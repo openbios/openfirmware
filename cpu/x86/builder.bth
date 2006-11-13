@@ -1,0 +1,10 @@
+purpose: Load file for i386 builder
+
+dictionary: ${BP}/cpu/x86/build/tools.dic
+command: &x86forth &dictionary &this
+build-now
+
+fload ${BP}/ofw/tokenizer/tokenize.fth	\ Tokenizer
+fload ${BP}/forth/lib/builder.fth	\ Builder
+
+.( --- Saving builder.dic --- )  "" builder.dic save-forth cr

@@ -1,0 +1,18 @@
+purpose: Load file for DEC 21143 Ethernet FCode driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing dec21143.fc
+
+FCode-version2
+fload ${BP}/dev/dec21140/dec21x40.fth
+fload ${BP}/dev/dec21140/dec21143.fth
+fload ${BP}/dev/dec21140/mif.fth
+fload ${BP}/dev/dec21140/loopback.fth
+fload ${BP}/dev/dec21140/macaddr.fth
+end0
+
+end-tokenizing

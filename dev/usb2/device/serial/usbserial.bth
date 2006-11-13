@@ -1,0 +1,24 @@
+purpose: Load file for USB UART driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing usbserial.fc
+
+FCode-version2
+
+fload ${BP}/dev/usb2/device/common.fth		\ USB device driver common routines
+fload ${BP}/dev/usb2/vendor.fth			\ Vendor/product id table search routines
+fload ${BP}/dev/usb2/device/serial/vendor.fth	\ UART vendor/product id table
+fload ${BP}/dev/usb2/device/serial/common.fth	\ USB uart driver common routines
+fload ${BP}/dev/usb2/device/serial/belkin.fth	\ Belkin device routines
+fload ${BP}/dev/usb2/device/serial/mct_u232.fth	\ MCT U232 device routines
+fload ${BP}/dev/usb2/device/serial/pl2303.fth	\ PL2303 device routines
+fload ${BP}/dev/usb2/device/serial/uart.fth	\ USB uart driver
+
+end0
+
+end-tokenizing
+

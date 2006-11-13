@@ -1,0 +1,18 @@
+purpose: Load file for OLPC CaFe NAND Driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing cafenand.fc
+
+FCode-version2
+
+fload ${BP}/dev/olpc/cafenand/cafenand.fth
+fload ${BP}/dev/olpc/cafenand/configure.fth
+fload ${BP}/dev/olpc/cafenand/methods.fth
+
+end0
+
+end-tokenizing

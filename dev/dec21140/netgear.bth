@@ -1,0 +1,19 @@
+purpose: Load file for NetGear LC82C169 Ethernet FCode driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing netgear.fc
+
+FCode-version2
+
+h# 100 constant /regs	\ Total size of adapter's register bank
+
+fload ${BP}/dev/dec21140/dec21x40.fth
+fload ${BP}/dev/dec21140/netgear.fth
+
+end0
+
+end-tokenizing

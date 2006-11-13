@@ -1,0 +1,16 @@
+purpose: Load file for USB Mass Storage Driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing usbstorage.fc
+
+FCode-version2
+
+fload ${BP}/dev/usb2/device/storage/storage.fth
+
+end0
+
+end-tokenizing

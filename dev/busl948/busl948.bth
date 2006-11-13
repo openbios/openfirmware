@@ -1,0 +1,32 @@
+purpose: Load file for DPT SCSI controllers
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing busl948.fc
+
+FCode-version2
+
+hex
+
+fload ${BP}/dev/busl948/dma-defs.fth
+fload ${BP}/dev/busl948/io.fth
+fload ${BP}/dev/busl948/init.fth
+
+fload ${BP}/dev/scsi/hacom.fth
+
+new-device
+   fload ${BP}/dev/scsi/scsidisk.fth
+   " disk" device-name
+finish-device
+
+new-device
+   fload ${BP}/dev/scsi/scsitape.fth
+   " tape" device-name
+finish-device
+
+end0
+
+end-tokenizing

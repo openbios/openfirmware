@@ -1,0 +1,35 @@
+purpose: PC keyboard keymap file
+
+\ This file was converted automatically from the Linux keymap file
+\ with the same base name
+\ ... and then hand-edited to remove the AltGr submap
+
+create us
+   ch E  ch N  \ Language
+   2 c,  \ #submaps
+\ Unshifted
+  (  0 )   xx     1b c,  ch 1   ch 2   ch 3   ch 4   ch 5   ch 6 
+  (  8 )   ch 7   ch 8   ch 9   ch 0   ch -   ch =    8 c,   9 c,
+  ( 10 )   ch q   ch w   ch e   ch r   ch t   ch y   ch u   ch i 
+  ( 18 )   ch o   ch p   ch [   ch ]    d c,   2 c,  ch a   ch s 
+  ( 20 )   ch d   ch f   ch g   ch h   ch j   ch k   ch l   ch ; 
+  ( 28 )   ch '   ch `    1 c,  ch \   ch z   ch x   ch c   ch v 
+  ( 30 )   ch b   ch n   ch m   ch ,   ch .   ch /    1 c,  ch * 
+  ( 38 )    3 c,  20 c,   4 c,  81 c,  82 c,  83 c,  84 c,  85 c,
+  ( 40 )   86 c,  87 c,  88 c,  89 c,  8a c,   5 c,   6 c,  97 c,
+  ( 48 )   98 c,  99 c,  ch -   94 c,  95 c,  96 c,  ch +   91 c,
+  ( 50 )   92 c,  93 c,  90 c,  9a c,  xx     xx     ch <   8b c,
+  ( 58 )   8c c,  xx     xx     xx     xx     xx     xx     xx   
+\ Shifted
+  (  0 )   xx     1b c,  ch !   ch @   ch #   ch $   ch %   ch ^ 
+  (  8 )   ch &   ch *   ch (   ch )   ch _   ch +    8 c,   9 c,
+  ( 10 )   ch Q   ch W   ch E   ch R   ch T   ch Y   ch U   ch I 
+  ( 18 )   ch O   ch P   ch {   ch }   xx     xx     ch A   ch S 
+  ( 20 )   ch D   ch F   ch G   ch H   ch J   ch K   ch L   ch : 
+  ( 28 )   ch "   ch ~   xx     ch |   ch Z   ch X   ch C   ch V 
+  ( 30 )   ch B   ch N   ch M   ch <   ch >   ch ?   xx     xx   
+  ( 38 )   xx     20 c,  xx     8b c,  8c c,  xx     xx     xx   
+  ( 40 )   xx     xx     xx     xx     xx     xx     xx     97 c,
+  ( 48 )   98 c,  99 c,  xx     94 c,  95 c,  96 c,  xx     91 c,
+  ( 50 )   92 c,  93 c,  90 c,  9a c,  xx     xx     ch >   8b c,
+  ( 58 )   8c c,  xx     xx     xx     xx     xx     xx     xx   

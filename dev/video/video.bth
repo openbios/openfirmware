@@ -1,0 +1,27 @@
+purpose: Main load file for driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing video.fc
+
+FCode-version2
+
+\ " vga" device-name
+" display" device-name
+
+fload ${BP}/dev/video/common/defer.fth		\ Defered words
+fload ${BP}/dev/video/controlr/pcimap.fth	\ Generic PCI implementations
+fload ${BP}/dev/video/dacs/loaddacs.fth		\ DAC routines
+fload ${BP}/dev/video/controlr/loadcntl.fth	\ Controller code
+fload ${BP}/dev/video/common/pci.fth		\ PCI routines
+fload ${BP}/dev/video/common/graphics.fth	\ Graphics and color routines
+fload ${BP}/dev/video/common/init.fth		\ Init code
+fload ${BP}/dev/video/common/display.fth	\ High level interface code
+fload ${BP}/dev/video/common/textmode.fth	\ VGA text mode
+
+end0
+
+end-tokenizing

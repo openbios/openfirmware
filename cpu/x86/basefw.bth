@@ -1,0 +1,134 @@
+purpose: Load file for core Open Firmware
+\ See license at end of file
+
+dictionary: ${BP}/cpu/x86/build/tools.dic
+command: &x86forth &dictionary &this
+build-now
+
+\ ' $report-name is include-hook
+\ ' noop is include-hook
+
+[ifndef] no-heads
+[ifndef] partial-no-heads
+limit origin - 4 /  d# 1000  set-transize
+true is suppress-transient?
+[then]
+[then]
+
+false value standalone?
+
+code call  ( address -- )   dx pop   dx call  c;
+
+\ fload ${BP}/forth/lib/showmsgs.fth	\ List error messages
+
+fload ${BP}/ofw/core/ofwcore.fth	\ Device tree and other OBP routines
+fload ${BP}/ofw/core/ofwfw.fth		\ FirmWorks enhancements
+
+fload ${BP}/ofw/core/memops.fth		\ Call memory node methods
+fload ${BP}/ofw/core/mmuops.fth		\ Call MMU node methods
+\ : cfill fill ;
+
+fload ${BP}/cpu/x86/segments.fth	\ far memory access
+fload ${BP}/cpu/x86/dt.fth		\ Descriptor table access
+fload ${BP}/cpu/x86/vector.fth		\ Interrupt vectors
+\ fload ${BP}/forth/lib/struct.fth
+fload ${BP}/cpu/x86/interrup.fth	\ Enable and disable interrupts
+fload ${BP}/cpu/x86/catchexc.fth
+
+fload ${BP}/cpu/x86/ctrace.fth	\ C stack backtrace
+
+: mapped?  ( adr -- flag )
+   " translate" mmu-node @ $call-method  dup  if  nip nip  then
+;
+' mapped? to valid-adr?
+
+fload ${BP}/cpu/x86/descr.fth		\ Decode segment descriptors
+fload ${BP}/cpu/x86/dtacc.fth		\ Descriptor table access words
+
+fload ${BP}/ofw/confvar/loadcv.fth	\ Configuration option management
+fload ${BP}/ofw/core/silentmd.fth	\ NVRAM variable silent-mode?
+
+fload ${BP}/cpu/x86/call.fth		\ Primitive subroutine calls
+fload ${BP}/cpu/x86/centry.fth		\ Low-level client entry and exit
+
+[ifdef] v2-compat
+fload ${BP}/cpu/x86/textops.fth		\ S Machine code for 1-bit ops
+[then]
+
+fload ${BP}/cpu/x86/fb8-ops.fth		\ Machine code for 8-bit ops
+
+fload ${BP}/ofw/termemu/loadfb.fth	\ S Frame buffer support
+\ fload ${BP}/ofw/termemu/cp881-16.fth	\ ISO-Latin1 Font
+fload ${BP}/ofw/termemu/gallant2.fth	\ Sun font, tip o' the hat to Vaughn Pratt
+
+fload ${BP}/ofw/gui/alert.fth		\ Basic dialogs and alerts
+fload ${BP}/dev/stringio.fth		\ Output diversion
+
+fload ${BP}/ofw/core/loadmore.fth	\ Load additional core stuff
+
+fload ${BP}/ofw/inet/loadtftp.fth	\ Trivial File Transfer Protocol pkg.
+
+fload ${BP}/cpu/x86/regacc.fth		\ Register access words
+
+fload ${BP}/ofw/fcode/loadfcod.fth	\ S Fcode interpreter
+
+fload ${BP}/ofw/fcode/regcodes.fth	\ Register access words
+
+\ File system readers
+fload ${BP}/ofw/core/initprog.fth	\ handle fcode and Forth source
+
+fload ${BP}/ofw/core/infltdi.fth	\ Support for compressed dropin drivers
+
+[ifdef] resident-packages
+support-package: fat-file-system
+   fload ${BP}/ofw/fs/fatfs/loadpkg.fth	\ FAT file system reader
+end-support-package
+
+support-package: iso9660-file-system
+   fload ${BP}/ofw/fs/cdfs/loadpkg.fth	\ ISO 9660 CD-ROM file system reader
+end-support-package
+
+support-package: disk-label
+   fload ${BP}/ofw/disklabel/loadpkg.fth	\ Disk label package
+end-support-package
+[then]
+
+[ifdef] resident-packages
+fload ${BP}/ofw/fs/fatfs/fdisk2.fth	\ Partition map administration
+[else]
+autoload: fdisk2.fth
+defines: $.partitions
+defines: .partitions
+\ defines: init-nt-disk
+defines: $partition
+[then]
+
+[ifndef] no-heads
+resident   dispose   0 0 set-transize   \ true is suppress-transient
+
+cr .( --- Saving basefw.dic --- )  "" basefw.dic save-forth  cr
+[then]
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2006 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

@@ -1,0 +1,32 @@
+This directory contains C code that can be compiled into the Forth
+wrapper program to provide memory-to-memory data compression using
+the ZIP deflate algorithm.
+
+The files in this directory were derived from the source code
+for gzip 1.2.4 as follows:
+
+	deflate.c	From gzip deflate.c, essentially verbatim
+	trees.c		From gzip trees.c, essentially verbatim
+	bits.c		From gzip bits.c, essentially verbatim
+	gzip.h		From gzip gzip.h, essentially verbatim
+
+	zipmem.c	From gzip gzip.c and zip.c, but both files
+			were gutted and only a small fraction of
+			the code was extracted to form zipmem.c.
+
+	util.c		From gzip util.c.  About half or more of the
+			file was discarded, and the rest was barely
+			touched.
+
+	tailor.h	From gzip tailor.h, but massively gutted,
+			leaving only a few defines.
+
+The "essentially verbatim" files, to the extent that they were modified
+at all, were modified by commenting-out irrelevant sections of the
+files with "#ifdef FWnotdef ... #endif".
+
+A lot of the gzip code is concerned with handling files and their
+modes and attributes, command line arguments, decompressing, and
+handling multiple compression methods.  The code in this directory
+is concerned solely with the problem of compressing from memory to
+memory, using only the ZIP "deflate" method.

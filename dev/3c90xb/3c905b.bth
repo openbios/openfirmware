@@ -1,0 +1,16 @@
+purpose: Load file for 3COM905B Ethernet FCode driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing 3c905b.fc
+
+FCode-version2
+" 3C905B" model
+" 3C905B" encode-string  " compatible" property
+fload ${BP}/dev/3c90xb/loadpkg.fth
+end0
+
+end-tokenizing
