@@ -38,14 +38,13 @@ h# 770.0000 constant /ram   \ 128 MB
 [ifdef] virtual-mode
    h# 10.0000  dropin-base over -  release
    dropin-base dropin-size +  mem-info-pa la1+ l@  over -  release
-
 [else]
-   \ ??? origin used to be fw-pa; I'm not sure that origin is correct
-   origin  h# 10.0000 u>  if
-      h# 10.0000   origin over -  release
-   then
+   h# 10.0000                             ( free-bot )
+   fw-pa dropin-base umin  dma-base umin  ( free-bot free-top )
+   over -  release
 
-   dropin-base dropin-size +  RAMtop max   initial-heap + max  /ram over -  release
+   fw-pa /fw-ram +  dropin-base dropin-size + umax  dma-base dma-size + umax
+   /ram  over -  release
 [then]
 ;
 
