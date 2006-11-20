@@ -47,13 +47,16 @@ h# 100000 constant /flash
 
 [ifdef] load-base
 : flash-buf  load-base  ;
+: ec-buf     load-base /flash +  ;
 [else]
 /flash buffer: flash-buf
+/ec buffer: ec-buf
 [then]
 0 value file-loaded?
 
 
 h# 30 constant crc-offset  \ From end
+h# 2c constant crc2-offset  \ From end
 
 : crc  ( adr len -- crc )  0 crctab  2swap ($crc)  ;
 
@@ -87,6 +90,7 @@ h# 30 constant crc-offset  \ From end
    ?image-valid
 
    true to file-loaded?
+   flash-buf ec-buf /ec move  \ Save a copy for merging
 ;
 
 : ?file  ( -- )
@@ -109,13 +113,27 @@ h# 30 constant crc-offset  \ From end
 
 : verify  ( -- )  ?file  flash-buf  /flash  0  verify-flash-range  ;
 
+: merge-mfg-data  ( -- )
+   ." Merging existing manufacturing data" cr
+   flash-buf /ec  0  read-spi-flash               ( )
+   flash-buf /ec +  last-mfg-data   flash-buf -   ( offset )
+   ec-buf /ec  2 pick  /string  ?erased           ( offset )
+   ec-buf flash-buf  rot  move                    ( )
+;
+
 : reflash   ( -- )   \ Flash from data already in memory
    ?file
    spi-start
 
    spi-identify .spi-id cr
 
-   flash-buf  /flash  0  write-flash-range   \ Write everything, EC code and BIOS
+   merge-mfg-data
+
+   \ Insert another CRC, this time including the mfg data
+   flash-buf  /flash  crc                  ( crc )
+   flash-buf  /flash +  crc2-offset -  l!  ( )
+
+   flash-buf  /flash  0  write-flash-range   \ Write everything
 
    spi-us d# 20 <  if
       verify

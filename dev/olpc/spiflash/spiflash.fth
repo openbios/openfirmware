@@ -227,9 +227,13 @@ defer write-spi-flash  ( adr len offset -- )
 \ into the memory buffer at adr
 
 : read-spi-flash  ( adr len offset -- )
-   setup-spi-read   ( adr len )
-   bounds  ?do  spi-in i c!  loop
-   spi-cs-off
+   flash-base -1 <>  if               ( adr len offset )
+      flash-base + -rot move          ( )
+   else                               ( adr len offset )
+      setup-spi-read                  ( adr len )
+      bounds  ?do  spi-in i c!  loop  ( )
+      spi-cs-off                      ( )
+   then                               ( )
 ;
 
 \ Implementation factor for verify.  Throws an error on mismatch.

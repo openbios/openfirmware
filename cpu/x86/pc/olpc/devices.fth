@@ -259,6 +259,8 @@ warning @ warning off
    kb3920? to atest?
 ;
 warning !
+fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
+fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 [then]
 
 fload ${BP}/dev/olpc/spiflash/spiflash.fth   \ SPI FLASH programming
