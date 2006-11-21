@@ -40,10 +40,22 @@ h# 770.0000 constant /ram   \ 128 MB
    dropin-base dropin-size +  mem-info-pa la1+ l@  over -  release
 [else]
    h# 10.0000                             ( free-bot )
-   fw-pa dropin-base umin  dma-base umin  ( free-bot free-top )
+   fw-pa                                  ( free-bot free-top )
+
+   \ Account for the dropin area if it is in RAM
+   dropin-base  /ram  u<  if              ( free-bot free-top )
+      dropin-base umin                    ( free-bot free-top' )
+   then                                   ( free-bot free-top )
+
    over -  release
 
-   fw-pa /fw-ram +  dropin-base dropin-size + umax  dma-base dma-size + umax
+   fw-pa /fw-ram +                        ( piece2-base )
+
+   \ Account for the dropin area if it is in RAM
+   dropin-base  /ram u<  if               ( piece2-base )
+      dropin-base dropin-size +  umax     ( piece2-base' )
+   then                                   ( piece2-base )
+
    /ram  over -  release
 [then]
 ;
