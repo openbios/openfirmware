@@ -291,18 +291,7 @@ defer handle-log-file  ( name$ -- )
       show-rebuilds?  if
          ." --- Rebuilding " target-names $top type cr
       then
-      \ If we can find the build file, it's better to use it than to use
-      \ the remembered command line, because the command line may be for
-      \ a different CPU.
-      build-files $top  extension  " log" $=  if
-         target-names $top  find-bld-file?  if
-            handle-bld-file
-         else
-            command-lines $top expand-macros $sh
-         then
-      else
-         command-lines $top expand-macros $sh
-      then
+      command-lines $top expand-macros $sh
    then
    rebuild pop drop
    dictionary-files $drop
