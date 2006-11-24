@@ -198,6 +198,7 @@ warning @ warning off
 warning !
 
 fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
+patch 3 6 get-countdown
 
 fload ${BP}/dev/scsi/probscsi.fth	\ probe-scsi and probe-scsi-all
 
@@ -228,7 +229,7 @@ warning @  warning off
    standalone?  if
       disable-interrupts
       cr ." Type 'i' to interrupt stand-init sequence" cr 
-      d# 2000 ms
+      d# 1000 ms
       key?  if
          key upc ascii I  =  if  ." Interacting" cr  hex interact  then
       then
@@ -262,17 +263,24 @@ hex
 [then]
 
 [ifdef] olpc
-: probe-usb  ( -- )
-   " /usb@f,4" select-dev   \ Open OHCI so it will claim USB 1 devices
-   " power-usb-ports" eval  \ Get the devices going
-   d# 500 ms
-   " /usb@f,5" select-dev  \ when the EHCI controller disowns then
+: probe-usb2
+   " /usb@f,5" select-dev
    " probe-usb" eval  \ EHCI probe
-   unselect
-   " probe-usb" eval  \ OHCI probe
    unselect
    ." USB2 devices:" cr
    " show-devs /usb@f,5" eval
+   report-disk
+;
+: probe-usb  ( -- )
+   \ Open OHCI so it will claim USB 1 devices that the EHCI controller disowns
+   " /usb@f,4" select-dev
+   " power-usb-ports" eval  \ Get the devices going
+\  d# 500 ms
+
+   probe-usb2               \ First dibs to EHCI/USB2
+
+   " probe-usb" eval  \ OHCI probe
+   unselect
    ." USB1 devices:" cr
    " show-devs /usb@f,4" eval
 \   report-disk
@@ -308,6 +316,34 @@ hex
 fload ${BP}/cpu/x86/pc/olpc/linux.fth
 [then]
 
+fload ${BP}/ofw/gui/bmptools.fth
+fload ${BP}/dev/null.fth
+fload ${BP}/ofw/core/bailout.fth
+
+[ifdef] olpc
+\ GUI
+false value gui-safeboot?
+
+\ FIXME need to implement user-ok to lockout ok prompt
+: 2tuck  ( d1 d2 -- d2 d1 d2 )  2swap 2over  ;
+false value fru-test?
+: user-ok  "ok"  ;  \ This is supposed to check for authorization
+true value user-mode?
+
+fload ${BP}/cpu/x86/pc/olpc/banner.fth
+
+[ifdef] sd-diags
+: loadsd  " rom:sd" $boot  ;
+[then]
+[then]
+
+fload ${BP}/ofw/gui/loadmenu.fth
+\ fload ${BP}/ofw/gui/insticon.fth
+
+[ifdef] olpc
+fload ${BP}/cpu/x86/pc/olpc/gui.fth
+[then]
+
 \ Eliminate 4 second delay in install console for the case where
 \ there is no keyboard.  The delay is unnecessary because the screen
 \ does not go blank when the device is closed.
@@ -319,13 +355,13 @@ patch drop ms install-console
    " fload disk:\boot\olpc-boot.fth" ['] eval catch  if
       2drop
    else
-      exit
+      show-disk exit
    then
 
    " fload disk:\boot\olpcboot.fth" ['] eval catch  if
       2drop
    else
-      exit
+      show-disk exit
    then
 
    " disk:\boot\initrd.img" 2dup  open-dev  ?dup  if  ( name$ ih )
@@ -336,6 +372,7 @@ patch drop ms install-console
    
    " disk:\boot\vmlinuz" 2dup  open-dev  ?dup  if  ( name$ ih )
       close-dev  " boot-device" $setenv
+      show-disk
       exit
    then
    2drop
@@ -344,7 +381,7 @@ patch drop ms install-console
    " fload nand:\boot\olpc-boot.fth" ['] eval catch  if
       2drop
    else
-      exit
+      show-nand exit
    then
 
    " ro root=mtd0 rootfstype=jffs2 console=ttyS0,115200 console=tty0 fbcon=font:SUN12x22 pci=nobios video=gxfb:1024x768-16"
@@ -353,6 +390,7 @@ patch drop ms install-console
    " "  " ramdisk"  $setenv
 
    " nand:\boot\vmlinuz" " boot-device" $setenv
+   show-nand
 ;
 
 : config&boot  ( -- )
@@ -401,60 +439,46 @@ true                               ' client-symbols?  set-config-int-default
 " dhcp" ' ip-address  set-config-string-default
 
 \ fload ${BP}/cpu/x86/pc/report.fth
-
-fload ${BP}/ofw/gui/bmptools.fth
-fload ${BP}/dev/null.fth
-
-[ifdef] olpc
-\ GUI
-false value gui-safeboot?
-
-\ FIXME need to implement user-ok to lockout ok prompt
-: 2tuck  ( d1 d2 -- d2 d1 d2 )  2swap 2over  ;
-vocabulary chords
-false value fru-test?
-: .chords ;
-: .chord  type cr  ;
-: .because  type cr  ;
-: user-ok  "ok"  ;  \ This is supposed to check for authorization
-true value user-mode?
-false value show-chords?
-
-fload ${BP}/cpu/x86/pc/olpc/banner.fth
-
-[ifdef] sd-diags
-: loadsd  " rom:sd" $boot  ;
-[then]
-[then]
-
-fload ${BP}/ofw/gui/loadmenu.fth
-fload ${BP}/ofw/gui/insticon.fth
-
-[ifdef] olpc
-fload ${BP}/cpu/x86/pc/olpc/gui.fth
-[then]
+fload ${BP}/ofw/core/dualconsole.fth
 
 : startup  ( -- )
    standalone?  0=  if  exit  then
+
+   ?bailout
 
    no-page
 \   ." calibrate-ms"  cr
    calibrate-ms
 
    " screen" open-dev  ?dup  if
-\       dup stdout !
+      stdout !
 \       logo-banner drop
-       close-dev
-       0 stdout !
+\       close-dev
+\       0 stdout !
    then
 
-   ." nvramrc" cr
-   use-nvramrc?  if  nvramrc safe-evaluate  then
+   ?bailout
 
-   auto-banner?  if
+   " keyboard" open-dev  ?dup  if  stdin !  then
+
+   install-dual-console
+   ?gui-banner
+
+
+\   ." nvramrc" cr
+\   use-nvramrc?  if  nvramrc safe-evaluate  then
+
+\   auto-banner?  if
       " Probing" ?type  probe-all
-      " Install console" ?type  install-console
-      ?gui-banner
+\      " Install console" ?type  install-console
+\      ?gui-banner
+\   then
+
+   " keyboard" expand-alias  if   ( devspec$ )
+      drop " /usb"  comp  0=  if  ( )
+         red-letters  ." Using USB keyboard." cr  black-letters
+         " keyboard" output
+      then
    then
 
    hex
