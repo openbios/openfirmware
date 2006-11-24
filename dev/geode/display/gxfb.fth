@@ -4,22 +4,24 @@ purpose: Initialize Cyrix MediaGX video Controller
 hex
 headers
 
-d# 1024 value /scanline				\ Frame buffer line width
-d# 1024 value /displine				\ Displayed line width
-d#  768 value #scanlines			\ Screen height
+2 value bytes/pixel
+
+d# 1024 value /scanline		\ Frame buffer line width
+d# 1024 value /displine		\ Displayed line width
+d#  768 value #scanlines	\ Screen height
 
 : declare-props  ( -- )		\ Instantiate screen properties
    " width" get-my-property  if  
-      /displine  encode-int " width"     property
-      #scanlines encode-int " height"    property
-               8 encode-int " depth"     property
-      /displine  encode-int " linebytes" property
+      /displine bytes/pixel /  encode-int " width"     property
+      #scanlines               encode-int " height"    property
+      bytes/pixel 8 *          encode-int " depth"     property
+      /scanline                encode-int " linebytes" property
    else
       2drop
    then
 ;
 
-: /fb  ( -- )  /scanline #scanlines *  ;	\ Size of framebuffer
+: /fb  ( -- )  /scanline #scanlines * bytes/pixel *  ;	\ Size of framebuffer
 
 0 instance value dc-base
 0 instance value gp-base
@@ -72,7 +74,7 @@ d#  768 value #scanlines			\ Screen height
 
 create timing-1024x768
    h#  52 , 0 ,  \ dotpll, rstpll, (refr=75, pixclk= d# 12690)
-   d# 1024 , d# 1024 , 8 ,  \ linelen, graphics pitch, bpp 
+   d# 1024 , d# 1024 ,   \ linelen, graphics pitch
    h# 051f.03ff , h# 051f.03ff , h# 046f.040f , ( h# 046f.040f , ) \ htiming 1,2,3,fp
    h# 031f.02ff , h# 031f.02ff , h# 0309.0300 , ( h# 03b1.03ae , ) \ vtiming 1,2,3,fp
 
@@ -92,11 +94,9 @@ create timing-1024x768
 
 create timing-dcon
    h# 57b , 0 ,  \ dotpll, rstpll, (refr=50, pixclk=d# 17460)
-   d# 1200 , d# 1200 , 8 ,  \ linelen, graphics pitch, bpp 
+   d# 1200 , d# 1200 ,   \ linelen, graphics pitch
    h# 04d7.04af , h# 04d7.04af , h# 04bf.04b7 , ( h# 04bf.04b7 , )  \ htiming 1,2,3,fp
    h# 038f.0383 , h# 038f.0383 , h# 038b.0388 , ( h# 038a.0387 , )  \ vtiming 1,2,3,fp 
-\  h# 04d7.04af , h# 04d7.04af , h# 04b7.04bf , ( h# 04b7.04bf ) ,  \ htiming 1,2,3,fp
-\  h# 038f.0383 , h# 038f.0383 , h# 038b.0388 , ( h# 038a.0387 ) ,  \ vtiming 1,2,3,fp
 
 [ifdef] notdef
 ok 60 30 do i 10 bounds do i dc@ 9 u.r 4 +loop cr 10 +loop
@@ -113,13 +113,10 @@ true value dcon?
 ;
 : @+  ( adr -- adr' value )  dup la1+ swap @  ;
 
-\ he got 34 12c  30 12e   40 4d704af   44 4d704af   48 4bf04b7  50 38f0383  54 38f0383 58 3b80388
-\ we get     96      98                                4b704bf     4b704bf                3bf0383
-
 : set-timing  ( -- )
    timing  2 na+  ( adr )
-   @+  3 rshift  h# 34 dc!  \ Graphics pitch  ( adr )
-   @+ >r  @+ 8 /  r> *   3 rshift  2 +  h# 30 dc!  \ Line size  ( adr )
+   @+ bytes/pixel *  3 rshift       h# 34 dc!  \ Graphics pitch  ( adr )
+   @+ bytes/pixel *  3 rshift  2 +  h# 30 dc!  \ Line size       ( adr )
 
    @+ h# 40 dc!   \ H_ACTIVE
    @+ h# 44 dc!   \ H_BLANK
@@ -236,8 +233,8 @@ true value hsync-low?
    set-timing
 
    \ Turn on timing generator
-   h# c000.0019  8 dc!   \ TGEN, GDEN, VDEN, A20M, A18M, (8BPP)
-\ DCON c000.0119 - 100 is 16bpp
+   \ TGEN, GDEN, VDEN, A20M, A18M, (8BPP=0  16BPP=100)
+   h# c000.0019  bytes/pixel 2 =  if  h# 100 or  then  8 dc!
 
    \ Turn on FIFO
    4 dc@  h# 180000 invert and  h# 6501 or  4 dc!
@@ -334,8 +331,8 @@ d# 12,000  constant scanline-spins
    else
       set-mode                \ Redo the mode for VGA
 
-      d# 1024 to /displine
-      d# 1024 to /scanline
+      d# 1024 bytes/pixel * to /displine
+      d# 1024 bytes/pixel * to /scanline
       d#  768 to #scanlines
    then
 
@@ -343,7 +340,7 @@ d# 12,000  constant scanline-spins
 ;
 
 : init-hook  ( -- )
-  /displine " emu-bytes/line" eval - 2/ to window-left
+   /displine " emu-bytes/line" eval - 2/ to window-left
 ;
 
 external
@@ -394,12 +391,39 @@ headers
    video-on			\ Turn on video
 
    map-frame-buffer
-   frame-buffer-adr /fb h# 0f fill
+   bytes/pixel case
+      1 of  frame-buffer-adr /fb h#        0f  fill  endof
+      2 of  frame-buffer-adr /fb h#      ffff wfill  endof
+      4 of  frame-buffer-adr /fb h# ffff.ffff lfill  endof
+   endcase
 ;
 
 : display-remove  ( -- )
    smb-off
 ;
+
+" display"                      device-type
+" ISO8859-1" encode-string    " character-set" property
+0 0  encode-bytes  " iso6429-1983-colors"  property
+
+: display-install  ( -- )
+   init
+   default-font set-font
+   /scanline bytes/pixel /  #scanlines     ( width height )
+   over char-width / over char-height /    ( width height rows cols )
+   bytes/pixel  case                       ( width height rows cols )
+      1 of  fb8-install   endof            ( )
+      2 of  fb16-install  endof            ( )
+   endcase                                 ( )
+   init-hook
+;
+
+: display-selftest  ( -- failed? )  false  ;
+
+' display-install  is-install
+' display-remove   is-remove
+' display-selftest is-selftest
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
