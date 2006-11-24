@@ -6,7 +6,7 @@
 \ a FLASH device from that image.  The details of how to actually
 \ access the FLASH device are defined elsewhere.
 
-h# 1000 constant /chunk  \ Convenient sized piece for progress reports
+h# 4000 constant /chunk  \ Convenient sized piece for progress reports
 h# 10000 constant /ec    \ Size of EC code area
 h# 100000 constant /flash
 
@@ -152,7 +152,7 @@ defer fw-filename$  ' null$ to fw-filename$
    $get-file
 ;
 
-: flash  ( ["filename"] -- )  get-file reflash  ;
+: flash  ( ["filename"] -- )  get-file reflash  power-off  ;
 
 
 0 [if]
