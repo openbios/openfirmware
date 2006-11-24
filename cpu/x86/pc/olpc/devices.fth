@@ -271,10 +271,12 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH prog
 [then]
 
 [ifdef] olpc
+fload ${BP}/cpu/x86/fb16-ops.fth
+fload ${BP}/ofw/termemu/fb16.fth
 0 0  " 1,1"  " /pci" begin-package
    fload ${BP}/dev/olpc/dcon/dconsmb.fth         \ SMB access to DCON chip
    fload ${BP}/dev/olpc/dcon/dcon.fth            \ DCON control
-   fload ${BP}/dev/geode/display/loadpkg.fth     \ ISA bus bridge under PCI node
+   fload ${BP}/dev/geode/display/loadpkg.fth     \ Geode display
 end-package
 devalias screen /display
 
