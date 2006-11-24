@@ -531,6 +531,20 @@ code fill  (s start-addr count char -- )
    dx di mov
 c;
 
+code wfill  (s start-addr count char -- )
+   di dx mov
+   cld   ds ax mov   ax es mov   ax pop   cx pop  1 # cx shr  di pop
+   rep   ax op: stos
+   dx di mov
+c;
+
+code lfill  (s start-addr count char -- )
+   di dx mov
+   cld   ds ax mov   ax es mov   ax pop   cx pop  2 # cx shr  di pop
+   rep   ax stos
+   dx di mov
+c;
+
 code noop (s -- )  c;
 
 code n->l (s n.unsigned -- l ) c;
