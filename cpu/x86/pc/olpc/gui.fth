@@ -1,81 +1,37 @@
 \ See license at end of file
 purpose: Graphical display of boot sequence
 
-: ?cleanup  ;
+d# 0  d# 0  2value first-icon-xy
+0 0 2value icon-xy
+0 value text-y
 
-0 0 2value xy
-: set-xy  ( x y -- )  to xy  ;
-
-: screen-draw-rectangle  ( adr w h -- )
-   xy 2swap " draw-rectangle" $call-screen
+: show-565  ( image-adr,len -- )
+   drop
+   dup  " C565" comp  abort" Not in C565 format"
+   dup 4 + le-w@  to image-width
+   dup 6 + le-w@  to image-height
+   8 +
+   icon-xy  image-width  image-height
+   " draw-rectangle" $call-screen
 ;
 
-h# f constant background-color#
-d# 16 value next-color#
-0 value icon-color#
-
-: screen-erase-rectangle  ( w h -- )
-   background-color# -rot xy 2swap " fill-rectangle" $call-screen
-;
-
-: prepare-clut  ( adr w h #planes  clut-adr color# #colors -- adr w h #planes )
-   2>r >r  2over 2over *  r> 2r>   ( adr w h #planes  adr w h'  clut c#,#c )
-   next-color# pack-colors         ( adr w h #planes  adr w h'  clut c#,#c )
-   2dup + to next-color#           ( adr w h #planes  adr w h'  clut c#,#c )
-   3dup screen-set-colors          ( adr w h #planes  adr w h'  clut c#,#c )
-   nip 3 * free-mem                ( adr w h #planes  adr w h' )
-   3drop                           ( adr w h #planes )
-;
-: show-plane  ( adr w h plane# -- )
-   #planes min      ( adr w h plane#' )
-   -rot  2>r        ( adr plane#  r: w,h )
-   2r@ * * +        ( adr' r: w,h )
-   2r> screen-draw-rectangle
-;
-: show-planes  ( adr w h #planes -- )
-   dup >r  0  do               ( adr w h )
-      3dup  i show-plane       ( adr w h )
-      d# 500 ms                ( adr w h )
-   loop                        ( adr w h )
-   * r> * free-mem
-;
-: show-bmp  ( bmp-adr,len -- )
-   drop bmp>rects              ( adr w h #planes  clut-adr color# #colors )
-   prepare-clut                ( adr w h #planes )
-   >r  3dup 0  show-plane      ( adr w h r: #planes )
-   * r> * free-mem             ( )
-;
-
-: $get-bmp  ( filename$ -- true | bmp-adr,len false )
+: $get-image  ( filename$ -- true | adr,len false )
    $read-open                        ( )
    ifd @ fsize  dup alloc-mem swap   ( bmp-adr,len )
    2dup  ifd @ fgets  over <>        ( bmp-adr,len error? )
    ifd @ fclose                      ( bmp-adr,len )
    if  free-mem true  else  false  then  ( true | bmp-adr,len false )
 ;
-: $show-bmp  ( filename$ -- )
-   $get-bmp  if  exit  then  2dup show-bmp  free-mem
+: $show  ( filename$ -- )
+   not-screen?  if  2drop exit  then
+   $get-image  if  exit  then  2dup show-565  free-mem
 ;
-: bmp  ( "name" -- )  safe-parse-word $show-bmp  ;
+: $show&advance  ( filename$ -- )
+   $show
+   icon-xy  image-width 0  d+  to icon-xy
+;
 
-\ ok 18 screen-color@ rot . swap . .   \ 107  99 165 
-\ ok 19 screen-color@ rot . swap . .   \ 123 115 177 
-\ ok 20 screen-color@ rot . swap . .   \ 132 123 181 
 : fix-cursor  ( -- )  cursor-on  ['] user-ok to (ok)  user-ok  ;
-
-d# 292  d# 300  2value name-xy
-0 0 2value first-icon-xy
-0 0 2value icon-xy
-0 0 2value logo-xy
-d# 486 constant text-y
-
-: position-icons  ( -- )
-   name-xy  d#  400  d#  0  d+  to first-icon-xy
-   first-icon-xy             to icon-xy
-
-   name-xy  d#  200  d#  0  d+  to logo-xy
-;
-position-icons
 
 : .mem  ( -- )  memory-size .d ." MB SDRAM"   ; 
 
@@ -278,24 +234,29 @@ warning !
    .cpu-data cr
 ;
 
-0 value images
-: free-images  ( -- )
-   images  if
-      images  image-width image-height *  #planes *  free-mem
-      0 to images
-   then
+\ Make the terminal emulator use a region that avoids the logo area
+: avoid-logo  ( -- )
+   0  h# f                                       ( fg-color bg-color )
+   screen-wh drop  char-wh drop  d# 80 *  -  2/  ( fg-color bg-color x )
+   text-y                                        ( fg-color bg-color x y )
+   char-wh drop d# 80  *                         ( fg-color bg-color x y w )
+   screen-wh nip text-y -                        ( fg-color bg-color x y w h )
+   set-text-region
+;
+
+: debug-net?  ( -- flag )  bootnet-debug  ;
+
+: text-area?  ( -- flag )
+   show-sysinfo?  debug-net?  or  user-mode? 0<> or  diagnostic-mode? or
+   gui-safeboot?  or  show-chords? or
 ;
 
 false value error-shown?
-: visible-icons  ( -- )
-   0 screen-color@  icon-color# 1+ screen-color!
-;
 
 : error-banner  ( -- )
-   visible-icons
    error-shown?  if  exit  then   true to error-shown?
 
-   logo-xy set-xy  " rom:error.bmp" $show-bmp
+   " rom:error.565" $show&advance
 
    .sysinfo
 ;
@@ -316,46 +277,10 @@ false value error-shown?
       user-mode? until                  ( error# | 0 )
       drop
    then
-   free-images
-;
-
-\ Make the terminal emulator use a region that avoids the logo area
-: avoid-logo  ( -- )
-   0  h# f                 ( fg-color bg-color )
-   screen-wh drop  char-wh drop  d# 80 *  -  2/  ( fg-color bg-color x )
-   text-y                                        ( fg-color bg-color x y )
-   char-wh drop d# 80  *                         ( fg-color bg-color x y w )
-   screen-wh nip text-y -                        ( fg-color bg-color x y w h )
-   set-text-region
-;
-
--1 value logo-color#
-: reset-colors  ( -- )
-   logo-color# -1 =  if
-      next-color# to logo-color#
-   else
-      logo-color# to next-color#
-   then
-;
-
-: gui-cleanup  ( -- )
-   ?cleanup
-   not-screen?  if  exit  then
-   reset-colors
-   first-icon-xy to icon-xy
-;
-
-: debug-net?  ( -- flag )  bootnet-debug  ;
-
-: text-area?  ( -- flag )
-   show-sysinfo?  debug-net?  or  user-mode? 0<> or  diagnostic-mode? or
-   gui-safeboot?  or  show-chords? or
 ;
 
 : logo-banner  ( -- error? )
    display?  0=  if  true exit  then
-
-   ['] gui-cleanup  to cleanup
 
 \ Do this later...
 \   diagnostic-mode?  0=  if  ['] visual-error to .error  then
@@ -363,25 +288,17 @@ false value error-shown?
    stdout @ to screen-ih
 
    text-area?  if
-      d# 0 d#  0 to name-xy
-      d# 176 to text-y
-      position-icons
+      d# 144 to text-y
+      first-icon-xy to icon-xy
    else
       null-output
    then
 
-\   0 6 at-xy
    cursor-off  ['] fix-cursor to (ok)	\ hide text cursor
    avoid-logo
    
    0 to image-width  0 to image-height   \ In case $show-bmp fails
-   name-xy set-xy
-   " rom:myname.bmp" $show-bmp
-
-   next-color# to icon-color#
-
-\    color# screen-color@  d# 15  screen-color!  \ Change background
-\    d# 255  d# 255 d# 255  d#  0  screen-color!  \ Make text foreground white
+   " rom:olpc.565" $show&advance
 
    show-sysinfo?  if  .sysinfo  then
    show-chords?  if  " .chords" evaluate  then
@@ -390,91 +307,32 @@ false value error-shown?
 ;
 ' logo-banner is gui-banner
 
-0 0 2value last-icon
-
-: ?erase-icon  ( -- )
-   last-icon drop  if  icon-xy set-xy  last-icon screen-erase-rectangle  then
-;
-
-: image  ( image# -- )
-   not-screen?  images 0= or  if  drop exit  then
-   dup  #planes >=  if  drop exit  then
-   logo-xy set-xy
-   >r  images  image-width  image-height  r> show-plane
-;
-
-: timeout-banner  ( -- )
-   5 image
-   .sysinfo
-;
-
-false value animate?
-: (configured)  ( -- )
-   animate? 0=  not-screen?  or  if  exit  then  1 image
-;
-
 [ifdef] resident-packages
 dev /obp-tftp
-fload ${BP}/cpu/x86/pc/olpc/guitftp.fth
+: (configured)  ( -- )
+   " rom:netconfigured.565" $show
+;
+: show-timeout  ( adr len -- )
+   2dup (.dhcp-msg)                 ( adr len )
+   " Timeout" $=  not-screen? 0=  and  if
+      " rom:nettimeout.565" $show
+      .sysinfo
+   then
+;
+' show-timeout to .dhcp-msg
+' (configured) to configured
 device-end
 [then]
 
-0 value last-progress
-2 value image#
-: animate  ( adr -- adr )
-   not-screen?  if  show-meter exit  then
-   dup last-progress u<  if  dup to last-progress  then  ( adr )
-   dup last-progress -  h# 2.0000 >=  if                 ( adr )
-      dup to last-progress                               ( adr )
-      image# 1 xor  to image#                            ( adr )
-      image# image
-   then
-;
+: show-nand  ( -- )  " rom:nand.565"   $show&advance  ;
+: show-disk  ( -- )  " rom:usbkey.565" $show&advance  ;
+: show-xo   ( -- )   " rom:xo.565"     $show&advance  ;
 
-: (load-done)  ( -- )
-   4 image  free-images  restore-output
-   false to animate?
-;
-
-: enable-animation  ( -- )
-   diagnostic-mode?  0=  if  ['] visual-error to .error  then
-   ['] animate to show-progress
-   ['] (load-done) to load-done
-;
-
-: (load-started)  ( -- )
+: simple-load-started  ( -- )
    not-screen?  if  exit  then
-   enable-animation
-   ?erase-icon
-   free-images
-   0 to #planes  0 to images
-   " rom:oslogo.bmp" $get-bmp  if  exit  then  ( bmp$ )
-
-   2dup  drop bmp>rects                   ( bmp$  adr w h #planes  clut c# #c )
-   prepare-clut                           ( bmp$  adr w h #planes )
-   to #planes                             ( bmp$  adr w h )
-   to image-height  to image-width        ( bmp$  adr )
-   to images                              ( bmp$ )
-   free-mem
-   0 image
-   true to animate?
+   ['] show-xo to load-done
 ;
-['] (load-started) to load-started
-
-true value spread-icons?
-: show-icon  ( bmp$ -- )
-   spread-icons?  if
-      icon-xy set-xy
-      icon-color# to next-color#
-      show-bmp
-      icon-xy  image-width 0  d+  to icon-xy
-   else
-      ?erase-icon
-      logo-xy  4  d# 40  d+  to icon-xy
-      icon-xy set-xy show-bmp
-      image-width image-height to last-icon
-   then
-;
+['] simple-load-started to load-started
 
 h# 32 buffer: icon-name
 
@@ -482,13 +340,13 @@ h# 32 buffer: icon-name
    locate-device  0=  if                               ( phandle )
       " icon" 2 pick  get-package-property  0=  if     ( phandle prop$ )
          rot drop                                      ( prop$ )
-         show-icon                                     ( )
+         $show&advance                                 ( )
       else                                             ( phandle )
          " name" rot  get-package-property  if  exit  then  ( prop$ )
          get-encoded-string                            ( name$ )
-         icon-name pack  " .bmp" rot $cat              ( )
+         icon-name pack  " .565" rot $cat              ( )
          icon-name count  find-drop-in  0=  if  exit  then  ( adr,len )
-         2dup show-icon release-dropin                 ( )
+         2dup $show&advance release-dropin             ( )
       then                                             ( )
    then                                                ( )
 ;
@@ -496,6 +354,7 @@ h# 32 buffer: icon-name
    not-screen? 0=  if  2dup ?show-icon  then
 ;
 ' (?show-device) to ?show-device
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

@@ -53,13 +53,14 @@ writing ofw.elf
 
    " ${BP}/dev/mmc/sdhci/sddma.fth"         " sd"          $add-dropin
 
-   " ${BP}/ofw/linux/logos.bmp"          " oslogo.bmp"     $add-deflated-dropin
-   " ${BP}/ofw/linux/logom16e.bmp"       " error.bmp"      $add-deflated-dropin
-   " ${BP}/ofw/linux/logom16c.bmp"       " timeout.bmp"    $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/olpclogo.bmp"    " myname.bmp"     $add-deflated-dropin
-   " ${BP}/dev/icons/tokenrng.bmp"       " token-ring.bmp" $add-deflated-dropin
-   " ${BP}/dev/icons/ethernet.bmp"       " ethernet.bmp"   $add-deflated-dropin
-   " ${BP}/dev/icons/flash.bmp"          " disk.bmp"       $add-deflated-dropin
-   " ${BP}/ofw/inet/httpdemo/homelogo.gif" " homelogo.gif" $add-dropin
+\   " ${BP}/ofw/linux/logos.bmp"          " oslogo.bmp"     $add-deflated-dropin
+\   " ${BP}/ofw/linux/logom16e.bmp"       " error.bmp"      $add-deflated-dropin
+\   " ${BP}/ofw/linux/logom16c.bmp"       " timeout.bmp"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/olpc.565"     " olpc.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " nand.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/network.565"  " network.565"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/usbkey.565"   " usbkey.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wireless.565"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/xo.565"       " xo.565"        $add-deflated-dropin
 
 ofd @ fclose
