@@ -15,6 +15,8 @@ create mac-adr 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c,
 : mac-adr$  ( -- adr len )  mac-adr /mac-adr  ;
 
 defer init-nic         ( -- )			' noop to init-nic
+defer wrap-msg         ( adr len -- adr' len' )	' noop to wrap-msg
+defer unwrap-msg       ( adr len -- adr' len' )	' noop to unwrap-msg
 defer link-up?	       ( -- up? )		' true to link-up?
 defer reset-nic        ( -- )			' noop to reset-nic
 defer start-nic        ( -- )			' noop to start-nic
@@ -26,30 +28,44 @@ headers
 
 : max-frame-size  ( -- size )  d# 1514  ;
 
+0 value multi-packet?   \ True if a single USB transaction can
+                        \ transfer multiple network packets, e.g. ax88772
+
+0 value residue         \ Remaining bytes in the packet buffer
+0 value pkt-adr         \ Offset into the packet buffer
+
 0 value vid
 0 value pid
 
 0 value outbuf
-0 value /outbuf
+d# 2048 value /outbuf   \ Power of 2 larger than max-frame-size
+                        \ Override as necessary
 
 0 value inbuf
-0 value /inbuf
+d# 2048 value /inbuf    \ Power of 2 larger than max-frame-size
+                        \ Override as necessary
 
 : init-buf  ( -- )
-   max-frame-size to /outbuf
-   max-frame-size to /inbuf
    outbuf 0=  if  /outbuf dma-alloc to outbuf  then
    inbuf  0=  if  /inbuf  dma-alloc to inbuf   then
+   0 to residue
 ;
 : free-buf  ( -- )
    outbuf  if  outbuf /outbuf dma-free  0 to outbuf  then
    inbuf   if  inbuf  /inbuf  dma-free  0 to inbuf   then
 ;
 
+: property-or-abort  ( name$ -- n )
+   2dup get-my-property  if          ( name$ )
+      ." Can't find property " type cr  stop-nic abort
+   then                              ( name$ value$ )
+   2swap 2drop  decode-int  nip nip  ( n )
+;
+
 : init  ( -- )
    init
-   " vendor-id"  get-int-property  to vid
-   " device-id"  get-int-property  to pid
+   " vendor-id"  property-or-abort  to vid
+   " device-id"  property-or-abort  to pid
 ;
 
 headers

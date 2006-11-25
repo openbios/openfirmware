@@ -47,7 +47,6 @@ external
    my-args  " debug" $=  if  debug-on  then
    device set-target
    opencount @ 0=  if
-      init-buf
       first-open?  if
          init-net
          false to first-open?
@@ -55,9 +54,9 @@ external
       then
       link-up? 0=  if
          ." Network not connected." cr
-         free-buf
          false exit
       then
+      init-buf
       start-nic
       inbuf /inbuf bulk-in-pipe begin-bulk-in
    then
@@ -65,27 +64,62 @@ external
    true
 ;
 
-: write  ( adr len -- actual )
-   swap >r				( len )  ( R: adr )
-   /outbuf /mod				( rem #loop )
-   r> 0 rot 0  ?do			( rem adr act )
-      over outbuf /outbuf move		( rem adr act )
-      outbuf /outbuf bulk-out-pipe bulk-out
-					( rem adr act usberr )
-      if  nip nip exit  then
-      /outbuf +				( rem adr act' )
-      swap /outbuf + swap		( rem adr' act' )
-   loop					( rem adr' act' ) 
+: copy-packet  ( adr len -- len' )
+   dup multi-packet?  if  4 +  then   ( adr len len' )
+   /outbuf >  if  ." USB Ethernet write packet too long" cr  stop-nic abort  then  ( adr len )
 
-   -rot swap				( act adr rem )
-   ?dup  if
-      tuck outbuf swap move		( act rem )
-      outbuf over bulk-out-pipe bulk-out
-					( act rem usberr )
-      if  drop  else  +  then		( act' )
-   else
-      drop				( act )
-   then
+   multi-packet?  if       ( adr len )
+      dup wbsplit          ( adr len len.low len.high )
+      dup outbuf 1+ c!  invert outbuf 3 + c!  ( adr len len.low )
+      dup outbuf c!     invert outbuf 2 + c!  ( adr len )
+      tuck  outbuf 4 + swap  move             ( len )
+      4 +                                     ( len' )
+   else                          ( adr len )
+      tuck outbuf swap move      ( len )
+   then                          ( len )
+;
+
+: write  ( adr len -- actual )
+   tuck  copy-packet                      ( len buf len' )
+   outbuf swap bulk-out-pipe bulk-out     ( len usberr )
+   if  drop -1  then                      ( actual )
+;
+
+: even  ( n -- n' )  1+ -2 and  ;
+
+\ The data format is:
+\  length.leword  ~length.leword  data  [ pad-to-even ]
+: extract-packet  ( -- data-adr len )
+   residue 4 <  if  ." Short residue from USB Ethernet" cr stop-nic  abort  then
+
+   pkt-adr dup 4 +  swap >r
+   r@ c@     r@ 1+  c@ bwjoin   ( data-adr length )
+   r@ 2+ c@  r> 3 + c@ bwjoin   ( data-adr length ~length )
+   over + h# ffff <>  if        ( data-adr length )
+      ." Bad length in USB Ethernet" cr
+      \ We got out of sync so we must discard the entire buffer
+      \ Return  data-adr 0
+      drop 0
+      0 to residue  0 to pkt-adr
+      exit
+   then                           ( data-adr length )
+   2dup even                      ( data-adr length data-adr padded-len )
+   tuck +  to pkt-adr             ( data-adr length padded-len )
+   residue swap - 4 - to residue  ( data-adr actual )
+;
+
+: packet-data  ( -- data-adr data-len )
+   \ In multi-packet mode, the device can return multiple packets in
+   \ a single USB transaction.  Each packet is preceded by a 32-bit
+   \ header containing the packet length and its one's complement.
+
+   multi-packet?  if   \ Extract packet from buffer
+      extract-packet                         ( in-adr actual )
+   else                \ Buffer contains entire packet
+      pkt-adr residue                        ( in-adr actual' )
+      0 to residue
+   then                                      ( in-adr actual' )
+   unwrap-msg                                ( data-adr data-len )
 ;
 
 : read  ( adr len -- actual )
@@ -93,15 +127,19 @@ external
    \ If a bad packet came in, discard it and return -1
    \ If no packet is currently available, return -2
 
-   bulk-in?  if  nip nip restart-bulk-in exit  then	\ USB error; restart
-   ?dup  if				( adr len actual )
-      inbuf swap 			( adr len in-adr actual' )
-      rot min dup >r			( adr in-adr actual )  ( R: actual )
-      rot swap move r>			( actual )
-      restart-bulk-in			( actual )
-   else
-      2drop -2				\ No packet is currently available
+   residue  0=  if                          ( adr len )
+      bulk-in?  if  restart-bulk-in  then   ( adr len actual ) \ USB error; restart 
+      to residue                            ( adr len )
+      residue 0=  if  2drop -2 exit  then   ( adr len )
+      inbuf to pkt-adr
    then
+
+   \ At this point we can be sure that residue is nonzero
+   packet-data                             ( adr len  data-adr data-len )
+   rot min >r			           ( adr in-adr R: actual )
+   swap r@ move  r>			   ( actual )
+
+   residue 0=  if  restart-bulk-in  then  \ Release buffer
 ;
 
 : load  ( adr -- len )
@@ -111,7 +149,7 @@ external
       0					( adr 0 )
    then					( adr ihandle|0 )
 
-   dup  0=  if  ." Can't open obp-tftp support package" abort  then
+   dup  0=  if  ." Can't open obp-tftp support package" stop-nic abort  then
 					( adr ihandle )
 
    >r
@@ -129,10 +167,8 @@ headers
 
 : init  ( -- )
    init
-   init-buf
    device set-target
    configuration set-config  if  ." Failed to set ethernet configuration" cr  then
-   free-buf
 ;
 
 init

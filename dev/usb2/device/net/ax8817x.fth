@@ -9,7 +9,7 @@ hex
 \ Hawking UF200 USB Ethernet  0x001f1d1f
 
 
-h# 0013.0103 value ax8817x-gpio		\ GPIO toggle values
+h# 0013.0103 value ax-gpio		\ GPIO toggle values
 \ This may need to optimized at some point
 : ax88772?  ( -- flag )
    " vendor-id" get-my-property  if  false exit  then  ( adr len )
@@ -41,102 +41,109 @@ h# 0013.0103 value ax8817x-gpio		\ GPIO toggle values
 \ h# 10 constant AX_MONITOR_HSFS
 
 
-6 buffer: ax8817x-buf
+6 buffer: ax-buf
 
-: ax8817x-control-set  ( adr len idx value cmd -- )
+: ax-control-set  ( adr len idx value cmd -- )
    DR_OUT DR_VENDOR or DR_DEVICE or swap control-set  drop
 ;
 : control!  ( value cmd -- )  \ For the common case where adr len and idx are 0
-   >r >r  0 0 0  r> r>  ax8817x-control-set
+   >r >r  0 0 0  r> r>  ax-control-set
 ;
-: ax8817x-control-get  ( adr len idx value cmd -- )
+: ax-control-get  ( adr len idx value cmd -- )
    DR_IN DR_VENDOR or DR_DEVICE or swap control-get  2drop
 ;
 
-: ax8817x-eeprom@  ( index -- w ) 
-   >r ax8817x-buf 2  0  r> h# b  ax8817x-control-get
-   ax8817x-buf le-w@
+: ax-eeprom@  ( index -- w ) 
+   >r ax-buf 2  0  r> h# b  ax-control-get
+   ax-buf le-w@
 ;
 
-: ax8817x-write-gpio  ( value -- )  h# 1f control!  ;  \ AX_CMD_WRITE_GPIOS
+: ax-write-gpio  ( value -- )  h# 1f control!  ;  \ AX_CMD_WRITE_GPIOS
 
-: ax8817x-toggle-gpio  ( -- )
+: ax-toggle-gpio  ( -- )
    ax88772?  if
-      h# b0  ax8817x-write-gpio  5 ms
+      h# b0  ax-write-gpio  5 ms
    else
-      ax8817x-gpio lbsplit drop			( lo m.lo m.hi )
-      ax8817x-write-gpio  5 ms			( lo m.lo )
-      ax8817x-write-gpio  5 ms			( lo )
-      ax8817x-write-gpio  5 ms			( )
+      ax-gpio lbsplit drop			( lo m.lo m.hi )
+      ax-write-gpio  5 ms			( lo m.lo )
+      ax-write-gpio  5 ms			( lo )
+      ax-write-gpio  5 ms			( )
    then
 ;
 
-: ax8817x-get-mac-address  ( -- adr len )	\ Read the MAC address from the EEPROM
+: ax-get-mac-address  ( -- adr len )	\ Read the MAC address from the EEPROM
    mac-adr /mac-adr  0 0                        ( adr len idx value )
    ax88772?  if  h# 13  else  h# 17  then   \ AX_CMD_READ_NODE_ID , in two versions
-   ax8817x-control-get
+   ax-control-get
    mac-adr /mac-adr
 ;
 
-: ax88772-sw-reset  ( flags -- )  h# 20 control!  ;  \ AX_CMD_SW_RESET
+\ SW reset bits:
+\ 01 - RR - Set then reset to clear bulk-in frame length error
+\ 02 - RT - Set then reset to clear bulk-out frame length error
+\ 04 - PRTE - 1: tri-state external phy reset, so it can be controlled
+\      by an external pull-up or pull-down.  0: drive it actively.
+\ 08 - PRL - External PHYRST_N pin. 1: high 0: low
+\ 10 - BZ - Set to 1 to force BulkIn to return a 0-length USB packet
+\ 20 - IPRL - internal phy reset.  0: Assert   1: release
+\ 40 - IPPD - internal phy power.  0: Power On 1: Power off
 
-: ax8817x-set-ipg  ( -- )
-   ax8817x-buf 3  0 0  h# 11  ax8817x-control-get  \ AX_CMD_READ_IPG012
+: ax-sw-reset  ( flags -- )  h# 20 control!  ;  \ AX_CMD_SW_RESET (88772 only)
+
+: ax-set-ipg  ( -- )
+   ax-buf 3  0 0  h# 11  ax-control-get  \ AX_CMD_READ_IPG012
    ax88772?  if
-      ax8817x-buf     3 0 0 h# 12 ax8817x-control-set  \ AX_CMD_WRITE_IPG0
+      ax-buf     3 0 0 h# 12 ax-control-set  \ AX_CMD_WRITE_IPG0
    else
-      ax8817x-buf     1 0 0 h# 12 ax8817x-control-set   \ AX_CMD_WRITE_IPG0
-      ax8817x-buf 1+  1 0 0 h# 13 ax8817x-control-set   \ AX_CMD_WRITE_IPG1
-      ax8817x-buf 2 + 1 0 0 h# 14 ax8817x-control-set   \ AX_CMD_WRITE_IPG2
+      ax-buf     1 0 0 h# 12 ax-control-set   \ AX_CMD_WRITE_IPG0
+      ax-buf 1+  1 0 0 h# 13 ax-control-set   \ AX_CMD_WRITE_IPG1
+      ax-buf 2 + 1 0 0 h# 14 ax-control-set   \ AX_CMD_WRITE_IPG2
    then
 ;
 
-: ax8817x-mii-sw  ( -- )  0 6 control!  ;  \ AX_CMD_SET_SW_MII  Enter S/W MII mode
-: ax8817x-mii-hw  ( -- )  0 h# a control!  ;	\ AX_CMD_SET_HW_MII Enter H/W MII mode
+: ax-mii-sw  ( -- )  0 6 control!  ;  \ AX_CMD_SET_SW_MII  Enter S/W MII mode
+: ax-mii-hw  ( -- )  0 h# a control!  ;	\ AX_CMD_SET_HW_MII Enter H/W MII mode
 
-: ax8817x-mii@  ( reg -- w )
-   ax8817x-buf 2 rot phyid 7 ax8817x-control-get  \ AX_CMD_READ_MII_REG
-   ax8817x-buf le-w@
+: ax-mii@  ( reg -- w )
+   ax-buf 2 rot phyid 7 ax-control-get  \ AX_CMD_READ_MII_REG
+   ax-buf le-w@
 ;
-: ax8817x-mii!  ( w reg -- )
-   swap ax8817x-buf le-w!
-   ax8817x-buf 2  rot  phyid  8 ax8817x-control-set \ AX_CMD_WRITE_MII_REG
-;
-
-: ax8817x-get-phyid  ( -- )
-   ax8817x-buf 2 0 0 h# 19 ax8817x-control-get  \ AX_CMD_READ_PHY_ID
-   ax8817x-buf 1+ c@ h# 3f and to phyid
+: ax-mii!  ( w reg -- )
+   swap ax-buf le-w!
+   ax-buf 2  rot  phyid  8 ax-control-set \ AX_CMD_WRITE_MII_REG
 ;
 
-: ax8817x-link-up?  ( -- up? )
-   ax8817x-mii-sw
-   1 ax8817x-mii@ 4 and			\ BMSR_LSTATUS=1 => link is up
-   ax8817x-mii-hw
+: ax-get-phyid  ( -- )
+   ax-buf 2 0 0 h# 19 ax-control-get  \ AX_CMD_READ_PHY_ID
+   ax-buf 1+ c@ h# 3f and to phyid
 ;
 
-: ax8817x-init-mii  ( -- )
-   ax8817x-mii-sw
-   ax88772?  if
-      phyid h# 10 =  if
-         2 ax8817x-mii@ h# 3b <>  if  ." Wrong PHY ID for ax88772" cr  then
+: ax-link-up?  ( -- up? )
+   ax-mii-sw
+   1 ax-mii@ 4 and			\ BMSR_LSTATUS=1 => link is up
+   ax-mii-hw
+;
 
-         \ Power-cycle internal PHY
-         h#  8 ax88772-sw-reset  d# 150 ms  \ Power off internal PHY with external one reset
-         h# 28 ax88772-sw-reset  d# 150 ms  \ Rower on internal PHY with external one reset
-      then
-   then
+: ax-init-mii  ( -- )
+   ax-mii-sw
+\   ax88772?  if
+\      phyid h# 10 =  if
+\         2 ax-mii@ h# 3b <>  if  ." Wrong PHY ID for ax88772" cr  then
+\      else
+\      then
+\   then
 
-   h# 8000 0 ax8817x-mii!		\ BMCR reset
+   h# 8000 0 ax-mii!		\ BMCR reset
 
    ax88772?  if  h# 1e1  else  h# 5e1  then  \ No pause for 88772
-   ( bits) 4 ax8817x-mii!		\ Advertise 10/100, half/full/full pause
-   h# 1200 0 ax8817x-mii!		\ Enable auto neg & restart
+   ( bits) 4 ax-mii!		\ Advertise 10/100, half/full/full pause
+   h# 1200 0 ax-mii!		\ Enable auto neg & restart
 
    ax88772?  if
       h# 336  h# 1b  control!  \ AX_CMD_WRITE_MEDIUM_MODE
    then
 
-   ax8817x-mii-hw
+   ax-mii-hw
 ;
 
 \ I have a wait here because it takes a while for BMSR_LSTATUS to be set if
@@ -144,60 +151,88 @@ h# 0013.0103 value ax8817x-gpio		\ GPIO toggle values
 \ and subsequent opens would fail.  I haven't figured out why yet.  It appears
 \ to be ok if one waits prior to finishing up open.
 
-: ax8817x-auto-neg-wait  ( -- )
+: ax-auto-neg-wait  ( -- )
    \ Empirically, at loop count d# 137-139, if connected, link-up? returns true.
-   \ But, I've seen loop count as high as d# 1020 in Longmont.
+   \ But, I've seen loop count as high as d# 1020.
    \ I increase the loop count in case the partner is slow in negotiating.
    \ And if there's no connection at all, let's not wait too long.
-   d# 2000 0  do  ax8817x-link-up? ?leave  1 ms  loop
+   d# 2000 0  do  ax-link-up? ?leave  1 ms  loop
 ;
 
 : select-phy  ( -- )
    ax88772?  if
-      1 h# 22 control!  \ AX_CMD_SW_PHY_SELECT Manually select built-in PHY
-      \ 0 h# 22 control!  \ AX_CMD_SW_PHY_SELECT Manually select external PHY
-      \ 2 h# 22 control!  \ AX_CMD_SW_PHY_SELECT Automatically select based on link status of built-in PHY
+      \ Linksys USB200M uses the built-in PHY, DLink DUB-E100 uses an external one
 
-      h# 40 ax88772-sw-reset  d# 150 ms  \ Power off internal PHY
-      h#  0 ax88772-sw-reset  d# 150 ms  \ Power on internal PHY
-      h# 28 ax88772-sw-reset  d# 150 ms  \ Release internal PHY, reset external one
+      \ Good for Linksys, bad for DLink DUB-E100
+      \ 1 h# 22 control!  \ AX_CMD_SW_PHY_SELECT Manually select built-in PHY
+
+      \ Good for DLink, bad for Linksys
+      \ 0 h# 22 control!  \ AX_CMD_SW_PHY_SELECT Manually select external PHY
+
+      \ Works for both Linksys USB200M and DLink DUB-E100, so long as there is
+      \ a link connected.  It probably wouldn't work for Linksys if you started
+      \ with the link disconnected and then tried to connect it later
+      \ AX_CMD_SW_PHY_SELECT Automatically select based on link status of built-in PHY
+      \ 2 h# 22 control!
+
+      phyid  h# 10 =  if   \ Primary phy is built-in
+         \ Reset internal PHY, leaving external phy reset tri-stated
+         h#  4 ax-sw-reset  d# 150 ms  \ Assert internal PHY reset
+         h# 24 ax-sw-reset  d# 150 ms  \ Release internal PHY reset
+
+         1 h# 22 control!  \ AX_CMD_SW_PHY_SELECT Manually select built-in PHY
+
+      else                 \ Primary phy is external
+
+         \ 40: Power-down internal PHY
+         \  4: Tri-state external PHY reset pin so external resistor controls it
+         h# 44 ax-sw-reset
+
+         0 h# 22 control!  \ AX_CMD_SW_PHY_SELECT Manually select external PHY
+      then
+
+      h# 40 ax-sw-reset  d# 150 ms  \ Power off internal PHY
+      h#  0 ax-sw-reset  d# 150 ms  \ Power on internal PHY
+      h# 28 ax-sw-reset  d# 150 ms  \ Release internal PHY, reset external one
    then
 ;
 
 : rx-ctl!  ( n -- )  h# 10 control!  ;    \ AX_CMD_WRITE_RX_CTL
-: ax8817x-start-nic  ( -- )
+: ax-start-nic  ( -- )
    h# 8c  my-args  " promiscuous" $=  if  1 or  then  rx-ctl!
 ;
-: ax8817x-stop-nic  ( -- )  0 rx-ctl!  ;
+: ax-stop-nic  ( -- )  0 rx-ctl!  ;
 
-: ax8817x-init-nic  ( -- )		\ Per ax8817x_bind
+: ax-init-nic  ( -- )		\ Per ax8817x_bind
    ax88772?  if  true to multi-packet?  then
 
-   ax8817x-toggle-gpio
+   ax-toggle-gpio
+   ax-get-phyid
    select-phy
    h# 80 rx-ctl!  \ Turn off receiver during setup
-   \ ax8817x-stop-nic
-   ax8817x-get-mac-address  2drop
-   ax8817x-set-ipg
-   ax8817x-get-phyid
-   ax8817x-init-mii
-   ax8817x-auto-neg-wait
-   ax8817x-start-nic
+   \ ax-stop-nic
+   ax-get-mac-address  2drop
+   ax-set-ipg
+   ax-init-mii
+   ax-auto-neg-wait
+   ax-start-nic
 ;
 
-: init-ax8817x  ( -- )
-   ['] ax8817x-init-nic to init-nic
-   ['] ax8817x-link-up? to link-up?
-   ['] ax8817x-start-nic to start-nic
-   ['] ax8817x-stop-nic  to stop-nic
-   ['] ax8817x-get-mac-address to get-mac-address
-   vid h# 2001 =  pid h# 1a00 = and  if  h# 009f.9d9f to ax8817x-gpio  then
-   vid h# 07b8 =  pid h# 420a = and  if  h# 001f.1d1f to ax8817x-gpio  then
+: init-ax  ( -- )
+   ['] ax-init-nic  to init-nic
+   ['] ax-link-up?  to link-up?
+   ['] ax-start-nic to start-nic
+   ['] ax-stop-nic  to stop-nic
+   ['] ax-get-mac-address to get-mac-address
+   vid h# 2001 =  pid h# 1a00 = and  if  h# 009f.9d9f to ax-gpio  then
+   vid h# 07b8 =  pid h# 420a = and  if  h# 001f.1d1f to ax-gpio  then
+   d# 2048 to /inbuf
+   d# 2048 to /outbuf
 ;
 
 : init  ( -- )
    init
-   vid pid net-ax8817x?  if  init-ax8817x  then
+   vid pid net-ax8817x?  if  init-ax  then
 ;
 
 \ LICENSE_BEGIN
