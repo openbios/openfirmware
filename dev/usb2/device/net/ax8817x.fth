@@ -1,21 +1,21 @@
-purpose: AX8817X based ethernet driver
+purpose: Driver for Asix AX8817X and AX88772-based network interfaces
 \ See license at end of file
 
 headers
 hex
 
-\ Other values:
+\ Other values - set in init-ax:
 \ DLink DUB-E100 USB Ethernet 0x009f9d9f
 \ Hawking UF200 USB Ethernet  0x001f1d1f
 
-
 h# 0013.0103 value ax-gpio		\ GPIO toggle values
+
 \ This may need to optimized at some point
 : ax88772?  ( -- flag )
-   " vendor-id" get-my-property  if  false exit  then  ( adr len )
-   decode-int  nip nip  case                           ( vid )
-      h# 13b1  of  true exit  endof  \ Vendor ID for Linksys USB200M rev 2
-      h# 2001  of  true exit  endof  \ Vendor ID for D-Link DUB-E100
+   pid vid wljoin   case                          ( vid.pid )
+      h# 13b1.0018  of  true exit  endof  \ ID for Linksys USB200M rev 2
+      h# 2001.3c05  of  true exit  endof  \ ID for D-Link DUB-E100 rev B
+      h# 07d1.3c05  of  true exit  endof  \ Alternate ID for D-Link DUB-E100 rev B
    endcase
    false
 ;
@@ -53,6 +53,8 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
    DR_IN DR_VENDOR or DR_DEVICE or swap control-get  2drop
 ;
 
+\ This isn't really necessary because all the important information in the
+\ EEPROM (node id, phyid, descriptors) can be accessed via other commands
 : ax-eeprom@  ( index -- w ) 
    >r ax-buf 2  0  r> h# b  ax-control-get
    ax-buf le-w@
