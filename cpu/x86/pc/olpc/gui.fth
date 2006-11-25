@@ -16,7 +16,7 @@ d# 0  d# 0  2value first-icon-xy
 ;
 
 : $get-image  ( filename$ -- true | adr,len false )
-   $read-open                        ( )
+   ['] $read-open catch  if  2drop true exit  then  ( )
    ifd @ fsize  dup alloc-mem swap   ( bmp-adr,len )
    2dup  ifd @ fgets  over <>        ( bmp-adr,len error? )
    ifd @ fclose                      ( bmp-adr,len )
@@ -27,6 +27,7 @@ d# 0  d# 0  2value first-icon-xy
    $get-image  if  exit  then  2dup show-565  free-mem
 ;
 : $show&advance  ( filename$ -- )
+   0 to image-width   \ In case $show fails
    $show
    icon-xy  image-width 0  d+  to icon-xy
 ;
