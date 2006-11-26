@@ -105,9 +105,9 @@ d# 53 constant dns-port#
    /dns-query allocate-udp >r
    r@ start-encode
    next-xid lwsplit drop  to dns-xid   \ DNS transaction IDs are 16 bits
-   \ Flags=10 means standard query, recursion desired (10)
+   \ Flags=100 means standard query, recursion desired (100)
    \        ID       flags    #questions  #answers  #namesrvrs  #additional
-   dns-xid +dnsw  h# 10 +dnsw  1 +dnsw     0 +dnsw   0 +dnsw     0 +dnsw
+   dns-xid +dnsw  h# 100 +dnsw  1 +dnsw     0 +dnsw   0 +dnsw     0 +dnsw
    +dns-host
    1 +dnsw  1 +dnsw
    x$  fw-port# dns-port# send-udp-packet
