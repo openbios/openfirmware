@@ -477,7 +477,7 @@ fload ${BP}/ofw/core/dualconsole.fth
    " keyboard" expand-alias  if   ( devspec$ )
       drop " /usb"  comp  0=  if  ( )
          red-letters  ." Using USB keyboard." cr  black-letters
-         " keyboard" output
+         " keyboard" input
       then
    then
 
