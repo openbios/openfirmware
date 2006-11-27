@@ -310,9 +310,7 @@ false value error-shown?
 
 [ifdef] resident-packages
 dev /obp-tftp
-: (configured)  ( -- )
-   " rom:netconfigured.565" $show
-;
+: (configured)  ( -- )  " rom:netconfigured.565" $show  ;
 : show-timeout  ( adr len -- )
    2dup (.dhcp-msg)                 ( adr len )
    " Timeout" $=  not-screen? 0=  and  if
@@ -320,8 +318,8 @@ dev /obp-tftp
       .sysinfo
    then
 ;
-' show-timeout to .dhcp-msg
-' (configured) to configured
+\ ' show-timeout to .dhcp-msg
+\ ' (configured) to configured
 device-end
 [then]
 
