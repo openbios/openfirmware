@@ -2,6 +2,7 @@
 purpose: Interrupt or modify startup sequence by keyboard command
 
 headerless
+false value early-interact?
 false value show-chords?
 defer .chord-prefix
 \ : alt-prefix  ." ALT-"  ;
@@ -20,13 +21,7 @@ headers
 : f3  ( -- )  " Setting network debugging switch" .because  debug-net  ;
 : f4  ( -- )  " Setting diag-switch?" .because   true to diag-switch?  ;
 : f5  ( -- )  " Resetting NVRAM to default values" .because  set-defaults  ;
-: f6  ( -- )
-   " Interrupting startup sequence" .because
-   ." Input and output on serial port." cr
-   ." Type 'resume'  to resume normal startup sequence." cr
-   \ fallback-device io console-io
-   ( help-msg ) interact
-;
+: f6  ( -- )  true to early-interact?  ;
 alias h f1
 alias a f2
 alias b f3

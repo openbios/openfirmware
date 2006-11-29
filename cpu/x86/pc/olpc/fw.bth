@@ -275,7 +275,7 @@ hex
    \ Open OHCI so it will claim USB 1 devices that the EHCI controller disowns
    " /usb@f,4" select-dev
    " power-usb-ports" eval  \ Get the devices going
-\  d# 500 ms
+   d# 500 ms
 
    probe-usb2               \ First dibs to EHCI/USB2
 
@@ -444,7 +444,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
-   ?bailout
+\   ?bailout
 
    no-page
 \   ." calibrate-ms"  cr
@@ -464,6 +464,12 @@ fload ${BP}/ofw/core/dualconsole.fth
    install-dual-console
    ?gui-banner
 
+   early-interact?  if
+      " Interrupting startup sequence prior to probing" .because
+      ." Type 'resume'  to resume normal startup sequence." cr
+      \ fallback-device io console-io
+      ( help-msg ) interact
+   then
 
 \   ." nvramrc" cr
 \   use-nvramrc?  if  nvramrc safe-evaluate  then
