@@ -325,8 +325,8 @@ d# 12,000  constant scanline-spins
    \ change the mode back to VGA timing and resolution
 
    dcon? tft-mode? and  if
-      d# 1200 to /displine
-      d# 1200 to /scanline
+      d# 1200 bytes/pixel * to /displine
+      d# 1200 bytes/pixel * to /scanline
       d# 900 to #scanlines
    else
       set-mode                \ Redo the mode for VGA
