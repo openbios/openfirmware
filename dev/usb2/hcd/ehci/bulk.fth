@@ -138,8 +138,8 @@ external
 : end-bulk-in  ( -- )
    debug?  if  ." end-bulk-in" cr  then
    bulk-in-qh 0=  if  exit  then
-   bulk-in-qh dup fixup-bulk-in-data
    bulk-in-qtd map-out-bptrs
+   bulk-in-qh dup fixup-bulk-in-data
    dup remove-qh  free-qhqtds
    0 to bulk-in-qh  0 to bulk-in-qtd
 ;
@@ -170,8 +170,8 @@ external
    then
 
    usb-error					( actual usberr )
-   my-qh dup fixup-bulk-in-data
    my-qtd map-out-bptrs
+   my-qh dup fixup-bulk-in-data
    dup remove-qh  free-qhqtds
 ;
 
@@ -192,8 +192,8 @@ external
    my-qh done? 0=  if  my-qh error? drop  then
 
    usb-error					( actual usberr )
-   my-qh dup fixup-bulk-out-data
    my-qtd map-out-bptrs
+   my-qh dup fixup-bulk-out-data
    dup remove-qh  free-qhqtds
 ;
 
