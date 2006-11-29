@@ -26,8 +26,11 @@ forth: ${OBJS}
 	${CC} -o $@ ${OBJS}
 	@ln -sf forth x86forth
 
+# Compile with -O0 because with GCC4, higher optimization levels cause the
+# functions to be reordered so the "inflate" entry point is no longer at
+# the beginning.
 inflate.o: ${ZIPDIR}/inflate.c
-	${CC} -c -O1 -fpic $< -o $@
+	${CC} -c -O0 -fpic $< -o $@
 
 ../build/inflate.bin: inflate.o
 	objcopy -O binary $< $@
