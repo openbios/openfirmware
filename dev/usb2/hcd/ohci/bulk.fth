@@ -186,8 +186,8 @@ external
    then
 
    usb-error					( actual usberr )
-   my-ed dup fixup-bulk-in-data			( actual usberr ed )
    my-td map-out-cbp				( actual usberr ed )
+   my-ed dup fixup-bulk-in-data			( actual usberr ed )
    remove-my-bulk				( actual usberr )
 ;
 
@@ -207,8 +207,8 @@ external
    my-ed done? 0=  if  my-td error? drop  then
 
    usb-error					( actual usberr )
-   my-ed dup fixup-bulk-out-data
    my-td map-out-cbp
+   my-ed dup fixup-bulk-out-data
    remove-my-bulk
 ;
 

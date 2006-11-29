@@ -188,9 +188,10 @@ external
    then
 
    usb-error					( actual usberr )
-   my-td my-#tds fixup-bulk-in-data
-   my-td map-out-buf
-   my-qh dup  remove-qh  free-qhtds
+   my-qh					( actual usberr qh )
+   my-td dup map-out-buf			( actual usberr qh td )
+   my-#tds fixup-bulk-in-data			( actual usberr qh )
+   dup  remove-qh  free-qhtds			( actual usberr )
 ;
 
 : bulk-out  ( buf len pipe -- usberr )
@@ -209,9 +210,10 @@ external
    my-qh done? 0=  if  my-td error? drop  then
 
    usb-error					( actual usberr )
-   my-td my-#tds fixup-bulk-out-data
-   my-td map-out-buf
-   my-qh dup  remove-qh  free-qhtds
+   my-qh					( actual usberr qh )
+   my-td dup map-out-buf			( actual usberr qh td )
+   my-#tds fixup-bulk-out-data			( actual usberr qh )
+   dup  remove-qh  free-qhtds			( actual usberr )
 ;
 
 headers
