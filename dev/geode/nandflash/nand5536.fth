@@ -17,6 +17,11 @@ defer lmove
 : nand@  ( reg# -- b )  nand-base + c@  ;
 : nand!  ( b reg# -- )  nand-base + c!  ;
 
+h#     800 instance value /page
+h#  2.0000 instance value /eblock
+
+8 constant /ecc
+
 : clear-ecc  ( -- )  3 h# 815 nand!  ;
 : get-ecc  ( -- )  h# 811 nand@  h# 812 nand@  bwjoin  ;
 
