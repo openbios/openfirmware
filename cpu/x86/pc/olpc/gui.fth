@@ -289,7 +289,7 @@ false value error-shown?
    stdout @ to screen-ih
 
    text-area?  if
-      d# 144 to text-y
+      d# 146 to text-y
       first-icon-xy to icon-xy
    else
       null-output
