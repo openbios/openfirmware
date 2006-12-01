@@ -38,6 +38,9 @@ my-address my-space h# 200.0010 + encode-phys encode+
 \   4 my-w@  6 invert and  4 my-w!  \ No need to turn it off
 ;
 
+h#     800 instance value /page
+h#  2.0000 instance value /eblock
+
 h# e constant /ecc
 
 \ This resets the NAND controller in case the DMA gets hung or something
@@ -104,12 +107,14 @@ h# 0220.0080 0 5 >cmd constant write-cmd
 : dma-off  ( -- )  0 h# 40 cl!  ;
 
 : wait-write-done  ( -- )
-   begin
+   0               ( status )
+   begin           ( status )
+     drop          ( )
      read-status   ( status )
-     dup 1 and  if  ." Write error" cr  then
-\ If the value is completely 0 I think it means write protect     
-     h# 40 and
-   until
+     dup h# 40 and ( status flag )
+   until           ( status )
+   \ If the value is completely 0 I think it means write protect     
+   1 and  if  ." NAND write error" cr  then
 ;
 
 \ Assumes that the range doesn't straddle a page boundary
@@ -126,9 +131,19 @@ h# 0220.0080 0 5 >cmd constant write-cmd
    swap r> move                        ( )
 ;
 
-: pio-write  ( adr len page# offset -- )
+: pio-write-raw  ( adr len page# offset -- )
    write-enable
    dma-off  set-address  dup datalen   ( adr len )
+   chip h# 2000 +  swap  move          ( )
+   h# 2000.0110 cmd2  write-cmd  cmd   ( ) \ 2000. 2K page, (No Auto ECC)
+   wait-write-done
+   write-disable
+;
+
+: pio-write-page  ( adr page# -- )
+   write-enable  dma-off               ( adr page# )
+   0 set-address                       ( adr )
+   /page h# e +  dup datalen           ( adr len )
    chip h# 2000 +  swap  move          ( )
    h# 6800.0110 cmd2  write-cmd  cmd   ( ) \ 4000. Auto ECC, 2000. 2K page, 0800 R/S ECC
    wait-write-done
@@ -189,9 +204,9 @@ h# 0220.0080 0 5 >cmd constant write-cmd
    write-disable
 ;
 
-: dma-write-ecc  ( adr page# offset -- )  \ Size is fixed
-   write-enable                          ( adr page# offset )
-   set-address                           ( adr )
+: dma-write-page  ( adr page# -- )  \ Size is fixed
+   write-enable                          ( adr page# )
+   0 set-address                         ( adr )
    h# 800 h# 80e  false dma-setup        ( )
    h# 6800.0110 cmd2  write-cmd  cmd     ( )  \ Auto-ECC, 2KB, RS, write cmd
    wait-write-done

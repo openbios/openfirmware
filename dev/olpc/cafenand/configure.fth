@@ -1,9 +1,6 @@
 \ See license at end of file
 purpose: Common code for NAND FLASH access
 
-h#     800 instance value /page
-h#  2.0000 instance value /eblock
-
 h#  4.0000 instance value pages/chip
 h#      40 instance value pages/eblock
 

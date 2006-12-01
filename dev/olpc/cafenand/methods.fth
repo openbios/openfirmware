@@ -39,11 +39,11 @@ external
    drop  r>
 ;
 
-: write-blocks  ( adr page# #pages -- #read )
+: write-blocks  ( adr page# #pages -- #written )
    dup >r          ( adr page# #pages r: #pages )
    bounds  ?do                          ( adr )
       \ XXX need some error handling
-      dup /page /ecc +  i 0  pio-write  ( adr )
+      dup i pio-write-page              ( adr )
       /page +                           ( adr' )
    loop                                 ( adr )
    drop  r>
@@ -89,10 +89,10 @@ external
    find-good-block
    copy-page# erase-block
    copy-page#  pages/eblock  bounds  ?do  ( adr )
-      dup h# 80e  i 0  pio-write          ( adr )
+      dup i pio-write-page                ( adr )
 
 \ For some reason this isn't working
-\      dup  i 0  dma-write-ecc             ( adr )
+\      dup  i dma-write-page              ( adr )
 
       /page +                             ( adr' )
    loop                                   ( adr )
