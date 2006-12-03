@@ -1,10 +1,6 @@
 \ See license at end of file
 purpose: JFFS2 reader
 
-\ Optimizations to consider:
-\ 1) Keep the summary info in memory after the first call
-\    so subsequent calls go faster.
-
 d# 20,000 constant max-inodes
 
 0 value debug-scan?  \ True to display progress reports
@@ -156,15 +152,16 @@ true value first-time?
 : eblock>page  ( eblock# -- page# )  pages/eblock *  ;
 : page>eblock  ( page# -- eblock# )  pages/eblock /  ;
 
-: read-pages  ( page# #pages  -- )
+: read-pages  ( page# #pages  -- error? )
    tuck  block-buf -rot  " read-blocks" $call-parent  ( #pages #read )
-   <> abort" Bad read"
+   <>
 ;
 0 ( instance ) value have-eblock#  \ For avoiding redundant reads
 : read-eblock  ( eblock# -- )
    dup have-eblock#  <>  if   ( eblock# )
       to have-eblock#         ( )
       have-eblock# eblock>page  pages/eblock  read-pages
+      abort" jffs2: bad read"
    else
       drop
    then                      ( )
@@ -172,7 +169,7 @@ true value first-time?
 
 0 ( instance ) value sumsize
 
-: get-summary  ( page# -- adr )
+: get-summary  ( page# -- true | adr false )
    \ Get the size of the summary node
    block-buf /page + -2 j@   ( page# sumstart )
   
@@ -187,10 +184,10 @@ true value first-time?
    pages/eblock over -         ( byte# page# page-offset# #tail-pages)
 
    \ Read them
-   >r  +  r>  read-pages       ( byte# )
+   >r  +  r>  read-pages  if  drop true exit  then   ( byte# )
 
    \ Return the memory address of the summary
-   block-buf +
+   block-buf +  false
 ;
 
 \ Summary node:   0: magic|type 1: totlen 2: hdr_crc 3: #sum_entries
@@ -257,7 +254,7 @@ true value first-time?
 [then]
 
 : scan-sumnode  ( len adr -- len removed-len )
-   dup w@ case
+   dup w@ case     ( len adr case: type )
       inode-type  of  scan-sum-inode   endof
       dirent-type of  scan-sum-dirent  endof
       xattr-type  of  drop  d# 18   ." XA" cr   endof
@@ -278,23 +275,26 @@ true value first-time?
 \ drop true
 
 \ dup h# 47100 = if debug-me then
-   dup pages/eblock + 1-  1  read-pages           ( page# )
+   dup pages/eblock + 1-  1  read-pages  if       ( page# )
+      drop true exit
+   then                                           ( page# )
 
    \ Check magic number
    block-buf /page + -1 j@                        ( page# magic )
    h# 02851885  <>  if   drop true exit  then     ( page# )
 
-   get-summary                                    ( adr )
+   get-summary   if  true exit  then              ( adr )
    dup bad-summary?  if  drop true exit then      ( adr )
    scan-summary  false
 ;
 
-: possibly-dirty?  ( page# -- flag )
+: possible-nodes?  ( page# -- flag )
    \ We could scan as we go and bail out early - but if we did, it wouldn't
    \ help, because when we find a dirty page, we have to scan the
    \ entire erase block anyway.
 
-   /empty-scan /page round-up  /page /  read-pages   ( )
+   /empty-scan /page round-up  /page /  read-pages   ( error? )
+   if  false exit  then                              ( )
 
    block-buf  /empty-scan  bounds  ?do
       i l@ h# ffff.ffff <>  if  true unloop exit  then
@@ -410,7 +410,7 @@ true value first-time?
    pages/chip  0  do
       i page>eblock  to the-eblock#
       i no-summary?  if
-         i possibly-dirty?  if  i scan-raw-nodes  then
+         i possible-nodes?  if  i scan-raw-nodes  then
       then
    pages/eblock +loop
 ;

@@ -8,6 +8,8 @@ external
    init
    configure 0=  if  false exit  then
 
+   get-bbt
+
    my-args  dup  if   ( arg$ )
       " jffs2-file-system" find-package  if  ( arg$ xt )
          interpose  true   ( okay? )
@@ -28,77 +30,8 @@ external
 
 : dma-free  ( adr len -- )  " dma-free" $call-parent  ;
 
-: read-blocks  ( adr page# #pages -- #read )
-   dup >r          ( adr page# #pages r: #pages )
-   bounds  ?do                  ( adr )
-      \ XXX need some error handling
-      \ XXX can we read 80e bytes but only have 800 go via dma?
-      dup /page i 0  dma-read   ( adr )
-      /page +                   ( adr' )
-   loop                         ( adr )
-   drop  r>
-;
-
-: write-blocks  ( adr page# #pages -- #written )
-   dup >r          ( adr page# #pages r: #pages )
-   bounds  ?do                          ( adr )
-      \ XXX need some error handling
-      dup i pio-write-page              ( adr )
-      /page +                           ( adr' )
-   loop                                 ( adr )
-   drop  r>
-;
-
-: read-oob  ( page# -- adr )
-   h# 40  swap  h# 800  read-cmd  h# 130 generic-read
-;
-
-: erase-blocks  ( page# #pages -- #pages )
-   tuck  bounds  ?do  i erase-block  pages/eblock +loop
-;
-
-: block-size    ( -- n )  /page  ;
-
-: erase-size    ( -- n )  /eblock  ;
-
-: max-transfer  ( -- n )  /eblock  ;
-
 headers
 
-variable temp
-0 instance value copy-page#
-: +copy-page  ( -- )  copy-page# pages/eblock +  to copy-page#  ;
-
-: find-good-block  ( -- )
-   begin
-      temp 4  copy-page#    h# 83c  pio-read  temp @  0=
-      temp 4  copy-page# 1+ h# 83c  pio-read  temp @  0=
-   or  while
-      +copy-page
-   repeat
-;
-
-external
-
-\ These methods are used for copying a verbatim file system image
-\ onto the NAND FLASH, automatically skipping bad blocks.
-
-: start-copy  ( -- )  0 to copy-page#  ;
-
-: copy-block  ( adr -- )
-   find-good-block
-   copy-page# erase-block
-   copy-page#  pages/eblock  bounds  ?do  ( adr )
-      dup i pio-write-page                ( adr )
-
-\ For some reason this isn't working
-\      dup  i dma-write-page              ( adr )
-
-      /page +                             ( adr' )
-   loop                                   ( adr )
-   drop                                   ( )
-   +copy-page
-;
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

@@ -11,6 +11,8 @@ external
    h# 51400010 msr@ drop to nand-base
    configure 0=  if  false exit  then
 
+   get-bbt
+
    my-args  dup  if   ( arg$ )
       " jffs2-file-system" find-package  if  ( arg$ xt )
          interpose  true   ( okay? )
@@ -30,72 +32,8 @@ external
 
 : dma-free  ( adr len -- )  " dma-free" $call-parent  ;
 
-: read-blocks  ( adr page# #pages -- #read )
-   dup >r          ( adr page# #pages r: #pages )
-   bounds  ?do                  ( adr )
-      dup i page-read           ( adr )
-      /page +                   ( adr' )
-   loop                         ( adr )
-   drop  r>
-;
-
-[ifdef] notdef
-: write-blocks  ( adr page# #pages -- #read )
-   dup >r          ( adr page# #pages r: #pages )
-   bounds  ?do                          ( adr )
-      \ XXX need some error handling
-      dup i page-write                  ( adr )
-      /page +                           ( adr' )
-   loop                                 ( adr )
-   drop  r>
-;
-[then]
-
-[ifdef] notdef
-: erase-blocks  ( page# #pages -- #pages )
-   tuck  bounds  ?do  i erase-block  pages/eblock +loop
-;
-[then]
-
-: block-size    ( -- n )  /page  ;
-
-: erase-size    ( -- n )  /eblock  ;
-
-: max-transfer  ( -- n )  /eblock  ;
-
 headers
 
-[ifdef] notdef
-variable temp
-0 instance value copy-page#
-: +copy-page  ( -- )  copy-page# pages/eblock +  to copy-page#  ;
-
-: find-good-block  ( -- )
-   begin
-      copy-page#    read-oob  h# 3c + @  0=
-      copy-page# 1+ read-oob  h# 3c + @  0=
-   or  while
-      +copy-page
-   repeat
-;
-
-external
-
-\ These methods are used for copying a verbatim file system image
-\ onto the NAND FLASH, automatically skipping bad blocks.
-
-: start-copy  ( -- )  0 to copy-page#  ;
-
-: copy-block  ( adr -- )
-   find-good-block
-   copy-page# erase-block
-   copy-page#  pages/eblock  bounds  ?do  ( adr )
-      dup i page-write                    ( adr )
-      /page +                             ( adr' )
-   loop                                   ( adr )
-   drop                                   ( )
-   +copy-page
-;
 [then]
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

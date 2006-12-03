@@ -42,6 +42,7 @@ h#     800 instance value /page
 h#  2.0000 instance value /eblock
 
 h# e constant /ecc
+h# e constant bb-offset  \ Location of bad-block table signature in OOB data
 
 \ This resets the NAND controller in case the DMA gets hung or something
 : soft-reset  ( -- )  1 h# 3034 cl!  0 h# 3034 cl!  ;
@@ -150,6 +151,10 @@ h# 0220.0080 0 5 >cmd constant write-cmd
    write-disable
 ;
 
+: read-oob  ( page# -- adr )
+   h# 40  swap  h# 800  read-cmd  h# 130 generic-read
+;
+
 : read-rst     ( -- )  h# 8000.0000 h# c cl!  ;
 
 [ifdef] notdef
@@ -194,7 +199,10 @@ h# 0220.0080 0 5 >cmd constant write-cmd
 \   dma-release                         ( )
 ;
 
-: dma-write  ( adr len page# offset -- )
+\ XXX should check ECC
+: dma-read-page  ( adr page# -- )  /page swap 0 dma-read  ;
+
+: dma-write-raw  ( adr len page# offset -- )
    write-enable                          ( adr len page# offset )
    set-address                           ( adr len )
    dup  false dma-setup                  ( )
@@ -213,6 +221,10 @@ h# 0220.0080 0 5 >cmd constant write-cmd
 \   dma-release
    write-disable
 ;
+
+: read-page    ( adr page# -- )  dma-read-page   ;
+: write-page   ( adr page# -- )  dma-write-page  ;
+: write-bytes  ( adr len page# offset -- )  pio-write-raw  ;
 
 3 value #erase-adr-bytes  \ Chip dependent
 : erase-block  ( page# -- )

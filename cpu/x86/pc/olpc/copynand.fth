@@ -16,6 +16,9 @@ purpose: Copy a file onto the NAND FLASH
    open-nand
    safe-parse-word  open-dev  to fileih
    fileih 0=  if  nandih close-dev  true abort" Can't open file"  then
+   ." Erasing..." cr
+   " wipe" nandih $call-method
+   cr ." Writing..." cr
    0
    begin
       load-base /nand-block  " read" fileih $call-method
