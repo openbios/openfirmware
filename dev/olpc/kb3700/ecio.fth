@@ -23,7 +23,7 @@ h# fc2a	constant GPIO5
    h# ff h# 6c pc!   \ Release ownership
 ;
 
-: kb3920?  ( -- flag )  9 ec-cmd 9 =  ;
+: kb3920?  ( -- flag )  h# 6c pc@ h# ff =  if  true exit  then   9 ec-cmd 9 =  ;
 
 \ While accessing the SPI FLASH, we have to turn off the keyboard controller,
 \ because it continuously fetches from the SPI FLASH when it's on.  That
