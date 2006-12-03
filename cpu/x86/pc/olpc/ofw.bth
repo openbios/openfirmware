@@ -25,9 +25,16 @@ fload ${BP}/cpu/x86/pc/builton.bth
 
 hex
 
+[ifdef] bzimage-loaded
+.( --- Saving as ofw.bzi - Linux kernel format) cr
+fload ${BP}/cpu/x86/pc/bzhdr.fth
+   writing ofw.bzi
+   bz-hdr /bz-hdr  0  " bz-header"  write-dropin
+[else]
 .( --- Saving as ofw.elf - LinuxBIOS payload format) cr
 writing ofw.elf
    " elfhdr.di"             $add-file
+[then]
 
    " reset.di"              $add-file
    " start.di"              $add-file
