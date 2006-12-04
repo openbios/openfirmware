@@ -425,8 +425,7 @@ true value first-time?
    moffset@  block-buf +               ( inode-adr )
 ;
 
-: minode-good?  ( minode -- flag )
-   get-inode                    ( riadr )
+: inode-good?  ( inode -- flag )
    dup  d# 15 /l*  crc          ( riadr node-crc )
    over rincrc@ <>   if         ( riadr )
       drop false exit           ( -- false )
@@ -434,6 +433,7 @@ true value first-time?
    dup >ridata over ricsize@    ( riadr data-adr data-len )
    crc  swap ridcrc@ =
 ;
+: minode-good?  ( minode -- flag )  get-inode inode-good?  ;
 
 \ This is a brute-force, no tricks, insertion sort.
 \ Insertion sort is bad for large numbers of elements, but in this
@@ -547,19 +547,24 @@ c;
    <> abort" Wrong uncompressed length"
 ;
 
+: .inode  ( inode - )
+   ." tot "    dup riisize@ 8 u.r space
+   ." len "    dup ridsize@ 8 u.r space
+   ." extent " dup rioffset@ over ridsize@ +  8 u.r space
+   ." comp "       ricompr@ 3 u.r 
+   cr
+;
 : play-inode  ( mem-inode -- )
    debug-scan?  if
       dup meblock@ 4 u.r  dup moffset@ 6 u.r space
    then
-   get-inode   ( inode )
-
-   debug-scan?  if
-      ." tot "    dup riisize@ 8 u.r space
-      ." len "    dup ridsize@ 8 u.r space
-      ." extent " dup rioffset@ over ridsize@ +  8 u.r space
-      ." comp "   dup ricompr@ 3 u.r 
-      cr
+   get-inode                     ( inode )
+   dup inode-good?  0=  if       ( inode )
+      debug-scan?  if  ." Skipping bad inode."  cr  then
+      drop exit
    then
+
+   debug-scan?  if  dup .inode cr  then
    >r
    r@ riisize@  r@ rioffset@  r@ ridsize@ +  set-length
 
