@@ -7,12 +7,20 @@ purpose: LPC/FWH FLASH writer.  This assumes a 1 MiB device.
 
 h# 1.0000 constant /lpc-block
 h# fff0.0000 constant lpc-flash-base
+
+: ?lpc  ( -- )
+   h# ffbc.0000 c@  ( id0 )
+   dup 0=  swap h# ff =  or  abort" LPC FLASH not present"
+   geode-lpc-write-enable
+;
+
+
 : >lpc-adr  ( offset -- )  lpc-flash-base +  ;
 : lpc-jedec!  ( byte -- )  h# 5555 >lpc-adr  c!  ;
 
 \ The write enable for the block at fffx.0000 is at ffbx.0002
 : lpc-write-enable-block  ( adr -- )
-   >lpc-adr  h# 0040.ffff invert and  2 or  0 over c!
+   >lpc-adr  h# 0040.ffff invert and  2 or  0 swap c!
 ;
 
 : lpc-write-setup  ( -- )  h# aa lpc-jedec!  h# 55 h# 2aaa >lpc-adr c!  ;
@@ -25,10 +33,16 @@ h# fff0.0000 constant lpc-flash-base
    begin  2dup c@ =  until  2drop        ( )
 ;
 
+: lpc-wait-toggle  ( -- )
+   lpc-flash-base c@   ( value )
+   begin  lpc-flash-base c@ tuck  =  until  ( value )
+   drop
+;
 : lpc-erase-block  ( offset -- )
    dup lpc-write-enable-block
    lpc-write-setup   h# 80 lpc-jedec!
    lpc-write-setup   h# 50 swap >lpc-adr c!
+   lpc-wait-toggle
 ;
 
 : lpc-write-block  ( adr len offset -- )
@@ -42,13 +56,12 @@ h# fff0.0000 constant lpc-flash-base
 : lpc-reflash   ( -- )   \ Flash from data already in memory
    ?file
 
-   merge-mfg-data
-
    \ Insert another CRC, this time including the mfg data
    flash-buf  /flash  crc                  ( crc )
    flash-buf  /flash +  crc2-offset -  l!  ( )
 
-   geode-lpc-write-enable
+   ?lpc
+   ." Writing" cr
 
    /flash  0  ?do
       (cr i .

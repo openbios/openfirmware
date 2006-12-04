@@ -268,6 +268,8 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH prog
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
 ' ofw-fw-filename$ to fw-filename$
 
+fload ${BP}/dev/geode/lpcflash.fth           \ Reflasher for PLCC FLASH on A-test
+
 [then]
 
 [ifdef] olpc
