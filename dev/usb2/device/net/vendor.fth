@@ -13,6 +13,7 @@ create net-ax8817x-list  here
 	2001 w,	1a00 w,		\ DLink DUB-E100
 	0b95 w,	1720 w,		\ ST Lab
 	07b8 w,	420a w,		\ Hawking UF200
+	08dd w,	90ff w,		\ Billionton Systems, USB2AR
 here swap - constant /net-ax8817x-list
 
 : net-ax8817x?  ( vid pid -- flag )
