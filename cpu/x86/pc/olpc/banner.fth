@@ -9,7 +9,12 @@ headerless
    \ major-release (.) type ." ." minor-release (.) type    sub-release type
    \ pop-base
    \ This is the manufacturing signature 
+[ifdef] linuxbios-loaded
    h# ffff.ffc0 h# 10 type cr
+[then]
+[ifdef] bzimage-loaded
+   ." booted from disk - " .built
+[then]
 ;
 
 : (xbanner-basics)  ( -- )
