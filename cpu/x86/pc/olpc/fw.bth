@@ -215,12 +215,12 @@ devalias nfs net//obp-tftp:last//nfs
 fload ${BP}/cpu/x86/pc/mscal.fth
 fload ${BP}/cpu/x86/pc/boot.fth
 
-\ false to stand-init-debug?
-true to stand-init-debug?
+false to stand-init-debug?
+\ true to stand-init-debug?
 
 
 hex
-stand-init-debug?  [if]
+\ stand-init-debug?  [if]
 warning @  warning off 
 : init
 \ initial-heap add-memory
@@ -235,7 +235,7 @@ warning @  warning off
       then
    then
 ;
-warning !
+\ warning !
 [then]
 
 : (.firmware)  ( -- )
@@ -297,8 +297,6 @@ hex
 [then]
 
 : probe-all  ( -- )
-   " probe-" do-drop-in
-   ." probe-pci"  cr
 \   debug-me
    probe-pci
 \ probe-usb
@@ -462,6 +460,7 @@ fload ${BP}/ofw/core/dualconsole.fth
    " keyboard" open-dev  ?dup  if  stdin !  then
 
    install-dual-console
+   " probe-" do-drop-in
    ?gui-banner
 
    early-interact?  if
