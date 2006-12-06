@@ -61,6 +61,8 @@ defer asm-allot		forth ' allot assembler   is asm-allot
 : asm8,   ( n -- )  here 1 asm-allot asm8!  ;
 : asm16,  ( n -- )  wbsplit swap asm8, asm8,  ;
 : asm32,  ( n -- )  lwsplit swap asm16, asm16,  ;
+: asm16!  ( w adr -- )  >r wbsplit r@ 1+ asm8!  r> asm8!  ;
+: asm32!  ( l adr -- )  >r lwsplit r@ 2+ asm16!  r> asm16!  ;
 
 false value address-ov
 false value data-ov
@@ -684,10 +686,22 @@ HEX
 
 \ Assembler version of forward/backward mark/resolve.
 
+variable long-offsets  long-offsets off
+
 : >MARK     (S -- addr )  HERE  ;  \ Address of opcode, not offset byte
 : >RESOLVE  (S addr -- )  
-   1+ here over 1+ - dup big? abort" branch offset is too large "
-   swap asm8! 
+   long-offsets @  if
+      \ Opcode is 2 bytes long
+      2 + here over   ( offset-adr target-adr offset-adr )
+      real?  if       ( offset-adr target-adr offset-adr )
+         2 + -  swap asm16!  \ 2-byte offset
+      else
+         4 + -  swap asm32!  \ 4-byte offset
+      then
+   else
+      1+ here over 1+ - dup big? abort" branch offset is too large "
+      swap asm8! 
+   then
 ;
 : <MARK     (S -- addr )  HERE   ;
 : <RESOLVE  (S addr op -- )  
@@ -727,7 +741,15 @@ HEX
 \ One of the very best features of FORTH assemblers is the ability
 \ to use structured conditionals instead of branching to nonsense
 \ labels.
-: IF      >MARK swap  ASM8,  0 asm8,  ;
+: IF
+   >MARK swap
+   long-offsets @  if
+      h# 0f asm8,  h# 10 + asm8,
+      real?  if  0 asm16,  else  0 asm32,  then
+   else
+      ASM8,  0 asm8,
+   then
+;
 : THEN    >RESOLVE   ;
 : BEGIN   <MARK   ;
 : UNTIL   <RESOLVE   ;
