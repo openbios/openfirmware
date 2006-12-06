@@ -110,7 +110,7 @@ false value probemsg?	\ Optional probing messages
       dup 2 =  if			\ atapi
          drop  " " " is-atapi" str-property   true
       else
-         6 = 				\ scsi
+         dup 5 = swap 6 = or		\ removable, scsi
       then
    else
       drop false

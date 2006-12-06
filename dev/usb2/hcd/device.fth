@@ -72,7 +72,7 @@ defer make-dev-property-hook  ( speed dev port -- )
              2  of  drop " cdrom"  endof
              3  of  drop " tape"  endof
              4  of  drop " floppy"  endof
-             5  of  drop " removable"  endof
+             5  of  drop " scsi"  endof		\ removable
              6  of  drop " scsi"  endof
              ( default ) nip " storage" rot
              endcase
