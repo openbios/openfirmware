@@ -10,8 +10,12 @@ d# 500 constant bulk-out-timeout
 0 instance value bulk-in-pipe
 0 instance value bulk-out-pipe
 
-0 instance value bulk-in-qh
-0 instance value bulk-in-qtd
+8 constant #bulk-qtd-max		\ Preallocated qtds for bulk-qh
+					\ Each qtd can transfer upto 0x5000 bytes
+0 instance value bulk-qh		\ For bulk-in and bulk-out
+
+0 instance value bulk-in-qh		\ For begin-bulk-in, bulk-in?,...
+0 instance value bulk-in-qtd		\ For begin-bulk-in, bulk-in?,...
 
 : bulk-in-data@         ( -- n )  bulk-in-pipe  target di-in-data@   di-data>td-data  ;
 : bulk-out-data@        ( -- n )  bulk-out-pipe target di-out-data@  di-data>td-data  ;
@@ -49,6 +53,25 @@ d# 500 constant bulk-out-timeout
 : alloc-bulk-qhqtds  ( -- qh qtd )
    my-buf-phys /my-buf cal-#qtd dup to my-#qtds
    alloc-qhqtds
+;
+
+: ?alloc-bulk-qhqtds  ( -- qh qtd )
+   my-buf-phys /my-buf cal-#qtd dup to my-#qtds
+   dup #bulk-qtd-max >  if  ." Requested bulk transfer is too big." cr abort  then
+
+   bulk-qh 0=  if
+      #bulk-qtd-max alloc-qhqtds drop to bulk-qh
+   then
+   ( #qtd ) bulk-qh reuse-qhqtds
+;
+: free-bulk-qhqtds  ( -- )
+   bulk-qh ?dup  if
+      dup >qh-unaligned l@ swap		( qh.u,v )
+      dup >qh-phys l@			( qh.u,v,p )
+      #bulk-qtd-max /qtd * /qh +	( qh.u,v,p size )
+      aligned32-free-map-out		( )
+      0 to bulk-qh
+   then
 ;
 
 : fill-bulk-io-qtds  ( dir qtd -- )
@@ -148,7 +171,7 @@ external
    debug?  if  ." bulk-in" cr  then
    dup to bulk-in-pipe
    bulk-in-timeout process-bulk-args
-   alloc-bulk-qhqtds  to my-qtd  to  my-qh
+   ?alloc-bulk-qhqtds  to my-qtd  to  my-qh
 
    \ IN qTDs
    TD_PID_IN my-qtd fill-bulk-io-qtds
@@ -172,14 +195,14 @@ external
    usb-error					( actual usberr )
    my-qtd map-out-bptrs
    my-qh dup fixup-bulk-in-data
-   dup remove-qh  free-qhqtds
+   remove-qh
 ;
 
 : bulk-out  ( buf len pipe  -- usberr )
    debug?  if  ." bulk-out" cr  then
    dup to bulk-out-pipe
    bulk-out-timeout process-bulk-args
-   alloc-bulk-qhqtds  to my-qtd  to my-qh
+   ?alloc-bulk-qhqtds  to my-qtd  to my-qh
 
    \ OUT qTDs
    TD_PID_OUT my-qtd fill-bulk-io-qtds
@@ -194,12 +217,12 @@ external
    usb-error					( actual usberr )
    my-qtd map-out-bptrs
    my-qh dup fixup-bulk-out-data
-   dup remove-qh  free-qhqtds
+   remove-qh
 ;
 
 headers
 
-: (end-extra)  ( -- )  end-bulk-in  ;
+: (end-extra)  ( -- )  end-bulk-in free-bulk-qhqtds ;
 
 
 \ LICENSE_BEGIN

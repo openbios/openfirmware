@@ -238,6 +238,17 @@ h# c000.0000 constant QH_MULT3
    r> >qh-size l@			( qh.u,v,p size )
    aligned32-free-map-out		( )
 ;
+: reuse-qhqtds  ( #qtds qh -- qh qtd )
+   swap dup >r  /qtd * /qh + >r		( qh )  ( R: #qtds len )
+   dup >qh-unaligned l@ swap		( qh.u,v )  ( R: #qtds len )
+   dup >qh-phys l@			( qh,u,v,p )  ( R: #qtds len )
+   over r@ erase			( qh.u,v,p )  ( R: #qtds )
+   3dup r> r@ init-qh			( qh.u,v,p )  ( R: #qtds )
+   rot drop				( qh.v,p )  ( R: #qtds )
+   over /qh + dup -rot			( qh qtd qh.p qtd )  ( R: #qtds )
+   swap /qh +				( qh qtd qtd.v,p )  ( R: #qtds )
+   r> 4 pick link-qhqtds		( qh qtd )
+;
 
 \ ---------------------------------------------------------------------------
 \ qTD Buffer Pointers management
