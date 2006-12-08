@@ -8,9 +8,9 @@ label emit  ( al: char -- )
    cx push  dx push
 
    al cl mov
-   begin   3fd # dx mov  dx al in   40 # al and  0<> until
+   begin   h# 3fd # dx mov  dx al in   h# 40 # al and  0<> until
    cl al mov   3f8 # dx mov  al dx out
-   begin   3fd # dx mov  dx al in   40 # al and  0<> until
+   begin   h# 3fd # dx mov  dx al in   h# 40 # al and  0<> until
 
    dx pop  cx pop
    ret
@@ -43,6 +43,7 @@ label dot  ( ax: n -- )
    h# 20 # al mov  emit #) call
    ret
 end-code
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
