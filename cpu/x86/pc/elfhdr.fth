@@ -12,14 +12,26 @@ create elf-header
   2            w,  \ 0x10 object file type ET_EXEC
   3            w,  \ 0x12 architecture EM_386
   1            l,  \ 0x14 object file version EV_CURRENT
+
   \ Skip this ELF dropin (80) + the OBMD header of the next dropin (20)
+[ifdef] etherboot-variant
+   \ elf-header is not a dropin, so we only need to skip OBMD header of reset
+   \ we adjust the load-address below at position 0x40
+  dropin-base  h# 20 +  l,  \ 0x18 entry point virtual address
+[else]
+   \ Skip this ELF dropin (80) + the OBMD header of the next dropin (20)
   dropin-base  h# 80 + h# 20 +  l,  \ 0x18 entry point virtual address
+[then]
   h# 34        l,  \ 0x1c program header file offset
   0            l,  \ 0x20 section header file offset
   0            l,  \ 0x24 flags
   h# 34        w,  \ 0x28 ELF header size
   h# 20        w,  \ 0x2a program header table entry size
+[ifdef] grub-loaded
+  1            w,  \ 0x2c program header table entry count (one pheader)
+[else]
   0            w,  \ 0x2c program header table entry count (no pheaders)
+[then]
   0            w,  \ 0x2e section header table entry size
   0            w,  \ 0x30 section header table entry count
   0            w,  \ 0x32 section header string table index
@@ -29,7 +41,14 @@ create elf-header
   1            l,  \ 0x34 entry type PT_LOAD
   h# 54        l,  \ 0x38 file offset
   0            l,  \ 0x3c vaddr
+[ifdef] etherboot-variant
+   \ we need to skip what left of elf-hdr. to get it to point to a dropin
+   \ why is it 0x14 ?  I would have thought it should be the size of the multiboot header
+   \ which is 0x0c
+  dropin-base  h# 14 - l,  \ 0x40 paddr         \ Where to put the bits
+[else]
   dropin-base  l,  \ 0x40 paddr         \ Where to put the bits
+[then]
   h# ffffffff  l,  \ 0x44 file size     \ backpatched later
   h# ffffffff  l,  \ 0x48 memory size   \ backpatched later
   0            l,
@@ -52,6 +71,7 @@ create elf-header
 
   \ The total size, including the dropin header, will be h# 80 
 here elf-header -  constant /elf-header
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

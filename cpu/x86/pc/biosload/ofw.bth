@@ -31,10 +31,15 @@ fload ${BP}/cpu/x86/pc/builton.bth
 hex
 
 [ifdef] grub-loaded
-  .( --- Saving as ofwgrub.elf - GRUB multiboot format) cr
   fload ${BP}/cpu/x86/pc/elfhdr.fth
+[ifdef] etherboot-variant
+  .( --- Saving as ofwnet.elf - GRUB multiboot format) cr
+  writing ofwnet.elf
+[else]
+  .( --- Saving as ofwgrub.elf - GRUB multiboot format) cr
   writing ofwgrub.elf
-    elf-header /elf-header  0  " elf-header"  write-dropin
+[then]
+    elf-header /elf-header  ofd @ fputs
 [then]
 
 [ifdef] linuxbios-loaded

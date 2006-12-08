@@ -16,6 +16,7 @@ create syslinux-loaded
 
 \ - ELF format w/ Multiboot signature - various - GRUB
 \ create grub-loaded
+\ create etherboot-variant  \ Enable additional tweaks for Etherboot
 
 \ - ELF format (no pheader) - ROM - LinuxBIOS direct
 \ create linuxbios-loaded
@@ -23,6 +24,11 @@ create syslinux-loaded
 [ifdef] pc-serial
 create serial-console
 create pc
+[then]
+
+[ifdef] etherboot-variant
+create debug-startup
+create serial-console
 [then]
 
 [ifdef] pc-linux
