@@ -172,6 +172,8 @@ headerless
 ;
 
 : try-open  ( -- )
+   " block-size" $call-parent to /sector
+   /sector alloc-mem to sector-buf
    parse-partition	( )
    select-partition     ( )
 
@@ -186,7 +188,7 @@ headers
 \ flags around, we just abort when a fatal error occurs.  The "catch"
 \ intercepts the abort and returns the appropriate flag value.
 : open  ( -- okay? )  ['] try-open  catch  0=  ;
-: close  ( -- )  ;
+: close  ( -- )  sector-buf  if  sector-buf /sector free-mem  then  ;
 : size  ( -- d )  size-low size-high  ;
 : load  ( adr -- len )
    \ This load method is used only for type 41 partitions

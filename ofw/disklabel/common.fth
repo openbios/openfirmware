@@ -11,8 +11,8 @@ h# 96 constant iso-type
 0 value ufs-partition
 0 instance value #part
 
-h# 200 constant /sector
-/sector instance buffer: sector-buf
+0 instance value /sector  \ Set in open by calling parent's block-size method
+0 instance value sector-buf
 
 0 instance value sector-offset
 

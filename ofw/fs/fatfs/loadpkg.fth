@@ -2,11 +2,11 @@
 purpose: Load file for FAT file system support package
 
 fload ${BP}/ofw/fs/fatfs/setup.fth       \ System interface definitions
-fload ${BP}/ofw/fs/fatfs/diskio.fth      \ Interface to device driver
 fload ${BP}/ofw/fs/fatfs/leops.fth       \ Little-endian (Intel) memory access
 
 fload ${BP}/ofw/fs/fatfs/dosdate.fth     \ Conv. to and from DOS packed date/time
 fload ${BP}/ofw/fs/fatfs/bpb.fth	 \ BPB definitions
+fload ${BP}/ofw/fs/fatfs/diskio.fth      \ Interface to device driver
 fload ${BP}/ofw/fs/fatfs/dirent.fth      \ Dir.entry structure & file attrib. defs
 fload ${BP}/ofw/fs/fatfs/device.fth      \ Init-fat-cache, ?read-bpb, Set-device
 fload ${BP}/ofw/fs/fatfs/rwclusts.fth    \ Cluster access, R/W, cl>sector

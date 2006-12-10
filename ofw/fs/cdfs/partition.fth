@@ -4,10 +4,7 @@ purpose: Recognizer for ISO-9660 file system type
 \ Returns true if the disk or partition is an ISO 9660 file
 \ system volume, as determined by reading the primary volume descriptor.
 : iso-9660?  ( -- flag )
-   \ CD-ROM logical sectors are 2K bytes, but this package works
-   \ in terms of 512 byte sectors, so we ask for sector 64 to
-   \ get the first part of CD-ROM logical sector 16.
-   d# 64  ['] read-sector catch  if  drop false exit  then
+   d# 16  ['] read-sector catch  if  drop false exit  then
    sector-buf c@ 1 =  sector-buf 1+ 5 " CD001"  $=  and  dup  if   ( flag )
       iso-type to partition-type
 

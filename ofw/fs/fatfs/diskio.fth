@@ -16,10 +16,11 @@
 
 private
 
+: init-sector-size  ( -- )  " block-size" $call-parent  bps w!  ;
 : translate-params  (S sector# #sectors addr -- addr #bytes )
-   rot 9 <<  0  " seek"  $call-parent  ( #sectors addr err? )
+   rot bps w@ um*  " seek"  $call-parent  ( #sectors addr err? )
    abort" seek failed in translate-params" 
-   swap 9 <<  
+   swap bps w@ *
 ;
 
 : read-sectors   (S sector# #sectors addr -- error? )

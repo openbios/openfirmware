@@ -5,7 +5,8 @@ purpose: FDisk partition map decoder
 \ which signifies the beginning of a DOS "FAT" file system.
 : fat?  ( -- flag )
    sector-buf d# 11 +  le-w@              ( bps )
-   dup d# 256 = over  d# 512 = or  swap d# 1024 = or    \ bps ok?
+   dup  dup 1- and 0=                  ( bps power-of-2? )
+   swap  d# 256  d# 4096 between  and  ( bps-ok? )
    sector-buf d# 16 + c@ 1 2 between and  ( flag )  \ #FATS ok?
 ;
 

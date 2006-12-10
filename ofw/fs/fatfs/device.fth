@@ -3,7 +3,7 @@ purpose: BPB management
 
 hex
 
-d# 1024 constant /sector-max
+d# 4096 constant /sector-max
 
 : /sector  ( -- n )  bps w@  ;
 : /cluster  ( -- n )  spc c@ /sector *  ;
@@ -73,7 +73,8 @@ d# 1024 constant /sector-max
 ;
 : not-bpb?  ( -- error? )
    bp_bps lew@                         ( bps )
-   dup d# 256 = over  d# 512 = or  swap d# 1024 = or    \ bps ok?
+   dup  dup 1- and 0=                  ( bps power-of-2? )
+   swap  d# 256  d# 4096 between  and  ( bps-ok? )
    bp_nfats c@ 1 2 between and  0=     ( error? )
 ;
 : find-bpb  ( -- )
@@ -122,9 +123,13 @@ d# 1024 constant /sector-max
 
 : ?read-bpb  ( -- )
    /sector 0=  if      \ Read bpb if necessary
+      init-sector-size
       find-bpb
 
       bp_media c@  media c!
+      bp_bps lew@  bps w@ <>  if
+         ." WARNING: BPB sector size differs from device sector size" cr
+      then
       bp_bps lew@  bps w!
       bp_spc c@    spc c!
       bp_spf lew@  ?dup  if
