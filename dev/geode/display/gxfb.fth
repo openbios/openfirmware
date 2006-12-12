@@ -73,7 +73,8 @@ d#  768 value #scanlines	\ Screen height
 \   50, 1200, 900, 17460,  24,   8,   4,   5,    8,    3, +h +v, noninterlaced
 
 create timing-1024x768
-   h#  52 , 0 ,  \ dotpll, rstpll, (refr=75, pixclk= d# 12690)
+\   h#  52 , 0 ,  \ dotpll, rstpll, (refr=75, pixclk= d# 12690)
+   h#  95e , 0 ,  \ dotpll, rstpll, (refr=60, pixclk= d# 15873)
    d# 1024 , d# 1024 ,   \ linelen, graphics pitch
    h# 051f.03ff , h# 051f.03ff , h# 046f.040f , ( h# 046f.040f , ) \ htiming 1,2,3,fp
    h# 031f.02ff , h# 031f.02ff , h# 0309.0300 , ( h# 03b1.03ae , ) \ vtiming 1,2,3,fp
