@@ -74,7 +74,7 @@ d#  768 value #scanlines	\ Screen height
 
 create timing-1024x768
 \   h#  52 , 0 ,  \ dotpll, rstpll, (refr=75, pixclk= d# 12690)
-   h#  95e , 0 ,  \ dotpll, rstpll, (refr=60, pixclk= d# 15873)
+   h#  95e , 0 ,  \ dotpll, rstpll, (refr=60, pixclk= d# 15384)
    d# 1024 , d# 1024 ,   \ linelen, graphics pitch
    h# 051f.03ff , h# 051f.03ff , h# 046f.040f , ( h# 046f.040f , ) \ htiming 1,2,3,fp
    h# 031f.02ff , h# 031f.02ff , h# 0309.0300 , ( h# 03b1.03ae , ) \ vtiming 1,2,3,fp
@@ -136,7 +136,7 @@ h# 4c00.0015 constant dotpll
 : set-dclk  ( -- )
    dotpll msr@  drop             ( dotpll.low )
 \ DCON  0200.0000 57b
-   1 or  h# 8000 invert and      ( dotpll.low' )  \ DOTRESET on, BYPASS off
+   1 or  h# c000 invert and      ( dotpll.low' )  \ DOTRESET on, PD and BYPASS off
    timing @                      ( d.dotpll )
 \ DCON this value is good if dcon? is set correctly
    dotpll msr!                   ( )
