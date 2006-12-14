@@ -144,12 +144,14 @@ ascii h report
 \   di  mem-info-pa 2 la+ #)  mov	\ Report top of page table area
 [then]
 
-ascii m report
+ascii M report
 [ifdef] rom-pa
    \ Page Directory Entry
-\   pt-pa /ptab +  pte-control + #  ax  mov	\ PTE contents
-\   pdir-pa  rom-pa d# 22 rshift la+  #   di  mov	\ PDE address
-\   ax              0 [di]  mov		\ PDE for firmware page table
+   /ptab #             si  sub
+   si                  bp  mov		\ Page table PA in EBP
+   bp                  ax  mov
+   pte-control #       ax  or		\ Page table PDE in EAX
+   ax   rom-pa d# 22 rshift /l*  [bx]  mov  \ Set PDE for ROM page tables
 
    \ Page Table Entries
 
@@ -158,15 +160,13 @@ ascii m report
    bp                                                 di  mov
    rom-pa pte-mask land /page / /l* #                 di  add
 
-\   /rom /page / #		             cx  mov
-h# 40000 /page / #		             cx  mov
+   /rom /page / #		             cx  mov
 
    begin
       ax stos
       /page #  ax  add
    loopa
 [then]
-
 ascii a report
    \ enable paging
    bx              cr3  mov	\ Set Page Directory Base Register
@@ -213,8 +213,6 @@ ascii a report
       fw-virt-base #  di  mov	\ Firmware RAM address (destination)
       cld  rep byte movs	\ Copy the firmware
    then
-
-\ ascii H report
 
    \ "firmware" drop-in should discard redundant page table entries
    fw-virt-base #   ax  mov	\ Jump to Forth in RAM

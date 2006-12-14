@@ -172,8 +172,11 @@ fload ${BP}/cpu/x86/pc/reboot.fth	\ Restart the client program
 fload ${BP}/cpu/x86/pc/reenter.fth	\ Various entries into Forth
 
 headerless
-\ : (initial-heap)  ( -- adr len )  sp0 @ ps-size -  dict-limit  tuck -  ;
-: (initial-heap)  ( -- adr len )  RAMtop heap-size   ;
+[ifdef] virtual-mode
+: (initial-heap)  ( -- adr len )  sp0 @ ps-size -  dict-limit  tuck -  ;
+[else]
+: (initial-heap)  ( -- adr len )  RAMtop heap-size  ;
+[then]
 ' (initial-heap) is initial-heap
 headers
 

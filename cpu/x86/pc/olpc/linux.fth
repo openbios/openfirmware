@@ -150,12 +150,10 @@ d# 20 constant /root-dev-buf
  ramdisk-adr  h# 218 +lp  l!	\ initrd start
     /ramdisk  h# 21c +lp  l!	\ initrd size
 
-[ifdef] notnow
    \ Put Open Firmware signature and IDT pointer in the params area
    " OFW " drop @  h# 7fc +lp l!   \ Validator for this area
    1               h# 7f8 +lp l!   \ Number of additional items (version#)
    idt drop        h# 7f4 +lp l!   \ So Linux can preserve our debug vectors
-[then]
 
    \ Command line goes after the 16-bit wad
    ( cmdline$ ) add-root-dev

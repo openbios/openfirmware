@@ -25,7 +25,6 @@ create addresses-assigned  \ Define if base addresses are already assigned
 create pc
 create linux-support
 create jffs2-support
-create use-ega
 create use-elf
 
 create cafe-support
@@ -37,23 +36,18 @@ create spi-flash-support
 
 create resident-packages
 \ create use-watch-all
-\ create use-pc87317
-\ create use-mediagx
-\ create use-5530
-\ create use-pcf8584
 \ create use-root-isa
 create no-floppy-node
 create use-pci-isa
 
 create use-null-nvram
 
-\ create use-meg0    \ Just in case
-
 \ --- Extra Features ---
 
 \ create sd-diags    \ To enable SD diag support for Marvell lab testing
 
 fload ${BP}/cpu/x86/pc/olpc/addrs.fth
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

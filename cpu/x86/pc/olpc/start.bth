@@ -32,6 +32,12 @@ fload ${BP}/cpu/x86/pc/dot.fth			\ Numeric display
 label startup
 \ This is the target of the jump
 
+   h# 1808 #  cx  mov       \ Default region configuration properties MSR
+   h# f asm8,  h# 32 asm8,  \ rdmsr - returns dx=high ax=low
+   h# 0fffff00 # ax and     \ Top of System Memory field
+   4 # ax shl               \ Shift into place
+   ax mem-info-pa 4 + #)  mov  \ Put it where resetend.fth can find it
+
    ret
 end-code
 

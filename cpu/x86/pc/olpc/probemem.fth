@@ -18,6 +18,8 @@ h# 770.0000 constant /ram   \ 128 MB
 
 : release-range  ( start-adr end-adr -- )  over - release  ;
 
+: ram-limit  ( -- addr )  mem-info-pa la1+ l@  ;
+
 : probe  ( -- )
    gpio-data@ 4 and  if  h# 770.0000  else  h# f70.0000  then  to /ram
 
@@ -36,8 +38,14 @@ h# 770.0000 constant /ram   \ 128 MB
    mem-info-pa 2 la+ l@   h# a.0000  release-range  \ Below DOS hole
 
 [ifdef] virtual-mode
-   h# 10.0000  dropin-base over -  release
-   dropin-base dropin-size +  mem-info-pa la1+ l@  over -  release
+   \ Release from 1M up to the amount of unallocated (so far) memory
+   dropin-base ram-limit u<   if
+      \ Except for the area that contains the dropins, if they are in RAM
+      h# 10.0000  dropin-base over -  release
+      dropin-base dropin-size +  ram-limit  over -  release
+   else
+      h# 10.0000  ram-limit  over -  release
+   then
 [else]
    h# 10.0000                             ( free-bot )
    fw-pa                                  ( free-bot free-top )

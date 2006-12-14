@@ -15,6 +15,8 @@ h# fff2.0000 constant dropin-base  \ Location of payload in FLASH
 h#   08.0000 constant dropin-size
 h#  1e0.0000 constant fw-pa
 h#   20.0000 constant /fw-ram
+h# fff0.0000 constant rom-pa
+h#   10.0000 constant /rom
 [then]
 
 [ifdef] old-bzimage-loaded

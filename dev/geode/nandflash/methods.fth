@@ -8,7 +8,9 @@ external
    \ We assume that LinuxBIOS has already set up the address map
    \ and the timing MSRs.
    set-lmove
-   h# 51400010 msr@ drop to nand-base
+
+   h# 51400010 msr@ drop h# 1000 " map-in" $call-parent  to nand-base
+
    configure 0=  if  false exit  then
 
    get-bbt
