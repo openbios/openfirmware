@@ -37,13 +37,6 @@ fload ${BP}/dev/pciprobe.fth		\ Generic PCI probing
 fload ${BP}/cpu/x86/tsc.fth
 [then]
 
-[ifdef] use-ega
-0 0 " " " /" begin-package
-   fload ${BP}/dev/egatext.fth
-end-package
-devalias screen /ega-text
-[then]
-
 [ifdef] use-root-isa
 0 0  " "  " /" begin-package
    fload ${BP}/cpu/x86/pc/isabus.fth	\ ISA Bus Bridge under root node
@@ -129,9 +122,7 @@ devalias mouse /isa/8042/mouse
 fload ${BP}/cpu/x86/pc/tsccal.fth
 [then]
 
-[ifdef] use-ega
 dev /8042      patch false ctlr-selftest open   device-end
-[then]
 
 0 0  " i70"  " /isa" begin-package   	\ Real-time clock node
    fload ${BP}/dev/ds1385r.fth
@@ -234,11 +225,8 @@ fload ${BP}/dev/isa/diaguart.fth	\ ISA COM port driver
 
 h# 3f8 is uart-base
 fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
-[ifdef] use-ega
-fload ${BP}/cpu/x86/pc/egauart.fth		\ Output also to EGA
-[then]
 
-fload ${BP}/cpu/x86/pc/reset.fth		\ reset-all
+fload ${BP}/cpu/x86/pc/reset.fth	\ reset-all
 
 [ifndef] save-flash
 : save-flash ;
