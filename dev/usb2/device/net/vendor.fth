@@ -7,6 +7,7 @@ create net-ax8817x-list  here
         2001 w, 3c05 w,		\ D-Link DUBE100 Rev B1 ax88772
         07d1 w, 3c05 w,		\ D-Link DUBE100 Rev B1 ax88772
         2001 w, 1a00 w,		\ D-Link DUBE100 Rev A  ax88772
+	0b95 w,	7720 w,		\ ST Lab
         13b1 w, 0018 w,		\ Linksys USB200M  ax88772
 	077b w,	2226 w,		\ Linksys USB200M
 	0846 w,	1040 w,		\ Netgear FA120

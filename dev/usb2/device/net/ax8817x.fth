@@ -16,6 +16,7 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
       h# 13b1.0018  of  true exit  endof  \ ID for Linksys USB200M rev 2
       h# 2001.3c05  of  true exit  endof  \ ID for D-Link DUB-E100 rev B
       h# 07d1.3c05  of  true exit  endof  \ Alternate ID for D-Link DUB-E100 rev B
+      h# 0b95.7720  of  true exit  endof  \ Another 88772 device, possibly ST Labs
    endcase
    false
 ;
