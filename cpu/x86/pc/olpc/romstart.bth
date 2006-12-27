@@ -1,0 +1,331 @@
+\ See license at end of file
+purpose: Low-level startup code for DOS-loaded x86 Forth
+
+command: &builder &this
+build-now
+
+\needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+\ create debug-startup
+
+hex
+
+fload ${BP}/cpu/x86/pc/report.fth			\ Startup reports
+
+fload ${BP}/cpu/x86/pc/olpc/config.fth
+
+fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
+
+start-assembling
+protected-mode
+
+label my-entry
+
+[ifdef] debug-startup
+   \ Branch past the I/O subroutines that are called by debug printouts
+   e9 c,  0 ,				\ To be patched later
+end-code
+
+\ Load some debug subroutines
+fload ${BP}/cpu/x86/pc/dot.fth			\ Numeric display
+[then]
+
+label startup   \ The return address is in %esp
+hex
+
+ \ Disable floating point emulation
+   cr0 ax mov
+   4 bitclr
+   ax cr0 mov
+
+ \ Init timer
+
+   57 43 port-wb
+   12 41 port-wb
+
+   \ Init mainboard registers
+
+   \ msr_init,src/mainboard/olpc/rev_a/auto.c
+   \ Default region config - page 152
+\   22fff002.10f3bf00.   1808 set-msr
+   22fff002.10800000.   1808 set-msr
+
+   \ GLIU0 P2D Base Mask Descriptors - page 85
+   20000000.000fff80.   10000020 set-msr
+   20000000.080fffe0.   10000021 set-msr
+
+   \ Go ahead and set these up too, while we're at it
+   \ The top of memory and frame buffer locations change based on RAM size
+   a00000fe.000ffffc.   10000022 set-msr
+   c00000fe.008ffffc.   10000023 set-msr
+   80000000.0a0fffe0.   10000024 set-msr
+   2c7be040.400fffe0.   10000026 set-msr
+   20000007.7df00100.   10000028 set-msr \ Top of memory
+   20a7e0fd.7fffd000.   10000029 set-msr \ Frame buffer
+   801ffcfe.007fe004.   1000002a set-msr
+   20000000.f0000003.   1000002c set-msr \ 000f.xxxx range
+
+   \ GLIU1 P2D Base Mask Descriptors - page 85
+   20000000.000fff80.   40000020 set-msr
+   20000000.080fffe0.   40000021 set-msr
+   200000fe.000ffffc.   40000022 set-msr
+   20000040.400fffe0.   40000023 set-msr
+   200000fe.004ffffc.   40000024 set-msr
+   200000fe.008ffffc.   40000025 set-msr
+   20000000.0a0fffe0.   40000026 set-msr  \ a0000h - bf000h EGA video memory
+   20000007.7df00100.   40000029 set-msr  \ top of memory.
+   200000fd.7fffd000.   4000002a set-msr  \ frame buffer
+   20000000.f0000003.   4000002d set-msr  \ 000f.xxxx range
+
+ \ Init cs5536
+
+   \ cs5536_early_setup,src/southbridge/amd/cs5536/cs5536_early_setup.c
+
+   \ EXTMSR - page 449   \ Use PCI device #F for port 2
+   00000000.00000f00.   5000201e set-msr  \ cs5536_setup_extmsr(void)
+
+   \ GLCP_SYS_RSTPLL - page 406
+   \ If the PLL is already set up, we don't redo the 5536 setup
+   long-offsets on   \ This IF .. THEN is too long for 8-bit branch offsets
+   4c000014 rmsr fc00.0000 bitand  0<>  if
+      \ write IDSEL to the write once register at address 0x0000
+      02000000 0 port-wl
+
+      \ USB Serial short detect bit.
+      51600005 rmsr  10 bitand-hi  0<>  if
+         \ We need to preserve bits 32,33,35 and not clear any BIST error,
+         \ but clear the SERSHRT error bit
+         4 bitclr-hi   51600005 wmsr
+      then
+
+      \ Set up IO base registers
+      0000f001.00006000.   5140000b set-msr  \ SMB BAR
+      0000f001.00006100.   5140000c set-msr  \ GPIO BAR
+      0000f001.00006200.   5140000d set-msr  \ MFGPT BAR
+      0000f001.00009c00.   5140000e set-msr  \ ACPI BAR
+      0000f001.00009d00.   5140000f set-msr  \ PM BAR
+
+      \ GPIO setup for SDA/SCL
+      3fffc000 6104 port-wl  \ Output enable GPIO 15,14 are outs
+      3fffc000 6110 port-wl  \ AUX1 sel
+      3fffc000 6120 port-wl  \ Input enable
+      3fffc000 6134 port-wl  \ Input AUX1 sel
+
+      \ setup CPU interface serial to mode C on both sides
+      \ 18 51000010 rmsr 18 bitclr  10 bitset  51000010 wmsr  \ 5536 p 229
+      10 51000010 bitset-msr   \ 5536 p 229
+
+      \ Comment in LinuxBIOS says: Only do this if we are building for 5536
+      \ 2 is a reserved value in the GX datasheet.  01 is supposed to be the only good value
+      00000000.00000002.   54002010 set-msr \ Reserved value
+
+      \ Setting up the SMBUS for serial presence detect is unnecessary
+      \ since the OLPC RAM array has no SPD ROMs
+      \ cs5536_enable_smbus
+      0 6005 port-wb                             \ Reset SMBUS controller
+      \ 6005 port-rb  41 bitset  6005 port-wb    \ Set SCL freq and enable SMB controller
+      \ 6004 pc@ ef bitset 6004 port-wb          \ Setup SMBus host controller address to 0xEF
+      \ ef 6004 port-wb
+   then
+   long-offsets off
+
+ \ Hmmm, there is really no point in doing the UART init before the PLL turn-on
+ \ except when debugging the pre-PLL startup.
+ \ Anything that happens before PLL-on gets done twice.
+ \ We should move this after the PLL init, or eliminate it entirely, since the
+ \ serial port is useless on the real systems, which have no serial connector.
+ \ Init UART
+
+   \ cs5536_setup_onchipuart,cs5536_early_setup.c:205.14
+   0.00000012.   5140003a set-msr  \ enable COM1
+
+   \ GPIO1 - UART1 TX
+   100 6104 port-wl   \ GPIO1 - output enable
+   100 6110 port-wl   \ OUT AUX1
+   300 6118 port-wl   \ 
+   200 6120 port-wl   \ 
+   200 6134 port-wl   \ 
+   70000  51400014 bitset-msr  \ MDD_LEG_IO  legacy IO
+
+   \ gpio_init,auto.c
+   1000.0000 6138 port-wl  \ Make sure events enable for gpio 12 is off
+   4 6120 port-wl          \ Enable the GPIO bit that reports DRAM size (ticket 151)
+
+   \ uart_init,serial.c
+   \ This is a garden-variety 8250 UART setup sequence
+    0 3f9 port-wb
+    1 3fa port-wb
+   83 3fb port-wb  \ DLAB
+    1 3f8 port-wb  \ 115200 divisor low
+    0 3f9 port-wb  \ 115200 divisor high
+    3 3fb port-wb  \ !DLAB
+   \ At this point we could send characters out the serial port
+
+   \ pll_reset,pll_reset.c
+   \ If the straps say we are in bypass and the syspll is not AND there are no software
+   \ bits set then FS2 bitset something set up the PLL and we should not change it.
+
+   \ GX page 406
+   \ 8000 4c000014 bitclr-msr  \ Clear PLL BYPASS
+
+   4c000014 rmsr  04000000 bitand  0=  if     \ If this is the first time
+      \ If we also set 0100.0000 (LOCKWAIT), it might start faster
+      226.04de.0000.   4c000014 set-msr
+      226.04de.6001.   4c000014 set-msr
+   \ CPU will reset here
+   then
+   \ And return to here after the reset
+
+ \ Init CPU registers
+ \ cpuRegInit,cpureginit.c
+
+   1  1210 bitset-msr  \ Enable Suspend on Halt - GX p 121
+
+   \  Enable SUSP and allow TSC to run in Suspend to keep speed detection happy
+   1020 1900 bitset-msr \ GX p 174
+
+   0.603c. 4c00001e set-msr     \ GLCP_TH_OD  processor throttle off delay, GX page 414
+   54000010 rmsr  3 bitclr  2 bitset  54000010 wmsr  \ FooGlue, whatever that is
+   4000 4c000015 bitset-msr     \ Power down DOT PLL GX page 410
+   8 1301 bitset-msr            \ Enable SMI instructions like RSDC  GX page 124
+
+   4c000017 rmsr  h# 21 # ax cmp  >= if   \ CPU revision ID
+      11 1100 bitset-msr        \ Enable branch target buffer and near call return stack GX page 116
+   then
+   1 1a00 bitset-msr            \ Enable imprecise FPU exceptions  - GX page 178
+
+   \ putstring "done cpuRegInit\n"
+
+ \ Init memory controller
+
+   \ sdram_initialize,generic_sdram.c
+   \ sdram_set_spdregisters(),auto.c
+ 
+   \ Refresh and SDRAM program MSR GX page 205
+   6130 port-rl 4 bitand  0<> if  \ 128 MiB
+      10075012.00003000.  20000018 set-msr
+   else                           \ 256 MiB
+      10076013.00003000.  20000018 set-msr
+   then
+
+   \ 20000019 rmsr            \ SDRAM timing and mode program
+   18000108.286332a3.   20000019 set-msr
+
+   \ The RAM controller is now set up
+
+ \ Init the SDRAMs
+ \ sdram_enable,src/northbridge/amd/gx2/raminit.c
+
+   \ 2. clock gating for PMode
+   \ Clocks always on in mode 1, hardware gating in mode 0
+   20002004 rmsr  4 bitclr  1 bitset  20002004 wmsr  \ GX p 199
+
+   \ Delay on exit from power mode 1, use unbuffered RAM
+   101 2000001a bitset-msr    \ GX p 210
+
+   \ Unmask CKE1 and CKE0
+   300 2000001d bitclr-msr
+
+   \ In the following sequence of writes the 2000.0018 MSR, we
+   \ take advantage of the fact that the existing value stays
+   \ in EAX/EDX, so we don't have to re-read the value.
+
+   \ Force some refresh requests
+   20000018 rmsr
+   19 0 do
+      8 bitset  20000018 wmsr
+      8 bitclr  20000018 wmsr
+   loop
+
+   \ 5. set refresh interval
+   \ Since we know it was 3000 before, we could skip the bitclr
+   ffff00 bitclr  3400 bitset  20000018 wmsr
+
+   \ set refresh staggering to 4 SDRAM clocks
+   c0 bitclr  20000018 wmsr
+
+   \ 6. Enable DLL, load Extended Mode Register by set and clear PROG_DRAM
+   10000001 bitset  20000018 wmsr
+   10000001 bitclr  20000018 wmsr
+
+   \ 7. Reset DLL (bit 27 is undocumented in GX datasheet, but is in the LX one)
+   08000001 bitset  20000018 wmsr
+   08000001 bitclr  20000018 wmsr
+
+   \ 8. load Mode Register
+   1 bitset  20000018 wmsr
+   1 bitclr  20000018 wmsr
+
+   \ wait 200 SDCLKs
+   \ d# 200 0 do  h# aa h# 80 port-wb  loop
+   d# 200 #  bx  mov
+   begin
+      h# aa h# 80 port-wb
+      bx dec
+   0= until
+
+   \ load RDSYNC
+   \ Empirically, the recommended setting of 0xff310.00000000. causes RAM errors
+   00000310.00000000.   2000001f set-msr  \ GX page 215
+
+   \ set delay control
+   830d415a.8ea0ad6a.   4c00000f set-msr
+
+   \ The RAM dll needs a write to lock on so generate a few dummy writes
+   ax ax xor
+   ax  0 [ax] mov
+   ax  4 [ax] mov
+   ax  8 [ax] mov
+   ax  c [ax] mov
+   ax 10 [ax] mov
+
+   \ Turn on the cache
+   cr0	ax   mov
+   6000.0000 bitclr  \ Cache-disable off, coherent
+   ax   cr0  mov
+   h# 0f asm8,  h# 09 asm8,  \ wbinvd
+
+\ Example of how to output a character to serial port
+\  44 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+
+   sp jmp  \ Return
+end-code
+
+[ifdef] debug-startup
+also 386-assembler
+startup  my-entry  put-branch
+previous
+[then]
+
+end-assembling
+
+\ Write out the code in dropin-module format
+
+writing romstart.di
+asm-base  here over -  0  " start" write-dropin
+ofd @ fclose
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2006 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
