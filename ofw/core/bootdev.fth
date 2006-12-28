@@ -1,7 +1,7 @@
 purpose: Default values for some configuration variables
 
 headers
-" disk net                                         "
+" disk net                                                                                                                                                                                                                                                       "
 d# 256 config-string  boot-device
 
 "                                                                                                                                                                                                                                                                "

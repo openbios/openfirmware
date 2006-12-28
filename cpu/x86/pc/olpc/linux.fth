@@ -1,20 +1,17 @@
 \ See license at end of file
 purpose: Linux bzImage program loading
-[ifdef] olpc
 
-\needs ramdisk  " disk:\boot\initrd.img" d# 128 config-string ramdisk
+\ \needs ramdisk  " disk:\boot\initrd.img" d# 128 config-string ramdisk
+\ " ro root=LABEL=OLPCRoot rootfstype=ext3 console=ttyS0,115200 console=tty0 fbcon=font:SUN12x22"  ' boot-file set-config-string-default
+\ " disk:\boot\vmlinuz"   ' boot-device      set-config-string-default
 
-" disk:\boot\vmlinuz"   ' boot-device      set-config-string-default
+\ \needs ramdisk  " " d# 128 config-string ramdisk
+\ " nand:\boot\vmlinuz"   ' boot-device      set-config-string-default
+\ " ro root=mtd0 rootfstype=jffs2 console=ttyS0,115200 console=tty0 fbcon=font:SUN12x22"  ' boot-file set-config-string-default
 
-" ro root=LABEL=OLPCRoot rootfstype=ext3 console=ttyS0,115200 console=tty0 fbcon=font:SUN12x22 pci=nobios video=gxfb:1024x768-16"  ' boot-file set-config-string-default
-
-[else]
-
-\needs ramdisk  " disk:\boot\initrd" d# 128 config-string ramdisk
-" disk:\boot\vmlinuz"   ' boot-device      set-config-string-default
-" console=ttyS0,115200 console=tty0 pci=nobios" ' boot-file set-config-string-default
-
-[then]
+\needs ramdisk  " " d# 128 config-string ramdisk
+" "   ' boot-file      set-config-string-default   \ Let the olpcboot.fth file set the cmdline
+" net disk:\boot\olpc.fth nand:\boot\olpc.fth"   ' boot-device  set-config-string-default
 
 0 value ramdisk-adr
 0 value /ramdisk
@@ -82,15 +79,28 @@ here screen-info - constant /screen-info
 
 
 h# 9.0000 constant linux-params
-h# 10.0000 constant linux-base
+h# 10.0000 value linux-base
 : code16-size  ( -- #bytes )   load-base h# 1f1 + c@ 1+  d# 512 *   ;
 0 value cmdline-offset
 
 \ Find the end of the largest piece of memory
 : memory-limit  ( -- limit )
    " /memory" find-package 0= abort" No /memory node"  ( phandle )
-   " reg" rot get-package-property abort" No available property"  ( $ )
+[ifdef] virtual-mode
+   " reg" rot get-package-property abort" No memory node reg property"  ( $ )
    decode-int drop  decode-int  nip nip   ( n )
+[else]
+   " available" rot get-package-property abort" No memory node available property"  ( $ )
+   \ Find the memory piece that starts at 1 Meg
+   begin  dup  8 >=  while           ( $ )
+      decode-int  h# 10.0000 =  if   ( $ )   \ Found the one we want
+         decode-int h# 10.0000 +     ( $ limit )
+         nip nip  exit
+      then                           ( $ )
+      decode-int drop                ( $ )
+   repeat                            ( $ )
+   2drop true abort" No suitable memory piece"
+[then]
 ;
 
 d# 20 constant /root-dev-buf
@@ -151,9 +161,10 @@ d# 20 constant /root-dev-buf
     /ramdisk  h# 21c +lp  l!	\ initrd size
 
    \ Put Open Firmware signature and IDT pointer in the params area
-   " OFW " drop @  h# 7fc +lp l!   \ Validator for this area
-   1               h# 7f8 +lp l!   \ Number of additional items (version#)
-   idt drop        h# 7f4 +lp l!   \ So Linux can preserve our debug vectors
+   " OFW " drop @  h# b0 +lp l!   \ Validator for this area
+   1               h# b4 +lp l!   \ Number of additional items (version#)
+   cif-handler     h# b8 +lp l!   \ Client interface handler
+   idt drop        h# bc +lp l!   \ So Linux can preserve our debug vectors
 
    \ Command line goes after the 16-bit wad
    ( cmdline$ ) add-root-dev
@@ -163,26 +174,9 @@ d# 20 constant /root-dev-buf
    cmdline-offset +lp  h# 228 +lp  l!  \ New command line address
 ;
 
-\ Add some entries to the GDT for Linux
-: amend-gdt   ( -- )
-   gdtr@ drop                        ( va )
-   h# 0000.ffff over h# 20 + l!      ( va ) \ user 4 GB code at 0
-   h# 00cf.fa00 over h# 24 + l!      ( va )
-   h# 0000.ffff over h# 28 + l!      ( va ) \ user 4 GB data at 0
-   h# 00cf.f200 over h# 2c + l!      ( va )
-
-   \ For 2.5.x kernel
-   h# 0000.ffff over h# 60 + l!      ( va ) \ user 4 GB code at 0
-   h# 00cf.fa00 over h# 64 + l!      ( va )
-   h# 0000.ffff over h# 68 + l!      ( va ) \ user 4 GB data at 0
-   h# 00cf.f200 over h# 6c + l!      ( va )
-   drop
-;
-
 : linux-fixup  ( -- )
 [ifdef] linux-logo  linux-logo  [then]
    args-buf cscount set-parameters          ( )
-   amend-gdt
    h# ff h# 21 pc!	\ Squelch the timer interrupt and others
 
    linux-base  linux-params  (init-program)
@@ -215,13 +209,14 @@ d# 20 constant /root-dev-buf
    0 +lp  h# 1000  erase
 ;
 
-[ifdef] elf-format-linux
 0 value linux-loaded?
 : ?linux-elf-map-in  ( va size -- )
    \ The Linux startup code really wants the physical address to be
    \ virtual_address AND 0x0fff.ffff.  We recognize Linux by the virtual
    \ address range that it uses (0xc0xx.xxxx)
    over h# f000.0000 and  h# c000.0000 =  if
+      h# 40.0000 to linux-base
+      h# 800 to cmdline-offset
       true to linux-loaded?
       over  h# 0fff.ffff and   ( va size pa )
       -rot -1                  ( pa va size mode )
@@ -232,31 +227,13 @@ d# 20 constant /root-dev-buf
 ;
 ' ?linux-elf-map-in is elf-map-in
 
-warning @ warning off
-: init-program  ( -- )
-   false to linux-loaded?
-   init-program
-   linux-loaded?  if
-      claim-params
-      code16-size to cmdline-offset         \ Save in case we clobber load-base
-      linux-fixup
-   then
-;
-warning !
-[then]
-
 : init-bzimage?   ( -- flag )
    load-base h# 202 +  " HdrS"  comp  if  false exit  then
-
-   claim-params
+   h# 10.0000 to linux-base
    code16-size to cmdline-offset         \ Save in case we clobber load-base
-
    load-base  0 +lp  code16-size  move   \ Copy the 16-bit stuff
    loaded code16-size /string  linux-base  swap  move  \ Copy the 32-bit stuff
-   
-   ['] load-ramdisk guarded
-
-   linux-fixup
+   true to linux-loaded?
    true
 ;
 
@@ -268,6 +245,18 @@ warning @ warning off
 
 : sym  ( "name" -- adr )
    parse-word  $sym>  0=  if  err-sym-not-found throw  then
+;
+warning !
+
+warning @ warning off
+: init-program  ( -- )
+   false to linux-loaded?
+   init-program
+   linux-loaded?  if
+      claim-params
+      ['] load-ramdisk guarded
+      linux-fixup
+   then
 ;
 warning !
 
@@ -488,6 +477,7 @@ Load a GDT with
   jumps to the eip from the array
 
 [then]
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

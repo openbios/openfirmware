@@ -56,7 +56,7 @@ h#  20.0000 constant heap-size
 h# 300.0000 constant jffs2-dirent-base
 h# 400.0000 constant jffs2-inode-base
 h# 600.0000 constant dma-base
-h# 100.0000 constant dma-size
+h# a00.0000 constant dma-size
 
 
 fload ${BP}/cpu/x86/pc/virtaddr.fth

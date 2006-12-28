@@ -4,7 +4,8 @@ purpose: Common code for several versions of reset.bth
    \ The memory layout information from the start dropin is stored in low
    \ memory.
 
-   \ Move GDT to low memory.
+   \ Move GDT to low memory.  We use the first location at gdt-pa as
+   \ scratch memory for sgdt, and put the actual gdt at gdt-pa + 0x10
    gdt-pa # ax mov
    0 [ax] sgdt				\ Read GDT
    2 [ax] si mov			\ GDT base
@@ -12,9 +13,15 @@ purpose: Common code for several versions of reset.bth
    ffff # cx and
    cx inc
 
-   gdt-pa 10 + # di mov			\ New GDT base
+   gdt-pa h# 10 + # di mov		\ New GDT base
    di 2 [ax] mov			\ Set new GDT base
    rep movsb				\ Copy ROM GDT to RAM
+
+   \ Copy code and data segment descriptors from 10,18 to 60,68
+   gdt-pa h# 10 + h# 10 + #   si  mov   \ Descriptor 0x10 - src
+   gdt-pa h# 10 + h# 60 + #   di  mov   \ Descriptor 0x60 - dst
+   4 # cx mov                           \ 4 longwords, 2 descriptors
+   rep movs
 
    op: h# ff #   0 [ax]  mov            \ Make GDT bigger for Linux
 
@@ -22,6 +29,23 @@ purpose: Common code for several versions of reset.bth
 
    \ Next time segment registers are changed, they will be
    \ reloaded from memory.
+
+   h# fff202a0 h# 60  #)  far jmp
+\   h# 60 #     push   \ New CS value
+\   h# 10.0000 #     push   \ New CS value
+\   here 5 + #) call   \ Get return address on stack
+\   4 #  0 [sp] add    \ Adjust return address past ret
+                      \ The add is 3 bytes and the ret is 1
+\   far ret
+nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop 
+
+\ begin again
+   h# 68 # ax mov
+   ax ds  mov
+   ax es  mov
+   ax fs  mov
+   ax gs  mov
+   ax ss  mov
 
 [ifdef] mem-info-pa
    gdt-pa /page round-up #  ax  mov	\ Current low-memory high water mark
