@@ -157,7 +157,6 @@ h# 0220.0080 0 5 >cmd constant write-cmd
 
 : read-rst     ( -- )  h# 8000.0000 h# c cl!  ;
 
-[ifdef] notdef
 0 instance value dma-vadr
 0 instance value dma-padr
 0 instance value dma-len
@@ -178,25 +177,12 @@ h# 0220.0080 0 5 >cmd constant write-cmd
    dma-vadr dma-padr dma-len  " dma-map-out" $call-parent
 ;
 
-[else]
-
-\ Depend on the fact that we have physical addressing and hardware coherency
-: dma-setup  ( adr #bytes #ecc direction-in? -- )
-   >r                            ( adr #bytes #ecc )
-   datalen                       ( adr #bytes )
-   swap h# 44 cl!  0 h# 48 cl!   ( #bytes )                \ Set address
-   r> if  h# a000.0000  else  h# 8000.0000  then  ( bits )
-   or h# 40 cl!
-;
-
-[then]
-
 : dma-read  ( adr len page# offset -- )
    set-address
    dup  true dma-setup                 ( )
    h# 130 cmd2  read-cmd  0 cl!        ( adr chip-adr r: len )
    wait-dma-done  \ For DMA reads we wait for DMA completion instead of cmd
-\   dma-release                         ( )
+   dma-release                         ( )
 ;
 
 \ XXX should check ECC
@@ -208,7 +194,7 @@ h# 0220.0080 0 5 >cmd constant write-cmd
    dup  false dma-setup                  ( )
    h# 2000.0110 cmd2  write-cmd  cmd     ( )
    wait-write-done
-\   dma-release
+   dma-release
    write-disable
 ;
 
