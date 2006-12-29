@@ -385,13 +385,7 @@ patch drop ms install-console
       show-nand exit
    then
 
-   " ro root=mtd0 rootfstype=jffs2 console=ttyS0,115200 console=tty0 fbcon=font:SUN12x22 pci=nobios video=gxfb:1024x768-16"
-   " boot-file" $setenv
-
-   " "  " ramdisk"  $setenv
-
-   " nand:\boot\vmlinuz" " boot-device" $setenv
-   show-nand
+    " net" " boot-device" $setenv
 ;
 
 : config&boot  ( -- )

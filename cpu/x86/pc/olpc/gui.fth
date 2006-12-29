@@ -323,9 +323,9 @@ dev /obp-tftp
 device-end
 [then]
 
-: show-nand  ( -- )  " rom:nand.565"   $show&advance  ;
-: show-disk  ( -- )  " rom:usbkey.565" $show&advance  ;
-: show-xo   ( -- )   " rom:xo.565"     $show&advance  ;
+: show-nand  ( -- )  " rom:nandflash.565"   $show&advance  ;
+: show-disk  ( -- )  " rom:disk.565"        $show&advance  ;
+: show-xo   ( -- )   " rom:xo.565"          $show&advance  ;
 
 : simple-load-started  ( -- )
    not-screen?  if  exit  then
@@ -343,9 +343,9 @@ h# 32 buffer: icon-name
       else                                             ( phandle )
          " name" rot  get-package-property  if  exit  then  ( prop$ )
          get-encoded-string                            ( name$ )
-         icon-name pack  " .565" rot $cat              ( )
-         icon-name count  find-drop-in  0=  if  exit  then  ( adr,len )
-         2dup $show&advance release-dropin             ( )
+         " rom:" icon-name pack  $cat                  ( )
+         " .565" icon-name $cat                        ( )
+         icon-name count  $show&advance                ( )
       then                                             ( )
    then                                                ( )
 ;
