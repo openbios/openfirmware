@@ -395,6 +395,7 @@ patch drop ms install-console
 ;
 
 : config&boot  ( -- )
+   ['] boot catch drop  \ Try the normal boot path first
    boot-configure auto-boot?  if  boot  then
 ;
 " config&boot" ' boot-command set-config-string-default
