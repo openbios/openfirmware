@@ -4,6 +4,7 @@ command: &builder &this
 in: ${BP}/cpu/x86/pc/olpc/build/elfhdr.di
 in: ${BP}/cpu/x86/pc/olpc/build/reset.di
 in: ${BP}/cpu/x86/pc/olpc/build/start.di
+in: ${BP}/cpu/x86/pc/olpc/build/paging.di
 in: ${BP}/cpu/x86/pc/olpc/build/fw.dic
 in: ${BP}/dev/geode/nandflash/build/nandflash.fc
 in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
@@ -38,6 +39,7 @@ writing ofw.elf
 
    " reset.di"              $add-file
    " start.di"              $add-file
+   " paging.di"             $add-file
    " ${BP}/cpu/x86/build/inflate.bin"        " inflate"         $add-dropin
    " fw.img"   " firmware"  $add-deflated-dropin
    " ${BP}/dev/pci/build/pcibridg.fc"   " class060400"     $add-deflated-dropin
