@@ -97,17 +97,6 @@ fload ${BP}/cpu/x86/pc/olpc/probemem.fth	\ Memory probing
 
 [ifdef] virtual-mode
 fload ${BP}/cpu/x86/loadvmem.fth	\ /mmu node
-warning @ warning off
-: translate  ( va -- false | pa mode true )
-   dup pdir@  dup present?  if   ( va pde )
-      map-ptab  (pte@)           ( pte )
-      dup h# fff invert and      ( pte pa )
-      swap h# 1f and  true       ( pa mode true )
-   else                          ( va pde )
-      2drop false                ( false )
-   then
-;
-warning !
 
 stand-init: MMU
    " /mmu" open-dev mmu-node !
