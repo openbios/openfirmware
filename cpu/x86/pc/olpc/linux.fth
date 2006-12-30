@@ -86,10 +86,6 @@ h# 10.0000 value linux-base
 \ Find the end of the largest piece of memory
 : memory-limit  ( -- limit )
    " /memory" find-package 0= abort" No /memory node"  ( phandle )
-[ifdef] virtual-mode
-   " reg" rot get-package-property abort" No memory node reg property"  ( $ )
-   decode-int drop  decode-int  nip nip   ( n )
-[else]
    " available" rot get-package-property abort" No memory node available property"  ( $ )
    \ Find the memory piece that starts at 1 Meg
    begin  dup  8 >=  while           ( $ )
@@ -100,7 +96,6 @@ h# 10.0000 value linux-base
       decode-int drop                ( $ )
    repeat                            ( $ )
    2drop true abort" No suitable memory piece"
-[then]
 ;
 
 d# 20 constant /root-dev-buf
