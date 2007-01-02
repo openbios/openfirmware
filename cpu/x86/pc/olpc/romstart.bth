@@ -11,25 +11,31 @@ build-now
 
 hex
 
-fload ${BP}/cpu/x86/pc/report.fth			\ Startup reports
+fload ${BP}/cpu/x86/pc/report.fth		\ Startup reports for debugging
 
-fload ${BP}/cpu/x86/pc/olpc/config.fth
+fload ${BP}/cpu/x86/pc/olpc/config.fth		\ Configuration defines
+
+\ startmacros.fth defines some assembler macros that make MSR and I/O port
+\  access very easy by hiding the details of register use.
 
 fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
 
-start-assembling
+start-assembling                                \ Turn on the target assembler
 protected-mode
 
 label my-entry
 
 [ifdef] debug-startup
    \ Branch past the I/O subroutines that are called by debug printouts
-   e9 c,  0 ,				\ To be patched later
+   e9 c,  0 ,					\ To be patched later
 end-code
 
 \ Load some debug subroutines
 fload ${BP}/cpu/x86/pc/dot.fth			\ Numeric display
 [then]
+
+\ This is where the real startup code begins.  Everything before this,
+\ if anything, is subroutines for debugging.
 
 label startup   \ The return address is in %esp
 hex
@@ -293,6 +299,8 @@ hex
 end-code
 
 [ifdef] debug-startup
+\ If debugging is turned on, we have to patch the first location in this
+\ image to jump past the debugging subroutines to the real startup code.
 also 386-assembler
 startup  my-entry  put-branch
 previous
