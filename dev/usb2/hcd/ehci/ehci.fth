@@ -81,7 +81,10 @@ my-address my-space          encode-phys
 ;
 
 : doorbell-wait  ( -- )
-   begin  usbsts@ h# 20 and  until	\ Wait until interrupt on async advance bit is set
+   \ Wait until interupt on async advance bit is set.
+   \ But, some HC fails to set the async advance bit sometimes.  Therefore,
+   \ we add a timeout and clear the status all the same.
+   h# 100 0  do  usbsts@ h# 20 and  if  leave  then  loop
    h# 20 usbsts!			\ Clear status
 ;
 : ring-doorbell  ( -- )
