@@ -58,7 +58,7 @@ external
 
    \ Probe each port
    alloc-pkt-buf
-   h# ff and 0 do
+   h# ff and  0  ?do
       i ['] probe-root-hub-port catch  if
          drop ." Failed to probe root port " i u. cr
       then
