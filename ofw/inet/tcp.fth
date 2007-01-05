@@ -2252,7 +2252,7 @@ false instance value do-delack?
    then                                 ( adr len )
 
    2drop
-   ts established <>  if  -1  else  -2  then
+   ts established <>  if  -1  else  -2  tcp_output  then
 ;
 
 : init-variables  ( -- )
