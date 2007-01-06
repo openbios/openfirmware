@@ -46,6 +46,9 @@ h# fc2a	constant GPIO5
    false to kbc-off?
 ;
 
+: kbd-led-on  ( -- )  h# fc21 ec@  1 invert and  h# fc21 ec!  ;
+: kbd-led-off ( -- )  h# fc21 ec@  1 or  h# fc21 ec!  ;
+
 : io-spi@  ( reg# -- b )  h# fea8 +  ec@  ;
 : io-spi!  ( b reg# -- )  h# fea8 +  ec!  ;
 
