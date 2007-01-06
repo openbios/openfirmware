@@ -285,12 +285,19 @@ d# 12,000  constant scanline-spins
    ]unlock
 ;
 
+: dcon2?  ( -- flag )
+   0 ['] dcon@ catch  if  drop   smb-init  false exit  then  ( value )
+   h# dc02 =
+;
+
 : good-dcon?  ( -- flag )
    atest?  if    \ A-test boards don't need this PLL kick
       0 ['] dcon@ catch  if  drop  smb-init  false exit  then
       wbsplit nip  h# dc =    ( flag )
       exit  
    then
+
+   dcon2?  if  true exit  then
 
    \ Scan line enable (100), color swizzling (20),
    \ blanking (10), pass thru disable (1)

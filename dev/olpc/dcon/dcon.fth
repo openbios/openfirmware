@@ -102,8 +102,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
 
 : set-color ( color? -- )
    dup to color?
-   \ No color antialiasing (40) for this version
-   if  h# 89  else  h# 29  then  1 dcon!
+   if  h# 89  else  h# 69  then  1 dcon!
 ;
 
 \ gx_configure_tft(info);
@@ -147,9 +146,11 @@ d# 905 value resumeline  \ Configurable; should be set from args
       h# 0101  h# 42 dcon!
       h# 0101  h# 43 dcon!
    else           \ Later boards have a DCON ASIC
-      h#   7a  h# 0b dcon!  \ Input sampling edge (7a => Negative, 72 => Positive)
-      h#  25e  h# 37 dcon!  \ BSTH output timing
-      h#  25c  h# 36 dcon!  \ BSTH output timing
+      dcon2?  0=  if
+         h#   7a  h# 0b dcon!  \ Input sampling edge (7a => Negative, 72 => Positive)
+         h#  25e  h# 37 dcon!  \ BSTH output timing
+         h#  25c  h# 36 dcon!  \ BSTH output timing
+      then
 
       \ Colour swizzle, AA, no passthrough, backlight
       h# 069  mode!  \ DCON_MODE
