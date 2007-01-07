@@ -176,15 +176,6 @@ d# 20 constant /root-dev-buf
 
    linux-base  linux-params  (init-program)
    linux-params to %esi
-
-[ifdef] virtual-mode
-\   h# c010.0000 to %eip  \ This is for ELF loading in virtual mode
-
-   \ Incorporate a mapping for Open Firmware into Linux's page
-   \ tables by copying our page table pointer into his page directory.
-   fw-virt-base d# 20 rshift h# ffc and   ( ptp-offset )
-   dup cr3@ + l@  swap %eip h# 1000 + +  !
-[then]
 ;
 
 : load-ramdisk  ( -- )
