@@ -285,11 +285,6 @@ d# 12,000  constant scanline-spins
    ]unlock
 ;
 
-: dcon2?  ( -- flag )
-   0 ['] dcon@ catch  if  drop   smb-init  false exit  then  ( value )
-   h# dc02 =
-;
-
 : good-dcon?  ( -- flag )
    atest?  if    \ A-test boards don't need this PLL kick
       0 ['] dcon@ catch  if  drop  smb-init  false exit  then

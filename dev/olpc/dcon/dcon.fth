@@ -125,6 +125,11 @@ d# 905 value resumeline  \ Configurable; should be set from args
 \ Setup so it can be called by execute-device-method
 : dcon-off  ( -- )  smb-init  h# 12 ['] mode!  catch  if  drop  then  ;
 
+: dcon2?  ( -- flag )
+   0 ['] dcon@ catch  if  drop   smb-init  false exit  then  ( value )
+   h# dc02 =
+;
+
 : dcon-enable  ( -- )
    \ Switch to OLPC mode
 
