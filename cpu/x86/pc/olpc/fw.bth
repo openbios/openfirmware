@@ -68,12 +68,7 @@ d# 12   to pageshift
 
 dev /
 1 encode-int  " #address-cells"  property
-
-" OLPC-Dev1A" model
 " OLPC" encode-string  " architecture" property
-
-\ XXX figure out bus frequency.  How?
-\ d# 33,333,333 " clock-frequency" integer-property
 device-end
 
 \ Memory management services
@@ -191,12 +186,26 @@ fload ${BP}/cpu/x86/pc/mmusetup.fth	\ Initial values for MMU lists
 
 fload ${BP}/cpu/x86/pc/olpc/devices.fth
 
+dev /cpu
+   d# 366,666,666 " clock-frequency" integer-property
+dend
+
 warning @ warning off
 : stand-init
    stand-init
    root-device
-      kb3920?  if  " OLPC A-test"  else  " OLPC B-test"  then
+      kb3920?  if  " OLPC A-test"  else
+         board-revision  case
+            0 of  " B2" " OLPC B2"
+            1 of  " B3" " OLPC B3"
+            7 of  " B1" " OLPC B1"
+            ( default )  >r  " ??"  " OLPC ??"  r>
+         endcase
+      then
       encode-string  " banner-name" property
+      model
+   " /cpu" find-device
+         board-revision  case
    dend
 ;
 warning !

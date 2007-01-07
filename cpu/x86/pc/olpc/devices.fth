@@ -1,6 +1,10 @@
 \ See license at end of file
 purpose: Load device drivers according to configuration definitions
 
+: board-revision  ( -- n )
+   h# 4c00.0014 rdmsr drop 4 rshift 7 and
+;
+
 fload ${BP}/cpu/x86/pc/isaio.fth
 
 fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
@@ -28,6 +32,18 @@ fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
 end-package
 stand-init: PCI host bridge
    " /pci" " init" execute-device-method drop
+   " /pci" find-device
+      kb3920?  if
+         d# 33,333,333
+      else
+         board-revision  7 =  if
+            d# 33,333,333
+         else
+            d# 66,666,667
+         then
+      then
+      " clock-frequency" integer-property
+   dend
 ;
 
 fload ${BP}/dev/pciprobe.fth		\ Generic PCI probing
