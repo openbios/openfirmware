@@ -41,6 +41,7 @@ external
       hc-rh-desb@ d# 17 >> over h# ff and 0  ?do
          dup 1 i << and  if
             i hc-rh-psta@  h# 100 or i hc-rh-psta!	\ power port
+            d# 10 ms            \ Stagger to lower surge current
          then
       loop  drop
    then  drop
