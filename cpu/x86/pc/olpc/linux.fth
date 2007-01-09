@@ -214,7 +214,10 @@ d# 20 constant /root-dev-buf
 ' ?linux-elf-map-in is elf-map-in
 
 : init-bzimage?   ( -- flag )
-   load-base h# 202 +  " HdrS"  comp  if  false exit  then
+   loaded                               ( adr len )
+   h# 202 /string                       ( adr' len' )
+   4 <  if  drop false exit  then       ( adr )
+   " HdrS"  comp  if  false exit  then  ( )
    h# 10.0000 to linux-base
    code16-size to cmdline-offset         \ Save in case we clobber load-base
    load-base  0 +lp  code16-size  move   \ Copy the 16-bit stuff
