@@ -32,38 +32,19 @@ fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
 end-package
 stand-init: PCI host bridge
    " /pci" " init" execute-device-method drop
-   " /pci" find-device
-      kb3920?  if
-         d# 33,333,333
-      else
-         board-revision  7 =  if
-            d# 33,333,333
-         else
-            d# 66,666,667
-         then
-      then
-      " clock-frequency" integer-property
-   dend
 ;
 
 fload ${BP}/dev/pciprobe.fth		\ Generic PCI probing
 
-[ifdef] use-timestamp-counter
 \ Use the CPU chip's Time Stamp Counter for timing; it does just what we want
 fload ${BP}/cpu/x86/tsc.fth
-[then]
+d# 366,666 to ms-factor
+d# 367 to us-factor
 
 [ifdef] use-root-isa
 0 0  " "  " /" begin-package
    fload ${BP}/cpu/x86/pc/isabus.fth	\ ISA Bus Bridge under root node
 end-package
-[then]
-
-fload ${BP}/cpu/x86/pc/getms.fth
-
-[ifdef] use-mediagx
-fload ${BP}/dev/mediagx/reg.fth		\ MediaGX constants and access
-fload ${BP}/dev/mediagx/dump.fth
 [then]
 
 [ifdef] use-pci-isa
@@ -134,10 +115,6 @@ devalias a /isa/fdc/disk@0
 devalias b /isa/fdc/disk@1
 devalias mouse /isa/8042/mouse
 
-[ifdef] use-timestamp-counter
-fload ${BP}/cpu/x86/pc/tsccal.fth
-[then]
-
 dev /8042      patch false ctlr-selftest open   device-end
 
 0 0  " i70"  " /isa" begin-package   	\ Real-time clock node
@@ -162,7 +139,6 @@ fload ${BP}/forth/lib/pattern.fth	\ Text string pattern matching
 \ XXX remove the OS file commands from tools.dic
 fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
 
-[ifdef] olpc
 fload ${BP}/cpu/x86/pc/olpc/cmos.fth     \ CMOS RAM indices are 1f..ff , above RTC
 
 stand-init: nand5536
@@ -176,7 +152,6 @@ stand-init: nand5536
 \ This alias will work for either the CS5536 NAND FLASH
 \ or the CaFe NAND FLASH, whichever is present.
 devalias nand /nandflash
-[then]
 
 [ifdef] pseudo-nvram
 fload ${BP}/cpu/x86/pc/biosload/filenv.fth
@@ -254,7 +229,6 @@ fload ${BP}/cpu/x86/pc/reset.fth	\ reset-all
 fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
 fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
 
-[ifdef] olpc
 fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
 0 value atest?
 warning @ warning off
@@ -263,9 +237,24 @@ warning @ warning off
    kb3920? to atest?
 ;
 warning !
+
+stand-init: PCI properties
+   " /pci" find-device
+      kb3920?  if
+         d# 33,333,333
+      else
+         board-revision  7 =  if
+            d# 33,333,333
+         else
+            d# 66,666,667
+         then
+      then
+      " clock-frequency" integer-property
+   dend
+;
+
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
-[then]
 
 fload ${BP}/dev/olpc/spiflash/spiflash.fth   \ SPI FLASH programming
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
@@ -276,7 +265,6 @@ fload ${BP}/dev/geode/lpcflash.fth           \ Reflasher for PLCC FLASH on A-tes
 
 [then]
 
-[ifdef] olpc
 fload ${BP}/cpu/x86/fb16-ops.fth
 fload ${BP}/ofw/termemu/fb16.fth
 0 0  " 1,1"  " /pci" begin-package
@@ -287,7 +275,6 @@ end-package
 devalias screen /display
 
 fload ${BP}/dev/geode/acpi.fth           \ Power management
-[then]
 
 [ifdef] notdef-olpc
 \ fload ${BP}/dev/olpc/plccflash.fth  \ PLCC LPC debug FLASH

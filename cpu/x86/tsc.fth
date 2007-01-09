@@ -37,6 +37,16 @@ d# 262 value us-factor
 
 : (ms)  ( #ms -- )  0  ?do  1ms  loop  ;
 ' (ms) to ms
+
+\ Timing tools
+: t(  ( -- d.timestamp )  tsc@  ;
+: )t  ( d.timestamp -- )
+   tsc@  2swap d-  d# 367 um/mod nip  ( microseconds )
+   push-decimal
+   <#  u# u# u#  [char] , hold  u# u#s u#>  type  ." usec"
+   pop-base
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

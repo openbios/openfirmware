@@ -194,18 +194,16 @@ warning @ warning off
 : stand-init
    stand-init
    root-device
-      kb3920?  if  " OLPC A-test"  else
+      kb3920?  if  " A1" " OLPC A-test"  else
          board-revision  case
-            0 of  " B2" " OLPC B2"
-            1 of  " B3" " OLPC B3"
-            7 of  " B1" " OLPC B1"
+            0 of  " B2" " OLPC B2"  endof
+            1 of  " B3" " OLPC B3"  endof
+            7 of  " B1" " OLPC B1"  endof
             ( default )  >r  " ??"  " OLPC ??"  r>
          endcase
       then
       encode-string  " banner-name" property
       model
-   " /cpu" find-device
-         board-revision  case
    dend
 ;
 warning !
@@ -224,13 +222,10 @@ end-support-package
 [then]
 devalias nfs net//obp-tftp:last//nfs
 
-
-fload ${BP}/cpu/x86/pc/mscal.fth
 fload ${BP}/cpu/x86/pc/boot.fth
 
 false to stand-init-debug?
 \ true to stand-init-debug?
-
 
 hex
 \ stand-init-debug?  [if]
@@ -284,6 +279,8 @@ hex
    " show-devs /usb@f,5" eval
    report-disk
 ;
+alias p2 probe-usb2
+
 : probe-usb  ( -- )
    \ Open OHCI so it will claim USB 1 devices that the EHCI controller disowns
    " /usb@f,4" select-dev
@@ -295,7 +292,7 @@ hex
    " probe-usb" eval  \ OHCI probe
    unselect
    ." USB1 devices:" cr
-   " show-devs /usb@f,4" eval
+   " no-page  show-devs /usb@f,4  page-mode" eval
 \   report-disk
 ;
 [else]
@@ -304,7 +301,7 @@ hex
    d# 300 ms
    " probe-usb" eval
    unselect
-   " show-devs /usb" eval
+   " no-page  show-devs /usb  page-mode" eval
    report-disk
 ;
 [then]
@@ -453,8 +450,6 @@ fload ${BP}/ofw/core/dualconsole.fth
 \   ?bailout
 
    no-page
-\   ." calibrate-ms"  cr
-   calibrate-ms
 
    " screen" open-dev  ?dup  if
       stdout !
