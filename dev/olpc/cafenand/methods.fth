@@ -3,10 +3,29 @@ purpose: interface methods for CaFe NAND controller
 
 external
 
+: dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
+
+: dma-free  ( adr len -- )  " dma-free" $call-parent  ;
+
+: close  ( -- )
+   soft-reset unmap-regs
+   dma-buf-va  ?dup  if
+      dma-buf-va dma-buf-pa /dma-buf  " dma-map-out" $call-parent
+      /dma-buf dma-free
+   then
+;
+
+: size  ( -- d )  pages/chip /page um*  ;
+
 : open  ( -- okay? )
    map-regs
    init
    configure 0=  if  false exit  then
+
+   /dma-buf dma-alloc to dma-buf-va
+   dma-buf-va /dma-buf false " dma-map-in" $call-parent to dma-buf-pa
+
+   " lmove" $find  0=  if  ['] move  then  to do-lmove
 
    get-bbt
 
@@ -21,14 +40,6 @@ external
       2drop  true          ( okay? )
    then                    ( okay? )
 ;
-
-: close  ( -- )  soft-reset unmap-regs  ;
-
-: size  ( -- d )  pages/chip /page um*  ;
-
-: dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
-
-: dma-free  ( adr len -- )  " dma-free" $call-parent  ;
 
 headers
 

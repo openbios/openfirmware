@@ -60,7 +60,8 @@ dma-base   dup dma-size +  2constant dma-range
    dma-base encode-int encode+  dma-size encode-int encode+
 " dma-ranges" property
 
-h# 13 constant dma-map-mode		\ Non-cacheable
+\ x86 caches are coherent
+h# 3 constant dma-map-mode		\ Cacheable
 
 \ Used with "find-node" to locate a physical memory node containing
 \ enough memory in the DMA range.

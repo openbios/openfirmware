@@ -41,6 +41,7 @@ my-address my-space h# 200.0010 + encode-phys encode+
 h#     800 instance value /page
 h#  2.0000 instance value /eblock
 
+h# 40 constant /oob
 h# e constant /ecc
 h# e constant bb-offset  \ Location of bad-block table signature in OOB data
 
@@ -152,7 +153,7 @@ h# 0220.0080 0 5 >cmd constant write-cmd
 ;
 
 : read-oob  ( page# -- adr )
-   h# 40  swap  h# 800  read-cmd  h# 130 generic-read
+   /oob  swap  h# 800  read-cmd  h# 130 generic-read
 ;
 
 : read-rst     ( -- )  h# 8000.0000 h# c cl!  ;
@@ -166,7 +167,7 @@ h# 0220.0080 0 5 >cmd constant write-cmd
    datalen                  ( adr #bytes )
    over to dma-vadr         ( adr #bytes )     \ Remember for later
    dup  to dma-len          ( adr #bytes )     \ Remember for later
-   tuck true  " dma-map-in" $call-parent  ( #bytes padr )  \ Prepare DMA buffer
+   tuck false " dma-map-in" $call-parent  ( #bytes padr )  \ Prepare DMA buffer
    dup to dma-padr          ( #bytes padr )           \ Remember for later
    h# 44 cl!  0 h# 48 cl!   ( #bytes )                \ Set address
    r> if  h# a000.0000  else  h# 8000.0000  then  ( bits )
@@ -177,16 +178,32 @@ h# 0220.0080 0 5 >cmd constant write-cmd
    dma-vadr dma-padr dma-len  " dma-map-out" $call-parent
 ;
 
-: dma-read  ( adr len page# offset -- )
+: slow-dma-read  ( adr len page# offset -- )
    set-address
    dup  true dma-setup                 ( )
    h# 130 cmd2  read-cmd  0 cl!        ( adr chip-adr r: len )
+   \ XXX put a 90 us delay here so we don't start hitting the register
+   \ until almost done.
    wait-dma-done  \ For DMA reads we wait for DMA completion instead of cmd
    dma-release                         ( )
 ;
 
+: /dma-buf  ( -- n )  /page /oob +  ;
+0 instance value dma-buf-pa
+0 instance value dma-buf-va
+defer do-lmove
+
 \ XXX should check ECC
-: dma-read-page  ( adr page# -- )  /page swap 0 dma-read  ;
+: read-page  ( adr page# -- )
+   h# 20 cl!   0 h# 1c cl!  
+   /page ( /oob + ) h# 18 cl!          ( adr )
+   dma-buf-pa h# 44 cl!                ( adr )
+   0 h# 48 cl!                         ( adr )
+   /page h# a000.0000 or  h# 40 cl!    ( adr )
+   h# 130 4 cl!  read-cmd  0 cl!       ( adr )
+   wait-dma-done  \ For DMA reads we wait for DMA completion instead of cmd
+   dma-buf-va swap /page do-lmove      ( )
+;
 
 : dma-write-raw  ( adr len page# offset -- )
    write-enable                          ( adr len page# offset )
@@ -208,7 +225,7 @@ h# 0220.0080 0 5 >cmd constant write-cmd
    write-disable
 ;
 
-: read-page    ( adr page# -- )  dma-read-page   ;
+\ : read-page    ( adr page# -- )  dma-read-page   ;
 : write-page   ( adr page# -- )  dma-write-page  ;
 : write-bytes  ( adr len page# offset -- )  pio-write-raw  ;
 
