@@ -1,0 +1,6 @@
+purpose: Fetch the VSA binary
+
+command: &builder &this
+build-now
+
+" wget http://dev.laptop.org/git\?p=users/jcrouse/buildrom\;a=blob_plain\;h=ec9aae9 -O vsa.bin" $sh
