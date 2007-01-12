@@ -155,6 +155,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
          h#   7a  h# 0b dcon!  \ Input sampling edge (7a => Negative, 72 => Positive)
          h#  25e  h# 37 dcon!  \ BSTH output timing
          h#  25c  h# 36 dcon!  \ BSTH output timing
+         h# 002b  h# 3b dcon!
       then
 
       \ Colour swizzle, AA, no passthrough, backlight
@@ -162,7 +163,6 @@ d# 905 value resumeline  \ Configurable; should be set from args
 
       h# 0101  h# 41 dcon!
       h# 0101  h# 42 dcon!
-      h# 002b  h# 3b dcon!
    then
    h# f bright!
 ;
