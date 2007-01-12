@@ -80,7 +80,7 @@ external
 ;
 
 : write  ( adr len -- actual )
-   tuck  copy-packet                      ( len buf len' )
+   tuck  copy-packet                      ( len len' )
    outbuf swap bulk-out-pipe bulk-out     ( len usberr )
    if  drop -1  then                      ( actual )
 ;
