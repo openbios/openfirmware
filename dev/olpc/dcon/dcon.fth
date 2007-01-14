@@ -102,7 +102,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
 
 : set-color ( color? -- )
    dup to color?
-   if  h# 89  else  h# 69  then  1 dcon!
+   if  h# 69  else  h# 89  then  1 dcon!
 ;
 
 \ gx_configure_tft(info);
@@ -227,6 +227,7 @@ d# 440 8 /  constant dcon-flag
 : maybe-set-cmos  ( -- )
    tft-mode?  1 and  dcon-flag cmos!
 ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
