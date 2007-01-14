@@ -288,7 +288,7 @@ defer write-spi-flash  ( adr len offset -- )
    case
       h# 13  of  ['] common-write  endof
       h# bf  of  ['] sst-write     0 spi-write-status  endof
-      ( default )  ." Unsupported SPI FLASH ID" dup .x  cr  abort
+      ( default )  ." Unsupported SPI FLASH ID " dup .x  cr  abort
    endcase
    to write-spi-flash
 ;
