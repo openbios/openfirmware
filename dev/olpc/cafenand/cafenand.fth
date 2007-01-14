@@ -49,9 +49,10 @@ h# e constant bb-offset  \ Location of bad-block table signature in OOB data
 : soft-reset  ( -- )  1 h# 3034 cl!  0 h# 3034 cl!  ;
 
 : timing-configure  ( -- )
-   \ The following timing values are taken from Marvell's diagnostic
-   h#       400 h# 24 cl!  \ Timing1
-   h#       101 h# 28 cl!  \ Timing2
+   \ The following timing values are calculated from the Hynix and Samsung
+   \ datasheets based on a clock cycle time of 10.4 nS.
+   h# 1010.0900 h# 24 cl!  \ Timing1
+   h#    1.0101 h# 28 cl!  \ Timing2
    h# 1000.0000 h# 2c cl!  \ Timing3
 ;
 [ifdef] notdef
@@ -247,8 +248,6 @@ defer do-lmove
 ;
 
 : init  ( -- )
-   timing-configure
-
    0              0 cl!   \ Clear command register
    h# 2000.0000   4 cl!   \ Page 2KB
    write-disable
@@ -258,6 +257,7 @@ defer do-lmove
    0 h# 14 cl!  \ Interrupts off
    clr-ints
 ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

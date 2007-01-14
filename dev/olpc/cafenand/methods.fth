@@ -41,6 +41,14 @@ external
    then                    ( okay? )
 ;
 
+\ Establish the NAND timings regardless of whether the device is
+\ ever opened, so the OS driver doesn't have to worry about it.
+\ Fortunately, for all the NAND chips we have considered so far,
+\ the same timing set is appropriate.
+
+: probe  ( -- )  map-regs  timing-configure  unmap-regs  ;
+probe
+
 headers
 
 \ LICENSE_BEGIN
