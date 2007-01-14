@@ -107,13 +107,10 @@ end-support-package
 [then]
 
 fload ${BP}/dev/pci/isaall.fth
-devalias seriala /isa/serial@i3f8
 devalias com1 /isa/serial@i3f8:115200
-devalias serialb /isa/serial@i2f8
-devalias com2 /isa/serial@i2f8
-devalias a /isa/fdc/disk@0
-devalias b /isa/fdc/disk@1
 devalias mouse /isa/8042/mouse
+devalias d disk
+devalias n nand
 
 dev /8042      patch false ctlr-selftest open   device-end
 

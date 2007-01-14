@@ -8,7 +8,9 @@ external
 : dma-free  ( adr len -- )  " dma-free" $call-parent  ;
 
 : close  ( -- )
-   soft-reset unmap-regs
+   \ Leave the timing registers set so the OS driver can get the
+   \ right values from them.
+   soft-reset timing-configure unmap-regs
    dma-buf-va  ?dup  if
       dma-buf-va dma-buf-pa /dma-buf  " dma-map-out" $call-parent
       /dma-buf dma-free
