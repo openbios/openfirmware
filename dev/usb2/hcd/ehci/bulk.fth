@@ -203,6 +203,7 @@ external
    dup to bulk-out-pipe
    bulk-out-timeout process-bulk-args
    ?alloc-bulk-qhqtds  to my-qtd  to my-qh
+   my-qh >hcqh-overlay >hcqtd-token dup le-l@ TD_STAT_PING or swap le-l!
 
    \ OUT qTDs
    TD_PID_OUT my-qtd fill-bulk-io-qtds

@@ -212,7 +212,10 @@ h# c000.0000 constant QH_MULT3
    >hcqh-overlay tuck			( qh.overlay qtd.p qh.overlay )
    >hcqtd-next le-l!			( qh.overlay )
    TERMINATE over >hcqtd-next-alt le-l!	( qh.overlay)
-   TD_TOGGLE_DATA1 TD_STAT_PING or swap >hcqtd-token le-l!	( )
+   \ We start with OUT instead of PING here because some broken USB keys don't
+   \ support PING.  In bulk.fth, we add back the PING flag for bulk-out
+   \ operations, where ping transactions can help significantly.
+   TD_TOGGLE_DATA1 TD_STAT_OUT or swap >hcqtd-token le-l!	( )
 ;
 
 : link-qhqtds  ( qtd.v qtd.p #qtds qh -- )
