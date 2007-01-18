@@ -5,6 +5,8 @@ purpose: Access to GPIO registers
 h# 00 constant GPIOx_OUT_VAL 
 h# 20 constant GPIOx_IN_EN 
 h# 04 constant GPIOx_OUT_EN  
+h# 10 constant GPIOx_OUT_AUX1
+h# 14 constant GPIOx_OUT_AUX2
 h# 24 constant GPIOx_INV_EN 
 h# 28 constant GPIOx_IN_FLTR_EN 
 h# 2c constant GPIOx_EVNTCNT_EN 

@@ -190,13 +190,20 @@ dev /cpu
    d# 366,666,666 " clock-frequency" integer-property
 dend
 
+: b2-fixup  ( -- )
+   \ Configure GPIO as output for controlling MIC input AC/DC coupling
+   2 GPIOx_OUT_EN gpio!
+   2 >clr GPIOx_OUT_AUX1 gpio!   \ GPIO, not AUX1 function
+   2 >clr GPIOx_OUT_AUX2 gpio!   \ GPIO, not AUX2 function
+;
+
 warning @ warning off
 : stand-init
    stand-init
    root-device
-      kb3920?  if  " A1" " OLPC A-test"  else
+      atest?  if  " A1" " OLPC A-test"  else
          board-revision  case
-            0 of  " B2" " OLPC B2"  endof
+            0 of  " B2" " OLPC B2"  b2-setup  endof
             1 of  " B3" " OLPC B3"  endof
             7 of  " B1" " OLPC B1"  endof
             ( default )  >r  " ??"  " OLPC ??"  r>
