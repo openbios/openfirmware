@@ -4,9 +4,6 @@ purpose: AC97 Driver for Geode CS5536 companion chip
 hex
 headers
 
-d# 48,000 constant frame-rate
-frame-rate d# 1000 / constant f/ms
-
 " audio" device-name
 " sound" device-type
 1 encode-int " #input-channels" property
@@ -141,7 +138,12 @@ constant /dma-regs
    8 and 1 or r> >dma-cmd rb!	\ Set direction and go bits
 ;
 
-: dma-wait  ( channel# -- )  >dma-regs >dma-cmd  begin  dup rb@ 1 and  0=  until  ;
+: dma-wait  ( channel# -- )
+   >dma-regs >dma-cmd  begin  ( adr )
+      dup rb@ 1 and  0=       ( adr flag )
+   until                      ( adr )
+   drop                       ( )
+;
 
 \ : dma-wait  ( channel# -- )
 \    >dma-regs  begin  dup >dma-status rb@ 1 and  until drop   ( regs-adr )
@@ -163,20 +165,19 @@ constant /dma-regs
 : disable-playback   ( -- )  h# 8808 set-linein-volume  ;
 : set-linein         ( -- )  h# 404 h# 1a codec!  ;
 
-0 value vendor-id
-: get-vendor-id  ( -- )
-   h# 7c codec@  8 <<  h# 7e codec@ 8 >> or  to vendor-id
+0 value device-id
+: get-device-id  ( -- )
+   h# 7c codec@  8 <<  h# 7e codec@ 8 >> or  to device-id
 ;
-
-h# 414453  constant  id-ad1819
-h# 4e5343  constant  id-lm4548
 
 d# 48000 instance value sample-rate
 0 instance value s/ms
 
+: set-sample-rate  ( hz -- )  to sample-rate  ;
+
 : open-in  ( -- )
-   sample-rate dup d# 1000 / to s/ms   ( hz )
-   vendor-id  id-ad1819 =  if  h# 78  else  h# 32  then  codec!
+   sample-rate d# 1000 / to s/ms   ( hz )
+   sample-rate  h# 32 codec!
    0 set-record-gain
 ;
 : close-in  ( -- )
@@ -185,7 +186,7 @@ d# 48000 instance value sample-rate
 : open-out  ( -- )
    disable-playback
    sample-rate d# 1000 / to s/ms
-   frame-rate vendor-id  id-ad1819 =  if  h# 78  else  h# 2c  then  codec!
+   sample-rate  dup h# 2c codec!  dup h# 2e codec!  h# 30 codec!
    0 set-master-volume
 \   0 set-mono-volume
    h# 0f0f set-headphone-volume
@@ -268,16 +269,17 @@ external
 
 : playback  ( -- )  open-out enable-playback  ;
 
-\ : 8khz    ( -- )  d# 8000 to sample-rate  ;
-: 48khz   ( -- )  d# 48000 to sample-rate  ;
+\ : 8khz    ( -- )  d# 8000 set-sample-rate  ;
+: 48khz   ( -- )  d# 48000 set-sample-rate  ;
 : default ( -- )  48khz disable-playback  ;
 
 : open  ( -- ok? )
 \   fatal-error?  if  false exit  then
    map-regs
-   get-vendor-id
+   get-device-id
    default
    set-linein
+   h# 2a codec@  1 or  h# 2a codec!   \ Enable variable rate
    parse-args  0=  if  unmap-regs false exit  then
    true
 ;
