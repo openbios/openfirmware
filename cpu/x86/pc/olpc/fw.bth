@@ -203,7 +203,7 @@ warning @ warning off
    root-device
       atest?  if  " A1" " OLPC A-test"  else
          board-revision  case
-            0 of  " B2" " OLPC B2"  b2-setup  endof
+            0 of  " B2" " OLPC B2"  b2-fixup  endof
             1 of  " B3" " OLPC B3"  endof
             7 of  " B1" " OLPC B1"  endof
             ( default )  >r  " ??"  " OLPC ??"  r>
