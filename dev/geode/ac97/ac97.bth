@@ -1,0 +1,14 @@
+purpose: Load file for AMD Geode AC97 Audio interface
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing ac97.fc
+
+FCode-version2
+fload ${BP}/dev/geode/ac97/ac97.fth
+end0
+
+end-tokenizing
