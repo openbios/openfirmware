@@ -277,9 +277,9 @@ hex
 ;
 [then]
 
-[ifdef] olpc
 : probe-usb2
    " /usb@f,5" select-dev
+   delete-my-children
    " probe-usb" eval  \ EHCI probe
    unselect
    ." USB2 devices:" cr
@@ -291,6 +291,7 @@ alias p2 probe-usb2
 : probe-usb  ( -- )
    \ Open OHCI so it will claim USB 1 devices that the EHCI controller disowns
    " /usb@f,4" select-dev
+   delete-my-children
    " power-usb-ports" eval  \ Get the devices going
    d# 500 ms
 
@@ -302,16 +303,6 @@ alias p2 probe-usb2
    " no-page  show-devs /usb@f,4  page-mode" eval
 \   report-disk
 ;
-[else]
-: probe-usb
-   " /usb" select-dev
-   d# 300 ms
-   " probe-usb" eval
-   unselect
-   " no-page  show-devs /usb  page-mode" eval
-   report-disk
-;
-[then]
 
 : probe-all  ( -- )
 \   debug-me

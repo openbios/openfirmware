@@ -1888,6 +1888,17 @@ headers
       .not-devtree
    then
 ;
+: delete-my-children  ( -- )
+   device-context?  if
+      'child token@                   ( first-node )
+      begin  non-null?  while         ( node )
+	 dup push-device              ( node )
+	 'peer token@                 ( node peer )
+	 pop-device                   ( node peer )
+         swap delete-package          ( peer )
+      repeat                          ( )
+   then
+;
 
 headers
 
