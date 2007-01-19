@@ -6,51 +6,10 @@ headers
 
 false value probemsg?	\ Optional probing messages
 
-\ >tmp$ copies the string to allocated memory.  This is necessary because
-\ the loading of a hub driver may cause another driver to be loaded,
-\ thus re-entering load-fcodedriver .  The string that class$ returns
-\ is in a static area that is overwritten on each call, so it must
-\ be copied to a dynamically-allocated place.  It's tempting to
-\ apply >tmp$ only to class$, but then the "free-mem" would have
-\ to be omitted for strings from super$ and driver$
-
-: >tmp$  ( $1 -- $2 )
-   >r r@ alloc-mem    ( name-adr adr r: len )
-   tuck r@ move       ( adr r: len )
-   r>                 ( adr len )
-;
-
 \ $load-driver executes an FCode driver that is stored somewhere
-\ other than on the device itself.  This should be defined outside
-\ the FCode driver...
+\ other than on the device itself.
 
-\ any-drop-ins? and do-drop-in are fcode driver loading methods in
-\ FirmWorks' OpenFirmware implementation.
-\ The following code may have to be changed for other OpenFirmware
-\ implementation, provided they have a special way of loading fcode
-\ driver from system ROM.
-
-\ If any-drop-ins? or do-drop-in is missing, eval will throw an error
-\ that will be caught in $load-driver.
-
-: did-drop-in?  ( name$ -- flag )
-   2dup  " any-drop-ins?" eval      ( name$ flag )
-   0=  if  2drop false  exit  then  ( name$ )
-
-   probemsg?  if                                  ( name$ )
-      ." Matched dropin driver "  2dup type  cr   ( name$ )
-   then                                           ( name$ )
-
-   " do-drop-in" eval  true
-;
-
-: $load-driver  ( name$ -- done? )
-   >tmp$            ( name$' )
-
-   2dup ['] did-drop-in?  catch  if  2drop false  then  ( name$' done? )
-
-   -rot  free-mem   ( done? )
-;
+: $load  ( name$ -- done? )  " $load-driver" evaluate  ;
 
 \ Words to get my (as a child) properties
 
@@ -130,11 +89,11 @@ false value probemsg?	\ Optional probing messages
 ;
 
 : load-fcode-driver  ( -- )
-   device$ $load-driver  if  exit  then
-   super$  $load-driver  if  exit  then
+   device$ $load  if  exit  then
+   super$  $load  if  exit  then
 
    0 2  do
-      i class$ $load-driver  if  unloop exit  then
+      i class$ $load  if  unloop exit  then
    -1 +loop
 ;
 
