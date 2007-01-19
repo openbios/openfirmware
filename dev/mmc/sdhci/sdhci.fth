@@ -387,6 +387,16 @@ external
    unmap-regs
 ;
 
+: init   ( -- )
+   map-regs
+   \ One-time initialization of Marvell CaFe SD interface.
+   \ Marvell told us to do this, but didn't say why.
+   h# 0004 h# 6a cw!
+   h# 7fff h# 60 cw!
+   unmap-regs
+;
+init
+
 external
 
 new-device
