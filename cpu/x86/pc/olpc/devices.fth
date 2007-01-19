@@ -111,6 +111,8 @@ devalias com1 /isa/serial@i3f8:115200
 devalias mouse /isa/8042/mouse
 devalias d disk
 devalias n nand
+devalias u /usb/disk
+devalias sd /sd/disk
 
 dev /8042      patch false ctlr-selftest open   device-end
 
@@ -237,7 +239,7 @@ warning !
 
 stand-init: PCI properties
    " /pci" find-device
-      kb3920?  if
+      atest?  if
          d# 33,333,333
       else
          board-revision  7 =  if

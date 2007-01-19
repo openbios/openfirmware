@@ -1,652 +1,397 @@
+purpose: Driver for SDHCI (Secure Digital Host Controller)
 \ See license at end of file
-\ SDHCI driver
 
-hex
+\ TODO:
+\ Test timeouts
+\ Test suspend/resume
+\ Check card busy and cmd inhibit bits before sending commands
+\ Test stop-at-block-gap
+\ Test high speed mode
+\ Test 1-bit data mode
+
+\ begin-select /pci/pci11ab,4101
 
 " sd" device-name
+0  " #address-cells" integer-property
+0  " #size-cells" integer-property
 
-" mmc" device-type
+h# 4000 constant /regs
 
-\ Register offsets from the adapter's base address
+: phys+ encode-phys encode+  ;
+: i+  encode-int encode+  ;
 
-0 instance value ioaddr
-h# 100 constant /regs	\ Total size of adapter's register bank
+0 0 encode-bytes
+0 0 h# 0000.0000  my-space +  phys+   0 i+  h# 0000.0100 i+   \ Config registers
+0 0 h# 0100.0010  my-space +  phys+   0 i+         /regs i+   \ Frame buffer
+" reg" property
 
-: sdb@  ( offset -- b )  ioaddr +  rb@  ;
-: sdb!  ( b offset -- )  ioaddr +  rb!  ;
-: sdw@  ( offset -- w )  ioaddr +  rw@  ;
-: sdw!  ( w offset -- )  ioaddr +  rw!  ;
-: sdl@  ( offset -- l )  ioaddr +  rl@  ;
-: sdl!  ( l offset -- )  ioaddr +  rl!  ;
+0 value debug?
 
-: my-w@  ( offset -- w )  my-space +  " config-w@" $call-parent  ;
-: my-w!  ( w offset -- )  my-space +  " config-w!" $call-parent  ;
-: unmap-regs  ( -- )
-   4 my-w@  6 invert and  4 my-w!
-   ioaddr /regs " map-out" $call-parent
-;
+0 value chip
+
+h# 200 constant /block  \ 512 bytes
+
 : map-regs  ( -- )
-   0 0  my-space h# 0200.0014 +  /regs " map-in" $call-parent  to ioaddr
-   4 my-w@  6 or  4 my-w!
+   chip  if  exit  then
+   0 0 h# 0200.0010 my-space +  /regs " map-in" $call-parent
+   to chip
 ;
-
-: le-l!  ( l adr -- )
-   >r lbsplit  r@ 3 + c!  r@ 2+ c!  r@ 1+ c!  r> c!
-;
-: le-l@  ( adr -- l )
-   >r  r@ c@  r@ 1+ c@  r@ 2+ c@  r> 3 + c@  bljoin
-;
-
 : unmap-regs  ( -- )
-   4 my-w@  7 invert and  4 my-w!            \ Disable
-   ioaddr /regs " map-out" $call-parent
-;
-: map-regs  ( -- )
-   \ 0 0  my-space h# 0200.0010 +  /regs " map-in" $call-parent  to ioaddr
-   0 0  my-space h# 0100.0018 +  /regs " map-in" $call-parent  to ioaddr
-   4 my-w@  3 or  4 my-w!       \ Enable memory and io
+   chip  0=  if  exit  then
+   chip  h# 4000  " map-out" $call-parent
+   0 to chip
 ;
 
+: cl!  ( l adr -- )  chip + rl!  ;
+: cl@  ( adr -- l )  chip + rl@  ;
+: cw!  ( w adr -- )  chip + rw!  ;
+: cw@  ( adr -- w )  chip + rw@  ;
+: cb!  ( b adr -- )  chip + rb!  ;
+: cb@  ( adr -- b )  chip + rb@  ;
 
-\ PCI registers
+\ This is the lowest level general-purpose command issuer
+\ Some shorthand words for accessing interrupt registers
 
-h# 00 constant pci-ifpio
-h# 01 constant pci-ifdma
-h# 02 constant pci-ifvendor
+\ By the way, you can't clear the error summary bit in the ISR
+\ by writing 1 to it.  It clears automatically when the ESR bits
+\ are cleared (by writing ones to the ESR bits that are set).
+: isr@  ( -- w )  h# 30 cw@  ;
+: isr!  ( w -- )  h# 30 cw!  ;
+: esr@  ( -- w )  h# 32 cw@  ;
+: esr!  ( w -- )  h# 32 cw!  ;
 
-h# 40 /* 8 bits */ constant pci-slot-info
-: pci-slot-info-slots  ( x -- n )  4 rshift 7 and  ;
-h# 07 constant pci-slot-info-first-bar-mask
+[ifdef] marvell
+: enable-sd-int  ( -- )
+   h# 300c cl@  h# 8000.0002 or  h# 300c cl!
+;
+: disable-sd-int  ( -- )
+   h# 300c cl@  2 invert and  h# 300c cl!
+;
+: enable-sd-clk  ( -- )
+   h# 3004 cw@  h# 2000 or  h# 3004 cw!
+;
+: disable-sd-clk  ( -- )
+   h# 3004 cw@  h# 2000 invert and  h# 3004 cw!
+;
+[then]
 
-\ Controller registers
-
-h# 00 constant dma-address  \ L
-
-h# 04 constant block-size   \ W
-: make-blksz  ( blksz dma -- n )
-   7 and d# 12 lshift  swap h# fff and or
+: clear-interrupts  ( -- )
+   isr@ drop  esr@ drop
+   h# ffff isr!  \ Clear all normal interrupts
+   h# ffff esr!  \ Clear all error interrupts
 ;
 
-h# 06 constant block-count   \ W
+0 instance value sd-clk
 
-h# 08 constant argument      \ L
+: wp?  false  ;  \ XXX FIXME
 
-h# 0C constant transfer-mode \ W
-h# 01 constant trns-dma
-h# 02 constant trns-blk-cnt-en
-h# 04 constant trns-acmd12
-h# 10 constant trns-read
-h# 20 constant trns-multi
-
-h# 0E constant command        \ W
-h# 03 constant cmd-resp-mask
-h# 08 constant cmd-crc
-h# 10 constant cmd-index
-h# 20 constant cmd-data
-
-h# 00 constant cmd-resp-none
-h# 01 constant cmd-resp-long
-h# 02 constant cmd-resp-short
-h# 03 constant cmd-resp-short-busy
-
-: make-cmd  ( f c -- )  bwjoin  ;
-
-h# 10 constant response
-
-h# 20 constant buffer
-
-h# 24 constant present-state     \ L
-h# 00000001 constant cmd-inhibit
-h# 00000002 constant data-inhibit
-h# 00000100 constant doing-write
-h# 00000200 constant doing-read
-h# 00000400 constant space-available
-h# 00000800 constant data-available
-h# 00010000 constant card-present
-h# 00080000 constant write-protect
-
-h# 28 constant host-control  \ B
-h# 01 constant ctrl-led
-h# 02 constant ctrl-4bitbus
-
-h# 29 constant power-control \ B
-h# 01 constant power-on
-h# 0A constant power-180
-h# 0C constant power-300
-h# 0E constant power-330
-
-h# 2A constant block-gap-control \ B
-
-h# 2B constant walk-up-control   \ B
-
-h# 2C constant clock-control     \ W
-8 constant divider-shift
-h# 0004 constant clock-card-en
-h# 0002 constant clock-int-stable
-h# 0001 constant clock-int-en
-
-h# 2E constant timeout-control   \ B
-
-h# 2F constant software-reset    \ B
-h# 01 constant reset-all
-h# 02 constant reset-cmd
-h# 04 constant reset-data
-
-h# 30 constant int-status        \ L
-h# 34 constant int-enable        \ L
-h# 38 constant signal-enable     \ L
-
-h# 00000001 constant int-response
-h# 00000002 constant int-data-end
-h# 00000008 constant int-dma-end
-h# 00000010 constant int-space-avail
-h# 00000020 constant int-data-avail
-h# 00000040 constant int-card-insert
-h# 00000080 constant int-card-remove
-h# 00000100 constant int-card-int
-h# 00010000 constant int-timeout
-h# 00020000 constant int-crc
-h# 00040000 constant int-end-bit
-h# 00080000 constant int-index
-h# 00100000 constant int-data-timeout
-h# 00200000 constant int-data-crc
-h# 00400000 constant int-data-end-bit
-h# 00800000 constant int-bus-power
-h# 01000000 constant int-acmd12err
-
-h# 00007FFF constant int-normal-mask
-h# FFFF8000 constant int-error-mask
-
-0
-int-response or
-int-timeout or
-int-crc or
-int-end-bit or
-int-index or
-constant int-cmd-mask
-
-int-data-end
-int-dma-end or
-int-data-avail or
-int-space-avail or
-int-data-timeout or
-int-data-crc or
-int-data-end-bit or
-constant int-data-mask
-
-h# 3C constant acmd12-err  \ W
-
-\ 3E-3F reserved
-
-h#       40 constant capabilities
-h# 0000003F constant timeout-clk-mask
-
-0 constant timeout-clk-shift
-h# 00000080 constant timeout-clk-unit
-
-8 constant clock-base-shift
-h# 00003F00 constant clock-base-mask
-
-16 constant max-block-shift
-h# 00030000 constant max-block-mask
-
-h# 00400000 constant can-do-dma
-h# 01000000 constant can-vdd-330
-h# 02000000 constant can-vdd-300
-h# 04000000 constant can-vdd-180
-
-\ 44-47 reserved for more caps
-
-h# 48 constant max-current       \ L
-
-\ 4C-4F reserved for more max current
-
-\ 50-FB reserved
-
-h#   FC constant slot-int-status \ W
-
-h#   FE constant host-version    \ W
-h# FF00 constant vendor-ver-mask
-      8 constant vendor-ver-shift
-h# 00FF constant spec-ver-mask
-      0 constant spec-ver-shift
-
-0 instance value clock    \ Current clock in MHz
-0 instance value max-clk  \ Controller's max clock in MHz
-0 instance value power    \ Current power setting
-0 instance value blksz    \ Block size
-0 instance value max-block  \ Controller's max block size
-0 instance value buffer
-0 instance value timeout_clk
-0 instance value size
-0 instance value use-dma?
-0 instance value requested-blocks
-
-0 value debug-nodma?
-0 value debug-forcedma?
-0 value debug-quirks?
-
-\ Low level functions
-
-: reset  ( mask -- )
-   dup software-reset rb!                ( mask )
-   reset-all and  if  0 to clock  then   ( mask )
-   d# 100 ms                             ( mask )
-   d# 100  0  do                         ( mask )
-      dup  software-reset rb@  and 0=  if  drop unloop exit  then
-      1 ms
-   loop
-   true abort" sdhci reset didn't complete"
+\ 1 is reset_all, 2 is reset CMD line, 4 is reset DAT line
+: sw-reset  ( mask -- )
+   h# 2f  2dup  cb!   begin  2dup  cb@  and 0=  until  2drop
+;
+: reset-host  ( -- )
+   0 to sd-clk
+   1 sw-reset  \ RESET_ALL
+   \ Marvell-specific
+   wp?  if  h# 40004 4  else  h# 60006 6  then  h# 3038 cb!  h# 315c cl!
 ;
 
-0
-int_bus_power   or   int_data_end_bit or
-int_data_crc    or   int_data_timeout or  int_index or
-int_end_bit     or   int_crc or           int_timeout or
-int_card_remove or   int_card_insert or
-int_data_avail  or   int_space_avail or
-int_dma_end     or   int_data_end or      int_response or
-constant init-intmask 
-
-: init  ( -- )
-   reset-all reset
-   init-intmask int-enable    sdl!
-   init-intmask signal-enable sdl!
+: init-dma  ( -- )
+\   enable-sd-int   \ Marvell-specific
+   /block h# 4000 or  4 cw!  \ h# 400 means 64K DMA boundary
 ;
 
-: led-on   ( -- )  host-control sdb@  ctrl-led or  host-control sdb!  ;
-: led-off  ( -- )  host-control sdb@  ctrl-led invert and  host-control sdb!  ;
+: high-speed  ( -- )  h# 28 cb@  4 or  h# 28 cb!  ;
+: low-speed   ( -- )  h# 28 cb@  4 invert and  h# 28 cb!  ;
 
-\ Core functions
+: 4-bit  ( -- )  h# 28 cb@  2 or  h# 28 cb!  ;
+: 1-bit  ( -- )  h# 28 cb@  2 invert and  h# 28 cb!  ;
 
-\ Len must be a multiple of 4, adr must be longword aligned
-: read-pio  ( adr len -- )
-   bounds  ?do
-      begin  present-state sdl@ data-available and  until
-      i blksize bounds  ?do
-         \ XXX this assumes that the host is little-endian
-         buffer sdl@  i l!
-      /l +loop
-   blksize +loop
+\ : led-on   ( -- )  h# 28 cb@  1 or  h# 28 cb!  ;
+\ : led-off  ( -- )  h# 28 cb@  1 invert and  h# 28 cb!  ;
+
+\ There is no need to use the debounced version (the 3.0000 bits).
+\ We poll for the card when the SDMMC driver opens, rather than
+\ sitting around waiting for insertion/removal events.
+\ The debouncer takes about 300 ms to stabilize.
+
+: card-inserted?  ( -- flag )
+   h# 24 cl@ h# 40000 and  h# 40000 =
 ;
 
-: write-pio  ( adr len -- )
-   bounds  ?do
-      begin  present-state sdl@ space-available and  until
-      i blksize bounds  ?do
-          \ XXX this assumes that the host is little-endian
-          i l@  buffer sdl!
-      /l +loop
-   blksize +loop
+: card-power-on  ( -- )
+   \ XXX should use the capabilities register (40 cl@) to determine
+   \ which power choices are available.
+   h# c  h# 29  cb!   \ 3.0V
+   h# d  h# 29  cb!   \ 3.0V + on
+;
+: card-power-off  ( -- )  0  h# 29  cb!  ;
+
+: internal-clock-on  ( -- )
+   h# 2c cw@  1 or  h# 2c cw!
+   begin  h# 2c cw@  2 and  until
+;
+: internal-clock-off  ( -- )  h# 2c cw@  1 invert and  h# 2c cw!  ;
+
+: card-clock-on   ( -- )  h# 2c cw@  4 or  h# 2c cw!  ;
+: card-clock-off  ( -- )  h# 2c cw@  4 invert and  h# 2c cw!  ;
+
+: data-timeout!  ( n -- )  h# 2e cb!  ;
+
+: setup-host  ( -- )
+   reset-host
+   internal-clock-on
+   init-dma
+
+   h#   00 h# 28 cb!  \ Not high speed, 1-bit data width, LED off
+   h# 00fb h# 34 cw!  \ normal interrupt status en reg
+                         \ block gap event not enabled
+   h# f1ff h# 36 cw!  \ error interrupt status en reg
+   h# 0000 h# 38 cw!  \ Normal interrupt status interrupt enable reg
+   h# 0000 h# 3a cw!  \ error interrupt status interrupt enable reg
+
+   clear-interrupts
 ;
 
-: timeout>count  ( timeout-clks timeout-ns -- count )
-   d# 1000 /  swap clock / +   ( target-timeout )
+0 instance value dma-vadr
+0 instance value dma-padr
+0 instance value dma-len
 
-  \ Figure out needed cycles.
-  \ We do this in steps in order to fit inside a 32 bit int.
-  \ The first step is the minimum timeout, which will have a
-  \ minimum resolution of 6 bits:
-  \ (1) 2^13*1000 > 2^22,
-  \ (2) host->timeout_clk < 2^16
-  \     =>
-  \     (1) / (2) > 2^6
-
-  1 d# 13 lshift  d# 1000 *  timeout_clk /   ( target current )
-
-  h# e  0  do     ( target current )
-     2dup >=  if  2drop i unloop exit  then  ( target current )
-     2*                                      ( target current' )
-  loop                                       ( target current' )
-  2drop  h# e
+: dma-setup  ( #blocks adr -- )
+   over 6 cw!            ( #blocks adr ) \ Set block count
+   swap /block *         ( adr #bytes )  \ Convert to byte count
+   dup to dma-len        ( adr #bytes )  \ Remember for later
+   over to dma-vadr      ( adr #bytes )  \ Remember for later
+   true  " dma-map-in" $call-parent  ( padr )  \ Prepare DMA buffer
+   dup to dma-padr       ( padr )        \ Remember for later
+   0 cl!                                 \ Set address
+;
+: dma-release  ( -- )
+   dma-vadr dma-padr dma-len  " dma-map-out" $call-parent
 ;
 
-\ blksz * blocks must be <= 524288
-\ blksz must be < host_max-block
-\ blocks must be <= 65535
-: dma-prepare-data  ( blocks blksz timeout_clks timeout_ns -- )
-   timeout>count timeout-control sdb!
-\	int count;
-\	count = pci_map_sg(host->chip->pdev, data->sg, data->sg_len,
-\		(data->flags & MMC_DATA_READ)?PCI_DMA_FROMDEVICE:PCI_DMA_TODEVICE);
-\	BUG_ON(count != 1);
-\	writel(sg_dma_address(data->sg), DMA_ADDRESS);
+: decode-esr  ( esr -- )
+   dup h# 8000 and  if   ." Vendor8, "  then
+   dup h# 4000 and  if   ." Vendor4, "  then
+   dup h# 2000 and  if   ." Vendor2, "  then
+   dup h# 1000 and  if   ." Vendor1, "  then
+   dup h#  800 and  if   ." Reserved8, "  then
+   dup h#  400 and  if   ." Reserved4, "  then
+   dup h#  200 and  if   ." Reserved2, "  then
+   dup h#  100 and  if   ." Auto CMD12, "  then
+   dup h#   80 and  if   ." Current Limit, "  then
+   dup h#   40 and  if   ." Data End Bit, "  then
+   dup h#   20 and  if   ." Data CRC, "  then
 
-\  ( count ) dma-address sdl!
-   \ We do not handle DMA boundaries, so set it to max - 512 KiB
-   ( blksz ) 7 make-blksz  block-size sdw!
-   ( blocks )  block-count sdw!
+   dup h#   10 and  if   ." Data Timeout, "  then
+   dup h#    8 and  if   ." Command Index, "  then
+   dup h#    4 and  if   ." Command End Bit, "  then
+   dup h#    2 and  if   ." Command CRC, "  then
+   dup h#    1 and  if   ." Command Timeout, "  then
+   drop  cr
 ;
 
-: pio-prepare-data  ( blocks blksz timeout_clks timeout_ns -- )
-   timeout>count timeout-control sdb!
-
-   2dup * to size
-
-   \ We do not handle DMA boundaries, so set it to max - 512 KiB
-   ( blksz ) 7 make-blksz  block-size sdw!
-   ( blocks )  block-count sdw!
-;
-
-: set-transfer-mode  ( blocks direction-in? -- )
-   trns-blk-cnt-en                    ( blocks direction-in? mode )
-   swap  if  trns-multi or  then      ( blocks mode' )
-   swap  1 >  if  trns-read or  then  ( mode' )
-   use-dma?   if  trns-dma  or  then  ( mode' )
-   transfer-mode sdw!
-;
-
-: finish-data  ( -- )
-\   use-dma?  if  dir-in?  dma-unmap  then
-
-   \ Controller doesn't count down when in single block mode.
-
-   requested-blocks dup  1 <>  if
-      \ Should report an error if the residual #blocks is nonzero
-      block-count sdw@ -
-   then                  ( actual )
-   requested-blocksz  *  ( bytes-transferred )
-
-   need-stop?  \ data->stop
-
-   data->stop  if
-      \ Reset controller upon error conditions
-      error?  if  reset-cmd reset  reset-data reset  then 
-      send_command(host, data->stop);
-   else
-      finish_tasklet
+: check-error  ( isr -- )
+   dup h# 8000 and  if     \ Check for error
+      ." Error: ISR = " dup u.  ." ESR = " esr@ dup u.
+      dup esr!
+      dup decode-esr
+      true abort" Stopping"
+\      debug-me
    then
+   drop
 ;
 
-: wait-cmd-ready  ( mask -- )  \ some combination of cmd-inhibit and data-inhibit
-\	mask = CMD_INHIBIT;
-\	if ((cmd->data != NULL) || (cmd->flags & MMC_RSP_BUSY))
-\		mask |= DATA_INHIBIT;
-\
-\	\ We shouldn't wait for data inhibit for stop commands, even
-\	\ though they might use busy signaling
-\	if (host->mrq->data && (cmd == host->mrq->data->stop))
-\		mask &= ~DATA_INHIBIT;
-    
-   d# 10 0  do   ( mask )
-      dup present-state sdl@  and 0=  if  drop unloop exit  then
-      1 ms       ( mask )
-   loop          ( mask )
-   drop          ( )
-   true abort" SDHCI controller inhibited"
+: wait  ( mask -- isr )
+   h# 8000 or                             ( mask' )
+   begin  isr@  2dup and  0=  while       ( mask isr )
+\     key?  if  key drop  debug-me  then  ( mask isr )
+      drop                                ( mask )
+   repeat                                 ( mask isr )
+   debug?  if  ." ISR: " dup 4 u.r  cr  then
+   tuck and isr!                          ( isr )
+   check-error                            ( isr )
 ;
 
-opcode flags arg blocks blksz timeout_clks timeout_ns 
-: send-command ( struct mmc_command *cmd -- )
-	int flags;
-
-	host->cmd = cmd;
-
-	prepare_data(cmd->data);
-	writel(cmd->arg, ARGUMENT);
-	set_transfer_mode(cmd->data);
-
-	if ((cmd->flags & MMC_RSP_136) && (cmd->flags & MMC_RSP_BUSY)) {
-		printk(KERN_ERR "%s: Unsupported response type! ");
-		cmd->error = MMC_ERR_INVALID;
-		tasklet_schedule(&host->finish_tasklet);
-		return;
-	}
-
-	if (!(cmd->flags & MMC_RSP_PRESENT))	flags = CMD_RESP_NONE;
-	else if (cmd->flags & MMC_RSP_136)	flags = CMD_RESP_LONG;
-	else if (cmd->flags & MMC_RSP_BUSY)	flags = CMD_RESP_SHORT_BUSY;
-	else                    		flags = CMD_RESP_SHORT;
-
-	if (cmd->flags & MMC_RSP_CRC)   flags |= CMD_CRC;
-	if (cmd->flags & MMC_RSP_OPCODE)flags |= CMD_INDEX;
-	if (cmd->data)  		flags |= CMD_DATA;
-
-	sdw!(MAKE_CMD(cmd->opcode, flags), COMMAND);
-}
-
-: finish-command  ( -- )
-
-	if (host->cmd->flags & MMC_RSP_PRESENT) {
-		if (host->cmd->flags & MMC_RSP_136) {
-			\ CRC is stripped so we need to do some shifting.
-			for (i = 0;i < 4;i++) {
-				host->cmd->resp[i] = readl(host->ioaddr +
-					RESPONSE + (3-i)*4) << 8;
-				if (i != 3)
-					host->cmd->resp[i] |=
-						readb(host->ioaddr +
-						RESPONSE + (3-i)*4-1);
-			}
-		} else {
-			host->cmd->resp[0] = readl(RESPONSE);
-		}
-	}
-
-	host->cmd->error = MMC_ERR_NONE;
-
-	if (host->cmd->data)
-		host->data = host->cmd->data;
-   else
-      finish_tasklet
-   then
+: cmd  ( arg cmd mode -- )
+   debug?  if  ." CMD: " over 4 u.r space   then
+   h# c cw!              ( arg cmd )  \ Mode
+   swap 8 cl!            ( cmd )      \ Arg
+   h# e cw!              ( )          \ cmd
+   1 wait                ( )
 ;
 
-: clock>divisor  ( clock -- div )
-   1         ( clock div )
-   begin     ( clock div )
-      dup d# 256 =  if  nip exit  then  ( clock div )
-      2dup  max-clk swap /              ( clock div clock max/div )
-      >=  if  u2/ nip  exit  then       ( clock div )
-      2*
-   again
-;
-: wait-clock-stable  ( -- clk )
-   d# 10 0  do   \ Wait max 10 ms
-      clock-control sdw@              ( clk )
-      dup clock-int-stable and  if  unloop exit  then  ( clk )
-      drop                            ( )
-      1 ms
-   loop
-   true abort" SDHCI clock never stabilized"
-;
-: set-clock  ( clock -- )
-   dup clock =  if  drop exit  then      ( clock )
-   0 clock-control sdw!
-   dup 0=  if  to clock  exit  then      ( clock )
+\ start    cmd    arg  crc  stop
+\ 47:46  45:40   39:8  7:1     0
+\     2      6     32    7     1
+\ Overhead is 16 bits
 
-   clock>divisior                        ( div )
+\ Response types:
+\ R1: mirrored command and status
+\ R3: OCR register
+\ R6: RCA
+\ R2: 136 bits (CID (cmd 2 or 9) or CSD (cmd 10))
+\ In R2 format, the first 2 bits are start bits, the next 6 are
+\ reserved.  Then there are 128 bits (16 bytes) of data, then the end bit
 
-   divider-shift lshift  clock-int-en or  dup clock-control sdw!  ( )
+\ No need to mask, because cw@ is guaranteed to deliver exactly 16 bits
+: response  ( -- l )   h# 10 cl@  ;
 
-   wait-clock-stable                     ( clk )
+: buf+!  ( buf value -- buf' )  over l!  la1+  ;
 
-   clock-card-en or  clock-control sdw!  ( )
-
-   to clock
+\ Store in the buffer in little-endian form
+: get-response136  ( buf -- )  \ 128 bits (16 bytes) of data.
+   h# 20  h# 10  do  i cl@ buf+!  4 +loop  drop
 ;
 
-: set-power  ( power -- )  \ 0, pwr-180, pwr-300, or pwr-330
-   dup power =  if  drop exit  then
-   dup to power             ( power )
-   0 power-control sdb!     ( power )
-   ?dup  if  power-on or  power-control sdb!  then
+0 instance value rca
+d# 16 instance buffer: cid
+
+external
+d# 16 instance buffer: csd
+headers
+
+: reset-card  ( -- )  0 0 0 cmd  0 to rca  ;  \ 0 -
+
+\ Get card ID; Result is in cid buffer
+: get-all-cids  ( -- )  0 h# 0209 0 cmd  cid get-response136  ;  \ 2 R2
+
+\ Get relative card address
+: get-rca  ( -- )  0 h# 031a 0 cmd  response  h# ffff0000 and  to rca  ; \ 3 R6
+
+: set-dsr  ( -- )  0 h# 0400 0 cmd  ;  \ 4 - UNTESTED
+
+\ cmd6 (R1) is switch-function.  It can be used to enter high-speed mode
+
+: deselect-card  ( -- )   0   h# 0700 0 cmd  ;  \ 7 - with null RCA
+: select-card    ( -- )   rca h# 071b 0 cmd  ;  \ 7 R1b
+
+\ Get Card-specific data
+: get-csd    ( -- )  rca  h# 0909 0 cmd  csd get-response136  ;  \ 9 R2
+: get-cid    ( -- )  rca  h# 0a09 0 cmd  cid get-response136  ;  \ 10 R2 UNTESTED
+
+: stop-transmission  ( -- )  rca  h# 0c1b 0 cmd  ;        \ 12 R1b UNTESTED
+
+: get-status ( -- status )  rca  h# 0d1a 0 cmd  response  ;  \ 13 R1 UNTESTED
+
+: go-inactive  ( -- )  rca  h# 0f00 0 cmd  ;         \ 15 - UNTESTED
+
+: set-blocklen  ( blksize -- )  h# 101a 0 cmd  ;     \ 16 R1 SET_BLOCKLEN
+
+\ Data transfer mode bits for register 0c (only relevant for reads and writes)
+\  1.0000  use DMA
+\  2.0000  block count register is valid
+\  4.0000  auto cmd12 to stop multiple block transfers
+\  8.0000  reserved
+\ 10.0000  direction: 1 for read, 0 for write
+\ 20.0000  multi (set for multiple-block transfers)
+
+: read-single     ( byte# -- )  h# 113a h# 13 cmd  ;  \ 17 R1 READ_SINGLE_BLOCK
+: read-multiple   ( byte# -- )  h# 123a h# 37 cmd  ;  \ 18 R1 READ_MULTIPLE
+: write-single    ( byte# -- )  h# 183a h# 03 cmd  ;  \ 24 R1 WRITE_SINGLE_BLOCK
+: write-multiple  ( byte# -- )  h# 193a h# 27 cmd  ;  \ 25 R1 WRITE_MULTIPLE
+
+: program-csd  ( -- )     0  h# 1b1a 0 cmd  ;  \ R1 27 UNTESTED
+: protect     ( group# -- )  h# 1c1b 0 cmd  ;  \ R1b 28 UNTESTED
+: unprotect   ( group# -- )  h# 1d1b 0 cmd  ;  \ R1b 29 UNTESTED
+: protected?  ( group# -- 32-bits )  h# 1e1a cmd  response  ;  \ 30 R1 UNTESTED
+
+: erase-blocks  ( block# #blocks -- ) \ UNTESTED
+   dup  0=  if  2drop exit  then
+   1- bounds        ( last first )
+   h# 201a 0 cmd    ( last )   \ cmd32 - R1
+   h# 211a 0 cmd    ( )        \ cmd33 - R1
+   h# 261b 0 cmd               \ cmd38 - R1b (wait for busy)
 ;
 
-\ MMC callbacks
+\ cmd40 is MMC
 
-: request ( cmd... -- )
-   led-on
-   send-command
+\ See table 4-5 in sandisk spec
+\ : lock/unlock  ( -- ) 0 h# 2a1a 0 cmd  ;  \ 42 R1 LOCK_UNLOCK not sure how it works
+
+: app-prefix  ( -- )  rca  h# 371a 0 cmd  ;  \ 55 R1 app-specific command prefix
+
+: set-bus-width  ( mode -- )  app-prefix  h# 61a 0 cmd  ;  \ a6 R1 Set mode
+
+: set-oc ( ocr -- ocr' )  app-prefix  h# 2902 0 cmd  response  ;  \ a41 R3
+
+\ This sends back 512 bits in a single data block.
+: app-get-status  ( -- status )  app-prefix  0 h# 12.0d1a 0 cmd  response  ;  \ a13 R1 UNTESTED
+
+: get-#write-blocks  ( -- n )  app-prefix  0 h# 161a 0 cmd  response  ;  \ a22 R1 UNTESTED
+
+\ You might want to turn this off for data transfer, as it controls
+\ a resistor on one of the data lines
+: set-card-detect  ( on/off -- )  app-prefix  h# 2a1a 0 cmd  ;  \ a42 R1 UNTESTED
+: get-scr  ( -- src )  app-prefix  0 h# 331a 0 cmd  response  ;  \ a51 R1 UNTESTED
+
+h# 8008.0000 value oc-mode  \ Voltage settings, etc.
+: set-operating-conditions  ( -- )
+   begin
+      oc-mode set-oc     ( ocr )  \ acmd41
+      h# 8000.0000 and   ( card-powered-on? )
+   0= while
+      d# 10 ms
+   repeat
 ;
 
-: set-ios  ( 4bit? power clock -- )
-   \ Reset the chip on each power off.
-   \ Should clear out any weird states.
-   over  if  0 signal-enable sdl!  init  then  ( 4bit? power clock )
-   set-clock                                   ( 4bit? power )
-   set-power                                   ( 4bit? )
-
-   host-control sdb@  ctrl-4bitbus             ( 4bit? hc-reg bit )
-   rot if  or  else  invert and  then          ( hc-reg' )
-   host-control sdb!                           ( )
+: configure-transfer  ( -- )
+   2 set-bus-width  \ acmd6 - bus width 4
+   4-bit
+   h# b data-timeout!   \ 2^24 / 48 MHz = 0.35 sec
+   /block set-blocklen  \ Cmd 16
 ;
 
-: ro?  ( -- flag )
-   present-state sdl@ write-protect and  0=
+external
+
+: attach-card  ( -- okay? )
+   card-inserted?  0=  if  false exit  then   
+
+   card-power-on  d# 20 ms  \ This delay is just a guess
+   card-clock-on  d# 10 ms  \ This delay is just a guess
+
+   reset-card     \ Cmd 0
+
+   set-operating-conditions  
+
+   get-all-cids   \ Cmd 2
+   get-rca        \ Cmd 3 - Get relative card address
+   get-csd        \ Cmd 9 - Get card-specific data
+   select-card    \ Cmd 7 - Select
+
+   configure-transfer
+   true
 ;
 
-: card-present?  ( -- flag )
-   present-state sdl@  card-present and  0<>
+: dma-alloc   ( size -- vadr )  " dma-alloc"  $call-parent  ;
+: dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;
+
+: r/w-blocks  ( addr block# #blocks in? -- actual )
+   >r               ( addr block# #blocks r: in? )
+   rot dma-setup    ( block# r: in? )
+   /block *  r>  if  read-multiple  else  write-multiple  then
+   2 wait
+   dma-release
+   dma-len /block /
 ;
 
-0 value clock-quirk?
-: reset-controller  ( -- )
-   \ Some controllers need this kick or reset won't work here
-   clock-quirk?  if  clock  0 to clock  set-clock  then
-
-   \ Spec says we should do both at the same time, but Ricoh
-   \ controllers do not like that.
-   reset-cmd reset
-   reset-data reset
-
-   led-off
-;
-
-: ack-interrupt  ( intmask bit -- intmask' )
-   dup int-status sdl!
-   invert and
-;
-
-\ Interrupt handling
-
-0 instance value cmd-done?
-0 instance value int-error-bits
-
-int-timeout int-crc or int-end-bit or int-index or  constant cmd-int-error-bits
-
-: cmd-irq  ( intmask -- intmask' )
-   doing-cmd?  0=  if
-      ." SDHCI: Command interrupt with no command in progress" cr
-   then
-
-   dup int-response and  if
-      finish-command
-      int-response ack-interrupt  \ XXX is this right?
-      exit
-   then
-
-   dup cmd-int-error-bits and  if
-      dup cmd-int-error-bits and  dup to int-error-bits  ack-interrupt
-      finsh-tasklet
-   then
-;
-
-int-data-timeout int-data-crc or  int-data-end-bit or  constant data-int-error-bits
-
-: data-irq  ( intmask -- intmask' )
-   doing-data?  0=  if
-      \ A data end interrupt is sent with the response for the stop command.
-      dup int-data-end and  0=  if
-         ." SDHCI: Data interrupt with no data operation in progress" cr
-      then
-      exit
-   then
-
-   dup data-int-error-bits  and  if
-      dup data-int-error-bits  and  dup to int-error-bits  ack-interrupt
-      finish-data
-      exit
-   then
-
-   dup int-data-avail int-space-avail or and  if
-      transfer-pio
-   then
-
-   dup int-data-end  and  if
-      finish-data
-   then      
-;
-
-: wait-done  ( -- )
-   int-status sdl@    ( intmask )
-
-   dup  int-card-insert  and  if
-      ." Card inserted" cr
-      int-card-insert ack-interrupt
-   then
-
-   dup  int-card-remove  and  if
-      ." Card removed" cr
-      int-card-remove ack-interrupt
-   then
-
-   dup int-cmd-mask  and   if
-      ...
-      int-cmd-mask ack-interrupt
-   then
-
-   dup int-data-mask  and   if
-      ...
-      int-data-mask ack-interrupt
-   then
-
-   dup int-bus-power and   if
-      ." SD device is using too much power" cr
-      int-bus-power ack-interrupt
-   then
-
-   ( intmask )
-   ." Unexpected interrupt bits " .x  cr
-;
-
-\ Device probing/removal
-
-: open  ( -- flag )
+: open  ( -- )
    map-regs
-   reset-all reset
-
-   capabilities	sdl@   ( capabilities )
-
-   false to use-dma?
-   try-dma?  if        ( capabilities )
-      dup can-do-dma and  if    ( capabilities )
-         true to use-dma?
-         \ XXX also check low byte of class config register to ensure dma IF present
-         \ Turn on bus master bit in enable register
-         4 my-w@  4 or  4 my-w!
-         allocate-dma
-      else
-         false to use-dma?
-         ." No DMA support in sdhci" cr
-      then
-   then
-
-   dup clock-base-mask and  clock-base-shift rshift  ( capabilities mhz )
-   d# 1000000 *  to max-clk                          ( capabilities )
-
-   dup timeout-clock-mask and  timeout-clock-shift rshift  ( capabilities clks )
-   over timeout-clk-unit and  if  d# 1000 *  then  to timeout-clk  ( capabilities )
-
-   dup max-block-mask and  max-block-shift rshift    ( capabilities max-blk-cnt )
-   d# 512 swap lshift  to max-block                  ( capabilities )
-
-   \ XXX need to do something with the list of supported voltages
-   drop                                              ( )
-
-   \ DMA transfer is limited to 512KiB.
-
-   init
-
+   setup-host
    true
 ;
 
 : close  ( -- )
-   use-dma?  if  free-dma  then
+   card-clock-off
+   card-power-off
    unmap-regs
-   0 4 my-w!
 ;
 
+external
+
+new-device
+   " sdmmc" " $load-driver" eval drop
+finish-device
 
 
 \ LICENSE_BEGIN
