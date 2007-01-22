@@ -83,8 +83,6 @@ h# 200 constant /block  \ 512 bytes
 
 0 instance value sd-clk
 
-: wp?  false  ;  \ XXX FIXME
-
 \ 1 is reset_all, 2 is reset CMD line, 4 is reset DAT line
 : sw-reset  ( mask -- )
    h# 2f  2dup  cb!   begin  2dup  cb@  and 0=  until  2drop
@@ -92,8 +90,6 @@ h# 200 constant /block  \ 512 bytes
 : reset-host  ( -- )
    0 to sd-clk
    1 sw-reset  \ RESET_ALL
-   \ Marvell-specific
-   wp?  if  h# 40004 4  else  h# 60006 6  then  h# 3038 cb!  h# 315c cl!
 ;
 
 : init-dma  ( -- )
