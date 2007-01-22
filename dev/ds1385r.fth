@@ -1,6 +1,11 @@
 \ See license at end of file
 purpose: Driver for DS1385 Real-time clock and NVRAM chip
 
+\ Define this to latch the bad-battery indication
+\ -- The "sticky battery" feature has turned out to be annoying,
+\ so it is probably best to leave it off.
+\ create sticky-battery
+
 " rtc" device-name
 " rtc" device-type
 " pnpPNP,b00" " compatible" string-property
@@ -28,9 +33,11 @@ headers		\ For convenience
 
 headerless
 
+[ifdef] sticky-battery
 : rtc-error@  ( -- b )  d# 14 rtc@  ;
 : rtc-error!  ( b -- )  d# 14 rtc!  ;
 h# 80 constant battery-error-bit
+[then]
 
 \ make sure that the battery is charged - reg D/13 should be 80x
 : check-battery  ( -- error? )
@@ -46,6 +53,7 @@ h# 80 constant battery-error-bit
    then
 					     ( error? )
 
+[ifdef] sticky-battery
    \ If we don't have a "status" property, determine the battery
    \ state and create one.
    \ First check for a latched battery state bit.  The battery indication
@@ -55,9 +63,12 @@ h# 80 constant battery-error-bit
    rtc-error@ battery-error-bit and  if       ( error? )
       drop true                               ( error? )
    then                                       ( error? )
+[then]
 
    dup  if                                    ( error? )
+[ifdef] sticky-battery
       rtc-error@  h# 80 or  rtc-error!        ( error? )
+[then]
       " bad battery"                          ( error? $ )
    else                                       ( error? )
       " okay"                                 ( error? $ )
@@ -126,11 +137,13 @@ headers
    d# 100 /mod  h# 1a bcd!  9 bcd!  8 bcd!  7 bcd!  4 bcd!  2 bcd!  0 bcd!
    r> d# 11 rtc!                            ( )
 
+[ifdef] sticky-battery
    \ Clear error flags
    rtc-error@  h# 80 invert and  rtc-error!
    " status" get-my-property  0=  if			( adr len )
       2drop  " okay" encode-string  " status" property	( )
    then
+[then]
 ;
 
 : selftest  ( -- flag )
