@@ -226,6 +226,8 @@ devalias nfs net//obp-tftp:last//nfs
 
 fload ${BP}/cpu/x86/pc/boot.fth
 
+fload ${BP}/cpu/x86/pc/olpc/usb.fth
+
 false to stand-init-debug?
 \ true to stand-init-debug?
 
@@ -254,60 +256,9 @@ warning @  warning off
 ;
 ' (.firmware) to .firmware
 
-hex 
-\ If there is a PCI ethernet adapter, use it as the default net device,
-\ otherwise use any ethernet that can be found in the device tree.
-: report-net  ( -- )
-   " /usb/ethernet" 2dup  find-package  if  ( name$ phandle )
-      drop                                  ( name$ )
-   else                                     ( name$ )
-      2drop  " /ethernet"                   ( name$' )
-   then                                     ( name$ )
-   " net" 2swap $devalias                   ( )
-;
-
-[ifdef] notdef   \ We have the graphical penguin
-: linux-logo  ( -- )
-   " penguin.txt" find-drop-in  if  page type  then
-;
-[then]
-
-: probe-usb2
-   " /usb@f,5" select-dev
-   delete-my-children
-   " probe-usb" eval  \ EHCI probe
-   unselect
-   ." USB2 devices:" cr
-   " show-devs /usb@f,5" eval
-   report-disk
-;
-alias p2 probe-usb2
-
-: probe-usb  ( -- )
-   \ Open OHCI so it will claim USB 1 devices that the EHCI controller disowns
-   " /usb@f,4" select-dev
-   delete-my-children
-   " power-usb-ports" eval  \ Get the devices going
-   d# 500 ms
-
-   probe-usb2               \ First dibs to EHCI/USB2
-
-   " probe-usb" eval  \ OHCI probe
-   unselect
-   ." USB1 devices:" cr
-   " no-page  show-devs /usb@f,4  page-mode" eval
-\   report-disk
-;
-
 : probe-all  ( -- )
-\   debug-me
    probe-pci
-\ probe-usb
-[ifdef] olpc
    probe-usb
-[else]
- ." Not probing USB; execute probe-usb manually" cr
-[then]
    report-disk
    report-net
    report-keyboard
@@ -475,12 +426,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 \      ?gui-banner
 \   then
 
-   " keyboard" expand-alias  if   ( devspec$ )
-      drop " /usb"  comp  0=  if  ( )
-         red-letters  ." Using USB keyboard." cr  black-letters
-         " keyboard" input
-      then
-   then
+   ?usb-keyboard
 
    hex
    warning on
