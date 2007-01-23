@@ -130,6 +130,10 @@ constant /dma-regs
    stat@ ffff and
 ;
 
+: iand  ( n1 mask -- n2 )  invert and  ;
+: codec-set  ( mask reg# -- )  tuck codec@  or         swap codec!  ;
+: codec-clr  ( mask reg# -- )  tuck codec@  swap iand  swap codec!  ;
+
 : >dma-regs  ( channel# -- adr )  /dma-regs *  h# 20 +  au +  ;
 : start-dma  ( prd-phys-adr in? channel# -- )
    >dma-regs >r
@@ -152,6 +156,14 @@ constant /dma-regs
 \    >dma-regs dup >dma-cmd rb@ 1 invert and swap >dma-cmd rb!
 \ ;
 
+: db>volume  ( atten-db -- regval )
+   2*                    ( db*2 )
+   3 /                   ( regval ) \ scale by 1.5 dB steps
+   h# 1f max             ( regval' )
+   dup wljoin            ( left,right )
+;
+
+
 \ AC '97 CODEC stuff
 : set-master-volume     ( value -- )  ( db>volume )      2 codec!  ;  \ XXX handle balance too
 : set-headphone-volume  ( value -- )  ( db>volume )      4 codec!  ;
@@ -164,6 +176,28 @@ constant /dma-regs
 : enable-playback    ( -- )  h#  808 set-linein-volume  ;
 : disable-playback   ( -- )  h# 8808 set-linein-volume  ;
 : set-linein         ( -- )  h# 404 h# 1a codec!  ;
+
+: set-mic-db  ( db -- )
+   dup d# 12 >  if       ( db )
+      d# 20 -  h# 40     ( db' base-regval )  \ Boost gain by 20 dB
+   else                  ( db )
+      0                  ( db base-regval )
+   then                  ( db base-regval )
+   swap                  ( base-regval db )
+   d# 12 swap -          ( base-regval attenuation )
+   0 max                 ( base-regval attenuation' )
+   2* 3 / h# 1f min      ( base-regval reg-low )
+   or                    ( regval )
+   h# e codec!
+;
+
+: mic-mute  ( -- )  h# 8008 h# e codec!  ;
+
+: mic+0db   ( -- )  h# 40  h# 0e codec-clr  ;
+: mic+20db  ( -- )  h# 40  h# 0e codec-set  ;
+
+: mic-input  ( -- )  0  h# 1a codec!  ;
+
 
 0 value device-id
 : get-device-id  ( -- )
@@ -179,9 +213,11 @@ d# 48000 instance value sample-rate
    sample-rate d# 1000 / to s/ms   ( hz )
    sample-rate  h# 32 codec!
    0 set-record-gain
+   mic+0db
+   mic-input
 ;
 : close-in  ( -- )
-   h# 8000 set-record-gain		\ mute
+\   h# 8000 set-record-gain		\ mute
 ;
 : open-out  ( -- )
    disable-playback
@@ -201,11 +237,6 @@ d# 48000 instance value sample-rate
 ;
 
 0 instance value last-prd
-
-: wait-prds  ( last-prd -- )
-   \ XXX need timeout
-   begin  last-prd >prd-status w@  eop and  until
-;
 
 : fill-prds  ( phys len prd-virt -- last-prd )
    swap  begin                           ( phys prd len )
@@ -228,11 +259,10 @@ d# 48000 instance value sample-rate
    dup alloc-prds  to prd-in-len  to prd-in-phys  to prd-in-virt  ( adr len )
    tuck  true  dma-map-in                ( len phys )
 
-   swap prd-in-virt  fill-prds
+   over prd-in-virt  fill-prds
 
    prd-in-phys true in-channel start-dma
 
-   wait-prds  
    in-channel dma-wait
    prd-in-virt prd-in-phys prd-in-len free-prds
 ;
@@ -267,6 +297,25 @@ d# 48000 instance value sample-rate
 
 external
 
+: stats  ( adr len -- min max avg )
+   >r >r  h# 9000 h# -9000 0   ( min max sum r: len adr )
+   r> r@ bounds  ?do           ( min max sum r: len )
+      i <w@  +                 ( min max sum' r: len )
+      swap  i <w@  max  swap   ( min max' sum r: len )
+      rot   i <w@  min  -rot   ( min' max sum r: len )
+   /w +loop                    ( min max sum )
+   r> 2/ /                     ( min max avg )
+;
+
+: hpf-on   ( -- )  h# 1000  h# 5c codec-clr  ;
+: hpf-off  ( -- )  h# 1000  h# 5c codec-set  ;
+
+: vbias-off  ( -- )  4  h# 76 codec-set  ;
+: vbias-on   ( -- )  4  h# 76 codec-clr  ;
+
+: vbias-low   ( -- )  8  h# 76 codec-clr  ;
+: vbias-high  ( -- )  8  h# 76 codec-set  ;
+
 : playback  ( -- )  open-out enable-playback  ;
 
 \ : 8khz    ( -- )  d# 8000 set-sample-rate  ;
@@ -278,8 +327,7 @@ external
    map-regs
    get-device-id
    default
-   set-linein
-   h# 2a codec@  1 or  h# 2a codec!   \ Enable variable rate
+   1  h# 2a codec-set   \ Enable variable rate
    parse-args  0=  if  unmap-regs false exit  then
    true
 ;
