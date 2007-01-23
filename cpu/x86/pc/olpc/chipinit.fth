@@ -355,8 +355,10 @@ msr: 5100.0025 0187c001.01840001.
 msr: 5100.0026 014fc001.01480001.
 msr: 5100.0027 fe01a000.fe01a001. \ OHCI
 msr: 5100.0028 fe01b000.fe01b001. \ EHCI
+msr: 5100.0029 efc00000.efc00001. \ UOC
 msr: 5100.002b 018ac001.018a0001.
 msr: 5100.002f 00084001.00084009.
+msr: 5101.0020 400000ef.c00fffff. \ P2D_BM0 UOC
 msr: 5101.0023 500000fe.01afffff. \ P2D_BMK Descriptor 0 OHCI
 msr: 5101.0024 400000fe.01bfffff. \ P2D_BMK Descriptor 1 UHCI
 msr: 5101.00e0 60000000.1f0ffff8. \ IOD_BM Descriptor 0  ATA IO address
@@ -399,6 +401,7 @@ msr: 5140.004e 00000000.effd0080. \ LPC_SIRQ
 msr: 5120.0001 0000000b.00000000.  \ USB_GLD_MSR_CONFIG - 5536 page 262
 msr: 5120.0008 0000000e.fe01a000.  \ USB OHC Base Address - 5536 page 266
 msr: 5120.0009 0000200e.fe01b000.  \ USB EHC Base Address - 5536 page 266
+msr: 5120.000b 00000002.efc00000.  \ USB UOC Base Address - 5536 page 266
 
 
 here msr-init - constant /msr-init
