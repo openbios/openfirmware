@@ -33,7 +33,7 @@ alias p2 probe-usb2
    \ Open OHCI so it will claim USB 1 devices that the EHCI controller disowns
    " /usb@f,4" select-dev
    delete-my-children
-   " power-usb-ports" eval  \ Get the devices going
+   " stagger-power" eval  \ Get the devices going
    d# 500 ms
 
    probe-usb2               \ First dibs to EHCI/USB2

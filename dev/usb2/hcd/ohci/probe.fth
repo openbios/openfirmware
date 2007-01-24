@@ -34,6 +34,7 @@ headers
 false value ports-powered?
 
 external
+\ This version powers all the ports at once
 : power-usb-ports  ( -- )
    hc-rh-desa@  dup h# 200  and  0=  if
       \ ports are power switched
@@ -41,10 +42,25 @@ external
       hc-rh-desb@ d# 17 >> over h# ff and 0  ?do
          dup 1 i << and  if
             i hc-rh-psta@  h# 100 or i hc-rh-psta!	\ power port
-            d# 10 ms            \ Stagger to lower surge current
          then
       loop  drop
    then  drop
+   potpgt 2* ms			\ Wait until powergood
+   true to ports-powered?
+;
+
+\ This version powers the ports in a staggered fashion to reduce surge current
+: stagger-power  ( -- )
+   hc-rh-desa@  h# 200 and  0=  if               ( )
+      hc-rh-desa@ h# 100 or hc-rh-desa!	\ Individual power switching mode
+      hc-rh-desa@ h# ff and  h# f min            ( numports )
+      1 over lshift 1-                           ( numports bitmask )
+      d# 17 lshift  hc-rh-desb@ or  hc-rh-desb!  ( numports )
+      0  ?do                                     ( )
+         i hc-rh-psta@  h# 100 or i hc-rh-psta!	 ( )  \ power port
+         d# 10 ms            \ Stagger to lower surge current
+      loop                                       ( )
+   then
    potpgt 2* ms			\ Wait until powergood
    true to ports-powered?
 ;
