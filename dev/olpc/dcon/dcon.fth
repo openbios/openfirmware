@@ -100,11 +100,6 @@ d# 905 value resumeline  \ Configurable; should be set from args
    then
 ;
 
-: set-color ( color? -- )
-   dup to color?
-   if  h# 69  else  h# 89  then  1 dcon!
-;
-
 \ gx_configure_tft(info);
 
 : try-dcon!  ( w reg# -- )
@@ -122,6 +117,12 @@ d# 905 value resumeline  \ Configurable; should be set from args
 : scanint! ( si -- )      9 dcon!  ;  \ def: h# 0000
 : bright!  ( level -- ) d# 10 dcon! ; \ def: h# xxxF
 
+\ Colour swizzle, AA, no passthrough, backlight
+: set-color ( color? -- )
+   dup to color?
+   if  h# 69  else  h# 89  then  mode!
+;
+
 \ Setup so it can be called by execute-device-method
 : dcon-off  ( -- )  smb-init  h# 12 ['] mode!  catch  if  drop  then  ;
 
@@ -136,9 +137,6 @@ d# 905 value resumeline  \ Configurable; should be set from args
    atest?  if    \ A-test boards have a DCON FPGA
       h#  002  h# 0b dcon!
 
-      \ Colour swizzle, AA, no passthrough, backlight
-      h# 069  mode!  \ DCON_MODE
-
       \ Initialise SDRAM
       h# e040  h# 3a dcon!
       h# 0028  h# 3b dcon!
@@ -151,19 +149,20 @@ d# 905 value resumeline  \ Configurable; should be set from args
       h# 0101  h# 42 dcon!
       h# 0101  h# 43 dcon!
    else           \ Later boards have a DCON ASIC
-      dcon2?  0=  if
+      dcon2?  if
+         h# c040  h# 3a dcon!   \ SDRAM Setup/Hold time.  Default of e040 fails
+         h# 0000  h# 41 dcon!   \ Himax suggested this sequence (0 then 0101)
+      else
          h#   7a  h# 0b dcon!  \ Input sampling edge (7a => Negative, 72 => Positive)
          h#  25e  h# 37 dcon!  \ BSTH output timing
          h#  25c  h# 36 dcon!  \ BSTH output timing
          h# 002b  h# 3b dcon!
       then
 
-      \ Colour swizzle, AA, no passthrough, backlight
-      h# 069  mode!  \ DCON_MODE
-
       h# 0101  h# 41 dcon!
       h# 0101  h# 42 dcon!
    then
+   true set-color
    h# f bright!
 ;
 
