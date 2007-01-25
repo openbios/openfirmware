@@ -5,8 +5,8 @@ purpose: Controls for the microphone input mode (AC vs. DC coupling)
 \ It turns off the DC offset compensator.
 
 : post-b1?   ( -- flag )
-   atest?  if  false exit  then
-   board-revision 1 6 between
+   atest?  if  false exit  then  \ atest is detected via EC type
+   board-revision 0 6 between    \ b1 is board revision 7
 ;
 
 : ac-mode  ( -- )
@@ -32,7 +32,10 @@ warning @ warning off
       2 GPIOx_OUT_EN gpio!
       2 >clr GPIOx_OUT_AUX1 gpio!   \ GPIO, not AUX1 function
       2 >clr GPIOx_OUT_AUX2 gpio!   \ GPIO, not AUX2 function
+      2 >clr GPIOL_PU_EN    gpio!   \ GPIO, not pull up
+      2 >clr GPIOL_PD_EN    gpio!   \ GPIO, not pull down
    then
+   ac-mode
 ;
 warning !
 

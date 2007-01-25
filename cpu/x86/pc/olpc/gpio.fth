@@ -7,6 +7,8 @@ h# 20 constant GPIOx_IN_EN
 h# 04 constant GPIOx_OUT_EN  
 h# 10 constant GPIOx_OUT_AUX1
 h# 14 constant GPIOx_OUT_AUX2
+h# 18 constant GPIOL_PU_EN
+h# 1c constant GPIOL_PD_EN
 h# 24 constant GPIOx_INV_EN 
 h# 28 constant GPIOx_IN_FLTR_EN 
 h# 2c constant GPIOx_EVNTCNT_EN 
