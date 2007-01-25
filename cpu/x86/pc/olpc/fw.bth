@@ -204,6 +204,15 @@ warning @ warning off
       then
       encode-string  " banner-name" property
       model
+      8 ec-cmd  " ec-version" integer-property
+
+      " PQ2" h# fff0.0000 h# 1.0000 sindex  dup 0>=  if  ( offset )
+         h# fff0.0000 +  cscount                         ( name )
+      else
+         drop  " UNKNOWN"
+      then
+      " ec-name" string-property
+
    dend
 ;
 warning !
