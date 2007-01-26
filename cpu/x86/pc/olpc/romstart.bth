@@ -112,12 +112,6 @@ hex
       0000f001.00009c00.   5140000e set-msr  \ ACPI BAR
       0000f001.00009d00.   5140000f set-msr  \ PM BAR
 
-      \ GPIO setup for SDA/SCL
-      3fffc000 6104 port-wl  \ Output enable GPIO 15,14 are outs
-      3fffc000 6110 port-wl  \ AUX1 sel
-      3fffc000 6120 port-wl  \ Input enable
-      3fffc000 6134 port-wl  \ Input AUX1 sel
-
       \ setup CPU interface serial to mode C on both sides
       \ 18 51000010 rmsr 18 bitclr  10 bitset  51000010 wmsr  \ 5536 p 229
       10 51000010 bitset-msr   \ 5536 p 229
@@ -279,6 +273,7 @@ hex
    830d415a.8ea0ad6a.   4c00000f set-msr
 
    \ The RAM dll needs a write to lock on so generate a few dummy writes
+   \ Jordan thinks that one write is sufficient, so we should try that.
    ax ax xor
    ax  0 [ax] mov
    ax  4 [ax] mov
