@@ -6,8 +6,12 @@ in: ${BP}/cpu/x86/pc/olpc/build/ec.img
 in: ${BP}/cpu/x86/pc/olpc/build/romreset.di
 in: ${BP}/cpu/x86/pc/olpc/build/romstart.di
 in: ${BP}/cpu/x86/pc/olpc/build/rmstart.img
+in: ${BP}/cpu/x86/pc/olpc/build/paging.di
 in: ${BP}/cpu/x86/pc/olpc/build/fw.dic
 in: ${BP}/dev/geode/nandflash/build/nandflash.fc
+in: ${BP}/dev/mmc/sdhci/build/sdhci.fc
+in: ${BP}/dev/mmc/sdhci/build/sdmmc.fc
+in: ${BP}/dev/geode/ac97/build/ac97.fc
 in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
 in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
 in: ${BP}/dev/usb2/device/hub/build/hub.fc
@@ -15,7 +19,6 @@ in: ${BP}/dev/usb2/device/net/build/usbnet.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
-in: ${BP}/dev/pci/build/pcibridg.fc
 in: ${BP}/dev/olpc/cafenand/build/cafenand.fc
 
 build-now
