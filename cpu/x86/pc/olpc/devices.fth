@@ -7,7 +7,11 @@ purpose: Load device drivers according to configuration definitions
 
 fload ${BP}/cpu/x86/pc/isaio.fth
 
+[ifdef] rom-loaded
+fload ${BP}/cpu/x86/pc/olpc/vsapci.fth	\ PCI configuration access with some hacks
+[else]
 fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
+[then]
 
 0 0  " "  " /"  begin-package
    fload ${BP}/cpu/x86/pc/mappci.fth	\ Map PCI to root
@@ -25,10 +29,6 @@ fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
    patch 2drop my-w! find-fcode?
 [then]
    fload ${BP}/cpu/x86/pc/olpc/pcinode.fth	\ System-specific words for PCI
-   [ifdef] use-mediagx
-   h# 4100.0000 to first-mem		\ Avoid scratchpad RAM
-   h# ff00.0000 to mem-space-top
-   [then]
 end-package
 stand-init: PCI host bridge
    " /pci" " init" execute-device-method drop
@@ -61,9 +61,6 @@ fload ${BP}/cpu/x86/pc/moveisa.fth
    fload ${BP}/dev/pci/isamisc.fth
 end-package
 
-[ifdef] addresses-assigned
-\ fload ${BP}/dev/mediagx/cx5530/nomapsmi.fth
-[then]
 [then]
 
 1 [if]
@@ -292,6 +289,7 @@ stand-init: DCON
    dcon-present? drop
 ;
 [then]
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

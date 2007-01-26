@@ -186,6 +186,10 @@ fload ${BP}/cpu/x86/pc/mmusetup.fth	\ Initial values for MMU lists
 
 fload ${BP}/cpu/x86/pc/olpc/devices.fth
 
+[ifdef] rom-loaded
+fload ${BP}/cpu/x86/pc/olpc/chipinit.fth
+[then]
+
 dev /cpu
    d# 366,666,666 " clock-frequency" integer-property
 dend
@@ -241,6 +245,17 @@ false to stand-init-debug?
 \ true to stand-init-debug?
 
 hex
+: i-key-wait  ( ms -- pressed? )
+   cr ." Type 'i' to interrupt stand-init sequence" cr 
+   0  do
+      key?  if
+         key upc ascii I  =  if  true unloop exit  then
+      then
+      1 ms
+   loop
+   false
+;
+
 \ stand-init-debug?  [if]
 warning @  warning off 
 : init
@@ -249,11 +264,11 @@ warning @  warning off
 
    standalone?  if
       disable-interrupts
-      cr ." Type 'i' to interrupt stand-init sequence" cr 
-      d# 1000 ms
-      key?  if
-         key upc ascii I  =  if  ." Interacting" cr  hex interact  then
-      then
+      d# 3000
+      i-key-wait  if  ." Interacting" cr  hex interact  then
+[ifdef] rom-loaded
+      setup
+[then]
    then
 ;
 \ warning !
@@ -359,7 +374,15 @@ patch drop ms install-console
       2drop 2drop
    then
 
+[ifdef] rom-loaded
+   \ This really should be in a cache line by itself
+   \ with a bunch of prefetched nops after, so we don't
+   \ do memory prefetches during shutdown
+   1. h# 5140.0017 wrmsr  \ DIVIL_SOFT_RESET MSR, 5536 page 367
+   begin again
+[else]
    (reset-all)
+[then]
 ;
 ' dcon-reset-all to reset-all
 
@@ -397,6 +420,18 @@ true                               ' client-symbols?  set-config-int-default
 \ fload ${BP}/cpu/x86/pc/report.fth
 fload ${BP}/ofw/core/dualconsole.fth
 
+: user-switch?  ( -- flag )
+[ifdef] rom-loaded
+   atest?  if
+      h# fc3f ec@ h# ff <>
+   else
+      h# fc34 ec@ h# 70 and  h# 70 <>
+   then
+[else]
+   true
+[then]
+;
+
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
@@ -404,6 +439,9 @@ fload ${BP}/ofw/core/dualconsole.fth
 
    no-page
 
+[ifdef] rom-loaded
+." Screen" cr
+[then]
    " screen" open-dev  ?dup  if
       stdout !
 \       logo-banner drop
@@ -411,9 +449,15 @@ fload ${BP}/ofw/core/dualconsole.fth
 \       0 stdout !
    then
 
-   ?bailout
+[ifdef] rom-loaded
+   user-switch?  if
+      ?bailout
 
-   " keyboard" open-dev  ?dup  if  stdin !  then
+      " keyboard" open-dev  ?dup  if  stdin !  then
+   then
+[else]
+   ?bailout
+[then]
 
    install-dual-console
    " probe-" do-drop-in
