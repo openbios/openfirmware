@@ -230,6 +230,9 @@ true value hsync-low?
    set-dclk        \ Setup DCLK and its divisor
 
    0 h# 10 dc!     \ Clear frame buffer offset
+   0 h# 14 dc!     \ Clear compression buffer offset
+   0 h# 18 dc!     \ Clear cursor buffer offset
+   0 h# 1c dc!     \ Clear icon buffer offset
 
    set-timing
 
