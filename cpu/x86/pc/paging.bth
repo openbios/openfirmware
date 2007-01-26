@@ -86,42 +86,64 @@ label entry
    /section 1- #       dx  add		\ Round up to a multiple of /section
    d# 22 #             dx  shr		\ Number of ptabs needed
 
-   dx                  ax  mov		\ Copy of #ptabs
-   d# 12 #             ax  shl		\ Number of bytes for page tables
-   ax                  si  sub          \ Get memory for page tables
+   cr4      ax  mov    \ Try to turn on Page Size Extension Bit
+   h# 10 #  ax  or
+   ax       cr4 mov
 
-   \ Page Directory Entries
-   si                  ax  mov
-   pte-control #       ax  or		\ PDE contents
-   bx                  di  mov		\ Base address
-   dx                  cx  mov		\ Loop count (#ptabs)
-   begin
-      ax stos				\ pde for linear=physical page table
-      /ptab # ax add			\ Point to next page table
-   loopa
+   cr4      ax  mov    \ See if it worked
+   h# 10 #  ax  and  0=  if
 
-   \ Page Table Entries
-   mem-info-pa 4 + #)     cx  mov	\ Top of memory available to software
-   /page 1- #             cx  add	\ Round to a multiple of /page
-   d# 12 #                cx  shr	\ #pages
+      \ Processor does not support 4M pages, so use page tables
+      dx                  ax  mov	\ Copy of #ptabs
+      d# 12 #             ax  shl	\ Number of bytes for page tables
+      ax                  si  sub	\ Get memory for page tables
 
-   pte-control #          ax  mov	\ First PTE value (physical 0)
-   si                     di  mov	\ Base address of first page table
-   begin
-      ax stos				\ Set PTE
-      /page #  ax  add
-   loopa
+      \ Page Directory Entries
+      si                  ax  mov
+      pte-control #       ax  or	\ PDE contents
+      bx                  di  mov	\ Base address
+      dx                  cx  mov	\ Loop count (#ptabs)
+      begin
+         ax stos			\ pde for linear=physical page table
+         /ptab # ax add			\ Point to next page table
+      loopa
 
-   d# 10 #                dx  shl	\ #pages mapped by ptabs
-   dx                     cx  mov	\ Move into cx
+      \ Page Table Entries
+      mem-info-pa 4 + #)     cx  mov	\ Top of memory available to software
+      /page 1- #             cx  add	\ Round to a multiple of /page
+      d# 12 #                cx  shr	\ #pages
 
-   mem-info-pa 4 + #)     dx  mov	\ Top of memory available to software
-   /page 1- #             dx  add	\ Round to a multiple of /page
-   d# 12 #                dx  shr	\ #pages
+      pte-control #          ax  mov	\ First PTE value (physical 0)
+      si                     di  mov	\ Base address of first page table
+      begin
+         ax stos			\ Set PTE
+         /page #  ax  add
+      loopa
 
-   dx                     cx  sub	\ #ptes to zero
-   ax                     ax  xor	\ Clear ax to make invalid PTE
-   rep  ax  stos			\ Fill the leftovers
+      d# 10 #                dx  shl	\ #pages mapped by ptabs
+      dx                     cx  mov	\ Move into cx
+
+      mem-info-pa 4 + #)     dx  mov	\ Top of memory available to software
+      /page 1- #             dx  add	\ Round to a multiple of /page
+      d# 12 #                dx  shr	\ #pages
+
+      dx                     cx  sub	\ #ptes to zero
+      ax                     ax  xor	\ Clear ax to make invalid PTE
+      rep  ax  stos			\ Fill the leftovers
+
+
+   else
+      \ Use 4M pages.
+
+      \ Page Directory Entries
+      pte-control h# 80 + #  ax  mov	\ PDE for 4M page at 0
+      bx                  di  mov	\ Base address
+      dx                  cx  mov	\ Loop count (#ptabs)
+      begin
+         ax stos			\ pde for linear=physical page table
+         /section # ax add		\ Point to next 4M section
+      loopa
+   then
 
 [ifdef] mem-info-pa
    si  mem-info-pa 1 la+ #)  mov	\ Report top of page table area

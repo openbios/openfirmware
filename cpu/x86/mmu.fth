@@ -101,10 +101,10 @@ h# 3 value pde-mode		\ D=0, A=0, PCD=0, PWT=0, U=0, W=1, P=1
 : (pte!)  ( pte va -- )  (pte-setup) pt!  ;
 : (pte@)  ( va -- pte )  (pte-setup) l@  ;
 
-: .mapping ( va pte -- )
-   over ." VA: " .x                                          ( va pte )
-   swap h# fff and  over page-high-bits  or  ." PA: " .x cr  ( pte )
+: bigpage?  ( pte -- flag )  h# 80 and  0<>  ;
+: .map-mode  ( pte -- )
    ." Mode: " h# fff and dup .x
+   dup bigpage?   if  ." 4M "  then
    dup h# 40 and  if  ." Dirty "  then
    dup h# 20 and  if  ." Accessed "  then
    dup h# 10 and  if  ." Don'tCache "  then
@@ -114,18 +114,32 @@ h# 3 value pde-mode		\ D=0, A=0, PCD=0, PWT=0, U=0, W=1, P=1
    drop
    cr
 ;
+: (translate)  ( va -- false | pa status true )
+   dup pdir@  dup present?  0=  if
+      2drop false                ( false )
+      exit
+   then                          ( va pde )
+
+   dup bigpage?  if              ( va pde )
+      dup h# 3f.ffff invert and  ( va pde pa-base )
+      rot h# 3f.ffff and  or     ( pde pa )
+   else                          ( va pde )
+      map-ptab                   ( va )
+      dup (pte@)                 ( va pte )
+      dup h# fff invert and      ( va pte pa-base )
+      rot h# fff and  or         ( pte pa )
+   then                          ( va pde )
+   swap h# ff and   true         ( pa mode true )
+;
 
 : map?  ( va -- )
-   dup pdir@ present?  if		      ( va )
-      dup set-ptab dup (pte@)                 ( va pte )
-      dup present?  if			      ( va pte )
-         .mapping			      ( )
-      else                	              ( va pte )
-         ." Not mapped at page table"  2drop  ( )
-      then                                    ( )
-   else                                       ( va )
-      ." Not mapped at page directory"  drop  ( )
-   then                                       ( )
+   dup  (translate)  if   ( va pa status )
+      rot ." VA: " .x                         ( pa mode )
+      swap ." PA: " .x cr                     ( status )
+      .map-mode
+   else
+      drop  ." Not mapped" cr
+   then
 ;
 
 \ "Circular arithmetic" max and min.  In circular arithmetic, 0 is greater
@@ -245,6 +259,14 @@ defer initial-map        ( -- )  ' noop to initial-map
 
 headers
 warning off
+
+\ Redefine translate to go directly to the hardware so we can
+\ see provisional translations that haven't been recorded.
+: translate  ( va -- false | pa mode true )
+   \ Leave just the mode bits, discarding the status ones
+   (translate)  if  h# 1f and  true  else  false  then
+;
+
 : open  ( -- )
    initial-mmu-setup	\ Do platform-specific stuff as necessary 
 

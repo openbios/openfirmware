@@ -22,11 +22,7 @@ dev /mmu
    drop
 ;
 
-: >p  ( va -- pa )
-   dup pdir@ h# fff invert and           ( va pt-pa )
-   swap d# 10 rshift  h# ffc and  or l@  ( pte )
-   h# fff invert and
-;
+: >p  ( va -- pa )  (translate)  0= abort" Not mapped"  drop  ;
 
 : (initial-mmu-setup)  ( -- )	\ Locate the page directory
    pdir-pa /ptab - to pt-pa
@@ -45,7 +41,7 @@ dev /mmu
    origin >p      origin       /fw-ram              -1 map   \ Firmware 
 
    \ Formally establish the pre-existing mapping so it can be released later
-   0              0            h# 10.0000           -1 map   \ Low meg
+\  0              0            h# 10.0000           -1 map   \ Low meg
 
    \ Move the page directory virtual address to the pocket just above the
    \ Forth stacks; typically fc10.0000.

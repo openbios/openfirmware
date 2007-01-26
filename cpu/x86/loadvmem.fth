@@ -12,20 +12,6 @@ fload ${BP}/ofw/core/maplist.fth	\ Manage translation list
 
 fload ${BP}/cpu/x86/mmu.fth
 
-warning @ warning off
-: translate  ( va -- false | pa mode true )
-   dup pdir@  dup present?  if   ( va pde )
-      map-ptab                   ( va )
-      dup (pte@)                 ( va pte )
-      dup h# fff invert and      ( va pte pa-base )
-      rot h# fff and  or         ( pte pa )
-      swap h# 1f and  true       ( pa mode true )
-   else                          ( va pde )
-      2drop false                ( false )
-   then
-;
-warning !
-
 : .t   translations translation-node .list  ;
 
 ' 2drop is ?splice
