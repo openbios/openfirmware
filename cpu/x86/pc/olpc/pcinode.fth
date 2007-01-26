@@ -7,11 +7,7 @@ h# 0000 encode-int			\ Mask of implemented add-in slots
 
 also forth definitions
 
-[ifdef] rom-loaded
  " c,f" dup  config-string pci-probe-list
-[else]
- " 1,c,f" dup  config-string pci-probe-list
-[then]
 
 previous definitions
 
