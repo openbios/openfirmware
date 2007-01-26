@@ -8,6 +8,19 @@ h#   0.4000 constant fw-pa
 h#   f.c000 constant /fw-ram
 [then]
 
+[ifdef] rom-loaded
+h# fff0.0000   constant rom-pa		\ Physical address of boot ROM
+h#   10.0000   constant /rom		\ Size of boot ROM
+h#    8.0000   constant dropin-size
+
+rom-pa  h# 8.0000 +  constant dropin-base
+dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
+
+h#  1c0.0000 constant fw-pa
+h#   20.0000 constant /fw-ram
+
+[then]
+
 [ifdef] linuxbios-loaded
 \ h#  d8.0000 constant dropin-base
 h# fff2.0000 constant dropin-base  \ Location of payload in FLASH

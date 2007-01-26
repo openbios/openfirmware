@@ -6,8 +6,11 @@ create olpc             \ OLPC-specific build
 \ --- The environment that "boots" us ---
 \ - Image Format - Example Media - previous stage bootloader
 
-\ - (Syslinux) COM32 format - USB Key w/ FAT FS - Syslinux
-\ create syslinux-loaded
+\ - OBMD format - ROM - direct boot from ROM
+\ create rom-loaded
+
+\ - ELF format (no pheader) - ROM - LinuxBIOS direct
+create linuxbios-loaded
 
 \ - Linux kernel format - USB Key w/ FAT FS - LinuxBIOS w/ stripped Linux payload
 \ create bzimage-loaded
@@ -15,8 +18,8 @@ create olpc             \ OLPC-specific build
 \ - ELF format w/ Multiboot signature - various - GRUB
 \ create grub-loaded
 
-\ - ELF format (no pheader) - ROM - LinuxBIOS direct
-create linuxbios-loaded
+\ - (Syslinux) COM32 format - USB Key w/ FAT FS - Syslinux
+\ create syslinux-loaded
 
 
 create virtual-mode
