@@ -50,9 +50,13 @@ patch noop remote-mode open
 \ The old version is 0a.00.67  -  It doesn't support, e.g. advanced status
 \ The new version is 14.00.67  -  It matches the Hybrid-GP2B-T-1.pdf spec
 
+: touchpad-id  ( -- n )
+   mouse2:1 mouse2:1 mouse2:1 mouse-status  ( 67 0 a|14|28 )
+   0 bljoin
+;
+
 : olpc-touchpad?  ( -- flag )
-   mouse2:1 mouse2:1 mouse2:1 mouse-status  ( 67 0 a|14 )
-   0 bljoin  dup  h# a0067 =  swap h# 140067 =  or
+   touchpad-id  dup  h# a0067 =  over h# 140067 =  or  swap h# 280067 =  or
 ;
 
 \ Ref: 5.2.10 (2-1) of Hybrid-GP2B-T-1.pdf
