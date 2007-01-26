@@ -5,12 +5,22 @@ d# 0  d# 0  2value first-icon-xy
 0 0 2value icon-xy
 0 value text-y
 
+: ?next-row  ( -- )
+   icon-xy drop  image-width +                       ( right )
+   screen-ih  package( screen-width )package  >  if  ( )
+      first-icon-xy  drop   ( x )
+      icon-xy nip d# 40 +   ( y )
+      to icon-xy
+   then
+;
+
 : show-565  ( image-adr,len -- )
    drop
    dup  " C565" comp  abort" Not in C565 format"
    dup 4 + le-w@  to image-width
    dup 6 + le-w@  to image-height
    8 +
+   ?next-row
    icon-xy  image-width  image-height
    " draw-rectangle" $call-screen
 ;
@@ -290,7 +300,7 @@ false value error-shown?
 
    text-area?  if
       d# 146 to text-y
-      first-icon-xy to icon-xy
+      0 0 to icon-xy
    else
       null-output
    then
@@ -300,6 +310,8 @@ false value error-shown?
    
    0 to image-width  0 to image-height   \ In case $show-bmp fails
    " rom:olpc.565" $show&advance
+
+   icon-xy to first-icon-xy
 
    show-sysinfo?  if  .sysinfo  then
    show-chords?  if  " .chords" evaluate  then
