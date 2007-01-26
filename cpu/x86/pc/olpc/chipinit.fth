@@ -363,8 +363,8 @@ msr: 5101.0023 500000fe.01afffff. \ P2D_BMK Descriptor 0 OHCI
 msr: 5101.0024 400000fe.01bfffff. \ P2D_BMK Descriptor 1 UHCI
 msr: 5101.00e0 60000000.1f0ffff8. \ IOD_BM Descriptor 0  ATA IO address
 msr: 5101.00e1 a0000001.480fff80. \ IOD_BM Descriptor 1
-msr: 5101.00e2 00000001.400fff80. \ IOD_BM Descriptor 2
-msr: 5101.00e3 00000001.840ffff0. \ IOD_BM Descriptor 3
+msr: 5101.00e2 80000001.400fff80. \ IOD_BM Descriptor 2
+msr: 5101.00e3 80000001.840ffff0. \ IOD_BM Descriptor 3
 msr: 5101.00e4 00000001.858ffff8. \ IOD_BM Descriptor 4
 msr: 5101.00e5 60000001.8a0ffff0. \ IOD_BM Descriptor 5
 msr: 5101.00eb 00000000.f0301850. \ IOD_SC Descriptor 1
@@ -541,10 +541,10 @@ h# fe00.8000 value vp-base
    h#     0000 h# 107c pw!  \ GPIO_05_EVENT_COUNT
    h#     6066 h# 107e pw!  \ GPIO_05_EVENTCOMPARE_VALUE
  \  h# ffff0000 h# 1080 pl!  \ GPIOH_ OUTPUT_VALUE 
-   h# 660000a6 h# 1084 pl!  \ GPIOH_OUTPUT_ENABLE
+   h# 660001a6 h# 1084 pl!  \ GPIOH_OUTPUT_ENABLE
    h# ea0fb060 h# 1088 pl!  \ GPIOH_OUT_OPENDRAIN
    h# 0000a6a8 h# 108c pl!  \ GPIOH_OUTPUT_INVERT_ENABLE
-   h# 10b06066 h# 1090 pl!  \ GPIOH_OUT_AUX1_SELECT
+   h# 10b06166 h# 1090 pl!  \ GPIOH_OUT_AUX1_SELECT
    h# 00a6a8ea h# 1094 pl!  \ GPIOH_OUT_AUX2_SELECT
    h# b0606600 h# 1098 pl!  \ GPIOH_PULLUP_ENABLE
    h# a6a8ea11 h# 109c pl!  \ GPIOH_PULLDOWN_ENABLE
