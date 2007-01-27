@@ -33,16 +33,6 @@ label startup
    80  70  isa-c!			\ Disable NMI
    71 # dx mov  dx al in		\ Why do we do this?
 
-[ifdef] XXdebug-startup
-init-com1
-
-carret report
-linefeed report
-ascii F report
-ascii o report
-ascii r report
-[then]
-
    " start" $find-dropin,   \ Assemble call to find-dropin with literal arg
    \ What should we do it this fails?  Perhaps call a default routine
    \ to try to initialize com1 and display a message?

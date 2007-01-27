@@ -54,8 +54,8 @@ hex
 
    \ msr_init,src/mainboard/olpc/rev_a/auto.c
    \ Default region config - page 152
-\   22fff002.10f3bf00.   1808 set-msr
-   22fff002.10800000.   1808 set-msr
+\  22fff002.10800000.   1808 set-msr
+   25fff002.1077e000.   1808 set-msr
 
    \ GLIU0 P2D Base Mask Descriptors - page 85
    20000000.000fff80.   10000020 set-msr
@@ -205,8 +205,10 @@ hex
    \ Refresh and SDRAM program MSR GX page 205
    6130 port-rl 4 bitand  0<> if  \ 128 MiB
       10075012.00003000.  20000018 set-msr
+      25fff002.1077e000.      1808 set-msr
    else                           \ 256 MiB
       10076013.00003000.  20000018 set-msr
+      25fff002.10f7e000.      1808 set-msr
    then
 
    \ 20000019 rmsr            \ SDRAM timing and mode program
@@ -289,6 +291,12 @@ hex
 
 \ Example of how to output a character to serial port
 \  44 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+
+   h# 1808 #  cx  mov          \ Default region configuration properties MSR
+   h# f asm8,  h# 32 asm8,     \ rdmsr - returns dx=high ax=low
+   h# 0fffff00 # ax and        \ Top of System Memory field
+   4 # ax shl                  \ Shift into place
+   ax mem-info-pa 4 + #)  mov  \ Put it where resetend.fth can find it
 
    sp jmp  \ Return
 end-code

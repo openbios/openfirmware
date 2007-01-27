@@ -30,14 +30,8 @@ purpose: Common code for several versions of reset.bth
    \ Next time segment registers are changed, they will be
    \ reloaded from memory.
 
-   h# fff202a0 h# 60  #)  far jmp
-\   h# 60 #     push   \ New CS value
-\   h# 10.0000 #     push   \ New CS value
-\   here 5 + #) call   \ Get return address on stack
-\   4 #  0 [sp] add    \ Adjust return address past ret
-                      \ The add is 3 bytes and the ret is 1
-\   far ret
-nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop nop 
+   here asm-base - ResetBase +  7 +   h# 60  #)  far jmp  \ 7-byte instruction
+   \ nop nop nop nop
 
 \ begin again
    h# 68 # ax mov
@@ -59,7 +53,6 @@ ascii t report
    ds ax mov  ax es mov
 
 [ifdef]  virtual-mode
-\ ascii p report
    " paging" $find-dropin,  \ Assemble call to find-dropin with literal arg
 
    4 [ax]          cx  mov	\ Length of paging init code (byte-swapped)
@@ -71,7 +64,6 @@ ascii t report
 
    inflate-base #  ax  mov      \ Absolute address of memory copy
    ax call
-\ ascii P report
 [then]
 
    " firmware" $find-dropin,  \ Assemble call to find-dropin with literal arg

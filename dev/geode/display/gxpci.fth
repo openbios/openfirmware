@@ -22,20 +22,12 @@ headers
 ;
 : unmap  ( adr size -- )  " map-out" $call-parent  ;
 : (map-io-regs)  ( -- gp dc vp )
-[ifdef] rom-loaded
-   h# fe00.0000 h# fe00.4000 h# fe00.8000 
-[else]
    h# 14 h# 4000 map-membar   ( gp-base )
    h# 18 h# 4000 map-membar   ( gp-base dc-base )
    h# 1c h# 4000 map-membar   ( gp-base dc-base vp-base )
-[then]
 ;
 : (map-frame-buffer)  ( -- adr )
-[ifdef] rom-loaded
-   h# fd00.0000
-[else]
    h# 10  h# 100.0000  map-membar
-[then]
 ;
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

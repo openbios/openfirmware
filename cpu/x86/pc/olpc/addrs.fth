@@ -25,6 +25,7 @@ h#   20.0000 constant /fw-ram
 \ h#  d8.0000 constant dropin-base
 h# fff2.0000 constant dropin-base  \ Location of payload in FLASH
 \ h# fff8.0000 constant dropin-base  \ Location of payload in FLASH
+dropin-base h# 80 + h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
 h#   08.0000 constant dropin-size
 h#  1e0.0000 constant fw-pa
 h#   20.0000 constant /fw-ram
