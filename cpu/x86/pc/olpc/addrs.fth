@@ -71,12 +71,8 @@ h# 400.0000 constant jffs2-inode-base
 h# 600.0000 constant dma-base
 h# a00.0000 constant dma-size
 
-
 fload ${BP}/cpu/x86/pc/virtaddr.fth
 
-[ifdef] virtual-mode
-h#        3 constant pte-control	\ Page table entry attributes
-[then]
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

@@ -5,6 +5,8 @@ h#     1000 constant /ptab		\ Bytes per page table
 h#     1000 constant /page
 h#  40.0000 constant /section		\ Fixed by the architecture
 h#  3f.f000 constant pte-mask
+h#        3 constant pte-control	\ Page table entry attributes
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
