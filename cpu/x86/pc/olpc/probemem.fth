@@ -3,27 +3,21 @@ purpose: Create memory node properties and lists
 
 dev /memory
 
-[ifdef] notdef
-: cmos@   ( offset -- byte )  h# 70 pc!  h# 71 pc@  ;
-: /ram  ( -- #bytes )
-   \ The BIOS puts the number of kilobytes of extended memory in CMOS memory
-   \ locations 30,31. The total memory is that plus the low meg.
-   h# 30 cmos@  h# 31 cmos@  bwjoin    ( #kbytes-extended )
-   d# 1024 +                           ( #kbytes-total )
-   d# 1024 *                           ( #bytes )
-;
-[else]
 h# 770.0000 constant /ram   \ 128 MB
-[then]
 
 : release-range  ( start-adr end-adr -- )  over - release  ;
 
 : ram-limit  ( -- addr )  mem-info-pa la1+ l@  ;
 
 : probe  ( -- )
-   gpio-data@ 4 and  if  h# 770.0000  else  h# f70.0000  then  to /ram
+   gpio-data@ 4 and  if
+      h#  800.0000  h# 770.0000
+   else
+      h# 1000.0000  h# f70.0000
+   then
+   to /ram    ( total-ram )
 
-   0 /ram  reg   \ Report extant memory
+   0 swap  reg   \ Report extant memory
 
    \ Put h# 10.0000-1f.ffff and 28.0000-memsize in pool,
    \ reserving 0..10.0000 for the firmware
