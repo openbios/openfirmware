@@ -453,11 +453,11 @@ fload ${BP}/ofw/core/dualconsole.fth
 [ifdef] rom-loaded
    user-switch?  if
       ?bailout
-
       " keyboard" open-dev  ?dup  if  stdin !  then
    then
 [else]
    ?bailout
+   " keyboard" open-dev  ?dup  if  stdin !  then
 [then]
 
    install-dual-console
