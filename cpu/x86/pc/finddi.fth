@@ -8,7 +8,7 @@ also forth definitions
 previous definitions
 
 also 386-assembler definitions
-[ifdef] ResetBase
+[ifdef] rom-loaded
 \ This version does not require a stack, but you do need to know the load addr
 : $find-dropin,  ( adr len -- patch-adr )
    \   mov ax,#<address after jmp>
