@@ -92,13 +92,8 @@ h# 200 constant /block  \ 512 bytes
    1 sw-reset  \ RESET_ALL
 ;
 
-: init-dma  ( -- )
-\   enable-sd-int   \ Marvell-specific
-   /block h# 4000 or  4 cw!  \ h# 400 means 64K DMA boundary
-;
-
-: high-speed  ( -- )  h# 28 cb@  4 or  h# 28 cb!  ;
-: low-speed   ( -- )  h# 28 cb@  4 invert and  h# 28 cb!  ;
+: host-high-speed  ( -- )  h# 28 cb@  4 or  h# 28 cb!  ;
+: host-low-speed   ( -- )  h# 28 cb@  4 invert and  h# 28 cb!  ;
 
 : 4-bit  ( -- )  h# 28 cb@  2 or  h# 28 cb!  ;
 : 1-bit  ( -- )  h# 28 cb@  2 invert and  h# 28 cb!  ;
@@ -129,15 +124,26 @@ h# 200 constant /block  \ 512 bytes
 ;
 : internal-clock-off  ( -- )  h# 2c cw@  1 invert and  h# 2c cw!  ;
 
+
 : card-clock-on   ( -- )  h# 2c cw@  4 or  h# 2c cw!  ;
 : card-clock-off  ( -- )  h# 2c cw@  4 invert and  h# 2c cw!  ;
+
+: card-clock-25  ( -- )
+   card-clock-off
+   h# 103 h# 2c cw!   \ Set divisor to 2^1, leaving internal clock on
+   card-clock-on
+;
+: card-clock-50  ( -- )
+   card-clock-off
+   h# 003 h# 2c cw!   \ Set divisor to 2^0, leaving internal clock on
+   card-clock-on
+;
 
 : data-timeout!  ( n -- )  h# 2e cb!  ;
 
 : setup-host  ( -- )
    reset-host
    internal-clock-on
-   init-dma
 
    h#   00 h# 28 cb!  \ Not high speed, 1-bit data width, LED off
    h# 00fb h# 34 cw!  \ normal interrupt status en reg
@@ -153,14 +159,19 @@ h# 200 constant /block  \ 512 bytes
 0 instance value dma-padr
 0 instance value dma-len
 
+: (dma-setup)  ( adr #bytes block-size -- )
+   h# 7000 or  4 cw!                 ( adr #bytes )  \ Block size register
+   dup to dma-len                    ( adr #bytes )  \ Remember for later
+   over to dma-vadr                  ( adr #bytes )  \ Remember for later
+   true  " dma-map-in" $call-parent  ( padr )        \ Prepare DMA buffer
+   dup to dma-padr                   ( padr )        \ Remember for later
+   0 cl!                                             \ Set address
+;
+
 : dma-setup  ( #blocks adr -- )
    over 6 cw!            ( #blocks adr ) \ Set block count
-   swap /block *         ( adr #bytes )  \ Convert to byte count
-   dup to dma-len        ( adr #bytes )  \ Remember for later
-   over to dma-vadr      ( adr #bytes )  \ Remember for later
-   true  " dma-map-in" $call-parent  ( padr )  \ Prepare DMA buffer
-   dup to dma-padr       ( padr )        \ Remember for later
-   0 cl!                                 \ Set address
+   swap /block *  /block ( adr #bytes block-size )  \ Convert to byte count
+   (dma-setup)
 ;
 : dma-release  ( -- )
    dma-vadr dma-padr dma-len  " dma-map-out" $call-parent
@@ -230,7 +241,6 @@ h# 200 constant /block  \ 512 bytes
 \ In R2 format, the first 2 bits are start bits, the next 6 are
 \ reserved.  Then there are 128 bits (16 bytes) of data, then the end bit
 
-\ No need to mask, because cw@ is guaranteed to deliver exactly 16 bits
 : response  ( -- l )   h# 10 cl@  ;
 
 : buf+!  ( buf value -- buf' )  over l!  la1+  ;
@@ -239,6 +249,8 @@ h# 200 constant /block  \ 512 bytes
 : get-response136  ( buf -- )  \ 128 bits (16 bytes) of data.
    h# 20  h# 10  do  i cl@ buf+!  4 +loop  drop
 ;
+
+d# 64 instance buffer: scratch-buf
 
 0 instance value rca
 d# 16 instance buffer: cid
@@ -258,6 +270,13 @@ headers
 : set-dsr  ( -- )  0 h# 0400 0 cmd  ;  \ 4 - UNTESTED
 
 \ cmd6 (R1) is switch-function.  It can be used to enter high-speed mode
+: switch-function  ( arg -- adr )
+   scratch-buf  d# 64  d# 64  (dma-setup)
+   h# 063b h# 11 cmd  ( response drop )
+   2 wait
+   dma-release
+   scratch-buf
+;
 
 : deselect-card  ( -- )   0   h# 0700 0 cmd  ;  \ 7 - with null RCA
 : select-card    ( -- )   rca h# 071b 0 cmd  ;  \ 7 R1b
@@ -274,7 +293,8 @@ headers
 
 : set-blocklen  ( blksize -- )  h# 101a 0 cmd  ;     \ 16 R1 SET_BLOCKLEN
 
-\ Data transfer mode bits for register 0c (only relevant for reads and writes)
+\ Data transfer mode bits for register 0c (only relevant for reads, writes,
+\ and switch-function)
 \  1.0000  use DMA
 \  2.0000  block count register is valid
 \  4.0000  auto cmd12 to stop multiple block transfers
@@ -312,23 +332,32 @@ headers
 : set-oc ( ocr -- ocr' )  app-prefix  h# 2902 0 cmd  response  ;  \ a41 R3
 
 \ This sends back 512 bits in a single data block.
-: app-get-status  ( -- status )  app-prefix  0 h# 12.0d1a 0 cmd  response  ;  \ a13 R1 UNTESTED
+: app-get-status  ( -- status )  app-prefix  0 h# 0d1a h# 12 cmd  response  ;  \ a13 R1 UNTESTED
 
 : get-#write-blocks  ( -- n )  app-prefix  0 h# 161a 0 cmd  response  ;  \ a22 R1 UNTESTED
 
 \ You might want to turn this off for data transfer, as it controls
 \ a resistor on one of the data lines
 : set-card-detect  ( on/off -- )  app-prefix  h# 2a1a 0 cmd  ;  \ a42 R1 UNTESTED
-: get-scr  ( -- src )  app-prefix  0 h# 331a 0 cmd  response  ;  \ a51 R1 UNTESTED
+: get-scr  ( -- adr )
+   scratch-buf  d# 8  d# 8  (dma-setup)
+   app-prefix  0 h# 333a h# 11 cmd  ( response drop )  \ a51 R1
+   2 wait
+   dma-release
+   scratch-buf
+;
 
-h# 8008.0000 value oc-mode  \ Voltage settings, etc.
+variable ocr
+h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 : set-operating-conditions  ( -- )
    begin
-      oc-mode set-oc     ( ocr )  \ acmd41
-      h# 8000.0000 and   ( card-powered-on? )
-   0= while
-      d# 10 ms
-   repeat
+      oc-mode set-oc         ( ocr )  \ acmd41
+      dup h# 8000.0000 and   ( card-powered-on? )
+   0= while                  ( ocr )
+      drop d# 10 ms
+   repeat                    ( ocr )
+   \ We must save this so we can look at the Card Capacity Status bit
+   ocr !                     ( )
 ;
 
 : configure-transfer  ( -- )
@@ -338,13 +367,28 @@ h# 8008.0000 value oc-mode  \ Voltage settings, etc.
    /block set-blocklen  \ Cmd 16
 ;
 
+: ?high-speed  ( -- )
+   \ High speed didn't exist until SD spec version 1.10
+   \ The low nibble of the first byte of SCR data is 0 for v1.0 and v1.01,
+   \ 1 for v1.10, and 2 for v2.
+   get-scr c@  h# f and  0=  if  exit  then
+
+   \ Ask if high-speed is supported
+   h# 00ff.fff1 switch-function d# 13 + c@  2  and  if
+      h# 80ff.fff1 switch-function drop   \ Perform the switch
+      \ Bump the host controller clock
+      host-high-speed  \ Changes the clock edge
+      card-clock-50
+   then
+;
+
 external
 
 : attach-card  ( -- okay? )
    card-inserted?  0=  if  false exit  then   
 
    card-power-on  d# 20 ms  \ This delay is just a guess
-   card-clock-on  d# 10 ms  \ This delay is just a guess
+   card-clock-25  d# 10 ms  \ This delay is just a guess
 
    reset-card     \ Cmd 0
 
@@ -356,6 +400,8 @@ external
    select-card    \ Cmd 7 - Select
 
    configure-transfer
+   ?high-speed
+
    true
 ;
 
