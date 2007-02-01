@@ -337,7 +337,7 @@ f000.0000 constant TD_CC_MASK
 \ XXX the HCD level is redundant.
 \ ---------------------------------------------------------------------------
 
-4 constant intr-interval
+8 constant intr-interval
 
 : (insert-intr-ed)  ( ed idx -- )
    dup >r				( ed idx )  ( R: idx )

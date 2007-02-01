@@ -49,7 +49,7 @@ h# 88 constant mm-mask-gui
 false  value    typematic?
 d# 500 constant repeat-delay		\ Typematic begins after x ms, repeat key
 d#  30 constant repeat-rate		\ Repeat key after y ms in typematic mode
-d#   4 constant idle-rate		\ Parameter for set-idle
+d#  32 constant idle-rate		\ Parameter for set-idle
 
 \ Scan code queue
 /kbd-buf    constant /qe
