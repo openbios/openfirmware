@@ -111,6 +111,9 @@ h# 200 constant /block  \ 512 bytes
 ;
 
 : card-power-on  ( -- )
+   \ Card power on does not work if a removal interrupt is pending
+   h# c0  isr!              \ Clear any pending insert/remove events
+
    \ XXX should use the capabilities register (40 cl@) to determine
    \ which power choices are available.
    h# c  h# 29  cb!   \ 3.0V
@@ -385,9 +388,12 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 external
 
 : attach-card  ( -- okay? )
-   card-inserted?  0=  if  false exit  then   
+   card-power-off d# 20 ms
 
    card-power-on  d# 20 ms  \ This delay is just a guess
+
+   card-inserted?  0=  if  card-power-off  false exit  then   
+
    card-clock-25  d# 10 ms  \ This delay is just a guess
 
    reset-card     \ Cmd 0
