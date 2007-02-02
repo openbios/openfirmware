@@ -42,6 +42,7 @@ variable 'get-data? 'get-data? off
 
 patch noop remote-mode open
 
+variable ptr
 0 value show-raw?
 
 \ Runs the special Device ID command and checks for the ALPS return code
@@ -110,6 +111,8 @@ variable mode
    drop true
 ;
 
+: record-byte  ( b -- b )  dup ptr @ c!  1 ptr +!  ;
+
 \ This is used to get subsequent packet bytes, after the first
 \ byte of a packet has already been received.
 \ : quick-byte  ( -- b )
@@ -117,10 +120,26 @@ variable mode
 \ ;
 : quick-byte
    'get-data @  my-parent  call-package
+   record-byte
    show-raw?  if  dup .  then
    dup h# 80 and  if  ." *" dup .  then
 ;
 
+: show-packets  ( adr len -- )
+   push-hex
+   bounds  ?do
+      i 6  bounds  ?do  i c@  3 u.r  loop  cr
+   6 +loop
+   pop-base
+;
+: last-10  ( -- )
+   ptr @  load-base -  d# 60  >  if
+      ptr @  d# 60 -  d# 60
+   else
+      load-base  ptr @  over -
+   then
+   show-packets
+;
 
 \ Variable used during packet decoding
 \ variable px    \ Pen mode x value
@@ -211,7 +230,7 @@ variable miss?
             exit-pt @  0=  if  gs-only  then
          then
          false exit
-      then  ( byte )
+      then  ( byte )  record-byte
 
       case
          h# cf  of  decode-pt  true exit  endof
@@ -288,51 +307,87 @@ h# 4 value y-offset
 2 value /pixel
 
 : button  ( color x -- )
-   d# 300  d# 200  d# 30  " fill-rectangle" $call-screen
+   maxy d# 50 -  d# 200  d# 30  " fill-rectangle" $call-screen
 ;
 : background  ( -- )
    fbadr  maxy 2+  /line *  erase
-   0 d# 10 at-xy  ." Touchpad test.  Both buttons clears screen.  Type a key to exit" cr
+   0 d# 30 at-xy  ." Touchpad test.  Both buttons clears screen.  Type a key to exit" cr
+   0 d# 20 at-xy  ." Pressure: "
 ;
 : track-init  ( -- )
    screen-ih package(
       frame-buffer-adr  screen-width  screen-height bytes/line16
    )package  to /line  2- to maxy  2- to maxx  to fbadr
+   load-base ptr !
 ;
-: track  ( x y z buttons -- )
-   mode @ 2 =  if  yellow  else  cyan  then  pixcolor !  ( x y z but )
 
-   dup 3 and 3 =  if  background  then
-   dup  1 and  if  green  else  black  then  d# 100 button
-   dup  2 and  if  red    else  black  then  d# 350 button  ( x y z but )
+: show-up  ( x y z -- )  3drop  d# 10 d# 20 at-xy  ." UP "  ;
 
-   \ Filter out events where the pen or finger in the current mode is not down
-   8 and  0=  if  3drop exit  then        ( x y z )
+: show-pressure  ( -- )  push-decimal  d# 10 d# 20 at-xy  3 u.r  pop-base  ;
 
-   drop                                   ( x y )
-
-   dup 0<  if  ." Y < 0: " .  0  then     ( x y )
+: dot  ( x y -- )
    y-offset +  maxy min  /line *          ( x line-adr )
    swap                                   ( line-adr x )
-   dup 0<  if  ." X < 0: " .  0  then     ( line-adr x )
    maxx min  /pixel *  +                  ( pixel-offset )
    fbadr +                                ( pixel-adr )
    pixcolor @ swap  2dup  l!              ( pixcolor pixel-adr )
    /line + l!
 ;
 
+false value relative?
+true value up?
+d# 600 d# 512 2value last-rel
+0 0 2value last-abs
+
+: abs>rel  ( x y -- x' y' )
+   up?  if                                ( x y )
+      \ This is a touch
+      2dup to last-abs  false to up?      ( x y )
+   then                                   ( x y )
+
+   last-abs                               ( x y x0 y0 )
+   2over to last-abs                      ( x y x0 y0 )
+   xy-  last-rel xy+                      ( x' y' )
+   swap 0 max  maxx min
+   swap 0 max  maxy min                   ( x' y' )
+   2dup to last-rel                       ( x y )
+;
+
+: track  ( x y z buttons -- )
+   mode @ 2 =  if  yellow  else  cyan  then  pixcolor !  ( x y z but )
+
+   dup 3 and 3 =  if  background  load-base ptr !  then
+   dup  1 and  if  green  else  black  then  d# 100 button
+   dup  2 and  if  red    else  black  then  d# 350 button  ( x y z but )
+
+   \ Filter out events where the pen or finger in the current mode is not down
+   8 and  0=  if  show-up  true to up?  exit  then   ( x y z )
+
+   show-pressure                          ( x y )
+
+   relative?  if  abs>rel  then
+
+   dot
+;
+
 : selftest  ( -- error? )
    open  0=  if  ." PS/2 Mouse (trackpad) open failed"  1 exit  then
+   my-args  " relative" $=  to relative?
+
    cursor-off  track-init  start
 
    background
-   gs-only  begin  pad?  if  track  then  key? until  key drop
+   gs-only
+   begin
+      begin  pad?  if  track  then  key? until
+      key upc  [char] P  =  dup  if
+         cursor-on
+         cr last-10
+         key drop
+         background
+      then
+   0= until
 
-\   background
-\   0 d# 28 at-xy  ." Pen tablet test. Buttons change color. Type a key to exit"
-\   pt-only  begin  pt?  if  track  then  key? until  key drop
-
-   cursor-on
    close
    0
 ;
