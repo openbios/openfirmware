@@ -5,7 +5,7 @@ OS := $(shell uname)
 
 BP=../../..
 
-CFLAGS	= -O -g -DUNIX -D${OS} -DX86
+CFLAGS	= -O -g -m32 -DUNIX -D${OS} -DX86
 
 WRTAIL = forth/wrapper
 WRDIR = ${BP}/${WRTAIL}
@@ -30,7 +30,7 @@ forth: ${OBJS}
 # functions to be reordered so the "inflate" entry point is no longer at
 # the beginning.
 inflate.o: ${ZIPDIR}/inflate.c
-	${CC} -c -O0 -fpic $< -o $@
+	${CC} -c -m32 -O0 -fpic $< -o $@
 
 ../build/inflate.bin: inflate.o
 	objcopy -O binary $< $@
