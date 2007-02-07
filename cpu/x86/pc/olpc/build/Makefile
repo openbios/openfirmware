@@ -5,6 +5,9 @@ all: ofw.elf
 ofw.elf: FORCE build ../../../build/inflate.bin
 	./build $@
 
+olpc.rom: FORCE build ../../../build/inflate.bin
+	./build $@
+
 ../../../${OS}/forth:
 	@make -C ../../../${OS} forth
 
