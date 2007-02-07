@@ -1,3 +1,8 @@
+\ See license at end of file
+purpose: Bad block table handling for NAND FLASH
+
+\ Uses the same layout as the Linux mtd bad block tables
+
 0 value bbt   \ Bad block table address
 
 : round-up  ( n boundary -- n' )  over 1- +  over / *  ;
@@ -22,11 +27,32 @@
    tuck swap c@ and  ( mask masked-byte )
    <>
 ;
+: block-reserved?  ( page# -- flag )
+   >bbt              ( adr mask )
+   tuck swap c@ and  ( mask masked-byte )
+   swap h# aa and  =
+;
+
+
+\ Marks the block containing page# as used for another purpose
+: mark-reserved  ( page# -- )
+   >bbt                   ( adr mask )
+   dup h# aa and  -rot    ( set-mask adr mask )
+   invert over c@ and     ( set-mask adr masked-byte )
+   rot or  swap c!        ( )
+;
 
 \ Marks the block containing page# as bad
 : mark-bad  ( page# -- )
    >bbt                   ( adr mask )
    invert over c@ and     ( adr byte )
+   swap c!
+;
+
+\ Marks the block containing page# as good
+: mark-good  ( page# -- )
+   >bbt                   ( adr mask )
+   over c@ or             ( adr byte )
    swap c!
 ;
 
@@ -116,6 +142,11 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
    then
 ;
 
+: save-bbt  ( -- )
+   " Bbt0" bbt0  write-bbt
+   " 1tbB" bbt1  write-bbt
+;
+
 \ Allocate and free memory for a bad block table
 : alloc-bbt  ( -- )  bbt 0=  if  /bbt alloc-mem to bbt  then  ;
 : release-bbt  ( -- )
@@ -131,8 +162,7 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
    initial-badblock-scan
    find-initial-bbt
    bbt0 0=   if  ." No good blocks for saving the bad block table" cr  then
-   " Bbt0" bbt0  write-bbt
-   " 1tbB" bbt1  write-bbt
+   save-bbt
 ;
 
 \ Read the bad block table from NAND to memory
@@ -167,6 +197,15 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
    then
 ;
 
+0 instance value resmap
+0 value #reserved-eblocks
+: ?free-resmap  ( -- )
+   resmap  if
+      resmap #reserved-eblocks /n* free-mem
+      0 to resmap
+   then
+;
+
 \ The upper limit of pages below the bad block tables
 : usable-page-limit  ( -- page# )
    bbt0  if
@@ -178,10 +217,21 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
    pages/chip
 ;
 
+: map-resblock  ( page# #pages -- page#' #pages )
+   swap pages/eblock /mod    ( adr #pages offset eblock# )
+   resmap swap na+ @         ( adr #pages offset res-page# )
+   + swap                    ( adr page#' #pages )
+;
+
 external
 \ Assumes that the page range doesn't cross an erase block boundary
 : read-blocks  ( adr page# #pages -- #read )
-   over block-bad?  if  3drop 0 exit  then
+   resmap  if                   ( adr page# #pages )
+      map-resblock
+   else
+      over block-bad?  if  3drop 0 exit  then
+   then
+
    dup >r          ( adr page# #pages r: #pages )
    bounds  ?do                  ( adr )
       \ XXX need some error handling
@@ -192,7 +242,12 @@ external
 ;
 
 : write-blocks  ( adr page# #pages -- #written )
-   over block-bad?  if  3drop 0 exit  then
+   resmap  if                   ( adr page# #pages )
+      map-resblock
+   else
+      over block-bad?  if  3drop 0 exit  then
+   then
+
    dup >r          ( adr page# #pages r: #pages )
    bounds  ?do                          ( adr )
       \ XXX need some error handling
@@ -211,6 +266,10 @@ external
 : erase-size    ( -- n )  /eblock  ;
 
 : max-transfer  ( -- n )  /eblock  ;
+
+: dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
+
+: dma-free  ( adr len -- )  " dma-free" $call-parent  ;
 
 \ Completely erase the device, ignoring any existing bad-block info
 \ This is fairly severe, not recommended except in exceptional situations
@@ -243,12 +302,30 @@ external
 : show-bbt  ( -- )
    get-bbt
    pages/chip  0  ?do
-      i block-bad?  if  ." Bad block" i .page-byte cr  then
+      i block-reserved?  if  ." Reserved " i .page-byte cr  else
+         i block-bad?    if  ." Bad block" i .page-byte cr  then
+      then
    pages/eblock +loop
    bbt1  if  ." BBTable 1" bbt1 .page-byte  cr  then
    bbt0  if  ." BBTable 0" bbt0 .page-byte  cr  then
 ;
 
+: map-reserved
+   0  usable-page-limit  0  ?do
+      i block-reserved?  if  1+  then
+   pages/eblock +loop
+   dup to #reserved-eblocks
+
+   /n* alloc-mem  to resmap   ( adr )
+
+   resmap  usable-page-limit  0  ?do   ( adr )
+      i block-reserved?  if            ( adr )
+         i over !  na1+                ( adr' )
+      then                             ( adr )
+   pages/eblock +loop                  ( adr )
+   drop
+;
+      
 headers
 
 \ Copy-to-NAND functions
@@ -277,3 +354,129 @@ external
    drop                                   ( )
    +copy-page
 ;
+
+: erased?  ( adr len -- flag )
+   bounds  ?do
+      i @ -1 <>  if  false unloop exit  then
+   /n +loop
+   true
+;
+
+0 value test-page
+
+: block-erased?  ( page# -- flag )
+   pages/eblock  bounds  ?do
+      test-page i read-page
+      test-page /page erased? 0=  if  false unloop exit  then
+   pages/eblock +loop
+   true
+;
+: enough-reserve?  ( len -- flag )
+   dup  0=  if  true exit  then                      ( len )
+   /eblock 1- +  /eblock /                           ( #eblocks-needed )
+   usable-page-limit  0  ?do                         ( #needed )
+      i  block-reserved?  if  1-  else               ( #needed' )
+         i block-erased?  if  1-  then               ( #needed' )
+      then                                           ( #needed )
+      dup 0=  if  drop true unloop exit  then        ( #needed )
+   pages/eblock +loop                                ( #needed )
+   drop  false                                       ( flag )
+;
+
+0 value any-marked?
+
+: start-fastcopy  ( len -- error? )
+   /page dma-alloc to test-page
+   enough-reserve?  0=  if
+      test-page /page dma-free
+      true exit
+   then
+   false to any-marked?
+
+   \ Erase existing fastnand area
+   usable-page-limit  0  ?do
+      i block-reserved?  if
+         i erase-block
+         i mark-good  true to any-marked?
+      then
+   pages/eblock +loop
+
+   start-copy
+   false
+;
+: next-fastcopy  ( adr -- )
+   usable-page-limit  copy-page#  ?do           ( adr )
+      i block-erased?  if                       ( adr )
+         i pages/eblock write-blocks  drop      ( )
+         i mark-reserved   true to any-marked?  ( )
+         i pages/eblock +  to copy-page#
+         unloop exit
+      then                                      ( adr )
+   pages/eblock +loop                           ( adr )
+   ." Error: no more NAND fastcopy space" cr
+   abort
+;
+: end-fastcopy  ( -- )
+   test-page /page dma-free
+   any-marked?  if  save-bbt  then
+;
+
+0 instance value deblocker
+: $call-deblocker  ( ??? adr len -- ??? )  deblocker $call-method  ;
+: init-deblocker  ( -- okay? )
+   " "  " deblocker"  $open-package  to deblocker
+   deblocker if
+      true
+   else
+      ." Can't open deblocker package"  cr  false
+   then
+;
+: seek  ( d.offset -- status )
+   resmap  0=  if  -1 exit  then
+   " seek" $call-deblocker
+;
+: position  ( -- d.offset )
+   resmap  0=  if  0. exit  then
+   " position" $call-deblocker
+;
+: read  ( adr len -- actual )
+   resmap  0=  if  2drop -1 exit  then
+   " read" $call-deblocker
+;
+: write  ( adr len -- actual )
+   resmap  0=  if  2drop -1 exit  then
+   " write" $call-deblocker
+;
+: size  ( -- d.size )
+   resmap  0=  if  0. exit  then
+   #reserved-eblocks /eblock um*
+;
+: load  ( adr -- actual )
+   resmap  0=  if  drop 0 exit   then
+   0 0 seek drop
+   size drop  read
+;
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2006 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

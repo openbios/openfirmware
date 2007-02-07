@@ -449,7 +449,6 @@ h# fe00.8000 value vp-base
 : fix-memsize  ( -- )
    1030 pl@  4 and  0=  if
       bigmem-msrs /bigmem-init bounds  ?do  i init-msr  d# 12 +loop
-      h# f7e.0000 h# 88 dc-base + l!   \ DV_CTL register, undocumented Memory size dependent???
    then
 ;
 
@@ -464,7 +463,6 @@ h# fe00.8000 value vp-base
    gp-base dup  h# c000  -1  mmu-map
 [then]
 
-   h# 80.0000   \ 8 MB video memory
    \ BAR0 is frame buffer - 8M
    \ BAR1 is GP regs - 16K
    \ BAR2 is VG regs - 16K
@@ -486,8 +484,8 @@ h# fe00.8000 value vp-base
 \ write_vg_32(DC_DV_CTL, mVal.high);
 
    \ The base address of the frame buffer in physical memory
-\   h# f7e.0000 h# 88 dc-base + l!   \ DV_CTL register, undocumented Memory size dependent???
-   h# 77e.0000 h# 88 dc-base + l!   \ DV_CTL register, undocumented Memory size dependent???
+   1030 pl@  4 and  if  h# 77e.0000  else  h# f7e.0000  then
+   h# 88 dc-base + l!   \ DV_CTL register, undocumented
 
 \ hw_fb_map_init(PCI_FB_BASE);
 \ Initialize the frame buffer base realated stuff.

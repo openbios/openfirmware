@@ -260,10 +260,11 @@ warning @  warning off
 
    standalone?  if
       disable-interrupts
-      d# 3000
-      i-key-wait  if  ." Interacting" cr  hex interact  then
 [ifdef] rom-loaded
       setup
+[else]
+      d# 3000
+      i-key-wait  if  ." Interacting" cr  hex interact  then
 [then]
    then
 ;
@@ -279,9 +280,6 @@ warning @  warning off
 : probe-all  ( -- )
    probe-pci
    probe-usb
-   report-disk
-   report-net
-   report-keyboard
 ;
 
 [ifdef] linux-support
@@ -429,56 +427,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 [then]
 ;
 
-: startup  ( -- )
-   standalone?  0=  if  exit  then
-
-\   ?bailout
-
-   no-page
-
-[ifdef] rom-loaded
-   video-map
-." Screen" cr
-[then]
-   " screen" open-dev  ?dup  if
-      stdout !
-\       logo-banner drop
-\       close-dev
-\       0 stdout !
-   then
-
-[ifdef] rom-loaded
-   user-switch?  if
-      ?bailout
-      " keyboard" open-dev  ?dup  if  stdin !  then
-   then
-[else]
-   ?bailout
-   " keyboard" open-dev  ?dup  if  stdin !  then
-[then]
-
-   install-dual-console
-   " probe-" do-drop-in
-   ?gui-banner
-
-   early-interact?  if
-      " Interrupting startup sequence prior to probing" .because
-      ." Type 'resume'  to resume normal startup sequence." cr
-      \ fallback-device io console-io
-      ( help-msg ) interact
-   then
-
-\   ." nvramrc" cr
-\   use-nvramrc?  if  nvramrc safe-evaluate  then
-
-\   auto-banner?  if
-      " Probing" ?type  probe-all
-\      " Install console" ?type  install-console
-\      ?gui-banner
-\   then
-
-   ?usb-keyboard
-
+: interpreter-init  ( -- )
    hex
    warning on
    only forth also definitions
@@ -489,19 +438,65 @@ fload ${BP}/ofw/core/dualconsole.fth
    #line off
 
 \   .built cr
+;
 
+: console-start  ( -- )
+[ifdef] rom-loaded
+   video-map cr
+[then]
+   " screen" open-dev  ?dup  if
+      stdout !
+\       logo-banner drop
+\       close-dev
+\       0 stdout !
+   then
+
+   install-dual-console
+   ?gui-banner
+   " probe-" do-drop-in
+\   ." nvramrc" cr
+\   use-nvramrc?  if  nvramrc safe-evaluate  then
+;
+: debug-interact  ( -- )
+   early-interact?  if
+      " Interrupting startup sequence prior to probing" .because
+      ." Type 'resume'  to resume normal startup sequence." cr
+      \ fallback-device io console-io
+      ( help-msg ) interact
+   then
+;
+
+: optional-startup  ( -- )
+   probe-usb
+   ?usb-keyboard
+;
+
+: startup  ( -- )
+   standalone?  0=  if  exit  then
+
+\   ?bailout
+
+   no-page
+
+   console-start
+   user-switch?  if
+      ." Interactive boot" cr
+      ?bailout
+      " keyboard" open-dev  ?dup  if  stdin !  then
+      probe-pci
+      optional-startup
+   else
+      probe-pci
+      ['] false to interrupt-auto-boot?
+   then
+
+   interpreter-init
    auto-boot
 
 [ifdef] linux-support
    ." See "
    blue-letters ." http://firmworks.com/QuickRef.html" black-letters
    cr cr
-
-\   ." Type 'help-linux' to learn about Linux loading options" cr
-\   ." Type 'boot' to just do it.
-[then]
-[ifdef] sd-diags
-   ." Type 'loadsd' to start SD diags" cr
 [then]
 
    quit

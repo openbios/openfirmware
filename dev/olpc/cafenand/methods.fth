@@ -1,6 +1,11 @@
 \ See license at end of file
 purpose: interface methods for CaFe NAND controller
 
+: $=  ( $1 $2 -- flag )
+   rot tuck <>  if  3drop false exit  then
+   comp 0=
+;
+
 external
 
 : dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
@@ -15,9 +20,17 @@ external
       dma-buf-va dma-buf-pa /dma-buf  " dma-map-out" $call-parent
       /dma-buf dma-free
    then
+   ?free-resmap
 ;
 
-: size  ( -- d )  pages/chip /page um*  ;
+: size  ( -- d )
+   resmap  if
+      #reserved-eblocks /eblock
+   else
+      pages/chip /page
+   then
+   um*
+;
 
 : open  ( -- okay? )
    map-regs
@@ -32,6 +45,13 @@ external
    get-bbt
 
    my-args  dup  if   ( arg$ )
+      2dup " fastboot" $=  if          ( arg$ )
+         2drop                         ( )
+         map-reserved                  ( )
+         init-deblocker  dup 0=  if  ?free-resmap  then  ( okay? )
+         exit
+      then                             ( arg$ )
+
       " jffs2-file-system" find-package  if  ( arg$ xt )
          interpose  true   ( okay? )
       else                 ( arg$ )

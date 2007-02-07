@@ -152,6 +152,17 @@ d# 32  buffer: drive-name
 
    \ Insert working directory if the path name is relative
    dup  if                                               ( path$ )
+      [char] ,  split-string                             ( head$ tail$ )
+
+      dup  if                                            ( head$ ,tail$ )
+         \ If tail$ is not empty, there was a , in the path
+         \ so we copy the head$ to the path buffer verbatim
+         2swap +path  " ," +path                         ( tail$ )
+         1 /string                                       ( tail$' )
+      else                                               ( head$ null$ )
+         2drop                                           ( head$ )
+      then                                               ( path$ )
+
       \ Insert directory if path string doesn't start with '\'
       over c@ [char] \ <>  if  insert-directory  then    ( path$ )
    else                                                  ( path$ )

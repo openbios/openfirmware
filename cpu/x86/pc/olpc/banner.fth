@@ -12,6 +12,9 @@ headerless
 [ifdef] linuxbios-loaded
    h# ffff.ffc0 h# 10 type cr
 [then]
+[ifdef] rom-loaded
+   h# ffff.ffc0 h# 10 type cr
+[then]
 [ifdef] bzimage-loaded
    ." booted from disk - " .built
 [then]

@@ -4,12 +4,17 @@ purpose: Copy a file onto the NAND FLASH
 0 value fileih
 0 value nandih
 0 value /nand-block
+0 value /nand-page
+0 value nand-pages/block
+0 value #nand-pages
 
 : open-nand  ( -- )
    " /nandflash" open-dev to nandih
    nandih 0= abort" Can't open NAND FLASH device"
    " erase-size" nandih $call-method to /nand-block
-   " start-copy" nandih $call-method
+   " block-size" nandih $call-method to /nand-page
+   " size" nandih $call-method  /nand-page  um/mod nip to #nand-pages
+   /nand-block /nand-page /  to nand-pages/block
 ;
 
 : copy-nand  ( "devspec" -- )
@@ -18,7 +23,9 @@ purpose: Copy a file onto the NAND FLASH
    fileih 0=  if  nandih close-dev  true abort" Can't open file"  then
    ." Erasing..." cr
    " wipe" nandih $call-method
+
    cr ." Writing..." cr
+   " start-copy" nandih $call-method
    0
    begin
       load-base /nand-block  " read" fileih $call-method
@@ -30,10 +37,6 @@ purpose: Copy a file onto the NAND FLASH
    fileih close-dev
    nandih close-dev
 ;
-
-0 value #nand-pages
-0 value nand-pages/block
-0 value /nand-page
 
 : written?  ( adr len -- flag )
    false -rot   bounds  ?do            ( flag )
@@ -53,10 +56,6 @@ true value dump-oob?
 
    fileih 0=  if  nandih close-dev  true abort" Can't open file"  then
 
-   " block-size" nandih $call-method to /nand-page
-   " size" nandih $call-method  /nand-page  um/mod nip to #nand-pages
-   /nand-block /nand-page /  to nand-pages/block
-   
    \ The stack is empty at the end of each line unless otherwise noted
    #nand-pages  0  do
       (cr i .
@@ -75,6 +74,32 @@ true value dump-oob?
       then
    nand-pages/block +loop
    cr  ." Done" cr
+
+   fileih close-dev
+   nandih close-dev
+;
+
+: fastcopy-nand  ( "devspec" -- )
+   open-nand
+   safe-parse-word  open-dev  to fileih
+   fileih 0=  if  nandih close-dev  true abort" Can't open file"  then
+
+   " size" fileih $call-method  drop              ( len )
+   " start-fastcopy" nandih $call-method  if      ( )
+      nandih close-dev  fileih close-dev
+      true abort" Not enough spare NAND space for fast copy"
+   then                                                   ( )
+
+   begin                                                  ( )
+      load-base /nand-block  " read" fileih $call-method  ( len )
+   dup 0> while                                           ( len )
+      \ If the read didn't fill a complete block, zero the rest
+      load-base /nand-block  rot /string  erase
+
+      load-base " next-fastcopy" nandih $call-method      ( )
+   repeat                                                 ( len )
+   drop                                                   ( )
+   " end-fastcopy" nandih $call-method                    ( )
 
    fileih close-dev
    nandih close-dev

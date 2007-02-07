@@ -18,13 +18,16 @@ purpose: USB elaborations for the OLPC platform
 ;
 [then]
 
-: probe-usb2
+: (probe-usb2)
    " /usb@f,5" select-dev
    delete-my-children
    " probe-usb" eval  \ EHCI probe
    unselect
    ." USB2 devices:" cr
    " show-devs /usb@f,5" eval
+;
+: probe-usb2  ( -- )
+   (probe-usb2)
    report-disk
 ;
 alias p2 probe-usb2
@@ -36,13 +39,16 @@ alias p2 probe-usb2
    " stagger-power" eval  \ Get the devices going
    d# 500 ms
 
-   probe-usb2               \ First dibs to EHCI/USB2
+   (probe-usb2)           \ First dibs to EHCI/USB2
 
    " probe-usb" eval  \ OHCI probe
    unselect
    ." USB1 devices:" cr
    " no-page  show-devs /usb@f,4  page-mode" eval
-\   report-disk
+
+   report-disk
+   report-net
+   report-keyboard
 ;
 
 : ?usb-keyboard  ( -- )

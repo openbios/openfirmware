@@ -1,9 +1,15 @@
 \ See license at end of file
 purpose: Interface methods for AMD CS5536 NAND controller
 
-external
+: $=  ( $1 $2 -- flag )
+   rot tuck <>  if  3drop false exit  then
+   comp 0=
+;
 
 : msr@  ( adr -- d )  " rdmsr" eval  ;
+
+external
+
 : open  ( -- okay? )
    \ We assume that LinuxBIOS has already set up the address map
    \ and the timing MSRs.
@@ -16,6 +22,34 @@ external
    get-bbt
 
    my-args  dup  if   ( arg$ )
+      ascii , left-parse-string    ( arg2$ arg1$ )
+      2dup " zip" $=  if           ( arg2$ arg1$ )
+         2drop                         ( arg2$ )
+         map-reserved                  ( arg2$ )
+         init-deblocker  0=  if  2drop ?free-resmap false exit  then  ( arg2$ )
+
+         \ If no file is specified, open the raw archive
+         dup 0=  if  2drop true exit  then                ( arg2$ )
+      
+         \ Otherwise interpose the filesystem handler
+         " zip-file-system" find-package  if              ( arg2$ xt )
+            interpose true                                ( true )
+         else                                             ( arg2$ )
+            ." Can't find zip-file-system package" cr     ( arg2$ )
+            2drop  deblocker close-package  ?free-resmap  ( )
+            false                                         ( false )
+         then
+         exit
+      then                                                ( arg2$ arg1$ )
+
+      \ Accept either "path" or "jffs2,path"
+      2dup " jffs2" $=  if                                ( arg2$ arg1$ )
+         2drop                                            ( arg2$ )
+      else                                                ( arg2$ arg1$ )
+         \ XXX probably should check that arg$2 is empty...
+         2swap 2drop                                      ( arg1$ )
+      then                                                ( arg$ )
+
       " jffs2-file-system" find-package  if  ( arg$ xt )
          interpose  true   ( okay? )
       else                 ( arg$ )
@@ -26,7 +60,7 @@ external
       2drop  true          ( okay? )
    then                    ( okay? )
 ;
-: close  ( -- )  ;
+: close  ( -- )  ?free-resmap  ;
 
 : size  ( -- d )  pages/chip /page um*  ;
 

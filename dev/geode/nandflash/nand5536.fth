@@ -10,8 +10,8 @@ h# 2000.0000 h# 1000 reg
 defer lmove
 
 : set-lmove
-  " lmove" my-parent ihandle>phandle find-method  0=  if  ['] move  then
-  to lmove
+   " lmove" my-parent ihandle>phandle find-method  0=  if  ['] move  then
+   to lmove
 ;
 
 : nand@  ( reg# -- b )  nand-base + c@  ;
@@ -125,7 +125,7 @@ h# 40 buffer: oob-buf
 
 : write-bytes   ( adr len page# offset -- )
    h# 80  start-io  data       ( adr len )
-   nand-base swap move         ( )
+   nand-base swap lmove        ( )
    h# 10 cmd   stp             ( )
    wait-ready
    wait-write-done

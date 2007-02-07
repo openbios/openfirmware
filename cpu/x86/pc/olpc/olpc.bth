@@ -28,6 +28,8 @@ fload ${BP}/cpu/x86/pc/olpc/config.fth
 \ Always re-create the builton.fth file when we make a new rom.img
 fload ${BP}/cpu/x86/pc/builton.bth
 
+fload ${BP}/forth/lib/crc32.fth
+
 hex
 
 : pad-file  ( location -- )
@@ -53,5 +55,20 @@ writing olpc.rom
 
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
    " rmstart.img"    $add-file
+
+\ Insert the revision signature
+/rom h# 40 - ofd @ fseek
+" CL1   Q2B99  Q2B" ofd @ fputs
+
+/l buffer: crcbuf
+/rom buffer: filebuf
+0 ofd @ fseek
+
+\ Read the entire image, compute the CRC, and store it h# 30 from the end
+filebuf /rom ofd @ fgets /rom <> abort" Can't read back image"
+filebuf /rom $crc crcbuf !
+
+/rom h# 30 - ofd @ fseek
+crcbuf /l ofd @ fputs
 
 ofd @ fclose
