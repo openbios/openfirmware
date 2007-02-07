@@ -2,7 +2,6 @@ purpose: Construct the Open Firmware module collection
 
 command: &builder &this
 in: ${BP}/cpu/x86/pc/olpc/build/ec.img
-\ in: ${BP}/cpu/x86/pc/olpc/build/vsa.bin
 in: ${BP}/cpu/x86/pc/olpc/build/romreset.di
 in: ${BP}/cpu/x86/pc/olpc/build/romstart.di
 in: ${BP}/cpu/x86/pc/olpc/build/rmstart.img
@@ -41,9 +40,6 @@ hex
 .( --- Saving as olpc.rom - Direct ROM format) cr
 writing olpc.rom
    " ec.img"                $add-file
-   h# 1.0000 pad-file
-
-   " olpc_vsa.64k.bin"      $add-file
    h# 2.0000 pad-file
 
    dropin-base rom-pa -  pad-file
