@@ -23,7 +23,7 @@ all: forth x86forth ../build/inflate.bin
 # Use x86forth when you need to compile new dictionaries that will
 # run on x86 systems.
 forth: ${OBJS}
-	${CC} -o $@ ${OBJS}
+	${CC} -o -m32 $@ ${OBJS}
 	@ln -sf forth x86forth
 
 # Compile with -O0 because with GCC4, higher optimization levels cause the
