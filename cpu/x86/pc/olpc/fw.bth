@@ -261,6 +261,8 @@ warning @  warning off
    standalone?  if
       disable-interrupts
 [ifdef] rom-loaded
+      d# 300
+      i-key-wait  if  ." Interacting" cr  hex interact  then
       setup
 [else]
       d# 3000
@@ -420,7 +422,14 @@ fload ${BP}/ofw/core/dualconsole.fth
    atest?  if
       h# fc3f ec@ h# ff <>
    else
-      h# fc34 ec@ h# 70 and  h# 70 <>
+      \ The EC can tristate the KEY_OUT lines behind our back, so we
+      \ try several times to observe a key press.
+      d# 10 0  do
+         h# ff h# fc12 ec!      \ Output enable the KEY_OUT matrix lines
+         h# fc34 ec@ h# 70 and
+         h# 70 <>  if  true unloop exit  then
+      loop
+      false
    then
 [else]
    true
@@ -479,7 +488,8 @@ fload ${BP}/ofw/core/dualconsole.fth
    no-page
 
    console-start
-   user-switch?  if
+\   user-switch?  if
+   true  if
       ." Interactive boot" cr
       ?bailout
       " keyboard" open-dev  ?dup  if  stdin !  then

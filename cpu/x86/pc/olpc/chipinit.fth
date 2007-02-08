@@ -129,20 +129,22 @@
 ;
 
 create msr-init
+\ Memsize-dependent MSRs are set in the early startup code
+
 \ northbridgeinit: GLIUS
 msr: 1000.0020 20000000.000fff80.   \ 0 - 7.ffff low RAM
 msr: 1000.0021 20000000.080fffe0.   \ 8.0000 - 9.ffff low RAM
 msr: 1000.002c 20000000.f0000003.   \ f.0000 - f.ffff Read only to expansion ROM
-msr: 1000.0028 20000007.7df00100.   \ 10.000 - 077d.f000 High RAM - Memsize dependent
+\ msr: 1000.0028 20000007.7df00100.   \ 10.000 - 077d.f000 High RAM - Memsize dependent
 
 \ SMM memory (fbe) (40. is SMM_OFFSET)
-msr: 1000.0026 2c7be040.400fffe0.   \ 4040.0000 - 405f.ffff relocated to 7fe.0000 - Memsize dependent
+\ msr: 1000.0026 2c7be040.400fffe0.   \ 4040.0000 - 405f.ffff relocated to 7fe.0000 - Memsize dependent
 
 \ Graphics
 msr: 1000.0022 a00000fe.000ffffc.   \ fe00.0000 - fe00.3fff GP
 msr: 1000.0023 c00000fe.008ffffc.   \ fe00.8000 - fe00.bfff VP
 msr: 1000.0024 80000000.0a0fffe0.   \ 000a.0000 - 000b.ffff DC
-msr: 1000.0029 20a7e0fd.7fffd000.   \ fd00.0000 - fd7f.ffff mapped to 77e.0000 Memsize dependent (Frame Buffer)
+\ msr: 1000.0029 20a7e0fd.7fffd000.   \ fd00.0000 - fd7f.ffff mapped to 77e.0000 Memsize dependent (Frame Buffer)
 msr: 1000.002a 801ffcfe.007fe004.   \ fe00.4000 - fe00.7fff mapped to 0 in DC space
 
 msr: 1000.0025 000000ff.fff00000.   \ Unmapped
@@ -158,7 +160,7 @@ msr: 1000.00e3 00000000.f030ac18.   \ IOD_SC
 msr: 4000.0020 20000000.000fff80.   \ 0 - 7.ffff low RAM
 msr: 4000.0021 20000000.080fffe0.   \ 8.0000 - 9.ffff low RAM
 msr: 4000.002d 20000000.f0000003.   \ expansion ROM
-msr: 4000.0029 20000007.7df00100.   \ 10.0000 - 0f7d.f000 High RAM - Memsize dependent
+\ msr: 4000.0029 20000007.7df00100.   \ 10.0000 - 0f7d.f000 High RAM - Memsize dependent
 msr: 4000.0023 20000040.400fffe0.   \ 4040.0000 - 405f.ffff SMM memory
 msr: 4000.0024 200000fe.004ffffc.   \ fe00.4000 - fe00.7fff DC
 msr: 4000.00e3 60000000.033000f0.   \ CPU - 0003.3000 don't know what this is
@@ -184,7 +186,7 @@ msr: 54002001 00000000.00000000.
 msr: 58002001 00000000.00000000.
 
 \ Region config
-msr: 1808 25fff002.1077e000.  \ Memsize dependent
+\ msr: 1808 25fff002.1077e000.  \ Memsize dependent
 \ msr: 180a 00000000.00000000.
 msr: 180a 00000000.00000011.  \ Disable cache for table walks
 msr: 1800 00002000.00000022.
@@ -205,7 +207,7 @@ msr: 50002015 35353535.35353535.
 msr: 50002016 35353535.35353535.
 msr: 50002017 35353535.35353535.
 msr: 50002018 0009f000.00000130.
-msr: 50002019 077df000.00100130.  \ Memsize dependent
+\ msr: 50002019 077df000.00100130.  \ Memsize dependent
 msr: 5000201a 4041f000.40400120.
 msr: 5000201b 00000000.00000000.
 msr: 5000201c 00000000.00000000.
@@ -408,11 +410,11 @@ here msr-init - constant /msr-init
 
 create bigmem-msrs
 msr:      1808 25fff002.10f7e000.  \ Memsize dependent
-msr: 1000.0028 2000000f.7df00100.   \ 10.000 - 0f7d.f000 High RAM - Memsize dependent
-msr: 1000.0026 2cfbe040.400fffe0.   \ 4040.0000 - 405f.ffff relocated to ffe.0000 - Memsize dependent
-msr: 1000.0029 2127e0fd.7fffd000.   \ fd00.0000 - fd7f.ffff mapped to f7e.0000 Memsize dependent (Frame Buffer)
-msr: 4000.0029 2000000f.7df00100.   \ 10.0000 - 0f7d.f000 High RAM - Memsize dependent
-msr: 5000.2019 0f7df000.00100130.    \ Memsize?
+msr: 1000.0028 2000000f.7df00100.  \   10.0000 - 0f7d.f000 High RAM - Memsize dependent
+msr: 1000.0026 2cfbe040.400fffe0.  \ 4040.0000 - 405f.ffff relocated to ffe.0000 - Memsize dependent
+msr: 1000.0029 2127e0fd.7fffd000.  \ fd00.0000 - fd7f.ffff mapped to f7e.0000 Memsize dependent (Frame Buffer)
+msr: 4000.0029 2000000f.7df00100.  \   10.0000 - 0f7d.f000 High RAM - Memsize dependent
+msr: 5000.2019 0f7df000.00100130.  \ Memsize?
 here bigmem-msrs - constant /bigmem-init
 
 
@@ -604,7 +606,7 @@ h# fe00.8000 value vp-base
 ;
 : setup  
    set-msrs
-   fix-memsize
+\   fix-memsize  \ Memsize-dependent MSRs are set in romstart.bth
 \   fix-sirq
    gpio-init
    acpi-init

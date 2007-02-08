@@ -62,7 +62,7 @@ writing olpc.rom
 
 \ Read the entire image, compute the CRC, and store it h# 30 from the end
 filebuf /rom ofd @ fgets /rom <> abort" Can't read back image"
-filebuf /rom $crc crcbuf !
+0 crctab  filebuf /rom  ($crc)  crcbuf !
 
 /rom h# 30 - ofd @ fseek
 crcbuf /l ofd @ fputs

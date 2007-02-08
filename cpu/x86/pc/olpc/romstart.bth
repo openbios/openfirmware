@@ -63,12 +63,10 @@ hex
 
    \ Go ahead and set these up too, while we're at it
    \ The top of memory and frame buffer locations change based on RAM size
+   \ so they are set later, after determining the size.
    a00000fe.000ffffc.   10000022 set-msr
    c00000fe.008ffffc.   10000023 set-msr
    80000000.0a0fffe0.   10000024 set-msr
-   2c7be040.400fffe0.   10000026 set-msr
-   20000007.7df00100.   10000028 set-msr \ Top of memory
-   20a7e0fd.7fffd000.   10000029 set-msr \ Frame buffer
    801ffcfe.007fe004.   1000002a set-msr
    20000000.f0000003.   1000002c set-msr \ 000f.xxxx range
 
@@ -80,7 +78,6 @@ hex
    200000fe.004ffffc.   40000024 set-msr
    200000fe.008ffffc.   40000025 set-msr
    20000000.0a0fffe0.   40000026 set-msr  \ a0000h - bf000h EGA video memory
-   20000007.7df00100.   40000029 set-msr  \ top of memory.
    200000fd.7fffd000.   4000002a set-msr  \ frame buffer
    20000000.f0000003.   4000002d set-msr  \ 000f.xxxx range
 
@@ -206,9 +203,19 @@ hex
    6130 port-rl 4 bitand  0<> if  \ 128 MiB
       10075012.00003000.  20000018 set-msr
       25fff002.1077e000.      1808 set-msr
+      2c7be040.400fffe0.  10000026 set-msr
+      20000007.7df00100.  10000028 set-msr \ Top of memory
+      20a7e0fd.7fffd000.  10000029 set-msr \ Frame buffer
+      20000007.7df00100.  40000029 set-msr \ top of memory.
+      077df000.00100130.  50002019 set-msr
    else                           \ 256 MiB
       10076013.00003000.  20000018 set-msr
       25fff002.10f7e000.      1808 set-msr
+      2cfbe040.400fffe0.  10000026 set-msr
+      2000000f.7df00100.  10000028 set-msr \ Top of memory
+      2127e0fd.7fffd000.  10000029 set-msr \ Frame buffer
+      2000000f.7df00100.  40000029 set-msr \ top of memory.
+      0f7df000.00100130.  50002019 set-msr
    then
 
    \ 20000019 rmsr            \ SDRAM timing and mode program
