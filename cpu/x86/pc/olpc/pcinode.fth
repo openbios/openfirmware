@@ -22,6 +22,11 @@ h# 0000.8000 to first-io		\ Avoid mappings established by BIOS
 \ returning "int-line true" if the child's interrupt line register should
 \ be set or "false" otherwise.
 : assign-int-line  ( phys.hi.func INTx -- irq true )
+[ifdef] rom-loaded
+   \ The IRQ for the CaFe chip is b.  The other devices aren't really
+   \ on the PCI bus, so their IRQ assignment is done via MSRs.
+   over h# f800 and  h# 6000 =  if  2drop h# b true exit  then
+[then]
    \ Reiterate the value that is already in the int line register,
    \ which was placed there by lower level init code
    drop  h# 3c +  config-b@  true

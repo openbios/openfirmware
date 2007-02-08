@@ -45,12 +45,33 @@ external
    get-bbt
 
    my-args  dup  if   ( arg$ )
-      2dup " fastboot" $=  if          ( arg$ )
-         2drop                         ( )
-         map-reserved                  ( )
-         init-deblocker  dup 0=  if  ?free-resmap  then  ( okay? )
+      ascii , left-parse-string    ( arg2$ arg1$ )
+      2dup " zip" $=  if           ( arg2$ arg1$ )
+         2drop                         ( arg2$ )
+         map-reserved                  ( arg2$ )
+         init-deblocker  0=  if  2drop ?free-resmap false exit  then  ( arg2$ )
+
+         \ If no file is specified, open the raw archive
+         dup 0=  if  2drop true exit  then                ( arg2$ )
+      
+         \ Otherwise interpose the filesystem handler
+         " zip-file-system" find-package  if              ( arg2$ xt )
+            interpose true                                ( true )
+         else                                             ( arg2$ )
+            ." Can't find zip-file-system package" cr     ( arg2$ )
+            2drop  deblocker close-package  ?free-resmap  ( )
+            false                                         ( false )
+         then
          exit
-      then                             ( arg$ )
+      then                                                ( arg2$ arg1$ )
+
+      \ Accept either "path" or "jffs2,path"
+      2dup " jffs2" $=  if                                ( arg2$ arg1$ )
+         2drop                                            ( arg2$ )
+      else                                                ( arg2$ arg1$ )
+         \ XXX probably should check that arg$2 is empty...
+         2swap 2drop                                      ( arg1$ )
+      then                                                ( arg$ )
 
       " jffs2-file-system" find-package  if  ( arg$ xt )
          interpose  true   ( okay? )

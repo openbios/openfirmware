@@ -465,11 +465,6 @@ h# fe00.8000 value vp-base
    gp-base dup  h# c000  -1  mmu-map
 [then]
 
-   \ BAR0 is frame buffer - 8M
-   \ BAR1 is GP regs - 16K
-   \ BAR2 is VG regs - 16K
-   \ BAR2 is DF regs - 16K
-
    \ Unlock the display controller registers
 \ write_vg_32(DC_UNLOCK, DC_UNLOCK_VALUE);
    h# 4758 dc-base 0 + l!
@@ -490,7 +485,7 @@ h# fe00.8000 value vp-base
    h# 88 dc-base + l!   \ DV_CTL register, undocumented
 
 \ hw_fb_map_init(PCI_FB_BASE);
-\ Initialize the frame buffer base realated stuff.
+\ Initialize the frame buffer base related stuff.
 
    h# fd00.0000 h#  84 dc-base + l!   \ GLIU0 Memory offset
    h# fd00.0000 h#  4c gp-base + l!   \ GP base

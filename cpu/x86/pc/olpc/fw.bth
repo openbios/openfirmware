@@ -364,7 +364,9 @@ patch drop ms install-console
    ['] boot catch drop  \ Try the normal boot path first
    boot-configure auto-boot?  if  boot  then
 ;
+[ifndef] rom-loaded
 " config&boot" ' boot-command set-config-string-default
+[then]
 
 : dcon-reset-all  ( -- )
    " screen"  " dcon-off" ['] execute-device-method  catch  if
@@ -488,12 +490,14 @@ fload ${BP}/ofw/core/dualconsole.fth
    no-page
 
    console-start
-\   user-switch?  if
-   true  if
+   user-switch?  0=  if
+\   true  if
       ." Interactive boot" cr
+      ." Keyboard probe" cr
       ?bailout
       " keyboard" open-dev  ?dup  if  stdin !  then
       probe-pci
+      ." USB probe" cr
       optional-startup
    else
       probe-pci
