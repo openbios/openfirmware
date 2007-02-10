@@ -55,14 +55,10 @@ start.o: start.s
 
 # Hello is a demo program that uses the stdio library
 
-hello.elf: hello bintoelf makefile
-	dd if=hello of=hello.img bs=32 skip=1
-	bintoelf  -e 0x100000  -p 3  -l  <hello.img >hello.elf
-
-hello: libobp.a start.o hello.o
-	ld -Bstatic -N -T 100000 -o hello start.o hello.o libobp.a -lc
-	cp hello hello.syms
-	strip hello
+hello.elf: libobp.a start.o hello.o
+	ld -Bstatic -N -Ttext 0x100000 -o $@ start.o hello.o libobp.a -lc
+	cp hello.elf hello.syms
+	strip hello.elf
 
 hello.o: ../../hello/hello.c
 	${CC} ${CFLAGS} -c ../../hello/hello.c
