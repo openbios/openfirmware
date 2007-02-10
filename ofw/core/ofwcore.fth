@@ -2985,6 +2985,22 @@ nuser temp-char
       rot encode-int  2swap (property)
    device-end
 ;
+: set-stdin  ( ihandle -- )
+   stdin @  swap stdin !			( old-ihandle )
+   stdin @  " stdin" chosen-int-property
+
+   " install-abort" stdin @ $call-method	( old-ihandle )
+   ?dup  if 					( old-ihandle )
+      " remove-abort" 2 pick $call-method	( old-ihandle )
+      close-dev
+   then
+;
+: set-stdout  ( ihandle -- )
+   stdout @  swap stdout !	( old-ihandle )
+   ?close
+   stdout @  " stdout" chosen-int-property
+   report-#lines
+;
 headers
 : input  ( pathname-adr,len -- )
    2dup locate-device  if
@@ -2993,14 +3009,7 @@ headers
       dup stdin @ pihandle=  if  3drop exit  then  \ Same device?
       "read" rot has-method?  if      ( pathname-adr,len )
 	 open-dev ?dup  if				( ihandle )
-	    stdin @  swap stdin !			( old-ihandle )
-            stdin @  " stdin" chosen-int-property
-
-	    " install-abort" stdin @ $call-method	( old-ihandle )
-	    ?dup  if 					( old-ihandle )
-	       " remove-abort" 2 pick $call-method	( old-ihandle )
-	       close-dev
-	    then
+            set-stdin
 	 else
 	    ." Can't open input device." cr  exit
 	 then
@@ -3050,10 +3059,7 @@ variable termemu-#lines		\ For communication with terminal emulator
             \ If a different behavior for "light" is appropriate, it will
             \ have been established during "open-dev" (e.g. by fb8-install)
             nip                         ( ihandle )
-	    stdout @  swap stdout !	( old-ihandle )
-	    ?close
-            stdout @  " stdout" chosen-int-property
-            report-#lines
+	    set-stdout
 	 else                           ( xt )
             to light                    ( )
 	    ." Can't open output device." cr  exit

@@ -420,7 +420,6 @@ true                               ' client-symbols?  set-config-int-default
 fload ${BP}/ofw/core/dualconsole.fth
 
 : user-switch?  ( -- flag )
-[ifdef] rom-loaded
    atest?  if
       h# fc3f ec@ h# ff <>
    else
@@ -433,8 +432,12 @@ fload ${BP}/ofw/core/dualconsole.fth
       loop
       false
    then
+;
+: fast-boot?  ( -- flag )
+[ifdef] rom-loaded
+   user-switch?
 [else]
-   true
+   false
 [then]
 ;
 
@@ -456,7 +459,7 @@ fload ${BP}/ofw/core/dualconsole.fth
    video-map cr
 [then]
    " screen" open-dev  ?dup  if
-      stdout !
+      set-stdout
 \       logo-banner drop
 \       close-dev
 \       0 stdout !
@@ -490,18 +493,17 @@ fload ${BP}/ofw/core/dualconsole.fth
    no-page
 
    console-start
-   user-switch?  0=  if
-\   true  if
+   fast-boot?   if
+      probe-pci
+      ['] false to interrupt-auto-boot?
+   else
       ." Interactive boot" cr
       ." Keyboard probe" cr
       ?bailout
-      " keyboard" open-dev  ?dup  if  stdin !  then
+      " keyboard" open-dev  ?dup  if  set-stdin  then
       probe-pci
       ." USB probe" cr
       optional-startup
-   else
-      probe-pci
-      ['] false to interrupt-auto-boot?
    then
 
    interpreter-init
