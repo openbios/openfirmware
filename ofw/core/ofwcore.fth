@@ -2995,12 +2995,6 @@ nuser temp-char
       close-dev
    then
 ;
-: set-stdout  ( ihandle -- )
-   stdout @  swap stdout !	( old-ihandle )
-   ?close
-   stdout @  " stdout" chosen-int-property
-   report-#lines
-;
 headers
 : input  ( pathname-adr,len -- )
    2dup locate-device  if
@@ -3043,6 +3037,12 @@ variable termemu-#lines		\ For communication with terminal emulator
       then                      ( #lines )
    then                         ( #lines )
    stdout-#lines  !
+;
+: set-stdout  ( ihandle -- )
+   stdout @  swap stdout !	( old-ihandle )
+   ?close
+   stdout @  " stdout" chosen-int-property
+   report-#lines
 ;
 : output  ( pathname-adr,len -- )
    2dup locate-device  if               ( pathname-adr,len )
