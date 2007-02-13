@@ -75,6 +75,8 @@ ascii t report
       \ and use it to inflate the firmware into RAM
       ax  push			\ Save address of firmware dropin
 
+ascii h report
+
       " inflate" $find-dropin,  \ Assemble call to find-dropin with literal arg
 
       4 [ax]          cx  mov	\ Length of inflater (byte-swapped)
@@ -93,6 +95,7 @@ ascii t report
       0 #             push      \ No-header flag - 0 means expect a header
       workspace    #  push	\ Scratch RAM for inflater
 
+      ascii m report
       inflate-base #  ax  mov	\ Base address of inflater
       ax call			\ Inflate the firmware
    else
@@ -103,8 +106,12 @@ ascii t report
       d# 32 [ax]      si  lea	\ si: Base address of firmware code in dropin
       fw-virt-base #  di  mov	\ Firmware RAM address (destination)
       cld  rep byte movs	\ Copy the firmware
+
+      ascii h report
+      ascii m report
    then
 
+   ascii a report
    \ "firmware" drop-in should discard redundant page table entries
    fw-virt-base #   ax  mov	\ Jump to Forth in RAM
    ax  jmp

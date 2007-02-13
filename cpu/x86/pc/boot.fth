@@ -123,10 +123,8 @@ label prom-cold-code  ( -- )
 
 \ carret report
 \ linefeed report
-ascii h report
+ascii c report
 
-ascii m report
-    
 \ Get the origin address
    here 5 + #) call   here origin -  ( offset )
    bx  pop
@@ -139,7 +137,7 @@ ascii m report
    user-size #       cx  mov
    rep byte movs
 
-ascii a report
+ascii s report
 
    prom-main-task #      up  mov        \ Set User Area Pointer
 
@@ -166,9 +164,7 @@ ascii a report
     'user dp-loc    ax    mov
     ax        'user dp    mov    \ Initialize the dictionary pointer
 
-ascii c report
-
-ascii s report
+\ ascii s report
 h# 20 report
 
 \ Enter Forth
