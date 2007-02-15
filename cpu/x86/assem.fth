@@ -680,6 +680,12 @@ HEX
  9B  1MI WAIT           ( XCHG )  D7  1MI XLAT    30 13MI XOR
  C2 14MI +RET
 
+: invd    ( -- )  h# 0f asm8,  h# 08 asm8,  ;
+: wbinvd  ( -- )  h# 0f asm8,  h# 09 asm8,  ;
+: wrmsr   ( -- )  h# 0f asm8,  h# 30 asm8,  ;
+: rdtsc   ( -- )  h# 0f asm8,  h# 31 asm8,  ;
+: rdmsr   ( -- )  h# 0f asm8,  h# 32 asm8,  ;
+
 \ Structured Conditionals
 \ single pass forces fixed size. optimize for small, fast structures:
 \ always use 8-bit offsets.
