@@ -189,18 +189,19 @@ msr: 58002001 00000000.00000000.
 \ msr: 1808 25fff002.1077e000.  \ Memsize dependent
 \ msr: 180a 00000000.00000000.
 msr: 180a 00000000.00000011.  \ Disable cache for table walks
-msr: 1800 00002000.00000022.
+msr: 1800 00002000.00000022.  \ Data memory - 2 outstanding write ser.,
+                              \ INVD => WBINVD, serialize load misses.
 msr: 1810 fd7ff000.fd000111.  \ Video (write through)
 msr: 1811 fe003000.fe000101.  \ GP
 msr: 1812 fe007000.fe004101.  \ DC
 msr: 1813 fe00b000.fe008101.  \ VP
 
 \ PCI
-msr: 50002000 00000000.00105001.
-msr: 50002001 00000000.00000027.
+\ msr: 50002000 00000000.00105001. \ RO
+msr: 50002001 00000000.00000027. \ Priority 2, domain 7
 msr: 50002002 00000000.00000000. \ No SMIs, please
 msr: 50002003 00000000.00000000. \ No ERRs, please
-msr: 50002004 00000000.00000015.
+msr: 50002004 00000000.00000015. \ Clock gating for 3 clocks
 msr: 50002005 00000000.00000000. \ Enable some PCI errors
 msr: 50002010 fff030f8.001a0215.
 msr: 50002011 00000300.00000100.

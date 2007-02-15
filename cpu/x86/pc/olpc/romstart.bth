@@ -168,8 +168,15 @@ hex
 
    4c000014 rmsr  04000000 bitand  0=  if     \ If this is the first time
       \ If we also set 0100.0000 (LOCKWAIT), it might start faster
-      226.04de.0000.   4c000014 set-msr
-      226.04de.6001.   4c000014 set-msr
+      \ The BOOTSTRAP_STAT bits (mask 70) read the straps that tell
+      \ us the board revision.  ID 5 is preB1, ID7 is B1.  ID0 is B2.
+      4c000014 rmsr  00000070 bitand  h# 5 # ax cmp  <  if
+         220.04de.0000.   4c000014 set-msr
+      else
+         226.04de.0000.   4c000014 set-msr
+      then
+      1 bitset   4c000014 wmsr
+
    \ CPU will reset here
    then
    \ And return to here after the reset
@@ -294,7 +301,7 @@ hex
    cr0	ax   mov
    6000.0000 bitclr  \ Cache-disable off, coherent
    ax   cr0  mov
-   h# 0f asm8,  h# 09 asm8,  \ wbinvd
+   h# 0f asm8,  h# 08 asm8,  \ invd
 
 \ Example of how to output a character to serial port
 \  44 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
