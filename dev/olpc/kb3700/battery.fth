@@ -39,14 +39,14 @@ end-string-array
 ;
 
 string-array bat-states
-  ," no-battery"
-  ," charging-idle"
-  ," charging-normal"
-  ," charging-equalize"
-  ," charging-learning"
+  ," no-battery        "
+  ," charging-idle     "
+  ," charging-normal   "
+  ," charging-equalize "
+  ," charging-learning "
   ," charging-temp-wait"
-  ," charging-full"
-  ," discharge"
+  ," charging-full     "
+  ," discharge         "
   ," abnormal: "
 end-string-array
 
