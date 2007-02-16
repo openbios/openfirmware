@@ -8,6 +8,16 @@ h# 380 constant iobase
 : ec@  ( index -- b )  wbsplit iobase 1+ pc!  iobase 2+ pc!  iobase 3 + pc@  ;
 : ec!  ( b index -- )  wbsplit iobase 1+ pc!  iobase 2+ pc!  iobase 3 + pc!  ;
 
+: ec-dump  ( offset len -- )
+   ." Addr   0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f" cr  cr
+   push-hex
+   bounds  ?do
+      i 4 u.r space
+      i h# 10 bounds  do  i ec@ 3 u.r  loop  cr
+      exit? ?leave
+   h# 10 +loop
+   pop-base
+;
 
 \ EC internal addresses
 
