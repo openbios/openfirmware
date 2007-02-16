@@ -149,8 +149,10 @@ h# 200 constant /block  \ 512 bytes
    internal-clock-on
 
    h#   00 h# 28 cb!  \ Not high speed, 1-bit data width, LED off
-   h# 00fb h# 34 cw!  \ normal interrupt status en reg
-                         \ block gap event not enabled
+   h# 000b h# 34 cw!  \ normal interrupt status en reg
+            \ Enable: DMA Interrupt, Transfer Complete, CMD Complete
+            \ Disable: Card Interrupt, Remove, Insert, Read Ready,
+            \ Write Ready, Block Gap
    h# f1ff h# 36 cw!  \ error interrupt status en reg
    h# 0000 h# 38 cw!  \ Normal interrupt status interrupt enable reg
    h# 0000 h# 3a cw!  \ error interrupt status interrupt enable reg
@@ -201,26 +203,26 @@ h# 200 constant /block  \ 512 bytes
    drop  cr
 ;
 
-: check-error  ( isr -- )
-   dup h# 8000 and  if     \ Check for error
-      ." Error: ISR = " dup u.  ." ESR = " esr@ dup u.
-      dup esr!
-      dup decode-esr
-      true abort" Stopping"
+: .sderror  ( isr -- )
+   ." Error: ISR = " dup u. isr!
+   ." ESR = " esr@ dup u.  dup esr!  decode-esr
+   true abort" Stopping"
 \      debug-me
-   then
-   drop
 ;
 
-: wait  ( mask -- isr )
-   h# 8000 or                             ( mask' )
-   begin  isr@  2dup and  0=  while       ( mask isr )
-\     key?  if  key drop  debug-me  then  ( mask isr )
-      drop                                ( mask )
-   repeat                                 ( mask isr )
-   debug?  if  ." ISR: " dup 4 u.r  cr  then
-   tuck and isr!                          ( isr )
-   check-error                            ( isr )
+: wait  ( mask -- )
+   h# 8000 or                                     ( mask' )
+   begin                                          ( mask )
+      isr@                                        ( mask isr )
+   2dup and  0= while                             ( mask isr )
+\     key?  if  key drop  debug-me  then          ( mask isr )
+      dup isr!                                    ( mask isr )
+      \ DMA interrupt - the transfer crossed an address boundary
+      8 and  if  0 cl@ 0 cl!  then                ( mask )
+   repeat                                         ( mask isr )
+   nip                                            ( isr )
+   dup h# 8000 and  if   dup .sderror  then       ( isr ) 
+   isr!                                           ( )
 ;
 
 : cmd  ( arg cmd mode -- )
@@ -366,7 +368,10 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 : configure-transfer  ( -- )
    2 set-bus-width  \ acmd6 - bus width 4
    4-bit
-   h# b data-timeout!   \ 2^24 / 48 MHz = 0.35 sec
+   \ The h# c below is supposed to be h# b, but there is a CaFe bug
+   \ in which the timeout code is off by one, which makes the timeout
+   \ be half the requested length.
+   h# c data-timeout!   \ 2^24 / 48 MHz = 0.35 sec
    /block set-blocklen  \ Cmd 16
 ;
 
