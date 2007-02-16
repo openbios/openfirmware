@@ -226,7 +226,6 @@ fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
 fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
 
 fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
-fload ${BP}/dev/olpc/kb3700/battery.fth    \ Battery state reports
 
 0 value atest?
 warning @ warning off
