@@ -185,10 +185,17 @@ h# 4c00.0015 constant dotpll
    \ DCON value 1030f  300 is sync's active high
 ;
 
+h# c0002001 constant gld_msr_config
+: configure-vga  ( -- )
+   gld_msr_config msr@  swap 8 invert and swap  gld_msr_config msr!
+;
+
 d# 900 value yres
 true value vsync-low?
 true value hsync-low?
 : configure-tft  ( -- )
+   gld_msr_config msr@  swap 8 or swap  gld_msr_config msr!
+
    \ Set up the DF pad select MSR
    \ (reserved register in spec, but the Linux driver does this)
    \ Jordan Crouse says that this number was dialed in through validation
@@ -243,7 +250,7 @@ true value hsync-low?
    \ Turn on FIFO
    4 dc@  h# 180000 invert and  h# 6501 or  4 dc!
    configure-display
-   tft-mode?  if  configure-tft  then
+   tft-mode?  if  configure-tft  else  configure-vga  then
 ;
 
 : display-on  ( -- )
