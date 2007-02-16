@@ -31,13 +31,18 @@ h# 4000 constant /regs
 
 h# 200 constant /block  \ 512 bytes
 
+: my-w@  ( offset -- w )  my-space + " config-w@" $call-parent  ;
+: my-w!  ( w offset -- )  my-space + " config-w!" $call-parent  ;
+
 : map-regs  ( -- )
    chip  if  exit  then
    0 0 h# 0200.0010 my-space +  /regs " map-in" $call-parent
    to chip
+   6 4 my-w!
 ;
 : unmap-regs  ( -- )
    chip  0=  if  exit  then
+   0 4 my-w!
    chip  h# 4000  " map-out" $call-parent
    0 to chip
 ;
