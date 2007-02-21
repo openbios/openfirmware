@@ -72,6 +72,7 @@ stand-init: USB setup
    \ to correspond to the way they are wired on the board.
    \ USB port 1 is PWR_EN2, USB ports 2-4 are PWR_EN1
    h# 3ab h# efc00000 l!
+   2 h# efc00004 l!
 ;
 
 
