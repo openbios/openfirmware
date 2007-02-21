@@ -7,6 +7,7 @@ code wrmsr  ( eax edx ecx -- )
    eax pop
    h# 0f c, h# 30 c,			\ WRMSR
 c;
+alias msr! wrmsr
 
 code rdmsr  ( ecx -- eax edx )
    ecx pop
@@ -14,6 +15,15 @@ code rdmsr  ( ecx -- eax edx )
    eax push
    edx push
 c;
+alias msr@ rdmsr
+
+: .msr  ( msr# -- )
+   rdmsr        ( d )
+   push-hex     ( d )
+   <# [char] . hold  # # # # # # # # [char] . hold # # # # # # # # #> type  ( )
+   pop-base
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
