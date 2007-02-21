@@ -30,6 +30,7 @@ purpose: FDisk partition map decoder
       over h#  f =     or	\ Extended LBA
       over h# 41 =     or
       over iso-type =  or
+      over minix-type =  or
       over ufs-type =  or
       swap ext2fs-type =  or                             ( recognized? )
       if  i 4 + c@ to partition-type true unloop exit  then

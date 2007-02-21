@@ -4,6 +4,7 @@ purpose: Data that is common to all format recognizers
 -1 instance value size-low
 -1 instance value size-high
 0 instance value partition-type
+h# 81 constant minix-type
 h# 83 constant ext2fs-type
 h# a5 constant ufs-type
 h# 96 constant iso-type

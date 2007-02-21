@@ -108,6 +108,7 @@ headerless
 
    partition-type ufs-type    =  if  " ufs-file-system"    exit  then
    partition-type ext2fs-type =  if  " ext2-file-system" exit  then
+   partition-type minix-type  =  if  " minix-file-system"    exit  then
 
    0 read-sector   \ Get the first sector of the selected partition
    dropin?  if  " dropin-file-system" exit  then
