@@ -613,7 +613,7 @@ h# fe00.8000 value vp-base
 
 : acpi-init
    0 h# 1840 pw!
-   h# 100 1842 pw!
+   0 h# 1842 pw!   \ Disable power button during early startup
    0 h# 1848 pw!
    0 h# 184c pw!
    0 h# 1858 pw!

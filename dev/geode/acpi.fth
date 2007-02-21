@@ -12,6 +12,8 @@
 : pm@  ( offset -- n )  pm-base +  pl@ ;
 : pm!  ( n offset -- )  pm-base +  pl! ;
 
+: enable-power-button  ( -- )  h# 100 2 acpi-w!  ;
+
 h# 4000.0000 constant pm-enable
 : gx-power-off  ( -- )
    \ If the keyboard controller is off (after "flash"), power off doesn't work.
@@ -44,6 +46,7 @@ warning @ warning off
    d# 32768 pm-enable or  h# 40 pm!  \ Shorten off delay to .5 sec
 ;
 warning !
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

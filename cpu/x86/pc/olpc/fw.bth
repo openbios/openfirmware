@@ -447,7 +447,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 : fast-boot?  ( -- flag )
 [ifdef] rom-loaded
-   user-switch?
+   user-switch? 0=
 [else]
    false
 [then]
@@ -497,6 +497,10 @@ fload ${BP}/ofw/core/dualconsole.fth
    ?usb-keyboard
 ;
 
+: open-keyboard  ( -- )
+   " keyboard" open-dev  ?dup  if  set-stdin  then
+;
+
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
@@ -508,18 +512,23 @@ fload ${BP}/ofw/core/dualconsole.fth
    fast-boot?   if
       probe-pci
       ['] false to interrupt-auto-boot?
+      interpreter-init
+      enable-power-button
+      auto-boot
+      open-keyboard
+      optional-startup
    else
       ." Interactive boot" cr
       ." Keyboard probe" cr
       ?bailout
-      " keyboard" open-dev  ?dup  if  set-stdin  then
+      open-keyboard
       probe-pci
       ." USB probe" cr
       optional-startup
+      interpreter-init
+      enable-power-button
+      auto-boot
    then
-
-   interpreter-init
-   auto-boot
 
 [ifdef] linux-support
    ." See "
