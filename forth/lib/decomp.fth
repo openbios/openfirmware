@@ -287,7 +287,7 @@ variable extent  extent off
 : skip-wlit     ( ip -- ip' )  ta1+ wa1+  ;
 : .llit         ( ip -- ip' )  ta1+ dup unaligned-l@ 1- . la1+  ;
 : skip-llit     ( ip -- ip' )  ta1+ la1+  ;
-: .dlit         ( ip -- ip' )  ta1+ dup 2@ (d.) type  ." . "  2 na+  ;
+: .dlit         ( ip -- ip' )  ta1+ dup d@ (d.) type  ." . "  2 na+  ;
 : skip-dlit     ( ip -- ip' )  ta1+ 2 na+  ;
 : skip-branch   ( ip -- ip' )  +branch  ;
 : .quote        ( ip -- ip' )  .word   .word   ;
