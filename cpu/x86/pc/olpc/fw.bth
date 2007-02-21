@@ -137,6 +137,12 @@ support-package: dropin-file-system
 end-support-package
 [then]
 
+support-package: minix-file-system
+   fload ${BP}/ofw/fs/minix.fth		\ Minix3 file system
+end-support-package
+
+fload ${BP}/ofw/core/osfile.fth		\ For testing
+
 \ Load file format handlers
 
 : call32 ;
@@ -425,11 +431,16 @@ fload ${BP}/ofw/core/dualconsole.fth
       h# fc3f ec@ h# ff <>
    else
       \ The EC can tristate the KEY_OUT lines behind our back, so we
-      \ try several times to observe a key press.
-      d# 10 0  do
-         h# ff h# fc12 ec!      \ Output enable the KEY_OUT matrix lines
-         h# fc34 ec@ h# 70 and
+      \ try several times to observe a key press.  Empirically, the EC
+      \ takes about 1.5 mS to finish an (infrequent) scan.
+      d# 5 0  do
+         \ Output enable the KEY_OUT matrix lines
+         h# fc12 ec@  dup h# e0 or  h# fc12 ec!  ( old )
+         h# fc34 ec@ h# 70 and                   ( old keys )
+         \ Output disable the KEY_OUT matrix lines
+         swap  h# e0 invert and  h# fc12 ec!     ( keys )
          h# 70 <>  if  true unloop exit  then
+         2 ms
       loop
       false
    then
