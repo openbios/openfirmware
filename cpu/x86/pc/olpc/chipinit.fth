@@ -152,9 +152,13 @@ msr: 1000.0027 000000ff.fff00000.   \ Unmapped
 msr: 1000.002b 00000000.000fffff.   \ Unmapped
 
 msr: 1000.0080 00000000.00000003.   \ Coherency
+msr: 1000.0083 00000000.0000ff00.   \ Disable SMIs
+msr: 1000.0084 00000000.0000ff00.   \ Disable Async errors
+
 msr: 1000.00e0 80000000.3c0ffff0.   \ IOD_BM DC
 msr: 1000.00e1 80000000.3d0ffff0.   \ IOD_BM DC (why 2)
 msr: 1000.00e3 00000000.f030ac18.   \ IOD_SC
+msr: 1000.2002 0000001f.0000001f.   \ Disables SMIs
 
 \ DMA incoming maps
 msr: 4000.0020 20000000.000fff80.   \ 0 - 7.ffff low RAM
@@ -173,7 +177,10 @@ msr: 4000.002d 20000000.f0000003.   \ 000f.0000 - 000f.ffff expansion ROM
 msr: 4000.0027 000000ff.fff00000.   \ Unmapped
 msr: 4000.0028 000000ff.fff00000.   \ Unmapped
 
+msr: 4000.0083 00000000.0000ff00.   \ Disable SMIs
+
 msr: 4000.00e0 20000000.3c0fffe0.   \ IOD_BM DC
+msr: 4000.2002 0000001f.0000001f.   \ Disables SMIs
 
 \ GeodeLink Priority Table
 msr: 00002001 00000000.00000220.
@@ -199,8 +206,8 @@ msr: 1813 fe00b000.fe008101.  \ VP
 \ PCI
 \ msr: 50002000 00000000.00105001. \ RO
 msr: 50002001 00000000.00000027. \ Priority 2, domain 7
-msr: 50002002 00000000.00000000. \ No SMIs, please
-msr: 50002003 00000000.00000000. \ No ERRs, please
+msr: 50002002 00000000.003f003f. \ No SMIs, please
+msr: 50002003 00000000.00370037. \ No ERRs, please
 msr: 50002004 00000000.00000015. \ Clock gating for 3 clocks
 msr: 50002005 00000000.00000000. \ Enable some PCI errors
 msr: 50002010 fff030f8.001a0215.
@@ -301,10 +308,7 @@ msr: 2000.0019 18000108.286332a3.
 \	GLPCI_CRTL_PPIDE_SET GLPCI_SB_CTRL msr-bitset  \ Enable Post Primary IDE
 
 \ Set the prefetch policy for various devices
-msr: 5160.0001  0.00008f000.   \ USB1
-msr: 5120.0001  0.00008f000.   \ USB2
-\ 5130.0001 0.00048f000.   \ ATA  (many of these bits are reserved)
-msr: 5150.0001  0.00008f000.   \ AC97 (turn off?)
+msr: 5150.0001  0.00008f000.   \ AC97
 msr: 5140.0001  0.00000f000.   \ DIVIL
 
 \  Set up Hardware Clock Gating
@@ -331,9 +335,11 @@ msr: 5150.0004  0.000000005.  \ AC97
 
 \ Stuff done by VSA when graphics initialized
 msr: a000.2001 00000000.00000010.  \ GP config (priority)
-msr: a000.2002 00000001.00000001.  \ GP SMI
+msr: a000.2002 00000001.00000001.  \ Disable GP SMI
+msr: a000.2003 00000003.00000003.  \ Disable GP ERR
 msr: 8000.2001 00000000.00000320.  \ VG config (priority)
-msr: 8000.2002 00000001.00000001.  \ VG SMI (9. to enable vertical blanking SMI)
+msr: 8000.2002 0000001f.0000001f.  \ Disable SMIs
+msr: 8000.2003 0000000f.0000000f.  \ Disable ERRs
 msr: 8000.2012 00000000.06060202.  \ VG DELAY
 msr: 8000.2011 00000000.00000001.  \ VG SPARE - VG fetch state machine hardware fix off
 
@@ -350,6 +356,9 @@ msr: 4c00.0022 00000000.000001001.   \ GLD Action Data
 msr: 5000.2014 00000000.00ffffff.  \ Enables PCI access to low mem
 
 \ 5536 region configs
+msr: 5100.0002 00000000.007f0000.  \ Disable SMIs
+msr: 5101.0002 0000000f.0000000f.  \ Disable SMIs
+
 msr: 5100.0010 44000020.00020013.  \ PCI timings
 msr: 5100.0020 018b4001.018b0001.  \ Region configs
 msr: 5100.0021 010fc001.01000001.
@@ -366,6 +375,7 @@ msr: 5100.002f 00084001.00084009.
 msr: 5101.0020 400000ef.c00fffff. \ P2D_BM0 UOC
 msr: 5101.0023 500000fe.01afffff. \ P2D_BMK Descriptor 0 OHCI
 msr: 5101.0024 400000fe.01bfffff. \ P2D_BMK Descriptor 1 EHCI
+msr: 5101.0083 00000000.0000ff00. \ Disable SMIs
 msr: 5101.00e0 60000000.1f0ffff8. \ IOD_BM Descriptor 0  ATA IO address
 msr: 5101.00e1 a0000001.480fff80. \ IOD_BM Descriptor 1
 msr: 5101.00e2 80000001.400fff80. \ IOD_BM Descriptor 2
@@ -375,6 +385,8 @@ msr: 5101.00e5 60000001.8a0ffff0. \ IOD_BM Descriptor 5
 msr: 5101.00eb 00000000.f0301850. \ IOD_SC Descriptor 1
 
 msr: 5130.0008 00000000.000018a1. \ IDE_IO_BAR - IDE bus master registers
+
+msr: 5140.0002 0000fbff.00000000. \ Disable SMIs
 
 msr: 5140.0008 0000f001.00001880. \ LBAR_IRQ
 msr: 5140.0009 fffff001.fe01a000. \ LBAR_KEL (USB)
@@ -406,7 +418,7 @@ msr: 5140.004e 00000000.effd00c0. \ LPC_SIRQ
 \ USB host controller
 msr: 5120.0001 0000000b.00000000.  \ USB_GLD_MSR_CONFIG - 5536 page 262
 msr: 5120.0008 0000000e.fe01a000.  \ USB OHC Base Address - 5536 page 266
-msr: 5120.0009 0000200e.fe01b000.  \ USB EHC Base Address - 5536 page 266
+msr: 5120.0009 0000000e.fe01b000.  \ USB EHC Base Address - 5536 page 266
 msr: 5120.000b 00000002.efc00000.  \ USB UOC Base Address - 5536 page 266
 
 
