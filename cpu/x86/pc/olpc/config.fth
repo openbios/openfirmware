@@ -7,10 +7,10 @@ create olpc             \ OLPC-specific build
 \ - Image Format - Example Media - previous stage bootloader
 
 \ - OBMD format - ROM - direct boot from ROM
-\ create rom-loaded
+create rom-loaded
 
 \ - ELF format (no pheader) - ROM - LinuxBIOS direct
-create linuxbios-loaded
+\ create linuxbios-loaded
 
 \ - Linux kernel format - USB Key w/ FAT FS - LinuxBIOS w/ stripped Linux payload
 \ create bzimage-loaded

@@ -22,6 +22,9 @@ in: ${BP}/dev/olpc/cafenand/build/cafenand.fc
 
 build-now
 
+macro: FW_MAJOR B
+macro: FW_MINOR 75
+
 fload ${BP}/cpu/x86/pc/olpc/config.fth
 
 \ Always re-create the builton.fth file when we make a new rom.img
@@ -54,7 +57,7 @@ writing olpc.rom
 
 \ Insert the revision signature
 /rom h# 40 - ofd @ fseek
-" CL1   Q2B99  Q2B" ofd @ fputs
+" CL1   Q2${FW_MAJOR}${FW_MINOR}  Q2${FW_MAJOR}" expand$  ofd @ fputs
 
 /l buffer: crcbuf
 /rom buffer: filebuf
