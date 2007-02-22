@@ -168,7 +168,6 @@ defer intermediate-file
    source-file
 ;
 
-vocabulary macros
 : $get-macro  ( macro$ -- expansion$ )
    2dup  ['] macros $vfind  if
       nip nip  execute

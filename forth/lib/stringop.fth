@@ -1,8 +1,8 @@
 \ See license at end of file
 purpose: String tools to manipulate OS file pathnames
 
-: sys-$getenv  ( adr len -- adr' len' )
-   $cstr d# 84 syscall drop retval cscount
+: $getenv  ( adr len -- false | adr' len' true )
+   $cstr d# 84 syscall drop retval  dup  if  cscount true  then
 ;
 
 \ head$ is the portion of str3 preceding str2, and tail$ is the portion
@@ -36,6 +36,17 @@ purpose: String tools to manipulate OS file pathnames
    r> + swap move            ( )  ( r: len4 adr4 )
    r> r>
 ;
+vocabulary macros
+
+: macro:  ( "name" "value" -- )
+   also macros definitions  create  previous definitions  0 parse ",
+   does>  ( -- adr len )  count
+;
+: expansion  ( macro-name$ -- macro-value$ )
+   2dup ['] macros search-wordlist  if  nip nip execute exit  then  ( name$ )
+   $getenv  0=  if  " "  then
+;
+
 \ Expand references to environment variables within str1
 : expand1  ( str1 -- str2 expanded? )
    2dup [char] $ split-string        ( str head$ tail$ )
@@ -45,7 +56,7 @@ purpose: String tools to manipulate OS file pathnames
          [char] } split-string       ( str head$ env$ tail$' )
          dup 0>  if                  ( str head$ env$ tail$ )
             1 /string                ( str head$ env$ tail$' )
-            2swap sys-$getenv        ( str head$ tail$ env$ )
+            2swap expansion          ( str head$ tail$ env$ )
             2swap $cat3              ( str str2 )
             2swap 2drop  true        ( str2 true )
          else                        ( str head$ env$ tail$' )
