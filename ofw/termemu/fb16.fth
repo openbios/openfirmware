@@ -216,12 +216,12 @@ headers
 : fb16-insert-characters  ( #chars -- )
    #columns column# - min  dup
    column# +   column# swap     ( #chars' cursor-col# cursor+count-col# )
-   move-chars16  ( #chars' )  column#  erase-chars
+   move-chars16  ( #chars' )  column#  erase-chars16
 ;
 : fb16-delete-characters  ( #chars -- )
    #columns column# - min  dup  ( #chars' #chars' )
    column# +  column#           ( #chars' cursor+count-col#  cursor-col# )
-   move-chars16  ( #chars' )  #columns over -  erase-chars
+   move-chars16  ( #chars' )  #columns over -  erase-chars16
 ;
 headerless
 
