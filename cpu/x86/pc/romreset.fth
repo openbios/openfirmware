@@ -39,11 +39,20 @@ label startup
    \ For now, we assume success
 
    d# 32 #  ax  add				\ Skip dropin header
-   here 7 + asm-base - ResetBase + # sp mov	\ Put return address in sp
+
+   \ This is effectively a CALL, but since memory isn't on yet, we can't
+   \ use the stack, so an actual call instruction won't work.  Instead,
+   \ we explicitly calculate the return address and put it in the SP register.
+   \ The routine that we call has to know that, and return via that register,
+   \ instead of just doing a "ret".
+
+   here 7 + asm-base - ResetBase + #  sp  mov	\ Put return address in sp
    ax jmp					\ Execute the dropin
 
-   \ When we return, the memory is on
+   \ Return here with memory turned on
    h# 8.0000 #  sp  mov
+
+   \ Now we can use the stack and do conventional subroutine calls
 
 [ifdef] debug-startup
 init-com1
