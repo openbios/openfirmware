@@ -61,7 +61,7 @@ d# 34 buffer: disp-buf
    1  of  op8@ bext  dup 0>=  if  ?+  then  endof
    2  of  ?+ adv@      endof
    endcase
-   (.) disp-buf pack  count
+   (u.) disp-buf pack  count
 ;
 \ Used when "w" field contains 0
 string-array >reg8
@@ -164,7 +164,7 @@ end-string-array
 : iw    ( -- )  op16@ (.) type  ;
 : iv    ( -- )  opv@ (.) type  ;
 : iuv   ( -- )  opv@ (u.) type  ;
-: ,ib/v ( -- )  .,  wbit  if  opv@  else  op8@  then  (.) type  ;
+: ,ib/v ( -- )  .,  wbit  if  opv@  else  op8@  then  (u.) type  ;
 : al/x  ( -- )  wbit  if  ." eax"  else  ." al"  then  ;
 : ,al/x ( -- )  .,  al/x  ;
 : ,cl  ( -- )  .,  ." cl"  ;
@@ -295,10 +295,20 @@ end-string-array
          then
    endcase
 ;
+: msrop  ( -- )
+   low4bits case
+      0 of  ." wrmsr"  endof
+      1 of  ." rdtsc"  endof
+      2 of  ." rdmsr"  endof
+      .unimp
+   endcase
+;
+
 : .2byte  ( -- )
    decode-op  case
       0 of  2b0op  endof
       2 of  movspec  endof
+      3 of  msrop    endof
       8 of  ." j"   low4bits >cond ".  op-col  jv  endof
       9 of  ." set" low4bits >cond ".  op-col  0 is wbit  get-ea  .ea  endof
       a of  2baop  endof
