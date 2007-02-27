@@ -32,10 +32,6 @@ build-now
 
 hex
 
-also assembler definitions
-h# e2 3mi loop,   \ Define an assembler macro "loop,"
-previous definitions
-
 start-assembling
 protected-mode
 hex
