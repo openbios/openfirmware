@@ -4,6 +4,7 @@ command: &builder &this
 in: ${BP}/cpu/x86/pc/olpc/build/ec.img
 in: ${BP}/cpu/x86/pc/olpc/build/romreset.di
 in: ${BP}/cpu/x86/pc/olpc/build/romstart.di
+in: ${BP}/cpu/x86/pc/olpc/build/resume.di
 in: ${BP}/cpu/x86/pc/olpc/build/rmstart.img
 in: ${BP}/cpu/x86/pc/olpc/build/paging.di
 in: ${BP}/cpu/x86/pc/olpc/build/fw.dic
@@ -49,6 +50,7 @@ writing olpc.rom
 
    " romreset.di"           $add-file
    " romstart.di"           $add-file
+   " resume.di"             $add-file
 
    fload ${BP}/cpu/x86/pc/olpc/loaddropins.fth
 

@@ -61,8 +61,19 @@ also 386-assembler definitions
 \ access very few low-numbered ports.
 : port-wb  ( b port# -- )   swap # al mov   # dx mov  al dx out  ;
 : port-rb  ( port# -- )  # dx mov  dx al in  ;
+: port-ww  ( w port# -- )   swap # ax mov   # dx mov  op: ax dx out  ;
+: port-rw  ( port# -- )  ax ax xor  # dx mov  op: dx ax in  ;
 : port-wl  ( l port# -- )  swap # ax mov   # dx mov  ax dx out  ;
-: port-rl  ( l port# -- )  # dx mov  dx ax in  ;
+: port-rl  ( port# -- )  # dx mov  dx ax in  ;
+
+: config-wl  ( l config-adr -- )
+   h# 8000.0000  [ also forth ] or [ previous ] #  ax  mov
+   h# 3f8 #  dx  mov
+   ax dx out
+   #  ax  mov
+   h# 3fc #  dx  mov
+   ax dx out
+;
 
 previous definitions
 

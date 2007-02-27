@@ -52,34 +52,33 @@ hex
 
    \ Init mainboard registers
 
-   \ msr_init,src/mainboard/olpc/rev_a/auto.c
-   \ Default region config - page 152
-\  22fff002.10800000.   1808 set-msr
-   25fff002.1077e000.   1808 set-msr
-
    \ GLIU0 P2D Base Mask Descriptors - page 85
-   20000000.000fff80.   10000020 set-msr
-   20000000.080fffe0.   10000021 set-msr
+\ XXX Try just mapping low memory for 1 meg
+\   20000000.000fff80.   10000020 set-msr \ memory - 0..7ffff
+\   20000000.080fffe0.   10000021 set-msr \ memory - 80000..9ffff
+   20000000.000fff00.   10000020 set-msr \ memory - 0..fffff
 
    \ Go ahead and set these up too, while we're at it
    \ The top of memory and frame buffer locations change based on RAM size
    \ so they are set later, after determining the size.
-   a00000fe.000ffffc.   10000022 set-msr
-   c00000fe.008ffffc.   10000023 set-msr
-   80000000.0a0fffe0.   10000024 set-msr
-   801ffcfe.007fe004.   1000002a set-msr
-   20000000.f0000003.   1000002c set-msr \ 000f.xxxx range
+\   a00000fe.000ffffc.   10000022 set-msr \ GP
+\   c00000fe.008ffffc.   10000023 set-msr \ VP
+\   80000000.0a0fffe0.   10000024 set-msr \ DC - DOS frame buffer a0000..bffff
+\   801ffcfe.007fe004.   1000002a set-msr \ DC - fe00.4000..fe00.7fff mapped to DC 0
+\   20000000.f0000003.   1000002c set-msr \ memory - f0000..fffff
 
-   \ GLIU1 P2D Base Mask Descriptors - page 85
-   20000000.000fff80.   40000020 set-msr
-   20000000.080fffe0.   40000021 set-msr
-   200000fe.000ffffc.   40000022 set-msr
-   20000040.400fffe0.   40000023 set-msr
-   200000fe.004ffffc.   40000024 set-msr
-   200000fe.008ffffc.   40000025 set-msr
-   20000000.0a0fffe0.   40000026 set-msr  \ a0000h - bf000h EGA video memory
-   200000fd.7fffd000.   4000002a set-msr  \ frame buffer
-   20000000.f0000003.   4000002d set-msr  \ 000f.xxxx range
+   \ GLIU1 P2D Base Mask Descriptors - page 85 (incoming DMA)
+\ XXX These can be deferred
+\ XXX Try just mapping low memory for 1 meg
+\   20000000.000fff80.   40000020 set-msr \ DMA to memory - 0..7ffff XXX
+\   20000000.080fffe0.   40000021 set-msr \ DMA to memory - 80000..9ffff XXX
+\   200000fe.000ffffc.   40000022 set-msr \ GP - fe00.0000 .. fe00.3fff
+\   20000040.400fffe0.   40000023 set-msr \ SMM memory - 4040.0000 .. 4041.ffff probably unnecessary XXX
+\   200000fe.004ffffc.   40000024 set-msr \ DC registers - fe00.4000 .. fe00.7fff
+\   200000fe.008ffffc.   40000025 set-msr \ VP registers - fe00.8000 .. fe00.bfff
+\   20000000.0a0fffe0.   40000026 set-msr \ a0000h - bf000h EGA video memory XXX unnecessary
+\   200000fd.7fffd000.   4000002a set-msr \ frame buffer - fd00.0000 .. fd7f.ffff
+\   20000000.f0000003.   4000002d set-msr \ memory (read access to DOS ROM) - f0000..fffff XXX unnecessary
 
  \ Init cs5536
 
@@ -115,49 +114,18 @@ hex
 
       \ Comment in LinuxBIOS says: Only do this if we are building for 5536
       \ 2 is a reserved value in the GX datasheet.  01 is supposed to be the only good value
+      \ Jordan says the datasheet is wrong - 2 means 5536.
       00000000.00000002.   54002010 set-msr \ Reserved value
 
       \ Setting up the SMBUS for serial presence detect is unnecessary
       \ since the OLPC RAM array has no SPD ROMs
       \ cs5536_enable_smbus
-      0 6005 port-wb                             \ Reset SMBUS controller
+\     0 6005 port-wb                             \ Reset SMBUS controller
       \ 6005 port-rb  41 bitset  6005 port-wb    \ Set SCL freq and enable SMB controller
       \ 6004 pc@ ef bitset 6004 port-wb          \ Setup SMBus host controller address to 0xEF
       \ ef 6004 port-wb
    then
    long-offsets off
-
- \ Hmmm, there is really no point in doing the UART init before the PLL turn-on
- \ except when debugging the pre-PLL startup.
- \ Anything that happens before PLL-on gets done twice.
- \ We should move this after the PLL init, or eliminate it entirely, since the
- \ serial port is useless on the real systems, which have no serial connector.
- \ Init UART
-
-   \ cs5536_setup_onchipuart,cs5536_early_setup.c:205.14
-   0.00000012.   5140003a set-msr  \ enable COM1
-
-   \ GPIO1 - UART1 TX
-   100 6104 port-wl   \ GPIO1 - output enable
-   100 6110 port-wl   \ OUT AUX1
-   300 6118 port-wl   \ 
-   200 6120 port-wl   \ 
-   200 6134 port-wl   \ 
-   70000  51400014 bitset-msr  \ MDD_LEG_IO  legacy IO
-
-   \ gpio_init,auto.c
-   1000.0000 6138 port-wl  \ Make sure events enable for gpio 12 is off
-   4 6120 port-wl          \ Enable the GPIO bit that reports DRAM size (ticket 151)
-
-   \ uart_init,serial.c
-   \ This is a garden-variety 8250 UART setup sequence
-    0 3f9 port-wb
-    1 3fa port-wb
-   83 3fb port-wb  \ DLAB
-    1 3f8 port-wb  \ 115200 divisor low
-    0 3f9 port-wb  \ 115200 divisor high
-    3 3fb port-wb  \ !DLAB
-   \ At this point we could send characters out the serial port
 
    \ pll_reset,pll_reset.c
    \ If the straps say we are in bypass and the syspll is not AND there are no software
@@ -171,15 +139,21 @@ hex
       \ The BOOTSTRAP_STAT bits (mask 70) read the straps that tell
       \ us the board revision.  ID 5 is preB1, ID7 is B1.  ID0 is B2.
       4c000014 rmsr  00000070 bitand  h# 5 # ax cmp  <  if
-         220.04de.0000.   4c000014 set-msr
+\         220.04de.0000.   4c000014 set-msr
+         220.05de.0000.   4c000014 set-msr
       else
-         226.04de.0000.   4c000014 set-msr
+\         226.04de.0000.   4c000014 set-msr
+         226.05de.0000.   4c000014 set-msr
       then
       1 bitset   4c000014 wmsr
 
    \ CPU will reset here
    then
    \ And return to here after the reset
+
+   \ gpio_init,auto.c
+   1000.0000 6138 port-wl  \ Make sure events enable for gpio 12 is off
+   4 6120 port-wl          \ Enable the GPIO bit that reports DRAM size (ticket 151)
 
  \ Init CPU registers
  \ cpuRegInit,cpureginit.c
@@ -192,7 +166,7 @@ hex
    0.603c. 4c00001e set-msr     \ GLCP_TH_OD  processor throttle off delay, GX page 414
    54000010 rmsr  3 bitclr  2 bitset  54000010 wmsr  \ FooGlue, whatever that is
    4000 4c000015 bitset-msr     \ Power down DOT PLL GX page 410
-   8 1301 bitset-msr            \ Enable SMI instructions like RSDC  GX page 124
+\  8 1301 bitset-msr            \ Enable SMI instructions like RSDC  GX page 124
 
    4c000017 rmsr  h# 21 # ax cmp  >= if   \ CPU revision ID
       11 1100 bitset-msr        \ Enable branch target buffer and near call return stack GX page 116
@@ -292,10 +266,10 @@ hex
    \ Jordan thinks that one write is sufficient, so we should try that.
    ax ax xor
    ax  0 [ax] mov
-   ax  4 [ax] mov
-   ax  8 [ax] mov
-   ax  c [ax] mov
-   ax 10 [ax] mov
+\   ax  4 [ax] mov
+\   ax  8 [ax] mov
+\   ax  c [ax] mov
+\   ax 10 [ax] mov
 
    \ Turn on the cache
    cr0	ax   mov
@@ -303,14 +277,37 @@ hex
    ax   cr0  mov
    h# 0f asm8,  h# 08 asm8,  \ invd
 
-\ Example of how to output a character to serial port
-\  44 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
-
    h# 1808 #  cx  mov          \ Default region configuration properties MSR
    h# f asm8,  h# 32 asm8,     \ rdmsr - returns dx=high ax=low
    h# 0fffff00 # ax and        \ Top of System Memory field
    4 # ax shl                  \ Shift into place
    ax mem-info-pa 4 + #)  mov  \ Put it where resetend.fth can find it
+
+ \ Init UART
+   \ cs5536_setup_onchipuart,cs5536_early_setup.c:205.14
+   0.00000012.   5140003a set-msr  \ enable COM1
+
+   \ GPIO1 - UART1 TX
+   100 6104 port-wl   \ GPIO1 - output enable
+   100 6110 port-wl   \ OUT AUX1
+   300 6118 port-wl   \ 
+   200 6120 port-wl   \ 
+   200 6134 port-wl   \ 
+   70000  51400014 bitset-msr  \ MDD_LEG_IO  legacy IO
+
+   \ uart_init,serial.c
+   \ This is a garden-variety 8250 UART setup sequence
+    0 3f9 port-wb
+    1 3fa port-wb
+   83 3fb port-wb  \ DLAB
+    1 3f8 port-wb  \ 115200 divisor low
+    0 3f9 port-wb  \ 115200 divisor high
+    3 3fb port-wb  \ !DLAB
+   \ At this point we could send characters out the serial port
+   \ End of serial init
+
+\ Example of how to output a character to serial port
+  44 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
 
    sp jmp  \ Return
 end-code

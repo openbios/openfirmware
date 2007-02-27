@@ -447,6 +447,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 : fast-boot?  ( -- flag )
 [ifdef] rom-loaded
+false exit
    user-switch? 0=
 [else]
    false
@@ -499,6 +500,13 @@ fload ${BP}/ofw/core/dualconsole.fth
 
 : open-keyboard  ( -- )
    " keyboard" open-dev  ?dup  if  set-stdin  then
+;
+
+stand-init:  Suspend/resume
+   " resume" find-drop-in  if
+      resume-base swap move
+      0 resume-signature !
+   then
 ;
 
 : startup  ( -- )
