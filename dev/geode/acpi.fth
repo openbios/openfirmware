@@ -30,11 +30,12 @@ h# 4000.0000 constant pm-enable
    pm-enable   h# 34 pm!             \ PM_WKXD
    pm-enable   h# 30 pm!             \ PM_WKD
 
-   2 acpi-w@  h# 100 or  2 acpi-w!   \ Enable button wakeup in PM1_EN
+   \ Should be "2 acpi-w@", but 16-bit writes to ACPI and PM regs are broken
+   0 acpi-l@  h# 100.0000 or  0 acpi-l!   \ Enable button wakeup in PM1_EN
    h# 2ffff h# 54 pm!                \ Clear status bits i PM_SSC
    h# 1301 rdmsr  swap 2 or swap  h# 1301 wrmsr  \ Set SMM_SUSP_EN
    h# ffff.ffff h# 18 acpi-l!        \ Clear status bits in PM_GPE0_STS
-   8 acpi-w@  h# 2000 or  8 acpi-w!  \ SLP_EN in PM1_CNT - Down we go
+   8 acpi-l@  h# 2000 or  8 acpi-l!  \ SLP_EN in PM1_CNT - Down we go
 ;
 ' gx-power-off is power-off
 
