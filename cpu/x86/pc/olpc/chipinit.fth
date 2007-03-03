@@ -495,11 +495,14 @@ h# fe00.8000 value vp-base
 \  h#     0000 h# 107a pw!  \ GPIO_05_FILTER_COUNT - default
 \  h#     0000 h# 107c pw!  \ GPIO_05_EVENT_COUNT - default
 \  h#     0000 h# 107e pw!  \ GPIO_05_EVENTCOMPARE_VALUE - default
+
+   h# feff0100 h# 1090 pl!  \ GPIOH_OUT_AUX1_SELECT - GPIO24 is WORK_AUX
+   h# feff0100 h# 1084 pl!  \ GPIOH_OUTPUT_ENABLE - GPIO24 is WORK_AUX
+
 \  h# ffff0000 h# 1080 pl!  \ GPIOH_OUTPUT_VALUE - default
 \  h# ffff0000 h# 1084 pl!  \ GPIOH_OUTPUT_ENABLE - default
 \  h# ffff0000 h# 1088 pl!  \ GPIOH_OUT_OPENDRAIN - default
 \  h# ffff0000 h# 108c pl!  \ GPIOH_OUTPUT_INVERT_ENABLE - default
-\  h# ffff0000 h# 1090 pl!  \ GPIOH_OUT_AUX1_SELECT - default
 \  h# ffff0000 h# 1094 pl!  \ GPIOH_OUT_AUX2_SELECT - default
 \  h# 0000ffff h# 1098 pl!  \ GPIOH_PULLUP_ENABLE - default
 \  h# ffff0000 h# 109c pl!  \ GPIOH_PULLDOWN_ENABLE - default
@@ -541,8 +544,10 @@ h# fe00.8000 value vp-base
 ;
 
 : acpi-init
+\ !!! 16-bit writes to these registers don't work - 5536 erratum
 \  0 h# 1840 pw!   \ default - some bits are preserved through standby
-   0 h# 1842 pw!   \ Disable power button during early startup
+\   0 h# 1842 pw!   \ Disable power button during early startup
+   0 h# 1840 pl!   \ Disable power button during early startup
 \  0 h# 1848 pw!   \ default
 \  0 h# 184c pw!   \ This register does nothing
 \  0 h# 1858 pl!   \ default

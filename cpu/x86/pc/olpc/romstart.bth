@@ -20,6 +20,20 @@ fload ${BP}/cpu/x86/pc/olpc/config.fth		\ Configuration defines
 
 fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
 
+\ This creates and dismisses a floating point exception, which causes
+\ the IRQ13 to go high then low.
+\                      FNCLEX       FLDZ         FDIV ST,ST   FNCLEX
+\ : pulse-irq13  ( -- )  ( db c, e2 c, ) d9 c, ee c,  d8 c, f0 c,  db c, e2 c,  ;
+: pulse-tp  ( -- )
+   [ also assembler ]
+    1. 4c00.0016 set-msr
+   10. 4c00.000c set-msr
+   20. 4c00.000c set-msr
+   10. 4c00.000c set-msr
+   [ previous ]
+;
+
+
 start-assembling                                \ Turn on the target assembler
 protected-mode
 
@@ -37,52 +51,20 @@ fload ${BP}/cpu/x86/pc/dot.fth			\ Numeric display
 \ This is where the real startup code begins.  Everything before this,
 \ if anything, is subroutines for debugging.
 
+\ Timeline:
+\ 0: vcore_cpu comes on
+\ ~100 mS: PCI_RST# starts rattling.
+\ 220 mS: PWG goes high (CN16 pin 8)
+\ 497 mS: PCI_RST# stops rattling
+\ 510 mS: romstart.bth rattles GPIO (intentionally, before PLL on)
+
 label startup   \ The return address is in %esp
 hex
 
- \ Disable floating point emulation
-   cr0 ax mov
-   4 bitclr
-   ax cr0 mov
-
- \ Init timer
-
-   57 43 port-wb
-   12 41 port-wb
-
-   \ Init mainboard registers
+\   pulse-tp
 
    \ GLIU0 P2D Base Mask Descriptors - page 85
-\ XXX Try just mapping low memory for 1 meg
-\   20000000.000fff80.   10000020 set-msr \ memory - 0..7ffff
-\   20000000.080fffe0.   10000021 set-msr \ memory - 80000..9ffff
-   20000000.000fff00.   10000020 set-msr \ memory - 0..fffff
-
-   \ Go ahead and set these up too, while we're at it
-   \ The top of memory and frame buffer locations change based on RAM size
-   \ so they are set later, after determining the size.
-\   a00000fe.000ffffc.   10000022 set-msr \ GP
-\   c00000fe.008ffffc.   10000023 set-msr \ VP
-\   80000000.0a0fffe0.   10000024 set-msr \ DC - DOS frame buffer a0000..bffff
-\   801ffcfe.007fe004.   1000002a set-msr \ DC - fe00.4000..fe00.7fff mapped to DC 0
-\   20000000.f0000003.   1000002c set-msr \ memory - f0000..fffff
-
-   \ GLIU1 P2D Base Mask Descriptors - page 85 (incoming DMA)
-\ XXX These can be deferred
-\ XXX Try just mapping low memory for 1 meg
-\   20000000.000fff80.   40000020 set-msr \ DMA to memory - 0..7ffff XXX
-\   20000000.080fffe0.   40000021 set-msr \ DMA to memory - 80000..9ffff XXX
-\   200000fe.000ffffc.   40000022 set-msr \ GP - fe00.0000 .. fe00.3fff
-\   20000040.400fffe0.   40000023 set-msr \ SMM memory - 4040.0000 .. 4041.ffff probably unnecessary XXX
-\   200000fe.004ffffc.   40000024 set-msr \ DC registers - fe00.4000 .. fe00.7fff
-\   200000fe.008ffffc.   40000025 set-msr \ VP registers - fe00.8000 .. fe00.bfff
-\   20000000.0a0fffe0.   40000026 set-msr \ a0000h - bf000h EGA video memory XXX unnecessary
-\   200000fd.7fffd000.   4000002a set-msr \ frame buffer - fd00.0000 .. fd7f.ffff
-\   20000000.f0000003.   4000002d set-msr \ memory (read access to DOS ROM) - f0000..fffff XXX unnecessary
-
- \ Init cs5536
-
-   \ cs5536_early_setup,src/southbridge/amd/cs5536/cs5536_early_setup.c
+   20000000.000fff00.   10000020 set-msr  \ memory - 0..fffff
 
    \ EXTMSR - page 449   \ Use PCI device #F for port 2
    00000000.00000f00.   5000201e set-msr  \ cs5536_setup_extmsr(void)
@@ -90,7 +72,8 @@ hex
    \ GLCP_SYS_RSTPLL - page 406
    \ If the PLL is already set up, we don't redo the 5536 setup
    long-offsets on   \ This IF .. THEN is too long for 8-bit branch offsets
-   4c000014 rmsr fc00.0000 bitand  0<>  if
+   4c000014 rmsr fc00.0000 bitand  0=  if
+
       \ write IDSEL to the write once register at address 0x0000
       02000000 0 port-wl
 
@@ -101,12 +84,16 @@ hex
          4 bitclr-hi   51600005 wmsr
       then
 
-      \ Set up IO base registers
-      0000f001.00006000.   5140000b set-msr  \ SMB BAR
-      0000f001.00006100.   5140000c set-msr  \ GPIO BAR
-      0000f001.00006200.   5140000d set-msr  \ MFGPT BAR
-      0000f001.00009c00.   5140000e set-msr  \ ACPI BAR
-      0000f001.00009d00.   5140000f set-msr  \ PM BAR
+\   d# 13000 # cx mov  begin  nop  loopa
+
+   pulse-tp
+
+          0.00000f000.  5140.0001  set-msr \ DIVIL
+
+   pulse-tp
+
+   \ Set up IO base registers
+   0000f001.00001000.   5140000c set-msr  \ GPIO BAR
 
       \ setup CPU interface serial to mode C on both sides
       \ 18 51000010 rmsr 18 bitclr  10 bitset  51000010 wmsr  \ 5536 p 229
@@ -117,24 +104,6 @@ hex
       \ Jordan says the datasheet is wrong - 2 means 5536.
       00000000.00000002.   54002010 set-msr \ Reserved value
 
-      \ Setting up the SMBUS for serial presence detect is unnecessary
-      \ since the OLPC RAM array has no SPD ROMs
-      \ cs5536_enable_smbus
-\     0 6005 port-wb                             \ Reset SMBUS controller
-      \ 6005 port-rb  41 bitset  6005 port-wb    \ Set SCL freq and enable SMB controller
-      \ 6004 pc@ ef bitset 6004 port-wb          \ Setup SMBus host controller address to 0xEF
-      \ ef 6004 port-wb
-   then
-   long-offsets off
-
-   \ pll_reset,pll_reset.c
-   \ If the straps say we are in bypass and the syspll is not AND there are no software
-   \ bits set then FS2 bitset something set up the PLL and we should not change it.
-
-   \ GX page 406
-   \ 8000 4c000014 bitclr-msr  \ Clear PLL BYPASS
-
-   4c000014 rmsr  04000000 bitand  0=  if     \ If this is the first time
       \ If we also set 0100.0000 (LOCKWAIT), it might start faster
       \ The BOOTSTRAP_STAT bits (mask 70) read the straps that tell
       \ us the board revision.  ID 5 is preB1, ID7 is B1.  ID0 is B2.
@@ -145,15 +114,49 @@ hex
 \         226.04de.0000.   4c000014 set-msr
          226.05de.0000.   4c000014 set-msr
       then
-      1 bitset   4c000014 wmsr
+      6001 bitset   4c000014 wmsr
 
    \ CPU will reset here
    then
+   long-offsets off
+
    \ And return to here after the reset
 
+   pulse-tp
+
+   \ Set the UART TX line high
+   100.0000 1010 port-wl   \ Output AUX1 select - UART TX as GPIO for now
+        100 1000 port-wl   \ high
+        100 1004 port-wl   \ GPIO1 - output enable
+
+ \ Init UART
+   \ cs5536_setup_onchipuart,cs5536_early_setup.c:205.14
+   0.00000012.   5140003a set-msr  \ enable COM1
+
+   \ GPIO1 - UART1 TX
+   100 1004 port-wl   \ GPIO1 - output enable
+   100 1010 port-wl   \ Output AUX1 select - UART TX
+   200 1018 port-wl   \ Enable pull-up on UART RX
+   200 1020 port-wl   \ Input enable UART RX
+   200 1034 port-wl   \ Input AUX1 select - UART RX
+   70000  51400014 bitset-msr  \ MDD_LEG_IO  legacy IO
+
+   \ uart_init,serial.c
+   \ This is a garden-variety 8250 UART setup sequence
+    0 3f9 port-wb
+    1 3fa port-wb
+   83 3fb port-wb  \ DLAB
+    1 3f8 port-wb  \ 115200 divisor low
+    0 3f9 port-wb  \ 115200 divisor high
+    3 3fb port-wb  \ !DLAB
+   \ At this point we could send characters out the serial port
+   \ End of serial init
+
+   char + 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+
    \ gpio_init,auto.c
-   1000.0000 6138 port-wl  \ Make sure events enable for gpio 12 is off
-   4 6120 port-wl          \ Enable the GPIO bit that reports DRAM size (ticket 151)
+   1000.0000 1038 port-wl  \ Make sure events enable for gpio 12 is off
+   4 1020 port-wl          \ Enable the GPIO bit that reports DRAM size (ticket 151)
 
  \ Init CPU registers
  \ cpuRegInit,cpureginit.c
@@ -175,14 +178,15 @@ hex
 
    \ putstring "done cpuRegInit\n"
 
+
  \ Init memory controller
 
    \ sdram_initialize,generic_sdram.c
    \ sdram_set_spdregisters(),auto.c
  
    \ Refresh and SDRAM program MSR GX page 205
-   6130 port-rl 4 bitand  0<> if  \ 128 MiB
-      10075012.00003000.  20000018 set-msr
+   1030 port-rl 4 bitand  0<> if  \ 128 MiB
+      10075012.00003400.  20000018 set-msr
       25fff002.1077e000.      1808 set-msr
       2c7be040.400fffe0.  10000026 set-msr
       20000007.7df00100.  10000028 set-msr \ Top of memory
@@ -190,7 +194,7 @@ hex
       20000007.7df00100.  40000029 set-msr \ top of memory.
       077df000.00100130.  50002019 set-msr
    else                           \ 256 MiB
-      10076013.00003000.  20000018 set-msr
+      10076013.00003400.  20000018 set-msr
       25fff002.10f7e000.      1808 set-msr
       2cfbe040.400fffe0.  10000026 set-msr
       2000000f.7df00100.  10000028 set-msr \ Top of memory
@@ -207,69 +211,118 @@ hex
  \ Init the SDRAMs
  \ sdram_enable,src/northbridge/amd/gx2/raminit.c
 
-   \ 2. clock gating for PMode
+   \ Clock gating for PMode
    \ Clocks always on in mode 1, hardware gating in mode 0
    20002004 rmsr  4 bitclr  1 bitset  20002004 wmsr  \ GX p 199
 
    \ Delay on exit from power mode 1, use unbuffered RAM
-   101 2000001a bitset-msr    \ GX p 210
+   101. 2000001a set-msr    \ GX p 210
 
    \ Unmask CKE1 and CKE0
-   300 2000001d bitclr-msr
-
-   \ In the following sequence of writes the 2000.0018 MSR, we
-   \ take advantage of the fact that the existing value stays
-   \ in EAX/EDX, so we don't have to re-read the value.
-
-   \ Force some refresh requests
-   20000018 rmsr
-   19 0 do
-      8 bitset  20000018 wmsr
-      8 bitclr  20000018 wmsr
-   loop
-
-   \ 5. set refresh interval
-   \ Since we know it was 3000 before, we could skip the bitclr
-   ffff00 bitclr  3400 bitset  20000018 wmsr
-
-   \ set refresh staggering to 4 SDRAM clocks
-   c0 bitclr  20000018 wmsr
-
-   \ 6. Enable DLL, load Extended Mode Register by set and clear PROG_DRAM
-   10000001 bitset  20000018 wmsr
-   10000001 bitclr  20000018 wmsr
-
-   \ 7. Reset DLL (bit 27 is undocumented in GX datasheet, but is in the LX one)
-   08000001 bitset  20000018 wmsr
-   08000001 bitclr  20000018 wmsr
-
-   \ 8. load Mode Register
-   1 bitset  20000018 wmsr
-   1 bitclr  20000018 wmsr
-
-   \ wait 200 SDCLKs
-   \ d# 200 0 do  h# aa h# 80 port-wb  loop
-   d# 200 #  bx  mov
-   begin
-      h# aa h# 80 port-wb
-      bx dec
-   0= until
+   0. 2000001d set-msr   \ Clear 300 bits
 
    \ load RDSYNC
    \ Empirically, the recommended setting of 0xff310.00000000. causes RAM errors
    00000310.00000000.   2000001f set-msr  \ GX page 215
 
-   \ set delay control
+   \ set delay control.  The exact value below is specified in the GX manual.
    830d415a.8ea0ad6a.   4c00000f set-msr
 
-   \ The RAM dll needs a write to lock on so generate a few dummy writes
-   \ Jordan thinks that one write is sufficient, so we should try that.
-   ax ax xor
-   ax  0 [ax] mov
-\   ax  4 [ax] mov
-\   ax  8 [ax] mov
-\   ax  c [ax] mov
-\   ax 10 [ax] mov
+   0000f001.00001400.   5140000f set-msr  \ PMS BAR
+
+0 [if]
+   long-offsets on
+   1454 port-rl  2 bitand  0<>  if  \ Wakeup event flag
+      char r 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+
+\ Several refreshes
+      20000018 rmsr  8 bitset
+      wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr
+      wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr
+      8 bitclr
+      forget-msr  \ So the next use of 20000018 rmsr will set cx
+
+      \ The RAM DLL needs a write to lock on
+      ax  h# ffff0 #)  mov
+
+      \ Some nops for delay
+      nop nop nop nop nop
+
+      \ Do some extra reads to a different areas to wipe the sleep
+      \ from the SDRAM's eyes.
+      h# 400000 #)  ax mov
+      h# 888800 #)  ax mov
+
+      \ Some nops for delay
+      nop nop nop nop nop
+
+      \ Turn on the cache
+      cr0	ax   mov
+      6000.0000 bitclr  \ Cache-disable off, coherent
+      ax   cr0  mov
+      h# 0f asm8,  h# 08 asm8,  \ invd
+
+      h# 90909000 #  h# f000c #)  cmp  <>  if
+         char x 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+         resume # sp mov  sp jmp
+      else
+    
+         h# 90909000 #  h# f0004 #)  cmp  <>  if
+            char y 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+            resume # sp mov  sp jmp
+         else
+    
+            h# 00000be9 #  h# f0000 #)  cmp  <>  if
+               char z 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+               resume # sp mov  sp jmp
+            else
+               resume # sp mov  sp jmp
+            then
+         then
+      then
+
+\      resume # sp mov  sp jmp
+   then
+   long-offsets off
+[then]
+
+   char b 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+
+   \ Enable DLL, load Extended Mode Register by set and clear PROG_DRAM
+   20000018 rmsr
+   10000001 bitset  20000018 wmsr
+   10000001 bitclr  20000018 wmsr
+
+   \ Reset DLL (bit 27 is undocumented in GX datasheet, but is in the LX one)
+   08000001 bitset  20000018 wmsr
+   08000001 bitclr  20000018 wmsr
+
+   \ Here we are supposed to wait 200 SDCLK cycles to let the DLL settle.
+   \ That is approximately 2 uS.  The ROM instruction access is so slow that
+   \ anything we do will take quite a bit longer than that, so we just let the
+   \ "rmsr, bitset" sequence take care of the time delay for us.
+
+   \ In the following sequence of writes the 2000.0018 MSR, we
+   \ take advantage of the fact that the existing value stays
+   \ in EAX/EDX, so we don't have to re-read the value.
+
+   \ Generate 2 refresh requests.  The refresh queue is 8 deep, and we
+   \ need to make sure 2 refreshes hit the chips, so we have to issue
+   \ 10 requests to the queue.  According to the GX datasheet, we don't
+   \ have to clear the REF_TST bit (8) explicitly between writes 
+   20000018 rmsr  8 bitset
+   wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr
+   8 bitclr
+
+   \ 5. set refresh interval to 0x34 and staggering to 4 clocks
+\   ffffc0 bitclr  3400 bitset  20000018 wmsr
+
+   \ 8. load Mode Register
+   1 bitset  20000018 wmsr
+   1 bitclr  20000018 wmsr
+
+   \ The RAM DLL needs a write to lock on
+   ax  h# ffff0 #)  mov
 
    \ Turn on the cache
    cr0	ax   mov
@@ -277,37 +330,19 @@ hex
    ax   cr0  mov
    h# 0f asm8,  h# 08 asm8,  \ invd
 
+   1454 port-rl  2 bitand  0<>  if  \ Wakeup event flag
+      char r 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+      resume # sp mov  sp jmp
+   then
+
    h# 1808 #  cx  mov          \ Default region configuration properties MSR
    h# f asm8,  h# 32 asm8,     \ rdmsr - returns dx=high ax=low
    h# 0fffff00 # ax and        \ Top of System Memory field
    4 # ax shl                  \ Shift into place
    ax mem-info-pa 4 + #)  mov  \ Put it where resetend.fth can find it
 
- \ Init UART
-   \ cs5536_setup_onchipuart,cs5536_early_setup.c:205.14
-   0.00000012.   5140003a set-msr  \ enable COM1
-
-   \ GPIO1 - UART1 TX
-   100 6104 port-wl   \ GPIO1 - output enable
-   100 6110 port-wl   \ OUT AUX1
-   300 6118 port-wl   \ 
-   200 6120 port-wl   \ 
-   200 6134 port-wl   \ 
-   70000  51400014 bitset-msr  \ MDD_LEG_IO  legacy IO
-
-   \ uart_init,serial.c
-   \ This is a garden-variety 8250 UART setup sequence
-    0 3f9 port-wb
-    1 3fa port-wb
-   83 3fb port-wb  \ DLAB
-    1 3f8 port-wb  \ 115200 divisor low
-    0 3f9 port-wb  \ 115200 divisor high
-    3 3fb port-wb  \ !DLAB
-   \ At this point we could send characters out the serial port
-   \ End of serial init
-
 \ Example of how to output a character to serial port
-  44 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+\   char D 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
 
    sp jmp  \ Return
 end-code

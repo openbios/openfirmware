@@ -268,6 +268,9 @@ warning @  warning off
       disable-interrupts
 [ifdef] rom-loaded
       d# 300
+      h# 1454 pl@ 2 and  if
+         ." Interacting due to botched resume" cr  hex interact
+      then
       i-key-wait  if  ." Interacting" cr  hex interact  then
       setup
 [else]
@@ -278,6 +281,8 @@ warning @  warning off
 ;
 \ warning !
 [then]
+
+: r " p2 flash disk:\olpc.rom" evaluate  ;
 
 : (.firmware)  ( -- )
    ." Open Firmware  "  .built  cr
@@ -504,10 +509,24 @@ false exit
 
 stand-init:  Suspend/resume
    " resume" find-drop-in  if
-      resume-base swap move
-      0 resume-signature !
+      suspend-base swap move
+\      0 resume-signature !
+      msr-init  >physical  resume-data h# 30 + !
+      /msr-init resume-data h# 34 + !
    then
 ;
+: suspend
+   0 " set-source" stdout @ $call-method  \ Freeze display
+
+   \ Enable wakeup from power button, also clearing
+   \ any status bits in the low half of the register.
+   h# 1840 pl@  h# 100.0000 or  h# 1840 pl!
+
+   h# f0000 call
+
+\   1 " set-source" stdout @ $call-method  \ Unfreeze display
+;
+alias s suspend
 
 : startup  ( -- )
    standalone?  0=  if  exit  then

@@ -17,11 +17,7 @@ fload ${BP}/cpu/x86/pc/olpc/config.fth		\ Configuration defines
 
 fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
 
-h# 526f7553 constant suspended   \ 'StoR'
-
-resume-signature h# 10 + constant resume-data
-
-\ This code will be copied to RAM at resume-base
+\ This code will be copied to RAM at suspend-base
 
 start-assembling                                \ Turn on the target assembler
 protected-mode
@@ -59,36 +55,47 @@ here suspend-entry put-branch
    cr3 ax mov  ax  h# 1c [bp]  mov
    cr4 ax mov  ax  h# 20 [bp]  mov
 
-   \ Save the GPIO setup   
    cld
-   h# 38 [bp]  di  lea    \ GPIO save area
+   h# 38 [bp]  di  lea    \ Save area
 
-   h# 1000 #     dx  mov  \ Low bank - first contiguous GPIO register
+   \ Video MSRs that change between VGA and flat panel
+   h# 4c00.0014 rmsr  ax stos  dx ax mov  ax stos   \ RSTPLL
+   h# 4c00.0015 rmsr  ax stos  dx ax mov  ax stos   \ DOTPLL
+   h# c000.2001 rmsr  ax stos  dx ax mov  ax stos   \ Video output format
+   h# c000.2011 rmsr  ax stos  dx ax mov  ax stos   \ TFTP pad select
+
+   \ Save the GPIO setup   
+   \ We do this in top-down order to configure the AUX select
+   \ registers before setting the output enables and values.
+
+   h# 1038 #     dx  mov  \ Low bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
    begin
       dx  ax   in   \ Read GPIO control register
       ax stos       \ Save
-      4 #  dx  add  \ Next port address
+      4 #  dx  sub  \ Next port address
    loopne
 
    h# 1040 # dx mov  dx ax in  ax stos  \ Pos edge enable
    h# 1044 # dx mov  dx ax in  ax stos  \ Neg edge enable
    h# 103c # dx mov  dx ax in  ax stos  \ Low bank lock
 
-   h# 1080 #     dx  mov  \ High bank - first contiguous GPIO register
+   h# 10b8 #     dx  mov  \ High bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
    begin
       ax   dx  in   \ Read GPIO control register
       ax stos       \ Save
-      4 #  dx  add  \ Next port address
+      4 #  dx  sub  \ Next port address
    loopne
 
    h# 10c0 # dx mov  dx ax in  ax stos  \ Pos edge enable
    h# 10c4 # dx mov  dx ax in  ax stos  \ Neg edge enable
    h# 10bc # dx mov  dx ax in  ax stos  \ High bank lock
 
-   h# 5140.0034 #  cx  mov   \ MSR number
-   wrmsr                     \ Reset PIC shadow pointer (data is irrelevant)
+\ XXX need to do the shadow thing for the PIT too - 51400036
+\ XXX and the DMA controller
+
+   h# 5140.0034 wmsr         \ Reset PIC shadow pointer (data is irrelevant)
    rdmsr  al stos            \ PIC1 ICW1
    rdmsr  al stos            \ PIC1 ICW2
    rdmsr  al stos            \ PIC1 ICW3
@@ -106,7 +113,24 @@ here suspend-entry put-branch
    h# 21 # al in  al stos    \ PIC1 OCW1 (interrupt mask)
    h# a1 # al in  al stos    \ PIC2 OCW1 (interrupt mask)
 
-   suspended #  resume-signature #)  mov  \ Set suspended marker
+   h# 4d0 # dx mov  dx al in  al stos   \ Edge/level low
+   h# 4d1 # dx mov  dx al in  al stos   \ Edge/level high
+
+   h# 5140.0036 wmsr       \ Reset PIT shadow pointer (data is irrelevant)
+   rdmsr  al stos            \ PIT Counter 0 LSB
+   rdmsr  al stos            \ PIT Counter 0 MSB
+   rdmsr  al stos            \ PIT Counter 1 LSB
+   rdmsr  al stos            \ PIT Counter 1 MSB
+   rdmsr  al stos            \ PIT Counter 2 LSB
+   rdmsr  al stos            \ PIT Counter 2 MSB
+   rdmsr  al stos            \ PIT Counter 0 Command Word - not sure how this works
+   rdmsr  al stos            \ PIT Counter 1 Command Word
+   rdmsr  al stos            \ PIT Counter 2 Command Word
+   h# 43 # al in  al stos    \ Read back register 43 directly
+   h# 61 # al in  al stos    \ Read back register 43 directly
+   h# 5140.0037 rmsr  al stos  \ PIT Count Enable MSR
+
+\   suspended #  resume-signature #)  mov  \ Set suspended marker
 
    h# 4000.0e00 h# 1410 port-wl   \ Assert SLP_CLK_EN# 1 mS after SUSPA#
    h# 4000.4601 h# 1414 port-wl   \ Release SUSP# 5 mS after wakeup
@@ -114,8 +138,9 @@ here suspend-entry put-branch
    h# 0002.ffff h# 1454 port-wl   \ Clear wakeup type bits
 
    \ This is actually two 16-bit registers, but 16-bit writes don't work
-   \ right due to a 5536 erratum.  (The corrupt other registers)
-   h# 0100.ffff h# 1840 port-wl   \ Enable Power button wakeup, clear status bits
+   \ right (they corrupt other registers) due to a 5536 erratum.  
+   h# 1840 port-rl  ( .s cr h# ffff bitset ) ax dx out
+\   h# 0100.ffff h# 1840 port-wl   \ Enable Power button wakeup, clear status bits
 
    wbinvd                                 \ Flush the cache
    \ h# x.y.  h# 2000.0020 bitclr-msr  \ PM sensitivity counter
@@ -133,7 +158,9 @@ here resume-entry put-branch
 \   Running from a 32-bit identity-mapped code segment
 \   Using physical addresses
 
-   0 #  resume-signature #) mov    \ Clear suspended marker
+  char < 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+
+\   0 #  resume-signature #) mov    \ Clear suspended marker
 
    resume-data #  bp  mov
 
@@ -141,7 +168,8 @@ here resume-entry put-branch
 
    \ MSR init
    h# 30 [bp]  si  mov   \ MSR table start address
-   h# 34 [bp]  bx  mov   \ MSR table end address
+   si          bx  mov
+   h# 34 [bp]  bx  add   \ MSR table end address
 
    begin
       ax lods  ax cx  mov   \ msr#
@@ -151,34 +179,38 @@ here resume-entry put-branch
       si bx cmp
    = until
 
-   h# 38 [bp]  si  lea    \ GPIO save area
+   h# 38 [bp]  si  lea    \ Save area
 
-   h# 1000 #     dx  mov  \ Low bank - first contiguous GPIO register
+   ax lods  ax dx xchg  ax lods  ax dx xchg  h# 4c00.0014 wmsr  \ RSTPLL
+   ax lods  ax dx xchg  ax lods  ax dx xchg
+   1 bitset  h# 4c00.0015 wmsr  \ DOTPLL - reset to make it take the new value
+   1 bitclr  h# 4c00.0015 wmsr  \ DOTPLL - release reset
+   ax lods  ax dx xchg  ax lods  ax dx xchg  h# c000.2001 wmsr  \ Video output format
+   ax lods  ax dx xchg  ax lods  ax dx xchg  h# c000.2011 wmsr  \ TFTP pad select
+
+   h# 1038 #     dx  mov  \ Low bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
    begin
       ax lods
       ax   dx  out  \ Write to GPIO control register
-      4 #  dx  add  \ Next port address
+      4 #  dx  sub  \ Next port address
    loopne
    ax lods  h# 1040 # dx mov  ax dx out  \ Pos edge enable
    ax lods  h# 1044 # dx mov  ax dx out  \ Neg edge enable
    ax lods  h# 103c # dx mov  ax dx out  \ Low bank lock
 
-   h# 1080 #     dx  mov  \ High bank - first contiguous GPIO register
+   h# 10b8 #     dx  mov  \ High bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
    begin
       ax lods
       ax   dx  out  \ Write to GPIO control register
-      4 #  dx  add  \ Next port address
+      4 #  dx  sub  \ Next port address
    loopne
    ax lods  h# 10c0 # dx mov  ax dx out  \ Pos edge enable
    ax lods  h# 10c4 # dx mov  ax dx out  \ Neg edge enable
    ax lods  h# 10bc # dx mov  ax dx out  \ High bank lock
 
 \   0 h# 1842 pw!   \ Disable power button during early startup
-
-   h# 20 h# 4d0 port-wb         \ IRQ5 (AC-97) level triggered
-   h# 0c h# 4d1 port-wb         \ IRQA (USB) and IRQB (GXFB) level triggered
 
    \ Restore Interrupt controller setup
    al lods        al h# 20 # out    \ PIC1 ICW1
@@ -200,13 +232,33 @@ here resume-entry put-branch
    al lods  al  h# 21 #  out   \ PIC1 OCW1 (interrupt mask)
    al lods  al  h# a1 #  out   \ PIC2 OCW1 (interrupt mask)
 
+   al lods  h# 4d0 # dx mov  al dx out   \ Edge/level low
+   al lods  h# 4d1 # dx mov  al dx out   \ Edge/level high
+
+   \ Restore PIT (timer)
+   h# 30 # al mov  al h# 43 # out  \ Load LSB,MSB for counter 0
+   al lods  al h# 40 out
+   al lods  al h# 40 out
+   h# 70 # al mov  al h# 43 # out  \ Load LSB,MSB for counter 1
+   al lods  al h# 41 out
+   al lods  al h# 41 out
+   h# b0 # al mov  al h# 43 # out  \ Load LSB,MSB for counter 2
+   al lods  al h# 42 # out
+   al lods  al h# 42 # out
+   al lods  \ Command word for counter 0
+   al lods  \ Command word for counter 1
+   al lods  \ Command word for counter 2
+   al lods  al h# 43 # out
+   al lods  al h# 61 # out
+   al lods  h# 5140.0037 wmsr   \ PIT Count Enable MSR - high bits irrelevant
+
    \ 5536 NAND FLASH ...  ???
    \ h# 8000 h# 4000.0000 or h# 1440 pl!  \ Fail-safe delay
 
    \ Assign CaFe base addresses
-   h# fe00c000 6010 config-wl  \ NAND FLASH base address
-   h# fe010000 6110 config-wl  \ SD base address
-   h# fe014000 6210 config-wl  \ Camera controller base address
+   h# fe00c000 h# 6010 config-wl  \ NAND FLASH base address
+   h# fe010000 h# 6110 config-wl  \ SD base address
+   h# fe014000 h# 6210 config-wl  \ Camera controller base address
 \ XXX need to set CaFe timing too.
 
    \ Display stuff
@@ -238,12 +290,14 @@ here resume-entry put-branch
 
    \ Force the paging enable to take place
    h# eb asm8,  0 asm8,    \ jmp to next location to enable paging
-   \ here asm-base - 5 +  resume-base + #)  jmp
+   \ here asm-base - 5 +  suspend-base + #)  jmp
 
    h# 10 [bp]  lgdt        \ Global descriptor table register
    h#  a [bp]  lidt        \ Interrupt descriptor table register
    h#  8 [bp]  lldt        \ Local descriptor table register
-   h#  6 [bp]  ltr         \ Task register
+\  h#  6 [bp]  ltr         \ Task register
+
+  char > 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
 
    0 [bp]  sp  lss
    gs pop

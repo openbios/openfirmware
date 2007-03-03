@@ -18,6 +18,8 @@
 -1 value last-cx
 also 386-assembler definitions
 
+: forget-msr  -1 to last-cx  ;
+
 \ set-cx is an internal implementation factor used by wmsr and rmsr.
 \ It assembles code to put an MSR number in %ecx, optimizing out
 \ unnecessary code by remembering what was last put there.
@@ -68,10 +70,10 @@ also 386-assembler definitions
 
 : config-wl  ( l config-adr -- )
    h# 8000.0000  [ also forth ] or [ previous ] #  ax  mov
-   h# 3f8 #  dx  mov
+   h# cf8 #  dx  mov
    ax dx out
    #  ax  mov
-   h# 3fc #  dx  mov
+   h# cfc #  dx  mov
    ax dx out
 ;
 
