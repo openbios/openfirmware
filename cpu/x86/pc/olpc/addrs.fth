@@ -72,8 +72,9 @@ h# 400.0000 constant jffs2-inode-base
 h# 600.0000 constant dma-base
 h# a00.0000 constant dma-size
 
-h# f.0000 constant resume-base       \ In the DOS hole
-h# f.0800 constant resume-signature
+h# f.0000 constant suspend-base      \ In the DOS hole
+h# f.0008 constant resume
+h# f.0800 constant resume-data
 
 fload ${BP}/cpu/x86/pc/virtaddr.fth
 
