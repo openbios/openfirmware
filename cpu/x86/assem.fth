@@ -52,6 +52,7 @@ protected-mode# value memory-mode
 
 defer asm-set-relocation-bit
 
+defer asm8@		forth ' c@    assembler   is asm8@
 defer asm8!		forth ' c!    assembler   is asm8!
 defer here		forth ' here  assembler   is here
 defer asm-allot		forth ' allot assembler   is asm-allot
@@ -697,8 +698,8 @@ variable long-offsets  long-offsets off
 : >MARK     (S -- addr )  HERE  ;  \ Address of opcode, not offset byte
 : >RESOLVE  (S addr -- )  
    long-offsets @  if
-      \ Opcode is 2 bytes long
-      2 + here over   ( offset-adr target-adr offset-adr )
+      dup asm8@ h# 0f =  if  2+  else  1+  then  ( offset-adr )
+      here over   ( offset-adr target-adr offset-adr )
       real?  if       ( offset-adr target-adr offset-adr )
          2 + -  swap asm16!  \ 2-byte offset
       else
@@ -728,6 +729,31 @@ variable long-offsets  long-offsets off
 
 HEX
 
+\ One of the very best features of FORTH assemblers is the ability
+\ to use structured conditionals instead of branching to nonsense
+\ labels.
+: IF
+   >MARK swap
+   long-offsets @  if
+      dup h# eb =  if
+         drop h# e9 asm8,
+      else
+         h# 0f asm8,  h# 10 + asm8,
+      then
+      real?  if  0 asm16,  else  0 asm32,  then
+   else
+      ASM8,  0 asm8,
+   then
+;
+: THEN    >RESOLVE   ;
+: BEGIN   <MARK   ;
+: UNTIL   <RESOLVE   ;
+: AHEAD   0EB IF          ;
+: ELSE    AHEAD  BUT   THEN   ;
+: AGAIN   0EB UNTIL   ;
+: WHILE   IF   BUT  ;
+: REPEAT  AGAIN   THEN   ;
+
 \ These conditional test words leave the opcodes of conditional
 \ branches to be used by the structured conditional words.
 \   For example,
@@ -743,27 +769,6 @@ HEX
 7F CONSTANT <=   7E CONSTANT >     73 CONSTANT U<
 72 CONSTANT U>=  77 CONSTANT U<=   76 CONSTANT U>
 71 CONSTANT OV	 E3 CONSTANT CXNZ
-
-\ One of the very best features of FORTH assemblers is the ability
-\ to use structured conditionals instead of branching to nonsense
-\ labels.
-: IF
-   >MARK swap
-   long-offsets @  if
-      h# 0f asm8,  h# 10 + asm8,
-      real?  if  0 asm16,  else  0 asm32,  then
-   else
-      ASM8,  0 asm8,
-   then
-;
-: THEN    >RESOLVE   ;
-: BEGIN   <MARK   ;
-: UNTIL   <RESOLVE   ;
-: AHEAD   0EB IF          ;
-: ELSE    AHEAD  BUT   THEN   ;
-: AGAIN   0EB UNTIL   ;
-: WHILE   IF   BUT  ;
-: REPEAT  AGAIN   THEN   ;
 
 \ why lose DO ???
 \ XXX : DO      # ECX MOV   HERE   ;
