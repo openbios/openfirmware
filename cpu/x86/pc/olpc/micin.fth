@@ -11,14 +11,14 @@ purpose: Controls for the microphone input mode (AC vs. DC coupling)
 
 : ac-mode  ( -- )
    post-b1?  if
-      2 >clr GPIOx_OUT_VAL gpio!     \ 5536 GPIO01
+      2 >clr OUT_VAL gpio!           \ 5536 GPIO01
    else
       2 ec-cmd drop                  \ EC GPIO18
    then
 ;
 : dc-mode  ( -- )
    post-b1?  if
-      2 GPIOx_OUT_VAL gpio!          \ 5536 GPIO01
+      2 OUT_VAL gpio!                \ 5536 GPIO01
    else
       1 ec-cmd drop                  \ EC GPIO18
    then
@@ -29,11 +29,11 @@ warning @ warning off
    stand-init
    post-b1?  if
       \ Configure GPIO as output for controlling MIC input AC/DC coupling
-      2 GPIOx_OUT_EN gpio!
-      2 >clr GPIOx_OUT_AUX1 gpio!   \ GPIO, not AUX1 function
-      2 >clr GPIOx_OUT_AUX2 gpio!   \ GPIO, not AUX2 function
-      2 >clr GPIOL_PU_EN    gpio!   \ GPIO, not pull up
-      2 >clr GPIOL_PD_EN    gpio!   \ GPIO, not pull down
+      2 OUT_EN gpio!
+      2 >clr OUT_AUX1 gpio!   \ GPIO, not AUX1 function
+      2 >clr OUT_AUX2 gpio!   \ GPIO, not AUX2 function
+      2 >clr PU_EN    gpio!   \ GPIO, not pull up
+      2 >clr PD_EN    gpio!   \ GPIO, not pull down
    then
    ac-mode
 ;

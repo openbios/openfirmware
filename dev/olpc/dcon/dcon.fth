@@ -170,17 +170,17 @@ dconstat dconblnk or dconirq or  constant in-gpios
 dconload constant out-gpios
 
 : dcon-init  ( -- )
-   out-gpios in-gpios wljoin  GPIOx_OUT_EN gpio!
-   in-gpios out-gpios wljoin  GPIOx_IN_EN  gpio!
+   out-gpios in-gpios wljoin  OUT_EN gpio!
+   in-gpios out-gpios wljoin  IN_EN  gpio!
 
-   dconirq     >set  GPIOx_INV_EN gpio!
+   dconirq     >set  INV_EN gpio!
 
    dconirq dconblnk or             ( events )
 
 \ Linux doesn't want me to turn these on
-\   dup >set  GPIOx_EVNT_EN     gpio!
-\   dup >set  GPIOx_IN_FLTR_EN  gpio!   \ Enable counter for GPIO7 (DCONIRQ)
-\   dup >clr  GPIOx_EVNTCNT_EN  gpio!
+\   dup >set  EVNT_EN     gpio!
+\   dup >set  IN_FLTR_EN  gpio!   \ Enable counter for GPIO7 (DCONIRQ)
+\   dup >clr  EVNTCNT_EN  gpio!
 \    d# 12     gpio-base h# f7 + rb!     \ GPIO_FE7_SEL
 \    dup >clr  h# 44             gpio!   \ NEGEDGE_EN
 
@@ -205,7 +205,7 @@ dconload constant out-gpios
 [then]
 
    ( events )
-   dup >set  GPIOx_IN_EN  gpio!
+   dup >set  IN_EN  gpio!
    >set h# 4c gpio!   \ GPIOL_NEGEDGE_STS - clear detected edges
 
    dcon-load

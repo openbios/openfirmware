@@ -2,18 +2,20 @@
 purpose: Access to GPIO registers
 
 \ GPIO registers
-h# 00 constant GPIOx_OUT_VAL 
-h# 20 constant GPIOx_IN_EN 
-h# 04 constant GPIOx_OUT_EN  
-h# 10 constant GPIOx_OUT_AUX1
-h# 14 constant GPIOx_OUT_AUX2
-h# 18 constant GPIOL_PU_EN
-h# 1c constant GPIOL_PD_EN
-h# 24 constant GPIOx_INV_EN 
-h# 28 constant GPIOx_IN_FLTR_EN 
-h# 2c constant GPIOx_EVNTCNT_EN 
-h# 30 constant GPIOx_READ_BACK 
-h# 38 constant GPIOx_EVNT_EN 
+h# 00 constant OUT_VAL 
+h# 04 constant OUT_EN  
+h# 08 constant OUT_OD_EN  
+h# 0c constant OUT_INVRT_EN  
+h# 10 constant OUT_AUX1
+h# 14 constant OUT_AUX2
+h# 18 constant PU_EN
+h# 1c constant PD_EN
+h# 20 constant IN_EN 
+h# 24 constant INV_EN 
+h# 28 constant IN_FLTR_EN 
+h# 2c constant EVNTCNT_EN 
+h# 30 constant READ_BACK 
+h# 38 constant EVNT_EN 
 
 h# 1000 value gpio-base  \ stand-init sets this from an MSR
 : gpio@  ( offset -- 0 )  gpio-base +  pl@  ;
@@ -21,6 +23,8 @@ h# 1000 value gpio-base  \ stand-init sets this from an MSR
 
 alias >set noop   ( mask -- mask' )  
 : >clr    ( mask -- mask' )  d# 16 lshift  ;
+
+: >hi     ( reg# -- reg#' )  h# 80 +  ;   \ High bank for GPIO bits 16..31
 
 : gpio-data@  ( -- l )  h# 30 gpio@  ;
 
