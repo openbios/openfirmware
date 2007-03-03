@@ -84,9 +84,13 @@ T c000.2010 2
 
 \ GLCP
 
-T 4c00.2000 6
+T 4c00.2001 5
 
-T 4c00.0008 18
+T 4c00.0008 2
+T 4c00.000b 2
+\ 4c00.000d has status bits that can't be set directly
+T 4c00.000e 3
+T 4c00.0012 5
 
 \ -- GLPCI
 
@@ -142,7 +146,11 @@ T 5130.0010 6
 
 T 5140.0000 6
 T 5140.0008 2
-T 5140.000b 4d
+T 5140.000b 1b
+T 5140.0028 3
+T 5140.0037 a
+T 5140.004e 3
+T 5140.0054 4
 
 \ SMB natives 0 8
 \ KEL natives 100 10  (and port 92)
