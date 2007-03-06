@@ -59,6 +59,16 @@ h# fc2a	constant GPIO5
 : kbd-led-on  ( -- )  h# fc21 ec@  1 invert and  h# fc21 ec!  ;
 : kbd-led-off ( -- )  h# fc21 ec@  1 or  h# fc21 ec!  ;
 
+: wlan-reset  ( -- )
+   \ WLAN reset is EC GPIOEE, controlled by EC registers fc15 and fc25
+   h# fc15 ec@   h# fc25 ec@           ( enable data )
+   dup  h# 40 invert and  h# fc25 ec!  ( enable data )  \ WLAN_RESET data output low
+   over h# 40 or          h# fc15 ec!  ( enable data )  \ Assert output enable
+   1 ms
+   h# 40 or          h# fc25 ec!       ( enable )       \ Drive data high
+   h# 40 invert and  h# fc15 ec!       ( )              \ Release output enable
+;
+
 : io-spi@  ( reg# -- b )  h# fea8 +  ec@  ;
 : io-spi!  ( b reg# -- )  h# fea8 +  ec!  ;
 
