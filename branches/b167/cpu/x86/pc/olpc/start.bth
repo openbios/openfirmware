@@ -1,0 +1,77 @@
+\ See license at end of file
+purpose: Low-level startup code for DOS-loaded x86 Forth
+
+command: &builder &this
+build-now
+
+\needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+create debug-startup
+
+hex
+
+fload ${BP}/cpu/x86/pc/report.fth			\ Startup reports
+
+fload ${BP}/cpu/x86/pc/olpc/config.fth
+
+start-assembling
+protected-mode
+
+label my-entry
+
+[ifdef] debug-startup
+   \ Branch past the I/O subroutines that are called by debug printouts
+   e9 c,  0 ,				\ To be patched later
+end-code
+
+\ Load some debug subroutines
+fload ${BP}/cpu/x86/pc/dot.fth			\ Numeric display
+[then]
+
+label startup
+\ This is the target of the jump
+
+   h# 1808 #  cx  mov       \ Default region configuration properties MSR
+   h# f asm8,  h# 32 asm8,  \ rdmsr - returns dx=high ax=low
+   h# 0fffff00 # ax and     \ Top of System Memory field
+   4 # ax shl               \ Shift into place
+   ax mem-info-pa 4 + #)  mov  \ Put it where resetend.fth can find it
+
+   ret
+end-code
+
+[ifdef] debug-startup
+also 386-assembler
+startup  my-entry  put-branch
+previous
+[then]
+
+end-assembling
+
+writing start.di
+asm-base  here over -  0  " start" write-dropin
+ofd @ fclose
+\ LICENSE_BEGIN
+\ Copyright (c) 2006 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

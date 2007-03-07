@@ -1,0 +1,14 @@
+purpose: Load file for the Cyrix 5530 SMI function driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing smi.fc
+
+FCode-version2
+fload ${BP}/dev/mediagx/cx5530/smi.fth
+end0
+
+end-tokenizing

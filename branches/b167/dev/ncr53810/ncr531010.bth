@@ -1,0 +1,17 @@
+purpose: Load file for LSI Logic 53C1010 SCSI FCode driver
+
+command: &tokenize &this
+build-now
+
+hex
+silent on
+
+
+begin-tokenizing ncr531010.fc
+
+FCode-version2
+fload ${BP}/dev/ncr53810/loadpkg.fth
+0 0 encode-bytes " assigned-addresses" property
+fcode-end
+
+end-tokenizing

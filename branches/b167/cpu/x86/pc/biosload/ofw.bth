@@ -1,0 +1,123 @@
+purpose: Construct the final BIOS-start OFW image 
+
+command: &builder &this
+\ in: biostart.img
+in: reset.di
+in: start.di
+in: fw.img
+in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
+in: ${BP}/dev/usb2/hcd/uhci/build/uhci.fc
+in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
+in: ${BP}/dev/usb2/device/hub/build/hub.fc
+\ in: ${BP}/dev/usb2/device/net/build/usbnet.fc
+in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
+in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
+in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
+\ in: ${BP}/ofw/fs/nfs/build/nfs.di
+\ in: ${BP}/ofw/fs/cdfs/build/cdfs.di
+\ in: ${BP}/ofw/fs/fatfs/build/fatfs.di
+\ in: ${BP}/ofw/disklabel/build/disklabel.di
+\ in: ${BP}/ofw/inet/build/obptftp.di
+in: ${BP}/dev/pci/build/pcibridg.fc
+in: ${BP}/cpu/x86/pc/biosload/linux.fth
+
+build-now
+
+fload ${BP}/cpu/x86/pc/biosload/config.fth
+
+\ Always re-create the builton.fth file when we make a new rom.img
+fload ${BP}/cpu/x86/pc/builton.bth
+
+hex
+
+[ifdef] grub-loaded
+  fload ${BP}/cpu/x86/pc/elfhdr.fth
+[ifdef] etherboot-variant
+  .( --- Saving as ofwnet.elf - GRUB multiboot format) cr
+  writing ofwnet.elf
+[else]
+  .( --- Saving as ofwgrub.elf - GRUB multiboot format) cr
+  writing ofwgrub.elf
+[then]
+    elf-header /elf-header  ofd @ fputs
+[then]
+
+[ifdef] linuxbios-loaded
+  .( --- Saving as ofwlb.elf - LinuxBIOS payload format) cr
+  fload ${BP}/cpu/x86/pc/elfhdr.fth
+  writing ofwlb.elf
+    elf-header /elf-header  0  " elf-header"  write-dropin
+[then]
+
+[ifdef] syslinux-loaded
+  .( --- Saving as ofw.c32 - Syslinux COM32 format) cr
+  fload ${BP}/cpu/x86/pc/c32hdr.fth
+  writing ofw.c32
+    c32-hdr  /c32-hdr      ofd @ fputs
+[then]
+
+[ifdef] bzimage-loaded
+  .( --- Saving as ofw.bzi - Linux kernel format) cr
+  fload ${BP}/cpu/x86/pc/bzhdr.fth
+  writing ofw.bzi
+    bz-hdr /bz-hdr  0  " bz-header"  write-dropin
+[then]
+
+[ifdef] real-mode-entry
+   " biostart.img"          $add-file
+[then]
+   " reset.di"              $add-file
+   " start.di"              $add-file
+   " ${BP}/cpu/x86/build/inflate.bin"           " inflate"         $add-dropin
+   " fw.img"                                    " firmware"        $add-deflated-dropin
+   " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
+
+[ifdef] usb-support
+   " ${BP}/dev/usb2/hcd/uhci/build/uhci.fc"	" class0c0300"     $add-deflated-dropin
+   " ${BP}/dev/usb2/hcd/ohci/build/ohci.fc"	" class0c0310"     $add-deflated-dropin
+   " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"     $add-deflated-dropin
+
+   " ${BP}/dev/usb2/device/hub/build/hub.fc"            " usb,class9"  $add-dropin
+   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"    " usb,class3"  $add-dropin
+\  " ${BP}/dev/usb2/device/net/build/usbnet.fc"         " usbnet"      $add-deflated-dropin
+   " ${BP}/dev/usb2/device/serial/build/usbserial.fc"   " usbserial"   $add-deflated-dropin
+   " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"  $add-deflated-dropin
+[then]
+
+   " builton.fth"                       " probe-"          $add-dropin
+[ifndef] resident-packages
+   " ${BP}/ofw/fs/cdfs/build/cdfs.di"                      $add-file
+   " ${BP}/ofw/fs/fatfs/build/fatfs.di"                    $add-file
+   " ${BP}/ofw/fs/nfs/build/nfs.di"                        $add-file
+   " ${BP}/ofw/fs/dropinfs.fth"    " dropin-file-system"   $add-deflated-dropin
+   " ${BP}/ofw/disklabel/build/disklabel.di"               $add-file
+   " ${BP}/ofw/inet/build/obptftp.di"                      $add-file
+   " ${BP}/dev/16550pkg/16550.fth" " 16550"                $add-deflated-dropin
+   " ${BP}/cpu/x86/disassem.fth"   " disassem.fth"         $add-deflated-dropin
+   " ${BP}/ofw/ppp/build/ppp.di"                           $add-file
+\  " ${BP}/ofw/fs/ufs/ufs.fth"     " ufs-file-system"      $add-deflated-dropin
+   " ${BP}/ofw/fs/zipfs.fth"       " zip-file-system"      $add-deflated-dropin
+   " ${BP}/ofw/inet/tcp.fth"       " tcp"                  $add-deflated-dropin
+   " ${BP}/ofw/inet/http.fth"      " http"                 $add-deflated-dropin
+   " ${BP}/ofw/fs/ext2fs/ext2fs.fth"  " ext2-file-system"  $add-deflated-dropin
+   " ${BP}/ofw/inet/telnetd.fth"      " telnetd"           $add-deflated-dropin
+   " ${BP}/ofw/fs/fatfs/fdisk2.fth"   " fdisk2.fth"        $add-deflated-dropin
+[then]
+   " ${BP}/ofw/fcode/memtest.fth"  " memtest.fth"          $add-deflated-dropin
+
+   " ${BP}/ofw/inet/httpdemo/index.htm"	   " index.htm"    $add-dropin
+   " ${BP}/ofw/inet/httpdemo/config.htm"   " config.htm"   $add-dropin
+\  " ${BP}/ofw/inet/httpdemo/post.htm"     " post.htm"     $add-dropin
+   " ${BP}/ofw/inet/httpdemo/free.htm"	   " free.htm"     $add-dropin
+   " ${BP}/ofw/inet/httpdemo/homelogo.gif" " homelogo.gif" $add-dropin
+
+   " ${BP}/cpu/x86/pc/biosload/linux.fth"     " linux.fth"    $add-dropin
+   " ${BP}/ofw/linux/penguin.txt"  " penguin.txt"          $add-dropin
+
+[ifdef] grub-loaded
+   ofd @ fsize   pad !      \ file size; store in memory for convenience below
+   h# 44 ofd @ fseek        \ Seek to file size field; see elfhdr.bth
+   pad 4 ofd @ fputs        \ Patch file size
+   pad 4 ofd @ fputs        \ Patch memory size
+[then]
+ofd @ fclose

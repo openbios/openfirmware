@@ -1,0 +1,105 @@
+<HTML>
+<HEAD>
+   <META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
+   <META NAME="GENERATOR" CONTENT="Mozilla/4.05 [en] (Win95; I) [Netscape]">
+   <TITLE>index</TITLE>
+</HEAD>
+<BODY TEXT="#000000" BGCOLOR="#FFFFFF" LINK="#0000FF" VLINK="#FF4400">
+<hr>
+<br>
+<form method=GET action="rom-setconfig-tf">
+
+Environment Variable:
+   <select name=env-var size=1>
+      <option>client-symbols? 
+      <option>fcode-debug? 
+      <option>oem-logo? 
+      <option>oem-banner? 
+      <option>auto-boot? 
+      <option>watchdog-reboot? 
+      <option>local-mac-address? 
+      <option>ansi-terminal? 
+      <option>use-nvramrc? 
+      <option>silent-mode? 
+      <option>diag-switch? 
+   </select>
+
+Setting:
+   <select name=env-val size=1>
+      <option>true
+      <option>false
+   </select>
+<br>
+<input type=submit value="Set Configuration">
+</form>
+
+<hr>
+<br>
+<form method=GET action="rom-setconfig-string">
+
+Environment Variable:
+   <select name=env-var size=1>
+      <option>graphics-memory-size
+      <option>pci-probe-list
+      <option>oem-logo              
+      <option>oem-banner                                           
+      <option>output-device
+      <option>input-device
+      <option>load-base
+      <option>boot-command
+      <option>diag-file
+      <option>diag-device
+      <option>boot-file
+      <option>boot-device
+      <option>screen-#columns
+      <option>screen-#rows
+   </select>
+<br>
+New Value:
+   <input type=text name=env-val size=40 maxlength=80>
+   <p>
+   <input type=submit value="Set Configuration">
+</form>
+<br>
+
+<hr>
+<form method=GET action="rom-setdefault">
+
+Environment Variable:
+   <select name=env-var size=1>
+      <option>client-symbols? 
+      <option>fcode-debug? 
+      <option>oem-logo? 
+      <option>oem-banner? 
+      <option>auto-boot? 
+      <option>watchdog-reboot? 
+      <option>local-mac-address? 
+      <option>ansi-terminal? 
+      <option>use-nvramrc? 
+      <option>silent-mode? 
+      <option>diag-switch? 
+      <option>graphics-memory-size
+      <option>pci-probe-list
+      <option>oem-logo              
+      <option>oem-banner                                           
+      <option>output-device
+      <option>input-device
+      <option>load-base
+      <option>boot-command
+      <option>diag-file
+      <option>diag-device
+      <option>boot-file
+      <option>boot-device
+      <option>screen-#columns
+      <option>screen-#rows
+   </select>
+<br>
+   <p>
+   <input type=submit value="Set Default">
+
+
+<CENTER><A href="index.htm">Back to Main Page</A></CENTER>
+<hr>
+<CENTER><IMG SRC="homelogo.gif" HEIGHT=85 WIDTH=315></CENTER>
+</BODY>
+</HTML>

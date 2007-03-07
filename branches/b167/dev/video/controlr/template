@@ -1,0 +1,33 @@
+
+\
+\ When building new controller files, you must include the two
+\ methods below. The dac and init files rely on the defered words
+\ that must be defined within the controller code.
+\
+
+\ Replace <name> with something appropriate for the controller you
+are writing code for...
+
+: use-<name>-dac-methods  ( -- )		\ Assigns <name> version of DAC access words
+   ['] <name>-rmr@ to rmr@
+   ['] <name>-rmr! to rmr!
+   ['] <name>-plt@ to plt@
+   ['] <name>-plt! to plt!
+   ['] <name>-rindex! to rindex!
+   ['] <name>-windex! to windex!
+   ['] <name>-rs@ to rs@
+   ['] <name>-rs! to rs!
+   ['] <name>-idac@ to idac@
+   ['] <name>-idac! to idac!
+;
+
+: use-<name>-words  ( -- )			\ Turns on the <name> specific words
+   ['] map-<name>-io-regs to map-io-regs
+   ['] unmap-<name>-io-regs to unmap-io-regs
+   ['] map-<name>-frame-buffer to map-frame-buffer
+   ['] unmap-<name>-frame-buffer to unmap-frame-buffer
+   ['] init-<name>-controller to init-controller
+   ['] reinit-<name>-controller to reinit-controller
+   ['] <name>-video-on to video-on
+   use-<name>-dac-methods
+;

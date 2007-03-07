@@ -1,0 +1,17 @@
+purpose: Load file for USB Hub Driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing hub.fc
+
+FCode-version2
+
+fload ${BP}/dev/usb2/hcd/hcd-call.fth		\ HCD interface forwarded to children
+fload ${BP}/dev/usb2/device/hub/hub.fth		\ Hub driver
+
+end0
+
+end-tokenizing

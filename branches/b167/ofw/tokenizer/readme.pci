@@ -1,0 +1,51 @@
+The following table defines the data structure that precedes the FCode
+image in a PCI expansion ROM. Refer to the "PCI Local Bus Specification"
+for exact descriptions of all the fields.
+
+Note: all values are in hex. Muti-byte values are little-endian.
+
+Offset	Length	Value	Description
+------	------	-----	-----------
+00	 1	55	ROM Signature, byte 1
+01	 1	aa	ROM Signature, byte 2
+02	 2	0034	FCode start offset
+04	14	00	Reserved
+18	 2	001a	PCI Data Structure offset
+1a	 4	'PCIR'	PCI Data Structure signature
+1e	 2	--	Vendor ID
+20	 2	--	Device ID
+22	 2	--	VPD offset (usually zero)
+24	 2	0018	PCI Data Structure length
+26	 1	00	PCI Data Structure revision
+27	 3	--	Class Code
+2a	 2	--	Image length in 512-byte blocks
+2c	 2	--	Revision of code/data
+2e	 1	01	Code type (1 = FCode)
+2f	 1	80	Continuation Indicator (Bit 7: 1=last image, 0=more)
+30	 2	0000	Reserved
+32	 2	0000	Padding
+34	--	--	FCode image
+
+The following code fragment should precede "fcode-versionN" in the 
+source file, in order to make the header:
+
+hex
+tokenizer[
+   55 emit-byte aa emit-byte	\ PCI magic number
+   34 emit-byte 00 emit-byte	\ Start of FCode
+   14 0 do 0 emit-byte loop
+   1a emit-byte 00 emit-byte	\ Start of PCI Data Structure:
+   ascii P emit-byte ascii C emit-byte ascii I emit-byte ascii R emit-byte
+   xx emit-byte xx emit-byte	\ 2 vendor
+   xx emit-byte xx emit-byte	\ 2 device
+   00 emit-byte 00 emit-byte	\ 2 VPD
+   18 emit-byte 00 emit-byte	\ 2 DS len
+   00 emit-byte xx emit-byte	\ 1 rev
+   xx emit-byte xx emit-byte	\ 3 class code
+   xx emit-byte xx emit-byte	\ 2 image len
+   01 emit-byte 00 emit-byte	\ 2 rev of code
+   01 emit-byte 		\ 1 code type
+   80 emit-byte 		\ 1 indicator
+   00 emit-byte 00 emit-byte	\ 2 reserved
+   00 emit-byte 00 emit-byte	\ 2 pad
+]tokenizer

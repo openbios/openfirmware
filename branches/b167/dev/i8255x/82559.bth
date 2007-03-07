@@ -1,0 +1,16 @@
+purpose: Load file for Intel 82559 Ethernet FCode driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing 82559.fc
+
+FCode-version2
+" 82559" model
+" 82559" encode-string  " compatible" property
+fload ${BP}/dev/i8255x/loadpkg.fth
+end0
+
+end-tokenizing

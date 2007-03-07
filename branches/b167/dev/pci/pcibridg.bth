@@ -1,0 +1,16 @@
+purpose: Load file for PCI probe code
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing pcibridg.fc
+
+FCode-version2
+
+fload ${BP}/dev/pci/pcibridg.fth
+
+end0
+
+end-tokenizing

@@ -1,0 +1,582 @@
+purpose: Build Open Firmware for OLPC
+\ See license at end of file
+
+dictionary: ${BP}/cpu/x86/build/basefw.dic
+command: &x86forth &dictionary &this
+in: builton.fth
+build-now
+
+
+hex
+\ ' $report-name is include-hook
+
+fload ${BP}/cpu/x86/pc/olpc/config.fth
+
+: headerless ;  : headers  ;  : headerless0 ;
+
+' (quit) to quit
+
+create debug-startup
+: \Tags [compile] \  ; immediate
+: \NotTags [compile] \  ; immediate
+
+fload ${BP}/cpu/x86/pc/segments.fth     \ Segment selectors (address spaces)
+
+: RAMbase  ( -- adr )  fw-virt-base  ;
+: RAMtop  ( -- adr )  RAMbase /fw-ram +  ;
+
+h# 00.0000 value    dp-loc	\ Set in patchboot
+: stacktop    ( -- adr )  RAMtop  ;
+: dict-limit  ( -- adr )  RAMtop  h# 06.0000 -  ;
+
+\ XXX What we should do is pass in the top address in SP, and have
+\ boot.fth allocate the user area by subtracting user-size.  But
+\ we need some way of finding it again for exception re-entry.
+\ prom-main-task is used in arch/pc/boot.fth .  The constant
+\ value is wired into the assembly code
+stacktop  user-size - constant prom-main-task	\ user area for main task
+
+0 value load-limit	\ Top address of area at load-base
+' 2drop to sync-cache
+
+def-load-base ' load-base set-config-int-default
+
+true ' fcode-debug? set-config-int-default
+\ false  ' auto-boot?    set-config-int-default
+
+[ifdef] serial-console
+" com1" ' output-device set-config-string-default
+" com1" ' input-device set-config-string-default
+[then]
+
+\ XXX should be loaded by basefw.bth
+fload ${BP}/cpu/x86/initpgm.fth		\ Basic boot handler
+fload ${BP}/cpu/x86/msr.fth	        \ Access to machine specific registers
+
+: (cpu-arch  ( -- adr len )
+   " architecture" ['] root-node  get-package-property  drop
+   get-encoded-string
+;
+' (cpu-arch to cpu-arch
+
+h# 1000 to pagesize
+d# 12   to pageshift
+
+dev /
+1 encode-int  " #address-cells"  property
+" OLPC" encode-string  " architecture" property
+device-end
+
+\ Memory management services
+[ifdef] virtual-mode
+fload ${BP}/ofw/core/clntmem1.fth	\ client services for memory
+[else]
+fload ${BP}/ofw/core/clntphy1.fth	\ client services for memory
+[then]
+fload ${BP}/ofw/core/memlist.fth	\ Resource list common routines
+fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
+fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
+fload ${BP}/ofw/core/availpm.fth	\ Available memory list
+
+fload ${BP}/cpu/x86/pc/rootnode.fth	\ Platform-specific root node changes
+dev /
+alias lmove lmove			\ Needed by CS5536 NAND FLASH driver
+dend
+
+fload ${BP}/cpu/x86/pc/olpc/gpio.fth	\ Rudimentary GPIO driver
+fload ${BP}/cpu/x86/pc/olpc/probemem.fth	\ Memory probing
+
+[ifdef] virtual-mode
+fload ${BP}/cpu/x86/loadvmem.fth	\ /mmu node
+
+stand-init: MMU
+   " /mmu" open-dev mmu-node !
+;
+fload ${BP}/cpu/x86/pc/initdict.fth	\ Dynamic dictionary allocation
+[then]
+
+\ XXX should be elsewhere
+dev /client-services
+: chain  ( len args entry size virt -- )
+   release                                       ( len args entry )
+   h# 8000 alloc-mem h# 8000 +  (init-program)   ( len args )
+   to %ebx  to %ecx
+   go
+;
+device-end
+
+fload ${BP}/cpu/x86/crc32.fth		\ Assembly language Zip CRC calculation
+fload ${BP}/forth/lib/crc32.fth		\ High-level portion of CRC calculation
+
+[ifdef] resident-packages
+
+[ifdef]  use-ufs
+support-package: ufs-file-system
+   fload ${BP}/ofw/fs/ufs/ufs.fth		\ Unix file system
+end-support-package
+[then]
+
+[ifdef] linux-support
+support-package: ext2-file-system
+   fload ${BP}/ofw/fs/ext2fs/ext2fs.fth	\ Linux file system
+end-support-package
+[then]
+
+[ifdef] jffs2-support
+support-package: jffs2-file-system
+   fload ${BP}/ofw/fs/jffs2/jffs2.fth	\ Journaling flash file system 2
+end-support-package
+[then]
+
+support-package: zip-file-system
+   fload ${BP}/ofw/fs/zipfs.fth		\ Zip file system
+end-support-package
+
+support-package: dropin-file-system
+   fload ${BP}/ofw/fs/dropinfs.fth	\ Dropin file system
+end-support-package
+[then]
+
+\ Load file format handlers
+
+: call32 ;
+
+fload ${BP}/ofw/core/allocsym.fth    \ Allocate memory for symbol table
+fload ${BP}/ofw/core/symcif.fth
+fload ${BP}/ofw/core/symdebug.fth
+: release-load-area  ( boundary-adr -- )  drop  ;
+
+fload ${BP}/cpu/x86/pc/fixkbd.fth		\ Switch keyboard scan codes
+
+[ifdef] use-elf
+fload ${BP}/ofw/elf/elf.fth
+fload ${BP}/ofw/elf/elfdebug.fth
+[ifdef] virtual-mode
+: (elf-map-in) ( va size -- )  swap 1 -rot  allocate-aligned  drop  ;
+' (elf-map-in) is elf-map-in
+[else]
+' 2drop is elf-map-in
+[then]
+[then]
+
+\ Reboot and re-entry code
+fload ${BP}/cpu/x86/pc/reboot.fth	\ Restart the client program
+fload ${BP}/cpu/x86/pc/reenter.fth	\ Various entries into Forth
+
+headerless
+[ifdef] virtual-mode
+: (initial-heap)  ( -- adr len )  sp0 @ ps-size -  dict-limit  tuck -  ;
+[else]
+: (initial-heap)  ( -- adr len )  RAMtop heap-size  ;
+[then]
+' (initial-heap) is initial-heap
+headers
+
+" /openprom" find-device
+   " FirmWorks,3.0" encode-string " model" property
+device-end
+
+[ifdef] virtual-mode
+fload ${BP}/cpu/x86/pc/mmusetup.fth	\ Initial values for MMU lists
+[then]
+
+fload ${BP}/cpu/x86/pc/olpc/devices.fth
+
+[ifdef] rom-loaded
+fload ${BP}/cpu/x86/pc/olpc/chipinit.fth
+[then]
+
+dev /cpu
+   d# 366,666,666 " clock-frequency" integer-property
+dend
+
+warning @ warning off
+: stand-init
+   stand-init
+   root-device
+      atest?  if  " A1" " OLPC A-test"  else
+         board-revision  case
+            0 of  " B2" " OLPC B2"  endof
+            1 of  " B3" " OLPC B3"  endof
+            7 of  " B1" " OLPC B1"  endof
+            ( default )  >r  " ??"  " OLPC ??"  r>
+         endcase
+      then
+      encode-string  " banner-name" property
+      model
+      8 ec-cmd  " ec-version" integer-property
+
+      " PQ2" h# fff0.0000 h# 1.0000 sindex  dup 0>=  if  ( offset )
+         h# fff0.0000 +  cscount                         ( name )
+      else
+         drop  " UNKNOWN"
+      then
+      " ec-name" string-property
+
+   dend
+;
+warning !
+
+fload ${BP}/cpu/x86/pc/olpc/micin.fth   \ Microphone input AC/DC coupling
+
+fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
+patch 3 6 get-countdown
+
+fload ${BP}/dev/scsi/probscsi.fth	\ probe-scsi and probe-scsi-all
+
+true ' local-mac-address? set-config-int-default
+[ifdef] resident-packages
+support-package: nfs
+   fload ${BP}/ofw/fs/nfs/loadpkg.fth
+end-support-package
+
+[then]
+devalias nfs net//obp-tftp:last//nfs
+
+fload ${BP}/cpu/x86/pc/boot.fth
+
+fload ${BP}/cpu/x86/pc/olpc/usb.fth
+
+false to stand-init-debug?
+\ true to stand-init-debug?
+
+hex
+: i-key-wait  ( ms -- pressed? )
+   cr ." Type 'i' to interrupt stand-init sequence" cr 
+   0  do
+      key?  if
+         key upc ascii I  =  if  true unloop exit  then
+      then
+      1 ms
+   loop
+   false
+;
+
+\ stand-init-debug?  [if]
+warning @  warning off 
+: init
+\ initial-heap add-memory
+   init
+
+   standalone?  if
+      disable-interrupts
+[ifdef] rom-loaded
+      d# 300
+      i-key-wait  if  ." Interacting" cr  hex interact  then
+      setup
+[else]
+      d# 3000
+      i-key-wait  if  ." Interacting" cr  hex interact  then
+[then]
+   then
+;
+\ warning !
+[then]
+
+: (.firmware)  ( -- )
+   ." Open Firmware  "  .built  cr
+   ." Copyright 1999 FirmWorks  All Rights Reserved" cr
+;
+' (.firmware) to .firmware
+
+: probe-all  ( -- )
+   probe-pci
+   probe-usb
+;
+
+[ifdef] linux-support
+fload ${BP}/cpu/x86/pc/olpc/linux.fth
+[then]
+
+fload ${BP}/ofw/gui/bmptools.fth
+fload ${BP}/dev/null.fth
+fload ${BP}/ofw/core/bailout.fth
+
+[ifdef] olpc
+\ GUI
+false value gui-safeboot?
+
+\ FIXME need to implement user-ok to lockout ok prompt
+: 2tuck  ( d1 d2 -- d2 d1 d2 )  2swap 2over  ;
+false value fru-test?
+: user-ok  "ok"  ;  \ This is supposed to check for authorization
+true value user-mode?
+
+fload ${BP}/cpu/x86/pc/olpc/banner.fth
+
+[ifdef] sd-diags
+: loadsd  " rom:sd" $boot  ;
+[then]
+[then]
+
+fload ${BP}/ofw/gui/loadmenu.fth
+\ fload ${BP}/ofw/gui/insticon.fth
+
+[ifdef] olpc
+fload ${BP}/cpu/x86/pc/olpc/gui.fth
+fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
+fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
+[then]
+
+\ Eliminate 4 second delay in install console for the case where
+\ there is no keyboard.  The delay is unnecessary because the screen
+\ does not go blank when the device is closed.
+patch drop ms install-console
+
+: boot-configure  ( -- )
+   cr ." Trying startup script disk:\boot\olpc-boot.fth" cr
+
+   " fload disk:\boot\olpc-boot.fth" ['] eval catch  if
+      2drop
+   else
+      show-disk exit
+   then
+
+   " fload disk:\boot\olpcboot.fth" ['] eval catch  if
+      2drop
+   else
+      show-disk exit
+   then
+
+   " disk:\boot\initrd.img" 2dup  open-dev  ?dup  if  ( name$ ih )
+      close-dev  " ramdisk" $setenv
+   else
+      2drop
+   then
+   
+   " disk:\boot\vmlinuz" 2dup  open-dev  ?dup  if  ( name$ ih )
+      close-dev  " boot-device" $setenv
+      show-disk
+      exit
+   then
+   2drop
+
+   cr ." Trying startup script nand:\boot\olpc-boot.fth" cr
+   " fload nand:\boot\olpc-boot.fth" ['] eval catch  if
+      2drop
+   else
+      show-nand exit
+   then
+
+    " net" " boot-device" $setenv
+;
+
+: config&boot  ( -- )
+   ['] boot catch drop  \ Try the normal boot path first
+   boot-configure auto-boot?  if  boot  then
+;
+[ifndef] rom-loaded
+" config&boot" ' boot-command set-config-string-default
+[then]
+
+: dcon-reset-all  ( -- )
+   " screen"  " dcon-off" ['] execute-device-method  catch  if
+      2drop 2drop
+   then
+
+[ifdef] rom-loaded
+   \ This really should be in a cache line by itself
+   \ with a bunch of prefetched nops after, so we don't
+   \ do memory prefetches during shutdown
+   1. h# 5140.0017 wrmsr  \ DIVIL_SOFT_RESET MSR, 5536 page 367
+   begin again
+[else]
+   (reset-all)
+[then]
+;
+' dcon-reset-all to reset-all
+
+alias reboot bye
+
+[ifdef] use-watch-all
+fload ${BP}/cpu/x86/pc/watchall.fth
+[then]
+
+alias crcgen drop  ( crc byte -- crc' )
+fload ${BP}/cpu/x86/pc/saveabs.fth
+
+fload ${BP}/forth/lib/selstr.fth
+
+fload ${BP}/ofw/inet/loadtcp.fth
+
+support-package: http
+   fload ${BP}/ofw/inet/http.fth	\ HTTP client
+end-support-package
+
+[ifdef] use-ppp
+fload ${BP}/ofw/ppp/loadppp.fth
+[then]
+
+[ifdef] pc-linux
+" a:\initrd.imz" d# 128 config-string ramdisk
+" root=/dev/ram0 mount_ramdisk=1"  ' boot-file        set-config-string-default
+" a:\vmlinuz"                      ' boot-device      set-config-string-default
+true                               ' client-symbols?  set-config-int-default
+\ Also try " console=/dev/ttyS0,9600 console=/dev/tty0" in boot-file
+[then]
+
+" dhcp" ' ip-address  set-config-string-default
+
+\ fload ${BP}/cpu/x86/pc/report.fth
+fload ${BP}/ofw/core/dualconsole.fth
+
+: user-switch?  ( -- flag )
+   atest?  if
+      h# fc3f ec@ h# ff <>
+   else
+      \ The EC can tristate the KEY_OUT lines behind our back, so we
+      \ try several times to observe a key press.
+      d# 10 0  do
+         h# ff h# fc12 ec!      \ Output enable the KEY_OUT matrix lines
+         h# fc34 ec@ h# 70 and
+         h# 70 <>  if  true unloop exit  then
+      loop
+      false
+   then
+;
+: fast-boot?  ( -- flag )
+[ifdef] rom-loaded
+   user-switch?
+[else]
+   false
+[then]
+;
+
+: interpreter-init  ( -- )
+   hex
+   warning on
+   only forth also definitions
+
+   install-alarm
+
+   page-mode
+   #line off
+
+\   .built cr
+;
+
+: console-start  ( -- )
+[ifdef] rom-loaded
+   video-map cr
+[then]
+   " screen" open-dev  ?dup  if
+      set-stdout
+\       logo-banner drop
+\       close-dev
+\       0 stdout !
+   then
+
+   install-dual-console
+   ?gui-banner
+   " probe-" do-drop-in
+\   ." nvramrc" cr
+\   use-nvramrc?  if  nvramrc safe-evaluate  then
+;
+: debug-interact  ( -- )
+   early-interact?  if
+      " Interrupting startup sequence prior to probing" .because
+      ." Type 'resume'  to resume normal startup sequence." cr
+      \ fallback-device io console-io
+      ( help-msg ) interact
+   then
+;
+
+: optional-startup  ( -- )
+   probe-usb
+   ?usb-keyboard
+;
+
+: startup  ( -- )
+   standalone?  0=  if  exit  then
+
+\   ?bailout
+
+   no-page
+
+   console-start
+   fast-boot?   if
+      probe-pci
+      ['] false to interrupt-auto-boot?
+   else
+      ." Interactive boot" cr
+      ." Keyboard probe" cr
+      ?bailout
+      " keyboard" open-dev  ?dup  if  set-stdin  then
+      probe-pci
+      ." USB probe" cr
+      optional-startup
+   then
+
+   interpreter-init
+   auto-boot
+
+[ifdef] linux-support
+   ." See "
+   blue-letters ." http://firmworks.com/QuickRef.html" black-letters
+   cr cr
+[then]
+
+   quit
+;
+
+[ifdef] olpc
+fload ${BP}/cpu/x86/pc/olpc/copynand.fth
+[then]
+
+[ifndef] olpc
+\ This sometimes helps with VGA/EGA boards, enabling I/O space access
+\ to the CRT registers that control the hardware cursor.
+: cursor  ( -- )
+   " begin-select /display  3 my-space 4 + config-w! unselect" evaluate
+;
+[then]
+
+\ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
+also hidden also keys-forth definitions
+warning @  warning off
+: esc-o  key lastchar !  [""] esc-[ do-command  ;
+warning !
+previous previous definitions
+
+.( --- Saving fw.dic ...)
+"" fw.dic save-forth cr
+
+\ patch foo decimal cold
+
+[ifndef] notdef
+.( --- Saving fw.img ...)
+" fw.img"  RAMbase save-abs-rom cr
+[then]
+
+[ifdef] notdef-com32
+.( Saving fw.c32 ...)
+fw-pa h# 10.1000 <> [if]
+.( fw-pa must be 10.1000 for COM32 load format) cr
+[else]
+" fw.c32"  RAMbase save-abs-rom cr
+[then]
+[then]
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2006 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

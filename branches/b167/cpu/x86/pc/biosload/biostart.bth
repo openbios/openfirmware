@@ -1,0 +1,281 @@
+\ See license at end of file
+purpose: Startup code for loading the firmware from DOS as a ".EXE" file.
+
+command: &builder &this
+build-now
+
+\ Appears to be loaded with CS=0f7d, i.e. f7d0
+
+fload ${BP}/cpu/x86/asmtools.fth
+
+create debug-startup
+
+: le-w,  here  /w allot  le-w!  ;
+: le-l,  here  /l allot  le-l!  ;
+
+hex
+
+fload ${BP}/cpu/x86/pc/biosload/addrs.fth
+
+h# 0.0400 constant gdt-pa
+h# 0.1000 constant stacktop
+
+: >seg  ( adr -- seg-val )  h# f.0000 and  d# 4 rshift  ;
+
+\ Assembler macros for startup diagnostics
+
+\ write a byte to an ISA port
+: risa-c!   ( n a - )
+   "  # dx mov   # al mov   al dx out " evaluate
+;
+
+: v-report  ( char -- )
+   " # al mov  al h# b8000 #) mov  h# 1d # al mov  al h# b8001 #) mov" evaluate
+;
+: vr-report  ( char -- )  \ Real mode version
+   " ds push  h# b000 # push ds pop" evaluate   
+   " # al mov  al h# 8000 #) mov   h# 1d # al mov  al h# 8001 #) mov"  evaluate
+   " ds pop" evaluate
+;
+
+fload ${BP}/cpu/x86/pc/report.fth			\ Startup reports
+
+start-assembling
+
+real-mode
+
+label my-entry
+   e9 c,  0 le-w,  \ Branch instruction; patch later
+end-code
+
+h# 20 pad-to
+
+\ This code begins execution in real mode with CS set to the beginning
+\ of the load image.
+
+\ The startup code must establish a Global Descriptor Table containing
+\ suitable mappings, and then enter protected mode.
+
+\ Real Mode Startup
+
+label gdt-template	\ Will be copied to gdt-pa
+  0    le-w,  0         le-l,	    0 le-w,  \  0 Mandatory null descriptor
+  0    le-w,  0         le-l,	    0 le-w,  \ * Another null descriptor
+  ffff le-w,  9b.000000 le-l,  00.c.f le-w,  \ 10 Code, linear=physical, 4GB
+  ffff le-w,  93.000000 le-l,  00.c.f le-w,  \ 18 Data, linear=physical, 4GB
+end-code
+label gdt-end  end-code
+
+label gdt-ptr	\ GDT limit + address
+  1f le-w,  gdt-pa le-l,	\ # slots (3 * 8 - 1) ,  starting address
+end-code
+
+h# 100 pad-to  \ space for stack 
+
+[ifdef] debug-startup
+fload ${BP}/cpu/x86/pc/rdot.fth		\ Real-mode numeric output
+fload ${BP}/cpu/x86/pc/dot.fth		\ Numeric output
+[then]
+
+
+\ ------->>>>> Startup code.  DOS sends us here.
+
+label dos-rm-start
+real-mode
+   c 3f2  risa-c!	\ Turn off floppy motor
+
+ascii 0 vr-report
+
+\ Ask the BIOS to tell us the memory size.
+\ Move code here because the INT calls reenable interrupts.
+
+      op: ax ax xor  ax push  ds pop    \ Zero DS so we can write low memory
+      op: bx bx xor
+
+      \ E801 is not the last word in memory reporting.  There is a new ACPI
+      \ call "E820" that returns a list of possibly-disjoint memory ranges.
+      \ But E801 will have to do for now.
+      h# e801 #  ax  mov  h# 15 int     \ BIOS call to get memory size
+      no-carry?  if                     \ Success
+        op:  h# ffff #  bx  and         \ clear sign extend
+        op:  d# 16   #  bx  shl         \ Convert from 64K chunks to bytes
+        op:  h# ffff #  ax  and         \ clear sign extend
+        op:  d# 10   #  ax  shl         \ Convert from 1K chunks to bytes
+        op:  bx         ax  add         \ Now we have the total
+      else                              \ New call failed; use old one
+         h# 88 # ah mov  h# 15 int      \ BIOS call to get extended memory size
+         op: d# 10   #  ax  shl         \ Convert from 1K chunks to bytes
+      then
+      op: h# 10.0000 #  ax  add         \ Assume 1M of base memory
+      op: ax  mem-info-pa 4 + #)  mov   \ Store it where resetend.fth expects it
+
+ascii 1 vr-report
+
+\ Take over from BIOS.  Must not rely on BIOS from now on.
+
+   cli cld		\ Turn off interrupts (does not affect NMI)
+
+ascii 2 vr-report
+
+   80  70  risa-c!	\ Disable NMI
+   71 # dx mov  dx al in
+
+ascii 3 vr-report
+
+\ SIOA: init for testing
+
+    1 3fc  risa-c!	\ DTR on
+   80 3fb  risa-c!	\ Enable divisor latch
+   01 3f8  risa-c!	\ Baud rate divisor low - 115200 baud
+    0 3f9  risa-c!	\ Baud rate divisor high - 115200 baud
+    3 3fb  risa-c!	\ 8 bits, no parity
+
+    2  92  risa-c!	\ enable A20 the easy way
+
+ascii 4 vr-report
+
+    \ Enable A20 the hard way, using the keyboard controller
+    begin		\ Wait until the 8042 is ready to accept a command
+       h# 64 #  al  in	\ Keyboard status register
+       h#  2 #  al  and	\ Input-buffer-full bit
+    0= until
+    h# d1 #  al  mov	\ Command byte
+    al  h# 64 #  out	\ Send command
+    begin		\ Wait until the 8042 is ready to accept a command
+       h# 64 #  al  in	\ Keyboard status register
+       h#  2 #  al  and	\ Input-buffer-full bit
+    0= until
+    h# 4b #  al  mov	\ Data byte (KBDCLK:40 AUXCLK:8 GateA20:2 Reset*:1)
+    al  h# 60 #  out	\ Send data
+
+ascii 5 vr-report
+
+carret report
+linefeed report
+ascii F report
+
+\ copy GDT template to a fixed place in memory (gdt-pa)
+
+      cs push  ds pop
+
+      gdt-template asm-base - #  si  mov	\ Source address
+
+      gdt-pa >seg # push  es pop		\ Destination segment
+      gdt-pa #  di  mov				\ Destination address
+
+      gdt-end gdt-template - #  cx  mov		\ Byte count
+
+      rep  byte movs
+
+      \ The following instruction uses the operation size override to
+      \ load a 32-bit pointer.
+      \ The address override is not used; the GDT limit/address data structure
+      \ above is reachable with a 16-bit address through the code segment.
+      
+      \ lgdte  cs:[gdt-ptr]   Setup GDT
+      op: cs:  0f c,  01 c,  16 c,  gdt-ptr asm-base - le-w,
+
+
+      \ Relocate the offset part of the code pointer in the next "far jmp"
+      \ instruction.
+      op: cx cx xor				\ Clear high 16 bits
+      cs cx mov					\ Code segment paragraph#
+      op: cx 4 # shl				\ Convert to address
+
+      \ The addresses in the following instructions will be patched later
+      \ to refer to the offset part of the immediate field of the next
+      \ "far jmp" instruction.
+
+      op: 0 #)  ax mov   here 2 - >r  \ Relocate; Address will be patched later
+      op: cx  ax  add
+      op: ax  0 #)  mov  here 2 - >r  \ Relocate; Address will be patched later
+
+\ XXX we may need to synchronize I and D caches here
+
+      op: cr0  bx  mov		\ Get existing CR0 value
+      1 #  bl  or		\ Set "protected mode" bit
+      op:  bx  cr0  mov		\ Enter protected mode
+
+      eb c,  0 c,		\ Flush prefetch queue
+
+\ The switch to protected mode does not occur until the far jmp has
+\ executed, but we need to compile the "far jmp" with a 32-bit offset,
+\ (because it uses op:), so we put the "protected-mode" (which is a
+\ misnomer; it should be "use32") here instead of after the "far jmp".
+protected-mode
+
+      \ Execute a far jump to following code to reload CS with a
+      \ protected mode selector.  The offset portion of the address
+      \ (here asm-base - 7 +) has been relocated by the code above.
+      op:  here asm-base - 7 +  10 #)  far jmp
+
+      \ The following 2 lines execute at compile time, patching the
+      \ address portions of earlier "mov" instructions so that they
+      \ refer to the offset portion of the immediate file of the
+      \ preceding "far jmp" instruction.
+      here asm-base -  6 -  r> le-w!
+      here asm-base -  6 -  r> le-w!
+
+      \ set segment registers
+      18 #  bx  mov		\ Data segment selector
+      bx    ds  mov		\ Set segment register
+      bx    es  mov		\ Set segment register
+      bx    fs  mov		\ Set segment register
+      bx    gs  mov		\ Set segment register
+
+      bx    ss  mov		\ Set segment register
+      stacktop #  sp  mov	\ Initialize the 32-bit stack pointer
+
+ascii 6 v-report
+ascii o report
+
+ascii r report
+
+      0 #  si mov  here 4 - >r	\ Get offset to following dropins
+      cx    si add		\ Absolute address of following dropins
+
+      dropin-base #  di  mov	\ Destination of copy
+      dropin-size #  cx  mov	\ Byte count
+      cld  rep byte movs
+
+ascii 7 v-report
+
+      dropin-base d# 32 + #  ax  mov	\ Final address of reset dropin
+      ax jmp			\ Jump to dropin land
+
+      here asm-base -  r> le-l!	\ Replace immediate field of previous instr.
+end-code
+
+dos-rm-start my-entry put-branch16
+
+end-assembling
+here asm-base -  constant /dos-image
+
+only forth also definitions  \ In case of unbalanced "label .. end-code" above
+
+writing biostart.img
+asm-base /dos-image ofd @ fputs
+ofd @ fclose
+\ LICENSE_BEGIN
+\ Copyright (c) 2006 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

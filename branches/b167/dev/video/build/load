@@ -1,0 +1,26 @@
+#! /bin/csh
+
+cat ../common/defer.fth
+
+cat ../dacs/tvp3025.fth
+cat ../dacs/tvp3026.fth
+cat ../dacs/ibm37rgb.fth
+cat ../dacs/att21498.fth
+cat ../dacs/s3.fth
+cat ../dacs/cirrus.fth
+cat ../dacs/trio.fth
+cat ../dacs/virge.fth
+cat ../dacs/brooktre.fth
+
+cat ../controlr/s3.fth
+cat ../controlr/mga.fth
+cat ../controlr/glint.fth
+cat ../controlr/viper.fth
+
+cat ../common/pci.fth
+cat ../common/graphics.fth
+cat ../common/init.fth
+cat ../common/display.fth
+
+echo ""
+

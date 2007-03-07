@@ -1,0 +1,80 @@
+purpose: Construct the Open Firmware module collection
+
+command: &builder &this
+in: ${BP}/cpu/x86/pc/olpc/build/elfhdr.di
+in: ${BP}/cpu/x86/pc/olpc/build/reset.di
+in: ${BP}/cpu/x86/pc/olpc/build/start.di
+in: ${BP}/cpu/x86/pc/olpc/build/paging.di
+in: ${BP}/cpu/x86/pc/olpc/build/fw.dic
+in: ${BP}/dev/geode/nandflash/build/nandflash.fc
+in: ${BP}/dev/mmc/sdhci/build/sdhci.fc
+in: ${BP}/dev/mmc/sdhci/build/sdmmc.fc
+in: ${BP}/dev/geode/ac97/build/ac97.fc
+in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
+in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
+in: ${BP}/dev/usb2/device/hub/build/hub.fc
+in: ${BP}/dev/usb2/device/net/build/usbnet.fc
+in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
+in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
+in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
+in: ${BP}/dev/pci/build/pcibridg.fc
+in: ${BP}/dev/olpc/cafenand/build/cafenand.fc
+
+build-now
+
+fload ${BP}/cpu/x86/pc/olpc/config.fth
+
+\ Always re-create the builton.fth file when we make a new rom.img
+fload ${BP}/cpu/x86/pc/builton.bth
+
+hex
+
+[ifdef] bzimage-loaded
+.( --- Saving as ofw.bzi - Linux kernel format) cr
+fload ${BP}/cpu/x86/pc/bzhdr.fth
+   writing ofw.bzi
+   bz-hdr /bz-hdr  0  " bz-header"  write-dropin
+[else]
+.( --- Saving as ofw.elf - LinuxBIOS payload format) cr
+writing ofw.elf
+   " elfhdr.di"             $add-file
+[then]
+
+   " reset.di"              $add-file
+   " start.di"              $add-file
+   " paging.di"             $add-file
+   " ${BP}/cpu/x86/build/inflate.bin"        " inflate"         $add-dropin
+   " fw.img"   " firmware"  $add-deflated-dropin
+   " ${BP}/dev/pci/build/pcibridg.fc"   " class060400"     $add-deflated-dropin
+
+   " ${BP}/dev/usb2/hcd/ohci/build/ohci.fc"	" class0c0310"     $add-deflated-dropin
+   " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"     $add-deflated-dropin
+   " ${BP}/dev/usb2/device/hub/build/hub.fc"     " usb,class9"      $add-dropin
+   " ${BP}/dev/usb2/device/net/build/usbnet.fc"       " usbnet"     $add-deflated-dropin
+   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"  " usb,class3" $add-dropin
+   " ${BP}/dev/usb2/device/serial/build/usbserial.fc" " usbserial"  $add-deflated-dropin
+   " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
+
+   \ XXX the PCI device IDs should be different for the different CaFe functions
+   " ${BP}/dev/olpc/cafenand/build/cafenand.fc" " class050101"   $add-deflated-dropin
+
+   " ${BP}/dev/geode/nandflash/build/nandflash.fc" " nand5536"   $add-deflated-dropin
+   " ${BP}/dev/geode/ac97/build/ac97.fc"       " pci1022,2093"   $add-deflated-dropin
+
+   " builton.fth"                       " probe-"          $add-dropin
+   " ${BP}/ofw/fcode/memtest.fth"  " memtest.fth"          $add-deflated-dropin
+
+   " ${BP}/dev/mmc/sdhci/build/sdhci.fc"  " pci11ab,4101"   $add-dropin
+   " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"  " sdmmc"          $add-dropin
+
+\   " ${BP}/ofw/linux/logos.bmp"          " oslogo.bmp"     $add-deflated-dropin
+\   " ${BP}/ofw/linux/logom16e.bmp"       " error.bmp"      $add-deflated-dropin
+\   " ${BP}/ofw/linux/logom16c.bmp"       " timeout.bmp"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/olpclogo.565" " olpc.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " nandflash.565" $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/network.565"  " network.565"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/usbkey.565"   " disk.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wireless.565"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/xo.565"       " xo.565"        $add-deflated-dropin
+
+ofd @ fclose
