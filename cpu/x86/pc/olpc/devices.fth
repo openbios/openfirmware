@@ -232,6 +232,12 @@ warning @ warning off
 : stand-init
    stand-init
    kb3920? to atest?
+
+   \ Hit the reset on the Marvell wireless.  It sometimes (infrequently)
+   \ fails to enumerate after a power-cycle, and reset seems to fix it.
+   \ We need > 85 ms between wlan-reset and probe-usb, but console-start
+   \ takes about 200 mS, so we are okay.
+   atest? 0=  if  wlan-reset  then
 ;
 warning !
 
