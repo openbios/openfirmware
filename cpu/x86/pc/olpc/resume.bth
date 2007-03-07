@@ -130,11 +130,31 @@ here suspend-entry put-branch
    h# 61 # al in  al stos    \ Read back register 43 directly
    h# 5140.0037 rmsr  al stos  \ PIT Count Enable MSR
 
-\   suspended #  resume-signature #)  mov  \ Set suspended marker
+   \ SMBUS controller
+   h# 18b3 # dx mov  \ SMBUS base port
+           dx al in   al stos   \ Reg 3
+   dx inc  dx al in   al stos   \ Reg 4
+   dx inc  dx al in   al bl mov  h# fe # al and  al stos   \ Reg 5 w/o enable bit
+   dx inc  dx al in   al stos   \ Reg 6
+           bl al mov  al stos   \ Reg 5 with enable bit
+
+   \ MFGPTs 0-5.  MFGPT 6 and 7 are in the standby domain, live during suspend
+   h# 1800 # dx mov  \ MFGPT base port
+   h# 18 # cx mov    \ Save registers up to h# 30.
+   begin
+      op: dx ax in
+      op: ax stos
+      dx inc  dx inc
+   loopa
+
+   \ AC97
+   \ Codec
+   \ USB
 
    h# 4000.0e00 h# 1410 port-wl   \ Assert SLP_CLK_EN# 1 mS after SUSPA#
-   h# 4000.4601 h# 1414 port-wl   \ Release SUSP# 5 mS after wakeup
-   h# 4000.00a0 h# 1434 port-wl   \ Turn off WORK_AUX (== MAIN_ON) after 5 mS
+   h# 4000.460a h# 1414 port-wl   \ Release SUSP# 5 mS after wakeup
+   h# 4000.00a0 h# 1434 port-wl   \ Turn on WORK_AUX (== MAIN_ON) after 5 mS
+   h# 4000.0001 h# 1438 port-wl   \ RESET_OUT turn on delay
    h# 0002.ffff h# 1454 port-wl   \ Clear wakeup type bits
 
    \ This is actually two 16-bit registers, but 16-bit writes don't work
@@ -159,8 +179,6 @@ here resume-entry put-branch
 \   Using physical addresses
 
   char < 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
-
-\   0 #  resume-signature #) mov    \ Clear suspended marker
 
    resume-data #  bp  mov
 
@@ -252,14 +270,36 @@ here resume-entry put-branch
    al lods  al h# 61 # out
    al lods  h# 5140.0037 wmsr   \ PIT Count Enable MSR - high bits irrelevant
 
-   \ 5536 NAND FLASH ...  ???
+   \ SMBUS controller
+   h# 18b3 # dx mov  \ SMBUS base port
+   al lods          al dx out  \ Reg 3
+   al lods  dx inc  al dx out  \ Reg 4
+   al lods  dx inc  al dx out  \ Reg 5 without the enable bit
+   al lods  dx inc  al dx out  \ Reg 6
+   al lods  dx dec  al dx out  \ Reg 5 with the enable bit
+
+   \ MFGPTs 0-5.  MFGPT 6 and 7 are in the standby domain, live during suspend
+   h# 1800 # dx mov  \ MFGPT base port
+   h# 18 # cx mov
+   begin
+      op: ax lods
+      op: ax dx out
+      dx inc  dx inc
+   loopa
+
+   \ AC97
+   \ Codec
+   \ USB
+
    \ h# 8000 h# 4000.0000 or h# 1440 pl!  \ Fail-safe delay
 
+1 [if]
    \ Assign CaFe base addresses
    h# fe00c000 h# 6010 config-wl  \ NAND FLASH base address
    h# fe010000 h# 6110 config-wl  \ SD base address
    h# fe014000 h# 6210 config-wl  \ Camera controller base address
 \ XXX need to set CaFe timing too.
+[then]
 
    \ Display stuff
    h# 4758 #  h# fe00.4000 #)  mov  \ Unlock display controller registers

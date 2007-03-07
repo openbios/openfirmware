@@ -53,7 +53,7 @@ h#   60 constant dconstat
 : dcon-load  ( -- )  dconload >set 0 gpio!  ;
 : dcon-unload  ( -- )  dconload >clr 0 gpio!  ;
 : dcon-blnk ( -- flag )  gpio-data@  dconblnk and 0<>  ;
-: dcon-stat ( -- n )  gpio-data@  d# 5 rshift  3 and  ;
+\ : dcon-stat ( -- n )  gpio-data@  d# 5 rshift  7 and  ;
 : event-counter7@  ( -- )  h# dc gpio@  ;
 
 \ DCONSTAT values:  0 SCANINT  1 SCANINT_DCON  2 DISPLAYLOAD  3 MISSED
@@ -74,12 +74,13 @@ d# 905 value resumeline  \ Configurable; should be set from args
    ." Wait for VGA ready timed out" cr
 ;
 
-\ Or wait for ec7 to change value
 : wait-dcon-mode  ( -- )
-   d# 500 0  do
-      dcon-stat  2 =  if  unloop exit  then
-      1 ms
-   loop
+   d# 100 ms-factor *  tsc@ drop +  ( end-time )
+   begin                            ( end-time )
+      gpio-data@ h# e0 and  h# c0 =  if  drop exit  then  \ DCONIRQ=1 and DCONSTAT=10
+      dup tsc@ drop - 0<            ( end-time reached? )
+   until                            ( end-time )
+   drop
    ." Timeout entering DCON mode" cr
 ;
 
@@ -95,7 +96,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
 \      display-on
    else
       dcon-unload  \ Put the DCON in self-refresh mode
-      wait-dcon-mode
+      lock[ wait-dcon-mode ]unlock
 \      display-off
    then
 ;

@@ -380,6 +380,22 @@ patch drop ms install-console
 " config&boot" ' boot-command set-config-string-default
 [then]
 
+\ XXX wireless test hack
+: check-wireless
+   wlan-reset  d# 100 ms
+   probe-usb2
+   " /usb@f,5/device@3,0" locate-device  if   \ No wireless device
+      drop
+      cr cr  red-letters  ." !!! No WLAN !!!"  black-letters  cr cr
+   else
+      cr cr green-letters  ." Wireless found"  black-letters  cr cr
+      d# 1000 ms
+      power-off
+   then
+;
+\ " check-wireless" ' boot-command set-config-string-default
+
+
 : dcon-reset-all  ( -- )
    " screen"  " dcon-off" ['] execute-device-method  catch  if
       2drop 2drop
@@ -412,6 +428,11 @@ fload ${BP}/ofw/inet/loadtcp.fth
 
 support-package: http
    fload ${BP}/ofw/inet/http.fth	\ HTTP client
+end-support-package
+
+fload ${BP}/ofw/wifi/wifi-cfg.fth
+support-package: supplicant
+fload ${BP}/ofw/wifi/loadpkg.fth
 end-support-package
 
 [ifdef] use-ppp
@@ -515,8 +536,9 @@ stand-init:  Suspend/resume
       /msr-init resume-data h# 34 + !
    then
 ;
+
 : suspend
-   0 " set-source" stdout @ $call-method  \ Freeze display
+  " video-save" stdout @ $call-method  \ Freeze display
 
    \ Enable wakeup from power button, also clearing
    \ any status bits in the low half of the register.
@@ -524,7 +546,7 @@ stand-init:  Suspend/resume
 
    h# f0000 call
 
-\   1 " set-source" stdout @ $call-method  \ Unfreeze display
+   " video-restore" stdout @ $call-method  \ Unfreeze display
 ;
 alias s suspend
 
@@ -557,11 +579,8 @@ alias s suspend
       auto-boot
    then
 
-[ifdef] linux-support
-   ." See "
-   blue-letters ." http://firmworks.com/QuickRef.html" black-letters
+   blue-letters ." Type 'help' for more information." black-letters
    cr cr
-[then]
 
    quit
 ;

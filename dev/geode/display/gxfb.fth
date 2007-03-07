@@ -267,6 +267,102 @@ true value hsync-low?
     lock
 ;
 
+h# 300 /n* buffer: video-state
+
+: l!+  ( adr l -- adr' )  over l!  la1+  ;
+: l@+  ( adr -- adr' l )  dup la1+  swap l@  ;
+
+: video-save
+   0 set-source  \ Freeze image
+   video-state
+   h# 10 dc@ l!+
+   h# 14 dc@ l!+
+   h# 18 dc@ l!+
+   h# 1c dc@ l!+
+
+   h# 20 dc@ l!+
+   h# 24 dc@ l!+
+   h# 28 dc@ l!+
+   h# 30 dc@ l!+
+   h# 34 dc@ l!+
+   h# 38 dc@ l!+
+   h# 40 dc@ l!+
+   h# 44 dc@ l!+
+   h# 48 dc@ l!+
+   h# 50 dc@ l!+
+   h# 54 dc@ l!+
+   h# 58 dc@ l!+
+   h# 60 dc@ l!+
+   h# 64 dc@ l!+
+   h# 68 dc@ l!+
+   0 h# 70 dc!  h# 100 0 do  h# 74 dc@ l!+  loop
+   h# 80 dc@ l!+
+   h# 84 dc@ l!+
+   h#  8 dc@ l!+
+   h#  4 dc@ l!+
+
+   h# 400 vp@ l!+
+   h# 408 vp@ l!+
+   h# 418 vp@ l!+
+   h#   8 vp@ l!+
+   0 h# 38 vp!  h# 100 0  do  h# 40 vp@  l!+  loop  \ Gamma
+   h# 410 vp@ l!+
+
+\   h# 3c 0  do  i gp@ l!+  4 +loop
+\   h# 4c gp@ l!+
+
+   drop
+   \ video-state - /l / . cr
+;
+
+: video-restore
+   h# 4758 0 dc!  \ Unlock
+
+   video-state
+   l@+ h# 10 dc!
+   l@+ h# 14 dc!
+   l@+ h# 18 dc!
+   l@+ h# 1c dc!
+
+   l@+ h# 20 dc!
+   l@+ h# 24 dc!
+   l@+ h# 28 dc!
+   l@+ h# 30 dc!
+   l@+ h# 34 dc!
+   l@+ h# 38 dc!
+   l@+ h# 40 dc!
+   l@+ h# 44 dc!
+   l@+ h# 48 dc!
+   l@+ h# 50 dc!
+   l@+ h# 54 dc!
+   l@+ h# 58 dc!
+   l@+ h# 60 dc!
+   l@+ h# 64 dc!
+   l@+ h# 68 dc!
+   0 h# 70 dc!  h# 100 0 do  l@+ h# 74 dc!  loop
+   l@+ h# 80 dc!
+   l@+ h# 84 dc!
+   l@+ h#  8 dc!
+   l@+ h#  4 dc!
+
+   0 h# 50 vp!  \ Power on for DACs, enable gamma correction 
+   l@+ h# 400 vp!
+   l@+ h# 408 vp!
+   l@+ h# 418 vp!
+   l@+ h#   8 vp!
+   0 h# 38 vp!  h# 100 0  do  l@+ h# 40 vp!  loop  \ Gamma
+   l@+ h# 410 vp!
+
+\   h# 3c 0  do  l@+ i gp!  4 +loop
+\   l@+ h# 4c gp! 
+
+   0 0 dc!  \ Lock
+   drop
+\   video-state - /l / . cr
+   1 set-source  \ Unfreeze image
+;
+
+
 \ fload ${BP}/dev/mediagx/video/bitblt.fth
 
 \ This is a horrible hack to get the DCON PLL started.

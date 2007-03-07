@@ -110,9 +110,9 @@ msr: 1000.0080 00000000.00000003.   \ Coherency
 msr: 1000.0083 00000000.0000ff00.   \ Disable SMIs
 msr: 1000.0084 00000000.0000ff00.   \ Disable Async errors
 
-msr: 1000.00e0 80000000.3c0ffff0.   \ IOD_BM DC
-msr: 1000.00e1 80000000.3d0ffff0.   \ IOD_BM DC (why 2)
-msr: 1000.00e3 00000000.f030ac18.   \ IOD_SC
+\ msr: 1000.00e0 80000000.3c0ffff0.   \ IOD_BM DC - VGA registers
+\ msr: 1000.00e1 80000000.3d0ffff0.   \ IOD_BM DC - VGA registers
+\ msr: 1000.00e3 00000000.f030ac18.   \ IOD_SC - Virtual Register - ac1c-ac1f
 msr: 1000.2002 0000001f.0000001f.   \ Disables SMIs
 msr: 1000.2004 00000000.00000005.   \ Clock gating
 
@@ -133,8 +133,8 @@ msr: 4000.002a 200000fd.7fffd000.   \ frame buffer - fd00.0000 .. fd7f.ffff
 msr: 4000.0080 00000000.00000001.   \ Route coherency snoops from GLIU1 to GLIU0
 msr: 4000.0083 00000000.0000ff00.   \ Disable SMIs
 
-msr: 4000.00e0 20000000.3c0fffe0.   \ IOD_BM DC
-msr: 4000.00e3 60000000.033000f0.   \ CPU - 0003.3000 don't know what this is
+\ msr: 4000.00e0 20000000.3c0fffe0.   \ IOD_BM DC - VGA
+msr: 4000.00e3 60000000.033000f0.   \ GLCP - Ports f0 and f1 incoming (clear FP IRQ13)
 msr: 4000.2002 0000001f.0000001f.   \ Disables SMIs
 msr: 4000.2004 00000000.00000005.   \ Clock gating
 
@@ -203,7 +203,7 @@ msr: 0000180d 00000000.00000000. \ Regions e0000..fffff
 \ The result of this is already included in clockgating above
 
 \ eng2900();
-msr: 00003003 0080a13d.00000000.  \ clear 800 bit in high word
+msr: 0000.3003 0080a13d.00000000. \ Disables sysenter/sysexit in CPUID3
 
 \ swapsif thing - don't do this stuff for use with FS2
 msr: 4c00.005f 00000000.00000000. \ Disable enable_actions in DIAGCTL while setting up GLCP
@@ -212,7 +212,7 @@ msr: 4c00.0016 00000000.00000002. \ Changing DBGCLKCTL register to GeodeLink
 msr: 1000.2005 00000000.80338041. \ Send mb0 port 3 requests to upper GeodeLink diag bits
 msr: 4c00.0045 5ad68000.00000000. \ set5m watches request ready from mb0 to CPU (snoop)
 msr: 4c00.0044 00000000.00000140. \ SET4M will be high when state is idle (XSTATE=11)
-msr: 4c00.004c 00002000.00000000. \ SET5n to watch for processor stalled state
+msr: 4c00.004d 00002000.00000000. \ SET5n to watch for processor stalled state
 \ Writing action number 13: XSTATE=0 to occur when CPU is snooped unless we're stalled
 msr: 4c00.0075 00000000.00400000.
 msr: 4c00.0073 00000000.00030000. \ Writing action number 11: inc XSTATE every GeodeLink clock unless we're idle
@@ -295,7 +295,7 @@ msr: 8000.2003 0000000f.0000000f.  \ Disable ERRs
 msr: 8000.2011 00000000.00000001.  \ VG SPARE - VG fetch state machine hardware fix off
 msr: 8000.2012 00000000.06060202.  \ VG DELAY
 
-msr: c000.2001 00000000.00040f80.  \ DF config.  - or in 8. for FP ???
+\ msr: c000.2001 00000000.00040f80.  \ DF config.  - Already set
 msr: c000.2004 00000000.00000155.  \ Clock gating
 
 \ msr: 4c00.0015 00000037.00000001.  \ MCP DOTPLL reset; unnecessary because of later video init
@@ -311,7 +311,7 @@ msr: 5000.2014 00000000.00ffffff.  \ Enables PCI access to low mem
 msr: 5100.0002 00000000.007f0000.  \ Disable SMIs
 msr: 5101.0002 0000000f.0000000f.  \ Disable SMIs
 
-msr: 5100.0010 44000020.00020013.  \ PCI timings
+\ msr: 5100.0010 44000020.00020013.  \ PCI timings - already set
 msr: 5100.0020 018b4001.018b0001.  \ Region configs
 msr: 5100.0021 010fc001.01000001.
 msr: 5100.0022 0183c001.01800001.
@@ -545,14 +545,7 @@ h# fe00.8000 value vp-base
 
 : acpi-init
 \ !!! 16-bit writes to these registers don't work - 5536 erratum
-\  0 h# 1840 pw!   \ default - some bits are preserved through standby
-\   0 h# 1842 pw!   \ Disable power button during early startup
    0 h# 1840 pl!   \ Disable power button during early startup
-\  0 h# 1848 pw!   \ default
-\  0 h# 184c pw!   \ This register does nothing
-\  0 h# 1858 pl!   \ default
-\  0 h# 185c pl!   \ default
-   \ h# 1400 is PM-base
 ;
 : setup  
    set-msrs

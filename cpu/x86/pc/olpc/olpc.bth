@@ -49,7 +49,7 @@ writing olpc.rom
    dropin-base rom-pa -  pad-file
 
    " romreset.di"           $add-file
-   " romstart.di"           $add-file
+\   " romstart.di"           $add-file
    " resume.di"             $add-file
 
    fload ${BP}/cpu/x86/pc/olpc/loaddropins.fth
