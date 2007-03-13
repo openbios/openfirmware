@@ -22,38 +22,55 @@ fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
 start-assembling                                \ Turn on the target assembler
 protected-mode
 
-label suspend-entry   \ h# f.0000
-   e9 c,  0 ,         \ To be patched later
-   nop nop nop        \ Pad to offset 8
-
-label resume-entry    \ h# f.0008
-   e9 c,  0 ,         \ To be patched later
-   nop nop nop        \ Pad to offset 10
-
 \ Suspend code - called as a subroutine, with return address on the stack
-here suspend-entry put-branch
+\ This assumes that the following code is in an area that is mapped virtual=physical
+\ The assumption is embodied by the fact that paging is turned off on the way
+\ down, while continuing to execute straight-line code.  Also, the BP register
+\ is used as a memory pointer before and after the paging turn-off.
+
+label suspend-entry   \ h# f.0000 - entry point at fixed location, called by OS
+   here h# 10 + #)  jmp   \ Jump to offset 10
+   8 pad-to
+
+label resume-entry    \ h# f.0008 - entry point at fixed location, called by resume
+   e9 c,  0 ,         \ To be patched later
+   nop                \ Aligns to even, for the benefit of the disassembler
+   h# 10 pad-to
+
+label suspend-save    \ h# f.0010
    pusha
    pushf
    ds push
    es push
    fs push
    gs push
+   ss push dx pop                 \ SS in dx
 
+   cr0 ax mov  ax bx mov          \ CR0 in BX
+   h# 80000000 invert #  ax  and  \ Paging enable off
+   ax cr0 mov
+
+   h# f0030 # ax mov  ax jmp      \ Jump to suspend-physical, disabling paging
+
+   h# 30 pad-to
+
+\ suspend-physical
+\ here suspend-entry put-branch
    resume-data #  bp  mov
 
    sp      0 [bp]  mov     \ SP part of SP:SS full pointer
-
-   ss push  ax pop         \ SS in ax
-   op: ax  4 [bp]  mov     \ SS part of SP:SS full pointer
+   op: dx  4 [bp]  mov     \ SS part of SP:SS full pointer
 
    h#  6 [bp]  str         \ Task register
    h#  8 [bp]  sldt        \ Local descriptor table register
    h#  a [bp]  sidt        \ Interrupt descriptor table register
    h# 10 [bp]  sgdt        \ Global descriptor table register
 
-   cr0 ax mov  ax  h# 18 [bp]  mov
+               bx  h# 18 [bp]  mov
    cr3 ax mov  ax  h# 1c [bp]  mov
    cr4 ax mov  ax  h# 20 [bp]  mov
+
+   \ Physical addresses from now on
 
    cld
    h# 38 [bp]  di  lea    \ Save area
@@ -91,9 +108,6 @@ here suspend-entry put-branch
    h# 10c0 # dx mov  dx ax in  ax stos  \ Pos edge enable
    h# 10c4 # dx mov  dx ax in  ax stos  \ Neg edge enable
    h# 10bc # dx mov  dx ax in  ax stos  \ High bank lock
-
-\ XXX need to do the shadow thing for the PIT too - 51400036
-\ XXX and the DMA controller
 
    h# 5140.0034 wmsr         \ Reset PIC shadow pointer (data is irrelevant)
    rdmsr  al stos            \ PIC1 ICW1
@@ -147,12 +161,37 @@ here suspend-entry put-branch
       dx inc  dx inc
    loopa
 
+   \ Save CaFe configuration
+
+   h# 6010 config-rl   ax stos  \ NAND BAR
+   ax bx mov                    \ Base address
+   6  h# 6004 config-ww         \ Enable access
+   h# 24 [bx]  ax mov  ax stos  \ NAND Timing1
+   h# 28 [bx]  ax mov  ax stos  \ NAND Timing2
+   h# 2c [bx]  ax mov  ax stos  \ NAND Timing3
+   h# 6004 config-rw   ax stos  \ NAND enables
+   
+   h# 6110 config-rl   ax stos  \ SDHCI BAR
+   ax bx mov                    \ Base address
+   h# 3038 [bx] ax mov ax stos  \ GPIO Config
+   h# 315c [bx] ax mov ax stos  \ GPIO Data
+   h# 6104 config-rw   ax stos  \ SDHCI enables
+
+   h# 6210 config-rl   ax stos  \ Camera BAR
+   h# 6204 config-rw   ax stos  \ SDHCI enables
+
+   \ Other state we might want to save:
+   \ ISA DMA Controller
    \ AC97
    \ Codec
    \ USB
 
+   \ Stop video refresh
+   h# 4758 #  h# fe00.4000 #)  mov  \ Unlock DC registers
+   h#    0 #  h# fe00.4004 #)  mov  \ Turn off access to display memory
+
    h# 4000.0e00 h# 1410 port-wl   \ Assert SLP_CLK_EN# 1 mS after SUSPA#
-   h# 4000.460a h# 1414 port-wl   \ Release SUSP# 5 mS after wakeup
+   h# 4000.4601 h# 1414 port-wl   \ Release SUSP# 5 mS after wakeup
    h# 4000.00a0 h# 1434 port-wl   \ Turn on WORK_AUX (== MAIN_ON) after 5 mS
    h# 4000.0001 h# 1438 port-wl   \ RESET_OUT turn on delay
    h# 0002.ffff h# 1454 port-wl   \ Clear wakeup type bits
@@ -160,15 +199,33 @@ here suspend-entry put-branch
    \ This is actually two 16-bit registers, but 16-bit writes don't work
    \ right (they corrupt other registers) due to a 5536 erratum.  
    h# 1840 port-rl  ( .s cr h# ffff bitset ) ax dx out
-\   h# 0100.ffff h# 1840 port-wl   \ Enable Power button wakeup, clear status bits
+
+   \ The caller chooses the wakeup conditions, so we don't do it here
+   \ h# 0100.ffff h# 1840 port-wl   \ Enable Power button wakeup, clear status bits
 
    wbinvd                                 \ Flush the cache
-   \ h# x.y.  h# 2000.0020 bitclr-msr  \ PM sensitivity counter
    h# 00ff.ff00  h# 2000.0018 bitclr-msr  \ Set refresh to 0, disabling GX refresh
-   h#         4. h# 2000.2004 set-msr     \ Enable memory controller clock gating
-   h#      2000  h# 1848 port-wl          \ go to sleep
 
-   begin again
+   \ This is what the code below does, without the cache alignment elaborations
+   \ h#         4. h# 2000.2004 set-msr     \ Enable memory controller clock gating
+   \ h#      2000  h# 1848 port-wl          \ go to sleep
+
+   \ Setup the register values in advance so the active instruction sequence
+   \ is as short as possible, thus keeping all the activity in one cache line.
+   h# 4. # dx mov # ax mov              \ Value to write to MSR
+   h# 2000.2004 # cx mov                \ GLD_MSR_PM MSR number
+   h# 2000 # bx mov                     \ Value to write to PM1_CNT register
+   h# 1848 # di mov                     \ PM1_CNT I/O port number
+
+   \ Align to a cache line boundary
+   also forth
+   begin  here asm-base - h# 1f and  while  h# 90 c,  repeat  \ Align with NOPs
+   previous
+
+   wrmsr                                \ Write GLD_MSR_PM to self-refresh memory
+   di dx mov  bx ax mov  ax dx out      \ Write PM1_CNT to initial suspend
+
+   begin again    \ Spin in this cache line while going down
 
 \ Resume code
 here resume-entry put-branch
@@ -178,7 +235,7 @@ here resume-entry put-branch
 \   Running from a 32-bit identity-mapped code segment
 \   Using physical addresses
 
-  char < 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+\ char < 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
 
    resume-data #  bp  mov
 
@@ -289,17 +346,31 @@ here resume-entry put-branch
 
    \ AC97
    \ Codec
-   \ USB
 
    \ h# 8000 h# 4000.0000 or h# 1440 pl!  \ Fail-safe delay
 
-1 [if]
-   \ Assign CaFe base addresses
-   h# fe00c000 h# 6010 config-wl  \ NAND FLASH base address
-   h# fe010000 h# 6110 config-wl  \ SD base address
-   h# fe014000 h# 6210 config-wl  \ Camera controller base address
-\ XXX need to set CaFe timing too.
-[then]
+   \ Restore CaFe configuration
+
+   h# 6010 config-setup  ax lods  ax dx out        \ NAND BAR
+   ax bx mov                                       \ Base address
+   6  h# 6004 config-ww                            \ Enable access
+   ax lods  ax  h# 24 [bx]  mov                    \ NAND Timing 1
+   ax lods  ax  h# 28 [bx]  mov                    \ NAND Timing 2
+   ax lods  ax  h# 2c [bx]  mov                    \ NAND Timing 3
+   h# 6004 config-setup  ax lods  op: ax dx out    \ NAND enables
+
+   h# 6110 config-setup  ax lods  ax dx out        \ SDHCI BAR
+   ax bx mov                                       \ Base address
+   6  h# 6104 config-ww                            \ Enable access
+   ax lods  ax  h# 3038 [bx]  mov                  \ GPIO Config
+   ax lods  ax  h# 315c [bx]  mov                  \ GPIO Data
+   \ The next two values can't be saved/restored; the registers aren't readable
+   op: h# 0004 #  h# 6a [bx]  mov                  \ Magic recipe from Marvell
+   op: h# 7fff #  h# 60 [bx]  mov                  \ Magic recipe from Marvell
+   h# 6104 config-setup  ax lods  op: ax dx out    \ SDHCI enables
+
+   h# 6210 config-setup  ax lods  ax dx out        \ Camera BAR
+   h# 6204 config-setup  ax lods  op: ax dx out    \ Camera enables
 
    \ Display stuff
    h# 4758 #  h# fe00.4000 #)  mov  \ Unlock display controller registers
@@ -337,7 +408,7 @@ here resume-entry put-branch
    h#  8 [bp]  lldt        \ Local descriptor table register
 \  h#  6 [bp]  ltr         \ Task register
 
-  char > 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+\  char > 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
 
    0 [bp]  sp  lss
    gs pop

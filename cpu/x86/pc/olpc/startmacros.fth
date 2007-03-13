@@ -68,13 +68,36 @@ also 386-assembler definitions
 : port-wl  ( l port# -- )  swap # ax mov   # dx mov  ax dx out  ;
 : port-rl  ( port# -- )  # dx mov  dx ax in  ;
 
+: config-setup  ( config-adr -- )
+   [ also forth ]
+   dup 3 invert and  h# 8000.0000 or   ( config-adr cf8-value )
+   [ previous ]
+   #  ax  mov                          ( config-adr )
+   h# cf8 #  dx  mov                   ( config-adr )
+   ax dx out                           ( config-adr )
+   [ also forth ]
+   3 and h# cfc or                     ( data-port )
+   [ previous ]
+   # dx mov
+;
 : config-wl  ( l config-adr -- )
-   h# 8000.0000  [ also forth ] or [ previous ] #  ax  mov
-   h# cf8 #  dx  mov
-   ax dx out
+   config-setup  ( l )
    #  ax  mov
-   h# cfc #  dx  mov
    ax dx out
+;
+: config-rl  ( config-adr -- )  \ Returns value in EAX
+   config-setup
+   dx ax in
+;
+: config-ww  ( w config-adr -- )
+   config-setup     ( w )
+   op: # ax  mov    ( )
+   op: ax dx out
+;
+: config-rw  ( config-adr -- )  \ Returns value AX
+   config-setup     ( )
+   ax ax xor
+   op: dx ax in
 ;
 
 previous definitions

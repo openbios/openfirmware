@@ -313,6 +313,9 @@ h# 300 /n* buffer: video-state
 
    drop
    \ video-state - /l / . cr
+
+   unlock
+   0 4 dc!  \ Turn off video memory access
 ;
 
 : video-restore
