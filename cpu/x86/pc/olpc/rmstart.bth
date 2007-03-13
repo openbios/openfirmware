@@ -8,4 +8,4 @@ build-now
 \ create debug-reset
 
 fload ${BP}/cpu/x86/pc/olpc/config.fth
-fload ${BP}/cpu/x86/pc/rmstart.fth
+fload ${BP}/cpu/x86/pc/olpc/rmstart.fth

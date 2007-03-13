@@ -83,6 +83,11 @@
 create msr-init
 \ Memsize-dependent MSRs are set in the early startup code
 
+\ CPU
+msr: 0000.1210 00000000.00000001.  \ GX p 121 Suspend on halt
+msr: 0000.1900 00000000.00001131.  \ GX p 174 Default + SUSP + TSC_SUSP
+msr: 0000.1a00 00000000.00000001.  \ GX p 178 Imprecise exceptions
+
 \ northbridgeinit: GLIUS
 \ Already mapped in early startup
 \ msr: 1000.0020 20000000.000fff80.   \ 0 - 7.ffff low RAM

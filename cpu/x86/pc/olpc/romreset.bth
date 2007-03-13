@@ -54,32 +54,14 @@ label testsub
 end-code
 
 label startup
-   \ GLCP_SYS_RSTPLL - page 406
-   \ If the PLL is already set up, we don't redo the 5536 setup
-   4c000014 rmsr  ax bx mov  fc00.0000 bitand  0=  if
-
-      \ The BOOTSTRAP_STAT bits (mask 70) read the straps that tell
-      \ us the board revision.  ID 5 is preB1, ID7 is B1.  ID0 is B2.
-      h# 70 # bl and  h# 50 # bl cmp  <  if
-         220.04de.0000.   4c000014 set-msr
-      else
-         226.04de.0000.   4c000014 set-msr
-      then
-\ Tom Sylla recommends not using LOCKWAIT, as it has not been verified
-\    100.6001 bitset   4c000014 wmsr  \ Set LOCKWAIT, PD, RESETPLL
-      00.6001 bitset   4c000014 wmsr  \ Set PD, RESETPLL
-
-   \ CPU will reset here
-   then
-
-   \ And return to here after the reset
+   11. 1100 set-msr        \ Enable branch target buffer and near call return stack GX page 116
 
    \ The next few MSRs allow us to access the 5536
    \ EXTMSR - page 449   \ Use PCI device #F for port 2
    00000000.00000f00.   5000201e set-msr  \ cs5536_setup_extmsr(void)
 
    \ write IDSEL to the write once register at address 0x0000
-\      02000000 0 port-wl  \ This is the default value so we need not set it
+   \ 02000000 0 port-wl  \ This is the default value so we need not set it
 
    \ setup CPU interface serial to mode C on both sides
    44000020.00200013. 51000010 set-msr   \ 5536 p 229
@@ -88,40 +70,41 @@ label startup
    \ The GX datasheet is incorrect; 2 means 5536, not a reserved value
    00000000.00000002.   54002010 set-msr
 
-   \ Set up IO base registers
+   \ Set up GPIO base register
    0000f001.00001000.   5140000c set-msr  \ GPIO BAR
 
-0 [if]
-   \ Set the UART TX line high
+ \ Init UART
+1 [if]
+ 1 [if]
+   \ Set the UART TX line high - this prevents a low-going glitch that
+   \ the receiver interprets as a character.
    100.0000 1010 port-wl   \ Output AUX1 select - UART TX as GPIO for now
         100 1000 port-wl   \ high
         100 1004 port-wl   \ GPIO1 - output enable
-[then]
+ [then]
 
- \ Init UART
-[ifdef] use-uart2
+   \ The UART init sequence takes 550 uS running from ROM
+ [ifdef] use-uart2
    \ cs5536_setup_onchipuart,cs5536_early_setup.c:205.14
    0.00000012.   5140003e set-msr  \ enable UART2
 
    \ GPIO1 - UART2 TX
    10 1004 port-wl   \ GPIO4 - output enable - UART2 TX
    10 1010 port-wl   \ Output AUX1 select - UART2 TX
-\   8 1018 port-wl   \ Enable pull-up on UART2 RX (default)
     8 1020 port-wl   \ Input enable UART2 RX
     8 1034 port-wl   \ Input AUX1 select - UART2 RX
    0.8070.0003  51400014 set-msr  \ MDD_LEG_IO  UART2 at COM1 address
-[else]
+ [else]
    \ cs5536_setup_onchipuart,cs5536_early_setup.c:205.14
    0.00000012.   5140003a set-msr  \ enable COM1
 
    \ GPIO1 - UART1 TX
    100 1004 port-wl   \ GPIO1 - output enable
    100 1010 port-wl   \ Output AUX1 select - UART TX
-\  200 1018 port-wl   \ Enable pull-up on UART RX (default)
    200 1020 port-wl   \ Input enable UART RX
    200 1034 port-wl   \ Input AUX1 select - UART RX
    0.8007.0003.  51400014 set-msr  \ MDD_LEG_IO  legacy IO
-[then]
+ [then]
 
    \ uart_init,serial.c
    \ This is a garden-variety 8250 UART setup sequence
@@ -135,27 +118,16 @@ label startup
    \ End of serial init
 
    \ char + 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
-
-   \ gpio_init,auto.c
-   1000.0000 1038 port-wl  \ Make sure events enable for gpio 12 is off
-   4 1020 port-wl          \ Enable the GPIO bit that reports DRAM size (ticket 151)
-
- \ Init CPU registers
- \ cpuRegInit,cpureginit.c
-
-   1  1210 bitset-msr  \ Enable Suspend on Halt - GX p 121
-
-   \  Enable SUSP and allow TSC to run in Suspend to keep speed detection happy
-   1020 1900 bitset-msr \ GX p 174
-
-   11 1100 bitset-msr        \ Enable branch target buffer and near call return stack GX page 116
-   1 1a00 bitset-msr         \ Enable imprecise FPU exceptions  - GX page 178
+[then]
 
  \ Init memory controller
 
    \ sdram_initialize,generic_sdram.c
    \ sdram_set_spdregisters(),auto.c
  
+   \ gpio_init,auto.c
+   4 1020 port-wl          \ Enable the GPIO bit that reports DRAM size (ticket 151)
+
    \ Refresh and SDRAM program MSR GX page 205
    \ Some of these don't really have to be set here, and could be
    \ moved to the big table of MSR values, except that the table
@@ -253,7 +225,7 @@ label startup
    \ It is tempting to test bit 0 of PM register 5c, but a 5536 erratum
    \ prevents that bit from working.
    1454 port-rl  2 bitand  0<>  if  \ Wakeup event flag
-      \ char r 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+      char r 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
       resume # sp mov  sp jmp
    then
 
@@ -262,8 +234,7 @@ label startup
    4 # ax shl                  \ Shift into place
    ax mem-info-pa 4 + #)  mov  \ Put it where resetend.fth can find it
 
-\ Example of how to output a character to serial port
-\   char D 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+   \ char D 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
 
    \ Memory is now on
    h# 8.0000 #  sp  mov        \ Setup a stack pointer for later code
