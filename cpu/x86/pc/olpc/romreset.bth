@@ -88,16 +88,6 @@ label startup
    \ The GX datasheet is incorrect; 2 means 5536, not a reserved value
    00000000.00000002.   54002010 set-msr
 
-   \ This is a workaround for 5536 erratum 57.
-   \ The USB Serial short detect bit sometimes comes up at 1 (incorrectly),
-   \ so we need to clear it, without overwriting some other bits (35,33,32)
-   \ with 0 and without clearing (by writing 1) the BIST error bit (34).
-   \ So we have to do the read/modify/write instead of just writing
-   \ 10.0000.0000. to msr 51200005
-   51200005 rmsr  10 bitand-hi  0<>  if
-      4 bitclr-hi   51200005 wmsr
-   then
-
    \ Set up IO base registers
    0000f001.00001000.   5140000c set-msr  \ GPIO BAR
 
@@ -167,6 +157,9 @@ label startup
    \ sdram_set_spdregisters(),auto.c
  
    \ Refresh and SDRAM program MSR GX page 205
+   \ Some of these don't really have to be set here, and could be
+   \ moved to the big table of MSR values, except that the table
+   \ slammer is dumb and can't handle conditionals.
    1030 port-rl 4 bitand  0<> if  \ 128 MiB
       10075012.00003400.  20000018 set-msr
       25fff002.1077e000.      1808 set-msr

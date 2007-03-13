@@ -85,9 +85,7 @@ create msr-init
 
 \ northbridgeinit: GLIUS
 \ Already mapped in early startup
-\ XX msr: 1000.0020 20000000.000fff80.   \ 0 - 7.ffff low RAM
-\ XX msr: 1000.0021 20000000.080fffe0.   \ 8.0000 - 9.ffff low RAM
-\ msr: 1000.0020 20000000.000fff00.   \ 0 - f.ffff low RAM
+\ msr: 1000.0020 20000000.000fff80.   \ 0 - 7.ffff low RAM
 msr: 1000.0022 a00000fe.000ffffc.   \ fe00.0000 - fe00.3fff GP
 msr: 1000.0023 c00000fe.008ffffc.   \ fe00.8000 - fe00.bfff VP
 msr: 1000.0024 80000000.0a0fffe0.   \ 000a.0000 - 000b.ffff DC
@@ -113,6 +111,7 @@ msr: 1000.0084 00000000.0000ff00.   \ Disable Async errors
 \ msr: 1000.00e0 80000000.3c0ffff0.   \ IOD_BM DC - VGA registers
 \ msr: 1000.00e1 80000000.3d0ffff0.   \ IOD_BM DC - VGA registers
 \ msr: 1000.00e3 00000000.f030ac18.   \ IOD_SC - Virtual Register - ac1c-ac1f
+
 msr: 1000.2002 0000001f.0000001f.   \ Disables SMIs
 msr: 1000.2004 00000000.00000005.   \ Clock gating
 
@@ -205,6 +204,7 @@ msr: 0000180d 00000000.00000000. \ Regions e0000..fffff
 \ eng2900();
 msr: 0000.3003 0080a13d.00000000. \ Disables sysenter/sysexit in CPUID3
 
+\ This is the Branch Target Buffer workaround
 \ swapsif thing - don't do this stuff for use with FS2
 msr: 4c00.005f 00000000.00000000. \ Disable enable_actions in DIAGCTL while setting up GLCP
 msr: 4c00.0016 00000000.00000000. \ Changing DBGCLKCTL register to GeodeLink
@@ -351,7 +351,7 @@ msr: 5140.0010 fffff007.20000000. \ LBAR_FLSH0
 \ msr: 5140.0011  \ LBAR_FLSH1
 \ msr: 5140.0012  \ LBAR_FLSH2
 \ msr: 5140.0013  \ LBAR_FLSH3
-msr: 5140.0014 00000000.80070003. \ LEG_IO
+\ msr: 5140.0014 00000000.80070003. \ LEG_IO already set in romreset
 msr: 5140.0015 00000000.00000f7c. \ BALL_OPTS
 msr: 5140.001b 00000000.00100010. \ NANDF_DATA
 msr: 5140.001c 00000000.00000010. \ NANDF_CTL
@@ -372,6 +372,9 @@ msr: 5120.0001 0000000b.00000000.  \ USB_GLD_MSR_CONFIG - 5536 page 262
 msr: 5120.0008 0000000e.fe01a000.  \ USB OHC Base Address - 5536 page 266
 msr: 5120.0009 0000000e.fe01b000.  \ USB EHC Base Address - 5536 page 266
 msr: 5120.000b 00000002.efc00000.  \ USB UOC Base Address - 5536 page 266
+
+\ Clear possible spurious USB Short Serial detect bit per 5536 erratum 57
+msr: 5120.0015 00000010.00000000.  \ USB_GLD_MSR_DIAG
 
 here msr-init - constant /msr-init
 
@@ -452,20 +455,23 @@ h# fe00.8000 value vp-base
 
 : gpio-init  ( -- )
 \  h# f7ff0800 h# 1000 pl!  \ GPIOL_OUTPUT_VALUE 
-   h# 36ffc900 h# 1004 pl!  \ GPIOL_OUTPUT_ENABLE 
+\  h# 36ffc900 h# 1004 pl!  \ GPIOL_OUTPUT_ENABLE 
+   h#     d802 h# 1004 pl!  \ GPIOL_OUTPUT_ENABLE - SMI#, DCONLOAD, MIC
 \  h# ffff0000 h# 1008 pl!  \ GPIOL_OUT_OPENDRAIN - default
 \  h# ffff0000 h# 100c pl!  \ GPIOL_OUTPUT_INVERT_ENABLE - default
-   h# 3effc100 h# 1010 pl!  \ GPIOL_OUT_AUX1_SELECT 
+   h#     c000 h# 1010 pl!  \ GPIOL_OUT_AUX1_SELECT - enable SMBUS pins
 \  h# ffff0000 h# 1014 pl!  \ GPIOL_OUT_AUX2_SELECT - default
-   h# 1001effe h# 1018 pl!  \ GPIOL_PULLUP_ENABLE 
+\  h# 1001effe h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - I don't think we need pullups
+   h# 02080000 h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - Disable pullups except for UART Rx
 \  h# efff1000 h# 101c pl!  \ GPIOL_PULLDOWN_ENABLE - default
-   h# 2d1ad2e5 h# 1020 pl!  \ GPIOL_INPUT_ENABLE 
-   h# ff7e0081 h# 1024 pl!  \ GPIOL_INPUT_INVERT_ENABLE 
+   h# ffff0000 h# 101c pl!  \ GPIOL_PULLDOWN_ENABLE - Disable all pull-downs
+   h#     d6e5 h# 1020 pl!  \ GPIOL_INPUT_ENABLE - DCONBLNK, DCONLOAD, THERM_ALRM, DCONIRQ, DCONSTAT1/0, MEMSIZE, PCI_INTA
+   h#     0081 h# 1024 pl!  \ GPIOL_INPUT_INVERT_ENABLE - Invert DCONIRQ and PCI_INTA#
 \  h# ffff0000 h# 1028 pl!  \ GPIOL_IN_FILTER_ENABLE - default
 \  h# ffff0000 h# 102c pl!  \ GPIOL_IN_EVENTCOUNT_ENABLE - default
 \  h# 2d9bd264 h# 1030 pl!  \ GPIOL_READ_BACK
-   h# 3dfbc204 h# 1034 pl!  \ GPIOL_IN_AUX1_SELECT 
-   h# fffe0001 h# 1038 pl!  \ GPIOL_EVENTS_ENABLE 
+   h#     c600 h# 1034 pl!  \ GPIOL_IN_AUX1_SELECT
+   h#     0081 h# 1038 pl!  \ GPIOL_EVENTS_ENABLE 
 \  h# 00000000 h# 103c pl!  \ GPIOL_LOCK_ENABLE - default
 \  h# ffff0000 h# 1040 pl!  \ GPIOL_IN_POSEDGE_ENABLE - default
 \  h# ffff0000 h# 1044 pl!  \ GPIOL_IN_NEGEDGE_ENABLE - default
@@ -496,8 +502,8 @@ h# fe00.8000 value vp-base
 \  h#     0000 h# 107c pw!  \ GPIO_05_EVENT_COUNT - default
 \  h#     0000 h# 107e pw!  \ GPIO_05_EVENTCOMPARE_VALUE - default
 
-   h# feff0100 h# 1090 pl!  \ GPIOH_OUT_AUX1_SELECT - GPIO24 is WORK_AUX
-   h# feff0100 h# 1084 pl!  \ GPIOH_OUTPUT_ENABLE - GPIO24 is WORK_AUX
+   h#     0100 h# 1090 pl!  \ GPIOH_OUT_AUX1_SELECT - GPIO24 is WORK_AUX
+   h#     0100 h# 1084 pl!  \ GPIOH_OUTPUT_ENABLE - GPIO24 is WORK_AUX
 
 \  h# ffff0000 h# 1080 pl!  \ GPIOH_OUTPUT_VALUE - default
 \  h# ffff0000 h# 1084 pl!  \ GPIOH_OUTPUT_ENABLE - default
@@ -507,12 +513,14 @@ h# fe00.8000 value vp-base
 \  h# 0000ffff h# 1098 pl!  \ GPIOH_PULLUP_ENABLE - default
 \  h# ffff0000 h# 109c pl!  \ GPIOH_PULLDOWN_ENABLE - default
 \  h# efff1000 h# 10a0 pl!  \ GPIOH_INPUT_ENABLE - default
+   h#     1c00 h# 10a0 pl!  \ GPIOH_INPUT_ENABLE - PWR_BUT#, SCI#, PWR_BUT_in
 \  h# ffff0000 h# 10a4 pl!  \ GPIOH_INPUT_INVERT_ENABLE - default
 \  h# ffff0000 h# 10a8 pl!  \ GPIOH_IN_FILTER_ENABLE - default
 \  h# ffff0000 h# 10ac pl!  \ GPIOH_IN_EVENTCOUNT_ENABLE - default
 \  h# efff1000 h# 10b0 pl!  \ GPIOH_READ_BACK
 \  h# efff1000 h# 10b4 pl!  \ GPIOH_IN_AUX1_SELECT - default
 \  h# ffff0000 h# 10b8 pl!  \ GPIOH_EVENTS_ENABLE - default
+   h#     0c00 h# 10b8 pl!  \ GPIOH_EVENTS_ENABLE - SCI#, PWR_BUT_in
 \  h# 00000000 h# 10bc pl!  \ GPIOL_LOCK_ENABLE - default
 \  h# ffff0000 h# 10c0 pl!  \ GPIOH_IN_POSEDGE_ENABLE - default
 \  h# ffff0000 h# 10c4 pl!  \ GPIOH_IN_NEGEDGE_ENABLE - default
@@ -554,48 +562,3 @@ h# fe00.8000 value vp-base
    acpi-init
    irq-init
 ;
-
-0 [if]
-void do_vsmbios(void)
-{
-	device_t dev;
-	unsigned long busdevfn;
-	unsigned int rom = 0;
-	unsigned char *buf;
-	unsigned int size = SMM_SIZE*1024;
-	int i;
-	unsigned long ilen, olen;
-	
-	\ clear vsm bios data area
-        h# 400  h# 100  erase
-
-	\ declare rom address here - keep any config data out of the way of core LXB stuff
-        /rom negate  h# 1.0000 +  to vsa-bits
-
-	buf = (unsigned char *) 0x60000;
-	olen = unrv2b((uint8_t *)rom, buf, &ilen);
-
-	\ check for post code at start of vsainit.bin. If you don't see it, don't bother.
-	if ((buf[0x20] != 0xb0) || (buf[0x21] != 0x10) ||
-	    (buf[0x22] != 0xe6) || (buf[0x23] != 0x80)) {
-		return;
-	}
-
-	\ ecx gets smm, edx gets sysm
-	real_mode_switch_call_vsm(0x10000026, 0x10000028);
-
-	\ restart timer 1
-	h# 56 h# 43 pc!
-	h# 12 h# 41 pc!
-}
-
-
-                graphics_init();
-
-\ Skip this; OFW knows what PCI config method to use
-\ 		dev->ops = &pci_domain_ops;
-\ 		pci_set_method(dev);
-
-		ram_resource(dev, 0, 0, ((sizeram() - VIDEO_MB) * 1024) - SMM_SIZE);
-[then]
-
