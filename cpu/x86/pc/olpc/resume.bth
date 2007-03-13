@@ -46,11 +46,13 @@ label suspend-save    \ h# f.0010
    gs push
    ss push dx pop                 \ SS in dx
 
+   cli                            \ No interrupts from now on
+
+   h# f0030 # cx mov  
    cr0 ax mov  ax bx mov          \ CR0 in BX
    h# 80000000 invert #  ax  and  \ Paging enable off
    ax cr0 mov
-
-   h# f0030 # ax mov  ax jmp      \ Jump to suspend-physical, disabling paging
+   cx jmp      \ Jump to suspend-physical, disabling paging
 
    h# 30 pad-to
 
