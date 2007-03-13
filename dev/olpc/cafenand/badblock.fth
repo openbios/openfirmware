@@ -330,30 +330,67 @@ headers
 
 \ Copy-to-NAND functions
 
-0 instance value copy-page#
-: +copy-page  ( -- )  copy-page# pages/eblock +  to copy-page#  ;
+external
+
+0 instance value scan-page#
+
+headers
 
 : find-good-block  ( -- )
-   begin  copy-page# block-bad?  while  +copy-page  repeat
+   scan-page#     ( page# )
+   begin  pages/eblock +  dup  block-bad?  0=  until
+   to scan-page#
 ;
+
+0 value test-page
 
 external
 
 \ These methods are used for copying a verbatim file system image
 \ onto the NAND FLASH, automatically skipping bad blocks.
 
-: start-copy  ( -- )  0 to copy-page#  ;
+: start-scan  ( -- )  pages/eblock negate  to scan-page#  ;
 
 \ Must erase all (wipe) first
 : copy-block  ( adr -- )
    find-good-block
-   copy-page#  pages/eblock  bounds  ?do  ( adr )
+   scan-page#  pages/eblock  bounds  ?do  ( adr )
       dup i write-page                    ( adr )
       /page +                             ( adr' )
    loop                                   ( adr )
    drop                                   ( )
-   +copy-page
 ;
+
+: read-next-block  ( adr -- )
+   find-good-block
+   scan-page#  pages/eblock  bounds  ?do  ( adr )
+      dup i read-page                     ( adr )
+      /page +                             ( adr' )
+   loop                                   ( adr )
+   drop                                   ( )
+;
+
+\ : start-verify  ( -- )
+\    /page dma-alloc to test-page
+\    start-scan
+\ ;
+\ : end-verify  ( -- )
+\    test-page /page dma-free
+\ ;
+\ 
+\ : verify-block  ( adr -- false | page# true )
+\    find-good-block
+\    scan-page#  pages/eblock  bounds  ?do  ( adr )
+\       test-page i read-page               ( adr )
+\       dup test-page /page comp  if        ( adr )
+\          drop                             ( )
+\          i  true  exit                    ( -- page# true )
+\       then                                ( adr )
+\       /page +                             ( adr' )
+\    loop                                   ( adr )
+\    drop                                   ( )
+\    false
+\ ;
 
 : erased?  ( adr len -- flag )
    bounds  ?do
@@ -361,8 +398,6 @@ external
    /n +loop
    true
 ;
-
-0 value test-page
 
 : block-erased?  ( page# -- flag )
    pages/eblock  bounds  ?do
@@ -401,15 +436,15 @@ external
       then
    pages/eblock +loop
 
-   start-copy
+   start-scan
    false
 ;
 : next-fastcopy  ( adr -- )
-   usable-page-limit  copy-page#  ?do           ( adr )
+   usable-page-limit  scan-page#  ?do           ( adr )
       i block-erased?  if                       ( adr )
          i pages/eblock write-blocks  drop      ( )
          i mark-reserved   true to any-marked?  ( )
-         i pages/eblock +  to copy-page#
+         i pages/eblock +  to scan-page#
          unloop exit
       then                                      ( adr )
    pages/eblock +loop                           ( adr )
