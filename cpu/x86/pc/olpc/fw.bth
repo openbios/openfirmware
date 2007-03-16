@@ -539,6 +539,8 @@ stand-init:  Suspend/resume
 \ Useful for debugging suspend/resume problems
 \ : sum-forth  ( -- )  0  here origin  do  i c@ +  loop  .  cr  ;
 
+code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
+
 : suspend
   " video-save" stdout @ $call-method  \ Freeze display
 
@@ -547,12 +549,21 @@ stand-init:  Suspend/resume
    h# 1840 pl@  h# 100.0000 or  h# 1840 pl!
 
 \  sum-forth
-   h# f0000 call
+   [ also dev /mmu ]  pdir-va  h# f0000 ax-call  [ previous definitions ]
+\   h# f0000 call
 \  sum-forth
 
    " video-restore" stdout @ $call-method  \ Unfreeze display
 ;
 alias s suspend
+
+: 0off  " dev /mmu 0 0 >pdir l! flush-tlb dend" eval  ;
+: flub
+   h# f0000 h# c00f0000 h# 10000 -1 mmu-map
+   " patch c00f0000 f0000 suspend" eval
+;
+: snub  0off flub  ;
+
 
 : startup  ( -- )
    standalone?  0=  if  exit  then

@@ -37,7 +37,7 @@ label resume-entry    \ h# f.0008 - entry point at fixed location, called by res
    nop                \ Aligns to even, for the benefit of the disassembler
    h# 10 pad-to
 
-label suspend-save    \ h# f.0010
+label suspend-save    \ h# f.0010  (Page directory VA in ax)
    pusha
    pushf
    ds push
@@ -46,19 +46,32 @@ label suspend-save    \ h# f.0010
    gs push
    ss push dx pop                 \ SS in dx
 
-   cli                            \ No interrupts from now on
+   here 5 + dup #) call  di pop   \ Virtual address of EIP in DI
+   ( here ) asm-base - #  di  sub   \ Virtual address of suspend-base in DI
 
-   h# f0030 # cx mov  
-   cr0 ax mov  ax bx mov          \ CR0 in BX
-   h# 80000000 invert #  ax  and  \ Paging enable off
-   ax cr0 mov
-   cx jmp      \ Jump to suspend-physical, disabling paging
+   \ Page directory VA in AX
+   ax      si  mov                \ Save PDIR VA
+   0 [si]  cx  mov                \ Save old PDIR entry 0
+   h# 83 # 0 [ax] mov             \ Punch a 4M mapping 0->0 into the page directory
+   cr3 ax mov  ax cr3 mov         \ Invalide the TLB to activate the mapping
+   h# f0060 # ax mov  ax jmp      \ Jump to suspend-physical, disabling paging
+   h# 60 pad-to
 
-   h# 30 pad-to
+   \ We have to be running from a virtual=physical mapping here, otherwise we
+   \ die on the instruction after paging is turned off.
+   cr0 ax mov  ax bx mov          \ CR0 saved in BX
+   h# 80000000 invert #  ax  and  \ Knock off the Paging enable (PG) bit
+   ax cr0 mov                     \ Now paging is off
+
+   \ Physical addresses from now on
 
 \ suspend-physical
 \ here suspend-entry put-branch
    resume-data #  bp  mov
+
+\   here 5 + dup #) call  bp pop    \ EIP (virtual) in AX
+\   ( here ) asm-base - suspend-base + #  bp  sub
+\   resume-data # bp add
 
    sp      0 [bp]  mov     \ SP part of SP:SS full pointer
    op: dx  4 [bp]  mov     \ SS part of SP:SS full pointer
@@ -71,8 +84,9 @@ label suspend-save    \ h# f.0010
                bx  h# 18 [bp]  mov
    cr3 ax mov  ax  h# 1c [bp]  mov
    cr4 ax mov  ax  h# 20 [bp]  mov
-
-   \ Physical addresses from now on
+               cx  h# 24 [bp]  mov  \ PDIR entry 0
+               si  h# 28 [bp]  mov  \ PDIR VA
+               di  h# 2c [bp]  mov  \ Address offset
 
    cld
    h# 38 [bp]  di  lea    \ Save area
@@ -397,23 +411,41 @@ here resume-entry put-branch
    \ DCON fiddling
    \ USB
 
+   h# 2c [bp]  di mov               \ VA of suspend-base in di
+   h# 28 [bp]  si mov               \ PDIR VA
+   h# 24 [bp]  cx mov               \ PDIR entry 0
    h# 20 [bp]  ax mov  ax cr4 mov  
    h# 1c [bp]  ax mov  ax cr3 mov  
-   h# 18 [bp]  ax mov  ax cr0 mov  
-
-   \ Force the paging enable to take place
-   h# eb asm8,  0 asm8,    \ jmp to next location to enable paging
-   \ here asm-base - 5 +  suspend-base + #)  jmp
+   h# 18 [bp]  ax mov
 
    h# 10 [bp]  lgdt        \ Global descriptor table register
    h#  a [bp]  lidt        \ Interrupt descriptor table register
    h#  8 [bp]  lldt        \ Local descriptor table register
-\  h#  6 [bp]  ltr         \ Task register
+   op:  h# ffff #  h# 6 [bp]  test  0<>  if
+      h#  6 [bp]  ltr      \ Task register
+   then
+
+   ax cr0 mov              \ Paging is back on now (if it ever was on)
+
+   \ Force the paging enable to take place
+   h# eb asm8,  0 asm8,    \ jmp to next location to enable paging
+
+   \ Now jump back to the virtual execution address
+   here asm-base - 8 + # di add  \ The add instruction is 6 bytes, the jmp is 2
+   di jmp
+
+   \ Identity mapping of low memory is still in effect
+   0 [bp]  sp  lss
+
+   cx  0 [si]  mov         \ Restore PDIR entry 0
+   cr3 ax mov  ax cr3 mov  \ Flush TLB
+
+   \ Identity mapping of low memory might not exist now
 
 \  char > 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
 
-   0 [bp]  sp  lss
    gs pop
+
    fs pop
    es pop
    ds pop
@@ -425,3 +457,23 @@ end-code
 writing resume.di
 suspend-entry here over -  0  " resume"  write-dropin
 ofd @ fclose
+
+\ To use task state switching, we need to do:
+\ ??? how to pass information to a task?
+\  Set up a 108-byte Task State Segment containing:
+\    Initial values for general registers and segment registers
+\    EFLAGS value
+\    EIP value
+\    CR3 value for firmware
+\    Stack addresses for 3 privilege levels
+\    Task LDT value (0?)
+\ Create a TSS descriptor referring to the Task State Segment - it goes in the GDT
+\ Do an LTR with that descriptor
+\ The TSS can be paged.  Gag.
+
+\ Could allocate additional space in the TSS for the save/restore data
+
+\ Arrange for Linux to import the descriptor
+\ Linux does a task call to suspend
+
+\ The resume code also needs to do an LTR to get back to the descriptor
