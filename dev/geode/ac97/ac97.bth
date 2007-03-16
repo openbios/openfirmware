@@ -9,6 +9,7 @@ begin-tokenizing ac97.fc
 
 FCode-version2
 fload ${BP}/dev/geode/ac97/ac97.fth
+fload ${BP}/dev/geode/ac97/selftest.fth
 end0
 
 end-tokenizing

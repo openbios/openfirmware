@@ -62,6 +62,22 @@ h# 770.0000 constant /ram   \ 128 MB
 [then]
 ;
 
+[ifndef] 8u.h
+: 8u.h  ( n -- )  push-hex (.8) type pop-base  ;
+[then]
+: .chunk  ( adr len -- )  ." Testing memory at: " swap 8u.h ."  size " 8u.h cr  ;
+: selftest  ( -- error? )
+   " available" get-my-property  if  ." No available property" cr true exit  then
+					 ( adr len )
+   begin  ?dup  while
+      2 decode-ints swap		 ( rem$ chunk$ )
+      2dup .chunk			 ( rem$ chunk$ )
+      2dup over swap 3 mmu-map		 ( rem$ chunk$ )
+      memory-test-suite  if  2drop true exit  then	 ( rem$ )
+   repeat  drop
+   false
+;
+
 device-end
 
 also forth definitions

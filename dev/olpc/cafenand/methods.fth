@@ -84,6 +84,12 @@ external
    then                    ( okay? )
 ;
 
+: selftest  ( -- error? )
+   map-regs
+   read-id 1+ c@ h# dc <>
+   unmap-regs
+;
+
 \ Establish the NAND timings regardless of whether the device is
 \ ever opened, so the OS driver doesn't have to worry about it.
 \ Fortunately, for all the NAND chips we have considered so far,

@@ -64,6 +64,7 @@ variable test-char
    refcount @  if  ." Device in use" cr 0 exit  then
    open 0=  if  ." Device won't open" cr true exit  then
    h# 7f bl  do  i test-char !  test-char 1 write drop  loop
+   close  0
 ;
 
 : init  ( -- )

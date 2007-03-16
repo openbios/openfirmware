@@ -238,6 +238,11 @@ h# 200 constant /block  \ 512 bytes
    1 wait                ( )
 ;
 
+\ For some reason, the OLPC sdhci sometimes reports that data is done (2 wait)
+\ even when dat0 indicates busy (0=busy).
+: wait-dat0  ( -- )  begin  24 cl@ h# 10.0000 and  until  ;
+
+
 \ start    cmd    arg  crc  stop
 \ 47:46  45:40   39:8  7:1     0
 \     2      6     32    7     1
@@ -429,6 +434,7 @@ external
    rot dma-setup    ( block# r: in? )
    /block *  r>  if  read-multiple  else  write-multiple  then
    2 wait
+   wait-dat0
    dma-release
    dma-len /block /
 ;

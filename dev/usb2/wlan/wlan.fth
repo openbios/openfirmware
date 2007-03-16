@@ -162,26 +162,26 @@ false instance value force-open?
    r> close-package
 ;
 
-: selftest  ( -- flag )
-   false
-;
-
 : reset  ( -- flag )  reset-nic  ;
 
-: scan-wifi  ( -- )
+: (scan-wifi)  ( -- error? )
    true to force-open?
    open
    false to force-open?
-   0=  if  ." Can't open USB8388 wireless" cr  exit  then
+   0=  if  ." Can't open USB8388 wireless" cr true close  exit  then
 
    (scan)  if
-      ." Failed to scan" cr
+      ." Failed to scan" true cr
    else
-      respbuf /fw-cmd + .scan
+      respbuf /fw-cmd + .scan false
    then
 
    close
 ;
+
+: scan-wifi  ( -- )  (scan-wifi) drop  ;
+
+: selftest  ( -- error? )  (scan-wifi)  ;
 
 headers
 

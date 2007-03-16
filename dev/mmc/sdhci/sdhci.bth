@@ -9,6 +9,7 @@ begin-tokenizing sdhci.fc
 
 FCode-version2
 fload ${BP}/dev/mmc/sdhci/sdhci.fth
+fload ${BP}/dev/mmc/sdhci/selftest.fth
 end0
 
 end-tokenizing
