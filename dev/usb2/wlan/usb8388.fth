@@ -29,9 +29,8 @@ hex
 \ driver-state bit definitions
 0000 constant ds-not-ready		\ Initial state
 0001 constant ds-ready			\ Firmware has been downloaded
-0030 constant ds-connected-mask		\ Associated or joined
+0010 constant ds-connected-mask		\ Associated or joined
 0010 constant ds-associated
-0020 constant ds-joined
 8000 constant ds-disconnected		\ Disconnected
 
 ds-not-ready value driver-state
@@ -42,6 +41,7 @@ ds-not-ready value driver-state
 \ bss-type values
 1 constant bss-type-managed
 2 constant bss-type-adhoc
+bss-type-managed value bss-type
 
 \ WPA/WPA2 keys
 0 value ktype			\ Key type
@@ -75,7 +75,9 @@ d# 256 buffer: ssid
 d# 80 buffer: wpa-ie		\ WPA IE saved for EAPOL phases
 0 value /wpa-ie
 
+external
 : wpa-ie$  ( -- adr len )  wpa-ie /wpa-ie  ;
+headers
 
 \ Data rates
 d# 14 constant #rates
@@ -83,11 +85,13 @@ create supported-rates 82 c, 84 c, 8b c, 96 c, 0c c, 12 c, 18 c, 24 c,
 		       30 c, 48 c, 60 c, 6c c, 00 c, 00 c,
 #rates buffer: common-rates
 
+external
 : supported-rates$  ( -- adr len )  supported-rates #rates  ;
 : set-common-rates  ( adr len -- )
    common-rates #rates erase
    #rates min common-rates swap move
 ;
+headers
 
 \ Miscellaneous
 0 value preamble		\ 0=long, 2=short, 4=auto
@@ -95,9 +99,11 @@ create supported-rates 82 c, 84 c, 8b c, 96 c, 0c c, 12 c, 18 c, 24 c,
 h# 401 value cap		\ Capabilities
 3 value mac-ctrl		\ MAC control
 
+external
 : set-preamble  ( preamble -- )  to preamble  ;
 : set-cap  ( cap -- )  to cap  ;
 : set-auth-mode  ( amode -- )  to auth-mode  ;
+headers
 
 : marvel-link-up?  ( -- flag )  driver-state ds-ready >  ;
 
@@ -381,7 +387,7 @@ true value got-response?
       h# 0b  of  ." Sleep"  process-wakeup  endof
       h# 0d  of  ." Multicast MIC error"  process-gmic-failure  endof
       h# 0e  of  ." Unicast MIC error"  process-pmic-failure  endof
-      h# 11  of  ." HWAC - ad-hoc BCN lost"  endof
+      h# 11  of  ." HWAC - adhoc BCN lost"  endof
       h# 19  of  ." RSSI low"  endof
       h# 1a  of  ." SNR low"  endof
       h# 1b  of  ." Max fail"  endof
@@ -556,6 +562,78 @@ true value got-response?
 ;
 
 \ =========================================================================
+\ Miscellaneous control settings
+\ =========================================================================
+
+: set-radio-control  ( -- )
+   4 h# 1c ( CMD_802_11_RADIO_CONTROL ) prepare-cmd
+   ACTION_SET +xw
+   preamble 1 or +xw	\ Preamble, RF on
+   4 outbuf-bulk-out  if  exit  then
+   wait-cmd-resp  if  exit  then
+;
+
+: (set-bss-type)  ( bsstype -- ok? )
+   6 d# 128 + h# 16 ( CMD_802_11_SNMP_MIB ) prepare-cmd
+   ACTION_SET +xw
+   0 +xw		\ Object = desiredBSSType
+   1 +xw		\ Size of object
+   ( bssType ) +xb	
+   6 d# 128 + outbuf-bulk-out  if  false exit  then
+   wait-cmd-resp 0=
+;
+
+external
+: set-bss-type  ( bssType -- ok? )  dup to bss-type (set-bss-type)  ;
+headers
+
+: set-mac-control  ( -- )
+   4 h# 28 ( CMD_MAC_CONTROL ) prepare-cmd
+   mac-ctrl +xw		\ WEP type, WMM, protection, multicast, promiscous, WEP, tx, rx
+   4 outbuf-bulk-out  if  exit  then
+   wait-cmd-resp  if  exit  then
+;
+
+: set-domain-info  ( adr len -- )
+   dup 6 + h# 5b ( CMD_802_11D_DOMAIN_INFO ) prepare-cmd
+   ACTION_SET +xw
+   7 +xw				\ Type = MrvlIETypes_DomainParam_t
+   ( len ) dup +xw			\ Length of payload
+   ( adr len ) tuck +x$			\ Country IE
+   ( len ) 6 + outbuf-bulk-out  if  exit  then
+   wait-cmd-resp  if  exit  then
+;
+
+: enable-11d  ( -- )
+   6 d# 128 + h# 16 ( CMD_802_11_SNMP_MIB ) prepare-cmd
+   ACTION_SET +xw
+   9 +xw		\ Object = enable 11D
+   2 +xw		\ Size of object
+   1 +xw		\ Enable 11D
+   6 d# 128 + outbuf-bulk-out  if  exit  then
+   wait-cmd-resp  if  exit  then
+;
+
+external
+: enforce-protection  ( -- )
+   mac-ctrl h# 400 or to mac-ctrl	\ Enforce protection
+   set-mac-control
+;
+
+: disable-protection  ( -- )
+   mac-ctrl h# 400 invert and  to mac-ctrl
+   set-mac-control
+;
+
+: set-key-type  ( ctp ctg ktype -- )  to ktype  to ctype-g  to ctype-p  ;
+
+: set-country-info  ( adr len -- )	\ IEEE country IE
+   set-domain-info
+   enable-11d
+;
+headers
+
+\ =========================================================================
 \ Scan
 \ =========================================================================
 
@@ -617,8 +695,8 @@ h# 0050.f202 constant amoui			\ WPA authentication suite
 
 : (scan)  ( -- error? )
    /cmd_802_11_scan 6 ( CMD_802_11_SCAN ) prepare-cmd
-   BSS_ANY outbuf >fw-data tuck >bss-type c!
    resp-wait-long to resp-wait
+   BSS_ANY outbuf >fw-data tuck >bss-type c!
 
    dup >chan-list-IE h# 101 over >type-id le-w!
    #channels /chan-list * over >/payload le-w!
@@ -632,73 +710,13 @@ h# 0050.f202 constant amoui			\ WPA authentication suite
    wait-cmd-resp
 ;
 
+external
 : scan  ( adr len -- actual )
    (scan)  if  2drop 0 exit  then
    respbuf /respbuf /fw-cmd /string	( adr len radr rlen )
    rot min -rot swap 2 pick move	( actual )
 ;
-
-
-\ =========================================================================
-\ Authenticate
-\ =========================================================================
-
-: authenticate  ( target-mac$ -- )
-   7 h# 11 ( CMD_802_11_AUTHENTICATE ) prepare-cmd
-   ( target-mac$ ) +x$		\ Peer MAC address
-   auth-mode +xb		\ Authentication mode
-   7 outbuf-bulk-out  if  exit  then
-   wait-cmd-resp  if  exit  then
-;
-
-: deauthenticate  ( mac$ -- )
-   8 h# 24 ( CMD_802_11_DEAUTHENTICATE ) prepare-cmd
-   ( mac$ ) +x$			\ AP MAC address
-   3 +xw			\ Reason code: station is leaving
-   8 outbuf-bulk-out  if  exit  then
-   wait-cmd-resp  if  exit  then
-   ds-disconnected set-driver-state
-;
-
-\ =========================================================================
-\ Miscellaneous control settings
-\ =========================================================================
-
-: set-radio-control  ( -- )
-   4 h# 1c ( CMD_802_11_RADIO_CONTROL ) prepare-cmd
-   ACTION_SET +xw
-   preamble 1 or +xw	\ Preamble, RF on
-   4 outbuf-bulk-out  if  exit  then
-   wait-cmd-resp  if  exit  then
-;
-
-: set-bss-type  ( bssType -- ok? )
-   5 d# 128 + h# 16 ( CMD_802_11_SNMP_MIB ) prepare-cmd
-   ACTION_SET +xw
-   0 +xw		\ Object = desiredBSSType
-   1 +xw		\ Size of object
-   ( bssType ) +xb	
-   5 d# 128 + outbuf-bulk-out  if  false exit  then
-   wait-cmd-resp 0=
-;
-
-: set-mac-control  ( -- )
-   4 h# 28 ( CMD_MAC_CONTROL ) prepare-cmd
-   mac-ctrl +xw		\ WEP type, WMM, protection, multicast, promiscous, WEP, tx, rx
-   4 outbuf-bulk-out  if  exit  then
-   wait-cmd-resp  if  exit  then
-;
-
-: enforce-protection  ( -- )
-   mac-ctrl h# 400 or to mac-ctrl	\ Enforce protection
-   set-mac-control
-;
-: disable-protection  ( -- )
-   mac-ctrl h# 400 invert and  to mac-ctrl
-   set-mac-control
-;
-
-: set-key-type  ( ctp ctg ktype -- )  to ktype  to ctype-g  to ctype-p  ;
+headers
 
 \ =========================================================================
 \ WEP
@@ -714,6 +732,7 @@ h# 0050.f202 constant amoui			\ WPA authentication suite
    +xb
 ;
 
+external
 : set-wep  ( wep4$ wep3$ wep2$ wep1$ idx -- ok? )
    d# 72 h# 13 ( CMD_802_11_SET_WEP ) prepare-cmd
    ACTION_ADD +xw
@@ -738,6 +757,7 @@ h# 0050.f202 constant amoui			\ WPA authentication suite
    d# 72 outbuf-bulk-out  if  false exit  then
    wait-cmd-resp 0=
 ;
+headers
 
 \ =========================================================================
 \ WPA and WPA2
@@ -751,8 +771,10 @@ h# 0050.f202 constant amoui			\ WPA authentication suite
    wait-cmd-resp 0=
 ;
 
+external
 : enable-rsn   ( -- ok? )  1 set-rsn  ;
 : disable-rsn  ( -- ok? )  0 set-rsn  ;
+headers
 
 : set-key-material  ( key$ kinfo ct -- )
    /outbuf h# 5e ( CMD_802_11_KEY_MATERIAL ) prepare-cmd
@@ -768,14 +790,16 @@ h# 0050.f202 constant amoui			\ WPA authentication suite
    wait-cmd-resp  if  exit  then
 ;
 
+external
 : set-gtk  ( gtk$ -- )  5 ctype-g  set-key-material  ;
 : set-ptk  ( ptk$ -- )  6 ctype-p  set-key-material  ;
+headers
 
-\ =========================================================================
-\ Associate/disassociate
-\ =========================================================================
+\ =======================================================================
+\ Adhoc join
+\ =======================================================================
 
-0 value assoc-id
+0 value atim
 
 : save-associate-params  ( ch ssid$ target-mac$ -- ch ssid$ target-mac )
    over target-mac$ move
@@ -783,6 +807,77 @@ h# 0050.f202 constant amoui			\ WPA authentication suite
    ssid swap move
    4 pick to channel
 ;
+
+: (join)  ( ch ssid$ target-mac$ -- ok? )
+   save-associate-params
+   /outbuf h# 2c ( CMD_802_11_AD_HOC_JOIN ) prepare-cmd
+   resp-wait-long to resp-wait
+
+   ( target-mac$ ) +x$			\ Peer MAC address
+   ( ssid$ ) tuck +x$			\ SSID
+   ( ssid-len ) d# 32 swap - +x		\ 32 bytes of SSID
+   bss-type-adhoc +xb			\ BSS type
+   d# 100 +xw				\ Beacon period
+   1      +xb				\ DTIM period
+
+   8 +x					\ 8 bytes of time stamp
+   8 +x					\ 8 bytes of local time
+
+   \ DS param set
+   3 +xb				\ Elem ID = DS param set
+   1 +xb				\ Length
+   ( channel ) +xb			\ Channel
+   4 +x					\ Reserved bytes
+
+   \ IBSS param set
+   6 +xb				\ Elem ID = IBSS param set
+   2 +xb				\ Length
+   atim +xw				\ ATIM window
+   4 +x					\ Reserved bytes
+
+   cap    +xw				\ Capability info: ESS, short slot, WEP
+
+   \ XXX 14 bytes for 802.11g, 8 bytes for 802.11b
+   common-rates #rates +x$		\ Common supported data rates
+   d# 255 +xw				\ Association timeout
+   0      +xw				\ Probe delay time
+
+   /x dup /fw-cmd-hdr + outbuf >fw-len le-w!	\ Finally set the length
+   outbuf-bulk-out  if  false exit  then
+   wait-cmd-resp  if  ." Failed to join adhoc network" cr false exit  then
+   true
+;
+
+external
+: set-atim-window  ( n -- )  d# 50 min  to atim  ;
+headers
+
+\ =========================================================================
+\ Authenticate
+\ =========================================================================
+
+: authenticate  ( target-mac$ -- )
+   7 h# 11 ( CMD_802_11_AUTHENTICATE ) prepare-cmd
+   ( target-mac$ ) +x$		\ Peer MAC address
+   auth-mode +xb		\ Authentication mode
+   7 outbuf-bulk-out  if  exit  then
+   wait-cmd-resp  if  exit  then
+;
+
+: deauthenticate  ( mac$ -- )
+   8 h# 24 ( CMD_802_11_DEAUTHENTICATE ) prepare-cmd
+   ( mac$ ) +x$			\ AP MAC address
+   3 +xw			\ Reason code: station is leaving
+   8 outbuf-bulk-out  if  exit  then
+   wait-cmd-resp  if  exit  then
+   ds-disconnected set-driver-state
+;
+
+\ =========================================================================
+\ Associate/disassociate
+\ =========================================================================
+
+0 value assoc-id
 
 \ The source IE is in the Marvel format: id and len are 2 bytes long.
 \ The destination IE is in the 802.11 format: id and len are 1 byte long.
@@ -877,11 +972,14 @@ h# 0050.f202 constant amoui			\ WPA authentication suite
    then
 ;
 
+external
 : associate  ( ch ssid$ target-mac$ -- ok? )
    set-mac-control
    2dup authenticate
-   (associate)
+   bss-type bss-type-managed =  if  (associate)  else  (join)  then
 ;
+headers
+
 : do-associate  ( -- ok? )
    do-associate dup  if
       ds-disconnected reset-driver-state

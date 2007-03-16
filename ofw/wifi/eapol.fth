@@ -13,7 +13,7 @@ hex
 
 d# 10,000 constant eapol-wait
 
-1 constant eapol-ver
+1 value    eapol-ver
 3 constant eapol-key
 h# 888e constant eapol-type
 
@@ -23,7 +23,7 @@ d# 2048 constant /buf
 \ bss-type values
 1 constant bss-type-managed
 2 constant bss-type-adhoc
-bss-type-managed value bss-type
+0 value bss-type
 
 d# 32 constant /tkip
 d# 16 constant /aes
@@ -266,7 +266,6 @@ false value group-rekey?
    false  eapol-wait 0  do
       data /buf read-force 0>  if
          data >etype be-w@ eapol-type =		\ EAPOL frame
-         data >ver c@ eapol-ver =  and		\ Version 1
          data >ptype c@ eapol-key =  and	\ EAPOL-key
          data >rcnt last-rcnt /rcnt comp and  if	\ A new eapol-key record
             data >rcnt last-rcnt!		\ Update last replay counter
@@ -280,6 +279,7 @@ false value group-rekey?
 
 : process-1-of-4  ( -- ok? )
    " Process EAPOL-key message 1 of 4" vtype
+   data >ver      c@ to eapol-ver
    data >dtype    c@ kt>dtype        <>  if  false exit  then	\ Descriptor type mismatch
    data >kinfo be-w@ pct>kinfo1      <>  if  false exit  then	\ Bad key info
    data >klen  be-w@ ctype-p ct>klen <>  if  false exit  then	\ Bad key len
@@ -363,8 +363,8 @@ false value group-rekey?
 : process-1-of-2  ( --  ok? )
    " Process EAPOL-key message 1 of 2" vtype
    data >dtype    c@ kt>dtype        <>  if  false exit  then	\ Descriptor type mismatch data >kinfo be-w@ ki-idx-mask invert and gct>kinfo1 <>  if  false exit  then	\ Bad key info
-   data >klen  be-w@ ctype-p ct>klen <>  if  false exit  then	\ Bad key len
-   data ctype-g mic-ok?              0=  if  true to group-rekey? false exit  then	\ Bad mic
+   data >klen  be-w@ ctype-g ct>klen <>  if  false exit  then	\ Bad key len
+   data ctype-p mic-ok?              0=  if  true to group-rekey? false exit  then	\ Bad mic
    data decrypt-gtk
 ;
 : wait-for-1-of-2  ( -- ok? )
@@ -480,7 +480,7 @@ false value group-rekey?
    endcase
 ;
 
-: .bss-type  ( n -- )  1 =  if  ." Infrastructure"  else  ." Ad-hoc"  then  ;
+: .bss-type  ( n -- )  1 =  if  ." Infrastructure"  else  ." Adhoc"  then  ;
 : .cap  ( cap -- )
    ."     Type: " dup 3 and  .bss-type cr
    ."     WEP: " dup h# 10 and  .on/off
@@ -519,11 +519,10 @@ false value group-rekey?
 
 /buf buffer: scanbuf
 
-: find-ie  ( adr ie-type -- adr len true | false )
-   >r					( adr )  ( R: ie-type )
-   dup le-w@ swap 2 + swap d# 19 /string	( adr' len' )
+: (find-ie)  ( adr len ie-type -- adr len true | false )
+   >r
    false -rot				( flag adr len )  ( R: ie-type )
-   begin  2 pick 0= over and  while	( flag adr len )  ( R: ie-type )
+   begin  2 pick 0= over 0> and  while	( flag adr len )  ( R: ie-type )
       over c@ r@ =  if			( flag adr len )  ( R: ie-type )
          rot drop true -rot		\ Found it
       else
@@ -532,6 +531,19 @@ false value group-rekey?
    repeat  r> drop			( flag adr len )
    rot  if  drop dup 1+ c@ swap 2 + swap true  else  2drop false  then
 					( adr' len' true | false )
+;
+: find-ie  ( adr ie-type -- adr len true | false )
+   >r					( adr )  ( R: ie-type )
+   dup le-w@ swap 2 + swap d# 19 /string	( adr' len' )
+   r> (find-ie)				( adr' len' true | false )
+;
+: find-ie2  ( ie-adr,len adr ie-type -- adr len true | false )
+   >r		   			( ie-adr,len adr )  ( R: ie-type )
+   dup le-w@ swap 2 + swap d# 19 /string
+					( ie-adr,len adr len )  ( R: ie-type )
+   3 pick rot - -			( ie-adr,len len' )  ( R: ie-type )
+   swap /string				( adr' len' )  ( R: ie-type )
+   r> (find-ie)				( adr' len' true | false )
 ;
 : find-ssid  ( ssid$ adr -- adr' true | false )
    false swap				( ssid$ flag adr )
@@ -547,7 +559,6 @@ false value group-rekey?
 ;
 
 : rssi-ok?  ( rssi -- flag )  drop true  ;	\ XXX
-: set-country-info  ( adr len -- )  2drop  ;	\ XXX
 
 \ Authentication mode
 0 constant am-open
@@ -590,7 +601,6 @@ false value group-rekey?
 : report-associate-info  ( -- )
    report-common-rates
    ctype-p ctype-g ktype set-key-type
-   bss-type set-bss-type
    ktype  case
       kt-none  of  am-open set-auth-mode
                    disable-rsn
@@ -605,6 +615,15 @@ false value group-rekey?
                    enable-rsn
                    disable-wep
    endcase
+;
+
+: set-bss-type  ( bss-type -- )  dup to bss-type  set-bss-type  ;
+
+: set-country-info  ( adr len -- )
+   country?  if  2drop country-ie  then	\ Overwrite the country IE
+   3 / 3 *				\ Remove pad byte
+   ?dup 0=  if  drop exit  then		\ Nothing to set
+   set-country-info
 ;
 
 : set-wpa-atype  ( adr -- )
@@ -657,24 +676,34 @@ false value group-rekey?
    dup 0=  if  ." Keys in wifi-cfg are not valid" cr  then
 ;
 
+h# 0050.f201 constant wpa-tag
+: process-wpa-ie  ( ie-adr,len adr -- )
+   \ Some AP such as Linksys has a bogus WPA IE in addition to the real thing.
+   \ Skip over the bad one and see if there's another WPA IE
+   2 pick be-l@ wpa-tag =  if  drop set-wpa-ktype exit  then
+   d# 221 find-ie2  if
+      over be-l@ wpa-tag =  if  set-wpa-ktype  else  2drop  then
+   then
+;
+
 : ssid-valid?  ( adr -- flag )
    kt-none ktype!
    dup 2 + target-mac!				\ AP's mac address
    dup 8 + c@ rssi-ok? 0=  if  ." Signal too weak" cr drop false exit  then
    dup d# 19 + le-w@ 				\ Capabilities
-   dup h# 10 and  if  kt-wep ktype!  then
-   dup 3 and  bss-type <>  if  ." Expect: " bss-type .bss-type
-                               ."   found: " 3 and .bss-type cr drop false exit  then
+   dup h# 10 and  if  kt-wep ktype!  then	\ Privacy
+   dup  3 and  set-bss-type			\ BSS type: managed/adhoc
    dup 20 and  if  2 set-preamble  then		\ Short preamble
    h# 433 and set-cap				\ Set our own capabilities
    dup 1 find-ie  if  add-common-rates  then	\ Supported rates
    dup d# 50 find-ie  if  add-common-rates  then	\ Extended supported rates
    dup 3 find-ie 0=  if  ." Cannot locate the channel #" cr drop false exit  then
    drop c@ channel!				\ Channel number
-   dup 7 find-ie  if  set-country-info  then	\ Country info
+   dup 6 find-ie  if  drop 2 + le-w@ set-atim-window  then	\ ATIM window
+   dup 7 find-ie 0=  if  null$  then  set-country-info	\ Country channel/power info
    dup d# 48 find-ie  if  set-wpa2-ktype drop key-ok? exit  then	\ Favor RSN(WPA2) over WPA
-   d# 221 find-ie  if  set-wpa-ktype  then
-   key-ok?
+   dup d# 221 find-ie  if  2 pick process-wpa-ie  then
+   drop key-ok?
 ;
 
 : (do-associate)  ( -- ok? )
@@ -714,7 +743,6 @@ false value group-rekey?
    " Process EAPOL message" vtype
    2dup vdump
    data swap move
-   data >ver c@ eapol-ver =  			\ Version 1
    data >ptype c@ eapol-key =  and  if		\ EAPOL-key
       data >rcnt last-rcnt /rcnt comp  if	\ A new eapol-key record
          " Got EAPOL-key message 1 of 2" vtype
@@ -734,11 +762,18 @@ false value group-rekey?
    begin  ?dup  while
       ascii , left-parse-string
       2dup " debug" $=  if  true to debug?  then
-           " scan"  $=  if  true to scan?   then	\ Force scan even if ssid$ is same
+      2dup " scan"  $=  if  true to scan?   then	\ Force scan even if ssid$ is same
+      2dup drop " country" comp 0=  if		\ Force different country IE
+         2dup [char] = left-parse-string  2drop
+         set-country
+         true to country?
+      then
+      2drop
    repeat drop
 ;
 
 : open  ( -- ok? )
+   wifi-country$ set-country
    my-args parse-args
    mac-adr$ init-wifi-data
    first-open?  if

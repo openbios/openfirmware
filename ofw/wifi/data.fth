@@ -24,7 +24,9 @@ purpose: Supplicant data and environment data
 : set-cap  ( cap -- )  " set-cap" $call-parent  ;
 : set-preamble  ( preamble -- )  " set-preamble" $call-parent  ;
 : set-auth-mode  ( amode -- )  " set-auth-mode" $call-parent  ;
-: set-key-type   ( ctp ctg ktype -- )  " set-key-type"  $call-parent  ;
+: set-key-type   ( ctp ctg ktype -- )  " set-key-type" $call-parent  ;
+: set-country-info  ( adr len -- )  " set-country-info" $call-parent  ;
+: set-atim-window   ( n -- )  " set-atim-window" $call-parent  ;
 
 \ =======================================================================
 \ Global data
@@ -78,11 +80,15 @@ h# ff constant kt-none
 1 constant at-eap
 2 constant at-preshared
 
+0 0 2value country-ie			\ Address of country IE
+
+
 \ =======================================================================
 \ Instance data 
 
 false instance value debug?
 false instance value scan?
+false instance value country?
 0 instance value wifi			\ Current wifi-node
 
 : ptk  ( -- adr )  wifi >ptk  ;
@@ -147,7 +153,10 @@ false instance value scan?
 : wifi-wep2$  ( -- $ )  wifi-cfg >wc-wep2 adrlen@  ;
 : wifi-wep3$  ( -- $ )  wifi-cfg >wc-wep3 adrlen@  ;
 : wifi-wep4$  ( -- $ )  wifi-cfg >wc-wep4 adrlen@  ; 
-: wifi-wep-idx  ( -- n )  wifi-cfg >wc-wep-idx @ 1- 0 max 4 min  ;
+: wifi-wep-idx   ( -- n )  wifi-cfg >wc-wep-idx @ 1- 0 max 4 min  ;
+: wifi-country$  ( -- $ )  wifi-cfg >wc-country 3  ;
+
+: set-country  ( adr len -- )  2dup upper  country>ie to country-ie  ;
 
 
 \ LICENSE_BEGIN
