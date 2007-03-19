@@ -1,4 +1,4 @@
-purpose: Build Open Firmware for OLPC
+purpose: Build Open Firmware for LX Development board
 \ See license at end of file
 
 dictionary: ${BP}/cpu/x86/build/basefw.dic
@@ -10,7 +10,7 @@ build-now
 hex
 \ ' $report-name is include-hook
 
-fload ${BP}/cpu/x86/pc/olpc/config.fth
+fload ${BP}/cpu/x86/pc/lxdevel/config.fth
 
 : headerless ;  : headers  ;  : headerless0 ;
 
@@ -64,7 +64,7 @@ d# 12   to pageshift
 
 dev /
 1 encode-int  " #address-cells"  property
-" OLPC" encode-string  " architecture" property
+" Salsa" encode-string  " architecture" property
 device-end
 
 \ Memory management services
@@ -84,7 +84,7 @@ alias lmove lmove			\ Needed by CS5536 NAND FLASH driver
 dend
 
 fload ${BP}/cpu/x86/pc/olpc/gpio.fth	\ Rudimentary GPIO driver
-fload ${BP}/cpu/x86/pc/olpc/probemem.fth	\ Memory probing
+fload ${BP}/cpu/x86/pc/lxdevel/probemem.fth	\ Memory probing
 
 [ifdef] virtual-mode
 fload ${BP}/cpu/x86/loadvmem.fth	\ /mmu node
@@ -186,10 +186,10 @@ device-end
 fload ${BP}/cpu/x86/pc/mmusetup.fth	\ Initial values for MMU lists
 [then]
 
-fload ${BP}/cpu/x86/pc/olpc/devices.fth
+fload ${BP}/cpu/x86/pc/lxdevel/devices.fth
 
 [ifdef] rom-loaded
-fload ${BP}/cpu/x86/pc/olpc/gpioinit.fth
+fload ${BP}/cpu/x86/pc/lxdevel/gpioinit.fth
 fload ${BP}/cpu/x86/pc/olpc/chipinit.fth
 [then]
 
@@ -201,30 +201,11 @@ warning @ warning off
 : stand-init
    stand-init
    root-device
-      atest?  if  " A1" " OLPC A-test"  else
-         board-revision  case
-            0 of  " B2" " OLPC B2"  endof
-            1 of  " B3" " OLPC B3"  endof
-            7 of  " B1" " OLPC B1"  endof
-            ( default )  >r  " ??"  " OLPC ??"  r>
-         endcase
-      then
-      encode-string  " banner-name" property
-      model
-      8 ec-cmd  " ec-version" integer-property
-
-      " PQ2" h# fff0.0000 h# 1.0000 sindex  dup 0>=  if  ( offset )
-         h# fff0.0000 +  cscount                         ( name )
-      else
-         drop  " UNKNOWN"
-      then
-      " ec-name" string-property
-
+      " Salsa" encode-string  " banner-name" property
+      " Salsa" model
    dend
 ;
 warning !
-
-fload ${BP}/cpu/x86/pc/olpc/micin.fth   \ Microphone input AC/DC coupling
 
 fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
 patch 3 6 get-countdown
@@ -242,7 +223,7 @@ devalias nfs net//obp-tftp:last//nfs
 
 fload ${BP}/cpu/x86/pc/boot.fth
 
-h# 3ab constant usb-port-power-map  \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR2
+h# 3ea constant usb-port-power-map  \ USB4:PWR2  USB3:PWR1  USB2:PWR1  USB1:PWR1
 fload ${BP}/cpu/x86/pc/olpc/usb.fth
 
 false to stand-init-debug?
@@ -288,8 +269,6 @@ warning @  warning off
 \ warning !
 [then]
 
-: r " p2 flash disk:\olpc.rom" evaluate  ;
-
 : (.firmware)  ( -- )
    ." Open Firmware  "  .built  cr
    ." Copyright 1999 FirmWorks  All Rights Reserved" cr
@@ -309,7 +288,7 @@ fload ${BP}/ofw/gui/bmptools.fth
 fload ${BP}/dev/null.fth
 fload ${BP}/ofw/core/bailout.fth
 
-[ifdef] olpc
+[ifdef] olpc-gui
 \ GUI
 false value gui-safeboot?
 
@@ -320,104 +299,19 @@ false value fru-test?
 true value user-mode?
 
 fload ${BP}/cpu/x86/pc/olpc/banner.fth
-
-[ifdef] sd-diags
-: loadsd  " rom:sd" $boot  ;
-[then]
 [then]
 
 fload ${BP}/ofw/gui/loadmenu.fth
 \ fload ${BP}/ofw/gui/insticon.fth
 
-[ifdef] olpc
+[ifdef] olpc-gui
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
-fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
-fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
 [then]
 
 \ Eliminate 4 second delay in install console for the case where
 \ there is no keyboard.  The delay is unnecessary because the screen
 \ does not go blank when the device is closed.
 patch drop ms install-console
-
-: boot-configure  ( -- )
-   cr ." Trying startup script disk:\boot\olpc-boot.fth" cr
-
-   " fload disk:\boot\olpc-boot.fth" ['] eval catch  if
-      2drop
-   else
-      show-disk exit
-   then
-
-   " fload disk:\boot\olpcboot.fth" ['] eval catch  if
-      2drop
-   else
-      show-disk exit
-   then
-
-   " disk:\boot\initrd.img" 2dup  open-dev  ?dup  if  ( name$ ih )
-      close-dev  " ramdisk" $setenv
-   else
-      2drop
-   then
-   
-   " disk:\boot\vmlinuz" 2dup  open-dev  ?dup  if  ( name$ ih )
-      close-dev  " boot-device" $setenv
-      show-disk
-      exit
-   then
-   2drop
-
-   cr ." Trying startup script nand:\boot\olpc-boot.fth" cr
-   " fload nand:\boot\olpc-boot.fth" ['] eval catch  if
-      2drop
-   else
-      show-nand exit
-   then
-
-    " net" " boot-device" $setenv
-;
-
-: config&boot  ( -- )
-   ['] boot catch drop  \ Try the normal boot path first
-   boot-configure auto-boot?  if  boot  then
-;
-[ifndef] rom-loaded
-" config&boot" ' boot-command set-config-string-default
-[then]
-
-\ XXX wireless test hack
-: check-wireless
-   wlan-reset  d# 100 ms
-   probe-usb2
-   " /usb@f,5/device@3,0" locate-device  if   \ No wireless device
-      drop
-      cr cr  red-letters  ." !!! No WLAN !!!"  black-letters  cr cr
-   else
-      cr cr green-letters  ." Wireless found"  black-letters  cr cr
-      d# 1000 ms
-      power-off
-   then
-;
-\ " check-wireless" ' boot-command set-config-string-default
-
-
-: dcon-reset-all  ( -- )
-   " screen"  " dcon-off" ['] execute-device-method  catch  if
-      2drop 2drop
-   then
-
-[ifdef] rom-loaded
-   \ This really should be in a cache line by itself
-   \ with a bunch of prefetched nops after, so we don't
-   \ do memory prefetches during shutdown
-   1. h# 5140.0017 wrmsr  \ DIVIL_SOFT_RESET MSR, 5536 page 367
-   begin again
-[else]
-   (reset-all)
-[then]
-;
-' dcon-reset-all to reset-all
 
 alias reboot bye
 
@@ -458,25 +352,7 @@ true                               ' client-symbols?  set-config-int-default
 \ fload ${BP}/cpu/x86/pc/report.fth
 fload ${BP}/ofw/core/dualconsole.fth
 
-: user-switch?  ( -- flag )
-   atest?  if
-      h# fc3f ec@ h# ff <>
-   else
-      \ The EC can tristate the KEY_OUT lines behind our back, so we
-      \ try several times to observe a key press.  Empirically, the EC
-      \ takes about 1.5 mS to finish an (infrequent) scan.
-      d# 5 0  do
-         \ Output enable the KEY_OUT matrix lines
-         h# fc12 ec@  dup h# e0 or  h# fc12 ec!  ( old )
-         h# fc34 ec@ h# 70 and                   ( old keys )
-         \ Output disable the KEY_OUT matrix lines
-         swap  h# e0 invert and  h# fc12 ec!     ( keys )
-         h# 70 <>  if  true unloop exit  then
-         2 ms
-      loop
-      false
-   then
-;
+true constant user-switch?  ( -- flag )
 : fast-boot?  ( -- flag )
 [ifdef] rom-loaded
 false exit
@@ -583,7 +459,7 @@ alias s suspend
       probe-pci
       ['] false to interrupt-auto-boot?
       interpreter-init
-      enable-power-button
+\     enable-power-button
       auto-boot
       open-keyboard
       optional-startup
@@ -596,7 +472,7 @@ alias s suspend
       ." USB probe" cr
       optional-startup
       interpreter-init
-      enable-power-button
+\      enable-power-button
       auto-boot
    then
 
@@ -605,10 +481,6 @@ alias s suspend
 
    quit
 ;
-
-[ifdef] olpc
-fload ${BP}/cpu/x86/pc/olpc/copynand.fth
-[then]
 
 [ifndef] olpc
 \ This sometimes helps with VGA/EGA boards, enabling I/O space access

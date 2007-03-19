@@ -1,0 +1,11 @@
+\ See license at end of file
+purpose: Build script fo x86 real mode startup code.
+
+command: &builder &this
+build-now
+
+\ To do this on the geode, extra init may be necessary
+\ create debug-reset
+
+fload ${BP}/cpu/x86/pc/lxdevel/config.fth
+fload ${BP}/cpu/x86/pc/olpc/rmstart.fth

@@ -9,16 +9,22 @@ h#   f.c000 constant /fw-ram
 [then]
 
 [ifdef] rom-loaded
+[ifdef] lx-devel
+h# fff8.0000   constant rom-pa		\ Physical address of boot ROM
+h#    8.0000   constant /rom		\ Size of boot ROM
+rom-pa         constant dropin-base
+[else]
 h# fff0.0000   constant rom-pa		\ Physical address of boot ROM
 h#   10.0000   constant /rom		\ Size of boot ROM
+rom-pa  h# 8.0000 +  constant dropin-base
+[then]
+
 h#    8.0000   constant dropin-size
 
-rom-pa  h# 8.0000 +  constant dropin-base
 dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
 
 h#  1c0.0000 constant fw-pa
 h#   20.0000 constant /fw-ram
-
 [then]
 
 [ifdef] linuxbios-loaded
@@ -73,7 +79,7 @@ h# 600.0000 constant dma-base
 h# a00.0000 constant dma-size
 
 h# f.0000 constant suspend-base      \ In the DOS hole
-h# f.0008 constant resume
+h# f.0008 constant resume-entry
 h# f.0800 constant resume-data
 
 fload ${BP}/cpu/x86/pc/virtaddr.fth

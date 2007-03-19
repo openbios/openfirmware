@@ -264,24 +264,24 @@ hex
 
       h# 90909000 #  h# f000c #)  cmp  <>  if
          char x 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
-         resume # sp mov  sp jmp
+         resume-entry # sp mov  sp jmp
       else
     
          h# 90909000 #  h# f0004 #)  cmp  <>  if
             char y 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
-            resume # sp mov  sp jmp
+            resume-entry # sp mov  sp jmp
          else
     
             h# 00000be9 #  h# f0000 #)  cmp  <>  if
                char z 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
-               resume # sp mov  sp jmp
+               resume-entry # sp mov  sp jmp
             else
-               resume # sp mov  sp jmp
+               resume-entry # sp mov  sp jmp
             then
          then
       then
 
-\      resume # sp mov  sp jmp
+\      resume-entry # sp mov  sp jmp
    then
    long-offsets off
 [then]
@@ -332,7 +332,7 @@ hex
 
    1454 port-rl  2 bitand  0<>  if  \ Wakeup event flag
       char r 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
-      resume # sp mov  sp jmp
+      resume-entry # sp mov  sp jmp
    then
 
    h# 1808 #  cx  mov          \ Default region configuration properties MSR

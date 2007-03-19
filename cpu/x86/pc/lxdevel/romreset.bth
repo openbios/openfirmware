@@ -6,7 +6,7 @@ build-now
 
 create debug-startup
 
-fload ${BP}/cpu/x86/pc/olpc/config.fth	\ Address configuration
+fload ${BP}/cpu/x86/pc/lxdevel/config.fth	\ Address configuration
 
 
 \needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
@@ -49,15 +49,7 @@ fload ${BP}/cpu/x86/pc/dot.fth		\ Numeric output
 
 fload ${BP}/cpu/x86/pc/romfind.fth	\ find-dropin
 
-label testsub
-   ret
-end-code
-
 label startup
-[ifndef] use-lx    \ This is an entirely different register in LX
-   11. 1100 set-msr        \ Enable branch target buffer and near call return stack GX page 116
-[then]
-
    \ The next few MSRs allow us to access the 5536
    \ EXTMSR - page 449   \ Use PCI device #F for port 2
    00000000.00000f00.   5000201e set-msr  \ cs5536_setup_extmsr(void)
@@ -68,48 +60,7 @@ label startup
    \ setup CPU interface serial to mode C on both sides
    44000020.00200013. 51000010 set-msr   \ 5536 p 229
 
-[ifndef] use-lx
-   \ Tell the GX what kind of companion chip is attached.
-   \ The GX datasheet is incorrect; 2 means 5536, not a reserved value
-   00000000.00000002.   54002010 set-msr
-[then]
-
-   \ Set up GPIO base register
-   0000f001.00001000.   5140000c set-msr  \ GPIO BAR
-
  \ Init UART
-1 [if]
- 1 [if]
-   \ Set the UART TX line high - this prevents a low-going glitch that
-   \ the receiver interprets as a character.
-   100.0000 1010 port-wl   \ Output AUX1 select - UART TX as GPIO for now
-        100 1000 port-wl   \ high
-        100 1004 port-wl   \ GPIO1 - output enable
- [then]
-
-   \ The UART init sequence takes 550 uS running from ROM
- [ifdef] use-uart2
-   \ cs5536_setup_onchipuart,cs5536_early_setup.c:205.14
-   0.00000012.   5140003e set-msr  \ enable UART2
-
-   \ GPIO1 - UART2 TX
-   10 1004 port-wl   \ GPIO4 - output enable - UART2 TX
-   10 1010 port-wl   \ Output AUX1 select - UART2 TX
-    8 1020 port-wl   \ Input enable UART2 RX
-    8 1034 port-wl   \ Input AUX1 select - UART2 RX
-   0.8070.0003  51400014 set-msr  \ MDD_LEG_IO  UART2 at COM1 address
- [else]
-   \ cs5536_setup_onchipuart,cs5536_early_setup.c:205.14
-   0.00000012.   5140003a set-msr  \ enable COM1
-
-   \ GPIO1 - UART1 TX
-   100 1004 port-wl   \ GPIO1 - output enable
-   100 1010 port-wl   \ Output AUX1 select - UART TX
-   200 1020 port-wl   \ Input enable UART RX
-   200 1034 port-wl   \ Input AUX1 select - UART RX
-   0.8007.0003.  51400014 set-msr  \ MDD_LEG_IO  legacy IO
- [then]
-
    \ uart_init,serial.c
    \ This is a garden-variety 8250 UART setup sequence
     0 3f9 port-wb
@@ -122,47 +73,20 @@ label startup
    \ End of serial init
 
    char + 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
-[then]
 
  \ Init memory controller
 
    \ sdram_initialize,generic_sdram.c
    \ sdram_set_spdregisters(),auto.c
  
-   \ gpio_init,auto.c
-   4 1020 port-wl          \ Enable the GPIO bit that reports DRAM size (ticket 151)
-
-   \ Refresh and SDRAM program MSR GX page 205
-   \ Some of these don't really have to be set here, and could be
-   \ moved to the big table of MSR values, except that the table
-   \ slammer is dumb and can't handle conditionals.
-   1030 port-rl 4 bitand  0<> if  \ 128 MiB
-      25fff002.1077e000.      1808 set-msr
-      2c7be040.400fffe0.  10000026 set-msr
-      20000007.7df00100.  10000028 set-msr \ Top of memory
-      20a7e0fd.7fffd000.  10000029 set-msr \ Frame buffer
-[ifdef] use-lx
-      10076013.00003a40.  20000018 set-msr
-      20000007.7df00100.  4000002a set-msr \ top of memory.
-[else]
-      10075012.00003400.  20000018 set-msr
-      20000007.7df00100.  40000029 set-msr \ top of memory.
-[then]
-      077df000.00100130.  50002019 set-msr
-   else                           \ 256 MiB
-      25fff002.10f7e000.      1808 set-msr
-      2cfbe040.400fffe0.  10000026 set-msr
-      2000000f.7df00100.  10000028 set-msr \ Top of memory
-      2127e0fd.7fffd000.  10000029 set-msr \ Frame buffer
-[ifdef] use-lx
-      10076013.00003a40.  20000018 set-msr
-      2000000f.7df00100.  4000002a set-msr \ top of memory.
-[else]
-      10076013.00003400.  20000018 set-msr
-      2000000f.7df00100.  40000029 set-msr \ top of memory.
-[then]
-      0f7df000.00100130.  50002019 set-msr
-   then
+\ Memory config setup
+   25fff002.10f7e000.      1808 set-msr
+   2cfbe040.400fffe0.  10000026 set-msr
+   2000000f.7df00100.  10000028 set-msr \ Top of memory
+   2127e0fd.7fffd000.  10000029 set-msr \ Frame buffer
+   10076013.00003a40.  20000018 set-msr
+   2000000f.7df00100.  4000002a set-msr \ top of memory.
+   0f7df000.00100130.  50002019 set-msr
 
    \ 20000019 rmsr            \ SDRAM timing and mode program
    18000108.286332a3.   20000019 set-msr
@@ -178,30 +102,15 @@ label startup
    1. 20002004 set-msr  \ GX p 199
 
    \ Delay on exit from power mode 1, use unbuffered RAM
-[ifndef] use-lx
-   101. 2000001a set-msr    \ MC_CF1017_DATA GX p 210
-[else]
    130ad101. 2000001a set-msr    \ MC_CF1017_DATA  LX p 231
-[then]
 
    \ Unmask CKE1 and CKE0
    0. 2000001d set-msr   \ MC_CFCLK_DBG Clear 300 bits
 
-[ifdef] use-lx
    \ Reset memory controller
    20000018 rmsr    \ MC_CF07_DATA
    2 bitset  20000018 wmsr
    2 bitclr  20000018 wmsr
-[then]
-
-[ifndef] use-lx
-   \ load RDSYNC
-   \ Empirically, the recommended setting of 0xff310.00000000. causes RAM errors
-   00000310.00000000.   2000001f set-msr  \ GX page 215
-
-   \ set delay control.  The exact value below is specified in the GX manual.
-   830d415a.8ea0ad6a.   4c00000f set-msr
-[then]
 
    \ char b 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
 

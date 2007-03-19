@@ -1,16 +1,11 @@
 purpose: Construct the Open Firmware module collection
 
 command: &builder &this
-in: ${BP}/cpu/x86/pc/olpc/build/ec.img
-in: ${BP}/cpu/x86/pc/olpc/build/romreset.di
-in: ${BP}/cpu/x86/pc/olpc/build/romstart.di
-in: ${BP}/cpu/x86/pc/olpc/build/resume.di
-in: ${BP}/cpu/x86/pc/olpc/build/rmstart.img
-in: ${BP}/cpu/x86/pc/olpc/build/paging.di
-in: ${BP}/cpu/x86/pc/olpc/build/fw.dic
-in: ${BP}/dev/geode/nandflash/build/nandflash.fc
-in: ${BP}/dev/mmc/sdhci/build/sdhci.fc
-in: ${BP}/dev/mmc/sdhci/build/sdmmc.fc
+in: ${BP}/cpu/x86/pc/lxdevel/build/romreset.di
+\ in: ${BP}/cpu/x86/pc/lxdevel/build/resume.di
+in: ${BP}/cpu/x86/pc/lxdevel/build/rmstart.img
+in: ${BP}/cpu/x86/pc/lxdevel/build/paging.di
+in: ${BP}/cpu/x86/pc/lxdevel/build/fw.dic
 in: ${BP}/dev/geode/ac97/build/ac97.fc
 in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
 in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
@@ -19,14 +14,13 @@ in: ${BP}/dev/usb2/device/net/build/usbnet.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
-in: ${BP}/dev/olpc/cafenand/build/cafenand.fc
 
 build-now
 
-macro: FW_MAJOR S
-macro: FW_MINOR 02
+macro: FW_MAJOR L
+macro: FW_MINOR 01
 
-fload ${BP}/cpu/x86/pc/olpc/config.fth
+fload ${BP}/cpu/x86/pc/lxdevel/config.fth
 
 \ Always re-create the builton.fth file when we make a new rom.img
 fload ${BP}/cpu/x86/pc/builton.bth
@@ -41,16 +35,10 @@ hex
    ?do  h# ff ofd @ fputc  loop
 ;
 
-.( --- Saving as olpc.rom - Direct ROM format) cr
-writing olpc.rom
-   " ec.img"                $add-file
-   h# 2.0000 pad-file
-
-   dropin-base rom-pa -  pad-file
-
+.( --- Saving as lxdevel.rom - Direct ROM format) cr
+writing lxdevel.rom
    " romreset.di"           $add-file
-\   " romstart.di"           $add-file
-   " resume.di"             $add-file
+\  " resume.di"             $add-file
 
    fload ${BP}/cpu/x86/pc/olpc/loaddropins.fth
 
@@ -59,7 +47,7 @@ writing olpc.rom
 
 \ Insert the revision signature
 /rom h# 40 - ofd @ fseek
-" CL1   Q2${FW_MAJOR}${FW_MINOR}  Q2${FW_MAJOR}" expand$  ofd @ fputs
+" LX1   L2${FW_MAJOR}${FW_MINOR}  L2${FW_MAJOR}" expand$  ofd @ fputs
 
 /l buffer: crcbuf
 /rom buffer: filebuf

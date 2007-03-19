@@ -126,25 +126,38 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
 
    real-mode
 
+   \ This code is highly optimized because it runs when the CPU is in
+   \ it slowest operation mode, so we want to get it done fast.
    \ GLCP_SYS_RSTPLL - page 406
    \ If the PLL is already set up, we don't redo the 5536 setup
    op: h# 4c000014 # cx mov   rdmsr     \ MSR value in dx,ax
    al bl mov
    op: h# fc00.0000 # ax and  0=  if    \ Start the PLL if not already on
 
-      op: dx dx xor                     \ Clear high bits
-      op: h# 04de.0000 # ax mov         \ Low MSR bits
+      h# 0017 # cx mov  rdmsr    \ Read CHIP_REVID
+      h# 0014 # cx mov           \ Restore RSTPLL MSR number
+      h# 30 # al cmp  >=  if     \ LX CPU
+         rdmsr                             \ Get base MSR value with divisors
+         op: h# 04de.0000 # ax or          \ Set the startup time (de) and breadcrumb (4)
+         wrmsr                             \ Put in the base value
+         op: h# 0000.1800 invert # ax and  \ Turn off the BYPASS bits
+      else                       \ GX CPU
+         op: dx dx xor                     \ Clear high bits
+         op: h# 04de.0000 # ax mov         \ Low MSR bits
 
-      \ The BOOTSTRAP_STAT bits (mask 70) read the straps that tell
-      \ us the board revision.  ID 5 is preB1, ID7 is B1.  ID0 is B2.
-      h# 70 # bl and  h# 50 # bl cmp  <  if
-         h# 220 # dx mov
-      else
-         h# 226 # dx mov
+         \ The BOOTSTRAP_STAT bits (mask 70) read the straps that tell
+         \ us the board revision.  ID 5 is preB1, ID7 is B1.  ID0 is B2.
+         h# 70 # bl and  h# 50 # bl cmp  <  if  \ B2 or later
+            h# 220 # dx mov             \ Divisor code for 66 MHz REFCLK
+         else                                   \ earlier than B2
+            h# 226 # dx mov             \ Divisor code for 33 MHz REFCLK
+         then
+         wrmsr                          \ Establish base MSR value
       then
-      wrmsr                             \ Establish base MSR value
       h# 6001 # ax or                   \ Set PD, RESETPLL
       wrmsr                             \ Start the PLL and reset the CPU
+
+[then]
    then
 
    \ Return to here after the reset

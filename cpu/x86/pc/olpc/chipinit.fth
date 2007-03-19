@@ -92,7 +92,11 @@ msr: 0000.1a00 00000000.00000001.  \ GX p 178 Imprecise exceptions
 \ Already mapped in early startup
 \ msr: 1000.0020 20000000.000fff80.   \ 0 - 7.ffff low RAM
 msr: 1000.0022 a00000fe.000ffffc.   \ fe00.0000 - fe00.3fff GP
+[ifdef] use-lx
+msr: 1000.0023 400000fe.008ffffc.   \ fe00.8000 - fe00.bfff VP
+[else]
 msr: 1000.0023 c00000fe.008ffffc.   \ fe00.8000 - fe00.bfff VP
+[then]
 msr: 1000.0024 80000000.0a0fffe0.   \ 000a.0000 - 000b.ffff DC
 
 \ msr: 1000.0025 000000ff.fff00000.   \ Unmapped - default
@@ -127,7 +131,11 @@ msr: 4000.0020 20000000.000fff00.   \ 0 - f.ffff low RAM
 msr: 4000.0022 200000fe.000ffffc.   \ fe00.0000 - fe00.03ff GP
 \ msr: 4000.0023 20000040.400fffe0.   \ 4040.0000 - 4041.ffff SMM memory
 msr: 4000.0024 200000fe.004ffffc.   \ fe00.4000 - fe00.7fff DC
+[ifdef] use-lx
+msr: 4000.0025 400000fe.008ffffc.   \ fe00.8000 - fe00.bfff VP
+[else]
 msr: 4000.0025 200000fe.008ffffc.   \ fe00.8000 - fe00.bfff VP
+[then]
 \ msr: 4000.0026 20000000.0a0fffe0.   \ 000a.0000 - 000b.ffff DC in low mem;  XXX - no DOS frame  buffer
 \ msr: 4000.0027 000000ff.fff00000.   \ Unmapped - default
 \ msr: 4000.0028 000000ff.fff00000.   \ Unmapped - default
@@ -138,7 +146,9 @@ msr: 4000.0080 00000000.00000001.   \ Route coherency snoops from GLIU1 to GLIU0
 msr: 4000.0083 00000000.0000ff00.   \ Disable SMIs
 
 \ msr: 4000.00e0 20000000.3c0fffe0.   \ IOD_BM DC - VGA
+[ifndef] use-lx
 msr: 4000.00e3 60000000.033000f0.   \ GLCP - Ports f0 and f1 incoming (clear FP IRQ13)
+[then]
 msr: 4000.2002 0000001f.0000001f.   \ Disables SMIs
 msr: 4000.2004 00000000.00000005.   \ Clock gating
 
@@ -146,11 +156,16 @@ msr: 4000.2004 00000000.00000005.   \ Clock gating
 msr: 0000.2001 00000000.00000220.
 msr: 4c00.2001 00000000.00000001.
 msr: 5000.2001 00000000.00000027.
-msr: 5400.2001 00000000.00000000.
 msr: 5800.2001 00000000.00000000.
 msr: 8000.2001 00000000.00000320.
 msr: a000.2001 00000000.00000010.
+
+[ifndef] use-lx
+msr: 5400.2001 00000000.00000000.  \ In GX, 5400.xxxx is FooGlue, in LX it is VIP
 msr: c000.2001 00000000.00040f80.
+msr: c000.2004 00000000.00000155.  \ Clock gating
+\ msr: c000.2001 00000000.00040f80.  \ DF config.  - Already set
+[then]
 
 \ Region config
 \ msr: 1808 25fff002.1077e000.  \ Memsize dependent
@@ -171,7 +186,11 @@ msr: 5000.2003 00000000.00370037. \ No ERRs, please
 msr: 5000.2004 00000000.00000015. \ Clock gating for 3 clocks
 msr: 5000.2005 00000000.00000000. \ Enable some PCI errors
 msr: 5000.2010 fff030f8.001a0215.
-msr: 5000.2011 00000300.00000100.
+[ifdef] use-lx
+msr: 5000.2011 04000300.00800f01. \ GLPCI_ARB - LX page 581
+[else]
+msr: 5000.2011 00000300.00000100. \ GLPCI_ARB
+[then]
 msr: 5000.2014 00000000.00f000ff.
 msr: 5000.2015 35353535.35353535.
 msr: 5000.2016 35353535.35353535.
@@ -182,13 +201,15 @@ msr: 5000.201a 4041f000.40400120.
 msr: 5000.201b 00000000.00000000.
 msr: 5000.201c 00000000.00000000.
 msr: 5000.201e 00000000.00000f00.
-msr: 5000.201f 00000000.0000006b.
+msr: 5000.201f 00000000.0000004b.
+\ msr: 5000.201f 00000000.0000006b.  \ Set below in bug workaround
+\ We don't need posted I/O writes to IDE, as we have no IDE
 
 \ clockgating
-msr: 2000.2004 00000000.00000003.  \ early setup uses 0, eng1398 changes to 3
 \ msr: 5400.2004 00000000.00000000.  \ Clock gating - default
 \ msr: 5400.2004 00000000.00000003.  \ Clock gating
 
+[ifndef] use-lx
 \ cpu/amd/model_gx2/cpubug.c
 
 \ pcideadlock();
@@ -204,7 +225,7 @@ msr: 0000180c 00000000.00000000. \ Regions c0000..dffff
 msr: 0000180d 00000000.00000000. \ Regions e0000..fffff
 
 \ eng1398();
-\ The result of this is already included in clockgating above
+msr: 2000.2004 00000000.00000003.  \ early setup uses 1, eng1398 changes to 3
 
 \ eng2900();
 msr: 0000.3003 0080a13d.00000000. \ Disables sysenter/sysexit in CPUID3
@@ -245,11 +266,12 @@ msr: 0000.3008 00000000.00000552.  \ Supposed to be same as msr 3002
 msr: 0000.3009 c0c0a13d.00000000.
 
 \ bug118253();
-\ Already done above
-\ 5000.201f 00000000.0000006b.  \ Disable GLPCI PIO Post Control
+\ msr: 5000.201f 00000000.0000006b.  \ Disable GLPCI PIO Post Control
+\ This is irrelevant because we don't use IDE, so posting to IDE ports is a don't care
 
 \ disablememoryreadorder();
 msr: 2000.0019 18000108.286332a3.
+[then]
 
 \ chipsetinit(nb);
 
@@ -299,9 +321,6 @@ msr: 8000.2003 0000000f.0000000f.  \ Disable ERRs
 \ msr: 8000.2004 00000000.00000055.  \ Clock gating
 msr: 8000.2011 00000000.00000001.  \ VG SPARE - VG fetch state machine hardware fix off
 msr: 8000.2012 00000000.06060202.  \ VG DELAY
-
-\ msr: c000.2001 00000000.00040f80.  \ DF config.  - Already set
-msr: c000.2004 00000000.00000155.  \ Clock gating
 
 \ msr: 4c00.0015 00000037.00000001.  \ MCP DOTPLL reset; unnecessary because of later video init
 
@@ -413,12 +432,6 @@ h# fe00.0000 value gp-base
 h# fe00.4000 value dc-base
 h# fe00.8000 value vp-base
 
-: fix-sirq  ( -- )
-   9 ec-cmd 9 <>  if
-      h# 5140.004e rdmsr  swap h# 40 or swap  h# 5140.004e wrmsr
-   then
-;
-
 : video-map
 [ifdef] virtual-mode
    gp-base dup  h# c000  -1  mmu-map
@@ -456,104 +469,6 @@ h# fe00.8000 value vp-base
 [ifdef] virtual-mode
    gp-base h# c000  mmu-unmap
 [then]
-;
-
-: gpio-init  ( -- )
-\  h# f7ff0800 h# 1000 pl!  \ GPIOL_OUTPUT_VALUE 
-\  h# 36ffc900 h# 1004 pl!  \ GPIOL_OUTPUT_ENABLE 
-   h#     d802 h# 1004 pl!  \ GPIOL_OUTPUT_ENABLE - SMI#, DCONLOAD, MIC
-\  h# ffff0000 h# 1008 pl!  \ GPIOL_OUT_OPENDRAIN - default
-\  h# ffff0000 h# 100c pl!  \ GPIOL_OUTPUT_INVERT_ENABLE - default
-   h#     c000 h# 1010 pl!  \ GPIOL_OUT_AUX1_SELECT - enable SMBUS pins
-\  h# ffff0000 h# 1014 pl!  \ GPIOL_OUT_AUX2_SELECT - default
-\  h# 1001effe h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - I don't think we need pullups
-   h# 02080000 h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - Disable pullups except for UART Rx
-\  h# efff1000 h# 101c pl!  \ GPIOL_PULLDOWN_ENABLE - default
-   h# ffff0000 h# 101c pl!  \ GPIOL_PULLDOWN_ENABLE - Disable all pull-downs
-   h#     d6e5 h# 1020 pl!  \ GPIOL_INPUT_ENABLE - DCONBLNK, DCONLOAD, THERM_ALRM, DCONIRQ, DCONSTAT1/0, MEMSIZE, PCI_INTA
-   h#     0081 h# 1024 pl!  \ GPIOL_INPUT_INVERT_ENABLE - Invert DCONIRQ and PCI_INTA#
-\  h# ffff0000 h# 1028 pl!  \ GPIOL_IN_FILTER_ENABLE - default
-\  h# ffff0000 h# 102c pl!  \ GPIOL_IN_EVENTCOUNT_ENABLE - default
-\  h# 2d9bd264 h# 1030 pl!  \ GPIOL_READ_BACK
-   h#     c600 h# 1034 pl!  \ GPIOL_IN_AUX1_SELECT
-   h#     0081 h# 1038 pl!  \ GPIOL_EVENTS_ENABLE 
-\  h# 00000000 h# 103c pl!  \ GPIOL_LOCK_ENABLE - default
-\  h# ffff0000 h# 1040 pl!  \ GPIOL_IN_POSEDGE_ENABLE - default
-\  h# ffff0000 h# 1044 pl!  \ GPIOL_IN_NEGEDGE_ENABLE - default
-\  h# 0000ffff h# 1048 pl!  \ GPIOL_IN_POSEDGE_STATUS - R/WC
-\  h# 0000ffff h# 104c pl!  \ GPIOL_IN_NEGEDGE_STATUS - R/WC
-\  h#     0000 h# 1050 pw!  \ GPIO_00_FILTER_AMOUNT - default
-\  h#     0000 h# 1052 pw!  \ GPIO_00_FILTER_COUNT - default
-\  h#     0000 h# 1054 pw!  \ GPIO_00_EVENT_COUNT - default
-\  h#     0000 h# 1056 pw!  \ GPIO_00_EVENTCOMPARE_VALUE - default
-\  h#     0000 h# 1058 pw!  \ GPIO_01_FILTER_AMOUNT - default
-\  h#     0000 h# 105a pw!  \ GPIO_01_FILTER_COUNT - default
-\  h#     0000 h# 105c pw!  \ GPIO_01_EVENT_COUNT - default
-\  h#     0000 h# 105e pw!  \ GPIO_01_EVENTCOMPARE_VALUE - default
-\  h#     0000 h# 1060 pw!  \ GPIO_02_FILTER_AMOUNT - default
-\  h#     0000 h# 1062 pw!  \ GPIO_02_FILTER_COUNT - default
-\  h#     0000 h# 1064 pw!  \ GPIO_02_EVENT_COUNT - default
-\  h#     0000 h# 1066 pw!  \ GPIO_02_EVENTCOMPARE_VALUE - default
-\  h#     0000 h# 1068 pw!  \ GPIO_03_FILTER_AMOUNT - default
-\  h#     0000 h# 106a pw!  \ GPIO_03_FILTER_COUNT - default
-\  h#     0000 h# 106c pw!  \ GPIO_03_EVENT_COUNT - default
-\  h#     0000 h# 106e pw!  \ GPIO_03_EVENTCOMPARE_VALUE - default
-\  h#     0000 h# 1070 pw!  \ GPIO_04_FILTER_AMOUNT - default
-\  h#     0000 h# 1072 pw!  \ GPIO_04_FILTER_COUNT - default
-\  h#     0000 h# 1074 pw!  \ GPIO_04_EVENT_COUNT - default
-\  h#     0000 h# 1076 pw!  \ GPIO_04_EVENTCOMPARE_VALUE - default
-\  h#     0000 h# 1078 pw!  \ GPIO_05_FILTER_AMOUNT - default
-\  h#     0000 h# 107a pw!  \ GPIO_05_FILTER_COUNT - default
-\  h#     0000 h# 107c pw!  \ GPIO_05_EVENT_COUNT - default
-\  h#     0000 h# 107e pw!  \ GPIO_05_EVENTCOMPARE_VALUE - default
-
-   h#     0100 h# 1090 pl!  \ GPIOH_OUT_AUX1_SELECT - GPIO24 is WORK_AUX
-   h#     0100 h# 1084 pl!  \ GPIOH_OUTPUT_ENABLE - GPIO24 is WORK_AUX
-
-\  h# ffff0000 h# 1080 pl!  \ GPIOH_OUTPUT_VALUE - default
-\  h# ffff0000 h# 1084 pl!  \ GPIOH_OUTPUT_ENABLE - default
-\  h# ffff0000 h# 1088 pl!  \ GPIOH_OUT_OPENDRAIN - default
-\  h# ffff0000 h# 108c pl!  \ GPIOH_OUTPUT_INVERT_ENABLE - default
-\  h# ffff0000 h# 1094 pl!  \ GPIOH_OUT_AUX2_SELECT - default
-\  h# 0000ffff h# 1098 pl!  \ GPIOH_PULLUP_ENABLE - default
-\  h# ffff0000 h# 109c pl!  \ GPIOH_PULLDOWN_ENABLE - default
-\  h# efff1000 h# 10a0 pl!  \ GPIOH_INPUT_ENABLE - default
-   h#     1c00 h# 10a0 pl!  \ GPIOH_INPUT_ENABLE - PWR_BUT#, SCI#, PWR_BUT_in
-\  h# ffff0000 h# 10a4 pl!  \ GPIOH_INPUT_INVERT_ENABLE - default
-\  h# ffff0000 h# 10a8 pl!  \ GPIOH_IN_FILTER_ENABLE - default
-\  h# ffff0000 h# 10ac pl!  \ GPIOH_IN_EVENTCOUNT_ENABLE - default
-\  h# efff1000 h# 10b0 pl!  \ GPIOH_READ_BACK
-\  h# efff1000 h# 10b4 pl!  \ GPIOH_IN_AUX1_SELECT - default
-\  h# ffff0000 h# 10b8 pl!  \ GPIOH_EVENTS_ENABLE - default
-   h#     0c00 h# 10b8 pl!  \ GPIOH_EVENTS_ENABLE - SCI#, PWR_BUT_in
-\  h# 00000000 h# 10bc pl!  \ GPIOL_LOCK_ENABLE - default
-\  h# ffff0000 h# 10c0 pl!  \ GPIOH_IN_POSEDGE_ENABLE - default
-\  h# ffff0000 h# 10c4 pl!  \ GPIOH_IN_NEGEDGE_ENABLE - default
-\  h# 0000ffff h# 10c8 pl!  \ GPIOH_IN_POSEDGE_STATUS - R/WC
-\  h# 0000ffff h# 10cc pl!  \ GPIOH_IN_NEGEDGE_STATUS - R/WC
-\  h#     0000 h# 10d0 pw!  \ GPIO_06_FILTER_AMOUNT - default
-\  h#     0000 h# 10d2 pw!  \ GPIO_06_FILTER_COUNT - default
-\  h#     0000 h# 10d4 pw!  \ GPIO_06_EVENT_COUNT - default
-\  h#     0000 h# 10d6 pw!  \ GPIO_06_EVENTCOMPARE_VALUE - default
-\  h#     0000 h# 10d8 pw!  \ GPIO_07_FILTER_AMOUNT - default
-\  h#     0000 h# 10da pw!  \ GPIO_07_FILTER_COUNT - default
-\  h#     0000 h# 10dc pw!  \ GPIO_07_EVENT_COUNT - default
-\  h#     0000 h# 10de pw!  \ GPIO_07_EVENTCOMPARE_VALUE - default
-
-   h# 20000001 h# 10e0 pl!  \ GPIO_MAPPER_X
-\  h# 00000000 h# 10e4 pl!  \ GPIO_MAPPER_Y - default
-\  h# 00000000 h# 10e8 pl!  \ GPIO_MAPPER_Z - default
-\  h# 00000000 h# 10ec pl!  \ GPIO_MAPPER_W - default
-\  h#       00 h# 10f0 pc!  \ GPIO_EE_SELECT_0 - default
-\  h#       00 h# 10f1 pc!  \ GPIO_EE_SELECT_1 - default
-\  h#       00 h# 10f2 pc!  \ GPIO_EE_SELECT_2 - default
-\  h#       00 h# 10f3 pc!  \ GPIO_EE_SELECT_3 - default
-\  h#       00 h# 10f4 pc!  \ GPIO_EE_SELECT_4 - default
-\  h#       00 h# 10f5 pc!  \ GPIO_EE_SELECT_5 - default
-\  h#       00 h# 10f6 pc!  \ GPIO_EE_SELECT_6 - default
-\  h#       00 h# 10f7 pc!  \ GPIO_EE_SELECT_7 - default
-\  h# 00000000 h# 10f8 pl!  \ GPIOL_EVENT_DECREMENT - default
-\  h# 00000000 h# 10fc pl!  \ GPIOH_EVENT_DECREMENT - default
 ;
 
 : acpi-init
