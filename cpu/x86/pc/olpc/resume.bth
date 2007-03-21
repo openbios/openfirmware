@@ -422,7 +422,7 @@ here resume-entry put-branch
    h#  a [bp]  lidt        \ Interrupt descriptor table register
    h#  8 [bp]  lldt        \ Local descriptor table register
    op:  h# ffff #  h# 6 [bp]  test  0<>  if
-      h#  6 [bp]  ltr      \ Task register
+\     h#  6 [bp]  ltr      \ Task register
    then
 
    ax cr0 mov              \ Paging is back on now (if it ever was on)
