@@ -24,7 +24,7 @@ in: ${BP}/dev/olpc/cafenand/build/cafenand.fc
 build-now
 
 macro: FW_MAJOR S
-macro: FW_MINOR 02
+macro: FW_MINOR 03
 
 fload ${BP}/cpu/x86/pc/olpc/config.fth
 

@@ -3,7 +3,7 @@ purpose: Fetch the EC (Embedded Controller, i.e. KB3700) microcode
 command: &builder &this
 build-now
 
-macro: EC B73
+macro: EC B81
 
 " wget http://dev.laptop.org/pub/ec/ec_v${EC}.img -O ec.img" expand$ $sh
 
