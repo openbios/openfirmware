@@ -287,10 +287,11 @@ defer write-spi-flash  ( adr len offset -- )
    \ unique auto-increment address writing scheme.
    case
       h# 13  of  ['] common-write  endof
-      h# bf  of  ['] sst-write     0 spi-write-status  endof
+      h# bf  of  ['] sst-write     endof
       ( default )  ." Unsupported SPI FLASH ID " dup .x  cr  abort
    endcase
    to write-spi-flash
+   0 spi-write-status  \ Turn off write protect bits
 ;
 
 \ Display a message telling what kind of part was found

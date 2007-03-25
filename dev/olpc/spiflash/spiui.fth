@@ -136,7 +136,12 @@ h# 2c constant crc2-offset  \ From end
    flash-buf  /flash  0  write-flash-range   \ Write everything
 
    spi-us d# 20 <  if
-      verify
+      ['] verify catch  if
+         ." Verify failed.  Retrying once"  cr
+         spi-identify
+         flash-buf  /flash  0  write-flash-range   \ Write everything
+         verify
+      then
    else
       ." Type verify if you want to verify the data just written."  cr
       ." Verification will take about 17 minutes..." cr
