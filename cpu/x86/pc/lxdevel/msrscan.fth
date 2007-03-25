@@ -114,7 +114,7 @@ T 4c00.0012 5
 
 T 4c00.0018 1 \ Clock throttling
 \ 4c00.0019   Reading this register causes entry to C2 state!
-T 4c00.001c 4 \ Throttle control
+T 4c00.001c 3 \ Throttle control
 \ T 4c00.0023 1 \ Debug interface
 T 4c00.0031 1 \ A20M !!
 T 4c00.0033 1 \ CPU INIT !!
@@ -172,7 +172,7 @@ T 5140.0008 2
 T 5140.000b 1b
 T 5140.0028 3
 T 5140.0037 a
-T 5140.004e 3
+T 5140.004e 2
 T 5140.0054 4
 
 \ SMB natives 0 8
@@ -186,7 +186,8 @@ T 5140.0054 4
 \ PM natives (emulated?)
 
 T 5170.0000 6
-T 5170.0008 10
+T 5170.0008 9
+T 5170.00012 6
 
 0 [if]
 \ some native registers 0 50  by 4

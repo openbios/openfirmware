@@ -190,7 +190,7 @@ fload ${BP}/cpu/x86/pc/lxdevel/devices.fth
 
 [ifdef] rom-loaded
 fload ${BP}/cpu/x86/pc/lxdevel/gpioinit.fth
-fload ${BP}/cpu/x86/pc/olpc/chipinit.fth
+fload ${BP}/cpu/x86/pc/lxdevel/msrinit.fth
 [then]
 
 dev /cpu

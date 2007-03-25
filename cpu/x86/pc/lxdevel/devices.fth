@@ -73,7 +73,7 @@ stand-init: superio
    h# 64 h# 63 pnp!  \ Port 64
    h#  1 h# 70 pnp!  \ Keyboard interrupt 1
    h#  c h# 72 pnp!  \ Keyboard interrupt 12
-   h# 81 h# f0 pnp!  \ Enable port 92, fast reset
+   h# 83 h# f0 pnp!  \ i8042 clock, fast reset, fast A20
    h#  1 h# 30 pnp!  \ Enable
 ;
 
@@ -125,7 +125,8 @@ devalias n nand
 devalias u /usb/disk
 devalias sd /sd/disk
 
-dev /8042      patch false ctlr-selftest open   device-end
+\ If we don't do the ctlr-selftest, the keyboard won't start on the LX devel board
+\ dev /8042      patch false ctlr-selftest open   device-end
 
 0 0  " i70"  " /isa" begin-package   	\ Real-time clock node
    fload ${BP}/dev/ds1385r.fth

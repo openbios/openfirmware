@@ -80,16 +80,24 @@ label startup
    \ sdram_set_spdregisters(),auto.c
  
 \ Memory config setup
-   25fff002.10f7e000.      1808 set-msr
-   2cfbe040.400fffe0.  10000026 set-msr
-   2000000f.7df00100.  10000028 set-msr \ Top of memory
-   2127e0fd.7fffd000.  10000029 set-msr \ Frame buffer
-   10076013.00003a40.  20000018 set-msr
-   2000000f.7df00100.  4000002a set-msr \ top of memory.
-   0f7df000.00100130.  50002019 set-msr
+[ifdef] lx-devel
+   25fff802.10f80000.      1808 set-msr  \ 512K ROM at fff8.0000, system RAM limit at 0f80.0000
+[else]
+   25fff002.10f80000.      1808 set-msr  \ 1M ROM at fff0.0000, system RAM limit at 0f80.0000
+[then]
+   2000000f.7ff00100.  10000028 set-msr  \ Top of memory at 0f7f.ffff
+   212800fd.7fffd000.  10000029 set-msr  \ Frame buffer at PA fd00.0000 maps to RAM at 0f80.0000
+   10076013.00005040.  20000018 set-msr  \ DIMM1 empty, DIMM0 256 MB, 1 module bank, 8K pages
+   2000000f.7ff00100.  4000002c set-msr  \ DMA to memory from 1M to RAM limit at 0f80.0000
+   0f7ff000.00100130.  50002019 set-msr  \ PCI DMA to memory from 1M to RAM limit at 0f80.0000
 
    \ 20000019 rmsr            \ SDRAM timing and mode program
-   18000108.286332a3.   20000019 set-msr
+   00000000.2814d352.   00001981 set-msr  \ Memory delay values
+   00000000.1068334d.   00001982 set-msr  \ Memory delay values
+   00000106.83104104.   00001983 set-msr  \ Memory delay values
+   00000000.00000001.   00001980 set-msr  \ Enable memory delays
+
+   18000100.3b8332a3.   20000019 set-msr
 
    \ The RAM controller is now set up
 
@@ -102,10 +110,11 @@ label startup
    1. 20002004 set-msr  \ GX p 199
 
    \ Delay on exit from power mode 1, use unbuffered RAM
-   130ad101. 2000001a set-msr    \ MC_CF1017_DATA  LX p 231
+   140dd101. 2000001a set-msr    \ MC_CF1017_DATA  LX p 231
+   00000200.00000000. 20000020 set-msr   \ Power mode entry and exit delays
 
    \ Unmask CKE1 and CKE0
-   0. 2000001d set-msr   \ MC_CFCLK_DBG Clear 300 bits
+   1000. 2000001d set-msr   \ MC_CFCLK_DBG Clear 300 bits, don't tristate in IDLE
 
    \ Reset memory controller
    20000018 rmsr    \ MC_CF07_DATA
