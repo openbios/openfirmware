@@ -28,15 +28,14 @@ h# 70 value smb-clock  \ 8 is the shortest period the controller allows
 \ necessary now that we have the clock going slower, but I'm not sure.
 : smb-init  ( -- )  smb-on  smb-stop  smb-off  smb-on  ;
 
-: ?conflict  ( status -- )  h# 20 and  abort" SMB Bus conflict"  ;
+: smb-status  ( -- b )
+   1 smb@  dup 1 smb!
+   dup h# 20 and  abort" SMB Bus conflict"
+;
 
 : wait-ready  ( -- )
    d# 1000 0  do
-      1 smb@  dup  h# 60 and  if
-         ?conflict
-         unloop exit
-      then
-      drop
+      smb-status  h# 40 and  if  unloop exit  then
    loop
    smb-stop
    smb-off
@@ -45,15 +44,12 @@ h# 70 value smb-clock  \ 8 is the shortest period the controller allows
 
 : smb-byte-out  ( b -- )
    wait-ready  0 smb!
-   1 smb@  h# 10 and  abort" No ACK"
+   smb-status h# 10 and  abort" No ACK"
 ;
 
 : wait-start  ( -- )
    d# 1000 0  do
-      1 smb@  dup  h# 22 and  if
-         ?conflict  unloop exit
-      then
-      drop
+      smb-status  2 and  if  unloop exit  then
    loop
    smb-stop
    smb-off

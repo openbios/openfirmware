@@ -86,8 +86,8 @@ d# 905 value resumeline  \ Configurable; should be set from args
 
 : set-source ( vga? -- )
    dup vga? =  if  drop exit  then  ( source )
-   dup to vga?
-   dup  if                ( source )
+   dup to vga?                      ( source )
+   if
 \      unblank-display
       d# 50 ms
       wait-output
@@ -128,7 +128,10 @@ d# 905 value resumeline  \ Configurable; should be set from args
 : dcon-off  ( -- )  smb-init  h# 12 ['] mode!  catch  if  drop  then  ;
 
 : dcon2?  ( -- flag )
-   0 ['] dcon@ catch  if  drop   smb-init  false exit  then  ( value )
+   0 ['] dcon@ catch  if  ( x )
+      drop   smb-init     ( )
+      0 ['] dcon@ catch  if  drop false exit  then
+   then
    h# dc02 =
 ;
 
