@@ -1,0 +1,16 @@
+purpose: Load file for OLPC CaFe Camera Driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing cafecamera.fc
+
+FCode-version2
+
+fload ${BP}/dev/olpc/cafecamera/cafecamera.fth
+
+end0
+
+end-tokenizing
