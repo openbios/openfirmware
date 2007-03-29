@@ -254,11 +254,7 @@ warning @  warning off
       h# 1454 pl@ 2 and  if
          ." Interacting due to botched resume" cr  hex interact
       then
-[ifdef] lx-devel
-      interact
-[else]
       i-key-wait  if  ." Interacting" cr  hex interact  then
-[then]
       setup
 [else]
       d# 3000
@@ -312,6 +308,20 @@ fload ${BP}/cpu/x86/pc/olpc/gui.fth
 \ there is no keyboard.  The delay is unnecessary because the screen
 \ does not go blank when the device is closed.
 patch drop ms install-console
+
+: dcon-reset-all  ( -- )
+   " screen"  " dcon-off" ['] execute-device-method  catch  if
+      2drop 2drop
+   then
+
+[ifdef] rom-loaded
+   1. h# 5140.0017 wrmsr  \ DIVIL_SOFT_RESET MSR, 5536 page 367
+   begin again
+[else]
+   (reset-all)
+[then]
+;
+' dcon-reset-all to reset-all
 
 alias reboot bye
 
