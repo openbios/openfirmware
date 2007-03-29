@@ -408,9 +408,6 @@ patch drop ms install-console
    then
 
 [ifdef] rom-loaded
-   \ This really should be in a cache line by itself
-   \ with a bunch of prefetched nops after, so we don't
-   \ do memory prefetches during shutdown
    1. h# 5140.0017 wrmsr  \ DIVIL_SOFT_RESET MSR, 5536 page 367
    begin again
 [else]
@@ -547,9 +544,7 @@ stand-init:  Suspend/resume
 
 code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
 
-: suspend
-  " video-save" stdout @ $call-method  \ Freeze display
-
+: s3
    \ Enable wakeup from power button, also clearing
    \ any status bits in the low half of the register.
    h# 1840 pl@  h# 100.0000 or  h# 1840 pl!
@@ -558,10 +553,14 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
    [ also dev /mmu ]  pdir-va  h# f0000 ax-call  [ previous definitions ]
 \   h# f0000 call
 \  sum-forth
-
+;
+: suspend
+  " video-save" stdout @ $call-method  \ Freeze display
+  s3
    " video-restore" stdout @ $call-method  \ Unfreeze display
 ;
 alias s suspend
+
 
 : 0off  " dev /mmu 0 0 >pdir l! flush-tlb dend" eval  ;
 : flub

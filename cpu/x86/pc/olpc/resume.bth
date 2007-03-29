@@ -19,6 +19,12 @@ fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
 
 \ This code will be copied to RAM at suspend-base
 
+\ create save-display
+
+h# fe00.0000 constant gp-pa
+h# fe00.4000 constant dc-pa
+h# fe00.8000 constant vp-pa
+
 start-assembling                                \ Turn on the target assembler
 protected-mode
 
@@ -39,7 +45,7 @@ label resume-entry    \ h# f.0008 - entry point at fixed location, called by res
 
 label suspend-save    \ h# f.0010  (Page directory VA in ax)
    pusha
-   pushf
+   pushf  cli
    ds push
    es push
    fs push
@@ -47,7 +53,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    ss push dx pop                 \ SS in dx
 
    here 5 + dup #) call  di pop   \ Virtual address of EIP in DI
-   ( here ) asm-base - #  di  sub   \ Virtual address of suspend-base in DI
+   ( here ) asm-base - #  di  sub \ Virtual address of suspend-base in DI
 
    \ Page directory VA in AX
    ax      si  mov                \ Save PDIR VA
@@ -97,6 +103,11 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    h# c000.2001 rmsr  ax stos  dx ax mov  ax stos   \ Video output format
    h# c000.2011 rmsr  ax stos  dx ax mov  ax stos   \ TFTP pad select
 
+[ifdef] save-display
+   \ Freeze image by clearing the DCONLOAD bit (0x800) in the GPIO output register
+   h# 0800.0000 h# 1000 port-wl
+[then]
+
    \ Save the GPIO setup   
    \ We do this in top-down order to configure the AUX select
    \ registers before setting the output enables and values.
@@ -107,7 +118,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
       dx  ax   in   \ Read GPIO control register
       ax stos       \ Save
       4 #  dx  sub  \ Next port address
-   loopne
+   loopa
 
    h# 1040 # dx mov  dx ax in  ax stos  \ Pos edge enable
    h# 1044 # dx mov  dx ax in  ax stos  \ Neg edge enable
@@ -119,11 +130,36 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
       ax   dx  in   \ Read GPIO control register
       ax stos       \ Save
       4 #  dx  sub  \ Next port address
-   loopne
+   loopa
 
    h# 10c0 # dx mov  dx ax in  ax stos  \ Pos edge enable
    h# 10c4 # dx mov  dx ax in  ax stos  \ Neg edge enable
    h# 10bc # dx mov  dx ax in  ax stos  \ High bank lock
+
+[ifdef] save-display
+\ \ h# 3c 0  do  i gp@ l!+  4 +loop  h# 4c gp@ l!+
+\  h# f # cx mov  gp-pa set-base  begin  0 [bx] ax mov  ax stos  4 # bx add  loopa
+\  gp-pa h# 4c + #) ax mov  ax stos
+
+   vp-pa set-base
+   h# 400 reg-save  h# 408 reg-save  h# 418 reg-save
+   h#   8 reg-save
+   0 # h# 38 [bx] mov  h# 100 # cx mov  begin  h# 40 reg-save  loopa  \ Gamma
+   h# 410 reg-save
+
+   dc-pa set-base
+   h# 10 reg-save  h# 14 reg-save  h# 18 reg-save  h# 1c reg-save
+
+   h# 20 reg-save  h# 24 reg-save  h# 28 reg-save
+   h# 30 reg-save  h# 34 reg-save  h# 38 reg-save
+   h# 40 reg-save  h# 44 reg-save  h# 48 reg-save
+   h# 50 reg-save  h# 54 reg-save  h# 58 reg-save
+   h# 60 reg-save  h# 64 reg-save  h# 68 reg-save
+   0 # h# 70 [bx] mov  h# 100 # cx mov  begin  h# 74 reg-save  loopa
+   h# 80 reg-save  h# 84 reg-save
+   h#  8 reg-save  h#  4 reg-save
+
+[then]
 
    h# 5140.0034 wmsr         \ Reset PIC shadow pointer (data is irrelevant)
    rdmsr  al stos            \ PIC1 ICW1
@@ -201,6 +237,13 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    \ AC97
    \ Codec
    \ USB
+
+[ifdef] save-display
+   \ Wait until the DCON has loaded a frame - DCONIRQ=1 and DCONSTAT=10
+   d# 50,000 # cx mov  \ 50K spins is about 40 mS
+   h# 1030 # dx mov
+   begin  dx ax in  h# e0 # al and  h# c0 # al cmp  loopne
+[then]
 
    \ Stop video refresh
    h# 4758 #  h# fe00.4000 #)  mov  \ Unlock DC registers
@@ -288,7 +331,7 @@ here resume-entry put-branch
       ax lods
       ax   dx  out  \ Write to GPIO control register
       4 #  dx  sub  \ Next port address
-   loopne
+   loopa
    ax lods  h# 1040 # dx mov  ax dx out  \ Pos edge enable
    ax lods  h# 1044 # dx mov  ax dx out  \ Neg edge enable
    ax lods  h# 103c # dx mov  ax dx out  \ Low bank lock
@@ -299,10 +342,62 @@ here resume-entry put-branch
       ax lods
       ax   dx  out  \ Write to GPIO control register
       4 #  dx  sub  \ Next port address
-   loopne
+   loopa
    ax lods  h# 10c0 # dx mov  ax dx out  \ Pos edge enable
    ax lods  h# 10c4 # dx mov  ax dx out  \ Neg edge enable
    ax lods  h# 10bc # dx mov  ax dx out  \ High bank lock
+
+[ifdef] save-display
+
+\ \ h# 3c 0  do  l@+ i gp!  4 +loop   l@+ h# 4c gp! 
+\  h# f # cx mov   gp-pa set-base  begin  ax lods  ax 0 [bx] mov  4 # bx add  loopa
+\  ax lods  ax  gp-pa h# 4c + #)  mov
+
+\ Synchronize the flat panel turn-on with the DCON blanking
+\   d# 50,000 # cx mov  \ 50K spins is about 40 mS
+\   h# 1030 # dx mov  \ GPIO data port
+\   begin  dx ax in  h# 1000 # ax test  loope  \ Wait for blanking
+
+   vp-pa set-base
+   0 #  h# 50 [bx] mov  \ Power on for DACs, enable gamma correction 
+   h# 400 reg-restore
+   h# 408 reg-restore
+   h# 418 reg-restore
+   h#   8 reg-restore
+   0 #  h# 38 [bx] mov  h# 100 # cx mov  begin  h# 40 reg-restore  loopa  \ Gamma
+   h# 410 reg-restore
+
+\   d# 1,000,000 # cx mov  begin  h# 410 [bx] ax mov  1 # al test  loope  \ Panel power up
+
+   dc-pa set-base
+   
+   h# 4758 #  0 [bx]  mov  \ Unlock
+   h# 10 reg-restore   h# 14 reg-restore   h# 18 reg-restore   h# 1c reg-restore
+
+   h# 20 reg-restore   h# 24 reg-restore   h# 28 reg-restore
+   h# 30 reg-restore   h# 34 reg-restore   h# 38 reg-restore
+   h# 40 reg-restore   h# 44 reg-restore   h# 48 reg-restore
+   h# 50 reg-restore   h# 54 reg-restore   h# 58 reg-restore
+   h# 60 reg-restore   h# 64 reg-restore   h# 68 reg-restore
+   0 #  h# 70  [bx] mov   h# 100 # cx mov   begin  h# 74 reg-restore  loopa
+   h# 80 reg-restore   h# 84 reg-restore
+
+\ Synchronize the VGA turn-on with the DCON blanking
+   d# 50,000 # cx mov  \ 50K spins is about 40 mS
+   h# 1030 # dx mov  \ GPIO data port
+   begin  dx ax in  h# 1000 # ax test  loope  \ Wait for blanking
+
+   h#  8 reg-restore   h#  4 reg-restore
+
+   0 #  dc-pa #)  mov  \ Lock
+
+\   d# 100,000 # cx mov  begin  h# 80 #  ax in  loopa  \ Delay about 100 ms
+
+   d# 80,000 # cx mov  begin  h# 80 # a in  loopa  \ Wait for panel power up
+
+   \ Unfreeze image by setting the DCONLOAD bit (0x800) in the GPIO output register
+   h# 0800 h# 1000 port-wl
+[then]
 
 \   0 h# 1842 pw!   \ Disable power button during early startup
 
@@ -456,6 +551,7 @@ here resume-entry put-branch
    popa
    ret
 end-code
+
 
 writing resume.di
 suspend-entry here over -  0  " resume"  write-dropin

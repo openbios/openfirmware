@@ -100,6 +100,10 @@ also 386-assembler definitions
    op: dx ax in
 ;
 
+: set-base  ( adr -- )  # bx mov  ;
+: reg-save  ( offset -- )  [bx] ax mov  ax stos  ;
+: reg-restore  ( offset -- )  ax lods  ax  swap [bx]  mov  ;
+
 previous definitions
 
 \ LICENSE_BEGIN
