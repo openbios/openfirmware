@@ -13,6 +13,7 @@ fload ${BP}/dev/olpc/cafenand/cafenand.fth
 fload ${BP}/dev/olpc/cafenand/configure.fth
 fload ${BP}/dev/olpc/cafenand/badblock.fth
 fload ${BP}/dev/olpc/cafenand/methods.fth
+fload ${BP}/dev/olpc/cafenand/selftest.fth
 
 end0
 

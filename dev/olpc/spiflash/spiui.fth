@@ -159,6 +159,17 @@ defer fw-filename$  ' null$ to fw-filename$
 
 : flash  ( ["filename"] -- )  get-file reflash  power-off  ;
 
+dev /flash
+0 value rom-va
+: selftest  ( -- error? )
+   rom-va 0=  if  rom-pa /flash root-map-in to rom-va  then
+   rom-va flash-buf /flash move
+   flash-buf /flash + crc2-offset - dup l@ swap
+   -1 swap l!
+   flash-buf /flash crc  <>
+   rom-va /flash root-map-out  0 to rom-va
+;
+device-end
 
 0 [if]
 \ Erase the first block containing the EC microcode.  This is dangerous...

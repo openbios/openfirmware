@@ -130,23 +130,6 @@ external
    0=  if  unmap-regs  then
 ;
 
-: selftest  ( -- error? )
-   ehci-reg dup 0=  if  map-regs  then
-   hcsparams@ h# f and 0  ?do
-      i portsc@ h# 2001 and  if		\ Port owned by usb 1.1 controller or device
-					\ is present.
-         ." USB 2.0 port " i u. ."  in use" cr
-      else
-         ." Fisheye pattern out to USB 2.0 port " i u. cr
-         i test-port-begin
-         d# 2,000 ms
-         i test-port-end
-      then
-   loop
-   0=  if  unmap-regs  then
-   false
-;
-
 headers
 
 : init-ehci-regs  ( -- )
@@ -204,6 +187,24 @@ external
    open-count 1- to open-count
    end-extra
    open-count 0=  if  free-dma-buf unmap-regs  then
+;
+
+: selftest  ( -- error? )
+   ehci-reg dup 0=  if  map-regs  then
+   hcsparams@ h# f and 0  ?do
+      i portsc@ h# 2001 and  if		\ Port owned by usb 1.1 controller or device
+					\ is present.
+         ." USB 2.0 port " i u. ."  in use" cr
+      else
+         ." Fisheye pattern out to USB 2.0 port " i u. cr
+         i test-port-begin
+         d# 2,000 ms
+         i test-port-end
+         0 i portsc!  i reset-port  i power-port
+      then
+   loop
+   0=  if  unmap-regs  then
+   false
 ;
 
 headers
