@@ -16,18 +16,6 @@ fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
 0 0  " "  " /"  begin-package
    fload ${BP}/cpu/x86/pc/mappci.fth	\ Map PCI to root
    fload ${BP}/dev/pcibus.fth		\ Generic PCI bus package
-[ifdef] addresses-assigned
-   \ Suppress PCI address assignment; use the addresses the BIOS assigned
-   patch false true master-probe
-   patch noop assign-all-addresses prober
-   patch noop clear-addresses populate-device-node
-   patch noop clear-addresses populate-device-node
-   patch noop temp-assign-addresses find-fcode?
-   patch 2drop my-w! populate-device-node
-   : or-w!  ( bitmask reg# -- )  tuck my-w@  or  swap my-w!  ;
-   patch or-w! my-w! find-fcode?
-   patch 2drop my-w! find-fcode?
-[then]
    fload ${BP}/cpu/x86/pc/lxdevel/pcinode.fth	\ System-specific words for PCI
 end-package
 stand-init: PCI host bridge
@@ -231,10 +219,21 @@ stand-init: PCI properties
 
 \ fload ${BP}/dev/geode/lpcflash.fth           \ Reflasher for PLCC FLASH on A-test
 
+: +i encode-int encode+  ;  : 0+i  0 +i  ;
+
 fload ${BP}/cpu/x86/fb16-ops.fth
 fload ${BP}/ofw/termemu/fb16.fth
 0 0  " 1,1"  " /pci" begin-package
    fload ${BP}/dev/geode/display/loadpkg.fth     \ Geode display
+
+   0 0 encode-bytes
+   h# 8200.0910 +i  0+i h# fd00.0000 +i  0+i h# 0100.0000 +i  \ Frame buffer
+   h# 8200.0914 +i  0+i h# fe00.0000 +i  0+i h# 0000.4000 +i  \ GP
+   h# 8200.0918 +i  0+i h# fe40.0000 +i  0+i h# 0000.4000 +i  \ DC
+   h# 8200.091c +i  0+i h# fe80.0000 +i  0+i h# 0000.4000 +i  \ VP
+   h# 8200.0920 +i  0+i h# fec0.0000 +i  0+i h# 0000.4000 +i  \ VIP (LX only)
+   " assigned-addresses" property
+
 end-package
 devalias screen /display
 

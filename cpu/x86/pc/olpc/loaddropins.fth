@@ -12,21 +12,19 @@
    " ${BP}/dev/usb2/device/serial/build/usbserial.fc" " usbserial"  $add-deflated-dropin
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
 
-[ifndef] lx-devel
    \ XXX the PCI device IDs should be different for the different CaFe functions
-   " ${BP}/dev/olpc/cafenand/build/cafenand.fc" " class050101"   $add-deflated-dropin
+   " ${BP}/dev/olpc/cafenand/build/cafenand.fc"     " class050101"    $add-deflated-dropin
+   " ${BP}/dev/olpc/cafecamera/build/cafecamera.fc" " pci11ab,4102"   $add-deflated-dropin
 
+   " ${BP}/dev/mmc/sdhci/build/sdhci.fc"  " pci11ab,4101"   $add-dropin
+   " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"  " sdmmc"          $add-dropin
+[ifndef] lx-devel
    " ${BP}/dev/geode/nandflash/build/nandflash.fc" " nand5536"   $add-deflated-dropin
 [then]
    " ${BP}/dev/geode/ac97/build/ac97.fc"       " pci1022,2093"   $add-deflated-dropin
 
    " builton.fth"                       " probe-"          $add-dropin
    " ${BP}/ofw/fcode/memtest.fth"  " memtest.fth"          $add-deflated-dropin
-
-[ifndef] lx-devel
-   " ${BP}/dev/mmc/sdhci/build/sdhci.fc"  " pci11ab,4101"   $add-dropin
-   " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"  " sdmmc"          $add-dropin
-[then]
 
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
 

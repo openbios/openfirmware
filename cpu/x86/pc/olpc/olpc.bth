@@ -20,11 +20,12 @@ in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
 in: ${BP}/dev/olpc/cafenand/build/cafenand.fc
+in: ${BP}/dev/olpc/cafecamera/build/cafecamera.fc
 
 build-now
 
 macro: FW_MAJOR S
-macro: FW_MINOR 03
+macro: FW_MINOR 05
 
 fload ${BP}/cpu/x86/pc/olpc/config.fth
 

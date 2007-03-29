@@ -30,13 +30,13 @@ create nb-hdr  \ All R/O except cmd/stat, cache line size, latency
          0 ,        0 ,        0 ,        0 ,
          0 ,        0 ,        0 ,        0 ,
 
-create gxfb-hdr  \ All R/O except cmd/stat and cache line size
+create lxfb-hdr  \ All R/O except cmd/stat and cache line size
   ff800000 , fffff000 , fffff000 , fffff000 ,
          0 ,        0 ,        0 ,        0 ,
 
     30100b ,  2200003 ,  3000000 ,        0 ,
   fd000000 , fe000000 , fe004000 , fe008000 , \ FB, GP, VG, DF
-         0 ,        0 ,        0 ,   30100b ,
+  fe00c000 ,        0 ,        0 ,   30100b , \ VIP
          0 ,        0 ,        0 ,        0 ,
          0 ,        0 ,        0 ,        0 ,
        3d0 ,      3c0 ,    a0000 ,        0 , \ VG IO, VG IO, EGA FB, MONO FB
@@ -139,7 +139,7 @@ variable bar-probing
       h# 7c00  of  ohci-hdr  endof
       h# 7d00  of  ehci-hdr  endof
       h#  800  of  nb-hdr    endof
-      h#  900  of  gxfb-hdr  endof
+      h#  900  of  lxfb-hdr  endof
       ( default )  2drop ff-loc exit
    endcase
    +hdr
@@ -151,9 +151,12 @@ variable bar-probing
    3 and  h# cfc or  io-base +
 ;
 
+: virtual-pci-slot?  ( config-adr -- flag )
+   d# 11 rshift  h# 1fff and  dup h# f =  swap 1 =  or
+;
+
 : config-setup  ( a1 -- a2 special? )
-   dup  d# 11 >>  h# 1f and   ( a1 dev# )
-   dup h# f =  swap 1 =  or   ( a1 special )
+   dup  virtual-pci-slot?   ( a1 special )
    if  geode-map true  else  config-map-m1 false  then
 ;
 
