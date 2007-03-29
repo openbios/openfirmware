@@ -155,7 +155,7 @@ h# 20 buffer: line-buf
 ;
 
 true value dump-oob?
-: dump-nand  ( "devspec" -- )
+: (dump-nand)  ( "devspec" -- )
    open-nand
    safe-parse-word   ( name$ )
 
@@ -188,6 +188,9 @@ true value dump-oob?
    fileih close-dev
    nandih close-dev
 ;
+: dump-nand  ( "devspec" -- )  true  to dump-oob?  (dump-nand)  ;
+: save-nand  ( "devspec" -- )  false to dump-oob?  (dump-nand)  ;
+
 
 : fastcopy-nand  ( "devspec" -- )
    open-nand
