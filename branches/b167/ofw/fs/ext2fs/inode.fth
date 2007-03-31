@@ -26,6 +26,7 @@ decimal
 : link-count! ( n -- )          26 +i short!  update  ;
 : #blks-held  ( -- n )          28 +i int@  ;
 : #blks-held! ( n -- )          28 +i int!  update  ;
+: file-acl    ( -- n )         104 +i int@  ;
 
 d# 12 constant #direct-blocks
 : direct0     ( -- adr )   40 +i  ;

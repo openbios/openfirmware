@@ -200,9 +200,9 @@ defer init-dir
    bounds do i c@ ascii / =  if  ascii \ i c!  then loop
 ;
 
-\ XXX try:
 : linkpath   ( -- a )
-   #blks-held  if	\ long symbolic link path
+   file-acl  if  bsize 9 rshift  else  0  then     ( #acl-blocks )
+   #blks-held  <>  if	\ long symbolic link path
       direct0 int@ block
    else			\ short symbolic link path
       direct0
