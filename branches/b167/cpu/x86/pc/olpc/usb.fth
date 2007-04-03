@@ -37,7 +37,7 @@ alias p2 probe-usb2
    " /usb@f,4" select-dev
    delete-my-children
    " stagger-power" eval  \ Get the devices going
-   d# 500 ms
+   d# 1000 ms
 
    (probe-usb2)           \ First dibs to EHCI/USB2
 
