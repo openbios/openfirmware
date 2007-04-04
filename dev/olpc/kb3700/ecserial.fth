@@ -14,6 +14,7 @@
    ['] spicmd!      to spi-out
 
    d# 200 to spi-us  \ Approximate time to do serial-spi!
+   ['] noop to spi-reprogrammed
 
    d# 57600 baud
    h# 5a uemit    ( divisor )  \ ( wait-tx )

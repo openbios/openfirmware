@@ -56,9 +56,11 @@ h# fff0.0000 constant lpc-flash-base
 : lpc-reflash   ( -- )   \ Flash from data already in memory
    ?file
 
+[ifdef] crc2-offset
    \ Insert another CRC, this time including the mfg data
    flash-buf  /flash  crc                  ( crc )
    flash-buf  /flash +  crc2-offset -  l!  ( )
+[then]
 
    ?lpc
    ." Writing" cr

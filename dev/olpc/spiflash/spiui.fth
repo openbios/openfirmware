@@ -6,9 +6,12 @@
 \ a FLASH device from that image.  The details of how to actually
 \ access the FLASH device are defined elsewhere.
 
-h# 4000 constant /chunk  \ Convenient sized piece for progress reports
-h# 10000 constant /ec    \ Size of EC code area
+h# 4000 constant /chunk   \ Convenient sized piece for progress reports
 h# 100000 constant /flash
+h# 10000 constant /flash-block \ Size of erase block
+
+h# e.0000 constant mfg-data-offset
+mfg-data-offset /flash-block +  constant mfg-data-end-offset
 
 : write-flash-range  ( adr end-offset start-offset -- )
    ." Erasing" cr
@@ -19,8 +22,9 @@ h# 100000 constant /flash
    
    ." Writing" cr
    ?do                ( adr )
-      i .x (cr
-      dup  i +  /chunk  i  write-spi-flash
+      i .x (cr                         ( adr )
+      dup  /chunk  i  write-spi-flash  ( adr )
+      /chunk +                         ( adr' )
    /chunk +loop       ( adr )
    cr  drop           ( )
 ;
@@ -47,16 +51,14 @@ h# 100000 constant /flash
 
 [ifdef] load-base
 : flash-buf  load-base  ;
-: ec-buf     load-base /flash +  ;
+: mfg-data-buf     load-base /flash +  ;
 [else]
 /flash buffer: flash-buf
-/ec buffer: ec-buf
+/flash-block buffer: mfg-data-buf
 [then]
 0 value file-loaded?
 
-
-h# 30 constant crc-offset  \ From end
-h# 2c constant crc2-offset  \ From end
+h# 30 constant crc-offset   \ From end
 
 : crc  ( adr len -- crc )  0 crctab  2swap ($crc)  ;
 
@@ -69,7 +71,7 @@ h# 2c constant crc2-offset  \ From end
 
    flash-buf /flash crc              ( crc-adr calc-crc r: crc )
    r@ rot l!                         ( calc-crc r: crc )
-   r> <>  abort" Corrupt firmware image - bad internal CRC"
+   r> <>  abort" Firmware image has bad internal CRC"
 ;
 
 : ?image-valid   ( len -- )
@@ -80,6 +82,9 @@ h# 2c constant crc2-offset  \ From end
    " CL1" comp  abort" Wrong machine type"
 
    ?crc
+
+   flash-buf mfg-data-offset +  /flash-block  ['] ?erased  catch
+   abort" Firmware image has data in the manufacturing data block"
 ;
 
 : $get-file  ( "filename" -- )
@@ -90,7 +95,6 @@ h# 2c constant crc2-offset  \ From end
    ?image-valid
 
    true to file-loaded?
-   flash-buf ec-buf /ec move  \ Save a copy for merging
 ;
 
 : ?file  ( -- )
@@ -113,12 +117,69 @@ h# 2c constant crc2-offset  \ From end
 
 : verify  ( -- )  ?file  flash-buf  /flash  0  verify-flash-range  ;
 
-: merge-mfg-data  ( -- )
+: mfg-data-range  ( -- adr len )  mfg-data-top dup last-mfg-data  tuck -  ;
+
+: make-sn-name  ( -- filename$ )
+   " SN" find-tag 0=  abort" No serial number in mfg data"  ( sn$ )
+   dup  if  1-  then         ( sn$' )  \ Remove Null
+   d# 11 over -  dup 0>  if  ( sn$' #excess )
+      /string                ( sn$' )  \ Keep last 11 characters
+   else                      ( sn$' #excess )
+      drop                   ( sn$ )
+   then                      ( sn$ )
+
+   " disk:\" "temp place    ( sn$' )
+
+   dup 8 >  if              ( sn$ )
+      over 8 "temp $cat     ( sn$ )
+      8 /string             ( sn$' )
+      " ."   "temp $cat     ( sn$ )
+   then                     ( sn$ )
+   "temp $cat               ( )
+   "temp count              ( filename$ )
+;
+: save-mfg-data  ( -- )
+   make-sn-name      ( name$ )
+   ." Creating " 2dup type cr
+   $create-file                               ( ihandle )
+   dup 0= abort" Can't create file"   >r      ( r: ihandle )
+   mfg-data-range  " write" r@ $call-method   ( r: ihandle )
+   r> close-dev
+;
+
+: ?move-mfg-data  ( -- )
    ." Merging existing manufacturing data" cr
-   flash-buf /ec  0  read-spi-flash               ( )
-   flash-buf /ec +  last-mfg-data   flash-buf -   ( offset )
-   ec-buf /ec  2 pick  /string  ?erased           ( offset )
-   ec-buf flash-buf  rot  move                    ( )
+
+   \ If the system has mfg data in the old place, move it to the new place
+   mfg-data-top h# fff1.0000 =  if
+      \ Copy just the manufacturing data into the memory buffer; don't
+      \ copy the EC bits from the beginning of the block
+      mfg-data-range                          ( adr len )
+      flash-buf mfg-data-end-offset +         ( adr len ram-adr )
+      over -   swap                           ( adr ram-adr' len )
+      2dup 2>r  move  2r>                     ( ram-adr len )                              
+
+      \ Write from the memory buffer to the FLASH
+      mfg-data-offset erase-spi-block         ( ram-adr len )
+      mfg-data-end-offset over -              ( ram-adr len offset )
+      write-spi-flash                         ( )
+   else
+      \ Copy the entire block containing the manufacturing data into the
+      \ memory buffer.  This make verification easier.
+
+      mfg-data-top /flash-block -             ( src-adr )
+      flash-buf mfg-data-offset +             ( src-adr dst-adr )
+      /flash-block move                       ( )
+   then
+;
+
+: write-firmware  ( -- )
+   flash-buf  mfg-data-offset  0  write-flash-range      \ Write first part
+
+   \ Don't write the block containing the manufacturing data
+
+   flash-buf mfg-data-end-offset +          ( adr )
+   /flash mfg-data-end-offset  write-flash-range         \ Write last part
 ;
 
 : reflash   ( -- )   \ Flash from data already in memory
@@ -127,21 +188,18 @@ h# 2c constant crc2-offset  \ From end
 
    spi-identify .spi-id cr
 
-   merge-mfg-data
+   ?move-mfg-data
 
-   \ Insert another CRC, this time including the mfg data
-   flash-buf  /flash  crc                  ( crc )
-   flash-buf  /flash +  crc2-offset -  l!  ( )
-
-   flash-buf  /flash  0  write-flash-range   \ Write everything
+   write-firmware
 
    spi-us d# 20 <  if
       ['] verify catch  if
          ." Verify failed.  Retrying once"  cr
          spi-identify
-         flash-buf  /flash  0  write-flash-range   \ Write everything
+         write-firmware
          verify
       then
+      spi-reprogrammed
    else
       ." Type verify if you want to verify the data just written."  cr
       ." Verification will take about 17 minutes..." cr
@@ -164,8 +222,10 @@ dev /flash
 : selftest  ( -- error? )
    rom-va 0=  if  rom-pa /flash root-map-in to rom-va  then
    rom-va flash-buf /flash move
-   flash-buf /flash + crc2-offset - dup l@ swap
-   -1 swap l!
+
+   \ Replace the manufacturing data block with all FF
+   flash-buf mfg-data-offset +  /flash-block  h# ff fill
+
    flash-buf /flash crc  <>
    rom-va /flash root-map-out  0 to rom-va
 ;

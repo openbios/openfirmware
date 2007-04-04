@@ -24,8 +24,8 @@ in: ${BP}/dev/olpc/cafecamera/build/cafecamera.fc
 
 build-now
 
-macro: FW_MAJOR S
-macro: FW_MINOR 05
+macro: FW_MAJOR C
+macro: FW_MINOR 00
 
 fload ${BP}/cpu/x86/pc/olpc/config.fth
 
@@ -45,7 +45,6 @@ hex
 .( --- Saving as olpc.rom - Direct ROM format) cr
 writing olpc.rom
    " ec.img"                $add-file
-   h# 2.0000 pad-file
 
    dropin-base rom-pa -  pad-file
 

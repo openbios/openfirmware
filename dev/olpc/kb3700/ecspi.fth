@@ -14,6 +14,8 @@ defer spi!      ( b reg# -- )  \ Write an EC SPI register
 defer spi-out   ( b -- )       \ Write SPI command and wait if necessary
 1 value spi-us  ( -- n )       \ Approximate time in uS to do spi!
                                \ Used to optimize some routines
+defer spi-reprogrammed  ( -- ) \ What to do when done reprogramming
+' noop to spi-reprogrammed
 
 \ Symbolic names for the registers that control SPI access from the EC
 

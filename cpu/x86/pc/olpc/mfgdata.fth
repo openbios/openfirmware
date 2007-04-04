@@ -1,7 +1,5 @@
 purpose: Manufacturing data reader
 
-h# fff1.0000 constant mfg-data-top
-
 \ The manufacturing data format is specified by
 \ http://wiki.laptop.org/go/Manufacturing_Data
 
@@ -29,6 +27,13 @@ h# fff1.0000 constant mfg-data-top
    swap 2-  true          ( adr' data$ adr )
 ;
 
+\ Mfg data used to be at the end of the EC erase block, but
+\ is now in a block by itself.
+: mfg-data-top  ( -- adr )
+   h# fff1.0000 dup  invalid-tag?  ( old-top data-adr flag )
+   nip  if  drop h# ffff.0000  then
+;
+
 : find-tag  ( name$ -- false | data$ true )
    drop >r  mfg-data-top        ( adr r: name-adr )
    begin  another-tag?  while   ( adr' data$ tname-adr r: name-adr )
@@ -43,6 +48,21 @@ h# fff1.0000 constant mfg-data-top
 
 : ?erased  ( adr len -- )
    bounds  ?do  i c@  h# ff <> abort" Not erased"  loop
+;
+
+: $tag-printable?  ( adr len -- flag )
+   dup  if  2dup + 1- c@ 0=  if  1-  then  then   \ Ignore trailing null
+   bounds  ?do  i c@ printable?  0=  if  false unloop exit  then  loop
+   true
+;
+
+: .mfg-data  ( -- )
+   mfg-data-top        ( adr )
+   begin  another-tag?  while   ( adr' data$ tname-adr )
+      2 type 3 spaces           ( adr' data$ )
+      2dup $tag-printable?  if  type  else  cdump  then  cr
+   repeat
+   drop
 ;
 
 [ifdef] notdef
