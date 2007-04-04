@@ -73,20 +73,15 @@ d#  768 value #scanlines	\ Screen height
 \   50, 1200, 900, 17460,  24,   8,   4,   5,    8,    3, +h +v, noninterlaced
 
 create timing-1024x768
-\   h#  52 , 0 ,             \ dotpll, rstpll, (refr=75, pixclk= d# 12690)
-[ifdef] lx-devel
-   \ The development board uses a 48 MHz refclk
+
+   \ LX timing: refclk is 48 MHz
    \ M=0  N=3  P=2  (N+1)/((M+1)*(P+1)) = 4/(1*3) = 4/3
    \ 48 MHz * 4 / 3 = 64 MHz
    \ We can't get much closer because the PLL doesn't seem to lock
    \ if the multiplier is much above 48 with DOTREF = 48 MHz
-   h#  95e , 0 ,  h# 0032 ,  \ dotpll, rstpll, lxdotpll, (refr=60, pixclk= d# 15625)
-[else]
-   \ The OLPC board uses a 14.318 MHz refclk
-   \ M=4  N=0x57=87  P=3  (N+1)/((M+1)*(P+1)) = 88/(5*4) = 58/20
-   \ 14.318 MHz * 88 / 20 = 63 MHz
-   h#  95e , 0 ,  h# 4573 ,  \ dotpll, rstpll, lxdotpll, (refr=60, pixclk= d# 15384)
-[then]
+
+   h#  95e , 0 ,  h# 0032 ,  \ gxdotpll, gxrstpll, lxdotpll, (refr=60, pixclk= d# 15625)
+
    d# 1024 , d# 1024 ,   \ linelen, graphics pitch
    h# 051f.03ff , h# 051f.03ff , h# 046f.040f , ( h# 046f.040f , ) \ htiming 1,2,3,fp
    h# 031f.02ff , h# 031f.02ff , h# 0309.0300 , ( h# 03b1.03ae , ) \ vtiming 1,2,3,fp
@@ -106,28 +101,16 @@ create timing-1024x768
 \ 1 is to
 
 create timing-dcon
-[ifdef] lx-devel
-   \ The development board uses a 48 MHz refclk
+
+   \ LX timing: refclk is 48 MHz
    \ M=2  N=0x1f=31  P=8  (N+1)/((M+1)*(P+1)) = 32/(3*9) = 32/27
    \ 48 MHz * 32 / 27 = 56.9 MHz
-   h# 57b , 0 ,  h# 21f8 , \ dotpll, rstpll, lxdotpll, (refr=50, pixclk=d# 17460)
-[else]
-   \ The OLPC board uses a 14.318 MHz refclk
-   \ M=2  N=0x5e=94  P=7  (N+1)/((M+1)*(P+1)) = 95/(3*8) = 95/24
-   \ 14.318 MHz * 94 / 24 = 56.7 MHz
-   h# 57b , 0 ,  h# 25e7 , \ dotpll, rstpll, lxdotpll, (refr=50, pixclk=d# 17460)
-[then]
+
+   h# 57b , 0 ,  h# 21f8 , \ gxdotpll, gxrstpll, lxdotpll, (refr=50, pixclk=d# 17460)
+
    d# 1200 , d# 1200 ,     \ linelen, graphics pitch
    h# 04d7.04af , h# 04d7.04af , h# 04bf.04b7 , ( h# 04bf.04b7 , )  \ htiming 1,2,3,fp
    h# 038f.0383 , h# 038f.0383 , h# 038b.0388 , ( h# 038a.0387 , )  \ vtiming 1,2,3,fp 
-
-[ifdef] notdef
-ok 60 30 do i 10 bounds do i dc@ 9 u.r 4 +loop cr 10 +loop
-      12e      12c effa9fa4 5de57bff
-  4d704af  4d704af  4bf04b7 5feffba9
-  38f0383  38f0383  38b0388 dfffffdf
-[then]
-
 
 true value dcon?
 
@@ -155,44 +138,33 @@ true value dcon?
 h# 4c00.0014 constant rstpll
 h# 4c00.0015 constant dotpll
 
-: set-dclk  ( -- )
-[ifdef] use-lx
-   dotpll msr@  drop             ( dotpll.low )
-   1 or  h# c000 invert and      ( dotpll.low' )  \ DOTRESET on, PD and BYPASS off
-   timing 2 na+ @                ( d.dotpll )
-   dotpll msr!                   ( )
+: set-dotpll  ( new-hi -- )
+   dotpll msr@  drop             ( new-hi dotpll.low )
+   1 or  h# c000 invert and      ( new-hi dotpll.low' )  \ DOTRESET on, PD and BYPASS off
+   swap dotpll msr!              ( )
 
    \ Wait for lock bit
    d# 1000 0  do 
       dotpll msr@  drop  h# 2000000  and  ?leave
    loop
-
-   dotpll msr@                   ( d.dotpll )
-   swap  1 invert and  swap      ( d.dotpll' )    \ Release reset bit
-   dotpll msr!                   ( )
-[else]
-   dotpll msr@  drop             ( dotpll.low )
-\ DCON  0200.0000 57b
-   1 or  h# c000 invert and      ( dotpll.low' )  \ DOTRESET on, PD and BYPASS off
-   timing @                      ( d.dotpll )
-\ DCON this value is good if dcon? is set correctly
-   dotpll msr!                   ( )
-
-   rstpll msr@                   ( d.rstpll )
-\ DCON  06de.0170 209
-   swap  h# e invert and  timing na1+ @ or   swap  ( d.rstpll )
-\ DCON this value is good if dcon? is set correctly
-   rstpll msr!                   ( )
 
    dotpll msr@                   ( d.dotpll )
    swap  1 invert and  swap      ( d.dotpll' )    \ Clear reset bit
-   dotpll msr!                   ( )              \ thus starting PLL
+   dotpll msr!                   ( )
+;
+: gx?  ( -- flag )  h# 4c000017 msr@ drop  4 rshift  2 =  ;
+: set-dclk  ( -- )
+   gx?  if                          ( )
+      timing na1+ @                 ( rstpll-div-bits )
+      rstpll msr@                   ( rstpll-div-bits d.rstpll )
+      >r  h# e invert and  or  r>   ( d.rstpll' )
+      rstpll msr!                   ( )
 
-   \ Wait for lock bit
-   d# 1000 0  do 
-      dotpll msr@  drop  h# 2000000  and  ?leave
-   loop
-[then]
+      timing @                      ( dotpll-hi )
+   else                             ( )
+      timing 2 na+ @                ( dotpll-hi )
+   then                             ( dotpll-hi )
+   set-dotpll                       ( )
 ;
 
 [ifndef] dcon-init
