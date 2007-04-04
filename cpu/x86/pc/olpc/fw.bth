@@ -221,6 +221,10 @@ warning @ warning off
       " ec-name" string-property
 
    dend
+
+   " /openprom" find-device
+      h# ffff.ffc0 d# 16 " model" string-property
+   dend
 ;
 warning !
 
