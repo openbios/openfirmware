@@ -33,6 +33,18 @@ h# fc2a	constant GPIO5
    h# ff h# 6c pc!   \ Release ownership
 ;
 
+: ec-cmd66  ( byte -- )
+   h# 66  pc! 
+   \ It typically requires about 200 polls
+   d# 1000 0  do  h# 66 pc@ 2 and 0=  if  unloop exit  then  loop
+   true abort" EC didn't respond to port 66 command"
+;
+
+\ This command hard-resets the EC deeply enough for the SP write-protect to
+\ be off when the system is powered up again.
+
+: ec-reset  ( -- )  5  h# 6c pc!  ;
+
 : kb3920?  ( -- flag )  h# 6c pc@ h# ff =  if  true exit  then   9 ec-cmd 9 =  ;
 
 \ While accessing the SPI FLASH, we have to turn off the keyboard controller,
@@ -42,8 +54,7 @@ h# fc2a	constant GPIO5
 0 value kbc-off?
 : kbc-off  ( -- )
    kbc-off?  if  exit  then  \ Fast bail out
-   h# d8  h# 66  pc!
-   d# 500000 0  do  h# 66 pc@ 2 and ?leave  loop
+   h# d8 ec-cmd66      \ Prepare for reset
    h# ff14 ec@  1 or  h# ff14 ec!
    true to kbc-off?
 ;
@@ -55,6 +66,16 @@ h# fc2a	constant GPIO5
    h# ff14 ec@  1 invert and  h# ff14 ec!  \ Innocuous if already on
    false to kbc-off?
 ;
+
+\ kbc-pause temporarily halts execution of the keyboard controller microcode.
+\ kbc-resume makes it run again, picking up where it left off.
+\ This is useful for accessing the SPI FLASH in cases where you do not
+\ overwrite the keyboard controller microcodes.
+
+: kbc-pause  ( -- )   h# dd ec-cmd66  ;
+: kbc-resume  ( -- )  h# df ec-cmd66  ;
+
+
 
 : kbd-led-on  ( -- )  h# fc21 ec@  1 invert and  h# fc21 ec!  ;
 : kbd-led-off ( -- )  h# fc21 ec@  1 or  h# fc21 ec!  ;
@@ -79,10 +100,16 @@ h# fc2a	constant GPIO5
 
 : io-spi-out  ( b -- )  spicmd!  spi-cmd-wait  ;
 
+: io-spi-reprogrammed  ( -- )
+   ." Powering off..."  d# 2000 ms  cr
+   power-off
+;
+
 : io-spi-start  ( -- )
    ['] io-spi@  to spi@
    ['] io-spi!  to spi!
    ['] io-spi-out to spi-out
+   ['] io-spi-reprogrammed to spi-reprogrammed
    h# fff0.0000 to flash-base
 
    7 to spi-us   \ Measured time for "1 fea9 ec!" is 7.9 uS
