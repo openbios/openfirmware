@@ -830,12 +830,12 @@ external
    begin
       \ We now have the dirent for the file at the end of the string
       dup ftype@  case                                   ( dirent )
-         4      of  to pwd  true exit  endof           \ Directory
-         8      of  dirino@ do-file  ?release exit  endof
-         d# 10  of
+         4      of  to pwd  true exit  endof               \ Directory
+         8      of  dirino@ do-file  ?release exit  endof  \ Regular file
+         d# 10  of                                         \ Link
             dir-link  if  false ?release exit  then  ( dirent )
          endof
-         ( default )             
+         ( default )   \ Anything else (special file) is error
             2drop false ?release exit
       endcase                                       ( dirent )
    again
