@@ -20,10 +20,15 @@ fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
 \ This code will be copied to RAM at suspend-base
 
 \ create save-display
+create restore-usb-power
 
 h# fe00.0000 constant gp-pa
 h# fe00.4000 constant dc-pa
 h# fe00.8000 constant vp-pa
+h# fe01.a000 constant ohci-pa
+h# fe01.b000 constant ehci-pa
+h# efc0.0000 constant uoc-pa
+h#      1000 constant gpio-port
 
 start-assembling                                \ Turn on the target assembler
 protected-mode
@@ -112,7 +117,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    \ We do this in top-down order to configure the AUX select
    \ registers before setting the output enables and values.
 
-   h# 1038 #     dx  mov  \ Low bank - first contiguous GPIO register
+   gpio-port h# 38 + #  dx  mov  \ Low bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
    begin
       dx  ax   in   \ Read GPIO control register
@@ -120,11 +125,11 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
       4 #  dx  sub  \ Next port address
    loopa
 
-   h# 1040 # dx mov  dx ax in  ax stos  \ Pos edge enable
-   h# 1044 # dx mov  dx ax in  ax stos  \ Neg edge enable
-   h# 103c # dx mov  dx ax in  ax stos  \ Low bank lock
+   gpio-port h# 40 + # dx mov  dx ax in  ax stos  \ Pos edge enable
+   gpio-port h# 44 + # dx mov  dx ax in  ax stos  \ Neg edge enable
+   gpio-port h# 3c + # dx mov  dx ax in  ax stos  \ Low bank lock
 
-   h# 10b8 #     dx  mov  \ High bank - first contiguous GPIO register
+   gpio-port h# b8 + #  dx  mov  \ High bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
    begin
       ax   dx  in   \ Read GPIO control register
@@ -132,9 +137,9 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
       4 #  dx  sub  \ Next port address
    loopa
 
-   h# 10c0 # dx mov  dx ax in  ax stos  \ Pos edge enable
-   h# 10c4 # dx mov  dx ax in  ax stos  \ Neg edge enable
-   h# 10bc # dx mov  dx ax in  ax stos  \ High bank lock
+   gpio-port h# c0 + # dx mov  dx ax in  ax stos  \ Pos edge enable
+   gpio-port h# c4 + # dx mov  dx ax in  ax stos  \ Neg edge enable
+   gpio-port h# bc + # dx mov  dx ax in  ax stos  \ High bank lock
 
 [ifdef] save-display
 \ \ h# 3c 0  do  i gp@ l!+  4 +loop  h# 4c gp@ l!+
@@ -453,8 +458,7 @@ here resume-entry put-branch
    h# 1800 # dx mov  \ MFGPT base port
    h# 18 # cx mov
    begin
-      op: ax lods
-      op: ax dx out
+      op: ax lods  ax ax test  0<>  if  op: ax dx out  then
       dx inc  dx inc
    loopa
 
@@ -462,6 +466,17 @@ here resume-entry put-branch
    \ Codec
 
    \ h# 8000 h# 4000.0000 or h# 1440 pl!  \ Fail-safe delay
+
+   \ USB Power-to-Port assignment
+   h# 3ab #  uoc-pa     #) mov
+   h#   2 #  uoc-pa 4 + #) mov
+
+[ifdef] restore-usb-power
+   ohci-pa set-base
+   h#       1 #  h# 08 [bx]  mov  \ HcCommandStatus register - Reset host controller
+   h# 1e.0000 #  h# 4c [bx]  mov  \ HcRhDescriptorB register - Individual port power
+   h#     100 #  h# 58 [bx]  mov  \ HcRhPortStatus[2] register - Power on
+[then]
 
    \ Restore CaFe configuration
 
@@ -486,6 +501,17 @@ here resume-entry put-branch
    h# 6210 config-setup  ax lods  ax dx out        \ Camera BAR
    h# 6204 config-setup  ax lods  op: ax dx out    \ Camera enables
 
+[ifdef] restore-usb-power
+   ohci-pa set-base
+   \ Do this after the CaFe setup to stagger the power-on.  The staggering
+   \ might not be necessary for B3 and later.
+   h#     100 #  h# 54 [bx]  mov  \ HcRhPortStatus[1] register - Power on
+   \ Ports 2 and 3 are ganged and port 4 (wireless) is controlled by EC,
+   \ but we still want the "powered" bits to be set in the registers
+   h#     100 #  h# 5c [bx]  mov  \ HcRhPortStatus[3] register - Power on
+   h#     100 #  h# 60 [bx]  mov  \ HcRhPortStatus[4] register - Power on
+[then]
+
    \ Display stuff
    h# 4758 #  h# fe00.4000 #)  mov  \ Unlock display controller registers
 
@@ -500,10 +526,6 @@ here resume-entry put-branch
 
    \ There is a lot of other stuff that must be done to turn on the
    \ video - but we will let the gx driver take care of that.
-
-   \ USB Power-to-Port assignment
-   h# 3ab #  h# efc00000 #) mov
-   h#   2 #  h# efc00004 #) mov
 
    \ XXX keyboard init
    \ DCON fiddling
