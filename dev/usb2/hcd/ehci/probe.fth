@@ -16,27 +16,43 @@ headers
    make-device-node			( )
 ;
 
+: probe-root-hub-port  ( port -- )
+   dup portsc@ 1 and 0=  if  drop exit  then	\ No device detected
+   dup portsc@ h# c00 and h# 400 =  if		\ A low speed device detected
+      dup disown-port				\ Disown the port
+   else						\ Don't know what it is
+      dup reset-port				\ Reset to find out
+      dup portsc@ 4 and  0=  if			\ A full speed device detected
+	 dup disown-port			\ Disown the port
+      else					\ A high speed device detected
+         dup ['] make-root-hub-node catch  if	\ Process high speed device
+            drop ." Failed to probe root port " dup .d cr
+         then
+      then
+   then  drop
+;
+
 external
 : power-usb-ports  ( -- )  ;
 
 : probe-usb  ( -- )
    alloc-pkt-buf
-   hcsparams@ h# f and 0  ?do				\ For each port
-      i portsc@ 1 and  if				\ A device is connected
-         i portsc@ h# c00 and h# 400 =  if		\ A low speed device detected
-	    i disown-port				\ Disown the port
-         else						\ Don't know what it is
-            i reset-port				\ Reset to find out
-            i portsc@ 4 and  0=  if			\ A full speed device detected
-	       i disown-port				\ Disown the port
-            else					\ A high speed device detected
-               i ['] make-root-hub-node catch  if	\ Process high speed device
-                  ." Failed to probe root port " i .d cr
-               then
-            then
-         then
-      then
+   hcsparams@ h# f and 0  ?do			\ For each port
+      i probe-root-hub-port			\ Probe it
+      i portsc@ i portsc!			\ Clear connection change bit
    loop
+   free-pkt-buf
+;
+
+: reprobe-usb  ( xt -- )
+   alloc-pkt-buf
+   hcsparams@ h# f and 0  ?do			\ For each port
+      i portsc@ 2 and  if			\ Connection changed
+         i over execute				\ Remove obsolete device nodes
+         i probe-root-hub-port			\ Probe it
+         i portsc@ i portsc!			\ Clear connection change bit
+      then
+   loop  drop
    free-pkt-buf
 ;
 

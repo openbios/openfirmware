@@ -49,6 +49,15 @@ external
    true to ports-powered?
 ;
 
+\ This version assumes that power has been applied already, and
+\ all we have to do is wait enough time for the devices to be ready.
+: wait-after-power  ( target-msecs -- )
+   ports-powered?  if  drop exit  then  ( target-msecs )
+   begin  dup get-msecs - 0<=  until    ( target-msecs )
+   drop                                 ( )
+   true to ports-powered?
+;
+
 \ This version powers the ports in a staggered fashion to reduce surge current
 : stagger-power  ( -- )
    hc-rh-desa@  h# 200 and  0=  if               ( )
@@ -79,10 +88,24 @@ external
       i ['] probe-root-hub-port catch  if
          drop ." Failed to probe root port " i u. cr
       then
+      3.0000 i hc-rh-psta!			\ Clear change bits
    loop
    free-pkt-buf
 ;
 
+: reprobe-usb  ( xt -- )
+   alloc-pkt-buf
+   hc-rh-desA@ h# ff and 0  ?do
+      i hc-rh-psta@ 3.0000 and  if
+         i over execute				\ Remove obsolete device nodes
+         i ['] probe-root-hub-port catch  if
+	    drop ." Failed to probe root port " i u. cr
+         then
+         3.0000 i hc-rh-psta!			\ Clear change bits
+      then
+   loop  drop
+   free-pkt-buf
+;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

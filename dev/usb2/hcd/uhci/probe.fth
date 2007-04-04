@@ -36,12 +36,27 @@ external
    2 0  do
       i reset-root-hub-port
       i ['] probe-root-hub-port catch  if
-         ." Failed to probe root port " i .d cr
+         drop ." Failed to probe root port " i .d cr
       then
+      i portsc@ i portsc!			\ Clear change bits
    loop
    free-pkt-buf
 ;
 
+: reprobe-usb  ( xt -- )
+   alloc-pkt-buf
+   2 0  do
+      i portsc@ h# a and  if
+         i over execute				\ Remove obsolete device nodes
+         i reset-root-hub-port
+         i ['] probe-root-hub-port catch  if
+            drop ." Failed to probe root port " i .d cr
+         then
+         i portsc@ i portsc!			\ Clear change bits
+      then
+   loop  drop
+   free-pkt-buf
+;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

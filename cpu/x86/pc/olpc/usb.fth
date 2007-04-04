@@ -32,12 +32,13 @@ purpose: USB elaborations for the OLPC platform
 ;
 alias p2 probe-usb2
 
+0 value usb-power-on-time
+
 : probe-usb  ( -- )
    \ Open OHCI so it will claim USB 1 devices that the EHCI controller disowns
    " /usb@f,4" select-dev
    delete-my-children
-   " stagger-power" eval  \ Get the devices going
-   d# 500 ms
+   usb-power-on-time d# 1000 +  " wait-after-power" eval
 
    (probe-usb2)           \ First dibs to EHCI/USB2
 
@@ -60,19 +61,54 @@ alias p2 probe-usb2
    then
 ;
 
+100 buffer: usbpwd		0 value /usbpwd
+: $hold  ( adr len -- )
+   dup  if  bounds swap 1-  ?do  i c@ hold  -1 +loop  else  2drop  then
+;
+: rm-usb-child  ( $ phandle -- )  -rot type ."  removed" cr  delete-package  ;
+: make-usb$  ( port func -- $ )
+   <# u#s drop ascii , hold u#s drop " /@" $hold usbpwd /usbpwd $hold 0 u#>
+;
+: rm-usb-children  ( port -- )
+   device-context? 0=  if  drop exit  then
+   pwd$ dup to /usbpwd  usbpwd swap move
+   h# f 0  do				\ Find all the functions at the port
+      dup i make-usb$ 2dup locate-device 0=  if  rm-usb-child  else  2drop leave then
+   loop  drop
+;
+
+: reprobe-usb  ( -- )
+   ." USB2 devices:" cr
+   " /usb@f,5" select-dev  ['] rm-usb-children " reprobe-usb" evaluate  unselect
+   " no-page show-devs /usb@f,5" evaluate
+   ." USB1 devices:" cr
+   " /usb@f,4" select-dev  ['] rm-usb-children " reprobe-usb" evaluate  unselect
+   " show-devs /usb@f,4  page-mode" evaluate
+   report-disk
+   report-net
+   report-keyboard
+;
+
 stand-init: USB setup
    \ Set up an address routing to the USB Option Controller
    h# efc00000.efc00001. h# 5100.0029 wrmsr
    h# 400000ef.c00fffff. h# 5101.0020 wrmsr
    h# 00000002.efc00000. h# 5120.000b wrmsr
 [ifdef] virtual-mode
-   h# efc00000 dup h# 1000 -1 mmu-map
+   h# efc00000 dup h# 1000 -1 mmu-map  \ UOC
+   h# fe01a000 dup h# 1000 -1 mmu-map  \ OHCI
 [then]
    \ Configure the assignment of 2 USB Power Enable pins to USB ports
    \ to correspond to the way they are wired on the board.
    \ USB port 1 is PWR_EN2, USB ports 2-4 are PWR_EN1
    usb-port-power-map h# efc00000 l!
    2 h# efc00004 l!
+   h#       1 h# fe01a008 l!   \ Reset OHCI host controller
+   h# 1e.0000 h# fe01a04c l!   \ Configure ports for individual power
+   h#     100 h# fe01a058 l!   \ Power-on ports 2 and 3
+   d# 10 ms                    \ Stagger for glitch-prevention
+   h#     100 h# fe01a054 l!   \ Power-on port 1
+   get-msecs to usb-power-on-time
 ;
 
 
