@@ -18,13 +18,21 @@ purpose: USB elaborations for the OLPC platform
 ;
 [then]
 
+\ Like $show-devs, but ignores pagination keystrokes
+: $nopage-show-devs  ( nodename$ -- )
+   ['] exit? behavior >r  ['] false to exit?
+   $show-devs
+   r> to exit?
+;
+
 : (probe-usb2)
    " /usb@f,5" select-dev
    delete-my-children
    " probe-usb" eval  \ EHCI probe
    unselect
+
    ." USB2 devices:" cr
-   " show-devs /usb@f,5" eval
+   " /usb@f,5" $nopage-show-devs
 ;
 : probe-usb2  ( -- )
    (probe-usb2)
@@ -44,8 +52,9 @@ alias p2 probe-usb2
 
    " probe-usb" eval  \ OHCI probe
    unselect
+
    ." USB1 devices:" cr
-   " no-page  show-devs /usb@f,4  page-mode" eval
+   " /usb@f,4" $nopage-show-devs
 
    report-disk
    report-net
@@ -80,10 +89,12 @@ alias p2 probe-usb2
 : reprobe-usb  ( -- )
    ." USB2 devices:" cr
    " /usb@f,5" select-dev  ['] rm-usb-children " reprobe-usb" evaluate  unselect
-   " no-page show-devs /usb@f,5" evaluate
+   " /usb@f,5" $nopage-show-devs
+
    ." USB1 devices:" cr
    " /usb@f,4" select-dev  ['] rm-usb-children " reprobe-usb" evaluate  unselect
-   " show-devs /usb@f,4  page-mode" evaluate
+   " /usb@f,4" $nopage-show-devs
+
    report-disk
    report-net
    report-keyboard
