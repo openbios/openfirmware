@@ -336,6 +336,7 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 
 [ifdef] olpc
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
+fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
 [then]

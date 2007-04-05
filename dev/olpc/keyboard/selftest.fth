@@ -134,7 +134,7 @@ raw-scancode value cur-sc-table
 
 h# 07ff constant pressed-key-color
 h# 001f constant idle-key-color
-h# 0000 constant kbd-bc
+h# ffff constant kbd-bc
 
 : scancode->key  ( scancode -- key# )  cur-sc-table + c@  ;
 
