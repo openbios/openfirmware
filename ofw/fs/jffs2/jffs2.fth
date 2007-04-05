@@ -152,11 +152,14 @@ true value first-time?
 : eblock>page  ( eblock# -- page# )  pages/eblock *  ;
 : page>eblock  ( page# -- eblock# )  pages/eblock /  ;
 
+-1 ( instance ) value have-eblock#  \ For avoiding redundant reads
 : read-pages  ( page# #pages  -- error? )
+   \ Partial reads invalidate the cache
+   dup pages/eblock <>  if  -1 to have-eblock#  then  ( page# #pages )
+
    tuck  block-buf -rot  " read-blocks" $call-parent  ( #pages #read )
    <>
 ;
-0 ( instance ) value have-eblock#  \ For avoiding redundant reads
 : read-eblock  ( eblock# -- )
    dup have-eblock#  <>  if   ( eblock# )
       to have-eblock#         ( )
@@ -389,6 +392,9 @@ true value first-time?
       endof
 [then]
 
+      ( adr nodetype )
+      cr ." Unsupported nodetype " dup . cr
+
    endcase             ( adr )
    +raw-node           ( adr' )
 ;
@@ -540,11 +546,46 @@ c;
    drop to file-size   \ Set overall length
 ;
 
+: ?outlen  ( expected actual -- )  <> abort" Wrong uncompressed length"  ;
 : zlib-inflate  ( src dst clen dlen -- )
    nip  -rot        ( dlen src dst )
    swap 2+ swap     ( dlen src dst )     \ Skip 2-byte header
    true (inflate)   ( dlen actual-dlen )
-   <> abort" Wrong uncompressed length"
+   ?outlen
+;
+
+d# 256 /w* constant /positions
+/positions instance buffer: positions
+
+instance variable outpos
+0 instance value dst
+
+: rtime-decompress  ( src dst srclen dstlen -- )
+   >r                            ( src dst srclen r: dstlen )
+   swap to dst  outpos off       ( src srclen     r: dstlen )
+
+   positions /positions  erase   ( src srclen )
+
+   bounds  ?do                   ( )
+      i 1+ c@                    ( repeat )
+      i c@                       ( repeat value )
+      dup outpos @ dst +  c!     ( repeat value )  \ Verbatim copied byte
+      1 outpos +!                ( repeat value )
+      positions swap wa+ dup w@  ( repeat 'positions backoffs )
+      outpos @  rot w!           ( repeat backoffs )
+      swap                       ( backoffs repeat ) 
+      dup  if                    ( backoffs repeat ) 
+         swap  dst +             ( repeat src )
+         outpos @ dst +          ( repeat src dst )
+         \ We must use cmove instead of move, because we need the
+         \ repetition-when-overlapping semantics.
+         2 pick cmove            ( repeat )
+         outpos +!               ( )
+      else                       ( backoffs repeat ) 
+         2drop                   ( )
+      then                       ( )
+   2 +loop                       ( )
+   r>  outpos @  ?outlen         ( )
 ;
 
 : .inode  ( inode - )
@@ -570,8 +611,9 @@ c;
 
    r@ >ridata  file-buf r@ rioffset@ +  ( src dst )
    r@ ricompr@  case                    ( src dst )
-      0 of   r@ ridsize@  move   endof  ( )
-      6 of   r@ ricsize@  r@ ridsize@  zlib-inflate  endof  ( )
+      0 of   r@ ridsize@  move                           endof  ( )
+      2 of   r@ ricsize@  r@ ridsize@  rtime-decompress  endof  ( )
+      6 of   r@ ricsize@  r@ ridsize@  zlib-inflate      endof  ( )
       ( default )  ." Unsupported compression type " .  cr abort
    endcase
    r> drop
