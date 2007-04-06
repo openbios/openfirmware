@@ -35,7 +35,7 @@ devalias u /usb/disk
    " /usb@f,5" $nopage-show-devs
 
    ." USB1 devices:" cr
-   " /usb@f,5" open-dev  ?dup  if  close-dev  then
+   " /usb@f,4" open-dev  ?dup  if  close-dev  then
    " /usb@f,4" $nopage-show-devs
 
    report-disk
