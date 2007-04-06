@@ -1,0 +1,57 @@
+This directory contains a version of memtest86 that has been modified
+for use on an OLPC system, booted via Open Firmware.  See README for
+general information about memtest86.
+
+The OLPC system is based on an AMD Geode processor.  Geode firmware
+normally uses a System Management Mode handler program to "virtualize"
+certain registers that are not directly implemented in Geode hardware.
+Those registers include the EGA frame buffer and the PCI configuration
+registers for devices that are built-in to the Geode chipset.
+
+Open Firmware for the OLPC dispenses with that virtualization, instead
+requiring memtest86 (and also operating systems) to provide drivers for
+the real Geode hardware.  This copy of the memtest86 source code has
+been modified accordingly.  The changes consist of:
+
+  a) Replacing the code that writes directly to the EGA with "function
+  calls" to set and get character and color values.  When memtest86 is
+  configured to run on an ordinary PC, they are implemeted as macros
+  (in ega.h) that write directly to the EGA.  When configured for OLPC,
+  they are implemented as real function calls that render text into a
+  linear framebuffer.  The function calls are in lfbega.c
+
+  b) Eliminating (by not linking in) several unnecessary modules,
+  including linuxbios.o, pci.o, controller.o, extra.o, and spd.o.
+  The top level routines that those modules implement are replaced
+  with do-nothing stub versions defined in olpc.c.
+
+  c) Commenting out (#ifndef OLPC) some unnecessary code.  Leaving
+  that code would not have broken anything, but since we want to store
+  the memtest86 binary in the OLPC boot ROM, it is useful to avoid
+  wasting space unnecessarily.
+
+The modifications listed above were done by Lilian Walter (lfbega.c) and
+Mitch Bradley (olpc.c and paring down), both of FirmWorks.  The modifications
+are released under the same license as the rest of memtest86, i.e. version
+2 of the GNU Public License.
+
+Here is an example of how memtest might be booted from Open Firmware on an
+OLPC system.
+
+: memtest-map-in  ( [ phys.. ] size -- )  0 mem-claim drop  ;
+
+: memtest  ( -- )
+   \ Do different kind of map-in than the linux kernel
+   ['] memtest-map-in to elf-map-in
+
+   \ Map the frame buffer (virtual=physical)
+   h# 910 config-l@ dup 100.0000 -1 mmu-map
+
+   \ Disable the OHCI USB controller so that it does not modify the HCCA buffer.
+   \ We assume that we're not loading memtest86 from devices behind the OHCI USB
+   \ controller.
+   " /usb@f,4" open-dev iselect " reset-usb" my-self $call-method unselect-dev
+
+   \ Load and run memtest86
+   " rom:memtest" $boot
+;
