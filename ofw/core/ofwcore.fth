@@ -1005,8 +1005,8 @@ headerless
    '#values @  '#buffers @  negate    ( value-size variable-size )
    previous                           ( value-size variable-size )
    deallocate-instance
-;
 
+;
 \ When creating a package definition, we initialize the buffer
 \ (uninitialized data) allocation pointer and the value (initialized data)
 \ allocation pointer.
@@ -2351,7 +2351,9 @@ headerless
       r> push-device                        ( path$ )
    else                                     ( path$ args$ devname$ )
       \ The path component is an ordinary device node or the root node
-      noa-find-device                       ( path$ args$ )
+      ['] noa-find-device  catch  ?dup  if  ( path$ args$ x x throw-code )
+         close-parents  throw
+      then                                  ( path$ args$ )
       current-device  parent-device  r> open-parents ( path$ args$ my-phandle )
       push-device                           ( path$ args$ )
       new-instance                          ( path$ )
