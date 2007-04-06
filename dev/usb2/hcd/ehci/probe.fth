@@ -35,25 +35,49 @@ headers
 external
 : power-usb-ports  ( -- )  ;
 
-: probe-usb  ( -- )
-   alloc-pkt-buf
-   hcsparams@ h# f and 0  ?do			\ For each port
-      i probe-root-hub-port			\ Probe it
-      i portsc@ i portsc!			\ Clear connection change bit
-   loop
-   free-pkt-buf
-;
+: probe-root-hub  ( -- )
+   \ Set active-package so device nodes can be added and removed
+   my-self ihandle>phandle push-package
 
-: reprobe-usb  ( xt -- )
    alloc-pkt-buf
-   hcsparams@ h# f and 0  ?do			\ For each port
+   #ports 0  ?do			        \ For each port
       i portsc@ 2 and  if			\ Connection changed
-         i over execute				\ Remove obsolete device nodes
+         i rm-obsolete-children			\ Remove obsolete device nodes
          i probe-root-hub-port			\ Probe it
          i portsc@ i portsc!			\ Clear connection change bit
       then
-   loop  drop
+   loop
    free-pkt-buf
+
+   pop-package
+;
+
+: open  ( -- flag )
+   parse-my-args
+   open-count 0=  if
+      map-regs
+      first-open?  if
+         false to first-open?
+         0 ehci-reg@  h# ff and to op-reg-offset
+         reset-usb
+         init-ehci-regs
+         start-usb
+         claim-ownership
+         init-struct
+         init-extra
+      then
+      alloc-dma-buf
+
+      probe-root-hub
+   then
+   open-count 1+ to open-count
+   true
+;
+
+: close  ( -- )
+   open-count 1- to open-count
+   end-extra
+   open-count 0=  if  free-dma-buf unmap-regs  then
 ;
 
 headers

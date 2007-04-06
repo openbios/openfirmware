@@ -150,44 +150,21 @@ headers
 
 : disown-port  ( port -- )  dup portsc@ h# 2000 or swap portsc!  ;
 
+: #ports  ( -- n )  hcsparams@ h# f and  ;
+
 : claim-ownership  ( -- )
    1 cfgflag!				\ Claim ownership to all ports
    1 ms
 
    \ Power on ports if necessary
    hcsparams@ h# 10 and  if
-      hcsparams@ h# f and 0  ?do
+      #ports 0  ?do
          i power-port
       loop
    then
 ;
 
 external
-: open  ( -- flag )
-   parse-my-args
-   open-count 0=  if
-      map-regs
-      first-open?  if
-         false to first-open?
-         0 ehci-reg@  h# ff and to op-reg-offset
-         reset-usb
-         init-ehci-regs
-         start-usb
-         claim-ownership
-         init-struct
-         init-extra
-      then
-      alloc-dma-buf
-   then
-   open-count 1+ to open-count
-   true
-;
-
-: close  ( -- )
-   open-count 1- to open-count
-   end-extra
-   open-count 0=  if  free-dma-buf unmap-regs  then
-;
 
 : selftest  ( -- error? )
    ehci-reg dup 0=  if  map-regs  then

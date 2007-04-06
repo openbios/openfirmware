@@ -34,8 +34,10 @@ headers
 false value ports-powered?
 
 external
+: #ports  ( -- n )  hc-rh-desa@ h# ff and  ;
+
 \ This version powers all the ports at once
-: power-usb-ports  ( -- )
+: power-ports  ( -- )
    hc-rh-desa@  dup h# 200  and  0=  if
       \ ports are power switched
       hc-rh-stat@ h# 1.0000 or hc-rh-stat!	\ power all ports
@@ -46,23 +48,20 @@ external
       loop  drop
    then  drop
    potpgt 2* ms			\ Wait until powergood
+
+   \ Setup PowerOnToPowerGoodTime and OverCurrentProtectionMode
+   hc-rh-desA@  h# 00ff.ffff and  potpgt d# 24 lshift or
+   h# 800 or   hc-rh-desA!	\ per-port over-current status
+
    true to ports-powered?
 ;
 
-\ This version assumes that power has been applied already, and
-\ all we have to do is wait enough time for the devices to be ready.
-: wait-after-power  ( target-msecs -- )
-   ports-powered?  if  drop exit  then  ( target-msecs )
-   begin  dup get-msecs - 0<=  until    ( target-msecs )
-   drop                                 ( )
-   true to ports-powered?
-;
-
+[ifdef] notdef
 \ This version powers the ports in a staggered fashion to reduce surge current
 : stagger-power  ( -- )
    hc-rh-desa@  h# 200 and  0=  if               ( )
       hc-rh-desa@ h# 100 or hc-rh-desa!	\ Individual power switching mode
-      hc-rh-desa@ h# ff and  h# f min            ( numports )
+      #ports  h# f min                           ( numports )
       1 over lshift 1-                           ( numports bitmask )
       d# 17 lshift  hc-rh-desb@ or  hc-rh-desb!  ( numports )
       0  ?do                                     ( )
@@ -71,40 +70,64 @@ external
       loop                                       ( )
    then
    potpgt 2* ms			\ Wait until powergood
-   true to ports-powered?
-;
-
-: probe-usb  ( -- )
-   \ Power on ports
-   ports-powered? not  if  power-usb-ports  then
 
    \ Setup PowerOnToPowerGoodTime and OverCurrentProtectionMode
-   hc-rh-desA@  dup h# 00ff.ffff and
-   h# 800 or potpgt d# 24 << or  hc-rh-desA!	\ per-port over-current status
+   hc-rh-desA@  h# 00ff.ffff and  potpgt d# 24 lshift or
+   h# 800 or   hc-rh-desA!	\ per-port over-current status
 
-   \ Probe each port
-   alloc-pkt-buf
-   h# ff and  0  ?do
-      i ['] probe-root-hub-port catch  if
-         drop ." Failed to probe root port " i u. cr
-      then
-      3.0000 i hc-rh-psta!			\ Clear change bits
-   loop
-   free-pkt-buf
+   true to ports-powered?
 ;
+[then]
 
-: reprobe-usb  ( xt -- )
+: probe-root-hub  ( -- )
+   \ Power on ports
+   \ ports-powered? 0=  if  power-ports  then
+   0 hc-rh-psta@ h# 100 and  if
+      " wait-usb-power" $find  if  execute  else  2drop  then
+   else
+      power-ports
+   then
+
+   \ Set active-package so device nodes can be added and removed
+   my-self ihandle>phandle push-package
+
    alloc-pkt-buf
-   hc-rh-desA@ h# ff and 0  ?do
+   #ports 0  ?do
       i hc-rh-psta@ 3.0000 and  if
-         i over execute				\ Remove obsolete device nodes
+         i rm-obsolete-children			\ Remove obsolete device nodes
          i ['] probe-root-hub-port catch  if
 	    drop ." Failed to probe root port " i u. cr
          then
          3.0000 i hc-rh-psta!			\ Clear change bits
       then
-   loop  drop
+   loop
    free-pkt-buf
+
+   pop-package
+;
+
+: open  ( -- flag )
+   parse-my-args
+   open-count 0=  if
+      map-regs
+      first-open?  if
+         false to first-open?
+         reset-usb
+         init-struct
+         init-ohci-regs
+      then
+      alloc-dma-buf
+
+      probe-root-hub
+   then
+   open-count 1+ to open-count
+   true
+;
+
+: close  ( -- )
+   open-count 1- to open-count
+   end-extra
+   open-count 0=  if  free-dma-buf unmap-regs  then
 ;
 
 \ LICENSE_BEGIN

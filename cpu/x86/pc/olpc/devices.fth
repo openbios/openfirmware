@@ -108,7 +108,6 @@ devalias com1 /isa/serial@i3f8:115200
 devalias mouse /isa/8042/mouse
 devalias d disk
 devalias n nand
-devalias u /usb/disk
 devalias sd /sd/disk
 
 dev /8042      patch false ctlr-selftest open   device-end
@@ -212,8 +211,6 @@ fload ${BP}/dev/isa/diaguart.fth	\ ISA COM port driver
 
 h# 3f8 is uart-base
 fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
-
-fload ${BP}/cpu/x86/pc/reset.fth	\ reset-all
 
 [ifndef] save-flash
 : save-flash ;

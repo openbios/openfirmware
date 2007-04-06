@@ -292,7 +292,7 @@ warning @  warning off
 \ warning !
 [then]
 
-: r " p2 flash disk:\olpc.rom" evaluate  ;
+: r " flash u:\olpc.rom" evaluate  ;
 
 : (.firmware)  ( -- )
    ." Open Firmware  "  .built  cr
@@ -413,12 +413,8 @@ patch drop ms install-console
       2drop 2drop
    then
 
-[ifdef] rom-loaded
    1. h# 5140.0017 wrmsr  \ DIVIL_SOFT_RESET MSR, 5536 page 367
    begin again
-[else]
-   (reset-all)
-[then]
 ;
 ' dcon-reset-all to reset-all
 

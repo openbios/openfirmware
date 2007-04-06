@@ -117,6 +117,10 @@ external
 
 headers
 
+: rm-obsolete-children  ( port -- )
+   " rm-usb-children" $find  if  execute  else  3drop  then
+;
+
 : parse-my-args  ( -- )
    my-args  " debug" $=  if  debug-on  then
 ;

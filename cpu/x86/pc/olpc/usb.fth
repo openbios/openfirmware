@@ -1,6 +1,10 @@
 purpose: USB elaborations for the OLPC platform
 \ See license at end of file
 
+devalias usb1 /usb@f,4
+devalias usb2 /usb@f,5
+devalias u /usb/disk
+
 \ If there is a PCI ethernet adapter, use it as the default net device,
 \ otherwise use any ethernet that can be found in the device tree.
 : report-net  ( -- )
@@ -25,41 +29,21 @@ purpose: USB elaborations for the OLPC platform
    r> to exit?
 ;
 
-: (probe-usb2)
-   " /usb@f,5" select-dev
-   delete-my-children
-   " probe-usb" eval  \ EHCI probe
-   unselect
-
-   ." USB2 devices:" cr
-   " /usb@f,5" $nopage-show-devs
-;
-: probe-usb2  ( -- )
-   (probe-usb2)
-   report-disk
-;
-alias p2 probe-usb2
-
-0 value usb-power-on-time
-
 : probe-usb  ( -- )
-   \ Open OHCI so it will claim USB 1 devices that the EHCI controller disowns
-   " /usb@f,4" select-dev
-   delete-my-children
-   usb-power-on-time d# 1000 +  " wait-after-power" eval
-
-   (probe-usb2)           \ First dibs to EHCI/USB2
-
-   " probe-usb" eval  \ OHCI probe
-   unselect
+   ." USB2 devices:" cr
+   " /usb@f,5" open-dev  ?dup  if  close-dev  then
+   " /usb@f,5" $nopage-show-devs
 
    ." USB1 devices:" cr
+   " /usb@f,5" open-dev  ?dup  if  close-dev  then
    " /usb@f,4" $nopage-show-devs
 
    report-disk
    report-net
    report-keyboard
 ;
+alias probe-usb2 probe-usb
+alias p2 probe-usb2
 
 : ?usb-keyboard  ( -- )
    " keyboard" expand-alias  if   ( devspec$ )
@@ -70,34 +54,32 @@ alias p2 probe-usb2
    then
 ;
 
-100 buffer: usbpwd		0 value /usbpwd
-: $hold  ( adr len -- )
-   dup  if  bounds swap 1-  ?do  i c@ hold  -1 +loop  else  2drop  then
-;
-: rm-usb-child  ( $ phandle -- )  -rot type ."  removed" cr  delete-package  ;
-: make-usb$  ( port func -- $ )
-   <# u#s drop ascii , hold u#s drop " /@" $hold usbpwd /usbpwd $hold 0 u#>
+\ Unlink every node whose phys.hi component matches port
+: port-match?  ( port -- flag )
+   get-unit  if  drop false exit  then
+   get-encoded-int =
 ;
 : rm-usb-children  ( port -- )
    device-context? 0=  if  drop exit  then
-   pwd$ dup to /usbpwd  usbpwd swap move
-   h# f 0  do				\ Find all the functions at the port
-      dup i make-usb$ 2dup locate-device 0=  if  rm-usb-child  else  2drop leave then
-   loop  drop
+   also                             ( port )
+   'child                           ( port prev )
+   first-child  begin while         ( port prev )
+      over port-match?  if          ( port prev )
+         'peer link@  over link!    ( port prev )      \ Disconnect
+      else                          ( port prev )
+         drop 'peer                 ( port prev' )
+      then                          ( port prev )
+   next-child  repeat               ( port prev )
+   2drop                            ( )
+   previous definitions
 ;
 
-: reprobe-usb  ( -- )
-   ." USB2 devices:" cr
-   " /usb@f,5" select-dev  ['] rm-usb-children " reprobe-usb" evaluate  unselect
-   " /usb@f,5" $nopage-show-devs
+0 value usb-power-done-time
 
-   ." USB1 devices:" cr
-   " /usb@f,4" select-dev  ['] rm-usb-children " reprobe-usb" evaluate  unselect
-   " /usb@f,4" $nopage-show-devs
-
-   report-disk
-   report-net
-   report-keyboard
+\ This version assumes that power has been applied already, and
+\ all we have to do is wait enough time for the devices to be ready.
+: wait-usb-power  ( -- )
+   begin  usb-power-done-time get-msecs - 0<=  until    ( )
 ;
 
 stand-init: USB setup
@@ -119,7 +101,9 @@ stand-init: USB setup
    h#     100 h# fe01a058 l!   \ Power-on ports 2 and 3
    d# 10 ms                    \ Stagger for glitch-prevention
    h#     100 h# fe01a054 l!   \ Power-on port 1
-   get-msecs to usb-power-on-time
+   h#     100 h# fe01a05c l!   \ Power-on port 3
+   h#     100 h# fe01a060 l!   \ Power-on port 4
+   get-msecs d# 1000 +  to usb-power-done-time
 ;
 
 

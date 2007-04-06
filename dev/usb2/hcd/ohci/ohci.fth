@@ -84,28 +84,6 @@ external
 : start-usb     ( -- )  c0 hc-cntl-clr 80 hc-cntl-set  ;
 : suspend-usb   ( -- )  c0 hc-cntl-set  ;
 
-: open  ( -- flag )
-   parse-my-args
-   open-count 0=  if
-      map-regs
-      first-open?  if
-         false to first-open?
-         reset-usb
-         init-struct
-         init-ohci-regs
-      then
-      alloc-dma-buf
-   then
-   open-count 1+ to open-count
-   true
-;
-
-: close  ( -- )
-   open-count 1- to open-count
-   end-extra
-   open-count 0=  if  free-dma-buf unmap-regs  then
-;
-
 headers
 
 \ LICENSE_BEGIN
