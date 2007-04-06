@@ -1,11 +1,11 @@
 OS := $(shell uname)
 
-all: ofw.elf 
+all: olpc.rom
 
 ofw.elf: FORCE build ../../../build/inflate.bin
 	./build $@
 
-olpc.rom: FORCE build ../../../build/inflate.bin
+olpc.rom: FORCE build ../../../build/inflate.bin ../../../../../clients/memtest86/memtest
 	./build $@
 
 ../../../${OS}/forth:
@@ -13,6 +13,9 @@ olpc.rom: FORCE build ../../../build/inflate.bin
 
 ../../../build/inflate.bin:
 	@make -C ../../../build inflate.bin
+
+../../../../../clients/memtest86/memtest:
+	@make -C ../../../../../clients/memtest86 memtest
 
 build: ../../../${OS}/forth
 	@ln -sf ../../../${OS}/forth build

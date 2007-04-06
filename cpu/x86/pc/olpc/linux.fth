@@ -232,6 +232,25 @@ warning @ warning off
    init-program
 ;
 
+: memtest-map-in  ( [ phys.. ] size -- )  0 mem-claim drop  ;
+
+: $boot-memtest  ( -- )
+   \ Do different kind of map-in than the linux kernel
+   ['] memtest-map-in to elf-map-in
+
+   \ Map the frame buffer (virtual=physical)
+   h# 910 config-l@ dup 100.0000 -1 mmu-map
+
+   \ Disable the OHCI USB controller so that it does not modify the HCCA buffer.
+   \ We assume that we're not loading memtest86 from devices behind the OHCI USB
+   \ controller.
+   " /usb@f,4" open-dev iselect " reset-usb" my-self $call-method unselect-dev
+
+   \ Load and run memtest86
+   $boot
+;
+: memtest  ( -- )  " rom:memtest" $boot-memtest  ;
+
 : sym  ( "name" -- adr )
    parse-word  $sym>  0=  if  err-sym-not-found throw  then
 ;
