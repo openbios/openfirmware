@@ -5,9 +5,21 @@ build-now
 
 fload ${BP}/cpu/x86/pc/olpc/versions.fth
 
-" wget -O - http://download.fedora.redhat.com/pub/fedora/projects/olpc/development/source/SRPMS/libertas-usb8388-firmware-${WLAN_VERSION}.src.rpm | rpm2cpio | cpio -i usb8388.bin" expand$ $sh
+" wget -O - http://www.laptop.org/teamwiki/images/6/60/Libertas-firmware.tgz | tar xfz -" $sh
+" grep version: libertas-fw-${WLAN_DATE}/RELEASE_NOTES | cut -d ' ' -f 3 | tr -d \\n >libertas.version" expand$ $sh
 
-\ This forces the creation of an ec.log file, so we don't re-fetch ec.img
+reading libertas.version
+here  dup d# 50 ifd @ fgets   ( adr len )
+ifd @ fclose                  ( adr len )
+
+" ${WLAN_VERSION}" expand$  $=  0=  [if]
+.( Wrong Libertas version ) cr
+error-exit
+[then]
+
+" cp libertas-fw-${WLAN_DATE}/usb8388.bin ." expand$ $sh
+
+\ This forces the creation of an .log file, so we don't re-fetch
 writing usb8388.version
-" ${WLAN}"n" expand$  ofd @ fputs
+" ${WLAN_VERSION}"n" expand$  ofd @ fputs
 ofd @ fclose
