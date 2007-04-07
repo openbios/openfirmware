@@ -232,24 +232,24 @@ warning @ warning off
    init-program
 ;
 
-: memtest-map-in  ( [ phys.. ] size -- )  0 mem-claim drop  ;
+: ?memtest-elf-map-in  ( vaddr size -- )
+   \ We recognize memtest by its virtual address of 0x10000
+   \ It expects that virtual = physical; we depend on the fact
+   \ that we have low memory mapped V=P
+   over  h# 10000 =  if  ( vaddr size )
+      0 mem-claim drop
 
-: $boot-memtest  ( -- )
-   \ Do different kind of map-in than the linux kernel
-   ['] memtest-map-in to elf-map-in
+      \ Map the frame buffer (virtual=physical)
+      h# 910 config-l@ dup 100.0000 -1 mmu-map
+      exit
+   then
 
-   \ Map the frame buffer (virtual=physical)
-   h# 910 config-l@ dup 100.0000 -1 mmu-map
-
-   \ Disable the OHCI USB controller so that it does not modify the HCCA buffer.
-   \ We assume that we're not loading memtest86 from devices behind the OHCI USB
-   \ controller.
-   " /usb@f,4" open-dev iselect " reset-usb" my-self $call-method unselect-dev
-
-   \ Load and run memtest86
-   $boot
+   \ If it's not memtest, chain to the linux recognizer
+   ?linux-elf-map-in
 ;
-: memtest  ( -- )  " rom:memtest" $boot-memtest  ;
+' ?memtest-elf-map-in is elf-map-in
+
+: memtest  ( -- )  " rom:memtest" $boot  ;
 
 : sym  ( "name" -- adr )
    parse-word  $sym>  0=  if  err-sym-not-found throw  then
