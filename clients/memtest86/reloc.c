@@ -239,12 +239,10 @@ void _dl_start(void)
 	elf_dynamic_do_rel(&map, 
 		map.l_info[DT_REL]->d_un.d_ptr,
 		map.l_info[DT_RELSZ]->d_un.d_val);
-	if (map.l_info[DT_PLTREL]) {
-	   if (map.l_info[DT_PLTREL]->d_un.d_val == DT_REL) {
+	if (map.l_info[DT_PLTREL] && map.l_info[DT_PLTREL]->d_un.d_val == DT_REL) {
 		elf_dynamic_do_rel(&map, 
 			map.l_info[DT_JMPREL]->d_un.d_ptr,
 			map.l_info[DT_PLTRELSZ]->d_un.d_val);
-	   }
 	}
 #endif
 

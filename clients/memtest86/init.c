@@ -42,6 +42,8 @@ static void display_init(void)
         serial_echo_print("[0m");
         serial_echo_print("[37m[44m");
 
+	ega_init();
+
 	/* Clear screen & set background to blue */
         int j;
         for (i=0; i<24; i++) {
@@ -74,13 +76,11 @@ void init(void)
 
 	outb(0x8, 0x3f2);  /* Kill Floppy Motor */
 
-	ega_init();
+	/* Turn on cache */
+	set_cache(1);
 
 	/* Setup the display */
 	display_init();
-
-	/* Turn on cache */
-	set_cache(1);
 
 	/* Determine the memory map */
 	if ((firmware == FIRMWARE_UNKNOWN) && 

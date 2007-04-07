@@ -448,7 +448,7 @@ void check_input(void)
 
 #ifdef OLPC
 			/* do a warm start */
-                        warm_start();
+			warm_start();
 #else
 			/* tell the BIOS to do a warm start */
 			*((unsigned short *)0x472) = 0x1234;

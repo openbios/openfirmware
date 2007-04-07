@@ -156,11 +156,6 @@ int pci_init(void)
 	/* For now just make certain we can directly
 	 * use the pci functions.
 	 */
-#ifdef USE_PCI_CONF_TYPE_1
-	pci_conf_type = PCI_CONF_TYPE_1;
-	return 0;
-#else
 	result = pci_check_direct();
 	return result;
-#endif
 }

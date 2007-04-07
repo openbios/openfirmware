@@ -82,7 +82,6 @@ flush:	movl	$KERNEL_DS, %eax
 	movl	$0, zerobss@GOTOFF(%ebx)
 zerobss_done:
 
-/* #ifndef EMULATE_EGA */
 /* 
  * Clear the video display
  */
@@ -97,7 +96,6 @@ zerobss_done:
 	jnz	1b
 	movl	$0, clear_display@GOTOFF(%ebx)
 clear_display_done:
-/* #endif */
 
 
 /*
@@ -414,13 +412,15 @@ not_cyrix:
 id_done:
 	movl	%edi, %ebx	/* Restore GOT pointer */
 
-        // Disable Paging
-        movl    %cr0,%eax
-        andl    $~(1 << 31),%eax
-        movl    %eax,%cr0
-        // Flush TLBs
-        movl    %cr3,%eax
-        movl    %eax,%cr3
+#ifdef OLPC
+	/* Disable Paging */
+	movl    %cr0,%eax
+	andl    $~(1 << 31),%eax
+	movl    %eax,%cr0
+	/* Flush TLBs */
+	movl    %cr3,%eax
+	movl    %eax,%cr3
+#endif
  
 	leal	_dl_start@GOTOFF(%ebx), %eax
 	call	*%eax
@@ -947,7 +947,11 @@ idt_real:
 
 .data
 zerobss:	.long	1
+#ifdef EMULATE_EGA
 clear_display:	.long	0
+#else
+clear_display:	.long	1
+#endif
 .previous
 .data
 .balign 16

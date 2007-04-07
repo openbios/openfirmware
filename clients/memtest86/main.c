@@ -428,6 +428,8 @@ void do_test(void)
 
 void restart()
 {
+        int i, j;
+
 	/* clear variables */
 	firsttime = 0;
 	v->test = 0;
@@ -436,9 +438,7 @@ void restart()
 	v->ecount = 0;
 	v->ecc_ecount = 0;
 
-//      clear_screen();
-        int i, j;
-
+        /* Clear the screen */
         for (i=0; i<24; i++) {
 	  for (j=0; j<80; j++) {
 	    set_ega_char (i, j, ' ');

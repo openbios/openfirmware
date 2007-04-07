@@ -13,7 +13,7 @@
 /* SERIAL_CONSOLE_DEFAULT -  The default state of the serial console. */
 /*	This is normally off since it slows down testing.  Change to a 1 */
 /*	to enable. */
-#define SERIAL_CONSOLE_DEFAULT 1
+#define SERIAL_CONSOLE_DEFAULT 0
 
 /* SERIAL_BAUD_RATE - Baud rate for the serial console
  * If this is not defined it is assumed a previous program has set the
@@ -35,11 +35,6 @@
 /*	and mouse support*/
 /*	Normally enabled */
 #define USB_WAR
-
-/* USE_PCI_CONF_TYPE_1 - Sets pci_conf_type to PCI_CONF_TYPE_1 */
-/*      Normally not enabled */
-/*      Enabled for OLPC */
-#define USE_PCI_CONF_TYPE_1
 
 /* EMULATE_EGA - Enables EGA emulation instead of writing to EGA buffer directly */
 /*      Normally not enabled */
