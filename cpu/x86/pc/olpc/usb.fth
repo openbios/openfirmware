@@ -82,6 +82,13 @@ alias p2 probe-usb2
    begin  usb-power-done-time get-msecs - 0<=  until    ( )
 ;
 
+: usb-quiet  ( -- )
+   [ ' go-hook behavior compile, ]    \ Chain to old behavior
+   " usb1" " reset-usb" execute-device-method
+   " usb2" " reset-usb" execute-device-method
+;
+' usb-quiet to go-hook
+
 stand-init: USB setup
    \ Set up an address routing to the USB Option Controller
    h# efc00000.efc00001. h# 5100.0029 wrmsr

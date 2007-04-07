@@ -56,9 +56,11 @@ true value first-open?
 : hc-cntl-set  ( bit-mask -- )  hc-cntl@ swap or hc-cntl!  ;
 
 : reset-usb  ( -- )
+   ohci-reg dup 0=  if  map-regs  then
    1 hc-rh-stat!		\ power-off root hub
    1 hc-cmd!			\ reset usb host controller
-   10 ms
+   d# 10 ms
+   0= if  unmap-regs  then
 ;
 : init-ohci-regs  ( -- )
    hcca-phys hc-hcca!		\ physical address of hcca
