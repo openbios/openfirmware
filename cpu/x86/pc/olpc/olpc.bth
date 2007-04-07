@@ -22,11 +22,14 @@ in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
 in: ${BP}/dev/olpc/cafenand/build/cafenand.fc
 in: ${BP}/dev/olpc/cafecamera/build/cafecamera.fc
 in: ${BP}/clients/memtest86/memtest
+in: ec.img
 
 build-now
 
-macro: FW_MAJOR C
-macro: FW_MINOR 00
+fload ${BP}/cpu/x86/pc/olpc/versions.fth
+
+" macro: FW_VERSION Q2${FW_MAJOR}${FW_MINOR}" expand$ eval
+
 
 fload ${BP}/cpu/x86/pc/olpc/config.fth
 
@@ -43,8 +46,10 @@ hex
    ?do  h# ff ofd @ fputc  loop
 ;
 
-.( --- Saving as olpc.rom - Direct ROM format) cr
-writing olpc.rom
+.( --- Saving as )
+" ${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
+2dup type cr  ( adr len )
+$new-file
    " ec.img"                $add-file
 
    dropin-base rom-pa -  pad-file
@@ -62,7 +67,7 @@ writing olpc.rom
 
 \ Insert the revision signature
 /rom h# 40 - ofd @ fseek
-" CL1   Q2${FW_MAJOR}${FW_MINOR}  Q2${FW_MAJOR}" expand$  ofd @ fputs
+" CL1   ${FW_VERSION}  Q2${FW_MAJOR}" expand$  ofd @ fputs
 
 /l buffer: crcbuf
 /rom buffer: filebuf
@@ -75,4 +80,12 @@ filebuf /rom ofd @ fgets /rom <> abort" Can't read back image"
 /rom h# 30 - ofd @ fseek
 crcbuf /l ofd @ fputs
 
+ofd @ fclose
+
+\ Creating olpc.version serves two purposes:
+\ a) It reports the firmware revision for use by external scripts
+\ b) It provides an olpc.* artifact for the builder dependency management.
+
+writing olpc.version
+" ${FW_VERSION}" expand$  2dup lower  ofd @ fputs
 ofd @ fclose
