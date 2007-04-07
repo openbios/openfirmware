@@ -37,6 +37,7 @@ fload ${BP}/cpu/x86/pc/olpc/config.fth
 
 \ Always re-create the builton.fth file when we make a new rom.img
 fload ${BP}/cpu/x86/pc/builton.bth
+fload ${BP}/cpu/x86/pc/olpc/sourceurl.fth
 
 fload ${BP}/forth/lib/crc32.fth
 
@@ -61,6 +62,7 @@ $new-file
    " resume.di"             $add-file
 
    fload ${BP}/cpu/x86/pc/olpc/loaddropins.fth
+   " sourceurl"   " sourceurl"                    $add-dropin
 
    " ${BP}/clients/memtest86/memtest"  " memtest" $add-deflated-dropin
 

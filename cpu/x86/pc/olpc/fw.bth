@@ -224,6 +224,8 @@ warning @ warning off
 
    " /openprom" find-device
       h# ffff.ffc0 d# 16 " model" string-property
+
+      " sourceurl" find-drop-in  if  " source-url" string-property  then
    dend
 ;
 warning !
