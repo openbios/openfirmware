@@ -4,7 +4,7 @@ purpose: Wireless ethernet driver
 hex
 headers
 
-" ethernet" device-name
+" wlan" device-name
 " wireless-network" device-type
 
 variable opencount 0 opencount !

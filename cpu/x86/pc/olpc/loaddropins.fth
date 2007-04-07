@@ -11,6 +11,8 @@
    " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"  " usb,class3" $add-dropin
    " ${BP}/dev/usb2/device/serial/build/usbserial.fc" " usbserial"  $add-deflated-dropin
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
+   " ${BP}/dev/usb2/device/wlan/build/usb8388.fc" " usb1286,2001"   $add-deflated-dropin
+   " usb8388.bin" " usb8388.bin"                                    $add-deflated-dropin
 
    \ XXX the PCI device IDs should be different for the different CaFe functions
    " ${BP}/dev/olpc/cafenand/build/cafenand.fc"     " class050101"    $add-deflated-dropin
