@@ -512,6 +512,9 @@ false exit
    then
 
    install-dual-console
+   \ Eat any spurious characters that may have resulted from keyboard startup
+   4 0  do  key?  0= ?leave  key drop  loop
+
    ?gui-banner
    " probe-" do-drop-in
 \   ." nvramrc" cr
