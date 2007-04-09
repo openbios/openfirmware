@@ -14,6 +14,7 @@ h# 1985 constant jffs2-magic
 h# e001 constant dirent-type
 h# e002 constant inode-type
 h# 2003 constant cleanmarker-type
+h# 2004 constant padding-type
 h# 2006 constant summary-type
 h# e008 constant xattr-type
 h# e009 constant xref-type
@@ -383,8 +384,12 @@ true value first-time?
          scan-raw-inode     ( adr )
       endof                 ( adr nodetype )
 
+      padding-type  of  ( adr )
+         \ We just skip padding nodes; they contain no information
+      endof             ( adr nodetype )
+
 [ifdef] cleanmark?
-      cleanmarker  of  ( adr )
+      cleanmarker-type  of  ( adr )
          \ Verify that it is at the start of the buffer
          the-eblock# eblock>page  the-page#  =
          to cleanmark?
