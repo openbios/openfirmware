@@ -131,6 +131,9 @@ external
 
    my-args " <NoFile>"  $=  if  true exit  then
 
+   \ Start out in the root directory
+   root-dir# init-dir  if  release-buffers false exit  then
+
    my-args  ascii \ split-after                 ( file$ path$ )
    $chdir  if  2drop release-buffers false  exit  then  ( file$ )
 

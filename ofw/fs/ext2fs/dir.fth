@@ -26,7 +26,7 @@ variable current-dir
    dirent  la1+ short@  dup diroff +!  totoff +!
    totoff @  file-size >=  if  true exit  then
    diroff @  bsize =  if
-      lblk#++  get-dirblk ?dup  if  exit  then
+      lblk#++  get-dirblk  if  true exit  then
       diroff off
    then
    false
@@ -167,10 +167,17 @@ create days/month
    r> file-handle init-inode
 ;
 
+\ On entry:
+\   current-dir @  is the inode of the directory file
+\   dir-block# is the physical block number of the first directory block
+\   diroff @ and totoff @ are 0
+\ On successful exit:
+\   dir-block# is the physical block number of the current directory block
+\   diroff @ is the within-block offset of the directory entry that matches name$
+\   totoff @ is the overall offset of the directory entry that matches name$
 : lookup  ( name$ -- not-found? )
    begin
       2dup file-name  $=  if  2drop false exit  then
-      
       next-dirent
    until
    2drop true
@@ -178,21 +185,19 @@ create days/month
 
 defer init-dir
 
-: $chdir  ( adr len -- error? )		\ Fail if path is file, not dir
-   dup 0=  if  2drop true exit  then
-   root-dir# init-dir  if  2drop true exit  then
-   
-   begin			( path-$ )
-      over c@ ascii \  =  if  1 /string  then
-      ascii \ split-before	( \tail-$ head-$ )
-   dup while			
-      lookup  if  2drop true exit  then
-      dir? 0=  if  2drop true exit  then
-      
-      file-handle init-dir  if  2drop true exit  then
-   
-   repeat   ( tail-$ head-$ )
-   4drop false
+: $chdir  ( path$ -- error? )
+   begin  dup  while		( path$ )
+      [char] \ left-parse-string  ( tail$ head$ )
+      dup  0=  if               ( tail$ head$ )  \ Begins with \
+         2drop			( tail$ )
+         root-dir# init-dir  if  2drop  true exit  then
+      else		        ( tail$ head$ )
+         lookup  if  2drop true exit  then
+         dir? 0=  if  2drop true exit  then
+         file-handle init-dir  if  2drop true exit  then
+      then			( tail$ )
+   repeat			( path$ )
+   2drop false
 ;
 
 \ replace / with \ in a string
@@ -209,33 +214,37 @@ defer init-dir
    then
 ;
 
+variable parent-dir
+
 : select-file  ( i# -- error? )
    to inode#
-   symlink?  if
-      linkpath dup cstrlen 2dup >OFW-path ascii \  split-after
-      ?dup  if
-         $chdir  if  2drop true exit  then
-      
-      else
-         drop current-dir @ init-dir  ?dup  if  exit  then
-      
-      then
-      dup 0=  if  2drop false exit  then
-      lookup ?dup  if  exit  then
+   symlink?  if                                                 ( )
+      linkpath dup cstrlen 2dup >OFW-path ascii \  split-after  ( file$ path\$ )
+      dup  if                                                   ( file$ path\$ )
+         parent-dir @ init-dir  if  4drop true exit  then       ( file$ path\$ )
+         $chdir  if  2drop true exit  then                      ( file$ )
+      else                                                      ( file$ path\$ )
+         2drop current-dir @ init-dir  if  2drop true exit  then ( file$ )
+      then                                                       ( file$ )
+      dup 0=  if  2drop false exit  then                         ( file$ )
+      lookup  if  true exit  then                                ( )
       
       file-handle recurse
-   else
-      0 to lblk#  false
-   then
+   else                                                         ( )
+      0 to lblk#  false                                         ( )
+   then                                                         ( )
 ;
 
 \ **** Select the directory file
 : (init-dir)  ( i# -- error? )
-   dup current-dir ! 
-   select-file ?dup  if  exit  then
-   get-dirblk ?dup  if  exit  then
-   0 diroff !  0 totoff !
-   false
+   \ Save the current directory because we will need to return to it
+   \ in case we encounter a relative symlink.
+   current-dir @ parent-dir !           ( i# )
+   dup current-dir !                    ( i# )
+   select-file  if  true exit  then     ( )
+   get-dirblk   if  true exit  then     ( )
+   0 diroff !  0 totoff !               ( )
+   false                                ( )
 ;
 ' (init-dir) to init-dir
 
