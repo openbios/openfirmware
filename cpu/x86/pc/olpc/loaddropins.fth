@@ -20,9 +20,7 @@
 
    " ${BP}/dev/mmc/sdhci/build/sdhci.fc"  " pci11ab,4101"   $add-dropin
    " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"  " sdmmc"          $add-dropin
-[ifndef] lx-devel
    " ${BP}/dev/geode/nandflash/build/nandflash.fc" " nand5536"   $add-deflated-dropin
-[then]
    " ${BP}/dev/geode/ac97/build/ac97.fc"       " pci1022,2093"   $add-deflated-dropin
 
    " builton.fth"                       " probe-"          $add-dropin

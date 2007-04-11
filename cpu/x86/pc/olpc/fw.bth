@@ -279,11 +279,7 @@ warning @  warning off
       h# 1454 pl@ 2 and  if
          ." Interacting due to botched resume" cr  hex interact
       then
-[ifdef] lx-devel
-      interact
-[else]
       i-key-wait  if  ." Interacting" cr  hex interact  then
-[then]
       setup
 [else]
       d# 3000

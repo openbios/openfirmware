@@ -45,10 +45,6 @@ create use-pci-isa
 
 create use-null-nvram
 
-\ --- Extra Features ---
-
-\ create sd-diags    \ To enable SD diag support for Marvell lab testing
-
 fload ${BP}/cpu/x86/pc/olpc/addrs.fth
 
 \ LICENSE_BEGIN
