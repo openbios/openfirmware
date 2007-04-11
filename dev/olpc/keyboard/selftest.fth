@@ -147,8 +147,12 @@ h# ffff constant kbd-bc
 : key-down  ( key# -- )  pressed-key-color draw-key  ;
 : key-up    ( key# -- )  idle-key-color    draw-key  ;
 
+: fill-screen  ( color -- )
+   0 0 " dimensions" $call-screen " fill-rectangle" $call-screen
+;
+
 : draw-keyboard  ( -- )
-   kbd-bc 0 0 " dimensions" $call-screen " fill-rectangle" $call-screen
+   kbd-bc fill-screen
    #keys 0  ?do  i key-up  loop
    0 d# 20 at-xy ." Press the top left key to exit"
 ;
@@ -194,6 +198,8 @@ false value up-key?
    selftest-keys
    " translation-on" $call-parent  toss-keys cursor-on
    iunselect
+   screen-ih iselect  erase-screen  iunselect
+   page
    false
 ;
 
