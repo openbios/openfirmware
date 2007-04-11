@@ -178,7 +178,7 @@ false constant tft-mode?
 : set-gamma  ( -- )
    0 h# 38 vp!
 
-   dcon?  atest? 0=  and                    ( shift? )
+   dcon?  atest? 0=  gx?  and                    ( shift? )
    h# 100 0  do
      \   blue       green        red
      dup  if                                ( s? )
@@ -195,7 +195,7 @@ false constant tft-mode?
 : configure-display  ( -- )
    \ This test really should be for OLPC boards < Btest-3, but
    \ testing for GX amounts to the same thing in practice.
-   gx?  if  set-gamma  then
+   set-gamma
 
    8 vp@  6 iand  8 vp!  \ Disable h and v syncs - Try 0 8 vp!
 
