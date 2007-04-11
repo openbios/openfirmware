@@ -83,6 +83,7 @@ dev /
 alias lmove lmove			\ Needed by CS5536 NAND FLASH driver
 dend
 
+fload ${BP}/cpu/x86/pc/olpc/port80.fth	\ Port 80 debug messages
 fload ${BP}/cpu/x86/pc/olpc/gpio.fth	\ Rudimentary GPIO driver
 fload ${BP}/cpu/x86/pc/olpc/probemem.fth	\ Memory probing
 

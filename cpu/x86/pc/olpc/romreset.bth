@@ -54,6 +54,7 @@ label testsub
 end-code
 
 label startup
+   h# 10 # al mov  al h# 80 out
 [ifndef] use-lx    \ This is an entirely different register in LX
    11. 1100 set-msr        \ Enable branch target buffer and near call return stack GX page 116
 [then]
@@ -124,6 +125,7 @@ label startup
    char + 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
 [then]
 
+   h# 11 # al mov  al h# 80 out
  \ Init memory controller
 
    \ sdram_initialize,generic_sdram.c
@@ -204,11 +206,13 @@ label startup
 [then]
 
    \ char b 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+   h# 12 # al mov  al h# 80 out
 
 fload ${BP}/cpu/x86/pc/olpc/draminit.fth
 
    \ Now we can use the stack and do conventional subroutine calls
 
+   h# 1f # al mov  al h# 80 out
    fload ${BP}/cpu/x86/pc/resetend.fth
 end-code
 

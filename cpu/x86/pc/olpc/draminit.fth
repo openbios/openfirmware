@@ -1,3 +1,5 @@
+   h# 18 # al mov  al h# 80 out
+
    \ Enable DLL, load Extended Mode Register by set and clear PROG_DRAM
    20000018 rmsr
    10000001 bitset  20000018 wmsr
@@ -37,21 +39,26 @@
    \ The RAM DLL needs a write to lock on
    ax  h# ffff0 #)  mov
 
+   h# 19 # al mov  al h# 80 out
+
    \ Turn on the cache
    cr0	ax   mov
    6000.0000 bitclr  \ Cache-disable off, coherent
    ax   cr0  mov
    invd
 
+   h# 1a # al mov  al h# 80 out
    0000f001.00001400.   5140000f set-msr  \ PMS BAR
 
    \ It is tempting to test bit 0 of PM register 5c, but a 5536 erratum
    \ prevents that bit from working.
    1454 port-rl  2 bitand  0<>  if  \ Wakeup event flag
+      h# 1b # al mov  al h# 80 out
       char r 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
       resume-entry # sp mov  sp jmp
    then
 
+   h# 1c # al mov  al h# 80 out
    h# 1808 rmsr                \ Default region configuration properties MSR
    h# 0fffff00 # ax and        \ Top of System Memory field
    4 # ax shl                  \ Shift into place
@@ -62,6 +69,7 @@
    \ Memory is now on
    h# 8.0000 #  sp  mov        \ Setup a stack pointer for later code
 
+   h# 1d # al mov  al h# 80 out
 \ Some optional debugging stuff ...
 [ifdef] debug-startup
 init-com1
