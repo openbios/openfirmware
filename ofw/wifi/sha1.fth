@@ -301,9 +301,11 @@ headers
    sha1-abcde  to 'sha1-abcde
 ;
 
+also forth definitions
 stand-init: Init SHA-1 variables
    init-'sha1
 ;
+previous definitions
 
 init-'sha1
 

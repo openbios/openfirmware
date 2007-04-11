@@ -118,7 +118,14 @@ d# 16 dup constant /mic   buffer: mic
    rot drop				( adr1 adr2 len )
    >r true -rot r>			( flag adr1 adr2 len )
    0  ?do				( flag adr1 adr2 )
-      over c@ over c@ >  if  rot drop false -rot leave  then
+      over i ca+ c@			( flag adr1 adr2 c1 )
+      over i ca+ c@			( flag adr1 adr2 c1 c2 )
+      2dup =  if			( flag adr1 adr2 c1 c2 )
+         2drop				( flag adr1 adr2 )
+      else				( flag adr1 adr2 c1 c2 )
+         >  if  rot drop false -rot  then	( flag adr1 adr2 )
+         leave				( flag adr1 adr2 )
+      then				( flag adr1 adr2 )
    loop  2drop				( flag )
 ;
 
