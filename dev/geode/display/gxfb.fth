@@ -193,7 +193,10 @@ false constant tft-mode?
 ;
 
 : configure-display  ( -- )
-   set-gamma
+   \ This test really should be for OLPC boards < Btest-3, but
+   \ testing for GX amounts to the same thing in practice.
+   gx?  if  set-gamma  then
+
    8 vp@  6 iand  8 vp!  \ Disable h and v syncs - Try 0 8 vp!
 
    \ According to data sheet, this should be 1030f, but according
