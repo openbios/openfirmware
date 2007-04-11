@@ -54,12 +54,9 @@ h#      40 instance value pages/eblock
 ;
 : configure  ( -- okay? )
    read-id                ( adr )
-   dup 1+ c@  case        ( adr device-code )
-      h# dc  of  configure-auto  drop true  endof
-      ( default )  ." Unsupported device code " dup u. cr  ( adr device-code )
-          2drop false exit
-   endcase
+   ['] configure-auto catch 0= nip
 ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
