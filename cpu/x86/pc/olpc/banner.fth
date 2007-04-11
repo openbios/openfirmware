@@ -21,7 +21,8 @@ headerless
 ;
 
 : (xbanner-basics)  ( -- )
-   ?spaces  cpu-model type  ." , "   .memory  cr
+   ?spaces  cpu-model type  ." , "   .memory
+   ." , S/N "  " SN" find-tag  if  type  else  ." Unknown"  then  cr
    ?spaces  .rom
 ;
 ' (xbanner-basics) to banner-basics
