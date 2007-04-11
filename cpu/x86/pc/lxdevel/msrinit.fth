@@ -57,7 +57,7 @@ create msr-init
 \ msr: 4000.0023 000000ff.fff00000.   \ Unmapped - default
   msr: 4000.0024 200000fe.004ffffc.   \ fe00.4000 - fe00.7fff DC, route to GLIU0
   msr: 4000.0025 400000fe.008ffffc.   \ fe00.8000 - fe00.bfff VP, route to VP in GLIU1
-  msr: 4000.0026 a00000fe.00cffffc.   \ fe00.c000 - fe00.bfff VIP, route to VP in GLIU1
+  msr: 4000.0026 a00000fe.00cffffc.   \ fe00.c000 - fe00.ffff VIP, route to VP in GLIU1
 \ msr: 4000.0027 000000ff.fff00000.   \ Unmapped - default
 \ msr: 4000.0028 000000ff.fff00000.   \ Unmapped - default
 \ msr: 4000.0029 000000ff.fff00000.   \ Unmapped - default
