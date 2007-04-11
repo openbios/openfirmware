@@ -492,6 +492,8 @@ alias s suspend
    quit
 ;
 
+fload ${BP}/cpu/x86/pc/olpc/copynand.fth
+
 [ifndef] olpc
 \ This sometimes helps with VGA/EGA boards, enabling I/O space access
 \ to the CRT registers that control the hardware cursor.

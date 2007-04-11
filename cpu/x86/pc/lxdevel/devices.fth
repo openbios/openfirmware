@@ -138,6 +138,10 @@ fload ${BP}/forth/lib/pattern.fth	\ Text string pattern matching
 \ XXX remove the OS file commands from tools.dic
 fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
 
+\ This alias will work for either the CS5536 NAND FLASH
+\ or the CaFe NAND FLASH, whichever is present.
+devalias nand /nandflash
+
 [ifdef] pseudo-nvram
 fload ${BP}/cpu/x86/pc/biosload/filenv.fth
 dev /file-nvram
