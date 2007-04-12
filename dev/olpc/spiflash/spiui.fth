@@ -226,6 +226,10 @@ dev /flash
    \ Replace the manufacturing data block with all FF
    flash-buf mfg-data-offset +  /flash-block  h# ff fill
 
+   \ Get the CRC and then replace it with -1
+   flash-buf /flash + crc-offset - dup l@ swap
+   -1 swap l!
+
    flash-buf /flash crc  <>
    rom-va /flash root-map-out  0 to rom-va
 ;
