@@ -178,8 +178,8 @@ false constant tft-mode?
 : set-gamma  ( -- )
    0 h# 38 vp!
 
-   dcon?  atest? 0=  gx?  and                    ( shift? )
-   h# 100 0  do
+   dcon?  atest? 0= and   gx? and           ( shift? )
+   h# 100 0  do                             ( shift? )
      \   blue       green        red
      dup  if                                ( s? )
         i 2 rshift  i 1 rshift  i 2 rshift  ( s? b g r )
