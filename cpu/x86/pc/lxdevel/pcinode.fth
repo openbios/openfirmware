@@ -2,7 +2,6 @@
 purpose: PCI bus package
 
 [ifdef] addresses-assigned
-
 \   patch false true master-probe
 : nonvirtual-probe-state?  ( -- flag )
    my-space virtual-pci-slot?  if  false  else  probe-state?  then

@@ -82,12 +82,8 @@ label startup
    \ sdram_initialize,generic_sdram.c
    \ sdram_set_spdregisters(),auto.c
  
-\ Memory config setup
-[ifdef] lx-devel
-   25fff802.10f80000.      1808 set-msr  \ 512K ROM at fff8.0000, system RAM limit at 0f80.0000
-[else]
+   \ The LX devel board has only 512M ROM, but assigning 1M of address space is harmless
    25fff002.10f80000.      1808 set-msr  \ 1M ROM at fff0.0000, system RAM limit at 0f80.0000
-[then]
    2000000f.7ff00100.  10000028 set-msr  \ Top of memory at 0f7f.ffff
    212800fd.7fffd000.  10000029 set-msr  \ Frame buffer at PA fd00.0000 maps to RAM at 0f80.0000
    10076013.00005040.  20000018 set-msr  \ DIMM1 empty, DIMM0 256 MB, 1 module bank, 8K pages

@@ -56,13 +56,15 @@ end-package
 
 stand-init: superio
    h# 87 h# 2e pc!  h# 87 h# 2e pc!  \ Enable PNP registers
-   h#  5 h#  7 pnp!  \ Select keyboard controller
-   h# 60 h# 61 pnp!  \ Port 60
-   h# 64 h# 63 pnp!  \ Port 64
-   h#  1 h# 70 pnp!  \ Keyboard interrupt 1
-   h#  c h# 72 pnp!  \ Keyboard interrupt 12
-   h# 83 h# f0 pnp!  \ i8042 clock, fast reset, fast A20
-   h#  1 h# 30 pnp!  \ Enable
+   h# 20 pnp@  h# 52 =  if  \ Check device ID
+      h#  5 h#  7 pnp!  \ Select keyboard controller
+      h# 60 h# 61 pnp!  \ Port 60
+      h# 64 h# 63 pnp!  \ Port 64
+      h#  1 h# 70 pnp!  \ Keyboard interrupt 1
+      h#  c h# 72 pnp!  \ Keyboard interrupt 12
+      h# 83 h# f0 pnp!  \ i8042 clock, fast reset, fast A20
+      h#  1 h# 30 pnp!  \ Enable
+   then
 ;
 
 1 [if]
@@ -206,8 +208,6 @@ fload ${BP}/dev/isa/diaguart.fth	\ ISA COM port driver
 h# 3f8 is uart-base
 fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 
-fload ${BP}/cpu/x86/pc/reset.fth	\ reset-all
-
 [ifndef] save-flash
 : save-flash ;
 : restore-flash ;
@@ -220,6 +220,8 @@ stand-init: PCI properties
    d# 66,666,667  " clock-frequency" integer-property
    dend
 ;
+
+fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 
 \ fload ${BP}/dev/geode/lpcflash.fth           \ Reflasher for PLCC FLASH on A-test
 

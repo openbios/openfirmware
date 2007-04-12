@@ -48,8 +48,8 @@ writing lxdevel.rom
    " romreset.di"           $add-file
 \  " resume.di"             $add-file
 
-   " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
    fload ${BP}/cpu/x86/pc/olpc/loaddropins.fth
+   " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
 
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
    " rmstart.img"    $add-file
