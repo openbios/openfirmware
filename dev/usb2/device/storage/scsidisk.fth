@@ -59,9 +59,6 @@ create sstart-cmd  h# 1b c, 0 c, 0 c, 0 c, 1 c, 0 c,
    0 set-timeout
 ;
 
-0 instance value /block         \ Device native block size
-
-create mode-sense-bd          h# 1a c, 0 c, 0 c, 0 c, d# 12 c, 0 c,
 create read-capacity-cmd h# 25 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 
 
 : read-block-extent  ( -- true | block-size #blocks false )
@@ -69,21 +66,11 @@ create read-capacity-cmd h# 25 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c,
    \ The SCSI-2 standard requires disk devices to implement
    \ the "read capacity" command.
 
-   8  read-capacity-cmd 0a  short-data-command  0=  if
-       dup 4 + 4c@  swap 4c@  1+  false  exit
+   8  read-capacity-cmd 0a  short-data-command  if  ( )
+      true
+   else                                             ( adr )
+      dup 4 + 4c@  swap 4c@  1+  false
    then
-
-   \ Failing that, try "mode sense" with an allocation length big enough only
-   \ for the header and the block descriptor, in case it's a SCSI-1 device
-
-   d# 12  mode-sense-bd 6  short-data-command  0=  if           ( adr )
-       dup 9 + 3c@  swap 4 + 4c@  false  exit
-   then
-
-   true
-;
-: read-block-size  ( -- n )     \ Ask device about its block size
-   read-block-extent  if  d# 512  else  drop  then
 ;
 
 external
@@ -110,17 +97,10 @@ create mode-sense-geometry    h# 1a c, 0 c, 4 c, 0 c, d# 36 c, 0 c,
 ;
 [then]
 
-: #blocks  ( -- true | n false )
-   read-block-extent  if  true  else  nip  then
-;
-
-\ Return device block size; cache it the first time we find the information
 \ This method is called by the deblocker
-: block-size  ( -- n )
-   /block  if  /block exit  then        \ Don't ask if we already know
 
-   read-block-size dup to /block
-;
+0 instance value #blocks
+0 instance value block-size
 
 headers
 
@@ -155,7 +135,7 @@ headers
 [then]
    swap                                           ( addr dir cmdlen #blks )
    dup >r                                         ( addr input? cmdlen #blks )
-   /block *  -rot  cmdbuf swap  -1  ( addr #bytes input? cmd cmdlen #retries )
+   block-size *  -rot  cmdbuf swap  -1  ( addr #bytes input? cmd cmdlen #retries )
    retry-command  if                              ( [ sensebuf ] hw? )
       0= if  drop  then  r> drop 0
    else
@@ -187,7 +167,8 @@ external
 
    timed-spin  if  false exit  then
 
-   block-size to /block
+   read-block-extent  if  false exit  then  ( block-size #blocks )
+   to #blocks  to block-size
 
    init-deblocker  0=  if  false exit  then
 
