@@ -1,13 +1,13 @@
 : olpc-gpio-init
 \  h# f7ff0800 h# 1000 pl!  \ GPIOL_OUTPUT_VALUE 
 \  h# 36ffc900 h# 1004 pl!  \ GPIOL_OUTPUT_ENABLE 
-   h#     d802 h# 1004 pl!  \ GPIOL_OUTPUT_ENABLE - SMI#, DCONLOAD, MIC
+   h#     e902 h# 1004 pl!  \ GPIOL_OUTPUT_ENABLE - SMBDAT, SMBCLK, SMI#, DCONLOAD, UART1TX, MIC
 \  h# ffff0000 h# 1008 pl!  \ GPIOL_OUT_OPENDRAIN - default
 \  h# ffff0000 h# 100c pl!  \ GPIOL_OUTPUT_INVERT_ENABLE - default
-   h#     c000 h# 1010 pl!  \ GPIOL_OUT_AUX1_SELECT - enable SMBUS pins
+   h#     c100 h# 1010 pl!  \ GPIOL_OUT_AUX1_SELECT - SMBDAT, SMBCLK, UART1TX
 \  h# ffff0000 h# 1014 pl!  \ GPIOL_OUT_AUX2_SELECT - default
 \  h# 1001effe h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - I don't think we need pullups
-   h# 02080000 h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - Disable pullups except for UART Rx
+   h# 397a0000 h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - Disable pullups on SMI#, DCONBLNK/LOAD/STAT UART1TX, VGA, MICDC
 \  h# efff1000 h# 101c pl!  \ GPIOL_PULLDOWN_ENABLE - default
    h# ffff0000 h# 101c pl!  \ GPIOL_PULLDOWN_ENABLE - Disable all pull-downs
    h#     d6e5 h# 1020 pl!  \ GPIOL_INPUT_ENABLE - DCONBLNK, DCONLOAD, THERM_ALRM, DCONIRQ, DCONSTAT1/0, MEMSIZE, PCI_INTA
