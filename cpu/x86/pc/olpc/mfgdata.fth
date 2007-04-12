@@ -30,6 +30,7 @@ purpose: Manufacturing data reader
 \ Mfg data used to be at the end of the EC erase block, but
 \ is now in a block by itself.
 : mfg-data-top  ( -- adr )
+[ifdef] lx-devel  h# ffff.fff0 exit  [then]
    h# fff1.0000 dup  invalid-tag?  ( old-top data-adr flag )
    nip  if  drop h# ffff.0000  then
 ;

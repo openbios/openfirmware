@@ -152,7 +152,6 @@ h# 4c00.0015 constant dotpll
    swap  1 invert and  swap      ( d.dotpll' )    \ Clear reset bit
    dotpll msr!                   ( )
 ;
-: gx?  ( -- flag )  h# 4c000017 msr@ drop  4 rshift  2 =  ;
 : set-dclk  ( -- )
    gx?  if                          ( )
       timing na1+ @                 ( rstpll-div-bits )

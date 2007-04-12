@@ -36,7 +36,7 @@ create gxfb-hdr  \ All R/O except cmd/stat and cache line size
 
     30100b ,  2200003 ,  3000000 ,        0 ,
   fd000000 , fe000000 , fe004000 , fe008000 , \ FB, GP, VG, DF
-         0 ,        0 ,        0 ,   30100b ,
+         0 ,        0 ,        0 ,   30100b , \ Possibly VIP
          0 ,        0 ,        0 ,        0 ,
          0 ,        0 ,        0 ,        0 ,
        3d0 ,      3c0 ,    a0000 ,        0 , \ VG IO, VG IO, EGA FB, MONO FB
@@ -151,9 +151,17 @@ variable bar-probing
    3 and  h# cfc or  io-base +
 ;
 
+: virtual-pci-slot?  ( config-adr -- flag )
+   d# 11 rshift  h# 1fff and  dup h# f =  swap 1 =  or
+;
+
+: preassigned-pci-slot?  ( config-adr -- flag )
+[ifdef] lx-devel  virtual-pci-slot? exit  [then]
+   drop true
+;
+
 : config-setup  ( a1 -- a2 special? )
-   dup  d# 11 >>  h# 1f and   ( a1 dev# )
-   dup h# f =  swap 1 =  or   ( a1 special )
+   dup  virtual-pci-slot?   ( a1 special )
    if  geode-map true  else  config-map-m1 false  then
 ;
 
@@ -172,7 +180,12 @@ variable bar-probing
 ;
 warning @ warning off
 : stand-init  ( -- )
-   stand-init  assign-cafe
+   stand-init
+
+[ifdef] lx-devel  exit  [then]
+   assign-cafe
+   \ FIXME - we really should fixup the NB and FB headers to use the
+   \ AMD device IDs, add the AES device, and insert the VIP BAR.
 ;
 warning !
 

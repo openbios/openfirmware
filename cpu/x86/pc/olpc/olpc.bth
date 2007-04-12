@@ -25,6 +25,7 @@ in: ${BP}/dev/olpc/cafecamera/build/cafecamera.fc
 in: ${BP}/clients/memtest86/memtest
 in: ec.img
 in: usb8388.bin
+in: ${BP}/dev/pci/build/pcibridg.fc
 
 build-now
 
@@ -50,12 +51,18 @@ hex
 ;
 
 .( --- Saving as )
+[ifdef] lx-devel
+" lxd${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
+[else]
 " ${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
+[then]
 2dup type cr  ( adr len )
 $new-file
+[ifndef] lx-devel
    " ec.img"                $add-file
 
    dropin-base rom-pa -  pad-file
+[then]
 
    " romreset.di"           $add-file
 \   " romstart.di"           $add-file
@@ -65,6 +72,9 @@ $new-file
    " sourceurl"   " sourceurl"                    $add-dropin
 
    " ${BP}/clients/memtest86/memtest"  " memtest" $add-deflated-dropin
+[ifdef] lx-devel
+   " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
+[then]
 
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
    " rmstart.img"    $add-file

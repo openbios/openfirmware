@@ -84,6 +84,25 @@ alias lmove lmove			\ Needed by CS5536 NAND FLASH driver
 dend
 
 fload ${BP}/cpu/x86/pc/olpc/port80.fth	\ Port 80 debug messages
+
+[ifdef] lx-devel
+: pnp!  ( b reg# -- )  h# 2e pc!  h# 2f pc!  ;
+: pnp@  ( reg# -- b )  h# 2e pc!  h# 2f pc@  ;
+
+: init-superio  ( -- )
+   h# 87 h# 2e pc!  h# 87 h# 2e pc!  \ Enable PNP registers
+   h# 20 pnp@  h# 52 =  if  \ Check device ID
+      h#  5 h#  7 pnp!  \ Select keyboard controller
+      h# 60 h# 61 pnp!  \ Port 60
+      h# 64 h# 63 pnp!  \ Port 64
+      h#  1 h# 70 pnp!  \ Keyboard interrupt 1
+      h#  c h# 72 pnp!  \ Keyboard interrupt 12
+      h# 83 h# f0 pnp!  \ i8042 clock, fast reset, fast A20
+      h#  1 h# 30 pnp!  \ Enable
+   then
+;
+[then]
+
 fload ${BP}/cpu/x86/pc/olpc/gpio.fth	\ Rudimentary GPIO driver
 fload ${BP}/cpu/x86/pc/olpc/probemem.fth	\ Memory probing
 
@@ -212,6 +231,7 @@ warning @ warning off
       then
       encode-string  " banner-name" property
       model
+[ifndef] lx-devel
       8 ec-cmd  " ec-version" integer-property
 
       " PQ2" h# fff0.0000 h# 1.0000 sindex  dup 0>=  if  ( offset )
@@ -220,6 +240,7 @@ warning @ warning off
          drop  " UNKNOWN"
       then
       " ec-name" string-property
+[then]
 
    dend
 
@@ -249,11 +270,22 @@ devalias nfs net//obp-tftp:last//nfs
 
 fload ${BP}/cpu/x86/pc/boot.fth
 
-h# 3ab constant usb-port-power-map  \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR2
+: usb-port-power-map  ( -- n )
+[ifdef] lx-devel
+   h# 3ea exit     \ USB4:PWR2  USB3:PWR1  USB2:PWR1  USB1:PWR1
+[then]
+   board-revision  case
+      0 of  h# 3ab  endof  \ B2    \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR2
+      1 of  h# 3aa  endof  \ B3    \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR1
+      2 of  h# 3aa  endof  \ C1    \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR1 (guess)
+      7 of  h# 3ab  endof  \ B1
+      ( default )  h# 3ab swap   \ A - and early B1 (actually not switched, but no harm)
+   endcase
+;
 fload ${BP}/cpu/x86/pc/olpc/usb.fth
 
-false to stand-init-debug?
-\ true to stand-init-debug?
+\ false to stand-init-debug?
+true to stand-init-debug?
 
 hex
 : i-key-wait  ( ms -- pressed? )
@@ -281,6 +313,10 @@ warning @  warning off
          ." Interacting due to botched resume" cr  hex interact
       then
       i-key-wait  if  ." Interacting" cr  hex interact  then
+[ifdef] lx-devel
+      init-superio
+[then]
+
       setup
 [else]
       d# 3000
@@ -290,8 +326,6 @@ warning @  warning off
 ;
 \ warning !
 [then]
-
-: r " flash u:\olpc.rom" evaluate  ;
 
 : (.firmware)  ( -- )
    ." Open Firmware  "  .built  cr
@@ -323,10 +357,6 @@ false value fru-test?
 true value user-mode?
 
 fload ${BP}/cpu/x86/pc/olpc/banner.fth
-
-[ifdef] sd-diags
-: loadsd  " rom:sd" $boot  ;
-[then]
 [then]
 
 fload ${BP}/ofw/gui/loadmenu.fth
@@ -344,68 +374,6 @@ fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
 \ there is no keyboard.  The delay is unnecessary because the screen
 \ does not go blank when the device is closed.
 patch drop ms install-console
-
-: boot-configure  ( -- )
-   cr ." Trying startup script disk:\boot\olpc-boot.fth" cr
-
-   " fload disk:\boot\olpc-boot.fth" ['] eval catch  if
-      2drop
-   else
-      show-disk exit
-   then
-
-   " fload disk:\boot\olpcboot.fth" ['] eval catch  if
-      2drop
-   else
-      show-disk exit
-   then
-
-   " disk:\boot\initrd.img" 2dup  open-dev  ?dup  if  ( name$ ih )
-      close-dev  " ramdisk" $setenv
-   else
-      2drop
-   then
-   
-   " disk:\boot\vmlinuz" 2dup  open-dev  ?dup  if  ( name$ ih )
-      close-dev  " boot-device" $setenv
-      show-disk
-      exit
-   then
-   2drop
-
-   cr ." Trying startup script nand:\boot\olpc-boot.fth" cr
-   " fload nand:\boot\olpc-boot.fth" ['] eval catch  if
-      2drop
-   else
-      show-nand exit
-   then
-
-    " net" " boot-device" $setenv
-;
-
-: config&boot  ( -- )
-   ['] boot catch drop  \ Try the normal boot path first
-   boot-configure auto-boot?  if  boot  then
-;
-[ifndef] rom-loaded
-" config&boot" ' boot-command set-config-string-default
-[then]
-
-\ XXX wireless test hack
-: check-wireless
-   wlan-reset  d# 100 ms
-   probe-usb2
-   " /usb@f,5/device@3,0" locate-device  if   \ No wireless device
-      drop
-      cr cr  red-letters  ." !!! No WLAN !!!"  black-letters  cr cr
-   else
-      cr cr green-letters  ." Wireless found"  black-letters  cr cr
-      d# 1000 ms
-      power-off
-   then
-;
-\ " check-wireless" ' boot-command set-config-string-default
-
 
 : dcon-reset-all  ( -- )
    " screen"  " dcon-off" ['] execute-device-method  catch  if
@@ -457,6 +425,7 @@ true                               ' client-symbols?  set-config-int-default
 fload ${BP}/ofw/core/dualconsole.fth
 
 : user-switch?  ( -- flag )
+[ifdef] lx-devel  false exit  [then]
    atest?  if
       h# fc3f ec@ h# ff <>
    else
@@ -538,8 +507,9 @@ false exit
 stand-init:  Suspend/resume
    " resume" find-drop-in  if
       suspend-base swap move
-      msr-init  >physical  resume-data h# 30 + !
-      /msr-init resume-data h# 34 + !
+      msr-init-range                    ( adr len )
+      resume-data h# 34 + !             ( adr )
+      >physical  resume-data h# 30 + !  ( )
    then
 ;
 
@@ -576,20 +546,24 @@ alias s suspend
       probe-pci
       ['] false to interrupt-auto-boot?
       interpreter-init
+[ifndef] lx-devel
       enable-power-button
+[then]
       auto-boot
       open-keyboard
       optional-startup
    else
       ." Interactive boot" cr
       ." Keyboard probe" cr
-      ?bailout
+\     ?bailout
       open-keyboard
       probe-pci
       ." USB probe" cr
       optional-startup
       interpreter-init
+[ifndef] lx-devel
       enable-power-button
+[then]
       auto-boot
    then
 
@@ -599,17 +573,7 @@ alias s suspend
    quit
 ;
 
-[ifdef] olpc
 fload ${BP}/cpu/x86/pc/olpc/copynand.fth
-[then]
-
-[ifndef] olpc
-\ This sometimes helps with VGA/EGA boards, enabling I/O space access
-\ to the CRT registers that control the hardware cursor.
-: cursor  ( -- )
-   " begin-select /display  3 my-space 4 + config-w! unselect" evaluate
-;
-[then]
 
 \ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
 also hidden also keys-forth definitions

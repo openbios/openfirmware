@@ -1,8 +1,22 @@
 \ See license at end of file
 purpose: Load device drivers according to configuration definitions
 
+: gx?  ( -- flag )  h# 4c000017 msr@ drop  4 rshift  2 =  ;
+: lx?  ( -- flag )  h# 4c000017 msr@ drop  4 rshift  3 =  ;
+
 : board-revision  ( -- n )
-   h# 4c00.0014 rdmsr drop 4 rshift 7 and
+   lx?  if
+      1
+[ifdef] notyet
+      h# fa20 ec@  case
+         h# b2  of  0  endof
+         h# b3  of  1  endof
+         h# c1  of  2  endof
+      endcase
+[then]
+   else
+      h# 4c00.0014 rdmsr drop 4 rshift 7 and
+   then
 ;
 
 fload ${BP}/cpu/x86/pc/isaio.fth
@@ -16,18 +30,6 @@ fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
 0 0  " "  " /"  begin-package
    fload ${BP}/cpu/x86/pc/mappci.fth	\ Map PCI to root
    fload ${BP}/dev/pcibus.fth		\ Generic PCI bus package
-[ifdef] addresses-assigned
-   \ Suppress PCI address assignment; use the addresses the BIOS assigned
-   patch false true master-probe
-   patch noop assign-all-addresses prober
-   patch noop clear-addresses populate-device-node
-   patch noop clear-addresses populate-device-node
-   patch noop temp-assign-addresses find-fcode?
-   patch 2drop my-w! populate-device-node
-   : or-w!  ( bitmask reg# -- )  tuck my-w@  or  swap my-w!  ;
-   patch or-w! my-w! find-fcode?
-   patch 2drop my-w! find-fcode?
-[then]
    fload ${BP}/cpu/x86/pc/olpc/pcinode.fth	\ System-specific words for PCI
 end-package
 stand-init: PCI host bridge
@@ -110,7 +112,12 @@ devalias d disk
 devalias n nand
 devalias sd /sd/disk
 
-dev /8042      patch false ctlr-selftest open   device-end
+
+dev /8042
+[ifndef] lx-devel
+   patch false ctlr-selftest open
+[then]
+device-end
 
 0 0  " i70"  " /isa" begin-package   	\ Real-time clock node
    fload ${BP}/dev/ds1385r.fth
@@ -137,6 +144,7 @@ fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
 fload ${BP}/cpu/x86/pc/olpc/cmos.fth     \ CMOS RAM indices are 1f..ff , above RTC
 
 stand-init: nand5536
+   lx?  if  exit  then
    h# c h# 800 *  config-w@  h# 11ab  <>  if
       0 0  " m20000000" " /" begin-package
         " nand5536" do-drop-in
@@ -217,8 +225,9 @@ fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 : restore-flash ;
 [then]
 
-[ifdef] spi-flash-support
 \needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
+
+[ifdef] spi-flash-support
 fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
 fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
 
@@ -226,8 +235,9 @@ fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
 
 0 value atest?
 warning @ warning off
-: stand-init
-   stand-init
+stand-init: Wireless reset
+[ifdef] lx-devel  exit  [then]
+
    kb3920? to atest?
 
    \ Hit the reset on the Marvell wireless.  It sometimes (infrequently)
@@ -275,10 +285,11 @@ fload ${BP}/ofw/termemu/fb16.fth
    fload ${BP}/dev/geode/display/loadpkg.fth     \ Geode display
 
    0 0 encode-bytes
-   h# 8000.0910 +i  0+i h# fd00.0000 +i  0+i h# 0100.0000 +i  \ Frame buffer
-   h# 8000.0914 +i  0+i h# fe00.0000 +i  0+i h# 0000.4000 +i  \ GP
-   h# 8000.0918 +i  0+i h# fe40.0000 +i  0+i h# 0000.4000 +i  \ DC
-   h# 8000.091c +i  0+i h# fe80.0000 +i  0+i h# 0000.4000 +i  \ VP
+   h# 8200.0910 +i  0+i h# fd00.0000 +i  0+i h# 0100.0000 +i  \ Frame buffer
+   h# 8200.0914 +i  0+i h# fe00.0000 +i  0+i h# 0000.4000 +i  \ GP
+   h# 8200.0918 +i  0+i h# fe40.0000 +i  0+i h# 0000.4000 +i  \ DC
+   h# 8200.091c +i  0+i h# fe80.0000 +i  0+i h# 0000.4000 +i  \ VP
+   h# 8200.0920 +i  0+i h# fec0.0000 +i  0+i h# 0000.4000 +i  \ VIP (LX only)
    " assigned-addresses" property
 
 end-package

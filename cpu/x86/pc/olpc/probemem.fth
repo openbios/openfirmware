@@ -3,19 +3,25 @@ purpose: Create memory node properties and lists
 
 dev /memory
 
-h# 770.0000 constant /ram   \ 128 MB
+h# f70.0000 constant /ram   \ 256 MB
 
 : release-range  ( start-adr end-adr -- )  over - release  ;
 
 : ram-limit  ( -- addr )  mem-info-pa la1+ l@  ;
 
-: probe  ( -- )
+: ram-range  ( -- extant avail )
+[ifdef] lx-devel
+   h# 1000.0000  h# f70.0000 exit
+[then]
    gpio-data@ 4 and  if
       h#  800.0000  h# 770.0000
    else
       h# 1000.0000  h# f70.0000
    then
-   to /ram    ( total-ram )
+;
+
+: probe  ( -- )
+   ram-range to /ram    ( total-ram )
 
    0 swap  reg   \ Report extant memory
 
@@ -85,6 +91,7 @@ stand-init: Probing memory
    " probe" memory-node @ $call-method  
 ;
 previous definitions
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

@@ -2,10 +2,10 @@
 
 \ The overall firmware revision
 macro: FW_MAJOR C
-macro: FW_MINOR 02
+macro: FW_MINOR 03
 
 \ The EC microcode
-macro: EC_VERSION b87
+macro: EC_VERSION c03
 
 \ The wireless LAN module firmware
 macro: WLAN_RPM 5.220.10.p5-1.olpc1

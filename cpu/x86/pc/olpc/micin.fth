@@ -27,6 +27,8 @@ purpose: Controls for the microphone input mode (AC vs. DC coupling)
 warning @ warning off
 : stand-init
    stand-init
+
+[ifdef] lx-devel  exit  [then]
    post-b1?  if
       \ Configure GPIO as output for controlling MIC input AC/DC coupling
       2 OUT_EN gpio!
