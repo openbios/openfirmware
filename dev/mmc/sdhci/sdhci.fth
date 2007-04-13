@@ -57,6 +57,8 @@ h# 200 constant /block  \ 512 bytes
 \ This is the lowest level general-purpose command issuer
 \ Some shorthand words for accessing interrupt registers
 
+: present-state@  ( -- l )  h# 24 cl@  ;
+
 \ By the way, you can't clear the error summary bit in the ISR
 \ by writing 1 to it.  It clears automatically when the ESR bits
 \ are cleared (by writing ones to the ESR bits that are set).
@@ -112,7 +114,7 @@ h# 200 constant /block  \ 512 bytes
 \ The debouncer takes about 300 ms to stabilize.
 
 : card-inserted?  ( -- flag )
-   h# 24 cl@ h# 40000 and  h# 40000 =
+   present-state@ h# 40000 and  h# 40000 =
 ;
 
 : card-power-on  ( -- )
@@ -230,17 +232,27 @@ h# 200 constant /block  \ 512 bytes
    isr!                                           ( )
 ;
 
+: wait-ready  ( -- )
+   get-msecs d# 1000 +                    ( limit )
+   begin    present-state@  1 and  while  ( limit )
+      dup get-msecs - 0<  abort" SDHCI command ready timeout"
+   repeat                                 ( limit )
+   drop                                   ( )
+;
+
 : cmd  ( arg cmd mode -- )
    debug?  if  ." CMD: " over 4 u.r space   then
+   wait-ready
    h# c cw!              ( arg cmd )  \ Mode
    swap 8 cl!            ( cmd )      \ Arg
    h# e cw!              ( )          \ cmd
    1 wait                ( )
 ;
 
-\ For some reason, the OLPC sdhci sometimes reports that data is done (2 wait)
-\ even when dat0 indicates busy (0=busy).
-: wait-dat0  ( -- )  begin  24 cl@ h# 10.0000 and  until  ;
+\ The data transfer done indication (2 wait) just tells us that the
+\ data has been transferred to the card; the card might still be
+\ busy actually writing it to the media.
+: wait-dat0  ( -- )  begin  present-state@ h# 10.0000 and  until  ;
 
 
 \ start    cmd    arg  crc  stop
