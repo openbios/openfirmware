@@ -393,6 +393,7 @@ INTERNAL long   m_deflate();
 INTERNAL long   m_inflate();
 INTERNAL long   m_map();
 INTERNAL long   m_unmap();
+INTERNAL long   s_ioperm();
 INTERNAL long   f_mkdir();
 INTERNAL long   f_rmdir();
 #ifdef SIM
@@ -524,8 +525,8 @@ long ( (*functions[])()) = {
 	  0,        0,         0,           0,         0,          0,
 #endif
 
-          /* 376       380      384  */
-          m_inflate,   m_map,   m_unmap
+          /* 376       380      384		388 */
+          m_inflate,   m_map,   m_unmap,	s_ioperm
 };
 /*
  * Function semantics:
@@ -1217,12 +1218,17 @@ no_waitchar (int fd)		/* "don't wait for character" */
 #endif
 
 #ifdef LinuxX86
-INTERNAL long
-s_ioperm(unsigned  long  from,  unsigned  long num, unsigned long on)
-{
-  return (long)ioperm(from, num, (int)on);
-}
+#include <sys/io.h>
 #endif
+INTERNAL long
+s_ioperm(unsigned long  from,  unsigned long num, unsigned long on)
+{
+#ifdef LinuxX86
+  return (long)ioperm(from, num, (int)on);
+#else
+  return -1L;
+#endif
+}
 
 /*
  * Returns true if a key has been typed on the keyboard since the last
