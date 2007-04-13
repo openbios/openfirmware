@@ -111,6 +111,24 @@ d# 15 3 * dup constant /country-ie   buffer: country-ie
 
 : adrlen!  ( adr len dst -- )  tuck na1+ ! !  ;
 
+\ Some syntactic sugar
+: $wifi  ( country,ssid$ -- )
+   dup 0= abort" Empty country,SSID string"
+   wifi-cfg  /wifi-cfg erase    ( adr len )
+   wifi-cfg  3 blank            ( adr len )
+   [char] , left-parse-string   ( tail$ head$ )
+   2 pick  0=  if               ( null$ ssid$ )  
+      2swap 2drop  " US"        ( ssid$ country$ )
+   then                         ( ssid$ country$ )
+   dup 3 >  if
+      type ." is too long to be a country name." cr
+      abort
+   then
+   wifi-cfg >wc-country swap move   ( ssid$ )
+   here >r  ",  r> count            ( ssid$' )  \ Save the string
+   wifi-cfg >wc-ssid adrlen!        ( )
+;
+: wifi  ( "country,ssid" -- )  0 parse $wifi  ;
 
 0 [if]
 
