@@ -31,8 +31,8 @@ purpose: Manufacturing data reader
 \ is now in a block by itself.
 : mfg-data-top  ( -- adr )
 [ifdef] lx-devel  h# ffff.fff0 exit  [then]
-   h# fff1.0000 dup  invalid-tag?  ( old-top data-adr flag )
-   nip  if  drop h# ffff.0000  then
+   flash-base h# 1.0000 +  dup  invalid-tag?  ( old-top data-adr flag )
+   nip  if  drop flash-base h# f.0000 +  then
 ;
 
 : find-tag  ( name$ -- false | data$ true )

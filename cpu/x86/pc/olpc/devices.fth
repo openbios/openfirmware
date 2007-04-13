@@ -229,6 +229,11 @@ fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 
 [ifdef] spi-flash-support
 fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
+
+warning @ warning off
+: stand-init  stand-init  h# fff0.0000 to flash-base  ;
+warning !
+
 fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
 
 fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip

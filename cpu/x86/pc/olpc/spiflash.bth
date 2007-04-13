@@ -6,13 +6,29 @@ build-now
 : null$  " "  ;
 
 fload ${BP}/cpu/x86/pc/olpc/linuxserial.fth
+fload ${BP}/cpu/x86/ioports.fth    \ I/O port access under Linux
+
+fload ${BP}/cpu/x86/crc32.fth		\ Assembly language Zip CRC calculation
+fload ${BP}/forth/lib/crc32.fth		\ High-level portion of CRC calculation
 
 : us  ( microseconds -- )  drop  ;
+: ms  ( milliseconds -- )  drop  ;
+
+: power-off  ( -- )  " sync" $sh  " kbc-on" eval  ;
 
 hex
 fload ${BP}/dev/olpc/kb3700/ecspi.fth
 fload ${BP}/dev/olpc/spiflash/spiflash.fth
+fload ${BP}/dev/olpc/kb3700/ecio.fth
+
+: linux-io-spi-start  ( -- )
+   io-spi-start
+   h# fff0.0000 h# 10.0000 mmap to flash-base
+;
+: use-linux-io  ( -- )  ['] linux-io-spi-start to spi-start  ;
+
 fload ${BP}/dev/olpc/kb3700/ecserial.fth
+fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth
 fload ${BP}/dev/olpc/spiflash/spiui.fth
 
 : os-fw-filename$  ( -- adr len )  " olpc.rom"  ;

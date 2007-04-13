@@ -119,6 +119,7 @@ h# 30 constant crc-offset   \ From end
 
 : mfg-data-range  ( -- adr len )  mfg-data-top dup last-mfg-data  tuck -  ;
 
+[ifdef] $call-method
 : make-sn-name  ( -- filename$ )
    " SN" find-tag 0=  abort" No serial number in mfg data"  ( sn$ )
    dup  if  1-  then         ( sn$' )  \ Remove Null
@@ -138,6 +139,7 @@ h# 30 constant crc-offset   \ From end
    "temp $cat               ( )
    "temp count              ( filename$ )
 ;
+
 : save-mfg-data  ( -- )
    make-sn-name      ( name$ )
    ." Creating " 2dup type cr
@@ -146,12 +148,13 @@ h# 30 constant crc-offset   \ From end
    mfg-data-range  " write" r@ $call-method   ( r: ihandle )
    r> close-dev
 ;
+[then]
 
 : ?move-mfg-data  ( -- )
    ." Merging existing manufacturing data" cr
 
    \ If the system has mfg data in the old place, move it to the new place
-   mfg-data-top h# fff1.0000 =  if
+   mfg-data-top  flash-base h# 1.0000 +  =  if
       \ Copy just the manufacturing data into the memory buffer; don't
       \ copy the EC bits from the beginning of the block
       mfg-data-range                          ( adr len )
@@ -217,6 +220,7 @@ defer fw-filename$  ' null$ to fw-filename$
 
 : flash  ( ["filename"] -- )  get-file reflash  power-off  ;
 
+[ifdef] dev
 dev /flash
 0 value rom-va
 : selftest  ( -- error? )
@@ -234,6 +238,7 @@ dev /flash
    rom-va /flash root-map-out  0 to rom-va
 ;
 device-end
+[then]
 
 0 [if]
 \ Erase the first block containing the EC microcode.  This is dangerous...
