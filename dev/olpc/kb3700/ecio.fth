@@ -36,7 +36,7 @@ h# fc2a	constant GPIO5
 : ec-cmd66  ( byte -- )
    h# 66  pc! 
    \ It typically requires about 200 polls
-   d# 1000 0  do  h# 66 pc@ 2 and 0=  if  unloop exit  then  loop
+   d# 4000 0  do  h# 66 pc@ 2 and 0=  if  unloop exit  then  loop
    true abort" EC didn't respond to port 66 command"
 ;
 
