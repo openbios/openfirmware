@@ -4,16 +4,16 @@ purpose: USB elaborations for the OLPC platform
 devalias usb1 /usb@f,4
 devalias usb2 /usb@f,5
 devalias u /usb/disk
+devalias net /wlan
 
-\ If there is a PCI ethernet adapter, use it as the default net device,
-\ otherwise use any ethernet that can be found in the device tree.
+\ If there is a USB ethernet adapter, use it as the default net device.
 : report-net  ( -- )
    " /usb/ethernet" 2dup  find-package  if  ( name$ phandle )
       drop                                  ( name$ )
+     " net" 2swap $devalias                 ( )
    else                                     ( name$ )
-      2drop  " /ethernet"                   ( name$' )
-   then                                     ( name$ )
-   " net" 2swap $devalias                   ( )
+      2drop                                 ( )
+   then
 ;
 
 [ifdef] notdef   \ We have the graphical penguin
