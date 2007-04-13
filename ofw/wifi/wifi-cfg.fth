@@ -121,7 +121,7 @@ d# 15 3 * dup constant /country-ie   buffer: country-ie
       2swap 2drop  " US"        ( ssid$ country$ )
    then                         ( ssid$ country$ )
    dup 3 >  if
-      type ." is too long to be a country name." cr
+      type ."  is too long to be a country name." cr
       abort
    then
    wifi-cfg >wc-country swap move   ( ssid$ )
@@ -129,6 +129,18 @@ d# 15 3 * dup constant /country-ie   buffer: country-ie
    wifi-cfg >wc-ssid adrlen!        ( )
 ;
 : wifi  ( "country,ssid" -- )  0 parse $wifi  ;
+
+: $wep  ( wep$ -- )
+   dup 5 <>  over d# 13 <>  and  abort" WEP key must be 5 or 13 bytes"
+   wifi-cfg >wc-wep-idx   dup @          ( wep$ adr idx )
+   dup 4 >=  abort" Too many WEP keys"   ( wep$ adr idx )
+   2dup 1+ swap !                        ( wep$ adr idx )
+   2* na+ na1+  adrlen!                  ( )
+;
+: $pmk  ( pmk$ -- )
+   dup d# 32 <>  abort" PMK must be 32 bytes"
+   wifi-cfg >wc-pmk adrlen!
+;
 
 0 [if]
 
