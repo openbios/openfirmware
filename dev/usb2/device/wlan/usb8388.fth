@@ -63,6 +63,16 @@ h# ff constant kt-none
 1 constant TYPE_WEP_40_BIT
 2 constant TYPE_WEP_104_BIT
 
+0 value wep-idx
+d# 13 buffer: wep1  0 constant /wep1
+d# 13 buffer: wep2  0 constant /wep2
+d# 13 buffer: wep3  0 constant /wep3
+d# 13 buffer: wep4  0 constant /wep4
+: wep1$  ( -- $ )  wep1 /wep1  ;
+: wep2$  ( -- $ )  wep2 /wep2  ;
+: wep3$  ( -- $ )  wep3 /wep3  ;
+: wep4$  ( -- $ )  wep4 /wep4  ;
+
 /mac-adr buffer: target-mac
 : target-mac$  ( -- $ )  target-mac /mac-adr  ;
 
@@ -733,7 +743,7 @@ headers
 ;
 
 external
-: set-wep  ( wep4$ wep3$ wep2$ wep1$ idx -- ok? )
+: (set-wep)  ( wep4$ wep3$ wep2$ wep1$ idx -- ok? )
    d# 72 h# 13 ( CMD_802_11_SET_WEP ) prepare-cmd
    ACTION_ADD +xw
    ( idx ) +xw				\ TxKeyIndex
@@ -747,6 +757,19 @@ external
    loop
    d# 72 outbuf-bulk-out  if  false exit  then
    wait-cmd-resp 0=
+;
+: set-wep  ( wep4$ wep3$ wep2$ wep1$ idx -- ok? )
+   to wep-idx
+   dup to /wep1 wep1 swap move
+   dup to /wep2 wep2 swap move
+   dup to /wep3 wep3 swap move
+   dup to /wep4 wep4 swap move
+   true
+;
+: ?set-wep  ( -- )
+   ktype kt-wep =  if
+      wep4$ wep3$ wep2$ wep1$ wep-idx (set-wep) drop
+   then
 ;
 
 : disable-wep  ( -- ok? )
@@ -974,6 +997,7 @@ headers
 
 external
 : associate  ( ch ssid$ target-mac$ -- ok? )
+   ?set-wep				\ Set WEP keys again, if ktype is WEP
    set-mac-control
    2dup authenticate
    bss-type bss-type-managed =  if  (associate)  else  (join)  then
