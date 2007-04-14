@@ -112,6 +112,11 @@ d# 15 3 * dup constant /country-ie   buffer: country-ie
 : adrlen!  ( adr len dst -- )  tuck na1+ ! !  ;
 
 \ Some syntactic sugar
+: preserve$  ( $ -- $' )
+   over in-dictionary?  if  exit  then  ( $ )
+   here >r  ",  r> count   
+;
+
 : $wifi  ( country,ssid$ -- )
    dup 0= abort" Empty country,SSID string"
    wifi-cfg  /wifi-cfg erase    ( adr len )
@@ -125,22 +130,43 @@ d# 15 3 * dup constant /country-ie   buffer: country-ie
       abort
    then
    wifi-cfg >wc-country swap move   ( ssid$ )
-   here >r  ",  r> count            ( ssid$' )  \ Save the string
+   preserve$                        ( ssid$' )  \ Save the string
    wifi-cfg >wc-ssid adrlen!        ( )
 ;
-: wifi  ( "country,ssid" -- )  0 parse $wifi  ;
 
 : $wep  ( wep$ -- )
    dup 5 <>  over d# 13 <>  and  abort" WEP key must be 5 or 13 bytes"
+   preserve$                             ( wep$' )
    wifi-cfg >wc-wep-idx   dup @          ( wep$ adr idx )
    dup 4 >=  abort" Too many WEP keys"   ( wep$ adr idx )
    2dup 1+ swap !                        ( wep$ adr idx )
    2* na+ na1+  adrlen!                  ( )
 ;
+
 : $pmk  ( pmk$ -- )
    dup d# 32 <>  abort" PMK must be 32 bytes"
-   wifi-cfg >wc-pmk adrlen!
+   preserve$                 ( pmk$' )
+   wifi-cfg >wc-pmk adrlen!  ( )
 ;
+
+
+\ Stores the result at here
+: decode-hex  ( hex$ -- bin$ )
+   here >r
+   begin  dup  while   ( adr len )
+      over 2  push-hex $number pop-base  ( adr len [ true | n false ] )
+      abort" Bad hex number"             ( adr len n )
+      c,                                 ( adr len )
+      2 /string                          ( adr' len' )
+   repeat                                ( adr len )
+   2drop                                 ( adr len )
+   r>  here over -                       ( bin-adr bin-len )
+;
+
+: wifi  ( "country,ssid" -- )  0 parse $wifi  ;
+: wep  ( "wep" -- )  parse-word  decode-hex  $wep  ;
+: pmk  ( "pmk" -- )  parse-word  decode-hex  $pmk  ;
+
 
 0 [if]
 
