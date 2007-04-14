@@ -213,7 +213,7 @@ h# 200 constant /block  \ 512 bytes
 : .sderror  ( isr -- )
    ." Error: ISR = " dup u. isr!
    ." ESR = " esr@ dup u.  dup esr!  decode-esr
-   true abort" Stopping"
+   ." Stopping" cr abort
 \      debug-me
 ;
 
@@ -235,7 +235,10 @@ h# 200 constant /block  \ 512 bytes
 : wait-ready  ( -- )
    get-msecs d# 1000 +                    ( limit )
    begin    present-state@  1 and  while  ( limit )
-      dup get-msecs - 0<  abort" SDHCI command ready timeout"
+      dup get-msecs - 0<  if
+         ." SDHCI command ready timeout" cr
+         abort
+      then
    repeat                                 ( limit )
    drop                                   ( )
 ;
@@ -253,7 +256,6 @@ h# 200 constant /block  \ 512 bytes
 \ data has been transferred to the card; the card might still be
 \ busy actually writing it to the media.
 : wait-dat0  ( -- )  begin  present-state@ h# 10.0000 and  until  ;
-
 
 \ start    cmd    arg  crc  stop
 \ 47:46  45:40   39:8  7:1     0
@@ -412,6 +414,24 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
    then
 ;
 
+0 instance value writing?
+
+\ This is the correct way to wait for programming complete.
+: wait-write-done  ( -- )
+   writing? 0=  if  exit  then                     ( limit )
+
+   get-msecs d# 1000 +                              ( limit )
+   begin  get-status 9 rshift h# f and  7 =  while  ( limit )
+      dup get-msecs - 0<  if
+         ." SDHCI wait-write-done timeout" cr
+         abort
+      then
+   repeat                                           ( limit )
+   drop                                             ( )
+
+   false to writing?
+;
+
 external
 
 : attach-card  ( -- okay? )
@@ -444,9 +464,13 @@ external
 : r/w-blocks  ( addr block# #blocks in? -- actual )
    >r               ( addr block# #blocks r: in? )
    rot dma-setup    ( block# r: in? )
-   /block *  r>  if  read-multiple  else  write-multiple  then
+   wait-write-done
+   /block *  r>  if
+      read-multiple
+   else
+      write-multiple  true to writing?
+   then
    2 wait
-   wait-dat0
    dma-release
    dma-len /block /
 ;
@@ -458,6 +482,7 @@ external
 ;
 
 : close  ( -- )
+   wait-write-done
    card-clock-off
    card-power-off
    unmap-regs
