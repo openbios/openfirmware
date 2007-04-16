@@ -46,6 +46,7 @@ h# e009 constant xref-type
 
 \ Access a field within a JFFS2 FLASH data structure
 : j@  ( adr offset -- value )  la+ l@  ;
+: j!  ( adr offset -- value )  la+ l!  ;
 
 \ Access fields within the memory data structure for volume inodes
 \ Based on struct jffs2_sum_inode_flash, with "nodetype" replaced
@@ -768,10 +769,6 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    ftype@ 4 <>     \ Return false (no error) if it's a directory
 ;
 
-: do-file  ( inode -- okay? )
-   collect-nodes
-;
-
 : advance-dirent  ( dirent -- false | dirent' true )
    pwd dirino@    swap   ( parent-inode dirent )
    begin  dup next-dirent u<  while   ( par dirent )
@@ -823,6 +820,86 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    remove-unlinks
 ;
 
+0 [if]
+struct jffs2_raw_dirent
+{
+0	jint16_t magic;
+0+w	jint16_t nodetype;	/* == JFFS2_NODETYPE_DIRENT */
+1	jint32_t totlen;
+2	jint32_t hdr_crc;
+3	jint32_t pino;
+4	jint32_t version;
+5	jint32_t ino; /* == zero for unlink */
+6	jint32_t mctime;
+7	uint8_t nsize;
+7+b	uint8_t type;
+7+w	uint8_t unused[2];
+8	jint32_t node_crc;
+9	jint32_t name_crc;
+10	uint8_t name[0];
+[then]
+
+\ For now, just 0 the modify time, since we only support deleting
+: now-seconds  ( -- secs )  0  ;
+
+: make-raw-dirent  ( pino version name$ dirino ftype -- adr len )
+   2 pick d# 40 + /l round-up          ( pino version name$ dirino ftype len )
+   dup >r alloc-mem                    ( pino version name$ dirino ftype adr r: len )
+   dup r@ erase  >r                    ( pino version name$ dirino ftype r: len adr )
+   now-seconds over 6 j!  \ mctime     ( pino version name$ dirino ftype r: len adr )
+   r@ 7 la+ 1+ c!         \ type       ( pino version name$ dirino       r: len adr )
+   r@ 5 j!                \ dirino     ( pino version name$              r: len adr )
+   dup  r@ 7 la+ c!       \ nsize      ( pino version name$              r: len adr )
+   2dup crc  r@ 9 j!      \ name_crc   ( pino version name$              r: len adr )
+   r@ d# 10 la+ swap move \ name       ( pino version                    r: len adr )
+   \ Null terminate?
+   r@ 4 j!                \ version    ( pino                            r: len adr )
+   r@ 3 j!                \ pino       ( r: len adr )
+   dirent-type r@ wa1+ w! \ nodetype   ( r: len adr )
+   jffs2-magic r@ w!      \ magic      ( r: len adr )
+   r@ 8 crc r@ 2 j!       \ hdr_crc    ( r: len adr )
+   r@ 8 /l* crc  r@ 8 j!  \ node_crc   ( r: len adr )
+   r> r>                               ( adr len )
+;
+
+: erased?  ( adr len -- flag )
+   bounds  ?do
+      i l@ -1 <>  if  false unloop exit  then
+   /n +loop
+   true
+;
+: find-empty-page   ( -- true | page# false )
+   pages/chip  0  ?do
+      i 1 read-pages  0=  if
+         block-buf /page erased?  if
+            i false  unloop exit
+         then
+      then
+   pages/eblock +loop
+   true
+;
+: put-node  ( adr len page# -- )
+   >r                               ( adr len         r: page# )
+   2dup block-buf  move             ( adr len         r: page# )
+   tuck free-mem                    ( len             r: page# )
+   block-buf /page rot /string      ( pad-adr pad-len r: page# )
+   2dup erase                       ( pad-adr pad-len r: page# )
+   over 1 j!                  \ totlen      ( pad-adr r: page# )
+   jffs2-magic over w!        \ magic       ( pad-adr r: page# )
+   padding-type swap wa1+ w!  \ nodetype    (         r: page# )
+   block-buf r> 1  " write-blocks" $call-parent              ( )
+   1 <>  if  ." JFFS2: write failed"  then                   ( )
+;
+
+\ pwd is the parent dirent
+: $delete  ( adr len -- error? )
+   pwd $resolve-path  dup  if  true exit  then  ( dirent' )
+   >r r@ pino@  r@ version@ 1+  r> fname$       ( parent-ino new-version name$ )
+   0 0 make-raw-dirent                          ( adr len )
+   find-empty-page                              ( adr len page# )
+   put-node
+;
+
 decimal
 
 headerless
@@ -866,9 +943,9 @@ external
    begin
       \ We now have the dirent for the file at the end of the string
       dup ftype@  case                                   ( dirent )
-         4      of  to pwd  true exit  endof               \ Directory
-         8      of  dirino@ do-file  ?release exit  endof  \ Regular file
-         d# 10  of                                         \ Link
+         4      of  to pwd  true exit  endof                     \ Directory
+         8      of  dirino@ collect-nodes  ?release exit  endof  \ Regular file
+         d# 10  of                                               \ Link
             dir-link  if  false ?release exit  then  ( dirent )
          endof
          ( default )   \ Anything else (special file) is error
