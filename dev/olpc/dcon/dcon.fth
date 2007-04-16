@@ -225,7 +225,13 @@ d# 440 8 /  constant dcon-flag
 : msr!  ( d l -- )  " wrmsr" eval  ;
 
 \ This depends on a jumper on the board
-: tft-mode?  ( -- flag )  h# c000.2001 msr@  drop h# 40 and  0<>  ;
+: tft-mode?  ( -- flag )
+   gx?  if
+      h# c000.2001 msr@  drop h# 40 and  0<>
+   else
+      true
+   then
+;
 
 : maybe-set-cmos  ( -- )
    tft-mode?  1 and  dcon-flag cmos!

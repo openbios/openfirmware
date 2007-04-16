@@ -115,7 +115,7 @@ create timing-dcon
 true value dcon?
 
 : timing  ( -- adr )
-   dcon?  if  timing-dcon  else  timing-1024x768  then
+   dcon? tft-mode? and  if  timing-dcon  else  timing-1024x768  then
 ;
 : @+  ( adr -- adr' value )  dup la1+ swap @  ;
 
@@ -271,7 +271,7 @@ true value hsync-low?
    \ Turn on FIFO
    4 dc@  h# 180000 invert and  h# 6501 or  4 dc!
    configure-display
-   tft-mode?  if  configure-tft  else  configure-vga  then
+   dcon? tft-mode? and  if  configure-tft  else  configure-vga  then
 ;
 
 : display-on  ( -- )

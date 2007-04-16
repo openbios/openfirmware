@@ -495,7 +495,11 @@ create lx-msr-init
 
   msr: 5000.2014 00000000.00ffffff.  \ Enables PCI access to low mem
 
-  msr: 4800.2001 00000000.00040c00.  \ Set VP reference clock divider to 0xc, not 0xe
+[ifdef] lx-devel
+  msr: 4800.2001 00000000.00040c00.  \ Set VP reference clock divider to 0xc, not 0xe, CRT mode
+[else]
+  msr: 4800.2001 00000000.00040c08.  \ Set VP reference clock divider to 0xc, not 0xe, TFT mode
+[then]
 
 \ 5536 region configs
   msr: 5100.0002 00000000.007f0000.  \ Disable SMIs
