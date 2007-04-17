@@ -19,7 +19,7 @@ purpose: Access to CMOS RAM on Geode 5536
 ;
 
 \ Zero is the right checksum for zero data
-: init-bios-cmos  ( -- )  h# 2f h# 10  do  0 i cmos!  loop  ;
+: init-bios-cmos  ( -- )  h# 30 h# 10  do  0 i cmos!  loop  ;
 
 stand-init: CMOS
    bios-checksum-bad?  if  init-bios-cmos  then
