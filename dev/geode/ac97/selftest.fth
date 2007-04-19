@@ -25,7 +25,7 @@ h# 808 value rlevel
 
 h# 0 value plevel
 : set-plevel  ( db -- )
-   dup 0>  abort" Playback only does attenuation - use a negative number"
+   dup 0>  if  drop 0  then
    negate  1+ 2* 3 /  dup bwjoin  to plevel
 ;
 
@@ -34,15 +34,75 @@ h# 0 value plevel
    record-base  record-len  audio-out drop  write-done
 ;
 
+create sin-half
+d#     0 w,
+d#  3212 w,
+d#  6393 w,
+d#  9512 w,
+d# 12539 w,
+d# 15446 w,
+d# 18204 w,
+d# 20787 w,
+d# 23170 w,
+d# 25329 w,
+d# 27245 w,
+d# 28898 w,
+d# 30273 w,
+d# 31356 w,
+d# 32137 w,
+d# 32609 w,
+d# 32767 w,
+d# 32609 w,
+d# 32137 w,
+d# 31356 w,
+d# 30273 w,
+d# 28898 w,
+d# 27245 w,
+d# 25329 w,
+d# 23170 w,
+d# 20787 w,
+d# 18204 w,
+d# 15446 w,
+d# 12539 w,
+d# 9512 w,
+d# 6393 w,
+d# 3212 w,
+
+
+
 0 value wave
-: wave++  ( -- wave )  wave 4 + dup 3f and 0= if negate then dup to wave  ;
-: make-wave  ( -- )  record-base record-len bounds do wave++ dup wljoin i l! 4 +loop  ;
+: wave++  ( -- wave )
+   wave h# 800 + dup h# 7fff and 0= if negate then dup to wave
+;
+: cycle  ( adr -- adr' )
+   d# 32  0  do                   ( adr )
+      sin-half i wa+ w@  over w!  ( adr value )
+      la1+                        ( adr' )
+   loop                           ( adr )
+   d# 32  0  do                   ( adr )
+      sin-half i wa+ w@ negate  over w!   ( adr value )
+      la1+                        ( adr' )
+   loop                           ( adr' )
+;
+
+: make-wave  ( -- )
+  record-base record-len 2/  bounds      ( endadr startadr )
+  begin  2dup u>  while  cycle  repeat   ( endadr startadr )
+  2drop
+
+  record-base record-len bounds          ( endadr startadr )
+  record-len 2/ + wa1+
+  begin  2dup u>  while  cycle  repeat   ( endadr startadr )
+  2drop
+;
 : selftest  ( -- error? )
    open 0=  if  ." Failed to open /audio" cr true exit  then
    record-len alloc-mem to record-base
    ." Play tone" cr
+   -9 set-plevel
    make-wave play
    ." Record and playback" cr
+   0 set-plevel
    record play
    record-base record-len free-mem
    close false
