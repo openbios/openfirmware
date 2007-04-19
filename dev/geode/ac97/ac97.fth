@@ -216,10 +216,21 @@ d# 48000 instance value sample-rate
    mic+0db
    mic-input
 ;
+: amp-default-on?  ( -- flag )  " gx?" eval  ;
 : close-in  ( -- )
 \   h# 8000 set-record-gain		\ mute
 ;
+: codec-set  ( bitmask reg# -- )  dup >r codec@ or  r> codec!  ;
+: codec-clr  ( bitmask reg# -- )  dup >r codec@ swap invert and  r> codec!  ;
+: amplifier-on   ( -- )
+   h# 8000 h# 26  amp-default-on?  if  codec-clr  else  codec-set  then
+;
+: amplifier-off  ( -- )
+   h# 8000 h# 26  amp-default-on?  if  codec-set  else  codec-clr  then
+;
+
 : open-out  ( -- )
+   amplifier-on
    disable-playback
    sample-rate d# 1000 / to s/ms
    sample-rate  dup h# 2c codec!  dup h# 2e codec!  h# 30 codec!
@@ -234,6 +245,7 @@ d# 48000 instance value sample-rate
    h# 8808 set-pcm-gain			\ mute
    h# 8000 set-master-volume
    h# 8000 set-mono-volume
+   amplifier-off
 ;
 
 0 instance value last-prd
