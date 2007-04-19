@@ -237,8 +237,8 @@ true value hsync-low?
 
       h# 70 h# 418 vp!  \  Set the dither control GX_FP_DFC
    else
-      \ The datasheet says 4800.0011, but that is wrong
-      h# 3f.dfffffff. h# 4800.2011 msr!
+      \ The PADSEL MSR, 4800.2011, is set in the early MSR init.
+      \ So is the GLD_CONFIG MSR, 4800.2001
       0 400 vp!
       h# 08c0.0000 h# 408 vp!
       h# 0000.0070 h# 418 vp!
@@ -396,11 +396,11 @@ h# 300 /n* buffer: video-state
 
 also forth definitions
 : crt-on  ( -- )
-   gx? 0=  if  exit  then
+   gx?  if  exit  then
    h# 4800.2001 msr@  swap h# 8000 or swap  h# 4800.2001 msr!
 ;
 : crt-off  ( -- )
-   gx? 0=  if  exit  then
+   gx?  if  exit  then
    h# 4800.2001 msr@  swap h# 8000 invert and swap  h# 4800.2001 msr!
 ;
 previous definitions

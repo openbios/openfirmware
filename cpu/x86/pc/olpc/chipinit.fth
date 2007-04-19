@@ -500,6 +500,8 @@ create lx-msr-init
 [else]
   msr: 4800.2001 00000000.00040c08.  \ Set VP reference clock divider to 0xc, not 0xe, TFT mode
 [then]
+  \ The datasheet says the MSR number is 4800.0011, but that is wrong
+  msr: 4800.2011 0000003f.dfffffff.  \ Set TFT pads to registered
 
 \ 5536 region configs
   msr: 5100.0002 00000000.007f0000.  \ Disable SMIs
