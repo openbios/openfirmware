@@ -36,7 +36,7 @@ create gxfb-hdr  \ All R/O except cmd/stat and cache line size
 
     30100b ,  2200003 ,  3000000 ,        0 ,
   fd000000 , fe000000 , fe004000 , fe008000 , \ FB, GP, VG, DF
-         0 ,        0 ,        0 ,   30100b , \ Possibly VIP
+         0 ,        0 ,        0 ,   30100b , \ VIP (LX only)
          0 ,        0 ,        0 ,        0 ,
          0 ,        0 ,        0 ,        0 ,
        3d0 ,      3c0 ,    a0000 ,        0 , \ VG IO, VG IO, EGA FB, MONO FB
@@ -52,6 +52,18 @@ create isa-hdr
          0 ,        0 ,        0 ,        0 ,
          0 ,        0 ,        0 ,        0 ,
          0 ,        0 ,        0 ,     aa5b , \ interrupt steering
+         0 ,        0 ,        0 ,        0 ,
+
+create aes-hdr  \ LX security block
+  ffffc000 ,        0 ,        0 ,        0 ,
+         0 ,        0 ,        0 ,        0 ,
+
+  20281022 ,  2a00006 , 10100000 ,        8 ,
+  fe010000 ,        0 ,        0 ,        0 ,  \ I/O BAR - base of virtual registers
+         0 ,        0 ,        0 , 20821022 ,
+         0 ,        0 ,        0 ,        0 ,
+         0 ,        0 ,        0 ,        0 ,
+         0 ,        0 ,        0 ,        0 ,
          0 ,        0 ,        0 ,        0 ,
 
 0 [if]  \ Turned off
@@ -140,6 +152,7 @@ variable bar-probing
       h# 7d00  of  ehci-hdr  endof
       h#  800  of  nb-hdr    endof
       h#  900  of  gxfb-hdr  endof
+      h#  a00  of  gx?  if  ff-loc  else  aes-hdr  then  endof
       ( default )  2drop ff-loc exit
    endcase
    +hdr
@@ -174,13 +187,22 @@ variable bar-probing
 : config-l!  ( l a -- )  config-setup  if  do-special  else  rl!  then   ;
 
 : assign-cafe  ( -- )
-   h# fe00c000  h# 6010 config-l!
-   h# fe010000  h# 6110 config-l!
-   h# fe014000  h# 6210 config-l!
+   h# fe020000  h# 6010 config-l!
+   h# fe024000  h# 6110 config-l!
+   h# fe028000  h# 6210 config-l!
 ;
 warning @ warning off
 : stand-init  ( -- )
    stand-init
+
+   lx?  if
+      \ Amend the fake PCI headers for the LX settings
+      h#   281022   nb-hdr h# 20 + l!  \ Vendor/device ID - AMD 
+
+      h# ffffc000 gxfb-hdr h# 10 + l!  \ BAR4 MASK - VIP
+      h# 20811022 gxfb-hdr h# 20 + l!  \ Vendor/device ID - AMD 
+      h# fe0c0000 gxfb-hdr h# 40 + l!  \ BAR4 address - VIP 
+   then
 
 [ifdef] lx-devel  exit  [then]
    assign-cafe
