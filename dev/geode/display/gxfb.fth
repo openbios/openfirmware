@@ -215,26 +215,34 @@ true value hsync-low?
 : configure-tft  ( -- )
    gld_msr_config msr@  swap 8 or swap  gld_msr_config msr!
 
-   \ Set up the DF pad select MSR
-   \ (reserved register in spec, but the Linux driver does this)
-   \ Jordan Crouse says that this number was dialed in through validation
-   h# c0002011 msr@
-   swap  h# 3fff.ffff invert and  h# 1fff.ffff or  swap
-   h# c0002011 msr!
+   gx?  if
+      \ Set up the DF pad select MSR
+      \ (reserved register in spec, but the Linux driver does this)
+      \ Jordan Crouse says that this number was dialed in through validation
+      h# c0002011 msr@
+      swap  h# 3fff.ffff invert and  h# 1fff.ffff or  swap
+      h# c0002011 msr!
 
-   \ Panel off  - FP_PM register, GX_FP_PM_P bit
-   h# 410 vp@  h# 100.0000 invert and  h# 410 vp!
+      \ Panel off  - FP_PM register, GX_FP_PM_P bit
+      h# 410 vp@  h# 100.0000 invert and  h# 410 vp!
 
-   \ Set timing 1  FP_PT1
-   h# 400 vp@  h# 7ff0000 and  yres d# 16 lshift or  h# 400 vp!
+      \ Set timing 1  FP_PT1
+      h# 400 vp@  h# 7ff0000 and  yres d# 16 lshift or  h# 400 vp!
 
-   \ Timing 2  Set bits that are always on for TFT
-   h# f10.0000
-   vsync-low?  if  h# 80.0000 or  then  \ Add vsync polarity
-   hsync-low?  if  h# 40.0000 or  then  \ Add hsync polarity
-   h# 408 vp!
+      \ Timing 2  Set bits that are always on for TFT
+      h# f10.0000
+      vsync-low?  if  h# 80.0000 or  then  \ Add vsync polarity
+      hsync-low?  if  h# 40.0000 or  then  \ Add hsync polarity
+      h# 408 vp!
 
-   h# 70 h# 418 vp!  \  Set the dither control GX_FP_DFC
+      h# 70 h# 418 vp!  \  Set the dither control GX_FP_DFC
+   else
+      \ The datasheet says 4800.0011, but that is wrong
+      h# 3f.dfffffff. h# 4800.2011 msr!
+      0 400 vp!
+      h# 08c0.0000 h# 408 vp!
+      h# 0000.0070 h# 418 vp!
+   then
 
    \ Enable the FP data and power - 40 is FP_PWR_EN, 80 is FP_DATA_EN
    \ but these are reserved in the Geode datasheet.
@@ -386,6 +394,16 @@ h# 300 /n* buffer: video-state
    1 set-source  \ Unfreeze image
 ;
 
+also forth definitions
+: crt-on  ( -- )
+   gx? 0=  if  exit  then
+   h# 4800.2001 msr@  swap h# 8000 or swap  h# 4800.2001 msr!
+;
+: crt-off  ( -- )
+   gx? 0=  if  exit  then
+   h# 4800.2001 msr@  swap h# 8000 invert and swap  h# 4800.2001 msr!
+;
+previous definitions
 
 \ fload ${BP}/dev/mediagx/video/bitblt.fth
 
