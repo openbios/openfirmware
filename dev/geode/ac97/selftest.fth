@@ -29,8 +29,15 @@ h# 0 value plevel
    negate  1+ 2* 3 /  dup bwjoin  to plevel
 ;
 
+h# 0 value glevel
+: set-glevel  ( db -- )
+   dup 0>  if  drop 0  then
+   negate  1+ 2* 3 /  dup bwjoin  to glevel
+;
+
+
 : play  ( -- )
-   open-out  plevel set-pcm-gain  0 h# 38 codec!
+   open-out  plevel set-pcm-gain  glevel h# 38 codec!
    record-base  record-len  audio-out drop  write-done
 ;
 
@@ -99,10 +106,10 @@ d# 3212 w,
    open 0=  if  ." Failed to open /audio" cr true exit  then
    record-len alloc-mem to record-base
    ." Play tone" cr
-   -9 set-plevel
+   0 set-plevel  d# -12 set-glevel
    make-wave play
    ." Record and playback" cr
-   0 set-plevel
+   0 set-plevel  0 set-glevel
    record play
    record-base record-len free-mem
    close false
