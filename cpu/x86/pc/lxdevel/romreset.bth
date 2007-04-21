@@ -50,7 +50,7 @@ fload ${BP}/cpu/x86/pc/dot.fth		\ Numeric output
 fload ${BP}/cpu/x86/pc/romfind.fth	\ find-dropin
 
 label startup
-   h# 10 # al mov  al h# 80 out
+   h# 10 # al mov  al h# 80 # out
 
    \ The next few MSRs allow us to access the 5536
    \ EXTMSR - page 449   \ Use PCI device #F for port 2
@@ -76,7 +76,7 @@ label startup
 
    char + 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
 
-   h# 11 # al mov  al h# 80 out
+   h# 11 # al mov  al h# 80 # out
  \ Init memory controller
 
    \ sdram_initialize,generic_sdram.c
@@ -121,13 +121,13 @@ label startup
    2 bitclr  20000018 wmsr
 
    \ char b 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
-   h# 12 # al mov  al h# 80 out
+   h# 12 # al mov  al h# 80 # out
 
 fload ${BP}/cpu/x86/pc/olpc/draminit.fth
 
    \ Now we can use the stack and do conventional subroutine calls
 
-   h# 1f # al mov  al h# 80 out
+   h# 1f # al mov  al h# 80 # out
    fload ${BP}/cpu/x86/pc/resetend.fth
 end-code
 

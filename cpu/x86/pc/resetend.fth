@@ -33,7 +33,7 @@ purpose: Common code for several versions of reset.bth
    here asm-base - ResetBase +  7 +   h# 60  #)  far jmp  \ 7-byte instruction
    \ nop nop nop nop
 
-   h# 20 # al mov  al h# 80 out
+   h# 20 # al mov  al h# 80 # out
 \ begin again
    h# 68 # ax mov
    ax ds  mov
@@ -52,7 +52,7 @@ purpose: Common code for several versions of reset.bth
 ascii t report
 
    ds ax mov  ax es mov
-   h# 21 # al mov  al h# 80 out
+   h# 21 # al mov  al h# 80 # out
 
 [ifdef]  virtual-mode
    " paging" $find-dropin,  \ Assemble call to find-dropin with literal arg
@@ -68,7 +68,7 @@ ascii t report
    ax call
 [then]
 
-   h# 22 # al mov  al h# 80 out
+   h# 22 # al mov  al h# 80 # out
    " firmware" $find-dropin,  \ Assemble call to find-dropin with literal arg
 
    long-offsets on
@@ -81,7 +81,7 @@ ascii t report
 
 ascii h report
 
-      h# 23 # al mov  al h# 80 out
+      h# 23 # al mov  al h# 80 # out
       " inflate" $find-dropin,  \ Assemble call to find-dropin with literal arg
 
       4 [ax]          cx  mov	\ Length of inflater (byte-swapped)
@@ -91,7 +91,7 @@ ascii h report
 
       cld  rep byte movs	\ Copy the inflater
 
-      h# 24 # al mov  al h# 80 out
+      h# 24 # al mov  al h# 80 # out
       ax pop  			\ Recover base address of firmware dropin
 
       d# 32 #  ax     add	\ Skip dropin header
@@ -101,12 +101,12 @@ ascii h report
       0 #             push      \ No-header flag - 0 means expect a header
       workspace    #  push	\ Scratch RAM for inflater
 
-      h# 25 # al mov  al h# 80 out
+      h# 25 # al mov  al h# 80 # out
       ascii m report
       inflate-base #  ax  mov	\ Base address of inflater
       ax call			\ Inflate the firmware
    else
-      h# 26 # al mov  al h# 80 out
+      h# 26 # al mov  al h# 80 # out
       \ The firmware dropin isn't compressed, so we just copy it to RAM
       4 [ax]          cx  mov	\ Length of firmware (byte-swapped)
       cx                  bswap	\ cx: Length of firmware
@@ -119,7 +119,7 @@ ascii h report
       ascii m report
    then
    long-offsets off
-   h# 2f # al mov  al h# 80 out
+   h# 2f # al mov  al h# 80 # out
 
    ascii a report
    \ "firmware" drop-in should discard redundant page table entries

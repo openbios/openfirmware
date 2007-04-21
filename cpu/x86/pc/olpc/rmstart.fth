@@ -126,7 +126,7 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
 
    real-mode
 
-   h# 01 # al mov  al h# 80 out
+   h# 01 # al mov  al h# 80 # out
 
    \ This code is highly optimized because it runs when the CPU is in
    \ it slowest operation mode, so we want to get it done fast.
@@ -163,7 +163,7 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
    then
 
    \ Return to here after the reset
-   h# 02 # al mov  al h# 80 out
+   h# 02 # al mov  al h# 80 # out
 
 [ifdef] init-com1      init-com1      [then]
 
@@ -190,7 +190,7 @@ ascii F report	 \ send it to com1 if you can...
    eb c, 0 c,		\ jmp to next location to flush prefetch queue
                         \ note: CPL is now 0
 
-   h# 03 # al mov  al h# 80 out
+   h# 03 # al mov  al h# 80 # out
 
    \ We are in protected mode, but we are still executing from old
    \ 16-bit code segment, and will continue to do so until the far jump
@@ -219,7 +219,7 @@ ascii t report
 ascii h report
 [then]
 
-   h# 0f # al mov  al h# 80 out
+   h# 0f # al mov  al h# 80 # out
    op: ad: ResetBase h# 10 #)  far jmp	\ Jump to Forth startup
 
    real-mode
