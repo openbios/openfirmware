@@ -96,7 +96,6 @@ msr: 4c00.2001 00000000.00000001.
 msr: 5000.2001 00000000.00000027.
 msr: 5800.2001 00000000.00000000.
 msr: 8000.2001 00000000.00000320.
-msr: a000.2001 00000000.00000010.
 
 msr: 5400.2001 00000000.00000000.  \ In GX, 5400.xxxx is FooGlue, in LX it is VIP
 msr: c000.2001 00000000.00040f80.
@@ -405,7 +404,6 @@ create lx-msr-init
   msr: 5000.2001 00000000.00000027.
   msr: 5800.2001 00000000.00000000.
   msr: 8000.2001 00000000.00000320.
-  msr: a000.2001 00000000.00000010.
 
   msr: 0000.1700 00000000.00000400.  \ Evict clean lines - necessary for L2
 
@@ -474,7 +472,7 @@ create lx-msr-init
 \ setup_gx2();
 
 \ Graphics init
-  msr: a000.2001 00000000.00000010.  \ GP config (priority)
+  msr: a000.2001 00000000.0fd60000.  \ CBASE field is FB addr + 6M
   msr: a000.2002 00000001.00000001.  \ Disable GP SMI
   msr: a000.2003 00000003.00000003.  \ Disable GP ERR
   msr: a000.2004 00000000.00000001.  \ Clock gating
@@ -498,7 +496,8 @@ create lx-msr-init
 [ifdef] lx-devel
   msr: 4800.2001 00000000.00040c00.  \ Set VP reference clock divider to 0xc, not 0xe, CRT mode
 [else]
-  msr: 4800.2001 00000000.00040c08.  \ Set VP reference clock divider to 0xc, not 0xe, TFT mode
+\  msr: 4800.2001 00000000.00040c08.  \ Set VP reference clock divider to 0xc, not 0xe, TFT mode
+  msr: 4800.2001 00000000.00048c08.  \ Set VP reference clock divider to 0xc, not 0xe, TFT + CRT mode
 [then]
   \ The datasheet says the MSR number is 4800.0011, but that is wrong
   msr: 4800.2011 0000003f.dfffffff.  \ Set TFT pads to registered
