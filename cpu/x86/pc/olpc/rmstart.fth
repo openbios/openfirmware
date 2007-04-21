@@ -141,6 +141,8 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
       h# 30 # al cmp  >=  if     \ LX CPU
          rdmsr                             \ Get base MSR value with divisors
          op: h# 04de.0000 # ax or          \ Set the startup time (de) and breadcrumb (4)
+         op: h# 0000.03d9 # dx mov         \ PLL value for 133 MB clk, 433 CPU
+\        op: h# 0000.04d9 # dx mov         \ PLL value for 167 MB clk, 433 CPU
          wrmsr                             \ Put in the base value
          op: h# 0000.1800 invert # ax and  \ Turn off the BYPASS bits
       else                       \ GX CPU
