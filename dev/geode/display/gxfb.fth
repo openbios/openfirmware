@@ -103,10 +103,10 @@ create timing-1024x768
 create timing-dcon
 
    \ LX timing: refclk is 48 MHz
-   \ M=2  N=0x1f=31  P=8  (N+1)/((M+1)*(P+1)) = 32/(3*9) = 32/27
-   \ 48 MHz * 32 / 27 = 56.9 MHz
+   \ M=4  N=0x28=40  P=6  (N+1)/((M+1)*(P+1)) = 41/(5*7) = 41/35
+   \ 48 MHz * 41 / 35 = 56.2 MHz
 
-   h# 57b , 0 ,  h# 21f8 , \ gxdotpll, gxrstpll, lxdotpll, (refr=50, pixclk=d# 17460)
+   h# 57b , 0 ,  h# 4286 , \ gxdotpll, gxrstpll, lxdotpll, (refr=50, pixclk=d# 17460)
 
    d# 1200 , d# 1200 ,     \ linelen, graphics pitch
    h# 04d7.04af , h# 04d7.04af , h# 04bf.04b7 , ( h# 04bf.04b7 , )  \ htiming 1,2,3,fp
