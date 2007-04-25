@@ -453,6 +453,12 @@ false exit
 [then]
 ;
 
+: set-mc  ( 19-val 1a-val -- )
+   lbsplit  h# 66  h# 69  do  i cmos!  -1 +loop
+   lbsplit  h# 62  h# 65  do  i cmos!  -1 +loop
+   1 h# 61 cmos!   1 h# 60 cmos!
+;
+
 : interpreter-init  ( -- )
    hex
    warning on

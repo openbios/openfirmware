@@ -137,20 +137,53 @@ label startup
    00000106.83104104.   00001983 set-msr  \ Memory delay values
    00000000.00000001.   00001980 set-msr  \ Enable memory delays
 
-   18000100.3b8332a3.   20000019 set-msr
+   h# 61 #  al mov    al  h# 70 #  out   h# 71 #  al in  \ Read CMOS 0x61
+   al al test  0= if
+      18000100.6a7332a0.   20000019 set-msr
 
-   \ The RAM controller is now set up
+      \ The RAM controller is now set up
 
- \ Init the SDRAMs
- \ sdram_enable,src/northbridge/amd/gx2/raminit.c
+    \ Init the SDRAMs
+    \ sdram_enable,src/northbridge/amd/gx2/raminit.c
 
-   \ Clock gating for PMode
-   \ Clocks always on in mode 1, hardware gating in mode 0
-\   20002004 rmsr  4 bitclr  1 bitset  20002004 wmsr  \ GX p 199
-   1. 20002004 set-msr  \ GX p 199
+      \ Clock gating for PMode
+      \ Clocks always on in mode 1, hardware gating in mode 0
+  \   20002004 rmsr  4 bitclr  1 bitset  20002004 wmsr  \ GX p 199
+      1. 20002004 set-msr  \ GX p 199
 
-   \ Delay on exit from power mode 1, use unbuffered RAM
-   140dd101. 2000001a set-msr    \ MC_CF1017_DATA  LX p 231
+      \ Delay on exit from power mode 1, use unbuffered RAM
+      130cd801. 2000001a set-msr    \ MC_CF1017_DATA  LX p 231
+   else
+      al dec  al h# 71 # out            \ Decrement safety counter
+
+      h# 64 # al mov  al h# 70 # out  h# 71 # al in   al bl mov
+      h# 65 # al mov  al h# 70 # out  h# 71 # al in   al bh mov
+      d# 16 # bx shl
+      h# 62 # al mov  al h# 70 # out  h# 71 # al in   al bl mov
+      h# 63 # al mov  al h# 70 # out  h# 71 # al in   al bh mov
+      
+      h# 18000100 # dx mov  bx ax mov  h# 20000019 wmsr
+
+      \ The RAM controller is now set up
+
+    \ Init the SDRAMs
+    \ sdram_enable,src/northbridge/amd/gx2/raminit.c
+
+      \ Clock gating for PMode
+      \ Clocks always on in mode 1, hardware gating in mode 0
+  \   20002004 rmsr  4 bitclr  1 bitset  20002004 wmsr  \ GX p 199
+      1. 20002004 set-msr  \ GX p 199
+
+      \ Delay on exit from power mode 1, use unbuffered RAM
+      h# 68 # al mov  al h# 70 # out  h# 71 # al in   al bl mov
+      h# 69 # al mov  al h# 70 # out  h# 71 # al in   al bh mov
+      d# 16 # bx shl
+      h# 66 # al mov  al h# 70 # out  h# 71 # al in   al bl mov
+      h# 67 # al mov  al h# 70 # out  h# 71 # al in   al bh mov
+
+      dx dx xor  bx ax mov  2000001a wmsr    \ MC_CF1017_DATA  LX p 231
+   then
+
    00000200.00000000. 20000020 set-msr   \ Power mode entry and exit delays
 
    \ Unmask CKE1 and CKE0
@@ -291,6 +324,15 @@ label startup
    h# 12 # al mov  al h# 80 # out
 
 fload ${BP}/cpu/x86/pc/olpc/draminit.fth
+
+   \ Last-minute check for LX erratum 34 - reset if the DLL didn't start correctly
+   h# 4c000017 rmsr  h# 10 bitand  0<>  if   \ LX branch
+      h# 4c00000f rmsr  h# 7ff bitclr  h# 4 bitset  h# 4c00000f wmsr  \ Set DLL_OV
+      h# 4c00000f rmsr  h# 7ff # ax and  h# 104 # ax cmp  =  if       \ Check the result
+         \ The value 104 indicates that the DLL did not start, so we must reset
+         1. 5140.0017 set-msr
+      then
+   then
 
    \ Now we can use the stack and do conventional subroutine calls
 
