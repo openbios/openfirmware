@@ -9,10 +9,11 @@ headers
 
 0 0 encode-bytes
 0 0 h# 0000.0000  my-space +  phys+   0 i+  h# 0000.0100 i+   \ Config registers
-0 0 h# 0200.0010  my-space +  phys+   0 i+  h# 0100.0000 i+   \ Frame buffer
+0 0 h# 0200.0010  my-space +  phys+   0 i+  h# 0080.0000 i+   \ Frame buffer
 0 0 h# 0200.0014  my-space +  phys+   0 i+  h# 0000.4000 i+   \ Display controller
 0 0 h# 0200.0018  my-space +  phys+   0 i+  h# 0000.4000 i+   \ Video controller
 0 0 h# 0200.001c  my-space +  phys+   0 i+  h# 0000.4000 i+   \ Graphics controller
+0 0 h# 0200.0020  my-space +  phys+   0 i+  h# 0000.4000 i+   \ Video Input Port
 " reg" property
 
 : map-membar  ( bar size -- adr )
@@ -27,7 +28,7 @@ headers
    h# 1c h# 4000 map-membar   ( gp-base dc-base vp-base )
 ;
 : (map-frame-buffer)  ( -- adr )
-   h# 10  h# 100.0000  map-membar
+   h# 10  h# 80.0000  map-membar
 ;
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
