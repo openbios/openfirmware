@@ -544,15 +544,29 @@ hex
 ps-size-t constant ps-size
 rs-size-t constant rs-size
 
-: cdump  (s adr len -- )
+: dump-chars  ( adr -- )
+   h# 10  bounds  do
+     i c@  dup  bl h# 80 within  if  emit  else  drop ." ."  then
+   loop
+;
+: bdump  (s adr len -- )
    base @ >r  hex
    bounds  ?do
       i 8 u.r  ." : "  i  h# 10  bounds  do
          i /l bounds  do  i c@ .2  loop  space
       /l +loop
-      i  h# 10  bounds  do
-         i c@  dup  bl h# 80 within  if  emit  else  drop ." ."  then
-      loop
+      i  dump-chars
+      cr
+   h# 10 +loop
+   r> base !
+;
+: wdump  (s adr len -- )
+   base @ >r  hex
+   bounds  ?do
+      i 8 u.r  ." : "  i  h# 10  bounds  do
+         i w@ 4 u.r space space
+      /w +loop
+      i  dump-chars
       cr
    h# 10 +loop
    r> base !
@@ -563,9 +577,7 @@ rs-size-t constant rs-size
       i 8 u.r  ." : "  i  h# 10  bounds  do
          i l@ 8 u.r space space
       /l +loop
-      i  h# 10  bounds  do
-         i c@  dup  bl h# 80 within  if  emit  else  drop ." ."  then
-      loop
+      i  dump-chars
       cr
    h# 10 +loop
    r> base !
