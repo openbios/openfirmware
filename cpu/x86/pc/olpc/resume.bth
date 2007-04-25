@@ -258,6 +258,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
 \  This is pointless because register 14 is in the working power domain
 \  and does not retain the value across the suspend
 \  h# 4000.4601 h# 1414 port-wl   \ Release SUSP# 5 mS after wakeup
+   h# 0000.9999 h# 1430 port-wl   \ Breadcrumb indicating sleep
    h# 4000.0001 h# 1434 port-wl   \ Turn on WORK_AUX (== MAIN_ON) at 32 uS
    h# 4000.0080 h# 1438 port-wl   \ RESET_OUT# deassert at 4 mS
    h# 0002.ffff h# 1454 port-wl   \ Clear wakeup type bits

@@ -51,8 +51,12 @@
    0000f001.00001400.   5140000f set-msr  \ PMS BAR
 
    \ It is tempting to test bit 0 of PM register 5c, but a 5536 erratum
-   \ prevents that bit from working.
-   1454 port-rl  2 bitand  0<>  if  \ Wakeup event flag
+   \ prevents that bit from working.  Bit 1 works, but LX errata 34
+   \ sometimes requires that we reset the system to fix the memory DLL,
+   \ which destroys all the bits of PM register 5c.  So we put a breadcrumb
+   \ in a PM register that we don't otherwise use.
+   1430 port-rl  h# 9999 # ax cmp  =  if  \ Wakeup event flag
+      0 1430 port-wl
       h# 1b # al mov  al h# 80 # out
       char r 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
       resume-entry # sp mov  sp jmp
