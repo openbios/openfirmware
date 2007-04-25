@@ -23,10 +23,6 @@ my-address my-space h# 200.0010 + encode-phys encode+
 
 : cl!  ( l adr -- )  chip + rl!  ;
 : cl@  ( adr -- l )  chip + rl@  ;
-: cw!  ( w adr -- )  chip + rw!  ;
-: cw@  ( adr -- w )  chip + rw@  ;
-: cb!  ( b adr -- )  chip + rb!  ;
-: cb@  ( adr -- b )  chip + rb@  ;
 
 : map-regs ( -- )
    0 0  h# 0200.0010 my-space +  /regs " map-in" $call-parent to chip
