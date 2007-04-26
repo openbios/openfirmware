@@ -7,11 +7,11 @@
    h#     c100 h# 1010 pl!  \ GPIOL_OUT_AUX1_SELECT - SMBDAT, SMBCLK, UART1TX
 \  h# ffff0000 h# 1014 pl!  \ GPIOL_OUT_AUX2_SELECT - default
 \  h# 1001effe h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - I don't think we need pullups
-   h# 397a0000 h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - Disable pullups on SMI#, DCONBLNK/LOAD/STAT UART1TX, VGA, MICDC
+   h# 3d7a0000 h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - Disable pullups on SMI#, DCONBLNK/LOAD/STAT, THRM_ALARM, UART1TX, VGA, MICDC
 \  h# efff1000 h# 101c pl!  \ GPIOL_PULLDOWN_ENABLE - default
    h# ffff0000 h# 101c pl!  \ GPIOL_PULLDOWN_ENABLE - Disable all pull-downs
-   h#     d6e5 h# 1020 pl!  \ GPIOL_INPUT_ENABLE - DCONBLNK, DCONLOAD, THERM_ALRM, DCONIRQ, DCONSTAT1/0, MEMSIZE, PCI_INTA
-   h#     0081 h# 1024 pl!  \ GPIOL_INPUT_INVERT_ENABLE - Invert DCONIRQ and PCI_INTA#
+   h#     d6e5 h# 1020 pl!  \ GPIOL_INPUT_ENABLE - DCONBLNK, DCONLOAD, THRM_ALARM, DCONIRQ, DCONSTAT1/0, MEMSIZE, PCI_INTA
+   h#     0481 h# 1024 pl!  \ GPIOL_INPUT_INVERT_ENABLE - Invert THRM_ALARM, DCONIRQ and PCI_INTA#
 \  h# ffff0000 h# 1028 pl!  \ GPIOL_IN_FILTER_ENABLE - default
 \  h# ffff0000 h# 102c pl!  \ GPIOL_IN_EVENTCOUNT_ENABLE - default
 \  h# 2d9bd264 h# 1030 pl!  \ GPIOL_READ_BACK

@@ -141,6 +141,10 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    gpio-port h# c4 + # dx mov  dx ax in  ax stos  \ Neg edge enable
    gpio-port h# bc + # dx mov  dx ax in  ax stos  \ High bank lock
 
+   \ Switch the THRM_ALARM# pin to GPIO during suspend, so it doesn't trigger falsely.
+   \ THRM_ALARM# is in the standby power well
+   h# 0400.0000 # ax mov  gpio-port h# 34 + # dx mov  ax dx out  \ GPIO, not THRM_ALARM#
+
 [ifdef] save-display
 \ \ h# 3c 0  do  i gp@ l!+  4 +loop  h# 4c gp@ l!+
 \  h# f # cx mov  gp-pa set-base  begin  0 [bx] ax mov  ax stos  4 # bx add  loopa
