@@ -135,6 +135,13 @@ defer showaddr  ( adr -- )	\ For disassemblers
 \ : ux.  ( adr -- )  base @ >r  hex  (u.) type  r> base !  ;
 \ ' ux. is showaddr
 
+\ Integer division which rounds to nearest instead of truncating
+: rounded-/  ( dividend divisor -- rounded-result )
+   swap 2*  swap /  ( result*2 )
+   dup 1 and +      \ add 1 to the result if it is odd
+   2/               ( rounded-result )
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
