@@ -40,10 +40,80 @@ h# fc2a	constant GPIO5
    true abort" EC didn't respond to port 66 command"
 ;
 
+: ec-release  ( -- )  h# ff h# 6c pc!  ;
+: ec-cmd@  ( -- b )  h# 6c pc@  ;
+: ec-wait-wr  ( -- )  begin  ec-cmd@ 2 and 0=  key? abort" wait wr"  until  ;
+: ec-wait-rd  ( -- )  begin  ec-cmd@ 1 and  key? abort" wait rd"  until  ;
+: ec-cmd!  ( b -- )  ec-wait-wr  h# 6c pc!  ec-wait-wr  ;
+: ec-dat@  ( -- b )  ec-wait-rd  h# 68 pc@  ;
+: ec-dat!  ( b -- )  ec-wait-wr  h# 68 pc!  ;
+: ec-rb    ( -- b )  0 ec-dat!  ec-dat@  ;
+: ec-rw    ( -- w )  ec-rb ec-rb swap bwjoin  ;
+: ec-wb    ( -- w )  ec-dat!  ;
+: ec-ww    ( -- w )  wbsplit ec-wb ec-wb  ;
+
+: flush-ec  ( -- )  begin  ec-cmd@  1 and  while  h# 68 pc@ drop  repeat  ;
+: ec-cmda  ( b -- )  flush-ec  ec-cmd!  ec-dat@ drop  ;
+
+: bat-voltage@   ( -- w )  h# 10 ec-cmda  ec-rw  ;
+: bat-current@   ( -- w )  h# 11 ec-cmda  ec-rw  ;
+: bat-acr@       ( -- w )  h# 12 ec-cmda  ec-rw  ;
+: bat-temp@      ( -- w )  h# 13 ec-cmda  ec-rw  ;
+: ambient-temp@  ( -- w )  h# 14 ec-cmda  ec-rw  ;
+: bat-status@    ( -- b )  h# 15 ec-cmda  ec-rb  ;
+: bat-soc@       ( -- b )  h# 16 ec-cmda  ec-rb  ;
+: bat-gauge-id@  ( -- l.sn4-7 l.sn0-3 )
+   h# 17 ec-cmda
+   ec-rw ec-rw swap wljoin  ec-rw ec-rw swap wljoin  swap
+;
+: bat-gauge@     ( -- b )  h# 18 ec-cmda  h# 31 ec-dat!  ec-dat@  ;  \ 31 is the EEPROM address
+: board-id@      ( -- b )  h# 19 ec-cmda  ec-rb  ;
+: sci-source@    ( -- b )  h# 1a ec-cmda  ec-rw  ;
+: sci-mask!      ( b -- )  h# 1b ec-cmda  ec-dat!  ;
+: sci-mask@      ( -- b )  h# 1c ec-cmda  ec-dat!  ;
+: game-key@      ( -- w )  h# 1d ec-cmda  ec-rw  ;
+: ec-date!       ( day month year -- )  h# 1e ec-cmda  ec-dat! ec-dat! ec-dat!  ;
+: ec-abnormal@   ( -- b )  h# 1f ec-cmda  ec-rb  ;  \ XXX is this byte or word?
+
+: bat-init-lifepo4 ( -- )  h# 21 ec-cmda  ;
+: bat-init-nimh    ( -- )  h# 22 ec-cmda  ;
+: wlan-off         ( -- )  h# 23 ec-cmda  0 ec-dat!  ;
+: wlan-on          ( -- )  h# 23 ec-cmda  1 ec-dat!  ;
+: wlan-wake        ( -- )  h# 24 ec-cmda  ;
+: wlan-rst         ( -- )  h# 25 ec-cmda  ;
+: dcon-disable     ( -- )  h# 26 ec-cmda  0 ec-dat!  ;
+: dcon-enable      ( -- )  h# 26 ec-cmda  1 ec-dat!  ;
+: reset-ec-warm    ( -- )  h# 27 ec-cmda  ;
+: reset-ec         ( -- )  h# 28 ec-cmda  ;
+: write-protect-fw ( -- )  h# 29 ec-cmda  ;
+\ : disable-ec-io    ( -- )  h# 2a ec-cmda  ;  \ ???
+
+\ EC mailbox access words
+
+: ec-mb-adr@   ( -- w )  h# 80 ec-cmda  ec-rw  ;
+: ec-mb-adr!   ( w -- )  h# 81 ec-cmda  ec-ww  ;
+: ec-mb-setup  ( cmd w -- )  ec-mb-adr!  ec-cmda  ;
+
+: ec-mb-b@    ( adr -- b )  h# 8a ec-mb-setup  h# 84 ec-cmda  ec-rb  ;
+: ec-mb-w@    ( adr -- w )  h# 88 ec-mb-setup  h# 82 ec-cmda  ec-rw  ;
+: ec-mb-b!    ( b adr -- )  h# 85 ec-mb-setup  ec-wb  h# 8b ec-cmda  ;
+: ec-mb-w!    ( w adr -- )  h# 83 ec-mb-setup  ec-ww  h# 89 ec-cmda  ;
+
+\ SCI source codes:
+\ SCI_WAKEUP_EVENT             0x01   // Game button,
+\ SCI_BATTERY_STATUS_CHANGE    0x02   // AC plugged/unplugged, ...
+\    Battery inserted/remove, Battery Low, Battery full, Battery destroy
+\ SCI_SOC_CHANGE               0x04   // SOC Change
+\ SCI_ABNORMAL_EVENT           0x08                              
+\ SCI_EB_MODE_CHANGE           0x10
+
 \ This command hard-resets the EC deeply enough for the SP write-protect to
 \ be off when the system is powered up again.
 
-: ec-reset  ( -- )  5  h# 6c pc!  ;
+: ec-reset  ( -- )  5  ec-cmd  ;
+
+: .gauge-sn  ( -- )
+;
 
 : kb3920?  ( -- flag )  h# 6c pc@ h# ff =  if  true exit  then   9 ec-cmd 9 =  ;
 
