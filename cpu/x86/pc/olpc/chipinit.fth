@@ -634,7 +634,7 @@ h# fe00.8000 value vp-base
 \ write_vg_32(DC_DV_CTL, mVal.high);
 
    \ The base address of the frame buffer in physical memory
-   1030 pl@  4 and  if  h# 77e.0000  else  h# f7e.0000  then
+   h# 1808 msr@ drop  4 lshift  h# fff invert and  ( fb-pa )
    h# 88 dc-base + l!   \ DV_CTL register, undocumented
 
 \ hw_fb_map_init(PCI_FB_BASE);

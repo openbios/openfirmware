@@ -199,6 +199,7 @@ warning @ warning off
       \ Amend the fake PCI headers for the LX settings
       h#   281022   nb-hdr h# 20 + l!  \ Vendor/device ID - AMD 
 
+      h# ff000000 gxfb-hdr h#  0 + l!  \ BAR0 MASK - FB
       h# ffffc000 gxfb-hdr h# 10 + l!  \ BAR4 MASK - VIP
       h# 20811022 gxfb-hdr h# 20 + l!  \ Vendor/device ID - AMD 
       h# fe00c000 gxfb-hdr h# 40 + l!  \ BAR4 address - VIP 
