@@ -213,10 +213,6 @@ fload ${BP}/cpu/x86/pc/olpc/gpioinit.fth
 fload ${BP}/cpu/x86/pc/olpc/chipinit.fth
 [then]
 
-dev /cpu
-   d# 366,666,666 " clock-frequency" integer-property
-dend
-
 warning @ warning off
 : stand-init
    stand-init

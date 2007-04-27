@@ -40,8 +40,17 @@ fload ${BP}/dev/pciprobe.fth		\ Generic PCI probing
 
 \ Use the CPU chip's Time Stamp Counter for timing; it does just what we want
 fload ${BP}/cpu/x86/tsc.fth
-d# 366,666 to ms-factor
-d# 367 to us-factor
+
+stand-init:
+   gx?  if  d# 366,666,667  else  d# 433,333,333  then  ( cpu-clock-hz )
+
+   " /cpu" find-device                                  ( cpu-clock-hz )
+      dup " clock-frequency" integer-property           ( cpu-clock-hz )
+   device-end                                           ( cpu-clock-hz )
+
+   d# 1000 rounded-/ dup  to ms-factor                  ( cpu-clock-khz )
+   d# 1000 rounded-/      to us-factor                  ( )
+;
 
 [ifdef] use-root-isa
 0 0  " "  " /" begin-package
