@@ -244,6 +244,7 @@ end-string-array
    low4bits  case
       0 of  .push  ." fs"  endof
       1 of  .pop   ." fs"  endof
+      2 of  ." cpuid"      endof
       3 of  ." bt"   op-col             ea,g  endof
       4 of  ." shld" op-col  1 is wbit  ea,g  ,ib  endof
       5 of  ." shld" op-col  1 is wbit  ea,g  ,cl  endof
@@ -251,6 +252,7 @@ end-string-array
       7 of  ." cmpxchg" op-col          ea,g  endof
       8 of  .push  ." gs"  endof
       9 of  .pop   ." gs"  endof
+   \  a of  ???
       b of  ." bt"   op-col             ea,g  endof
       c of  ." shrd" op-col  1 is wbit  ea,g  ,ib  endof
       d of  ." shrd" op-col  1 is wbit  ea,g  ,cl  endof

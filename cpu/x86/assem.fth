@@ -686,6 +686,7 @@ HEX
 : wrmsr   ( -- )  h# 0f asm8,  h# 30 asm8,  ;
 : rdtsc   ( -- )  h# 0f asm8,  h# 31 asm8,  ;
 : rdmsr   ( -- )  h# 0f asm8,  h# 32 asm8,  ;
+: cpuid   ( -- )  h# 0f asm8,  h# a2 asm8,  ;  \ Arg in %eax, results in ax,bx,dx,cx
 
 \ Structured Conditionals
 \ single pass forces fixed size. optimize for small, fast structures:
