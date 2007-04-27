@@ -368,6 +368,8 @@ not_intel:
 	movl	X86_VENDOR_ID+8(%esi),%eax
 	cmpl	$0x444d4163, %eax	# Is this an AMD CPU?
 	je	amd_type
+	cmpl	$0x43534e20, %eax	# " NSC" - Geode GX, now owned by AMD
+	je	amd_type
 	cmpl	$0x736c7561, %eax	# Is this a VIA CENTAUR?
 	jne	not_amd
 amd_type:

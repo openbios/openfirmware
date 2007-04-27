@@ -280,9 +280,9 @@ void cpu_type(void)
 	v->pae = 0;
 
 #ifdef CPUID_DEBUG
-	dprint(11,0,cpu_id.type,3,1);
-	dprint(12,0,cpu_id.model,3,1);
-	dprint(13,0,cpu_id.cpuid,3,1);
+	dprint(13,0,cpu_id.type,3,1);
+	dprint(14,0,cpu_id.model,3,1);
+	dprint(15,0,cpu_id.cpuid,3,1);
 #endif
 
 	/* If the CPUID instruction is not supported then this is */
@@ -371,6 +371,9 @@ void cpu_type(void)
 				cprint(LINE_CPU, 0, "AMD K5");
 				off = 6;
 				break;
+                        /* case 5 doesn't exist, because it would be the   */
+                        /* AMD Geode GX, but the vendor ID string for that */
+                        /* part says "Geode by NSC", handled elsewhere.    */
 			case 6:
 			case 7:
 				cprint(LINE_CPU, 0, "AMD K6");
@@ -387,6 +390,14 @@ void cpu_type(void)
 			case 9:
 				cprint(LINE_CPU, 0, "AMD K6-III");
 				off = 10;
+				l1_cache = cpu_id.cache_info[3];
+				l1_cache += cpu_id.cache_info[7];
+				l2_cache = (cpu_id.cache_info[11] << 8);
+				l2_cache += cpu_id.cache_info[10];
+				break;
+			case 10:
+				cprint(LINE_CPU, 0, "AMD Geode LX");
+				off = 12;
 				l1_cache = cpu_id.cache_info[3];
 				l1_cache += cpu_id.cache_info[7];
 				l2_cache = (cpu_id.cache_info[11] << 8);
@@ -513,6 +524,11 @@ void cpu_type(void)
 			}
 			l1_cache = cpu_id.cache_info[3] + cpu_id.cache_info[7];
 			l2_cache = (cpu_id.cache_info[11]*256) + cpu_id.cache_info[10];
+		} else if ( cpu_id.vend_id[9] == 'N' ) { /* Geode by NSC (now AMD) */
+				cprint(LINE_CPU, 0, "AMD Geode GX");
+				off = 12;
+				l1_cache = cpu_id.cache_info[3];
+				l1_cache += cpu_id.cache_info[7];
 		} else {				/* GenuineIntel */
 			if (cpu_id.type == 4) {
 			switch(cpu_id.model) {
