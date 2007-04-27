@@ -9,13 +9,6 @@ h# 3f8 value uart-base	\ Virtual address of UART; set later
 : uart@  ( reg# -- byte )  uart-base +  pc@  ;	\ Read from a UART register
 : uart!  ( byte reg# -- )  uart-base +  pc!  ;	\ Write to a UART register
 
-\ Integer division which rounds to nearest instead of truncating
-: rounded-/  ( dividend divisor -- rounded-result )
-   swap 2*  swap /  ( result*2 )
-   dup 1 and +      \ add 1 to the result if it is odd
-   2/               ( rounded-result )
-;
-
 : baud  ( baud-rate -- )
    uart-clock-frequency d# 16 /  swap rounded-/    ( baud-rate-divisor )
 
