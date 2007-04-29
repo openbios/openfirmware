@@ -8,7 +8,7 @@ purpose: Bad block table handling for NAND FLASH
 : round-up  ( n boundary -- n' )  over 1- +  over / *  ;
 
 : /bbt  ( -- bytes )   \ Bytes per bad block table
-   pages/chip pages/eblock /  3 +  4 /   ( bytes )
+   total-pages pages/eblock /  3 +  4 /   ( bytes )
    /page round-up
 ;
 
@@ -70,8 +70,8 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
 \ Page range to search for a bad block table
 : bbtbounds  ( low-page high-page -- )
    0 to bbt0   0 to bbt1
-   pages/chip  #bbtsearch pages/eblock *  -
-   pages/chip  pages/eblock -
+   total-pages  #bbtsearch pages/eblock *  -
+   total-pages  pages/eblock -
 ;
 
 \ Look for existing bad block tables, setting bbt0 and bbt1 if found
@@ -118,7 +118,7 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
 
 \ Scan the device and record the factory bad-block info in a table
 : initial-badblock-scan  ( -- )
-   pages/chip 0  do
+   total-pages 0  do
       i initial-block-bad?  if
          i .bad
       else
@@ -214,7 +214,7 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
       exit
    then
    bbt1  if  bbt1 exit  then
-   pages/chip
+   total-pages
 ;
 
 : map-resblock  ( page# #pages -- page#' #pages )
@@ -275,7 +275,7 @@ external
 \ This is fairly severe, not recommended except in exceptional situations
 : scrub  ( -- )
    release-bbt
-   pages/chip  0  ?do
+   total-pages  0  ?do
       (cr i .
       i erase-block
    pages/eblock +loop
@@ -301,7 +301,7 @@ external
 ;
 : show-bbt  ( -- )
    get-bbt
-   pages/chip  0  ?do
+   total-pages  0  ?do
       i block-reserved?  if  ." Reserved " i .page-byte cr  else
          i block-bad?    if  ." Bad block" i .page-byte cr  then
       then

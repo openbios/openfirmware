@@ -59,7 +59,7 @@ load-base h# 100000 +  constant ob
 ;
 
 : test-all  ( -- )
-   pages/chip 0  do
+   total-pages 0  do
       (cr i .
       i test-eb
       key? ?leave
@@ -68,7 +68,7 @@ load-base h# 100000 +  constant ob
 
 \ XXX skip mfg bad blocks
 : erase-all  ( -- )
-   pages/chip 0  do
+   total-pages 0  do
       (cr i .
       i erase-block
       key? ?leave
@@ -84,7 +84,7 @@ load-base h# 100000 +  constant ob
 
 : scan-all
    cr
-   pages/chip 0  do
+   total-pages 0  do
       i ?.
       ib  /full-page  i 0  pio-read
       mismatch?  if  i .  .where  then
@@ -104,7 +104,7 @@ load-base h# 100000 +  constant ob
 ;
 : .bad  ( page# -- )  .x ." bad" cr  ;
 : initial-badblock-scan  ( -- )
-   pages/chip 0  do
+   total-pages 0  do
       i block-bad?  if
          i .bad
       else
@@ -147,11 +147,12 @@ h# 840 constant /buf  \ 2K data bytes + 64 extra bytes
 [then]
 
 : scan-bad  ( -- )
-   pages/chip 0  do
+   total-pages 0  do
       bbbuf 4  i     h# 800  pio-read  i    .bad
       bbbuf 4  i 1+  h# 800  pio-read  i 1+ .bad
    pages/eblock  +loop
 ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

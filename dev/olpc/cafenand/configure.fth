@@ -1,8 +1,9 @@
 \ See license at end of file
 purpose: Common code for NAND FLASH access
 
-h#  4.0000 instance value pages/chip
-h#      40 instance value pages/eblock
+h#  0 instance value total-pages   \ Start with 0 and add chips
+h#  0 instance value pages/chip
+h# 40 instance value pages/eblock
 
 \ This uses byte 4 to work out the plane parameters
 \ The Samsung part has this byte, but the Hynix part doesn't
@@ -10,7 +11,7 @@ h#      40 instance value pages/eblock
    dup 4 + c@   ( adr plane-data )
    h# 1000 over  4 rshift  7 and  lshift  ( adr plane-data pages/plane )
    1  rot 2 rshift 3 and  lshift          ( adr kbytes/plane #planes )
-   *  to pages/chip                       ( adr )
+   *  to pages/chip        ( adr )
 ;
 
 \ This uses byte 3 to work out the page and erase block sizes
@@ -55,6 +56,7 @@ h#      40 instance value pages/eblock
 : configure  ( -- okay? )
    read-id                ( adr )
    ['] configure-auto catch 0= nip
+   pages/chip  total-pages +  to total-pages
 ;
 
 \ LICENSE_BEGIN

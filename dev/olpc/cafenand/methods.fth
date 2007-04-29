@@ -6,6 +6,24 @@ purpose: interface methods for CaFe NAND controller
    comp 0=
 ;
 
+: configure-all  ( -- error? )
+   0 to total-pages
+
+   \ Set boundary to 0 to look for chip on CE1#
+   \ If one is found, the number of pages will be added to total-pages
+   0 to chip-boundary  configure  drop
+
+   \ Set boundary to 1 to look for chip on CE0#  (configure uses page# 0)
+   1 to chip-boundary  configure  if
+      pages/chip  \ Chip present at CE0#, set boundary above it
+   else
+      0           \ No chip at CE0, set boundary at 0 to use CE1# chip
+   then
+   to chip-boundary
+
+   total-pages 0=   \ Error if there are no chips
+;
+
 external
 
 : dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
@@ -27,7 +45,7 @@ external
    resmap  if
       #reserved-eblocks /eblock
    else
-      pages/chip /page
+      total-pages /page
    then
    um*
 ;
@@ -35,7 +53,7 @@ external
 : open  ( -- okay? )
    map-regs
    init
-   configure 0=  if  false exit  then
+   configure-all  if  false exit  then
 
    /dma-buf dma-alloc to dma-buf-va
    dma-buf-va /dma-buf false " dma-map-in" $call-parent to dma-buf-pa

@@ -15,7 +15,6 @@ my-address my-space h# 200.0010 + encode-phys encode+
 
 " reg" property
 
-
 : my-w@  ( offset -- w )  my-space +  " config-w@" $call-parent  ;
 : my-w!  ( w offset -- )  my-space +  " config-w!" $call-parent  ;
 
@@ -64,12 +63,29 @@ h# e constant bb-offset  \ Location of bad-block table signature in OOB data
 \ Wait not busy - XXX need timeout
 : ctrl-wait  ( -- )  begin  h# c cl@  h# 8000.0000 and 0=  until  ;
 
-\ Think of col as the offset within a disk block, and row as the block#
-: set-address  ( row col -- )  h# 1c cl!  h# 20 cl!  ;
+\ Bit 19 in the command (0) register is reserved according to the
+\ version of the CaFe chip spec that we have, but Jerry Zheng says
+\ that it chooses the chip select - 0 for CS0, 1 for CS1.
+
+1 instance value chip-boundary  \ Boundary between chip 0 and chip 1
+0 instance value cs-mask        \ Chip-select bit for command 0 register
+: chip0  ( -- )  0 to cs-mask  ;
+: chip1  ( -- )  h# 80000 to cs-mask  ;
+
+: set-chip  ( page# -- page#' )
+   dup  chip-boundary >=  if  chip-boundary -  chip1  else  chip0  then
+;
+
+\ For erase-block, the address that is sent to the chip is formatted
+\ differently than for reads and writes.
+: set-erase-page  ( page# -- )  set-chip  lwsplit  h# 20 cl!  h# 1c cl!  ;
+
+: set-page  ( page# offset -- )  h# 1c cl!  set-chip h# 20 cl!  ;
 
 : >cmd  ( cmd# #nonmem #address-bytes -- cmdval )
    dup  if  1- d# 27 lshift h# 4000.0000 or  then  ( cmd# #nm adr-field )
-   swap 7 and d# 22 lshift  or     ( cmd# nm,adr )
+   over 1 and  d# 20 lshift  or  \ #nm[0]          ( cmd# #nm adr+nm0 )
+   swap e and  d# 21 lshift  or  \ #nm[3:1]        ( cmd# adr+nm )
    or  h# 8000.0000 or
 ;
 
@@ -80,29 +96,26 @@ h#   20.0070 1 0 >cmd constant read-status-cmd
 h# 0420.0000 0 5 >cmd constant read-cmd
 h# 0220.0080 0 5 >cmd constant write-cmd
 
-: wait-dma-done  ( -- )
-   begin
-      h# 10 cl@  h# 1000.0000 and
-   until
-   h# 1000.0000 h# 10 cl!   \ Clear DMA done
+: wait-mask  ( bitmask -- )
+   begin  dup h# 10 cl@  and  until  ( bitmask )
+   h# 10 cl!   \ Clear status bit
 ;
-
-: wait-done  ( -- )
-   begin
-      h# 10 cl@  h# 8000.0000 and
-   until
-   h# 8000.0000 h# 10 cl!   \ Clear done
-;
+: wait-dma  ( -- )  h# 1000.0000 wait-mask  ;
+: wait-cmd  ( -- )  h# 8000.0000 wait-mask  ;
 
 \ Control3 - no reset, no BAR write protect
 : write-disable  ( -- )  0 8 cl!  ;
 : write-enable  ( -- )  h# 4000.0000 8 cl!  ;
 
-: cmd  ( n -- )  0 cl!  wait-done  ;
-: cmd2  ( n -- )  4 cl!  ;
+: cmd  ( cmd cmd2 -- )
+   /page d# 10 rshift  3 and  d# 28 lshift  or  4 cl!  ( cmd )
+   cs-mask or  0 cl!                                   ( )
+;
+
 : datalen  ( n -- )  h# 18 cl!  ;
-: read-status  ( -- b )  read-status-cmd cmd  h# 30 cl@ h# ff and  ;
-\ : read-id  ( -- )  0 0 set-address  read-id-cmd cmd  h# 30 cl@  ;
+
+: read-status  ( -- b )  read-status-cmd 0 cmd  wait-cmd  h# 30 cl@ h# ff and  ;
+\ : read-id  ( -- )  0 0 set-page read-id-cmd 0 cmd  wait-cmd  h# 30 cl@  ;
 : dma-off  ( -- )  0 h# 40 cl!  ;
 
 : wait-write-done  ( -- )
@@ -118,10 +131,10 @@ h# 0220.0080 0 5 >cmd constant write-cmd
 
 \ Assumes that the range doesn't straddle a page boundary
 : generic-read  ( len page# offset cmd cmd2 -- chip-adr )
-   cmd2 >r                   ( len page# offset r: cmd )
-   set-address  dma-off      ( len r: cmd )
-   datalen                   ( r: cmd )
-   r> cmd                    ( )
+   >r >r                     ( len page# offset r: cmd cmd2 )
+   set-page  dma-off         ( len r: cmd cmd2 )
+   datalen                   ( r: cmd cmd2 )
+   r> r> cmd wait-cmd        ( )
    chip h# 1000 +            ( adr )
 ;
 : pio-read  ( adr len page# offset -- )
@@ -132,19 +145,19 @@ h# 0220.0080 0 5 >cmd constant write-cmd
 
 : pio-write-raw  ( adr len page# offset -- )
    write-enable
-   dma-off  set-address  dup datalen   ( adr len )
-   chip h# 2000 +  swap  move          ( )
-   h# 2000.0110 cmd2  write-cmd  cmd   ( ) \ 2000. 2K page, (No Auto ECC)
+   dma-off  set-page  dup datalen         ( adr len )
+   chip h# 2000 +  swap  move             ( )
+   write-cmd h# 0000.0110 cmd  wait-cmd   ( ) No Auto ECC
    wait-write-done
    write-disable
 ;
 
 : pio-write-page  ( adr page# -- )
-   write-enable  dma-off               ( adr page# )
-   0 set-address                       ( adr )
-   /page h# e +  dup datalen           ( adr len )
-   chip h# 2000 +  swap  move          ( )
-   h# 6800.0110 cmd2  write-cmd  cmd   ( ) \ 4000. Auto ECC, 2000. 2K page, 0800 R/S ECC
+   write-enable  dma-off                  ( adr page# )
+   0 set-page                             ( adr )
+   /page h# e +  dup datalen              ( adr len )
+   chip h# 2000 +  swap  move             ( )
+   write-cmd h# 4800.0110 cmd  wait-cmd   ( ) \ 4000. Auto ECC, 0800. R/S ECC
    wait-write-done
    write-disable
 ;
@@ -153,7 +166,7 @@ h# 0220.0080 0 5 >cmd constant write-cmd
    /oob  swap  h# 800  read-cmd  h# 130 generic-read
 ;
 
-: read-rst     ( -- )  h# 8000.0000 h# c cl!  ;
+: read-rst  ( -- )  h# 8000.0000 h# c cl!  ;
 
 0 instance value dma-vadr
 0 instance value dma-padr
@@ -176,13 +189,10 @@ h# 0220.0080 0 5 >cmd constant write-cmd
 ;
 
 : slow-dma-read  ( adr len page# offset -- )
-   set-address
-   dup  true dma-setup                 ( )
-   h# 130 cmd2  read-cmd  0 cl!        ( adr chip-adr r: len )
-   \ XXX put a 90 us delay here so we don't start hitting the register
-   \ until almost done.
-   wait-dma-done  \ For DMA reads we wait for DMA completion instead of cmd
-   dma-release                         ( )
+   set-page
+   dup  true dma-setup                  ( )
+   read-cmd h# 0800.0130 cmd  wait-dma  ( adr chip-adr r: len )
+   dma-release                          ( )
 ;
 
 : /dma-buf  ( -- n )  /page /oob +  ;
@@ -192,34 +202,33 @@ defer do-lmove
 
 \ XXX should check ECC
 : read-page  ( adr page# -- )
-   h# 20 cl!   0 h# 1c cl!  
+   0 set-page                          ( adr )
    /page ( /oob + ) h# 18 cl!          ( adr )
    dma-buf-pa h# 44 cl!                ( adr )
    0 h# 48 cl!                         ( adr )
    /page h# a000.0000 or  h# 40 cl!    ( adr )
-   h# 130 4 cl!  read-cmd  0 cl!       ( adr )
-   wait-dma-done  \ For DMA reads we wait for DMA completion instead of cmd
+   read-cmd h# 0800.0130 cmd  wait-dma ( adr )
    dma-buf-va swap /page do-lmove      ( )
 ;
 
 : dma-write-raw  ( adr len page# offset -- )
-   write-enable                          ( adr len page# offset )
-   set-address                           ( adr len )
-   dup  false dma-setup                  ( )
-   h# 2000.0110 cmd2  write-cmd  cmd     ( )
-   wait-write-done
-   dma-release
-   write-disable
+   write-enable                        ( adr len page# offset )
+   set-page                            ( adr len )
+   dup  false dma-setup                ( )
+   write-cmd h# 110 cmd wait-cmd       ( )
+   wait-write-done                     ( )
+   dma-release                         ( )
+   write-disable                       ( )
 ;
 
 : dma-write-page  ( adr page# -- )  \ Size is fixed
    write-enable                          ( adr page# )
-   0 set-address                         ( adr )
+   0 set-page                            ( adr )
    h# 800 h# 80e  false dma-setup        ( )
-   h# 6800.0110 cmd2  write-cmd  cmd     ( )  \ Auto-ECC, 2KB, RS, write cmd
-   wait-write-done
+   write-cmd h# 4800.0110 cmd wait-cmd   ( )  \ Auto-ECC, RS, write cmd
+   wait-write-done                       ( )
 \   dma-release
-   write-disable
+   write-disable                         ( )
 ;
 
 \ : read-page    ( adr page# -- )  dma-read-page   ;
@@ -229,9 +238,8 @@ defer do-lmove
 3 value #erase-adr-bytes  \ Chip dependent
 : erase-block  ( page# -- )
    write-enable
-   lwsplit swap set-address  \  Fiddle the block number
-   h# 1d0 cmd2
-   h# 20.0060 0 #erase-adr-bytes >cmd cmd
+   set-erase-page
+   h# 20.0060 0 #erase-adr-bytes >cmd  h# 1d0 cmd
    wait-write-done
    write-disable
 ;
@@ -240,12 +248,10 @@ defer do-lmove
 
 : send-reset-cmd  ( -- )
    ctrl-wait
-   h# 8000.00ff  cmd   \ NAND Reset command
+   h# 8000.00ff 0 cmd  wait-cmd  \ NAND Reset command
 ;
 
 : init  ( -- )
-   0              0 cl!   \ Clear command register
-   h# 2000.0000   4 cl!   \ Page 2KB
    write-disable
 
    send-reset-cmd
