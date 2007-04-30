@@ -1,22 +1,40 @@
 : olpc-gpio-init
 \  h# f7ff0800 h# 1000 pl!  \ GPIOL_OUTPUT_VALUE 
 \  h# 36ffc900 h# 1004 pl!  \ GPIOL_OUTPUT_ENABLE 
+lx? if
+   h#     c902 h# 1004 pl!  \ GPIOL_OUTPUT_ENABLE - SMBDAT, SMBCLK,       DCONLOAD, UART1TX, MIC
+else
    h#     e902 h# 1004 pl!  \ GPIOL_OUTPUT_ENABLE - SMBDAT, SMBCLK, SMI#, DCONLOAD, UART1TX, MIC
+then
 \  h# ffff0000 h# 1008 pl!  \ GPIOL_OUT_OPENDRAIN - default
 \  h# ffff0000 h# 100c pl!  \ GPIOL_OUTPUT_INVERT_ENABLE - default
    h#     c100 h# 1010 pl!  \ GPIOL_OUT_AUX1_SELECT - SMBDAT, SMBCLK, UART1TX
 \  h# ffff0000 h# 1014 pl!  \ GPIOL_OUT_AUX2_SELECT - default
 \  h# 1001effe h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - I don't think we need pullups
+lx? if
+   h# 1d7a2000 h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - Disable pullups on DCONBLNK/LOAD/STAT, THRM_ALARM, UART1TX, VGA, MICDC
+                            \                       Enable pullup on PCI_INTC#
+else
    h# 3d7a0000 h# 1018 pl!  \ GPIOL_PULLUP_ENABLE - Disable pullups on SMI#, DCONBLNK/LOAD/STAT, THRM_ALARM, UART1TX, VGA, MICDC
+then
 \  h# efff1000 h# 101c pl!  \ GPIOL_PULLDOWN_ENABLE - default
    h# ffff0000 h# 101c pl!  \ GPIOL_PULLDOWN_ENABLE - Disable all pull-downs
+lx? if
+   h#     f6e5 h# 1020 pl!  \ GPIOL_INPUT_ENABLE - DCONBLNK, DCONLOAD, PCI_INTC, THRM_ALARM, DCONIRQ, DCONSTAT1/0, MEMSIZE, PCI_INTA
+   h#     2481 h# 1024 pl!  \ GPIOL_INPUT_INVERT_ENABLE - Invert PCI_INTC, THRM_ALARM, DCONIRQ and PCI_INTA#
+else
    h#     d6e5 h# 1020 pl!  \ GPIOL_INPUT_ENABLE - DCONBLNK, DCONLOAD, THRM_ALARM, DCONIRQ, DCONSTAT1/0, MEMSIZE, PCI_INTA
    h#     0481 h# 1024 pl!  \ GPIOL_INPUT_INVERT_ENABLE - Invert THRM_ALARM, DCONIRQ and PCI_INTA#
+then
 \  h# ffff0000 h# 1028 pl!  \ GPIOL_IN_FILTER_ENABLE - default
 \  h# ffff0000 h# 102c pl!  \ GPIOL_IN_EVENTCOUNT_ENABLE - default
 \  h# 2d9bd264 h# 1030 pl!  \ GPIOL_READ_BACK
    h#     c600 h# 1034 pl!  \ GPIOL_IN_AUX1_SELECT
+lx? if
+   h#     2081 h# 1038 pl!  \ GPIOL_EVENTS_ENABLE - PCI_INTC, PCI_INTA
+else
    h#     0081 h# 1038 pl!  \ GPIOL_EVENTS_ENABLE 
+then
 \  h# 00000000 h# 103c pl!  \ GPIOL_LOCK_ENABLE - default
 \  h# ffff0000 h# 1040 pl!  \ GPIOL_IN_POSEDGE_ENABLE - default
 \  h# ffff0000 h# 1044 pl!  \ GPIOL_IN_NEGEDGE_ENABLE - default
@@ -81,6 +99,9 @@
 \  h#     0000 h# 10de pw!  \ GPIO_07_EVENTCOMPARE_VALUE - default
 
    h# 20000001 h# 10e0 pl!  \ GPIO_MAPPER_X
+lx? if
+   h# 00500000 h# 10e4 pl!  \ GPIO_MAPPER_Y
+then
 \  h# 00000000 h# 10e4 pl!  \ GPIO_MAPPER_Y - default
 \  h# 00000000 h# 10e8 pl!  \ GPIO_MAPPER_Z - default
 \  h# 00000000 h# 10ec pl!  \ GPIO_MAPPER_W - default
