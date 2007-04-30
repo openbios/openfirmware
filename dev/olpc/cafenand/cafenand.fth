@@ -85,7 +85,7 @@ h# e constant bb-offset  \ Location of bad-block table signature in OOB data
 : >cmd  ( cmd# #nonmem #address-bytes -- cmdval )
    dup  if  1- d# 27 lshift h# 4000.0000 or  then  ( cmd# #nm adr-field )
    over 1 and  d# 20 lshift  or  \ #nm[0]          ( cmd# #nm adr+nm0 )
-   swap e and  d# 21 lshift  or  \ #nm[3:1]        ( cmd# adr+nm )
+   swap h# e and  d# 21 lshift  or  \ #nm[3:1]     ( cmd# adr+nm )
    or  h# 8000.0000 or
 ;
 
@@ -147,7 +147,7 @@ h# 0220.0080 0 5 >cmd constant write-cmd
    write-enable
    dma-off  set-page  dup datalen         ( adr len )
    chip h# 2000 +  swap  move             ( )
-   write-cmd h# 0000.0110 cmd  wait-cmd   ( ) No Auto ECC
+   write-cmd h# 0000.0110 cmd  wait-cmd   ( ) \ No Auto ECC
    wait-write-done
    write-disable
 ;
