@@ -38,6 +38,8 @@ h# 40 instance value pages/eblock
 : configure-size  ( adr -- adr )
    \ These are all 2K-page devices
    dup 1+ c@   case  ( adr device-code )
+      h#  0  of  abort  endof  \ This is the result for nonexistent chips
+      h# ff  of  abort  endof  \ Another likely result for nonexistent chips
       h# f2  of  h# 01.0000  endof   \ 128 MB,  1 Gbit,  64K pages
       h# f1  of  h# 02.0000  endof   \ 256 MB,  2 Gbit, 128K pages
       h# dc  of  h# 04.0000  endof   \ 512 MB,  4 Gbit, 256K pages
