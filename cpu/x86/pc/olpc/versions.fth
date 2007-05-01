@@ -12,6 +12,5 @@ macro: EC_VERSION c09
 \ macro: GET_EC cp ~/ec-c05t.bin ec.img
 
 \ The wireless LAN module firmware
-macro: WLAN_RPM 5.220.10.p5-1.olpc1
+macro: WLAN_RPM ${WLAN_VERSION}-1.olpc1
 macro: WLAN_VERSION 5.220.10.p5
-macro: WLAN_DATE 2007-03-30

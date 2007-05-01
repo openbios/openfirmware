@@ -12,7 +12,7 @@ CC=gcc
 #
 # gcc compiler options, these settings should suffice
 #
-CCFLAGS=-Wall -march=i486 -m32 -Os -fomit-frame-pointer -fno-builtin -ffreestanding
+CCFLAGS=-Wall -march=i486 -m32 -Os -fomit-frame-pointer -fno-builtin -ffreestanding -fno-stack-protector
 
 AS=as -32
 
