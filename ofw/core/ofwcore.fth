@@ -2509,7 +2509,7 @@ defer skip-test?  ( phandle -- flag )
 
 : test   \ device-specifier  ( -- )
    \ Get device specifier string
-   optional-arg$  ( adr len )
+   parse-word  ( adr len )
    dup 0=  if
       ??cr ." No device name specified."
    else
