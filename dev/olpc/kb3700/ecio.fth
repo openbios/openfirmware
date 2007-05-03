@@ -42,8 +42,8 @@ h# fc2a	constant GPIO5
 
 : ec-release  ( -- )  h# ff h# 6c pc!  ;
 : ec-cmd@  ( -- b )  h# 6c pc@  ;
-: ec-wait-wr  ( -- )  begin  ec-cmd@ 2 and 0=  key? abort" wait wr"  until  ;
-: ec-wait-rd  ( -- )  begin  ec-cmd@ 1 and  key? abort" wait rd"  until  ;
+: ec-wait-wr  ( -- )  begin  ec-cmd@ 2 and  while  key? abort" wait wr"  1 ms repeat  ;
+: ec-wait-rd  ( -- )  begin  ec-cmd@ 1 and  0=  while  key? abort" wait rd"  1 ms  repeat  ;
 : ec-cmd!  ( b -- )  ec-wait-wr  h# 6c pc!  ec-wait-wr  ;
 : ec-dat@  ( -- b )  ec-wait-rd  h# 68 pc@  ;
 : ec-dat!  ( b -- )  ec-wait-wr  h# 68 pc!  ;
