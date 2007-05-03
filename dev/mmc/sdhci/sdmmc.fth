@@ -33,10 +33,7 @@ external
 : dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;
 
 : open  ( -- )
-   " attach-card" $call-parent  0=  if
-      ." No SD card" cr
-      false exit
-   then
+   " attach-card" $call-parent  0=  if  false exit  then
 
    " "  " deblocker"  $open-package  ?dup  if
       to deblocker
