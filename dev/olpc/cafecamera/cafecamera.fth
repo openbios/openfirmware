@@ -458,8 +458,9 @@ external
 
 : open  ( -- flag )
    map-regs
-   first-open?  if  init false to first-open?  then
+   first-open?  if  init  then
    ov7670-detected? 0=  if  unmap-regs false exit  then
+   false to first-open? 
    alloc-dma-bufs
    read-setup
    true
