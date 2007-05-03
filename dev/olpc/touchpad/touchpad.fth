@@ -380,13 +380,20 @@ d# 600 d# 512 2value last-rel
    gs-only
    begin
       begin  pad?  if  track  then  key? until
-      key upc  [char] P  =  dup  if
-         cursor-on
-         cr last-10
-         key drop
-         background
-      then
-   0= until
+      key upc  case
+         [char] P  of
+            cursor-on
+            cr last-10
+            key drop
+            background
+            false
+         endof
+
+         [char] S  of  suspend stream-on false  endof
+
+         ( key )  true swap
+      endcase
+   until
 
    close
    0

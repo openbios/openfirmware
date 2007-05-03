@@ -1,42 +1,35 @@
-purpose: Controls for the microphone input mode (AC vs. DC coupling)
+purpose: Setup and tests for suspend/resume to RAM
 \ See license at end of file
 
-\ This uses an undocumented register in the AD1888 codec.
-\ It turns off the DC offset compensator.
-
-: post-b1?   ( -- flag )  board-revision  h# b10  >=  ;
-
-: ac-mode  ( -- )
-   post-b1?  if
-      2 >clr OUT_VAL gpio!           \ 5536 GPIO01
-   else
-      2 ec-cmd drop                  \ EC GPIO18
-   then
-;
-: dc-mode  ( -- )
-   post-b1?  if
-      2 OUT_VAL gpio!                \ 5536 GPIO01
-   else
-      1 ec-cmd drop                  \ EC GPIO18
+stand-init:  Suspend/resume
+   " resume" find-drop-in  if
+      suspend-base swap move
+      msr-init-range                    ( adr len )
+      resume-data h# 34 + !             ( adr )
+      >physical  resume-data h# 30 + !  ( )
    then
 ;
 
-warning @ warning off
-: stand-init
-   stand-init
+\ Useful for debugging suspend/resume problems
+\ : sum-forth  ( -- )  0  here origin  do  i c@ +  loop  .  cr  ;
 
-[ifdef] lx-devel  exit  [then]
-   post-b1?  if
-      \ Configure GPIO as output for controlling MIC input AC/DC coupling
-      2 OUT_EN gpio!
-      2 >clr OUT_AUX1 gpio!   \ GPIO, not AUX1 function
-      2 >clr OUT_AUX2 gpio!   \ GPIO, not AUX2 function
-      2 >clr PU_EN    gpio!   \ GPIO, not pull up
-      2 >clr PD_EN    gpio!   \ GPIO, not pull down
-   then
-   ac-mode
+code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
+
+: s3
+   \ Enable wakeup from power button, also clearing
+   \ any status bits in the low half of the register.
+   h# 1840 pl@  h# 100.0000 or  h# 1840 pl!
+
+\  sum-forth
+   [ also dev /mmu ]  pdir-va  h# f0000 ax-call  [ previous definitions ]
+\  sum-forth
 ;
-warning !
+: suspend
+  " video-save" stdout @ $call-method  \ Freeze display
+  s3
+   " video-restore" stdout @ $call-method  \ Unfreeze display
+;
+alias s suspend
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

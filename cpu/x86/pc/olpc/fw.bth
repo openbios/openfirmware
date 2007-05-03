@@ -217,16 +217,19 @@ warning @ warning off
 : stand-init
    stand-init
    root-device
-      atest?  if  " A1" " OLPC A-test"  else
-         board-revision  case
-            0 of  " B2" " OLPC B2"  endof
-            1 of  " B3" " OLPC B3"  endof
-            7 of  " B1" " OLPC B1"  endof
-            ( default )  >r  " ??"  " OLPC ??"  r>
-         endcase
-      then
+      board-revision  case
+         h# a18  of " A1"    " OLPC A-test"  endof
+         h# b18  of " B1"    " OLPC B1"      endof
+         h# b28  of " B2"    " OLPC B2"      endof
+         h# b30 of  " preB3" " OLPC preB3"   endof
+         h# b38 of  " B3"    " OLPC B3"      endof
+         h# b40 of  " preB4" " OLPC preB4"   endof
+         h# b48 of  " B4"    " OLPC B4"      endof
+         ( default )  >r  " ??"  " OLPC ??"  r>
+      endcase
       encode-string  " banner-name" property
       model
+      board-revision " board-revision-int" integer-property
 [ifndef] lx-devel
       8 ec-cmd  " ec-version" integer-property
 
@@ -270,13 +273,13 @@ fload ${BP}/cpu/x86/pc/boot.fth
 [ifdef] lx-devel
    h# 3ea exit     \ USB4:PWR2  USB3:PWR1  USB2:PWR1  USB1:PWR1
 [then]
-   board-revision  case
-      0 of  h# 3ab  endof  \ B2    \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR2
-      1 of  h# 3aa  endof  \ B3    \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR1
-      2 of  h# 3aa  endof  \ C1    \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR1 (guess)
-      7 of  h# 3ab  endof  \ B1
-      ( default )  h# 3ab swap   \ A - and early B1 (actually not switched, but no harm)
-   endcase
+   board-revision  h# b10  h# b2f between  if  \ B1 and B2
+      h# 3ab   \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR2
+   else
+      \ A-test doesn't switch USB power, so the value doesn't matter.
+      \ preB3 and presumably later use this value
+      h# 3aa   \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR1
+   then
 ;
 fload ${BP}/cpu/x86/pc/olpc/usb.fth
 
@@ -361,6 +364,7 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 
 [ifdef] olpc
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
+fload ${BP}/cpu/x86/pc/olpc/suspend.fth      \ Suspend/resume setup
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
@@ -422,27 +426,14 @@ fload ${BP}/ofw/core/dualconsole.fth
 
 : user-switch?  ( -- flag )
 [ifdef] lx-devel  false exit  [then]
-   atest?  if
-      h# fc3f ec@ h# ff <>
-   else
-      \ The EC can tristate the KEY_OUT lines behind our back, so we
-      \ try several times to observe a key press.  Empirically, the EC
-      \ takes about 1.5 mS to finish an (infrequent) scan.
-      d# 5 0  do
-         \ Output enable the KEY_OUT matrix lines
-         h# fc12 ec@  dup h# e0 or  h# fc12 ec!  ( old )
-         h# fc34 ec@ h# 70 and                   ( old keys )
-         \ Output disable the KEY_OUT matrix lines
-         swap  h# e0 invert and  h# fc12 ec!     ( keys )
-         h# 70 <>  if  true unloop exit  then
-         2 ms
-      loop
-      false
+." Game key value is "
+   game-key@  dup .  cr  0<>  dup  if
+      ." Release the game key to continue" cr
+      begin  d# 100 ms  game-key@ 0=  until
    then
 ;
 : fast-boot?  ( -- flag )
 [ifdef] rom-loaded
-false exit
    user-switch? 0=
 [else]
    false
@@ -503,36 +494,6 @@ false exit
 : open-keyboard  ( -- )
    " keyboard" open-dev  ?dup  if  set-stdin  then
 ;
-
-stand-init:  Suspend/resume
-   " resume" find-drop-in  if
-      suspend-base swap move
-      msr-init-range                    ( adr len )
-      resume-data h# 34 + !             ( adr )
-      >physical  resume-data h# 30 + !  ( )
-   then
-;
-
-\ Useful for debugging suspend/resume problems
-\ : sum-forth  ( -- )  0  here origin  do  i c@ +  loop  .  cr  ;
-
-code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
-
-: s3
-   \ Enable wakeup from power button, also clearing
-   \ any status bits in the low half of the register.
-   h# 1840 pl@  h# 100.0000 or  h# 1840 pl!
-
-\  sum-forth
-   [ also dev /mmu ]  pdir-va  h# f0000 ax-call  [ previous definitions ]
-\  sum-forth
-;
-: suspend
-  " video-save" stdout @ $call-method  \ Freeze display
-  s3
-   " video-restore" stdout @ $call-method  \ Unfreeze display
-;
-alias s suspend
 
 : startup  ( -- )
    standalone?  0=  if  exit  then

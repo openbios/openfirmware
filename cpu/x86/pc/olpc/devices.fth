@@ -4,21 +4,6 @@ purpose: Load device drivers according to configuration definitions
 : gx?  ( -- flag )  h# 4c000017 msr@ drop  4 rshift  2 =  ;
 : lx?  ( -- flag )  h# 4c000017 msr@ drop  4 rshift  3 =  ;
 
-: board-revision  ( -- n )
-   lx?  if
-      1
-[ifdef] notyet
-      h# fa20 ec@  case
-         h# b2  of  0  endof
-         h# b3  of  1  endof
-         h# c1  of  2  endof
-      endcase
-[then]
-   else
-      h# 4c00.0014 rdmsr drop 4 rshift 7 and
-   then
-;
-
 fload ${BP}/cpu/x86/pc/isaio.fth
 
 [ifdef] rom-loaded
@@ -262,16 +247,26 @@ stand-init: Wireless reset
 ;
 warning !
 
+: board-revision  ( -- n )
+   atest?  if  h# a18 exit  then
+   lx?  if
+      board-id@  case
+         h# b2  of  h# b30  endof  \ preB3
+         ( board-id )  dup h# 10 * 8 +  swap  \ E.g. b3 -> b38
+      endcase
+   else
+      h# 4c00.0014 rdmsr drop   ( RSTPLL-value )
+      4 rshift 7 and  7 =  if  h# b28  else  h# b18  then
+   then
+;
+
 stand-init: PCI properties
    " /pci" find-device
-      atest?  if
+      board-revision  h# b18  <  if
          d# 33,333,333
       else
-         board-revision  7 =  if
-            d# 33,333,333
-         else
-            d# 66,666,667
-         then
+         \ We switched to 66 MHz at B2
+         d# 66,666,667
       then
       " clock-frequency" integer-property
    dend
