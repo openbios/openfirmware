@@ -38,7 +38,7 @@ create gxfb-hdr  \ All R/O except cmd/stat and cache line size
   fd000000 , fe000000 , fe004000 , fe008000 , \ FB, GP, VG, DF
          0 ,        0 ,        0 ,   30100b , \ VIP (LX only)
          0 ,        0 ,        0 ,        0 ,
-         0 ,        0 ,        0 ,        0 ,
+         0 ,        0 ,        0 ,        0 , \ Interrupt goes at 5c for LX
        3d0 ,      3c0 ,    a0000 ,        0 , \ VG IO, VG IO, EGA FB, MONO FB
          0 ,        0 ,        0 ,        0 ,
 
@@ -203,6 +203,7 @@ warning @ warning off
       h# ffffc000 gxfb-hdr h# 10 + l!  \ BAR4 MASK - VIP
       h# 20811022 gxfb-hdr h# 20 + l!  \ Vendor/device ID - AMD 
       h# fe00c000 gxfb-hdr h# 40 + l!  \ BAR4 address - VIP 
+      h#      10e gxfb-hdr h# 5c + w!  \ Interrupt pin and line - INTA, IRQ 14
    then
 
 [ifdef] lx-devel  exit  [then]
