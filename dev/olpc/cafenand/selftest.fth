@@ -52,7 +52,6 @@ purpose: Selftest for NAND FLASH section of the OLPC CaFe chip
 ;
 : selftest  ( -- error? )
    open 0=  if  true exit  then
-   read-id 1+ c@ h# dc <>  if  close true exit  then
    show-bbt
    write-test
    close
