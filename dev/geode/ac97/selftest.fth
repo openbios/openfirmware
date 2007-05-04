@@ -108,7 +108,7 @@ d# 3212 w,
 : selftest-args  ( -- arg$ )  my-args ascii : left-parse-string 2drop  ;
 
 : ?play-wav-file  ( -- )
-   selftest-args dup 0=  if  drop exit  then
+   selftest-args dup 0=  if  2drop exit  then
 
    \ Read the .wav file
    2dup ." Play " type cr
