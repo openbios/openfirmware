@@ -64,6 +64,34 @@ purpose: Access to I/O ports and physical addresses under Linux
    dup -1 =  abort" mmap failed"
 ;
 : munmap  ( virt len -- )  mem-fd  d# 384  syscall  2drop  ;
+
+-1 value msr-fd
+: ?open-msr  ( -- )
+   msr-fd 0<  if
+      2 " /dev/cpu/0/msr" $cstr 8 syscall 2drop  retval  to msr-fd
+   then
+   msr-fd 0< abort" Can't open /dev/cpu/0/msr"
+;
+8 buffer: msr-data
+: msr-seek  ( msr# -- )  ?open-msr  msr-fd _fseek  ;
+
+: msr@  ( msr# -- d )
+   msr-seek
+   msr-data 8 msr-fd _fread  8 <>  abort" Can't read MSR"
+   msr-data d@
+;
+: msr!  ( d msr# -- )
+  msr-seek
+  msr-data d!
+  msr-data 8 msr-fd _fwrite  8 <>  abort" Can't write MSR"
+;
+: .msr  ( msr# -- )
+   msr@         ( d )
+   push-hex     ( d )
+   <# [char] . hold  # # # # # # # # [char] . hold # # # # # # # # #> type  ( )
+   pop-base
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
