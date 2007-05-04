@@ -56,12 +56,16 @@ d# 60,000 constant burnin-time		\ 1 minute
    " fill-rectangle" $call-screen	( )
 ;
 
-: random-selftest  ( -- error? )
+: random-selftest  ( -- )
    get-msecs rn !
-   get-msecs burnin-time +  
-   begin  get-msecs over u< key? not and  while
-      .random-rect
-   repeat
+   get-msecs burnin-time +    ( limit )
+   begin
+      get-msecs over u<       ( limit reached? )
+      key? 0= and             ( limit end? )
+   while                      ( limit )
+      .random-rect            ( limit )
+   repeat                     ( limit )
+   drop
 ;
 
 : selftest  ( -- error? )
