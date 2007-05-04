@@ -61,9 +61,9 @@ d# 60,000 constant burnin-time		\ 1 minute
    get-msecs burnin-time +    ( limit )
    begin
       get-msecs over u<       ( limit reached? )
-      key? 0= and             ( limit end? )
    while                      ( limit )
       .random-rect            ( limit )
+      key?  if  key 2drop exit  then
    repeat                     ( limit )
    drop
 ;
@@ -74,7 +74,7 @@ d# 60,000 constant burnin-time		\ 1 minute
    d# 2000 ms
    .vertical-bars16
    d# 2000 ms
-   ." Press a key to abort." cr
+   ." Press a key to stop early." cr
    d# 1000 ms
    random-selftest
    false
