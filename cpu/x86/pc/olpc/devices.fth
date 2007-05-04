@@ -123,6 +123,7 @@ stand-init: RTC
 ;
 
 fload ${BP}/cpu/x86/pc/cpunode.fth
+fload ${BP}/cpu/x86/k6cputest.fth	\ Burnin test for K6 CPU
 
 0 [if]
 fload ${BP}/ofw/console/bailout.fth
@@ -305,6 +306,8 @@ end-package
 devalias screen /display
 
 fload ${BP}/dev/geode/acpi.fth           \ Power management
+
+fload ${BP}/cpu/x86/adpcm.fth            \ ADPCM decoding
 
 [ifdef] notdef-olpc
 \ fload ${BP}/dev/olpc/plccflash.fth  \ PLCC LPC debug FLASH

@@ -295,8 +295,9 @@ d# 48000 instance value sample-rate
    prd-out-phys false out-channel start-dma  ( len )
 ;
 
+: open-args  ( -- arg$ )  my-args ascii : left-parse-string 2swap 2drop  ;
 : parse-args  ( -- flag )
-   my-args  begin  dup  while       \ Execute mode modifiers
+   open-args  begin  dup  while       \ Execute mode modifiers
       ascii , left-parse-string            ( rem$ first$ )
       my-self ['] $call-method  catch  if  ( rem$ x x x )
          ." Unknown argument" cr

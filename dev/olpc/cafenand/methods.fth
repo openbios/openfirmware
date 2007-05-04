@@ -24,6 +24,8 @@ purpose: interface methods for CaFe NAND controller
    total-pages 0=   \ Error if there are no chips
 ;
 
+: open-args  ( -- arg$ )  my-args ascii : left-parse-string 2swap 2drop  ;
+
 external
 
 : dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
@@ -62,7 +64,7 @@ external
 
    get-bbt
 
-   my-args  dup  if   ( arg$ )
+   open-args  dup  if   ( arg$ )
       ascii , left-parse-string    ( arg2$ arg1$ )
       2dup " zip" $=  if           ( arg2$ arg1$ )
          2drop                         ( arg2$ )
