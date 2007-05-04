@@ -37,3 +37,5 @@
    " ${BP}/cpu/x86/pc/olpc/images/usbkey.565"   " disk.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wireless.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/xo.565"       " xo.565"        $add-deflated-dropin
+
+   " ${BP}/ofw/termemu/gallant.obf"             " font"          $add-deflated-dropin

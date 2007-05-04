@@ -61,11 +61,28 @@ defer font
 
 headerless
 : decode-font  ( hdr-adr -- bits-adr width height advance min-char #glyphs )
-   dup d# 24 + swap          ( bits-adr hdr-adr )
-   d# 24                     ( bits-adr hdr-adr hdr-len )
-   4 decode-bytes  " font"  $=  0= abort" Not a font"  ( bits-adr str )
-   5 0 do  decode-int -rot  loop  ( bits-adr width height advance min #gl str )
-   2drop                     ( bits-adr width height advance min-char #glyphs )
+   dup " font" comp 0=  if   ( hdr-adr )   \ OBF font format
+      dup d# 24 +  swap              ( bit-adr hdr-adr )
+      4 +  d# 20                     ( bit-adr hdr-adr' hdr-len )
+      5 0 do  decode-int -rot  loop  ( bits-adr width height advance min #gl str )
+      2drop                  ( bits-adr width height advance min-char #glyphs )
+      exit
+   then                      ( hdr-adr )
+
+   \ http://www.win.tue.nl/~aeb/linux/kbd/font-formats-1.html
+   dup le-l@ h# 864ab572 =  if  ( hdr-adr )   \ PSF2 format, little endian
+      >r                        ( r: hdr-adr )
+      r@  r@ 8 + le-l@ +        ( bits-adr r: hdr-adr )
+      r@ h# 1c + le-l@          ( bits-adr width r: hdr-adr )
+      r@ h# 18 + le-l@ negate   ( bits-adr width height r: hdr-adr )
+      over 7 + 8 /              ( bits-adr width height advance r: hdr-adr )
+      0                         ( bits-adr width height advance min r: hdr-adr )
+      r@ h# 10 + le-l@          ( bits-adr width height advance #glyphs r: hdr-adr )
+      r> drop                   ( bits-adr width height advance #glyphs )
+      exit
+   then                         ( hdr-adr )
+
+   true abort" Not a font"
 ;
 headers
 also forth definitions

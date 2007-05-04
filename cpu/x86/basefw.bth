@@ -59,7 +59,7 @@ fload ${BP}/cpu/x86/fb8-ops.fth		\ Machine code for 8-bit ops
 
 fload ${BP}/ofw/termemu/loadfb.fth	\ S Frame buffer support
 \ fload ${BP}/ofw/termemu/cp881-16.fth	\ ISO-Latin1 Font
-fload ${BP}/ofw/termemu/gallant2.fth	\ Sun font, tip o' the hat to Vaughn Pratt
+fload ${BP}/ofw/termemu/difont.fth	\ Get font from a dropin module
 
 fload ${BP}/ofw/gui/alert.fth		\ Basic dialogs and alerts
 fload ${BP}/dev/stringio.fth		\ Output diversion
