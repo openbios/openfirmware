@@ -426,8 +426,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 
 : user-switch?  ( -- flag )
 [ifdef] lx-devel  false exit  [then]
-." Game key value is "
-   game-key@  dup .  cr  0<>  dup  if
+   game-key@  0<>  dup  if
       ." Release the game key to continue" cr
       begin  d# 100 ms  game-key@ 0=  until
    then
