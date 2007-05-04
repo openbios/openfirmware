@@ -204,6 +204,13 @@ device-end
 
 [ifdef] virtual-mode
 fload ${BP}/cpu/x86/pc/mmusetup.fth	\ Initial values for MMU lists
+dev /mmu
+: claim-rom  ( -- )
+   (initial-claim)
+   rom-pa  h# ffff.0000 over -  claim-virtual drop   \ ROM 1-1 map
+;
+' claim-rom to initial-claim
+dend
 [then]
 
 fload ${BP}/cpu/x86/pc/olpc/devices.fth

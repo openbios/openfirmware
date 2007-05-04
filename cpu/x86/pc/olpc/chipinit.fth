@@ -628,6 +628,7 @@ h# fe00.8000 value vp-base
 
 : video-map
 [ifdef] virtual-mode
+   gp-base h# c000 0  mmu-claim drop
    gp-base dup  h# c000  -1  mmu-map
 [then]
 

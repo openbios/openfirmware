@@ -95,8 +95,10 @@ stand-init: USB setup
    h# 400000ef.c00fffff. h# 5101.0020 wrmsr
    h# 00000002.efc00000. h# 5120.000b wrmsr
 [ifdef] virtual-mode
-   h# efc00000 dup h# 1000 -1 mmu-map  \ UOC
-   h# fe01a000 dup h# 1000 -1 mmu-map  \ OHCI
+   h# efc00000 h# 1000 0 mmu-claim drop  \ UOC
+   h# efc00000 dup h# 1000 -1 mmu-map    \ UOC
+   h# fe01a000 h# 1000 0 mmu-claim drop  \ OHCI
+   h# fe01a000 dup h# 1000 -1 mmu-map    \ OHCI
 [then]
    \ Configure the assignment of 2 USB Power Enable pins to USB ports
    \ to correspond to the way they are wired on the board.
