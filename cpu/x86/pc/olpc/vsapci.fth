@@ -34,7 +34,7 @@ create gxfb-hdr  \ All R/O except cmd/stat and cache line size
   ff800000 , fffff000 , fffff000 , fffff000 ,
          0 ,        0 ,        0 ,        0 ,
 
-    30100b ,  2200003 ,  3000000 ,        0 ,
+    30100b ,  2200002 ,  3000000 ,        8 ,
   fd000000 , fe000000 , fe004000 , fe008000 , \ FB, GP, VG, DF
          0 ,        0 ,        0 ,   30100b , \ VIP (LX only)
          0 ,        0 ,        0 ,        0 ,
@@ -58,10 +58,10 @@ create aes-hdr  \ LX security block
   ffffc000 ,        0 ,        0 ,        0 ,
          0 ,        0 ,        0 ,        0 ,
 
-  20281022 ,  2a00006 , 10100000 ,        8 ,
+  20821022 ,  2a00006 , 10100000 ,        8 ,
   fe010000 ,        0 ,        0 ,        0 ,  \ I/O BAR - base of virtual registers
          0 ,        0 ,        0 , 20821022 ,
-         0 ,        0 ,        0 ,        0 ,
+         0 ,        0 ,        0 ,      10e ,  \ INTA, IRQ 14
          0 ,        0 ,        0 ,        0 ,
          0 ,        0 ,        0 ,        0 ,
          0 ,        0 ,        0 ,        0 ,
@@ -197,12 +197,14 @@ warning @ warning off
 
    lx?  if
       \ Amend the fake PCI headers for the LX settings
-      h#   281022   nb-hdr h# 20 + l!  \ Vendor/device ID - AMD 
+      h# 20801022   nb-hdr h# 20 + l!  \ Vendor/device ID - AMD 
+      h# 20801022   nb-hdr h# 4c + l!  \ Vendor/device ID - AMD 
 
-      h# ff000000 gxfb-hdr h#  0 + l!  \ BAR0 MASK - FB
+      h# ff000008 gxfb-hdr h#  0 + l!  \ BAR0 MASK - FB
       h# ffffc000 gxfb-hdr h# 10 + l!  \ BAR4 MASK - VIP
       h# 20811022 gxfb-hdr h# 20 + l!  \ Vendor/device ID - AMD 
       h# fe00c000 gxfb-hdr h# 40 + l!  \ BAR4 address - VIP 
+      h# 20811022 gxfb-hdr h# 4c + l!  \ Vendor/device ID - AMD 
       h#      10e gxfb-hdr h# 5c + w!  \ Interrupt pin and line - INTA, IRQ 14
    then
 

@@ -339,7 +339,11 @@ create lx-msr-init
   msr: 0000.1210 00000000.00000003.  \ Suspend on halt and pause
   msr: 0000.1900 00000000.02001131.  \ Pausedly 16 clocks, SUSP + TSC_SUSP
   msr: 0000.1920 00000000.0000000f.  \ Enable L2 cache
-  msr: 0000.1a00 00000000.00000001.  \ GX p 178 Imprecise exceptions
+  msr: 0000.1930 00000000.00070303.  \ MSR_PMODE
+  msr: 0000.1981 00000000.2814d352.  \ MSS_ARRAY_CTL0 - cache timings - value from PRS
+  msr: 0000.1982 00000000.1068334d.  \ MSS_ARRAY_CTL1 - cache timings - value from PRS
+  msr: 0000.1983 00000106.83104104.  \ MSS_ARRAY_CTL2 - cache timings - value from PRS
+  msr: 0000.1a00 00000000.00000001.  \ Imprecise exceptions
 
 \ northbridgeinit: GLIUS
 \ msr: 1000.0020 20000000.000fff80.   \ 0 - 7.ffff low RAM Early startup
@@ -351,13 +355,13 @@ create lx-msr-init
 \ msr: 1000.0026 000000ff.fff00000.   \ Unmapped - default
 
 \ Graphics
-\ msr: 1000.0029 20a7e0fd.7fffd000.   \ fd00.0000 - fd7f.ffff mapped to 77e.0000 Memsize dependent (Frame Buffer)
+\ msr: 1000.0029 20a7e0fd.ffffd000.   \ fd00.0000 - fdff.ffff mapped to f00.0000 Memsize dependent, fbsize dependent
   msr: 1000.002a 801ffcfe.007fe004.   \ fe00.4000 - fe00.7fff mapped to 0 in DC space
 
 \ msr: 1000.002b 00000000.000fffff.   \ Unmapped - default
 \ msr: 1000.002c 00000000.00000000.   \ Unmapped - default (Swiss Cheese)
 
-  msr: 1000.0080 00000000.00000003.   \ Coherency
+  msr: 1000.0080 00000000.00000003.   \ Coherency - route snoops to CPU
   msr: 1000.0082 80000000.00000000.   \ Arbitration
   msr: 1000.0083 00000000.0000ff00.   \ Disable SMIs
   msr: 1000.0084 00000000.0000ff00.   \ Disable Async errors
@@ -376,11 +380,11 @@ create lx-msr-init
 \ msr: 4000.0023 000000ff.fff00000.   \ Unmapped - default
   msr: 4000.0024 200000fe.004ffffc.   \ fe00.4000 - fe00.7fff DC, route to GLIU0
   msr: 4000.0025 400000fe.008ffffc.   \ fe00.8000 - fe00.bfff VP, route to VP in GLIU1
-  msr: 4000.0026 a00000fe.00cffffc.   \ fe00.c000 - fe00.ffff VIP, route to VP in GLIU1
+  msr: 4000.0026 a00000fe.00cffffc.   \ fe00.c000 - fe00.ffff VIP, route to VIP in GLIU1
 \ msr: 4000.0027 000000ff.fff00000.   \ Unmapped - default
 \ msr: 4000.0028 000000ff.fff00000.   \ Unmapped - default
 \ msr: 4000.0029 000000ff.fff00000.   \ Unmapped - default
-  msr: 4000.002a 200000fd.7fffd000.   \ frame buffer - fd00.0000 .. fd7f.ffff, route to GLIU0
+  msr: 4000.002a 200000fd.ffffd000.   \ frame buffer - fd00.0000 .. fdff.ffff, route to GLIU0, fbsize
   msr: 4000.002b c00000fe.013fe010.   \ Security Block - fe01.0000 .. fe01.3fff
 \ msr: 4000.002c 20000007.7ff00100.   \ 10.0000 - 0f7f.ffff High RAM - Memsize dependent
 \ msr: 4000.002d 00000000.000fffff.   \ Unmapped - default
@@ -402,7 +406,7 @@ create lx-msr-init
   msr: 0000.2001 00000000.00000220.
   msr: 4c00.2001 00000000.00000001.
   msr: 5000.2001 00000000.00000027.
-  msr: 5800.2001 00000000.00000000.
+  msr: 5800.2001 00000000.00000013.
   msr: 8000.2001 00000000.00000320.
 
   msr: 0000.1700 00000000.00000400.  \ Evict clean lines - necessary for L2
@@ -418,8 +422,8 @@ create lx-msr-init
   msr: 0000.180d 00000000.00000000.  \ Cache e0000-fffff
 \ msr: 0000.180e 00000001.00000001.  \ SMM off - default
 \ msr: 0000.180f 00000001.00000001.  \ DMM off - default
-  msr: 0000.1810 fd7ff000.fd000111.  \ Video (write through)
-  msr: 0000.1811 fe00f000.fe000101.  \ GP + DC + VP + VIP registers non-cacheable
+  msr: 0000.1810 fdfff000.fd000111.  \ Video (write through), fbsize
+  msr: 0000.1811 fe013000.fe000101.  \ GP + DC + VP + VIP + AES registers non-cacheable
 \ msr: 0000.1812 00000000.00000000.  \ Disabled - default
 \ msr: 0000.1813 00000000.00000000.  \ Disabled - default
 \ msr: 0000.1814 00000000.00000000.  \ Disabled - default
@@ -428,31 +432,37 @@ create lx-msr-init
 \ msr: 0000.1817 00000000.00000000.  \ Disabled - default
 
 \ PCI
-\ msr: 5000.2000 00000000.00105001.  \ RO
+\ msr: 5000.2000 00000000.00105400.  \ RO
   msr: 5000.2001 00000000.00000017.  \ Priority 1, domain 7
   msr: 5000.2002 00000000.003f003f.  \ No SMIs
   msr: 5000.2003 00000000.00370037.  \ No ERRs
   msr: 5000.2004 00000000.00000015.  \ Clock gating for 3 clocks
   msr: 5000.2005 00000000.00000000.  \ Enable some PCI errors
-  msr: 5000.2010 fff01120.001a021d.  \ PCI timings
+  msr: 5000.2010 fff01120.001a021d.  \ PCI timings - LB has the latency timer at max
   msr: 5000.2011 04000300.00800f01.  \ GLPCI_ARB - LX page 581
-  msr: 5000.2014 00000000.00f000ff.
-  msr: 5000.2015 30303030.30303030.  \ Cache, prefetch, write combine a0000 - bffff
-  msr: 5000.2016 30303030.30303030.  \ Cache, prefetch, write combine c0000 - dffff
-  msr: 5000.2017 34343434.30303030.  \ Cache, prefetch, write combine e0000 - fffff, write protect f0000 - fffff
+
+\ I don't think we need to do anything special for the DOS hole from PCI
+\ msr: 5000.2014 00000000.00f000ff.  \ Fixed region enables - f, b, and a
+\ msr: 5000.2015 30303030.30303030.  \ Cache, prefetch, write combine a0000 - bffff
+\ msr: 5000.2016 30303030.30303030.  \ Cache, prefetch, write combine c0000 - dffff
+\ msr: 5000.2017 34343434.30303030.  \ Cache, prefetch, write combine e0000 - fffff, write protect f0000 - fffff
+
   msr: 5000.2018 000ff000.00000130.  \ Cache PCI DMA to low memory 0 .. fffff
 \ msr: 5000.2019 0f7ff000.00100130.  \ Cache PCI DMA to high memory - Memsize dependent
 \ msr: 5000.201a 4041f000.40400120.
 \ msr: 5000.201a 00000000.00000000.  \ Off - default
   msr: 5000.201b 00000000.00000000.
   msr: 5000.201c 00000000.00000000.
-  msr: 5000.201e 00000000.00000f00.
+  msr: 5000.201e 00000000.00000f00.  \ PCI function number for MSR accesses to VP port
   msr: 5000.201f 00000000.0000004b.
 \ We don't need posted I/O writes to IDE, as we have no IDE
 
-\ clockgating
-\ msr: 5400.2004 00000000.00000000.  \ Clock gating - default
-\ msr: 5400.2004 00000000.00000003.  \ Clock gating
+\ VIP
+\ msr: 5400.2004 00000000.00000005.  \ Clock gating - default
+
+\ AES
+\ msr: 5800.2002 00000007.00000007.  \ SMI mask - default is all off
+\ msr: 5800.2004 00000000.00000015.  \ Clock gating - default
 
 \ chipsetinit(nb);
 
@@ -472,23 +482,26 @@ create lx-msr-init
 \ setup_gx2();
 
 \ Graphics init
-  msr: a000.2001 00000000.0fd60000.  \ CBASE field is FB addr + 6M
+  msr: a000.2001 00000000.0fde0000.  \ CBASE field is FB addr + 14M, fbsize
   msr: a000.2002 00000001.00000001.  \ Disable GP SMI
   msr: a000.2003 00000003.00000003.  \ Disable GP ERR
   msr: a000.2004 00000000.00000001.  \ Clock gating
   msr: 8000.2001 00000000.00000720.  \ VG config (priority)
-  msr: 8000.2002 00001fff.00001fff.  \ Disable SMIs
+  msr: 8000.2002 1001ffff.1001ffff.  \ Disable SMIs
   msr: 8000.2003 0000003f.0000003f.  \ Disable ERRs
 \ msr: 8000.2004 00000000.00000000.  \ Clock gating - default
 \ msr: 8000.2004 00000000.00000055.  \ Clock gating
-  msr: 8000.2011 00000000.00000001.  \ VG SPARE - VG fetch state machine hardware fix off
-  msr: 8000.2012 00000000.06060202.  \ VG DELAY
+  msr: 8000.2011 00000000.00000042.  \ VG SPARE - VG fetch state machine hardware fix off
+  msr: 8000.2012 00000000.00000302.  \ VG DELAY
 
 \ msr: 4c00.0015 00000037.00000001.  \ MCP DOTPLL reset; unnecessary because of later video init
 
 \ More GLCP stuff
-  msr: 4c00.000f f2f100ff.56960444.  \ I/O buffer delay controls
-  msr: 4c00.0016 00000000.00000000.  \ Turn off debug clock
+  msr: 4c00.000f f2f100ff.56960444.  \ I/O buffer delay controls - LB uses 82f1.00aa.5696.0444
+           \ Our value has lower drive for mem signals and more delay for BA, MA, CKE, CS, RAS, CAS, WE
+
+  msr: 4c00.0016 00000000.00000000.  \ Turn off debug clock - LB has 2 (default, GLIU1 to debug logic)
+\ msr: 4c00.001e 00000000.0000603c.  \ Processor throttle off delay - LB values
   msr: 4c00.2004 00000000.00000015.  \ Hardware clock gating for everything (Insyde uses 0x14)
 
   msr: 5000.2014 00000000.00ffffff.  \ Enables PCI access to low mem
@@ -642,7 +655,7 @@ h# fe00.8000 value vp-base
 
    h# fd00.0000 h#  84 dc-base + l!   \ GLIU0 Memory offset
    h# fd00.0000 h#  4c gp-base + l!   \ GP base
-   h# fd80.0000 h# 460 vp-base + l!   \ Flat panel base
+   h# fd80.0000 h# 460 vp-base + l!   \ Flat panel base (reserved on LX)
 
    \ VGdata.hw_vga_base = h# fd7.c000
    \ VGdata.hw_cursor_base = h# fd7.bc00
