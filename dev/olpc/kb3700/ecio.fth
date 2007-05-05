@@ -40,53 +40,86 @@ h# fc2a	constant GPIO5
    true abort" EC didn't respond to port 66 command"
 ;
 
-: ec-release  ( -- )  h# ff h# 6c pc!  ;
 : ec-cmd@  ( -- b )  h# 6c pc@  ;
-: ec-wait-wr  ( -- )  begin  ec-cmd@ 2 and  while  key? abort" wait wr"  1 ms repeat  ;
-: ec-wait-rd  ( -- )  begin  ec-cmd@ 1 and  0=  while  key? abort" wait rd"  1 ms  repeat  ;
-: ec-cmd!  ( b -- )  ec-wait-wr  h# 6c pc!  ec-wait-wr  ;
+
+: ec-release  ( -- )  h# ff h# 6c pc!  1 ms  h# 68 pc@  drop  ;
+: ec-wait-wr  ( -- )
+   d# 70 0  do
+      ec-cmd@ 2 and  0=  if  unloop exit  then
+      d# 10 ms
+   loop
+   ." EC write timed out" cr
+;
+\ Empirically, it can take a long time for the EC to sense the game
+\ keys when several are down at once.  500 mS is not enough.
+: ec-wait-rd  ( -- )
+   d# 70 0  do
+      ec-cmd@ 1 and  if  unloop exit  then
+      d# 10 ms
+   loop
+   ." EC read timed out" cr
+;
+: flush-ec  ( -- )
+   begin  ec-cmd@  dup h# 80 and  while
+      drop  ." EC release" cr  ec-release  d# 10 ms
+   repeat  ( 6c-val )
+
+   begin  1 and  while            ( )
+      h# 68 pc@ drop              ( )
+      d# 200 us                   ( )
+      ec-cmd@                     ( 6c-val )
+   repeat                         ( 6c-val )
+;
+: ec-cmd!  ( b -- )  ec-wait-wr  h# 6c pc!  ( ec-wait-wr )  ;
+
 : ec-dat@  ( -- b )  ec-wait-rd  h# 68 pc@  ;
 : ec-dat!  ( b -- )  ec-wait-wr  h# 68 pc!  ;
+
 : ec-rb    ( -- b )  0 ec-dat!  ec-dat@  ;
 : ec-rw    ( -- w )  ec-rb ec-rb swap bwjoin  ;
 : ec-wb    ( -- w )  ec-dat!  ;
 : ec-ww    ( -- w )  wbsplit ec-wb ec-wb  ;
 
-: flush-ec  ( -- )  begin  ec-cmd@  1 and  while  h# 68 pc@ drop  repeat  ;
 : ec-cmda  ( b -- )  flush-ec  ec-cmd!  ec-dat@ drop  ;
+: ec-cmd0  ( -- )  ec-cmda ec-release  ;
 
-: bat-voltage@   ( -- w )  h# 10 ec-cmda  ec-rw  ;
-: bat-current@   ( -- w )  h# 11 ec-cmda  ec-rw  ;
-: bat-acr@       ( -- w )  h# 12 ec-cmda  ec-rw  ;
-: bat-temp@      ( -- w )  h# 13 ec-cmda  ec-rw  ;
-: ambient-temp@  ( -- w )  h# 14 ec-cmda  ec-rw  ;
-: bat-status@    ( -- b )  h# 15 ec-cmda  ec-rb  ;
-: bat-soc@       ( -- b )  h# 16 ec-cmda  ec-rb  ;
+: ec-cmd-w@  ( cmd -- w )  ec-cmda  ec-rw  ec-release  ;
+: ec-cmd-b@  ( cmd -- w )  ec-cmda  ec-rb  ec-release  ;
+: ec-cmd-b!  ( b cmd -- )  ec-cmda  ec-wb  ec-release  ;
+
+: bat-voltage@   ( -- w )  h# 10 ec-cmd-w@  ;
+: bat-current@   ( -- w )  h# 11 ec-cmd-w@  ;
+: bat-acr@       ( -- w )  h# 12 ec-cmd-w@  ;
+: bat-temp@      ( -- w )  h# 13 ec-cmd-w@  ;
+: ambient-temp@  ( -- w )  h# 14 ec-cmd-w@  ;
+: bat-status@    ( -- b )  h# 15 ec-cmd-b@  ;
+: bat-soc@       ( -- b )  h# 16 ec-cmd-b@  ;
 : bat-gauge-id@  ( -- l.sn4-7 l.sn0-3 )
    h# 17 ec-cmda
    ec-rw ec-rw swap wljoin  ec-rw ec-rw swap wljoin  swap
+   ec-release
 ;
-: bat-gauge@     ( -- b )  h# 18 ec-cmda  h# 31 ec-dat!  ec-dat@  ;  \ 31 is the EEPROM address
-: board-id@      ( -- b )  h# 19 ec-cmda  ec-rb  ;
-: sci-source@    ( -- b )  h# 1a ec-cmda  ec-rw  ;
-: sci-mask!      ( b -- )  h# 1b ec-cmda  ec-dat!  ;
-: sci-mask@      ( -- b )  h# 1c ec-cmda  ec-dat!  ;
-: game-key@      ( -- w )  h# 1d ec-cmda  ec-rw  ;
-: ec-date!       ( day month year -- )  h# 1e ec-cmda  ec-dat! ec-dat! ec-dat!  ;
-: ec-abnormal@   ( -- b )  h# 1f ec-cmda  ec-rb  ;  \ XXX is this byte or word?
+: bat-gauge@     ( -- b )  h# 18 ec-cmda  h# 31 ec-wb  ec-dat@  ec-release  ;  \ 31 is the EEPROM address
+: board-id@      ( -- b )  h# 19 ec-cmd-b@  ;
+: sci-source@    ( -- b )  h# 1a ec-cmd-w@  ;
+: sci-mask!      ( b -- )  h# 1b ec-cmd-b!  ;
+: sci-mask@      ( -- b )  h# 1c ec-cmd-b@  ;
+: game-key@      ( -- w )  h# 1d ec-cmda  ec-rw  ec-release  ;
+: ec-date!       ( day month year -- )  h# 1e ec-cmda  ec-wb ec-wb ec-wb  ec-release  ;
+: ec-abnormal@   ( -- b )  h# 1f ec-cmd-b@  ;  \ XXX is this byte or word?
 
-: bat-init-lifepo4 ( -- )  h# 21 ec-cmda  ;
-: bat-init-nimh    ( -- )  h# 22 ec-cmda  ;
-: wlan-off         ( -- )  h# 23 ec-cmda  0 ec-dat!  ;
-: wlan-on          ( -- )  h# 23 ec-cmda  1 ec-dat!  ;
-: wlan-wake        ( -- )  h# 24 ec-cmda  ;
-: wlan-rst         ( -- )  h# 25 ec-cmda  ;
-: dcon-disable     ( -- )  h# 26 ec-cmda  0 ec-dat!  ;
-: dcon-enable      ( -- )  h# 26 ec-cmda  1 ec-dat!  ;
-: reset-ec-warm    ( -- )  h# 27 ec-cmda  ;
-: reset-ec         ( -- )  h# 28 ec-cmda  ;
-: write-protect-fw ( -- )  h# 29 ec-cmda  ;
-\ : disable-ec-io    ( -- )  h# 2a ec-cmda  ;  \ ???
+: bat-init-lifepo4 ( -- )  h# 21 ec-cmd0  ;
+: bat-init-nimh    ( -- )  h# 22 ec-cmd0  ;
+: wlan-off         ( -- )  0 h# 23 ec-cmd-b!  ;
+: wlan-on          ( -- )  1 h# 23 ec-cmd-b!  ;
+: wlan-wake        ( -- )  h# 24 ec-cmd0  ;
+: wlan-rst         ( -- )  h# 25 ec-cmd0  ;
+: dcon-disable     ( -- )  0 h# 26 ec-cmd-b!  ;
+: dcon-enable      ( -- )  1 h# 26 ec-cmd-b!  ;
+: reset-ec-warm    ( -- )  h# 27 ec-cmd0  ;
+: reset-ec         ( -- )  h# 28 ec-cmd0  ;
+: write-protect-fw ( -- )  h# 29 ec-cmd0  ;
+\ : disable-ec-io    ( -- )  h# 2a ec-cmd0  ;  \ ???
 
 \ EC mailbox access words
 
@@ -94,10 +127,10 @@ h# fc2a	constant GPIO5
 : ec-mb-adr!   ( w -- )  h# 81 ec-cmda  ec-ww  ;
 : ec-mb-setup  ( cmd w -- )  ec-mb-adr!  ec-cmda  ;
 
-: ec-mb-b@    ( adr -- b )  h# 8a ec-mb-setup  h# 84 ec-cmda  ec-rb  ;
-: ec-mb-w@    ( adr -- w )  h# 88 ec-mb-setup  h# 82 ec-cmda  ec-rw  ;
-: ec-mb-b!    ( b adr -- )  h# 85 ec-mb-setup  ec-wb  h# 8b ec-cmda  ;
-: ec-mb-w!    ( w adr -- )  h# 83 ec-mb-setup  ec-ww  h# 89 ec-cmda  ;
+: ec-mb-b@    ( adr -- b )  h# 8a ec-mb-setup  h# 84 ec-cmd-b@  ;
+: ec-mb-w@    ( adr -- w )  h# 88 ec-mb-setup  h# 82 ec-cmd-w@  ;
+: ec-mb-b!    ( b adr -- )  h# 85 ec-mb-setup  ec-wb  h# 8b ec-cmda  ec-release  ;
+: ec-mb-w!    ( w adr -- )  h# 83 ec-mb-setup  ec-ww  h# 89 ec-cmda  ec-release  ;
 
 \ SCI source codes:
 \ SCI_WAKEUP_EVENT             0x01   // Game button,
@@ -111,9 +144,6 @@ h# fc2a	constant GPIO5
 \ be off when the system is powered up again.
 
 : ec-reset  ( -- )  5  ec-cmd  ;
-
-: .gauge-sn  ( -- )
-;
 
 : kb3920?  ( -- flag )  h# 6c pc@ h# ff =  if  true exit  then   9 ec-cmd 9 =  ;
 
