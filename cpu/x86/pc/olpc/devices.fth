@@ -234,11 +234,30 @@ fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
 fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
 
 0 value atest?
+0 value board-revision
+
+ stand-init: board revision
+   kb3920?  to atest?
+   atest?  if
+      h# a18
+   else
+      lx?  if
+\         board-id@  case
+         snoop-board-id@  case
+            h# b2  of  h# b30  endof  \ preB3
+            ( board-id )  dup h# 10 * 8 +  swap  \ E.g. b3 -> b38
+         endcase
+      else
+         h# 4c00.0014 rdmsr drop   ( RSTPLL-value )
+         4 rshift 7 and  7 =  if  h# b28  else  h# b18  then
+      then
+   then   
+   to board-revision
+;
+
 warning @ warning off
 stand-init: Wireless reset
 [ifdef] lx-devel  exit  [then]
-
-   kb3920? to atest?
 
    \ Hit the reset on the Marvell wireless.  It sometimes (infrequently)
    \ fails to enumerate after a power-cycle, and reset seems to fix it.
@@ -247,19 +266,6 @@ stand-init: Wireless reset
    atest? 0=  if  wlan-reset  then
 ;
 warning !
-
-: board-revision  ( -- n )
-   atest?  if  h# a18 exit  then
-   lx?  if
-      board-id@  case
-         h# b2  of  h# b30  endof  \ preB3
-         ( board-id )  dup h# 10 * 8 +  swap  \ E.g. b3 -> b38
-      endcase
-   else
-      h# 4c00.0014 rdmsr drop   ( RSTPLL-value )
-      4 rshift 7 and  7 =  if  h# b28  else  h# b18  then
-   then
-;
 
 stand-init: PCI properties
    " /pci" find-device

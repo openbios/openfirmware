@@ -29,14 +29,14 @@ h# fc2a	constant GPIO5
 
 
 : ec-cmd  ( cmd -- response )
-   h# 6c pc!  begin  h# 6c pc@  3 and  1 =  until  h# 68 pc@
+   h# 6c pc!  begin  1 ms  h# 6c pc@  3 and  1 =  until  1 ms  h# 68 pc@
    h# ff h# 6c pc!   \ Release ownership
 ;
 
 : ec-cmd66  ( byte -- )
    h# 66  pc! 
    \ It typically requires about 200 polls
-   d# 4000 0  do  h# 66 pc@ 2 and 0=  if  unloop exit  then  loop
+   d# 4000 0  do  1 ms  h# 66 pc@ 2 and 0=  if  unloop exit  then  loop
    true abort" EC didn't respond to port 66 command"
 ;
 
@@ -146,6 +146,8 @@ h# fc2a	constant GPIO5
 : ec-reset  ( -- )  5  ec-cmd  ;
 
 : kb3920?  ( -- flag )  h# 6c pc@ h# ff =  if  true exit  then   9 ec-cmd 9 =  ;
+
+: snoop-board-id@  ( -- id )  h# fa20 ec@  ;
 
 \ While accessing the SPI FLASH, we have to turn off the keyboard controller,
 \ because it continuously fetches from the SPI FLASH when it's on.  That
