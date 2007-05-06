@@ -260,8 +260,7 @@ warning !
 
 fload ${BP}/cpu/x86/pc/olpc/micin.fth   \ Microphone input AC/DC coupling
 
-fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
-patch 3 6 get-countdown
+fload ${BP}/cpu/x86/pc/olpc/countdwn.fth	\ Startup countdown
 
 fload ${BP}/dev/scsi/probscsi.fth	\ probe-scsi and probe-scsi-all
 
