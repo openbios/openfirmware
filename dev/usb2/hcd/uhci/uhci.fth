@@ -53,6 +53,7 @@ my-address my-space          encode-phys
 : portsc!     ( data port -- )  2* 10 + uhci-w!  ;
 
 : reset-usb  ( -- )
+   uhci-reg dup 0=  if  map-regs  then
    4 usbcmd!			\ Global reset
    50 ms
    0 usbcmd!
@@ -63,6 +64,7 @@ my-address my-space          encode-phys
       usbcmd@ 2 and  0=  ?leave
       1 ms
    loop
+   0=  if  unmap-regs  then
 ;
 
 : (process-hc-status)  ( -- )
@@ -85,29 +87,6 @@ external
 ;
 : stop-usb  ( -- )  h# c0 usbcmd!  ;
 : suspend-usb   ( -- )  ;
-
-: open  ( -- flag )
-   parse-my-args
-   open-count 0=  if
-      map-regs
-      first-open?  if
-         false to first-open?
-         reset-usb
-         init-struct
-         init-lists
-         start-usb
-      then
-      alloc-dma-buf
-   then
-   open-count 1+ to open-count
-   true
-;
-
-: close  ( -- )
-   open-count 1- to open-count
-   end-extra
-   open-count 0=  if  free-dma-buf unmap-regs  then
-;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

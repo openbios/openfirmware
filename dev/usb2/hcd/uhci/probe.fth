@@ -29,21 +29,12 @@ headers
 ;
 
 external
-: power-usb-ports  ( -- )  ;
+: power-ports  ( -- )  ;
 
-: probe-usb  ( -- )
-   alloc-pkt-buf
-   2 0  do
-      i reset-root-hub-port
-      i ['] probe-root-hub-port catch  if
-         drop ." Failed to probe root port " i .d cr
-      then
-      i portsc@ i portsc!			\ Clear change bits
-   loop
-   free-pkt-buf
-;
+: probe-root-hub  ( -- )
+   \ Set active-package so device nodes can be added and removed
+   my-self ihandle>phandle push-package
 
-: reprobe-usb  ( -- )
    alloc-pkt-buf
    2 0  do
       i portsc@ h# a and  if
@@ -56,6 +47,33 @@ external
       then
    loop
    free-pkt-buf
+
+   pop-package
+;
+
+: open  ( -- flag )
+   parse-my-args
+   open-count 0=  if
+      map-regs
+      first-open?  if
+         false to first-open?
+         reset-usb
+         init-struct
+         init-lists
+         start-usb
+      then
+      alloc-dma-buf
+
+      probe-root-hub
+   then
+   open-count 1+ to open-count
+   true
+;
+
+: close  ( -- )
+   open-count 1- to open-count
+   end-extra
+   open-count 0=  if  free-dma-buf unmap-regs  then
 ;
 
 \ LICENSE_BEGIN
