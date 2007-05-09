@@ -242,8 +242,7 @@ fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
       h# a18
    else
       lx?  if
-\         board-id@  case
-         snoop-board-id@  case
+         board-id@  case
             h# b2  of  h# b30  endof  \ preB3
             ( board-id )  dup h# 10 * 8 +  swap  \ E.g. b3 -> b38
          endcase

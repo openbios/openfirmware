@@ -44,18 +44,18 @@ h# fc2a	constant GPIO5
 
 : ec-release  ( -- )  h# ff h# 6c pc!  1 ms  h# 68 pc@  drop  ;
 : ec-wait-wr  ( -- )
-   d# 70 0  do
+   d# 140 0  do
       ec-cmd@ 2 and  0=  if  unloop exit  then
-      d# 10 ms
+      5 ms
    loop
    ." EC write timed out" cr
 ;
 \ Empirically, it can take a long time for the EC to sense the game
 \ keys when several are down at once.  500 mS is not enough.
 : ec-wait-rd  ( -- )
-   d# 70 0  do
+   d# 700 0  do
       ec-cmd@ 1 and  if  unloop exit  then
-      d# 10 ms
+      d# 1 ms
    loop
    ." EC read timed out" cr
 ;
@@ -70,7 +70,7 @@ h# fc2a	constant GPIO5
       ec-cmd@                     ( 6c-val )
    repeat                         ( 6c-val )
 ;
-: ec-cmd!  ( b -- )  ec-wait-wr  h# 6c pc!  ( ec-wait-wr )  ;
+: ec-cmd!  ( b -- )  ec-wait-wr  h# 6c pc!  ec-wait-wr  ;
 
 : ec-dat@  ( -- b )  ec-wait-rd  h# 68 pc@  ;
 : ec-dat!  ( b -- )  ec-wait-wr  h# 68 pc!  ;
@@ -94,9 +94,9 @@ h# fc2a	constant GPIO5
 : ambient-temp@  ( -- w )  h# 14 ec-cmd-w@  ;
 : bat-status@    ( -- b )  h# 15 ec-cmd-b@  ;
 : bat-soc@       ( -- b )  h# 16 ec-cmd-b@  ;
-: bat-gauge-id@  ( -- l.sn4-7 l.sn0-3 )
+: bat-gauge-id@  ( -- sn0 .. sn7 )
    h# 17 ec-cmda
-   ec-rw ec-rw swap wljoin  ec-rw ec-rw swap wljoin  swap
+   8 0  do ec-rb  loop
    ec-release
 ;
 : bat-gauge@     ( -- b )  h# 18 ec-cmda  h# 31 ec-wb  ec-dat@  ec-release  ;  \ 31 is the EEPROM address
