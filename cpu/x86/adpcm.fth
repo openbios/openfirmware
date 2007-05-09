@@ -1,6 +1,13 @@
 \ See license at end of file
 purpose: decode IMA/DVI ADPCM .wav file
 
+2 value #output-ch                      \ Number of output channels
+0 value audio-ih                        \ /audio ihandle
+0 value /pcm-output                     \ Size of uncompressed buffer
+defer (play-pcm)
+
+: $call-audio  ( ... method -- ... )  audio-ih $call-method  ;
+
 \ Uncompressed data format:
 \   16-bit Left, 16-bit Right, ...
 \
@@ -107,7 +114,7 @@ c;
 ;
 
 : adpcm-decode-blk  ( in out #sample -- )
-   #ch 0  ?do                           ( in out #sample )
+   #ch #output-ch min 0  ?do            ( in out #sample )
       2 pick i /l * +                   ( in out #sample in' )
       2 pick i /w * +                   ( in out #sample in out' )
       init-ch-vars			( in out #sample in' out' )
@@ -121,20 +128,20 @@ c;
    stepsize-table to 'stepsize-table
 
    dup to blk-size                      ( in out #sample #ch blk-size )
-   over 4 * - 1+ to #sample/blk         ( in out #sample #ch )
+   over 4 * - 2* over / 1+ to #sample/blk ( in out #sample #ch )
    dup to #ch                           ( in out #sample #ch )
-   dup /l * to in-skip                  ( in out #sample #ch )
-       /w * to out-skip                 ( in out #sample )
+   /l * to in-skip                      ( in out #sample )
+   #output-ch /w * to out-skip          ( in out #sample )
 
    begin  dup 0>  while                 ( in out #sample )
       3dup #sample/blk min adpcm-decode-blk
       rot blk-size +                    ( out #sample in' )
-      rot #sample/blk #ch * wa+         ( #sample in out' )
+      rot #sample/blk #output-ch * wa+  ( #sample in out' )
       rot #sample/blk -                 ( in out #sample' )
    repeat  3drop
 ;
 
-\ Decode an .wav file
+\ Decode a .wav file
 \
 \ .wav file format:
 \ "RIFF" L<len of file> "WAVE"
@@ -147,6 +154,26 @@ c;
 \ Each <block of data> contains:
 \        W<sample> B<index> B<0> per channel
 \        (block size - 1) samples of compressed data
+
+0 value wav-fmt-adr
+0 value wav-fact-adr
+0 value wav-data-adr
+
+: .wav-cc  ( cc -- )
+   case
+          0  of  ." unknown"           endof
+          1  of  ." PCM"               endof
+          2  of  ." MS ADPCM"          endof
+          6  of  ." ITU G.711 a-law"   endof
+          7  of  ." ITU G.711 au-law"  endof
+      h# 11  of  ." IMA ADPCM"         endof
+      h# 16  of  ." ITU G.723 ADPCM"   endof
+      h# 31  of  ." GSM 6.10"          endof
+      h# 40  of  ." ITU G.721 ADPCM"   endof
+      h# 50  of  ." MPEG"              endof
+      ( default )  ." unknown code: " dup u.
+   endcase
+;
 
 : find-wav-chunk?  ( in chunk$ -- in' true | false )
    rot dup 4 + le-l@ over + swap h# c + ( chunk$ in-end in' )
@@ -163,43 +190,111 @@ c;
    dup " RIFF" comp  swap 8 + " WAVE" comp  or 0=
 ;
 
-: fmt-ok?  ( in -- #ch blk-size true | false )
-   " fmt " find-wav-chunk? 0=  if  false exit  then   ( in' )
-   dup      8 + le-w@ h# 11 =              \ compression code: DVI_ADPCM
-   over h# 16 + le-w@     4 = and  if      \ bits/sample
-      dup   h#  a + le-w@                  ( #ch )
-      swap  h# 14 + le-w@  true            ( #ch blk-size true )
+: parse-wav-ok?  ( in -- ok? )
+   0 to wav-fmt-adr  0 to wav-fact-adr  0 to wav-data-adr
+   dup wav-ok? 0=  if  drop false exit  then
+   dup " fmt " find-wav-chunk?  if  to wav-fmt-adr  then
+   dup " fact" find-wav-chunk?  if  to wav-fact-adr  then
+   " data" find-wav-chunk?  if  8 + to wav-data-adr  then
+   wav-fmt-adr 0= wav-data-adr 0= or not
+;
+
+: wav-cc        ( -- cc )        wav-fmt-adr  dup  if      8 + le-w@  then  ;
+: wav-in-#ch    ( -- #ch )       wav-fmt-adr  dup  if  h#  a + le-w@  then  ;
+: wav-#sample   ( -- #sample )   wav-fact-adr dup  if      8 + le-l@  then  ;
+: wav-blk-size  ( -- blk-size )  wav-fmt-adr  dup  if  h# 14 + le-w@  then  ;
+
+: set-sample-rate  ( -- )
+   wav-fmt-adr ?dup  if  h# c + le-l@ " set-sample-rate" $call-audio  then
+;
+
+0 value out-move
+: condense-pcm  ( adr -- )
+   wav-in-#ch #output-ch - /w * to in-skip
+   #output-ch /w * to out-move
+   dup dup 4 - le-l@  bounds  ?do          ( out )
+      i over out-move move                 ( out )
+      out-move +                           ( out' )
+   in-skip +loop  drop                     ( )
+;
+: expand-pcm  ( adr -- )
+   #output-ch wav-in-#ch - /w * to out-skip
+   wav-in-#ch /w * to out-move
+   dup dup 4 - le-l@  bounds  swap out-move -  ( out in-begin in-end )
+   begin  2dup u<  while                   ( out in-begin in )
+      dup 3 pick out-move move             ( out in-begin in )
+      out-move - rot out-move + -rot       ( out' in-begin in' )
+      2 pick out-skip erase                ( out in-begin in )
+      rot out-skip + -rot                  ( out' in-begin in )
+   repeat  3drop                           ( )
+;
+
+: play-pcm-once  ( adr len -- )  " write" $call-audio drop " write-done" $call-audio  ;
+: play-pcm-loop  ( adr len -- )
+   ." Press a key to abort" cr
+   begin  2dup play-pcm-once  key?  until  key drop  2drop
+;
+' play-pcm-once to (play-pcm)
+
+: play-pcm  ( adr -- error? )
+   wav-in-#ch 0=  if  drop true exit  then
+   set-sample-rate
+   wav-data-adr 4 - le-l@ to /pcm-output
+   wav-in-#ch #output-ch =  if
+      /pcm-output (play-pcm)                 \ Play straight from the source
    else
-      drop false                           ( false )
-   then
+   /pcm-output wav-in-#ch / #output-ch * to /pcm-output
+   #output-ch wav-in-#ch <  if
+      dup condense-pcm                       \ Skip extra channel data
+      /pcm-output (play-pcm)
+   else
+      dup expand-pcm                         \ Convert mono to stereo
+      /pcm-output (play-pcm)
+   then  then
+   false
 ;
 
-: fact-ok?  ( in -- #sample true | false )
-   " fact" find-wav-chunk? dup  if  swap 8 + le-l@ swap  then
+: play-ima-adpcm  ( adr -- error? )
+   wav-fact-adr 0=  if  drop true exit  then
+   set-sample-rate
+   wav-#sample #output-ch * /w * to /pcm-output
+   \ Because alloc-mem does not guarantee contiguous physical memory, use load-base area.
+   loaded + pagesize round-up tuck          ( out in out )
+   dup /pcm-output erase                    ( out in out )
+   wav-#sample wav-in-#ch wav-blk-size      ( out in out #sample #ch blk-size )
+   adpcm-decoder                            ( out )
+   /pcm-output (play-pcm)                   ( )
+   false                                    ( error? )
 ;
 
-: data-ok?  ( in -- in' true | false )
-   " data" find-wav-chunk? dup  if  swap 8 + swap  then
+: (play-wav)  ( adr -- error? )
+   parse-wav-ok?  not  if  ." Not a .wav file" cr true exit  then
+   " /audio" open-dev ?dup 0=  if  ." Cannot open audio device" cr true exit  then
+   to audio-ih
+   wav-cc  case
+          1  of  wav-data-adr play-pcm        endof
+      h# 11  of  wav-data-adr play-ima-adpcm  endof
+      ( default )  ." Cannot play .wav format type: " dup .wav-cc true swap cr
+   endcase
+   audio-ih close-dev
 ;
 
-: adpcm-decode  ( in out -- actual )
-   over wav-ok? not  if  2drop 0 exit  then       ( in out )
-   swap dup data-ok? not  if  2drop 0 exit  then  ( out in in' )
-   -rot dup fact-ok? not  if  3drop 0 exit  then  ( in' out in #sample )
-   swap     fmt-ok?  not  if  3drop 0 exit  then  ( in' out #sample #ch blk-size )
-   2 pick 2 pick /w * * >r                        ( in' out #sample #ch blk-size )  ( R: actual )
-   adpcm-decoder r>                               ( actual )
+: ($play-wav)  ( file-str -- )
+   boot-read
+   load-base (play-wav)  abort" Error playing wav file"
 ;
 
-: adpcm-size  ( in -- actual )
-   dup  wav-ok?  not  if  drop 0 exit  then       ( in )
-   dup  fact-ok? not  if  drop 0 exit  then       ( in #sample )
-   swap fmt-ok?  not  if  drop 0 exit  then       ( #sample #ch blk-size )
-   drop /w * *                                    ( actual )
+: $play-wav  ( file-str -- )  ['] play-pcm-once to (play-pcm)  ($play-wav)  ;
+: play-wav  ( "filename< >" -- )  safe-parse-word $play-wav  ;
+
+: $play-wav-loop  ( file-str -- )
+   ['] play-pcm-loop to (play-pcm)
+   ($play-wav)
 ;
+: play-wav-loop  ( "filename< >" -- )  safe-parse-word $play-wav-loop  ;
 
 \ LICENSE_BEGIN
-\ Copyright (c) 2007 FirmWorks
+\ Copyright (c) 2006 FirmWorks
 \ 
 \ Permission is hereby granted, free of charge, to any person obtaining
 \ a copy of this software and associated documentation files (the

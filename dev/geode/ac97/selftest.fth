@@ -109,32 +109,7 @@ d# 3212 w,
 
 : ?play-wav-file  ( -- )
    selftest-args dup 0=  if  2drop exit  then
-
-   \ Read the .wav file
-   2dup ." Play " type cr
-   " boot-read" evaluate
-
-   \ Allocate raw audio buffer
-   " loaded" evaluate 0=  if  drop exit  then         \ No data loaded
-   " adpcm-size" evaluate                 ( /raw-buf )
-   ?dup 0=  if  exit  then                \ Not an IMA ADPCM .wav file
-   dup to /raw-buf alloc-mem to raw-buf   ( )
-
-   \ Decode the .wav file
-   " load-base" evaluate                  ( in )
-   raw-buf " adpcm-decode" evaluate       ( /raw-buf )  ( R: len wav-buf )
-   ?dup 0=  if  exit  then                \ Not an IMA ADPCM .wav file
-
-   \ Play the raw audio data
-   ." Press a key to abort" cr
-   open-out  plevel set-pcm-gain  glevel h# 38 codec! 
-   begin
-      raw-buf /raw-buf audio-out drop
-   key?  until  write-done
-   key drop
-
-   \ Release the raw audio buffer
-   raw-buf /raw-buf free-mem  0 to raw-buf 0 to /raw-buf
+   " $play-wav-loop" $find 0=  if  2drop  else  catch drop  then
 ;
 
 : selftest  ( -- error? )
