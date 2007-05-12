@@ -248,7 +248,7 @@ fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
          endcase
       else
          h# 4c00.0014 rdmsr drop   ( RSTPLL-value )
-         4 rshift 7 and  7 =  if  h# b28  else  h# b18  then
+         4 rshift 7 and  0=  if  h# b28  else  h# b18  then
       then
    then   
    to board-revision
