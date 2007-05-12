@@ -73,7 +73,7 @@ h# fc2a	constant GPIO5
 : ec-cmd!  ( b -- )  ec-wait-wr  h# 6c pc!  ec-wait-wr  ;
 
 : ec-dat@  ( -- b )  ec-wait-rd  h# 68 pc@  ;
-: ec-dat!  ( b -- )  ec-wait-wr  h# 68 pc!  ;
+: ec-dat!  ( b -- )  ec-wait-wr  h# 68 pc!  ec-wait-wr  ;
 
 : ec-rb    ( -- b )  0 ec-dat!  ec-dat@  ;
 : ec-rw    ( -- w )  ec-rb ec-rb swap bwjoin  ;
