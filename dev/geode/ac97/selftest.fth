@@ -40,6 +40,7 @@ h# 0 value glevel
    record-base  record-len  audio-out drop  write-done
 ;
 
+[ifdef] notdef
 create sin-half
 d#     0 w,
 d#  3212 w,
@@ -92,18 +93,87 @@ d# 3212 w,
 ;
 
 : make-wave  ( -- )
+   \ Start with everything quiet
+   record-base record-len erase
+
+   \ Add a sine wave to the left channel for the first half of the time
    record-base record-len 2/  bounds      ( endadr startadr )
    begin  2dup u>  while  cycle  repeat   ( endadr startadr )
    2drop
 
+   \ Add a sine wave to the right channel for the last half of the time
    record-base record-len bounds          ( endadr startadr )
    record-len 2/ + wa1+
    begin  2dup u>  while  cycle  repeat   ( endadr startadr )
    2drop
 ;
+[then]
 
-0 value raw-buf
-0 value /raw-buf
+fload ${BP}/forth/lib/isin.fth
+
+d# 500 value tone-freq
+
+: /cycle  ( -- #bytes )  #cycle /l*  ;
+
+: make-cycle  ( adr -- adr' )
+   #quarter-cycle 1+  0  do               ( adr )
+      i isin                              ( adr isin )
+      2dup  swap  i la+ w!                ( adr isin )
+      2dup  swap  #half-cycle i - la+ w!  ( adr isin )
+      negate                              ( adr -isin )
+      2dup  swap  #half-cycle i + la+ w!  ( adr -isin )
+      over  #cycle i - la+ w!             ( adr )
+   loop                                   ( adr )
+   /cycle +
+;
+
+: make-tone-wave  ( -- )
+   \ Start with everything quiet
+   record-base record-len erase
+
+   sample-rate to fs
+   tone-freq set-freq
+
+   record-base  make-cycle  drop
+
+   \ Copy the wave template into the left channel
+   record-base /cycle +   record-len 2/  /cycle -  bounds  ?do
+      record-base  i  /cycle  move
+   /cycle +loop
+
+   \ Copy the wave template into the right channel
+   record-base record-len 2/ + wa1+  record-len 2/ /cycle -   bounds  ?do
+      record-base  i  /cycle  move
+   /cycle +loop
+;
+
+: copy-cycle  ( adr #copies -- adr' )
+   1  ?do                      ( adr )
+      dup  /cycle -  over      ( adr adr- adr )
+      /cycle move              ( adr )
+      /cycle +                 ( adr+ )
+   loop                        ( adr' )
+;
+
+: make-wave  ( -- )
+   \ Start with everything quiet
+   record-base record-len erase
+
+   sample-rate to fs
+
+   record-base
+   1  d# 30  do            ( adr )
+      i set-period         ( adr )
+      make-cycle           ( adr )
+\      d# 42 copy-cycle     ( adr' )
+      d# 35 copy-cycle     ( adr' )
+   -1 +loop
+   drop
+
+   \ Copy the left channel into the right channel
+   record-base   record-base record-len 2/ + wa1+  record-len 2/ /w -  move
+;
+
 
 : selftest-args  ( -- arg$ )  my-args ascii : left-parse-string 2drop  ;
 
@@ -112,20 +182,40 @@ d# 3212 w,
    " $play-wav-loop" $find 0=  if  2drop  else  catch drop  then
 ;
 
-: selftest  ( -- error? )
-   open 0=  if  ." Failed to open /audio" cr true exit  then
-   0 set-plevel  0 set-glevel
+d#  -8 value wav-plevel
+d# -12 value wav-glevel
+: wav-test  ( -- )
+   wav-plevel set-plevel  wav-glevel set-glevel
    ?play-wav-file
-   record-len alloc-mem to record-base
-   ." Play tone" cr
-   0 set-plevel  d# -12 set-glevel
+;
+
+d#  -8 value tone-plevel
+d# -12 value tone-glevel
+
+: tone-test  ( -- )
+   ." Playing tone" cr
+   \ Onset of clipping in the P domain is -7
+   tone-plevel set-plevel  tone-glevel set-glevel
    make-wave play
+;
+
+d# -8 value rec-plevel
+d# -3 value rec-glevel
+: mic-test  ( -- )
    ." Recording ..." cr
-   0 set-plevel  0 set-glevel
+   rec-plevel set-plevel  rec-glevel set-glevel
    record
    ." Playing ..." cr
    play
-   record-base record-len free-mem
+;
+
+: selftest  ( -- error? )
+   open 0=  if  ." Failed to open /audio" cr true exit  then
+   wav-test
+   record-len la1+  alloc-mem to record-base
+   tone-test
+   mic-test
+   record-base record-len la1+  free-mem
    close false
 ;
 
