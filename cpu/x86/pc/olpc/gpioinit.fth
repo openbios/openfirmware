@@ -98,13 +98,15 @@ then
 \  h#     0000 h# 10dc pw!  \ GPIO_07_EVENT_COUNT - default
 \  h#     0000 h# 10de pw!  \ GPIO_07_EVENTCOMPARE_VALUE - default
 
-   h# 20000001 h# 10e0 pl!  \ GPIO_MAPPER_X
 lx? if
-   h# 00500000 h# 10e4 pl!  \ GPIO_MAPPER_Y
+   h# 20000001 h# 10e0 pl!  \ GPIO_MAPPER_X - GPIO7(DCON) -> group 2 , GPIO0(CPU) -> group 1
+   h# 00500000 h# 10e4 pl!  \ GPIO_MAPPER_Y - GPIO13(CaFe) -> group 5
+else
+   h# 20000005 h# 10e0 pl!  \ GPIO_MAPPER_X - GPIO7(DCON) -> group 2, GPIO 0(CaFe) -> group 5
 then
 \  h# 00000000 h# 10e4 pl!  \ GPIO_MAPPER_Y - default
 \  h# 00000000 h# 10e8 pl!  \ GPIO_MAPPER_Z - default
-\  h# 00000000 h# 10ec pl!  \ GPIO_MAPPER_W - default
+   h# 0000fe00 h# 10ec pl!  \ GPIO_MAPPER_W - GPIO27 is SCI, PME+group 7, GPIO26 is PWR_BUT_in (lid), PME+group 6
 \  h#       00 h# 10f0 pc!  \ GPIO_EE_SELECT_0 - default
 \  h#       00 h# 10f1 pc!  \ GPIO_EE_SELECT_1 - default
 \  h#       00 h# 10f2 pc!  \ GPIO_EE_SELECT_2 - default
