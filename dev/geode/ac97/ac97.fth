@@ -111,23 +111,25 @@ constant /dma-regs
 : cmd!  ( l -- )  cmd-wait  au h# c +  rl! ;
 \ : 1us  ( -- )  ms-factor d# 1000 / spins  ;
 \ : rst  ( -- )  h# 40.0000 stat!  1us  0 stat!  ;
+: codec-ready?  ( -- flag )  stat@ h# 80.0000 and 0<>  ;
+
 : codec!  ( value reg# -- )
    d# 24 << or  h# 1.0000 or  cmd!
    begin  cmd@ h# 1.0000 and  0=  until
 ;
 : codec@  ( reg# -- value )
    \ 192 is a ~60us delay to wait until the status tag is cleared.
-   d# 192  0  do
-      stat@  h# 3.0000 and  h# 1.0000 =  if  leave  then
-   loop
+
+   stat@ drop   ( reg# )    \ Clear old status
    d# 24 <<  h# 8001.0000 or  cmd!
-   \ wait until status valid and status tag is set.
-   true  d# 192  0  do
-      stat@  h# 3.0000 and  h# 3.0000 =
-      if  drop false leave  then
+
+   \ wait until status new
+   true                      ( error? )
+   d# 192  0  do             ( error? )
+      stat@  h# 2.0000 and  if  0= leave  then
    loop
    to fatal-error?
-   stat@ ffff and
+   stat@  h# ffff and
 ;
 
 : iand  ( n1 mask -- n2 )  invert and  ;
@@ -336,9 +338,10 @@ external
 : default ( -- )  48khz disable-playback  ;
 
 : open  ( -- ok? )
-\   fatal-error?  if  false exit  then
    map-regs
+   codec-ready?  0=  if  false exit  then
    get-device-id
+   fatal-error?  if  false exit  then
    default
    1  h# 2a codec-set   \ Enable variable rate
    parse-args  0=  if  unmap-regs false exit  then
