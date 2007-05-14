@@ -254,7 +254,6 @@ fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
    to board-revision
 ;
 
-warning @ warning off
 stand-init: Wireless reset
 [ifdef] lx-devel  exit  [then]
 
@@ -264,7 +263,6 @@ stand-init: Wireless reset
    \ takes about 200 mS, so we are okay.
    atest? 0=  if  wlan-reset  then
 ;
-warning !
 
 stand-init: PCI properties
    " /pci" find-device
