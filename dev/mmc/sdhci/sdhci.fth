@@ -210,26 +210,32 @@ h# 200 constant /block  \ 512 bytes
    drop  cr
 ;
 
+0 instance value allow-timeout?
+0 instance value timeout?
+
 : .sderror  ( isr -- )
-   ." Error: ISR = " dup u. isr!
-   ." ESR = " esr@ dup u.  dup esr!  decode-esr
+   esr@ dup esr!           ( isr esr )
+   allow-timeout?  if      ( isr esr )
+      dup 1 =  if  true to timeout?  2drop exit  then
+   then                    ( isr esr )
+
+   ." Error: ISR = " swap u.
+   ." ESR = " dup u.  decode-esr
    ." Stopping" cr abort
-\      debug-me
+   \      debug-me
 ;
 
 : wait  ( mask -- )
    h# 8000 or                                     ( mask' )
    begin                                          ( mask )
-      isr@                                        ( mask isr )
+      isr@  dup isr!                              ( mask isr )
    2dup and  0= while                             ( mask isr )
 \     key?  if  key drop  debug-me  then          ( mask isr )
-      dup isr!                                    ( mask isr )
       \ DMA interrupt - the transfer crossed an address boundary
       8 and  if  0 cl@ 0 cl!  then                ( mask )
    repeat                                         ( mask isr )
    nip                                            ( isr )
-   dup h# 8000 and  if   dup .sderror  then       ( isr ) 
-   isr!                                           ( )
+   dup h# 8000 and  if   .sderror  else  drop  then   ( )
 ;
 
 : wait-ready  ( -- )
@@ -267,6 +273,7 @@ h# 200 constant /block  \ 512 bytes
 \ R3: OCR register
 \ R6: RCA
 \ R2: 136 bits (CID (cmd 2 or 9) or CSD (cmd 10))
+\ R7: 136 bits (Interface condition, for CMD8)
 \ In R2 format, the first 2 bits are start bits, the next 6 are
 \ reserved.  Then there are 128 bits (16 bytes) of data, then the end bit
 
@@ -310,6 +317,8 @@ headers
 : deselect-card  ( -- )   0   h# 0700 0 cmd  ;  \ 7 - with null RCA
 : select-card    ( -- )   rca h# 071b 0 cmd  ;  \ 7 R1b
 
+: send-if-cond  ( -- )  h# 1aa h# 081a 0 cmd  ( response h# 1aa <>  if  ." Error"  then )   ;  \ 8 R7
+
 \ Get Card-specific data
 : get-csd    ( -- )  rca  h# 0909 0 cmd  csd get-response136  ;  \ 9 R2
 : get-cid    ( -- )  rca  h# 0a09 0 cmd  cid get-response136  ;  \ 10 R2 UNTESTED
@@ -331,10 +340,10 @@ headers
 \ 10.0000  direction: 1 for read, 0 for write
 \ 20.0000  multi (set for multiple-block transfers)
 
-: read-single     ( byte# -- )  h# 113a h# 13 cmd  ;  \ 17 R1 READ_SINGLE_BLOCK
-: read-multiple   ( byte# -- )  h# 123a h# 37 cmd  ;  \ 18 R1 READ_MULTIPLE
-: write-single    ( byte# -- )  h# 183a h# 03 cmd  ;  \ 24 R1 WRITE_SINGLE_BLOCK
-: write-multiple  ( byte# -- )  h# 193a h# 27 cmd  ;  \ 25 R1 WRITE_MULTIPLE
+: read-single     ( address -- )  h# 113a h# 13 cmd  ;  \ 17 R1 READ_SINGLE_BLOCK
+: read-multiple   ( address -- )  h# 123a h# 37 cmd  ;  \ 18 R1 READ_MULTIPLE
+: write-single    ( address -- )  h# 183a h# 03 cmd  ;  \ 24 R1 WRITE_SINGLE_BLOCK
+: write-multiple  ( address -- )  h# 193a h# 27 cmd  ;  \ 25 R1 WRITE_MULTIPLE
 
 : program-csd  ( -- )     0  h# 1b1a 0 cmd  ;  \ R1 27 UNTESTED
 : protect     ( group# -- )  h# 1c1b 0 cmd  ;  \ R1b 28 UNTESTED
@@ -376,17 +385,34 @@ headers
    scratch-buf
 ;
 
-variable ocr
+\ Version 2 of the spec add CMD8.  Pre-v2 cards will time out on CMD8.
+: sd2?  ( -- flag )
+   true to allow-timeout?  true to timeout?
+   send-if-cond
+   false to allow-timeout?
+
+   timeout? 0=
+;
+
+0 instance value address-shift
 h# 8010.0000 value oc-mode  \ Voltage settings, etc.
+
 : set-operating-conditions  ( -- )
+   sd2?  if  h# 4010.0000  else  h# 8010.0000  then  to oc-mode
+
    begin
       oc-mode set-oc         ( ocr )  \ acmd41
       dup h# 8000.0000 and   ( card-powered-on? )
    0= while                  ( ocr )
       drop d# 10 ms
    repeat                    ( ocr )
-   \ We must save this so we can look at the Card Capacity Status bit
-   ocr !                     ( )
+
+   \ Card Capacity Status bit - High Capacity cards are addressed
+   \ in blocks, so the block number does not have to be shifted.
+   \ Standard capacity cards are addressed in bytes, so the block
+   \ number must be left-shift by 9 (multiplied by 512).
+
+   h# 4000.0000 and  if  0  else  9  then  to address-shift
 ;
 
 : configure-transfer  ( -- )
@@ -465,7 +491,7 @@ external
    >r               ( addr block# #blocks r: in? )
    rot dma-setup    ( block# r: in? )
    wait-write-done
-   /block *  r>  if
+   address-shift lshift  r>  if
       read-multiple
    else
       write-multiple  true to writing?
