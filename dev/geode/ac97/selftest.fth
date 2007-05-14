@@ -165,13 +165,17 @@ d# 500 value tone-freq
    1  d# 30  do            ( adr )
       i set-period         ( adr )
       make-cycle           ( adr )
-\      d# 42 copy-cycle     ( adr' )
       d# 35 copy-cycle     ( adr' )
    -1 +loop
    drop
 
-   \ Copy the left channel into the right channel
-   record-base   record-base record-len 2/ + wa1+  record-len 2/ /w -  move
+   \ Copy the left channel into the right channel in reverse order
+   record-base   record-len /w -  bounds   ( end start )
+   begin  2dup u>  while                   ( end start )
+      2dup w@ swap w!                      ( end start )
+      swap /w -  swap wa1+                 ( end' start' )
+   repeat                                  ( end start )
+   2drop
 ;
 
 
