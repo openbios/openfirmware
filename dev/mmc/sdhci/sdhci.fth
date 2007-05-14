@@ -387,7 +387,7 @@ headers
 
 \ Version 2 of the spec add CMD8.  Pre-v2 cards will time out on CMD8.
 : sd2?  ( -- flag )
-   true to allow-timeout?  true to timeout?
+   true to allow-timeout?  false to timeout?
    send-if-cond
    false to allow-timeout?
 
@@ -397,15 +397,21 @@ headers
 0 instance value address-shift
 h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 
-: set-operating-conditions  ( -- )
-   sd2?  if  h# 4010.0000  else  h# 8010.0000  then  to oc-mode
-
-   begin
+: wait-powered  ( -- ocr )
+   d# 100 0  do
       oc-mode set-oc         ( ocr )  \ acmd41
       dup h# 8000.0000 and   ( card-powered-on? )
-   0= while                  ( ocr )
+      if  unloop exit  then
       drop d# 10 ms
-   repeat                    ( ocr )
+   loop                      ( )
+   ." Card didn't power up after 1 second" cr
+   abort
+;
+
+: set-operating-conditions  ( -- )
+   sd2?  if  h# 4030.0000  else  h# 0030.0000  then  to oc-mode
+
+   wait-powered
 
    \ Card Capacity Status bit - High Capacity cards are addressed
    \ in blocks, so the block number does not have to be shifted.
@@ -471,7 +477,7 @@ external
 
    reset-card     \ Cmd 0
 
-   set-operating-conditions  
+   ['] set-operating-conditions  catch  if  false exit  then
 
    get-all-cids   \ Cmd 2
    get-rca        \ Cmd 3 - Get relative card address
