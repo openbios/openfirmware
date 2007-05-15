@@ -390,7 +390,7 @@ VGA_WIDTH VGA_HEIGHT * 2* constant /dma-buf
 : soft-reset  ( -- )  4 h# 3034 cl!  0 h# 3034 cl!  ;
 
 : (init)  ( -- )
-   0000.0008 3038 cl!		\ magic to bringup hardware
+   0000.0008 3038 cl!		\ Turn on CaFe GPIO3 to enable power
    0008.0008 315c cl!
    0000.0005 3004 cl!		\ wake up device
    0000.000a 3004 cl!
@@ -412,6 +412,9 @@ VGA_WIDTH VGA_HEIGHT * 2* constant /dma-buf
    1 ms
 ;
 
+: power-off  ( -- )
+   0 3038 cl!		\ Turn off CaFe GPIO3 to disable power
+;
 : init  ( -- )
    (init)
    power-up
@@ -468,6 +471,7 @@ external
 
 : close  ( -- )
    ctlr-stop
+   power-off
    free-dma-bufs
    unmap-regs
 ;
