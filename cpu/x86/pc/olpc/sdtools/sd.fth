@@ -33,6 +33,32 @@ fe01.0000 4000 mmap constant sd
 
 : r  ( offset -- )  sdl@ u.  ;
 : w  ( l offset -- )  sdl!  ;
+
+fff0.0000 10.0000 mmap constant flash-base
+\needs cdump  : cdump  ( adr len -- )  bounds  ?do  i c@ .x  loop  ;
+\needs .mfg-data fload mfgdata.fth
+
+: 1ms  ( -- )
+  h# 10 msr@ drop  d# 500,000 +   ( limit  )
+  begin  dup  h# 10 msr@ drop -  0<  until
+  drop
+;
+: ms  ( #ms -- )  0  ?do  1ms  loop  ;
+
+\needs dcon@ fload dconsmb.fth
+
+: mode!    ( mode -- )    1 dcon!  ;
+: hres!    ( hres -- )    2 dcon!  ;  \ def: h#  458 d# 1200
+: htotal!  ( htotal -- )  3 dcon!  ;  \ def: h#  4e8 d# 1256
+: hsync!   ( sync -- )    4 dcon!  ;  \ def: h# 1808 d# 24,8
+: vres!    ( vres -- )    5 dcon!  ;  \ def: h#  340 d# 900
+: vtotal!  ( htotal -- )  6 dcon!  ;  \ def: h#  390 d# 912
+: vsync!   ( sync -- )    7 dcon!  ;  \ def: h#  403 d# 4,3
+: timeout! ( to -- )      8 dcon!  ;  \ def: h# ffff
+: scanint! ( si -- )      9 dcon!  ;  \ def: h# 0000
+: bright!  ( level -- ) d# 10 dcon! ; \ def: h# xxxF
+
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

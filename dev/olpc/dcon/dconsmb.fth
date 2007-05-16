@@ -8,7 +8,7 @@ purpose: DCON SMB driver for Geode 5536 companion chip
 h# 70 value smb-clock  \ 8 is the shortest period the controller allows
 
 : smb-on  ( -- )
-   h# 5140000b rdmsr drop to smb-base
+   h# 5140000b msr@ drop to smb-base
    \ Empirically, it doesn't work if you set reg 6 before reg 5
    \ First set the registers with the enable bit clear
    smb-clock 1 lshift         5 smb!
