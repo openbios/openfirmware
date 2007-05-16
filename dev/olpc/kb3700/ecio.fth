@@ -149,6 +149,10 @@ h# fc2a	constant GPIO5
 
 : snoop-board-id@  ( -- id )  h# fa20 ec@  ;
 
+\ This makes the EC stop generating a flood of SCIs every time you do
+\ the port 66 command sequence.
+: sci-quiet  ( -- )  h# 50  h# ff03 ec!  ;
+
 \ While accessing the SPI FLASH, we have to turn off the keyboard controller,
 \ because it continuously fetches from the SPI FLASH when it's on.  That
 \ interferes with our accesses.

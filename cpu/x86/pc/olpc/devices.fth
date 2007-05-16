@@ -253,6 +253,10 @@ fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
    to board-revision
 ;
 
+stand-init: Quiet SCI
+   sci-quiet
+;
+
 stand-init: Wireless reset
 [ifdef] lx-devel  exit  [then]
 
