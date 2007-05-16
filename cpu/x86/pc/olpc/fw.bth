@@ -237,6 +237,9 @@ warning @ warning off
       encode-string  " banner-name" property
       model
       board-revision " board-revision-int" integer-property
+      \ The "1-" removes the null byte
+      " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
+
 [ifndef] lx-devel
       8 ec-cmd  " ec-version" integer-property
 
