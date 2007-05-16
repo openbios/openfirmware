@@ -2,14 +2,14 @@
 
 \ The overall firmware revision
 macro: FW_MAJOR C
-macro: FW_MINOR 11
+macro: FW_MINOR 12
 
 \ The EC microcode
 macro: EC_VERSION c11
 
 \ Alternate command for getting EC microcode, for testing new versions.
 \ Temporarily uncomment the line and modify the path as necessary
-\ macro: GET_EC cp ~/pqc10t.bin ec.img
+\ macro: GET_EC cp ./c11t-1.bin ec.img
 
 \ The wireless LAN module firmware
 macro: WLAN_RPM ${WLAN_VERSION}-1.olpc1
