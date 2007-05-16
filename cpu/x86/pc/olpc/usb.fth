@@ -3,8 +3,8 @@ purpose: USB elaborations for the OLPC platform
 
 devalias usb1 /usb@f,4
 devalias usb2 /usb@f,5
-devalias u /usb/disk
-devalias net /wlan
+devalias u    /usb/disk
+devalias net  /usb/wlan
 
 \ If there is a USB ethernet adapter, use it as the default net device.
 : report-net  ( -- )
@@ -88,6 +88,19 @@ alias p2 probe-usb2
    " usb2" " reset-usb" execute-device-method
 ;
 ' usb-quiet to go-hook
+
+0 0 " " " /" begin-package
+   " prober" device-name
+   : open
+      " /usb@f,5" open-dev  ?dup  if  close-dev  then
+      " /usb@f,4" open-dev  ?dup  if  close-dev  then
+      report-disk
+      report-net
+      report-keyboard
+      false
+   ;
+   : close ;
+end-package
 
 stand-init: USB setup
    \ Set up an address routing to the USB Option Controller

@@ -33,9 +33,9 @@
 \   " ${BP}/ofw/linux/logom16c.bmp"       " timeout.bmp"    $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/olpclogo.565" " olpc.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " nandflash.565" $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/network.565"  " network.565"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/network.565"  " ethernet.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/usbkey.565"   " disk.565"      $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wireless.565"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wlan.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/xo.565"       " xo.565"        $add-deflated-dropin
 
    " ${BP}/ofw/termemu/gallant.obf"             " font"          $add-deflated-dropin
