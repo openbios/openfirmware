@@ -408,12 +408,18 @@ VGA_WIDTH VGA_HEIGHT * 2* constant /dma-buf
    40 dup cl@ 1000.0000 invert and swap cl!	\ power up
    30 b4 cl!				        \ power up, reset
    1 ms
-   31 b4 cl!
+   31 b4 cl!                                    \ release reset
    1 ms
 ;
 
 : power-off  ( -- )
-   0 3038 cl!		\ Turn off CaFe GPIO3 to disable power
+   30 b4 cl!					\ assert Cam_Reset   
+   1 ms
+   32 b4 cl!					\ assert Cam_Reset and Cam_PWRDN
+   1 ms
+   0008.0000 315c cl!				\ Remove VDD
+   5 ms
+   40 dup cl@ 1000.0000 or swap cl!		\ power off
 ;
 : init  ( -- )
    (init)
