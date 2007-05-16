@@ -262,8 +262,8 @@ true value first-time?
    dup w@ case     ( len adr case: type )
       inode-type  of  scan-sum-inode   endof
       dirent-type of  scan-sum-dirent  endof
-      xattr-type  of  drop  d# 18   ." XA" cr   endof
-      xref-type   of  drop  6       ." R" cr   endof
+      xattr-type  of  drop  d# 18   ( ." XA" cr )  endof
+      xref-type   of  drop  6       ( ." R" cr  )  endof
       h# ffff     of  drop  dup  ( find-nonblank  )  endof  \ Keep scanning to end
       ." Unrecognized summary node type " dup .x cr  abort
    endcase
@@ -426,6 +426,80 @@ true value first-time?
       then
    pages/eblock +loop
 ;
+
+0 [if]
+/eblock value summary-start
+
+: .eb  ( -- )
+   the-eblock# .xxx
+;
+
+: xanother-node?  ( adr -- false | adr' true )
+   eb-end  swap  ?do
+      i w@ jffs2-magic =  if
+         i header-crc?  if
+            i +raw-node  eb-end  u<=  if
+               i true unloop  exit
+            then
+         then
+      then
+   loop
+   false
+;
+: .offset  ( adr -- )  ." offset " block-buf - . ." in " .eb  ;
+
+: check-node-data  ( adr -- )
+;
+Mitch_Bradley: the most common type of 'bad node'will have a mismatching data crc. And the node will end in 0xff 0xff 0xff .... when it wasn't intended to. Because of an interrupted write.
+[22:52]	<dwmw2_gone>	those ones are almost certainly harmless
+
+>	Mitch_Bradley: it should also always be true that there is no range of a file _not_ covered by a data node
+[22:54]	<dwmw2_gone>	even if it's just a "hole" node -- with JFFS2_COMPR_ZERO.
+[22:54]	<Mitch_Bradley>	oh, that's useful
+[22:54]	<dwmw2_gone>	I had to add those 'hole' nodes to deal with truncation and then later writes past the (new) end of the file
+
+: check-node  ( adr -- len )
+   dup w@ jffs2-magic =  if    ( adr )
+      dup header-crc?  if      ( adr )
+         dup +raw-node         ( adr adr' )
+         over - swap           ( len adr )
+         check-node-data       ( len )
+      else
+         ." Bad header CRC at " .offset
+         /eblock               ( len )
+      then                     ( len )
+   else                        ( adr )
+      check-em
+   then
+;
+
+: check-nodes  ( -- )
+   block-buf  summary-start  erased?  if  exit  then
+   block-buf  summary-start  bounds  ?do  i  check-node  +loop
+;
+
+: check-summary  ( -- )
+   /eblock to summary-start
+
+   \ Check magic number
+   block-buf /page + -1 j@  h# 02851885  <>  if   exit  then
+
+   block-buf /eblock + -2 j@  to summary-start
+
+   block-buf summary-start +  bad-summary?  if
+      ." Bad summary CRC for " .eb  exit
+   then
+;
+
+: check-blocks  ( -- )
+   pages/chip  0  do
+      i page>eblock  to the-eblock#
+      the-eblock# read-eblock
+      check-summary
+      check-nodes
+   pages/eblock +loop
+;
+[then]
 
 : place-node  ( node where -- )
    !
@@ -929,7 +1003,11 @@ external
 
    0 to seek-ptr                                ( )
 
-   set-sizes  allocate-buffers  scan-occupied   ( )
+   set-sizes  allocate-buffers                  ( )
+
+\   my-args " :check" $=  if  check-blocks true exit  then
+
+   scan-occupied                                ( )
 
    \ This is the value we will use for file-buf if we use read and seek
    next-inode to file-buf
