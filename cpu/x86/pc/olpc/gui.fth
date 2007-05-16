@@ -26,10 +26,10 @@ d# 0  d# 0  2value first-icon-xy
 ;
 
 : $get-image  ( filename$ -- true | adr,len false )
-   ['] $read-open catch  if  2drop true exit  then  ( )
-   ifd @ fsize  dup alloc-mem swap   ( bmp-adr,len )
-   2dup  ifd @ fgets  over <>        ( bmp-adr,len error? )
-   ifd @ fclose                      ( bmp-adr,len )
+   r/o open-file  if  drop true  exit  then   >r    ( r: fd )
+   r@ fsize  dup alloc-mem swap          ( bmp-adr,len  r: fd )
+   2dup  r@ fgets  over <>               ( bmp-adr,len error?  r: fd )
+   r> fclose                             ( bmp-adr,len )
    if  free-mem true  else  false  then  ( true | bmp-adr,len false )
 ;
 : $show  ( filename$ -- )
