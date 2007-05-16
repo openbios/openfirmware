@@ -222,7 +222,6 @@ fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 
 \needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
 
-[ifdef] spi-flash-support
 fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
 
 warning @ warning off
@@ -285,8 +284,6 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH prog
 ' ofw-fw-filename$ to fw-filename$
 
 fload ${BP}/dev/geode/lpcflash.fth           \ Reflasher for PLCC FLASH on A-test
-
-[then]
 
 : +i encode-int encode+  ;  : 0+i  0 +i  ;
 

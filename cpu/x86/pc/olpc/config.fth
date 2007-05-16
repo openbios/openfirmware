@@ -30,10 +30,6 @@ create linux-support
 create jffs2-support
 create use-elf
 
-create cafe-support
-create usb-support
-create spi-flash-support
-
 \ create use-timestamp-counter \ Use CPU's timestamp counter for timing ...
 			\ ... this is worthwhile if your CPU has one.
 

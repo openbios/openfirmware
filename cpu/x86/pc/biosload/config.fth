@@ -60,7 +60,6 @@ create use-ega
 create use-elf
 create use-ne2000
 create use-watch-all
-create usb-support
 create use-null-nvram
 create no-floppy-node
 [then]
