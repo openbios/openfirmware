@@ -70,9 +70,9 @@ defer .firmware  ' noop to .firmware
 ;
 : .memory  ( -- )
    memory-size dup d# 1024 / ?dup  if ( mb gb )
-      nip "  GB" rot                  ( gb$ gb )
+      nip "  GiB" rot                 ( gb$ gb )
    else                               ( mb )
-      " MB " rot                      ( mb$ mb )
+      " MiB " rot                     ( mb$ mb )
    then                               ( m$ m )
    .d  type ." memory installed"      (  )
 ;
