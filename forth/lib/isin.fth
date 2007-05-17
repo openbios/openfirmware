@@ -47,7 +47,7 @@ d# 102943 constant pi
 : isin  ( index -- frac )
    fstep *  fs 2/  /  to x
    x dup times to xsq
-   one  d# 72 sin-step d# 42 sin-step  d# 20 sin-step  6 sin-step  x times  one max
+   one  d# 72 sin-step d# 42 sin-step  d# 20 sin-step  6 sin-step  x times  one min
 ;
 
 : one-cycle  ( adr -- )
