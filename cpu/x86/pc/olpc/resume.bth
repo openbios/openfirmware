@@ -409,6 +409,12 @@ here resume-entry put-branch
 
    \ Unfreeze image by setting the DCONLOAD bit (0x800) in the GPIO output register
    h# 0800 h# 1000 port-wl
+[else]
+   \ Turn on the flat panel power as soon as possible
+   \ The 400.0000 bit make the panel power-up timers use the 14 MHz clock
+   \ instead of the 32 kHz clock.  That is supposed to be only for simulation,
+   \ but we have DCON between the CPU and the panel, so we don't need delays.
+   h# 500.0000 #  vp-pa h# 410 + #)  mov
 [then]
 
 \   0 h# 1842 pw!   \ Disable power button during early startup
