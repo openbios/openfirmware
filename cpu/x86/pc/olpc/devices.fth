@@ -280,6 +280,7 @@ stand-init: PCI properties
 ;
 
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
+fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
 fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 
 fload ${BP}/dev/olpc/spiflash/spiflash.fth   \ SPI FLASH programming
