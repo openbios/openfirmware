@@ -23,7 +23,7 @@ h# 808 value rlevel
    record-base  record-len  audio-in drop
 ;
 
-h# 0 value plevel
+h# 606 value plevel   \ -9 dB, highest gain without digital clipping
 : set-plevel  ( db -- )
    dup 0>  if  drop 0  then
    negate  1+ 2* 3 /  dup bwjoin  to plevel
@@ -39,77 +39,6 @@ h# 0 value glevel
    open-out  plevel set-pcm-gain  glevel h# 38 codec!
    record-base  record-len  audio-out drop  write-done
 ;
-
-[ifdef] notdef
-create sin-half
-d#     0 w,
-d#  3212 w,
-d#  6393 w,
-d#  9512 w,
-d# 12539 w,
-d# 15446 w,
-d# 18204 w,
-d# 20787 w,
-d# 23170 w,
-d# 25329 w,
-d# 27245 w,
-d# 28898 w,
-d# 30273 w,
-d# 31356 w,
-d# 32137 w,
-d# 32609 w,
-d# 32767 w,
-d# 32609 w,
-d# 32137 w,
-d# 31356 w,
-d# 30273 w,
-d# 28898 w,
-d# 27245 w,
-d# 25329 w,
-d# 23170 w,
-d# 20787 w,
-d# 18204 w,
-d# 15446 w,
-d# 12539 w,
-d# 9512 w,
-d# 6393 w,
-d# 3212 w,
-
-
-
-0 value wave
-: wave++  ( -- wave )
-   wave h# 800 + dup h# 7fff and 0= if negate then dup to wave
-;
-: cycle  ( adr -- adr' )
-   d# 32  0  do                   ( adr )
-      sin-half i wa+ w@  over w!  ( adr value )
-      la1+                        ( adr' )
-   loop                           ( adr )
-   d# 32  0  do                   ( adr )
-      sin-half i wa+ w@ negate  over w!   ( adr value )
-      la1+                        ( adr' )
-   loop                           ( adr' )
-;
-
-: make-wave  ( -- )
-   \ Start with everything quiet
-   record-base record-len erase
-
-   \ Add a sine wave to the left channel for the first half of the time
-   record-base record-len 2/  bounds      ( endadr startadr )
-   begin  2dup u>  while  cycle  repeat   ( endadr startadr )
-   2drop
-
-   \ Add a sine wave to the right channel for the last half of the time
-   record-base record-len bounds          ( endadr startadr )
-   record-len 2/ + wa1+
-   begin  2dup u>  while  cycle  repeat   ( endadr startadr )
-   2drop
-;
-[then]
-
-fload ${BP}/forth/lib/isin.fth
 
 d# 500 value tone-freq
 
@@ -127,12 +56,11 @@ d# 500 value tone-freq
    /cycle +
 ;
 
-: make-tone-wave  ( -- )
+: make-tone  ( freq -- )
+   sample-rate to fs  ( freq )  set-freq
+
    \ Start with everything quiet
    record-base record-len erase
-
-   sample-rate to fs
-   tone-freq set-freq
 
    record-base  make-cycle  drop
 
@@ -147,6 +75,13 @@ d# 500 value tone-freq
    /cycle +loop
 ;
 
+: tone  ( freq -- )
+   record-len la1+  alloc-mem to record-base
+   make-tone
+   d# -9 set-glevel  play
+   record-base record-len la1+  free-mem
+;
+
 : copy-cycle  ( adr #copies -- adr' )
    1  ?do                      ( adr )
       dup  /cycle -  over      ( adr adr- adr )
@@ -155,7 +90,7 @@ d# 500 value tone-freq
    loop                        ( adr' )
 ;
 
-: make-wave  ( -- )
+: make-sweep  ( -- )
    \ Start with everything quiet
    record-base record-len erase
 
@@ -169,6 +104,7 @@ d# 500 value tone-freq
    -1 +loop
    drop
 
+\   record-base   record-base record-len 2/ + wa1+  record-len 2/ /w -  move
    \ Copy the left channel into the right channel in reverse order
    record-base   record-len /w -  bounds   ( end start )
    begin  2dup u>  while                   ( end start )
@@ -181,43 +117,29 @@ d# 500 value tone-freq
 
 : selftest-args  ( -- arg$ )  my-args ascii : left-parse-string 2drop  ;
 
-: ?play-wav-file  ( -- )
+: wav-test  ( -- )
    selftest-args dup 0=  if  2drop exit  then
    " $play-wav-loop" $find 0=  if  2drop  else  catch drop  then
 ;
 
-d#  -8 value wav-plevel
-d# -12 value wav-glevel
-: wav-test  ( -- )
-   wav-plevel set-plevel  wav-glevel set-glevel
-   ?play-wav-file
+: sweep-test  ( -- )
+   ." Playing sweep" cr
+   make-sweep
+   d# -9 set-glevel  play
 ;
 
-d#  -8 value tone-plevel
-d# -12 value tone-glevel
-
-: tone-test  ( -- )
-   ." Playing tone" cr
-   \ Onset of clipping in the P domain is -7
-   tone-plevel set-plevel  tone-glevel set-glevel
-   make-wave play
-;
-
-d# -8 value rec-plevel
-d# -3 value rec-glevel
 : mic-test  ( -- )
    ." Recording ..." cr
-   rec-plevel set-plevel  rec-glevel set-glevel
    record
    ." Playing ..." cr
-   play
+   d# -3 set-glevel  play
 ;
 
 : selftest  ( -- error? )
    open 0=  if  ." Failed to open /audio" cr true exit  then
    wav-test
    record-len la1+  alloc-mem to record-base
-   tone-test
+   sweep-test
    mic-test
    record-base record-len la1+  free-mem
    close false

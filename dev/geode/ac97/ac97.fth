@@ -239,8 +239,8 @@ d# 48000 instance value sample-rate
    0 set-master-volume
 \   0 set-mono-volume
    h# 0f0f set-headphone-volume
-   h# 808 set-pcm-gain		\ enable line-out
-   h# 808 h# 38 codec!		\ enable surround out (headphones)
+   h# 606 set-pcm-gain		\ enable line-out
+   h# 606 h# 38 codec!		\ enable surround out (headphones)
    h# 000 h# 76 codec!  	\ Route mixer out to headphones
 ;
 : close-out  ( -- )
