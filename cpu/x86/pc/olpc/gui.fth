@@ -347,19 +347,31 @@ device-end
 
 h# 32 buffer: icon-name
 
+: show-icon-file  ( basename$ -- )
+   " rom:" icon-name pack  $cat                  ( )
+   " .565" icon-name $cat                        ( )
+   icon-name count  $show&advance                ( )
+;
+
 : ?show-icon  ( adr len -- )
-   locate-device  0=  if                               ( phandle )
-      " icon" 2 pick  get-package-property  0=  if     ( phandle prop$ )
-         rot drop                                      ( prop$ )
-         $show&advance                                 ( )
-      else                                             ( phandle )
-         " name" rot  get-package-property  if  exit  then  ( prop$ )
-         get-encoded-string                            ( name$ )
-         " rom:" icon-name pack  $cat                  ( )
-         " .565" icon-name $cat                        ( )
-         icon-name count  $show&advance                ( )
-      then                                             ( )
-   then                                                ( )
+   locate-device  if  exit  then                    ( phandle )
+
+   " icon" 2 pick  get-package-property  0=  if     ( phandle prop$ )
+      $show&advance                                 ( phandle )
+      drop exit
+   then                                             ( phandle )
+
+   " iconname" 2 pick  get-package-property  0=  if ( phandle prop$ )
+      get-encoded-string  show-icon-file            ( phandle )
+      drop exit
+    then                                            ( phandle )
+
+   " name"  2 pick  get-package-property  0=  if    ( phandle prop$ )
+      get-encoded-string  show-icon-file            ( phandle )
+      drop exit
+    then                                            ( phandle )
+
+    drop
 ;
 : (?show-device)  ( adr len -- ihandle )
    not-screen? 0=  if  2dup ?show-icon  then

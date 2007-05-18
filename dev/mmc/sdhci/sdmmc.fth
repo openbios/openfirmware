@@ -2,6 +2,7 @@ purpose: SD disk (MMC) driver
 \ See license at end of file
 
 " disk" device-name
+" sdmmc" " iconname" string-property
 
 0 instance value label-package
 

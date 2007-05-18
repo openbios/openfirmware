@@ -5,6 +5,7 @@ hex
 
 " block" device-type
 " disk"  encode-string  " compatible" property
+" usbdisk" " iconname" string-property
 
 fload ${BP}/dev/usb2/device/storage/scsicom.fth	\ Utility routines for SCSI commands
 
