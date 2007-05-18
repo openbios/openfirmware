@@ -58,6 +58,7 @@ fff0.0000 10.0000 mmap constant flash-base
 : scanint! ( si -- )      9 dcon!  ;  \ def: h# 0000
 : bright!  ( level -- ) d# 10 dcon! ; \ def: h# xxxF
 
+\needs vp@ fload dumpgamma.fth
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

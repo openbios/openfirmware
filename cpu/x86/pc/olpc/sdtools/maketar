@@ -5,5 +5,5 @@ cp ../../../../../cpu/x86/build/builder.dic .
 cp ../../../../../cpu/x86/ioports.fth .
 cp ../../../../../cpu/x86/pc/olpc/mfgdata.fth .
 cp ../../../../../dev/olpc/dcon/dconsmb.fth .
-tar cfz sdkit.tgz forth builder.dic sd.fth ioports.fth dconsmb.fth mfgdata.fth sd
+tar cfz sdkit.tgz forth builder.dic sd.fth ioports.fth dconsmb.fth mfgdata.fth dumpgamma.fth sd
 rm -f builder.dic forth ioports.fth

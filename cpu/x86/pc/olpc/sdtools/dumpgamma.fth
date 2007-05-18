@@ -23,6 +23,21 @@ fe00.8000 4000 mmap constant vp-base
       cr  exit?  if  leave then
    h# 8 +loop
 ;
+
+fe00.4000 4000 mmap constant dc-base
+
+: dc@  ( reg -- l )  dc-base + l@  ;
+: dc!  ( l reg -- )  dc-base + l!  ;
+
+fe00.0000 4000 mmap constant gp-base
+
+: gp@  ( reg -- l )  gp-base + l@  ;
+: gp!  ( l reg -- )  gp-base + l!  ;
+
+
+
+
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
