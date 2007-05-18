@@ -7,7 +7,7 @@ d# 20,000 constant max-inodes
 
 0 instance value block-buf    \ Start address of working buffer
 0 instance value eb-end       \ End address of working buffer
-\ 0 value cleanmark?
+0 value cleanmark?
 
 \ Magic numbers to identify JFFS2 nodes
 h# 1985 constant jffs2-magic
@@ -24,13 +24,17 @@ h# e009 constant xref-type
 0 ( instance ) value alloc-len  \ (Computed) size of inode and dirent buffers
 
 0 ( instance ) value inodes         \ Buffer for in-memory inodes
-0 ( instance ) value next-inode     \ Pointer into inode buffer
+variable 'next-inode     \ Pointer into inode buffer
+: next-inode  ( -- val )  'next-inode @  ;
 
 0 ( instance ) value dirents        \ Buffer for dirent nodes
-0 ( instance ) value next-dirent    \ Pointer into dirent buffer
+variable 'next-dirent    \ Pointer into dirent buffer
+: next-dirent  ( -- val )  'next-dirent @  ;
 
-0 ( instance ) value minodes        \ Buffer for per-file inode list
-0 ( instance ) value next-minode    \ Pointer into per-file inode list
+\ 0 ( instance ) value minodes        \ Buffer for per-file inode list
+variable 'next-minode    \ Pointer into per-file inode list
+: next-minode  'next-minode @  ;
+: minodes next-inode ;  \ Start the inode pointer list after the inodes
 
 0 instance value file-buf       \ Buffer for constructing file
 0 instance value file-size      \ Actual size of file
@@ -41,6 +45,9 @@ h# e009 constant xref-type
 0 ( instance ) value /eblock        \ Size of erasable unit
 0 ( instance ) value pages/eblock   \ pages per erase block
 0 ( instance ) value pages/chip     \ total number of pages
+
+0 instance value the-page#
+0 instance value the-eblock#
 
 \ In-memory inode structure
 
@@ -57,11 +64,18 @@ h# e009 constant xref-type
 \ Storing it in this form saves space and time, because we only have
 \ to read the full inodes for the few files that we actually access.
 
-: meblock@   ( adr -- eblock# )  0 j@  ;
-: minum@     ( adr -- inode# )   1 j@  ;
-: mversion@  ( adr -- version )  2 j@  ;
-: moffset@   ( adr -- offset )   3 j@  ;
-4 /l* constant /mem-inode
+instance variable splices  0 splices !
+
+: pack-offset  ( offset block -- n )  the-eblock#  /eblock *  +  ;
+
+: minum@     ( adr -- inode# )   0 j@  ;
+: mversion@  ( adr -- version )  1 j@  ;
+: moffset@   ( adr -- block+offset )  2 j@  ;
+\ : moffset/block@  ( adr -- offset block )  moffset@ /eblock /mod  ;
+\ : meblock@   ( adr -- eblock# )  0 j@  ;
+\ : moffset@   ( adr -- offset )   3 j@  ;
+\ 4 /l* constant /mem-inode
+3 /l* constant /mem-inode
 \ : mtotlen@   ( adr -- offset )   4 j@  ;
 \ 5 /l* constant /mem-inode
 
@@ -126,7 +140,7 @@ true value first-time?
 : allocate-buffers  ( -- )
    /eblock  dma-alloc     to block-buf
    /page d# 1024 max  /eblock  min  to /empty-scan
-   max-inodes /n*  dma-alloc  to minodes  \ Arbitrary limit on inodes per file
+\   max-inodes /n*  dma-alloc  to minodes  \ Arbitrary limit on inodes per file
 
    first-time?  if
       jffs2-dirent-base to dirents
@@ -142,7 +156,7 @@ true value first-time?
 \   inodes  alloc-len     dma-free
 \   dirents alloc-len     dma-free
 
-   minodes max-inodes /n*  dma-free
+\   minodes max-inodes /n*  dma-free
 
    block-buf /eblock     dma-free
 
@@ -212,22 +226,204 @@ true value first-time?
    drop false
 ;
 
+3 /n* instance buffer: curinum  \ cur-inum, cur-vers, cur-offset
+: curvers  curinum na1+   ;
+: curoffs  curinum 2 na+  ;
+
+\ 0 instance variable cur-inum
+\ 0 instance variable cur-vers
+\ 0 instance variable cur-offset
+
+: init-curvars  ( -- )  curinum 3 /n* erase  ;
+
+1 [if]
+code aencode-inode  ( version inum offset 'curinum 'next-inode -- )
+   dx pop   \ dx: 'next-inode
+   cx pop   \ cx: 'curinum
+   bx pop   \ bx: offset
+            \ 0 [sp]: inum     4 [sp]: version  
+            \ 0 [cx]: curinum  4 [cx]: curvers  8 [cx]: curoffs
+   8 [cx]  ax  mov  \ ax: Old curoffs
+   bx  8 [cx]  mov  \ Update curoffs
+   ax      bx  sub  \ Delta
+
+   h# 200 #  bx  cmp  <  if
+      \ All 1-byte forms require offset < 200
+
+      4 [sp] ax mov   ax dec  4 [cx] ax cmp  =  if    \ version == curvers+1 ?
+         0 [sp] ax mov  0 [cx] ax  cmp  =  if         \ inum == curinum ?
+            1 # bx shr                                \ Shift delta to remove low 0 bit
+            0 [dx] ax mov  bl 0 [ax] mov  0 [dx] inc  \ Store encoded byte at next-inode++
+            4 [cx] inc                                \ Update curvers
+            ax pop  ax pop                            \ Remove inum and version from stack
+            next
+         then
+      then
+
+      1 #  4 [sp]  cmp  =  if                         \ version == 1 ?
+         0 [sp] ax mov  ax dec  0 [cx] ax  cmp  =  if \ inum == curinum+1 ?
+            1 # bx shr  bx inc                        \ Shift delta and add in the next-inum bit
+            0 [dx] ax mov  bl 0 [ax] mov  0 [dx] inc  \ Store encoded byte at next-inode++
+            0 [cx] inc    1 # 4 [cx] mov              \ Update inum and set curvers to p
+            ax pop  ax pop                            \ Remove inum and version from stack
+            next
+         then
+      then
+   then
+
+   di bx  mov      \ Save DI in bx; we are through with the delta value
+   0 [dx] di mov   \ Get pointer in di
+   ax ax xor
+   al stosb        \ encode a 0 byte to indicate the long form
+   
+   ax pop          \ inum
+   ax stos         \ encode it
+   ax 0 [cx] mov   \ Update curinum
+
+   ax pop          \ version
+   ax stos         \ encode it
+   ax 4 [cx] mov   \ Update curvers
+
+   8 [cx] ax mov   \ offset (from already-updated curoffs)
+   ax stos         \ encode it
+
+   di 0 [dx] mov   \ Update next-inode
+   bx di mov       \ Restore DI
+c;
+
+code amatch-inode  ( inum adr endadr 'curinum -- inum false | inum adr' offset version true )
+   dx pop  cx pop  ax pop  0 [sp] bx mov  \ dx: 'curinum  cx: endadr  ax: adr  bx: inum
+   si push
+   ax si mov     \ si: adr
+
+   begin  cx si cmp   u<  while
+      ax ax xor
+      al lodsb   \ ax: byte
+      h# 20 #  al  cmp  u<  if
+         ax lods  ax 0 [dx]  mov
+         ax lods  ax 4 [dx]  mov
+         ax lods  ax 8 [dx]  mov
+      else
+         1 #  al  test  0<>  if
+            0 [dx]  inc
+            1 #  4 [dx]  mov
+            h# fe #  al  and
+         else
+            4 [dx]  inc
+         then
+         ax ax add
+         ax  8 [dx]  add
+      then
+      bx  0 [dx]  cmp  =  if
+         si ax mov  si pop   ax push  8 [dx] push  4 [dx] push  -1 # push  next
+      then
+   repeat
+   si pop  0 # push
+c;
+
+[else]
+
+: short-encode   ( version inum lowbit offset -- )
+   2/ or next-inode c!  1 'next-inode +!    ( inum version )
+   curinum !  curvers !                     ( )
+;
+
+: encode-inode  ( version inum offset -- )
+   curoffs                 ( version inum offset &curoffset )
+   2dup @ -  >r            ( version inum offset &curoffset r: delta )
+   !                       ( version inum r: delta )
+   r@ h# 200 <  if         ( version inum r: delta )
+      \ All 1-byte forms require offset < 200
+
+      \ 1-byte form 0: nnnnnnn0: inum = cur-inum, vers = cur-vers + 1
+      \ This is the next data node in a sequence from one file
+
+      dup curinum @ =  if                  ( version inum )
+         over 1- curvers @ =  if           ( version inum )
+            0 r> short-encode  exit
+         then                              ( version inum )
+      then                                 ( version inum )
+
+      \ 1-byte form 1: nnnnnnn1: inum = cur-inum + 1, vers = 1
+      \ This is the beginning of a new file
+      \ With: 4,350,592   Without: 4,476,904
+
+      dup 1- curinum @  =  if              ( version inum )
+         over 1 =  if                      ( version inum )
+            1 r> short-encode  exit
+         then                              ( version inum )
+      then                                 ( version inum )
+   then                                    ( version inum  r: delta )
+   r> drop                                 ( version inum )
+
+   curinum !   curvers !                   ( )
+
+   \ If we can't use a short form, use the long form:
+   \ 0.byte, inum.long, version.long, offset.long
+
+   \ At some point we might want to have another form with .short fields
+
+   next-inode
+   0           over    c!    1+        ( adr' )
+   curinum @   over     !  na1+        ( adr' )
+   curvers @   over     !  na1+        ( adr' )
+   curoffs @   over     !  na1+        ( adr' )
+   'next-inode !                       ( )
+;
+
+: decode-inode  ( adr -- len )
+   dup  c@  h# 20 <  if             ( adr )
+      1+
+      dup @  curinum !  na1+        ( adr' )  \ Inum
+      dup @  curvers !  na1+        ( adr' )  \ Version
+          @  curoffs !              ( )       \ Offset
+      d# 13                         ( len )
+   else                             ( adr )
+      c@  dup 1 and  if             ( byte )
+         1 curinum     +!           ( byte )  \ Inum
+         1 curvers      !           ( byte )  \ Version
+         1 invert and               ( byte' )
+      else                          ( byte )
+         1 curvers     +!           ( byte )  \ Version
+      then                          ( byte )
+      2* curoffs +!                 ( )       \ Offset
+      1                             ( len )
+   then                             ( len )
+;
+
+: match-inode  ( inum mem-inode -- inum false | inum mem-inode' offset version true )
+   next-inode  swap  ?do        ( inum )
+      i decode-inode            ( inum len )
+      over curinum @ =  if      ( inum len )  \ Inum
+         i +  curoffs @  curvers @  ( inum mem-inode' offset version )
+         true unloop exit
+      then                      ( inum len )
+   +loop                        ( inum )
+   false
+;
+[then]
+
 \ Tools for copying into memory
 : c+!  ( adr c -- adr' )  over c! ca1+  ;
 : l+!  ( adr l -- adr' )  over l! la1+  ;
 
-0 instance value the-page#
-0 instance value the-eblock#
+: store-inode  ( inum version offset -- )
+   -rot  swap  next-inode   ( offset version inum adr )
+   tuck l!  la1+            ( offset version adr' )
+   tuck l!  la1+            ( offset adr' )
+   tuck l!  la1+            ( adr' )
+   'next-inode !
+;
 
 \ Copy summary inode from FLASH to memory
 \ Summary inode:  w.nodetype l.inode l.version l.offset l.totlen
 : scan-sum-inode  ( adr -- len )
    wa1+   \ Skip the nodetype so we can use j@
-   next-inode              ( adr iadr )
-   the-eblock#       l+!   ( adr iadr' )  \ eblock@
-   2dup   3 /l*  move      ( adr iadr )
-   3 la+ to next-inode     ( adr )
-   drop d# 18
+   >r  r@ 1 j@  r@ 0 j@  r> 2 j@ pack-offset  ( version inum offset )
+\   store-inode
+\  encode-inode
+   curinum 'next-inode aencode-inode
+   d# 18                         ( len )
 ;
 
 \ Copy summary dirent from FLASH to memory
@@ -242,7 +438,7 @@ true value first-time?
    dup >r                             ( src dst len r: len )
    move                               ( )
 
-   r@ la1+  next-dirent +  to next-dirent  ( offset-adr )
+   r@ la1+  'next-dirent +!           ( offset-adr )
 
    \ 6 is the length of the fields that were skipped, not copied
    r> 6 +                             ( len )
@@ -351,21 +547,18 @@ true value first-time?
    2 pick rdnsize@  move    ( adr )
    dup rdnsize@  d# 22 +    ( adr dirent-len )
 
-   next-dirent +  to next-dirent  ( adr )
+   'next-dirent +!          ( adr )
 ;
 
 \ Copy the raw inode information to memory in summary inode form
 \ We do this to save space, because we will only need the full
 \ information for those few inodes that correspond to the files
 \ we actually access.
-: scan-raw-inode  ( adr -- adr )
-   next-inode    ( adr iadr )
-   the-eblock#       l+!   ( adr dadr' )  \ eblock
-   over  riinode@    l+!   ( adr dadr' )  \ ino
-   over  riversion@  l+!   ( adr dadr' )  \ version
-   over block-buf -  l+!   ( adr dadr' )  \ offset
-\   over  riisize@    l+!   ( adr dadr' )  \ node length
-   to next-inode
+: scan-raw-inode  ( adr -- )
+   >r  r@ riversion@  r@ riinode@  r> block-buf -  pack-offset  ( version inum offset )
+\   store-inode
+\  encode-inode
+   curinum 'next-inode aencode-inode
 \ false to cleanmark?
 ;
 : scan-node  ( adr -- adr' )
@@ -382,7 +575,7 @@ true value first-time?
 
       inode-type  of        ( adr )
          debug-scan?  if  ." i"  then
-         scan-raw-inode     ( adr )
+         dup scan-raw-inode ( adr )
       endof                 ( adr nodetype )
 
       padding-type  of  ( adr )
@@ -417,8 +610,9 @@ true value first-time?
 
 : scan-occupied  ( -- )
    first-time?  0=  if  exit  then
-   dirents to next-dirent
-   inodes  to next-inode
+   init-curvars
+   dirents 'next-dirent !
+   inodes  'next-inode  !
    pages/chip  0  do
       i page>eblock  to the-eblock#
       i no-summary?  if
@@ -501,16 +695,6 @@ Mitch_Bradley: the most common type of 'bad node'will have a mismatching data cr
 ;
 [then]
 
-: place-node  ( node where -- )
-   !
-   next-minode  na1+  to next-minode  ( )
-;
-
-: get-inode  ( mem-inode -- adr )
-   dup meblock@  read-eblock
-   moffset@  block-buf +               ( inode-adr )
-;
-
 : inode-good?  ( inode -- flag )
    dup  d# 15 /l*  crc          ( riadr node-crc )
    over rincrc@ <>   if         ( riadr )
@@ -519,7 +703,8 @@ Mitch_Bradley: the most common type of 'bad node'will have a mismatching data cr
    dup >ridata over ricsize@    ( riadr data-adr data-len )
    crc  swap ridcrc@ =
 ;
-: minode-good?  ( minode -- flag )  get-inode inode-good?  ;
+
+: get-inode  ( offset -- adr )  /eblock /mod  read-eblock  block-buf +  ;
 
 \ This is a brute-force, no tricks, insertion sort.
 \ Insertion sort is bad for large numbers of elements, but in this
@@ -527,86 +712,92 @@ Mitch_Bradley: the most common type of 'bad node'will have a mismatching data cr
 \ is dominated by the need to scan all the nodes.  collect-nodes takes
 \ about 160 ms for a tiny file (4 nodes), about 200 ms for a very large
 \ one (573 nodes).
-: insert-sort  ( node -- )
-   dup mversion@                   ( node version )
-   next-minode  minodes  ?do       ( node version )
-      dup  i @ mversion@  =  if    ( node version )
+: insert-node  ( offset version adr -- )
+   \ XXX check for list overflow here
+   >r
+   r@  r@ 2 na+  next-minode r@ -  move   ( offset version r: adr )
+   r>  2!
+   2 /n*  'next-minode +!                 ( )
+;
+
+: insert-sort  ( offset version -- )
+   \ If the list is empty, insert at the beginning
+   next-minode  minodes  =  if         ( offset version )
+      minodes insert-node             ( )
+      exit
+   then
+
+   \ Run the loop backwards because versions are more likely to increase
+   minodes  next-minode 8 -  do              ( offset version )
+      dup  i @  >  if                        ( offset version )
+         \ Slide everything above up to open a slot
+         i 2 na+  insert-node               ( )
+         unloop exit
+      then                                   ( offset version )
+
+      dup  i @  =  if                        ( offset version )
          \ If we have a collision, we check the CRC of the new node,
          \ and if it is valid, replace the existing one.  We will
          \ end up with only the last good one in the slot.
-         drop                      ( node )
-         dup minode-good?  if      ( node )
-            i !                    ( )
-         else                      ( node )
-            drop                   ( )
-         then                      ( )
+         drop                                ( offset )
+         dup get-inode inode-good?  if       ( offset )
+            i na1+  !                        ( )
+         else                                ( offset )
+            drop                             ( )
+         then                                ( )
          unloop exit
       then
-                                   ( node version )
-      dup  i @ mversion@  <  if    ( node version )
-         \ Slide everything above up to open a slot
-         i  i na1+  next-minode i -  move  ( node version )
-         drop i place-node         ( node version )
-         unloop exit
-      then                         ( node version )
-   /n +loop                        ( node version )
-   drop  next-minode  place-node   ( )
+                                             ( offset version )
+   -8 +loop                                  ( offset version )
+
+   \ If we get here, the new node goes at the beginning of the list
+   minodes  insert-node                     ( )
+;
+
+
+\ Also used by insert-dirent
+: place-node  ( node where -- )
+   !
+   /n 'next-minode +!   ( )
 ;
 
 \ This is used for symlinks and directory inodes where there
 \ can only be one of them.
--1 value max-version  \ Local variable for find-node and $find-name
--1 value the-inode    \ Local variable for find-node
-: latest-node  ( inum -- true | minode false )
+-1 value max-version  \ Local variable for latest-node and $find-name
+\ -1 value the-inode    \ Local variable for latest-node
+-1 value the-offset   \ Local variable for latest-node
+: latest-node  ( inum -- true | offset false )
+   init-curvars
    -1 to max-version
-   \ Quick hack to shorten the inner loop - start at the minum field
-   \ Reduces the time for a typical run from 260 ms down to 160 ms
-   next-inode  inodes  la1+   ?do                ( inum )
-      dup  i @ =  if                             ( inum )
-         i /l -  minode-good?   if               ( inum )
-            i /l -  mversion@                    ( inum version )
-            dup max-version >  if                ( inum version )
-               to max-version                    ( inum )
-               i /l - to the-inode               ( inum )
-            else                                 ( inum version )
-               drop                              ( inum )
-            then                                 ( inum )
-         then                                    ( inum )
-      then                                       ( inum )
-   /mem-inode +loop                              ( inum )
+   inodes  begin  next-inode curinum  amatch-inode  while    ( inum inode' offset version )
+\   inodes  begin  match-inode  while    ( inum inode' offset version )
+      over get-inode inode-good?  if    ( inum inode' offset version )
+         dup max-version >  if          ( inum inode' offset version )
+            to max-version              ( inum inode' offset )
+            to the-offset               ( inum inode' )
+         else                           ( inum inode' )
+            2drop                       ( inum inode' )
+         then                           ( inum inode' )
+      else                              ( inum inode' offset version )
+         2drop                          ( inum inode' )
+      then                              ( inum inode' )
+   repeat                               ( inum )
    drop
    max-version -1 =  if  true exit  then
-   the-inode false
+   the-offset false
 ;
 
-\ This could be optimized out the wazoo, but in this application,
-\ it just doesn't matter.  We only need to load one or two files.
 : collect-nodes  ( inum -- any? )
-   minodes to next-minode   \ Empty the list
+   init-curvars
+   minodes 'next-minode !    \ Empty the list
 
-   \ Quick hack to shorten the inner loop - start at the minum field
-   \ Reduces the time for a typical run from 260 ms down to 160 ms
-   next-inode  inodes  la1+   ?do                ( inum )
-      dup  i @ =  if  i /l -  insert-sort  then  ( inum )
-   /mem-inode +loop                              ( inum )
-   drop
+   inodes  begin  next-inode curinum  amatch-inode  while    ( inum inode' offset version )
+\   inodes  begin  match-inode  while   ( inum inode' offset version )
+      insert-sort                      ( inum inode' )
+   repeat                               ( inum )
+   drop                                 ( )
    next-minode minodes <>
 ;
-
-0 [if]
-\ Excessive optimization - this knocks another 70 msecs off the time
-\ The next step would be to have a word that scans to find the next one.
-code dupi@=  ( n -- n flag )
-   0 [sp] cx mov    \ N in ax
-   0 [bp] bx mov   
-   4 [bp] bx add    \ i in bx
-   0 [bx] bx mov    \ i @ in bx
-   ax ax xor
-   bx cx cmp        \ flag
-   0=  if  ax dec  then
-   ax push
-c;
-[then]
 
 : set-length  ( final-size write-extent -- )
    2dup >  if    \ The final size extends past this segment
@@ -675,11 +866,7 @@ instance variable outpos
    ." comp "       ricompr@ 3 u.r 
    cr
 ;
-: play-inode  ( mem-inode -- )
-   debug-scan?  if
-      dup meblock@ 4 u.r  dup moffset@ 6 u.r space
-   then
-   get-inode                     ( inode )
+: (play-inode)  ( inode -- )
    dup inode-good?  0=  if       ( inode )
       debug-scan?  if  ." Skipping bad inode."  cr  then
       drop exit
@@ -705,7 +892,7 @@ instance variable outpos
    -1 to the-eblock#
    -1 to have-eblock#
    0 to file-size
-   next-minode  minodes  ?do   i @ play-inode  /n +loop
+   next-minode  minodes  ?do   i na1+ @ get-inode  (play-inode)  8 +loop
 
    release-inflater
 ;
@@ -788,18 +975,14 @@ defer $resolve-path
 d# 1024 constant /symlink   \ Max length of a symbolic link
 
 \ The input dirent is for a symlink.  Resolve it to a new dirent
-: minode>rinode  ( minode -- rinode )
-   dup meblock@ read-eblock     ( minode )
-   moffset@ block-buf +         ( rinode )
-;
 : dir-link  ( dirent -- true | dirent' false )
    delimiter >r  [char] / to delimiter
    /symlink alloc-mem >r
 
-   dirino@ latest-node  if      ( )
+   dirino@ latest-node  if         ( )
       true
-   else                            ( minode )
-      minode>rinode                ( rinode )
+   else                            ( offset )
+      get-inode                    ( rinode )
       dup >ridata  swap ridsize@   ( adr len )
       tuck  r@ swap  move          ( len )
       r@ swap  pwd  $resolve-path  ( true | dirent false )
@@ -844,7 +1027,7 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
 ;
 
 : advance-dirent  ( dirent -- false | dirent' true )
-   pwd dirino@    swap   ( parent-inode dirent )
+   pwd dirino@    swap                ( parent-inode dirent )
    begin  dup next-dirent u<  while   ( par dirent )
       2dup pino@ =  if                ( par dirent )
          nip true exit
@@ -877,7 +1060,7 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
          na1+                                ( minode' )
       else                                   ( minode )
          \ Deleted, remove from list
-         next-minode -1 na+ to next-minode   ( minode )
+         -1 /n* 'next-minode +!              ( minode )
          dup na1+  over                      ( minode src dst )
          next-minode over -  move            ( minode )
       then                                   ( minode' )
@@ -885,7 +1068,7 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    drop                                      ( )
 ;
 : prep-dirents  ( -- )
-   minodes to next-minode   \ Empty the list
+   minodes 'next-minode !   \ Empty the list
    dirents
    begin  advance-dirent  while
       dup insert-dirent
@@ -893,25 +1076,6 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    repeat
    remove-unlinks
 ;
-
-0 [if]
-struct jffs2_raw_dirent
-{
-0	jint16_t magic;
-0+w	jint16_t nodetype;	/* == JFFS2_NODETYPE_DIRENT */
-1	jint32_t totlen;
-2	jint32_t hdr_crc;
-3	jint32_t pino;
-4	jint32_t version;
-5	jint32_t ino; /* == zero for unlink */
-6	jint32_t mctime;
-7	uint8_t nsize;
-7+b	uint8_t type;
-7+w	uint8_t unused[2];
-8	jint32_t node_crc;
-9	jint32_t name_crc;
-10	uint8_t name[0];
-[then]
 
 \ For now, just 0 the modify time, since we only support deleting
 : now-seconds  ( -- secs )  0  ;
@@ -1091,8 +1255,8 @@ hex
       0 0 0  0 0 0           ( id' s m h  d m y  r: dirent )
       0                                ( ... len r: dirent )
       0                         ( ... attributes r: dirent )
-   else                           ( id' minode r: dirent )
-      minode>rinode  >r           ( id'  r: dirent rinode )
+   else                           ( id' offset r: dirent )
+      get-inode  >r               ( id'  r: dirent rinode )
       r@ rimtime@  sec>time&date  ( id' s m h  d m y  r: dirent rinode )
       r@ riisize@                 ( id' s m h  d m y  len r: dirent rinode )
       r> rimode@                  ( id' s m h  d m y  len  mode  r: dirent )
@@ -1133,8 +1297,7 @@ hex
 : .inode  ( adr )
    dup minum@    8 u.r  \ Inode
    dup mversion@ 8 u.r  \ Version
-   dup meblock@  7 u.r  \ Eblock#
-   dup moffset@  6 u.r  \ Offset on eblock
+   dup moffset@  /eblock /mod  7 u.r  6 u.r  \ Eblock#, offset on eblock
 \   dup mtotlen@  8 u.r  \ Total length
    mcr
    /mem-inode +
@@ -1182,19 +1345,6 @@ hex
 [then]
 
 
-
-0 [if]
-// Values of type field (byte at offset h# 1d) in directory entry
-#define DT_UNKNOWN	0
-#define DT_FIFO		1
-#define DT_CHR		2
-#define DT_DIR		4
-#define DT_BLK		6
-#define DT_REG		8
-#define DT_LNK		10
-#define DT_SOCK		12
-#define DT_WHT		14
-[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
