@@ -80,18 +80,16 @@ instance variable splices  0 splices !
 \ 5 /l* constant /mem-inode
 
 \ Fields within in-memory directory entry data structure.
-\ Based on struct jffs2_sum_dirent_flash, with the
-\ "nodetype" and "totlen" fields replaced by the eblock #.
+\ Based on struct jffs2_sum_dirent_flash, without the
+\ "nodetype", "totlen", and "offset" fields.
 
-: eblock@  ( adr -- eblock# )  0 j@  ;
-: offset@  ( adr -- offset )   1 j@  ;
-: pino@    ( adr -- parent )   2 j@  ;
-: version@ ( adr -- version )  3 j@  ;
-: dirino@  ( adr -- inode )    4 j@  ;
-: ftype@   ( adr -- type )     d# 21 + c@  ;
+: pino@    ( adr -- parent )   0 j@  ;
+: version@ ( adr -- version )  1 j@  ; \ $find-name and insert-dirent
+: dirino@  ( adr -- inode )    2 j@  ;
+: ftype@   ( adr -- type )     d# 13 + c@  ;
 : fname$   ( node-adr -- adr len )
-   dup d# 22 +           ( node-adr name-adr )
-   swap  d# 20 + c@      ( name-adr name-len )
+   dup d# 14 +           ( node-adr name-adr )
+   swap  d# 12 + c@      ( name-adr name-len )
 ;
 
 \ Access fields in per-file raw inode structure - based on
@@ -454,18 +452,16 @@ c;
 \ Summary dirent:  w.nodetype l.totlen l.offset l.pino l.version
 \ l.ino c.nsize c.type name
 : scan-sum-dirent  ( adr -- len )
-   the-eblock#  next-dirent  l!       ( adr )
-
-   6 +                                ( offset-adr )
-   next-dirent la1+                   ( offset-adr dst-adr )
-   over  d# 16 + c@  d# 18 +          ( src dst len )
+   d# 10 +                            ( offset-adr )
+   next-dirent                        ( offset-adr dst-adr )
+   over  d# 12 + c@  d# 14 +          ( src dst len )
    dup >r                             ( src dst len r: len )
    move                               ( )
 
-   r@ la1+  'next-dirent +!           ( offset-adr )
+   r@  'next-dirent +!                ( offset-adr )
 
-   \ 6 is the length of the fields that were skipped, not copied
-   r> 6 +                             ( len )
+   \ 10 is the length of the fields that were skipped, not copied
+   r> d# 10 +                         ( len )
 ;
 
 [ifdef] notdef
@@ -560,8 +556,6 @@ c;
 \ XXX        2dup next-dirent swap move     ( adr len )
    \ 
    next-dirent
-   the-eblock#        l+!
-   over block-buf -   l+!
    over rdpino@       l+!
    over rdversion@    l+!
    over rdinode@      l+!   ( adr iadr' )
@@ -569,7 +563,7 @@ c;
    over rdtype@       c+!   ( adr iadr' )
    over >rdname swap        ( adr str-adr iadr )
    2 pick rdnsize@  move    ( adr )
-   dup rdnsize@  d# 22 +    ( adr dirent-len )
+   dup rdnsize@  d# 14 +    ( adr dirent-len )
 
    'next-dirent +!          ( adr )
 ;
@@ -930,7 +924,7 @@ instance variable outpos
    dup fname$   space space type  space .ftype
 ;
 
-: +dirent  ( adr -- adr' )     5 la+ dup c@ +  2+  ;
+: +dirent  ( adr -- adr' )     3 la+ dup c@ +  2+  ;
 
 : #dirents  ( -- n )
    0
@@ -942,8 +936,6 @@ instance variable outpos
 char \ instance value delimiter
 
 create root-dirent
-   0 ,  \ block#
-   0 ,  \ offset
    0 ,  \ pino
    0 ,  \ version
    1 ,  \ ino
