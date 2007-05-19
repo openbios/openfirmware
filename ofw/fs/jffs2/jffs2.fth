@@ -271,8 +271,23 @@ code aencode-inode  ( version inum offset 'curinum 'next-inode -- )
       then
    then
 
-   di bx  mov      \ Save DI in bx; we are through with the delta value
-   0 [dx] di mov   \ Get pointer in di
+   2 # bx shr                     \ Throw away unused 0 bits in delta
+   h# 10000 # ax mov
+   ax bx cmp  <  if               \ delta fits in 16 bits?
+      0 [sp]  ax  cmp  >  if      \ inum fits in 16 bits?
+         4 [sp]  ax  cmp  >  if   \ version fits in 16 bits?
+            0 [dx] di xchg        \ Get pointer in di
+            al inc         al stosb                \ encode a 1 byte to indicate the long form
+            ax pop     op: ax stos  ax 0 [cx] mov  \ Encode the inum    as 16 bits
+            ax pop     op: ax stos  ax 4 [cx] mov  \ Encode the version as 16 bits
+            bx ax mov  op: ax stos                 \ Encode the version as 16 bits               
+            0 [dx] di xchg        \ Update next-inode pointer in di
+            next
+         then
+      then
+   then
+
+   0 [dx] di xchg  \ Get pointer in di
    ax ax xor
    al stosb        \ encode a 0 byte to indicate the long form
    
@@ -287,8 +302,7 @@ code aencode-inode  ( version inum offset 'curinum 'next-inode -- )
    8 [cx] ax mov   \ offset (from already-updated curoffs)
    ax stos         \ encode it
 
-   di 0 [dx] mov   \ Update next-inode
-   bx di mov       \ Restore DI
+   0 [dx] di xchg  \ Update next-inode
 c;
 
 code amatch-inode  ( inum adr endadr 'curinum -- inum false | inum adr' offset version true )
@@ -300,9 +314,17 @@ code amatch-inode  ( inum adr endadr 'curinum -- inum false | inum adr' offset v
       ax ax xor
       al lodsb   \ ax: byte
       h# 20 #  al  cmp  u<  if
-         ax lods  ax 0 [dx]  mov
-         ax lods  ax 4 [dx]  mov
-         ax lods  ax 8 [dx]  mov
+         al al or  0=  if
+            \ Long form: 0, inum.32, version.32, offset.32
+            ax lods  ax 0 [dx]  mov
+            ax lods  ax 4 [dx]  mov
+            ax lods  ax 8 [dx]  mov
+         else
+            \ Short form: 0, inum.16, version.16, delta_offset.16
+            op: ax lods  ax 0 [dx]  mov
+            op: ax lods  ax 4 [dx]  mov
+            op: ax lods  2 # ax shl  ax 8 [dx]  add
+         then
       else
          1 #  al  test  0<>  if
             0 [dx]  inc
@@ -358,8 +380,10 @@ c;
 
    curinum !   curvers !                   ( )
 
+   \ XXX implement short form: 1.byte, inum.16, version.16, delta.16
+
    \ If we can't use a short form, use the long form:
-   \ 0.byte, inum.long, version.long, offset.long
+   \ 0.byte, inum.32, version.32, offset.32
 
    \ At some point we might want to have another form with .short fields
 
