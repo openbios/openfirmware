@@ -162,9 +162,17 @@ true value dump-oob?
    cr ." Dumping to " 2dup type  cr
 
    2dup ['] $delete  catch  if  2drop  then  ( name$ )
-   $create-file to fileih
+   2dup ['] $create-file  catch  if
+      2drop
+      " Can't open a file.  Try using the raw disk?" confirm  if
+         open-file
+      else
+         2drop 0
+      then
+   then
+   to fileih
 
-   fileih 0=  if  nandih close-dev  true abort" Can't open file"  then
+   fileih 0=  if  nandih close-dev  true abort" Can't open output"  then
 
    \ The stack is empty at the end of each line unless otherwise noted
    #nand-pages  0  do
