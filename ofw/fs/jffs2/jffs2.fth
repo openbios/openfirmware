@@ -31,10 +31,12 @@ variable 'next-inode     \ Pointer into inode buffer
 variable 'next-dirent    \ Pointer into dirent buffer
 : next-dirent  ( -- val )  'next-dirent @  ;
 
-\ 0 ( instance ) value minodes        \ Buffer for per-file inode list
+\ minodes is an area that is used for constructing dynamic lists
+\ that don't persist between opens
+
 variable 'next-minode    \ Pointer into per-file inode list
-: next-minode  'next-minode @  ;
-: minodes next-inode ;  \ Start the inode pointer list after the inodes
+: next-minode  ( -- adr ) 'next-minode @  ;
+: minodes ( -- adr )  next-inode  ;  \ Start the inode pointer list after the inodes
 
 0 instance value file-buf       \ Buffer for constructing file
 0 instance value file-size      \ Actual size of file
@@ -49,48 +51,11 @@ variable 'next-minode    \ Pointer into per-file inode list
 0 instance value the-page#
 0 instance value the-eblock#
 
-\ In-memory inode structure
-
 \ Access a field within a JFFS2 FLASH data structure
 : j@  ( adr offset -- value )  la+ l@  ;
 : j!  ( adr offset -- value )  la+ l!  ;
 
-\ Access fields within the memory data structure for volume inodes
-\ Based on struct jffs2_sum_inode_flash, with "nodetype" replaced
-\ by the eblock number.  This is not the complete inode data, just
-\ the part that is in the summary node.  It is just enough information
-\ to let us create the list of inodes associated with a given file.
-\ Having created that list, we can get the full inodes from FLASH.
-\ Storing it in this form saves space and time, because we only have
-\ to read the full inodes for the few files that we actually access.
-
-instance variable splices  0 splices !
-
-: pack-offset  ( offset block -- n )  the-eblock#  /eblock *  +  ;
-
-: minum@     ( adr -- inode# )   0 j@  ;
-: mversion@  ( adr -- version )  1 j@  ;
-: moffset@   ( adr -- block+offset )  2 j@  ;
-\ : moffset/block@  ( adr -- offset block )  moffset@ /eblock /mod  ;
-\ : meblock@   ( adr -- eblock# )  0 j@  ;
-\ : moffset@   ( adr -- offset )   3 j@  ;
-\ 4 /l* constant /mem-inode
-3 /l* constant /mem-inode
-\ : mtotlen@   ( adr -- offset )   4 j@  ;
-\ 5 /l* constant /mem-inode
-
-\ Fields within in-memory directory entry data structure.
-\ Based on struct jffs2_sum_dirent_flash, without the
-\ "nodetype", "totlen", and "offset" fields.
-
-: pino@    ( adr -- parent )   0 j@  ;
-: version@ ( adr -- version )  1 j@  ; \ $find-name and insert-dirent
-: dirino@  ( adr -- inode )    2 j@  ;
-: ftype@   ( adr -- type )     d# 13 + c@  ;
-: fname$   ( node-adr -- adr len )
-   dup d# 14 +           ( node-adr name-adr )
-   swap  d# 12 + c@      ( name-adr name-len )
-;
+: pack-offset  ( offset -- n )  the-eblock#  /eblock *  +  ;
 
 \ Access fields in per-file raw inode structure - based on
 \ struct jffs2_raw_inode
@@ -113,22 +78,6 @@ instance variable splices  0 splices !
 
 \ see forth/lib/crc32.fth and cpu/x86/crc32.fth
 : crc  ( adr len -- crc )  0 crctab  2swap ($crc)  ;
-
-: set-sizes   ( -- )
-   -1 to file-size
-
-   " block-size" $call-parent to /page
-
-   " erase-size" ['] $call-parent    ( adr len xt )
-   catch  if  2drop h# 20000  then   ( n )
-   to /eblock
-
-   /eblock /page / to pages/eblock
-
-   " size" $call-parent   ( d )
-   /page um/mod  to pages/chip  ( rem )
-   drop
-;
 
 : dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
 : dma-free   ( len -- adr )  " dma-free" $call-parent  ;
@@ -232,7 +181,14 @@ true value first-time?
 \ 0 instance variable cur-vers
 \ 0 instance variable cur-offset
 
-: init-curvars  ( -- )  curinum 3 /n* erase  ;
+instance variable dirent-offset
+instance variable cur-pino
+
+: init-curvars  ( -- )
+   h# -100000 dup dirent-offset !  curoffs !
+   0 curinum !
+   0 curvers !
+;
 
 1 [if]
 code aencode-inode  ( version inum offset 'curinum 'next-inode -- )
@@ -448,20 +404,60 @@ c;
    d# 18                         ( len )
 ;
 
+: encode-dirent  ( boffset pino adr len -- )
+   2 pick >r                          ( boffset pino adr len r: pino )
+   crctab -rot  ($crc)                ( boffset hash )
+   next-dirent !                      ( boffset )
+
+   pack-offset                        ( offset )
+
+   dup dirent-offset @ -  2 rshift    ( offset delta )
+   dup h# 10000 <                     ( offset delta short-offset? )
+   r@ cur-pino @ =  and               ( offset delta short-encode? )
+
+   if                                 ( offset delta )
+      next-dirent na1+ w!             ( offset )
+      6                               ( offset de-len )
+   else                               ( offset )
+      drop  0 next-dirent na1+ w!     ( offset )
+      r@   next-dirent 6 + !          ( offset )  \ Encode pino
+      dup  next-dirent d# 10 + !      ( offset )  \ Encode offset
+      d# 14                           ( offset de-len )
+   then                               ( offset r: pino )
+   r> cur-pino !                      ( offset de-len )
+   'next-dirent +!                    ( offset )
+   dirent-offset !                    ( )
+;
+
+: w@+  ( adr -- w adr' )  dup w@ swap wa1+  ;
+: l@+  ( adr -- l adr' )  dup l@ swap la1+  ;
+
+: decode-dirent  ( adr -- false | adr' offset pino hash true )
+   dup  next-dirent  >=  if  drop false exit  then
+   l@+                          ( hash adr' )
+   w@+                          ( hash w adr' )
+   swap  ?dup  if               ( hash adr' w )   \ Short form
+      swap -rot                 ( adr' hash w )
+      /l* dirent-offset +!      ( adr' hash )
+      dirent-offset @           ( adr' hash offset )
+      cur-pino @ rot            ( adr' offset pino hash )
+   else                         ( hash adr' )     \ Long form
+      l@+ over cur-pino !       ( hash pino adr' )
+      l@+ over dirent-offset !  ( hash pino offset adr' )
+      swap 2swap swap           ( adr' offset pino hash )
+   then
+   true
+;
+
 \ Copy summary dirent from FLASH to memory
 \ Summary dirent:  w.nodetype l.totlen l.offset l.pino l.version
 \ l.ino c.nsize c.type name
 : scan-sum-dirent  ( adr -- len )
-   d# 10 +                            ( offset-adr )
-   next-dirent                        ( offset-adr dst-adr )
-   over  d# 12 + c@  d# 14 +          ( src dst len )
-   dup >r                             ( src dst len r: len )
-   move                               ( )
-
-   r@  'next-dirent +!                ( offset-adr )
-
-   \ 10 is the length of the fields that were skipped, not copied
-   r> d# 10 +                         ( len )
+   2+ >r
+   r@ 1 j@  r@ 2 j@            ( offset pino )
+   r@ d# 22 +  r> 5 la+ c@     ( offset pino adr namelen )
+   dup >r  encode-dirent       ( r: namelen )
+   r> d# 24 +                     ( len )
 ;
 
 [ifdef] notdef
@@ -493,9 +489,6 @@ c;
    2drop
 ;
 : no-summary?  ( page# -- flag )
-\ drop true
-
-\ dup h# 47100 = if debug-me then
    dup pages/eblock + 1-  1  read-pages  if       ( page# )
       drop true exit
    then                                           ( page# )
@@ -550,22 +543,11 @@ c;
 : rdnsize@    ( adr -- nsize )    7 la+ c@  ;
 : rdtype@     ( adr -- type )     7 la+ 1+ c@  ;
 : >rdname     ( adr -- adr' )     d# 10 la+  ;
+: rdname$     ( adr -- adr len )  dup >rdname  swap rdnsize@  ;
 
 : scan-raw-dirent  ( adr -- adr )
-\ XXX        dup 1 j@  4 round-up           ( adr len )
-\ XXX        2dup next-dirent swap move     ( adr len )
-   \ 
-   next-dirent
-   over rdpino@       l+!
-   over rdversion@    l+!
-   over rdinode@      l+!   ( adr iadr' )
-   over rdnsize@      c+!   ( adr iadr' )
-   over rdtype@       c+!   ( adr iadr' )
-   over >rdname swap        ( adr str-adr iadr )
-   2 pick rdnsize@  move    ( adr )
-   dup rdnsize@  d# 14 +    ( adr dirent-len )
-
-   'next-dirent +!          ( adr )
+   dup >r
+   r@ block-buf -  r@ rdpino@  r> rdname$  encode-dirent
 ;
 
 \ Copy the raw inode information to memory in summary inode form
@@ -574,8 +556,6 @@ c;
 \ we actually access.
 : scan-raw-inode  ( adr -- )
    >r  r@ riversion@  r@ riinode@  r> block-buf -  pack-offset  ( version inum offset )
-\   store-inode
-\  encode-inode
    curinum 'next-inode aencode-inode
 \ false to cleanmark?
 ;
@@ -640,6 +620,11 @@ c;
 ;
 
 0 [if]
+\ This is some unfinished filesystem consistency checking code
+\ It was started for debugging a crash that turned out to be
+\ caused by overflow of the memory tables, leading to a rewrite
+\ to use much less memory.
+
 /eblock value summary-start
 
 : .eb  ( -- )
@@ -722,7 +707,7 @@ Mitch_Bradley: the most common type of 'bad node'will have a mismatching data cr
    crc  swap ridcrc@ =
 ;
 
-: get-inode  ( offset -- adr )  /eblock /mod  read-eblock  block-buf +  ;
+: get-node  ( offset -- adr )  /eblock /mod  read-eblock  block-buf +  ;
 
 \ This is a brute-force, no tricks, insertion sort.
 \ Insertion sort is bad for large numbers of elements, but in this
@@ -758,7 +743,7 @@ Mitch_Bradley: the most common type of 'bad node'will have a mismatching data cr
          \ and if it is valid, replace the existing one.  We will
          \ end up with only the last good one in the slot.
          drop                                ( offset )
-         dup get-inode inode-good?  if       ( offset )
+         dup get-node inode-good?  if        ( offset )
             i na1+  !                        ( )
          else                                ( offset )
             drop                             ( )
@@ -773,23 +758,25 @@ Mitch_Bradley: the most common type of 'bad node'will have a mismatching data cr
 ;
 
 
-\ Also used by insert-dirent
-: place-node  ( node where -- )
-   !
-   /n 'next-minode +!   ( )
-;
+\ Information that we need about the working file/directory
+\ The working file changes at each level of a path search
 
-\ This is used for symlinks and directory inodes where there
-\ can only be one of them.
--1 value max-version  \ Local variable for latest-node and $find-name
-\ -1 value the-inode    \ Local variable for latest-node
+0 instance value wd-inum  \ Inumber of directory
+0 instance value wf-inum  \ Inumber of file or directory
+0 instance value wf-type  \ Type - 4 for directory, d# 10 for symlink, etc
+
+: set-root  ( -- )  1 to wd-inum  1 to wf-inum  4 to wf-type  ;
+
+\ latest-node is for symlinks and directories, which have only one data node.
+
+-1 value max-version  \ Local variable for latest-node
 -1 value the-offset   \ Local variable for latest-node
-: latest-node  ( inum -- true | offset false )
-   init-curvars
-   -1 to max-version
+
+: latest-node  ( inum -- true | rinode false )
+   init-curvars  -1 to max-version      ( inum )
    inodes  begin  next-inode curinum  amatch-inode  while    ( inum inode' offset version )
-\   inodes  begin  match-inode  while    ( inum inode' offset version )
-      over get-inode inode-good?  if    ( inum inode' offset version )
+\  inodes  begin  match-inode  while    ( inum inode' offset version )
+      over get-node inode-good?  if     ( inum inode' offset version )
          dup max-version >  if          ( inum inode' offset version )
             to max-version              ( inum inode' offset )
             to the-offset               ( inum inode' )
@@ -802,10 +789,13 @@ Mitch_Bradley: the most common type of 'bad node'will have a mismatching data cr
    repeat                               ( inum )
    drop
    max-version -1 =  if  true exit  then
-   the-offset false
+   the-offset get-node  false
 ;
 
-: collect-nodes  ( inum -- any? )
+\ collect-node is for ordinary files which can have many data nodes
+
+: collect-nodes  ( -- any? )
+   wf-inum
    init-curvars
    minodes 'next-minode !    \ Empty the list
 
@@ -877,20 +867,12 @@ instance variable outpos
    r>  outpos @  ?outlen         ( )
 ;
 
-: .inode  ( inode - )
-   ." tot "    dup riisize@ 8 u.r space
-   ." len "    dup ridsize@ 8 u.r space
-   ." extent " dup rioffset@ over ridsize@ +  8 u.r space
-   ." comp "       ricompr@ 3 u.r 
-   cr
-;
 : (play-inode)  ( inode -- )
    dup inode-good?  0=  if       ( inode )
       debug-scan?  if  ." Skipping bad inode."  cr  then
       drop exit
    then
 
-   debug-scan?  if  dup .inode cr  then
    >r
    r@ riisize@  r@ rioffset@  r@ ridsize@ +  set-length
 
@@ -910,21 +892,13 @@ instance variable outpos
    -1 to the-eblock#
    -1 to have-eblock#
    0 to file-size
-   next-minode  minodes  ?do   i na1+ @ get-inode  (play-inode)  8 +loop
+   next-minode  minodes  ?do   i na1+ @ get-node  (play-inode)  8 +loop
 
    release-inflater
 ;
 : ?play-log  ( -- )  file-size -1 =  if  play-log  then  ;
 
-: .ftype  ( adr -- )
-   ftype@ 2/ 0 max  "   /  @="  rot min +  c@  emit
-;
-
-: .fname  ( dirent -- )
-   dup fname$   space space type  space .ftype
-;
-
-: +dirent  ( adr -- adr' )     3 la+ dup c@ +  2+  ;
+: +dirent  ( adr -- adr' )   na1+ dup w@  0=  if 2 na+ then  wa1+  ;
 
 : #dirents  ( -- n )
    0
@@ -935,163 +909,174 @@ instance variable outpos
 
 char \ instance value delimiter
 
-create root-dirent
-   0 ,  \ pino
-   0 ,  \ version
-   1 ,  \ ino
-   0 c, \ nsize
-   4 c, \ type
-
--1 instance value pwd
-: set-root  ( -- dirent )  root-dirent dup to pwd  ;
-
-: strip\  ( name$ dirent -- name$' dirent' )
-   -rot
-   dup  0<>  if                      ( dirent name$ )
-      over c@  delimiter  =  if      ( dirent name$ )
-         1 /string                   ( dirent name$ )
-         rot drop  set-root -rot     ( dirent name$ )
-      then                           ( dirent name$ )
-   then                              ( dirent name$ )
-   rot
-;
-
-: dir-match?  ( name$ par adr -- flag )
-   tuck pino@ <>  if  ( name$ adr )
-      3drop false     ( false )
-   else               ( name$ adr )
-      fname$ $=       ( flag )
-   then
-;
-
--1 ( instance ) value the-dirent   \ Local variable for $find-name
-: $find-name  ( name$ dirent -- true | dirent false )
-   -1 to max-version
-   dirino@        ( name$ parent-inode )
-   dirents        ( name$ parent-inode adr )
-   begin  dup next-dirent u<   while    ( $ par adr )
-
-      \ Look for a directory type dirent with the right name and parent
-      2over 2over  dir-match?  if       ( $ par adr )
-
-         \ If this is the latest version, record its inode
-         dup version@  max-version >  if
-            dup version@ to max-version
-            dup to the-dirent
-         then
-      then
-      +dirent
-   repeat  ( name$ parent adr )
-   4drop
-   max-version 0<  if  true exit  then
-   the-dirent false
-;
-
 defer $resolve-path
 d# 1024 constant /symlink   \ Max length of a symbolic link
 
-\ The input dirent is for a symlink.  Resolve it to a new dirent
-: dir-link  ( dirent -- true | dirent' false )
+: strip\  ( name$ -- name$' )
+   dup  0<>  if                      ( name$ )
+      over c@  delimiter  =  if      ( name$ )
+         1 /string                   ( name$ )
+         set-root                    ( name$ )
+      then                           ( name$ )
+   then                              ( name$ )
+;
+
+0 instance value my-vers  \ Highest version number - local to $find-name
+
+: ?update-dirent  ( offset name$  -- )
+   rot get-node >r                        ( name$  r: rdirent )
+   r@ rdname$  $=  if                     ( r: rdirent )
+      wd-inum  r@ rdpino@  =  if          ( r: rdirent )
+         r@ rdversion@  my-vers  >  if    ( r: rdirent )
+            r@ rdversion@  to my-vers     ( r: rdirent )
+            r@ rdinode@    to wf-inum     ( r: rdirent )
+            r@ rdtype@     to wf-type     ( r: rdirent )
+         then                             ( r: rdirent )
+      then                                ( r: rdirent )
+   then                                   ( r: rdirent )
+   r> drop                                ( )
+;
+
+: $find-name  ( name$ -- error? )
+   -1 to my-vers                         ( name$ )
+   wd-inum crctab  2over  ($crc) >r      ( name$  r: hash )
+
+   0 dirent-offset !
+   dirents  begin  decode-dirent  while  ( name$ adr' offset pino' hash' )
+      nip                                ( name$ adr  offset hash' )
+      \ Check for a hash match
+      r@ =  if                           ( name$ adr offset )
+         2over  ?update-dirent           ( name$ adr )
+      else                               ( name$ adr  offset )
+         drop                            ( name$ adr )
+      then                               ( name$ adr )
+   repeat                                ( name$ adr r: hash )
+   2drop r> drop                         ( )
+   my-vers 0<   if  true exit  then      ( )
+   wf-type 4  =  if  wf-inum to wd-inum  then
+   false
+;
+
+\ The work file is a symlink.  Resolve it to a new dirent
+: dir-link  ( -- error? )
    delimiter >r  [char] / to delimiter
+
+   \ Allocate temporary space for the symlink value (new name)
    /symlink alloc-mem >r
 
-   dirino@ latest-node  if         ( )
+   wf-inum latest-node  if         ( )
       true
-   else                            ( offset )
-      get-inode                    ( rinode )
+   else                            ( rinode )
       dup >ridata  swap ridsize@   ( adr len )
       tuck  r@ swap  move          ( len )
-      r@ swap  pwd  $resolve-path  ( true | dirent false )
+      r@ swap  $resolve-path       ( error? )
    then   
 
    r> /symlink free-mem
    r> to delimiter
 ;
 
-: $find-path  ( path$ dirent -- true | dirent' false )
-   begin  strip\  over  while           ( path$  dirent' )
-      dup ftype@  case                  ( path$  dirent  c: type )
+: ($resolve-path)  ( path$ -- error? )
+   4 to wf-type
+   begin  strip\  dup  while            ( path$  )
+      wf-type  case                     ( path$  c: type )
+         4  of   \ Directory                       ( path$ )
+            delimiter left-parse-string            ( rem$' head$ )
+            $find-name  if  2drop true exit  then  ( rem$ )
+         endof                                     ( rem$ )
 
-         4  of   \ Directory            ( path$  dirent  )
-            dup  to pwd                 ( path$  dirent  )
-            >r  delimiter left-parse-string  r>  ( rem$' head$ dirent )
-            $find-name  if              ( rem$' )
-               2drop true exit
-            then                        ( rem$ dirent )
-         endof                          ( rem$ dirent )
-
-         d# 10  of                      ( rem$ dirent )
-            dir-link  if                ( rem$ )
-               2drop true exit
-            then                        ( rem$ dirent )
-         endof                          ( rem$ dirent )  \ symlink
-         ( default )                    ( rem$ dirent  c: type )
+         d# 10  of   \ symlink                     ( rem$ )
+            dir-link  if  2drop true exit  then    ( rem$ )
+         endof                                     ( rem$ )
+         ( default )                               ( rem$  c: type )
 
          \ The parent is an ordinary file or something else that
          \ can't be treated as a directory
-         4drop true exit
-      endcase                           ( rem$ dirent )
-   repeat                               ( rem$ dirent )
-   nip nip false                        ( dirent )
-;
-' $find-path to $resolve-path
-
-\ Leaves pwd set to the containing directory
-: $chdir  ( path$ -- error? )
-   $find-path  if  true exit  then  ( inode )
-   ftype@ 4 <>     \ Return false (no error) if it's a directory
+         3drop true exit
+      endcase                           ( rem$ )
+   repeat                               ( rem$ )
+   2drop false                          ( false )
 ;
 
-: advance-dirent  ( dirent -- false | dirent' true )
-   pwd dirino@    swap                ( parent-inode dirent )
-   begin  dup next-dirent u<  while   ( par dirent )
-      2dup pino@ =  if                ( par dirent )
-         nip true exit
-      then                            ( par dirent )
-      +dirent                         ( par dirent' )
-   repeat                             ( par dirent' )
-   2drop false
+\ Leaves the-wd set to the containing directory
+\ : $chdir  ( path$ -- error? )
+\    \ XXX should save wf-* and restore them on failure
+\    $resolve-path  if  true exit  then  ( dirent )
+\    wf-type 4 <>     \ Return true (error) if it's not a directory
+\ ;
+
+' ($resolve-path) to $resolve-path
+
+\ "tdirent" section
+
+\ This section makes a list of directory entries for a given directory.
+\ It is used only by "next-file-info".  It scans the in-memory abbreviated
+\ directory list, looking for entries whose parent inum matches that of
+\ the current directory.  It checks for duplicate names, superseding
+\ older versions and removing unlinked ones.
+
+: tdinum@     ( tdirent -- inum )   l@  ;
+: tdversion@  ( tdirent -- vers )   la1+ l@  ;
+: tdname$     ( tdirent -- name$ )  2 la+ count ;
+: tdlen       ( tdirent -- len )  dup tdname$ + swap -  ;
+
+\ Move down all the following tdirents to overwrite the current one.
+
+: remove-tdirent  ( tdirent -- )
+   dup  tdlen              ( tdirent len )
+   2dup +                  ( tdirent len  next-tdirent )
+   rot                     ( len  next-tdirent tdirent )
+   next-minode 2 pick -    ( len  next-tdirent tdirent move-len )
+   move                    ( len )
+   negate 'next-minode +!  ( )
+; 
+: replace-tdirent  ( rdirent tdirent -- )
+   over rdinode@    over      l!    ( rdirent tdirent' )  \ Inum
+   swap rdversion@  swap la1+ l!    ( )                   \ Version
 ;
 
-: insert-dirent  ( dirent -- )
-   minodes  begin  dup next-minode u<  while    ( dirent listadr )
-      over fname$  2 pick @ fname$  $=  if      ( dirent listadr )
-         over version@  over @ version@  >  if  ( dirent listadr )
-            !                                   ( )
-         else                                   ( dirent listadr )
-            2drop                               ( )
-         then                                   ( )
-         exit
-      then                                      ( dirent listadr )
-      na1+                                      ( dirent listadr' )
-   repeat                                       ( dirent listadr )
-   place-node                                   ( )
+: place-tdirent  ( rdirent -- )
+   next-minode               ( rdirent tdirent )
+   over rdinode@   l+!       ( rdirent tdirent' )
+   over rdversion@ l+!       ( rdirent tdirent' )
+   swap rdname$              ( tdirent name$ )
+   rot pack                  ( tdirent )
+   count + 'next-minode !    ( )
 ;
 
-\ Having collected the list of directory entries for the current
-\ target directory, we must prune the list to remove unlinked ones.
-: remove-unlinks  ( -- )
-   minodes  begin  dup next-minode <  while  ( minode )
-      dup @ dirino@  if                      ( minode )
-         na1+                                ( minode' )
-      else                                   ( minode )
-         \ Deleted, remove from list
-         -1 /n* 'next-minode +!              ( minode )
-         dup na1+  over                      ( minode src dst )
-         next-minode over -  move            ( minode )
-      then                                   ( minode' )
-   repeat                                    ( minode' )
-   drop                                      ( )
+: insert-dirent  ( offset -- )
+   get-node                                     ( rdirent )
+   next-minode  minodes  ?do                    ( rdirent )
+      dup rdname$  i tdname$  $=  if            ( rdirent )  \ Same name
+         dup rdversion@  i tdversion@  >  if    ( rdirent )  \ New version
+            dup rdinode@  if                    ( rdirent )
+               dup i replace-tdirent            ( rdirent )  \ Not unlinked
+            else                                ( rdirent )
+               i remove-tdirent                 ( rdirent )  \ Unlinked
+            then                                ( rdirent )
+         then                                   ( rdirent )
+         drop unloop exit
+      then                                      ( rdirent )
+      i tdlen                                   ( rdirent )
+   +loop                                        ( rdirent )
+   place-tdirent                                ( )
 ;
+
 : prep-dirents  ( -- )
    minodes 'next-minode !   \ Empty the list
-   dirents
-   begin  advance-dirent  while
-      dup insert-dirent
-      +dirent
-   repeat
-   remove-unlinks
+   dirents  begin  decode-dirent  while  ( adr  offset pino hash )
+      drop wd-inum =  if                 ( adr  offset )
+         insert-dirent                   ( adr )
+      else                               ( adr  offset )
+         drop                            ( adr )
+      then                               ( adr )
+   repeat                                ( )
 ;
+
+\ End of "tdirent" section
+
+false [if]
+\ "delete file" section
 
 \ For now, just 0 the modify time, since we only support deleting
 : now-seconds  ( -- secs )  0  ;
@@ -1145,14 +1130,17 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    1 <>  if  ." JFFS2: write failed"  then                   ( )
 ;
 
-\ pwd is the parent dirent
+\ the-wd is the parent dirent
 : $delete  ( adr len -- error? )
-   pwd $resolve-path  dup  if  true exit  then  ( dirent' )
-   >r r@ pino@  r@ version@ 1+  r> fname$       ( parent-ino new-version name$ )
+   $resolve-path  if  true exit  then           ( dirent' )
+   >r r@ xxpino@  r@ xxversion@ 1+  r> xxfname$       ( parent-ino new-version name$ )
    0 0 make-raw-dirent                          ( adr len )
    find-empty-page                              ( adr len page# )
    put-node
 ;
+
+\ End of "delete file" section
+[then]
 
 decimal
 
@@ -1166,6 +1154,22 @@ headerless
 ;
 : update-ptr  ( len' -- len' )  dup seek-ptr +  to seek-ptr  ;
 : 'base-adr  ( -- adr )  seek-ptr  file-buf +  ;
+
+: set-sizes   ( -- )
+   -1 to file-size
+
+   " block-size" $call-parent to /page
+
+   " erase-size" ['] $call-parent    ( adr len xt )
+   catch  if  2drop h# 20000  then   ( n )
+   to /eblock
+
+   /eblock /page / to pages/eblock
+
+   " size" $call-parent   ( d )
+   /page um/mod  to pages/chip  ( rem )
+   drop
+;
 
 headers
 external
@@ -1196,21 +1200,20 @@ external
 
    my-args " <NoFile>"  $=  if  true exit  then
 
-   my-args set-root  $resolve-path  if  false ?release exit  then  ( dirent )
+   my-args set-root  $resolve-path  if  false ?release exit  then  ( )
 
    begin
       \ We now have the dirent for the file at the end of the string
-      dup ftype@  case                                   ( dirent )
-         4      of  to pwd  true exit  endof                     \ Directory
-         8      of  dirino@ collect-nodes  ?release exit  endof  \ Regular file
-         d# 10  of                                               \ Link
-            dir-link  if  false ?release exit  then  ( dirent )
-         endof
+      wf-type  case
+         4      of  wf-inum to wd-inum  true exit  endof           \ Directory
+         8      of  collect-nodes  ?release exit  endof            \ Regular file
+         d# 10  of  dir-link  if  false ?release exit  then  endof \ Link
          ( default )   \ Anything else (special file) is error
-            2drop false ?release exit
-      endcase                                       ( dirent )
+            drop false ?release exit
+      endcase
    again
 ;
+
 : close  ( -- )  release-buffers  ;
 
 : size  ( -- d.size )  ?play-log file-size 0  ;
@@ -1264,103 +1267,24 @@ hex
 \ End of common code
 
 : next-file-info  ( id -- false | id' s m h d m y len attributes name$ true )
-   dup 0=  if  drop prep-dirents  minodes  then   ( minode )
-   dup next-minode =  if  drop false exit  then   ( minode )
-   dup @ >r na1+                           ( id' r: dirent )
-   r@ dirino@ latest-node if               ( id' r: dirent )
-      0 0 0  0 0 0           ( id' s m h  d m y  r: dirent )
-      0                                ( ... len r: dirent )
-      0                         ( ... attributes r: dirent )
-   else                           ( id' offset r: dirent )
-      get-inode  >r               ( id'  r: dirent rinode )
-      r@ rimtime@  sec>time&date  ( id' s m h  d m y  r: dirent rinode )
-      r@ riisize@                 ( id' s m h  d m y  len r: dirent rinode )
-      r> rimode@                  ( id' s m h  d m y  len  mode  r: dirent )
+   dup 0=  if  drop prep-dirents  minodes  then   ( tdirent )
+   dup next-minode =  if  drop false exit  then   ( tdirent )
+   dup >r  dup tdlen +                            ( id' r: tdirent )
+   r@ tdinum@ latest-node  if                     ( id' r: tdirent )
+." Can't find data node" cr
+      0 0 0  0 0 0           ( id' s m h  d m y  r: tdirent )
+      0                                ( ... len r: tdirent )
+      0                         ( ... attributes r: tdirent )
+   else                           ( id' rinode r: tdirent )
+      >r                          ( id'  r: tdirent rinode )
+      r@ rimtime@  sec>time&date  ( id' s m h  d m y  r: tdirent rinode )
+      r@ riisize@                 ( id' s m h  d m y  len r: tdirent rinode )
+      r> rimode@                  ( id' s m h  d m y  len  mode  r: tdirent )
    then
-   r> fname$ true
+   r> tdname$ true
 ;
 
 : free-bytes  ( -- d.#bytes )  0 0  ;
-
-
-\ create debug-jffs
-[ifdef] debug-jffs
-\needs mcr  : mcr cr  exit?  if  abort  then  ;
-
-\ Tools for dumping the dirent table, for debugging
-: .ldirent-hdr  ( -- )
-   ."    Inode Version Eblock  Offs Parent  Name" cr
-;
-: .ldirent  ( adr -- adr' )
-   dup dirino@   8 u.r  \ Inode
-   dup version@  8 u.r  \ Version
-   dup eblock@   7 u.r  \ Eblock#
-   dup offset@   6 u.r  \ Offset on eblock
-   dup pino@     7 u.r  \ Parent Inode
-   dup .fname  mcr
-   +dirent
-;
-
-: .dirents  ( -- )
-   .ldirent-hdr
-   next-dirent dirents   ( endadr adr )
-   begin  2dup >  while   .ldirent  repeat  ( endadr adr )
-   2drop
-;
-
-
-: .inode-hdr  ( -- )  ."    Inode Version Eblock  Offs" cr  ;
-: .inode  ( adr )
-   dup minum@    8 u.r  \ Inode
-   dup mversion@ 8 u.r  \ Version
-   dup moffset@  /eblock /mod  7 u.r  6 u.r  \ Eblock#, offset on eblock
-\   dup mtotlen@  8 u.r  \ Total length
-   mcr
-   /mem-inode +
-;
-
-: .inodes  ( -- )
-   .inode-hdr
-   next-inode inodes   ( endadr adr )
-   begin  2dup >  while   .inode  repeat  ( endadr adr )
-   2drop
-;
-
-: .dirent  ( adr parent -- adr' )
-   over pino@  =  if   ( adr )    \ Check Parent Inode
-\      dup version@  8 u.r  \ Version
-      dup dirino@   8 u.r  \ Inode
-      dup .fname mcr
-   then                ( adr )
-   +dirent             ( adr' )
-;
-
-: .dir  ( parent-inode -- )
-   >r
-   next-dirent dirents   ( endadr adr )
-   begin  2dup >  while   r@  .dirent  repeat  ( endadr adr )
-   2drop
-   r> drop
-;
-
-: $fdir  ( path$ -- )
-   $resolve-path abort" Not found"  ( dirent )
-   dup ftype@ 4 =  if
-      dirino@ .dir
-   else
-      dup dirino@ .   .fname  cr
-   then
-;
-
-: dir  parse-word   set-root  $fdir  ;
-
-: expand-file  ( inum -- )
-   collect-nodes 0= abort" none"
-   play-log
-;
-[then]
-
-
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
