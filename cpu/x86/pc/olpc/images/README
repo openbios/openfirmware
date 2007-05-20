@@ -1,3 +1,25 @@
+Image files - audio and graphics
+
+Audio:
+
+olpc16.wav is a startup sound by Barry Vercoe, 16K samples/sec.
+
+olpc16EQ.wav is the sound with some equalization to partially compensate
+  for OLPC speaker deficiencies.
+
+olpc16EQima.wav is olpc16EQ.wav encoded with IMA ADPCM to save space:
+
+  sox  olpc16EQ.wav  -i olpc16EQima.wav
+
+Barry also provided 24K and 32K samples/sec versions of the sound, but
+the difference is inaudible, especially on OLPC speakers, so I chose
+the 16K version to save space in ROM.
+
+Graphics / Icons:
+
+The boot progress icons were created by Eben Eliason to match the
+style of the OLPC logo.
+
 The .565 image format is a very simple format for 16-bit RGB 565 image data.
 The reason I invented this new format is because I couldn't find an
 existing standard format that handles 565 representation.  There is

@@ -72,8 +72,8 @@ $new-file
    " sourceurl"   " sourceurl"                    $add-dropin
 
 [ifndef] lx-devel
-   " ${BP}/clients/memtest86/memtest"           " memtest"  $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/olpc-t0.wav"  " splash"   $add-deflated-dropin
+   " ${BP}/clients/memtest86/memtest"               " memtest"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/olpc16EQima.wav"  " splash"   $add-deflated-dropin
 [then]
 [ifdef] lx-devel
    " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
