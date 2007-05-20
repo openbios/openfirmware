@@ -34,7 +34,7 @@
    " ${BP}/cpu/x86/pc/olpc/images/olpclogo.565" " olpc.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " nandflash.565" $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/ethernet.565" " ethernet.565"  $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/usbkey.565"   " usbkey.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/usbkey.565"   " usbdisk.565"   $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wlan.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/xo.565"       " xo.565"        $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " sdmmc.565"     $add-deflated-dropin

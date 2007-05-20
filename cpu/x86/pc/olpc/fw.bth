@@ -436,7 +436,6 @@ fload ${BP}/ofw/core/dualconsole.fth
 : user-switch?  ( -- flag )
 [ifdef] lx-devel  false exit  [then]
    atest?  if  true exit  then
-true exit
    game-key@  0<>  dup  if
       ." Release the game key to continue" cr
       begin  d# 100 ms  game-key@ 0=  until
@@ -508,12 +507,11 @@ true exit
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
-\   ?bailout
-
    no-page
 
    console-start
    fast-boot?   if
+      stdout off
       probe-pci
       ['] false to interrupt-auto-boot?
       interpreter-init
@@ -521,15 +519,14 @@ true exit
       enable-power-button
 [then]
       auto-boot
+      screen-ih stdout !
       open-keyboard
       optional-startup
    else
-      ." Interactive boot" cr
-      ." Keyboard probe" cr
-\     ?bailout
+      banner
+
       open-keyboard
       probe-pci
-      ." USB probe" cr
       optional-startup
       interpreter-init
 [ifndef] lx-devel

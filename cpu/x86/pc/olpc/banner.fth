@@ -36,7 +36,6 @@ defer gui-banner  ' true to gui-banner
    stop-auto?  if  suppress-auto-boot  then
 
    gui-banner drop
-   banner
 ;
 
 headers
