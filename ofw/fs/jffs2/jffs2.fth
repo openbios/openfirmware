@@ -1059,7 +1059,7 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
       then                                      ( rdirent )
       i tdlen                                   ( rdirent )
    +loop                                        ( rdirent )
-   place-tdirent                                ( )
+   dup rdinode@  if  place-tdirent  else  drop  then   ( )
 ;
 
 : prep-dirents  ( -- )
