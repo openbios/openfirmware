@@ -241,7 +241,7 @@ d# 48000 instance value sample-rate
    h# 0f0f set-headphone-volume
    h# 606 set-pcm-gain		\ enable line-out
    h# 606 h# 38 codec!		\ enable surround out (headphones)
-   h# 000 h# 76 codec!  	\ Route mixer out to headphones
+   h# 010 h# 76 codec!  	\ Route mixer out to headphones, unlock sample rate
 ;
 : close-out  ( -- )
    h# 8808 set-pcm-gain			\ mute
