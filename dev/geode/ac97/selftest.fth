@@ -23,20 +23,8 @@ h# 808 value rlevel
    record-base  record-len  audio-in drop
 ;
 
-h# 606 value plevel   \ -9 dB, highest gain without digital clipping
-: set-plevel  ( db -- )
-   dup 0>  if  drop 0  then
-   negate  1+ 2* 3 /  dup bwjoin  to plevel
-;
-
-h# 0 value glevel
-: set-glevel  ( db -- )
-   dup 0>  if  drop 0  then
-   negate  1+ 2* 3 /  dup bwjoin  to glevel
-;
-
 : play  ( -- )
-   open-out  plevel set-pcm-gain  glevel h# 38 codec!
+   open-out
    record-base  record-len  audio-out drop  write-done
 ;
 
@@ -78,7 +66,7 @@ d# 500 value tone-freq
 : tone  ( freq -- )
    record-len la1+  alloc-mem to record-base
    make-tone
-   d# -9 set-glevel  play
+   d# -9 set-volume  play
    record-base record-len la1+  free-mem
 ;
 
@@ -125,14 +113,14 @@ d# 500 value tone-freq
 : sweep-test  ( -- )
    ." Playing sweep" cr
    make-sweep
-   d# -9 set-glevel  play
+   d# -9 set-volume  play
 ;
 
 : mic-test  ( -- )
    ." Recording ..." cr
    record
    ." Playing ..." cr
-   d# -3 set-glevel  play
+   d# -3 set-volume  play
 ;
 
 : selftest  ( -- error? )

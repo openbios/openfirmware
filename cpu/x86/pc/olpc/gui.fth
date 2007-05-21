@@ -373,7 +373,7 @@ h# 32 buffer: icon-name
 
     drop
 ;
-: (?show-device)  ( adr len -- ihandle )
+: (?show-device)  ( adr len -- adr len )
    not-screen? 0=  if  2dup ?show-icon  then
 ;
 ' (?show-device) to ?show-device

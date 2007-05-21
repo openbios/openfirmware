@@ -500,6 +500,15 @@ fload ${BP}/ofw/core/dualconsole.fth
    ?usb-keyboard
 ;
 
+: start-sound  ( -- )
+   playback-volume >r  d# -21 to playback-volume
+   ['] load-started behavior  >r
+   ['] noop to load-started
+   " rom:splash" ['] $play-wav catch  if  2drop  then
+   r> to load-started
+   r> to playback-volume
+;
+
 : open-keyboard  ( -- )
    " keyboard" open-dev  ?dup  if  set-stdin  then
 ;
@@ -513,6 +522,7 @@ fload ${BP}/ofw/core/dualconsole.fth
    fast-boot?   if
       stdout off
       probe-pci
+      start-sound
       ['] false to interrupt-auto-boot?
       interpreter-init
 [ifndef] lx-devel

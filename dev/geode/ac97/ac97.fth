@@ -231,22 +231,23 @@ d# 48000 instance value sample-rate
    h# 8000 h# 26  amp-default-on?  if  codec-set  else  codec-clr  then
 ;
 
+h# 606 value volume
+: set-volume  ( db -- )
+   dup 0>  if  drop 0  then
+   negate  1+ 2* 3 /  dup bwjoin  to volume
+;
+
 : open-out  ( -- )
    amplifier-on
    disable-playback
+   h# 010 h# 76 codec!            \ Route mixer out to headphones, unlock sample rate
    sample-rate d# 1000 / to s/ms
-   sample-rate  dup h# 2c codec!  dup h# 2e codec!  h# 30 codec!
-   0 set-master-volume
-\   0 set-mono-volume
-   h# 0f0f set-headphone-volume
-   h# 606 set-pcm-gain		\ enable line-out
-   h# 606 h# 38 codec!		\ enable surround out (headphones)
-   h# 010 h# 76 codec!  	\ Route mixer out to headphones, unlock sample rate
+   sample-rate h# 2e codec!       \ Only need to set surround DAC for OLPC
+   h# 606 set-pcm-gain            \ Basic PCM Gain - -9 dB, just below clipping
+   volume h# 38 codec!            \ headphone/surround output pin gain
 ;
 : close-out  ( -- )
-   h# 8808 set-pcm-gain			\ mute
-   h# 8000 set-master-volume
-   h# 8000 set-mono-volume
+   h# 8808 set-pcm-gain		\ mute
    amplifier-off
 ;
 
@@ -343,7 +344,7 @@ external
    get-device-id
    fatal-error?  if  false exit  then
    default
-   1  h# 2a codec-set   \ Enable variable rate
+   h# 2801  h# 2a codec-set   \ Enable variable rate, power down LFE and center DACs
    parse-args  0=  if  unmap-regs false exit  then
    true
 ;

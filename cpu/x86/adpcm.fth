@@ -115,8 +115,8 @@ c;
 
 : adpcm-decode-blk  ( in out #sample -- )
    #ch #output-ch min 0  ?do            ( in out #sample )
-      2 pick i /l * +                   ( in out #sample in' )
-      2 pick i /w * +                   ( in out #sample in out' )
+      2 pick i /l* +                    ( in out #sample in' )
+      2 pick i /w* +                    ( in out #sample in out' )
       init-ch-vars			( in out #sample in' out' )
       2 pick 1-                         ( in out #sample in out #sample-1 )
       adpcm-decode-ch                   ( in out #sample )
@@ -130,8 +130,8 @@ c;
    dup to blk-size                      ( in out #sample #ch blk-size )
    over 4 * - 2* over / 1+ to #sample/blk ( in out #sample #ch )
    dup to #ch                           ( in out #sample #ch )
-   /l * to in-skip                      ( in out #sample )
-   #output-ch /w * to out-skip          ( in out #sample )
+   /l* to in-skip                       ( in out #sample )
+   #output-ch /w* to out-skip           ( in out #sample )
 
    begin  dup 0>  while                 ( in out #sample )
       3dup #sample/blk min adpcm-decode-blk
@@ -204,65 +204,91 @@ c;
 : wav-#sample   ( -- #sample )   wav-fact-adr dup  if      8 + le-l@  then  ;
 : wav-blk-size  ( -- blk-size )  wav-fmt-adr  dup  if  h# 14 + le-w@  then  ;
 
+: set-volume  ( -- )   " set-volume" $call-audio  ;
 : set-sample-rate  ( -- )
    wav-fmt-adr ?dup  if  h# c + le-l@ " set-sample-rate" $call-audio  then
 ;
 
 0 value out-move
+
+\ Collapse a sample array with "#output-ch" channels/sample into a smaller
+\ array with "wav-in-#ch" channels/sample, discarding the excess channels.
+
 : condense-pcm  ( adr -- )
-   wav-in-#ch #output-ch - /w * to in-skip
-   #output-ch /w * to out-move
+   wav-in-#ch #output-ch - /w* to in-skip
+   #output-ch /w* to out-move
    dup dup 4 - le-l@  bounds  ?do          ( out )
       i over out-move move                 ( out )
       out-move +                           ( out' )
    in-skip +loop  drop                     ( )
 ;
+
+\ Spread a sample array with "wav-in-#ch" channels/sample into a larger
+\ array with "#output-ch" channels/sample, zeroing the new channels.
+
 : expand-pcm  ( adr -- )
-   #output-ch wav-in-#ch - /w * to out-skip
-   wav-in-#ch /w * to out-move
-   dup dup 4 - le-l@  bounds  swap out-move -  ( out in-begin in-end )
-   begin  2dup u<  while                   ( out in-begin in )
-      dup 3 pick out-move move             ( out in-begin in )
-      out-move - rot out-move + -rot       ( out' in-begin in' )
-      2 pick out-skip erase                ( out in-begin in )
-      rot out-skip + -rot                  ( out' in-begin in )
-   repeat  3drop                           ( )
+   #output-ch wav-in-#ch - /w* to out-skip    ( adr )
+   wav-in-#ch /w* to out-move                 ( adr )
+   dup /l -  le-l@                            ( adr in-len ) 
+   2dup  wav-in-#ch /  #output-ch *           ( adr in-len adr out-len )
+   +  -rot                                    ( out-adr in-start in-len )
+   over +  out-move -  do                     ( out-adr )
+      out-skip -  dup out-skip erase          ( out-adr' )
+      out-move -  i over out-move move        ( out-adr' )
+   out-move negate +loop                      ( out-adr )
+   drop
 ;
 
-: play-pcm-once  ( adr len -- )  " write" $call-audio drop " write-done" $call-audio  ;
+\ Given a sample array of the form L0, R0, L1, R1, ..., copy the left
+\ channel into the right, giving L0, L0, L1, L1, etc.  This is
+\ particularly useful when the R samples are initially 0.
+
+: mono16>stereo16  ( adr len -- )  bounds  ?do  i w@  i wa1+ w!  /l +loop  ;
+
+: play-wait  ( -- )  " write-done" $call-audio  ;
+
+: play-pcm-once  ( adr len -- )  " write" $call-audio drop  ;
+
 : play-pcm-loop  ( adr len -- )
-   ." Press a key to abort" cr
-   begin  2dup play-pcm-once  key?  until  key drop  2drop
+   ." Press a key to stop" cr
+   begin  2dup play-pcm-once play-wait  key?  until  key drop  2drop
 ;
 ' play-pcm-once to (play-pcm)
 
+d# -9 value playback-volume  \ -9 is clipping threshold
+
 : play-pcm  ( adr -- error? )
    wav-in-#ch 0=  if  drop true exit  then
+   playback-volume set-volume
    set-sample-rate
-   wav-data-adr 4 - le-l@ to /pcm-output
-   wav-in-#ch #output-ch =  if
-      /pcm-output (play-pcm)                 \ Play straight from the source
-   else
-   /pcm-output wav-in-#ch / #output-ch * to /pcm-output
-   #output-ch wav-in-#ch <  if
-      dup condense-pcm                       \ Skip extra channel data
-      /pcm-output (play-pcm)
-   else
-      dup expand-pcm                         \ Convert mono to stereo
-      /pcm-output (play-pcm)
-   then  then
+   wav-data-adr 4 - le-l@  to /pcm-output
+   wav-in-#ch #output-ch <>  if
+      /pcm-output wav-in-#ch /  #output-ch *  to /pcm-output
+      #output-ch wav-in-#ch <  if
+         dup condense-pcm                       \ Skip extra channel data
+      else
+         dup expand-pcm                         \ Convert mono to stereo
+      then
+   then
+   /pcm-output (play-pcm)
    false
 ;
 
 : play-ima-adpcm  ( adr -- error? )
    wav-fact-adr 0=  if  drop true exit  then
+   playback-volume set-volume
    set-sample-rate
-   wav-#sample #output-ch * /w * to /pcm-output
+   wav-#sample #output-ch *  /w*  to /pcm-output
+
    \ Because alloc-mem does not guarantee contiguous physical memory, use load-base area.
    loaded + pagesize round-up tuck          ( out in out )
+
    dup /pcm-output erase                    ( out in out )
    wav-#sample wav-in-#ch wav-blk-size      ( out in out #sample #ch blk-size )
    adpcm-decoder                            ( out )
+   #output-ch 2 =  wav-in-#ch 1 =  and  if  ( out )
+      dup /pcm-output mono16>stereo16       ( out )
+   then                                     ( out )
    /pcm-output (play-pcm)                   ( )
    false                                    ( error? )
 ;
