@@ -415,6 +415,9 @@ fload ${BP}/ofw/wifi/wifi-cfg.fth
 support-package: supplicant
 fload ${BP}/ofw/wifi/loadpkg.fth
 end-support-package
+stand-init:
+   " ??,OLPCOFW" $wifi
+;
 
 [ifdef] use-ppp
 fload ${BP}/ofw/ppp/loadppp.fth
