@@ -30,7 +30,6 @@
    ." Getting a copy of this machine's FLASH" cr
    h# fff0.0000 flash-buf /flash move
    true to file-loaded?
-   flash-buf ec-buf /ec move  \ Save a copy for merging
 
    (serial-flash)
 ;

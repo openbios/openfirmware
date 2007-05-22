@@ -153,6 +153,24 @@ h# 30 constant crc-offset   \ From end
 : ?move-mfg-data  ( -- )
    ." Merging existing manufacturing data" cr
 
+   flash-base -1 =  if
+      \ Read the manufacturing data from the other FLASH
+      \ First try the new location in the e.0000 block
+      flash-buf mfg-data-offset +  /flash-block  mfg-data-offset  read-spi-flash
+
+      \ If there is no mfg data in the e.000 block, get whatever is in the
+      \ last 2K of the 0 block, where the mfg data used to live.
+      flash-buf mfg-data-end-offset + invalid-tag?  if
+         flash-buf mfg-data-offset +  /flash-block  h# ff  erase
+
+         flash-buf mfg-data-end-offset + h# 800 -  h# 800   ( adr len )
+         mfg-data-end-offset h# 800 -                       ( adr len offset )
+         read-spi-flash                                     ( )
+      then
+      exit
+   then
+
+
    \ If the system has mfg data in the old place, move it to the new place
    mfg-data-top  flash-base h# 1.0000 +  =  if
       \ Copy just the manufacturing data into the memory buffer; don't
