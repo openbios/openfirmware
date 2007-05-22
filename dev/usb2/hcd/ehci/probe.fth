@@ -4,6 +4,15 @@ purpose: EHCI USB Controller probe
 hex
 headers
 
+: retry-set-address  ( dev -- error? )
+   d# 200 ms
+   d# 5  0  do
+      dup  set-address  0=  if  drop false  unloop exit  then
+      d# 1000
+   loop   
+   drop true
+;
+
 : make-root-hub-node  ( port -- )
    ok-to-add-device? 0=  if  drop exit  then		\ Can't add another device
 
@@ -11,7 +20,11 @@ headers
    speed-high over di-speed!		( port dev )
 
    0 set-target				( port dev )	\ Address it as device 0
-   dup set-address  if  2drop exit  then ( port dev )	\ Assign it usb addr dev
+
+   dup retry-set-address  if  2drop exit  then ( port dev )	\ Assign it usb addr dev
+\ d# 4000 ms
+\   dup set-address  if  2drop exit  then ( port dev )	\ Assign it usb addr dev
+
    dup set-target			( port dev )	\ Address it as device dev
    make-device-node			( )
 ;
@@ -72,6 +85,13 @@ external
    then
    open-count 1+ to open-count
    true
+;
+
+: resume  ( -- )
+   init-ehci-regs
+   start-usb
+   claim-ownership
+   framelist-phys periodic!
 ;
 
 : close  ( -- )

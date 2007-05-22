@@ -28,6 +28,7 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
   " video-save" stdout @ $call-method  \ Freeze display
   s3
    " video-restore" stdout @ $call-method  \ Unfreeze display
+   " /usb@f,5" open-dev  ?dup  if  " resume" 2 pick $call-method  close-dev  then
 ;
 alias s suspend
 
