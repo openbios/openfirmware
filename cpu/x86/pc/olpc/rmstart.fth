@@ -128,6 +128,31 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
 
    h# 01 # al mov  al h# 80 # out
 
+   \ The next few MSRs allow us to access the 5536
+   \ EXTMSR - page 449   \ Use PCI device #F for port 2
+
+   op:  dx dx xor
+   op:  h# f00 # ax mov           \ 00000000.00000f00.
+   op:  h# 5000201e # cx mov      \ MSR number
+   wrmsr
+
+   op:  h# 44000020 # dx mov
+   op:  h# 00200013 # ax mov      \ 44000020.00200013 \ mode C
+   op:  h# 51000010 # cx mov      \ MSR number - CPU interface serial
+   wrmsr
+
+   op:  h# 014fc001 # dx mov
+   op:  h# 01480001 # ax mov
+   op:  h# 51000026 # cx mov
+   wrmsr
+
+   op:  h# a0000001 # dx mov
+   op:  h# 480fff80 # ax mov
+   op:  h# 510100e1 # cx mov
+   wrmsr
+
+   op: h# 7601.0004 # ax mov  op: h# 148c # dx mov  op: ax dx out
+
    \ This code is highly optimized because it runs when the CPU is in
    \ it slowest operation mode, so we want to get it done fast.
    \ GLCP_SYS_RSTPLL - page 406
