@@ -325,8 +325,8 @@ here resume-entry put-branch
       si bx cmp
    = until
 
-   h# 1840 # di mov         \ PM1_STS/EN I/O port number
-   di ax in  ax di out      \ Preserve EN bits and cleare STS bits  
+   h# 1840 # dx mov         \ PM1_STS/EN I/O port number
+   dx ax in  ax dx out      \ Preserve EN bits and clear STS bits  
 
    h# 38 [bp]  si  lea    \ Save area
 
@@ -344,6 +344,12 @@ here resume-entry put-branch
       ax   dx  out  \ Write to GPIO control register
       4 #  dx  sub  \ Next port address
    loopa
+
+   \ Clear edge detects for GPIO pins that are not powered during suspend
+   h# ffff # ax mov
+   h# 1048 # dx mov  ax dx out  \ Pos edge status
+   h# 104c # dx mov  ax dx out  \ Neg edge status
+
    ax lods  h# 1040 # dx mov  ax dx out  \ Pos edge enable
    ax lods  h# 1044 # dx mov  ax dx out  \ Neg edge enable
    ax lods  h# 103c # dx mov  ax dx out  \ Low bank lock
@@ -355,6 +361,13 @@ here resume-entry put-branch
       ax   dx  out  \ Write to GPIO control register
       4 #  dx  sub  \ Next port address
    loopa
+
+   \ Clear edge detects for GPIO pins that are not powered during suspend
+   \ GPIOs 28:24 are in the suspend power well.  GPIOs 31:29 don't exist.
+   h# e0ff # ax mov
+   h# 10c8 # dx mov  ax dx out  \ Pos edge status
+   h# 10cc # dx mov  ax dx out  \ Neg edge status
+
    ax lods  h# 10c0 # dx mov  ax dx out  \ Pos edge enable
    ax lods  h# 10c4 # dx mov  ax dx out  \ Neg edge enable
    ax lods  h# 10bc # dx mov  ax dx out  \ High bank lock
