@@ -182,7 +182,6 @@ false value selftest-err?
 : selftest  ( -- error? )
    open 0=  if  true exit  then
    get-msecs rn !
-   read-id 1+ c@ h# dc <>  if  close true exit  then
    show-bbt cr
    (selftest)
    close
