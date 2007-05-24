@@ -46,6 +46,8 @@ external
 headers
 
 : set-address  ( dev -- usberr )
+   " usb-delay" ['] eval catch  if  2drop  else  ms  then
+
    \ To get the right characteristics for dev in control-set, then normal
    \ set-my-dev is nooped.  We set my-dev and my-real-dev here instead.
    ['] set-my-dev behavior swap			( xt dev )	\ Save set-my-dev

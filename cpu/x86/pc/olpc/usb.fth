@@ -1,6 +1,8 @@
 purpose: USB elaborations for the OLPC platform
 \ See license at end of file
 
+0 config-int usb-delay  \ Milliseconds to wait before set-address
+
 devalias usb1 /usb@f,4
 devalias usb2 /usb@f,5
 devalias u    /usb/disk
