@@ -257,49 +257,58 @@ c;
 
 d# -9 value playback-volume  \ -9 is clipping threshold
 
-: play-pcm  ( adr -- error? )
-   wav-in-#ch 0=  if  drop true exit  then
-   playback-volume set-volume
-   set-sample-rate
-   wav-data-adr 4 - le-l@  to /pcm-output
-   wav-in-#ch #output-ch <>  if
-      /pcm-output wav-in-#ch /  #output-ch *  to /pcm-output
-      #output-ch wav-in-#ch <  if
-         dup condense-pcm                       \ Skip extra channel data
-      else
-         dup expand-pcm                         \ Convert mono to stereo
-      then
-   then
-   /pcm-output (play-pcm)
+0 value pcm-base
+
+: play-raw-pcm  ( adr -- error? )
+   wav-in-#ch 0=  if  drop true exit  then              ( adr )
+
+   \ Allocate DMA memory for the decoded output
+   wav-data-adr 4 - le-l@                               ( adr in-len )
+   dup  wav-in-#ch /  #output-ch *  to /pcm-output      ( adr in-len )
+   /pcm-output " dma-alloc" $call-audio  to pcm-base    ( adr in-len )
+   
+   pcm-base  swap  move                                 ( )
+
+   #output-ch wav-in-#ch <  if  pcm-base condense-pcm  then   \ Skip extra channel data
+   #output-ch wav-in-#ch >  if  pcm-base expand-pcm    then   \ Convert mono to stereo
+
+   pcm-base /pcm-output (play-pcm)
    false
 ;
 
 : play-ima-adpcm  ( adr -- error? )
    wav-fact-adr 0=  if  drop true exit  then
-   playback-volume set-volume
-   set-sample-rate
+
    wav-#sample #output-ch *  /w*  to /pcm-output
 
-   \ Because alloc-mem does not guarantee contiguous physical memory, use load-base area.
-   loaded + pagesize round-up tuck          ( out in out )
+   \ Allocate DMA memory for the decoded output
+   /pcm-output " dma-alloc" $call-audio  to pcm-base
 
-   dup /pcm-output erase                    ( out in out )
-   wav-#sample wav-in-#ch wav-blk-size      ( out in out #sample #ch blk-size )
-   adpcm-decoder                            ( out )
-   #output-ch 2 =  wav-in-#ch 1 =  and  if  ( out )
-      dup /pcm-output mono16>stereo16       ( out )
-   then                                     ( out )
-   /pcm-output (play-pcm)                   ( )
+   pcm-base /pcm-output erase               ( in )
+   pcm-base wav-#sample wav-in-#ch wav-blk-size  adpcm-decoder  ( )
+   #output-ch 2 =  wav-in-#ch 1 =  and  if  ( )
+      pcm-base /pcm-output mono16>stereo16  ( )
+   then                                     ( )
+   pcm-base /pcm-output (play-pcm)          ( )
    false                                    ( error? )
 ;
 
 : (play-wav)  ( adr -- error? )
+   pcm-base if
+      pcm-base /pcm-output " dma-free" $call-audio
+      0 to pcm-base
+   then
+
    parse-wav-ok?  not  if  ." Not a .wav file" cr true exit  then
    " /audio" open-dev ?dup 0=  if  ." Cannot open audio device" cr true exit  then
    to audio-ih
+
+   playback-volume set-volume
+   set-sample-rate
+
    wav-cc  case
-          1  of  wav-data-adr play-pcm        endof
-      h# 11  of  wav-data-adr play-ima-adpcm  endof
+          1  of  wav-data-adr play-raw-pcm     endof
+      h# 11  of  wav-data-adr play-ima-adpcm   endof
       ( default )  ." Cannot play .wav format type: " dup .wav-cc true swap cr
    endcase
    audio-ih close-dev
