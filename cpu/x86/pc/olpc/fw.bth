@@ -516,6 +516,13 @@ fload ${BP}/ofw/core/dualconsole.fth
    " keyboard" open-dev  ?dup  if  set-stdin  then
 ;
 
+: go-hook-freeze
+   [ ' go-hook behavior compile, ]
+   0 " set-source" $call-screen
+;
+: freeze    ( -- )  ['] go-hook-freeze to go-hook  ;
+: unfreeze  ( -- )  ['] usb-quiet      to go-hook  ;
+
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
@@ -531,6 +538,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 [ifndef] lx-devel
       enable-power-button
 [then]
+      freeze
       auto-boot
       screen-ih stdout !
       open-keyboard
