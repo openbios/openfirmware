@@ -11,10 +11,12 @@ purpose: Establish address and I/O configuration definitions
 [ifdef] linuxbios-loaded
 h# fff8.0000 constant dropin-base  \ Location of payload in FLASH
 h#   08.0000 constant dropin-size
+dropin-base h# 80 + h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
 [then]
 
 \needs dropin-base  h# 198.0000 constant dropin-base
 \needs dropin-size  h#   8.0000 constant dropin-size
+\needs ResetBase    dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
 
 \ This is considerably more memory than Open Firmware needs
 \ on platforms where you have a well bounded set of I/O devices.
