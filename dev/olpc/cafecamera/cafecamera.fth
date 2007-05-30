@@ -555,6 +555,11 @@ d# 10,000 constant movie-time
    0 close					( error? )
 ;
 
+\ Do this at probe time to make sure the camera power is off
+map-regs
+0000.0008 3038 cl!	\ Turn on CaFe GPIO3 to enable power
+0008.0000 315c cl!	\ Set VDD to off
+unmap-regs
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
