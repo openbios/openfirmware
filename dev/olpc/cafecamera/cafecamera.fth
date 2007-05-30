@@ -22,7 +22,6 @@ my-address my-space h# 200.0010 + encode-phys encode+
 : my-w@  ( offset -- w )  my-space +  " config-w@" $call-parent  ;
 : my-w!  ( w offset -- )  my-space +  " config-w!" $call-parent  ;
 
-true value first-open?
 0 instance value chip
 
 : cl!  ( l adr -- )  chip + rl!  ;
@@ -467,9 +466,8 @@ external
 
 : open  ( -- flag )
    map-regs
-   first-open?  if  init  then
+   init
    ov7670-detected? 0=  if  unmap-regs false exit  then
-   false to first-open? 
    alloc-dma-bufs
    read-setup
    true
