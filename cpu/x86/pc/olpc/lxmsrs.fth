@@ -107,7 +107,7 @@ create lx-msr-init
   msr: 5000.2003 00000000.00370037.  \ No ERRs
   msr: 5000.2004 00000000.00000015.  \ Clock gating for 3 clocks
   msr: 5000.2005 00000000.00000000.  \ Enable some PCI errors
-  msr: 5000.2010 fff01120.001a021d.  \ PCI timings - LB has the latency timer at max
+  msr: 5000.2010 fff01140.001a021d.  \ PCI timings - LB has the latency timer at max
   msr: 5000.2011 04000300.00800f01.  \ GLPCI_ARB - LX page 581
 
 \ I don't think we need to do anything special for the DOS hole from PCI
