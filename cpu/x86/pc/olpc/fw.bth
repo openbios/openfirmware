@@ -172,8 +172,6 @@ fload ${BP}/ofw/core/symcif.fth
 fload ${BP}/ofw/core/symdebug.fth
 : release-load-area  ( boundary-adr -- )  drop  ;
 
-fload ${BP}/cpu/x86/pc/fixkbd.fth		\ Switch keyboard scan codes
-
 [ifdef] use-elf
 fload ${BP}/ofw/elf/elf.fth
 fload ${BP}/ofw/elf/elfdebug.fth
