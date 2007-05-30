@@ -65,7 +65,10 @@ purpose: Copy a file onto the NAND FLASH
       load-base  load-base /nand-block +  /nand-block  comp  if        ( block# )
          cr  ." Miscompare in block starting at page# "                ( block# )
          " scan-page#" nandih $call-method  .x cr                      ( block# )
-         key? abort" Aborted by keystroke"                             ( block# )
+         key? if
+            nandih close-dev  fileih close-dev                         ( block# )
+            key drop  true abort" Aborted by keystroke"
+         then
       then                                                 ( block# )
    repeat                                                  ( block# )
    drop                                                    ( )
@@ -108,7 +111,10 @@ h# 20 buffer: line-buf
       load-base /nand-block  $crc                          ( block# crc actual-crc )
       2dup <>  if
          cr ." CRC miscompare - expected " swap . ." got " . cr
-         key? abort" Aborted by keystroke"
+         key?  if
+            crc-ih close-dev  fileih close-dev
+            key drop  true abort" Aborted by keystroke"
+         then
       else
          2drop
       then                                                 ( block# )
@@ -137,7 +143,10 @@ h# 20 buffer: line-buf
          cr ." CRC miscompare - expected " swap . ." got " .
          ." in NAND block starting at page "
          " scan-page#" nandih $call-method . cr
-         key? abort" Aborted by keystroke"
+         key?  if
+            nandih close-dev  crc-ih close-dev
+            key drop  true abort" Aborted by keystroke"
+         then
       else
          2drop
       then                                                 ( block# )
