@@ -315,24 +315,6 @@ fload ${BP}/dev/geode/acpi.fth           \ Power management
 
 fload ${BP}/cpu/x86/adpcm.fth            \ ADPCM decoding
 
-[ifdef] notdef-olpc
-\ fload ${BP}/dev/olpc/plccflash.fth  \ PLCC LPC debug FLASH
-
-0 0  " "  " /" begin-package   	         \ DCON driver
-fload ${BP}/dev/olpc/dcon/dconsmb.fth    \ SMB access to DCON chip
-fload ${BP}/dev/olpc/dcon/dcon.fth       \ DCON control
-fload ${BP}/dev/olpc/dcon/methods.fth    \ DCON interface methods
-end-package
-
-: dcon-present?  ( -- flag )
-   " /dcon" open-dev  ?dup  if  close-dev true  else  false  then
-;
-\ Doing this has the useful side effect of turning on the backlight
-stand-init: DCON
-   dcon-present? drop
-;
-[then]
-
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
