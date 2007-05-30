@@ -820,7 +820,7 @@ Mitch_Bradley: the most common type of 'bad node'will have a mismatching data cr
       2 pick                 ( final write hiwater final )
       over -                 ( final write hiwater extra )
       swap file-buf +  swap  ( final write buf-adr extra )
-      erase                  ( final write )
+      0 max  erase           ( final write )  \ 0 max accounts for truncation
    then                      ( final write )
    drop to file-size   \ Set overall length
 ;
