@@ -3,14 +3,35 @@ purpose: Copy a file onto the NAND FLASH
 
 0 value fileih
 0 value nandih
+0 value crc-ih
+
 0 value /nand-block
 0 value /nand-page
 0 value nand-pages/block
 0 value #nand-pages
 
+: close-nand-ihs  ( -- )
+   fileih  ?dup  if  0 to fileih  close-dev  then
+   nandih  ?dup  if  0 to nandih  close-dev  then
+   crc-ih  ?dup  if  0 to crc-ih  close-dev  then
+;
+
+: ?nand-abort  ( flag msg$ -- )
+   rot  if
+      close-nand-ihs  $abort
+   else
+      2drop
+   then
+;
+
+: ?key-stop  ( -- )
+    key?  dup  if  key drop  then           ( stop? )
+    " Stopped by keystroke"   ?nand-abort
+;
+
 : open-nand  ( -- )
    " /nandflash" open-dev to nandih
-   nandih 0= abort" Can't open NAND FLASH device"
+   nandih 0=  " Can't open NAND FLASH device"  ?nand-abort
    " erase-size" nandih $call-method to /nand-block
    " block-size" nandih $call-method to /nand-page
    " size" nandih $call-method  /nand-page  um/mod nip to #nand-pages
@@ -18,18 +39,66 @@ purpose: Copy a file onto the NAND FLASH
    " start-scan" nandih $call-method
 ;
 
+h# 20 buffer: line-buf
+: next-crc  ( -- false | crc true )
+   line-buf 9  " read" crc-ih $call-method   ( len )
+   dup  0=  if  exit  then                   ( len )
+   9 <> " Bad CRC line length" ?nand-abort   ( )
+   line-buf 8 $number " Bad number in CRC file"  ?nand-abort  ( crc )
+   true
+;
+
+
+: open-crcs  ( name$ -- )
+   open-dev  to crc-ih
+   crc-ih 0= " Can't open CRC file"  ?nand-abort
+;
+
+h# 100 buffer: image-name-buf
+: image-name$  ( -- adr len )  image-name-buf count  ;
+
+
+: ?open-crcs  ( -- )
+   image-name$ + 4 -  4  " .img" $=  if
+      " crc"  image-name$ + 3 -  swap move
+      image-name$ open-crcs
+   else
+      0 to crc-ih
+   then
+   crc-ih  if  ." Check file is " image-name$ type cr  then
+;
+
 : open-img  ( "devspec" -- )
-   safe-parse-word  open-dev  to fileih
-   fileih 0=  abort" Can't open NAND image file"
+   safe-parse-word  2dup image-name-buf place   ( devspec$ )
+   open-dev  to fileih
+   fileih 0= " Can't open NAND image file"  ?nand-abort
 ;
 
 : #records  ( ih /record -- n )
    swap " size" rot $call-method  rot um/mod nip
 ;
 
+: check-mem-crc  ( crc -- )
+   load-base /nand-block  $crc                          ( crc actual-crc )
+   2dup <>  if
+      cr ." CRC miscompare - expected " swap . ." got " . cr
+      true " Stopping" ?nand-abort
+      ?key-stop
+   else
+      2drop
+   then                                                 ( )
+;
+
+: ?check-crc  ( -- )
+   crc-ih  if
+      next-crc  0=  " Premature end of .crc file" ?nand-abort
+      check-mem-crc
+   then
+;
 : copy-nand  ( "devspec" -- )
    open-nand
    open-img
+   ?open-crcs
 
    ['] noop to show-progress
 
@@ -42,11 +111,11 @@ purpose: Copy a file onto the NAND FLASH
       load-base /nand-block  " read" fileih $call-method
    0> while
       (cr dup .  1+
+      ?check-crc
       load-base " copy-block" nandih $call-method
    repeat
    drop
-   fileih close-dev
-   nandih close-dev
+   close-nand-ihs
 ;
 
 : verify-nand  ( "devspec" -- )
@@ -65,37 +134,19 @@ purpose: Copy a file onto the NAND FLASH
       load-base  load-base /nand-block +  /nand-block  comp  if        ( block# )
          cr  ." Miscompare in block starting at page# "                ( block# )
          " scan-page#" nandih $call-method  .x cr                      ( block# )
-         key? if
-            nandih close-dev  fileih close-dev                         ( block# )
-            key drop  true abort" Aborted by keystroke"
-         then
+         ?key-stop
       then                                                 ( block# )
    repeat                                                  ( block# )
    drop                                                    ( )
-   fileih close-dev
-   nandih close-dev
+   close-nand-ihs
 ;
 
-0 value crc-ih
-h# 20 buffer: line-buf
-: next-crc  ( -- false | crc true )
-   line-buf 9  " read" crc-ih $call-method   ( len )
-   dup  0=  if  exit  then                   ( len )
-   9 <> abort" Bad CRC line length"          ( )
-   line-buf 8 $number  abort" Bad number in CRC file"   ( crc )
-   true
-;
-
-: open-crcs  ( -- )
-   safe-parse-word  open-dev  to crc-ih
-   crc-ih 0=  abort" Can't open CRC file"
-;
-
-: crc-img  ( "img-devspec" "crc-devspec" -- )
+: crc-img  ( "img-devspec" -- )
    hex
-   open-nand  nandih close-dev  \ To set sizes
+   open-nand  close-nand-ihs   \ To set sizes
    open-img
-   open-crcs
+   ?open-crcs
+   crc-ih 0= " No CRC file"  ?nand-abort
 
    ['] noop to show-progress
 
@@ -106,28 +157,18 @@ h# 20 buffer: line-buf
       swap  (cr dup .  1+   swap                           ( block#' crc )
 
       load-base /nand-block  " read" fileih $call-method   ( block# crc len )
-      /nand-block <>  abort" Short img file"               ( block# crc )
+      /nand-block <> " Short img file"  ?nand-abort        ( block# crc )
 
-      load-base /nand-block  $crc                          ( block# crc actual-crc )
-      2dup <>  if
-         cr ." CRC miscompare - expected " swap . ." got " . cr
-         key?  if
-            crc-ih close-dev  fileih close-dev
-            key drop  true abort" Aborted by keystroke"
-         then
-      else
-         2drop
-      then                                                 ( block# )
+      check-mem-crc                                        ( block# )
    repeat                                                  ( block# )
    drop                                                    ( )
-   fileih close-dev
-   crc-ih close-dev
+   close-nand-ihs
 ;
 
 : crc-nand  ( "crc-devspec" -- )
    hex
    open-nand
-   open-crcs
+   safe-parse-word  open-crcs
    ['] noop to show-progress
 
    ." Verifying " crc-ih 9 #records . ." blocks" cr
@@ -143,17 +184,13 @@ h# 20 buffer: line-buf
          cr ." CRC miscompare - expected " swap . ." got " .
          ." in NAND block starting at page "
          " scan-page#" nandih $call-method . cr
-         key?  if
-            nandih close-dev  crc-ih close-dev
-            key drop  true abort" Aborted by keystroke"
-         then
+         ?key-stop
       else
          2drop
       then                                                 ( block# )
    repeat                                                  ( block# )
    drop                                                    ( )
-   nandih close-dev
-   crc-ih close-dev
+   close-nand-ihs
 ;
 
 
@@ -181,7 +218,7 @@ true value dump-oob?
    then
    to fileih
 
-   fileih 0=  if  nandih close-dev  true abort" Can't open output"  then
+   fileih 0=  " Can't open output"  ?nand-abort
 
    \ The stack is empty at the end of each line unless otherwise noted
    #nand-pages  0  do
@@ -202,8 +239,7 @@ true value dump-oob?
    nand-pages/block +loop
    cr  ." Done" cr
 
-   fileih close-dev
-   nandih close-dev
+   close-nand-ihs
 ;
 : dump-nand  ( "devspec" -- )  true  to dump-oob?  (dump-nand)  ;
 : save-nand  ( "devspec" -- )  false to dump-oob?  (dump-nand)  ;
@@ -213,13 +249,11 @@ true value dump-oob?
    open-nand
 
    safe-parse-word  open-dev  to fileih
-   fileih 0=  abort" Can't open NAND fastboot image file"
+   fileih 0= " Can't open NAND fastboot image file"  ?nand-abort
 
-   " size" fileih $call-method  drop              ( len )
-   " start-fastcopy" nandih $call-method  if      ( )
-      nandih close-dev  fileih close-dev
-      true abort" Not enough spare NAND space for fast copy"
-   then                                                   ( )
+   " size" fileih $call-method  drop                      ( len )
+   " start-fastcopy" nandih $call-method                  ( error? )
+   " Not enough spare NAND space for fast copy" ?nand-abort
 
    begin                                                  ( )
       load-base /nand-block  " read" fileih $call-method  ( len )
@@ -232,8 +266,7 @@ true value dump-oob?
    drop                                                   ( )
    " end-fastcopy" nandih $call-method                    ( )
 
-   fileih close-dev
-   nandih close-dev
+   close-nand-ihs
 ;
 
 \ LICENSE_BEGIN
