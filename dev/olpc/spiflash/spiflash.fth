@@ -288,6 +288,11 @@ defer write-spi-flash  ( adr len offset -- )
    case
       h# 13  of  ['] common-write  endof
       h# bf  of  ['] sst-write     endof
+      h# 14  of
+         ." The SPI FLASH ID reads as 14.  This is due to an infrequent hardware problem."  cr
+         ." If you power cycle and try again, it will probably work the next time." cr
+         abort
+      endof
       ( default )  ." Unsupported SPI FLASH ID " dup .x  cr  abort
    endcase
    to write-spi-flash
