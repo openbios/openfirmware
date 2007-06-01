@@ -510,13 +510,7 @@ true value got-response?
 \ Reset
 \ =========================================================================
 
-: reset-wlan  ( -- )
-   fc25 dup " ec@" evaluate 40 invert and swap " ec!" evaluate	\ Assert WLAN_RESET#
-   fc15 dup " ec@" evaluate 40 or         swap " ec!" evaluate	\ Enable output
-   100 ms
-   fc15 dup " ec@" evaluate 40 invert and swap " ec!" evaluate	\ Disable output
-   5 ms
-;
+: reset-wlan  ( -- )  " wlan-reset" evaluate  ;
 
 \ =========================================================================
 \ MAC address
