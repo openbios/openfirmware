@@ -26,7 +26,7 @@ decimal
 \ nuser restartable?  restartable? off
 
 defer restart  ( -- )
-defer restart-step  ( -- )
+defer restart-step  ( -- )  ' restart to restart-step
 
 hidden definitions
 
