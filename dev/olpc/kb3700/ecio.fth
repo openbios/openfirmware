@@ -21,12 +21,6 @@ h# 380 constant iobase
 
 \ EC internal addresses
 
-h# fc2a	constant GPIO5
-
-: flash-write-protect-on  ( -- )  GPIO5 ec@  h# 80 invert and  GPIO5 ec!  ;
-
-: flash-write-protect-off  ( -- )  GPIO5 ec@  h# 80 or  GPIO5 ec!  ;
-
 : wait-ib-empty  ( -- )
    d# 1000 0  do  h# 6c pc@  2 and  0=  if  unloop exit  then  1 ms  loop
    true abort" EC port 6c input buffer timeout"
@@ -70,25 +64,25 @@ h# fc2a	constant GPIO5
 : bat-gauge-id@  ( -- sn0 .. sn7 )  h# 17 ec-cmd-out  8 0  do ec-rb  loop  ;
 : bat-gauge@     ( -- b )  h# 18 ec-cmd-out  h# 31 ec-wb  ec-rb  ;  \ 31 is the EEPROM address
 : board-id@      ( -- b )  h# 19 ec-cmd-b@  ;
-: sci-source@    ( -- b )  h# 1a ec-cmd-w@  ;
+: sci-source@    ( -- b )  h# 1a ec-cmd-b@  ;
 : sci-mask!      ( b -- )  h# 1b ec-cmd-b!  ;
 : sci-mask@      ( -- b )  h# 1c ec-cmd-b@  ;
 : game-key@      ( -- w )  h# 1d ec-cmd-out  ec-rw  ;
 : ec-date!       ( day month year -- )  h# 1e ec-cmd-out  ec-wb ec-wb ec-wb  ;
-: ec-abnormal@   ( -- b )  h# 1f ec-cmd-b@  ;  \ XXX is this byte or word?
+: ec-abnormal@   ( -- b )  h# 1f ec-cmd-b@  ;
 
 : bat-init-lifepo4 ( -- )  h# 21 ec-cmd-out  ;
 : bat-init-nimh    ( -- )  h# 22 ec-cmd-out  ;
 : wlan-off         ( -- )  0 h# 23 ec-cmd-b!  ;
 : wlan-on          ( -- )  1 h# 23 ec-cmd-b!  ;
 : wlan-wake        ( -- )  h# 24 ec-cmd-out  ;
-: wlan-rst         ( -- )  h# 25 ec-cmd-out  ;
+: wlan-reset       ( -- )  h# 25 ec-cmd-out  ;
 : dcon-disable     ( -- )  0 h# 26 ec-cmd-b!  ;
 : dcon-enable      ( -- )  1 h# 26 ec-cmd-b!  ;
 : reset-ec-warm    ( -- )  h# 27 ec-cmd-out  ;
 : reset-ec         ( -- )  h# 28 ec-cmd-out  ;
 : write-protect-fw ( -- )  h# 29 ec-cmd-out  ;
-: ebook-mode?      ( -- )  h# 2a ec-cmd-b@  ;
+: ebook-mode?      ( -- b )  h# 2a ec-cmd-b@  ;
 
 \ EC mailbox access words
 
@@ -117,8 +111,6 @@ h# fc2a	constant GPIO5
 
 : kb3920?  ( -- flag )  h# 6c pc@ h# ff =  if  true exit  then   9 ec-cmd 9 =  ;
 
-: snoop-board-id@  ( -- id )  h# fa20 ec@  ;
-
 \ This makes the EC stop generating a flood of SCIs every time you do
 \ the port 66 command sequence.
 : sci-quiet  ( -- )  h# 50  h# ff03 ec!  ;
@@ -135,11 +127,36 @@ h# fc2a	constant GPIO5
    true to kbc-off?
 ;
 
+: ec-power-off  ( -- )
+   1 h# ff14 ec!
+   1 h# ff01 ec!    \ Tell the EC to bounce us on restart
+   0 h# ff14 ec!
+;
+
 \ Unfortunately, since the system reset is mediated by the keyboard
 \ controller, turning the keyboard controller back on resets the system.
 
 : kbc-on  ( -- )
    h# ff14 ec@  1 invert and  h# ff14 ec!  \ Innocuous if already on
+
+   false to kbc-off?
+;
+: fancy-kbc-on  ( -- )
+   2 h# ff01 ec!    \ Prevent full system reset
+   h# ff14 ec@  1 invert and  h# ff14 ec!  \ Innocuous if already on
+   d# 400 ms          \ Give the EC time to start up
+   h# 44 h# fc80 ec!  \ Re-enable scan code conversion and system flag
+   h# 43 h# fc81 ec!  \ Re-enable fast gate and ibf/obf interrupts
+
+   h# f h# fe51 ec!  \ Clear pending interrupts
+   h# f h# fe50 ec!  \ Re-enable GPT interrupts
+   h# 0 h# fea7 ec!  \ Clear FLASH write enable
+   h# 4 h# fead ec!  \ fast read mode
+   h# fe95 ec@  h# 80 or  h# fe95 ec! \ Write-protect LPC
+   h# 3 h# ff04 ec!  \ enable IBF/OBF interrupts
+\  h# 40 h# ff08 ec! \ Clear some interrupt
+   h# ff30 ec@  h# 10 or  h# ff30 ec!  \ Enable interrupt from GPIO04, PCI_RST#
+
    false to kbc-off?
 ;
 
@@ -150,21 +167,6 @@ h# fc2a	constant GPIO5
 
 : kbc-pause  ( -- )   h# dd ec-cmd66  ;
 : kbc-resume  ( -- )  h# df ec-cmd66  ;
-
-
-
-: kbd-led-on  ( -- )  h# fc21 ec@  1 invert and  h# fc21 ec!  ;
-: kbd-led-off ( -- )  h# fc21 ec@  1 or  h# fc21 ec!  ;
-
-: wlan-reset  ( -- )
-   \ WLAN reset is EC GPIOEE, controlled by EC registers fc15 and fc25
-   h# fc15 ec@   h# fc25 ec@           ( enable data )
-   dup  h# 40 invert and  h# fc25 ec!  ( enable data )  \ WLAN_RESET data output low
-   over h# 40 or          h# fc15 ec!  ( enable data )  \ Assert output enable
-   1 ms
-   h# 40 or          h# fc25 ec!       ( enable )       \ Drive data high
-   h# 40 invert and  h# fc15 ec!       ( )              \ Release output enable
-;
 
 : io-spi@  ( reg# -- b )  h# fea8 +  ec@  ;
 : io-spi!  ( b reg# -- )  h# fea8 +  ec!  ;
@@ -179,6 +181,8 @@ h# fc2a	constant GPIO5
 : io-spi-reprogrammed  ( -- )
    ." Powering off..."  d# 2000 ms  cr
    power-off
+\   kbc-on
+\   ." Keyboard back on" cr
 ;
 
 : io-spi-start  ( -- )

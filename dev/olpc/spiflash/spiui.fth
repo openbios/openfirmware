@@ -236,7 +236,7 @@ defer fw-filename$  ' null$ to fw-filename$
    $get-file
 ;
 
-: flash  ( ["filename"] -- )  get-file reflash  power-off  ;
+: flash  ( ["filename"] -- )  get-file reflash  ;
 
 [ifdef] dev
 dev /flash
