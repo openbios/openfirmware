@@ -318,7 +318,10 @@ warning @  warning off
       h# 1454 pl@ 2 and  if
          ." Interacting due to botched resume" cr  hex interact
       then
-      i-key-wait  if  ." Interacting" cr  hex interact  then
+      i-key-wait  if
+         " patch false fast-boot? startup" eval
+         ." Interacting" cr  hex interact
+      then
 [ifdef] lx-devel
       init-superio
 [then]
@@ -434,17 +437,19 @@ true                               ' client-symbols?  set-config-int-default
 \ fload ${BP}/cpu/x86/pc/report.fth
 fload ${BP}/ofw/core/dualconsole.fth
 
-: user-switch?  ( -- flag )
+0 value game-key-mask
+
+: read-game-keys  ( -- f)
 [ifdef] lx-devel  false exit  [then]
    atest?  if  true exit  then
-   game-key@  0<>  dup  if
+   game-key@  dup to game-key-mask  if
       ." Release the game key to continue" cr
       begin  d# 100 ms  game-key@ 0=  until
    then
 ;
 : fast-boot?  ( -- flag )
 [ifdef] rom-loaded
-   user-switch? 0=
+   game-key-mask  h# 100 and  0=
 [else]
    false
 [then]
@@ -510,6 +515,9 @@ fload ${BP}/ofw/core/dualconsole.fth
    r> to playback-volume
 ;
 
+: ?start-sound  ( -- )
+   game-key-mask h# 40 and  if  start-sound  then
+;
 : open-keyboard  ( -- )
    " keyboard" open-dev  ?dup  if  set-stdin  then
 ;
@@ -527,25 +535,25 @@ fload ${BP}/ofw/core/dualconsole.fth
    no-page
 
    console-start
+   read-game-keys
    fast-boot?   if
       stdout off
       probe-pci
-      start-sound
+      ?start-sound
       ['] false to interrupt-auto-boot?
       interpreter-init
 [ifndef] lx-devel
       enable-power-button
 [then]
-      freeze
       auto-boot
       screen-ih stdout !
       open-keyboard
       optional-startup
    else
       banner
-
-      open-keyboard
       probe-pci
+      ?start-sound
+      open-keyboard
       optional-startup
       interpreter-init
 [ifndef] lx-devel
