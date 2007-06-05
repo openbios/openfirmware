@@ -335,9 +335,24 @@ create func-map  81 c,  8c c,
    false
 ;
 
+: ?olpc-keyboard  ( -- )
+    " enable-intf" $call-parent
+    begin  get-data?  while
+       drop
+       true to keyboard-present?
+       5 ms
+    repeat
+    keyboard-present?  if  exit  then
+    kbd-reset 0= to keyboard-present?
+;
+
 : reset  ( -- )
    init-data
-   clear-state get-initial-state
+   clear-state
+[ifdef] olpc
+   ?olpc-keyboard
+[else]
+   get-initial-state
 
    \ Test the keyboard interface clock and data lines
    " test-lines" $call-parent  if  false to keyboard-present? exit  then
@@ -354,6 +369,7 @@ create func-map  81 c,  8c c,
 
 \     7 set-leds  d# 100 ms  0 set-leds
    then
+[then]
 
    \ Leave the keyboard in scan set 2 (its default state), but also leave
    \ the 8042 in the mode where it translates to scan set 1.
