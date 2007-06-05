@@ -1,9 +1,11 @@
 #!/bin/sh
-ls ../../../../../cpu/x86/Linux
-cp ../../../../../cpu/x86/Linux/forth .
-cp ../../../../../cpu/x86/build/builder.dic .
-cp ../../../../../cpu/x86/ioports.fth .
-cp ../../../../../cpu/x86/pc/olpc/mfgdata.fth .
-cp ../../../../../dev/olpc/dcon/dconsmb.fth .
-tar cfz sdkit.tgz forth builder.dic sd.fth ioports.fth dconsmb.fth mfgdata.fth dumpgamma.fth sd
-rm -f builder.dic forth ioports.fth mfgdata.fth dconsmb.fth
+mkdir -p sdkit
+cp ../../../../../cpu/x86/Linux/forth sdkit
+cp ../../../../../cpu/x86/build/builder.dic sdkit
+cp ../../../../../cpu/x86/ioports.fth sdkit
+cp ../../../../../cpu/x86/pc/olpc/mfgdata.fth sdkit
+cp ../../../../../dev/olpc/dcon/dconsmb.fth sdkit
+cp ../../../../../dev/olpc/kb3700/ecio.fth sdkit
+cp sd sd.fth dumpgamma.fth sdkit
+tar cfz sdkit.tgz sdkit
+# rm sdkit/*

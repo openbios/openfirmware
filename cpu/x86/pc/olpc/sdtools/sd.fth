@@ -34,7 +34,8 @@ fe01.0000 4000 mmap constant sd
 : r  ( offset -- )  sdl@ u.  ;
 : w  ( l offset -- )  sdl!  ;
 
-fff0.0000 10.0000 mmap constant flash-base
+-1 value flash-base
+fff0.0000 10.0000 mmap to flash-base
 \needs cdump  : cdump  ( adr len -- )  bounds  ?do  i c@ .x  loop  ;
 \needs .mfg-data fload mfgdata.fth
 
@@ -59,6 +60,12 @@ fff0.0000 10.0000 mmap constant flash-base
 : bright!  ( level -- ) d# 10 dcon! ; \ def: h# xxxF
 
 \needs vp@ fload dumpgamma.fth
+
+: unimp  true abort" SPI reflashing is not implemented in this version"  ;
+: spicmd! unimp ;  : spi-cmd-wait unimp ;  : power-off unimp ;
+defer spi-start  defer spi@  defer spi!  defer spi-out  defer spi-reprogrammed
+1 value spi-us
+\needs ec@ fload ecio.fth
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
