@@ -67,10 +67,16 @@ false value selftest-err?
    ." Fill " dup .d  ." random blocks with h# 55, h# aa and h# ff" cr
 
    0  ?do
-      i 1 >  if  random-page  else  i 0<>  if  usable-page-limit 1-  else  0  then  then
-      pages/eblock 1- invert and
+      i case
+         0 of  0                      endof
+         1 of  usable-page-limit 1-   endof
+         ( default )  random-page swap
+      endcase                         ( block# )
+      pages/eblock 1- invert and      ( block#' )
 
-      dup block-bad? not  if
+      dup block-bad?  if              ( block#' )
+         drop                         ( )
+      else                            ( block#' )
          (cr dup .
          sbuf over read-eblock dup record-err  0=  if
             dup h# 55 test-eblock  record-err
