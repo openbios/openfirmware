@@ -325,9 +325,6 @@ here resume-entry put-branch
       si bx cmp
    = until
 
-   h# 1840 # dx mov         \ PM1_STS/EN I/O port number
-   dx ax in  ax dx out      \ Preserve EN bits and clear STS bits  
-
    h# 38 [bp]  si  lea    \ Save area
 
    ax lods  ax dx xchg  ax lods  ax dx xchg  h# 4c00.0014 wmsr  \ RSTPLL
