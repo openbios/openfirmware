@@ -115,6 +115,12 @@ h# 380 constant iobase
 \ the port 66 command sequence.
 : sci-quiet  ( -- )  h# 50  h# ff03 ec!  ;
 
+.( Redefining wlan-reset to add temporary workaround) cr
+: wlan-reset  ( -- )
+   h# fd h# fc15 ec!
+   wlan-reset
+;
+
 \ While accessing the SPI FLASH, we have to turn off the keyboard controller,
 \ because it continuously fetches from the SPI FLASH when it's on.  That
 \ interferes with our accesses.
