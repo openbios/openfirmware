@@ -71,8 +71,9 @@ h# 380 constant iobase
 : ec-date!       ( day month year -- )  h# 1e ec-cmd-out  ec-wb ec-wb ec-wb  ;
 : ec-abnormal@   ( -- b )  h# 1f ec-cmd-b@  ;
 
-: bat-init-lifepo4 ( -- )  h# 21 ec-cmd-out  ;
-: bat-init-nimh    ( -- )  h# 22 ec-cmd-out  ;
+: bat-init-nimh-gp     ( -- )  h# 20 ec-cmd-out  ;
+: bat-init-lifepo4-byd ( -- )  h# 21 ec-cmd-out  ;
+: bat-init-lifepo4-gp  ( -- )  h# 22 ec-cmd-out  ;
 : wlan-off         ( -- )  0 h# 23 ec-cmd-b!  ;
 : wlan-on          ( -- )  1 h# 23 ec-cmd-b!  ;
 : wlan-wake        ( -- )  h# 24 ec-cmd-out  ;
@@ -114,12 +115,6 @@ h# 380 constant iobase
 \ This makes the EC stop generating a flood of SCIs every time you do
 \ the port 66 command sequence.
 : sci-quiet  ( -- )  h# 50  h# ff03 ec!  ;
-
-.( Redefining wlan-reset to add temporary workaround) cr
-: wlan-reset  ( -- )
-   h# fd h# fc15 ec!
-   wlan-reset
-;
 
 \ While accessing the SPI FLASH, we have to turn off the keyboard controller,
 \ because it continuously fetches from the SPI FLASH when it's on.  That
