@@ -9,6 +9,7 @@ begin-tokenizing cafenand.fc
 
 FCode-version2
 
+fload ${BP}/dev/olpc/cafenand/ecc.fth
 fload ${BP}/dev/olpc/cafenand/cafenand.fth
 fload ${BP}/dev/olpc/cafenand/configure.fth
 fload ${BP}/dev/olpc/cafenand/badblock.fth
