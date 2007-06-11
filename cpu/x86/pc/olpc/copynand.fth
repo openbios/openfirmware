@@ -59,7 +59,7 @@ h# 100 buffer: image-name-buf
 
 
 : ?open-crcs  ( -- )
-   image-name$ + 4 -  4  " .img" $=  if
+   image-name$ + 4 -  " .img" caps-comp 0=  if
       " crc"  image-name$ + 3 -  swap move
       image-name$ open-crcs
    else
