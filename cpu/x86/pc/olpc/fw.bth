@@ -541,6 +541,7 @@ fload ${BP}/ofw/core/dualconsole.fth
       probe-pci
       ?start-sound
       ['] false to interrupt-auto-boot?
+      probe-usb
       interpreter-init
 [ifndef] lx-devel
       enable-power-button
@@ -548,7 +549,7 @@ fload ${BP}/ofw/core/dualconsole.fth
       auto-boot
       screen-ih stdout !
       open-keyboard
-      optional-startup
+      ?usb-keyboard
    else
       banner
       probe-pci
