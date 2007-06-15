@@ -288,7 +288,7 @@ external
    bbt  if
       usable-page-limit  0  ?do
          i block-bad?  if
-            cr ." Skipping bad block" i .page-byte cr
+\           cr ." Skipping bad block" i .page-byte cr
          else
             (cr i .
             i erase-block
