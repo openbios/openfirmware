@@ -20,6 +20,7 @@ fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
 \ This code will be copied to RAM at suspend-base
 
 \ create save-display
+create reset-smbus
 create restore-usb-power
 
 h# fe00.0000 constant gp-pa
@@ -476,6 +477,45 @@ here resume-entry put-branch
    al lods  dx inc  al dx out  \ Reg 5 without the enable bit
    al lods  dx inc  al dx out  \ Reg 6
    al lods  dx dec  al dx out  \ Reg 5 with the enable bit
+
+[ifdef] reset-smbus
+   \ This little dance resets the DCON's SMbus interface
+   h#    1 # al mov  \ START
+   h# 18b3 # dx mov  \ SMBUS control 1
+   al dx out         \ Initiate an SMBUS cycle to the DCON
+
+   \ We could split here and move the following down, so as to overlap
+   \ the delay time with other work, but it doesn't matter because the
+   \ later CaFe chip setup will stall anyway.
+
+   d#   32 # cx mov  \ Loop count (usually ready in 20 uS)
+   h# 18b1 # dx mov  \ SMBUS status
+   begin
+      dx al in
+      h# 40 # al test
+   loope             \ Wait for ready to accept byte or timeout
+
+   h#   1a # al mov  \ Address byte
+   h# 18b0 # dx mov  \ SMBUS data   
+   al dx out         \ Initiate address out cycle
+
+   \ Another possible split point, in case we should need to overlap
+   d#  256 # cx mov  \ Loop count (usually ready in 172 uS)
+   h# 18b1 # dx mov  \ SMBUS status
+   begin
+      dx al in
+      h# 50 # al test
+   loope             \ Wait for done or error or timeout
+
+   h#    2 # al mov  \ Stop
+   h# 18b3 # dx mov  \ SMBUS status
+   al dx out         \ Initiate STOP
+
+   h#   10 # al mov  \ Ack NEGACK
+   h# 18b1 # dx mov  \ SMBUS status
+   al dx out         \ While acking the NEGACK
+   \ End of DCON SMbus reset dance
+[then]
 
    \ MFGPTs 0-5.  MFGPT 6 and 7 are in the standby domain, live during suspend
    h# 1800 # dx mov  \ MFGPT base port
