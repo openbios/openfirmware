@@ -29,8 +29,17 @@ h# 70 value smb-clock  \ 8 is the shortest period the controller allows
 : smb-init  ( -- )  smb-on  smb-stop  smb-off  smb-on  ;
 
 : smb-status  ( -- b )
-   1 smb@  dup 1 smb!
-   dup h# 20 and  abort" SMB Bus conflict"
+   1 smb@  ( dup 1 smb! )
+   dup h# 20 and  if
+      smb-stop
+      h# 20 1 smb!
+      true abort" SMB Bus conflict"
+   then
+   dup h# 10 and  if
+      smb-stop
+      h# 10 1 smb!   \ Acknowledge NEGACK, only works after stop
+      true abort" No ACK"
+   then
 ;
 
 : wait-ready  ( -- )
@@ -42,10 +51,7 @@ h# 70 value smb-clock  \ 8 is the shortest period the controller allows
    true abort" SMB wait-ready timed out"
 ;
 
-: smb-byte-out  ( b -- )
-   wait-ready  0 smb!
-   smb-status h# 10 and  abort" No ACK"
-;
+: smb-byte-out  ( b -- )  wait-ready  0 smb!  ;
 
 : wait-start  ( -- )
    d# 1000 0  do
@@ -57,15 +63,12 @@ h# 70 value smb-clock  \ 8 is the shortest period the controller allows
 ;
 : smb-start  ( addr-byte -- )
    1 3 smb!  \ Start condition
-
    wait-start
-   
    smb-byte-out  \ Send address and R/W
 ;
 
-
 : dcon@  ( reg# -- w )
-   h# 1a  smb-start   smb-byte-out  \ Address and reg#
+   h# 1a  smb-start   smb-byte-out  wait-ready  \ Address and reg#
    h# 1b  smb-start   \ Switch to read
    wait-ready
    0 smb@                       ( low-byte )
