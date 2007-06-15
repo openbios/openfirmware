@@ -439,9 +439,13 @@ fload ${BP}/ofw/core/dualconsole.fth
 
 0 value game-key-mask
 
-: read-game-keys  ( -- f)
+: read-game-keys  ( -- )
 [ifdef] lx-devel  false exit  [then]
-   atest?  if  true exit  then
+   board-revision h# b20 <  if
+      h# 100 to game-key-mask
+      exit
+   then
+
    game-key@  dup to game-key-mask  if
       ." Release the game key to continue" cr
       begin  d# 100 ms  game-key@ 0=  until
