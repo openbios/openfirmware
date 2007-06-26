@@ -5,15 +5,15 @@ build-now
 
 fload ${BP}/cpu/x86/pc/olpc/versions.fth
 
-" rm -rf ./lib" $sh
-" wget -O - http://download.fedora.redhat.com/pub/fedora/projects/olpc/development/i386/os/Fedora/RPMS/libertas-usb8388-firmware-${WLAN_RPM}.noarch.rpm | rpm2cpio - | cpio -i -u --make-directories --no-absolute-filenames" expand$ $sh
+" rm usb8388.bin" expand$ $sh
 
+" wget -q http://dev.laptop.org/pub/firmware/libertas/usb8388-${WLAN_VERSION}.bin" expand$ $sh
 
-\ reading libertas.version
-\ here  dup d# 50 ifd @ fgets   ( adr len )
-\ ifd @ fclose                  ( adr len )
+" wget -q -O - http://dev.laptop.org/pub/firmware/libertas/MD5SUMS  | grep ${WLAN_VERSION}  >usb8388.md5" expand$ $sh
 
-" cp ./lib/firmware/usb8388.bin ." $sh
+" md5sum usb8388-${WLAN_VERSION}.bin | cmp - usb8388.md5" expand$ $sh
+
+" mv usb8388-${WLAN_VERSION}.bin usb8388.bin" expand$ $sh
 
 \ This forces the creation of a .log file, so we don't re-fetch
 writing usb8388.version
