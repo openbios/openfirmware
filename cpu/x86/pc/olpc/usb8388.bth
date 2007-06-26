@@ -5,7 +5,7 @@ build-now
 
 fload ${BP}/cpu/x86/pc/olpc/versions.fth
 
-" rm usb8388.bin" expand$ $sh
+" rm -f usb8388.bin" expand$ $sh
 
 " wget -q http://dev.laptop.org/pub/firmware/libertas/usb8388-${WLAN_VERSION}.bin" expand$ $sh
 
