@@ -296,7 +296,7 @@ variable dir-cl  cl#eof dir-cl !
    dup 1 >=  if
       over c@  ascii \  =  if
          1 /string
-         fat-type c@ fat32 =  if  rdirclus l@  else  0  then
+         rdirclus l@
       else
          dv_cwd-cl l@
       then
