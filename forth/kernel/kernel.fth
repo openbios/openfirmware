@@ -88,8 +88,8 @@ defer newline-pstring
 
 0 value tib
 
-headerless
 0 value #-buf
+headerless
 : init  ( -- )  init
    [ /n h# 10 * 8 + ] literal dup alloc-mem + is #-buf
    /tib    alloc-mem   is tib
