@@ -153,6 +153,7 @@ h# 34 buffer: candidate
    /n +loop                                    ( flag )
 ;
 
+0 [if]
 : do-erase  ( -- ) \ Side effect: span and bufcursor may be reduced
    begin
       word-to-string   ( addr )
@@ -163,6 +164,7 @@ h# 34 buffer: candidate
       cerase
    repeat
 ;
+[then]
 
 : do-expand  ( -- )
    expand-initial-substring
@@ -173,7 +175,9 @@ h# 34 buffer: candidate
 
 : expand-word  ( -- )
    collect-string find-candidates  ( )
-   #candidates @  if   do-expand   else  do-erase  then
+   #candidates @  if   do-expand   else
+[ifdef] do-erase  do-erase  [else]  beep  [then]
+   then
 ;
 
 : show-candidates  ( -- )
