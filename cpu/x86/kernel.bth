@@ -4,8 +4,6 @@ purpose: Load file for x86 Forth kernel
 command: &builder &this
 build-now
 
-\ Copyright 1994 FirmWorks  All Rights Reserved.
-
 \ [ifdef] use-postfix-assembler
 \ use-postfix-assembler
 \ ' 386-assembler >link fence a!
@@ -39,19 +37,9 @@ defer "header-t-hook ' (tags-header) is "header-t-hook
 "" loadkern.fth last-filename "copy
 [then]
 
-: lconstant constant ;
-\needs lbsplit fload ${BP}/forth/lib/split.fth
-\needs bitset  fload ${BP}/forth/lib/bitops.fth
-\ \needs name>string  : name>string  count  ;
-\ \needs id:        alias id:         \
-\ \needs purpose:   alias purpose:    \
-\ \needs copyright: alias copyright:  \
-\ \needs round-up   : round-up  ( a b -- a' )  1- tuck + swap not and  ;
-
 : resident ;
 
 fload ${BP}/forth/kernel/conft32.fth
-
 fload ${BP}/forth/kernel/meta1.fth
 
 only forth also meta also definitions
@@ -69,6 +57,7 @@ fload ${BP}/cpu/x86/target.fth
 fload ${BP}/forth/kernel/forward.fth
 fload ${BP}/cpu/x86/fixvoc.fth
 fload ${BP}/forth/kernel/metacompile.fth
+
 fload ${BP}/cpu/x86/metarel.fth
 
 only forth meta also forth also definitions
