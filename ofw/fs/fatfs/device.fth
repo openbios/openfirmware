@@ -14,7 +14,7 @@ d# 4096 constant /sector-max
    fat-type c@  case
       fat12  of  2 * 3 /  endof
       fat16  of  2/       endof
-      fat32  of  4 /      endof
+      fat32  of  2/ 2/    endof
    endcase
 ;
 
