@@ -1,0 +1,300 @@
+purpose: Load file for fw.dic for OLPC School Server
+\ See license at end of file
+
+dictionary: ${BP}/cpu/ppc/build/basefw.dic
+command: &ppcforth &dictionary &this
+build-now
+
+\ Configuration defines
+create bailout-early
+true to stand-init-debug?
+true constant real-mode?
+
+\ ' $report-name is include-hook
+
+headerless
+h# 1000 to pagesize
+d# 12   to pageshift
+
+headers
+true value chrp?	\ Change as needed
+
+dev /
+1 encode-int  " #address-cells"  property
+device-end
+
+\ Memory management services
+fload ${BP}/ofw/core/clntmem1.fth	\ client services for memory
+fload ${BP}/ofw/core/memlist.fth     \ Resource list common routines
+fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
+fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
+fload ${BP}/ofw/core/availpm.fth	\ Available memory list
+
+headerless
+: (memory?)  ( phys -- flag )  h# 8000.0000  u<  ;   \ The CHRP boundary is 0x4000.0000
+' (memory?) to memory?
+
+headers
+\ Handy tools to mark device nodes with the "built-in" property
+: mark-builtin  ( -- false )
+   0 package(  0 0 encode-bytes  " built-in" property  )package
+   false
+;
+: mark-builtin-all  ( -- )
+   ['] mark-builtin ['] search-preorder catch  2drop
+;
+
+\ Load file format handlers
+
+fload ${BP}/cpu/ppc/initpgm.fth		\ Basic boot handler
+fload ${BP}/cpu/ppc/olpc/elf.fth	\ handler for ELF booting
+fload ${BP}/ofw/inet/loadtcp.fth	\ TCP extensions
+
+\ Reboot and re-entry code
+fload ${BP}/cpu/ppc/reboot.fth		\ Restart the client program
+fload ${BP}/cpu/ppc/reenter.fth		\ Various entries into Forth
+
+\ Miscellaneous hardware interface words
+fload ${BP}/cpu/ppc/cache603.fth	\ Cache synchronization
+fload ${BP}/cpu/ppc/segreg.fth		\ Segment register access
+fload ${BP}/cpu/ppc/bat.fth		\ BAT mapping register access
+fload ${BP}/cpu/ppc/scrub.fth		\ Fast memory scrubbing using "dcbz"
+
+hex
+warning on
+
+h#  40.0000 ' load-base set-config-int-default
+
+headerless
+: (initial-heap)  ( -- adr len )  sp0 @ ps-size -  limit  tuck -  ;
+' (initial-heap) is initial-heap
+headers
+
+" /openprom" find-device
+   " FirmWorks,3.0" encode-string " model" property
+device-end
+
+\ XXX this may need to change for L2 cache support
+warning @ warning off
+\ We can't turn on the dcache until we have set up BAT mapping
+stand-init: Instruction cache on
+   icache-on? 0=  if  icache-on  then
+;
+warning !
+
+fload ${BP}/cpu/ppc/dectrap.fth		\ Null decrementer handler
+stand-init: Enable machine check exceptions
+   msr@  h# 1000 or  msr!
+;
+
+headerless
+defer set-memory-map  ' noop to set-memory-map
+
+headers
+stand-init: Set Memory Map
+   set-memory-map
+;
+
+headerless
+h# 6000.0000 value fw-virt-base			\ 32 megs of mapping space
+h# 0200.0000 value fw-virt-size
+
+headers
+0 value memsize
+
+fload ${BP}/cpu/ppc/loadvmem.fth		\ /mmu node
+stand-init: MMU
+   " /mmu" open-dev mmu-node !
+;
+
+fload ${BP}/cpu/ppc/realcif.fth		\ Real-mode client interface fixups
+
+fload ${BP}/cpu/ppc/rootnode.fth	\ Methods for root node
+stand-init: Root node
+   " /"  " init"  execute-device-method drop
+;
+stand-init: Data cache on
+   msr@ h# 10 and  dcache-on? 0=  and  if  dcache-on  then
+;
+stand-init: Fast CPU mode
+   fastest-mode
+;
+
+0 0  " "  " /"  begin-package
+fload ${BP}/cpu/ppc/olpc/mappci.fth	\ PCI-to-root-node address translation
+fload ${BP}/dev/pcibus.fth		\ Generic PCI bus package
+end-package
+stand-init: PCI host bridge
+   " /pci" " init" execute-device-method drop
+;
+
+fload ${BP}/dev/pciprobe.fth
+defer probe-all  ' probe-pci to probe-all
+
+fload ${BP}/cpu/ppc/cpunode.fth
+
+fload ${BP}/ofw/core/bailout.fth
+
+fload ${BP}/cpu/ppc/olpc/reset.fth	 \ Reset via "92" register
+
+fload ${BP}/ofw/core/countdwn.fth	 \ Startup countdown
+fload ${BP}/cpu/ppc/banner.fth		 \ Startup banner
+
+fload ${BP}/forth/lib/pattern.fth	\ Text string pattern matching
+fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
+
+\ fload ${BP}/pkg/flash/flash.fth
+\ fload ${BP}/dev/amd29fxx.fth
+
+\ fload ${BP}/cpu/ppc/ntctrace.fth
+
+fload ${BP}/ofw/core/startup.fth
+
+warning on
+
+h#   4.0000 constant initial-heap-size
+
+\ fload builton.fth  \ Automatic version stamp
+\ dev /openprom
+\    built-date-int encode-int " built-on" property
+\    0 0 encode-bytes  " arc-interrupt-level=vector" property
+\ device-end
+
+\ fload ${BP}/arch/prep/loadcvar.fth	\ PREP NVRAM layout
+
+\ fload ${BP}/arch/prep/ultra/fixednv.fth	\ Offsets of fixed regions of NVRAM 
+
+h# f100.0000 constant mv64660-base   \ Needs to be mapped to a VA
+
+: mv-b@  ( offset -- byte )  mv64660-base + rb@  ;
+: mv-b!  ( byte offset -- )  mv64660-base + rb!  ;
+: mv-w@  ( offset -- byte )  mv64660-base + rw@  ;
+: mv-w!  ( byte offset -- )  mv64660-base + rw!  ;
+: mv-l@  ( offset -- byte )  mv64660-base + rl@  ;
+: mv-l!  ( byte offset -- )  mv64660-base + rl!  ;
+: uart@  ( reg# -- byte )  /l*  h# 1.2000 +  mv-b@  ;
+: uart!  ( byte reg# -- )  /l*  h# 1.2000 +  mv-b!  ;
+fload ${BP}/dev/diaguart.fth		\ Diagnostic driver for PC-compatible serial port
+
+fload ${BP}/forth/lib/sysuart.fth	\ Plug UART routines into key and emit
+' ukey is diag-key			\ Feed UART input to "dl"
+
+fload ${BP}/cpu/ppc/olpc/reports.fth	\ Low-level character output routines
+
+fload ${BP}/cpu/ppc/olpc/pciconfig.fth	\ Configuration space access
+\ fload ${BP}/arch/prep/eagle.fth	\ Eagle configuration registers
+fload ${BP}/cpu/ppc/ppcboot.fth		\ Forth startup code
+
+[ifdef] bailout-early
+: startup quit ;
+
+install-rom-cold
+
+.( --- Saving fw.dic ---) cr  p" fw.dic" save-forth
+bye
+[then]
+
+fload ${BP}/cpu/ppc/olpc/rootnode.fth	\ Methods for root node
+
+fload ${BP}/cpu/ppc/olpc/pcinode.fth	\ System-specific words for PCI
+
+" "  dup config-string pci-probe-list
+
+6 buffer: 'system-mac-address
+: get-mac-address  ( -- )
+   " /ethernet" find-package if
+      " local-mac-address" rot get-package-property 0= if   ( a 6 )
+	 'system-mac-address swap move  exit
+      then
+   then
+   " 123456" 'system-mac-address swap move	\ better than nothing?
+;
+: (system-mac-address)  ( -- addr len )  'system-mac-address 6  ;
+' (system-mac-address) is system-mac-address
+
+: (probe-all)  ( -- )
+   " probe-" do-drop-in
+   probe-pci ( probe-pci-e  probe-pci-x )  get-mac-address
+   " probe+" do-drop-in
+;
+' (probe-all) to probe-all
+
+[ifdef] notyet
+0 0  " ????????"  " /" begin-package		\ Real-time clock node
+fload ${BP}/dev/ds1385r.fth
+end-package
+stand-init: RTC
+   " /rtc" open-dev  clock-node !
+;
+
+0 0  " i74"  " /pci/isa" begin-package		\ NVRAM node
+fload ${BP}/dev/ds1385n.fth
+
+" ds1385-nvram"  encode-string
+" pnpPNP,8"      encode-string encode+
+" compatible" property
+
+env-end-offset to /nvram
+end-package
+stand-init: NVRAM
+   " /nvram" open-dev  to nvram-node
+    init-config-vars
+;
+[endif]
+
+\ fload ${BP}/dev/isa/irq.fth
+
+stand-init:  Keyboard overrides
+   ?bailout
+;
+
+\ fload ${BP}/cpu/ppc/olpc/cpunode.fth		\ CPU node additions
+
+fload ${BP}/cpu/ppc/olpc/probemem.fth		\ Memory probing
+
+fload ${BP}/cpu/ppc/olpc/devalias.fth	\ Device aliases
+
+0 0 " fff00000" " /" begin-package
+   " flash" device-name
+   h# 8.0000 constant /device
+   my-address my-space /device reg
+   fload ${BP}/cpu/x86/pc/flashpkg.fth
+end-package
+
+devalias rom  /flash@fff00000
+
+fload ${BP}/cpu/ppc/olpc/flash.fth		\ Low-level FLASH access
+
+fload ${BP}/pkg/flash/saveflsh.fth		\ FLASH to disk and back
+
+\ ' false to interrupt-auto-boot?	\ Don't do countdown
+
+patch noop fw-title rom-cold	\ Superseded by banner
+
+install-rom-cold
+
+.( --- Saving subset.dic ---) cr  p" subset.dic" save-forth
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2007 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
