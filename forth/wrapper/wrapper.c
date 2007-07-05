@@ -153,15 +153,16 @@ char *host_cpu = "arm";
 #define HOST_LITTLE_ENDIAN
 #endif
 
-#ifdef Linux
+#ifdef __linux__
 char *host_os = "Linux";
 #define SYS5 1
 #ifdef HOSTPOWERPC
 #define LinuxPOWERPC
 char *host_cpu = "powerpc";
 #else
-# ifndef CKERNEL
-#  ifndef MIPS
+# ifdef __i386__
+#  ifndef CKERNEL
+    char *host_cpu = "x86";
 #   define LinuxX86
 #   define HOST_LITTLE_ENDIAN
 #  endif
@@ -398,7 +399,6 @@ INTERNAL long   f_mkdir();
 INTERNAL long   f_rmdir();
 #ifdef SIM
 INTERNAL long printnum();
-extern   int	close(), open();
 #endif
 #ifdef DLOPEN
 extern   long	dlopen(), dlsym(), dlerror(), dlclose();
@@ -1037,7 +1037,7 @@ pcb = pc[0];
 	signal(SIGFPE,exit_handler);
 	signal(SIGBUS,exit_handler);
 	signal(SIGSEGV,exit_handler);
-#ifndef Linux
+#ifndef __linux__
 	signal(SIGEMT,exit_handler);
 	signal(SIGSYS,exit_handler);
 #endif
@@ -1197,7 +1197,7 @@ exit_handler(sig)
 }
 #endif
 
-#ifdef Linux
+#ifdef __linux__
 static void			/* set file associated with fd to */
 waitchar (int fd)		/* "wait for character" */
 {
@@ -1259,7 +1259,7 @@ c_keyques()
 #else
 # ifdef UNIX
 #  ifdef SYS5
-#   ifdef Linux
+#   ifdef __linux__
 	no_waitchar (0);
 	nchars = read(0, &c[0], 1) > 0;
 	waitchar (0);
@@ -2356,7 +2356,7 @@ s_flushcache(adr, len)
      char *adr;
      long len;
 {
-#if defined(Linux) && defined(MIPS) 
+#if defined(__linux__) && defined(MIPS) 
        extern int cacheflush(char *addr, int nbytes, int cache);
        (void) cacheflush(adr, len, BCACHE);
 #endif
