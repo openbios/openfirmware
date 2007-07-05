@@ -47,7 +47,7 @@ h# e constant bb-offset  \ Location of bad-block table signature in OOB data
    \ The following timing values are calculated from the Hynix and Samsung
    \ datasheets based on a clock cycle time of 10.4 nS.
    h# 1010.0900 h# 24 cl!  \ Timing1
-   h#    1.0101 h# 28 cl!  \ Timing2
+   h#    1.0102 h# 28 cl!  \ Timing2 - recommended by Marvell
    h# 1000.0000 h# 2c cl!  \ Timing3
 ;
 [ifdef] notdef
@@ -94,7 +94,7 @@ h# e constant bb-offset  \ Location of bad-block table signature in OOB data
 \ h#        90 4 1 >cmd constant read-id-cmd      \ Not needed
 h#   20.0070 1 0 >cmd constant read-status-cmd
 h# 0420.0000 0 5 >cmd constant read-cmd
-h# 0220.0080 0 5 >cmd constant write-cmd
+h# 0220.0080 0 6 >cmd constant write-cmd  \ The 6 adds a dummy address cycle to meet tADR for Hynix
 
 : wait-mask  ( bitmask -- )
    begin  dup h# 10 cl@  and  until  ( bitmask )
