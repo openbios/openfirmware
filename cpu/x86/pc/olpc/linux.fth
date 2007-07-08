@@ -318,8 +318,8 @@ d# 34 to default-#lines
 warning @ warning off
 : help  ( -- )
    blue-letters  ." UPDATES:" black-letters  mcr
-   ."   flash u:\q2b74.rom              Rewrite the firmware from USB key" mcr
-   ."   flash nand:\q2b74.rom           Rewrite the firmware from NAND file" mcr
+   ."   flash u:\q2c18.rom              Rewrite the firmware from USB key" mcr
+   ."   flash nand:\q2c18.rom           Rewrite the firmware from NAND file" mcr
    ."   copy-nand u:\boot\nand290.img   Rewrite the OS on NAND from USB key" mcr
    mcr
    blue-letters  ." DIRECTORY LISTING:" black-letters  mcr
