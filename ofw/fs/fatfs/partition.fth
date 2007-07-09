@@ -102,11 +102,12 @@ defer suitable?  ( s n -- s n flag )
 : is-ufs?  ( type -- type flag )  dup ufs-type =  ;
 
 \ Matches partitions with the bootable flag set
-\ : bootable?  ( boot? type -- boot? type flag )  over h# 80 =  ;
-\ XXX kludge for Linux: bootable flag is not always set, accept ext2fs-type
-: bootable?  ( boot? type -- boot? type flag )
-   over h# 80 =  over h# 83 = or
-;
+: bootable?  ( boot? type -- boot? type flag )  over h# 80 =  ;
+
+\ Kludge for Linux: bootable flag is not always set, accept ext2fs-type
+\ : bootable?  ( boot? type -- boot? type flag )
+\    over h# 80 =  over h# 83 = or
+\ ;
 
 \ Matches the Nth partition, where N is initially stored in the value #part
 : nth?  ( -- flag )  #part 1- dup to #part  0=  ;
