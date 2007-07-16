@@ -1,0 +1,103 @@
+purpose: Load file for x86 Forth kernel
+\ See license at end of file
+
+command: &builder &this
+build-now
+
+: \Tags  [compile] \ ; immediate
+: \NotTags  ;  immediate
+
+\ ' $report-name is include-hook	' noop is include-exit-hook
+  ' noop is include-hook		' noop is include-exit-hook
+
+warning off	\ Turn OFF the warning messages
+
+: resident ;
+
+fload ${BP}/forth/kernel/conf16.fth
+fload ${BP}/forth/kernel/meta1.fth
+
+only forth also meta also definitions
+\needs 8015-assembler caps @ caps on  fload ${BP}/cpu/i8051/assem.fth caps !
+
+only forth also meta assembler also meta definitions
+: assembler  ( -- )  8051-assembler  ;
+
+only forth also meta also assembler definitions
+fload ${BP}/forth/lib/loclabel.fth         \ Local label assembler feature
+
+\ : : : lastacf .name cr ;   \ Debugging tool
+
+fload ${BP}/cpu/i8051/target.fth           \ Target configuration
+
+fload ${BP}/forth/kernel/forward.fth       \ Metacompiler forward referencing
+fload ${BP}/forth/kernel/metacompile.fth   \ Metacompiler
+
+fload ${BP}/cpu/i8051/metainit.fth         \ Turn on the metacompiler
+
+always-headers  \ Don't omit any headers
+
+\ Comment out the following lines when debugging
+-1  threshold  !	\ Turn OFF ALL debugging messages
+warning-t  off  	\ Turn OFF target warning messages
+
+\ Uncomment the following line(s) for more debug output
+\ show? on  1 granularity !  1 threshold !
+\ warning-t on
+
+fload ${BP}/cpu/i8051/kerncode.fth         \ CPU-dependent Forth kernel
+
+[ifdef] notdef    \ This is the FirmWorks Forth kernel high-level code
+: \tagvoc ; immediate
+: \nottagvoc [compile] \ ; immediate
+
+\ fload ${BP}/forth/kernel/uservars.fth
+\ fload ${BP}/forth/kernel/double.fth
+\ \ : (d.)  (  d -- adr len )  tuck dabs <# #s rot sign #>  ;
+\ \ fload ${BP}/forth/kernel/dmuldiv.fth
+
+\ fload ${BP}/forth/lib/bitops.fth
+\ fload ${BP}/forth/lib/struct.fth
+\ fload ${BP}/forth/kernel/kernel.fth
+\ fload ${BP}/forth/kernel/sysio.fth
+\ fload ${BP}/forth/lib/dumballo.fth
+\ fload ${BP}/cpu/x86/syscall.fth
+\ fload ${BP}/cpu/x86/boot.fth
+\ fload ${BP}/forth/kernel/init.fth
+\ fload ${BP}/cpu/x86/finish.fth
+[then]
+
+' (do-literal) is do-literal
+
+\ Save the result to a file
+writing kernel.img
+origin-t >hostaddr  here-t origin-t -  ofd @  fputs
+ofd @ fclose
+
+warning on
+
+hex
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2007 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
