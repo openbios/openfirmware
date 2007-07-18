@@ -42,7 +42,7 @@ always-headers  \ Don't omit any headers
 warning-t  off  	\ Turn OFF target warning messages
 
 \ Uncomment the following line(s) for more debug output
-\ show? on  1 granularity !  1 threshold !
+\ show? on  1 granularity !  540 threshold !
 \ warning-t on
 
 fload ${BP}/cpu/i8051/kerncode.fth         \ CPU-dependent Forth kernel

@@ -26,16 +26,11 @@ h# 10000 alloc-mem  target-image  \ Allocate space for the target image
 \ This number is a target token rather than an absolute address.
 hex
 
-0.0000 org  0.0000 voc-link-t token-t!
+0 voc-link-t token-t!
 
-ps-size-t equ ps-size
+\ ps-size-t equ ps-size
 
 assembler
-
-\ This is at the first location in the Forth image.
-
-hex
-mlabel cld
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

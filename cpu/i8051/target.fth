@@ -7,17 +7,21 @@ decimal
 
 only forth also meta definitions
 
+: note-string-t  ( adr len -- adr len )  ;
+
 : lobyte h# 0ff and ;
 : hibyte 8 rshift lobyte ;
 
 2 constant /w-t
-/l-t constant /n-t
+: /l-t true abort" /l-t called" ;
+: l,-t true abort" l,-t called" ;
+/w-t constant /n-t
 /w-t constant /a-t
 /a-t constant /thread-t
-/w-t constant /token-t
+3 constant /token-t   \ ljmp <adr>
 /w-t constant /link-t
 /token-t constant /defer-t
-\ /n-t h# 600 * constant user-size-t
+h# 80 constant user-size-t
 \ /n-t h# 100 * constant ps-size-t
 \ /n-t h# 100 * constant rs-size-t
 /w-t constant /user#-t
@@ -27,13 +31,19 @@ only forth also meta definitions
 \ 32 bit host Forth compiling 16-bit target Forth
 
 : n->n-t ; immediate
+: n->l-t ; immediate
+: s->l-t ; immediate
 
 : c!-t ( n add -- ) >hostaddr c! ;
 : c@-t ( target-address -- n ) >hostaddr c@ ;
 
-\ Intel processors are little-endian
+\ Store data in little endian
 : w!-t ( n add -- )  over lobyte over c!-t  ca1+ swap hibyte swap c!-t  ;
 : w@-t ( target-address -- n )  dup c@-t swap 1+ c@-t 8 << or  ;
+
+\ ljmp addresses are big endian
+: be-w!-t  ( n target-address -- )  over lobyte over ca1+ c!-t  swap hibyte swap c!-t  ;
+: be-w@-t  ( target-address -- n )  dup + c@-t swap c@-t 8 << or  ;
 
 alias le-w!-t w!-t
 alias le-w@-t w@-t
@@ -57,15 +67,13 @@ alias le-w@-t w@-t
 
 : a@-t ( target-address -- target-address )  w@-t  origin-t +  ;
 : a!-t ( token target-address -- )  swap  origin-t -  swap  w!-t  ;
-: token@-t ( target-address -- target-acf )  a@-t  ;
-: token!-t ( acf target-address -- )  a!-t  ;
+: token@-t ( target-address -- target-acf )  1+ a@-t  ;
+: token!-t ( acf target-address -- )  h# 12 over c!-t  1+ be-w!-t  ;  \ lcall instruction
 
 : rlink@-t  ( occurrence -- next-occurrence )  w@-t  origin-t +  ;
 : rlink!-t  ( next-occurrence occurrence -- ) swap  origin-t -  swap  w!-t  ;
 
-\ Machine independent
 : a,-t  ( adr -- )  here-t /a-t allot-t  a!-t  ;
-: token,-t ( token -- )  here-t /token-t allot-t  token!-t  ;
 
 \ These versions of linkx-t are for absolute links
 : link@-t ( target-address -- target-address' )  a@-t  ;
@@ -85,7 +93,7 @@ alias le-w@-t w@-t
 
 \ Machine independent
 : a-t, ( target-address -- )  here  /a-t allot  a-t!  ;
-: token-t, ( target-address -- )  here  /token-t allot  token-t!  ;
+: token-t, ( target-address -- )  here  /token-t allot  token!-t  ;
 
 \ Dictionary linked list; the list head is in the metacompiler environment
 \ during metacompilation
@@ -111,6 +119,8 @@ create threads-t   #threads-t /link-t * allot
    user-size-t allot-t
    userarea-t >hostaddr user-size-t  erase
 ;
+
+: >body-t ( cfa-t -- pfa-t )  3 + w@-t  ;
 
 : (>user-t)    ( cfa-t -- user-address-t )  >body-t  w@-t  userarea-t  +  ;
 : >user-t  ( cfa-t -- user-address-h )  (>user-t)  >hostaddr  ;
@@ -158,7 +168,7 @@ decimal
    /link +loop
 ;
 : initmeta  ( -- )
-   init-relocation-t
+\   init-relocation-t
    threads-t clear-threads-t  threads-t current-t !
 ;
 
@@ -169,9 +179,6 @@ decimal
 /w-t constant /branch
 : branch! ( from-t target-addr-t -- )  over -  swap  ( offset from-t )   w!-t  ;
 : branch, ( target-t -- )  here-t -  w,-t  ;
-
-\ XXX FIXME for subroutine threaded
-: >body-t ( cfa-t -- pfa-t )  /n-t +  ;   \ This version is for indirect threaded
 
 \ Store actions for some data types.
 
@@ -187,6 +194,7 @@ only forth also meta also definitions
    ['] here-t  is here
    ['] allot-t is asm-allot
    ['] c!-t    is asm8!
+   ['] c@-t    is asm8@
    [ previous meta ]
 ;
 : install-host-assembler  ( -- )  [ assembler ] resident [ meta ]  ;

@@ -2,7 +2,10 @@
 WRAPPER = pforth
 OPT = -O
 # OPT =
-CFLAGS = -DUNIX -DSYS5 -DSIM -DPOWERPC -DARGREGS -DSIMNEXT
+
+BP=../../..
+
+CFLAGS = -DUNIX -DPPCSIM -DTARGET_POWERPC
 
 CC = gcc
 
@@ -12,8 +15,8 @@ SIMDIR = ../ppcsim
 
 ZIPOBJS = zipmem.o deflate.o trees.o bits.o util.o inflate.o
 
-OBJS = wrapper.o ppcsim.o logger.o ${ZIPOBJS}
-TRACEOBJS = wrapper.o ppcsim.trace.o logger.o ${ZIPOBJS}
+OBJS = wrapsim.o ppcsim.o logger.o ${ZIPOBJS}
+TRACEOBJS = wrapsim.o ppcsim.trace.o logger.o ${ZIPOBJS}
 SIMROMOBJS = simrom.o ppcsim.simrom.o
 
 all: ppcforth ppcforth.trace
@@ -27,6 +30,9 @@ ppcforth.trace: $(TRACEOBJS)
 simrom: $(SIMROMOBJS)
 	$(CC) $(LFLAGS)  $(SIMROMOBJS)  -o $@
 
+wrapsim.o: ${WRDIR}/wrapper.c
+	${CC} -c ${CFLAGS} $< -o $@
+
 %.o: ${WRDIR}/%.c
 	${CC} -c ${CFLAGS} $< -o $@
 
@@ -34,16 +40,16 @@ simrom: $(SIMROMOBJS)
 	${CC} -c ${CFLAGS} -I${ZIPDIR} $< -o $@
 
 ppcsim.o: $(SIMDIR)/ppcsim.c
-	$(CC) $(OPT) $(CFLAGS) -c $< -o $@
+	$(CC) $(OPT) $(CFLAGS) -DARGREGS -DSIMNEXT -c $< -o $@
 
 ppcsim.trace.o: $(SIMDIR)/ppcsim.c
-	$(CC) $(OPT) $(CFLAGS) -DTRACE -c $< -o $@
+	$(CC) $(OPT) $(CFLAGS)  -DARGREGS -DSIMNEXT -DTRACE -c $< -o $@
 
 ppcsim.simrom.o: $(SIMDIR)/ppcsim.c
-	$(CC) $(CFLAGS) -DTRACE -DSIMROM -c $< -o $@
+	$(CC) $(CFLAGS)  -DARGREGS -DSIMNEXT -DTRACE -DSIMROM -c $< -o $@
 
 simrom.o: $(SIMDIR)/simrom.c
-	$(CC) $(CFLAGS) -DTRACE -DSIMROM -c $< -o $@
+	$(CC) $(CFLAGS)  -DARGREGS -DSIMNEXT -DTRACE -DSIMROM -c $< -o $@
 
 clean:
 	@rm -f *.o ppcforth ppcforth.trace
