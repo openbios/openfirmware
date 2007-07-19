@@ -358,7 +358,7 @@ h# 70 constant 0=           \ JNZ
    here  swap  rel!
 ;
 : <mark  ( -- to )  here  ;
-: <resolve  ( from -- )  here  rel!  ;
+: <resolve  ( to -- )  rel,  ;
 
 : but  ( mark1 mark1 -- mark2 mark1 )  swap  ;
 : yet  ( mark -- mark mark )  dup  ;
