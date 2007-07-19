@@ -88,7 +88,7 @@ h# f8 constant p3if  \ Bits report corresponding interrupt status
 ;
 : byte-offset?  ( offset -- flag )  h# -80 h# 7f between  ;
 : rel!  ( to from -- )
-   tuck  -    ( from offset )
+   tuck  1+ -    ( from offset )
    dup byte-offset? 0= abort" Bad branch offset"
    swap asm8!
 ;
@@ -317,11 +317,15 @@ h# 93 1mi movc_a,@a+dptr
 : pop  ( iram -- )  h# d0 asm8, iram,  ;
 
 : xjmp  ( adr -- )
-   dup here -  byte-offset?  if  sjmp  else  ljmp  then
+\ Turn off this optimizations for now for simplicity
+\   dup here -  byte-offset?  if  sjmp  else  ljmp  then
+   ljmp
 ;
 : xcall  ( adr -- )
-   dup  here 2+  xor h# f800 and  ( adr page-different? )
-   if  lcall  else  acall  then   ( adr )
+\ Turn off this optimizations for now for simplicity
+\   dup  here 2+  xor h# f800 and  ( adr page-different? )
+\   if  lcall  else  acall  then   ( adr )
+   lcall
 ;
 : put-ljmp  ( to from -- )
    >r
