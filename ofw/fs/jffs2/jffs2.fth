@@ -437,8 +437,12 @@ c;
    l@+                          ( hash adr' )
    w@+                          ( hash w adr' )
    swap  ?dup  if               ( hash adr' w )   \ Short form
-      swap -rot                 ( adr' hash w )
-      /l* dirent-offset +!      ( adr' hash )
+\      swap -rot                 ( adr' hash w )
+\      /l* dirent-offset +!      ( adr' hash )
+
+      /l* dirent-offset +!      ( hash adr' )
+      swap                      ( adr' hash )
+
       dirent-offset @           ( adr' hash offset )
       cur-pino @ rot            ( adr' offset pino hash )
    else                         ( hash adr' )     \ Long form
@@ -448,6 +452,110 @@ c;
    then
    true
 ;
+
+
+\ Information that we need about the working file/directory
+\ The working file changes at each level of a path search
+
+0 instance value wd-inum  \ Inumber of directory
+0 instance value wf-inum  \ Inumber of file or directory
+0 instance value wf-type  \ Type - 4 for directory, d# 10 for symlink, etc
+
+1 [if]
+code (next-pino-match)  ( adr next-dirent pino cur-pino dirent-offset -- false | adr' offset hash true )
+   dx pop             \ dx: dirent-offset
+   cx pop             \ cx: cur-pino
+   bx pop             \ bx: pino
+   0 [sp]  bp  xchg   \ bp: next-dirent
+   4 [sp]  si  xchg   \ si: adr
+
+   si bp cmp  =  if
+      0 [sp]  bp  mov            \ restore bp
+      4 [sp]  si  mov            \ restore si
+      4 #     sp  add            \ clean stack
+      ax ax xor  0 # 0 [sp] mov  \ return false
+      next
+   then
+
+   \ If the first encoded dirent is short-form, the pino is the same as
+   \ before and thus matches.
+   ax ax xor  op: 4 [si]  ax  mov   \ ax: w
+   ax ax or  0<>  if                \ Short form
+      2 # ax shl  ax 0 [dx] add     \ Update dirent-offset
+      0 [si]  cx  mov               \ cx: hash
+      6 #     si  add               \ skip long hash and word offset
+      4 [sp]  si  xchg              \ Put adr back on stack and restore si
+      0 [dx]  bp  mov               \ bp: offset
+      0 [sp]  bp  xchg              \ Put offset on stack and restore bp
+      cx          push              \ Put hash on stack
+      -1 #        push              \ Put true on stack
+      next
+   then
+
+   long-offsets on
+   begin  
+      ax ax xor  op: 4 [si]  ax  mov   \ ax: w
+      ax ax or  0<>  if                \ Short form
+         2 # ax shl  ax 0 [dx] add     \ Update dirent-offset
+         6 #     si  add               \ skip long hash and word offset
+      else
+         d# 10 [si]  ax  mov   ax  0 [dx]  mov  \ Update dirent-offset
+         d#  6 [si]  ax  mov   ax  0 [cx]  mov  \ Update cur-pino
+         d# 14 #     si  add                    \ skip record
+         ax bx cmp  =  if
+            d# -14 [si]  cx  mov       \ cx: hash
+            4 [sp]  si  xchg           \ Put adr back on stack and restore si
+            0 [dx]  bp  mov            \ bp: offset
+            0 [sp]  bp  xchg           \ Put offset on stack and restore bp
+            cx          push           \ Put hash on stack
+            -1 #        push           \ Put true on stack
+            next
+         then
+      then
+   bp si cmp  = until
+   long-offsets off
+
+   0 [sp]  bp  mov          \ restore bp
+   4 [sp]  si  mov          \ restore si
+   4 #     sp  add          \ clean stack
+   ax ax xor  0 # 0 [sp] mov  \ return false
+c;
+: next-pino-match  ( adr -- false | pino adr' offset hash true )
+   next-dirent wd-inum cur-pino dirent-offset (next-pino-match)
+;
+[then]
+
+[ifndef] next-pino-match
+: next-pino-match  ( adr -- false | adr' offset hash true )
+   dup  next-dirent  >=  if  drop false exit  then
+
+   \ If the first encoded dirent is short-form, the pino is the same as
+   \ before and thus matches.
+   dup la1+ w@  ?dup  if      ( adr w )
+      /l* dirent-offset +!    ( adr )
+      dirent-offset @         ( adr offset )
+      swap  l@+  wa1+         ( offset hash adr' )
+      -rot true               ( offset hash adr' )
+      exit
+   then                       ( adr )
+
+   begin                             ( adr )
+      la1+ w@+ swap ?dup  if         ( adr' w )
+         /l* dirent-offset +!        ( adr' )
+      else                           ( adr' )
+         l@+ swap cur-pino !         ( adr' )
+         l@+ swap dirent-offset !    ( adr' )
+         wd-inum cur-pino @ =  if    ( adr' )
+            dirent-offset @          ( adr' offset )
+            over -3 la+ -1 wa+ l@    ( adr' offset hash )
+            true                     ( adr' offset hash true )
+            exit
+         then                        ( adr )
+      then                           ( adr )
+   dup next-dirent >=  until         ( adr )
+   drop false                        ( false )
+;
+[then]
 
 \ Copy summary dirent from FLASH to memory
 \ Summary dirent:  w.nodetype l.totlen l.offset l.pino l.version
@@ -758,13 +866,6 @@ Mitch_Bradley: the most common type of 'bad node'will have a mismatching data cr
 ;
 
 
-\ Information that we need about the working file/directory
-\ The working file changes at each level of a path search
-
-0 instance value wd-inum  \ Inumber of directory
-0 instance value wf-inum  \ Inumber of file or directory
-0 instance value wf-type  \ Type - 4 for directory, d# 10 for symlink, etc
-
 : set-root  ( -- )  1 to wd-inum  1 to wf-inum  4 to wf-type  ;
 
 \ latest-node is for symlinks and directories, which have only one data node.
@@ -886,6 +987,23 @@ instance variable outpos
    r> drop
 ;
 
+\ This is related to play-log, but instead of going forward and
+\ reading the data, it goes backward and just looks for the last
+\ good node, from which it extracts the total size field.
+: find-size  ( -- size )
+   -1 to the-eblock#
+   -1 to have-eblock#
+   next-minode  begin  dup minodes <>  while   ( 'minode )
+      8 -  dup na1+ @ get-node                 ( 'minode' inode )
+      dup inode-good?  if                      ( 'minode inode )
+         nip  riisize@                         ( size )
+         exit                                  ( -- size )
+      then                                     ( 'minode inode )
+      drop                                     ( 'minode )
+   repeat                                      ( 'minode )
+   drop  0                                     ( size )
+;
+
 : play-log  ( -- )
    get-inflater
 
@@ -896,7 +1014,16 @@ instance variable outpos
 
    release-inflater
 ;
-: ?play-log  ( -- )  file-size -1 =  if  play-log  then  ;
+: ?play-log  ( -- )
+   file-size -1 =  if
+      file-buf -1 =  if
+         \ This is the value we will use for file-buf if we use read and seek
+         \ For load, the buffer address is given to us
+         next-minode to file-buf
+      then
+      play-log
+   then
+;
 
 : +dirent  ( adr -- adr' )   na1+ dup w@  0=  if 2 na+ then  wa1+  ;
 
@@ -942,20 +1069,20 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    wd-inum crctab  2over  ($crc) >r      ( name$  r: hash )
 
    0 dirent-offset !
-   dirents  begin  decode-dirent  while  ( name$ adr' offset pino' hash' )
-      nip                                ( name$ adr  offset hash' )
+   dirents  begin  next-pino-match  while  ( name$  adr' offset hash )
       \ Check for a hash match
       r@ =  if                           ( name$ adr offset )
          2over  ?update-dirent           ( name$ adr )
       else                               ( name$ adr  offset )
          drop                            ( name$ adr )
       then                               ( name$ adr )
-   repeat                                ( name$ adr r: hash )
+   repeat                                ( name$ r: hash )
    2drop r> drop                         ( )
    my-vers 0<   if  true exit  then      ( )
    wf-type 4  =  if  wf-inum to wd-inum  then
    false
 ;
+
 
 \ The work file is a symlink.  Resolve it to a new dirent
 : dir-link  ( -- error? )
@@ -1064,13 +1191,10 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
 
 : prep-dirents  ( -- )
    minodes 'next-minode !   \ Empty the list
-   dirents  begin  decode-dirent  while  ( adr  offset pino hash )
-      drop wd-inum =  if                 ( adr  offset )
-         insert-dirent                   ( adr )
-      else                               ( adr  offset )
-         drop                            ( adr )
-      then                               ( adr )
-   repeat                                ( )
+   dirents                         ( adr )
+   begin  next-pino-match  while   ( adr'  offset hash )
+      drop insert-dirent           ( adr )
+   repeat                          ( )
 ;
 
 \ End of "tdirent" section
@@ -1181,6 +1305,27 @@ external
 
 : ?release  ( flag -- flag )  dup 0=  if  release-buffers  then  ;
 
+\ Starting at the current directory (wd-inum), process all the path components,
+\ resolving symlinks until either a directory or an ordinary file is found.
+\ If the resulting final component is a directory, leave wd-inum set to it.
+\ If the resulting final component is a file, collect its data nodes so that
+\ "seek", "read", and "load" will access its data.
+
+: $find-file  ( name$ -- found? )
+   $resolve-path  if  false exit  then  ( )
+
+   begin
+      \ We now have the dirent for the file at the end of the string
+      wf-type  case
+         4      of  wf-inum to wd-inum   true exit  endof  \ Directory
+         8      of  collect-nodes             exit  endof  \ Regular file
+         d# 10  of  dir-link  if  false exit  then  endof  \ Link
+         ( default )   \ Anything else (special file) is error
+            drop false exit
+      endcase
+   again
+;
+
 : open  ( -- flag )
    \ This lets us open the node during compilation
    standalone?  0=  if  true exit  then
@@ -1193,30 +1338,19 @@ external
 
    scan-occupied                                ( )
 
-   \ This is the value we will use for file-buf if we use read and seek
-   next-inode to file-buf
-
    false to first-time?
 
    my-args " <NoFile>"  $=  if  true exit  then
 
-   my-args set-root  $resolve-path  if  false ?release exit  then  ( )
-
-   begin
-      \ We now have the dirent for the file at the end of the string
-      wf-type  case
-         4      of  wf-inum to wd-inum  true exit  endof           \ Directory
-         8      of  collect-nodes  ?release exit  endof            \ Regular file
-         d# 10  of  dir-link  if  false ?release exit  then  endof \ Link
-         ( default )   \ Anything else (special file) is error
-            drop false ?release exit
-      endcase
-   again
+   set-root
+   my-args  $find-file  ( okay? )
+   ?release
 ;
 
 : close  ( -- )  release-buffers  ;
 
-: size  ( -- d.size )  ?play-log file-size 0  ;
+: size  ( -- d.size )  find-size 0  ;
+
 : read  ( adr len -- actual )
    ?play-log                            ( adr len )
    clip-size tuck			( len' len' adr len' )
