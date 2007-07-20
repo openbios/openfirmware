@@ -5,7 +5,7 @@ OS := $(shell uname)
 # XXX need a better way of determining this
 HOST := x86
 
-XHOSTDIR := $(shell eval "(cd ../../${HOST}/${OS}; pwd)")
+HOSTDIR := $(shell eval "(cd ../../${HOST}/${OS}; pwd)")
 
 all: kernel.hex
 
@@ -13,17 +13,17 @@ all: kernel.hex
 
 .PRECIOUS: kernel.img
 
-${XHOSTDIR}/forth:
-	@make -C ${XHOSTDIR} forth
+${HOSTDIR}/forth:
+	@make -C ${HOSTDIR} forth
 
 sim:  kernel.hex
 	s51 -s ${SIMTTY} -X 32M /c/Temp/kernel.hex
 
-build: ${XHOSTDIR}/forth
-	@ln -sf ${XHOSTDIR}/forth $@
+build: ${HOSTDIR}/forth
+	@ln -sf ${HOSTDIR}/forth $@
 
 %.img: FORCE build
-	./build $@
+	HOSTDIR=${HOSTDIR} ./build $@
 
 %.hex: %.img
 	objcopy -I binary -O ihex $< $@
