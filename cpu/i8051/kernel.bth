@@ -35,7 +35,8 @@ fload ${BP}/forth/kernel/metacompile.fth   \ Metacompiler
 
 fload ${BP}/cpu/i8051/metainit.fth         \ Turn on the metacompiler
 
-always-headers  \ Don't omit any headers
+\ always-headers  \ Don't omit any headers
+sometimes-headers  \ Omit headers according to headers/headerless
 
 \ Comment out the following lines when debugging
 -1  threshold  !	\ Turn OFF ALL debugging messages
