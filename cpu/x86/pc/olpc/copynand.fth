@@ -10,10 +10,22 @@ purpose: Copy a file onto the NAND FLASH
 0 value nand-pages/block
 0 value #nand-pages
 
+0 value #image-eblocks
+0 value #crc-records
+
+0 value crc-buf
+
+: >crc  ( index -- crc )  crc-buf swap la+ l@  ;
+
 : close-nand-ihs  ( -- )
-   fileih  ?dup  if  0 to fileih  close-dev  then
-   nandih  ?dup  if  0 to nandih  close-dev  then
+   fileih  ?dup  if  0 to fileih  close-dev  0 to #image-eblocks  then
+   nandih  ?dup  if  0 to nandih  close-dev  0 to #nand-pages     then
    crc-ih  ?dup  if  0 to crc-ih  close-dev  then
+   #crc-records  if
+      crc-buf #crc-records /l* free-mem
+      0 to crc-buf
+      0 to #crc-records
+   then
 ;
 
 : ?nand-abort  ( flag msg$ -- )
@@ -48,37 +60,63 @@ h# 20 buffer: line-buf
    true
 ;
 
-
+\ Open the CRC file and parse all the CRC values into an integer array
 : open-crcs  ( name$ -- )
    open-dev  to crc-ih
    crc-ih 0= " Can't open CRC file"  ?nand-abort
+
+   " size" crc-ih $call-method 9 um/mod   ( residue #lines )
+   swap  0<> " CRC file length is not a multiple of the CRC record length" ?nand-abort
+
+   to #crc-records                        ( )
+   #crc-records /l* alloc-mem  to crc-buf
+
+   #crc-records 0  ?do
+      next-crc  0=  " CRC record read failure" ?nand-abort  ( crc )
+      crc-buf i la+ l! 
+   loop
+
+   crc-ih close-dev   0 to crc-ih
 ;
 
 h# 100 buffer: image-name-buf
 : image-name$  ( -- adr len )  image-name-buf count  ;
-
+h# 100 buffer: crc-name-buf
+: crc-name$  ( -- adr len )  crc-name-buf count  ;
 
 : ?open-crcs  ( -- )
    image-name$ + 4 -  " .img" caps-comp 0=  if
-      " crc"  image-name$ + 3 -  swap move
-      image-name$ open-crcs
-   else
-      0 to crc-ih
+      image-name$ crc-name-buf place
+      " crc"  crc-name$ + 3 -  swap move
+      crc-name$ open-crcs
    then
-   crc-ih  if  ." Check file is " image-name$ type cr  then
+   #crc-records  if
+      ." Check file is " crc-name$ type cr
+   then
 ;
+
+: get-img-filename  ( -- )  safe-parse-word  image-name-buf place  ;
 
 : open-img  ( "devspec" -- )
-   safe-parse-word  2dup image-name-buf place   ( devspec$ )
-   open-dev  to fileih
+   image-name$  open-dev  to fileih
    fileih 0= " Can't open NAND image file"  ?nand-abort
+   " size" fileih $call-method  /nand-block  um/mod  ( residue #eblocks )
+   to #image-eblocks                                 ( residue )
+   0<>  " Image file size is not a multiple of the NAND erase block size" ?nand-abort
+   #image-eblocks 0= " Image file is empty" ?nand-abort
+
+   #crc-records  if
+      #image-eblocks #crc-records <>  " CRC file length is wrong" ?nand-abort
+   then
 ;
 
-: #records  ( ih /record -- n )
-   swap " size" rot $call-method  rot um/mod nip
+: read-image-block  ( -- )
+   load-base /nand-block  " read" fileih $call-method   ( len )
+   /nand-block <> " Bad read of .img file"  ?nand-abort ( )
 ;
 
-: check-mem-crc  ( crc -- )
+: check-mem-crc  ( record# -- )
+   >crc                                                 ( crc )
    load-base /nand-block  $crc                          ( crc actual-crc )
    2dup <>  if
       cr ." CRC miscompare - expected " swap . ." got " . cr
@@ -89,79 +127,70 @@ h# 100 buffer: image-name-buf
    then                                                 ( )
 ;
 
-: ?check-crc  ( -- )
-   crc-ih  if
-      next-crc  0=  " Premature end of .crc file" ?nand-abort
-      check-mem-crc
-   then
+: ?check-crc  ( record# -- )
+   #crc-records  if  check-mem-crc  else  drop  then
 ;
+
 : copy-nand  ( "devspec" -- )
    open-nand
-   open-img
+   get-img-filename
    ?open-crcs
+   open-img
 
    ['] noop to show-progress
 
    ." Erasing..." cr
    " wipe" nandih $call-method
 
-   cr ." Writing " fileih /nand-block #records .  ." blocks" cr
-   0
-   begin
-      load-base /nand-block  " read" fileih $call-method
-   0> while
-      (cr dup .  1+
-      ?check-crc
+   cr ." Writing " #image-eblocks .  ." blocks" cr
+
+   #image-eblocks  0  ?do
+      (cr i .
+      read-image-block
+      i ?check-crc
       load-base " copy-block" nandih $call-method
-   repeat
-   drop
+   loop
    close-nand-ihs
 ;
 
 : verify-nand  ( "devspec" -- )
    open-nand
+   get-img-filename
    open-img
    ['] noop to show-progress
 
-   ." Verifing " fileih /nand-block #records . ." blocks" cr
+   ." Verifing " #image-eblocks . ." blocks" cr
 
-   0
-   begin                                                   ( block# )
-      load-base /nand-block  " read" fileih $call-method   ( block# #read )
-   0> while                                                ( block# )
-      (cr dup .  1+                                        ( block#' )
-      load-base /nand-block +  " read-next-block" nandih $call-method  ( block# )
-      load-base  load-base /nand-block +  /nand-block  comp  if        ( block# )
-         cr  ." Miscompare in block starting at page# "                ( block# )
-         " scan-page#" nandih $call-method  .x cr                      ( block# )
+   #image-eblocks  0  ?do
+      (cr i .
+      read-image-block
+      load-base /nand-block +  " read-next-block" nandih $call-method  ( )
+      load-base  load-base /nand-block +  /nand-block  comp  if        ( )
+         cr  ." Miscompare in block starting at page# "                ( )
+         " scan-page#" nandih $call-method  .x cr                      ( )
          ?key-stop
-      then                                                 ( block# )
-   repeat                                                  ( block# )
-   drop                                                    ( )
+      then                                                             ( )
+   repeat                                                              ( )
    close-nand-ihs
 ;
 
 : crc-img  ( "img-devspec" -- )
    hex
    open-nand  close-nand-ihs   \ To set sizes
-   open-img
+   get-img-filename
    ?open-crcs
-   crc-ih 0= " No CRC file"  ?nand-abort
+   open-img
+   #crc-records 0= " No CRC file"  ?nand-abort
 
    ['] noop to show-progress
 
-   ." Verifying " crc-ih 9 #records . ." blocks" cr
+   ." Verifying " #crc-records . ." blocks" cr
 
-   0
-   begin  next-crc  while                                  ( block# crc )
-      swap  (cr dup .  1+   swap                           ( block#' crc )
-
-      load-base /nand-block  " read" fileih $call-method   ( block# crc len )
-      /nand-block <> " Short img file"  ?nand-abort        ( block# crc )
-
-      check-mem-crc                                        ( block# )
-   repeat                                                  ( block# )
-   drop                                                    ( )
+   #crc-records  0  ?do
+      (cr i .  
+      read-image-block
+      i check-mem-crc
+   loop
    close-nand-ihs
 ;
 
@@ -171,25 +200,23 @@ h# 100 buffer: image-name-buf
    safe-parse-word  open-crcs
    ['] noop to show-progress
 
-   ." Verifying " crc-ih 9 #records . ." blocks" cr
+   ." Verifying " #crc-records . ." blocks" cr
 
-   0
-   begin  next-crc  while                                  ( block# crc )
-      swap  (cr dup .  1+  swap                            ( block#' crc )
+   #crc-records  0  ?do
+      (cr i .
 
-      load-base " read-next-block" nandih $call-method     ( block# crc )
+      load-base " read-next-block" nandih $call-method     ( )
 
-      load-base /nand-block  $crc                          ( block# crc actual-crc )
-      2dup <>  if
-         cr ." CRC miscompare - expected " swap . ." got " .
+      load-base /nand-block  $crc  i >crc                  ( actual-crc expected-crc )
+      2dup <>  if                                          ( actual-crc expected-crc )
+         cr ." CRC miscompare - expected " . ." got " .    ( )
          ." in NAND block starting at page "
          " scan-page#" nandih $call-method . cr
          ?key-stop
-      else
-         2drop
-      then                                                 ( block# )
-   repeat                                                  ( block# )
-   drop                                                    ( )
+      else                                                 ( actual-crc expected-crc )
+         2drop                                             ( )
+      then                                                 ( )
+   repeat                                                  ( )
    close-nand-ihs
 ;
 
