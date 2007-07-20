@@ -18,7 +18,7 @@ fload ${BP}/forth/kernel/conf16.fth
 fload ${BP}/forth/kernel/meta1.fth
 
 only forth also meta also definitions
-\needs 8015-assembler caps @ caps on  fload ${BP}/cpu/i8051/assem.fth caps !
+fload ${BP}/cpu/i8051/assem.fth
 
 only forth also meta assembler also meta definitions
 : assembler  ( -- )  8051-assembler  ;

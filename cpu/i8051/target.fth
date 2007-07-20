@@ -91,9 +91,8 @@ alias le-w@-t w@-t
 : link-t@  ( host-address -- target-address )  a-t@  ;
 : link-t!  ( target-address host-address -- )  a-t!  ;
 
-\ Machine independent
 : a-t, ( target-address -- )  here  /a-t allot  a-t!  ;
-: token-t, ( target-address -- )  here  /token-t allot  token!-t  ;
+: token-t, ( target-address -- )  here  /token-t allot  token-t!  ;
 
 \ Dictionary linked list; the list head is in the metacompiler environment
 \ during metacompilation
