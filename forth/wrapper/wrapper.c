@@ -162,7 +162,6 @@ char *host_cpu = "powerpc";
 #else
 # ifdef __i386__
 #  ifndef CKERNEL
-    char *host_cpu = "x86";
 #   define LinuxX86
 #   define HOST_LITTLE_ENDIAN
 #  endif
@@ -172,11 +171,7 @@ char *host_cpu = "powerpc";
 
 #ifdef NT
 char *host_os = "nt";
-#ifdef POWERPC
-char *host_cpu = "powerpc";
-#else
 char *host_cpu = "x86";
-#endif
 #endif
 
 #ifdef OSF1
@@ -185,7 +180,7 @@ char *host_cpu = "alpha";
 #endif
 
 
-#ifdef POWERPC
+#ifdef TARGET_POWERPC
 char *target_cpu = "powerpc";
 #ifndef LinuxPOWERPC
 #define TOCCALL
@@ -284,7 +279,7 @@ typedef long quadlet;
 
 #include <signal.h>
 
-#ifdef POWERPC
+#ifdef TARGET_POWERPC
 #ifdef LinuxPOWERPC
 #define NOGLUE
 #else
@@ -306,10 +301,6 @@ INTERNAL void	exit_handler();
 INTERNAL void	cont_handler();
 INTERNAL void	stop_handler();
 #endif
-#endif
-
-#ifdef SIM
-#define HELPER
 #endif
 
 #ifdef WIN32
@@ -352,7 +343,7 @@ INTERNAL long	f_close(), f_read(), f_write();
 INTERNAL long	f_ioctl();
 INTERNAL long	f_lseek();
 INTERNAL long	f_crstr();
-#ifdef SIM
+#ifdef PPCSIM
 /* These are not INTERNAL because the PowerPC simulator uses then */
          long	c_key();
          long	s_bye();
@@ -397,9 +388,6 @@ INTERNAL long   m_unmap();
 INTERNAL long   s_ioperm();
 INTERNAL long   f_mkdir();
 INTERNAL long   f_rmdir();
-#ifdef SIM
-INTERNAL long printnum();
-#endif
 #ifdef DLOPEN
 extern   long	dlopen(), dlsym(), dlerror(), dlclose();
 #endif
@@ -988,7 +976,7 @@ pcb = pc[0];
 	dictsize = sizeof(header) + imagesize +  extrasize ; 
 	dictsize += 16;		/* Allow for alignment */
 
-# ifdef SIM
+# ifdef PPCSIM
 	printf("PowerPC Instruction Set Simulator\n");
 	printf("Copyright 1994 FirmWorks   All rights reserved\n");
 # endif
@@ -1016,7 +1004,7 @@ pcb = pc[0];
 
 	f_close(f);
 
-# if defined(POWERPC) && defined(HOST_LITTLE_ENDIAN)
+# if defined(TARGET_POWERPC) && defined(HOST_LITTLE_ENDIAN)
 	lbflips((long *)(loadaddr + sizeof(header) + header.h_tlen),
 		header.h_dlen);
 	qlbflips((long *)(loadaddr + sizeof(header)),
@@ -1059,7 +1047,7 @@ pcb = pc[0];
 		 argc, argv));
 #endif
 
-#ifdef HELPER
+#ifdef PPCSIM
 	simulate(0L, loadaddr+sizeof(header)+START_OFFSET,
 		 loadaddr, functions, ((long)loadaddr+dictsize - 16) & ~15,
 		 argc, argv, 1 /* 0=POWER, 1=PowerPC */);
@@ -1081,7 +1069,7 @@ pcb = pc[0];
 	}
 # elif !defined(TOCCALL)
 
-#  ifdef POWERPC
+#  ifdef TARGET_POWERPC
 	s_bye((*(long (*) ())(loadaddr+sizeof(header)+START_OFFSET))
 		(loadaddr, ((char *)functions)+1, ((long)loadaddr+dictsize - 16) & ~15,
 		 argc, argv, 1));
@@ -2227,13 +2215,6 @@ size += 0x80;
 
 	return((long)mem);
 }
-#ifdef SIM
-INTERNAL long printnum(n1,n2,n3)
-long n1,n2,n3;
-{
-	printf("%x %x %x\n", n3,n2,n1);
-}
-#endif
 
 /* ARGSUSED */
 INTERNAL long
