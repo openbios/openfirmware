@@ -17,7 +17,7 @@ ${HOSTDIR}/forth:
 	@make -C ${HOSTDIR} forth
 
 sim:  kernel.hex
-	s51 -s ${SIMTTY} -X 32M /c/Temp/kernel.hex
+	s51 -s ${SIMTTY} -X 32M kernel.hex
 
 build: ${HOSTDIR}/forth
 	@ln -sf ${HOSTDIR}/forth $@
