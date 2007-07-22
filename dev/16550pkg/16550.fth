@@ -12,12 +12,14 @@ purpose: Support package for serial ports compatible with 16550 code
 0 instance value uart-base	\ Virtual address of UART; set later
 
 : uart-base-adr  ( -- adr )
- [ifdef] msr@
    uart-base
-   msr@ h# 30 and 0=  if  h# fff and io-base +  then
- [else]
-   uart-base 
- [then]
+\ The following code is a PowerPC-specific hack that 
+\ handles the case where memory mapping is turned off
+\ (in which case the 0x30 bit in MSR is 0).  Note that
+\ the PowerPC msr@ is not compatible with the x86 msr@.
+\ [ifdef] msr@
+\   msr@ h# 30 and 0=  if  h# fff and io-base +  then
+\ [then]
 ;
 : uart@  ( reg# -- byte )  uart-base-adr +  rb@  ; \ Read from a UART register
 : uart!  ( byte reg# -- )  uart-base-adr +  rb!  ; \ Write to a UART register
