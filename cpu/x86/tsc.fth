@@ -39,11 +39,12 @@ d# 262 value us-factor
 ' (ms) to ms
 
 \ Timing tools
-: t(  ( -- d.timestamp )  tsc@  ;
-: )t  ( d.timestamp -- )
-   tsc@  2swap d-  d# 367 um/mod nip  ( microseconds )
+2variable timestamp
+: t(  ( -- )  tsc@ timestamp 2! ;
+: )t  ( -- )
+   tsc@  timestamp 2@  d-  d# 367 um/mod nip  ( microseconds )
    push-decimal
-   <#  u# u# u#  [char] , hold  u# u#s u#>  type  ." usec"
+   <#  u# u# u#  [char] , hold  u# u#s u#>  type  ."  uS "
    pop-base
 ;
 
