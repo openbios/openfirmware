@@ -147,11 +147,6 @@ ascii 1 report
       loopa
    then
 
-[ifdef] mem-info-pa
-   si  mem-info-pa 1 la+ #)  mov	\ Report top of page table area
-\   di  mem-info-pa 2 la+ #)  mov	\ Report top of page table area
-[then]
-
 [ifdef] rom-pa
    \ Page Directory Entry
    /ptab #             si  sub
@@ -173,6 +168,10 @@ ascii 1 report
       ax stos
       /page #  ax  add
    loopa
+[then]
+
+[ifdef] mem-info-pa
+   si  mem-info-pa 1 la+ #)  mov	\ Report top of page table area
 [then]
 
 ascii P report
