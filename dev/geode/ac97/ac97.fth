@@ -215,7 +215,7 @@ d# 48000 instance value sample-rate
 : codec-set  ( bitmask reg# -- )  dup >r codec@ or  r> codec!  ;
 : codec-clr  ( bitmask reg# -- )  dup >r codec@ swap invert and  r> codec!  ;
 : amplifier-on   ( -- )
-   h# 8000 h# 26  amp-default-on?  if  codec-clr  else  codec-set  then
+   h# 8000 h# 26  amp-default-on?  if  codec-clr  else  codec-set  then  d# 30 ms
 ;
 : amplifier-off  ( -- )
    h# 8000 h# 26  amp-default-on?  if  codec-set  else  codec-clr  then
