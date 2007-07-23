@@ -1,0 +1,55 @@
+purpose: Code to prepend to the inflater to run it with the cache on
+copyright: Copyright 1995 Firmworks  All Rights Reserved
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/ppc/asmtools.fth
+
+start-assembling
+
+\ This module use C calling and register usage conventions
+\ On entry, 
+\	    r1: C stack pointer
+\	    r3: pointer to compressed image,
+\	    r4: pointer to base of firmware RAM,
+\	    r5: pointer to workspace area
+\	    r6: size of firmware RAM
+
+label entry  ( <as above> -- )
+   mfspr r0,lr		\ C stack linkage and register saving
+   stw   r31,-4(r1)
+   stw   r0,8(r1)
+   stwu  r1,h#-18(r1)
+
+   mfspr r31,hid0	\ r31: hid0
+
+   ori   r0,r31,h#8800	\ Merge-in bits to invalidate and enable the Icache 
+   sync  isync
+   mtspr hid0,r0	\ Invalidate and enable Icache
+   isync sync
+
+   here 0 ,		\ Reserve space for a call instruction
+
+   sync isync
+   mtspr  hid0,r31	\ Restore hid0 to its previous value
+   isync sync
+
+   addi  r1,r1,h#18	\ C stack un-linkage and register restoration
+   lwz   r0,8(r1)
+   mtspr lr,r0
+   lwz   r31,-4(r1)
+
+   mtspr lr,r0		\ Return to caller
+   bclr  20,0
+
+here swap put-call	\ Put a call to the following code in the place
+			\ that was reserved.  The code to be called will
+			\ be concatenated to the end of this binary file.
+end-code
+
+end-assembling
+
+writing cacheon.img
+asm-base  here over -  ofd @ fputs
+ofd @ fclose

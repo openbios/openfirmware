@@ -1,19 +1,11 @@
 purpose: Platform-specific device aliases
 \ See license at end of file
 
-devalias net /pci/ethernet@e
-
-.( XXX olpc/devalias.fth) cr
-devalias disk0 /pci/disk@0,0:1
-devalias disk1 /pci/scsi@c/disk@1,0:1
-devalias disk2 /pci/scsi@c/disk@2,0:1
-devalias cdrom /pci/scsi@c/disk@5,0
-
-devalias c /pci/scsi@c/disk@0,0
-
-devalias disk  /pci/scsi@c/disk@0,0:1
-
-devalias com1 /serial@f1012000
+devalias net  /pci/ethernet
+devalias disk /pci/disk
+devalias c    /pci/disk
+devalias u    /pci/usb/disk
+devalias com1 /serial
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

@@ -1,0 +1,65 @@
+purpose: Top-level build script for DDI DragonFly ROM
+copyright: Copyright 1997 FirmWorks  All Rights Reserved
+
+command: &builder &this
+in: ${BP}/cpu/ppc/olpc/build/builton.fth
+in: ${BP}/cpu/ppc/olpc/build/resetvec.di
+in: ${BP}/cpu/ppc/olpc/build/cachinfl.di
+in: ${BP}/cpu/ppc/olpc/build/start.di
+in: ${BP}/cpu/ppc/olpc/build/fw.dic
+in: ${BP}/dev/mmc/sdhci/build/sdhci.fc
+in: ${BP}/dev/mmc/sdhci/build/sdmmc.fc
+in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
+in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
+in: ${BP}/dev/usb2/device/hub/build/hub.fc
+in: ${BP}/dev/usb2/device/net/build/usbnet.fc
+in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
+in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
+in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
+in: ${BP}/dev/usb2/device/wlan/build/usb8388.fc
+in: ${BP}/dev/olpc/cafenand/build/cafenand.fc
+in: ${BP}/dev/olpc/cafecamera/build/cafecamera.fc
+in: ${BP}/dev/pci/build/pcibridg.fc
+\ in: ${BP}/dev/ide/build/idehier.fc
+\ in: usb8388.bin
+build-now
+
+\ Always re-create the builton.fth file when we make a new rom.img
+fload ${BP}/cpu/x86/pc/builton.bth
+\ fload ${BP}/cpu/x86/pc/olpc/sourceurl.fth
+
+writing olpc.img
+   " resetvec.di"   $add-file
+   " start.di"      $add-file
+   " cachinfl.di"   $add-file
+
+\   " fw.dic"  " firmware"  $add-deflated-dropin
+   " fw.dic"  " firmware"  $add-dropin
+
+   " builton.fth"                           " probe-"    $add-dropin
+\  " help.img"                              " help"      $add-deflated-dropin
+   
+   " ${BP}/dev/pci/build/pcibridg.fc"    " class060400"  $add-deflated-dropin
+\  " ${BP}/dev/ide/build/idehier.fc"     " pci-ide"      $add-deflated-dropin 
+
+   " ${BP}/dev/usb2/hcd/ohci/build/ohci.fc"	" class0c0310"      $add-dropin
+   " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"      $add-dropin
+   " ${BP}/dev/usb2/device/hub/build/hub.fc"     " usb,class9"      $add-dropin
+   " ${BP}/dev/usb2/device/net/build/usbnet.fc"       " usbnet"     $add-dropin
+   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"  " usb,class3" $add-dropin
+   " ${BP}/dev/usb2/device/serial/build/usbserial.fc" " usbserial"  $add-dropin
+   " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-dropin
+\   " ${BP}/dev/usb2/device/wlan/build/usb8388.fc" " usb1286,2001"   $add-deflated-dropin
+\   " usb8388.bin" " usb8388.bin"                                    $add-deflated-dropin
+
+   \ XXX the PCI device IDs should be different for the different CaFe functions
+   " ${BP}/dev/olpc/cafenand/build/cafenand.fc"     " class050101"    $add-dropin
+   " ${BP}/dev/olpc/cafecamera/build/cafecamera.fc" " pci11ab,4102"   $add-dropin
+
+   " ${BP}/dev/mmc/sdhci/build/sdhci.fc"  " pci11ab,4101"        $add-dropin
+   " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"  " sdmmc"               $add-dropin
+   " ${BP}/dev/geode/nandflash/build/nandflash.fc" " nand5536"   $add-dropin
+
+   " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
+
+ofd @ fclose

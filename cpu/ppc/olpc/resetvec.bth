@@ -1,0 +1,7 @@
+purpose: Build script for the reset vector startup code
+copyright: Copyright 1997 FirmWorks  All Rights Reserved
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/ppc/resetvec.fth

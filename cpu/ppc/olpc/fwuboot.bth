@@ -2,7 +2,7 @@ purpose: Create a Uboot-format image
 \ See license at end of file
 
 command: &builder &this
-in: ${BP}/cpu/ppc/olpc/build/fw.dic
+in: ${BP}/cpu/ppc/olpc/build/olpc.img
 build-now
 
 create uboot-header
@@ -10,8 +10,8 @@ create uboot-header
   0           be-l,  \ Header CRC, set later
   0           be-l,  \ Timestamp
   0           be-l,  \ Data size
-  h# 0f000000 be-l,  \ Load address
-  h# 0f000000 be-l,  \ Entry address
+  h# 0ff00000 be-l,  \ Load address
+  h# 0ff00100 be-l,  \ Entry address
   0           be-l,  \ Data CRC, set later
   5              c,  \ OS type - Linux 
   7              c,  \ CPU type - PowerPC
@@ -26,7 +26,7 @@ here uboot-header -  constant /uboot-header
 
 fload ${BP}/forth/lib/crc32.fth
 
-reading fw.dic
+reading olpc.img
 ifd @ fsize constant /image
 /image buffer: filebuf
 filebuf /image ifd @ fgets  /image <>  abort" Can't read image"

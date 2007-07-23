@@ -32,7 +32,6 @@ headers
    \ Could do interrupt routing here
 ;
 
-[ifdef] notyet
 headerless
 
 \ Determine the parent interrupt information (the "interrupt line" in PCI
@@ -42,6 +41,8 @@ headerless
 
 \ This table describes the wiring of PCI interrupt pins at the PCI slots
 \ to PIRQ inputs on the 82378zb chip.  The wiring varies from slot to slot.
+
+[ifdef] notyet
 
 create slot-map
 
@@ -61,9 +62,11 @@ create slot-map
    c - 4 * +  slot-map + c@			     ( pirq#|ff )
    dup h# ff  =  if  drop true  else  false  then
 ;
+[then]
 
 headers
 
+[ifdef] notyet
 : assign-int-line  ( phys.hi.func int-pin -- false | int-line true )
    dup 0=  if  2drop false  exit  then               ( phys.hi.func int-pin# )
    1-  swap d# 11 rshift  h# 1f and                  ( int-pin0 dev# )
@@ -75,11 +78,16 @@ headers
 
    true
 ;
+[else]
+.( XXX implement assign-int-line) cr
+: assign-int-line  ( phys.hi.func int-pin -- false | int-line true )
+   2drop false exit
+;
+[then]
 
-h# 700 encode-int				\ Mask of implemented slots
+h# 180 encode-int				\ Mask of implemented slots
 " PCI 1" encode-string encode+
-" PCI 2" encode-string encode+
-" PCI 3" encode-string encode+  " slot-names" property
+" PCI 2" encode-string encode+  " slot-names" property
 [then]
 
 device-end

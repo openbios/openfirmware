@@ -6,7 +6,6 @@ command: &ppcforth &dictionary &this
 build-now
 
 \ Configuration defines
-create bailout-early
 true to stand-init-debug?
 true constant real-mode?
 
@@ -100,7 +99,7 @@ h# 6000.0000 value fw-virt-base			\ 32 megs of mapping space
 h# 0200.0000 value fw-virt-size
 
 headers
-0 value memsize
+h# 1000.0000 value memsize
 
 fload ${BP}/cpu/ppc/loadvmem.fth		\ /mmu node
 stand-init: MMU
@@ -185,20 +184,15 @@ fload ${BP}/cpu/ppc/olpc/pciconfig.fth	\ Configuration space access
 \ fload ${BP}/arch/prep/eagle.fth	\ Eagle configuration registers
 fload ${BP}/cpu/ppc/ppcboot.fth		\ Forth startup code
 
-[ifdef] bailout-early
-: startup quit ;
-
-install-rom-cold
-
-.( --- Saving fw.dic ---) cr  p" fw.dic" save-forth
-bye
-[then]
+\ ---
 
 fload ${BP}/cpu/ppc/olpc/rootnode.fth	\ Methods for root node
 
 fload ${BP}/cpu/ppc/olpc/pcinode.fth	\ System-specific words for PCI
 
-" "  dup config-string pci-probe-list
+\ Don't probe 0; it is the host bridge thing and bad things
+\ happen if you change its BARs.
+" 7,8"  dup config-string pci-probe-list
 
 6 buffer: 'system-mac-address
 : get-mac-address  ( -- )
@@ -240,7 +234,7 @@ stand-init: NVRAM
    " /nvram" open-dev  to nvram-node
     init-config-vars
 ;
-[endif]
+[then]
 
 \ fload ${BP}/dev/isa/irq.fth
 
@@ -254,26 +248,29 @@ fload ${BP}/cpu/ppc/olpc/probemem.fth		\ Memory probing
 
 fload ${BP}/cpu/ppc/olpc/devalias.fth	\ Device aliases
 
-0 0 " fff00000" " /" begin-package
+0 0 " 0ff00000" " /" begin-package
    " flash" device-name
-   h# 8.0000 constant /device
+   h# 10.0000 dup constant /device
+   constant /device-phys
    my-address my-space /device reg
    fload ${BP}/cpu/x86/pc/flashpkg.fth
 end-package
 
-devalias rom  /flash@fff00000
+devalias rom  /flash@0ff00000
 
+[ifdef] notyet
 fload ${BP}/cpu/ppc/olpc/flash.fth		\ Low-level FLASH access
-
-fload ${BP}/pkg/flash/saveflsh.fth		\ FLASH to disk and back
+[then]
 
 \ ' false to interrupt-auto-boot?	\ Don't do countdown
 
 patch noop fw-title rom-cold	\ Superseded by banner
 
+: startup quit ;
+
 install-rom-cold
 
-.( --- Saving subset.dic ---) cr  p" subset.dic" save-forth
+.( --- Saving fw.dic ---) cr  p" fw.dic" save-forth
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

@@ -187,7 +187,7 @@ label move-user-area
 end-code
 [then]
 
-create uboot-entry
+\ create uboot-entry
 label rom-cold-code  ( r3:fw-RAM-base r4:fw-RAM-size -- )
 
 [ifdef] uboot-entry

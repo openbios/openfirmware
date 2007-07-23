@@ -1,0 +1,7 @@
+purpose: Build script for the inflater
+copyright: Copyright 1997 FirmWorks  All Rights Reserved
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/ppc/inflate.fth

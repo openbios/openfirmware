@@ -1,0 +1,76 @@
+purpose: Load file for start.di dropin
+copyright: Copyright 1997 FirmWorks. All rights resrved.
+
+command: &builder &this
+build-now
+
+h# 0ff0.0000 constant /ram
+h#   20.0000 constant /fw-ram
+
+true value stand-init-debug?
+\ false value stand-init-debug?
+
+\needs start-assembling  fload ${BP}/cpu/ppc/asmtools.fth
+
+hex
+
+start-assembling
+
+label my-entry
+   0 ,				\ To be patched later
+end-code
+
+fload ${BP}/cpu/ppc/olpc/reports.fth
+\ fload ${BP}/cpu/ppc/olpc/initcom1.fth
+
+\ fload ${BP}/cpu/ppc/olpc/mem.fth
+\ fload ${BP}/cpu/ppc/scrub.fth
+
+label start-memory  ( -- )
+   mfspr  r31,lr
+
+\  init-com1            bl *
+
+\  eagle-mem		bl *	\ Configure memory
+\  eagle-mem-size	bl *	\ r7 = actual RAMtop
+   /ram     set  r7,*
+   mr  r30,r7
+
+[ifdef] notdef
+   /fw-ram  set  r4,*	\ Firmware memory size
+   subf     r3,r4,r30	\ Firmware memory base address
+   scrub-memory	  bl *
+   
+   set  r4,h#4000	\ size of low memory int vectors
+   set  r3,0
+   scrub-memory	  bl *
+[then]
+
+   stw      r30,0(r0)	\ Actual memory size in low-memory structure
+
+   addi     r3,r0,0	\ We don't know the memory speed
+   stw      r3,4(r0)	\ Memory speed in low-memory structure
+
+   set      r3,d#800000000
+   stw      r3,8(r0)	\ CPU speed in low-memory structure
+
+   set      r3,d#200000000
+   stw      r3,12(r0)	\ Bus speed in low-memory structure
+
+   addi     r3,r0,0	\ Null board type
+   stw      r3,16(r0)	\ Board type in low-memory structure
+
+   /fw-ram  set  r4,*	\ FW memory size, passed to reset code in r4
+   subf     r3,r4,r30	\ FW memory base addr., passed to reset code in r3
+
+   mtspr  lr,r31
+   bclr   20,0
+end-code
+
+start-memory  my-entry  put-branch
+
+end-assembling
+
+writing start.di
+asm-base  here over -  0  " start" write-dropin
+ofd @ fclose

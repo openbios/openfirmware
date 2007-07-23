@@ -1,0 +1,36 @@
+purpose: Build script for the cacheon+inflater dropin
+copyright: Copyright 1997 FirmWorks  All Rights Reserved
+
+command: &builder &this
+in: cacheon.img
+in: inflate.bin
+build-now
+
+\needs $add-dropin  fload ${BP}/tools/mkdropin.fth
+
+\ Concatentate cacheon.img and inflate.bin and write it as a dropin file
+
+0 value bigbuf
+0 value /bigbuf
+
+: bufs+  ( adr1 len1 adr2 len2 -- adr3 len3 )
+   2swap tuck                  ( adr2 len2 len1 adr1 len1 )
+   3 pick +                    ( adr2 len2 len1 adr1 len3 )
+   tuck resize throw           ( adr2 len2 len1 len3 adr3 )
+   tuck 2>r                    ( adr2 len2 len1 adr3 )  ( r: len3,adr3 )
+   + swap move                 ( ) ( r: len3,adr3 )
+   2r> swap                    ( adr3 len3 )
+;
+
+
+" cachinfl.di" $new-file
+   " cacheon.img"  $read-file           ( adr1 len1 )
+   " inflate.bin"  $read-file           ( adr1 len1 adr2 len2 )
+
+   bufs+                                ( adr3 len3 )
+
+   2dup  0  " inflate" write-dropin     ( adr3 len3 )
+
+   free-mem
+
+ofd @ fclose
