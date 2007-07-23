@@ -89,6 +89,7 @@ h# 200 constant /block  \ 512 bytes
 ;
 
 0 instance value sd-clk
+0 instance value mmc?
 
 \ 1 is reset_all, 2 is reset CMD line, 4 is reset DAT line
 : sw-reset  ( mask -- )
@@ -137,6 +138,12 @@ h# 200 constant /block  \ 512 bytes
 
 : card-clock-on   ( -- )  h# 2c cw@  4 or  h# 2c cw!  ;
 : card-clock-off  ( -- )  h# 2c cw@  4 invert and  h# 2c cw!  ;
+
+: card-clock-slow  ( -- )  \ Less than 400 kHz, for init
+   card-clock-off
+   h# 8003 h# 2c cw!   \ Set divisor to 2^128, leaving internal clock on
+   card-clock-on
+;
 
 : card-clock-25  ( -- )
    card-clock-off
@@ -219,7 +226,7 @@ h# 200 constant /block  \ 512 bytes
       dup 1 =  if  true to timeout?  2drop exit  then
    then                    ( isr esr )
 
-   ." Error: ISR = " swap u.
+   ." SDHCI: Error: ISR = " swap u.
    ." ESR = " dup u.  decode-esr
    ." Stopping" cr abort
    \      debug-me
@@ -242,7 +249,7 @@ h# 200 constant /block  \ 512 bytes
    get-msecs d# 1000 +                    ( limit )
    begin    present-state@  1 and  while  ( limit )
       dup get-msecs - 0<  if
-         ." SDHCI command ready timeout" cr
+         ." SDHCI: command ready timeout" cr
          abort
       then
    repeat                                 ( limit )
@@ -283,7 +290,12 @@ h# 200 constant /block  \ 512 bytes
 
 \ Store in the buffer in little-endian form
 : get-response136  ( buf -- )  \ 128 bits (16 bytes) of data.
-   h# 20  h# 10  do  i cl@ buf+!  4 +loop  drop
+\   h# 20  h# 10  do  i cl@ buf+!  4 +loop  drop
+    >r
+    h# 1c cl@  8 lshift  h# 1b cb@ or  r@ 0 la+ l!
+    h# 18 cl@  8 lshift  h# 17 cb@ or  r@ 1 la+ l!
+    h# 14 cl@  8 lshift  h# 13 cb@ or  r@ 2 la+ l!
+    h# 10 cl@  8 lshift                r> 3 la+ l!
 ;
 
 d# 64 instance buffer: scratch-buf
@@ -297,11 +309,14 @@ headers
 
 : reset-card  ( -- )  0 0 0 cmd  0 to rca  ;  \ 0 -
 
+: send-op-cond  ( voltage-range -- ocr )  h# 0102 0 cmd  response  ; \ R3
+
 \ Get card ID; Result is in cid buffer
 : get-all-cids  ( -- )  0 h# 0209 0 cmd  cid get-response136  ;  \ 2 R2
 
 \ Get relative card address
-: get-rca  ( -- )  0 h# 031a 0 cmd  response  h# ffff0000 and  to rca  ; \ 3 R6
+: get-rca  ( -- )  0 h# 031a 0 cmd  response  h# ffff0000 and  to rca  ; \ 3 R6 - SD
+: set-rca  ( rca -- )  to rca  rca h# 031a 0 cmd  ; \ 3 R1 - MMC
 
 : set-dsr  ( -- )  0 h# 0400 0 cmd  ;  \ 4 - UNTESTED
 
@@ -317,7 +332,9 @@ headers
 : deselect-card  ( -- )   0   h# 0700 0 cmd  ;  \ 7 - with null RCA
 : select-card    ( -- )   rca h# 071b 0 cmd  ;  \ 7 R1b
 
-: send-if-cond  ( -- )  h# 1aa h# 081a 0 cmd  ( response h# 1aa <>  if  ." Error"  then )   ;  \ 8 R7
+: send-if-cond  ( -- )  h# 1aa h# 081a 0 cmd  ( response h# 1aa <>  if  ." Error"  then )   ;  \ 8 R7 (SD)
+
+\ : send-ext-csd  ( adr -- )  0 h# 0812 0 cmd  ;  \ 8 R1 (MMC) Untested - requires data transfer
 
 \ Get Card-specific data
 : get-csd    ( -- )  rca  h# 0909 0 cmd  csd get-response136  ;  \ 9 R2
@@ -385,65 +402,112 @@ headers
    scratch-buf
 ;
 
-\ Version 2 of the spec add CMD8.  Pre-v2 cards will time out on CMD8.
-: sd2?  ( -- flag )
-   true to allow-timeout?  false to timeout?
-   send-if-cond
-   false to allow-timeout?
-
-   timeout? 0=
-;
-
-0 instance value address-shift
+9 instance value address-shift
 h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 
-: wait-powered  ( -- ocr )
+: wait-powered  ( -- error? )
+   false to mmc?
+
+   9 to address-shift
+
    d# 100 0  do
-      oc-mode set-oc         ( ocr )  \ acmd41
-      dup h# 8000.0000 and   ( card-powered-on? )
-      if  unloop exit  then
+
+      false to timeout?
+      mmc?  if
+         oc-mode send-op-cond   \ cmd2              ( ocr )
+         timeout?  if  drop true  unloop exit  then ( ocr )
+      else
+         oc-mode set-oc         \ acmd41            ( ocr )
+         timeout?  if  drop  true to mmc?  0  then  ( ocr )
+      then                                       ( ocr )
+
+      dup h# 8000.0000 and  if ( card-powered-on? )
+
+         \ Card Capacity Status bit - High Capacity cards are addressed
+         \ in blocks, so the block number does not have to be shifted.
+         \ Standard capacity cards are addressed in bytes, so the block
+         \ number must be left-shift by 9 (multiplied by 512).
+         h# 4000.0000 and  if  0 to address-shift  then
+
+         unloop false exit
+      then
       drop d# 10 ms
    loop                      ( )
-   ." Card didn't power up after 1 second" cr
+
+   ." SDHCI: Card didn't power up after 1 second" cr
    abort
 ;
 
-: set-operating-conditions  ( -- )
-   sd2?  if  h# 4030.0000  else  h# 0030.0000  then  to oc-mode
+: set-operating-conditions  ( -- error? )
+   false to mmc?
+   true to allow-timeout?
 
-   wait-powered
+   \ SD version 2 adds CMD3.  Pre-v2 cards will time out.
+   false to timeout?  send-if-cond      (  )
+   timeout?   if  h# 0030.0000  else  h# 4030.0000  then  to oc-mode
 
-   \ Card Capacity Status bit - High Capacity cards are addressed
-   \ in blocks, so the block number does not have to be shifted.
-   \ Standard capacity cards are addressed in bytes, so the block
-   \ number must be left-shift by 9 (multiplied by 512).
+   wait-powered  if  true exit  then
 
-   h# 4000.0000 and  if  0  else  9  then  to address-shift
+   false to allow-timeout?
+   false
 ;
 
-: configure-transfer  ( -- )
-   2 set-bus-width  \ acmd6 - bus width 4
-   4-bit
+: set-timeout  ( -- )
    \ The h# c below is supposed to be h# b, but there is a CaFe bug
    \ in which the timeout code is off by one, which makes the timeout
    \ be half the requested length.
    h# c data-timeout!   \ 2^24 / 48 MHz = 0.35 sec
-   /block set-blocklen  \ Cmd 16
 ;
 
-: ?high-speed  ( -- )
-   \ High speed didn't exist until SD spec version 1.10
-   \ The low nibble of the first byte of SCR data is 0 for v1.0 and v1.01,
-   \ 1 for v1.10, and 2 for v2.
-   get-scr c@  h# f and  0=  if  exit  then
+: configure-transfer  ( -- )
+   mmc?  if
+      1-bit
+      \ We don't support 4-bit mode for MMC yet
 
-   \ Ask if high-speed is supported
-   h# 00ff.fff1 switch-function d# 13 + c@  2  and  if
-      h# 80ff.fff1 switch-function drop   \ Perform the switch
-      \ Bump the host controller clock
-      host-high-speed  \ Changes the clock edge
-      card-clock-50
+      \ We don't support switching to high speed on MMC yet.
+      \ Doing so requires reading the EXT_CSD block
+   else
+      2 set-bus-width  \ acmd6 - bus width 4
+      4-bit
+      /block set-blocklen  \ Cmd 16
+
+      \ High speed didn't exist until SD spec version 1.10
+      \ The low nibble of the first byte of SCR data is 0 for v1.0 and v1.01,
+      \ 1 for v1.10, and 2 for v2.
+      get-scr c@  h# f and  0=  if  exit  then
+
+      \ Ask if high-speed is supported
+      h# 00ff.fff1 switch-function d# 13 + c@  2  and  if
+         h# 80ff.fff1 switch-function drop   \ Perform the switch
+         \ Bump the host controller clock
+         host-high-speed  \ Changes the clock edge
+         card-clock-50
+      else
+         card-clock-25
+      then
    then
+;
+
+\ Extract bit fields from CSD or CID  (adr is either csd or cid)
+: @bits   ( bit# #bits adr -- bits )
+   rot 8 -                     ( #bits adr bit# )  \ -8 accounts for elided CRC
+   d# 32 /mod                  ( #bits adr off long#  )
+   /l* rot + >r                ( #bits off  r: ladr )
+   2dup + d# 32 >  if          ( #bits off  r: ladr )
+      \ Get two longs and splice
+      r@ l@ over rshift        ( #bits off l.low  r: ladr )
+      r> la1+ l@               ( #bits off l.low l.high )
+      rot  d# 32 swap -        ( #bits l.low l.high #shift )
+      lshift or                ( #bits l )
+   else                        ( #bits off  r: ladr )
+      \ The field is contained in one longword
+      r> l@  swap rshift       ( #bits l )
+   then                        ( #bits l )
+   swap dup d# 32 = if         ( l #bits )
+      drop                     ( bits )
+   else                        ( l #bits )
+      1 swap lshift 1-  and    ( bits )
+   then                        ( bits )
 ;
 
 0 instance value writing?
@@ -455,7 +519,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
    get-msecs d# 1000 +                              ( limit )
    begin  get-status 9 rshift h# f and  7 =  while  ( limit )
       dup get-msecs - 0<  if
-         ." SDHCI wait-write-done timeout" cr
+         ." SDHCI: wait-write-done timeout" cr
          abort
       then
    repeat                                           ( limit )
@@ -473,19 +537,28 @@ external
 
    card-inserted?  0=  if  card-power-off  false exit  then   
 
-   card-clock-25  d# 10 ms  \ This delay is just a guess
+   card-clock-slow  d# 10 ms  \ This delay is just a guess
 
    reset-card     \ Cmd 0
 
-   ['] set-operating-conditions  catch  if  false exit  then
+   set-operating-conditions  if  false exit  then
 
    get-all-cids   \ Cmd 2
-   get-rca        \ Cmd 3 - Get relative card address
-   get-csd        \ Cmd 9 - Get card-specific data
-   select-card    \ Cmd 7 - Select
+   mmc?  if
+      h# 10000 set-rca   \ Cmd 3 (MMC) - Get relative card address
+   else
+      get-rca        \ Cmd 3 (SD) - Get relative card address
+   then
+
+   card-clock-25
+
+   get-csd           \ Cmd 9 - Get card-specific data
+
+   select-card       \ Cmd 7 - Select
 
    configure-transfer
-   ?high-speed
+
+   set-timeout
 
    true
 ;
