@@ -170,7 +170,10 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
    bbt swap /bbt /page /  ( adr page# #pages )
    \ Can't use read-blocks because of block-bad? dependency
    bounds  ?do            ( adr )
-      dup i read-page     ( adr )
+      dup i read-page  if ( adr )
+         ." BBT has uncorrectable errors" cr
+         abort
+      then                ( adr )
       /page +             ( adr' )
    loop                   ( adr )
    drop
@@ -232,13 +235,15 @@ external
       over block-bad?  if  3drop 0 exit  then
    then
 
-   dup >r          ( adr page# #pages r: #pages )
-   bounds  ?do                  ( adr )
-      \ XXX need some error handling
-      dup i read-page           ( adr )
-      /page +                   ( adr' )
-   loop                         ( adr )
-   drop  r>
+   rot >r  2dup r> -rot         ( page# #pages adr page# #pages )
+   bounds  ?do                  ( page# #pages adr )
+      dup i read-page  if       ( page# #pages adr )
+         2drop  i swap -        ( #read )
+         unloop  exit
+      then                      ( page# #pages adr )
+      /page +                   ( page# #pages adr' )
+   loop                         ( page# #pages adr )
+   drop nip
 ;
 
 : write-blocks  ( adr page# #pages -- #written )
@@ -364,7 +369,9 @@ external
 : read-next-block  ( adr -- )
    find-good-block
    scan-page#  pages/eblock  bounds  ?do  ( adr )
-      dup i read-page                     ( adr )
+      dup i read-page  if                 ( adr )
+         ." Uncorrectable error in page 0x" i .x cr
+      then
       /page +                             ( adr' )
    loop                                   ( adr )
    drop                                   ( )
@@ -381,7 +388,7 @@ external
 \ : verify-block  ( adr -- false | page# true )
 \    find-good-block
 \    scan-page#  pages/eblock  bounds  ?do  ( adr )
-\       test-page i read-page               ( adr )
+\       test-page i read-page  drop         ( adr )
 \       dup test-page /page comp  if        ( adr )
 \          drop                             ( )
 \          i  true  exit                    ( -- page# true )
@@ -401,7 +408,7 @@ external
 
 : block-erased?  ( page# -- flag )
    pages/eblock  bounds  ?do
-      test-page i read-page
+      test-page i read-page  drop
       test-page /page erased? 0=  if  false unloop exit  then
    pages/eblock +loop
    true

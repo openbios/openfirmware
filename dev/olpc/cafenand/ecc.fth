@@ -3,8 +3,8 @@
 
 hex
 
-: array!  ( value index adr -- )  swap wa+ !  ;
-: array@  ( index adr -- value )  swap wa+ @  ;
+: array!  ( value index adr -- )  swap wa+ w!  ;
+: array@  ( index adr -- value )  swap wa+ w@  ;
 
 \ Split or join a number, size of low half is n bits.
 : #split ( x n -- x.lo x.hi )
@@ -330,10 +330,10 @@ h# e01 constant alpha
 
 [ifdef] notdef
 \ Test vectors
-CREATE s1  001 , 6c6 , 291 , d91 , 1ef , e26 , a19 , 8c0 ,
-CREATE s2  0f8 , de1 , 5e5 , 287 , 566 , 756 , f5f , 253 ,
-CREATE s3  001 , 001 , 001 , 001 , 001 , 001 , 001 , 001 ,
-CREATE s4  41e , b7a , 37c , 885 , c32 , a87 , 218 , b08 ,
+CREATE s1  001 w, 6c6 w, 291 w, d91 w, 1ef w, e26 w, a19 w, 8c0 w,
+CREATE s2  0f8 w, de1 w, 5e5 w, 287 w, 566 w, 756 w, f5f w, 253 w,
+CREATE s3  001 w, 001 w, 001 w, 001 w, 001 w, 001 w, 001 w, 001 w,
+CREATE s4  41e w, b7a w, 37c w, 885 w, c32 w, a87 w, 218 w, b08 w,
 
 
 : #aligned negate swap negate and negate ;

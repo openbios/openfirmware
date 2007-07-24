@@ -22,6 +22,7 @@ my-address my-space h# 200.0010 + encode-phys encode+
 
 : cl!  ( l adr -- )  chip + rl!  ;
 : cl@  ( adr -- l )  chip + rl@  ;
+: cw@  ( adr -- w )  chip + rw@  ;
 
 : map-regs ( -- )
    0 0  h# 0200.0010 my-space +  /regs " map-in" $call-parent to chip
@@ -199,16 +200,27 @@ h# 0220.0080 0 6 >cmd constant write-cmd  \ The 6 adds a dummy address cycle to 
 0 instance value dma-buf-pa
 0 instance value dma-buf-va
 defer do-lmove
+h# 10 buffer: syndrome-buf
+: syndrome  ( -- adr )
+   8  0  do  h# 50 i wa+ cw@  i syndrome-buf array!  loop
+   syndrome-buf
+;
 
-\ XXX should check ECC
-: read-page  ( adr page# -- )
+: read-page  ( adr page# -- error? )
    0 set-page                          ( adr )
-   /page ( /oob + ) h# 18 cl!          ( adr )
+   /page /ecc +  h# 18 cl!             ( adr )
    dma-buf-pa h# 44 cl!                ( adr )
    0 h# 48 cl!                         ( adr )
    /page h# a000.0000 or  h# 40 cl!    ( adr )
    read-cmd h# 0800.0130 cmd  wait-dma ( adr )
-   dma-buf-va swap /page do-lmove      ( )
+
+   h# 3c cl@  h# 40000 and  if         ( adr )      \ ECC error
+      dma-buf-va syndrome correct-ecc  ( adr uncorrectable? )
+   else                                ( adr )
+      false                            ( adr error? )
+   then                                ( adr error? )
+
+   dma-buf-va rot /page do-lmove       ( error? )
 ;
 
 : dma-write-raw  ( adr len page# offset -- )
@@ -231,7 +243,6 @@ defer do-lmove
    write-disable                         ( )
 ;
 
-\ : read-page    ( adr page# -- )  dma-read-page   ;
 : write-page   ( adr page# -- )  dma-write-page  ;
 : write-bytes  ( adr len page# offset -- )  pio-write-raw  ;
 
