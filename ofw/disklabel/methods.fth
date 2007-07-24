@@ -48,11 +48,13 @@ headerless
       then
    then
 
+[ifdef] ufs-support
    \ If the partition type is UFS and a filename is specified, select
    \ one of the UFS sub-partitions.  Otherwise use the raw partition.
    partition-type ufs-type =  if
       filename nip  if  ufs-map  then
    then
+[then]
 ;
 
 : select-partition  ( -- )
@@ -83,6 +85,7 @@ headerless
 
    iso-9660?  if  exit  then
 
+[ifdef] ufs-support
    \ If this disk has a UFS partition map that is not subordinate to
    \ an FDISK map and either a UFS partition letter or a filename is
    \ specified, select one of the UFS sub-partitions.
@@ -90,6 +93,7 @@ headerless
    ufs?  if
       ufs-partition 0<>  filename nip 0<> or  if  ufs-map exit  then
    then
+[then]
 
    \ Nothing we tried worked.
    abort
@@ -106,15 +110,32 @@ headerless
    \    ( change sector-offset and size.low,high ) ...
 [then]
 
+   2 read-sector
+   ext2?  if  
+      partition-type ext2fs-type <>  if
+         ." Warning: Filesystem is ext2/3, but partition type is 0x"  
+         partition-type .x ." (should be 0x83)."  cr
+      then
+      " ext2-file-system" exit
+   then
+
+[ifdef] ufs-support
    partition-type ufs-type    =  if  " ufs-file-system"    exit  then
-   partition-type ext2fs-type =  if  " ext2-file-system" exit  then
-   partition-type minix-type  =  if  " minix-file-system"    exit  then
+[then]
+   partition-type minix-type  =  if  " minix-file-system"  exit  then
 
    0 read-sector   \ Get the first sector of the selected partition
    dropin?  if  " dropin-file-system" exit  then
    zip?     if  " zip-file-system"    exit  then
+   fat?     if
+      partition-type ext2fs-type =  if
+         ." Warning: Filesystem is FAT, but partition type is 0x83 (ext2/3)." cr
+      then
+      " fat-file-system"    exit
+   then
 
-   " fat-file-system"
+   ." Error: Unknown file system" cr
+   abort
 ;
 
 \ If the arguments include a filename, we determine the type of filesystem
