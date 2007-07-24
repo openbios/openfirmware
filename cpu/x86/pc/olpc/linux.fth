@@ -11,7 +11,7 @@ purpose: Linux bzImage program loading
 
 \needs ramdisk  " " d# 128 config-string ramdisk
 " "   ' boot-file      set-config-string-default   \ Let the olpcboot.fth file set the cmdline
-" sd:\boot\olpc.fth disk:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"   ' boot-device  set-config-string-default
+" disk:\boot\olpc.fth sd:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"   ' boot-device  set-config-string-default
 
 0 value ramdisk-adr
 0 value /ramdisk
