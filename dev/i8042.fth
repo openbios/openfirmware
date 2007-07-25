@@ -26,7 +26,7 @@ hex
 [then]
 
 \ 0 means the keyboard port, 1 means the aux port
-: encode-unit  ( n -- adr len )  if  " aux"  else  " "  then  ;
+: encode-unit  ( n -- adr len )  if  " aux"  else  " kbd"  then  ;
 : decode-unit  ( adr len -- n )  " aux"  $=  0=  if  0  else  1  then  ;
 
 \ Queues for distributing bytes sent from the two devices

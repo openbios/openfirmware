@@ -1,7 +1,7 @@
 \ See license at end of file
 purpose: PCI bus package
 
-0 [if] addresses-assigned
+0 [if]
    \ Suppress PCI address assignment; use the addresses the BIOS assigned
    patch false true master-probe
    patch noop assign-all-addresses prober
@@ -13,6 +13,7 @@ purpose: PCI bus package
    patch or-w! my-w! find-fcode?
    patch 2drop my-w! find-fcode?
 [then]
+
 [ifdef] addresses-assigned
 \   patch false true master-probe
 : nonvirtual-probe-state?  ( -- flag )
@@ -61,7 +62,7 @@ also forth definitions
 [ifdef] lx-devel
    " 2,3,4,5,6,7,8,9,a,b,c,d,e,f" exit
 [then]
-   " c,f"
+   " 1,c,f"
 ;
 \    " c,f" dup  config-string pci-probe-list
 
@@ -99,6 +100,45 @@ h# 0000.8000 to first-io		\ Avoid mappings established by BIOS
    \ which was placed there by lower level init code
    drop  h# 3c +  config-b@  true
 ;
+
+0 value interrupt-parent
+
+1  " #interrupt-cells" integer-property
+0 0 encode-bytes  0000.ff00 +i  0+i  0+i  7 +i  " interrupt-map-mask" property
+
+: +map  ( adr len dev# int-pin# int-level -- adr' len' )
+   >r >r                  ( $ dev# R: level pin )
+   +i                     ( $' R: level pin )
+   0+i 0+i  r> +i         ( $' R: level )
+   interrupt-parent +i    ( $' R: level )
+   r> +i  0 +i            ( $' )   \ 0 is active low, level senstive for ISA
+;
+
+external
+
+: make-interrupt-map  ( -- )
+   " /isa/interrupt-controller" find-package  0=  if  exit  then  to interrupt-parent
+
+   0 0 encode-bytes                    ( prop$ )
+
+   h# 10000 0  do                      ( prop$ )
+      i h# 3d + config-b@              ( prop$ pin# )
+      dup 0<>  over h# ff <>  and  if  ( prop$ pin# )
+         i h# 3c + config-b@           ( prop$ pin# level )
+         i -rot  +map                  ( prop$' )
+      else                             ( prop$ pin# )
+         drop                          ( prop$ )
+      then                             ( prop$ )
+   h# 100 +loop                        ( prop$ )
+   " interrupt-map" property           ( )
+;
+
+also known-int-properties definitions
+\ In some systems the number of interrupt-map ints is variable,
+\ but on OLPC, the only node with an interrupt-map is PCI.
+: interrupt-map  7  ;
+: interrupt-map-mask  4  ;
+previous definitions
 
 \ Just use the global versions
 warning @ warning off

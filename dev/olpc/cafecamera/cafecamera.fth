@@ -7,6 +7,8 @@ hex
 " camera" device-name
 " olpc,camera" model
 " camera" device-type
+" olpc,camera" " compatible" string-property
+" OV7670" " sensor" string-property
 
 h# 4000 constant /regs
 

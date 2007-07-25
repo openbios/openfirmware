@@ -30,6 +30,13 @@ headers
 : (map-frame-buffer)  ( -- adr )
    h# 10  h# 80.0000  map-membar
 ;
+
+\ This is called during probing by make-function-node
+: init  ( -- )
+   " make-compatible-property" my-parent ihandle>phandle find-method  if  execute  then
+   " make-power-property" my-parent ihandle>phandle find-method  if  execute  then
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

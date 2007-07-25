@@ -40,8 +40,6 @@ h# 40 buffer: string4
 headers
 " pci"  encode-string  " name"  property
 
-7 encode-int " scsi-initiator-id" property
-
 \ There are no visible PCI registers
 \ my-address encode-int  /pci-regs encode-int encode+  " reg" property
 

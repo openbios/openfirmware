@@ -119,6 +119,7 @@ external
    size  rot 0  d-                    ( d.#bytes )
 ;
 
+[ifdef] flash-is-parent
 \ These allow us to sub-address the FLASH device to access the PROMICE AI port
 1 " #address-cells" integer-property
 
@@ -126,6 +127,8 @@ external
 : encode-unit  ( phys -- adr len )  push-hex  (u.)  pop-base  ;
 : map-in   ( offset size -- virt )  drop  device-base +  ;
 : map-out  ( virt size -- virt )  2drop  ;
+[then]
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

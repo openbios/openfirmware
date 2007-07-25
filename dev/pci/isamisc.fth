@@ -15,7 +15,9 @@ new-device   0 0  " i0"  set-args
      0 1 10 encode-reg
     80 1 20 encode-reg encode+
     c0 1 20 encode-reg encode+
-[ifndef] isa-dma-only
+[ifdef] isa-dma-only
+   481 1  f encode-reg encode+          \ High page registers
+[else]
 [ifdef] PREP    
    40a 1  2 encode-reg encode+		\ AIX wants this
 [else]
@@ -91,9 +93,7 @@ new-device  0 0  " i20"  set-args
    " pnpPNP,0" " compatible" string-property
 
    20 1 2 encode-reg  a0 1 2 encode-reg encode+
-[ifndef] basic-isa
    4d0 1 2 encode-reg encode+ 
-[then]
    " reg" property
 
    fload ${BP}/dev/i8259.fth

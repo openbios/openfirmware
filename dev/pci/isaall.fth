@@ -3,7 +3,7 @@ purpose: Create nodes for the usual complement of ISA devices
 
 fload ${BP}/dev/pci/isacom.fth			\ Serial ports
 
-[ifndef] no-lpt
+[ifndef] no-lpt-node
 0 0  " i378"  " /isa" begin-package
 fload ${BP}/dev/pci/isalpt.fth			\ Parallel port
 end-package

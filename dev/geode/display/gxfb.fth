@@ -541,7 +541,7 @@ headers
    h# 0f color@  h# ff color!	\ Set color ff to white (same as 15)
 ;
 
-: init  ( -- )			\ Initializes the controller
+: init-all  ( -- )		\ Initializes the controller
    smb-init
    map-io-regs			\ Enable IO registers
    init-controller		\ Setup the video controller
@@ -566,7 +566,7 @@ headers
 0 0  encode-bytes  " iso6429-1983-colors"  property
 
 : display-install  ( -- )
-   init
+   init-all
    default-font set-font
    /scanline bytes/pixel /  #scanlines     ( width height )
    over char-width / over char-height /    ( width height rows cols )

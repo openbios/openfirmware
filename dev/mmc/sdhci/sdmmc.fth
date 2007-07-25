@@ -3,6 +3,7 @@ purpose: SD disk (MMC) driver
 
 " disk" device-name
 " sdmmc" " iconname" string-property
+" block" device-type
 
 0 instance value label-package
 

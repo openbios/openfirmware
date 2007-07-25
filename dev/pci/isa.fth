@@ -6,6 +6,9 @@ hex
 " isa" device-name
 " isa" device-type
 
+2 " #address-cells" integer-property
+1 " #size-cells" integer-property
+
 my-address my-space encode-phys  0 encode-int encode+  h# 0 encode-int encode+
 " reg" property
 

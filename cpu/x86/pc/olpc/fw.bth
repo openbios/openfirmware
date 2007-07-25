@@ -64,6 +64,7 @@ d# 12   to pageshift
 
 dev /
 1 encode-int  " #address-cells"  property
+1 encode-int  " #size-cells"     property
 " OLPC" encode-string  " architecture" property
 device-end
 
@@ -378,6 +379,8 @@ fload ${BP}/cpu/x86/pc/olpc/suspend.fth      \ Suspend/resume setup
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
+fload ${BP}/cpu/x86/pc/olpc/copynand.fth
+fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
 [then]
 
 \ Eliminate 4 second delay in install console for the case where
@@ -546,6 +549,7 @@ fload ${BP}/ofw/core/dualconsole.fth
       ?start-sound
       ['] false to interrupt-auto-boot?
       probe-usb
+      " nand" $dev-update-flash
       interpreter-init
 [ifndef] lx-devel
       enable-power-button
@@ -573,7 +577,9 @@ fload ${BP}/ofw/core/dualconsole.fth
    quit
 ;
 
-fload ${BP}/cpu/x86/pc/olpc/copynand.fth
+: newrom
+   " flash http:\\10.20.0.109\new.rom" eval
+;
 
 \ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
 also hidden also keys-forth definitions

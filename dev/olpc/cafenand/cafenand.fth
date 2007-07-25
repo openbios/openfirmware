@@ -3,7 +3,7 @@ purpose: Driver for the NAND FLASH section of the OLPC CaFe chip
 
 " nandflash" device-name
 " olpc,cafenand" model
-" disk" device-type
+" olpc,cafenand" " compatible" string-property
 
 h# 4000 constant /regs
 

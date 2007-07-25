@@ -15,6 +15,8 @@ purpose: Driver for SDHCI (Secure Digital Host Controller)
 0  " #address-cells" integer-property
 0  " #size-cells" integer-property
 
+" sdhci" " compatible" string-property
+
 h# 4000 constant /regs
 
 : phys+ encode-phys encode+  ;

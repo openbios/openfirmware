@@ -37,7 +37,11 @@ create resident-packages
 \ create use-watch-all
 \ create use-root-isa
 create no-floppy-node
+create no-com2-node
+create no-lpt-node
 create use-pci-isa
+create basic-isa
+create isa-dma-only
 
 create use-null-nvram
 

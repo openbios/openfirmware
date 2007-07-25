@@ -12,9 +12,9 @@ d# 16 encode-int " sample-precisions" property
 d# 16 encode-int " sample-frame-size" property
 \ frame-rate encode-int " input-frame-rates" property
 \ frame-rate encode-int " output-frame-rates" property
-" 16bit-LE-unsigned-linear" 2dup encode-string " input-encoding-types" property
+" 16bit-LE-signed-linear" 2dup encode-string " input-encoding-types" property
 encode-string " output-encoding-types" property
-" AC97,CODEC" encode-string " compatible" property
+" AD1888" encode-string " AC97,CODEC" encode-string encode+ " compatible" property
 
 d# 128 constant /chipbase
 

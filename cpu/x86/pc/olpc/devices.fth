@@ -27,9 +27,14 @@ fload ${BP}/dev/pciprobe.fth		\ Generic PCI probing
 fload ${BP}/cpu/x86/tsc.fth
 
 stand-init:
-   gx?  if  d# 366,666,667  else  d# 433,333,333  then  ( cpu-clock-hz )
+   gx?  if
+      d# 366,666,667  " AMD,Geode GX"
+   else
+      d# 433,333,333  " AMD,Geode LX"
+   then               ( cpu-clock-hz model$ )
 
-   " /cpu" find-device                                  ( cpu-clock-hz )
+   " /cpu" find-device                                  ( cpu-clock-hz model$ )
+      " model" string-property                          ( cpu-clock-hz )
       dup " clock-frequency" integer-property           ( cpu-clock-hz )
    device-end                                           ( cpu-clock-hz )
 
@@ -64,12 +69,18 @@ dev /interrupt-controller
 h# 20 to vector-base0
 h# 28 to vector-base1
 device-end
-[then]
+
+warning @ warning off
+: probe-pci  ( -- )
+   probe-pci
+   " /pci" " make-interrupt-map" execute-device-method drop
+;
+warning !
 
 0 0  dropin-base <# u#s u#>  " /" begin-package
    " flash" device-name
 
-[ifdef] addresses-assigned  dropin-size  [else]  h# 4.0000  [then]
+   h# 10.0000
    dup value /device
    constant /device-phys
    my-address my-space /device-phys reg
