@@ -321,6 +321,7 @@ fload ${BP}/ofw/termemu/fb16.fth
 
 end-package
 devalias screen /display
+also hidden  d# 34 to display-height  previous  \ For editing
 
 fload ${BP}/dev/geode/acpi.fth           \ Power management
 
