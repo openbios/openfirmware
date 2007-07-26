@@ -150,6 +150,10 @@ h# 100 buffer: crc-name-buf
       i ?check-crc
       load-base " copy-block" nandih $call-method
    loop
+
+   cr ." Filling with cleanmarkers ..."
+   " put-cleanmarkers" nandih $call-method  cr
+
    close-nand-ihs
 ;
 

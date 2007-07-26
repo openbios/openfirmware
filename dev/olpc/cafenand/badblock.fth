@@ -341,10 +341,17 @@ external
 
 headers
 
-: find-good-block  ( -- )
-   scan-page#     ( page# )
-   begin  pages/eblock +  dup  block-bad?  0=  until
-   to scan-page#
+: (next-page#)  ( -- true | page# false )
+   usable-page-limit  scan-page# pages/eblock +  ?do
+      i block-bad? 0=  if
+         i to scan-page#
+         scan-page# false unloop exit
+      then
+   pages/eblock +loop
+   true
+;
+: next-page#  ( -- page# )
+   (next-page#)  if  ." No more good NAND blocks" cr  abort  then
 ;
 
 0 value test-page
@@ -358,17 +365,22 @@ external
 
 \ Must erase all (wipe) first
 : copy-block  ( adr -- )
-   find-good-block
-   scan-page#  pages/eblock  bounds  ?do  ( adr )
+   next-page#  pages/eblock  bounds  ?do  ( adr )
       dup i write-page                    ( adr )
       /page +                             ( adr' )
    loop                                   ( adr )
    drop                                   ( )
 ;
 
+: put-cleanmarkers  ( -- )
+   begin  (next-page#) 0=  while                  ( page# )
+      " "(85 19 03 20 08 00 00 00 00 00 00 00)"   ( page# adr len )
+      rot  /page /ecc +  write-bytes              ( )
+   repeat                                         ( )
+;
+
 : read-next-block  ( adr -- )
-   find-good-block
-   scan-page#  pages/eblock  bounds  ?do  ( adr )
+   next-page#  pages/eblock  bounds  ?do   ( adr )
       dup i read-page  if                 ( adr )
          ." Uncorrectable error in page 0x" i .x cr
       then
