@@ -154,7 +154,12 @@ h# 200 constant /block  \ 512 bytes
 ;
 : card-clock-50  ( -- )
    card-clock-off
-   h# 003 h# 2c cw!   \ Set divisor to 2^0, leaving internal clock on
+   h# 003     \ division = 2^0, clocks on
+
+   \ OLPC-specific hack: fast clock doesn't work on the FPGA CaFe chip
+   " board-revision" evaluate h# b20 <  if  drop h# 103  then
+
+   h# 2c cw!   \ Set divisor to 2^0, leaving internal clock on
    card-clock-on
 ;
 
