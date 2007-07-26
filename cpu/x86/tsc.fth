@@ -42,7 +42,7 @@ d# 262 value us-factor
 2variable timestamp
 : t(  ( -- )  tsc@ timestamp 2! ;
 : )t  ( -- )
-   tsc@  timestamp 2@  d-  d# 367 um/mod nip  ( microseconds )
+   tsc@  timestamp 2@  d-  us-factor um/mod nip  ( microseconds )
    push-decimal
    <#  u# u# u#  [char] , hold  u# u#s u#>  type  ."  uS "
    pop-base
