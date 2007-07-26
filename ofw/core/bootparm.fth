@@ -78,6 +78,9 @@ defer ?show-device  ( adr len -- adr len )   ' noop is ?show-device
 defer load-started  ' noop to load-started
 defer load-done     ' noop to load-done
 
+defer load-path
+' path-buf is load-path
+
 headerless
 : (boot-read)  ( adr len -- )
    opened-ih  if                        ( adr len )
@@ -89,7 +92,7 @@ headerless
       ( print-probe-list )
       true abort" "r"nCan't open boot device"r"n"
    then                                         ( fileid )
-   dup ihandle>devname path-buf place-cstr drop ( fileid )
+   dup ihandle>devname load-path place-cstr drop ( fileid )
    >r                                           ( )
    load-started
    0 !load-size  load-base                      ( load-adr )

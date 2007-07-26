@@ -178,13 +178,22 @@ d# 20 constant /root-dev-buf
    linux-params to %esi
 ;
 
+d# 256 buffer: ramdisk-buf
+' ramdisk-buf  " ramdisk" chosen-string
+
 : load-ramdisk  ( -- )
-   " ramdisk" eval  dup 0=  if  2drop exit  then
-   0 to /ramdisk
-   ." Loading ramdisk image from " 2dup type  ."  ..."
-   boot-read
+   " ramdisk" eval  dup 0=  if  2drop exit  then  ( name$ )
+   0 to /ramdisk                                  ( name$ )
+
+   ['] load-path behavior >r                      ( name$ r: xt )
+   ['] ramdisk-buf to load-path                   ( name$ r: xt )
+
+   ." Loading ramdisk image from " 2dup type  ."  ..."  ( name$ r: xt )
+   ['] boot-read catch                            ( throw-code r: xt )
+   cr                                             ( throw-code r: xt )
+   r> to load-path                                ( throw-code )
+   throw
    loaded to /ramdisk  to ramdisk-adr
-   cr   
 ;
 
 : claim-params  ( -- )
