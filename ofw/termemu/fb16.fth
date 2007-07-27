@@ -251,7 +251,7 @@ headers
    ['] fb16-delete-characters	is delete-characters
    ['] fb16-insert-lines	is insert-lines
 
-   bytes/line16 16 mod  if
+   bytes/line16 d# 16 mod  if
       ['] fb16-delete-lines-slow
    else
       ['] fb16-delete-lines
