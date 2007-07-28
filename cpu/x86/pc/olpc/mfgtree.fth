@@ -12,7 +12,18 @@ stand-init: Manufacturing data
          >r  encode-bytes  r> 2  property   ( adr )
       repeat                                ( adr )
       drop
+      " SN" get-property  if
+         " SHF00000000" " SN" string-property
+      else
+         2drop
+      then
+      " U#" get-property  if
+         " 00000000-0000-0000-0000-000000000000" " S#" string-property
+      else
+         2drop
+      then
    device-end
+
 ;
 
 \ LICENSE_BEGIN
