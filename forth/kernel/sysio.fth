@@ -161,6 +161,10 @@ headerless
 
 : sys-sync-cache  ( adr len -- )  swap 116 syscall 2drop  ;
 
+: sys-$getenv  ( adr len -- true | adr' len' false )
+   $cstr d# 84 syscall drop retval  dup  if  cscount false  else  drop true  then
+;
+
 : install-wrapper-alloc  ( -- )
    \ Don't use "is" in case a relocation map needs to be allocated first
    ['] sys-alloc-mem    ['] alloc-mem >body >user token!
@@ -185,6 +189,7 @@ headerless
    install-wrapper-alloc
    \ init-relocation goes here, for versions that need it
    install-wrapper-key
+   ['] sys-$getenv is $getenv
 ;
 
 headers

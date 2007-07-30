@@ -25,6 +25,7 @@ fload ${BP}/forth/kernel/splits.fth
 fload ${BP}/forth/kernel/endian.fth
 
 fload ${BP}/forth/lib/strings.fth
+fload ${BP}/forth/lib/stringop.fth
 
 fload ${BP}/forth/lib/fastspac.fth
 

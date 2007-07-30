@@ -501,7 +501,7 @@ headers
    config-ro
 ;
 
-: $getenv  ( name$ -- true | value$ false )
+: ofw-$getenv  ( name$ -- true | value$ false )
    2dup  $find-option  if                 ( name$ xt )
       nip nip                             ( xt )
       >r  r@ get  r> decode -null false   ( prop$ false )
@@ -3717,6 +3717,7 @@ partial-headers
    ['] heap-alloc-mem is alloc-mem
    ['] heap-free-mem  is free-mem
    ['] resize-memory  is resize
+   ['] ofw-$getenv    is $getenv
 ;
 headers
 

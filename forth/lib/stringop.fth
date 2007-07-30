@@ -1,10 +1,6 @@
 \ See license at end of file
 purpose: String tools to manipulate OS file pathnames
 
-: $getenv  ( adr len -- false | adr' len' true )
-   $cstr d# 84 syscall drop retval  dup  if  cscount true  then
-;
-
 \ head$ is the portion of str3 preceding str2, and tail$ is the portion
 \ of str3 following str2
 : break$  ( str2 str3  -- head$ tail$ )
@@ -38,13 +34,25 @@ purpose: String tools to manipulate OS file pathnames
 ;
 vocabulary macros
 
-: macro:  ( "name" "value" -- )
-   also macros definitions  create  previous definitions  0 parse ",
+: $set-macro  ( value$ name$ -- )
+   warning @  warning off
+   also macros definitions  $header create-cf  previous definitions  ( value$ )
+   warning !
+   ",
    does>  ( -- adr len )  count
 ;
+: $get-macro  ( name$ -- true | value$ false )
+   ['] macros search-wordlist  if  execute  false  else  true  then
+;
+
+: macro:  ( "name" "value" -- )  safe-parse-word  0 parse  2swap  $set-macro  ;
+
 : expansion  ( macro-name$ -- macro-value$ )
-   2dup ['] macros search-wordlist  if  nip nip execute exit  then  ( name$ )
-   $getenv  0=  if  " "  then
+   2dup $get-macro  if         ( name$ )
+      $getenv  if  " "  then   ( value$ )
+   else                        ( name$ value$ )
+      2nip                     ( value$ )
+   then                        ( value$ )
 ;
 
 \ Expand references to environment variables within str1
@@ -82,24 +90,25 @@ vocabulary macros
 : remaining  ( -- adr len )  source >in @ /string  ;
 \ The complexity with last-delim is necessary in order to handle the
 \ case where files" is at the very end of a line.
-0 value last-delim
+variable last-delim
 : files"  ( "strings" -- adr len )
-   0 to last-delim
+   last-delim off
    here
    begin
       #remaining  if
          [char] " parse  ( adr len )  $,
-         source drop  >in @  +  1-  c@ to last-delim
+         source drop  >in @  +  1-  c@ last-delim !
       then
       #remaining 0=
    while
-      >in @  if  last-delim  [char] " <>  else  true  then
+      >in @  if  last-delim @  [char] " <>  else  true  then
    while
       bl c,
       refill 0=
    until then then                ( adr )
    here over -
 ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

@@ -38,6 +38,7 @@ defer free-mem   ( adr #bytes -- )
 defer resize     ( adr #bytes -- adr' ior )
 
 defer sync-cache  ( adr len -- )  ' 2drop is sync-cache
+defer $getenv     ( adr len -- false | adr' len' true )
 
 defer #out   ( -- adr )
 defer #line  ( -- adr )
@@ -50,6 +51,8 @@ defer cr     ( -- )
 : default-type  ( adr len -- )
    0 max  bounds ?do  pause  i c@ (emit  loop
 ;
+: null-$getenv  ( adr len -- true )  2drop true  ;
+
 \ headerless		\ from campus version
 nuser (#out        \ number of characters emitted
 \ headers		\ from campus version
@@ -61,6 +64,7 @@ nuser (#line       \ the number of lines sent so far
 ' key1        is key
 ' (#out       is #out
 ' (#line      is #line
+' null-$getenv  is $getenv
 
 decimal
 
