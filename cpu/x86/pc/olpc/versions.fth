@@ -13,4 +13,4 @@ macro: EC_VERSION c20
 
 \ The wireless LAN module firmware
 macro: WLAN_RPM ${WLAN_VERSION}-1.olpc1
-macro: WLAN_VERSION 5.220.10.p5
+macro: WLAN_VERSION 5.110.16.p1
