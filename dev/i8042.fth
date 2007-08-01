@@ -19,6 +19,12 @@ my-address 4 +  my-space  1  encode-reg  encode+
 1 " #address-cells"  integer-property
 0 " #size-cells"     integer-property
 
+0 value debug?
+also forth definitions
+: debug-ps2    ( -- )  true  to debug?  ;
+: undebug-ps2  ( -- )  false to debug?  ;
+previous definitions
+
 hex
 
 [ifndef] $=
@@ -97,7 +103,8 @@ headers
 headerless
 
 : stat@  ( -- byte )  cmd-status-reg rb@  ;
-: data@  ( -- byte )  data-port rb@  ;
+: data@  ( -- byte )  data-port rb@  debug?  if  ." <" dup .  then  ;
+: data!  ( byte -- )  debug?  if  ." >" dup .  then   data-port rb!  ;
 
 \ *** Following delay can be reduced after testing ***
 
@@ -144,14 +151,16 @@ headers
 ;
 headerless
 
-: put-ctlr-cmd   ( cmd -- )  in-wait  cmd-status-reg rb!  ;
+: put-ctlr-cmd   ( cmd -- )
+   in-wait  debug?  if  ." ^" dup .  then  cmd-status-reg rb!
+;
 
 headers
 : put-data  ( data -- )
    port  if
-      lock[ h# d4 put-ctlr-cmd  in-wait  data-port rb! ]unlock
+      lock[ h# d4 put-ctlr-cmd  in-wait  data! ]unlock
    else
-      in-wait  data-port rb!
+      in-wait  data!
    then
 ;
 

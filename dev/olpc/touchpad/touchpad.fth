@@ -236,6 +236,13 @@ variable miss?
          h# cf  of  decode-pt  true exit  endof
          h# ff  of  decode-gs  true exit  endof
 \        h# eb  of  decode-simultaneous exit  endof
+         h# aa  of
+            0 d# 28 at-xy red-screen white-letters
+            ." Unexpected touchpad reset"
+            white-screen black-letters
+            cr
+            start gs-only   false exit
+         endof
          ( default )
             \ If the high bit is set it means it's the first byte
             \ of a packet.  Abort if we don't recognize the type.
@@ -379,7 +386,11 @@ d# 600 d# 512 2value last-rel
    background
    gs-only
    begin
-      begin  pad?  if  track  then  key? until
+      begin
+         ['] pad? catch  ?dup  if  .error  close true exit  then
+         if  track  then
+      key? until
+
       key upc  case
          [char] P  of
             cursor-on
