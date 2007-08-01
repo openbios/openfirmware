@@ -119,7 +119,7 @@ h# 0220.0080 0 6 >cmd constant write-cmd  \ The 6 adds a dummy address cycle to 
 \ : read-id  ( -- )  0 0 set-page read-id-cmd 0 cmd  wait-cmd  h# 30 cl@  ;
 : dma-off  ( -- )  0 h# 40 cl!  ;
 
-: wait-write-done  ( -- )
+: wait-write-done  ( -- error? )
    0               ( status )
    begin           ( status )
      drop          ( )
@@ -127,7 +127,8 @@ h# 0220.0080 0 6 >cmd constant write-cmd  \ The 6 adds a dummy address cycle to 
      dup h# 40 and ( status flag )
    until           ( status )
    \ If the value is completely 0 I think it means write protect     
-   1 and  if  ." NAND write error" cr  then
+   1 and  0<>      ( error? )
+   write-disable
 ;
 
 \ Assumes that the range doesn't straddle a page boundary
@@ -149,18 +150,17 @@ h# 0220.0080 0 6 >cmd constant write-cmd  \ The 6 adds a dummy address cycle to 
    dma-off  set-page  dup datalen         ( adr len )
    chip h# 2000 +  swap  move             ( )
    write-cmd h# 0000.0110 cmd  wait-cmd   ( ) \ No Auto ECC
-   wait-write-done
-   write-disable
+   wait-write-done                        ( error? )
+   drop
 ;
 
-: pio-write-page  ( adr page# -- )
+: pio-write-page  ( adr page# -- error? )
    write-enable  dma-off                  ( adr page# )
    0 set-page                             ( adr )
    /page h# e +  dup datalen              ( adr len )
    chip h# 2000 +  swap  move             ( )
    write-cmd h# 4800.0110 cmd  wait-cmd   ( ) \ 4000. Auto ECC, 0800. R/S ECC
-   wait-write-done
-   write-disable
+   wait-write-done                        ( error? )
 ;
 
 : read-oob  ( page# -- adr )
@@ -228,22 +228,21 @@ h# 10 buffer: syndrome-buf
    set-page                            ( adr len )
    dup  false dma-setup                ( )
    write-cmd h# 110 cmd wait-cmd       ( )
-   wait-write-done                     ( )
-   dma-release                         ( )
-   write-disable                       ( )
+   wait-write-done                     ( error? )
+   dma-release                         ( error? )
+   drop
 ;
 
-: dma-write-page  ( adr page# -- )  \ Size is fixed
+: dma-write-page  ( adr page# -- error? )  \ Size is fixed
    write-enable                          ( adr page# )
    0 set-page                            ( adr )
    h# 800 h# 80e  false dma-setup        ( )
    write-cmd h# 4800.0110 cmd wait-cmd   ( )  \ Auto-ECC, RS, write cmd
-   wait-write-done                       ( )
+   wait-write-done                       ( error? )
 \   dma-release
-   write-disable                         ( )
 ;
 
-: write-page   ( adr page# -- )  dma-write-page  ;
+: write-page   ( adr page# -- error? )  dma-write-page  ;
 : write-bytes  ( adr len page# offset -- )  pio-write-raw  ;
 
 3 value #erase-adr-bytes  \ Chip dependent
@@ -251,8 +250,8 @@ h# 10 buffer: syndrome-buf
    write-enable
    set-erase-page
    h# 20.0060 0 #erase-adr-bytes >cmd  h# 1d0 cmd
-   wait-write-done
-   write-disable
+   wait-write-done                       ( error? )
+   drop
 ;
 
 : read-id  ( -- adr )  8  0 0  h# c420.0090  0  generic-read  ;

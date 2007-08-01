@@ -148,7 +148,8 @@ h# 100 buffer: crc-name-buf
       (cr i .
       read-image-block
       i ?check-crc
-      load-base " copy-block" nandih $call-method
+      load-base " copy-block" nandih $call-method  ( error? )
+      " Error writing to NAND FLASH" ?nand-abort
    loop
 
    cr ." Filling with cleanmarkers ..."

@@ -132,7 +132,10 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
    dup  if                                  ( signature$ page# )
       dup erase-block                       ( signature$ page# )
       bbt over  /bbt /page /   bounds  ?do  ( signature$ page# adr )
-         dup i write-page                   ( signature$ page# adr )
+         dup i write-page  if               ( signature$ page# adr )
+            ." Error writing Bad Block Table - page# " i .x cr
+            3drop unloop exit
+         then
          /page +                            ( signature$ page# adr' )
       loop                                  ( signature$ page# adr' )
       drop                                  ( signature$ page# )
@@ -253,13 +256,15 @@ external
       over block-bad?  if  3drop 0 exit  then
    then
 
-   dup >r          ( adr page# #pages r: #pages )
-   bounds  ?do                          ( adr )
-      \ XXX need some error handling
-      dup i write-page                  ( adr )
-      /page +                           ( adr' )
-   loop                                 ( adr )
-   drop  r>
+   over >r  dup >r               ( adr page# #pages  r: page# #pages )
+   bounds  ?do                   ( adr  r: page# #pages )
+      dup i write-page  if       ( adr  r: page# #pages )
+         drop r> drop i r> -     ( #written )
+         unloop exit
+      then                       ( adr  r: page# #pages )
+      /page +                    ( adr' r: page# #pages )
+   loop                          ( adr  r: page# #pages )
+   drop  r>  r> drop             ( #pages )
 ;
 
 : erase-blocks  ( page# #pages -- #pages )
@@ -364,12 +369,14 @@ external
 : start-scan  ( -- )  pages/eblock negate  to scan-page#  ;
 
 \ Must erase all (wipe) first
-: copy-block  ( adr -- )
+: copy-block  ( adr -- error? )
    next-page#  pages/eblock  bounds  ?do  ( adr )
-      dup i write-page                    ( adr )
+      dup i write-page  if                ( adr )
+         drop true  unloop exit           ( true )
+      then                                ( adr )
       /page +                             ( adr' )
    loop                                   ( adr )
-   drop                                   ( )
+   drop false                             ( false )
 ;
 
 : put-cleanmarkers  ( -- )
