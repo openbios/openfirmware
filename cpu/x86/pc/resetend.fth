@@ -4,6 +4,7 @@ purpose: Common code for several versions of reset.bth
    \ The memory layout information from the start dropin is stored in low
    \ memory.
 
+[ifndef] qemu-loaded
    \ Move GDT to low memory.  We use the first location at gdt-pa as
    \ scratch memory for sgdt, and put the actual gdt at gdt-pa + 0x10
    gdt-pa # ax mov
@@ -30,10 +31,10 @@ purpose: Common code for several versions of reset.bth
    \ Next time segment registers are changed, they will be
    \ reloaded from memory.
 
+   \ qemu hangs when trying to do this
    here asm-base - ResetBase +  7 +   h# 60  #)  far jmp  \ 7-byte instruction
    \ nop nop nop nop
 
-   h# 20 # al mov  al h# 80 # out
 \ begin again
    h# 68 # ax mov
    ax ds  mov
@@ -41,6 +42,9 @@ purpose: Common code for several versions of reset.bth
    ax fs  mov
    ax gs  mov
    ax ss  mov
+[then]
+
+   h# 20 # al mov  al h# 80 # out
 
 [ifdef] mem-info-pa
    gdt-pa /page round-up #  ax  mov	\ Current low-memory high water mark

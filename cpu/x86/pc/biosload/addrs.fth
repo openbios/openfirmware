@@ -9,9 +9,15 @@ purpose: Establish address and I/O configuration definitions
 \ copies it to get it out of the way of things like OS load areas.
 
 [ifdef] linuxbios-loaded
-h# fff8.0000 constant dropin-base  \ Location of payload in FLASH
-h#   08.0000 constant dropin-size
-dropin-base h# 80 + h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
+  [ifdef] qemu-loaded
+    \ when running in qemu OFW is not in ROM but loaded to RAM by elfboot
+    h# 198.0080 constant dropin-base  \ Location of payload in RAM
+    dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in RAM
+  [else]
+    h# fff8.0000 constant dropin-base  \ Location of payload in FLASH
+    dropin-base h# 80 + h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
+  [then]
+  h#   08.0000 constant dropin-size
 [then]
 
 \needs dropin-base  h# 198.0000 constant dropin-base

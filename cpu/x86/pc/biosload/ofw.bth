@@ -32,21 +32,25 @@ hex
 
 [ifdef] grub-loaded
   fload ${BP}/cpu/x86/pc/elfhdr.fth
-[ifdef] etherboot-variant
-  .( --- Saving as ofwnet.elf - GRUB multiboot format) cr
-  writing ofwnet.elf
-[else]
-  .( --- Saving as ofwgrub.elf - GRUB multiboot format) cr
-  writing ofwgrub.elf
-[then]
-    elf-header /elf-header  ofd @ fputs
+  [ifdef] etherboot-variant
+    .( --- Saving as ofwnet.elf - GRUB multiboot format) cr
+    writing ofwnet.elf
+  [else]
+    .( --- Saving as ofwgrub.elf - GRUB multiboot format) cr
+    writing ofwgrub.elf
+  [then]
+  elf-header /elf-header  ofd @ fputs
 [then]
 
 [ifdef] linuxbios-loaded
   .( --- Saving as ofwlb.elf - LinuxBIOS payload format) cr
   fload ${BP}/cpu/x86/pc/elfhdr.fth
   writing ofwlb.elf
+  [ifdef] qemu-loaded
+    elf-header /elf-header ofd @ fputs
+  [else]
     elf-header /elf-header  0  " elf-header"  write-dropin
+  [then]
 [then]
 
 [ifdef] syslinux-loaded
@@ -118,4 +122,12 @@ hex
    pad 4 ofd @ fputs        \ Patch file size
    pad 4 ofd @ fputs        \ Patch memory size
 [then]
+
+[ifdef] qemu-loaded
+   ofd @ fsize pad !        \ file size; store in memory for convenience below
+   h# 44 ofd @ fseek        \ Seek to file size field; see elfhdr.bth
+   pad 4 ofd @ fputs        \ Patch file size
+   pad 4 ofd @ fputs        \ Patch memory size
+[then]
+
 ofd @ fclose

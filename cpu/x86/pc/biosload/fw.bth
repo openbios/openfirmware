@@ -257,7 +257,10 @@ hex
 
    auto-banner?  if
       " Probing" ?type  probe-all
+      \ install-console doesn't work with qemu, use -serial `tty` instead
+      [ifndef] qemu-loaded
       " Install console" ?type  install-console
+      [then]
       banner
    then
 

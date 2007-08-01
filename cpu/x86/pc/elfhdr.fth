@@ -18,6 +18,10 @@ create elf-header
    \ elf-header is not a dropin, so we only need to skip OBMD header of reset
    \ we adjust the load-address below at position 0x40
   dropin-base  h# 20 +  l,  \ 0x18 entry point virtual address
+[then]
+[ifdef] qemu-loaded
+   \ skip OBMD header but keep elf-header because elfboot in LinuxBIOS needs it
+   dropin-base h# 20 +  l, \ 0x18 entry point virtual address
 [else]
    \ Skip this ELF dropin (80) + the OBMD header of the next dropin (20)
   dropin-base  h# 80 + h# 20 +  l,  \ 0x18 entry point virtual address
@@ -28,6 +32,9 @@ create elf-header
   h# 34        w,  \ 0x28 ELF header size
   h# 20        w,  \ 0x2a program header table entry size
 [ifdef] grub-loaded
+  1            w,  \ 0x2c program header table entry count (one pheader)
+[then]
+[ifdef] qemu-loaded 
   1            w,  \ 0x2c program header table entry count (one pheader)
 [else]
   0            w,  \ 0x2c program header table entry count (no pheaders)
@@ -41,22 +48,39 @@ create elf-header
   1            l,  \ 0x34 entry type PT_LOAD
   h# 54        l,  \ 0x38 file offset
   0            l,  \ 0x3c vaddr
+[then]
+
+[ifdef] qemu-loaded \ Pheader causes elfboot to copy us to RAM
+  \ 0x34  Pheader
+  1            l,  \ 0x34 entry type PT_LOAD
+  0            l,  \ 0x38 file offset
+  dropin-base 80 -  l,  \ 0x3c vaddr
+[then]
+
 [ifdef] etherboot-variant
    \ we need to skip what left of elf-hdr. to get it to point to a dropin
    \ why is it 0x14 ?  I would have thought it should be the size of the multiboot header
    \ which is 0x0c
   dropin-base  h# 14 - l,  \ 0x40 paddr         \ Where to put the bits
+[then]
+
+[ifdef] qemu-loaded
+  dropin-base h# 80 -  l,  \ 0x40 paddr         \ Where to put the bits
 [else]
   dropin-base  l,  \ 0x40 paddr         \ Where to put the bits
 [then]
   h# ffffffff  l,  \ 0x44 file size     \ backpatched later
   h# ffffffff  l,  \ 0x48 memory size   \ backpatched later
+
+[ifndef] qemu-loaded
   0            l,
   0            l,
+[then]
   7            l,  \ 0x4c entry flags RWX
   0            l,  \ 0x50 alignment
                    \ 0x54 End of pheader
-
+[then]
+[ifdef] grub-loaded 
   \ "Multiboot" header that GRUB looks for
   h# 1BADB002 ,         \ 0x54
   h#        0 ,         \ 0x58

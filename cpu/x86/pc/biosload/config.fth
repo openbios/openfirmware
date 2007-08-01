@@ -21,6 +21,9 @@ create syslinux-loaded
 \ - ELF format (no pheader) - ROM - LinuxBIOS direct
 \ create linuxbios-loaded
 
+\ Load and run in qemu
+\ create qemu-loaded 
+
 [ifdef] pc-serial
 create serial-console
 create pc
