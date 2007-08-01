@@ -179,23 +179,20 @@ VARIABLE hint  VARIABLE fatc-start  VARIABLE fatc-end
    max-cl# l@ 1+ fatc-end @  search-up    if  mark-cluster exit  then
    false
 ;
-: allocate-cluster  ( hint-cluster# -- cluster# true  |  false )
-   fsinfo @ 0<>  if
-      fs_#freeclusters lel@ 0=  if
-         drop false
-      else
-         fs_freecluster# lel@ max-cl# l@ >  if
-            (allocate-cluster)
-            dup  if  fs-#free-  then
-         else
-            drop fs_freecluster# lel@  mark-cluster
-            fs-free#+
-            fs-#free-
-         then
-      then
-   else
-      (allocate-cluster)
-   then
+: allocate-cluster  ( hint-cluster# -- false | cluster# true )
+   fsinfo @  if                                    ( hint )
+      fs_#freeclusters lel@   if                   ( hint )
+         fs_freecluster# lel@ max-cl# l@ <=  if    ( hint )
+            drop fs_freecluster# lel@              ( hint' )
+         then                                      ( hint )
+         (allocate-cluster)                        ( false | cluster# true )
+         dup  if  over fs-free#!  fs-#free-  then  ( false | cluster# true )
+      else                                         ( hint )
+         drop false                                ( false )
+      then                                         ( false | cluster# true )
+   else                                            ( hint )
+      (allocate-cluster)                           ( false | cluster# true )
+   then                                            ( false | cluster# true )
 ;
 
 \ Frees first-cl# and all clusters linked after it.
@@ -205,7 +202,7 @@ VARIABLE hint  VARIABLE fatc-start  VARIABLE fatc-end
    while                               ( cluster# )
       dup  cluster@                    ( cluster# next-cluster# )
       0 rot  cluster!                  ( next-cluster# )
-      fs-#free+
+      fsinfo @  if  fs-#free+  then    ( next-cluster# )
    repeat
    drop
    ?flush-fat-cache

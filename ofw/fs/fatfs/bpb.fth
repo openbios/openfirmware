@@ -91,19 +91,9 @@ d# 12 constant fat12
 d# 16 constant fat16
 d# 32 constant fat32
 
-: fs-lelop  ( adr op -- )
-   fsinfo @ 0<>  if
-      over lel@ swap execute swap lel!
-      true fsinfos-dirty c!
-   else
-      2drop
-   then
-;
-: fs-free#+  ( -- )  fs_freecluster#  ['] 1+ fs-lelop  ;
-: fs-free#-  ( -- )  fs_freecluster#  ['] 1- fs-lelop  ;
-: fs-#free+  ( -- )  fs_#freeclusters ['] 1+ fs-lelop  ;
-: fs-#free-  ( -- )  fs_#freeclusters ['] 1- fs-lelop  ;
-
+: fs-#free+  ( -- )  fs_#freeclusters  dup lel@  1+  swap lel!  true fsinfos-dirty c!  ;
+: fs-#free-  ( -- )  fs_#freeclusters  dup lel@  1-  swap lel!  true fsinfos-dirty c!  ;
+: fs-free#!  ( cluster# -- )  fs_freecluster# lel!  true fsinfos-dirty c!  ;
 
 
 \ LICENSE_BEGIN
