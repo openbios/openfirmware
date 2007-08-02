@@ -11,16 +11,23 @@ purpose: Sniff the battery state from EC internal variables
 : bat-b@ h# f900 + ec@  ;
 : bat-w@ dup 1+ bat-b@ swap bat-b@ bwjoin ;
 : eram-w@  h# f400 + dup 1+ ec@ swap ec@ bwjoin ;
-: uvolt@ 0 bat-w@ d# 9760 d# 32 */ ;
-: cur@ 2 bat-w@ wextend  d# 15625 d# 120 */ ;
 \ Base unit for temperature is 1/256 degrees C
 : >degrees-c 7 rshift 1+ 2/  ;  \ Round to nearest degree 
-: pcb-temp 8 bat-w@ >degrees-c  ;
-: bat-temp 6 bat-w@ >degrees-c  ;
 : .%  ( n -- )  .d ." %" ;
-: soc     h# 10 bat-b@  ;
+\ : uvolt@ 0 bat-w@ d# 9760 d# 32 */ ;
+\ : cur@ 2 bat-w@ wextend  d# 15625 d# 120 */ ;
+\ : pcb-temp 8 bat-w@ >degrees-c  ;
+\ : bat-temp 6 bat-w@ >degrees-c  ;
+\ : soc     h# 10 bat-b@  ;
 : bat-state  h# 11 bat-b@  ;
 : bat-cause@ h# 70 bat-b@  ;
+
+: uvolt@ bat-voltage@ d# 9760 d# 32 */ ;
+: cur@ bat-current@ wextend  d# 15625 d# 120 */ ;
+: pcb-temp ambient-temp@ >degrees-c  ;
+: bat-temp bat-temp@ >degrees-c  ;
+: soc     bat-soc@  ;
+
 string-array bat-causes
 ( 00) ," "
 ( 01) ," Bus Stuck at Zero"
@@ -50,10 +57,20 @@ string-array bat-states
   ," abnormal: "
 end-string-array
 
-: .bat-state
-   bat-state dup bat-states count type
-   8 =  if  .bat-cause  then
+: .bat-status
+   bat-status@
+   ." AC "  dup h# 10 and  if  ." on  "  else  ." off  "  then
+
+   dup 1 and  if
+      dup 2 and  if  ." Battery full  "  then
+      dup 4 and  if  ." Battery low   "  then
+      dup 8 and  if  ." Battery destroyed  "  then
+   else
+      ." No battery"
+   then
+   drop
 ;
+
 : .milli  ( -- )
    push-decimal
    dup abs  d# 10,000 /  <# u# u# [char] . hold u#s swap sign u#> type
@@ -65,7 +82,7 @@ end-string-array
    uvolt@  .milli  ."  V  "
    cur@  .milli  ."  A  "
    bat-temp .d ." C    "
-   .bat-state
+   .bat-status
    ."   (PCB "  pcb-temp .d ." C)"
 ;
 : watch-battery  ( -- )
