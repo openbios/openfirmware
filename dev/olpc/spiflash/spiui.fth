@@ -243,7 +243,16 @@ dev /flash
 0 value rom-va
 : selftest  ( -- error? )
    rom-va 0=  if  rom-pa /flash root-map-in to rom-va  then
-   rom-va flash-buf /flash move
+
+   \ This is a slower version of "rom-va flash-buf /flash lmove"
+   \ It works around the problem that continuous CPU access to the
+   \ SPI FLASH starves the EC of instruction fetch cycles, often
+   \ causing it to turn off the system.
+   rom-va flash-buf
+   /flash  0  do
+      rom-va i +  flash-buf i +  h# 1.0000 lmove
+      d# 100 ms
+   h# 1.0000 +loop
 
    \ Replace the manufacturing data block with all FF
    flash-buf mfg-data-offset +  /flash-block  h# ff fill
