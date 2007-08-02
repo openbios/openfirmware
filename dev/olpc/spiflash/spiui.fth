@@ -248,10 +248,9 @@ dev /flash
    \ It works around the problem that continuous CPU access to the
    \ SPI FLASH starves the EC of instruction fetch cycles, often
    \ causing it to turn off the system.
-   rom-va flash-buf
    /flash  0  do
       rom-va i +  flash-buf i +  h# 1.0000 lmove
-      d# 100 ms
+      d# 200 ms
    h# 1.0000 +loop
 
    \ Replace the manufacturing data block with all FF
