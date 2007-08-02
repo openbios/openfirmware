@@ -76,6 +76,11 @@ d# 13 buffer: wep4  0 constant /wep4
 /mac-adr buffer: target-mac
 : target-mac$  ( -- $ )  target-mac /mac-adr  ;
 
+0              value    #mc-adr         \ Actual number of set multicast addresses
+d# 32      dup constant #max-mc-adr	\ Maximum number of multicast addresses
+/mac-adr * dup constant /mc-adrs
+               buffer:  mc-adrs		\ Buffer of multicast addresses
+
 d# 256 buffer: ssid
 0 value /ssid
 : ssid$  ( -- $ )  ssid /ssid  ;
@@ -533,6 +538,26 @@ true value got-response?
    wait-cmd-resp  if  exit  then
 ;
 
+: marvel-get-mc-address  ( -- )
+   4 /mc-adrs + h# 10 ( CMD_MAC_MULTICAST_ADR ) prepare-cmd
+   ACTION_GET +xw
+   4 /mc-adrs + outbuf-bulk-out  if  exit  then
+   wait-cmd-resp  if  exit  then
+   respbuf >fw-data 2 + le-w@ to #mc-adr
+   respbuf >fw-data 4 + mc-adrs #mc-adr /mac-adr * move
+;
+
+: marvel-set-mc-address  ( adr len -- )
+   4 /mc-adrs + h# 10 ( CMD_MAC_MULTICAST_ADR ) prepare-cmd
+   ACTION_SET +xw
+   dup /mac-adr / dup +xw			\ Number of multicast addresses
+   to #mc-adr
+   ( adr len ) 2dup +x$				\ Multicast addresses
+   mc-adrs swap move
+   4 /mc-adrs + outbuf-bulk-out  if  exit  then
+   wait-cmd-resp  if  exit  then
+;
+
 \ =========================================================================
 \ Register access
 \ =========================================================================
@@ -635,6 +660,16 @@ external
    set-domain-info
    enable-11d
 ;
+
+: enable-multicast  ( -- )
+   mac-ctrl h# 20 or to mac-ctrl
+   set-mac-control
+;
+: disable-multicast  ( -- )
+   mac-ctrl h# 20 invert and  to mac-ctrl
+   set-mac-control
+;
+: set-multicast  ( adr len -- )   marvel-set-mc-address  enable-multicast  ;
 headers
 
 \ =========================================================================
