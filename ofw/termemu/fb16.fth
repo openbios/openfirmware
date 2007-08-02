@@ -197,20 +197,20 @@ headers
 headerless
 
 : move-chars16  ( source-col# dest-col# -- )
-   2dup max  #columns swap -         ( src dst #chars )
-   char-width * -rot                 \ count is linelength-maxcol#
-   swap column-adr16  swap column-adr16  ( count src-adr dst-adr )
-   char-height 0  do
-      3dup rot move   ( count src-adr dst-adr )
-      swap bytes/line16 +  swap bytes/line16 +
-   loop    2drop drop
+   2dup max  #columns swap -                    ( src dst #chars )
+   char-width 2* * -rot                         ( #bytes src dst )
+   swap column-adr16  swap column-adr16         ( #bytes src dst )
+   char-height 0  do                            ( #bytes src dst )
+      3dup rot move                             ( #bytes src dst )
+      swap bytes/line16 +  swap bytes/line16 +  ( #bytes src' dst' )
+   loop    3drop                                ( )
 ;
 : erase-chars16  ( #chars start-col# -- )
-   swap char-width * swap
-   column-adr16 char-height 0  do         ( count adr )
-      2dup swap text-background16 fb-fill  ( count adr )
-      bytes/line16 +
-   loop  2drop
+   swap char-width 2* * swap               ( #bytes start-col# )
+   column-adr16 char-height 0  do          ( #bytes adr )
+      2dup swap text-background16 fb-fill  ( #bytes adr )
+      bytes/line16 +                       ( #bytes adr' )
+   loop  2drop                             ( )
 ;
 headers
 : fb16-insert-characters  ( #chars -- )
