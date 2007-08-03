@@ -297,6 +297,13 @@ d# 64 buffer: search-pattern
 
 public
 
+: $delete1  ( path$ -- )
+   open-directory ?dup 0= abort" Can't open directory"      ( name$ dir-ih )
+   >r  " $delete!" r@ $call-method  abort" Can't delete file"  ( r: dir-ih ) 
+   r> close-dev   
+;
+' $delete1 to _ofdelete
+
 : $delete-all  ( pattern-adr pattern-len -- )
    begin-search  begin  another-match?  while           ( 8*attributes name$ )
       \ Check attributes to see if this is a directory
@@ -438,6 +445,7 @@ public
    r> close-dev                                            ( path$2 )
    $open-file
 ;
+' $create-file to _ofcreate
 
 internal
 

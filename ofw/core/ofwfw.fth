@@ -76,10 +76,30 @@ headerless
 \ succeeds, returns the addresses of routines to perform I/O on the
 \ open file and true.  If the operation fails, returns false.
 
+
+defer _ofcreate
+: null-create  ( name -- 0 )  2drop 0  ;
+' null-create to _ofcreate
+
+defer _ofdelete
+' 2drop to _ofdelete
+
 : _ofopen
    ( name mode -- [ fid mode sizeop alignop closeop writeop readop ] okay? )
-   >r count open-dev
-   dup 0=  if  r> 2drop  false exit  then   ( fid )
+   >r count                                     ( name$  r: mode )
+   r@ create-flag and  if                       ( name$  r: mode )
+      2dup ['] _ofdelete catch  if  2drop  then ( name$  r: mode )
+   then                                         ( name$  r: mode )
+
+   2dup open-dev  ?dup  0=  if                  ( name$    r: mode )
+      r@ r/o =  if                              ( name$    r: mode )
+         0                                      ( name$ 0  r: mode )
+      else                                      ( name$    r: mode )
+         2dup _ofcreate                         ( name$ ih r: mode )
+      then                                      ( name$ ih r: mode )
+      ?dup 0=  if  r> 3drop  false exit  then   ( name$ ih r: mode )
+   then                                         ( name$ ih r: mode )
+   nip nip                                      ( ih       r: mode )
    r@   ['] _ofsize   ['] _dfalign   ['] _ofclose   ['] _ofseek
    r@ r/o  =  if  ['] nullwrite  else  ['] _ofwrite  then
    r> w/o  =  if  ['] nullread   else  ['] _ofread   then
