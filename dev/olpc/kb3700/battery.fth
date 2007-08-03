@@ -13,7 +13,6 @@ purpose: Sniff the battery state from EC internal variables
 : eram-w@  h# f400 + dup 1+ ec@ swap ec@ bwjoin ;
 \ Base unit for temperature is 1/256 degrees C
 : >degrees-c 7 rshift 1+ 2/  ;  \ Round to nearest degree 
-: .%  ( n -- )  .d ." %" ;
 \ : uvolt@ 0 bat-w@ d# 9760 d# 32 */ ;
 \ : cur@ 2 bat-w@ wextend  d# 15625 d# 120 */ ;
 \ : pcb-temp 8 bat-w@ >degrees-c  ;
@@ -57,18 +56,18 @@ string-array bat-states
   ," abnormal: "
 end-string-array
 
-: .bat-status
-   bat-status@
-   ." AC "  dup h# 10 and  if  ." on  "  else  ." off  "  then
+: .bat-type  ( -- )
+   bat-type@  dup 4 rshift  case   ( type )
+      1  of  ." GPB "  endof
+      2  of  ." BYD "  endof
+      ." UnknownVendor "
+   endcase                         ( type )
 
-   dup 1 and  if
-      dup 2 and  if  ." Battery full  "  then
-      dup 4 and  if  ." Battery low   "  then
-      dup 8 and  if  ." Battery destroyed  "  then
-   else
-      ." No battery"
-   then
-   drop
+   h# 0f and  case                 ( )
+      1  of  ." NiMH  "     endof
+      2  of  ." LiFePO4  "  endof
+      ." UnknownType  "
+   endcase
 ;
 
 : .milli  ( -- )
@@ -76,18 +75,33 @@ end-string-array
    dup abs  d# 10,000 /  <# u# u# [char] . hold u#s swap sign u#> type
    pop-base
 ;
+: 2.d  ( n -- )  push-decimal <# u# u#s u#>  type  pop-base  ;
+: .%  ( n -- )  2.d ." %" ;
 : .bat  ( -- )
-   ." Battery: "
-   soc .%   ."   "
-   uvolt@  .milli  ."  V  "
-   cur@  .milli  ."  A  "
-   bat-temp .d ." C    "
-   .bat-status
-   ."   (PCB "  pcb-temp .d ." C)"
+   bat-status@  ( stat )
+   ." AC: "  dup h# 10 and  if  ." on   "  else  ." off  "  then  ( stat )
+   ." PCB: "  pcb-temp 2.d ." C  "
+
+   dup 1 and  if
+      ." Battery: "
+      .bat-type
+      soc .%   ."   "
+      uvolt@  .milli  ." V  "
+      cur@  .milli  ." A  "
+      bat-temp 2.d ." C  "
+      dup 2 and  if  ." full "  then
+      dup 4 and  if  ." low "  then
+      dup 8 and  if  ." error "  then
+      dup h# 20 and  if  ." charging "  then
+      dup h# 40 and  if  ." discharging "  then
+   else
+      ." No battery"
+   then
+   drop
 ;
 : watch-battery  ( -- )
    cursor-off
-   begin  (cr .bat d# 100 ms  key?  until
+   begin  (cr .bat kill-line  d# 1000 ms  key?  until
    key drop
    cursor-on
 ;

@@ -63,6 +63,7 @@ h# 380 constant iobase
 : bat-soc@       ( -- b )  h# 16 ec-cmd-b@  ;
 : bat-gauge-id@  ( -- sn0 .. sn7 )  h# 17 ec-cmd-out  8 0  do ec-rb  loop  ;
 : bat-gauge@     ( -- b )  h# 18 ec-cmd-out  h# 31 ec-wb  ec-rb  ;  \ 31 is the EEPROM address
+: bat-type@      ( -- b )  h# 18 ec-cmd-out  h# 5f ec-wb  ec-rb  ;  \ 5f is the EEPROM address
 : board-id@      ( -- b )  h# 19 ec-cmd-b@  ;
 : sci-source@    ( -- b )  h# 1a ec-cmd-b@  ;
 : sci-mask!      ( b -- )  h# 1b ec-cmd-b!  ;
