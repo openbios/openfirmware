@@ -1,10 +1,10 @@
 purpose: Save the Forth dictionary to a file
 \ See license at end of file
 
-\ save-forth  ( filename -- )
+\ $save-forth  ( filename$ -- )
 \	Saves the Forth dictionary to a file so it may be later used under Unix
 \
-\ save-image  ( header-adr header-len filename -- )
+\ $save-image  ( header-adr header-len filename$ -- )
 \	Primitive save routine.  Saves the dictionary image to a file.
 \	The header is placed at the start of the file.  The latest definition
 \	whose name is the same as the "init-routine-name" argument is
@@ -30,10 +30,10 @@ headerless
    loop                          ( adr )
    drop
 ;
-: save-image  ( header header-len filename -- )
+: $save-image  ( header header-len filename$ -- )
    ['] ($find-next) is $find-next
 
-   new-file   ( header header-len )
+   $new-file   ( header header-len )
    in-little-endian?  if
        ( header header-len )  be-fputs		\ Write header
        origin   text-size     ?be-fputs		\ Write dictionary
@@ -62,16 +62,16 @@ headers
 ;
 
 \ Save an image of the target system in a file.
-: save-forth  ( str -- )
+: $save-forth  ( name$ -- )
    8 (align)			\ Make sure image is 8 byte aligned
 
-   >r
+   2>r
 
    make-bin-header
 
    " sys-init-io" $find-name is init-io
    " sys-init"  init-save
-   bin-header  /bin-header  r>  save-image
+   bin-header  /bin-header  2r>  $save-image
 ;
 
 only forth also definitions

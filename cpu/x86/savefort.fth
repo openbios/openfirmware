@@ -3,8 +3,8 @@ hex
 
 only forth also definitions
 
-: save-forth  ( pstr -- )
-   " sys-init-io" $find-name  is init-io           ( pstr )
+: $save-forth  ( name$ -- )
+   " sys-init-io" $find-name  is init-io           ( name$ )
    " sys-init"    init-save
    ['] noop is set-relocation-bit	\ Turn off until relo map is allocated
 
@@ -12,9 +12,9 @@ only forth also definitions
    origin  origin h# 1c +  le-l!	\ Set relocation base address
 
    \ Set user initialization table
-   up@ init-user-area origin + user-size  move  ( pstr )
+   up@ init-user-area origin + user-size  move  ( name$ )
 
-   origin  here over -  save-image
+   origin  here over -  $save-image
 ;
 only forth also definitions
 

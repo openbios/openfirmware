@@ -270,7 +270,7 @@ patch noop fw-title rom-cold	\ Superseded by banner
 
 install-rom-cold
 
-.( --- Saving fw.dic ---) cr  p" fw.dic" save-forth
+.( --- Saving fw.dic ---) cr  " fw.dic" $save-forth
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

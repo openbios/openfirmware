@@ -360,11 +360,11 @@ forth definitions
    ['] noop is uncatch-exceptions
 ;
 
-: save-forth  ( pstr -- )
+: $save-forth  ( name$ -- )
    ['] uncatch-exceptions behavior  ['] (uncatch-exceptions) =  if 
-      uncatch-exceptions  save-forth  catch-exceptions
+      uncatch-exceptions  $save-forth  catch-exceptions
    else
-      save-forth
+      $save-forth
    then
 ;
 

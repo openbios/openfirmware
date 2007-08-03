@@ -21,7 +21,7 @@ fload ${BP}/forth/lib/loadcomm.fth	\ CPU-independent Forth tools
 fload ${BP}/cpu/ppc/loadmach.fth	\ CPU and OS-specific extensions
 
 [ifndef] no-heads
-.( --- Saving tools.dic --- )  "" tools.dic save-forth cr
+.( --- Saving tools.dic --- )  " tools.dic" $save-forth cr
 [then]
 
 \ LICENSE_BEGIN

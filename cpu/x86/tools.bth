@@ -38,7 +38,7 @@ resident   dispose   0 0 set-transize   \ true is suppress-transient
 \ .(   zeroed: ) dot
 
 ' noop is include-hook  ' noop is include-exit-hook
-.( --- Saving tools.dic --- )  "" tools.dic save-forth cr
+.( --- Saving tools.dic --- )  " tools.dic" $save-forth cr
 [then]
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

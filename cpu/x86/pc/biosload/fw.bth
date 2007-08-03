@@ -310,7 +310,7 @@ fload ${BP}/cpu/x86/pc/biosload/vmdoor.fth   \ VMware interfaces
 " dhcp" ' ip-address  set-config-string-default
 
 .( Saving fw.dic ...)
-"" fw.dic save-forth cr
+" fw.dic" $save-forth cr
 
 .( Saving fw.img ...)
 " fw.img"  RAMbase save-abs-rom cr

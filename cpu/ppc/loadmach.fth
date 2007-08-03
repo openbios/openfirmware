@@ -18,7 +18,7 @@ fload ${BP}/cpu/ppc/decompm.fth
 [ifndef] partial-no-heads	transient  [then]
 fload ${BP}/forth/lib/binhdr.fth
 fload ${BP}/cpu/ppc/savefort.fth
-\ alias save-forth save-forth
+\ alias $save-forth $save-forth
 [ifndef] partial-no-heads	resident  [then]
 
 fload ${BP}/forth/lib/instdis.fth

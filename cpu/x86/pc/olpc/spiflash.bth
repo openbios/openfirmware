@@ -70,4 +70,4 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth
 
 alias quit bye
 
-"" spiflash.dic save-forth
+" spiflash.dic" $save-forth

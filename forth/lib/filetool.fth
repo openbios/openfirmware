@@ -38,6 +38,8 @@ variable ofd
    ofd !                       ( name$ )
    2drop
 ;
+: modifying  ( "filename" -- )  safe-parse-word $write-open  ;
+
 : $new-file  ( name$ -- )
    2dup r/w create-file  if    ( name$ x )
       drop  ." Can't create " type  cr abort
@@ -71,15 +73,6 @@ variable ofd
    note-string  2drop   \ Mark as a sequence of bytes
 ;
 
-\ Backwards compatibility ...
-
-: read-open     ( name-pstr -- )  count $read-open    ;
-: write-open    ( name-pstr -- )  count $write-open   ;
-: new-file      ( name-pstr -- )  count $new-file     ;
-: append-open   ( name-pstr -- )  count $append-open  ;
-: file-exists?  ( name-pstr -- flag ) \ True if the named file already exists
-   read fopen  ( fd )   dup   if  fclose true  then
-;
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

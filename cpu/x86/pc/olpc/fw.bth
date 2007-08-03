@@ -589,7 +589,7 @@ warning !
 previous previous definitions
 
 .( --- Saving fw.dic ...)
-"" fw.dic save-forth cr
+" fw.dic" $save-forth cr
 
 \ patch foo decimal cold
 

@@ -106,7 +106,7 @@ defines: $partition
 [ifndef] no-heads
 resident   dispose   0 0 set-transize   \ true is suppress-transient
 
-cr .( --- Saving basefw.dic --- )  "" basefw.dic save-forth  cr
+cr .( --- Saving basefw.dic --- )  " basefw.dic" $save-forth  cr
 [then]
 
 \ LICENSE_BEGIN

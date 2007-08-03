@@ -48,11 +48,11 @@ variable dictionary-size  h# 40000 dictionary-size !
    checksum   12 hw!			\ Checksum
 ;   
 
-: save-image  ( pstr base-adr len -- )
-   is code-size  is code-adr	( pstr )
-   makeheader			( pstr )
+: $save-image  ( name$ base-adr len -- )
+   is code-size  is code-adr	( name$ )
+   makeheader			( name$ )
 
-   new-file
+   $new-file
 
    exp-header  /exp-header  		 ofd @  fputs
    code-adr    code-size    		 ofd @  fputs

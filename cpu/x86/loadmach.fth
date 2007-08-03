@@ -19,7 +19,7 @@ fload ${BP}/cpu/x86/decompm.fth
 [ifndef] partial-no-heads       transient   [then]
 fload ${BP}/cpu/x86/saveexp.fth
 fload ${BP}/cpu/x86/savefort.fth
-\ alias save-forth save-forth
+\ alias $save-forth $save-forth
 [ifndef] partial-no-heads	resident  [then]
 
 [ifdef] resident-packages

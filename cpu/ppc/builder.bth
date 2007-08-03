@@ -8,7 +8,7 @@ build-now
 fload ${BP}/ofw/tokenizer/tokenize.fth
 fload ${BP}/forth/lib/builder.fth
 
-.( --- Saving builder.dic --- )  cr "" builder.dic save-forth
+.( --- Saving builder.dic --- )  cr " builder.dic" $save-forth
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks
