@@ -152,7 +152,7 @@ variable bar-probing
       h# 7d00  of  ehci-hdr  endof
       h#  800  of  nb-hdr    endof
       h#  900  of  gxfb-hdr  endof
-      h#  a00  of  gx?  if  ff-loc  else  aes-hdr  then  endof
+      h#  a00  of  gx?  if  drop ff-loc exit  else  aes-hdr  then  endof
       ( default )  2drop ff-loc exit
    endcase
    +hdr
