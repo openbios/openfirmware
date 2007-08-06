@@ -5,6 +5,42 @@ hex
 
 false instance value debug?
 
+h# 100 instance buffer: url
+0      instance value   /url
+h# 80  instance buffer: proxy
+0      instance value   /proxy
+
+-1 value result-code
+0  value image-size
+
+\ proxy should have the value of
+\   1.  environment variable, http-proxy, if not null$
+\   2.  otherwise, devalias http-proxy, if not null$
+\   3.  Location: URL$ for status code 305
+
+: set-proxy  ( $ -- )
+   \ strip "http://" or "http:\\"
+   over " http:" comp 0=  if
+      7 /string
+   else
+      over " HTTP:" comp 0=  if  7 /string  then
+   then
+
+   dup to /proxy  proxy swap move  
+;
+: init-proxy  ( -- )
+   0 to /proxy
+   " http-proxy" $getenv 0=  if
+      ?dup  if
+         set-proxy
+         exit
+      else
+         drop
+      then
+   then
+   " http-proxy" not-alias? 0=  if  set-proxy  then
+;
+
 d# 255 instance buffer: pathbuf
 : fix-delims  ( $ -- $' )
    pathbuf pack count   ( $' )
@@ -117,21 +153,17 @@ false instance value ipv6-host$?
 
 : decode-url  ( url$ -- send$ prefix$ port# server$ )
    fix-delims                           ( url$' )
-   " http-proxy" not-alias?  if         ( url$ )
+   /proxy 0=  if
       url-parse null$                   ( filename$ server$ prefix$ )
-      bootnet-debug  if  ." HTTP Server " 2over type cr  then
-   else                                 ( url$ proxy$ )
-      dup  0=  if                       ( url$ proxy$ )
-         2drop url-parse null$          ( filename$ server$ prefix$ )
-         bootnet-debug  if  ." HTTP Proxy server " 2over type cr  then
-      else                              ( url$ proxy$ )
-         " http:"                       ( url$ proxy$ prefix$ )
-      then                              ( url$ proxy$ prefix$ )
+      bootnet-debug  if  ." HTTP: Server is: " 2over type cr  then
+   else                                 ( url$ )
+      proxy /proxy                ( url$ proxy$ )
+      bootnet-debug  if  ." HTTP: Proxy is: " 2dup type cr  then
+      " http:"                          ( url$ proxy$ prefix$ )
    then                                 ( send$ server$ prefix$ )
    2swap  parse-port                    ( send$ prefix$ port# server$ )
 ;
-0 value image-size
--1 value result-code
+
 vocabulary http-tags
 
 : parse-line  ( adr len -- )
@@ -193,7 +225,7 @@ h# 100 instance buffer: line-buffer
 
 : get-number  ( adr len -- n )  push-decimal $number pop-base throw  ;
 : version-bad?  ( $ -- flag )
-   2dup  " HTTP/1.0" $=  if  2drop false exit  then  ( $ )
+   2dup " HTTP/1.0" $=  if  2drop false exit  then  ( $ )
    2dup " HTTP/1.1" $=  if
       2drop false 
    else
@@ -202,6 +234,11 @@ h# 100 instance buffer: line-buffer
       else  2drop  then
       true
    then
+;
+: result-code-supported?  ( # -- supported? )
+   dup to result-code >r	( # )
+   r@ d# 200 =    r@ d# 301 d# 303 between or
+   r@ d# 305 = or r> d# 307 = or
 ;
 : dump-response  ( -- )
    begin get-line dup  while  type  cr  repeat
@@ -212,15 +249,10 @@ h# 100 instance buffer: line-buffer
    abort" HTTP: Bad version line"	( rem$ )
    skipwhite  scanwhite                 ( rem$ head$ )
    get-number                           ( rem$ # )
-   \ XXX should handle 3xx redirects
-   dup d# 200 <>  if			( rem$ # )
+   dup result-code-supported? not  if	( rem$ # )
       bootnet-debug  if			( rem$ # )
-         dup d# 302 =  if
-            ." HTTP: Response: " .d  type cr	( )
-            dump-response
-         else
-            ." HTTP: Bad response: " .d  type cr	( )
-         then
+         ." HTTP: Bad response: " .d  type cr	( )
+         dump-response
       then				( | rem$ # )
       abort				( )
    else	 3drop  then			( )
@@ -242,12 +274,26 @@ also http-tags definitions
 \ Content-type: text/html
 \ Content-length: 10696
 \ Last-modified: Thu, 11 Feb 1999 01:08:12 GMT
+\ Location: http://www.w3.org/TheProject.html
 
 : content-length  ( $ -- )  \ [<white>] length
    skipwhite scanwhite    ( tail$ head$ )
    2swap 2drop            ( head$ )
    get-number             ( size )
    to image-size
+;
+: location  ( $ -- )		\ [<white>] url$
+   skipwhite scanwhite		( tail$ head$ )
+   2swap 2drop			( head$ )
+   ascii : left-parse-string 2drop	( head$' )
+   result-code d# 305 =  if
+      set-proxy
+   else
+      dup to /url		( head$ )
+      url swap move		( )
+      null$ set-proxy
+      bootnet-debug  if  ." HTTP: Location: " url /url type cr  then
+   then
 ;
 
 previous definitions
@@ -259,7 +305,7 @@ previous definitions
    check-status-line
    begin  get-line  dup  while  parse-header-line  repeat  2drop
 ;
-: mount  ( $url -- error? )
+: (mount)  ( $url -- error? )
    decode-url                           ( send$ prefix$ port# server$ )
 
    2dup set-server                      ( send$ prefix$ port# server$ )
@@ -284,9 +330,18 @@ previous definitions
 
    ['] check-header catch
 ;
+: mount  ( url$ -- error? )
+   dup to /url  2dup url swap move
+   begin  (mount) 0=  if  result-code d# 200 <>  else  false  then  while
+      " disconnect" $call-parent
+      url /url
+   repeat
+   result-code d# 200 <>
+;
 
 : open  ( -- )
    my-args dup  if
+      init-proxy
       bootnet-debug  if
          2dup ." HTTP: URL is: " type cr
       then
