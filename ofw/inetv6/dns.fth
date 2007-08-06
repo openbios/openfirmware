@@ -233,13 +233,11 @@ headerless
 : ?bad-ip  ( flag -- )  abort" Bad host name or address"  ;
 4 buffer: ip-buf
 : $>ip  ( adr len -- 'ip )
-   push-decimal
    ip-buf 4  bounds  do
-      [char] . left-parse-string  $number ?bad-ip
+      [char] . left-parse-string  push-decimal $number pop-base  ?bad-ip
       dup  d# 256 >=  ?bad-ip
       i c!
    loop
-   pop-base
    2drop
    ip-buf
 ;
