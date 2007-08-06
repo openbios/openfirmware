@@ -239,12 +239,15 @@ d# 1000 value ping-gap
    loop
 ;
 
-: $ping  ( ip$ -- )
-   " net//obp-tftp:last" open-net  " $set-host" $call-net
+: (ping)  ( -- )
    /ping-max " allocate-ip" $call-net to ping-packet
    try-pings
    ping-packet /ping-max " free-ip" $call-net
    close-net
+;
+: $ping  ( ip$ -- )
+   " net//obp-tftp:last" open-net  " $set-host" $call-net
+   (ping)
 ;
 
 : ping  ( "host" -- )  safe-parse-word $ping  ;

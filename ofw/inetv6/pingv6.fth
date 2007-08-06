@@ -129,15 +129,28 @@ d# 1000 value ping-gap
    loop
 ;
 
-: $ping6  ( ip$ -- )
-   " net//obp-tftp:last" open-net  " $set-host" $call-net
+: (ping6)  ( -- )
    /ping-max " allocate-ipv6" $call-net to ping-packet
    try-pingsv6
    ping-packet /ping-max " free-ipv6" $call-net
    close-net
 ;
+: $ping6  ( ip$ -- )
+   " net//obp-tftp:last" open-net  " $set-host" $call-net
+   (ping6)
+;
 
 : ping6  ( "host" -- )  safe-parse-word $ping6  ;
+
+[ifdef] include-ipv4
+: $ping  ( ip$ -- )
+   " net//obp-tftp:last" open-net  " $set-host" $call-net
+   " use-ipv6?" $call-net  if  (ping6)  else  (ping)  then
+;
+[else]
+: $ping  ( ip$ -- )  $ping6  ;
+[then]
+: ping  ( "host" -- )  safe-parse-word $ping  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
