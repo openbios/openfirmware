@@ -212,40 +212,42 @@ instance variable tcpt_2msl     tcpt_2msl    off
 
 [ifndef] include-ipv4
 : +rcv_nxt  ( n -- )  rcv_nxt + to rcv_nxt  ;
+[then]
 
-0 value wbuf-start
-0 value wbuf-adr
-0 value wbuf-top
-0 value wbuf-end
-0 value wbuf-threshold
+0 value wbufv6-start
+0 value wbufv6-adr
+0 value wbufv6-top
+0 value wbufv6-end
+0 value wbufv6-threshold
 
-d# 1024 d# 16 * constant /wbuf
-: wbuf-clear  ( -- )
-   wbuf-start /wbuf + to wbuf-end
-   wbuf-start dup to wbuf-adr  to wbuf-top
-   wbuf-start /wbuf 2/ + to wbuf-threshold
+d# 1024 d# 16 * constant /wbufv6
+: wbufv6-clear  ( -- )
+   wbufv6-start /wbufv6 + to wbufv6-end
+   wbufv6-start dup to wbufv6-adr  to wbufv6-top
+   wbufv6-start /wbufv6 2/ + to wbufv6-threshold
 ;
-: wbuf-allocate  ( -- )
-   /wbuf alloc-mem to wbuf-start
-   wbuf-clear
+: wbufv6-allocate  ( -- )
+   /wbufv6 alloc-mem to wbufv6-start
+   wbufv6-clear
 ;
 
-: wbuf-actual  ( -- n )  wbuf-top wbuf-adr -  ;
-: wbuf-avail  ( -- n )  wbuf-end wbuf-top -  ;
+: wbufv6-actual  ( -- n )  wbufv6-top wbufv6-adr -  ;
+: wbufv6-avail  ( -- n )  wbufv6-end wbufv6-top -  ;
 
 \ Remove n bytes of data from the beginning of the write buffer
-: wbuf-drop  ( n -- )
-   wbuf-adr +  to wbuf-adr
+: wbufv6-drop  ( n -- )
+   wbufv6-adr +  to wbufv6-adr
    \ If there are enough empty bytes at the beginning to make
    \ it worthwhile to do so, copy the data down to make more
    \ space at the end.
-   wbuf-adr wbuf-threshold >=  if
-      wbuf-adr wbuf-start wbuf-actual move     \ Copy bytes down
-      wbuf-actual wbuf-start + to wbuf-top     \ Fix pointers
-      wbuf-start to wbuf-adr
+   wbufv6-adr wbufv6-threshold >=  if
+      wbufv6-adr wbufv6-start wbufv6-actual move     \ Copy bytes down
+      wbufv6-actual wbufv6-start + to wbufv6-top     \ Fix pointers
+      wbufv6-start to wbufv6-adr
    then
 ;
 
+[ifndef] include-ipv4
 \ send sequence variables
 0 instance value snd_una		\ send unacknowledged
 0 instance value snd_nxt		\ send next
@@ -728,7 +730,9 @@ pr_slowhz d# 60 *  constant persmax
 
 0 value win
 0 value offs
-: dont-send?   ( -- exit? )
+[then]
+
+: dont-sendv6?   ( -- exit? )
    false
 
    \ Sender silly window avoidance.  If connection is idle and can send
@@ -741,7 +745,7 @@ pr_slowhz d# 60 *  constant persmax
    len  if
       len t_maxseg =  ?exit
 
-      idle?  nodelay t_flag?  or   len offs +  wbuf-actual  >=  and  ?exit
+      idle?  nodelay t_flag?  or   len offs +  wbufv6-actual  >=  and  ?exit
      
       t_force  ?exit
 
@@ -796,7 +800,7 @@ pr_slowhz d# 60 *  constant persmax
    \ If nothing happens soon, send when timer expires:
    \ if window is nonzero, transmit what we can, otherwise force out a byte.
 
-   wbuf-actual 0<>  tcpt_rexmt @ 0=  and  tcpt_persist @ 0=  and  if
+   wbufv6-actual 0<>  tcpt_rexmt @ 0=  and  tcpt_persist @ 0=  and  if
       0 to t_rxtshift
       setpersist
    then
@@ -804,6 +808,7 @@ pr_slowhz d# 60 *  constant persmax
    drop true
 ;
 
+[ifndef] include-ipv4
 \ TCP output routine: figure out what should be sent and send it.
 d# 32 buffer: opt
 0 value hdrlen
@@ -849,14 +854,14 @@ d# 32 buffer: opt
    xmit_bufv6 set-struct
 
    len  if
-      wbuf-adr offs +   xmit_bufv6 hdrlen +  len  move
+      wbufv6-adr offs +   xmit_bufv6 hdrlen +  len  move
 
       \ If we're sending everything we've got, set PUSH.
       \ (This will keep happy those implementations which only
       \ give data to the user when a buffer fills or
       \ a PUSH comes in.)
 
-      offs len +  wbuf-actual  =  
+      offs len +  wbufv6-actual  =  
       len snd_cwnd =  or	\ Also PUSH when we have a lot
       if
          oflags th_push or  to oflags
@@ -1033,12 +1038,12 @@ d# 32 buffer: opt
             \
             \ We can't just blindly clear the FIN bit, because if we don't
             \ have any more data to send then the probe will be the FIN itself.
-            off wbuf-actual <  if  fin-off  then
+            off wbufv6-actual <  if  fin-off  then
             1 to win
          then
       then
 
-      win wbuf-actual <  if  fin-off  win  else  wbuf-actual  then  ( n )
+      win wbufv6-actual <  if  fin-off  win  else  wbufv6-actual  then  ( n )
       offs -  to len
 
       len 0<  if
@@ -1056,7 +1061,7 @@ d# 32 buffer: opt
 
       rbuf-space to win
 
-      dont-send?  ?exit
+      dont-sendv6?  ?exit
         
       sendv6
    sendalot? 0=  until
@@ -1106,7 +1111,7 @@ d# 32 buffer: opt
          then
          iack snd_una -  to acked
 				\ XXX drop-snd needs to "wakeup" the sender
-         acked wbuf-drop
+         acked wbufv6-drop
          iack to snd_una				
          \ We are now finished with the packet data
 
@@ -1121,7 +1126,7 @@ d# 32 buffer: opt
          snd_una snd_max =  if  tcpt_rexmt off  else
          tcpt_persist @ 0=  if  t_rxtcur tcpt_rexmt !  then then
 
-         wbuf-actual  if  tcp_outputv6  then
+         wbufv6-actual  if  tcp_outputv6  then
          true exit
       then
       false exit
@@ -1576,18 +1581,18 @@ d# 32 buffer: opt
 
    tcp_close
 ;
+[then]
 
 \ Discard from the buffer the transmitted data that was acked 
-: release-data  ( -- flag )
-   acked wbuf-actual >  dup  if                ( flag )
-      snd_wnd wbuf-actual -  to snd_wnd        ( flag )
-      wbuf-actual wbuf-drop                    ( flag )
+: release-datav6  ( -- flag )
+   acked wbufv6-actual >  dup  if                ( flag )
+      snd_wnd wbufv6-actual -  to snd_wnd        ( flag )
+      wbufv6-actual wbufv6-drop                    ( flag )
    else                                        ( flag )
-      acked wbuf-drop                          ( flag )
+      acked wbufv6-drop                          ( flag )
       snd_wnd acked -  to snd_wnd              ( flag )
    then                                        ( flag )
 ;
-[then]
 
 : do-ackv6  ( -- done? )
    ts syn_received =  if
@@ -1692,7 +1697,7 @@ d# 32 buffer: opt
    snd_cwnd snd_ssthresh u>  if  dup u*  snd_cwnd /  then  ( cwnd-increment )
    snd_cwnd +  maxwin min  set-cwnd
    
-   release-data to ourfinisacked?
+   release-datav6 to ourfinisacked?
 
    \ wakeup-sender
 
@@ -1987,24 +1992,24 @@ nodetype: tcpnode
 /tcphdr d# 32 +  mssmax +  constant /xmit-max
 
 : alloc-buffers  ( -- )
-   wbuf-allocate
    d# 1024 d# 16 *  to rbuf-len
    rbuf-len alloc-mem to rbuf-adr
    0 to rbuf-actual
 ;
 : free-buffers  ( -- )
-   wbuf-start /wbuf free-mem
    rbuf-adr rbuf-len free-mem
 ;
 [then]
 
 \ This is basically attach
 : alloc-buffersv6  ( -- )
+   wbufv6-allocate
    /xmit-max " allocate-ipv6" $call-parent  to xmit_bufv6
 ;
 
 : free-buffersv6  ( -- )
    free-buffers
+   wbufv6-start /wbufv6 free-mem
    xmit_bufv6 /xmit-max " free-ipv6" $call-parent
 ;
 
@@ -2265,17 +2270,18 @@ false instance value do-delack?
    ?receivev6
 ;
 
-[ifndef] include-ipv4
-: wbuf-set  ( adr len -- )  over to wbuf-adr  + to wbuf-top  ;
-: wbuf-add  ( adr len -- #added )
-   wbuf-avail min                    ( adr #added )
+: wbufv6-set  ( adr len -- )  over to wbufv6-adr  + to wbufv6-top  ;
+: wbufv6-add  ( adr len -- #added )
+   wbufv6-avail min                    ( adr #added )
    dup  if                           ( adr #added )
-      tuck  wbuf-top swap move       ( #added )
-      dup wbuf-top +  to wbuf-top    ( #added )
+      tuck  wbufv6-top swap move       ( #added )
+      dup wbufv6-top +  to wbufv6-top    ( #added )
    else                              ( adr 0 )
       nip                            ( 0 )
    then                              ( #added )
 ;
+
+[ifndef] include-ipv4
 : read       ( adr len -- actual )  2drop 0  ;
 : write      ( adr len -- actual )  2drop 0  ;
 : write-oob  ( adr len -- actual )  2drop 0  ;
@@ -2285,7 +2291,7 @@ false instance value do-delack?
 : writev6  ( adr len -- actual )
    tuck  begin                   ( len adr remaining )
       alive? 0=  if  3drop -1 exit  then
-      2dup wbuf-add /string      ( len adr' remaining' )
+      2dup wbufv6-add /string      ( len adr' remaining' )
    dup  while                    ( len adr' remaining' )
       tcp_outputv6  pollv6       ( len adr' remaining' )
    repeat                        ( len adr 0 )
@@ -2465,11 +2471,11 @@ d# 5000 constant close-wait-ms
 
 : flush-writesv6  ( -- )
    \ If the connection is already down, just blow away any pending data
-   ts closed  =  if  wbuf-clear exit  then
+   ts closed  =  if  wbufv6-clear exit  then
 
    get-msecs
    begin  
-      wbuf-actual 0<>			( start-time flag )
+      wbufv6-actual 0<>			( start-time flag )
       get-msecs 2 pick - d# 10000 <	( start-time flag flag )
       and 				( start-time flag' )
    while                		( start-time )
@@ -2477,10 +2483,10 @@ d# 5000 constant close-wait-ms
    repeat				( start-time )
    drop					( )
 
-   wbuf-actual 0<>  if
+   wbufv6-actual 0<>  if
       show" TDROP"
       debug" TCP Timeout!"
-      wbuf-clear
+      wbufv6-clear
    then
 ;
 

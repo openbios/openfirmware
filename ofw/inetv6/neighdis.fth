@@ -79,12 +79,21 @@ headerless
    then
 ;
 
+create default-ipv6-addr  h# fe c, h# 80 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c,
+			  0 c, 0 c, 0 c, h# ff c, h# fe c, 0 c, 0 c, 0 c,
+: set-my-ipv6-addr  ( -- )
+   default-ipv6-addr my-ipv6-addr copy-ipv6-addr
+   my-en-addr     c@ 2 xor my-ipv6-addr     8 +   c!
+   my-en-addr 1+           my-ipv6-addr     9 + 2 move
+   my-en-addr 3 +          my-ipv6-addr d# 13 + 3 move
+;
+
 : configure-ipv6  ( -- )      \ Get discovery info
    ['] 4drop to icmpv6-err-callback-xt
    ['] 2drop to icmpv6-info-callback-xt
 
    d# 64 to prefix
-   " fe80::259:08ff:feb4:0061" my-ipv6-addr  $ipv6#
+   set-my-ipv6-addr
    set-my-mc-ipv6-addr
 
    \ XXX Duplicate address discovery; Router discovery

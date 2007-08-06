@@ -88,9 +88,23 @@ char / constant delim
    drop  swap -  update-ptr             ( len )
 ;
 
+false instance value ipv6-host$?
+: parse-ipv6-port  ( server$ -- server$' port$ )
+   1 /string
+   [char] ] left-parse-string		( port$ server$ )
+   2swap  [char] : left-parse-string    ( server$ port$ junk$ )
+   2drop                                ( server$ port$ )
+;
+
 : parse-port  ( server$ -- port# server$' )
-   [char] : left-parse-string           ( port$ server$ )
-   2swap  dup  if                       ( server$ port$ )
+   over c@ [char] [ =  dup to ipv6-host$?  if
+      parse-ipv6-port			( server$ port$ )
+   else
+
+      [char] : left-parse-string        ( port$ server$ )
+      2swap				( server$ port$ )
+   then
+   dup  if                              ( server$ port$ )
       push-decimal  $number  pop-base   ( server$ port# error? )
       abort" Bad port number"           ( server$ port# )
    else                                 ( server$ port$ )
@@ -260,8 +274,11 @@ previous definitions
 
    " GET " tcp-write                    ( send$ prefix$ server$ )
    2swap tcp-write  2swap tcp-write     ( server$ )
-   "  HTTP/1.1"r"nUser-Agent: FirmWorks/1.1"r"nHost: " tcp-write
-   tcp-write  " "r"n"r"n" tcp-write
+   "  HTTP/1.1"r"nUser-Agent: FirmWorks/1.1"r"nHost: "  tcp-write
+   ipv6-host$?  if  " [" tcp-write  then
+   ( server$ ) tcp-write
+   ipv6-host$?  if  " ]" tcp-write  then
+   " "r"n"r"n" tcp-write
 
    " flush-writes" $call-parent
 
@@ -276,7 +293,7 @@ previous definitions
       mount 0=
       bootnet-debug  if
          ." HTTP: "
-         dup  if   ." Succeded"  else ." Failed!"  then  cr
+         dup  if   ." Succeeded"  else ." Failed!"  then  cr
       then
    else
       2drop true
