@@ -212,11 +212,7 @@ defer send-all  ' (send-all) to send-all
    sbuf r>				( $3 )
 ;
 
-: create-num$  ( len -- num$ )
-   base @ >r  decimal	    ( len ) ( r: base )
-   num>ascii		    ( num$ )
-   r> base !		    ( num$ )
-;
+: create-num$  ( len -- num$ )  push-decimal num>ascii pop-base  ;
 
 : get-type  ( adr len -- c )
    0 -rot

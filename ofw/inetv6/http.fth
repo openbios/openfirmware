@@ -136,9 +136,9 @@ vocabulary http-tags
 
 : parse-line  ( adr len -- )
    save-input  2>r 2>r 2>r  -1 set-input
-   push-decimal
-   parse-word  ['] http-tags  search-wordlist  if  execute  then
-   pop-base
+   parse-word  ['] http-tags  search-wordlist  if
+      push-decimal  ['] execute catch  pop-base  throw
+   then
    2r> 2r> 2r> restore-input
 ;
 
