@@ -1,8 +1,6 @@
 purpose: Geode LX graphics acceleration
 \ See license at end of file
 
-dev screen
-
 alias depth+ wa+
 
 : gp!  ( l reg -- )  gp-base + rl!  ;
@@ -70,8 +68,45 @@ alias depth+ wa+
 ;
 [then]
 
+: rc>pixels  ( r c -- x y )  swap char-width *  swap char-height *  ;
+: +window    ( x y -- x' y' )  window-left 2/ window-top d+  ;
+: rc>window  ( r c -- x y )  rc>pixels +window  ;
 
-dend
+: fbgeode-delete-lines ( delta-#lines -- )
+   >r                           ( r: delta-#lines )
+   0  line# r@ +   rc>window    ( src-x,y r: delta )
+   0  line#        rc>window    ( src-x,y dst-x,y r: delta )
+   #columns  #lines r@ -  rc>pixels    ( src-x,y dst-x,y w,h r: delta )
+   gp-move                      ( r: delta )
+   screen-background16          ( color r: delta )
+   0  #lines r@ -  rc>window    ( color dst-x,y r: delta )
+   #columns  r>    rc>pixels    ( color dst-x,y w,h )
+   gp-fill
+;
+
+: gp-fb16-install  ( -- )
+   fb16-install
+   gp-setup
+   ['] fbgeode-delete-lines is delete-lines
+;
+
+: display-install  ( -- )
+   init-all
+   default-font set-font
+   /scanline bytes/pixel /  #scanlines     ( width height )
+   over char-width / over char-height /    ( width height rows cols )
+   bytes/pixel  case                       ( width height rows cols )
+      1 of  fb8-install      endof         ( )
+      2 of  gp-fb16-install  endof         ( )
+   endcase                                 ( )
+   init-hook
+;
+
+: display-selftest  ( -- failed? )  false  ;
+
+' display-install  is-install
+' display-remove   is-remove
+' display-selftest is-selftest
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

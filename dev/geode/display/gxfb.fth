@@ -565,24 +565,6 @@ headers
 " ISO8859-1" encode-string    " character-set" property
 0 0  encode-bytes  " iso6429-1983-colors"  property
 
-: display-install  ( -- )
-   init-all
-   default-font set-font
-   /scanline bytes/pixel /  #scanlines     ( width height )
-   over char-width / over char-height /    ( width height rows cols )
-   bytes/pixel  case                       ( width height rows cols )
-      1 of  fb8-install   endof            ( )
-      2 of  fb16-install  endof            ( )
-   endcase                                 ( )
-   init-hook
-;
-
-: display-selftest  ( -- failed? )  false  ;
-
-' display-install  is-install
-' display-remove   is-remove
-' display-selftest is-selftest
-
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
