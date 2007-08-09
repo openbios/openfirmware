@@ -1356,7 +1356,7 @@ d# 32 buffer: opt
    th_sport w@  th_dport w@  th_sport w!  th_dport w!
 ;
 : multicast-dstv6?  ( -- flag )
-   ipv6-struct  ihv6_dst  tcpv6-struct   ( adr )  " his-mc-ipv6-addr?" $call-parent
+   ipv6-struct  ihv6_dst  tcpv6-struct   ( adr )  " his-ipv6-addr-mc?" $call-parent
 ;
 /ipv6 buffer: tmp-ipv6
 : dropwithresetv6  ( -- )

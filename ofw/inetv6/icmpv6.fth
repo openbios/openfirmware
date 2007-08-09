@@ -50,7 +50,7 @@ variable icmp-temp
 /ipv6 buffer: his-ipv6-temp
 : send-mc-icmpv6-packet  ( adr len -- )  \ Send to his multicast IPv6 address
    his-ipv6-addr his-ipv6-temp copy-ipv6-addr
-   his-mc-ipv6-addr his-ipv6-addr copy-ipv6-addr
+   his-ipv6-addr-mc-sol-node his-ipv6-addr copy-ipv6-addr
    send-icmpv6-packet
    his-ipv6-temp his-ipv6-addr copy-ipv6-addr
 ;

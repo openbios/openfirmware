@@ -3,10 +3,11 @@ purpose: Neighbor Discovery
 
 headerless
 
-" "                d# 40 config-string ipv6-dns-server
-" "                d# 64 config-string ipv6-domain
-" "                d# 40 config-string ipv6-router
-" stateless"       d# 40 config-string ipv6-address	\ leave room
+d# 200 constant ND_TIMEOUT              \ Neighbor discovery timeout (ms)
+d# 200 constant DAD_TIMEOUT             \ Duplicate Address Detection timeout (ms)
+d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
+
+" stateless"       d# 40 config-string ipv6-address            \ leave room
 \ " dhcp" ' ipv6-address  set-config-string-default
 
 [ifndef] include-ipv4
@@ -23,28 +24,28 @@ headerless
    true
 ;
 
+/ipv6 buffer: his-ipv6-addr-temp
 : do-neighbor-discovery  ( -- )
    bootnet-debug  if
       ." ICMPv6 ND protocol: Getting MAC address for IP address: "
       his-ipv6-addr .ipv6 cr
    then
 
-   set-his-mc-en                              \ Set his multicast link address
-   send-neigh-sol                             \ Neighbor solicitation
+   his-ipv6-addr his-ipv6-addr-temp copy-ipv6-addr
+   set-his-en-addr-mc                         \ Set his multicast link address
+   set-his-ipv6-addr-mc
+   his-ipv6-addr-mc-sol-node his-ipv6-addr copy-ipv6-addr
+   his-ipv6-addr-temp send-neigh-sol               \ Neighbor solicitation
+   his-ipv6-addr-temp his-ipv6-addr copy-ipv6-addr
 
    current-timeout >r
-   timeout-msecs @ set-timeout
+   ND_TIMEOUT set-timeout
    begin
       IP_HDR_ICMPV6 receive-ip-packet ?dup 0=  if  got-nd-ad?  then
    until
    r> restore-timeout
 
    bootnet-debug  if  ." Got MAC address: " his-en-addr .enaddr cr  then
-;
-
-: do-discovery  ( -- )
-   \ XXX need to do DHCPv6 discovery
-   his-ipv6-addr be-w@ h# fe80 =  if  do-neighbor-discovery  then
 ;
 
 : (resolve-en-addrv6)  ( 'dest-adr type -- 'en-adr type )
@@ -63,7 +64,7 @@ headerless
    else                                              ( 'dest-adr type )
       dup IPV6_TYPE  =  if
          swap his-ipv6-addr copy-ipv6-addr
-         his-en-addr broadcast-en-addr en=  if  do-discovery  then
+         his-en-addr broadcast-en-addr en=  if  do-neighbor-discovery  then
          his-en-addr swap exit
       then
    then
@@ -73,44 +74,113 @@ headerless
 
 : s-all-ipv6 ( -- )           \ See discovery info
    bootnet-debug  if
-      ." Initial configuration: (fixed) " cr
-      indent .my-ipv6-addr  cr
+      ." My IPv6 configuration (stateless autoconfiguration): " cr
+      indent .my-ipv6-addr-link-local  cr
+      my-ipv6-addr-global unknown-ipv6-addr? not  if
+         indent .my-ipv6-addr-global   cr
+         indent .my-prefix             cr
+      then
       indent .my-link-addr  cr
+      use-routerv6?  if  indent .routerv6-en-addr  cr  then
    then
 ;
 
-create default-ipv6-addr  h# fe c, h# 80 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c,
-			  0 c, 0 c, 0 c, h# ff c, h# fe c, 0 c, 0 c, 0 c,
-: set-my-ipv6-addr  ( -- )
-   default-ipv6-addr my-ipv6-addr copy-ipv6-addr
-   my-en-addr     c@ 2 xor my-ipv6-addr     8 +   c!
-   my-en-addr 1+           my-ipv6-addr     9 + 2 move
-   my-en-addr 3 +          my-ipv6-addr d# 13 + 3 move
+: detect-dad  ( -- )
+   DAD_TIMEOUT set-timeout
+   begin
+      IP_HDR_ICMPV6 receive-ip-packet
+      dup 0=  if  got-nd-ad?  abort" Duplicate IPv6 address detected"  then
+   until
+;
+: set-my-ipv6-addr-link-local  ( -- )
+   \ Duplicate Address Discovery
+   unknown-ipv6-addr my-ipv6-addr copy-ipv6-addr
+
+   default-ipv6-addr my-ipv6-addr-link-local copy-ipv6-addr
+   my-en-addr     c@ 2 xor my-ipv6-addr-link-local     8 +   c!
+   my-en-addr 1+           my-ipv6-addr-link-local     9 + 2 move
+   my-en-addr 3 +          my-ipv6-addr-link-local d# 13 + 3 move
+
+   set-my-ipv6-addr-mc
+
+   ipv6-addr-mc-all-nodes his-ipv6-addr copy-ipv6-addr
+   set-his-en-addr-mc
+   my-ipv6-addr-link-local send-neigh-sol
+   detect-dad
+
+   my-ipv6-addr-link-local my-ipv6-addr copy-ipv6-addr
 ;
 
-: configure-ipv6  ( -- )      \ Get discovery info
+: process-rd-options  ( adr len -- )
+   begin  dup 0>  while
+      over c@ case
+         1  of  over 2 + routerv6-en-addr copy-en-addr  endof  \ Source link-layer address option
+         3  of  over 2 + c@ to /prefix                       \ Prefix option
+                over 3 + c@ to prefix-flag
+                over 8 + be-l@ to prefix-lifetime            \ XXX lifetime
+                over d# 16 + my-prefix copy-ipv6-addr        \ Prefix
+                endof
+         5  of  over 4 + be-l@ to (link-mtu)  endof          \ MTU option
+      endcase
+      over 1+ c@ 8 * /string
+   repeat  2drop
+;
+: process-rd?  ( adr len -- router-ad? )
+   over c@ d# 134 <>  if  drop false exit  then  \ Router advertisement?
+   over 4 + c@ to router-hop-limit
+   over 5 + c@ to router-flags                   \ XXX What to do with stateful config?
+   over 6 + be-w@ to router-lifetime
+   over 8 + be-l@ to router-reachable-time
+   over d# 12 + be-l@ to router-retrans-time
+   d# 16 /string                                ( opt-adr,len )
+   process-rd-options                           ( )
+   true
+;
+: auto-cfg-global?  ( -- flag )
+   my-prefix unknown-ipv6-addr?  if  false exit  then
+   prefix-flag h# 40 and 0=  if  false exit  then
+   /prefix d# 64 =                              \ XXX What to do with /prefix other than 64?
+;
+: discover-router  ( -- )
+   unknown-ipv6-addr        my-ipv6-addr-global       copy-ipv6-addr
+   ipv6-addr-mc-all-routers his-ipv6-addr             copy-ipv6-addr
+   set-his-en-addr-mc
+   send-router-sol
+
+   RD_TIMEOUT set-timeout
+   begin
+      IP_HDR_ICMPV6 receive-ip-packet  ?dup 0=  if  process-rd?  then
+   until
+   auto-cfg-global? not  if  exit  then
+
+   \ DAD on the global IPv6 address
+   my-ipv6-addr-link-local my-ipv6-addr-global copy-ipv6-addr
+   my-prefix my-ipv6-addr-global /prefix 8 / move   \ XXX assume prefix multiple of 8 bits
+
+   ipv6-addr-mc-all-nodes his-ipv6-addr copy-ipv6-addr
+   set-his-en-addr-mc
+   my-ipv6-addr-global send-neigh-sol
+   detect-dad
+;
+
+: configure-ipv6  ( -- )       \ Get discovery info
+   use-ipv6?                   \ Save IPv6 flag
+   true to use-ipv6?
+
    ['] 4drop to icmpv6-err-callback-xt
    ['] 2drop to icmpv6-info-callback-xt
 
-   d# 64 to prefix
-   set-my-ipv6-addr
-   set-my-mc-ipv6-addr
+   d# 64 to /prefix
+   set-my-ipv6-addr-link-local
 
-   \ XXX Duplicate address discovery; Router discovery
-   \ ::0 => ff02::1:ffb4:0061 hop-by-hop, multicast listener report
-   \ ::0 => ff02::2 router solicitation
-   \ ::0 => ff02::1:ffb4:0061 DAD, neighbor solicitation with target addr
-   \ Wait for router advertisement, if gotten, continue
-   \ For each prefix in router advertisement, combine prefix with interface id
-   \ Add address to the list of assigned addresses for the interface
-   \ All addresses must be verified with DAD
-   \ fe80::259:08ff:feb4:0061 => ff02::1:ffb4:0061 hop-by-hop, multicast listener report
+   discover-router
+   to use-ipv6?                 \ Restore IPv6 flag
 ;
 
 : configure  ( -- )
-   use-ipv6?			\ Save IPv6 flag
+   use-ipv6?                    \ Save IPv6 flag
    false to use-ipv6?  configure
-   to use-ipv6?			\ Restore IPv6 flag
+   to use-ipv6?                 \ Restore IPv6 flag
    configure-ipv6
 ;
 
@@ -139,7 +209,7 @@ create default-ipv6-addr  h# fe c, h# 80 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c,
 : open  ( -- ok? )
 [ifdef] include-ipv4
    false to use-ipv6?
-   open 0=  if  false exit  then		\ IPv4 open
+   open 0=  if  false exit  then               \ IPv4 open
 [else]
    open-link
    parse-args
@@ -147,11 +217,11 @@ create default-ipv6-addr  h# fe c, h# 80 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c,
    my-self to obp-tftp-ih
 [then]
    true to use-ipv6?
-   ['] (resolve-en-addrv6)  to resolve-en-addr
-   configure-ipv6
    set-mc-hash  if  close false exit  then
+   configure-ipv6
    s-all-ipv6
    setup-ip-attr
+   ['] (resolve-en-addrv6)  to resolve-en-addr
    true
 ;
 

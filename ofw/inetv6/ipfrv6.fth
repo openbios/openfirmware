@@ -3,32 +3,6 @@ purpose:  Internet Protocol version 6 (IPv6) fragmentation/reassembly implementa
 
 headerless
 
-d#   0 constant IP_HDR_HOP		\ Hop-by-hop option
-d#   1 constant IP_HDR_ICMPV4		\ Internet control message protocol - IPv4
-d#   2 constant IP_HDR_IGMPV4		\ Internet group management protocol - IPv4
-d#   4 constant IP_HDR_IPV4
-d#   6 constant IP_HDR_TCP
-d#   8 constant IP_HDR_EGP		\ Exterior gateway protocol
-d#   9 constant IP_HDR_IGP		\ Cisco private interior gateway
-d#  17 constant IP_HDR_UDP
-d#  41 constant IP_HDR_IPV6
-d#  43 constant IP_HDR_ROUTING		\ Routing header
-d#  44 constant IP_HDR_FRAGMENT
-d#  45 constant IP_HDR_IDRP		\ Interdomain routing protocol
-d#  46 constant IP_HDR_RSVP		\ Resource reservation protocol
-d#  47 constant IP_HDR_GRE		\ General routing encapsulation
-d#  50 constant IP_HDR_SECURE		\ Encrypted security payload
-d#  51 constant IP_HDR_AUTHEN		\ Authentication
-d#  58 constant IP_HDR_ICMPV6
-d#  59 constant IP_HDR_NONE		\ No next header
-d#  60 constant IP_HDR_DEST		\ Destination options
-d#  88 constant IP_HDR_EIGRP
-d#  89 constant IP_HDR_OSPF
-d# 108 constant IP_HDR_COMP		\ IP payload compression protocol
-d# 115 constant IP_HDR_L2TP		\ Layer 2 tunneling protocol
-d# 132 constant IP_HDR_SCTP		\ Stream control transmission protocol
-d# 135 constant IP_HDR_MOBILITY		\ Mobile IPV6
-
 struct ( ipv6-frag-header )
    1 sfield ipv6-fh-next-hdr
    1 sfield ipv6-fh-len
@@ -48,7 +22,7 @@ struct ( ipv6-frag-header )
 constant /ipv6-frag-hdr
 
 instance variable frag-id
-0 instance value hop-limit
+h# 40 instance value hop-limit
 
 headers
 
@@ -75,7 +49,8 @@ headerless
       h# 6000.0000  ipv6-version     xl!             \ version 6
       ( protocol )  ipv6-next-hdr    xc!             ( len )
       ( len ) dup   ipv6-length      xw!             ( len )
-      hop-limit     ipv6-hop-limit   xc!             ( len )
+      his-ipv6-addr ipv6-addr-local?  if  hop-limit  else  router-hop-limit  then
+      ( hop-limit ) ipv6-hop-limit   xc!             ( len )
       my-ipv6-addr  ipv6-source-addr copy-ipv6-addr  ( len )
       his-ipv6-addr ipv6-dest-addr   copy-ipv6-addr  ( len )
    /ipv6-header +                                    ( ip-len )

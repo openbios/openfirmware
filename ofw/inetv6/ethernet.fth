@@ -39,12 +39,18 @@ instance defer resolve-en-addr  ( 'dest-adr type -- 'en-adr type )
 
 /e buffer: my-en-addr
 /e buffer: his-en-addr
+/e buffer: routerv6-en-addr
+/e buffer: mc-en-addr
 
 : .my-link-addr   ( -- )  ." My MAC: " my-en-addr .enaddr  ;
 : .his-link-addr  ( -- )  ." His MAC: " his-en-addr  .enaddr  ;
+: .routerv6-en-addr  ( -- )  ." IPv6 router MAC: " routerv6-en-addr .enaddr  ;
 
-create multicast-en-addr  h# 33 c, 33 c, h# ff c, 0 c, 0 c, 0 c,
-create broadcast-en-addr  h# ff c, ff c, h# ff c, h# ff c, h# ff c, h# ff c,
+create mc-en-addr-all-nodes  h# 33 c, h# 33 c, h# 00 c, 0 c, 0 c, 1 c,
+create multicast-en-addr     h# 33 c, h# 33 c, h# ff c, 0 c, 0 c, 0 c,
+create broadcast-en-addr     h# ff c, h# ff c, h# ff c, h# ff c, h# ff c, h# ff c,
+
+: unknown-en-addr?  ( 'en -- flag )  dup l@ 0= swap w@ 0= and  ;
 
 decimal
 
@@ -54,13 +60,21 @@ struct ( ether-header )
     2 sfield en-type
 constant /ether-header
 
-: set-mc-hash  ( -- err? )
-   my-ipv6-addr /ipv6 + 3 - multicast-en-addr 3 + 3 move
-   multicast-en-addr /e " set-multicast" ['] $call-parent catch 0=  if  false exit  then
-   4drop
-   multicast-en-addr /e " $crc" evaluate invert
+: (set-mc-hash)  ( 'mc-en-adr -- err? )
+   /e " $crc" evaluate invert
    " set-hash" ['] $call-parent catch  if  3drop true  else  false  then
 ;
+
+: set-mc-hash  ( -- err? )
+   \ XXX Make buffer of all multicast addresses for "set-multicast"
+   my-en-addr 3 + multicast-en-addr 3 + 3 move
+   multicast-en-addr /e " set-multicast" ['] $call-parent catch 0=  if  false exit  then
+   4drop
+   multicast-en-addr    (set-mc-hash)
+   mc-en-addr-all-nodes (set-mc-hash) or
+;
+
+: multicast-en-addr?  ( adr -- flag )  w@ h# 3333 =  ;
 
 : select-ethernet-header  ( -- )  packet-buffer set-struct  ;
 

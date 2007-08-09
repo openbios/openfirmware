@@ -6,6 +6,12 @@ hex
 d# 16 constant /ipv6                 \ Bytes per IP address
 /ipv6 buffer: my-ipv6-addr
 
+0 value router-hop-limit
+0 value router-flags
+0 value router-lifetime
+0 value router-reachable-time
+0 value router-retrans-time
+
 : copy-ipv6-addr  ( src dst -- )  /ipv6 move  ;
 
 : .ipv6  ( buf -- )
@@ -107,7 +113,7 @@ Erroneous test cases:
 " ::xyz"
 " 123::456:xyz"
 " xyz:123::456"
-" 123:::456"                  \ Error was not caught!
+" 123:::456"
 " 123"
 " 123:456"
 " ::192.xy.1.102"

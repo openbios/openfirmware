@@ -23,10 +23,11 @@ headerless
 : (setup-ipv6-attr)  (  --  ) 	\ set tftp ip addresses
    (setup-ip-attr)
 
-   my-ipv6-addr /ipv6        " client-ipv6"     set-chosen-property
-   his-ipv6-addr /ipv6       " server-ipv6"     set-chosen-property
-   router-ipv6-addr /ipv6    " gateway-ipv6"    set-chosen-property
-   my-mc-ipv6-addr /ipv6     " multicast-ipv6"  set-chosen-property
+   my-prefix               /ipv6  " ipv6-prefix"         set-chosen-property
+   my-ipv6-addr-link-local /ipv6  " client-ipv6-local"   set-chosen-property
+   my-ipv6-addr-global     /ipv6  " client-ipv6-global"  set-chosen-property
+   his-ipv6-addr           /ipv6  " server-ipv6"         set-chosen-property
+   router-ipv6-addr        /ipv6  " gateway-ipv6"        set-chosen-property
 ;
 
 ['] (setup-ipv6-attr) is setup-ip-attr

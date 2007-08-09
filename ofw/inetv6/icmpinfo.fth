@@ -11,32 +11,46 @@ purpose:  Internet Control Message Protocol version 6 (ICMPv6) info message hand
 : handle-router-sol  ( adr len -- )  2drop  ;        \ Router solicitation
 : handle-router-ad  ( adr len -- )  2drop  ;         \ Router advertisement
 
+: send-router-sol  ( -- )
+   8 allocate-icmpv6 set-struct                      \ Option: source link-layer addr
+   d# 133 icmp-type xc!
+   0 icmp-code xc!
+   0 icmp-flags xl!
+   h# 101 icmp-data xw!                              \ Option type 1 (source mac addr)
+   my-en-addr icmp-data 2 + copy-en-addr
+
+   hop-limit >r h# ff to hop-limit
+   the-struct 8 2dup send-icmpv6-packet
+   free-icmpv6
+   r> to hop-limit
+;
+
 : handle-mc-router-ad  ( adr len -- )  2drop  ;      \ Multicast router advertisement
 : handle-mc-router-sol  ( adr len -- )  2drop  ;     \ Multicast router solicitation
 : handle-mc-router-term  ( adr len -- )  2drop  ;    \ Multicast router termination
 
-: send-neigh-sol  ( -- )
+: send-neigh-sol  ( 'ipv6 -- )
    d# 24 allocate-icmpv6 set-struct                  \ Dest IPv6 + one option
    d# 135 icmp-type xc!
    0 icmp-code xc!
    0 icmp-flags xl!
-   his-ipv6-addr icmp-data copy-ipv6-addr
+   ( 'ipv6 ) icmp-data copy-ipv6-addr
    h# 101 icmp-data /ipv6 + xw!                      \ Option type 1 (source mac addr)
                                                      \ Length (in 8 octels)
-   my-en-addr icmp-data /ipv6 + 2 + copy-ipv6-addr
+   my-en-addr icmp-data /ipv6 + 2 + copy-en-addr
    hop-limit >r h# ff to hop-limit                   \ Save and change hop-limit
-   the-struct d# 24 2dup send-mc-icmpv6-packet
+   the-struct d# 24 2dup send-icmpv6-packet
    free-icmpv6
    r> to hop-limit                                   \ Restore hop-limit
 ;
 
-: send-neigh-ad  ( solicited?  -- )
+: send-neigh-ad  ( 'ip solicited?  -- )
    d# 24 allocate-icmpv6 set-struct                  \ Dest IPv6 + one option
 
    d# 136 icmp-type xc!
    0 icmp-code xc!
    h# 40 and h# 20 or icmp-flags xl!                 \ Flags = (un)solicited, override
-   my-ipv6-addr icmp-data copy-ipv6-addr
+   ( 'ip ) icmp-data copy-ipv6-addr
    h# 201 icmp-data /ipv6 + xw!                      \ Option type 2 (target mac addr)
                                                      \ Length (in 8 octels)
    my-en-addr icmp-data /ipv6 + 2 + copy-ipv6-addr
@@ -47,16 +61,31 @@ purpose:  Internet Control Message Protocol version 6 (ICMPv6) info message hand
    r> to hop-limit                                   \ Restore hop-limit
 ;
 
+/ipv6 buffer: his-ipv6-addr-save
+/ipv6 buffer: my-ipv6-addr-save
 : handle-neigh-sol  ( adr len -- )                   \ Neighbor solicitation
    \ XXX Verify hop limit is 255.
    dup d# 24 <  if  2drop exit  then
    bootnet-debug  if
       ." Neighbor solicitation from MAC: " over d# 26 + .enaddr cr
    then
-   over /icmp-header + my-ipv6-addr ipv6= not  if  ." Not for me" cr 2drop exit  then
-   2drop
+   over /icmp-header + my-ipv6-addr ipv6= not  if
+      bootnet-debug  if  ." Not for me" cr  then
+      2drop exit  
+   then
+
    \ XXX Send Neighbor Advertisement
-   true send-neigh-ad
+   drop                                              ( adr )
+   his-ipv6-addr his-ipv6-addr-save copy-ipv6-addr   \ Save his-ipv6-addr
+   my-ipv6-addr  my-ipv6-addr-save  copy-ipv6-addr
+   ipv6-dest-addr   c@ dup h# ff = swap h# fe = or  if
+      my-ipv6-addr-link-local  else  my-ipv6-addr-global
+   then
+   my-ipv6-addr copy-ipv6-addr
+   ipv6-source-addr his-ipv6-addr copy-ipv6-addr     \ Use the solicitor's IPv6 addr as dst
+   /icmp-header + true send-neigh-ad
+   his-ipv6-addr-save his-ipv6-addr copy-ipv6-addr   \ Restore his-ipv6-addr
+   my-ipv6-addr-save  my-ipv6-addr  copy-ipv6-addr
 ;
 
 : handle-neigh-ad  ( adr len -- )  2drop  ;          \ Neighbor advertisement

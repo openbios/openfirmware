@@ -72,7 +72,7 @@ call-tftp: his-ipv6-addr     ( -- 'ip )
 call-tftp: set-dest-ipv6     ( 'ip -- )
 call-tftp: max-ipv6-payload  ( -- n )
 call-tftp: prefix-match?     ( 'ip1 'ip2 -- flag )
-call-tftp: his-mc-ipv6-addr? ( 'ip -- flag )
+call-tftp: his-ipv6-addr-mc? ( 'ip -- flag )
 [then]
 
 call-tftp: set-timeout     ( #milliseconds -- )
