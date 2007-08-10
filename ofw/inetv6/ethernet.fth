@@ -66,9 +66,13 @@ constant /ether-header
 ;
 
 : set-mc-hash  ( -- err? )
-   \ XXX Make buffer of all multicast addresses for "set-multicast"
    my-en-addr 3 + multicast-en-addr 3 + 3 move
-   multicast-en-addr /e " set-multicast" ['] $call-parent catch 0=  if  false exit  then
+   /e 2 * dup >r alloc-mem >r                        ( R: len adr )
+   multicast-en-addr    r@      /e move              ( R: len adr )
+   mc-en-addr-all-nodes r@ /e + /e move              ( R: len adr ) 
+   2r@ swap " set-multicast" ['] $call-parent catch  ( flag )  ( R: len adr )
+   2r> swap free-mem                                 ( flag )
+   0=  if  false exit  then
    4drop
    multicast-en-addr    (set-mc-hash)
    mc-en-addr-all-nodes (set-mc-hash) or
