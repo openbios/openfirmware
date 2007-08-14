@@ -17,6 +17,8 @@ purpose: Copy a file onto the NAND FLASH
 
 : >crc  ( index -- crc )  crc-buf swap la+ l@  ;
 
+: $call-nand  ( ?? method$ -- ?? )  nandih $call-method  ;
+
 : close-nand-ihs  ( -- )
    fileih  ?dup  if  0 to fileih  close-dev  0 to #image-eblocks  then
    nandih  ?dup  if  0 to nandih  close-dev  0 to #nand-pages     then
@@ -44,11 +46,11 @@ purpose: Copy a file onto the NAND FLASH
 : open-nand  ( -- )
    " /nandflash" open-dev to nandih
    nandih 0=  " Can't open NAND FLASH device"  ?nand-abort
-   " erase-size" nandih $call-method to /nand-block
-   " block-size" nandih $call-method to /nand-page
-   " size" nandih $call-method  /nand-page  um/mod nip to #nand-pages
+   " erase-size" $call-nand to /nand-block
+   " block-size" $call-nand to /nand-page
+   " size" $call-nand  /nand-page  um/mod nip to #nand-pages
    /nand-block /nand-page /  to nand-pages/block
-   " start-scan" nandih $call-method
+   " start-scan" $call-nand
 ;
 
 h# 20 buffer: line-buf
@@ -131,6 +133,34 @@ h# 100 buffer: crc-name-buf
    #crc-records  if  check-mem-crc  else  drop  then
 ;
 
+defer show-erasing  ( #blocks -- )
+: (show-erasing)  ( #blocks -- )  ." Erasing " . ." blocks" cr  ;
+' (show-erasing) is show-erasing
+
+defer show-erased
+: (show-erased)  ( block# -- )  (cr .  ;
+' (show-erased) is show-erased
+
+defer show-bad
+: (show-bad)  ( block# -- )  drop  ;
+' (show-bad) is show-bad
+
+defer show-clean
+: (show-clean)  ( block# -- )  drop  ;
+' (show-clean) is show-clean
+
+defer show-cleaning
+: (show-cleaning)  ( -- )  cr ." Cleanmarkers" cr  ;
+' (show-cleaning) is show-cleaning
+
+defer show-writing  ( #blocks -- )
+: (show-writing)  ." Writing " . ." blocks" cr  ;
+' (show-writing) is show-writing
+
+defer show-written
+: (show-written)  ( block# -- )  (cr .  ;
+' (show-written) is show-written
+
 : copy-nand  ( "devspec" -- )
    open-nand
    get-img-filename
@@ -139,21 +169,21 @@ h# 100 buffer: crc-name-buf
 
    ['] noop to show-progress
 
-   ." Erasing..." cr
-   " wipe" nandih $call-method
+   #nand-pages nand-pages/block / show-erasing
+   ['] show-bad  ['] show-erased  " (wipe)" $call-nand
 
-   cr ." Writing " #image-eblocks .  ." blocks" cr
+   #image-eblocks show-writing
 
    #image-eblocks  0  ?do
-      (cr i .
       read-image-block
       i ?check-crc
-      load-base " copy-block" nandih $call-method  ( error? )
-      " Error writing to NAND FLASH" ?nand-abort
+      load-base " copy-block" $call-nand          ( page# error? )
+      " Error writing to NAND FLASH" ?nand-abort  ( page# )
+      nand-pages/block / show-written             ( )
    loop
 
-   cr ." Filling with cleanmarkers ..."
-   " put-cleanmarkers" nandih $call-method  cr
+   show-cleaning
+   ['] show-clean " put-cleanmarkers" $call-nand
 
    close-nand-ihs
 ;
@@ -169,10 +199,10 @@ h# 100 buffer: crc-name-buf
    #image-eblocks  0  ?do
       (cr i .
       read-image-block
-      load-base /nand-block +  " read-next-block" nandih $call-method  ( )
+      load-base /nand-block +  " read-next-block" $call-nand           ( )
       load-base  load-base /nand-block +  /nand-block  comp  if        ( )
          cr  ." Miscompare in block starting at page# "                ( )
-         " scan-page#" nandih $call-method  .x cr                      ( )
+         " scan-page#" $call-nand  .x cr                               ( )
          ?key-stop
       then                                                             ( )
    repeat                                                              ( )
@@ -210,13 +240,13 @@ h# 100 buffer: crc-name-buf
    #crc-records  0  ?do
       (cr i .
 
-      load-base " read-next-block" nandih $call-method     ( )
+      load-base " read-next-block" $call-nand              ( )
 
       load-base /nand-block  $crc  i >crc                  ( actual-crc expected-crc )
       2dup <>  if                                          ( actual-crc expected-crc )
          cr ." CRC miscompare - expected " . ." got " .    ( )
          ." in NAND block starting at page "
-         " scan-page#" nandih $call-method . cr
+         " scan-page#" $call-nand . cr
          ?key-stop
       else                                                 ( actual-crc expected-crc )
          2drop                                             ( )
@@ -255,13 +285,13 @@ true value dump-oob?
    \ The stack is empty at the end of each line unless otherwise noted
    #nand-pages  0  do
       (cr i .
-      load-base  i  nand-pages/block  " read-blocks" nandih $call-method
+      load-base  i  nand-pages/block  " read-blocks" $call-nand
       nand-pages/block =  if
          load-base /nand-block  written?  if
             load-base /nand-block  " write" fileih $call-method drop
             dump-oob?  if
                i  nand-pages/block  bounds  ?do
-                  i " read-oob" nandih $call-method  h# 40  ( adr len )
+                  i " read-oob" $call-nand  h# 40  ( adr len )
                   " write" fileih $call-method drop
                   i pad !  pad 4 " write" fileih $call-method drop
                loop
@@ -284,7 +314,7 @@ true value dump-oob?
    fileih 0= " Can't open NAND fastboot image file"  ?nand-abort
 
    " size" fileih $call-method  drop                      ( len )
-   " start-fastcopy" nandih $call-method                  ( error? )
+   " start-fastcopy" $call-nand                           ( error? )
    " Not enough spare NAND space for fast copy" ?nand-abort
 
    begin                                                  ( )
@@ -293,10 +323,10 @@ true value dump-oob?
       \ If the read didn't fill a complete block, zero the rest
       load-base /nand-block  rot /string  erase
 
-      load-base " next-fastcopy" nandih $call-method      ( )
+      load-base " next-fastcopy" $call-nand               ( )
    repeat                                                 ( len )
    drop                                                   ( )
-   " end-fastcopy" nandih $call-method                    ( )
+   " end-fastcopy" $call-nand                             ( )
 
    close-nand-ihs
 ;
