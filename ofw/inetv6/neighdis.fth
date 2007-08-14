@@ -27,8 +27,8 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
 /ipv6 buffer: his-ipv6-addr-temp
 : do-neighbor-discovery  ( -- )
    bootnet-debug  if
-      ." ICMPv6 ND protocol: Getting MAC address for IP address: "
-      his-ipv6-addr .ipv6 cr
+      ." ICMPv6 ND protocol: Getting MAC address for IPv6 address: " cr
+      indent his-ipv6-addr .ipv6 cr
    then
 
    his-ipv6-addr his-ipv6-addr-temp copy-ipv6-addr
@@ -56,7 +56,11 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
          broadcast-en-addr his-en-addr copy-en-addr  ( ip-type )
       else                                           ( ip-type 'ip-adr )
          his-ip-addr copy-ip-addr                    ( ip-type )
-         his-en-addr broadcast-en-addr en=  if  do-arp  then  ( ip-type )
+         his-ip-addr my-ip-addr ip-prefix=?  if
+            his-en-addr broadcast-en-addr en=  if  do-arp  then  ( ip-type )
+         else
+            router-en-addr his-en-addr copy-en-addr
+         then
       then
       his-en-addr  swap
 [then]
@@ -76,7 +80,7 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
    bootnet-debug  if
       ." My IPv6 configuration (stateless autoconfiguration): " cr
       indent .my-ipv6-addr-link-local  cr
-      my-ipv6-addr-global unknown-ipv6-addr? not  if
+      my-ipv6-addr-global knownv6?  if
          indent .my-ipv6-addr-global   cr
          indent .my-prefix             cr
       then

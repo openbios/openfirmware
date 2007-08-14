@@ -249,6 +249,7 @@ headers
    0 file-name-buf c!
    unknown-ip-addr name-server-ip copy-ip-addr
    unknown-ip-addr dhcp-server-ip copy-ip-addr
+   unknown-ip-addr name-server-ip-slave copy-ip-addr
 ;
 
 also forth definitions
@@ -483,7 +484,9 @@ headerless
       then
    then
 
-   d#  6 find-option  if  drop name-server-ip    copy-ip-addr  then
+   d#  6 find-option  if  over name-server-ip copy-ip-addr  
+                          4 >  if  4 + name-server-ip-slave copy-ip-addr  else  drop  then
+                      then
    d# 28 find-option  if  drop broadcast-ip-addr copy-ip-addr  then
    d# 15 find-option  if  'domain-name    place-cstr drop  then
    d# 12 find-option  if  'client-name    place-cstr drop  then
@@ -493,7 +496,10 @@ headerless
    bootnet-debug  if
       indent ." Received DHCP ACK" cr
       name-server-ip known?  if
-         indent indent ." Name server: " name-server-ip .ipaddr cr
+         indent indent ." Master name server: " name-server-ip .ipaddr cr
+      then
+      name-server-ip-slave known?  if
+         indent indent ." Slave name server:  " name-server-ip-slave .ipaddr cr
       then
       broadcast-ip-addr   if
          indent indent ." IP broadcast: " broadcast-ip-addr (.ipaddr) cr

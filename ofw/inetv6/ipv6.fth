@@ -135,6 +135,10 @@ create his-ipv6-addr-mc-sol-node  h# ff c, 2 c, 0 w, 0 l, 0 w, 0 c, 1 c, h# ff c
 : ipv6-addr-local?  ( adr-buf -- flag )  c@ h# e0 and h# 20 <>  ;
 
 : use-routerv6?  ( -- flag )  routerv6-en-addr unknown-en-addr? not  ;
+: use-ipv6-ok?  ( -- flag )
+   his-ipv6-addr knownv6?
+   his-ipv6-addr ipv6-addr-local? not  if  use-routerv6? and  then
+;
 
 /ipv6 buffer: server-ipv6-addr
 : use-serverv6?  ( -- flag )  server-ipv6-addr knownv6?  ;
@@ -174,21 +178,20 @@ headerless
 [then]
 
 headers
-: set-dest-ipv6  ( buf -- )
-   dup his-ipv6-addr ipv6=  if
-      drop
+: (set-dest-ipv6)  ( buf -- )
+   his-ipv6-addr copy-ipv6-addr
+   set-his-ipv6-addr-mc
+   his-ipv6-addr ipv6-addr-local?  if
+      unlock-link-addr
+      my-ipv6-addr-link-local
    else
-      his-ipv6-addr copy-ipv6-addr
-      set-his-ipv6-addr-mc
-      his-ipv6-addr ipv6-addr-local?  if
-         unlock-link-addr
-         my-ipv6-addr-link-local
-      else
-         use-routerv6?  if  routerv6-en-addr his-en-addr copy-en-addr  then
-         my-ipv6-addr-global
-      then
-      my-ipv6-addr copy-ipv6-addr
+      use-routerv6?  if  routerv6-en-addr his-en-addr copy-en-addr  then
+      my-ipv6-addr-global
    then
+   my-ipv6-addr copy-ipv6-addr
+;
+: set-dest-ipv6  ( buf -- )
+   dup his-ipv6-addr ipv6=  if  drop  else  (set-dest-ipv6)  then
 ;
 
 : lock-ipv6-address  ( -- )

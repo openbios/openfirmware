@@ -158,7 +158,11 @@ headers
          broadcast-en-addr his-en-addr copy-en-addr  ( ip-type )
       else                                           ( ip-type 'ip-adr )
          his-ip-addr copy-ip-addr                    ( ip-type )
-         his-en-addr broadcast-en-addr en=  if  do-arp  then  ( ip-type )
+         his-ip-addr my-ip-addr ip-prefix=?  if
+            his-en-addr broadcast-en-addr en=  if  do-arp  then  ( ip-type )
+         else
+            router-en-addr his-en-addr copy-en-addr  \ Not local, go through the gateway
+         then
       then
       his-en-addr  swap exit
    then                                              ( 'dest-adr type )

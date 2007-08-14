@@ -7,26 +7,46 @@ headerless
 
 [ifndef] include-ipv4
 : $>ip  ( hostname$ -- 'ip )  .ipv4-not-supported  ;
-: (resolve)  ( hostname$ -- 'ip )  .ipv4-not-supported  ;
+: resolvev4  ( hostname$ -- )  .ipv4-not-supported  ;
 : set-dest-ip  ( buf -- )  .ipv4-not-supported  ;
 : ?bad-ip  ( flag -- )  abort" Bad host name or address"  ;
 [then]
 
+: resolvev6  ( hostname$ -- )
+   true to use-ipv6?
+   unknown-ipv6-addr his-ipv6-addr copy-ipv6-addr
+   abort" IPv6 DNS not supported yet"  
+;
+
 headers
-: (resolvev6)  ( hostname$ -- 'ip )  ;
 
 \ XXX Try (resolve) or (resolve6) first.  If fail, try the other one.
-: (resolve)  ( hostname$ -- 'ip )
-   use-ipv6?  if  (resolvev6) true  else  (resolve) false  then
-   dup to use-ipv6?
-   if  set-dest-ipv6  else  set-dest-ip  then
+: (resolve)  ( hostname$ -- )
+   2dup ['] resolvev6  catch  if
+      2drop
+      false to use-ipv6?
+      resolvev4
+   else
+      2drop
+   then
+   use-ipv6-ok? dup  to use-ipv6?  if     \ Make sure all the addresses are set properly
+      his-ipv6-addr (set-dest-ipv6)
+      bootnet-debug  if  ." Use IPv6 protocol" cr  then
+   else
+      his-ip-addr (set-dest-ip)
+      bootnet-debug  if  ." Use IP protocol" cr  then
+   then
 ;
 
 : $set-host  ( hostname$ -- )
    dup 0= ?bad-ip
    2dup ['] $>ip catch  if  2drop  else  false to use-ipv6? set-dest-ip 2drop exit  then
-   2dup ipv6-buf ['] $ipv6# catch nip nip not  if  true to use-ipv6? ipv6-buf set-dest-ipv6 exit  then
-   (resolve)
+   2dup ipv6-buf ['] $ipv6# catch  if
+      3drop (resolve)
+   else
+      2drop
+      true to use-ipv6? ipv6-buf set-dest-ipv6
+   then
 ;
 
 \ LICENSE_BEGIN

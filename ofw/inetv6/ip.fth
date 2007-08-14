@@ -42,6 +42,7 @@ d# 256 buffer: 'domain-name
 headers
 /i buffer: his-ip-addr
 /i buffer: name-server-ip
+/i buffer: name-server-ip-slave
 ' 'domain-name     " domain-name"    chosen-string
 
 headerless
@@ -125,13 +126,12 @@ headerless
 0 instance value last-ip-packet
 
 headers
+: (set-dest-ip)  ( buf -- )
+   his-ip-addr copy-ip-addr
+   unlock-link-addr
+;
 : set-dest-ip  ( buf -- )
-   dup his-ip-addr ip=  if
-      drop
-   else
-      his-ip-addr copy-ip-addr
-      unlock-link-addr
-   then
+   dup his-ip-addr ip=  if  drop  else  (set-dest-ip)  then
 ;
 
 : lock-ip-address  ( -- )

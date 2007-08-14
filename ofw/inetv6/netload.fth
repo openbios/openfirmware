@@ -26,7 +26,9 @@ headerless
 ;
 
 : show-router-addr  ( -- )
-   bootnet-debug  if  ." Router IP: = " router-ip-addr .ipaddr  cr  then 
+   bootnet-debug  if
+      .router-en-addr  ."  Router IP: = " router-ip-addr .ipaddr  cr 
+   then 
 ; 
 
 : show-all-en-ip-address  (  --  ) 
@@ -102,6 +104,7 @@ headerless
             indent ." Boot server: " server-ip-addr .ipaddr cr
          then
          use-router?  if
+            indent .router-en-addr cr
             indent ." Router: " router-ip-addr .ipaddr cr
          then
       then
@@ -400,6 +403,12 @@ headers
    2drop false
 ;
 
+: resolve-router-en-addr  ( -- )
+   router-ip-addr his-ip-addr copy-ip-addr
+   do-arp
+   his-en-addr router-en-addr copy-en-addr
+;
+
 defer configured  ' noop to configured
 : configure  ( -- )
    use-last?  if  configured exit  then
@@ -430,6 +439,7 @@ defer configured  ' noop to configured
          server-ip-addr set-dest-ip
       then
    then
+   use-router?  if  resolve-router-en-addr  then    \ Find router's MAC address
    show-all-en-ip-address
    configured
 ;

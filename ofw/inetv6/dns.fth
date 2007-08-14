@@ -13,9 +13,19 @@ headerless
 
 \ DNS question format:  QNAME-variable_length, QTYPE(/w), QCLASS(/w)
 \ QTYPE value for "A" (host name) is 1
+\ QTYPE value for "AAAA" (IPv6 hostname) is h# 1c
 \ QCLASS value for "IN" (Internet) is 1
 
-d# 1022 value fw-port#
+\ d# 1022 value fw-port#                   \ It's been assigned by IANA.
+h# 800a constant fw-port#                  \ It's unassigned as of 8/13/2007.
+
+d# 2000 constant dns-timeout
+
+2 value #retries-a
+2 value #retries-aaaa
+
+0 value    qtype
+1 constant qclass
 
 \ Encode/decode various DNS data types
 : +dnsw  ( w -- )  wbsplit +xb +xb  ;
@@ -109,7 +119,7 @@ d# 53 constant dns-port#
    \        ID       flags    #questions  #answers  #namesrvrs  #additional
    dns-xid +dnsw  h# 100 +dnsw  1 +dnsw     0 +dnsw   0 +dnsw     0 +dnsw
    +dns-host
-   1 +dnsw  1 +dnsw
+   qtype +dnsw  qclass +dnsw
    x$  fw-port# dns-port# send-udp-packet
    r> /dns-query free-udp
 ;
@@ -164,7 +174,7 @@ defer handle-dns-call  ' noop is handle-dns-call
 
    -dnsw  -dnsw  wljoin       ( class.type )
    -dnsl drop                 ( class.type )   \ Discard TTL
-   h# 1.0001 =  if            ( )
+   qtype qclass wljoin =  if  ( )
       -dnsw drop	\ Discard RDLENGTH (it better be 4!)
       x$ drop true            ( 'ip true )
    else                       ( )
@@ -192,21 +202,25 @@ headers
 \ The host name can be either a simple name (e.g. "pi") or a
 \ fully-qualified domain name (e.g. "pi.firmworks.com").
 : try-resolve  ( hostname$ -- 'ip )
-   name-server-ip set-dest-ip                    ( hostname$ )
-   d# 2000 set-timeout                           ( hostname$ )
-   send-dns-query                                ( )
-   dns-xid dns-port# fw-port# receive-dns-reply  ( error? )
-   1 and throw                                   ( )
-   get-host-addr                                 ( answer-ip )
+   dns-timeout set-timeout                          ( hostname$ )
+   send-dns-query                                   ( )
+   dns-xid dns-port# fw-port# receive-dns-reply     ( error? )
+   1 and throw                                      ( )
+   get-host-addr                                    ( answer-ip )
 ;
-: (resolve)  ( hostname$ -- )
-   bootnet-debug  if                             ( hostname$ )
-      ." Using DNS to find the IP address of "   ( hostname$ )
-      2dup type cr                               ( hostname$ )
-   then                                          ( hostname$ )
+: resolve-a  ( hostname$ -- 'ip )
+   bootnet-debug  if                                ( hostname$ )
+      ." Using DNS to find the IP address of "      ( hostname$ )
+      2dup type cr                                  ( hostname$ )
+   then                                             ( hostname$ )
 
-   d# 20 0  do		\ Try 20 times at 2 seconds per try
-      2dup ['] try-resolve catch  ?dup  if       ( hostname$ x x err )
+   1 to qtype
+   #retries-a 0  do		\ Try 20 times at 2 seconds per try
+      name-server-ip set-dest-ip
+      i 1 and  if
+         name-server-ip-slave known?  if  name-server-ip-slave set-dest-ip  then
+      then
+      2dup ['] try-resolve catch  ?dup  if          ( hostname$ x x err )
          nip nip                                    ( hostname$ err )
          1 <>  if                                   ( hostname$ )
             bootnet-debug  if                       ( hostname$ )
@@ -214,20 +228,65 @@ headers
             then                                    ( hostname$ )
             true abort" Unknown hostname"
          then                                       ( hostname$ )
-      else                                       ( hostname$ 'ip )
-         bootnet-debug  if                       ( hostname$ 'ip )
-            ." Got IP address "  dup .ipaddr cr  ( hostname$ 'ip )
-         then                                    ( hostname$ 'ip )
+      else                                          ( hostname$ 'ip )
+         bootnet-debug  if                          ( hostname$ 'ip )
+            indent ." Got IP address "  dup .ipaddr cr     ( hostname$ 'ip )
+         then                                       ( hostname$ 'ip )
 
-         nip nip                                 ( 'ip )
+         nip nip                                    ( 'ip )
          unloop exit
-      then                                       ( hostname$ )
-   loop                                          ( hostname$ )
+      then                                          ( hostname$ )
+   loop                                             ( hostname$ )
 
-   bootnet-debug  if  ." No answer to DNS request" cr  then    ( hostname$ )
+   bootnet-debug  if  ." No answer to DNS A request" cr  then    ( hostname$ )
    true abort" DNS: No answer"
 ;
-\ : resolve  ( 'ip hostname$ -- )  (resolve) swap copy-ip-addr  ;
+
+[ifdef] include-ipv6
+: resolve-aaaa  ( hostname$ -- )
+   bootnet-debug  if                                   ( hostname$ )
+      ." Using DNS AAAA to find the IPv6 address of "  ( hostname$ )
+      2dup type cr                                     ( hostname$ )
+   then
+
+   h# 1c to qtype
+   #retries-aaaa 0  do		\ Try 20 times at 2 seconds per try
+      name-server-ip set-dest-ip
+      i 1 and  if
+         name-server-ip-slave known?  if  name-server-ip-slave set-dest-ip  then
+      then
+      2dup ['] try-resolve catch  ?dup  if          ( hostname$ x x err )
+         nip nip                                    ( hostname$ err )
+         1 <>  if                                   ( hostname$ )
+            bootnet-debug  if                       ( hostname$ )
+               indent ." Unknown IPv6 hostname: " 2dup type cr  ( hostname )
+            then                                    ( hostname$ )
+            true abort" Unknown IPv6 hostname"
+         then                                       ( hostname$ )
+      else                                          ( hostname$ 'ip )
+         bootnet-debug  if                          ( hostname$ 'ip )
+            indent ." Got IPv6 address "  dup .ipv6 cr     ( hostname$ 'ip )
+         then                                       ( hostname$ 'ip )
+
+         set-dest-ipv6 2drop                        ( )
+         unloop exit
+      then                                          ( hostname$ )
+   loop                                             ( hostname$ )
+
+   bootnet-debug  if  indent ." No answer to DNS AAAA request" cr  then    ( hostname$ )
+   true abort" DNS AAAA: No answer"
+;
+[else]
+: resolve-aaaa  ( hostname$ -- )  abort" IPv4 AAAA DNS not supported"  ;
+[then]
+
+false value resolve-flag
+: resolvev4  ( hostname$ -- )
+   false to resolve-flag
+   2dup ['] resolve-a    catch  if  2drop  else  true to resolve-flag set-dest-ip  then
+        ['] resolve-aaaa catch  if  2drop  else  true to resolve-flag  then
+   resolve-flag not  abort" DNS: No answer"
+;
 
 headerless
 : ?bad-ip  ( flag -- )  abort" Bad host name or address"  ;
@@ -245,8 +304,7 @@ headerless
 headers
 : $set-host  ( hostname$ -- )
    dup 0= ?bad-ip
-   over c@  [char] 0 [char] 9 between  if  $>ip  else  (resolve)  then
-   set-dest-ip
+   over c@  [char] 0 [char] 9 between  if  $>ip set-dest-ip  else  resolvev4  then
 ;
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

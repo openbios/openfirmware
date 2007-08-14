@@ -39,11 +39,13 @@ instance defer resolve-en-addr  ( 'dest-adr type -- 'en-adr type )
 
 /e buffer: my-en-addr
 /e buffer: his-en-addr
-/e buffer: routerv6-en-addr
+/e buffer: router-en-addr                 \ IPv4 gateway/router
+/e buffer: routerv6-en-addr               \ IPv6 router
 /e buffer: mc-en-addr
 
-: .my-link-addr   ( -- )  ." My MAC: " my-en-addr .enaddr  ;
-: .his-link-addr  ( -- )  ." His MAC: " his-en-addr  .enaddr  ;
+: .my-link-addr      ( -- )  ." My MAC: " my-en-addr .enaddr  ;
+: .his-link-addr     ( -- )  ." His MAC: " his-en-addr .enaddr  ;
+: .router-en-addr    ( -- )  ." Gateway MAC: " router-en-addr .enaddr  ;
 : .routerv6-en-addr  ( -- )  ." IPv6 router MAC: " routerv6-en-addr .enaddr  ;
 
 create mc-en-addr-all-nodes  h# 33 c, h# 33 c, h# 00 c, 0 c, 0 c, 1 c,
