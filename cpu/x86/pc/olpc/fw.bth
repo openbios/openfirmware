@@ -214,54 +214,6 @@ dend
 
 fload ${BP}/cpu/x86/pc/olpc/devices.fth
 
-[ifdef] rom-loaded
-fload ${BP}/cpu/x86/pc/olpc/gpioinit.fth
-fload ${BP}/cpu/x86/pc/olpc/chipinit.fth
-[then]
-
-warning @ warning off
-: stand-init
-   stand-init
-   root-device
-      board-revision  case
-         h# a18  of " A1"    " OLPC A-test"  endof
-         h# b18  of " B1"    " OLPC B1"      endof
-         h# b28  of " B2"    " OLPC B2"      endof
-         h# b30 of  " preB3" " OLPC preB3"   endof
-         h# b38 of  " B3"    " OLPC B3"      endof
-         h# b40 of  " preB4" " OLPC preB4"   endof
-         h# b48 of  " B4"    " OLPC B4"      endof
-         ( default )  >r  " ??"  " OLPC ??"  r>
-      endcase
-      encode-string  " banner-name" property
-      model
-      board-revision " board-revision-int" integer-property
-      \ The "1-" removes the null byte
-      " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
-
-[ifndef] lx-devel
-      8 ec-cmd  " ec-version" integer-property
-
-      " PQ2" h# fff0.0000 h# 1.0000 sindex  dup 0>=  if  ( offset )
-         h# fff0.0000 +  cscount                         ( name )
-      else
-         drop  " UNKNOWN"
-      then
-      " ec-name" string-property
-[then]
-
-   dend
-
-   " /openprom" find-device
-      h# ffff.ffc0 d# 16 " model" string-property
-
-      " sourceurl" find-drop-in  if  " source-url" string-property  then
-   dend
-;
-warning !
-
-fload ${BP}/cpu/x86/pc/olpc/micin.fth   \ Microphone input AC/DC coupling
-
 fload ${BP}/cpu/x86/pc/olpc/countdwn.fth	\ Startup countdown
 
 fload ${BP}/dev/scsi/probscsi.fth	\ probe-scsi and probe-scsi-all
@@ -380,7 +332,10 @@ fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
 fload ${BP}/cpu/x86/pc/olpc/copynand.fth
+fload ${BP}/cpu/x86/pc/olpc/nandstat.fth
+\ fload ${BP}/cpu/x86/pc/olpc/carousel.fth     \ Carouseled NAND writing
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
+fload ${BP}/ofw/gui/ofpong.fth
 [then]
 
 \ Eliminate 4 second delay in install console for the case where
@@ -412,7 +367,7 @@ fload ${BP}/forth/lib/selstr.fth
 fload ${BP}/ofw/inet/loadtcp.fth
 
 support-package: http
-   fload ${BP}/ofw/inet/http.fth	\ HTTP client
+   fload ${BP}/ofw/inetv6/http.fth	\ HTTP client
 end-support-package
 
 fload ${BP}/ofw/wifi/wifi-cfg.fth
@@ -456,7 +411,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 : fast-boot?  ( -- flag )
 [ifdef] rom-loaded
-   game-key-mask  h# 100 and  0=
+   game-key-mask  h# 120 and  0=
 [else]
    false
 [then]
@@ -525,6 +480,9 @@ fload ${BP}/ofw/core/dualconsole.fth
 : ?start-sound  ( -- )
    game-key-mask h# 40 and  if  start-sound  then
 ;
+: ?games  ( -- )
+   game-key-mask h# 20 and  if  pong  then
+;
 : open-keyboard  ( -- )
    " keyboard" open-dev  ?dup  if  set-stdin  then
 ;
@@ -563,6 +521,7 @@ fload ${BP}/ofw/core/dualconsole.fth
       probe-pci
       ?start-sound
       open-keyboard
+      ?games
       optional-startup
       interpreter-init
 [ifndef] lx-devel
@@ -578,7 +537,9 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 
 : newrom
-   " flash http:\\10.20.0.109\new.rom" eval
+   " flash http:\\10.20.0.104\new.rom" eval
+\   " wifi media lab 802.11" eval
+\   " flash http:\\18.85.46.172\new.rom" eval
 ;
 
 \ This helps with TeraTerm, which sends ESC-O as the arrow key prefix

@@ -243,26 +243,7 @@ fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
 
 fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
 
-0 value atest?
-0 value board-revision
-
- stand-init: board revision
-   kb3920?  to atest?
-   atest?  if
-      h# a18
-   else
-      lx?  if
-         board-id@  case
-            h# b2  of  h# b30  endof  \ preB3
-            ( board-id )  dup h# 10 * 8 +  swap  \ E.g. b3 -> b38
-         endcase
-      else
-         h# 4c00.0014 rdmsr drop   ( RSTPLL-value )
-         4 rshift 7 and  0=  if  h# b28  else  h# b18  then
-      then
-   then   
-   to board-revision
-;
+fload ${BP}/cpu/x86/pc/olpc/boardrev.fth   \ Board revision decoding
 
 stand-init: Quiet SCI
    sci-quiet
@@ -326,6 +307,44 @@ also hidden  d# 34 to display-height  previous  \ For editing
 fload ${BP}/dev/geode/acpi.fth           \ Power management
 
 fload ${BP}/cpu/x86/adpcm.fth            \ ADPCM decoding
+
+[ifdef] rom-loaded
+fload ${BP}/cpu/x86/pc/olpc/gpioinit.fth
+fload ${BP}/cpu/x86/pc/olpc/chipinit.fth
+[then]
+
+warning @ warning off
+: stand-init
+   stand-init
+   root-device
+      model-name$   2dup model     ( name$ )
+      " OLPC " encode-bytes  2swap encode-string  encode+  " banner-name" property
+      board-revision " board-revision-int" integer-property
+      \ The "1-" removes the null byte
+      " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
+
+[ifndef] lx-devel
+      8 ec-cmd  " ec-version" integer-property
+
+      " PQ2" h# fff0.0000 h# 1.0000 sindex  dup 0>=  if  ( offset )
+         h# fff0.0000 +  cscount                         ( name )
+      else
+         drop  " UNKNOWN"
+      then
+      " ec-name" string-property
+[then]
+
+   dend
+
+   " /openprom" find-device
+      h# ffff.ffc0 d# 16 " model" string-property
+
+      " sourceurl" find-drop-in  if  " source-url" string-property  then
+   dend
+;
+warning !
+
+fload ${BP}/cpu/x86/pc/olpc/micin.fth   \ Microphone input AC/DC coupling
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
