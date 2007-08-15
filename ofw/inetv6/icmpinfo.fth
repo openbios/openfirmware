@@ -9,7 +9,10 @@ purpose:  Internet Control Message Protocol version 6 (ICMPv6) info message hand
 
 \ ****************** Neighbor Discovery and Autoconfiguration ******************
 : handle-router-sol  ( adr len -- )  2drop  ;        \ Router solicitation
-: handle-router-ad  ( adr len -- )  2drop  ;         \ Router advertisement
+: handle-router-ad  ( adr len -- )                   \ Router advertisement
+   bootnet-debug  if  ." Router advertisement" cr  then
+   2drop
+;
 
 : send-router-sol  ( -- )
    8 allocate-icmpv6 set-struct                      \ Option: source link-layer addr
@@ -53,7 +56,7 @@ purpose:  Internet Control Message Protocol version 6 (ICMPv6) info message hand
    ( 'ip ) icmp-data copy-ipv6-addr
    h# 201 icmp-data /ipv6 + xw!                      \ Option type 2 (target mac addr)
                                                      \ Length (in 8 octels)
-   my-en-addr icmp-data /ipv6 + 2 + copy-ipv6-addr
+   my-en-addr icmp-data /ipv6 + 2 + copy-en-addr
 
    hop-limit >r h# ff to hop-limit                   \ Save and change hop-limit
    the-struct d# 24 2dup send-icmpv6-packet
@@ -61,6 +64,7 @@ purpose:  Internet Control Message Protocol version 6 (ICMPv6) info message hand
    r> to hop-limit                                   \ Restore hop-limit
 ;
 
+/e buffer: his-en-addr-save
 /ipv6 buffer: his-ipv6-addr-save
 /ipv6 buffer: my-ipv6-addr-save
 : handle-neigh-sol  ( adr len -- )                   \ Neighbor solicitation
@@ -74,21 +78,29 @@ purpose:  Internet Control Message Protocol version 6 (ICMPv6) info message hand
       2drop exit  
    then
 
-   \ XXX Send Neighbor Advertisement
+   \ Send Neighbor Advertisement
    drop                                              ( adr )
-   his-ipv6-addr his-ipv6-addr-save copy-ipv6-addr   \ Save his-ipv6-addr
+   his-ipv6-addr his-ipv6-addr-save copy-ipv6-addr   \ Save his-*-addr
    my-ipv6-addr  my-ipv6-addr-save  copy-ipv6-addr
+   his-en-addr   his-en-addr-save   copy-en-addr
    ipv6-dest-addr   c@ dup h# ff = swap h# fe = or  if
       my-ipv6-addr-link-local  else  my-ipv6-addr-global
    then
    my-ipv6-addr copy-ipv6-addr
-   ipv6-source-addr his-ipv6-addr copy-ipv6-addr     \ Use the solicitor's IPv6 addr as dst
+   ipv6-source-addr his-ipv6-addr copy-ipv6-addr      \ Use solicitor's IPv6 addr as dst
+   dup /icmp-header + /ipv6 + 2 + his-en-addr copy-en-addr  \ Use solicitor's mac addr as dst
    /icmp-header + true send-neigh-ad
-   his-ipv6-addr-save his-ipv6-addr copy-ipv6-addr   \ Restore his-ipv6-addr
+   his-ipv6-addr-save his-ipv6-addr copy-ipv6-addr    \ Restore his-*-addr
    my-ipv6-addr-save  my-ipv6-addr  copy-ipv6-addr
+   his-en-addr-save   his-en-addr   copy-en-addr
 ;
 
-: handle-neigh-ad  ( adr len -- )  2drop  ;          \ Neighbor advertisement
+: handle-neigh-ad  ( adr len -- )                    \ Neighbor advertisement
+   bootnet-debug  if
+      ." Neighbor advertisement from MAC: " over d# 26 + .enaddr cr
+   then
+   2drop
+;
 
 : handle-inv-neigh-sol  ( adr len -- )  2drop  ;     \ Inverse neighbor discovery solicitation
 : handle-inv-neigh-ad  ( adr len -- )  2drop  ;      \ Inverse neighbor discovery advertisement

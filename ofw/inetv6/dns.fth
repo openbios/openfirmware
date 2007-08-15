@@ -244,6 +244,7 @@ headers
 
 [ifdef] include-ipv6
 : resolve-aaaa  ( hostname$ -- )
+   his-ipv6-addr unknown-ipv6-addr? not  if  2drop exit  then
    bootnet-debug  if                                   ( hostname$ )
       ." Using DNS AAAA to find the IPv6 address of "  ( hostname$ )
       2dup type cr                                     ( hostname$ )

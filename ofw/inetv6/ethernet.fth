@@ -53,6 +53,12 @@ create multicast-en-addr     h# 33 c, h# 33 c, h# ff c, 0 c, 0 c, 0 c,
 create broadcast-en-addr     h# ff c, h# ff c, h# ff c, h# ff c, h# ff c, h# ff c,
 
 : unknown-en-addr?  ( 'en -- flag )  dup l@ 0= swap w@ 0= and  ;
+: known-en-addr?    ( 'en -- flag )
+   >r
+   r@ unknown-en-addr?
+   r@ broadcast-en-addr en= or
+   r@ c@ h# 33 = r> 1+ c@ h# 33 = and or  not
+;
 
 decimal
 
@@ -119,7 +125,9 @@ th  800 constant IP_TYPE
 th 86dd constant IPV6_TYPE
 hex
 
-: ip-type?  ( type -- ip-type? )  dup IP_TYPE = swap IPV6_TYPE = or  ;
+: ip-type?  ( type -- ip-type? )
+   use-ipv6?  if  IPV6_TYPE   else  IP_TYPE  then  =
+;
 
 : eth-type=?  ( type -- flag )
    eth-type ip-type?  if  ip-type?  else  eth-type =  then

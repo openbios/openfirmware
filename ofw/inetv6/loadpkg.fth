@@ -43,7 +43,7 @@ fload ${BP}/ofw/inetv6/attr-ip.fth    \ Save IP info in /chosen
 [then]
 [ifdef] include-ipv6
 \ fload ${BP}/ofw/inetv6/bootpv6.fth      \ Bootp Protocol
-\ fload ${BP}/ofw/inetv6/dhcpv6.fth       \ Dynamic Host Config. Protocol
+fload ${BP}/ofw/inetv6/dhcpv6.fth     \ Dynamic Host Config. Protocol
 fload ${BP}/ofw/inetv6/tftp.fth       \ Trivial File Transfer Protocol
 fload ${BP}/ofw/inetv6/netloadv6.fth  \ Network boot loading package
 fload ${BP}/ofw/inetv6/neighdis.fth   \ Neighbor discovery

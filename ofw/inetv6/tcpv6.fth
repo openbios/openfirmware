@@ -2008,7 +2008,6 @@ nodetype: tcpnode
 ;
 
 : free-buffersv6  ( -- )
-   free-buffers
    wbufv6-start /wbufv6 free-mem
    xmit_bufv6 /xmit-max " free-ipv6" $call-parent
 ;
@@ -2430,9 +2429,6 @@ false instance value do-delack?
 
 : open  ( -- )
    alloc-buffersv6
-[ifdef] open
-   open
-[else]
    parse-args
    alloc-buffers
 
@@ -2451,7 +2447,6 @@ false instance value do-delack?
    true to alive?
 
    true
-[then]
 ;
 
 [ifndef] include-ipv4
@@ -2494,10 +2489,9 @@ d# 5000 constant close-wait-ms
 \ to make its way through the sequence of termination states.
 : disconnectv6  ( -- )
    usrclosed
-   flush-writes
    flush-writesv6
    alive?  if  tcp_outputv6  then
-   use-ipv6?  if  drainv6  else  drain  then
+   drainv6
    alive?  if  tcp_close   then
 ;
 
@@ -2505,16 +2499,14 @@ d# 5000 constant close-wait-ms
 \ external
 : set-nodelay  ( -- )  nodelay set-flag  ;
 : abort-on-reconnect  ( -- )  true to abort-on-reconnect?  ;
+: disconnect  ( -- )  ;
 [then]
 
 : close  ( -- )
-   disconnectv6
-[ifdef] close
-   close
-[else]
+   use-ipv6?  if  disconnectv6  else  disconnect  then
    ['] delack-tick    0  alarm
    ['] protocol-tick  0  alarm
-[then]
+   free-buffers
    free-buffersv6
 ;
 

@@ -57,7 +57,7 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
       else                                           ( ip-type 'ip-adr )
          his-ip-addr copy-ip-addr                    ( ip-type )
          his-ip-addr my-ip-addr ip-prefix=?  if
-            his-en-addr broadcast-en-addr en=  if  do-arp  then  ( ip-type )
+            his-en-addr known-en-addr? not  if  unlock-link-addr do-arp  then  ( ip-type )
          else
             router-en-addr his-en-addr copy-en-addr
          then
@@ -130,14 +130,14 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
    repeat  2drop
 ;
 : process-rd?  ( adr len -- router-ad? )
-   over c@ d# 134 <>  if  drop false exit  then  \ Router advertisement?
+   over c@ d# 134 <>  if  2drop false exit  then  \ Router advertisement?
    over 4 + c@ to router-hop-limit
-   over 5 + c@ to router-flags                   \ XXX What to do with stateful config?
+   over 5 + c@ to router-flags                    \ XXX What to do with stateful config?
    over 6 + be-w@ to router-lifetime
    over 8 + be-l@ to router-reachable-time
    over d# 12 + be-l@ to router-retrans-time
-   d# 16 /string                                ( opt-adr,len )
-   process-rd-options                           ( )
+   d# 16 /string                                  ( opt-adr,len )
+   process-rd-options                             ( )
    true
 ;
 : auto-cfg-global?  ( -- flag )
@@ -222,10 +222,10 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
 [then]
    true to use-ipv6?
    set-mc-hash  if  close false exit  then
+   ['] (resolve-en-addrv6) to resolve-en-addr
    configure-ipv6
    s-all-ipv6
    setup-ip-attr
-   ['] (resolve-en-addrv6)  to resolve-en-addr
    true
 ;
 
