@@ -53,6 +53,7 @@ fload ${BP}/forth/lib/debug.fth	\ Forth debugger
 start-module			 \ Breakpointing
 fload ${BP}/cpu/x86/cpubpsup.fth \ Breakpoint support
 fload ${BP}/forth/lib/breakpt.fth
+fload ${BP}/cpu/x86/Linux/catchexc.fth  \ OS signal handling
 end-module
 
 \ LICENSE_BEGIN
