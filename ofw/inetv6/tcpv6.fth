@@ -2497,8 +2497,7 @@ d# 5000 constant close-wait-ms
    flush-writes
    flush-writesv6
    alive?  if  tcp_outputv6  then
-   drain
-   drainv6
+   use-ipv6?  if  drainv6  else  drain  then
    alive?  if  tcp_close   then
 ;
 
