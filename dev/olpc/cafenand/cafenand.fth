@@ -96,6 +96,10 @@ h# e constant bb-offset  \ Location of bad-block table signature in OOB data
 h#   20.0070 1 0 >cmd constant read-status-cmd
 h# 0420.0000 0 5 >cmd constant read-cmd
 h# 0220.0080 0 6 >cmd constant write-cmd  \ The 6 adds a dummy address cycle to meet tADR for Hynix
+[ifdef] notdef
+h# 0400.0005 0 2 >cmd constant random-read-cmd
+h# 0200.0085 0 2 >cmd constant random-write-cmd
+[then]
 
 : wait-mask  ( bitmask -- )
    begin  dup h# 10 cl@  and  until  ( bitmask )
@@ -222,6 +226,26 @@ h# 10 buffer: syndrome-buf
 
    dma-buf-va rot /page do-lmove       ( error? )
 ;
+
+[ifdef] notdef
+: dma-read-buffer  ( adr len offset -- )
+   h# 1c cl!                           ( adr len )  \ Offset in internal chip buffer
+   dup h# 18 cl!                       ( adr len )
+   dma-buf-pa h# 44 cl!                ( adr len )
+   0 h# 48 cl!                         ( adr len)
+   dup h# a000.0000 or  h# 40 cl!      ( adr len )
+   random-read-cmd h# 0800.01e0 cmd  wait-dma ( adr len )
+   dma-buf-va -rot do-lmove            ( )
+;
+
+: dma-write-buffer  ( adr len offset -- )
+   write-enable                        ( adr len offset )
+   h# 1c cl!                           ( adr len )  \ Offset in internal chip buffer
+   dup  false dma-setup                ( )
+   random-write-cmd 0 cmd wait-cmd     ( )
+   dma-release                         ( )
+;
+[then]
 
 : dma-write-raw  ( adr len page# offset -- )
    write-enable                        ( adr len page# offset )
