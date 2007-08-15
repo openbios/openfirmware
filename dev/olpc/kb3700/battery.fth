@@ -58,12 +58,14 @@ end-string-array
 
 : .bat-type  ( -- )
    bat-type@  dup 4 rshift  case   ( type )
+      0  of  ." "      endof
       1  of  ." GPB "  endof
       2  of  ." BYD "  endof
       ." UnknownVendor "
    endcase                         ( type )
 
    h# 0f and  case                 ( )
+      0  of  ." "           endof
       1  of  ." NiMH  "     endof
       2  of  ." LiFePO4  "  endof
       ." UnknownType  "
@@ -79,16 +81,16 @@ end-string-array
 : .%  ( n -- )  2.d ." %" ;
 : .bat  ( -- )
    bat-status@  ( stat )
-   ." AC: "  dup h# 10 and  if  ." on   "  else  ." off  "  then  ( stat )
-   ." PCB: "  pcb-temp 2.d ." C  "
+   ." AC: "  dup h# 10 and  if  ." on  "  else  ." off "  then  ( stat )
+   ." PCB: "  pcb-temp 2.d ." C "
 
    dup 1 and  if
       ." Battery: "
       .bat-type
-      soc .%   ."   "
-      uvolt@  .milli  ." V  "
-      cur@  .milli  ." A  "
-      bat-temp 2.d ." C  "
+      soc .%   ."  "
+      uvolt@  .milli  ." V "
+      cur@  .milli  ." A "
+      bat-temp 2.d ." C "
       dup 2 and  if  ." full "  then
       dup 4 and  if  ." low "  then
       dup 8 and  if  ." error "  then
