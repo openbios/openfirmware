@@ -661,6 +661,15 @@ external
    enable-11d
 ;
 
+: enable-promiscuous  ( -- )
+   mac-ctrl h# 80 or to mac-ctrl
+   set-mac-control
+;
+: disable-promiscuous  ( -- )
+   mac-ctrl h# 80 invert and to mac-ctrl
+   set-mac-control
+;
+
 : enable-multicast  ( -- )
    mac-ctrl h# 20 or to mac-ctrl
    set-mac-control

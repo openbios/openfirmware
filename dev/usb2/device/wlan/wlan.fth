@@ -52,6 +52,8 @@ headers
    true
 ;
 
+false instance value use-promiscuous?
+
 external
 
 \ Set to true to force open the driver without association.
@@ -60,9 +62,11 @@ external
 false instance value force-open?
 				
 : parse-args  ( $ -- )
+   false to use-promiscuous?
    begin  ?dup  while
       ascii , left-parse-string
       2dup " debug" $=  if  debug-on  then
+      2dup " promiscuous" $=  if  true to use-promiscuous?  then
            " force" $=  if  true to force-open?  then
    repeat drop
 ;
@@ -87,6 +91,7 @@ false instance value force-open?
       then
       start-nic
    then
+   use-promiscuous?  if  enable-promiscuous  else  disable-promiscuous  then
    opencount @ 1+ opencount !
    true
 ;
