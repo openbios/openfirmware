@@ -6,6 +6,6 @@ cp ../../../../../cpu/x86/ioports.fth sdkit
 cp ../../../../../cpu/x86/pc/olpc/mfgdata.fth sdkit
 cp ../../../../../dev/olpc/dcon/dconsmb.fth sdkit
 cp ../../../../../dev/olpc/kb3700/ecio.fth sdkit
-cp sd sd.fth dumpgamma.fth sdkit
+cp sd sd.fth ecdump.fth dumpgamma.fth sdkit
 tar cfz sdkit.tgz sdkit
 # rm sdkit/*
