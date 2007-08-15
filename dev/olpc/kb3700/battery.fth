@@ -81,7 +81,7 @@ end-string-array
 : .%  ( n -- )  2.d ." %" ;
 : .bat  ( -- )
    bat-status@  ( stat )
-   ." AC: "  dup h# 10 and  if  ." on  "  else  ." off "  then  ( stat )
+   ." AC:"  dup h# 10 and  if  ." on  "  else  ." off "  then  ( stat )
    ." PCB: "  pcb-temp 2.d ." C "
 
    dup 1 and  if
