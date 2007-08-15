@@ -18,8 +18,8 @@
    " ${BP}/dev/olpc/cafenand/build/cafenand.fc"     " class050101"    $add-deflated-dropin
    " ${BP}/dev/olpc/cafecamera/build/cafecamera.fc" " pci11ab,4102"   $add-deflated-dropin
 
-   " ${BP}/dev/mmc/sdhci/build/sdhci.fc"  " pci11ab,4101"   $add-dropin
-   " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"  " sdmmc"          $add-dropin
+   " ${BP}/dev/mmc/sdhci/build/sdhci.fc"  " pci11ab,4101"   $add-deflated-dropin
+   " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"  " sdmmc"          $add-deflated-dropin
    " ${BP}/dev/geode/nandflash/build/nandflash.fc" " nand5536"   $add-deflated-dropin
    " ${BP}/dev/geode/ac97/build/ac97.fc"       " pci1022,2093"   $add-deflated-dropin
 
@@ -28,9 +28,6 @@
 
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
 
-\   " ${BP}/ofw/linux/logos.bmp"          " oslogo.bmp"     $add-deflated-dropin
-\   " ${BP}/ofw/linux/logom16e.bmp"       " error.bmp"      $add-deflated-dropin
-\   " ${BP}/ofw/linux/logom16c.bmp"       " timeout.bmp"    $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/olpclogo.565" " olpc.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " nandflash.565" $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/ethernet.565" " ethernet.565"  $add-deflated-dropin
@@ -40,3 +37,8 @@
    " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " sdmmc.565"     $add-deflated-dropin
 
    " ${BP}/ofw/termemu/gallant.obf"             " font"          $add-deflated-dropin
+
+\  " /space/bios-crypto/bios_crypto.img"        " crypto"        $add-deflated-dropin
+\  " /space/bios-crypto/bios_hash.img"          " hasher"        $add-deflated-dropin
+\  " /space/bios-crypto/wmbtest256.public"      " pubkey"        $add-dropin \ Incompressible
+\  " /space/bios-crypto/usb8388.bin.sig256"     " usb8388.sig"   $add-dropin \ Incompressible
