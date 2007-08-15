@@ -5,7 +5,10 @@ purpose: Bad block table handling for NAND FLASH
 
 0 value bbt   \ Bad block table address
 
-: round-up  ( n boundary -- n' )  over 1- +  over / *  ;
+: round-up  ( n boundary -- n' )
+   tuck 1- +    ( boundary n' )
+   over / *
+;
 
 : /bbt  ( -- bytes )   \ Bytes per bad block table
    total-pages pages/eblock /  3 +  4 /   ( bytes )
@@ -225,8 +228,8 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
 
 : map-resblock  ( page# #pages -- page#' #pages )
    swap pages/eblock /mod    ( adr #pages offset eblock# )
-   resmap swap na+ @         ( adr #pages offset res-page# )
-   + swap                    ( adr page#' #pages )
+   resmap swap na+ @         ( adr #pages offset res-eblock# )
+   + pages/eblock *  swap    ( adr page#' #pages )
 ;
 
 external
@@ -292,23 +295,29 @@ external
    make-bbt
 ;
 
-\ Clear the device but honor the existing bad block table
-: wipe  ( -- )
+: .bn  ( -- )  (cr .  ;  
+
+: (wipe)  ( 'show-bad 'show-erased -- )
    get-existing-bbt
    bbt  if
-      usable-page-limit  0  ?do
+      usable-page-limit  0  ?do         ( 'show-bad 'show-erased )
          i block-bad?  if
-\           cr ." Skipping bad block" i .page-byte cr
+            i pages/eblock / 2 pick execute
          else
-            (cr i .
+            i pages/eblock / over execute
             i erase-block
          then
       pages/eblock +loop
       exit
-   then
+   then                                 ( 'show-bad 'show-erased )
    \ If there is no existing bad block table, make one from factory info
    make-bbt
+   2drop
 ;
+
+\ Clear the device but honor the existing bad block table
+: wipe  ( -- )  ['] drop  ['] .bn  (wipe)  ;
+
 : show-bbt  ( -- )
    get-bbt
    total-pages  0  ?do
@@ -369,21 +378,27 @@ external
 : start-scan  ( -- )  pages/eblock negate  to scan-page#  ;
 
 \ Must erase all (wipe) first
-: copy-block  ( adr -- error? )
-   next-page#  pages/eblock  bounds  ?do  ( adr )
-      dup i write-page  if                ( adr )
-         drop true  unloop exit           ( true )
-      then                                ( adr )
-      /page +                             ( adr' )
-   loop                                   ( adr )
-   drop false                             ( false )
+: copy-block  ( adr -- page# error? )
+   next-page#                             ( adr page# )
+   tuck  pages/eblock  bounds  ?do        ( page# adr )
+      dup i write-page  if                ( page# adr )
+         drop true  unloop exit           ( page# true )
+      then                                ( page# adr )
+      /page +                             ( page# adr' )
+   loop                                   ( page# adr )
+   drop false                             ( page# false )
 ;
 
-: put-cleanmarkers  ( -- )
-   begin  (next-page#) 0=  while                  ( page# )
-      " "(85 19 03 20 08 00 00 00 00 00 00 00)"   ( page# adr len )
-      rot  /page /ecc +  write-bytes              ( )
-   repeat                                         ( )
+: put-cleanmarker  ( page# -- )
+   " "(85 19 03 20 08 00 00 00 00 00 00 00)"   ( page# adr len )
+   rot  /page /ecc +  write-bytes              ( )
+;
+: put-cleanmarkers  ( show-xt -- )
+   begin  (next-page#) 0=  while  ( show-xt page# )
+      dup put-cleanmarker         ( show-xt page# )
+      pages/eblock / over execute ( show-xt )
+   repeat                         ( show-xt )
+   drop
 ;
 
 : read-next-block  ( adr -- )
