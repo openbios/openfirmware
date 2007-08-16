@@ -50,12 +50,30 @@ create sizes 0 c, 1 c, 4 c,
    then                                  ( adr'' )
    sizes r> + c@ +                       ( adr''' )   \ Add displacement
 ;
+
 \ Looks for call instructions and figures out the length of their
 \ addressing mode bytes.  Returns the address following those addressing
 \ mode bytes, or step-adr if the instruction is not a call or if following-
 \ jsrs is true.
-: next-instruction  ( following-jsrs? -- adr 0 )
-   0=  if
+true value hardware-step?   \ True if the environment permits hardware single-step
+: find-successors  ( -- pc1 pc2 )
+   hardware-step?  if  step-adr 0  exit  then
+
+   ['] cr behavior >r  ['] type behavior >r
+   ['] noop to cr  ['] 2drop to type
+   [ also disassembler ] %eip pc!dis1  pc @  branch-target @  [ previous ]
+   r> to type  r> to cr
+;
+
+: next-instruction  ( following-jsrs? -- next-adr 0|branch_target )
+   if
+      \ We are following jsrs, so we want the target address
+      \ of call instructions.
+      find-successors                         ( adr1 adr2 )
+   else
+      \ We are not following jsrs, so we want the address right after
+      \ the instruction, not the address within the called subroutine.
+
       %eip dup 1+ swap  c@                  ( %eip opcode )
       case                                    ( %eip+1 opcode )
          h# 0cc of       0 exit  endof			\ INT 3
@@ -71,8 +89,8 @@ create sizes 0 c, 1 c, 4 c,
          endof
       endcase				      ( %eip+1 ) 
       drop                                    ( )
-   then                                       ( )
-   step-adr 0
+      find-successors                         ( adr1 adr2 )
+   then                                       ( adr1 adr2 )
 ;
 
 code goto  ( adr -- )
@@ -84,7 +102,7 @@ end-code
    true abort" loop-exit-adr is not implemented"
 ;
 
-: bumppc  ( -- )  0 next-instruction to rpc  ;
+: bumppc  ( -- )  0 next-instruction drop to rpc  ;
 only forth also definitions
 headers
 : set-pc  ( adr -- )  dup to rpc  ;

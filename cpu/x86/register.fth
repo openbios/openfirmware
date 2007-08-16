@@ -63,7 +63,7 @@ alias rpc %eip  alias %pc %eip
 
 \ State information needed by the firmware; not machine registers
 register watchdog        register %state-valid   register %restartable?
-register %saved-my-self  register last-trap#
+register %saved-my-self  register sig#
 
 \ Following words defined here to satisfy the
 \ references to these "variables" anywhere else

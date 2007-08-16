@@ -3,7 +3,23 @@
 decimal
 
 only forth also hidden also  forth definitions
+d# 64 constant #signals
+
+\ Ideally, we should determine /fpstate at runtime by searching
+\ for the "retcode" signature 0077b858
+\ h# 264 constant /fpstate  \ Determined empirically by dumping with gdb
+h# 26c constant /fpstate  \ Determined empirically by dumping with gdb
+
+\ retcode    -   8
+\ extramask  -   8
+\ fpstate    - 264
+\ sigcontext -  58
+\ signal#    -   4
+\ retaddr    -   4
+
 : enterforth
+   \ Adjust pc if it has been incremented past the trap
+   int# 3 =  if  %eip 1- to %eip  then
    handle-breakpoint
 ;
 
@@ -19,7 +35,7 @@ label reenter
 
    \ Establish the Data and Return stacks
    'user rp0          rp   mov
-   'user sp0          bx   mov
+   'user sp0          sp   mov
 
    \ Restart the Forth interpreter.
    cld
@@ -44,8 +60,8 @@ c;
 \   gs, fs, es, ds                           00..0c
 \   edi, esi, ebp, esp, ebx, edx, ecx, eax   10..2c
 \   trapno, err, eip, cs                     30..3c
-\   esp_at_signal, ss, *fpstate, oldmask     40..4c
-\   cr2                                      50
+\   eflags, esp_at_signal, ss, *fpstate      40..4c
+\   oldmask, cr2                             50..54
 
 label save-state-signal
 
@@ -56,29 +72,30 @@ label save-state-signal
    0 [dx]             up  mov		\ Establish user pointer
    'user cpu-state    bx  mov		\ Base address of save area
 
-   4 [sp]             si  lea           \ Address of signal#
+   sp                 si  mov           \ Address of return address
 
    cld         \ Increment pointers
-   ax lods  ax  offset-of int# [bx]  mov
+   ax lods  ax  offset-of %esp2  [bx]  mov
+   ax lods  ax  offset-of sig#   [bx]  mov
 
-   ax lods  ax  offset-of %gs  [bx]  mov
-   ax lods  ax  offset-of %fs  [bx]  mov
-   ax lods  ax  offset-of %es  [bx]  mov
-   ax lods  ax  offset-of %ds  [bx]  mov
+   ax lods  ax  offset-of %gs    [bx]  mov
+   ax lods  ax  offset-of %fs    [bx]  mov
+   ax lods  ax  offset-of %es    [bx]  mov
+   ax lods  ax  offset-of %ds    [bx]  mov
 
-   ax lods  ax  offset-of %edi [bx]  mov
-   ax lods  ax  offset-of %esi [bx]  mov
-   ax lods  ax  offset-of %ebp [bx]  mov
-   ax lods  ax  offset-of %esp [bx]  mov		\ Correct ESP value will be set later
-   ax lods  ax  offset-of %ebx [bx]  mov
-   ax lods  ax  offset-of %edx [bx]  mov
-   ax lods  ax  offset-of %ecx [bx]  mov
-   ax lods  ax  offset-of %eax [bx]  mov
+   ax lods  ax  offset-of %edi   [bx]  mov
+   ax lods  ax  offset-of %esi   [bx]  mov
+   ax lods  ax  offset-of %ebp   [bx]  mov
+   ax lods  ax  offset-of %esp   [bx]  mov		\ Correct ESP value will be set later
+   ax lods  ax  offset-of %ebx   [bx]  mov
+   ax lods  ax  offset-of %edx   [bx]  mov
+   ax lods  ax  offset-of %ecx   [bx]  mov
+   ax lods  ax  offset-of %eax   [bx]  mov
 
-   ax lods                                  \ Skip trapno
+   ax lods  ax  offset-of int#   [bx]  mov  \ trapno
    ax lods  ax  offset-of %error [bx]  mov  \ Save err
 
-   ax lods  ax  offset-of %eip [bx]  mov
+   ax lods  ax  offset-of %eip   [bx]  mov
 
    \ Change the resume address to go to "reenter"
    make-odd 			 	\ word-align address
@@ -90,6 +107,12 @@ label save-state-signal
    ax lods  ax  offset-of %eflags  [bx]  mov
    ax lods                                    \ Skip esp_at_signal
    ax lods  ax  offset-of %ss      [bx]  mov
+   ax lods                                    \ Skip *fpstate
+   ax lods  ax  offset-of %esp1    [bx]  mov  \ Hijack esp1 for oldmask
+   ax lods  ax  offset-of %cr3     [bx]  mov  \ Hijack cr3 for cr2
+   /fpstate #  si  add                        \ Skip fpstate
+   ax lods  ax  offset-of %ss0     [bx]  mov  \ Hijack ss0 for extramask0
+   ax lods  ax  offset-of %ss1     [bx]  mov  \ Hijack ss1 for extramask1
 
    ax ax xor      ax dec
    ax offset-of %state-valid [bx]  mov	\ mark saved state as valid
@@ -118,10 +141,82 @@ label save-state-signal
    ret
 end-code
 
+h# 400 buffer: restart-stack
+0 value restart-sp
+
+code (restart  ( -- )
+   \ Restore the Forth stacks.
+
+   cld                            \ Increment pointers
+   up  bx    mov	   	  \ Save UP because it is di
+   
+   \ Data Stack
+   'user pssave       si    mov   \ Address of data stack save area
+   'user sp0          di    mov   \ Top of data stack area
+
+   ps-size #          di    sub   \ Bottom of data stack area
+   ps-size 4 / #      cx    mov   \ Size of data stack area (in longwords)
+   rep movs
+
+
+   \ Return Stack
+   bx  up  mov			  \ Restore UP for 'user
+   'user rssave       si    mov   \ Address of return stack save area
+   'user rp0          di    mov   \ Top of return stack area
+
+   rs-size #          di    sub   \ Bottom of return stack area
+   rs-size 4 / #      cx    mov   \ Size of return stack area (in longwords)
+   rep movs
+
+   \ Restore registers
+
+   bx  up  mov		        	\ Restore UP for 'user
+   'user cpu-state    bx   mov		\ Base address of save area
+
+   'user restart-sp   sp   mov          \ Establish a stack for the next steps
+
+   h# 80cd0000 #           push         \ tail of retcode
+   h# 0077b858 #           push         \ retcode - ax pop  d# 119 # ax mov  h# 80 int
+   offset-of %ss1    [bx]  push         \ Actually extramask
+   offset-of %ss0    [bx]  push
+   /fpstate #  sp  sub                  \ Space for fpstate
+   offset-of %cr3    [bx]  push         \ Actually cr2
+   offset-of %esp1   [bx]  push         \ Actually oldmask
+   0 #                     push         \ *fpstate
+   offset-of %ss     [bx]  push         \ ss
+   offset-of %esp    [bx]  push         \ esp_at_signal
+   offset-of %eflags [bx]  push
+   offset-of %cs     [bx]  push
+   offset-of %eip    [bx]  push
+   offset-of %error  [bx]  push
+   offset-of int#    [bx]  push         \ Actually trapno
+
+   offset-of %eax    [bx]  push
+   offset-of %ecx    [bx]  push
+   offset-of %edx    [bx]  push
+   offset-of %ebx    [bx]  push
+   offset-of %esp    [bx]  push
+   offset-of %ebp    [bx]  push
+   offset-of %esi    [bx]  push
+   offset-of %edi    [bx]  push
+
+   offset-of %ds     [bx]  push
+   offset-of %es     [bx]  push
+   offset-of %fs     [bx]  push
+   offset-of %gs     [bx]  push
+
+   offset-of sig#    [bx]  push
+   offset-of %esp2   [bx]  push   \ Actually return address
+
+   ret
+
+end-code
+' (restart is restart
+
+
 
 hidden definitions
 
-d# 65 constant #signals
 #signals /n* buffer: old-signals
 
 defer save-state
@@ -179,13 +274,17 @@ string-array exception-names
 ( 08 ) ," Floating point error or divide-by-0"
 ( 09 ) ," "
 ( 10 ) ," "
-( 11 ) ," "
+( 11 ) ," Segmentation fault"
 end-string-array
 
 : (.exception)  ( -- )
-   int#
-   dup d# 8 <=  if  exception-names ". cr  exit  then
-   push-decimal (u.) type cr pop-base
+   sig# 5 =  if
+      int# 3 <>  if  ." Int 0x" .x  then
+      exit
+   then
+   
+   sig#  d# 11 <=  if  sig# exception-names ". cr  exit  then
+   push-decimal sig# (u.) type cr pop-base
 ;
 ' (.exception) is .exception
 : print-breakpoint
@@ -199,7 +298,9 @@ end-string-array
 hidden also
 : sys-init
    sys-init
+   restart-stack h# 400 +  to restart-sp
    catch-signals
+   false to hardware-step?
    restartable? off
 ;
 only forth also definitions

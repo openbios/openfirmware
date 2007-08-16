@@ -35,9 +35,9 @@ purpose: String tools to manipulate OS file pathnames
 vocabulary macros
 
 : $set-macro  ( value$ name$ -- )
-   warning @  warning off
+   warning @ >r  warning off
    also macros definitions  $header create-cf  previous definitions  ( value$ )
-   warning !
+   r> warning !
    ",
    does>  ( -- adr len )  count
 ;

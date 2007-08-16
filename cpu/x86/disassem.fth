@@ -14,6 +14,7 @@ also disassembler also definitions
 nuser instruction
 variable end-found
 nuser pc
+nuser branch-target
 nuser dis-offset
 
 : op8@   ( -- b )  pc @  dis-offset @ +  c@  1 pc +!  ;
@@ -185,8 +186,8 @@ string-array >cond
    ," s"  ," ns"  ," pe" ," po"  ," l"  ," ge"  ," le"  ," g"
 end-string-array
 
-: jb  ( -- )  op8@ bext  pc @ +  showaddr  ;
-: jv  ( -- )  adv@       pc @ +  showaddr  ;
+: jb  ( -- )  op8@ bext  pc @ +  dup branch-target !  showaddr  ;
+: jv  ( -- )  adv@       pc @ +  dup branch-target !  showaddr  ;
 
 : .jcc  ( -- )  ." j"  low4bits >cond ".  op-col jb  ;
 : ea,g  ( -- )  get-ea  .ea ., gb/v  ;
@@ -573,7 +574,7 @@ d# 16 case: op-class
    .op8  .op9  .opa  .movi .opc  .opd  .ope  .opf
 ;
 
-: (dis-body)  ( -- )  decode-op  op-class  ;
+: (dis-body)  ( -- )  branch-target off  decode-op  op-class  ;
 ' (dis-body) is dis-body
 : dis1  ( -- )
    ??cr
