@@ -367,7 +367,7 @@ fload ${BP}/forth/lib/selstr.fth
 fload ${BP}/ofw/inet/loadtcp.fth
 
 support-package: http
-   fload ${BP}/ofw/inetv6/http.fth	\ HTTP client
+   fload ${BP}/ofw/inet/http.fth	\ HTTP client
 end-support-package
 
 fload ${BP}/ofw/wifi/wifi-cfg.fth
@@ -507,7 +507,7 @@ fload ${BP}/ofw/core/dualconsole.fth
       ?start-sound
       ['] false to interrupt-auto-boot?
       probe-usb
-      " nand" $dev-update-flash
+\     " nand" $dev-update-flash
       interpreter-init
 [ifndef] lx-devel
       enable-power-button
