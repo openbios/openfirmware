@@ -21,7 +21,7 @@ fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
 
 \ create save-display
 create reset-smbus
-create restore-usb-power
+\ create restore-usb-power
 
 h# fe00.0000 constant gp-pa
 h# fe00.4000 constant dc-pa
