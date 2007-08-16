@@ -4,6 +4,7 @@ purpose: Interface to cryptographic code for firmware image validation
 h# c0000 constant crypto-base  \ The address the code is linked to run at
 h# c0000 constant hasher-base  \ The address the code is linked to run at
 
+0 [if]
 variable hashlen
 d# 128 buffer: hashbuf
 
@@ -17,9 +18,11 @@ d# 128 buffer: hashbuf
    hasher-base  dup h# 10 -  sp-call  abort" Hash failed"  drop 4drop  ( )
    hashbuf hashlen @
 ;
+[then]
 
-h# f value which-hashes
-: signature-bad?  ( data$ sig$ -- mismatch? )
+0 value hashname
+: signature-bad?  ( data$ sig$ hashname$ -- mismatch? )
+   $cstr to hashname                                      ( data$ sig$ )
    " crypto" find-drop-in  0=  if  4drop true exit  then  ( data$ sig$ prog$ )
    2dup crypto-base swap move  free-mem                   ( data$ sig$ )
       
@@ -28,7 +31,7 @@ h# f value which-hashes
    swap  2swap  swap   ( siglen sigadr datalen dataadr r: key$ )
    2r@ swap  2swap     ( siglen sigadr keylen keyadr datalen dataadr r: key$ )
 
-   which-hashes
+   hashname            ( siglen sigadr keylen keyadr datalen dataadr hash r: key$ )
 
    crypto-base  dup h# 10 -  sp-call  >r  3drop 4drop  r>  ( result  r: key$ )
    2r> free-mem
