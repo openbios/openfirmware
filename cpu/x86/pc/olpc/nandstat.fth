@@ -50,14 +50,14 @@ h# 80 h# 80 h# 80  rgb>565 constant bbt-color
    h# ff h# ff 0 rgb>565   ( #eblocks color )
    0  rot 0  ?do           ( color eblock# )
       dup nand-pages/block * " block-bad?" $call-nand  0=  if  ( color eblock# )
-         2dup swap show-state
-         1
-      else
-         0
-      then
-      swap 1+ swap
-   +loop
-   drop
+         2dup swap show-state  ( color eblock# )
+         1                     ( color eblock# increment )
+      else                     ( color eblock# )
+         0                     ( color eblock# increment )
+      then                     ( color eblock# increment )
+      swap 1+ swap             ( color eblock#' increment )
+   +loop                       ( color eblock#' )
+   2drop
 ;
 
 : gshow-written  ( eblock# -- )  0 h# ff 0 rgb>565  show-state  ;

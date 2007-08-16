@@ -307,8 +307,8 @@ external
             i pages/eblock / over execute
             i erase-block
          then
-      pages/eblock +loop
-      exit
+      pages/eblock +loop                ( 'show-bad 'show-erased )
+      2drop  exit
    then                                 ( 'show-bad 'show-erased )
    \ If there is no existing bad block table, make one from factory info
    make-bbt
