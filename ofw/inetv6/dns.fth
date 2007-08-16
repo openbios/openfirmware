@@ -284,8 +284,8 @@ headers
 false value resolve-flag
 : resolvev4  ( hostname$ -- )
    false to resolve-flag
-   2dup ['] resolve-a    catch  if  2drop  else  true to resolve-flag set-dest-ip  then
-        ['] resolve-aaaa catch  if  2drop  else  true to resolve-flag  then
+   2dup ['] resolve-aaaa catch  if  2drop  else  true to resolve-flag  then
+        ['] resolve-a    catch  if  2drop  else  true to resolve-flag set-dest-ip  then
    resolve-flag not  abort" DNS: No answer"
 ;
 
