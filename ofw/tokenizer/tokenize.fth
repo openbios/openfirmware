@@ -1226,7 +1226,7 @@ d# 100 buffer: output-name-buf
    init-vars
    init-path
 
-   save$3 new-file			       ( )
+   save$3 count $new-file		       ( )
    aout-header? @  if  write-header  then      ( )
 
    \ Save the current stack depth
