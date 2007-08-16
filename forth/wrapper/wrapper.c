@@ -174,12 +174,6 @@ char *host_os = "nt";
 char *host_cpu = "x86";
 #endif
 
-#ifdef OSF1
-char *host_os = "osf1";
-char *host_cpu = "alpha";
-#endif
-
-
 #ifdef TARGET_POWERPC
 char *target_cpu = "powerpc";
 #ifndef LinuxPOWERPC
@@ -199,12 +193,6 @@ char *host_cpu = "arm";
 #ifdef SPARC
 char *target_cpu = "sparc";
 #define CPU_MAGIC 0x30800008
-#define START_OFFSET 0
-#endif
-
-#ifdef MAJC
-char *target_cpu = "majc";
-#define CPU_MAGIC 0x03a00008
 #define START_OFFSET 0
 #endif
 
@@ -232,12 +220,7 @@ char *host_cpu = "x86";
 
 #include <errno.h>
 
-/* Is OSF/1 the only build environment where a long is 64 bits? */
-#ifdef OSF1
-typedef int quadlet;
-#else
 typedef long quadlet;
-#endif
 
 #ifdef WIN32
 #include <windows.h>
@@ -291,16 +274,12 @@ extern   void	glue();
 extern   void	_sync_cache_range(char *, long);
 #endif
 
-#ifdef OSF1
-#undef BSD
-#endif
-
 #ifdef UNIX
 INTERNAL void	exit_handler();
-#ifdef BSD
+# ifdef BSD
 INTERNAL void	cont_handler();
 INTERNAL void	stop_handler();
-#endif
+# endif
 #endif
 
 #ifdef WIN32
@@ -395,7 +374,7 @@ extern   long	dlopen(), dlsym(), dlerror(), dlclose();
 #ifdef JTAG
 #include "jtag.h"
 #endif
-#if defined (BSD) || defined(OSF1) || defined (LinuxX86)
+#if defined (BSD) || defined (__linux__)
 INTERNAL long s_timeofday();
 #endif
 #if defined(USE_TERMIOS)
@@ -500,7 +479,7 @@ long ( (*functions[])()) = {
 	  /* 268 .. 344 */
 	  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,
 #endif
-#if defined(BSD) || defined(OSF1) || defined(LinuxX86)
+#if defined(BSD) || defined(__linux__)
 	  /* 348 */
 	  s_timeofday,
 #else
@@ -781,10 +760,6 @@ main(argc, argv, envp)
 	char **argv, *envp;
 {
 	char * loadaddr;
-#ifdef LinuxX86
-	unsigned char * pc;
-	unsigned char pcb;
-#endif
 	long f;
 	long dictsize, extrasize, imagesize, memsize, relsize;
 	int extrak;
@@ -949,10 +924,6 @@ main(argc, argv, envp)
 	if (header.h_magic != CPU_MAGIC) {
 		error("forth: Incorrect dictionary file header in ", dictfile);
 /* XXX */ printf("%x %x\n", CPU_MAGIC, header.h_magic);
-#ifdef LinuxX86
-pc = (char *)&header.h_magic;
-pcb = pc[0];
-#endif
 		exit(1);
 	}
 
@@ -981,14 +952,7 @@ pcb = pc[0];
 	printf("Copyright 1994 FirmWorks   All rights reserved\n");
 # endif
 
-# ifdef MAJC
-	/* The code wad must be aligned on a 64K boundary because of the
-	 * way that call instructions work in MAJC */
-	loadaddr = (char *)m_alloc(dictsize + 0x10020);
-	loadaddr = (char *)(((((int)loadaddr + 0x10020)) & ~0xffff) - 0x20);
-# else
 	loadaddr = (char *)m_alloc(dictsize);
-# endif
 	if ((loadaddr == (char *) -1) || (loadaddr == (char *) 0)) {
 		error("forth: Can't get memory","");
 		exit(1);
@@ -1015,7 +979,6 @@ pcb = pc[0];
 
 	keymode();
 
-#ifdef MAJC
 #ifdef UNIX
 	signal(SIGHUP,exit_handler);
 	signal(SIGINT,exit_handler);
@@ -1025,27 +988,20 @@ pcb = pc[0];
 	signal(SIGFPE,exit_handler);
 	signal(SIGBUS,exit_handler);
 	signal(SIGSEGV,exit_handler);
-#ifndef __linux__
+# ifndef __linux__
 	signal(SIGEMT,exit_handler);
 	signal(SIGSYS,exit_handler);
-#endif
-#ifdef BSD
+# endif
+# ifdef BSD
 	signal(SIGCONT,cont_handler);
 	signal(SIGTSTP,stop_handler);
-#endif
-#endif
+# endif
 #endif
 
 	/*
 	 * Call the Forth interpreter as a subroutine.  If it returns,
 	 * exit with its return value as the status code.
 	 */
-
-#ifdef MAJC
-	s_bye((*(long (*) ())(loadaddr+sizeof(header)+START_OFFSET))
-		(loadaddr, functions, ((long)loadaddr+dictsize - 16) & ~15,
-		 argc, argv));
-#endif
 
 #ifdef PPCSIM
 	simulate(0L, loadaddr+sizeof(header)+START_OFFSET,
@@ -1168,6 +1124,9 @@ INTERNAL void
 exit_handler(sig)
 	int sig;
 {
+	printf("Mama\n");
+        while (1) ;
+
 #ifdef HAVE_PSIGNAL
 	psignal(sig, "forth");
 #else
@@ -1237,14 +1196,6 @@ c_keyques()
 	int nchars = 0;
 
 	fflush(stdout);
-#ifdef MAJC
-	if ( (nchars = stdin->_r) == 0 ) {
-		keyqmode();
-		nchars = read(0, &c, 1) > 0;
-		if (nchars)
-			ungetc(c[0], stdin);
-	}
-#else
 # ifdef UNIX
 #  ifdef SYS5
 #   ifdef __linux__
@@ -1273,7 +1224,6 @@ c_keyques()
 # endif
 #endif
 	return ((long)nchars);
-#endif
 }
 
 /*
@@ -1408,40 +1358,45 @@ INTERNAL void
 initline() {
 	if (lmode != M_ORIG)
 		return;
-#ifndef MAJC
 #ifdef USE_TERMIOS
 	tcgetattr(0, &ostate);              /* save old state        */
 
 	tcgetattr(0, &lstate);              /* base of line state    */
 	lstate.c_iflag |= IXON|IXANY|IXOFF;     /* XON/XOFF              */
 	lstate.c_iflag |= ICRNL;                /* CR/NL munging         */
-#ifdef IUCLC
+
+# ifdef IUCLC
 	lstate.c_iflag &= ~(IUCLC);             /* no case folding       */
-#endif
-#ifndef AIX
+# endif
+
+# ifndef AIX
 	lstate.c_oflag |=  OPOST|ONLCR;         /* Map NL to CR-LF       */
-#ifdef ILCUC
+#  ifdef ILCUC
 	lstate.c_oflag &= ~(OLCUC);             /* No case folding       */
-#endif
+#  endif
 	lstate.c_oflag &= ~(OCRNL|ONLRET);      /* Don't swap cr and lf  */
-#endif
+# endif
+
 	lstate.c_lflag |= ICANON|ECHO;          /* Line editing on       */
 	lstate.c_cc[VMIN] = 1;			/* Don't hold up input   */
 	lstate.c_cc[VTIME] = 0;                 /* No input delay        */
 
 	tcgetattr(0, &kstate);	                /* base of key state     */
 	kstate.c_iflag &= ~(IXON|IXANY|IXOFF);  /* no XON/XOFF           */
-#ifdef IUCLC
+
+# ifdef IUCLC
 	kstate.c_iflag &= ~(IUCLC);             /* no case folding       */
-#endif
-#ifndef AIX
+# endif
+
+# ifndef AIX
 	kstate.c_iflag &= ~(INLCR|ICRNL);       /* no CR/NL munging      */
 	kstate.c_oflag |=  OPOST|ONLCR;         /* Map NL to CR-LF       */
-#ifdef OLCUC
+#  ifdef OLCUC
 	kstate.c_oflag &= ~(OLCUC);             /* No case folding       */
-#endif
+#  endif
 	kstate.c_oflag &= ~(OCRNL|ONLRET);      /* Don't swap cr and lf  */
-#endif
+# endif
+
 	kstate.c_lflag &= ~(ICANON|ECHO);       /* No editing characters */
 	kstate.c_cc[VMIN] = 1;			/* Don't hold up input   */
 	kstate.c_cc[VTIME] = 0;                 /* No input delay        */
@@ -1449,6 +1404,7 @@ initline() {
 	kqstate = kstate;
 	kqstate.c_cc[VMIN] = 0;			/* Poll for character	 */
 #endif
+
 #ifdef USE_STTY
 	ioctl(0, TIOCGETP, &ostate);            /* save old state        */
 
@@ -1459,27 +1415,6 @@ initline() {
 	ioctl(0, TIOCGETP, &kstate);            /* base of key state     */
 	kstate.sg_flags |= CBREAK;		/* Wake up on each char  */
 	kstate.sg_flags &= ~ECHO;		/* Don't echo            */
-#endif
-#else
-#ifdef notnow
-	tcgetattr(0, &ostate);              /* save old state        */
-	tcgetattr(0, &lstate);              /* base of line state    */
-	lstate.c_iflag |= IXON|IXOFF;     /* XON/XOFF              */
-	lstate.c_iflag |= ICRNL;                /* CR/NL munging         */
-	lstate.c_oflag |=  OPOST;               /*                       */
-	lstate.c_lflag |= ICANON|ECHO;          /* Line editing on       */
-	lstate.c_cc[VMIN] = 1;			/* Don't hold up input   */
-	lstate.c_cc[VTIME] = 0;                 /* No input delay        */
-	tcgetattr(0, &kstate);	                /* base of key state     */
-	kstate.c_iflag &= ~(IXON|IXOFF);  /* no XON/XOFF           */
-	kstate.c_iflag &= ~(INLCR|ICRNL);       /* no CR/NL munging      */
-	kstate.c_oflag |=  OPOST;               /*                       */
-	kstate.c_lflag &= ~(ICANON|ECHO);       /* No editing characters */
-	kstate.c_cc[VMIN] = 1;			/* Don't hold up input   */
-	kstate.c_cc[VTIME] = 0;                 /* No input delay        */
-	kqstate = kstate;
-	kqstate.c_cc[VMIN] = 0;			/* Poll for character	 */
-#endif
 #endif
 }
 
@@ -1508,17 +1443,6 @@ keyqmode()
 	initline();
 	if (lmode != M_KEYQ) {
 		tcsetattr(0, TCSANOW, &kqstate);
-		lmode = M_KEYQ;
-	}
-}
-#endif
-
-#ifdef MAJC
-INTERNAL void
-keyqmode()
-{
-	initline();
-	if (lmode != M_KEYQ) {
 		lmode = M_KEYQ;
 	}
 }
@@ -1876,9 +1800,6 @@ INTERNAL long
 f_mkdir(name)
 	char *name;
 {
-#ifdef MAJC
-        return(-1);
-#else
 #ifdef DEMON
 	return(-1);	/* XXX fixme */
 #else
@@ -1888,21 +1809,16 @@ f_mkdir(name)
 #endif
 		));
 #endif
-#endif
 }
 
 INTERNAL long
 f_rmdir(name)
 	char *name;
 {
-#ifdef MAJC
-        return(-1);
-#else
 #ifdef DEMON
 	return(-1);	/* XXX fixme */
 #else
 	return((long)rmdir(expand_name(name)));
-#endif
 #endif
 }
 
@@ -1981,11 +1897,7 @@ f_ioctl(fd, code, buf)
 	char *buf;
 {
 #ifdef UNIX
-#ifndef MAJC
 	return((long)ioctl((int)fd, (int)code, buf));
-#else
-        return(0);
-#endif
 #else
 	return((long)-1);
 #endif
@@ -2029,7 +1941,6 @@ INTERNAL long
 s_system(str)
 	char *str;
 {
-#ifndef MAJC
 	int i;
 	char *cmd;
 
@@ -2048,7 +1959,6 @@ s_system(str)
 	keymode();
 
 	return ((long)i);
-#endif
 }
 
 /*
@@ -2274,10 +2184,7 @@ today()
 INTERNAL long
 timez()
 {
-#ifdef MAJC
-	return(0);
-#endif
-#if defined(BSD) || defined(OSF1)
+#if defined(BSD)
 	static struct timeval t;
 	static struct timezone tz;
 	extern int gettimeofday();
@@ -2304,7 +2211,7 @@ timez()
 #endif
 }
 
-#if defined(BSD) || defined(OSF1) || defined(LinuxX86)
+#if defined(BSD) || defined(__linux__)
 INTERNAL long
 s_timeofday()
 {
