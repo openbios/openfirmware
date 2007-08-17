@@ -394,7 +394,7 @@ external
 ;
 
 : put-cleanmarker  ( page# -- )
-   " "(85 19 03 20 08 00 00 00 00 00 00 00)"   ( page# adr len )
+   " "(85 19 03 20 08 00 00 00)"   ( page# adr len )
    rot  /page /ecc +  write-bytes              ( )
 ;
 : put-cleanmarkers  ( show-xt -- )
