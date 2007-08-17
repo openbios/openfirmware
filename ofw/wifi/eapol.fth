@@ -579,8 +579,8 @@ false value group-rekey?
 
 0 value cr-idx					\ Index into common-rates
 : supported-rate?  ( r -- true | false )
-   false swap #rates 0  ?do
-      supported-rates i + c@ over =  if  nip true swap leave  then
+   h# 7f and false swap #rates 0  ?do
+      supported-rates i + c@ h# 7f and over =  if  nip true swap leave  then
    loop  drop
 ;
 : add-common-rates  ( adr len -- )
