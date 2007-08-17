@@ -117,7 +117,8 @@ warning on	\ Turn ON the warning messages
 hex
 
 \Tags close-tag-file
-\NotTags .( --- Saving )  dic-file-name ". .(  ---)  dic-file-name save-meta cr
+\NotTags .( --- Saving )  dic-file-name ". .(  ---)
+dic-file-name count $save-meta cr
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

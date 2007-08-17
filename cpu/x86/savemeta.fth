@@ -8,7 +8,7 @@ only forth also meta also forth-h definitions
    0f + 4 >>
 ;
 
-: save-meta  ( str -- )
+: $save-meta  ( filename$ -- )
 \   origin-t >hostaddr  here-t origin-t -  save-image
 
    origin-t  origin-t h# 1c +  le-l!-t	\ Relocation base of saved image
@@ -17,7 +17,7 @@ only forth also meta also forth-h definitions
    origin-t >hostaddr is code-adr
    makeheader
 
-   new-file
+   $new-file
    exp-header /exp-header ofd @ fputs
    code-adr code-size ofd @ fputs
    relocation-map-t reloc-size ofd @ fputs
