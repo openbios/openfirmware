@@ -297,26 +297,30 @@ external
 
 : .bn  ( -- )  (cr .  ;  
 
-: (wipe)  ( 'show-bad 'show-erased -- )
+: (wipe)  ( 'show-bad 'show-erased 'show-bbt -- )
    get-existing-bbt
-   bbt  if
-      usable-page-limit  0  ?do         ( 'show-bad 'show-erased )
-         i block-bad?  if
-            i pages/eblock / 2 pick execute
-         else
-            i pages/eblock / over execute
-            i erase-block
-         then
-      pages/eblock +loop                ( 'show-bad 'show-erased )
-      2drop  exit
-   then                                 ( 'show-bad 'show-erased )
-   \ If there is no existing bad block table, make one from factory info
-   make-bbt
-   2drop
+   bbt 0=  if
+      \ If there is no existing bad block table, make one from factory info
+      make-bbt
+   then                    ( 'show-bad 'show-erased 'show-bbt )
+
+   bbt0  if  bbt0 pages/eblock / over execute  then
+   bbt1  if  bbt1 pages/eblock / over execute  then
+   drop                              ( 'show-bad 'show-erased )
+
+   usable-page-limit  0  ?do         ( 'show-bad 'show-erased )
+      i block-bad?  if
+         i pages/eblock / 2 pick execute
+      else
+         i pages/eblock / over execute
+         i erase-block
+      then
+   pages/eblock +loop                ( 'show-bad 'show-erased )
+   2drop  exit
 ;
 
 \ Clear the device but honor the existing bad block table
-: wipe  ( -- )  ['] drop  ['] .bn  (wipe)  ;
+: wipe  ( -- )  ['] drop  ['] .bn  ['] drop  (wipe)  ;
 
 : show-bbt  ( -- )
    get-bbt

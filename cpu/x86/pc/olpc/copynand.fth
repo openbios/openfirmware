@@ -137,19 +137,20 @@ defer show-erasing  ( #blocks -- )
 : (show-erasing)  ( #blocks -- )  ." Erasing " . ." blocks" cr  ;
 ' (show-erasing) is show-erasing
 
-defer show-erased
+defer show-erased  ( block# -- )
 : (show-erased)  ( block# -- )  (cr .  ;
 ' (show-erased) is show-erased
 
-defer show-bad
-: (show-bad)  ( block# -- )  drop  ;
-' (show-bad) is show-bad
+defer show-bad  ( block# -- )
+' drop is show-bad
 
-defer show-clean
-: (show-clean)  ( block# -- )  drop  ;
-' (show-clean) is show-clean
+defer show-bbt  ( block# -- )
+' drop is show-bbt
 
-defer show-cleaning
+defer show-clean  ( block# -- )
+' drop is show-clean
+
+defer show-cleaning  ( -- )
 : (show-cleaning)  ( -- )  cr ." Cleanmarkers" cr  ;
 ' (show-cleaning) is show-cleaning
 
@@ -170,7 +171,7 @@ defer show-written
    ['] noop to show-progress
 
    #nand-pages nand-pages/block / show-erasing
-   ['] show-bad  ['] show-erased  " (wipe)" $call-nand
+   ['] show-bad  ['] show-erased  ['] show-bbt " (wipe)" $call-nand
 
    #image-eblocks show-writing
 
@@ -205,7 +206,7 @@ defer show-written
          " scan-page#" $call-nand  .x cr                               ( )
          ?key-stop
       then                                                             ( )
-   repeat                                                              ( )
+   loop                                                                ( )
    close-nand-ihs
 ;
 
@@ -251,7 +252,7 @@ defer show-written
       else                                                 ( actual-crc expected-crc )
          2drop                                             ( )
       then                                                 ( )
-   repeat                                                  ( )
+   loop                                                    ( )
    close-nand-ihs
 ;
 

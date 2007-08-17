@@ -38,12 +38,12 @@ h# 80 h# 80 h# 80  rgb>565 constant bbt-color
    drop
 ;
 
-: gshow-erased  ( eblock# -- )  0 0 0 rgb>565  show-state  ;
-
-: gshow-bad  ( eblock# -- )  h# ff 0 0 rgb>565  show-state  ;
+: gshow-erased  ( eblock# -- )      0  0  0 rgb>565  show-state  ;
+: gshow-bad     ( eblock# -- )  h# ff  0  0 rgb>565  show-state  ;
+: gshow-bbt     ( eblock# -- )  h# 80 80  0 rgb>565  show-state  ;
+: gshow-clean  ( eblock# -- )   h#  0  0 ff rgb>565  show-state  ;
 
 : gshow-cleaning ( -- )  ." Cleanmarkers"  cr  cursor-on  ;
-: gshow-clean  ( eblock# -- )  h# 0 0 ff rgb>565  show-state  ;
 
 : gshow-writing  ( #eblocks -- )
    ." Writing  "
@@ -66,6 +66,7 @@ h# 80 h# 80 h# 80  rgb>565 constant bbt-color
    ['] gshow-erasing to show-erasing
    ['] gshow-erased to show-erased
    ['] gshow-bad to show-bad
+   ['] gshow-bbt to show-bbt
    ['] gshow-clean to show-clean
    ['] gshow-cleaning to show-cleaning
    ['] gshow-writing to show-writing
