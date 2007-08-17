@@ -36,6 +36,9 @@ d#  768 value #scanlines	\ Screen height
 : dc@  ( offset -- value )  dc-base + rl@  ;
 : vp!  ( value offset -- )  vp-base + rl!  ;
 : vp@  ( offset -- value )  vp-base + rl@  ;
+: gp!  ( l reg -- )  gp-base + rl!  ;
+: gp@  ( reg -- l )  gp-base + rl@  ;
+
 
 : iand  ( value mask -- )  invert and  ;
 
@@ -337,8 +340,8 @@ h# 300 /n* buffer: video-state
    0 h# 38 vp!  h# 100 0  do  h# 40 vp@  l!+  loop  \ Gamma
    h# 410 vp@ l!+
 
-\   h# 3c 0  do  i gp@ l!+  4 +loop
-\   h# 4c gp@ l!+
+   h# 3c 0  do  i gp@ l!+  4 +loop
+   h# 4c gp@ l!+
 
    drop
    \ video-state - /l / . cr
@@ -386,8 +389,8 @@ h# 300 /n* buffer: video-state
    0 h# 38 vp!  h# 100 0  do  l@+ h# 40 vp!  loop  \ Gamma
    l@+ h# 410 vp!
 
-\   h# 3c 0  do  l@+ i gp!  4 +loop
-\   l@+ h# 4c gp! 
+   h# 3c 0  do  l@+ i gp!  4 +loop
+   l@+ h# 4c gp! 
 
    0 0 dc!  \ Lock
    drop

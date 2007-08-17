@@ -3,9 +3,6 @@ purpose: Geode LX graphics acceleration
 
 alias depth+ wa+
 
-: gp!  ( l reg -- )  gp-base + rl!  ;
-: gp@  ( reg -- l )  gp-base + rl@  ;
-
 : dst!  ( x y -- )  bytes/line16 * swap depth+ 0 gp!  ;
 : src!  ( x y -- )  bytes/line16 * swap depth+ 4 gp!  ;
 : stride!  ( dst-stride src-stride -- )  wljoin  8 gp!  ;
