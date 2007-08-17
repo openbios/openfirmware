@@ -10,6 +10,17 @@ purpose: FDisk partition map decoder
    sector-buf d# 16 + c@ 1 2 between and  ( flag )  \ #FATS ok?
 ;
 
+\ This is a lame check to see if there might be a partition map entry.
+\ It is for the case where the disk has a valid BPB in sector 0, but
+\ also has a partition that doesn't start at 0.  Thit is a bogus layout,
+\ but we need to handle it anyway, because people often screw up when
+\ using fdisk and mkdosfs under Linux.  It is too easy to run mkdosfs on
+\ the overall disk (not the partition).
+: unpartitioned?  ( -- flag )
+   sector-buf h# 1fe + le-w@ h# aa55 <>
+   sector-buf h# 1c6 + le-l@ 0=  or
+;
+
 : ptable-bounds  ( -- end start )  sector-buf  h# 1be +  h# 40  bounds  ;
 : ptable-sum  ( -- n )   0  ptable-bounds  do  i c@ +  loop  ;
 : fdisk?  ( -- flag )

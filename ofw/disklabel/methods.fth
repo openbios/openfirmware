@@ -69,7 +69,7 @@ headerless
 
    \ If we find certain things in the first sector, we need not bother
    \ with partitions, and we ignore the partition specification
-   fat?     if  get-disk-size exit  then
+   fat? unpartitioned?  and  if  get-disk-size exit  then
    dropin?  if  get-disk-size exit  then
    zip?     if  get-disk-size exit  then
 
