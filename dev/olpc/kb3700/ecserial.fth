@@ -17,10 +17,21 @@
    ['] noop to spi-reprogrammed
 
    d# 57600 baud
+
+   \ We have to reset the target here because it is probably confused by having
+   \ received other characters from our serial line
+   ." Reset the target system with a full power-cycle, then type a key to continue"  cr
+   begin  key?  until  key drop
+
    h# 5a uemit    ( divisor )  \ ( wait-tx )
    h# 88 spicfg!  ( divisor )  \ Write enable for SPICMD register
    h# 45 spibaud! ( )
+
+   d# 50 ms         \ Settling time
+
    d# 115200 baud
+
+   d# 50 ms         \ Settling time
 
    -1 to flash-base
 ;

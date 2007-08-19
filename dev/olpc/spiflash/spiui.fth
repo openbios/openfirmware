@@ -203,6 +203,12 @@ h# 30 constant crc-offset   \ From end
    /flash mfg-data-end-offset  write-flash-range         \ Write last part
 ;
 
+: .verify-msg  ( -- )
+   ." Type verify if you want to verify the data just written."  cr
+   ." Verification will take about 17 minutes if the host is running Linux" cr
+   ." or about 5 minutes if the host is running OFW." cr
+;
+
 : reflash   ( -- )   \ Flash from data already in memory
    ?file
    spi-start
@@ -222,8 +228,7 @@ h# 30 constant crc-offset   \ From end
       then
       spi-reprogrammed
    else
-      ." Type verify if you want to verify the data just written."  cr
-      ." Verification will take about 17 minutes..." cr
+      .verify-msg
    then   
 ;
 
@@ -238,20 +243,25 @@ defer fw-filename$  ' null$ to fw-filename$
 
 : flash  ( ["filename"] -- )  get-file reflash  ;
 
-[ifdef] dev
-dev /flash
+\ This is a slower version of "rom-va flash-buf /flash lmove"
+\ It works around the problem that continuous CPU access to the
+\ SPI FLASH starves the EC of instruction fetch cycles, often
+\ causing it to turn off the system.
 0 value rom-va
-: selftest  ( -- error? )
-   rom-va 0=  if  rom-pa /flash root-map-in to rom-va  then
-
-   \ This is a slower version of "rom-va flash-buf /flash lmove"
-   \ It works around the problem that continuous CPU access to the
-   \ SPI FLASH starves the EC of instruction fetch cycles, often
-   \ causing it to turn off the system.
+: slow-flash-read  ( -- )
+   rom-pa /flash root-map-in to rom-va
    /flash  0  do
       rom-va i +  flash-buf i +  h# 1.0000 lmove
       d# 200 ms
    h# 1.0000 +loop
+   rom-va /flash root-map-out  0 to rom-va
+;
+
+[ifdef] dev
+dev /flash
+: selftest  ( -- error? )
+
+   slow-flash-read
 
    \ Replace the manufacturing data block with all FF
    flash-buf mfg-data-offset +  /flash-block  h# ff fill
@@ -261,7 +271,6 @@ dev /flash
    -1 swap l!
 
    flash-buf /flash crc  <>
-   rom-va /flash root-map-out  0 to rom-va
 ;
 device-end
 [then]
@@ -291,8 +300,7 @@ device-end
    \ Don't overwrite the EC code
    flash-buf  /flash  /ec  write-flash-range
 
-   ." Type verify-bios if you want to verify the data just written."  cr
-   ." Verification will take about 17 minutes..." cr
+   .verify-msg
 ;
 : verify-bios  ( -- )  flash-buf  /flash  /ec  verify-flash-range  ;
 

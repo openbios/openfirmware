@@ -28,7 +28,7 @@
 
 : clone  ( -- )
    ." Getting a copy of this machine's FLASH" cr
-   h# fff0.0000 flash-buf /flash move
+   slow-flash-read
    true to file-loaded?
 
    (serial-flash)
