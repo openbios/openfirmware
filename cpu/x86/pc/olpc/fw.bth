@@ -476,23 +476,26 @@ fload ${BP}/ofw/core/dualconsole.fth
    r> to load-started
    r> to playback-volume
 ;
-
-: ?start-sound  ( -- )
-   game-key-mask h# 40 and  if  start-sound  then
-;
-: ?games  ( -- )
-   game-key-mask h# 20 and  if  pong  then
-;
-: open-keyboard  ( -- )
-   " keyboard" open-dev  ?dup  if  set-stdin  then
-;
-
 : go-hook-freeze
    [ ' go-hook behavior compile, ]
    0 " set-source" $call-screen
 ;
 : freeze    ( -- )  ['] go-hook-freeze to go-hook  ;
 : unfreeze  ( -- )  ['] usb-quiet      to go-hook  ;
+
+: ?start-sound  ( -- )
+   game-key-mask h# 40 and  if  start-sound  then
+;
+: ?games  ( -- )
+   game-key-mask h# 20 and  if  pong    then
+;
+: ?freeze  ( -- )
+   game-key-mask h# 10 and  if  freeze  then
+;
+: open-keyboard  ( -- )
+   " keyboard" open-dev  ?dup  if  set-stdin  then
+;
+
 
 : startup  ( -- )
    standalone?  0=  if  exit  then
@@ -505,6 +508,7 @@ fload ${BP}/ofw/core/dualconsole.fth
       stdout off
       probe-pci
       ?start-sound
+      ?freeze
       ['] false to interrupt-auto-boot?
       probe-usb
 \     " nand" $dev-update-flash
@@ -522,6 +526,7 @@ fload ${BP}/ofw/core/dualconsole.fth
       ?start-sound
       open-keyboard
       ?games
+      ?freeze
       optional-startup
       interpreter-init
 [ifndef] lx-devel
