@@ -433,7 +433,7 @@ fload ${BP}/dev/ne2000/queue.fth
    \ updated the boundary register, or determined that there really were
    \ no new packets in the ring.
 
-   OVER isr!		\ Clear the overrun interrupt bit
+   OVR isr!		\ Clear the overrun interrupt bit
    set-tx-mode		\ Take the NIC out of loopback
 
    \ Resend any incomplete transmission
@@ -446,7 +446,7 @@ fload ${BP}/dev/ne2000/queue.fth
 : recv-690-overrun  ( -- )
    false to is-overrun-690
    boundary@ boundary!		\ rewrite bndry with itself
-   OVER isr!		\ Clear overrun interrupt bit
+   OVR isr!		\ Clear overrun interrupt bit
 ;
 [then]
 
