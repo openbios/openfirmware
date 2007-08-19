@@ -26,7 +26,7 @@ d# 255 8 * constant /idt	\ Full size
       [ also hidden ]
       ['] save-state-common to save-state
       [ previous ]
-      catch-exceptions
+      init-exceptions
    then
 ;
 

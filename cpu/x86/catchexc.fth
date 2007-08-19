@@ -333,9 +333,6 @@ defer uncatch-exceptions	' noop is uncatch-exceptions
 
 forth definitions
 : catch-exceptions  ( -- )
-   pssave drop  rssave drop	\ Force buffer allocation
-   [ 0 alloc-reg ] literal alloc-mem is cpu-state
-
    d# 00 catch-vector	\ Divide by 0
    d# 01 catch-vector	\ Debugger
    d# 03 catch-vector	\ Breakpoint
@@ -353,6 +350,13 @@ forth definitions
    ['] (forth-vectors)   is forth-vectors
 
    ['] (uncatch-exceptions) is uncatch-exceptions
+;
+: init-exceptions  ( -- )
+   pssave drop  rssave drop	\ Force buffer allocation
+   [ 0 alloc-reg ] literal alloc-mem is cpu-state
+   restartable? off
+
+   catch-exceptions
 ;
 
 : (cold-hook  ( -- )
@@ -417,13 +421,6 @@ end-string-array
    ??cr quit
 ;
 \ ' print-breakpoint is handle-breakpoint
-
-\ defer restart  ( -- )
-hidden also
-stand-init:
-   restartable? off
-;
-only forth also definitions
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
