@@ -28,7 +28,7 @@ h# 380 constant iobase
 : ec-cmd-out  ( cmd -- )  wait-ib-empty  h# 6c pc!  ;
 : ec-wb  (  -- )  wait-ib-empty  h# 68 pc!  ;
 : ec-rb  ( -- b )
-   d# 1000 0  do
+   d# 200 0  do
       h# 6c pc@  3 and  1 =  if
          h# 68 pc@
          unloop exit
@@ -37,8 +37,6 @@ h# 380 constant iobase
    loop
    true abort" EC port 6c output buffer timeout"
 ;
-
-: ec-cmd  ( cmd -- response )  ec-cmd-out  ec-rb  ;
 
 : ec-cmd66  ( byte -- )
    h# 66  pc! 
@@ -50,9 +48,51 @@ h# 380 constant iobase
 : ec-rw    ( -- w )  ec-rb ec-rb swap bwjoin  ;
 : ec-ww    ( -- w )  wbsplit ec-wb ec-wb  ;
 
-: ec-cmd-w@  ( cmd -- w )  ec-cmd-out  ec-rw  ;
-: ec-cmd-b@  ( cmd -- b )  ec-cmd  ;
-: ec-cmd-b!  ( b cmd -- )  ec-cmd-out  ec-wb  ;
+: (ec-cmd-b!)  ( b cmd -- )  ec-cmd-out  ec-wb  ;
+: (ec-cmd-b@)  ( cmd -- b )  ec-cmd-out  ec-rb  ;
+: (ec-cmd-w@)  ( cmd -- w )  ec-cmd-out  ec-rw  ;
+
+: too-many-retries  ( -- )  true abort" Too many EC command retries"  ;
+d# 10 constant #ec-retries
+
+: ec-cmd     ( cmd -- )
+   #ec-retries  0  do                   ( cmd )
+      dup ['] ec-cmd-out catch  0=  if  ( cmd )
+         drop unloop exit
+      then                              ( cmd x )
+      drop                              ( cmd )
+   loop                                 ( cmd )
+   too-many-retries
+;
+
+\ Hideous retries to work around race conditions in the EC code
+: ec-cmd-b!  ( b cmd -- )
+   #ec-retries  0  do                      ( b cmd )
+      2dup  ['] (ec-cmd-b!) catch  0=  if  ( b cmd )
+         2drop unloop exit
+      then                                 ( b cmd x x )
+      2drop                                ( b cmd )
+   loop                                    ( b cmd )
+   too-many-retries
+;
+: ec-cmd-b@  ( cmd -- b )
+   #ec-retries  0  do                      ( cmd )
+      dup  ['] (ec-cmd-b@) catch  0=  if   ( cmd b )
+         nip unloop exit
+      then                                 ( cmd x )
+      drop                                 ( cmd )
+   loop                                    ( cmd )
+   too-many-retries
+;
+: ec-cmd-w@  ( cmd -- w )
+   #ec-retries  0  do                      ( cmd )
+      dup  ['] (ec-cmd-w@) catch  0=  if   ( cmd w )
+         nip unloop exit
+      then                                 ( cmd x )
+      drop                                 ( cmd )
+   loop                                    ( cmd )
+   too-many-retries
+;
 
 : bat-voltage@   ( -- w )  h# 10 ec-cmd-w@  ;
 : bat-current@   ( -- w )  h# 11 ec-cmd-w@  ;
@@ -61,31 +101,60 @@ h# 380 constant iobase
 : ambient-temp@  ( -- w )  h# 14 ec-cmd-w@  ;
 : bat-status@    ( -- b )  h# 15 ec-cmd-b@  ;
 : bat-soc@       ( -- b )  h# 16 ec-cmd-b@  ;
-: bat-gauge-id@  ( -- sn0 .. sn7 )  h# 17 ec-cmd-out  8 0  do ec-rb  loop  ;
-: bat-gauge@     ( -- b )  h# 18 ec-cmd-out  h# 31 ec-wb  ec-rb  ;  \ 31 is the EEPROM address
-: bat-type@      ( -- b )  h# 18 ec-cmd-out  h# 5f ec-wb  ec-rb  ;  \ 5f is the EEPROM address
+: (bat-gauge-id@)  ( -- sn0 .. sn7 )  h# 17 ec-cmd-out  8 0  do ec-rb  loop  ;
+: bat-gauge-id@  ( -- sn0 .. sn7 )
+   #ec-retries  0  do
+      ['] (bat-gauge-id@) catch  0=  if  unloop exit  then
+   loop
+   too-many-retries
+;
+: (bat-gauge@)   ( -- b )  h# 18 ec-cmd-out  h# 31 ec-wb  ec-rb  ;  \ 31 is the EEPROM address
+: bat-gauge@  ( -- b )
+   #ec-retries  0  do
+      ['] (bat-gauge@) catch  0=  if  unloop exit  then
+   loop
+   too-many-retries
+;
+
+: (bat-type@)    ( -- b )  h# 18 ec-cmd-out  h# 5f ec-wb  ec-rb  ;  \ 5f is the EEPROM address
+: bat-type@  ( -- b )
+   #ec-retries  0  do
+      ['] (bat-type@) catch  0=  if  unloop exit  then
+   loop
+   too-many-retries
+;
+
 : board-id@      ( -- b )  h# 19 ec-cmd-b@  ;
 : sci-source@    ( -- b )  h# 1a ec-cmd-b@  ;
 : sci-mask!      ( b -- )  h# 1b ec-cmd-b!  ;
 : sci-mask@      ( -- b )  h# 1c ec-cmd-b@  ;
-: game-key@      ( -- w )  h# 1d ec-cmd-out  ec-rw  ;
-: ec-date!       ( day month year -- )  h# 1e ec-cmd-out  ec-wb ec-wb ec-wb  ;
+: game-key@      ( -- w )  h# 1d ec-cmd-w@  ;
+: (ec-date!)     ( day month year -- )  h# 1e ec-cmd-out  ec-wb ec-wb ec-wb  ;
+: ec-date!       ( day month year -- )
+   #ec-retries  0  do    ( d m y )
+      3dup ['] (ec-date!) catch  0=  if  3drop unloop exit  then  ( d m y x x x )
+      3drop              ( d m y )
+   loop                  ( d m y )
+   too-many-retries
+;
+
 : ec-abnormal@   ( -- b )  h# 1f ec-cmd-b@  ;
 
-: bat-init-nimh-gp     ( -- )  h# 20 ec-cmd-out  ;
-: bat-init-lifepo4-byd ( -- )  h# 21 ec-cmd-out  ;
-: bat-init-lifepo4-gp  ( -- )  h# 22 ec-cmd-out  ;
+: bat-init-nimh-gp     ( -- )  h# 20 ec-cmd  ;
+: bat-init-lifepo4-byd ( -- )  h# 21 ec-cmd  ;
+: bat-init-lifepo4-gp  ( -- )  h# 22 ec-cmd  ;
 : wlan-off         ( -- )  0 h# 23 ec-cmd-b!  ;
 : wlan-on          ( -- )  1 h# 23 ec-cmd-b!  ;
-: wlan-wake        ( -- )  h# 24 ec-cmd-out  ;
-: wlan-reset       ( -- )  h# 25 ec-cmd-out  ;
+: wlan-wake        ( -- )  h# 24 ec-cmd  ;
+: wlan-reset       ( -- )  h# 25 ec-cmd  ;
 : dcon-disable     ( -- )  0 h# 26 ec-cmd-b!  ;
 : dcon-enable      ( -- )  1 h# 26 ec-cmd-b!  ;
-: reset-ec-warm    ( -- )  h# 27 ec-cmd-out  ;
-: reset-ec         ( -- )  h# 28 ec-cmd-out  ;
-: write-protect-fw ( -- )  h# 29 ec-cmd-out  ;
+: reset-ec-warm    ( -- )  h# 27 ec-cmd  ;
+: reset-ec         ( -- )  h# 28 ec-cmd  ;
+: write-protect-fw ( -- )  h# 29 ec-cmd  ;
 : ebook-mode?      ( -- b )  h# 2a ec-cmd-b@  ;
 
+0 [if]
 \ EC mailbox access words
 
 : ec-mb-adr@   ( -- w )  h# 80 ec-cmd-out  ec-rw  ;
@@ -96,6 +165,7 @@ h# 380 constant iobase
 : ec-mb-w@    ( adr -- w )  h# 88 ec-mb-setup  h# 82 ec-cmd-w@  ;
 : ec-mb-b!    ( b adr -- )  h# 85 ec-mb-setup  ec-wb  h# 8b ec-cmd-out  ;
 : ec-mb-w!    ( w adr -- )  h# 83 ec-mb-setup  ec-ww  h# 89 ec-cmd-out  ;
+[then]
 
 \ SCI source codes:
 \ SCI_WAKEUP_EVENT             0x01   // Game button,
@@ -109,9 +179,9 @@ h# 380 constant iobase
 \ This command hard-resets the EC deeply enough for the SP write-protect to
 \ be off when the system is powered up again.
 
-: ec-reset  ( -- )  5  ec-cmd  ;
+: ec-reset  ( -- )  5  ec-cmd-b@ drop  ;
 
-: kb3920?  ( -- flag )  h# 6c pc@ h# ff =  if  true exit  then   9 ec-cmd 9 =  ;
+: kb3920?  ( -- flag )  h# 6c pc@ h# ff =  if  true exit  then   9 ec-cmd-b@ 9 =  ;
 
 \ This makes the EC stop generating a flood of SCIs every time you do
 \ the port 66 command sequence.
