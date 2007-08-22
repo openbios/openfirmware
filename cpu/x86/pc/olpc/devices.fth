@@ -324,7 +324,7 @@ warning @ warning off
       " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
 
 [ifndef] lx-devel
-      8 ec-cmd  " ec-version" integer-property
+      8 ec-cmd-b@  " ec-version" integer-property
 
       " PQ2" h# fff0.0000 h# 1.0000 sindex  dup 0>=  if  ( offset )
          h# fff0.0000 +  cscount                         ( name )

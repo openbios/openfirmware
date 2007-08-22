@@ -190,7 +190,7 @@ InInv - 0000 3081
 : fix-sirq  ( -- )
 [ifdef] lx-devel  exit  [then]
 
-   9 ec-cmd 9 <>  if
+   9 ec-cmd-b@ 9 <>  if
       h# 5140.004e rdmsr  swap h# 40 or swap  h# 5140.004e wrmsr
    then
 ;

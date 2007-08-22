@@ -10,14 +10,14 @@ purpose: Controls for the microphone input mode (AC vs. DC coupling)
    post-b1?  if
       2 >clr OUT_VAL gpio!           \ 5536 GPIO01
    else
-      2 ec-cmd drop                  \ EC GPIO18
+      2 ec-cmd-b@ drop               \ EC GPIO18
    then
 ;
 : dc-mode  ( -- )
    post-b1?  if
       2 OUT_VAL gpio!                \ 5536 GPIO01
    else
-      1 ec-cmd drop                  \ EC GPIO18
+      1 ec-cmd-b@ drop               \ EC GPIO18
    then
 ;
 
