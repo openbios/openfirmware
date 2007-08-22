@@ -224,6 +224,8 @@ headerless
 [then]
 
 : resolvev6  ( hostname$ -- )
+   name-server-ipv6 unknown-ipv6-addr?  if  true abort" Unknown DNS server IPv6 address"  then
+
    bootnet-debug  if                                   ( hostname$ )
       ." Using IPv6 DNS to find the IPv6 address of "  ( hostname$ )
       2dup type cr                                     ( hostname$ )

@@ -78,6 +78,7 @@ headers
 /ipv6 buffer: my-ipv6-addr-global
 /ipv6 buffer: router-ipv6-addr
 /ipv6 buffer: name-server-ipv6
+/ipv6 buffer: dhcp-ipv6-addr
 
 headerless
 
@@ -86,6 +87,7 @@ create unknown-ipv6-addr          0 l,  0 l,  0 l,  0 l,
 create default-ipv6-addr          h# fe c, h# 80 c, 0 w, 0 l, 0 w, 0 c, h# ff c, h# fe c, 0 c, 0 w,
 create ipv6-addr-mc-all-nodes     h# ff c, 2 c, 0 w, 0 l, 0 l, 0 w, 0 c, 1 c,
 create ipv6-addr-mc-all-routers   h# ff c, 2 c, 0 w, 0 l, 0 l, 0 w, 0 c, 2 c,
+create ipv6-addr-mc-all-dhcp      h# ff c, 2 c, 0 w, 0 l, 0 l, 0 c, 1 c, 0 c, 2 c,
 create my-ipv6-addr-mc-sol-node   h# ff c, 2 c, 0 w, 0 l, 0 w, 0 c, 1 c, h# ff c, 0 c, 0 w,
 create his-ipv6-addr-mc-sol-node  h# ff c, 2 c, 0 w, 0 l, 0 w, 0 c, 1 c, h# ff c, 0 c, 0 w,
 
@@ -168,10 +170,11 @@ headerless
 : .my-ipv6-addr-global  ( -- )
    ." My IPv6 (global):     "  my-ipv6-addr-global  .ipv6
 ; 
-: .his-ipv6-addr  ( -- )  ." His IP: " his-ipv6-addr  .ipv6  ; 
+: .his-ipv6-addr  ( -- )  ." His IPv6: " his-ipv6-addr  .ipv6  ; 
 : .my-prefix  ( -- )
    ." My prefix (global):   "  my-prefix  .ipv6  ." /" /prefix .d
 ;
+: .name-server-ipv6  ( -- )  ." DNS IPv6: " name-server-ipv6  .ipv6  ;
 
 [ifndef] include-ipv4
 0 instance value last-ip-packet

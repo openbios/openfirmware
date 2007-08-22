@@ -86,6 +86,7 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
       then
       indent .my-link-addr  cr
       use-routerv6?  if  indent .routerv6-en-addr  cr  then
+      name-server-ipv6 knownv6?  if  indent .name-server-ipv6  cr  then
    then
 ;
 
@@ -98,6 +99,7 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
 ;
 : set-my-ipv6-addr-link-local  ( -- )
    \ Duplicate Address Discovery
+   d# 64 to /prefix
    unknown-ipv6-addr my-ipv6-addr copy-ipv6-addr
 
    default-ipv6-addr my-ipv6-addr-link-local copy-ipv6-addr
@@ -114,17 +116,33 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
 
    my-ipv6-addr-link-local my-ipv6-addr copy-ipv6-addr
 ;
+: discover-me  ( -- )
+   ipv6-address " stateless" $=  if
+      set-my-ipv6-addr-link-local
+   else
+      do-dhcpv6-stateful
+   then
+;
+
+: ?discover-dns  ( -- )
+   ipv6-address " stateless" $=  if
+      name-server-ipv6 unknown-ipv6-addr?  if  
+         do-dhcpv6-stateless
+      then
+   then
+;
 
 : process-rd-options  ( adr len -- )
    begin  dup 0>  while
       over c@ case
-         1  of  over 2 + routerv6-en-addr copy-en-addr  endof  \ Source link-layer address option
-         3  of  over 2 + c@ to /prefix                       \ Prefix option
+         1  of  over 2 + routerv6-en-addr copy-en-addr  endof    \ Source link-layer address option
+         3  of  over 2 + c@ to /prefix                           \ Prefix option
                 over 3 + c@ to prefix-flag
-                over 8 + be-l@ to prefix-lifetime            \ XXX lifetime
-                over d# 16 + my-prefix copy-ipv6-addr        \ Prefix
+                over 8 + be-l@ to prefix-lifetime                \ XXX lifetime
+                over d# 16 + my-prefix copy-ipv6-addr            \ Prefix
                 endof
-         5  of  over 4 + be-l@ to (link-mtu)  endof          \ MTU option
+         5  of  over 4 + be-l@ to (link-mtu)  endof              \ MTU option
+     d# 25  of  over 8 + name-server-ipv6 copy-ipv6-addr  endof  \ RDNSS option
       endcase
       over 1+ c@ 8 * /string
    repeat  2drop
@@ -173,11 +191,12 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
 
    ['] 4drop to icmpv6-err-callback-xt
    ['] 2drop to icmpv6-info-callback-xt
+   unknown-ipv6-addr name-server-ipv6 copy-ipv6-addr
 
-   d# 64 to /prefix
-   set-my-ipv6-addr-link-local
-
+   discover-me
    discover-router
+   ?discover-dns
+   
    to use-ipv6?                 \ Restore IPv6 flag
 ;
 
