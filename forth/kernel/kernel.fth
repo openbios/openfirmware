@@ -995,9 +995,11 @@ headerless
      then
 ;
 headers
+0 value 'error-word
 : .not-found  ( adr len -- )  where  type ."  ?" cr  ;
 \ Abort after an undefined word in interpret state
 : $interpret-do-undefined  ( adr len -- )
+   d# 32 min 'error-word pack  count
    set-abort-message  d# -13 throw
 ;
 \ Compile a surrogate for an undefined word in compile state
@@ -1532,6 +1534,7 @@ headerless
    init
    d# 20 alloc-mem  is fake-name-buf
    d# 32 alloc-mem  is canonical-word
+   d# 34 alloc-mem  is 'error-word
 ;
 headers
 
