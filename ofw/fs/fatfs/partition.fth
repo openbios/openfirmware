@@ -17,8 +17,12 @@ purpose: FDisk partition map decoder
 \ using fdisk and mkdosfs under Linux.  It is too easy to run mkdosfs on
 \ the overall disk (not the partition).
 : unpartitioned?  ( -- flag )
-   sector-buf h# 1fe + le-w@ h# aa55 <>
-   sector-buf h# 1c6 + le-l@ 0=  or
+   \ In partition maps, the status byte is 0 (not bootable) or 80 (bootable)
+   sector-buf h# 1be + c@  h# 7f and  0<>     ( unpartitioned? )
+   \ and the end of the sector contains a signature
+   sector-buf h# 1fe + le-w@ h# aa55 <>  or   ( unpartitioned?' )
+   \ and the first partition entry has a non0 starting sector number
+   sector-buf h# 1c6 + le-l@ 0=  or           ( unpartitioned?' )
 ;
 
 : ptable-bounds  ( -- end start )  sector-buf  h# 1be +  h# 40  bounds  ;
