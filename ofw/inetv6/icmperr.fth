@@ -58,6 +58,10 @@ purpose:  Internet Control Message Protocol version 6 (ICMPv6) error message han
    icmp-code c@ -rot                  ( code adr len )
    icmp-type c@ -rot                  ( code type adr len )
    icmpv6-err-callback-xt execute
+
+   \ Abort because, most likely, the error condition is caused by
+   \ erroneous networking code.
+   true abort" Fix cause of error and retry"
 ;
 
 headers

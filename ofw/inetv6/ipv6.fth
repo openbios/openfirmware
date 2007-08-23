@@ -96,25 +96,6 @@ create his-ipv6-addr-mc-sol-node  h# ff c, 2 c, 0 w, 0 l, 0 w, 0 c, 1 c, h# ff c
 : unknown-ipv6-addr?   ( adr-buf -- flag )  unknown-ipv6-addr  ipv6=  ;
 : knownv6?  ( adr-buf -- flag )  unknown-ipv6-addr? 0=  ;
 
-: bits>mask  ( bits -- mask )
-   ?dup 0=  if  0 exit  then
-   0 swap  0 7  ?do                        ( mask bits )
-      1 i << rot or swap                   ( mask' bits )
-      1-  dup 0=  if  leave  then          ( mask bits' )
-   -1 +loop  drop                          ( mask )
-;
-
-: prefix-match?  ( ip1 ip2 -- flag )
-   /prefix 8 /mod 2over 2 pick       ( ip1 ip2 rem quot ip1 ip2 quot )
-   comp 0=  if
-      swap bits>mask >r             ( ip1 ip2 quot )  ( R: mask )
-      tuck + c@ r@ and              ( ip1 quot [ip2+quot]&mask )  ( R: mask )
-      -rot + c@ r> and =            ( flag )
-   else
-      4drop false
-   then
-;
-
 : set-his-ipv6-addr-mc  ( -- )
    his-ipv6-addr /ipv6 + 3 - his-ipv6-addr-mc-sol-node /ipv6 + 3 - 3 move
 ;
@@ -140,6 +121,35 @@ create his-ipv6-addr-mc-sol-node  h# ff c, 2 c, 0 w, 0 l, 0 w, 0 c, 1 c, h# ff c
 : use-ipv6-ok?  ( -- flag )
    his-ipv6-addr knownv6?
    his-ipv6-addr ipv6-addr-local? not  if  use-routerv6? and  then
+;
+
+: bits>mask  ( bits -- mask )  h# ff 8 rot - << h# ff and  ;
+: copy-ipv6-prefix  ( prefix ip /prefix -- )
+   8 /mod 2over 2 pick move         ( prefix ip rem quot )
+   swap ?dup  if                    ( prefix ip quot rem )
+      bits>mask                     ( prefix ip quot mask )
+      -rot                          ( prefix mask ip quot )
+      tuck + dup c@                 ( prefix mask quot ip+quot ip[quot] )
+      3 pick invert and 2>r         ( prefix mask quot )  ( R: ip+quot ip[quot]&~mask )
+      rot + c@ and                  ( prefix[quot]&mask )  ( R: ip+quot ip[quot]&~mask )
+      2r> rot or swap c!            ( )
+   else
+      3drop                         ( )
+   then
+;
+: (prefix-match?)  ( ip1 ip2 /prefix -- flag )
+   8 /mod 2over 2 pick              ( ip1 ip2 rem quot ip1 ip2 quot )
+   comp 0=  if
+      swap bits>mask >r             ( ip1 ip2 quot )  ( R: mask )
+      tuck + c@ r@ and              ( ip1 quot ip2[quot]&mask )  ( R: mask )
+      -rot + c@ r> and =            ( flag )
+   else
+      4drop false
+   then
+;
+: prefix-match?  ( ip1 ip2 -- flag )
+   dup ipv6-addr-local?  if  d# 64  else  /prefix  then
+   (prefix-match?)
 ;
 
 /ipv6 buffer: server-ipv6-addr

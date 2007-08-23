@@ -12,22 +12,27 @@ d# 128 buffer: file-name-buf
 d# 256 buffer: 'root-path
 d#  32 buffer: tmpname
 false instance value bootp-only?
+[then]
+
+: (.ipv6)  ( buf -- adr len )
+   push-hex
+   <#  dup /ipv6 + 1-  do  i c@ u# u# drop  -1 +loop  0 u#>
+   pop-base
+;
 
 \ Construct the file name for the second-stage boot program from
 \ the IP address and the architecture.
-: boot-filename  ( -- adr len )
+: boot-filenamev6  ( -- adr len )
    file-name-buf cscount dup  if  exit  then   ( adr len )
    2drop
-   push-hex
-   \ XXX Questionable code for IPv6
-   my-ipv6-addr be-l@  (.8)  2dup upper  ( adr len )
-   pop-base
+   my-ipv6-addr (.ipv6)  2dup upper            ( adr len )
    tmpname place
    cpu-arch dup  if  " ."  tmpname $cat  tmpname $cat  else  2drop  then
    tmpname count file-name-buf place-cstr  drop
    file-name-buf  cscount
 ;
 
+[ifndef] include-ipv4
 headers
 
 true instance value use-bootp?
@@ -116,7 +121,7 @@ d# 255 instance buffer: pathbuf
 headers
 : next-xid  ( -- id )  rpc-xid 1+ dup to rpc-xid  ;
 
-: load   ( adr -- len )  boot-filename read-file  ;
+: load   ( adr -- len )  boot-filenamev6 read-file  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

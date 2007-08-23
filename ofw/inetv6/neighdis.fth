@@ -160,12 +160,11 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
 ;
 : auto-cfg-global?  ( -- flag )
    my-prefix unknown-ipv6-addr?  if  false exit  then
-   prefix-flag h# 40 and 0=  if  false exit  then
-   /prefix d# 64 =                              \ XXX What to do with /prefix other than 64?
+   prefix-flag h# 40 and                          \ Prefix can be used for autocfg
 ;
 : discover-router  ( -- )
-   unknown-ipv6-addr        my-ipv6-addr-global       copy-ipv6-addr
-   ipv6-addr-mc-all-routers his-ipv6-addr             copy-ipv6-addr
+   unknown-ipv6-addr         my-ipv6-addr-global  copy-ipv6-addr
+   ipv6-addr-mc-all-routers  his-ipv6-addr        copy-ipv6-addr
    set-his-en-addr-mc
    send-router-sol
 
@@ -173,11 +172,11 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
    begin
       IP_HDR_ICMPV6 receive-ip-packet  ?dup 0=  if  process-rd?  then
    until
-   auto-cfg-global? not  if  exit  then
+   auto-cfg-global? 0=  if  exit  then
 
    \ DAD on the global IPv6 address
    my-ipv6-addr-link-local my-ipv6-addr-global copy-ipv6-addr
-   my-prefix my-ipv6-addr-global /prefix 8 / move   \ XXX assume prefix multiple of 8 bits
+   my-prefix my-ipv6-addr-global /prefix copy-ipv6-prefix
 
    ipv6-addr-mc-all-nodes his-ipv6-addr copy-ipv6-addr
    set-his-en-addr-mc

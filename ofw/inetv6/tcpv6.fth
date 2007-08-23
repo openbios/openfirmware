@@ -2413,7 +2413,6 @@ false instance value do-delack?
    use-ipv6?  if  acceptv6  else  accept  then
 ;
 
-\ XXX new args: ipv4, ipv6
 [ifndef] include-ipv4
 : parse-args  ( -- )
    my-args
