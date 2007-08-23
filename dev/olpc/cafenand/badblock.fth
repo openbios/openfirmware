@@ -286,13 +286,18 @@ external
 
 \ Completely erase the device, ignoring any existing bad-block info
 \ This is fairly severe, not recommended except in exceptional situations
-: scrub  ( -- )
+: scrub!  ( -- )
    release-bbt
    total-pages  0  ?do
       (cr i .
       i erase-block
    pages/eblock +loop
    make-bbt
+;
+: scrub  ( -- )
+   ." scrub is dangerous because it discards factory bad block information."  cr
+   ." That can cause bad problems with later use of the NAND FLASH device."  cr
+   ." Type  scrub!  if you really want to do it." cr
 ;
 
 : .bn  ( -- )  (cr .  ;  
