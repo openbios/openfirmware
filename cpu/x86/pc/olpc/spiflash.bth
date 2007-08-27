@@ -3,16 +3,21 @@ purpose: Builder script for making the SPI FLASH serial recovery program
 command: &builder &this
 build-now
 
-: null$  " "  ;
+\needs cdump : cdump  ( adr len -- )  push-hex   bounds  ?do  i c@  3 u.r  loop  pop-base  ;
+
+\needs null$  : null$  " "  ;
+
+h# fff0.0000 constant rom-pa
 
 fload ${BP}/cpu/x86/pc/olpc/linuxserial.fth
 fload ${BP}/cpu/x86/ioports.fth    \ I/O port access under Linux
 
+alias root-map-in mmap     ( phys len -- virt )
+alias root-map-out munmap  ( virt len -- )
+
 fload ${BP}/cpu/x86/crc32.fth		\ Assembly language Zip CRC calculation
 fload ${BP}/forth/lib/crc32.fth		\ High-level portion of CRC calculation
-
-: us  ( microseconds -- )  drop  ;
-: ms  ( milliseconds -- )  drop  ;
+fload ${BP}/forth/lib/wrtime.fth	\ Time delays via the wrapper
 
 : power-off  ( -- )  " sync" $sh  " kbc-on" eval  ;
 
@@ -30,6 +35,7 @@ fload ${BP}/dev/olpc/kb3700/ecio.fth
 fload ${BP}/dev/olpc/kb3700/ecserial.fth
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth
 fload ${BP}/dev/olpc/spiflash/spiui.fth
+fload ${BP}/dev/olpc/spiflash/flashec.fth
 
 : os-fw-filename$  ( -- adr len )  " olpc.rom"  ;
 
@@ -63,6 +69,10 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth
    ." Verification over the serial line is slow (17 minutes)" cr
    ." so you might want to skip it and let the" cr
    ." loaded image verify itself upon booting." cr
+   ."
+   cr
+   ." flash-ec filename  \ Programs the EC FLASH from the named file
+
    cr
 ;
 
