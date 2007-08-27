@@ -21,30 +21,24 @@
 usage
 
 hex
-fe01.0000 4000 mmap constant sd
+0 value sd-base
 
-: sdl@  ( offset -- l )  sd + l@  ;
-: sdw@  ( offset -- w )  sd + w@  ;
-: sdb@  ( offset -- b )  sd + c@  ;
+: sdl@  ( offset -- l )  sd-base + l@  ;
+: sdw@  ( offset -- w )  sd-base + w@  ;
+: sdb@  ( offset -- b )  sd-base + c@  ;
 
-: sdl!  ( l offset -- )  sd + l!  ;
-: sdw!  ( w offset -- )  sd + w!  ;
-: sdb!  ( b offset -- )  sd + c!  ;
+: sdl!  ( l offset -- )  sd-base + l!  ;
+: sdw!  ( w offset -- )  sd-base + w!  ;
+: sdb!  ( b offset -- )  sd-base + c!  ;
 
 : r  ( offset -- )  sdl@ u.  ;
 : w  ( l offset -- )  sdl!  ;
 
 -1 value flash-base
-fff0.0000 10.0000 mmap to flash-base
 \needs cdump  : cdump  ( adr len -- )  bounds  ?do  i c@ .x  loop  ;
 \needs .mfg-data fload mfgdata.fth
 
-: 1ms  ( -- )
-  h# 10 msr@ drop  d# 500,000 +   ( limit  )
-  begin  dup  h# 10 msr@ drop -  0<  until
-  drop
-;
-: ms  ( #ms -- )  0  ?do  1ms  loop  ;
+\needs ms fload wrtime.fth
 
 \needs dcon@ fload dconsmb.fth
 
@@ -67,6 +61,15 @@ defer spi-start  defer spi@  defer spi!  defer spi-out  defer spi-reprogrammed
 1 value spi-us
 \needs ec@ fload ecio.fth
 \needs ec-range fload ecdump.fth
+
+: map-io  ( -- )
+   h# fe01.0000 h#    4000 mmap to sd-base
+   h# fff0.0000 h# 10.0000 mmap to flash-base
+   h# fe00.8000 h#    4000 mmap to vp-base
+   h# fe00.4000 h#    4000 mmap to dc-base
+   h# fe00.0000 h#    4000 mmap to gp-base
+;
+map-io
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

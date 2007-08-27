@@ -5,7 +5,7 @@
 \needs mmap fload ioports.fth
 
 hex
-fe00.8000 4000 mmap constant vp-base
+-1 value vp-base
 
 : vp@  ( reg -- l )  vp-base + l@  ;
 : vp!  ( l reg -- )  vp-base + l!  ;
@@ -24,19 +24,15 @@ fe00.8000 4000 mmap constant vp-base
    h# 8 +loop
 ;
 
-fe00.4000 4000 mmap constant dc-base
+-1 value dc-base
 
 : dc@  ( reg -- l )  dc-base + l@  ;
 : dc!  ( l reg -- )  dc-base + l!  ;
 
-fe00.0000 4000 mmap constant gp-base
+-1 value gp-base
 
 : gp@  ( reg -- l )  gp-base + l@  ;
 : gp!  ( l reg -- )  gp-base + l!  ;
-
-
-
-
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

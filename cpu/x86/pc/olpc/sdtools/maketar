@@ -4,8 +4,10 @@ cp ../../../../../cpu/x86/Linux/forth sdkit
 cp ../../../../../cpu/x86/build/builder.dic sdkit
 cp ../../../../../cpu/x86/ioports.fth sdkit
 cp ../../../../../cpu/x86/pc/olpc/mfgdata.fth sdkit
+cp ../../../../../forth/lib/wrtime.fth sdkit
 cp ../../../../../dev/olpc/dcon/dconsmb.fth sdkit
 cp ../../../../../dev/olpc/kb3700/ecio.fth sdkit
 cp sd sd.fth ecdump.fth dumpgamma.fth sdkit
+chmod 755 sdkit/sd
 tar cfz sdkit.tgz sdkit
 # rm sdkit/*
