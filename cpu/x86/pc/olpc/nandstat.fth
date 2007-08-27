@@ -25,6 +25,12 @@ d# 128 value #cols
 dev screen  : erase-screen erase-screen ;  dend
 
 h# 80 h# 80 h# 80  rgb>565 constant bbt-color
+    0     0     0  rgb>565 constant erased-color
+h# ff     0     0  rgb>565 constant bad-color
+    0     0 h# ff  rgb>565 constant clean-color
+h# ff h# ff     0  rgb>565 constant writing-color
+    0 h# ff     0  rgb>565 constant written-color
+h# ff h# ff h# ff  rgb>565 constant starting-color
 
 : gshow-erasing ( #eblocks -- )
    cursor-off  " erase-screen" $call-screen  0 status-line at-xy
@@ -33,21 +39,21 @@ h# 80 h# 80 h# 80  rgb>565 constant bbt-color
    " bbt0" $call-nand nand-pages/block /  bbt-color show-state
    " bbt1" $call-nand nand-pages/block /  bbt-color show-state
 
-   h# ff h# ff h# ff rgb>565   ( #eblocks color )
+   starting-color   ( #eblocks color )
    swap 0  ?do  i over show-state  loop
    drop
 ;
 
-: gshow-erased  ( eblock# -- )      0  0  0 rgb>565  show-state  ;
-: gshow-bad     ( eblock# -- )  h# ff  0  0 rgb>565  show-state  ;
-: gshow-bbt     ( eblock# -- )  h# 80 80  0 rgb>565  show-state  ;
-: gshow-clean  ( eblock# -- )   h#  0  0 ff rgb>565  show-state  ;
+: gshow-erased  ( eblock# -- )  erased-color  show-state  ;
+: gshow-bad     ( eblock# -- )  bad-color     show-state  ;
+: gshow-bbt     ( eblock# -- )  bbt-color     show-state  ;
+: gshow-clean   ( eblock# -- )  clean-color   show-state  ;
 
 : gshow-cleaning ( -- )  ." Cleanmarkers"  cr  cursor-on  ;
 
 : gshow-writing  ( #eblocks -- )
    ." Writing  "
-   h# ff h# ff 0 rgb>565   ( #eblocks color )
+   writing-color   ( #eblocks color )
    0  rot 0  ?do           ( color eblock# )
       dup nand-pages/block * " block-bad?" $call-nand  0=  if  ( color eblock# )
          2dup swap show-state  ( color eblock# )
@@ -60,7 +66,7 @@ h# 80 h# 80 h# 80  rgb>565 constant bbt-color
    2drop
 ;
 
-: gshow-written  ( eblock# -- )  0 h# ff 0 rgb>565  show-state  ;
+: gshow-written  ( eblock# -- )  written-color  show-state  ;
 
 : gshow
    ['] gshow-erasing to show-erasing
