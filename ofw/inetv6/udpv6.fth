@@ -29,18 +29,18 @@ constant /udpv6-pseudo-hdr
 /udpv6-pseudo-hdr instance buffer: udpv6-pseudo-hdr
 
 \ Assumes the-struct is the UDP packet.
-: fill-udpv6-pseudo-hdr  ( -- )
+: fill-udpv6-pseudo-hdr  ( his-ipv6 my-ipv6 -- )
    /ipv6-header negate +struct
    udpv6-pseudo-hdr                                      ( udp-pseudo-addr )
-   my-ipv6-addr  over udpv6-src-addr copy-ipv6-addr      ( udp-pseudo-addr )
-   his-ipv6-addr over udpv6-dst-addr copy-ipv6-addr      ( udp-pseudo-addr )
+   tuck ( my-ipv6-addr )  udpv6-src-addr copy-ipv6-addr  ( udp-pseudo-addr )
+   tuck ( his-ipv6-addr ) udpv6-dst-addr copy-ipv6-addr  ( udp-pseudo-addr )
    IP_HDR_UDP over udpv6-protocol-id xl!                 ( udp-pseudo-addr )
    /ipv6-header +struct                                  ( udp-pseudo-addr )
    udp-length xw@  swap udpv6-len-copy xl!               (  )
 ;
 
 \ Assumes the-struct is the UDP packet.
-: calc-udpv6-checksum  ( -- checksum )
+: calc-udpv6-checksum  ( his-ipv6 my-ipv6 -- checksum )
    fill-udpv6-pseudo-hdr
    0 udpv6-pseudo-hdr /udpv6-pseudo-hdr  (oc-checksum)  ( cksum )
    0 udp-checksum xw!
@@ -54,7 +54,8 @@ headers
    /udp-header +  dup udp-length xw!             ( udp-len )
    0 udp-checksum  xw!                           ( udp-len )
 
-   calc-udpv6-checksum udp-checksum xw!          ( udp-len )
+   his-ipv6-addr my-ipv6-addr calc-udpv6-checksum udp-checksum xw!
+                                                 ( udp-len )
 
    the-struct  swap  IP_HDR_UDP  send-ipv6-packet       ( )
 ;
@@ -76,10 +77,15 @@ headers
 ;
 headerless
 
+\ XXX Assume no extra IPv6 headers
 : bad-udpv6-checksum?  ( -- bad? )
-   udp-checksum xw@  dup  if    ( checksum )
-      calc-udpv6-checksum  <>   ( bad? )
-   then                         ( bad? )
+   udp-checksum xw@  dup  if           ( checksum )
+      the-struct dup >r                ( checksum )  ( R: udp )
+      /ipv6-header - set-struct        ( checksum )  ( R: udp )
+      ipv6-source-addr ipv6-dest-addr  ( checksum his-ipv6 my-ipv6 )  ( R: udp )
+      r> set-struct                    ( checksum his-ipv6 my-ipv6 )
+      calc-udpv6-checksum  <>          ( bad? )
+   then                                ( bad? )
 ;
 
 : lock-udpv6-address  ( -- )  lock-ipv6-address  ;

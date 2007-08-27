@@ -78,7 +78,6 @@ headers
 /ipv6 buffer: my-ipv6-addr-global
 /ipv6 buffer: router-ipv6-addr
 /ipv6 buffer: name-server-ipv6
-/ipv6 buffer: dhcp-ipv6-addr
 
 headerless
 
@@ -107,6 +106,7 @@ create his-ipv6-addr-mc-sol-node  h# ff c, 2 c, 0 w, 0 l, 0 w, 0 c, 1 c, h# ff c
    >r
    r@ his-ipv6-addr-mc-sol-node ipv6=        \ His solicited node address?
    r@ ipv6-addr-mc-all-nodes    ipv6= or     \ Multicast all-nodes?
+   r@ ipv6-addr-mc-all-dhcp     ipv6= or     \ Multicast all-dhcp?
    r> ipv6-addr-mc-all-routers  ipv6= or     \ Multicast all-routers?
 ;
 : my-ipv6-addr-mc?   ( adr-buf -- flag )  

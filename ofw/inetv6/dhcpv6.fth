@@ -36,7 +36,7 @@ struct ( dhcpv6 option )
    0 sfield  do6-data              \ Option data
 constant /do6-hdr
 
-d# 1024 constant /dhcpv6-packet
+d# 1024 constant max-dhcpv6-packet
 
 \ do6-code values
 \    1  client ID
@@ -55,14 +55,22 @@ d# 1024 constant /dhcpv6-packet
 d# 256 buffer: 'root-path
 d# 256 buffer: 'client-name
 d# 256 buffer: 'vendor-options
+
 headers
 ' 'client-name     " client-name"    chosen-string
 ' 'vendor-options  " vendor-options" chosen-string
 ' 'root-path       " root-path"      chosen-string
 : domain-name  ( -- adr len )  'domain-name cscount  ;
+
+headerless
+instance variable xid
 [then]
 
-0 instance value dhcpv6-packet
+headers
+
+0 instance value dhcp-pref               \ DHCPv6 server preference
+0 instance value dhcpv6-packet           \ DHCPv6 packet to send
+0 instance value dhcpv6-reply            \ DHCPv6 packet received
 0 instance value dhcpv6-len              \ Actual length of received DHCPv6 packet
 0 instance value dhcpv6-option           \ Pointer to option field in dhcpv6-packet
 
@@ -75,15 +83,13 @@ headers
 : op$!  ( $ -- )  tuck dhcpv6-option swap move  +dhcpv6-option  ;
 
 : allocate-dhcpv6  ( size -- )
-   allocate-udp dup is dhcpv6-packet  set-struct
+   allocate-udpv6 dup is dhcpv6-packet  set-struct
    set-dhcpv6-option
-
-   get-msecs start-time !
 
    \ Set "random" transaction ID and random number generator seed
    my-en-addr 2 + xl@  get-msecs  xor  dup  xid !  rn !
 ;
-: free-dhcpv6  ( size -- )  dhcpv6-packet swap free-udp  ;
+: free-dhcpv6  ( size -- )  dhcpv6-packet swap free-udpv6  ;
 
 : init-dhcpv6  ( -- )
 [ifndef] include-ipv4
@@ -101,21 +107,51 @@ stand-init:  DHCPv6 init
 ;
 previous definitions
 
-: send-dhcpv6-packet  ( size op -- )
-   dh6-op c!
-   xid  dh6-xid!
-   dhcpv6-packet swap client-port dhcpv6-port send-udpv6-packet
+: .dhcpv6-err  ( status -- )
+   ?dup 0=  if  exit  then
+   ." DHCPv6: "
+   case
+      1  of  ." unspecified failure"  endof
+      2  of  ." no address available"  endof
+      3  of  ." no binding"  endof
+      4  of  ." not on-link"  endof
+      5  of  ." use multicast"  endof
+      ( otherwise )  ." unknown error: " dup u.
+   endcase
+   cr
 ;
 
-: detect-dhcpv6-packet  ( op -- timeout? )
+: process-dhcpv6-options  ( adr len -- error? )
+   begin  dup 0>  while
+      over be-w@  case                                               \ Option code
+             7  of  over 4 + c@ to dhcp-pref  endof                  \ Preference
+         d# 13  of  over 4 + be-w@ dup .dhcpv6-err                   \ Reply status
+                    if  2drop true exit  then  endof
+         d# 25  of  over 4 + name-server-ipv6 copy-ipv6-addr  endof  \ RDNSS
+      endcase
+      over 2 + be-w@ 4 + /string                        \ Advance to next option
+   repeat  2drop  false
+;
+
+: receive-dhcpv6-packet  ( op -- timeout? )
    >r
    dhcpv6-timeout set-timeout
    begin  client-port receive-udp-packet  0=  while       ( adr,len src-port )
-      drop  to  dhcpv6-len  set-struct
-the-struct dhcpv6-len dump cr
-      dh6-xid@ xid @ h# ff.ffff =  dh6-op c@ r@ =  and  if  r> drop false exit  then
+      drop  to  dhcpv6-len  dup set-struct  to  dhcpv6-reply
+      dh6-xid@ xid @ h# ff.ffff and =  dh6-op c@ r@ =  and  if  r> drop false exit  then
    repeat
    r> drop true
+;
+
+: detect-dhcpv6-packet  ( op -- error? )
+   receive-dhcpv6-packet ?dup  if  exit  then
+   dh6-options dhcpv6-len /dhcpv6-hdr -  process-dhcpv6-options
+;
+
+: send-dhcpv6-packet  ( size op -- )
+   dh6-op c!
+   xid @  dh6-xid!
+   dhcpv6-packet swap client-port dhcpv6-port send-udpv6-packet
 ;
 
 : option-client-id  ( -- )
@@ -151,16 +187,14 @@ the-struct dhcpv6-len dump cr
 ;
 
 : do-dhcpv6-stateless  ( -- )
-   ." DHCPv6 stateless auto configuration not supported yet" cr exit
-
    bootnet-debug  if
-      ." DHCPv6 protocol: Getting network information" cr
+      ." DHCPv6 protocol: Information Request" cr
    then
-   /dhcpv6-packet allocate-dhcpv6
+   max-dhcpv6-packet allocate-dhcpv6
 
-   ['] dhcpv6-req-info catch  drop
+   ['] dhcpv6-req-info catch  if  indent ." Timeout waiting for requested info" cr  then
 
-   /dhcpv6-packet free-dhcpv6
+   max-dhcpv6-packet free-dhcpv6
 ;
 
 : do-dhcpv6-stateful  ( -- )
