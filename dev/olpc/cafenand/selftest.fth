@@ -7,8 +7,30 @@ instance variable rn            \ Random number
    rn @  d# 1103515245 *  d# 12345 +   h# 7FFFFFFF and  dup rn !
 ;
 
-false value selftest-err?
-: record-err  ( error? -- )  if  true to selftest-err?  then  ;
+0 value cur-eblock                      \ Eblock # under scrutiny
+0 value prev-eblock                     \ Last bad eblock #
+0 value #fixbbt                         \ Counter of bad eblocks found
+false value fixbbt?                     \ Flag to determine whether to mark bad eblocks
+false value selftest-err?               \ Selftest result
+
+: #fixbbt++  ( -- )  #fixbbt 1+ to #fixbbt  ;
+: .#fixbbt  ( -- )
+   (cr ." # bad blocks "
+   fixbbt?  if  ." marked"  else  ." found"  then
+   ."  = "  #fixbbt .d  cr
+;
+: record-err  ( error? -- )
+   noop
+   if
+      true to selftest-err?
+      prev-eblock cur-eblock <>  if
+         ." Bad block" cur-eblock .page-byte cr
+         cur-eblock to prev-eblock
+         #fixbbt++
+         fixbbt?  if  cur-eblock mark-bad  then
+      then
+   then  
+;
 
 0 value sbuf                            \ Original content of block
 0 value obuf                            \ Block data written
@@ -37,7 +59,7 @@ false value selftest-err?
 : test-eblock  ( page# pattern -- error? )
    obuf erase-size 2 pick      fill
    ibuf erase-size rot invert  fill
-   obuf over write-eblock  if  true exit  then
+   obuf over write-eblock  if  drop true exit  then
    ibuf swap read-eblock   if  true exit  then
    ibuf obuf erase-size comp
 ;
@@ -46,7 +68,7 @@ false value selftest-err?
 : erase  ( subarg$ -- )  2drop  ." Erasing..." cr  wipe  ;
 
 \ Destroy content of flash.  Argument is hex byte pattern value.
-: .skip-bad  ( page# -- )  cr ." Skipping bad block" .page-byte cr  ;
+: .skip-bad  ( page# -- )  (cr ." Skip bad block" .page-byte cr  ;
 : fill  ( subarg$ -- )
    $number  if  0  else  0 max h# ff min  then
    ." Fill nandflash with h# " dup u. cr
@@ -55,9 +77,12 @@ false value selftest-err?
       i block-bad?  if
          i .skip-bad
       else
+         i to cur-eblock
          (cr i . i over test-eblock  record-err
       then
    pages/eblock +loop  drop
+
+   .#fixbbt
 ;
 
 \ Non-destructive.  Argument is number of blocks to test.
@@ -77,6 +102,7 @@ false value selftest-err?
       dup block-bad?  if              ( block#' )
          drop                         ( )
       else                            ( block#' )
+         dup to cur-eblock
          (cr dup .
          sbuf over read-eblock dup record-err  0=  if
             dup h# 55 test-eblock  record-err
@@ -86,6 +112,8 @@ false value selftest-err?
          sbuf swap write-eblock  record-err
       then
    loop
+
+   .#fixbbt
 ;
 
 \ Non-destructive.  Argument is <#blk>,<blk#>
@@ -119,6 +147,7 @@ false value selftest-err?
    pages/eblock * swap 1+ pages/eblock * ( page# #page )
    usable-page-limit rot  ?do            ( #blk+1 )
       i block-bad? not  if
+         i to cur-eblock
          (cr i .
          sbuf i read-eblock dup record-err  0=  if
             i h# 55 test-eblock  record-err
@@ -127,6 +156,15 @@ false value selftest-err?
          sbuf i write-eblock  record-err
       then
    dup +loop  drop
+
+   .#fixbbt
+;
+
+\ Non-destructive.  Same as full.  Except failed eblocks are marked as bad.
+: fixbbt  ( subarg$ -- )
+   true to fixbbt?
+   full
+   #fixbbt  if  save-bbt  then
 ;
 
 : none  ( subarg$ -- )  2drop exit  ;
@@ -146,19 +184,28 @@ false value selftest-err?
    ."                  Default <data> is 00" cr
    ."   fast[,<#blk>]  to non-destructively test the specified <#blk> of flash" cr
    ."                  Default <#blk> is decimal 10" cr
-   ."   full[,<#blk>[,<blk#>]" cr
+   ."   full[,<#blk>[,<blk#>]]" cr
    ."                  to non-destructively test the specified <blk#> every" cr
    ."                  <#blk>+1 number of blocks" cr
    ."                  Default <#blk> and <blk#> are 0" cr
    ."                  E.g., full,1,0 test even blocks" cr
    ."                        full,1,1 test odd blocks" cr
    ."                        full,2,0 test 33% of the flash" cr
+   ."   fixbbt[,<#blk>[,<blk#>]]" cr
+   ."                  same as full; however, bad blocks found are marked as bad" cr
    cr
+;
+
+: selftest-init  ( -- )                     \ Init variables per test
+   false to fixbbt?
+   0 to #fixbbt
+   -1 to prev-eblock
 ;
 
 : parse-selftest-args  ( arg$ -- )
    begin                                    ( arg$ )
       ascii ; left-parse-string  ?dup  if   ( rem$ arg$' )
+         selftest-init                      ( rem$ arg$' )
          ascii , left-parse-string          ( rem$ subarg$ method$ )
          my-self ['] $call-method catch  if ( rem$ x x x x x )
             ." Unknown argument" cr
@@ -179,6 +226,7 @@ false value selftest-err?
    selftest-args ?dup  if
       parse-selftest-args
    else
+      selftest-init
       drop " " fast
    then
    free-test-bufs
