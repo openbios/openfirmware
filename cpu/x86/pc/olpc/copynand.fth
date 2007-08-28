@@ -135,32 +135,32 @@ h# 100 buffer: crc-name-buf
 
 defer show-erasing  ( #blocks -- )
 : (show-erasing)  ( #blocks -- )  ." Erasing " . ." blocks" cr  ;
-' (show-erasing) is show-erasing
+' (show-erasing) to show-erasing
 
 defer show-erased  ( block# -- )
 : (show-erased)  ( block# -- )  (cr .  ;
-' (show-erased) is show-erased
+' (show-erased) to show-erased
 
 defer show-bad  ( block# -- )
-' drop is show-bad
+' drop to show-bad
 
-defer show-bbt  ( block# -- )
-' drop is show-bbt
+defer show-bbt-block  ( block# -- )
+' drop to show-bbt-block
 
 defer show-clean  ( block# -- )
-' drop is show-clean
+' drop to show-clean
 
 defer show-cleaning  ( -- )
 : (show-cleaning)  ( -- )  cr ." Cleanmarkers" cr  ;
-' (show-cleaning) is show-cleaning
+' (show-cleaning) to show-cleaning
 
 defer show-writing  ( #blocks -- )
 : (show-writing)  ." Writing " . ." blocks" cr  ;
-' (show-writing) is show-writing
+' (show-writing) to show-writing
 
 defer show-written
 : (show-written)  ( block# -- )  (cr .  ;
-' (show-written) is show-written
+' (show-written) to show-written
 
 : copy-nand  ( "devspec" -- )
    open-nand
@@ -171,7 +171,7 @@ defer show-written
    ['] noop to show-progress
 
    #nand-pages nand-pages/block / show-erasing
-   ['] show-bad  ['] show-erased  ['] show-bbt " (wipe)" $call-nand
+   ['] show-bad  ['] show-erased  ['] show-bbt-block " (wipe)" $call-nand
 
    #image-eblocks show-writing
 
@@ -306,7 +306,6 @@ true value dump-oob?
 ;
 : dump-nand  ( "devspec" -- )  true  to dump-oob?  (dump-nand)  ;
 : save-nand  ( "devspec" -- )  false to dump-oob?  (dump-nand)  ;
-
 
 : fastcopy-nand  ( "devspec" -- )
    open-nand

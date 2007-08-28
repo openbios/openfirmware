@@ -44,10 +44,10 @@ h# ff h# ff h# ff  rgb>565 constant starting-color
    drop
 ;
 
-: gshow-erased  ( eblock# -- )  erased-color  show-state  ;
-: gshow-bad     ( eblock# -- )  bad-color     show-state  ;
-: gshow-bbt     ( eblock# -- )  bbt-color     show-state  ;
-: gshow-clean   ( eblock# -- )  clean-color   show-state  ;
+: gshow-erased    ( eblock# -- )  erased-color  show-state  ;
+: gshow-bad       ( eblock# -- )  bad-color     show-state  ;
+: gshow-bbt-block ( eblock# -- )  bbt-color     show-state  ;
+: gshow-clean     ( eblock# -- )  clean-color   show-state  ;
 
 : gshow-cleaning ( -- )  ." Cleanmarkers"  cr  cursor-on  ;
 
@@ -69,14 +69,14 @@ h# ff h# ff h# ff  rgb>565 constant starting-color
 : gshow-written  ( eblock# -- )  written-color  show-state  ;
 
 : gshow
-   ['] gshow-erasing to show-erasing
-   ['] gshow-erased to show-erased
-   ['] gshow-bad to show-bad
-   ['] gshow-bbt to show-bbt
-   ['] gshow-clean to show-clean
-   ['] gshow-cleaning to show-cleaning
-   ['] gshow-writing to show-writing
-   ['] gshow-written to show-written
+   ['] gshow-erasing   to show-erasing
+   ['] gshow-erased    to show-erased
+   ['] gshow-bad       to show-bad
+   ['] gshow-bbt-block to show-bbt-block
+   ['] gshow-clean     to show-clean
+   ['] gshow-cleaning  to show-cleaning
+   ['] gshow-writing   to show-writing
+   ['] gshow-written   to show-written
 ;
 
 gshow

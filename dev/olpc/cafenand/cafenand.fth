@@ -149,13 +149,12 @@ h# 0200.0085 0 2 >cmd constant random-write-cmd
    swap r> move                        ( )
 ;
 
-: pio-write-raw  ( adr len page# offset -- )
+: pio-write-raw  ( adr len page# offset -- error? )
    write-enable
    dma-off  set-page  dup datalen         ( adr len )
    chip h# 2000 +  swap  move             ( )
    write-cmd h# 0000.0110 cmd  wait-cmd   ( ) \ No Auto ECC
    wait-write-done                        ( error? )
-   drop
 ;
 
 : pio-write-page  ( adr page# -- error? )
@@ -210,21 +209,27 @@ h# 10 buffer: syndrome-buf
    syndrome-buf
 ;
 
+\ Reads page into DMA buffer
+: get-page  ( page# -- true | adr false )
+   0 set-page                          ( )
+   /page /ecc +  h# 18 cl!             ( )
+   dma-buf-pa h# 44 cl!                ( )
+   0 h# 48 cl!                         ( )
+   /page h# a000.0000 or  h# 40 cl!    ( )
+   read-cmd h# 0800.0130 cmd  wait-dma ( )
+
+   h# 3c cl@  h# 40000 and  if         ( )      \ ECC error
+      dma-buf-va syndrome correct-ecc  ( uncorrectable? )
+   else                                ( )
+      false                            ( error? )
+   then                                ( error? )
+   dup  0=  if  dma-buf-va swap  then  ( true | adr false )
+;
+
 : read-page  ( adr page# -- error? )
-   0 set-page                          ( adr )
-   /page /ecc +  h# 18 cl!             ( adr )
-   dma-buf-pa h# 44 cl!                ( adr )
-   0 h# 48 cl!                         ( adr )
-   /page h# a000.0000 or  h# 40 cl!    ( adr )
-   read-cmd h# 0800.0130 cmd  wait-dma ( adr )
-
-   h# 3c cl@  h# 40000 and  if         ( adr )      \ ECC error
-      dma-buf-va syndrome correct-ecc  ( adr uncorrectable? )
-   else                                ( adr )
-      false                            ( adr error? )
-   then                                ( adr error? )
-
-   dma-buf-va rot /page do-lmove       ( error? )
+   get-page  if  drop true exit  then  ( adr dma-buf-adr )
+   swap /page do-lmove                 ( )
+   false
 ;
 
 [ifdef] notdef
@@ -267,7 +272,7 @@ h# 10 buffer: syndrome-buf
 ;
 
 : write-page   ( adr page# -- error? )  dma-write-page  ;
-: write-bytes  ( adr len page# offset -- )  pio-write-raw  ;
+: write-bytes  ( adr len page# offset -- error? )  pio-write-raw  ;
 
 3 value #erase-adr-bytes  \ Chip dependent
 : erase-block  ( page# -- )

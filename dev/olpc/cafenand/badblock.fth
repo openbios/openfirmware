@@ -142,7 +142,9 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
          /page +                            ( signature$ page# adr' )
       loop                                  ( signature$ page# adr' )
       drop                                  ( signature$ page# )
-      /page bb-offset +  write-bytes        ( )
+      /page bb-offset +  write-bytes  if    ( )
+         ." Failed to write bad block table" cr
+      then
    else                                     ( signature$ page# )
       3drop                                 ( )
    then
@@ -386,21 +388,51 @@ external
 
 : start-scan  ( -- )  pages/eblock negate  to scan-page#  ;
 
-\ Must erase all (wipe) first
+: try-copy-block  ( adr page# -- okay? )
+   pages/eblock  bounds  ?do        ( adr )
+      dup i write-page  if          ( adr )
+         drop false  unloop exit    ( false )
+      then                          ( adr )
+      /page +                       ( adr' )
+   loop                             ( adr )
+   drop true                        ( true )
+;
+: block-okay?  ( adr page# -- okay? )
+   pages/eblock  bounds  ?do        ( adr )
+      i get-page  if                ( adr )
+         drop false  unloop exit    ( false )
+      then                          ( adr buf-adr )
+      over /page comp  if           ( adr )
+         drop false unloop exit
+      then
+      /page +                       ( adr' )
+   loop                             ( adr )
+   drop true                        ( true )
+;
+: copy&check  ( adr page# -- okay? )
+   2dup try-copy-block  0=  if  2drop false exit  then  ( adr page# )
+   block-okay?
+;
+
 : copy-block  ( adr -- page# error? )
-   next-page#                             ( adr page# )
-   tuck  pages/eblock  bounds  ?do        ( page# adr )
-      dup i write-page  if                ( page# adr )
-         drop true  unloop exit           ( page# true )
-      then                                ( page# adr )
-      /page +                             ( page# adr' )
-   loop                                   ( page# adr )
-   drop false                             ( page# false )
+   begin  (next-page#)  0=  while                    ( adr page# )
+      2dup copy&check  if  nip false exit  then      ( adr page# )
+      \ Error; retry once
+      dup erase-block                                ( adr page# )
+      2dup copy&check  if  nip false exit  then     ( adr page# )
+      mark-bad  save-bbt                             ( adr )
+   repeat                                            ( adr )
+   drop                                              ( )
+   usable-page-limit pages/eblock -  true            ( page# error? )
 ;
 
 : put-cleanmarker  ( page# -- )
-   " "(85 19 03 20 08 00 00 00)"   ( page# adr len )
-   rot  /page /ecc +  write-bytes              ( )
+   >r
+   " "(85 19 03 20 08 00 00 00)"     ( adr len r: page# )
+   r@ /page /ecc +  write-bytes  if  ( r: page# )
+      r@ mark-bad save-bbt           ( r: page# )
+   then                              ( r: page# )
+   r> drop
 ;
 : put-cleanmarkers  ( show-xt -- )
    begin  (next-page#) 0=  while  ( show-xt page# )
