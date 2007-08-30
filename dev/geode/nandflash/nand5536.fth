@@ -97,6 +97,8 @@ h# 40 buffer: oob-buf
    handle-ecc                                 ( )
    stp
 ;
+h# 800 buffer: page-buf
+: get-page  ( page# -- adr )  page-buf swap read-page  page-buf  ;
 
 : read-id  ( -- adr )
    h# 90 cmd   \ Read-id command
