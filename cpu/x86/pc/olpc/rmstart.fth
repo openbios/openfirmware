@@ -128,6 +128,11 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
 
    h# 01 # al mov  al h# 80 # out
 
+   \ The following code sequence is a workaround for a hardware situation.
+   \ The MIC-on LED defaults to "on", because the CODEC chip powers on with
+   \ VREFOUT (i.e. MIC vbias) on.  We don't want the MIC LED to turn on
+   \ automatically on every resume, so we have to turn it off very quickly.
+
    \ The next few MSRs allow us to access the 5536
    \ EXTMSR - page 449   \ Use PCI device #F for port 2
 
@@ -141,17 +146,20 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
    op:  h# 51000010 # cx mov      \ MSR number - CPU interface serial
    wrmsr
 
-   op:  h# 014fc001 # dx mov
-   op:  h# 01480001 # ax mov
-   op:  h# 51000026 # cx mov
+   op:  h# 014fc001 # dx mov      \ Top of I/O region - 0x14fc, I/O space
+   op:  h# 01480001 # ax mov      \ Bottom of I/O region - 0x1480, enable
+   op:  h# 51000026 # cx mov      \ Region 6 configuration 
    wrmsr
 
-   op:  h# a0000001 # dx mov
-   op:  h# 480fff80 # ax mov
-   op:  h# 510100e1 # cx mov
+   op:  h# a0000001 # dx mov      \ Maps I/O space starting at 0x1480
+   op:  h# 480fff80 # ax mov      \ to the AC97 CODEC (ACC block)
+   op:  h# 510100e1 # cx mov      \ IOD Base Mask 1 MSR
    wrmsr
 
+   \ Writes 4 to CODEC register 0x76 to turn off VBIAS (VREFOUT)
    op: h# 7601.0004 # ax mov  op: h# 148c # dx mov  op: ax dx out
+
+   \ End of MIC LED code.
 
    \ This code is highly optimized because it runs when the CPU is in
    \ it slowest operation mode, so we want to get it done fast.
