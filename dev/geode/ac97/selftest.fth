@@ -21,6 +21,7 @@ h# 808 value rlevel
 : record  ( -- )
    open-in  establish-level
    record-base  record-len  audio-in drop
+   close-in
 ;
 
 : play  ( -- )
