@@ -31,7 +31,16 @@ struct ( ipv6-header )
     1 sfield ipv6-hop-limit
 /ipv6 sfield ipv6-source-addr
 /ipv6 sfield ipv6-dest-addr
-      \ There maybe extension headers here.
+    \ Maybe followed by zero or more of headers in following order:
+    \  -  Hop-by-Hop Options header
+    \  -  Destination Options header (for first destination, plus destinations in the
+    \     Routing header)
+    \  -  Routing header
+    \  -  Fragment header
+    \  -  Authentication header
+    \  -  Encapsulating Security Payload header
+    \  -  Destionation Options header (for final destination)
+    \  -  Upper-Layer header
 constant /ipv6-header
 
 \ Values of ipv6-next-hdr
@@ -186,9 +195,7 @@ headerless
 ;
 : .name-server-ipv6  ( -- )  ." DNS IPv6: " name-server-ipv6  .ipv6  ;
 
-[ifndef] include-ipv4
-0 instance value last-ip-packet
-[then]
+0 instance value last-ipv6-packet
 
 headers
 : (set-dest-ipv6)  ( buf -- )
@@ -208,7 +215,7 @@ headers
 ;
 
 : lock-ipv6-address  ( -- )
-   the-struct >r  last-ip-packet set-struct
+   the-struct >r  last-ipv6-packet set-struct
    \ Don't change his-ipv6-addr for booting over gateway
    use-routerv6?  if   \ booting over a gateway.  
       bootnet-debug  if  indent ." Using router"  cr  then
@@ -253,7 +260,12 @@ headerless
 : ipv6-payload  ( -- adr len )  the-struct /ipv6-header + ipv6-length xw@  ;
 
 \ Skip checking his-ipv6-addr if it is an ICMPv6 packet which may come from anywhere.
-: check-his-ipv6-addr?  ( -- flag )  ipv6-next-hdr c@ IP_HDR_ICMPV6 <>  ;
+\ XXX Assume <IPv6 header> [ <fragment header> ] <data>
+: check-his-ipv6-addr?  ( -- flag )
+   ipv6-next-hdr c@ IP_HDR_ICMPV6 =  if  false exit  then
+   ipv6-next-hdr c@ IP_HDR_FRAGMENT <>  if  true exit  then
+   the-struct /ipv6-header + c@ IP_HDR_ICMPV6 <>
+;
 : ipv6-addr-match?  ( -- flag )
    check-his-ipv6-addr?  if
       his-ipv6-addr his-ipv6-addr-mc?  0=  if

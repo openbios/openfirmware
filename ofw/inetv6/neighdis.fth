@@ -3,9 +3,9 @@ purpose: Neighbor Discovery
 
 headerless
 
-d# 200 constant ND_TIMEOUT              \ Neighbor discovery timeout (ms)
-d# 200 constant DAD_TIMEOUT             \ Duplicate Address Detection timeout (ms)
-d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
+d#  200 constant ND_TIMEOUT              \ Neighbor discovery timeout (ms)
+d#  200 constant DAD_TIMEOUT             \ Duplicate Address Detection timeout (ms)
+d# 2000 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
 
 " stateless"       d# 40 config-string ipv6-address            \ leave room
 \ " dhcp" ' ipv6-address  set-config-string-default
@@ -141,7 +141,7 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
                 over 8 + be-l@ to prefix-lifetime                \ XXX lifetime
                 over d# 16 + my-prefix copy-ipv6-addr            \ Prefix
                 endof
-         5  of  over 4 + be-l@ to (link-mtu)  endof              \ MTU option
+         5  of  over 4 + be-l@ link-mtu min to (link-mtu)  endof \ MTU option
      d# 25  of  over 8 + name-server-ipv6 copy-ipv6-addr  endof  \ RDNSS option
       endcase
       over 1+ c@ 8 * /string
@@ -190,7 +190,6 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
 
    ['] 4drop to icmpv6-err-callback-xt
    ['] 2drop to icmpv6-info-callback-xt
-   unknown-ipv6-addr name-server-ipv6 copy-ipv6-addr
 
    discover-me
    discover-router
@@ -212,6 +211,7 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
 ;
 
 : close  ( -- )
+   process-done-ipv6
 [ifdef] include-ipv4
    close
 [else]
@@ -241,6 +241,7 @@ d# 500 constant RD_TIMEOUT              \ Router Discovery timeout (ms)
    true to use-ipv6?
    set-mc-hash  if  close false exit  then
    ['] (resolve-en-addrv6) to resolve-en-addr
+   unknown-ipv6-addr name-server-ipv6 copy-ipv6-addr
    configure-ipv6
    s-all-ipv6
    setup-ip-attr

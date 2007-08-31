@@ -35,8 +35,7 @@ purpose:  Internet Control Message Protocol version 6 (ICMPv6) echo message hand
    2dup exchange-ipsv6                  ( en-adr,len icmp-adr,len ip-adr,len )
    2over change-typev6                  ( en-adr,len icmp-adr,len ip-adr,len )
    recompute-icmpv6-checksum            ( en-adr,len )
-   tuck " write" $call-parent           ( len actual )
-   <>  if  ." Network transmit error" cr  then
+   send-raw-packet			( )
 ;
 
 : handle-echo-reply  ( adr len -- )  2drop  ;

@@ -9,6 +9,7 @@ d# 1514 constant ethernet-max		\ Header (14) + data (1500)
 
 0 instance value (link-mtu)	\ max packet size
 0 instance value packet-buffer
+0 instance value /packet-buffer
 
 \ Determine the Ethernet address for his-ip-addr
 instance defer resolve-en-addr  ( 'dest-adr type -- 'en-adr type )
@@ -29,8 +30,8 @@ instance defer resolve-en-addr  ( 'dest-adr type -- 'en-adr type )
    then
 ;
 
-: open-link   ( -- )  link-mtu alloc-mem  to packet-buffer  ;
-: close-link  ( -- )  packet-buffer link-mtu free-mem  ; 
+: open-link   ( -- )  link-mtu dup to /packet-buffer  alloc-mem  to packet-buffer  ;
+: close-link  ( -- )  packet-buffer /packet-buffer  free-mem  ; 
 
 6 constant /e
 
