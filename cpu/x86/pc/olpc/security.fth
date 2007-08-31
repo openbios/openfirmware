@@ -376,7 +376,7 @@ d# 65 buffer: machine-id-buf
    2drop false
 ;
 
-: do-secure-boot  ( -- )
+: secure-boot  ( -- )
    debug-security?  if  screen-ih stdout !  then
    ['] secure-load-ramdisk to load-ramdisk
    secure-load  0=  if  fail-load  then
@@ -386,8 +386,8 @@ d# 65 buffer: machine-id-buf
 
 : wp?  ( -- flag )  " wp" find-tag  dup  if  nip nip  then  ;
 
-: secure-boot  ( -- )  wp?  if  do-secure-boot  else  boot  then  ;
-" secure-boot" ' boot-command set-config-string-default
+: ?secure-boot  ( -- )  wp?  if  secure-boot  else  boot  then  ;
+" ?secure-boot" ' boot-command set-config-string-default
 
 \ For dn in boot-device-list
 \   if 
