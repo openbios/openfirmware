@@ -11,4 +11,3 @@
    h# fffefffe 2  " wp"  $=  if  ." Succeeded" cr  then
    spi-reprogrammed
 ;
-set-wp
