@@ -31,7 +31,7 @@ h#   100 constant /spi-page     \ Largest write for page-oriented chips
 
 \ For some commands, a 3-byte address follows the command code
 
-: spi-adr  ( adr cmd -- )
+: spi-adr  ( adr -- )
    lbsplit drop  spi-out  spi-out  spi-out
 ;
 
