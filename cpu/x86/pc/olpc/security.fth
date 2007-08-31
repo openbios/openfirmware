@@ -188,14 +188,26 @@ d# 65 buffer: machine-id-buf
 
 : get-my-sn  ( -- error? )
 
-   " SN" find-tag  0=  if  true exit  then          ( adr len )
-   ?-null  dup d# 11 <>  if  2drop true exit  then  ( adr len )
+   " SN" find-tag  0=  if
+      " No serial number in mfg data" ?lease-debug-cr
+      true exit
+   then                                             ( adr len )
+   ?-null  dup d# 11 <>  if
+      " Invalid serial number" ?lease-debug-cr
+      2drop true exit
+   then                                             ( adr len )
    machine-id-buf  swap  move
 
    [char] : machine-id-buf d# 11 + c!
 
-   " U#" find-tag  0=  if  true exit  then          ( adr len )
-   ?-null  dup d# 36 <>  if  2drop true exit  then  ( adr len )
+   " U#" find-tag  0=  if
+      " No UUID in mfg data" ?lease-debug-cr
+      true exit
+   then                                             ( adr len )
+   ?-null  dup d# 36 <>  if
+      " Invalid UUID" ?lease-debug-cr
+      2drop true exit
+   then                                             ( adr len )
    machine-id-buf d# 12 +  swap  move
 
    [char] : machine-id-buf d# 48 + c!
