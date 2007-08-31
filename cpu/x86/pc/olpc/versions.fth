@@ -2,7 +2,7 @@
 
 \ The overall firmware revision
 macro: FW_MAJOR C
-macro: FW_MINOR 25
+macro: FW_MINOR 26
 
 \ The EC microcode
 macro: EC_VERSION c24
@@ -14,3 +14,6 @@ macro: EC_VERSION c24
 \ The wireless LAN module firmware
 macro: WLAN_RPM ${WLAN_VERSION}-1.olpc1
 macro: WLAN_VERSION 5.110.16.p1
+
+\ The bios_crypto image
+macro: CRYPTO_VERSION 0.0
