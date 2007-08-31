@@ -2,9 +2,11 @@ purpose: Interface to cryptographic code for firmware image validation
 \ See license at end of file
 
 h# c0000 constant crypto-base  \ The address the code is linked to run at
-h# c0000 constant hasher-base  \ The address the code is linked to run at
+h# d0000 constant crypto-bss   \ The address the code is linked to run at
+h# 10000 constant /crypto-bss
 
 0 [if]
+h# c0000 constant hasher-base  \ The address the code is linked to run at
 variable hashlen
 d# 128 buffer: hashbuf
 
@@ -20,21 +22,36 @@ d# 128 buffer: hashbuf
 ;
 [then]
 
-0 value hashname
+0 value crypto-loaded?
+: load-crypto  ( -- error? )
+   crypto-loaded?  if  false exit  then
+   " crypto" find-drop-in  0=  if  true exit  then  ( prog$ )
+   2dup crypto-base swap move  free-mem             ( )
+   true to crypto-loaded?
+   false
+;
+
+h# 200 buffer: pubkey
+0 value /pubkey
+: load-key  ( name$ -- error? )
+   find-drop-in  0=  if  true exit  then  ( key$ )
+   dup h# 200 >  if  free-mem  true exit  then      ( key$ )
+   dup to /pubkey                                   ( key$ )
+   2dup pubkey swap  move                           ( key$ )
+   free-mem
+   false
+;
+
 : signature-bad?  ( data$ sig$ hashname$ -- mismatch? )
-   $cstr to hashname                                      ( data$ sig$ )
-   " crypto" find-drop-in  0=  if  4drop true exit  then  ( data$ sig$ prog$ )
-   2dup crypto-base swap move  free-mem                   ( data$ sig$ )
+   $cstr >r            ( data$ sig$ r: 'hashname )
       
-   " pubkey" find-drop-in  0=  if  4drop true exit  then  ( data$ sig$ key$ )
-   2>r                 ( data$ sig$ r: key$ )
-   swap  2swap  swap   ( siglen sigadr datalen dataadr r: key$ )
-   2r@ swap  2swap     ( siglen sigadr keylen keyadr datalen dataadr r: key$ )
+   swap  2swap  swap   ( siglen sigadr datalen dataadr )
+   /pubkey pubkey  2swap     ( siglen sigadr keylen keyadr datalen dataadr )
+   r>          ( siglen sigadr keylen keyadr datalen dataadr 'hashname )
 
-   hashname            ( siglen sigadr keylen keyadr datalen dataadr hash r: key$ )
 
-   crypto-base  dup h# 10 -  sp-call  >r  3drop 4drop  r>  ( result  r: key$ )
-   2r> free-mem
+   crypto-bss /crypto-bss erase
+   crypto-base  dup h# 10 -  sp-call  >r  3drop 4drop  r>  ( result )
 
 \ XXX free-mem in suspend.fth and fw.bth after find-drop-in
 \ XXX clean out dead code in usb.fth

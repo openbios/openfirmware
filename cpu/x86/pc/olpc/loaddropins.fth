@@ -38,7 +38,6 @@
 
    " ${BP}/ofw/termemu/gallant.obf"             " font"          $add-deflated-dropin
 
-\  " /space/bios-crypto/bios_crypto.img"        " crypto"        $add-deflated-dropin
-\  " /space/bios-crypto/bios_hash.img"          " hasher"        $add-deflated-dropin
-\  " /space/bios-crypto/wmbtest256.public"      " pubkey"        $add-dropin \ Incompressible
-\  " /space/bios-crypto/usb8388.bin.sig256"     " usb8388.sig"   $add-dropin \ Incompressible
+   " crypto.img"                                " crypto"        $add-deflated-dropin
+   " os.public"                                 " oskey"         $add-dropin \ Incompressible
+   " fw.public"                                 " fwkey"         $add-dropin \ Incompressible

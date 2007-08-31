@@ -5,7 +5,10 @@ headerless
 0 instance value base-adr
 0 instance value image-size
 0 instance value seek-ptr
+external
+\ Expose for the OLPC security scheme
 0 instance value offset
+headerless
 
 : clip-size  ( adr len -- adr len' )
    seek-ptr +   image-size umin  seek-ptr -

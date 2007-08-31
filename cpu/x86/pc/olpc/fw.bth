@@ -335,6 +335,8 @@ fload ${BP}/cpu/x86/pc/olpc/copynand.fth
 fload ${BP}/cpu/x86/pc/olpc/nandstat.fth
 \ fload ${BP}/cpu/x86/pc/olpc/carousel.fth     \ Carouseled NAND writing
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
+fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
+fload ${BP}/cpu/x86/pc/olpc/security.fth
 fload ${BP}/ofw/gui/ofpong.fth
 [then]
 
@@ -542,7 +544,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 
 : newrom
-   " flash http:\\10.20.0.104\new.rom" eval
+   " flash http:\\10.20.0.14\new.rom" eval
 \   " wifi media lab 802.11" eval
 \   " flash http:\\18.85.46.172\new.rom" eval
 ;

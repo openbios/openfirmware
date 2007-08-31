@@ -181,8 +181,8 @@ d# 20 constant /root-dev-buf
 d# 256 buffer: ramdisk-buf
 ' ramdisk-buf  " ramdisk" chosen-string
 
-: load-ramdisk  ( -- )
-   " ramdisk" eval  dup 0=  if  2drop exit  then  ( name$ )
+defer load-ramdisk
+: $load-ramdisk  ( name$ -- )
    0 to /ramdisk                                  ( name$ )
 
    ['] load-path behavior >r                      ( name$ r: xt )
@@ -195,6 +195,11 @@ d# 256 buffer: ramdisk-buf
    throw
    loaded to /ramdisk  to ramdisk-adr
 ;
+: cv-load-ramdisk  ( -- )
+   " ramdisk" eval  dup 0=  if  2drop exit  then  ( name$ )
+   $load-ramdisk
+;
+' cv-load-ramdisk to load-ramdisk
 
 : claim-params  ( -- )
 [ifdef] virtual-mode
