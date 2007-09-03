@@ -27,6 +27,7 @@
 : put-mfg-data  ( -- )
    spi-start spi-identify
    mfg-data-buf  mfg-data-end-offset mfg-data-offset  write-flash-range
+   spi-reprogrammed
 ;
 
 \ Find RAM address of tag, given FLASH address
