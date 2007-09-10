@@ -295,9 +295,9 @@ fload ${BP}/ofw/termemu/fb16.fth
    0 0 encode-bytes
    h# 8200.0910 +i  0+i h# fd00.0000 +i  0+i h# 0080.0000 +i  \ Frame buffer
    h# 8200.0914 +i  0+i h# fe00.0000 +i  0+i h# 0000.4000 +i  \ GP
-   h# 8200.0918 +i  0+i h# fe40.0000 +i  0+i h# 0000.4000 +i  \ DC
-   h# 8200.091c +i  0+i h# fe80.0000 +i  0+i h# 0000.4000 +i  \ VP
-   h# 8200.0920 +i  0+i h# fec0.0000 +i  0+i h# 0000.4000 +i  \ VIP (LX only)
+   h# 8200.0918 +i  0+i h# fe00.4000 +i  0+i h# 0000.4000 +i  \ DC
+   h# 8200.091c +i  0+i h# fe00.8000 +i  0+i h# 0000.4000 +i  \ VP
+   h# 8200.0920 +i  0+i h# fe00.c000 +i  0+i h# 0000.4000 +i  \ VIP (LX only)
    " assigned-addresses" property
 
 end-package
