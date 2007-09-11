@@ -274,6 +274,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
 
    \ The caller chooses the wakeup conditions, so we don't do it here
    \ h# 0100.ffff h# 1840 port-wl   \ Enable Power button wakeup, clear status bits
+   h# ffff.ffff h# 1858 port-wl   \ Clear all status bits
 
    wbinvd                                 \ Flush the cache
    h# 00ff.ff00  h# 2000.0018 bitclr-msr  \ Set refresh to 0, disabling GX refresh

@@ -15,10 +15,26 @@ stand-init:  Suspend/resume
 
 code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
 
+: lid-wakeup
+   h#  400 h# c8 gpio!  \ Clear positive edge status bit
+   h#  400 h# cc gpio!  \ Clear negative edge status bit
+   h# 185c pl@  h# 4000.0000 or  h# 185c pl!
+;
+
+: sci-wakeup
+   h#  800 h# c8 gpio!  \ Clear positive edge status bit
+   h#  800 h# cc gpio!  \ Clear negative edge status bit
+   h# 185c pl@  h# 8000.0000 or  h# 185c pl!
+;
+
 : s3
    \ Enable wakeup from power button, also clearing
    \ any status bits in the low half of the register.
    h# 1840 pl@  h# 100.0000 or  h# 1840 pl!
+
+   h# ffff.ffff h# 1858 pl!  \ Clear PME status bits
+   h#      ffff h# c8 gpio!  \ Clear positive edge status bits
+   h#      ffff h# cc gpio!  \ Clear negative edge status bits
 
 \  sum-forth
    [ also dev /mmu ]  pdir-va  h# f0000 ax-call  [ previous definitions ]
