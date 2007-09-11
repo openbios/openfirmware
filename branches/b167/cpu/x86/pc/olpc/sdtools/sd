@@ -1,2 +1,0 @@
-#!/bin/sh
-exec ./forth ./builder.dic sd.fth -

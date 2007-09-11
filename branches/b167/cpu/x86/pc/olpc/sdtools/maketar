@@ -1,6 +1,0 @@
-#!/bin/sh
-cp ../../../bin/x86/linux/forth .
-cp ../../../bin/x86/builder.dic .
-cp ../../../cpu/x86/ioports.fth .
-tar cfz sdkit.tgz forth builder.dic sd.fth ioports.fth sd
-rm -f builder.dic forth ioports.fth

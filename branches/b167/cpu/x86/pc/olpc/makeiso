@@ -1,4 +1,0 @@
-#!/bin/sh
-OLPC=/home/wmb/obp-biosload/obp/arch/pc/dos/olpc
-cp ${OLPC}/build/ofw.c32 ${OLPC}/bootcd/isolinux
-mkisofs -o ${OLPC}/build/ofw.iso -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table ${OLPC}/bootcd
