@@ -38,6 +38,8 @@
 
    " ${BP}/ofw/termemu/gallant.obf"             " font"          $add-deflated-dropin
 
-   " crypto.img"                                " crypto"        $add-deflated-dropin
-   " os.public"                                 " oskey"         $add-dropin \ Incompressible
-   " fw.public"                                 " fwkey"         $add-dropin \ Incompressible
+   " verify.img"                                " verify"        $add-deflated-dropin
+   " os.public"                                 " ospubkey"      $add-dropin \ Incompressible
+   " fw.public"                                 " fwpubkey"      $add-dropin \ Incompressible
+   " lease.public"                              " leasepubkey"   $add-dropin \ Incompressible
+   " developer.public"                          " develpubkey"   $add-dropin \ Incompressible

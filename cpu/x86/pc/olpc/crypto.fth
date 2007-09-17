@@ -1,9 +1,9 @@
 purpose: Interface to cryptographic code for firmware image validation
 \ See license at end of file
 
-h# c0000 constant crypto-base  \ The address the code is linked to run at
-h# d0000 constant crypto-bss   \ The address the code is linked to run at
-h# 10000 constant /crypto-bss
+h# c0000 constant verify-base  \ The address the code is linked to run at
+h# d0000 constant verify-bss   \ The address the code is linked to run at
+h# 10000 constant /verify-bss
 
 0 [if]
 h# c0000 constant hasher-base  \ The address the code is linked to run at
@@ -25,33 +25,16 @@ d# 128 buffer: hashbuf
 0 value crypto-loaded?
 : load-crypto  ( -- error? )
    crypto-loaded?  if  false exit  then
-   " crypto" find-drop-in  0=  if  true exit  then  ( prog$ )
-   2dup crypto-base swap move  free-mem             ( )
+   " verify" find-drop-in  0=  if  true exit  then  ( prog$ )
+   2dup verify-base swap move  free-mem             ( )
    true to crypto-loaded?
    false
 ;
 
-h# 200 buffer: pubkey
-0 value /pubkey
-: load-key  ( name$ -- error? )
-   find-drop-in  0=  if  true exit  then  ( key$ )
-   dup h# 200 >  if  free-mem  true exit  then      ( key$ )
-   dup to /pubkey                                   ( key$ )
-   2dup pubkey swap  move                           ( key$ )
-   free-mem
-   false
-;
-
-: signature-bad?  ( data$ sig$ hashname$ -- mismatch? )
-   $cstr >r            ( data$ sig$ r: 'hashname )
-      
-   swap  2swap  swap   ( siglen sigadr datalen dataadr )
-   /pubkey pubkey  2swap     ( siglen sigadr keylen keyadr datalen dataadr )
-   r>          ( siglen sigadr keylen keyadr datalen dataadr 'hashname )
-
-
-   crypto-bss /crypto-bss erase
-   crypto-base  dup h# 10 -  sp-call  >r  3drop 4drop  r>  ( result )
+: signature-bad?  ( data$ sig$ key$ hashname$ -- mismatch? )
+   $cstr
+   verify-bss /verify-bss erase    ( data$ sig$ key$ 'hashname )
+   verify-base  dup h# 10 -  sp-call  >r  3drop 4drop  r>  ( result )
 
 \ XXX free-mem in suspend.fth and fw.bth after find-drop-in
 \ XXX clean out dead code in usb.fth
