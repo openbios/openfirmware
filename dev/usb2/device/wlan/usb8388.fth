@@ -1105,6 +1105,48 @@ headers
    wait-cmd-resp  if  exit  then
 ;
 
+2 constant gpio-pin 
+d# 20 constant wake-gap 
+1 constant wake-on-broadcast
+2 constant wake-on-unicast
+4 constant wake-on-mac-event 
+-1 constant remove-wakeup 
+
+\ LED_GPIO_CTRL 
+
+: host-sleep-activate  ( -- )
+   0 h# 45 ( CMD_802_11_HOST_SLEEP_ACTIVATE ) prepare-cmd
+   0 outbuf-bulk-out  if  exit  then
+   wait-cmd-resp  if  exit  then
+;
+
+: host-sleep-config  ( conditions -- )
+   >r
+   6 h# 43 ( CMD_802_11_HOST_SLEEP_CFG ) prepare-cmd
+\   ACTION_SET +xw
+   
+   r> +xl
+   gpio-pin +xb
+   wake-gap +xb
+
+   6 outbuf-bulk-out  if  exit  then
+   wait-cmd-resp  if  exit  then
+;
+
+: unicast-wakeup  ( -- )  wake-on-unicast host-sleep-config  ;
+: broadcast-wakeup  ( -- )  wake-on-unicast wake-on-broadcast or  host-sleep-config  ;
+: sleep ( -- ) host-sleep-activate  ;
+
+[ifdef] notdef  \ This is test code that only works with a special debug version of the Libertas firmware
+: autostart  ( -- )
+   h# 82 h# 9b ( CMD_MESH_ACCESS ) prepare-cmd
+   5 +xw  \ CMD_ACT_SET_ANYCAST
+   h# 700000 +xl
+
+   h# 82 outbuf-bulk-out  if  exit  then
+   wait-cmd-resp  if  exit  then
+;
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks
