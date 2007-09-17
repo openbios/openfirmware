@@ -53,13 +53,22 @@ create "fat ," File Allocation Table"
 \ If the FAT cache has been modified since it was last written, flush it
 \ to disk.
 
+: .sectors  ( sector# #sectors -- )
+   ."  " . ." sectors starting at " .
+;
 : ?flush-fat-cache  ( -- )
    fat-dirty w@ if
-      fat-sector @ #valid-sectors fat-cache @ write-sectors  ( err? )
-      if  "CaW ".  "FAT ".  abort  then
+      fat-sector @ #valid-sectors fat-cache @ write-sectors  ( err? )  if
+         "CaW ".  "FAT ".
+         fat-sector @  #valid-sectors  .sectors
+         abort
+      then
 
-      fat-sector @ spf l@ + #valid-sectors fat-cache @ write-sectors ( err? )
-      if  "CaW ".  ." alternate "  "FAT ".  abort  then
+      fat-sector @ spf l@ + #valid-sectors fat-cache @ write-sectors  if
+         "CaW ".  ." alternate "  "FAT ".
+         fat-sector @ spf l@ +  #valid-sectors  .sectors
+         abort
+      then
 
       false fat-dirty w!
    then
@@ -172,11 +181,12 @@ VARIABLE hint  VARIABLE fatc-start  VARIABLE fatc-end
       fatc-start @ hint @  search-down  if  mark-cluster exit  then
    then
 
+   \ Search up to the end of the disk ** 10/30/90 cpt: up to last cl (1+)
+   max-cl# l@ 1+ fatc-end @  search-up    if  mark-cluster exit  then
+
    \ Search down to the beginning of the disk
    2         fatc-start @  search-down  if  mark-cluster exit  then
 
-   \ Search up to the end of the disk ** 10/30/90 cpt: up to last cl (1+)
-   max-cl# l@ 1+ fatc-end @  search-up    if  mark-cluster exit  then
    false
 ;
 : allocate-cluster  ( hint-cluster# -- false | cluster# true )
