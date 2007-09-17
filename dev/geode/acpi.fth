@@ -12,15 +12,11 @@
 : pm@  ( offset -- n )  pm-base +  pl@ ;
 : pm!  ( n offset -- )  pm-base +  pl! ;
 
-: enable-power-button  ( -- )  h# 100 2 acpi-w!  ;
+: enable-power-button  ( -- )  2 acpi-w@ h# 100 or 2 acpi-w!  ;
+: disable-power-button  ( -- )  2 acpi-w@ h# 100 invert and 2 acpi-w!  ;
 
 h# 4000.0000 constant pm-enable
 : gx-power-off  ( -- )
-   \ If the keyboard controller is off (after "flash"), power off doesn't work.
-   \ I suspect that is because the EC doesn't notice the deassertion
-   \ of main_on and sus_on from the 5536.
-   ec-power-off
-
    \ The rest of this will succeed in turning off the CPU, but the EC will
    \ stay on.  The ec-power-off above turns off both the EC and CPU, so the
    \ rest of this is for historical interest only.

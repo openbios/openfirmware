@@ -241,7 +241,8 @@ defer fw-filename$  ' null$ to fw-filename$
    $get-file
 ;
 
-: flash  ( ["filename"] -- )  get-file reflash  ;
+: flash  ( ["filename"] -- )  get-file ?enough-power reflash  ;
+: flash! ( ["filename"] -- )  get-file reflash  ;
 
 \ This is a slower version of "rom-va flash-buf /flash lmove"
 \ It works around the problem that continuous CPU access to the

@@ -124,6 +124,27 @@ dev /8042
 [then]
 device-end
 
+dev /8042/keyboard
+0 value waiting-up?
+: olpc-check-abort  ( scan-code -- abort? )  \ Square pressed?
+   last-scan   over to last-scan  ( scan-code old-scan-code )
+   h# e0 <>  if  drop false exit  then          ( scan-code )
+
+   check-abort?  0=  if  drop false exit  then  ( scan-code )
+
+   dup h# 7f and  h# 5d <>  if  drop false exit then  ( scan-code )
+
+   h# 80 and  if   \ Up
+      false to waiting-up?
+      false                             ( abort? )
+   else
+      waiting-up?  0=                   ( abort? )
+      true to waiting-up?
+   then
+;
+patch olpc-check-abort check-abort get-scan
+dend
+
 0 0  " i70"  " /isa" begin-package   	\ Real-time clock node
    fload ${BP}/dev/ds1385r.fth
    8 encode-int  0 encode-int encode+    " interrupts" property
@@ -233,6 +254,8 @@ fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 
 \needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
 
+fload ${BP}/dev/geode/acpi.fth           \ Power management
+
 fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
 
 warning @ warning off
@@ -275,6 +298,8 @@ fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
 fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 
+fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
+
 fload ${BP}/dev/olpc/spiflash/spiflash.fth   \ SPI FLASH programming
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
 fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
@@ -303,8 +328,6 @@ fload ${BP}/ofw/termemu/fb16.fth
 end-package
 devalias screen /display
 also hidden  d# 34 to display-height  previous  \ For editing
-
-fload ${BP}/dev/geode/acpi.fth           \ Power management
 
 fload ${BP}/cpu/x86/adpcm.fth            \ ADPCM decoding
 

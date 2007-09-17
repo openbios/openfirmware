@@ -77,7 +77,7 @@ end-string-array
    dup abs  d# 10,000 /  <# u# u# [char] . hold u#s swap sign u#> type
    pop-base
 ;
-: 2.d  ( n -- )  push-decimal <# u# u#s u#>  type  pop-base  ;
+\needs 2.d : 2.d  ( n -- )  push-decimal <# u# u#s u#>  type  pop-base  ;
 : .%  ( n -- )  2.d ." %" ;
 : .bat  ( -- )
    bat-status@  ( stat )
@@ -101,11 +101,17 @@ end-string-array
    then
    drop
 ;
+
+: ?enough-power  ( )
+   bat-status@                                 ( stat )
+   dup  h# 10 and  0=  abort" AC not present"  ( stat )
+   dup  1 and  0=  abort" Battery not present" ( stat )
+   4 and  abort" Battery low"  
+;
+
 : watch-battery  ( -- )
-   cursor-off
    begin  (cr .bat kill-line  d# 1000 ms  key?  until
    key drop
-   cursor-on
 ;
 \ send questions to andrew at gold peak
 
