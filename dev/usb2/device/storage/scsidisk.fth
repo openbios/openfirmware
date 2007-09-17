@@ -149,10 +149,7 @@ external
 \ These three methods are called by the deblocker.
 
 : max-transfer  ( -- n )   parent-max-transfer  ;
-: read-blocks   ( addr block# #blocks -- #read )
-   " show-progress" evaluate
-   true  d# 8  r/w-blocks
-;
+: read-blocks   ( addr block# #blocks -- #read )   true  d# 8  r/w-blocks  ;
 : write-blocks  ( addr block# #blocks -- #written )  false d# 10 r/w-blocks  ;
 
 \ Methods used by external clients
