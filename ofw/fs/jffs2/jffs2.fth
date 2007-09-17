@@ -697,6 +697,11 @@ c;
       endof
 [then]
 
+      summary-type  of   ( adr )
+         ." JFFS2 warning: Bad summary node in erase block 0x" have-eblock# . cr
+         drop eb-end exit
+      endof              ( adr nodetype )
+
       ( adr nodetype )
       cr ." Unsupported nodetype " dup . cr
 
