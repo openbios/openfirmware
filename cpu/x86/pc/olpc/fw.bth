@@ -330,7 +330,6 @@ fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/suspend.fth      \ Suspend/resume setup
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
-fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
 fload ${BP}/cpu/x86/pc/olpc/copynand.fth
 fload ${BP}/cpu/x86/pc/olpc/nandstat.fth
 \ fload ${BP}/cpu/x86/pc/olpc/carousel.fth     \ Carouseled NAND writing
@@ -339,6 +338,13 @@ fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/ofw/gui/ofpong.fth
+fload ${BP}/cpu/x86/pc/olpc/life.fth
+: olpc-power-off  ( -- )
+   gx-power-off   \ Try the nice way first
+   d# 20 ms
+   ec-power-off   \ Then try the hard way
+;
+' olpc-power-off to power-off
 [then]
 
 \ Eliminate 4 second delay in install console for the case where
@@ -490,7 +496,9 @@ fload ${BP}/ofw/core/dualconsole.fth
    game-key-mask h# 40 and  if  start-sound  then
 ;
 : ?games  ( -- )
-   game-key-mask h# 20 and  if  pong    then
+   game-key-mask h# 20 and  if
+      time&date 5drop 1 and  if  pong  else  d# 1200 life  then
+   then
 ;
 : ?freeze  ( -- )
    game-key-mask h# 10 and  if  freeze  then
@@ -545,7 +553,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 
 : newrom
-   " flash http:\\10.20.0.14\new.rom" eval
+   " flash! http:\\10.20.0.14\new.rom" eval
 \   " wifi media lab 802.11" eval
 \   " flash http:\\18.85.46.172\new.rom" eval
 ;
