@@ -137,11 +137,13 @@ end-code
 \ will not show the action name and its argument on separate lines
 \ if it happens to be near the end of a line.
 
+[ifdef] install-decomp
 : .action  ( ip -- ip' )  dup token@ .name ta1+ dup token@ .name ta1+  ;
 also hidden also
 ' to   ' .action  ' skip-(')  install-decomp
 ' addr ' .action  ' skip-(')  install-decomp
 previous previous
+[then]
 
 : ?has-action  ( object-acf action-acf -- object-acf action-acf )
    2dup >body >action# >action-adr .object-error  2drop
@@ -158,6 +160,7 @@ previous previous
       -level		\ Exit temporary compile state, perhaps run word
 ;
 
+[ifdef] object-definer
 : (object-definer)  ( action-acf -- definer )
    dup /n -  @                 ( action-acf #actions )
    1- /token * - /n -  token@  ( last-action-acf )
@@ -170,6 +173,7 @@ previous previous
    until
 ;
 also hidden  ' (object-definer) is object-definer  previous
+[then]
 
 \ action-compiler: to
 action-compiler: addr

@@ -4,7 +4,9 @@ purpose: Load file for name=value configuration variable manager
 fload ${BP}/ofw/ppp/md5.fth
 fload ${BP}/ofw/confvar/conftype.fth	\ Configuration variable base types
 fload ${BP}/ofw/confvar/nvramrcg.fth	\ NVRAMRC (generic version)
+[ifndef] no-tools
 fload ${BP}/ofw/confvar/nvalias.fth	\ Persistent devaliases
+[then]
 fload ${BP}/ofw/confvar/nvcache.fth	\ NVRAM cache
 fload ${BP}/ofw/confvar/nameval.fth	\ name=value config variable encoding
 \ LICENSE_BEGIN

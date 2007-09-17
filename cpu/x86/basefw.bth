@@ -22,7 +22,9 @@ code call  ( address -- )   dx pop   dx call  c;
 \ fload ${BP}/forth/lib/showmsgs.fth	\ List error messages
 
 fload ${BP}/ofw/core/ofwcore.fth	\ Device tree and other OBP routines
+[ifndef] no-tools
 fload ${BP}/ofw/core/ofwfw.fth		\ FirmWorks enhancements
+[then]
 
 fload ${BP}/ofw/core/memops.fth		\ Call memory node methods
 fload ${BP}/ofw/core/mmuops.fth		\ Call MMU node methods
@@ -33,14 +35,18 @@ fload ${BP}/cpu/x86/dt.fth		\ Descriptor table access
 fload ${BP}/cpu/x86/vector.fth		\ Interrupt vectors
 \ fload ${BP}/forth/lib/struct.fth
 fload ${BP}/cpu/x86/interrup.fth	\ Enable and disable interrupts
+[ifdef] pssave
 fload ${BP}/cpu/x86/catchexc.fth
 
 fload ${BP}/cpu/x86/ctrace.fth	\ C stack backtrace
+[then]
 
+[ifdef] valid-adr?
 : mapped?  ( adr -- flag )
    " translate" mmu-node @ $call-method  dup  if  nip nip  then
 ;
 ' mapped? to valid-adr?
+[then]
 
 fload ${BP}/cpu/x86/descr.fth		\ Decode segment descriptors
 fload ${BP}/cpu/x86/dtacc.fth		\ Descriptor table access words
@@ -49,7 +55,9 @@ fload ${BP}/ofw/confvar/loadcv.fth	\ Configuration option management
 fload ${BP}/ofw/core/silentmd.fth	\ NVRAM variable silent-mode?
 
 fload ${BP}/cpu/x86/call.fth		\ Primitive subroutine calls
+[ifndef] no-tools
 fload ${BP}/cpu/x86/centry.fth		\ Low-level client entry and exit
+[then]
 
 [ifdef] v2-compat
 fload ${BP}/cpu/x86/textops.fth		\ S Machine code for 1-bit ops
@@ -70,9 +78,11 @@ fload ${BP}/ofw/inet/loadtftp.fth	\ Trivial File Transfer Protocol pkg.
 
 fload ${BP}/cpu/x86/regacc.fth		\ Register access words
 
+\ [ifndef] no-tools
 fload ${BP}/ofw/fcode/loadfcod.fth	\ S Fcode interpreter
 
 fload ${BP}/ofw/fcode/regcodes.fth	\ Register access words
+\ [then]
 
 \ File system readers
 fload ${BP}/ofw/core/initprog.fth	\ handle fcode and Forth source
@@ -84,15 +94,18 @@ support-package: fat-file-system
    fload ${BP}/ofw/fs/fatfs/loadpkg.fth	\ FAT file system reader
 end-support-package
 
+[ifndef] no-tools
 support-package: iso9660-file-system
    fload ${BP}/ofw/fs/cdfs/loadpkg.fth	\ ISO 9660 CD-ROM file system reader
 end-support-package
+[then]
 
 support-package: disk-label
    fload ${BP}/ofw/disklabel/loadpkg.fth	\ Disk label package
 end-support-package
 [then]
 
+[ifndef] no-tools
 [ifdef] resident-packages
 fload ${BP}/ofw/fs/fatfs/fdisk2.fth	\ Partition map administration
 [else]
@@ -101,6 +114,7 @@ defines: $.partitions
 defines: .partitions
 \ defines: init-nt-disk
 defines: $partition
+[then]
 [then]
 
 [ifndef] no-heads

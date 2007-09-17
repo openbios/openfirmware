@@ -608,14 +608,8 @@ external
    h# 7fff h# 60 cw!
    unmap-regs
 ;
-init
 
 external
-
-new-device
-   " sdmmc" " $load-driver" eval drop
-finish-device
-
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
