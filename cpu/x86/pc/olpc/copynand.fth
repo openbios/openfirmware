@@ -15,12 +15,16 @@ purpose: Copy a file onto the NAND FLASH
 
 0 value crc-buf
 
-: >crc  ( index -- crc )  crc-buf swap la+ l@  ;
+
+: >crc  ( index -- 'crc )  crc-buf swap la+  ;
 
 : $call-nand  ( ?? method$ -- ?? )  nandih $call-method  ;
 
+: close-image-file  ( -- )
+   fileih  ?dup  if  0 to fileih  close-dev  then
+;
 : close-nand-ihs  ( -- )
-   fileih  ?dup  if  0 to fileih  close-dev  0 to #image-eblocks  then
+   close-image-file
    nandih  ?dup  if  0 to nandih  close-dev  0 to #nand-pages     then
    crc-ih  ?dup  if  0 to crc-ih  close-dev  then
    #crc-records  if
@@ -118,7 +122,7 @@ h# 100 buffer: crc-name-buf
 ;
 
 : check-mem-crc  ( record# -- )
-   >crc                                                 ( crc )
+   >crc l@                                              ( crc )
    load-base /nand-block  $crc                          ( crc actual-crc )
    2dup <>  if
       cr ." CRC miscompare - expected " swap . ." got " . cr
@@ -132,6 +136,9 @@ h# 100 buffer: crc-name-buf
 : ?check-crc  ( record# -- )
    #crc-records  if  check-mem-crc  else  drop  then
 ;
+
+defer show-init  ( #eblocks -- )
+' drop to show-init
 
 defer show-erasing  ( #blocks -- )
 : (show-erasing)  ( #blocks -- )  ." Erasing " . ." blocks" cr  ;
@@ -151,16 +158,25 @@ defer show-clean  ( block# -- )
 ' drop to show-clean
 
 defer show-cleaning  ( -- )
-: (show-cleaning)  ( -- )  cr ." Cleanmarkers" cr  ;
+: (show-cleaning)  ( -- )  cr ." Cleanmarkers"  ;
 ' (show-cleaning) to show-cleaning
 
 defer show-writing  ( #blocks -- )
 : (show-writing)  ." Writing " . ." blocks" cr  ;
 ' (show-writing) to show-writing
 
+defer show-pending  ( block# -- )
+' drop to show-pending
+
 defer show-written
 : (show-written)  ( block# -- )  (cr .  ;
 ' (show-written) to show-written
+
+defer show-strange
+' drop to show-strange
+
+defer show-done
+' cr to show-done
 
 : copy-nand  ( "devspec" -- )
    open-nand
@@ -170,7 +186,9 @@ defer show-written
 
    ['] noop to show-progress
 
-   #nand-pages nand-pages/block / show-erasing
+   #nand-pages nand-pages/block /  dup  show-init  ( #eblocks )
+
+   show-erasing                                    ( )
    ['] show-bad  ['] show-erased  ['] show-bbt-block " (wipe)" $call-nand
 
    #image-eblocks show-writing
@@ -185,6 +203,7 @@ defer show-written
 
    show-cleaning
    ['] show-clean " put-cleanmarkers" $call-nand
+   show-done
 
    close-nand-ihs
 ;
@@ -243,7 +262,7 @@ defer show-written
 
       load-base " read-next-block" $call-nand              ( )
 
-      load-base /nand-block  $crc  i >crc                  ( actual-crc expected-crc )
+      load-base /nand-block  $crc  i >crc l@               ( actual-crc expected-crc )
       2dup <>  if                                          ( actual-crc expected-crc )
          cr ." CRC miscompare - expected " . ." got " .    ( )
          ." in NAND block starting at page "
@@ -264,43 +283,100 @@ defer show-written
 ;
 
 true value dump-oob?
-: (dump-nand)  ( "devspec" -- )
-   open-nand
-   safe-parse-word   ( name$ )
+: make-new-file  ( devspec$ -- fileih )
+   2dup ['] $delete  catch  if  2drop  then  ( name$ )
+   2dup ['] $create-file  catch  if          ( name$ x x )
+      2drop                                  ( name$ )
+      " Can't open a file.  Try using the raw disk?" confirm  if  ( name$ )
+         open-dev                            ( ih )
+      else                                   ( name$ )
+         2drop 0                             ( ih=0 )
+      then                                   ( ih )
+   else                                      ( name$ ih )
+      nip nip                                ( ih )
+   then                                      ( ih )
+;
 
+: alloc-crc-buf  ( -- )
+   #nand-pages nand-pages/block / to #crc-records
+   #crc-records /l* alloc-mem to crc-buf
+;
+
+: save-crcs  ( -- )
+   image-name$ crc-name-buf place
+   true
+   crc-name$ nip 4 >=  if
+      crc-name$ + 4 - c@  [char] .  =  if
+         " crc"  crc-name$ + 3 -  swap move
+         drop false
+      then
+   then                ( error? )
+   " Filename needs a 3-character extension"  ?nand-abort
+   crc-name$           ( name$ )
+
+   ." CRC file is " 2dup type  ( name$ )
+
+   make-new-file to crc-ih
+
+   crc-ih 0=  " Can't open CRC output file"  ?nand-abort
+
+   #image-eblocks 0  ?do
+      i >crc l@
+      push-hex  
+      <# newline hold u# u# u# u# u# u# u# u# u#>    ( adr len )
+      pop-base
+      " write" crc-ih $call-method 9 <>  " CRC write failed" ?nand-abort
+   loop
+
+;
+: open-dump-file  ( devspec$ -- )
    cr ." Dumping to " 2dup type  cr
 
-   2dup ['] $delete  catch  if  2drop  then  ( name$ )
-   2dup ['] $create-file  catch  if
-      2drop
-      " Can't open a file.  Try using the raw disk?" confirm  if
-         open-file
-      else
-         2drop 0
-      then
-   then
-   to fileih
+   make-new-file  to fileih
 
    fileih 0=  " Can't open output"  ?nand-abort
+;
+
+: (dump-nand)  ( "devspec" -- )
+   open-nand
+   get-img-filename
+
+   dump-oob?  0=  if  alloc-crc-buf  then
+   image-name$ open-dump-file
+
+   0 to #image-eblocks
 
    \ The stack is empty at the end of each line unless otherwise noted
-   #nand-pages  0  do
-      (cr i .
+   dump-oob?  if  #nand-pages  else  " usable-page-limit" $call-nand  then
+   0  do
+      (cr i nand-pages/block / .
       load-base  i  nand-pages/block  " read-blocks" $call-nand
       nand-pages/block =  if
          load-base /nand-block  written?  if
-            load-base /nand-block  " write" fileih $call-method drop
+            ." w"
+            load-base /nand-block  " write" fileih $call-method
+            /nand-block  <>  " Write to dump file failed" ?nand-abort
             dump-oob?  if
                i  nand-pages/block  bounds  ?do
                   i " read-oob" $call-nand  h# 40  ( adr len )
                   " write" fileih $call-method drop
-                  i pad !  pad 4 " write" fileih $call-method drop
+                  h# 40 <>  " Write of OOB data failed" ?nand-abort
+                  i pad !  pad 4 " write" fileih $call-method
+                  4 <>  " Write of eblock number failed" ?nand-abort
                loop
+            else
+               load-base /nand-block $crc #image-eblocks >crc l!
             then
+            #image-eblocks 1+ to #image-eblocks
+         else
+            ." s"
          then
       then
    nand-pages/block +loop
    cr  ." Done" cr
+
+   close-image-file
+   save-crcs
 
    close-nand-ihs
 ;
