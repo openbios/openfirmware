@@ -6,6 +6,7 @@ OS := $(shell uname)
 BP=../../..
 
 CFLAGS	= -O -g -m32 -DUNIX -D${OS} -DX86
+# CFLAGS += -DUSE_XCB
 
 WRTAIL = forth/wrapper
 WRDIR = ${BP}/${WRTAIL}

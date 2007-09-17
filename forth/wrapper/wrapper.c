@@ -371,6 +371,10 @@ INTERNAL long   f_rmdir();
 extern   long	dlopen(), dlsym(), dlerror(), dlclose();
 #endif
 
+#ifdef USE_XCB
+extern   long   open_window(), close_window(), rgbcolor(), fill_rectangle();
+#endif
+
 #ifdef JTAG
 #include "jtag.h"
 #endif
@@ -493,7 +497,12 @@ long ( (*functions[])()) = {
 #endif
 
           /* 376       380      384		388 */
-          m_inflate,   m_map,   m_unmap,	s_ioperm
+          m_inflate,   m_map,   m_unmap,	s_ioperm,
+
+#ifdef USE_XCB
+          /* 392       396           400       404 */
+          open_window, close_window, rgbcolor, fill_rectangle,
+#endif
 };
 /*
  * Function semantics:
