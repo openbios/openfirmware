@@ -191,7 +191,7 @@ false value up-key?
 : toss-keys  ( -- )  begin  key?  while  key drop  repeat  ;
 
 : selftest  ( -- error? )
-   stdin @ iselect
+   open  0=  if  true exit  then
    make-keys
    cursor-off draw-keyboard
    toss-keys  " translation-off" $call-parent
@@ -200,6 +200,7 @@ false value up-key?
    iunselect
    screen-ih iselect  erase-screen  iunselect
    page
+   close
    false
 ;
 
