@@ -197,7 +197,6 @@ false value up-key?
    toss-keys  " translation-off" $call-parent
    selftest-keys
    " translation-on" $call-parent  toss-keys cursor-on
-   iunselect
    screen-ih iselect  erase-screen  iunselect
    page
    close
