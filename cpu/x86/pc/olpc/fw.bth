@@ -478,7 +478,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 
 : start-sound  ( -- )
-   playback-volume >r  d# -21 to playback-volume
+   playback-volume >r  d# -9 to playback-volume
    ['] load-started behavior  >r
    ['] noop to load-started
    " rom:splash" ['] $play-wav catch  if  2drop  then
@@ -493,20 +493,19 @@ fload ${BP}/ofw/core/dualconsole.fth
 : unfreeze  ( -- )  ['] usb-quiet      to go-hook  ;
 
 : ?start-sound  ( -- )
-   game-key-mask h# 40 and  if  start-sound  then
+   game-key-mask h# 40 and  0=  if  start-sound  then
+;
+: ?freeze  ( -- )
+   game-key-mask h# 10 and  0=  if  freeze  then
 ;
 : ?games  ( -- )
    game-key-mask h# 20 and  if
       time&date 5drop 1 and  if  pong  else  d# 1200 life  then
    then
 ;
-: ?freeze  ( -- )
-   game-key-mask h# 10 and  if  freeze  then
-;
 : open-keyboard  ( -- )
    " keyboard" open-dev  ?dup  if  set-stdin  then
 ;
-
 
 : startup  ( -- )
    standalone?  0=  if  exit  then
