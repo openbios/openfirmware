@@ -633,7 +633,8 @@ c;
 
 \ This assumes that the entire erase block is in memory
 : another-node?  ( adr -- false | adr' true )
-   eb-end  swap  ?do
+   dup h# 100 +  eb-end umin   ( adr end-adr )
+   swap  ?do
       i w@ jffs2-magic =  if
          i header-crc?  if
             i +raw-node  eb-end  u<=  if
