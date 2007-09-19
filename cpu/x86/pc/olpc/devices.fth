@@ -117,33 +117,11 @@ devalias d disk
 devalias n nand
 devalias sd /sd/disk
 
-
 dev /8042
 [ifndef] lx-devel
    patch false ctlr-selftest open
 [then]
 device-end
-
-dev /8042/keyboard
-0 value waiting-up?
-: olpc-check-abort  ( scan-code -- abort? )  \ Square pressed?
-   last-scan   over to last-scan  ( scan-code old-scan-code )
-   h# e0 <>  if  drop false exit  then          ( scan-code )
-
-   check-abort?  0=  if  drop false exit  then  ( scan-code )
-
-   dup h# 7f and  h# 5d <>  if  drop false exit then  ( scan-code )
-
-   h# 80 and  if   \ Up
-      false to waiting-up?
-      false                             ( abort? )
-   else
-      waiting-up?  0=                   ( abort? )
-      true to waiting-up?
-   then
-;
-patch olpc-check-abort check-abort get-scan
-dend
 
 0 0  " i70"  " /isa" begin-package   	\ Real-time clock node
    fload ${BP}/dev/ds1385r.fth
@@ -270,6 +248,10 @@ fload ${BP}/cpu/x86/pc/olpc/boardrev.fth   \ Board revision decoding
 
 stand-init: Quiet SCI
    sci-quiet
+;
+
+stand-init: Date to EC
+   time&date d# 2000 -  ec-date!  3drop
 ;
 
 stand-init: Wireless reset
