@@ -62,3 +62,10 @@
    [char] w  swap 1+ c!  ( )
    put-mfg-data
 ;
+
+alias disable-security clear-wp
+
+: enable-security  ( -- )
+   board-revision  h# b48 <  abort" Only supported on B4 and later"
+   set-wp
+;
