@@ -117,6 +117,9 @@ d# 905 value resumeline  \ Configurable; should be set from args
 : timeout! ( to -- )      8 dcon!  ;  \ def: h# ffff
 : scanint! ( si -- )      9 dcon!  ;  \ def: h# 0000
 : bright!  ( level -- ) d# 10 dcon! ; \ def: h# xxxF
+: bright@  ( -- level ) d# 10 dcon@ ;
+: brighter  ( -- )  bright@ 1+  h# f min  bright!  ;
+: dimmer    ( -- )  bright@ 1-  0 max  bright!  ;
 
 \ Colour swizzle, AA, no passthrough, backlight
 : set-color ( color? -- )

@@ -386,6 +386,8 @@ create func-map  81 c,  8c c,
    init-data
    kbd-reset 0= to keyboard-present?
 ;
+defer scan-handled?
+' false to scan-handled?
 headerless
 : check-abort  ( scan-code -- flag )  \ Ctrl-break pressed?
    check-abort?  if
@@ -409,12 +411,11 @@ headerless
    begin
       get-data?
    while                                     ( scan-code )
-      dup enque                              ( scan-code )
-
       \ In the following code, we must be careful to unlock the
       \ queue before calling user-abort, because a timer interrupt
       \ can occur at any time after user-abort is executed.
-      check-abort  if
+      dup check-abort  if                    ( scan-code )
+         drop
          unlock  user-abort
          \ Wait here for long enough to ensure that an alarm timer tick
          \ will happen if it is going to happen.  This is the safest
@@ -430,7 +431,8 @@ headerless
          \ if the alarm tick is turned off.
          d# 20 ms
          exit
-      then
+      then                                         ( scan-code )
+      scan-handled?  if  drop  else  enque  then   ( )
    repeat
    unlock
 ;
