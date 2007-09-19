@@ -32,10 +32,10 @@
 
 \ Find RAM address of tag, given FLASH address
 : tag>ram-adr  ( adr len -- ram-adr )
-   drop 2+                      ( adr' )   \ Address of  "ww" tag
+   drop                         ( adr' )   \ Address of  "ww" tag
    rom-pa mfg-data-offset +  -  ( offset )
 
-   dup /flash-block u>= abort" Bad ww offset"        \ Sanity check
+   dup /flash-block u>= abort" Bad tag offset"        \ Sanity check
 
    mfg-data-buf +               ( ram-adr )
 ;
@@ -44,7 +44,8 @@
 : mfg-data-setup  ( tag$ -- ram-adr )
    get-mfg-data
    2dup  find-tag  0=  if  ." No " type ."  tag" cr  abort  then  ( tag$ adr len )
-   tag>ram-adr  >r                            ( tag$ r: ram-adr )
+   \ The 2+ below skips the length bytes to the tagname field
+   tag>ram-adr  2+ >r                         ( tag$ r: ram-adr )
    r@ 2 $=  0= abort" Tag mismatch in RAM"    ( r: ram-adr )
    r>
 ;
@@ -68,4 +69,67 @@ alias disable-security clear-wp
 : enable-security  ( -- )
    board-revision  h# b48 <  abort" Only supported on B4 and later"
    set-wp
+;
+
+: ?tagname-valid  ( tagname$ -- tagname$ )
+   dup 2 <> abort" Tag name must be 2 characters long"
+;
+: tag-setup  ( tagname$ -- ram-value$ )
+   ?tagname-valid
+   get-mfg-data
+   2dup  find-tag  0=  if  ." No " type ."  tag" cr  abort  then  ( tagname$ value$ )
+   2nip                    ( value$ )
+   tuck tag>ram-adr swap   ( ram-value$ )
+;
+
+: value-mismatch?  ( new-value$ old-value$ -- flag )
+   dup  if
+      \ non-empty old value string
+      2dup + 1- c@  0=  if         ( new-value$ old-value$ )
+         \ Old value ends in null character; subtract that from the count
+         1-                        ( new-value$ old-value$' )
+      then                         ( new-value$ old-value$ )
+      rot <>                       ( new-adr old-adr flag )
+      nip nip                      ( old-len new-value$ )
+   else                            ( new-value$ old-value$ )
+      \ empty old value string; new one had better be empty too
+      2drop  0<>  nip              ( flag )
+   then
+;
+
+: $change-tag  ( value$ tagname$ -- )
+   tag-setup  ( new-value$ old-value$ )
+   2over 2over  value-mismatch?  abort" New value and old value have different lengths"
+   drop swap move   ( )
+   put-mfg-data
+;
+
+: change-tag  ( "tagname" "new-value" -- )
+   safe-parse-word  ( tagname$ )
+   0 parse          ( tagname$ new-value$ )
+   2swap $change-tag
+;
+
+: ram-last-mfg-data  ( -- adr )
+   mfg-data-buf /flash-block +  last-mfg-data
+;
+
+: $add-tag  ( value$ name$ -- )
+   ?tagname-valid                                 ( value$ name$ )
+   2dup find-tag  abort" Tagname already exists"  ( value$ name$ )
+   get-mfg-data
+   ram-last-mfg-data  >r                          ( value$ name$ r: adr )
+   2 pick 1+  over +  3 +                         ( value$ name$ record-len r: adr )
+   r@ over -  mfg-data-buf u<=  abort" Not enough space for new tag"
+   r@ over -  swap  ?erased                       ( value$ name$ r: adr )
+   r@ 2- swap move                                ( value$ r: adr )
+   dup 1+  dup r@ 3 - c!  invert r@ 4 - c!        ( value$ r: adr )
+   0  r@ 5 - c!                                   ( value$ r: adr )
+   r> 5 -  over -                                 ( value$ data-adr )
+   swap move
+   put-mfg-data
+;
+
+: add-tag  ( "name$" "value$" -- )
+   safe-parse-word  0 parse  2swap $add-tag
 ;
