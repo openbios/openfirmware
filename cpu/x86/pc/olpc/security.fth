@@ -510,15 +510,17 @@ d# 65 buffer: machine-id-buf
    go
 ;
 
-\ wp? returns true if a "wp" manufacturing data tag is present
+false value secure?
 
-: wp?  ( -- flag )  " wp" find-tag  dup  if  nip nip  then  ;
+stand-init: wp
+   " wp" find-tag  if  2drop  true to secure?  then
+;
 
 \ ?secure-boot performs either the secure boot algorithm or the
 \ historical boot algorithm depending on the presence of a "wp"
 \ manufacturing data tag.
 
-: ?secure-boot  ( -- )  wp?  if  secure-boot  else  boot  then  ;
+: ?secure-boot  ( -- )  secure?  if  secure-boot  else  boot  then  ;
 " ?secure-boot" ' boot-command set-config-string-default
 
 
