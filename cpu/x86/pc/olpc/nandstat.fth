@@ -65,7 +65,7 @@ h# ff h# ff h# ff  rgb>565 constant starting-color \ white
 
 : gshow-writing  ( #eblocks -- )
    ." Writing  "
-   0  rot 0  ?do           ( eblock# )
+   0  swap 0  ?do              ( eblock# )
       dup nand-pages/block * " block-bad?" $call-nand  0=  if  ( eblock# )
          dup show-pending      ( eblock# )
          1                     ( eblock# increment )
