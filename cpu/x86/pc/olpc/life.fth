@@ -1,7 +1,7 @@
 
 \ rgb color value
-h# ff     0     0  rgb>565 constant xred      \ red
-h#  0     0     0  rgb>565 constant xblack    \ black
+h# ff    ff     0  rgb>565 constant lf_fg    \ yellow
+h#  0     0     0  rgb>565 constant lf_bg    \ black
 
 \ screen size constant
 d# 128 constant lf_width
@@ -18,13 +18,13 @@ lf_width lf_height * constant /board
 : >work  ( i j -- adr )  swap lf_width *  + lf_board_work +  ;
 
 : show-cell  ( state y x -- )
-   >offset swap  if  xred  else  xblack  then  show-state
+   >offset swap  if  lf_fg  else  lf_bg  then  show-state
 ;
 
 \ display the board of life
 : lf_board_print  ( -- )
-   lf_height 0  do 
-      lf_width 0  do 
+   lf_height 1-  1  do 
+      lf_width 1- 1  do 
          j i >cell c@  j i  show-cell
       loop
    loop
@@ -35,12 +35,29 @@ variable cell-sum
 
 : xy+  ( x1 y1 x2 y2 -- x3 y3 )  rot +  -rot +  swap ;
 
+code sumcell  ( adr -- sum )
+   bx pop
+   ax ax xor
+   lf_width    negate [bx]  al add
+   lf_width 1- negate [bx]  al add
+   lf_width 1+ negate [bx]  al add
+   -1                 [bx]  al add
+    1                 [bx]  al add
+   lf_width           [bx]  al add
+   lf_width 1-        [bx]  al add
+   lf_width 1+        [bx]  al add
+
+   ax push
+c;
+
+
 : +sum  ( i j +i +j -- i j )
    2over xy+             ( i j i' j' )
    >cell c@ cell-sum +!  ( i j )
 ;
 
 : lf_check_live_i_j  ( i j -- ncell )
+[ifdef] notdef
    cell-sum off      ( i j )
    -1 -1 +sum
    -1  0 +sum
@@ -51,6 +68,9 @@ variable cell-sum
     1  0 +sum
     1  1 +sum        ( i j )
    2drop cell-sum @  ( sum )
+[else]
+    >offset lf_board + sumcell
+[then]
 ;
 
 \ one step evolve the board
@@ -61,132 +81,151 @@ variable cell-sum
    lf_board lf_width + lf_board lf_width lf_height 1 - * + lf_width move
 
    \ copy the column before last to the first one and the second to the last
-   lf_height 0   do
-     i lf_width 2 - >cell @ i 0 >cell c!
-     i 1 >cell @ i lf_width 1 - >cell c!
+   lf_board               ( adr )
+   lf_height 0   do       ( adr )
+      dup lf_width +          ( adr end-adr )
+      over 1+ c@  over 1- c!  ( adr end-adr )
+      tuck 2- c@  swap c!     ( end-adr )
    loop
+   drop
 
-   lf_height 1 -  1  do
-      lf_width 1 - 1  do
-         j i lf_check_live_i_j ( sum1 )
-         j i >cell c@ if      ( sum1 )
+   0                                    ( row-offset )
+   lf_height 1-  1  do                  ( row-offset )
+      lf_width +                        ( row-offset )
+      dup 1+  lf_width 2-  bounds  do   ( row-offset )
+         i lf_board +  dup sumcell      ( row adr sum1 )
+         swap c@ if                     ( row sum1 )
             \ caso in cui nella cella c'e' 1
-            2 3 between        ( 0|-1 )
-         else                  ( sum1 )
+            2 3 between                 ( row 0|-1 )
+            dup 0=  if  i  lf_bg show-state  then
+         else                           ( row sum1 )
             \ caso in cui nella cella c'e' 0
-            3 =                ( 0|-1 )
-         then
-         negate                ( 0|1 )
-         dup  j i >work c!     ( 0|1 )
-         dup j i >cell c@ <>  if  ( 0|1 )
-            j i show-cell
-         else
-            drop
-         then
-      loop
+            3 =                         ( row 0|-1 )
+            dup  if  i  lf_fg show-state  then
+         then                           ( row 0|-1 )
+         negate                         ( row 0|1 )
+         i lf_board_work + c!           ( row 0|1 )
+      loop                              ( row )
    loop
+   drop
+[then]
    lf_board_work  lf_board  /board  move
 ;
 
-decimal
+: compile-pattern  ( -- )
+   begin  refill  while
+      parse-word  tuck  ",
+      0=  if  exit  then
+   repeat
+;
+: place-pattern  ( x y adr -- )
+   -rot >cell  swap       ( board-adr pattern-adr )
+   begin  dup c@  while   ( board-adr pattern-adr )
+      2dup count  bounds  ?do      ( board-adr pattern-adr board-adr )
+         i c@ [char] . <> negate   ( board-adr pattern-adr board-adr value )
+         over c!  1+               ( board-adr pattern-adr board-adr' )
+      loop                         ( board-adr pattern-adr board-adr )
+      drop                         ( board-adr pattern-adr )
+      swap lf_width +  swap +str   ( board-adr' pattern-adr' )
+   repeat                 ( board-adr pattern-adr )
+   2drop
+;
+: life-pattern:
+   create  compile-pattern
+   does>  ( x y adr )  place-pattern
+;
+
+life-pattern: r-pentomino
+.**
+**.
+.*.
+
+life-pattern: twin-bees
+.OO........................
+.OO........................
+...........................
+...............O...........
+OO.............OO........OO
+OO..............OO.......OO
+...........OO..OO..........
+...........................
+...........................
+...........................
+...........OO..OO..........
+OO..............OO.........
+OO.............OO..........
+...............O...........
+...........................
+.OO........................
+.OO........................
+
+life-pattern: turtle
+.OOO.......O
+.OO..O.OO.OO
+...OOO....O
+.O..O.O...O
+O....O....O
+O....O....O
+.O..O.O...O
+...OOO....O
+.OO..O.OO.OO
+.OOO.......O
+
+life-pattern: gosper-gun
+........................O
+......................O.O
+............OO......OO............OO
+...........O...O....OO............OO
+OO........O.....O...OO
+OO........O...O.OO....O.O
+..........O.....O.......O
+...........O...O
+............OO
+
+
+: erase-board  ( -- )  lf_board /board erase  ;
+
 \ initialize data
 : set-cell  ( i j -- )  >cell  1 swap c!  ;
 : init-board  ( -- )
-   lf_board /board erase
-[ifdef] notdef
-   2 2 set-cell
-   3 3 set-cell
-   4 3 set-cell
-   4 2 set-cell
-   4 1 set-cell
-[else]
-
-   \ R-pentominos
-   \ This placement evolves nicely
-   \ 20 20 set-cell  20 21 set-cell  21 19 set-cell  21 20 set-cell  22 20 set-cell
-
-   \ This placement is boring
-   \ 40 20 set-cell  40 21 set-cell  41 19 set-cell  41 20 set-cell  42 20 set-cell
-
-   \ This one is excellent!
-   \ 20 40 set-cell  20 41 set-cell  21 39 set-cell  21 40 set-cell  22 40 set-cell
-   
-   \ This one almost dies out, then explodes into a complex arrangement with
-   \ stuff happening everywhere.
-   \ 20 60 set-cell  20 61 set-cell  21 59 set-cell  21 60 set-cell  22 60 set-cell
-
-   \ This one takes a long time to kill off the glider gun, then lasts for a long time
-   \ 20 80 set-cell  20 81 set-cell  21 79 set-cell  21 80 set-cell  22 80 set-cell
-
-   \ This one takes out the block at the right side of the glider gun, which
-   \ disperses in an interesting pattern, then the whole arena dies quickly
-   \ 20 78 set-cell  20 79 set-cell  21 77 set-cell  21 78 set-cell  22 78 set-cell
-
-   \ This one is absolutely brilliant!  It takes out the glider gun, which
-   \ disperse in a boring way, but then the rest of the pattern just keeps
-   \ changing and changing, after looking like it is about to die several times.
-   \ It eventually dies about about 5000 generations.
-   20 79 set-cell  20 80 set-cell  21 78 set-cell  21 79 set-cell  22 79 set-cell
-
-   \ Glider gun
-   55 21 set-cell
-   55 22 set-cell
-   56 21 set-cell
-   56 22 set-cell
-   53 34 set-cell
-   53 33 set-cell
-   54 32 set-cell
-   55 31 set-cell
-   56 31 set-cell
-   57 31 set-cell
-   58 32 set-cell
-   59 33 set-cell
-   59 34 set-cell
-   56 35 set-cell
-   54 36 set-cell
-   55 37 set-cell
-   56 37 set-cell
-   56 38 set-cell
-   57 37 set-cell
-   58 36 set-cell
-
-   55 41 set-cell
-   54 41 set-cell
-   53 41 set-cell
-   55 42 set-cell
-   54 42 set-cell
-   53 42 set-cell
-
-   52 43 set-cell
-   52 45 set-cell
-   51 45 set-cell
-   56 43 set-cell
-   56 45 set-cell
-   57 45 set-cell
-
-   53 55 set-cell
-   53 56 set-cell
-   54 55 set-cell
-   54 56 set-cell
-
-[then]
 ;
 hex
 
-: show-board  ( -- )
+: generations  ( n -- )
    cursor-off  " erase-screen" $call-screen   
    lf_board_print
+   ( n )  0  do
+      lf_board_evolve
+      key?  if  key drop  leave  then
+   loop
+   cursor-on
+;
+: life-demo  ( -- )
+   page
+   erase-board
+   d# 20 d# 78 r-pentomino
+   d# 51 d# 21 gosper-gun
+   d# 5500 generations
 ;
 
-\ Version that displays the result in-place
-: generations  ( n -- )
-   show-board
-   ( n )  0  do   lf_board_evolve  loop
-;
-: life  ( #generations -- )
+life-pattern: toad-flipper
+.O..............O.
+.O..............O.
+O.O............O.O
+.O..............O.
+.O......O.......O.
+.O......OO......O.
+.O......OO......O.
+O.O......O.....O.O
+.O..............O.
+.O..............O.
+
+
+: flip-toad
    page
-   init-board
-   generations
+   erase-board
+   d# 40 d# 40 toad-flipper
+   d# 500 generations
 ;
 
 \ 500 generations

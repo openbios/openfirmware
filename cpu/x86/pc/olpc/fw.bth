@@ -500,7 +500,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 : ?games  ( -- )
    game-key-mask h# 20 and  if
-      time&date 5drop 1 and  if  pong  else  d# 1200 life  then
+      time&date 5drop 1 and  if  pong  else  life-demo  then
    then
 ;
 : open-keyboard  ( -- )
