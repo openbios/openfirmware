@@ -474,18 +474,29 @@ d# 65 buffer: machine-id-buf
 \ Bad idea, because the cmdline would need to be signed too
 \  " /lzip:\cmdline" zip-extent  to cmdline
 
+   0 to /ramdisk
+
+   ['] load-path behavior >r                      ( r: xt )
+   ['] ramdisk-buf to load-path                   ( r: xt )
+
    " rd" fn-buf place
    bundle-present?  if
+      r> to load-path
+
       "   RD found - " ?lease-debug
       0 hashname c!
       img$  sig$  valid?  if
          "   Signature valid" ?lease-debug-cr
-         " /lzip:\data.img" $load-ramdisk exit
+         load-base to ramdisk-adr
+         img$ dup to /ramdisk     ( adr len )
+         load-base swap move      ( )
+         exit
       else
          "   Signature invalid" ?lease-debug-cr
          fail-load
       then
    then
+   r> to load-path
 ;
 
 
