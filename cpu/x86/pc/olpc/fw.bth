@@ -339,6 +339,7 @@ fload ${BP}/cpu/x86/pc/olpc/security.fth
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/ofw/gui/ofpong.fth
 fload ${BP}/cpu/x86/pc/olpc/life.fth
+fload ${BP}/cpu/x86/pc/olpc/sound.fth
 : olpc-power-off  ( -- )
    gx-power-off   \ Try the nice way first
    d# 20 ms
