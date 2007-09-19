@@ -225,6 +225,7 @@ h# 606 value volume
 : set-volume  ( db -- )
    dup 0>  if  drop 0  then
    negate  1+ 2* 3 /  dup bwjoin  to volume
+   volume h# 38 codec!            \ headphone/surround output pin gain
 ;
 
 : open-out  ( -- )
