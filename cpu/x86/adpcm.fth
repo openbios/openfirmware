@@ -214,10 +214,10 @@ c;
 \ Collapse a sample array with "#output-ch" channels/sample into a smaller
 \ array with "wav-in-#ch" channels/sample, discarding the excess channels.
 
-: condense-pcm  ( adr -- )
-   wav-in-#ch #output-ch - /w* to in-skip
-   #output-ch /w* to out-move
-   dup dup 4 - le-l@  bounds  ?do          ( out )
+: condense-pcm  ( adr in-len -- )
+   wav-in-#ch #output-ch - /w* to in-skip  ( adr in-len )
+   #output-ch /w* to out-move              ( adr in-len )
+   over  swap  bounds  ?do                 ( out )
       i over out-move move                 ( out )
       out-move +                           ( out' )
    in-skip +loop  drop                     ( )
@@ -226,10 +226,9 @@ c;
 \ Spread a sample array with "wav-in-#ch" channels/sample into a larger
 \ array with "#output-ch" channels/sample, zeroing the new channels.
 
-: expand-pcm  ( adr -- )
-   #output-ch wav-in-#ch - /w* to out-skip    ( adr )
-   wav-in-#ch /w* to out-move                 ( adr )
-   dup /l -  le-l@                            ( adr in-len ) 
+: expand-pcm  ( adr in-len -- )
+   #output-ch wav-in-#ch - /w* to out-skip    ( adr in-len )
+   wav-in-#ch /w* to out-move                 ( adr in-len )
    2dup  wav-in-#ch /  #output-ch *           ( adr in-len adr out-len )
    +  -rot                                    ( out-adr in-start in-len )
    over +  out-move -  do                     ( out-adr )
@@ -266,11 +265,13 @@ d# -9 value playback-volume  \ -9 is clipping threshold
    wav-data-adr 4 - le-l@                               ( adr in-len )
    dup  wav-in-#ch /  #output-ch *  to /pcm-output      ( adr in-len )
    /pcm-output " dma-alloc" $call-audio  to pcm-base    ( adr in-len )
-   
-   pcm-base  swap  move                                 ( )
 
-   #output-ch wav-in-#ch <  if  pcm-base condense-pcm  then   \ Skip extra channel data
-   #output-ch wav-in-#ch >  if  pcm-base expand-pcm    then   \ Convert mono to stereo
+   tuck  pcm-base  swap  move                           ( in-len )
+
+   #output-ch wav-in-#ch <  if  pcm-base over condense-pcm  then   \ Skip extra channel data
+   #output-ch wav-in-#ch >  if  pcm-base over expand-pcm    then   \ Spread out channel data
+   #output-ch 2 =  wav-in-#ch 1 =  and  if  pcm-base over 2* mono16>stereo16   then   \ Stereo from mono
+   drop
 
    pcm-base /pcm-output (play-pcm)
    false
@@ -300,8 +301,10 @@ d# -9 value playback-volume  \ -9 is clipping threshold
    then
 
    parse-wav-ok?  not  if  ." Not a .wav file" cr true exit  then
-   " /audio" open-dev ?dup 0=  if  ." Cannot open audio device" cr true exit  then
-   to audio-ih
+   audio-ih  0=  if
+      " /audio" open-dev ?dup 0=  if  ." Cannot open audio device" cr true exit  then
+      to audio-ih
+   then
 
    playback-volume set-volume
    set-sample-rate
@@ -311,7 +314,7 @@ d# -9 value playback-volume  \ -9 is clipping threshold
       h# 11  of  wav-data-adr play-ima-adpcm   endof
       ( default )  ." Cannot play .wav format type: " dup .wav-cc true swap cr
    endcase
-   audio-ih close-dev
+   \ audio-ih close-dev
 ;
 
 : ($play-wav)  ( file-str -- )
