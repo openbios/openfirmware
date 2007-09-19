@@ -283,7 +283,7 @@ d# 1024 constant /sec-line-max
 \ including serial number, UUID, and expiration time, is place.
 \ That string is the signed object for lease and developer key verification.
 
-d# 65 buffer: machine-id-buf
+d# 67 buffer: machine-id-buf
 
 \ get-my-sn get the machine identification info including serial number
 \ and UUID from the manufacturing data, placing it into machine-id-buf
@@ -315,6 +315,8 @@ d# 65 buffer: machine-id-buf
 
    [char] : machine-id-buf d# 48 + c!
 
+   [char] : machine-id-buf d# 50 + c!
+
    false
 ;
 
@@ -333,9 +335,11 @@ d# 65 buffer: machine-id-buf
 
 : check-machine-signature  ( sig$ expiration$ -- -1|1 )
    0 hashname c!
-   machine-id-buf d# 49 +  swap  move  ( sig$ )
-   machine-id-buf d# 65  2swap  valid?  if  1  else  -1  then
+   machine-id-buf d# 51 +  swap  move  ( sig$ )
+   machine-id-buf d# 67  2swap  valid?  if  1  else  -1  then
 ;
+
+: set-disposition  ( adr -- )  c@  machine-id-buf d# 49 + c!  ;
 
 \ check-lease checks a lease signature record in act01: format
 
@@ -348,16 +352,23 @@ d# 65 buffer: machine-id-buf
       "   Not act01:" ?lease-debug-cr
       2drop -1 exit
    then
+
    bl left-parse-string                    ( rem$ serial$ )
    my-sn$ $=  0=  if                       ( rem$ )
       " is for a different system" ?lease-debug-cr
       2drop 0 exit
    then                                    ( rem$ )
+
+   \ Disposition code
+   bl left-parse-string  1 <>  if  3drop -1 exit  then  ( rem$ disp-adr )
+   set-disposition                         ( rem$ )
+
    bl left-parse-string                    ( sig$ expiration$ )
    dup d# 16 <>  if                        ( sig$ expiration$ )
       " has bad expiration format" ?lease-debug-cr
       4drop -1 exit
    then                                    ( sig$ expiration$ )
+
    2dup expired?  if
       " expired" ?lease-debug-cr
       4drop -1 exit
@@ -534,6 +545,10 @@ stand-init: wp
    bl left-parse-string  " dev01:"  $=  0=  if  2drop -1 exit  then  ( rem$ )
    bl left-parse-string                        ( rem$ serial$ )
    my-sn$ $=  0=  if  2drop 0 exit  then       ( rem$ )
+
+   \ Disposition code
+   bl left-parse-string  1 <>  if  3drop -1 exit  then  ( rem$ disp-adr )
+   set-disposition                                      ( rem$ )
 
    develkey$ to pubkey$
    " 00000000T000000Z"  check-machine-signature
