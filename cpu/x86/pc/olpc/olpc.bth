@@ -74,7 +74,9 @@ $new-file
 
 [ifndef] lx-devel
    " ${BP}/clients/memtest86/memtest"               " memtest"  $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/olpc16EQima.wav"  " splash"   $add-deflated-dropin
+\   " ${BP}/cpu/x86/pc/olpc/images/olpc16EQima.wav"  " splash"   $add-deflated-dropin
+\   " ${BP}/cpu/x86/pc/olpc/images/Edge1-16k-EQ-Comp-Amp-ima.wav"  " splash"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
 [then]
 [ifdef] lx-devel
    " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
