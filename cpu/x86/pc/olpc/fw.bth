@@ -408,7 +408,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 
 : read-game-keys  ( -- )
 [ifdef] lx-devel  false exit  [then]
-   board-revision h# b20 <  if
+   board-revision h# b18 <  if
       h# 100 to game-key-mask
       exit
    then
