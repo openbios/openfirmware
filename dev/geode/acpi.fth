@@ -14,6 +14,9 @@
 
 : enable-power-button  ( -- )  2 acpi-w@ h# 100 or 2 acpi-w!  ;
 : disable-power-button  ( -- )  2 acpi-w@ h# 100 invert and 2 acpi-w!  ;
+: ignore-power-button  ( -- )  0 h# 40 pm!  ;
+\ Shorten off delay to .5 sec
+: quick-power-button  ( -- )  d# 32768 pm-enable or  h# 40 pm!  ;
 
 h# 4000.0000 constant pm-enable
 : gx-power-off  ( -- )
@@ -44,7 +47,7 @@ warning @ warning off
    stand-init
    h# 5140.000e rdmsr drop  h# fff0 and  to acpi-base
    h# 5140.000f rdmsr drop  h# fff0 and  to pm-base
-   d# 32768 pm-enable or  h# 40 pm!  \ Shorten off delay to .5 sec
+   quick-power-button
 ;
 warning !
 

@@ -251,9 +251,8 @@ d# 10 constant #ec-retries
 : io-spi-out  ( b -- )  spicmd!  spi-cmd-wait  ;
 
 : io-spi-reprogrammed  ( -- )
-   ." Powering off..."  d# 2000 ms  cr
-   power-off
-\   kbc-on
+   ." Restarting..."  d# 2000 ms  cr
+   kbc-on
 \   ." Keyboard back on" cr
 ;
 
@@ -266,8 +265,8 @@ d# 10 constant #ec-retries
 
    7 to spi-us   \ Measured time for "1 fea9 ec!" is 7.9 uS
 
+   ignore-power-button  \ Guard against the user panicing
    kbc-off
-   disable-power-button  \ Guard against the user panicing
 ;
 : use-local-ec  ( -- )  ['] io-spi-start to spi-start  ;
 use-local-ec
