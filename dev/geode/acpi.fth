@@ -12,13 +12,14 @@
 : pm@  ( offset -- n )  pm-base +  pl@ ;
 : pm!  ( n offset -- )  pm-base +  pl! ;
 
+h# 4000.0000 constant pm-enable
+
 : enable-power-button  ( -- )  2 acpi-w@ h# 100 or 2 acpi-w!  ;
 : disable-power-button  ( -- )  2 acpi-w@ h# 100 invert and 2 acpi-w!  ;
 : ignore-power-button  ( -- )  0 h# 40 pm!  ;
 \ Shorten off delay to .5 sec
 : quick-power-button  ( -- )  d# 32768 pm-enable or  h# 40 pm!  ;
 
-h# 4000.0000 constant pm-enable
 : gx-power-off  ( -- )
    \ The rest of this will succeed in turning off the CPU, but the EC will
    \ stay on.  The ec-power-off above turns off both the EC and CPU, so the
