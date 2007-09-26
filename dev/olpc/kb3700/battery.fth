@@ -54,6 +54,7 @@ string-array bat-states
   ," charging-full     "
   ," discharge         "
   ," abnormal: "
+  ," trickle           "
 end-string-array
 
 : .bat-type  ( -- )
@@ -84,7 +85,7 @@ end-string-array
    ." AC:"  dup h# 10 and  if  ." on  "  else  ." off "  then  ( stat )
    ." PCB: "  pcb-temp 2.d ." C "
 
-   dup 1 and  if
+   dup h# 81 and  if
       ." Battery: "
       .bat-type
       soc .%   ."  "
@@ -96,6 +97,7 @@ end-string-array
       dup 8 and  if  ." error "  then
       dup h# 20 and  if  ." charging "  then
       dup h# 40 and  if  ." discharging "  then
+      dup h# 80 and  if  ." trickle  "  then
    else
       ." No battery"
    then
