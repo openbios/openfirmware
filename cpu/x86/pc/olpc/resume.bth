@@ -20,7 +20,8 @@ fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
 \ This code will be copied to RAM at suspend-base
 
 \ create save-display
-create reset-smbus
+\ create reset-smbus
+\ create reset-smbus-bitbang
 \ create restore-usb-power
 
 h# fe00.0000 constant gp-pa
@@ -335,6 +336,40 @@ here resume-entry put-branch
    1 bitclr  h# 4c00.0015 wmsr  \ DOTPLL - release reset
    ax lods  ax dx xchg  ax lods  ax dx xchg  h# c000.2001 wmsr  \ Video output format
    ax lods  ax dx xchg  ax lods  ax dx xchg  h# c000.2011 wmsr  \ TFTP pad select
+
+[ifdef] reset-smbus-bitbang
+   \ GPIO15 is SMB_DATA
+   \ GPIO14 is SMB_CLOCK
+   h# c0000000 # ax mov         \ Mask to clear SMB_DATA and SMB_CLOCK
+   h# 1010 # dx mov  ax dx out  \ Deselect OUT AUX1
+   h# 1014 # dx mov  ax dx out  \ Deselect OUT AUX2
+   h# 1034 # dx mov  ax dx out  \ Deselect IN AUX1
+   h#     c000 # ax mov         \ Mask to set SMB_DATA and SMB_CLOCK
+   h# 1000 # dx mov  ax dx out  \ Set output values to high
+   h# 1004 # dx mov  ax dx out  \ Set pins to output
+
+   h# 1000 # dx mov             \ Output value register
+
+   8 # cx mov  \ Generate 8 low pulses on SMB_CLOCK
+   begin
+      \ 50 uS delay (slightly longer for GX)
+      rdtsc  ax bx mov  d# 50 d# 500 * #  bx  add
+      begin  rdtsc  bx ax sub  0>= until
+
+      h# 40000000 # ax mov  ax dx out    \ Clear SMB_CLOCK
+
+      \ 50 uS delay (slightly longer for GX)
+      rdtsc  ax bx mov  d# 50 d# 500 * #  bx  add
+      begin  rdtsc  bx ax sub  0>= until
+
+      h#     4000 # ax mov  ax dx out    \ Set SMB_CLOCK
+
+   loopa
+
+   \ 50 uS delay (slightly longer for GX)
+   rdtsc  ax bx mov  d# 50 d# 500 * #  bx  add
+   begin  rdtsc  bx ax sub  0>= until
+[then]
 
    h# 1038 #     dx  mov  \ Low bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
