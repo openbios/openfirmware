@@ -20,26 +20,18 @@ h# 4000.0000 constant pm-enable
 \ Shorten off delay to .5 sec
 : quick-power-button  ( -- )  d# 32768 pm-enable or  h# 40 pm!  ;
 
+\ This turns off the main CPU, but the EC stays on.
 : gx-power-off  ( -- )
-   \ The rest of this will succeed in turning off the CPU, but the EC will
-   \ stay on.  The ec-power-off above turns off both the EC and CPU, so the
-   \ rest of this is for historical interest only.
-
-   \ Recipe from AMD; no way I would have figured this out from manual
-   5 d# 10 <<  1 or  8 acpi-w!   \ S5 - power off
-   
    \ Enable all of these controls with 0 delay
    pm-enable   h# 10 pm!             \ PM_SCLK
    pm-enable   h# 20 pm!             \ PM_IN_SLPCTL
    pm-enable   h# 34 pm!             \ PM_WKXD
    pm-enable   h# 30 pm!             \ PM_WKD
 
-   \ Should be "2 acpi-w@", but 16-bit writes to ACPI and PM regs are broken
-   0 acpi-l@  h# 100.0000 or  0 acpi-l!   \ Enable button wakeup in PM1_EN
    h# 2ffff h# 54 pm!                \ Clear status bits i PM_SSC
-   h# 1301 rdmsr  swap 2 or swap  h# 1301 wrmsr  \ Set SMM_SUSP_EN
    h# ffff.ffff h# 18 acpi-l!        \ Clear status bits in PM_GPE0_STS
-   8 acpi-l@  h# 2000 or  8 acpi-l!  \ SLP_EN in PM1_CNT - Down we go
+
+   h# 2000  8 acpi-l!                \ SLP_EN in PM1_CNT - Down we go
 ;
 ' gx-power-off is power-off
 
