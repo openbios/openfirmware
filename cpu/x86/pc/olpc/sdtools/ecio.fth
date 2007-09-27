@@ -77,8 +77,8 @@ h# 380 constant iobase
 : wlan-on          ( -- )  1 h# 23 ec-cmd-b!  ;
 : wlan-wake        ( -- )  h# 24 ec-cmd-out  ;
 : wlan-reset       ( -- )  h# 25 ec-cmd-out  ;
-: dcon-disable     ( -- )  0 h# 26 ec-cmd-b!  ;
-: dcon-enable      ( -- )  1 h# 26 ec-cmd-b!  ;
+: dcon-power-on    ( -- )  0 h# 26 ec-cmd-b!  ;
+: dcon-power-off   ( -- )  1 h# 26 ec-cmd-b!  ;
 : reset-ec-warm    ( -- )  h# 27 ec-cmd-out  ;
 : reset-ec         ( -- )  h# 28 ec-cmd-out  ;
 : write-protect-fw ( -- )  h# 29 ec-cmd-out  ;
