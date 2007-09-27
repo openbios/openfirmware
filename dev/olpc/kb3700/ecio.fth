@@ -147,8 +147,8 @@ d# 10 constant #ec-retries
 : wlan-on          ( -- )  1 h# 23 ec-cmd-b!  ;
 : wlan-wake        ( -- )  h# 24 ec-cmd  ;
 : wlan-reset       ( -- )  h# 25 ec-cmd  ;
-: dcon-disable     ( -- )  0 h# 26 ec-cmd-b!  ;
-: dcon-enable      ( -- )  1 h# 26 ec-cmd-b!  ;
+: dcon-power-off   ( -- )  0 h# 26 ec-cmd-b!  ;
+: dcon-power-on    ( -- )  1 h# 26 ec-cmd-b!  ;
 : reset-ec-warm    ( -- )  h# 27 ec-cmd  ;
 : reset-ec         ( -- )  h# 28 ec-cmd  ;
 : write-protect-fw ( -- )  h# 29 ec-cmd  ;
