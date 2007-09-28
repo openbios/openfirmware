@@ -358,7 +358,7 @@ here resume-entry put-branch
 
       h# 40000000 # ax mov  ax dx out    \ Clear SMB_CLOCK
 
-      \ 50 uS delay (slightly longer for GX)
+      \ 5 uS delay (slightly longer for GX)
       rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
       begin  rdtsc  bx ax sub  0>= until
 
@@ -367,7 +367,7 @@ here resume-entry put-branch
    loopa
 
    \ 50 uS delay (slightly longer for GX)
-   rdtsc  ax bx mov  d# 50 d# 500 * #  bx  add
+   rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
    begin  rdtsc  bx ax sub  0>= until
 [then]
 
