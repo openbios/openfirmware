@@ -1,0 +1,2 @@
+#!/bin/sh
+./forth fw.dic graphdev.fth -
