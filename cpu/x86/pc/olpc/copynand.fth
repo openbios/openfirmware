@@ -90,7 +90,10 @@ h# 100 buffer: image-name-buf
 h# 100 buffer: crc-name-buf
 : crc-name$  ( -- adr len )  crc-name-buf count  ;
 
+0 value img-has-oob?
+
 : ?open-crcs  ( -- )
+   img-has-oob?  if  exit  then
    image-name$ + 4 -  " .img" caps-comp 0=  if
       image-name$ crc-name-buf place
       " crc"  crc-name$ + 3 -  swap move
@@ -98,6 +101,10 @@ h# 100 buffer: crc-name-buf
    then
    #crc-records  if
       ." Check file is " crc-name$ type cr
+
+      #image-eblocks  if
+         #image-eblocks #crc-records <>  " CRC file length is wrong" ?nand-abort
+      then
    then
 ;
 
@@ -106,13 +113,26 @@ h# 100 buffer: crc-name-buf
 : open-img  ( "devspec" -- )
    image-name$  open-dev  to fileih
    fileih 0= " Can't open NAND image file"  ?nand-abort
-   " size" fileih $call-method  /nand-block  um/mod  ( residue #eblocks )
-   to #image-eblocks                                 ( residue )
-   0<>  " Image file size is not a multiple of the NAND erase block size" ?nand-abort
-   #image-eblocks 0= " Image file is empty" ?nand-abort
+   " size" fileih $call-method               ( d.size )
+   2dup  /nand-block  um/mod  swap  if       ( d.size #eblocks )
+      \ Wrong size for the no-oob data format; try the dump-nand format
+      drop                                   ( d.size #eblocks )
+      h# 21100 um/mod  swap                  ( #eblocks residue )
+      0<>  " Image file size is not a multiple of the NAND erase block size" ?nand-abort
+      true to img-has-oob?
+   else                                      ( d.size #eblocks )
+      false to img-has-oob?
+      nip nip                                ( #eblocks )
+   then                                      ( #eblocks )
+   to #image-eblocks
 
-   #crc-records  if
-      #image-eblocks #crc-records <>  " CRC file length is wrong" ?nand-abort
+   #image-eblocks 0= " Image file is empty" ?nand-abort
+;
+
+: ?skip-oob  ( -- )
+   img-has-oob?  if
+      load-base h# 1100  " read" fileih $call-method   ( len )
+      h# 1100 <> " Bad read of OOB data in .img file"  ?nand-abort ( )
    then
 ;
 
@@ -181,8 +201,8 @@ defer show-done
 : copy-nand  ( "devspec" -- )
    open-nand
    get-img-filename
-   ?open-crcs
    open-img
+   ?open-crcs
 
    ['] noop to show-progress
 
@@ -198,6 +218,7 @@ defer show-done
       i ?check-crc
       load-base " copy-block" $call-nand          ( page# error? )
       " Error writing to NAND FLASH" ?nand-abort  ( page# )
+      ?skip-oob
       nand-pages/block / show-written             ( )
    loop
 
@@ -233,8 +254,8 @@ defer show-done
    hex
    open-nand  close-nand-ihs   \ To set sizes
    get-img-filename
-   ?open-crcs
    open-img
+   ?open-crcs
    #crc-records 0= " No CRC file"  ?nand-abort
 
    ['] noop to show-progress
