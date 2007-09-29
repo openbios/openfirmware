@@ -1,0 +1,235 @@
+\ See license at end of file
+purpose: Load file for Forth toolkit, without firmware
+
+dictionary: ${BP}/cpu/x86/build/kernel.dic
+command: &x86forth &dictionary &this
+build-now
+
+ ' noop is include-hook
+\ ' $report-name is include-hook
+\ : rn  (cr 2dup type 15 spaces  ;  ' rn is include-hook
+
+create no-tools
+create no-heads
+create resident-packages
+
+fload ${BP}/forth/lib/fwsetup.fth
+
+: dot hex transtart . transize . there . ouser . hedge . limit . cr decimal ;
+.(  after: ) dot
+
+transient
+
+\ Variables controlling inclusion of optional packages.
+
+[ifdef] no-heads
+false
+[else]
+true
+[then]
+value assembler?		\  5280 bytes
+true  value forth-debug?	\  1064 bytes
+
+resident
+
+[ifndef] partial-no-heads	transient  [then]
+fload ${BP}/forth/lib/filetool.fth		\ needed for dispose, savefort.fth
+
+\NotTags fload ${BP}/forth/lib/dispose.fth
+[ifndef] partial-no-heads	resident  [then]
+
+[ifndef] partial-no-heads	transient  [then]
+\NotTags fload ${BP}/forth/lib/headless.fth
+\NotTags fload ${BP}/forth/lib/showspac.fth
+[ifndef] partial-no-heads	resident  [then]
+
+fload ${BP}/forth/lib/romable.fth
+
+fload ${BP}/forth/lib/hidden.fth
+
+fload ${BP}/forth/kernel/hashcach.fth
+
+fload ${BP}/forth/lib/th.fth
+\ fload ${BP}/forth/lib/ansiterm.fth
+
+fload ${BP}/forth/kernel/splits.fth
+fload ${BP}/forth/kernel/endian.fth
+
+fload ${BP}/forth/lib/strings.fth
+fload ${BP}/forth/lib/stringop.fth
+
+fload ${BP}/forth/lib/fastspac.fth
+
+fload ${BP}/forth/lib/patch.fth
+fload ${BP}/forth/lib/cirstack.fth		\ Circular stack
+\ fload ${BP}/forth/lib/pseudors.fth		\ Interpretable >r and r>
+
+\ fload ${BP}/forth/lib/headtool.fth
+
+fload ${BP}/forth/lib/needs.fth
+
+\ fload ${BP}/forth/lib/suspend.fth
+alias exit? false
+
+fload ${BP}/forth/lib/util.fth
+\ fload ${BP}/forth/lib/format.fth
+: to-column  ( column# -- )  drop space  ;
+
+fload ${BP}/forth/lib/stringar.fth
+
+fload ${BP}/forth/lib/parses1.fth	\ String parsing
+
+\ fload ${BP}/forth/lib/dump.fth
+\ fload ${BP}/forth/lib/words.fth
+\ fload ${BP}/forth/lib/decomp.fth
+
+\ Uses  over-vocabulary  from words.fth
+[ifndef] partial-no-heads	transient  [then]
+\ \NotTags fload ${BP}/forth/lib/dumphead.fth
+[ifndef] partial-no-heads	resident  [then]
+
+\ fload ${BP}/forth/lib/seechain.fth
+
+\ fload ${BP}/forth/lib/loadedit.fth		\ Command line editor module
+
+\ fload ${BP}/forth/lib/caller.fth
+
+\ fload ${BP}/forth/lib/callfind.fth
+fload ${BP}/forth/lib/substrin.fth
+\ fload ${BP}/forth/lib/sift.fth
+
+fload ${BP}/forth/lib/array.fth
+
+fload ${BP}/forth/lib/linklist.fth		\ Linked list routines
+
+fload ${BP}/forth/lib/lex.fth
+
+\ fload ${BP}/forth/lib/autold.fth		\ Autoload mechanism
+
+[ifndef] partial-no-heads	transient  [then]
+fload ${BP}/forth/lib/initsave.fth		\ Common code for save-forth et al
+fload ${BP}/forth/lib/reminder.fth		\ Reminders
+[ifndef] partial-no-heads	resident  [then]
+
+assembler? [if]
+fload ${BP}/cpu/x86/assem.fth
+fload ${BP}/cpu/x86/code.fth
+fload ${BP}/forth/lib/loclabel.fth
+[else]
+transient  fload ${BP}/cpu/x86/assem.fth  resident
+fload ${BP}/cpu/x86/code.fth
+transient  fload ${BP}/forth/lib/loclabel.fth     resident
+[then]
+fload ${BP}/cpu/x86/asmspec.fth	\ Special registers
+
+\ fload ${BP}/cpu/x86/decompm.fth
+
+
+: be-l,  ( l -- )  here set-swap-bit  here  4 allot  be-l!  ;
+
+[ifndef] partial-no-heads       transient   [then]
+fload ${BP}/cpu/x86/saveexp.fth
+fload ${BP}/cpu/x86/savefort.fth
+[ifndef] partial-no-heads	resident  [then]
+alias $save-forth $save-forth
+
+\ [ifdef] resident-packages
+\ fload ${BP}/cpu/x86/disassem.fth
+\ [else]
+\ autoload: disassem.fth
+\ defines: dis
+\ defines: +dis
+\ defines: pc!dis1
+\ [then]
+
+\ fload ${BP}/forth/lib/instdis.fth
+
+fload ${BP}/cpu/x86/objsup.fth
+fload ${BP}/forth/lib/objects.fth
+
+\ fload ${BP}/cpu/x86/cpustate.fth
+\ fload ${BP}/cpu/x86/register.fth
+
+\ fload ${BP}/forth/lib/savedstk.fth
+\ fload ${BP}/forth/lib/rstrace.fth
+\ fload ${BP}/cpu/x86/ftrace.fth
+\ fload ${BP}/cpu/x86/ctrace.fth
+\ fload ${BP}/cpu/x86/showcras.fth
+
+\ forth-debug? [if]
+\ fload ${BP}/cpu/x86/debugm.fth	\ Forth debugger support
+\ fload ${BP}/forth/lib/debug.fth	\ Forth debugger
+\ [then]
+
+\ start-module			 \ Breakpointing
+\ fload ${BP}/cpu/x86/cpubpsup.fth \ Breakpoint support
+\ fload ${BP}/forth/lib/breakpt.fth
+\ fload ${BP}/cpu/x86/Linux/catchexc.fth  \ OS signal handling
+\ end-module
+
+: edit-file  ( adr len maxlen -- len' )  drop nip  ;
+: edit-line  ( adr len maxlen -- len' )  drop nip  ;
+defer light ' noop to light
+alias cancel noop
+: vsift?  ( adr len voc-xt -- adr len exit? )  drop true  ;
+alias .in noop
+defer .voc     ' noop is .voc
+alias save-state-common noop
+defer save-state
+alias init-exceptions noop
+defer deny-history?
+alias not-dark noop
+alias (debug drop
+alias cpeek c@
+alias wpeek w@
+alias lpeek l@
+alias cpoke c!
+alias wpoke w!
+alias lpoke l!
+0 value load-base
+variable file-size
+: loaded load-base file-size @  ;
+: !load-size  file-size !  ;
+defer ?inflate-loaded  ' noop is ?inflate-loaded
+alias external noop
+
+\needs no-heads create no-heads
+fload ${BP}/cpu/x86/basefw.bth
+
+: reg  ( phys.. size )  encode-reg  " reg" property ;
+: ($callback)  ( nargs name$ -- error? )  2drop  0 ?do  drop  loop  true  ;
+: memory-test-suite  ( adr len -- error? )  2drop false  ;
+: byte-load  ( adr stride -- )  2drop  ;
+: model  " model" string-property  ;
+
+[ifndef] no-heads
+resident   dispose   0 0 set-transize   \ true is suppress-transient
+\ .(   zeroed: ) dot
+
+' noop is include-hook  ' noop is include-exit-hook
+.( --- Saving small.dic --- )  " small.dic" $save-forth cr
+[then]
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2006 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
