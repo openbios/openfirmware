@@ -51,17 +51,19 @@ false value selftest-err?               \ Selftest result
 ;
 : read-eblock  ( adr page# -- error? )
    pages/eblock read-blocks pages/eblock <>
+   dup  if  ." SAVE" cr  then
 ;
 : write-eblock  ( adr page# -- error? )
    dup erase-block
    pages/eblock write-blocks pages/eblock <>
+   dup  if  ." RESTORE" cr  then
 ;
 : test-eblock  ( page# pattern -- error? )
    obuf erase-size 2 pick      fill
    ibuf erase-size rot invert  fill
-   obuf over write-eblock  if  drop true exit  then
-   ibuf swap read-eblock   if  true exit  then
-   ibuf obuf erase-size comp
+   obuf over write-eblock  if  ." WRITE " obuf c@ . cr  drop true exit  then
+   ibuf swap read-eblock   if  ." READ " obuf c@ . cr true exit  then
+   ibuf obuf erase-size comp  dup if  ." COMP " obuf c@ . cr  then
 ;
 
 \ Destroy content of flash.  No argument.
