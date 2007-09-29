@@ -28,13 +28,34 @@
 
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
 
-   " ${BP}/cpu/x86/pc/olpc/images/olpclogo.565" " olpc.565"      $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " nandflash.565" $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/lightdot.565"  " lightdot.565"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/yellowdot.565" " yellowdot.565" $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/darkdot.565"   " darkdot.565"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/lock.565"      " lock.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/unlock.565"    " unlock.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/plus.565"      " plus.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/minus.565"     " minus.565"     $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/x.565"         " x.565"         $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/sad.565"       " sad.565"       $add-deflated-dropin
+
+\   " ${BP}/cpu/x86/pc/olpc/images/topkey.565"   " topkey.565"    $add-deflated-dropin
+\   " ${BP}/cpu/x86/pc/olpc/images/dot0.565"     " mark0.565"     $add-deflated-dropin
+\   " ${BP}/cpu/x86/pc/olpc/images/dot1.565"     " mark1.565"     $add-deflated-dropin
+\   " ${BP}/cpu/x86/pc/olpc/images/dot2.565"     " mark2.565"     $add-deflated-dropin
+\   " ${BP}/cpu/x86/pc/olpc/images/dot3.565"     " mark3.565"     $add-deflated-dropin
+\   " ${BP}/cpu/x86/pc/olpc/images/lock2.565"    " lock2.565"     $add-deflated-dropin
+\   " ${BP}/cpu/x86/pc/olpc/images/unlock2.565"  " unlock2.565"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/check.565"    " check.565"     $add-deflated-dropin
+\  " ${BP}/cpu/x86/pc/olpc/images/leasekey.565" " leasekey.565"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/xogray.565"   " xogray.565"    $add-deflated-dropin
+\   " ${BP}/cpu/x86/pc/olpc/images/olpclogo.565" " olpc.565"     $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " nand.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " fastnand.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/ethernet.565" " ethernet.565"  $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/usbkey.565"   " usbdisk.565"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/usbkey.565"   " disk.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wlan.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/xo.565"       " xo.565"        $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " sdmmc.565"     $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " sd.565"        $add-deflated-dropin
 
    " ${BP}/ofw/termemu/gallant.obf"             " font"          $add-deflated-dropin
 
@@ -43,3 +64,5 @@
    " fw.public"                                 " fwpubkey"      $add-dropin \ Incompressible
    " lease.public"                              " leasepubkey"   $add-dropin \ Incompressible
    " developer.public"                          " develpubkey"   $add-dropin \ Incompressible
+
+   " hasher.img"                                " hasher"        $add-deflated-dropin

@@ -272,7 +272,7 @@ warning @  warning off
          ." Interacting due to botched resume" cr  hex interact
       then
       i-key-wait  if
-         " patch false fast-boot? startup" eval
+\        " patch false fast-boot? startup" eval
          ." Interacting" cr  hex interact
       then
 [ifdef] lx-devel
@@ -335,6 +335,7 @@ fload ${BP}/cpu/x86/pc/olpc/nandstat.fth
 \ fload ${BP}/cpu/x86/pc/olpc/carousel.fth     \ Carouseled NAND writing
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
 fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
+fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/ofw/gui/ofpong.fth
@@ -438,23 +439,9 @@ true                               ' client-symbols?  set-config-int-default
 \ fload ${BP}/cpu/x86/pc/report.fth
 fload ${BP}/ofw/core/dualconsole.fth
 
-0 value game-key-mask
-
-: read-game-keys  ( -- )
-[ifdef] lx-devel  false exit  [then]
-   board-revision h# b18 <  if
-      h# 100 to game-key-mask
-      exit
-   then
-
-   game-key@  dup to game-key-mask  if
-      ." Release the game key to continue" cr
-      begin  d# 100 ms  game-key@ 0=  until
-   then
-;
 : fast-boot?  ( -- flag )
 [ifdef] rom-loaded
-   game-key-mask  h# 120 and  0=
+   button-x game-key?  0=
 [else]
    false
 [then]
@@ -506,11 +493,6 @@ fload ${BP}/ofw/core/dualconsole.fth
    then
 ;
 
-: optional-startup  ( -- )
-   probe-usb
-   ?usb-keyboard
-;
-
 : go-hook-freeze
    [ ' go-hook behavior compile, ]
    0 " set-source" $call-screen
@@ -519,13 +501,13 @@ fload ${BP}/ofw/core/dualconsole.fth
 : unfreeze  ( -- )  ['] usb-quiet      to go-hook  ;
 
 : ?sound  ( -- )
-   game-key-mask h# 40 and  0=  if  sound  then
+   button-rotate game-key? 0=  if  sound  then
 ;
 : ?freeze  ( -- )
-   game-key-mask h# 40 and  0=  if  freeze  then
+   button-rotate game-key?  0=  if  freeze  then
 ;
 : ?games  ( -- )
-   game-key-mask h# 20 and  if
+   rocker-right game-key?  if
       time&date 5drop 1 and  if  pong  else  life-demo  then
    then
 ;
@@ -540,36 +522,51 @@ fload ${BP}/ofw/core/dualconsole.fth
 
    console-start
    read-game-keys
+[ifdef] notdef
    fast-boot?   if
-      stdout off
+( D)  stdout off  \ banner
       probe-pci
       ?sound
       open-keyboard
+( D)              \ ?games
       ?freeze
-      ['] false to interrupt-auto-boot?
+\      ['] false to interrupt-auto-boot?
       probe-usb
 \     " nand" $dev-update-flash
       interpreter-init
-[ifndef] lx-devel
-      enable-power-button
-[then]
-      auto-boot
-      screen-ih stdout !
-      ?usb-keyboard
+      secure-startup
+( D)  screen-ih stdout !  \
+( D)  ?usb-keyboard       \
    else
-      banner
+( D)  banner  \ stdout off
+      probe-pci
+      ?sound
+      open-keyboard
+( D)  ?games  \
+      ?freeze
+      probe-usb
+( D)  ?usb-keyboard  \
+      interpreter-init
+      secure-startup
+   then
+[else]
+      stdout off  \ 
       probe-pci
       ?sound
       open-keyboard
       ?games
       ?freeze
-      optional-startup
+      ['] false to interrupt-auto-boot?
+      probe-usb
+\     " nand" $dev-update-flash
       interpreter-init
-[ifndef] lx-devel
-      enable-power-button
+      secure-startup
+      ['] (interrupt-auto-boot?) to interrupt-auto-boot?
+      screen-ih stdout !
+      banner
+      ?usb-keyboard
 [then]
-      auto-boot
-   then
+   auto-boot
 
    blue-letters ." Type 'help' for more information." black-letters
    cr cr

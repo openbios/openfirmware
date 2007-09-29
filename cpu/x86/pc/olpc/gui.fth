@@ -3,6 +3,7 @@ purpose: Graphical display of boot sequence
 
 d# 0  d# 0  2value first-icon-xy
 0 0 2value icon-xy
+0 0 2value last-xy
 0 value text-y
 
 : ?next-row  ( -- )
@@ -14,15 +15,15 @@ d# 0  d# 0  2value first-icon-xy
    then
 ;
 
-: show-565  ( image-adr,len -- )
+: prep-565  ( image-adr,len -- bits-adr x y w h )
    drop
    dup  " C565" comp  abort" Not in C565 format"
    dup 4 + le-w@  to image-width
    dup 6 + le-w@  to image-height
    8 +
    ?next-row
+   icon-xy to last-xy
    icon-xy  image-width  image-height
-   " draw-rectangle" $call-screen
 ;
 
 : $get-image  ( filename$ -- true | adr,len false )
@@ -34,13 +35,21 @@ d# 0  d# 0  2value first-icon-xy
 ;
 : $show  ( filename$ -- )
    not-screen?  if  2drop exit  then
-   $get-image  if  exit  then  2dup show-565  free-mem
-;
-: $show&advance  ( filename$ -- )
    0 to image-width   \ In case $show fails
-   $show
+   $get-image  if  exit  then
+   2dup prep-565  " draw-transparent-rectangle" $call-screen
+   free-mem
+;
+: $show-opaque  ( filename$ -- )
+   not-screen?  if  2drop exit  then
+   $get-image  if  exit  then
+   2dup prep-565  " draw-rectangle" $call-screen
+   free-mem
+;
+: advance  ( -- )
    icon-xy  image-width 0  d+  to icon-xy
 ;
+: $show&advance  ( filename$ -- )  $show  advance  ;
 
 : fix-cursor  ( -- )  cursor-on  ['] user-ok to (ok)  user-ok  ;
 
@@ -247,7 +256,7 @@ warning !
 
 \ Make the terminal emulator use a region that avoids the logo area
 : avoid-logo  ( -- )
-   0  h# f                                       ( fg-color bg-color )
+   screen-ih package( foreground-color background-color )package ( fg-color bg-color )
    screen-wh drop  char-wh drop  d# 80 *  -  2/  ( fg-color bg-color x )
    text-y                                        ( fg-color bg-color x y )
    char-wh drop d# 80  *                         ( fg-color bg-color x y w )
@@ -309,7 +318,9 @@ false value error-shown?
    avoid-logo
    
    0 to image-width  0 to image-height   \ In case $show-bmp fails
-   " rom:olpc.565" $show&advance
+[ifdef] old-way
+  " rom:olpc.565" $show&advance
+[then]
 
    icon-xy to first-icon-xy
 
@@ -347,13 +358,13 @@ device-end
 
 h# 32 buffer: icon-name
 
-: show-icon-file  ( basename$ -- )
+: show-icon  ( basename$ -- )
    " rom:" icon-name pack  $cat                  ( )
    " .565" icon-name $cat                        ( )
-   icon-name count  $show&advance                ( )
+   icon-name count  $show                        ( )
 ;
 
-: ?show-icon  ( adr len -- )
+: ?show-package-icon  ( adr len -- )
    locate-device  if  exit  then                    ( phandle )
 
    " icon" 2 pick  get-package-property  0=  if     ( phandle prop$ )
@@ -362,19 +373,19 @@ h# 32 buffer: icon-name
    then                                             ( phandle )
 
    " iconname" 2 pick  get-package-property  0=  if ( phandle prop$ )
-      get-encoded-string  show-icon-file            ( phandle )
+      get-encoded-string  show-icon advance         ( phandle )
       drop exit
     then                                            ( phandle )
 
    " name"  2 pick  get-package-property  0=  if    ( phandle prop$ )
-      get-encoded-string  show-icon-file            ( phandle )
+      get-encoded-string  show-icon advance         ( phandle )
       drop exit
     then                                            ( phandle )
 
     drop
 ;
 : (?show-device)  ( adr len -- adr len )
-   not-screen? 0=  if  2dup ?show-icon  then
+   not-screen? 0=  if  2dup ?show-package-icon  then
 ;
 ' (?show-device) to ?show-device
 

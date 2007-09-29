@@ -5,17 +5,23 @@ h# c0000 constant verify-base  \ The address the code is linked to run at
 h# d0000 constant verify-bss   \ The address the code is linked to run at
 h# 10000 constant /verify-bss
 
-0 [if]
-h# c0000 constant hasher-base  \ The address the code is linked to run at
+1 [if]
+h# 70000 constant hasher-base  \ The address the code is linked to run at
+h# 80000 constant hasher-bss
+h# 18000 constant /hasher-bss
 variable hashlen
 d# 128 buffer: hashbuf
 
-: hash  ( data$ hashname$ -- result$ )
-   " hasher" find-drop-in  0=  if  4drop true exit  then  ( data$ hashname$ prog$ )
-   2dup hasher-base swap move  free-mem          ( data$ hashname$ )
+: get-hasher  ( -- )
+   " hasher" find-drop-in  0=  if  4drop true exit  then  ( prog$ )
+   2dup hasher-base swap move  free-mem          ( hashname$ )
+;
 
+: hash  ( data$ hashname$ -- result$ )
    d# 128 hashlen !      
-   2>r  swap  hashlen hashbuf  2swap  2r> $cstr  ( &reslen resbuf datalen databuf hashname-cstr )
+   $cstr  hashbuf hashlen   ( databuf datalen hashname-cstr resbuf &reslen )
+
+   hasher-bss /hasher-bss erase
 
    hasher-base  dup h# 10 -  sp-call  abort" Hash failed"  drop 4drop  ( )
    hashbuf hashlen @
@@ -25,7 +31,9 @@ d# 128 buffer: hashbuf
 0 value crypto-loaded?
 : load-crypto  ( -- error? )
    crypto-loaded?  if  false exit  then
-   " verify" find-drop-in  0=  if  true exit  then  ( prog$ )
+   " verify" find-drop-in  0=  if
+      ." Can't find crypto code" cr  true exit
+   then  ( prog$ )
    2dup verify-base swap move  free-mem             ( )
    true to crypto-loaded?
    false

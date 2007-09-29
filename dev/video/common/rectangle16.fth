@@ -29,6 +29,24 @@ external
    loop                                    ( adr' wbytes fbadr' )
    3drop
 ;
+
+: draw-transparent-rectangle  ( adr x y w h -- )
+   rectangle-setup                         ( adr wbytes fbadr h )
+   >r  rot  r>                             ( wbytes fbadr adr h )
+   0  ?do                                  ( wbytes fbadr adr )
+      2 pick 0  ?do                        ( wbytes fbadr adr )
+         dup w@ >r  wa1+ r>                ( wbytes fbadr adr' color )
+         dup h# ffff =  if                 ( wbytes fbadr adr color )
+            drop                           ( wbytes fbadr adr )
+         else                              ( wbytes fbadr adr color )
+            2 pick i + w!                  ( wbytes fbadr adr )
+         then                              ( wbytes fbadr adr )
+      /w +loop                             ( wbytes fbadr adr )
+      swap /scanline +   swap              ( wbytes fbadr' adr )
+   loop                                    ( wbytes fbadr' adr' )
+   3drop
+;
+
 : read-rectangle  ( adr x y w h -- )
    rectangle-setup 0  ?do                  ( adr wbytes fbadr )
       3dup -rot move                       ( adr wbytes fbadr )

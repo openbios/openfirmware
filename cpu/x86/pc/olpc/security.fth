@@ -3,7 +3,11 @@ purpose: OLPC secure boot
 
 \ Specs at http://wiki.laptop.org/go/Firmware_Security
 
-: developer-device-list  " disk sd nand"   ;
+: security-failure  ( -- )
+   ." Security failure" cr
+   d# 10000 ms  power-off
+;
+
 : boot-device-list  " disk sd nand"   ;
 
 true value debug-security?
@@ -131,7 +135,8 @@ d# 256 constant /sig
 \ bundle whose name is constructed from the current settings of the
 \ device (DN), path (PN), filename head (CN), and filename body (FN).
 
-: bundle-present?  ( -- flag )
+: bundle-present?  ( fn$ -- flag )
+   fn-buf place
    bundle-name$
    " Trying " ?lease-debug  2dup ?lease-debug-cr
    ['] (boot-read) catch  if  2drop false exit  then
@@ -166,6 +171,11 @@ d# 32 buffer: hashname
    hashname place                           ( data$ sig$ )
 
    pubkey$  hashname count  signature-bad? 0=        ( okay? )
+   dup  if
+      "   Signature valid" ?lease-debug-cr
+   else
+         "   Signature invalid" ?lease-debug-cr
+   then
 ;
 
 \ earliest is the earliest acceptable date value (in seconds).
@@ -374,12 +384,6 @@ d# 67 buffer: machine-id-buf
       4drop -1 exit
    then                                    ( sig$ expiration$ )
    check-machine-signature                 ( -1|1 )
-
-   dup 0<  if
-      " has bad signature" ?lease-debug-cr
-   else
-      " valid" ?lease-debug-cr
-   then
 ;
 
 \ lease-valid? tries to read a lease file from the currently-selected
@@ -391,6 +395,7 @@ d# 67 buffer: machine-id-buf
    " ${DN}:\security\lease.sig" expand$            ( name$ )
    " Trying " ?lease-debug  2dup ?lease-debug-cr
    r/o open-file  if  drop false exit  then        ( ih )
+   load-started
    >r                                              ( r: ih )
    "   Lease " ?lease-debug                        ( r: ih )
    leasekey$ to pubkey$                            ( r: ih )
@@ -400,8 +405,8 @@ d# 67 buffer: machine-id-buf
       then                                         ( actual -eof? )
    while                                           ( actual )
       sec-line-buf swap check-lease  case          ( -1|0|1 )
-          1  of  r> close-file drop  true exit   endof
-         -1  of  r> close-file drop  false exit  endof
+          1  of  r> close-file drop  " unlock" show-icon  true  exit  endof
+         -1  of  r> close-file drop  " lock"   show-icon  false exit  endof
       endcase
    repeat         
    r> close-file drop  false
@@ -414,7 +419,7 @@ d# 67 buffer: machine-id-buf
 \ present) or "actos.zip" (the activation version of the OS).
 
 : ?leased  ( -- )
-   lease-valid?  if  " run"  else " act"  then  cn-buf place
+   lease-valid?  if  " run"  else  " act"  then  cn-buf place
 ;
 
 \ olpc-load-image is factor that is close the top level of the
@@ -425,22 +430,18 @@ d# 67 buffer: machine-id-buf
 \ "runos.zip" according to whether or not a valid lease for
 \ this machine is present on the same device.
 
-: olpc-load-image  ( list$ dirname$ -- okay? )
-   pn-buf place                             ( list$ )
+: olpc-load-image  ( list$ -- okay? )
    begin  dup  while                        ( list$ )
       bl left-parse-string                  ( list$ devname$ )
       dn-buf place                          ( list$' )
       ?leased                               ( list$ )
-      bundle-present?  if                   ( list$ )
+      " os" bundle-present?  if             ( list$ )
          "   OS found - " ?lease-debug
          0 hashname c!
          oskey$ to pubkey$
          img$  sig$  valid?  if
-            "   Signature valid" ?lease-debug-cr
             img$ tuck load-base swap move  !load-size
             2drop true exit
-         else
-            "   Signature invalid" ?lease-debug-cr
          then
       then                                  ( list$ )
    repeat                                   ( list$ )
@@ -453,20 +454,40 @@ d# 67 buffer: machine-id-buf
 \ the NAND FLASH for an alternate OS image.
 
 : secure-load  ( -- okay? )
-   load-crypto  if                          ( )
-      ." Can't get crypto code" cr          ( )
-      false exit
-   then                                     ( )
+   load-crypto  if  false exit  then
 
    get-my-sn if  false exit  then
    get-date  if  false exit  then
 
-   " os"  fn-buf place
-
-   boot-device-list " \boot"      olpc-load-image  if  true exit  then
-   " nand"          " \boot-alt"  olpc-load-image  if  true exit  then
+   " \boot"     pn-buf place   boot-device-list olpc-load-image  if  true exit  then
+   " \boot-alt" pn-buf place   " nand"          olpc-load-image  if  true exit  then
    false
 ;
+
+0 value alternate?
+: set-alternate  ( -- )
+   button-o game-key?  if  true to alternate? exit  then
+   h# 82 cmos@  [char] A =  if
+      [char] N h# 82 cmos!
+      true to alternate?  exit
+   then
+   false to alternate?
+;
+
+0 0 2value base-xy
+: show-check  ( -- )
+   icon-xy  base-xy to icon-xy  " check" show-icon  to icon-xy
+;
+: +icon-xy  ( delta-x,y -- )  icon-xy d+ to icon-xy  ;
+
+: show-dot  ( -- )
+   alternate?  if  " yellowdot"  else  " lightdot"  then  show-icon
+;
+: show-x  ( -- )  " x" show-icon  ;
+: show-sad  ( -- )  " sad" show-icon  ;
+: show-lock    ( -- )  " lock" show-icon  ;
+: show-unlock  ( -- )  " unlock" show-icon  ;
+
 
 \ secure-load-ramdisk is called during the process of preparing an
 \ OS image for execution.  It looks for an initrd bundle file on
@@ -490,26 +511,27 @@ d# 67 buffer: machine-id-buf
    ['] load-path behavior >r                      ( r: xt )
    ['] ramdisk-buf to load-path                   ( r: xt )
 
-   " rd" fn-buf place
-   bundle-present?  if
+   d# 16 0  +icon-xy  show-dot
+   \ cn-buf is already set as a result of the ?leased that
+   \ happened before loading the OS file
+   " rd" bundle-present?  if
       r> to load-path
 
       "   RD found - " ?lease-debug
       0 hashname c!
       img$  sig$  valid?  if
-         "   Signature valid" ?lease-debug-cr
+         show-unlock
          load-base to ramdisk-adr
          img$ dup to /ramdisk     ( adr len )
          load-base swap move      ( )
          exit
       else
-         "   Signature invalid" ?lease-debug-cr
+         show-unlock
          fail-load
       then
    then
    r> to load-path
 ;
-
 
 \ secure-boot performs the secure boot process
 
@@ -527,12 +549,12 @@ stand-init: wp
    " wp" find-tag  if  2drop  true to secure?  then
 ;
 
-\ ?secure-boot performs either the secure boot algorithm or the
+\ do-secure-boot performs either the secure boot algorithm or the
 \ historical boot algorithm depending on the presence of a "wp"
 \ manufacturing data tag.
 
-: ?secure-boot  ( -- )  secure?  if  secure-boot  else  boot  then  ;
-" ?secure-boot" ' boot-command set-config-string-default
+: do-secure-boot  ( -- )  secure?  if  secure-boot  else  boot  then  ;
+\ " do-secure-boot" ' boot-command set-config-string-default
 
 
 \ check-devel-key tests the developer signature string "dev01$".
@@ -559,8 +581,10 @@ stand-init: wp
 
 : has-developer-key?  ( -- flag )
    " ${DN}:\security\develop.sig" expand$    ( name$ )
+   " Trying " ?lease-debug  2dup ?lease-debug-cr
    r/o open-file  if  drop false exit  then  ( ih )
    >r
+   load-started
    begin
       sec-line-buf /sec-line-max r@ read-line  if  ( actual -eof? )
          2drop  r> close-file drop  false exit
@@ -577,71 +601,153 @@ stand-init: wp
 \ developer?  searches a list of devices (given by "developer-device-list")
 \ for a valid developer key
 
-: developer?  ( -- flag )
-   get-my-sn  if  false exit  then
+: checked-load-started  ( -- )
+   not-screen?  if  exit  then
+   show-check
+;
+\ ' checked-load-started to load-started
+\ noop to load-started
 
-   load-crypto  if                          ( )
-      ." Can't get crypt code" cr           ( )
-      false exit
-   then                                     ( )
+: ?toggle-secure  ( -- )  button-x game-key?  if  secure? 0= to secure?  then  ;
 
-   developer-device-list                    ( list$ )
+6 buffer: fw#buf
+: (fw-version)  ( base-adr -- n )
+   h# f.ffc7 + fw#buf 5 move
+   fw#buf 4 + c@  bl  =  if  [char] 0 fw#buf 4 + c!  then
+   base @ >r  d# 36 base !
+   fw#buf 5 $number  if
+      show-x
+      ." Invalid firmware version number"  security-failure
+   then
+   pop-base
+;
+
+: firmware-up-to-date?  ( img$ -- )
+   /flash <>  if  show-x  ." Invalid Firmware image" security-failure  then  ( adr )
+   (fw-version)          ( file-version# )
+   rom-pa (fw-version)   ( file-version# rom-version# )
+   u<=
+;
+
+: load-from-device  ( devname$ -- done? )
+
+   d# 16 0  +icon-xy  show-dot
+   null$ cn-buf place
+   " bootfw" bundle-present?  if
+      "   FW found - " ?lease-debug
+
+      img$  firmware-up-to-date?  if
+         " plus" show-icon
+         " current FW is up-to-date" ?lease-debug-cr
+      else
+         " minus" show-icon
+         " new - " ?lease-debug
+         0 hashname c!
+         fwkey$ to pubkey$
+         img$  sig$  valid?  if
+            img$ tuck flash-buf  swap move   ( len )
+            ?image-valid                     ( )
+            true to file-loaded?
+            " Updating firmware" ?lease-debug
+
+            \ Latch alternate? flag for next startup
+            alternate?  if  [char] A h# 82 cmos!  then
+
+            reflash      \ Should power-off and reboot
+            show-x
+            ." Reflash returned, unexpectedly" cr
+            security-failure
+         then
+         show-lock
+      then
+   then
+
+   d# 16 0  +icon-xy  show-dot
+   ?leased                \ Sets cn-buf
+
+   d# 16 0  +icon-xy  show-dot
+   " os" bundle-present?  if
+      "   OS found - " ?lease-debug
+      0 hashname c!
+      oskey$ to pubkey$
+      img$  sig$  valid?  if
+         img$ tuck load-base swap move  !load-size
+         show-unlock
+         true  exit
+      then
+      show-lock
+   then
+   false   ( done? )
+;
+
+: filesystem-present?  ( -- flag )
+   " ${DN}:\" expand$    ( name$ )   
+   open-dev  dup  if  dup close-dev  then
+   0<>
+;
+
+0 0 2value next-xy
+: load-from-list  ( list$ -- devkey? )
    begin  dup  while                        ( list$ )
-      bl left-parse-string dn-buf place     ( list$' )
-      has-developer-key?  if                ( list$' )
-         2drop true  exit
-      then                                  ( list$ )
+      bl left-parse-string                  ( list$ devname$ )
+      2dup dn-buf place                     ( list$ devname$ )
+
+      show-icon                             ( list$ xy )
+      icon-xy to base-xy
+      icon-xy image-width 0 d+ to next-xy   ( list$ )
+
+      filesystem-present?  if
+
+         d# 5 d# 77  +icon-xy  show-dot
+         has-developer-key?  if
+            show-unlock
+            true exit
+         then
+
+         load-from-device  if
+            2drop
+            ['] secure-load-ramdisk to load-ramdisk
+            " init-program" $find  if  execute  go  then
+            show-x
+            security-failure
+         then
+      then
+
+      next-xy to icon-xy
    repeat                                   ( list$ )
+   " sad" show-icon
    2drop false
 ;
 
+: text-on  screen-ih stdout !  ;
+: persistent-devkey?  ( -- flag )  " dk" find-tag  dup  if  nip nip  then  ;
 
-fexit
+: all-devices$  ( -- list$ )  " disk sd fastnand nand"  ;
+: secure-startup  ( -- )
+   ['] noop to ?show-device
+   ['] noop to load-done
+   ['] noop to load-started
 
-Firmware security use cases:
+   set-alternate
 
-a) load image signing:
+   d# 552 d# 383 to icon-xy  " rom:xogray.565" $show-opaque
+   d# 410 d# 540 to icon-xy  \ For boot progress reports
 
-Package: {run,act}{os,rd}.zip
-Expiration: none
-Signed object: OS or RD image file in .zip file
-Signature: sha256_rsa256.sig in .zip file
-Verification Algorithm: sha256 -> rsa256
-Verification Key: OLPC-run-public-key
+   button-check game-key?  if  text-on  then
+   ?toggle-secure
 
-Rule: Don't run the image if the signature fails
+   secure?  0=  if  exit  then
 
-b) Firmware update key
+   persistent-devkey?  if  exit  then
 
-Package: /boot/bootfw.zip
-Expiration: none (but should be versioned to avoid repeated updates)
-Signed object: image in .zip file
-Signature1: sha255.rsa in .zip file
-Signature2: whirl.rsa in .zip file
-Verification Algorithm: sha256 -> rsa256, whirlpool -> rsa256
-Verification Key: OLPC-fw-public-key
+   get-my-sn  if  ." No serial number" cr  show-sad  security-failure  then
+   get-date   if  ." Invalid system date" cr  show-sad  security-failure  then
 
-Rule: If the developer key is valid, enter unlocked firmware state
+   load-crypto  if  show-sad  security-failure   then       ( )
 
-c) Developer key
+   alternate?  if  " \boot-alt"  else  " \boot"  then  pn-buf place
 
-Package: /security/develop.key
-Expiration: none
-Signed object: <serial#>:<uuid>:00000000T000000Z (representing the machine)
-Signature: rsa256 data in sig01 line
-Verification Algorithm: rsa256
-Verification Key: OLPC-devel-public-key
+   all-devices$ load-from-list  if  exit  then   \ Returns only if no images found
 
-Rule: If the developer key is valid, enter unlocked firmware state
-
-d) Activation lease
-
-Package: /security/lease
-Expiration: Yes - time on signature line
-Signed object: <serial#>:<uuid>:<expiration time> (representing the machine)
-Signature: rsa256 data in sig01 line
-Verification Algorithm: rsa256
-Verification Key: OLPC-act-public-key
-
-Rule: If the lease is invalid, invoke act{os,rd}.zip instead of run{os,rd}.zip
-
+   ." Boot failed" cr  show-sad security-failure
+;

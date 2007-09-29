@@ -93,7 +93,8 @@ create colors-565
    aa 00 00 rgb>565 ,  \ Dark red
    aa 00 aa rgb>565 ,  \ Dark magenta
    aa 55 aa rgb>565 ,  \ Brown
-   aa aa aa rgb>565 ,  \ Light gray
+\  aa aa aa rgb>565 ,  \ Light gray
+   c0 c0 c0 rgb>565 ,  \ Light gray (OLPC background)
    55 55 55 rgb>565 ,  \ Dark gray
    55 55 ff rgb>565 ,  \ Light blue
    55 ff 55 rgb>565 ,  \ Light green
@@ -117,7 +118,7 @@ headers
    text-foreground16 screen-background16  fb16-invert
 ;
 : fb16-erase-screen  ( -- )
-   frame-buffer-adr  bytes/line16  screen-height *  screen-background16 fb-fill
+   frame-buffer-adr  bytes/line16  screen-height *  screen-background16 wfill
 ;
 : fb16-blink-screen  ( -- )   \ Better done by poking the DAC
    fb16-invert-screen  fb16-invert-screen
@@ -156,7 +157,7 @@ headers
 headerless
 
 : move-line16    ( src-line-adr dst-line-adr -- )  emu-bytes/line fb-move  ;
-: erase-line16   ( line-adr -- )  emu-bytes/line screen-background16 fb-fill  ;
+: erase-line16   ( line-adr -- )  emu-bytes/line screen-background16 wfill  ;
 : erase-lines16  ( last-line first-line -- )
    ?do  i erase-line16  bytes/line16 +loop
 ;
@@ -208,7 +209,7 @@ headerless
 : erase-chars16  ( #chars start-col# -- )
    swap char-width 2* * swap               ( #bytes start-col# )
    column-adr16 char-height 0  do          ( #bytes adr )
-      2dup swap text-background16 fb-fill  ( #bytes adr )
+      2dup swap text-background16 wfill    ( #bytes adr )
       bytes/line16 +                       ( #bytes adr' )
    loop  2drop                             ( )
 ;

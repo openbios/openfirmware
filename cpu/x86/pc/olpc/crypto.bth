@@ -6,6 +6,7 @@ build-now
 fload ${BP}/cpu/x86/pc/olpc/versions.fth
 
 " wget http://dev.laptop.org/pub/firmware/crypto/bios_verify-${CRYPTO_VERSION}.img -O verify.img" expand$ $sh
+" wget http://dev.laptop.org/pub/firmware/crypto/bios_hasher-${CRYPTO_VERSION}.img -O hasher.img" expand$ $sh
 " wget http://dev.laptop.org/pub/firmware/crypto/testkeys/os.public        -O os.public"        expand$ $sh
 " wget http://dev.laptop.org/pub/firmware/crypto/testkeys/fw.public        -O fw.public"        expand$ $sh
 " wget http://dev.laptop.org/pub/firmware/crypto/testkeys/lease.public     -O lease.public"     expand$ $sh
