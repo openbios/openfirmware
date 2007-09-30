@@ -21,11 +21,14 @@ nuser dis-offset
 : op16@  ( -- w )  op8@   op8@   bwjoin  ;
 : op32@  ( -- l )  op16@  op16@  wljoin  ;
 
+: bext  ( b -- l )  d# 24 <<  d# 24 >>a  ;
+: wext  ( w -- l )  d# 16 <<  d# 16 >>a  ;
+
 \ change size of data
 true value op32?
 : opv@  ( -- l | w )  op32?  if  op32@  else  op16@  then  ;
 true value ad32?
-: adv@  ( -- l | w )  ad32?  if  op32@  else  op16@  then  ;
+: adv@  ( -- l | w )  ad32?  if  op32@  else  op16@ wext  then  ;
 : dis16  ( -- )  false is op32?  false is ad32?  ;
 : dis32  ( -- )  true  is op32?  true  is ad32?  ;
 \ XXX We should also change the register names e.g. from "eax" to "ax"
@@ -41,9 +44,6 @@ true value ad32?
 : low4bits ( -- n )  0 4 ibits  ;
 : midbits  ( -- n )  3 3 ibits  ;
 : hibits   ( -- n )  6 2 ibits  ;
-
-: bext  ( b -- l )  d# 24 <<  d# 24 >>a  ;
-: wext  ( w -- l )  d# 16 <<  d# 16 >>a  ;
 
 hex
 
@@ -594,6 +594,8 @@ forth definitions disassembler  \ Search disassembler but define in forth
 alias pc!dis1 pc!dis1
 alias +dis +dis
 alias dis dis
+alias dis16 dis16
+alias dis32 dis32
 
 previous previous previous definitions
 \ LICENSE_BEGIN

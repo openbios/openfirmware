@@ -72,6 +72,9 @@ alias eval evaluate
 : bits  ( n bit# #bits -- bits )  -rot rshift  swap lowbits  ;
 : bit  ( n bit# -- )  1 bits  ;
 
+: kib  ( n -- nkib )  d# 10 lshift  ;  \ Convert to kilobytes
+: mib  ( n -- nmib )  d# 20 lshift  ;  \ Convert to megabytes
+
 : log2  ( n -- log2-of-n )
    0  begin        ( n log )
       swap  2/     ( log n' )
