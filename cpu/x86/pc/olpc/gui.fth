@@ -389,6 +389,16 @@ h# 32 buffer: icon-name
 ;
 ' (?show-device) to ?show-device
 
+: dcon-freeze    ( -- )  0 " set-source" $call-screen d# 30 ms  ;
+: dcon-unfreeze  ( -- )  1 " set-source" $call-screen d# 30 ms  ;
+
+: go-hook-freeze
+   [ ' go-hook behavior compile, ]
+   0 " set-source" $call-screen
+;
+: freeze    ( -- )  ['] go-hook-freeze to go-hook  ;
+: unfreeze  ( -- )  ['] usb-quiet      to go-hook  ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

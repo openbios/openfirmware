@@ -3,11 +3,6 @@ purpose: OLPC secure boot
 
 \ Specs at http://wiki.laptop.org/go/Firmware_Security
 
-: security-failure  ( -- )
-   ." Security failure" cr
-   d# 10000 ms  power-off
-;
-
 : boot-device-list  " disk sd nand"   ;
 
 true value debug-security?
@@ -419,7 +414,12 @@ d# 67 buffer: machine-id-buf
 \ present) or "actos.zip" (the activation version of the OS).
 
 : ?leased  ( -- )
-   lease-valid?  if  " run"  else  " act"  then  cn-buf place
+   " ak" find-tag  if
+      2drop  " run"
+   else
+      lease-valid?  if  " run"  else  " act"  then
+   then
+   cn-buf place
 ;
 
 \ olpc-load-image is factor that is close the top level of the
@@ -475,6 +475,27 @@ d# 67 buffer: machine-id-buf
 ;
 
 0 0 2value base-xy
+d# 410 d# 540 2constant progress-xy
+
+: ?unfreeze  ( -- )
+   game-key@ button-check and  if  dcon-unfreeze  then
+;
+
+: security-failure  ( -- )
+   ." Security failure" cr
+   get-msecs  d# 10000  +  begin  ( limit )
+      ?unfreeze
+      dup get-msecs -
+   0< until  drop
+   power-off
+;
+
+: show-going  ( -- )
+   h# c0 h# c0 h# c0  rgb>565  progress-xy  d# 500 d# 100  " fill-rectangle" $call-screen
+   d# 585 d# 613 to icon-xy  " bigdot" show-icon
+   dcon-unfreeze
+;
+
 : show-check  ( -- )
    icon-xy  base-xy to icon-xy  " check" show-icon  to icon-xy
 ;
@@ -688,7 +709,11 @@ stand-init: wp
 
 0 0 2value next-xy
 : load-from-list  ( list$ -- devkey? )
+   button-check game-key?  0=  if  dcon-freeze  then
+   " dev /jffs2-file-system ' ?unfreeze to scan-callout  dend" eval
+
    begin  dup  while                        ( list$ )
+      ?unfreeze
       bl left-parse-string                  ( list$ devname$ )
       2dup dn-buf place                     ( list$ devname$ )
 
@@ -707,7 +732,9 @@ stand-init: wp
          load-from-device  if
             2drop
             ['] secure-load-ramdisk to load-ramdisk
-            " init-program" $find  if  execute  go  then
+            " init-program" $find  if
+               execute  show-going  go
+            then
             show-x
             security-failure
          then
@@ -723,6 +750,8 @@ stand-init: wp
 : persistent-devkey?  ( -- flag )  " dk" find-tag  dup  if  nip nip  then  ;
 
 : all-devices$  ( -- list$ )  " disk sd fastnand nand"  ;
+
+d# 410 d# 540 2constant progress-xy
 : secure-startup  ( -- )
    ['] noop to ?show-device
    ['] noop to load-done
@@ -731,7 +760,7 @@ stand-init: wp
    set-alternate
 
    d# 552 d# 383 to icon-xy  " rom:xogray.565" $show-opaque
-   d# 410 d# 540 to icon-xy  \ For boot progress reports
+   progress-xy to icon-xy  \ For boot progress reports
 
    button-check game-key?  if  text-on  then
    ?toggle-secure

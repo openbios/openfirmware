@@ -3,6 +3,8 @@ purpose: JFFS2 reader
 
 d# 20,000 constant max-inodes
 
+defer scan-callout  ' noop to scan-callout
+
 0 value debug-scan?  \ True to display progress reports
 
 0 instance value block-buf    \ Start address of working buffer
@@ -727,6 +729,7 @@ c;
    inodes  'next-inode  !
    pages/chip  0  do
       i page>eblock  to the-eblock#
+      i h# ff and 0=  if  scan-callout  then
       i no-summary?  if
          i possible-nodes?  if  i scan-raw-nodes  then
       then

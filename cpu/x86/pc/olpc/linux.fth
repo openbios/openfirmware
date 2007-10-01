@@ -263,7 +263,7 @@ warning @ warning off
 ;
 ' ?memtest-elf-map-in is elf-map-in
 
-: memtest  ( -- )  " rom:memtest" $boot  ;
+: memtest  ( -- )  unfreeze " rom:memtest" $boot  ;
 
 : sym  ( "name" -- adr )
    parse-word  $sym>  0=  if  err-sym-not-found throw  then

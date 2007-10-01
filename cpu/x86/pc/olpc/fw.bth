@@ -300,10 +300,6 @@ warning @  warning off
    probe-usb
 ;
 
-[ifdef] linux-support
-fload ${BP}/cpu/x86/pc/olpc/linux.fth
-[then]
-
 fload ${BP}/ofw/gui/bmptools.fth
 fload ${BP}/dev/null.fth
 fload ${BP}/ofw/core/bailout.fth
@@ -336,6 +332,7 @@ fload ${BP}/cpu/x86/pc/olpc/nandstat.fth
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
 fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
+fload ${BP}/cpu/x86/pc/olpc/linux.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/ofw/gui/ofpong.fth
@@ -348,6 +345,7 @@ fload ${BP}/cpu/x86/pc/olpc/sound.fth
 ;
 ' olpc-power-off to power-off
 [then]
+
 
 : dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
 : brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;
@@ -492,13 +490,6 @@ fload ${BP}/ofw/core/dualconsole.fth
       ( help-msg ) interact
    then
 ;
-
-: go-hook-freeze
-   [ ' go-hook behavior compile, ]
-   0 " set-source" $call-screen
-;
-: freeze    ( -- )  ['] go-hook-freeze to go-hook  ;
-: unfreeze  ( -- )  ['] usb-quiet      to go-hook  ;
 
 : ?sound  ( -- )
    button-rotate game-key? 0=  if  sound  then

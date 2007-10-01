@@ -37,18 +37,10 @@
    " ${BP}/cpu/x86/pc/olpc/images/minus.565"     " minus.565"     $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/x.565"         " x.565"         $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/sad.565"       " sad.565"       $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/bigdot.565"    " bigdot.565"    $add-deflated-dropin
 
-\   " ${BP}/cpu/x86/pc/olpc/images/topkey.565"   " topkey.565"    $add-deflated-dropin
-\   " ${BP}/cpu/x86/pc/olpc/images/dot0.565"     " mark0.565"     $add-deflated-dropin
-\   " ${BP}/cpu/x86/pc/olpc/images/dot1.565"     " mark1.565"     $add-deflated-dropin
-\   " ${BP}/cpu/x86/pc/olpc/images/dot2.565"     " mark2.565"     $add-deflated-dropin
-\   " ${BP}/cpu/x86/pc/olpc/images/dot3.565"     " mark3.565"     $add-deflated-dropin
-\   " ${BP}/cpu/x86/pc/olpc/images/lock2.565"    " lock2.565"     $add-deflated-dropin
-\   " ${BP}/cpu/x86/pc/olpc/images/unlock2.565"  " unlock2.565"   $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/check.565"    " check.565"     $add-deflated-dropin
-\  " ${BP}/cpu/x86/pc/olpc/images/leasekey.565" " leasekey.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/xogray.565"   " xogray.565"    $add-deflated-dropin
-\   " ${BP}/cpu/x86/pc/olpc/images/olpclogo.565" " olpc.565"     $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " nand.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " fastnand.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/ethernet.565" " ethernet.565"  $add-deflated-dropin
