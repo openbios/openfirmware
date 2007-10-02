@@ -26,25 +26,26 @@ d# 0  d# 0  2value first-icon-xy
    icon-xy  image-width  image-height
 ;
 
+: image-base  ( -- adr )  " graphmem" $call-screen  ;
+
 : $get-image  ( filename$ -- true | adr,len false )
    r/o open-file  if  drop true  exit  then   >r    ( r: fd )
-   r@ fsize  dup alloc-mem swap          ( bmp-adr,len  r: fd )
+   
+   image-base  r@ fsize                  ( bmp-adr,len  r: fd )
    2dup  r@ fgets  over <>               ( bmp-adr,len error?  r: fd )
    r> fclose                             ( bmp-adr,len )
-   if  free-mem true  else  false  then  ( true | bmp-adr,len false )
+   if  2drop true  else  false  then     ( true | bmp-adr,len false )
 ;
 : $show  ( filename$ -- )
    not-screen?  if  2drop exit  then
    0 to image-width   \ In case $show fails
    $get-image  if  exit  then
-   2dup prep-565  " draw-transparent-rectangle" $call-screen
-   free-mem
+   prep-565  " draw-transparent-rectangle" $call-screen
 ;
 : $show-opaque  ( filename$ -- )
    not-screen?  if  2drop exit  then
    $get-image  if  exit  then
-   2dup prep-565  " draw-rectangle" $call-screen
-   free-mem
+   prep-565  " draw-rectangle" $call-screen
 ;
 : advance  ( -- )
    icon-xy  image-width 0  d+  to icon-xy

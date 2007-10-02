@@ -544,6 +544,8 @@ headers
    h# 0f color@  h# ff color!	\ Set color ff to white (same as 15)
 ;
 
+0 instance value graphmem
+
 : init-all  ( -- )		\ Initializes the controller
    smb-init
    map-io-regs			\ Enable IO registers
@@ -559,6 +561,8 @@ headers
       4 of  frame-buffer-adr /fb h# ffff.ffff lfill  endof
    endcase
    7 to background-color
+
+   frame-buffer-adr /fb +  to graphmem
 ;
 
 : display-remove  ( -- )

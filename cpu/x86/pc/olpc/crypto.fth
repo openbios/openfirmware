@@ -48,70 +48,8 @@ d# 128 buffer: hashbuf
 \ XXX clean out dead code in usb.fth
 ;
 
-1 [if]
-
-\ Check that the version is an upgrade?
-
-: >rom-name$  ( device$ -- path$ )
-   image-name-buf place                      ( )
-   " :\boot\olpcfw.rom" image-name-buf $cat  ( )
-   image-name$
-;
-: sig-name$  ( -- path$ )
-   image-name$ + 4 -  " .rom" caps-comp 0=  if
-      " sig"  image-name$ + 3 -  swap move
-      image-name$
-   else
-      2drop  " "
-   then
-;
-: $dev-update-flash  ( device$ -- )
-   >rom-name$  $get-image  if  exit  then          ( data$ )
-
-   sig-name$ $get-image  if
-      ." Missing firmware update signature file: " sig-name$ type  cr
-      free-mem exit
-   then   ( data$ sig$ )  
-
-   2over 2over  signature-bad?  if                 ( data$ sig$ )
-      ." Firmware update image signature mismatch: " sig-name$ type  cr
-      free-mem  free-mem  exit
-   then                                            ( data$ sig$ )
-
-   free-mem                                        ( data$ )
-
-   2dup flash-buf swap move                        ( data$ )
-   tuck free-mem                                   ( data-len )
-   ['] ?image-valid  catch  if                     ( x )
-      drop  ." Firmware image failed sanity checks" cr  ( )
-      exit
-   then                                            ( x )
-
-   true to file-loaded?
-   reflash
-;
-[then]
-
 : getbin     " usb8388.bin" find-drop-in 0= abort" No usb8388.bin"  ;
 : getsig     " usb8388.sig" find-drop-in 0= abort" No usb8388.sig"  ;
-: tc  ( -- )
-   getbin  getsig
-   signature-bad?  if
-      ." Signature was bad, expected good" cr
-   then
-
-   getbin  over 1 swap +!
-   getsig
-   signature-bad?  0=  if
-      ." Signature was good, expected bad (corrupt image)" cr
-   then
-
-   getbin
-   getsig  over 40 +  1 swap +!
-   signature-bad?  0=  if
-      ." Signature was good, expected bad (corrupt signature)" cr
-   then
-;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks
