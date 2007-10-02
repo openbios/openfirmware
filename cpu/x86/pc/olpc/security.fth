@@ -477,10 +477,13 @@ d# 67 buffer: machine-id-buf
 0 0 2value base-xy
 d# 410 d# 540 2constant progress-xy
 
+: text-on  screen-ih stdout !  ;
+
 : ?unfreeze  ( -- )
    game-key@ button-check and  if
       dcon-unfreeze
       unfreeze
+      text-on
    then
 ;
 
@@ -757,7 +760,6 @@ stand-init: wp
    2drop false
 ;
 
-: text-on  screen-ih stdout !  ;
 : persistent-devkey?  ( -- flag )  " dk" find-tag  dup  if  nip nip  then  ;
 
 : all-devices$  ( -- list$ )  " disk sd fastnand nand"  ;
@@ -774,7 +776,7 @@ d# 410 d# 540 2constant progress-xy
    button-rotate game-key?  if  show-warnings  then
    show-child
 
-   button-check game-key?  if
+   button-check button-x or  game-key?  if
       unfreeze  text-on
    else
       freeze  dcon-freeze
