@@ -247,7 +247,8 @@ fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
 fload ${BP}/cpu/x86/pc/olpc/boardrev.fth   \ Board revision decoding
 
 stand-init: Date to EC
-   time&date d# 2000 -  ec-date!  3drop
+   time&date d# 2000 -  ['] ec-date! catch  if  3drop  then
+   3drop
 ;
 
 stand-init: Wireless reset

@@ -24,7 +24,8 @@ stand-init: board revision
       h# a18
    else
       lx?  if
-         board-id@  case
+         ['] board-id@ catch  if  0  then   case
+            0      of  0       endof  \ EC broken
             h# b2  of  h# b30  endof  \ preB3
             ( board-id )  dup h# 10 * 8 +  swap  \ E.g. b3 -> b38
          endcase

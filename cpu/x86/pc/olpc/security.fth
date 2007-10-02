@@ -143,34 +143,39 @@ d# 256 constant /sig
 
 d# 32 buffer: hashname
 
-\ valid? checks the validity of data$ against the ASCII signature
+\ invalid? checks the validity of data$ against the ASCII signature
 \ record sig01$, using the public key that pubkey$ points to.
-\ It also verifies that the hashname contained in sig01$ is not
-\ the same one that was last used (for verification of firmware
-\ images against two different hashes).
+\ It also verifies that the hashname contained in sig01$ is the
+\ expected one.
 
-: valid?  ( data$ sig01$ -- okay? )
+: invalid?  ( data$ sig01$ exp-hashname$ -- error? )
+   2>r
    parse-sig  if
       ." Bad signature format in "  bundle-name$ type  cr
-      false exit
-   then                                     ( data$ hashname$ sig$ )
-
-   2swap  d# 31 min                         ( data$ sig$ hashname$' )
+      2r> 2drop  true exit
+   then                                     ( data$ hashname$ sig$ r: exp$ )
 
    \ Check for duplicate hashname attacks
-   2dup hashname count $=  if               ( data$ sig$ hashname$ )
-      ." Duplicate hash name in "  bundle-name$ type  cr
-      4drop false exit
+   2swap 2dup 2r>  $=  0=  if               ( data$ sig$ hashname$ )
+      ." Wrong hash name in "  bundle-name$ type  cr
+      4drop 2drop true exit
    then                                     ( data$ sig$ hashname$ )
 
-   hashname place                           ( data$ sig$ )
-
-   pubkey$  hashname count  signature-bad? 0=        ( okay? )
+   pubkey$  2swap  signature-bad?  ( error? )
    dup  if
-      "   Signature valid" ?lease-debug-cr
+      "   Signature invalid" ?lease-debug-cr
    else
-         "   Signature invalid" ?lease-debug-cr
+      "   Signature valid" ?lease-debug-cr
    then
+;
+: sha-valid?  ( data$ sig01$ -- okay? )  " sha256" invalid? 0=  ;
+: fw-valid?  ( data$ 2*sig$ -- okay? )
+   2swap 2>r                          ( 2*sig$ r: data$ )
+   newline left-parse-string          ( rmd-sig$ sha-sig$ r: data$ )
+   2r@ 2swap sha-valid?  0=  if       ( rmd-sig$ r: data$ )
+      2r> 4drop false exit
+   then                               ( rmd-sig$ r: data$ )
+   2r> 2swap " rmd160" invalid? 0=
 ;
 
 \ earliest is the earliest acceptable date value (in seconds).
@@ -341,7 +346,7 @@ d# 67 buffer: machine-id-buf
 : check-machine-signature  ( sig$ expiration$ -- -1|1 )
    0 hashname c!
    machine-id-buf d# 51 +  swap  move  ( sig$ )
-   machine-id-buf d# 67  2swap  valid?  if  1  else  -1  then
+   machine-id-buf d# 67  2swap  sha-valid?  if  1  else  -1  then
 ;
 
 : set-disposition  ( adr -- )  c@  machine-id-buf d# 49 + c!  ;
@@ -422,48 +427,6 @@ d# 67 buffer: machine-id-buf
    cn-buf place
 ;
 
-\ olpc-load-image is factor that is close the top level of the
-\ secure boot process.  Given a directory prefix (e.g. "\boot")
-\ and a space-delimited list of device names, it searches
-\ each device in that list for an OS bundle in that directory.
-\ The name of the OS bundle file is either "actos.zip" or
-\ "runos.zip" according to whether or not a valid lease for
-\ this machine is present on the same device.
-
-: olpc-load-image  ( list$ -- okay? )
-   begin  dup  while                        ( list$ )
-      bl left-parse-string                  ( list$ devname$ )
-      dn-buf place                          ( list$' )
-      ?leased                               ( list$ )
-      " os" bundle-present?  if             ( list$ )
-         "   OS found - " ?lease-debug
-         0 hashname c!
-         oskey$ to pubkey$
-         img$  sig$  valid?  if
-            img$ tuck load-base swap move  !load-size
-            2drop true exit
-         then
-      then                                  ( list$ )
-   repeat                                   ( list$ )
-   2drop false
-;
-
-\ secure-load is the top level of the secure OS loading process.
-\ It searches for lease files and signed OS image bundles on several
-\ different devices.  If an OS bundle is not found, it then searches
-\ the NAND FLASH for an alternate OS image.
-
-: secure-load  ( -- okay? )
-   load-crypto  if  false exit  then
-
-   get-my-sn if  false exit  then
-   get-date  if  false exit  then
-
-   " \boot"     pn-buf place   boot-device-list olpc-load-image  if  true exit  then
-   " \boot-alt" pn-buf place   " nand"          olpc-load-image  if  true exit  then
-   false
-;
-
 0 value alternate?
 : set-alternate  ( -- )
    button-o game-key?  if  true to alternate? exit  then
@@ -481,9 +444,8 @@ d# 410 d# 540 2constant progress-xy
 
 : ?unfreeze  ( -- )
    game-key@ button-check and  if
-      dcon-unfreeze
+      dcon-unfreeze text-on
       unfreeze
-      text-on
    then
 ;
 
@@ -496,17 +458,13 @@ d# 410 d# 540 2constant progress-xy
    power-off
 ;
 
+: +icon-xy  ( delta-x,y -- )  icon-xy d+ to icon-xy  ;
+
 : show-going  ( -- )
    h# c0 h# c0 h# c0  rgb>565  progress-xy  d# 500 d# 100  " fill-rectangle" $call-screen
    d# 585 d# 613 to icon-xy  " bigdot" show-icon
    dcon-unfreeze
 ;
-
-: show-check  ( -- )
-   icon-xy  base-xy to icon-xy  " check" show-icon  to icon-xy
-;
-: +icon-xy  ( delta-x,y -- )  icon-xy d+ to icon-xy  ;
-
 : show-dot  ( -- )
    alternate?  if  " yellowdot"  else  " lightdot"  then  show-icon
 ;
@@ -555,7 +513,7 @@ d# 410 d# 540 2constant progress-xy
 
       "   RD found - " ?lease-debug
       0 hashname c!
-      img$  sig$  valid?  if
+      img$  sig$  sha-valid?  if
          show-unlock
          load-base to ramdisk-adr
          img$ dup to /ramdisk     ( adr len )
@@ -569,29 +527,11 @@ d# 410 d# 540 2constant progress-xy
    r> to load-path
 ;
 
-\ secure-boot performs the secure boot process
-
-: secure-boot  ( -- )
-   debug-security?  if  screen-ih stdout !  then
-   ['] secure-load-ramdisk to load-ramdisk
-   secure-load  0=  if  fail-load  then
-   loaded sync-cache  " init-program" $find  if  execute  else  2drop  then
-   go
-;
-
 false value secure?
 
 stand-init: wp
    " wp" find-tag  if  2drop  true to secure?  then
 ;
-
-\ do-secure-boot performs either the secure boot algorithm or the
-\ historical boot algorithm depending on the presence of a "wp"
-\ manufacturing data tag.
-
-: do-secure-boot  ( -- )  secure?  if  secure-boot  else  boot  then  ;
-\ " do-secure-boot" ' boot-command set-config-string-default
-
 
 \ check-devel-key tests the developer signature string "dev01$".
 
@@ -634,16 +574,6 @@ stand-init: wp
    r> close-file drop  false
 ;
 
-\ developer?  searches a list of devices (given by "developer-device-list")
-\ for a valid developer key
-
-: checked-load-started  ( -- )
-   not-screen?  if  exit  then
-   show-check
-;
-\ ' checked-load-started to load-started
-\ noop to load-started
-
 : ?toggle-secure  ( -- )  button-x game-key?  if  secure? 0= to secure?  then  ;
 
 6 buffer: fw#buf
@@ -680,11 +610,14 @@ stand-init: wp
          " new - " ?lease-debug
          0 hashname c!
          fwkey$ to pubkey$
-         img$  sig$  valid?  if
+         img$  sig$  fw-valid?  if
+            dcon-unfreeze text-on
+
             img$ tuck flash-buf  swap move   ( len )
+
             ?image-valid                     ( )
             true to file-loaded?
-            " Updating firmware" ?lease-debug
+            " Updating firmware" ?lease-debug-cr
 
             \ Latch alternate? flag for next startup
             alternate?  if  [char] A h# 82 cmos!  then
@@ -706,7 +639,7 @@ stand-init: wp
       "   OS found - " ?lease-debug
       0 hashname c!
       oskey$ to pubkey$
-      img$  sig$  valid?  if
+      img$  sig$  sha-valid?  if
          img$ tuck load-base swap move  !load-size
          show-unlock
          true  exit
@@ -739,6 +672,7 @@ stand-init: wp
 
          d# 5 d# 77  +icon-xy  show-dot
          has-developer-key?  if
+            dcon-unfreeze text-on
             show-unlock
             true exit
          then

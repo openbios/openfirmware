@@ -506,6 +506,12 @@ fload ${BP}/ofw/core/dualconsole.fth
    no-page
 
    console-start
+
+   board-revision 0=  if
+      ." EC problem - remove all power and restart" cr
+      begin again
+   then
+
    read-game-keys
    stdout off  \ 
    probe-pci
