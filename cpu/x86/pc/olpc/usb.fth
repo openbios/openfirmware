@@ -86,8 +86,8 @@ alias p2 probe-usb2
 
 : usb-quiet  ( -- )
    [ ' go-hook behavior compile, ]    \ Chain to old behavior
-   " usb1" " reset-usb" execute-device-method
-   " usb2" " reset-usb" execute-device-method
+   " usb1" " reset-usb" execute-device-method drop
+   " usb2" " reset-usb" execute-device-method drop
 ;
 ' usb-quiet to go-hook
 
