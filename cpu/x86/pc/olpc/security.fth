@@ -712,10 +712,10 @@ d# 410 d# 540 2constant progress-xy
 
    ?toggle-secure
 
-   secure?  0=  if  unfreeze text-on  exit  then
+   secure?  0=  if  dcon-unfreeze unfreeze text-on  exit  then
 
    button-check game-key?  if
-      unfreeze  text-on
+      dcon-unfreeze unfreeze  text-on
    else
       freeze  dcon-freeze
    then
