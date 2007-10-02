@@ -710,15 +710,15 @@ d# 410 d# 540 2constant progress-xy
    button-rotate game-key?  if  show-warnings  then
    show-child
 
-   button-check button-x or  game-key?  if
+   ?toggle-secure
+
+   secure?  0=  if  unfreeze text-on  exit  then
+
+   button-check game-key?  if
       unfreeze  text-on
    else
       freeze  dcon-freeze
    then
-
-   ?toggle-secure
-
-   secure?  0=  if  exit  then
 
    persistent-devkey?  if  exit  then
 
