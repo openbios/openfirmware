@@ -491,12 +491,6 @@ fload ${BP}/ofw/core/dualconsole.fth
    then
 ;
 
-: ?sound  ( -- )
-   button-rotate game-key? 0=  if  sound  then
-;
-: ?freeze  ( -- )
-   button-rotate game-key?  0=  if  freeze  then
-;
 : ?games  ( -- )
    rocker-right game-key?  if
       time&date 5drop 1 and  if  pong  else  life-demo  then
@@ -513,50 +507,19 @@ fload ${BP}/ofw/core/dualconsole.fth
 
    console-start
    read-game-keys
-[ifdef] notdef
-   fast-boot?   if
-( D)  stdout off  \ banner
-      probe-pci
-      ?sound
-      open-keyboard
-( D)              \ ?games
-      ?freeze
-\      ['] false to interrupt-auto-boot?
-      probe-usb
-\     " nand" $dev-update-flash
-      interpreter-init
-      secure-startup
-( D)  screen-ih stdout !  \
-( D)  ?usb-keyboard       \
-   else
-( D)  banner  \ stdout off
-      probe-pci
-      ?sound
-      open-keyboard
-( D)  ?games  \
-      ?freeze
-      probe-usb
-( D)  ?usb-keyboard  \
-      interpreter-init
-      secure-startup
-   then
-[else]
-      stdout off  \ 
-      probe-pci
-      ?sound
-      open-keyboard
-      ?games
-      ?freeze
-      ['] false to interrupt-auto-boot?
-      probe-usb
-\     " nand" $dev-update-flash
-      interpreter-init
-      secure-startup
-      ['] (interrupt-auto-boot?) to interrupt-auto-boot?
-      screen-ih stdout !
-      banner
-      ?usb-keyboard
-[then]
+   stdout off  \ 
+   probe-pci
+   sound
+   open-keyboard
+   ?games
+   ['] false to interrupt-auto-boot?
+   probe-usb
+   interpreter-init
+   secure-startup
+   ['] (interrupt-auto-boot?) to interrupt-auto-boot?
+   screen-ih stdout !
+   banner
+   ?usb-keyboard
    auto-boot
 
    blue-letters ." Type 'help' for more information." black-letters

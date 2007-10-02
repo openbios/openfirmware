@@ -478,7 +478,10 @@ d# 67 buffer: machine-id-buf
 d# 410 d# 540 2constant progress-xy
 
 : ?unfreeze  ( -- )
-   game-key@ button-check and  if  dcon-unfreeze  then
+   game-key@ button-check and  if
+      dcon-unfreeze
+      unfreeze
+   then
 ;
 
 : security-failure  ( -- )
@@ -508,7 +511,16 @@ d# 410 d# 540 2constant progress-xy
 : show-sad  ( -- )  " sad" show-icon  ;
 : show-lock    ( -- )  " lock" show-icon  ;
 : show-unlock  ( -- )  " unlock" show-icon  ;
-
+: show-child  ( -- )
+   " erase-screen" $call-screen
+   d# 552 d# 383 to icon-xy  " rom:xogray.565" $show-opaque
+   progress-xy to icon-xy  \ For boot progress reports
+;
+: show-warnings  ( -- )
+   " erase-screen" $call-screen
+   d# 48 d# 32 to icon-xy  " rom:warnings.565" $show-opaque
+   dcon-freeze
+;
 
 \ secure-load-ramdisk is called during the process of preparing an
 \ OS image for execution.  It looks for an initrd bundle file on
@@ -709,7 +721,6 @@ stand-init: wp
 
 0 0 2value next-xy
 : load-from-list  ( list$ -- devkey? )
-   button-check game-key?  0=  if  dcon-freeze  then
    " dev /jffs2-file-system ' ?unfreeze to scan-callout  dend" eval
 
    begin  dup  while                        ( list$ )
@@ -751,6 +762,7 @@ stand-init: wp
 
 : all-devices$  ( -- list$ )  " disk sd fastnand nand"  ;
 
+
 d# 410 d# 540 2constant progress-xy
 : secure-startup  ( -- )
    ['] noop to ?show-device
@@ -759,10 +771,15 @@ d# 410 d# 540 2constant progress-xy
 
    set-alternate
 
-   d# 552 d# 383 to icon-xy  " rom:xogray.565" $show-opaque
-   progress-xy to icon-xy  \ For boot progress reports
+   button-rotate game-key?  if  show-warnings  then
+   show-child
 
-   button-check game-key?  if  text-on  then
+   button-check game-key?  if
+      unfreeze  text-on
+   else
+      freeze  dcon-freeze
+   then
+
    ?toggle-secure
 
    secure?  0=  if  exit  then

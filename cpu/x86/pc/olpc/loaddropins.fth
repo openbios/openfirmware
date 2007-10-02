@@ -28,6 +28,7 @@
 
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
 
+   " ${BP}/cpu/x86/pc/olpc/images/warnings.565"  " warnings.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/lightdot.565"  " lightdot.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/yellowdot.565" " yellowdot.565" $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/darkdot.565"   " darkdot.565"   $add-deflated-dropin
