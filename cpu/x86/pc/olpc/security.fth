@@ -442,19 +442,17 @@ d# 410 d# 540 2constant progress-xy
 
 : text-on  screen-ih stdout !  ;
 
+: visible  dcon-unfreeze text-on   ;
+
 : ?unfreeze  ( -- )
-   game-key@ button-check and  if
-      dcon-unfreeze text-on
-      unfreeze
-   then
+   game-key@ button-check and  if  visible unfreeze  then
 ;
 
 : security-failure  ( -- )
+   visible
    ." Security failure" cr
-   get-msecs  d# 10000  +  begin  ( limit )
-      ?unfreeze
-      dup get-msecs -
-   0< until  drop
+
+   d# 10000 ms
    power-off
 ;
 
@@ -583,13 +581,13 @@ stand-init: wp
    base @ >r  d# 36 base !
    fw#buf 5 $number  if
       show-x
-      ." Invalid firmware version number"  security-failure
+      visible  ." Invalid firmware version number"  security-failure
    then
    pop-base
 ;
 
 : firmware-up-to-date?  ( img$ -- )
-   /flash <>  if  show-x  ." Invalid Firmware image" security-failure  then  ( adr )
+   /flash <>  if  show-x  visible  ." Invalid Firmware image" security-failure  then  ( adr )
    (fw-version)          ( file-version# )
    rom-pa (fw-version)   ( file-version# rom-version# )
    u<=
@@ -611,7 +609,7 @@ stand-init: wp
          0 hashname c!
          fwkey$ to pubkey$
          img$  sig$  fw-valid?  if
-            dcon-unfreeze text-on
+            visible
 
             img$ tuck flash-buf  swap move   ( len )
 
@@ -624,6 +622,7 @@ stand-init: wp
 
             reflash      \ Should power-off and reboot
             show-x
+            visible
             ." Reflash returned, unexpectedly" cr
             security-failure
          then
@@ -672,7 +671,7 @@ stand-init: wp
 
          d# 5 d# 77  +icon-xy  show-dot
          has-developer-key?  if
-            dcon-unfreeze text-on
+            visible
             show-unlock
             true exit
          then
@@ -712,24 +711,24 @@ d# 410 d# 540 2constant progress-xy
 
    ?toggle-secure
 
-   secure?  0=  if  dcon-unfreeze unfreeze text-on  exit  then
+   secure?  0=  if  unfreeze visible  exit  then
 
    button-check game-key?  if
-      dcon-unfreeze unfreeze  text-on
+      unfreeze  visible
    else
       freeze  dcon-freeze
    then
 
    persistent-devkey?  if  exit  then
 
-   get-my-sn  if  ." No serial number" cr  show-sad  security-failure  then
-   get-date   if  ." Invalid system date" cr  show-sad  security-failure  then
+   get-my-sn  if  visible  ." No serial number" cr     show-sad  security-failure  then
+   get-date   if  visible  ." Invalid system date" cr  show-sad  security-failure  then
 
-   load-crypto  if  show-sad  security-failure   then       ( )
+   load-crypto  if  visible  ." Crytpo load failed" cr  show-sad  security-failure   then       ( )
 
    alternate?  if  " \boot-alt"  else  " \boot"  then  pn-buf place
 
    all-devices$ load-from-list  if  exit  then   \ Returns only if no images found
 
-   ." Boot failed" cr  show-sad security-failure
+   visible  ." Boot failed" cr  show-sad security-failure
 ;
