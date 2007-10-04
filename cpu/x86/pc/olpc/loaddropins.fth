@@ -55,6 +55,7 @@
    " verify.img"                                " verify"        $add-deflated-dropin
    " os.public"                                 " ospubkey"      $add-dropin \ Incompressible
    " fw.public"                                 " fwpubkey"      $add-dropin \ Incompressible
+   " fs.public"                                 " fspubkey"      $add-dropin \ Incompressible
    " lease.public"                              " leasepubkey"   $add-dropin \ Incompressible
    " developer.public"                          " develpubkey"   $add-dropin \ Incompressible
 

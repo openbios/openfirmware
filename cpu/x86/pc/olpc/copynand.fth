@@ -198,6 +198,8 @@ defer show-strange
 defer show-done
 ' cr to show-done
 
+: >eblock#  ( page# -- eblock# )  nand-pages/block /  ;
+
 : copy-nand  ( "devspec" -- )
    open-nand
    get-img-filename
@@ -206,7 +208,7 @@ defer show-done
 
    ['] noop to show-progress
 
-   #nand-pages nand-pages/block /  dup  show-init  ( #eblocks )
+   #nand-pages >eblock#  dup  show-init  ( #eblocks )
 
    show-erasing                                    ( )
    ['] show-bad  ['] show-erased  ['] show-bbt-block " (wipe)" $call-nand
@@ -219,7 +221,7 @@ defer show-done
       load-base " copy-block" $call-nand          ( page# error? )
       " Error writing to NAND FLASH" ?nand-abort  ( page# )
       ?skip-oob
-      nand-pages/block / show-written             ( )
+      >eblock# show-written             ( )
    loop
 
    show-cleaning
@@ -319,7 +321,7 @@ true value dump-oob?
 ;
 
 : alloc-crc-buf  ( -- )
-   #nand-pages nand-pages/block / to #crc-records
+   #nand-pages >eblock# to #crc-records
    #crc-records /l* alloc-mem to crc-buf
 ;
 
@@ -370,7 +372,7 @@ true value dump-oob?
    \ The stack is empty at the end of each line unless otherwise noted
    dump-oob?  if  #nand-pages  else  " usable-page-limit" $call-nand  then
    0  do
-      (cr i nand-pages/block / .
+      (cr i >eblock# .
       load-base  i  nand-pages/block  " read-blocks" $call-nand
       nand-pages/block =  if
          load-base /nand-block  written?  if

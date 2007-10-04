@@ -5,29 +5,6 @@ h# c0000 constant verify-base  \ The address the code is linked to run at
 h# d0000 constant verify-bss   \ The address the code is linked to run at
 h# 10000 constant /verify-bss
 
-1 [if]
-h# 70000 constant hasher-base  \ The address the code is linked to run at
-h# 80000 constant hasher-bss
-h# 18000 constant /hasher-bss
-variable hashlen
-d# 128 buffer: hashbuf
-
-: get-hasher  ( -- )
-   " hasher" find-drop-in  0=  if  4drop true exit  then  ( prog$ )
-   2dup hasher-base swap move  free-mem          ( hashname$ )
-;
-
-: hash  ( data$ hashname$ -- result$ )
-   d# 128 hashlen !      
-   $cstr  hashbuf hashlen   ( databuf datalen hashname-cstr resbuf &reslen )
-
-   hasher-bss /hasher-bss erase
-
-   hasher-base  dup h# 10 -  sp-call  abort" Hash failed"  drop 4drop  ( )
-   hashbuf hashlen @
-;
-[then]
-
 0 value crypto-loaded?
 : load-crypto  ( -- error? )
    crypto-loaded?  if  false exit  then
@@ -43,13 +20,22 @@ d# 128 buffer: hashbuf
    $cstr
    verify-bss /verify-bss erase    ( data$ sig$ key$ 'hashname )
    verify-base  dup h# 10 -  sp-call  >r  3drop 4drop  r>  ( result )
-
-\ XXX free-mem in suspend.fth and fw.bth after find-drop-in
-\ XXX clean out dead code in usb.fth
 ;
 
-: getbin     " usb8388.bin" find-drop-in 0= abort" No usb8388.bin"  ;
-: getsig     " usb8388.sig" find-drop-in 0= abort" No usb8388.sig"  ;
+\ This is a hack that saves a lot of memory.  The crypto verifier
+\ code has a mode where it will just compute and return the hash value,
+\ instead of going on to verify the hash's signature.  In that mode,
+\ we use sig$ for the address and length of the result buffer, key-adr
+\ to return the actual return length, and pass in key-len = 0 to denote
+\ that we want only hashing.
+
+variable hashlen
+d# 128 buffer: hashbuf
+: hash  ( data$ hashname$ -- result$ )
+   2>r  hashbuf d# 128  hashlen 0  2r>   ( data$ sig$ key$ hashname$ )
+   signature-bad?  abort" Hash failed"   ( )
+   hashbuf hashlen @
+;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

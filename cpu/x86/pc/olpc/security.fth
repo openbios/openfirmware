@@ -3,8 +3,6 @@ purpose: OLPC secure boot
 
 \ Specs at http://wiki.laptop.org/go/Firmware_Security
 
-: boot-device-list  " disk sd nand"   ;
-
 true value debug-security?
 : ?lease-debug   ( msg$ -- )
    debug-security?  if  type  else  2drop  then
@@ -53,6 +51,7 @@ previous definitions
    then
    rot >r  2dup r> 2!         ( key$ )
 ;
+" fspubkey"     key: fskey$
 " ospubkey"     key: oskey$
 " fwpubkey"     key: fwkey$
 " develpubkey"  key: develkey$
@@ -73,10 +72,6 @@ d# 256 constant /sig
 \ binary form at sig-buf.  It returns the adr,len of the binary string.
 
 : hex-decode  ( hex$ -- true | sig$ false )
-   dup /sig 2* <>  if
-      ( ." Bad signature length" cr  )
-      2drop true  exit
-   then                         ( hex$ )
    sig-buf -rot                 ( adr hex$ )
    bounds ?do                   ( adr )
       i 2 push-hex $number pop-base  if  ( adr )
@@ -97,6 +92,8 @@ d# 256 constant /sig
    bl left-parse-string  dup d#  6 <>  if  4drop true exit  then  2swap ( hash$ rem$ )
    bl left-parse-string  nip d# 64 <>  if  4drop true exit  then        ( hash$ rem$ )
    newline left-parse-string  2swap nip  0<>  if  4drop true exit  then ( hash$ data$ )
+   dup /sig 2* <>  if  ( ." Bad signature length" cr  )  2drop true  exit  then ( hash$ data$ )
+
    hex-decode  if  2drop true  else  false  then
 ;
 
@@ -140,8 +137,6 @@ d# 256 constant /sig
 
 \ hashname remembers the most recently used hashname to guard against
 \ attacks based on reuse of the same (presumably compromized) hash.
-
-d# 32 buffer: hashname
 
 \ invalid? checks the validity of data$ against the ASCII signature
 \ record sig01$, using the public key that pubkey$ points to.
@@ -344,7 +339,6 @@ d# 67 buffer: machine-id-buf
 \ a tree-state flag; see check-lease.)
 
 : check-machine-signature  ( sig$ expiration$ -- -1|1 )
-   0 hashname c!
    machine-id-buf d# 51 +  swap  move  ( sig$ )
    machine-id-buf d# 67  2swap  sha-valid?  if  1  else  -1  then
 ;
@@ -510,7 +504,6 @@ d# 410 d# 540 2constant progress-xy
       r> to load-path
 
       "   RD found - " ?lease-debug
-      0 hashname c!
       img$  sig$  sha-valid?  if
          show-unlock
          load-base to ramdisk-adr
@@ -606,7 +599,6 @@ stand-init: wp
       else
          " minus" show-icon
          " new - " ?lease-debug
-         0 hashname c!
          fwkey$ to pubkey$
          img$  sig$  fw-valid?  if
             visible
@@ -616,6 +608,12 @@ stand-init: wp
             ?image-valid                     ( )
             true to file-loaded?
             " Updating firmware" ?lease-debug-cr
+
+            ['] ?enough-power  catch  ?dup  if
+               visible
+               .error
+               security-failure
+            then
 
             \ Latch alternate? flag for next startup
             alternate?  if  [char] A h# 82 cmos!  then
@@ -636,7 +634,6 @@ stand-init: wp
    d# 16 0  +icon-xy  show-dot
    " os" bundle-present?  if
       "   OS found - " ?lease-debug
-      0 hashname c!
       oskey$ to pubkey$
       img$  sig$  sha-valid?  if
          img$ tuck load-base swap move  !load-size
@@ -667,17 +664,18 @@ stand-init: wp
       icon-xy to base-xy
       icon-xy image-width 0 d+ to next-xy   ( list$ )
 
-      filesystem-present?  if
+      filesystem-present?  if               ( list$ )
 
-         d# 5 d# 77  +icon-xy  show-dot
-         has-developer-key?  if
+         d# 5 d# 77  +icon-xy  show-dot     ( list$ )
+         has-developer-key?  if             ( list$ )
+            2drop                           ( )
             visible
             show-unlock
             true exit
-         then
+         then                               ( list$ )
 
-         load-from-device  if
-            2drop
+         load-from-device  if               ( list$ )
+            2drop                           ( )
             ['] secure-load-ramdisk to load-ramdisk
             " init-program" $find  if
                execute  show-going  go
@@ -685,12 +683,12 @@ stand-init: wp
             show-x
             security-failure
          then
-      then
+      then                                  ( list$ )
 
-      next-xy to icon-xy
+      next-xy to icon-xy                    ( list$ )
    repeat                                   ( list$ )
-   " sad" show-icon
-   2drop false
+   " sad" show-icon                         ( list$ )
+   2drop false                              ( )
 ;
 
 : persistent-devkey?  ( -- flag )  " dk" find-tag  dup  if  nip nip  then  ;
