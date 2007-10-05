@@ -95,7 +95,7 @@ c;
 \ Find the degree of a polynomial.  The degree of the 0 polynomial is 0.
 : poly-deg  ( poly -- )
    0  9 1  do                           ( 'poly degree )
-      over i wa+ @  if  drop i  then    ( 'poly degree' )
+      over i wa+ w@  if  drop i  then   ( 'poly degree' )
    loop                                 ( 'poly degree )
    nip                                  ( degree )
 ;
