@@ -3211,7 +3211,12 @@ headers
       method-name 2@  current-device              ( method-adr,len phandle )
       execute-phandle-method  drop                ( result )
 
-      ?dup  if  ??cr ." Selftest failed. Return code = " .d cr  then
+      ?dup  if
+         red-letters
+         ??cr ." Selftest failed. Return code = " .d cr
+         d# 10000 ms
+         black-letters
+      then
 
    then                                            (  )
 ;
