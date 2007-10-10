@@ -64,6 +64,8 @@ end-package
 
 [then]
 
+fload ${BP}/cpu/x86/pc/olpc/timertest.fth  \ Selftest for PIT timer
+
 1 [if]
 dev /interrupt-controller
 h# 20 to vector-base0
@@ -111,6 +113,9 @@ end-support-package
 [then]
 
 fload ${BP}/dev/pci/isaall.fth
+\ We don't need a serial selftest because the serial port is internal only
+\ and the selftest turns off the diag device
+dev /serial  warning @ warning off  : selftest false ;  warning !  device-end
 devalias com1 /isa/serial@i3f8:115200
 devalias mouse /isa/8042/mouse
 devalias d disk
