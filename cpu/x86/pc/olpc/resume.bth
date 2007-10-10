@@ -340,33 +340,32 @@ here resume-entry put-branch
 [ifdef] reset-smbus-bitbang
    \ GPIO15 is SMB_DATA
    \ GPIO14 is SMB_CLOCK
+   h#     c000 # ax mov         \ Mask to set SMB_DATA and SMB_CLOCK
+   h# 1000 # dx mov  ax dx out  \ Set output values to high
+   h# 1004 # dx mov  ax dx out  \ Set pins to output
    h# c0000000 # ax mov         \ Mask to clear SMB_DATA and SMB_CLOCK
    h# 1010 # dx mov  ax dx out  \ Deselect OUT AUX1
    h# 1014 # dx mov  ax dx out  \ Deselect OUT AUX2
    h# 1034 # dx mov  ax dx out  \ Deselect IN AUX1
-   h#     c000 # ax mov         \ Mask to set SMB_DATA and SMB_CLOCK
-   h# 1000 # dx mov  ax dx out  \ Set output values to high
-   h# 1004 # dx mov  ax dx out  \ Set pins to output
 
-   h# 1000 # dx mov             \ Output value register
-
-   8 # cx mov  \ Generate 8 low pulses on SMB_CLOCK
+   d# 16 # cx mov  \ Generate 8 low pulses on SMB_CLOCK
    begin
       \ 5 uS delay (slightly longer for GX)
       rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
       begin  rdtsc  bx ax sub  0>= until
 
+      h# 1000 # dx mov             \ Output value register
       h# 40000000 # ax mov  ax dx out    \ Clear SMB_CLOCK
 
       \ 5 uS delay (slightly longer for GX)
       rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
       begin  rdtsc  bx ax sub  0>= until
 
+      h# 1000 # dx mov             \ Output value register
       h#     4000 # ax mov  ax dx out    \ Set SMB_CLOCK
-
    loopa
 
-   \ 50 uS delay (slightly longer for GX)
+   \ 5 uS delay (slightly longer for GX)
    rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
    begin  rdtsc  bx ax sub  0>= until
 [then]
