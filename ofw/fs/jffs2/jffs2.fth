@@ -118,21 +118,29 @@ true value first-time?
 : page>eblock  ( page# -- eblock# )  pages/eblock /  ;
 
 -1 ( instance ) value have-eblock#  \ For avoiding redundant reads
-: read-pages  ( page# #pages  -- error? )
+: (read-pages)  ( page# #pages  -- #read )
    \ Partial reads invalidate the cache
    dup pages/eblock <>  if  -1 to have-eblock#  then  ( page# #pages )
 
-   tuck  block-buf -rot  " read-blocks" $call-parent  ( #pages #read )
-   <>
+   block-buf -rot  " read-blocks" $call-parent        ( #read )
 ;
+: read-pages  ( page# #pages  -- error? )  tuck (read-pages) <>  ;
 : read-eblock  ( eblock# -- )
-   dup have-eblock#  <>  if   ( eblock# )
-      to have-eblock#         ( )
-      have-eblock# eblock>page  pages/eblock  read-pages
-      abort" jffs2: bad read"
-   else
-      drop
-   then                      ( )
+   dup have-eblock#  <>  if      ( eblock# )
+      to have-eblock#            ( )
+      have-eblock# eblock>page  pages/eblock  (read-pages)  ( npages )
+      dup pages/eblock <>  if    ( npages )
+         ." JFFS2: bad read - eblock# " have-eblock# .x  ." page " dup .x cr
+         /page *                 ( block-offset )
+         dup block-buf +         ( block-offset adr )
+         /eblock rot -           ( adr erase-length )
+         h# ff fill              ( )
+      else                       ( npages )
+         drop                    ( )
+      then                       ( )
+   else                          ( eblock# )
+      drop                       ( )
+   then                          ( )
 ;
 
 0 ( instance ) value sumsize
