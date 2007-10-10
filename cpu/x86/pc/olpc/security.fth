@@ -163,14 +163,35 @@ d# 256 constant /sig
       "   Signature valid" ?lease-debug-cr
    then
 ;
-: sha-valid?  ( data$ sig01$ -- okay? )  " sha256" invalid? 0=  ;
-: fw-valid?  ( data$ 2*sig$ -- okay? )
-   2swap 2>r                          ( 2*sig$ r: data$ )
-   newline left-parse-string          ( rmd-sig$ sha-sig$ r: data$ )
-   2r@ 2swap sha-valid?  0=  if       ( rmd-sig$ r: data$ )
+
+\ Look for a line that starts with "sig01: "
+: next-sig01$  ( sig$ -- true | rem$ sig01$ false )
+   begin  dup  while                   ( rem$ )
+      newline left-parse-string        ( rem$' line$ )
+      2dup 7 min  " sig01: "  $=  if   ( rem$  line$ )
+         false exit
+      then                             ( rem$ line$ )
+      2drop                            ( rem$ )
+   repeat                              ( rem$ )
+   2drop true
+;
+
+\ Find a sig01: line and check its sha256/rsa signature
+: sha-valid?  ( data$ sig01$ -- okay? )
+   next-sig01$  if  2drop false exit  then  ( data$ rem$ sig01$ )
+   2nip  " sha256" invalid? 0=
+;
+
+\ Find two sig01: lines, the first with sha256 and the seconcd with rmd160,
+\ and check their signatures
+: fw-valid?  ( data$ sig$ -- okay? )
+   2swap 2>r                                    ( sig$ r: data$ )
+   next-sig01$  if  2r> 2drop false exit  then  ( rem$ sig01$ )
+   2r@ 2swap sha-valid?  0=  if                 ( rem$ r: data$ )
       2r> 4drop false exit
-   then                               ( rmd-sig$ r: data$ )
-   2r> 2swap " rmd160" invalid? 0=
+   then                                         ( rmd-sig$ r: data$ )
+   next-sig01$  if  2r> 2drop false exit  then  ( rem$ sig01$ )
+   2nip  2r> 2swap " rmd160" invalid? 0=
 ;
 
 \ earliest is the earliest acceptable date value (in seconds).
