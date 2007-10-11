@@ -154,6 +154,8 @@ d# 10 constant #ec-retries
 : write-protect-fw ( -- )  h# 29 ec-cmd  ;
 : ebook-mode?      ( -- b )  h# 2a ec-cmd-b@  ;
 
+: ec-indexed-io-off  ( -- )  h# fe95 ec@  h# 40 invert and  h# fe95 ec!  ;
+
 0 [if]
 \ EC mailbox access words
 
