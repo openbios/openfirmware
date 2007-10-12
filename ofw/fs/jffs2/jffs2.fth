@@ -414,55 +414,116 @@ c;
    d# 18                         ( len )
 ;
 
-: encode-dirent  ( boffset pino adr len -- )
-   2 pick >r                          ( boffset pino adr len r: pino )
-   crctab -rot  ($crc)                ( boffset hash )
-   next-dirent !                      ( boffset )
+\ There are three dirent record formats:
+\ delta is  current-dirent-offset - last-dirent-offset
+\ 1-byte format:  (delta >> 1) | 1                \ for delta < 0x200
+\ 2-byte format:  (delta >> 1) | 0, (delta >> 9)  \ for delta < 0x20000
+\ 10-byte format: 0.w, pino.l, offset.l   \ For delta >= 0x20000 or different pino
+\
+\ The reason for this complexity is to save space in the dirent map in the
+\ face of JFFS2 pathologies that could cause the dirent map to overflow.
+\ An example would be a filesystem with millions of hard links to the same file.
 
-   pack-offset                        ( offset )
-
-   dup dirent-offset @ -  2 rshift    ( offset delta )
-   dup h# 10000 <                     ( offset delta short-offset? )
-   r@ cur-pino @ =  and               ( offset delta short-encode? )
-
-   if                                 ( offset delta )
-      next-dirent na1+ w!             ( offset )
-      6                               ( offset de-len )
-   else                               ( offset )
-      drop  0 next-dirent na1+ w!     ( offset )
-      r@   next-dirent 6 + !          ( offset )  \ Encode pino
-      dup  next-dirent d# 10 + !      ( offset )  \ Encode offset
-      d# 14                           ( offset de-len )
-   then                               ( offset r: pino )
-   r> cur-pino !                      ( offset de-len )
-   'next-dirent +!                    ( offset )
-   dirent-offset !                    ( )
+: +dirent  ( adr -- adr' )
+   c@+  dup 1 and  if  drop exit  then   ( adr' c )
+   >r c@+ r> swap bwjoin                 ( adr' w )
+   0=  if  2 na+  then
 ;
 
+: #dirents  ( -- n )
+   0
+   next-dirent dirents   ( n endadr adr )
+   begin  2dup >  while   +dirent  rot 1+ -rot  repeat  ( n endadr adr )
+   2drop
+;
+
+\ ?erase-previous is an optimization/workaround for a JFFS2 pathology
+\ in which multiple nearly-identical dirents appears one after another.
+\ The pathology is caused by a garbage collection bug; we don't
+\ know if the situation can also appear for other reasons.
+\ The optimization overwrites the previous dirent record if the next
+\ one supersedes it, thus preventing the dirent buffer from filling up
+\ with millions (literally) of obsolete records.
+
+variable prev-dirent  -1 prev-dirent !  \ Needed for erasing old one
+variable prev-offset  -1 prev-offset !  \ Needed for restoring old state for regenerating
+d# 256 instance buffer: prev-name
+
+: ?erase-previous   ( boffset pino adr len -- boffset pino )
+   2dup  prev-name count  $=  0=   if   ( boffset pino adr len )
+      d# 255 min prev-name place        ( boffset pino )
+      exit
+   then                                 ( boffset pino adr len )
+   2drop                                         ( boffset pino )
+
+   dup  cur-pino @  <>  if  exit  then           ( boffset pino )
+   prev-dirent @ 'next-dirent !
+   prev-offset @ dirent-offset !
+;
+
+: encode-dirent-long   ( offset pino -- offset dirent-len )
+   0 next-dirent w!          ( offset pino)
+   next-dirent wa1+ !        ( offset )
+   dup next-dirent 6 + !     ( offset )
+   d# 10                     ( offset dirent-len )
+;
+
+: encode-dirent  ( boffset pino adr len -- )
+   ?erase-previous                     ( boffset pino )
+
+   next-dirent d# 10 +  jffs2-inode-base  >  if
+      ." JFFS2 dirent overflow - " #dirents .d ." dirents" cr
+      abort
+   then
+
+   swap pack-offset  swap               ( offset pino )
+   dup cur-pino @ <>  if                ( offset pino )
+      dup cur-pino !                    ( offset pino )
+      encode-dirent-long                ( offset dirent-len )
+   else                                 ( offset pino )
+      over dirent-offset @ -  1 rshift  ( offset pino delta )
+      dup h# 10000 >=   if              ( offset pino delta )
+         drop encode-dirent-long        ( offset dirent-len )
+      else                              ( offset pino delta )
+         dup h# 100 <  if               ( offset pino delta )
+            1 or  next-dirent c!        ( offset pino )
+            drop  1                     ( offset dirent-len )
+         else                           ( offset pino delta )
+            next-dirent le-w!           ( offset pino )
+            drop  2                     ( offset dirent-len )
+         then
+      then                              ( offset dirent-len )
+   then                                 ( offset dirent-len )
+   next-dirent prev-dirent !            ( offset dirent-len )
+   'next-dirent +!                      ( offset )
+   dirent-offset @ prev-offset !        ( offset )
+   dirent-offset !                      ( )
+;
+
+: c@+  ( adr -- c adr' )  dup c@ swap ca1+  ;
 : w@+  ( adr -- w adr' )  dup w@ swap wa1+  ;
 : l@+  ( adr -- l adr' )  dup l@ swap la1+  ;
 
-: decode-dirent  ( adr -- false | adr' offset pino hash true )
+: decode-dirent  ( adr -- false | adr' offset pino true )
    dup  next-dirent  >=  if  drop false exit  then
-   l@+                          ( hash adr' )
-   w@+                          ( hash w adr' )
-   swap  ?dup  if               ( hash adr' w )   \ Short form
-\      swap -rot                 ( adr' hash w )
-\      /l* dirent-offset +!      ( adr' hash )
-
-      /l* dirent-offset +!      ( hash adr' )
-      swap                      ( adr' hash )
-
-      dirent-offset @           ( adr' hash offset )
-      cur-pino @ rot            ( adr' offset pino hash )
-   else                         ( hash adr' )     \ Long form
-      l@+ over cur-pino !       ( hash pino adr' )
-      l@+ over dirent-offset !  ( hash pino offset adr' )
-      swap 2swap swap           ( adr' offset pino hash )
-   then
+   dup c@  dup 1 and  if           ( adr c )   \ 1-byte form
+      2/  /l* dirent-offset +!     ( adr )
+      ca1+                         ( adr' )
+      dirent-offset @              ( adr offset )
+      cur-pino @                   ( adr offset pino )
+   else                            ( adr c )   \ Longer form
+      w@+  ?dup  if                ( adr' w )   \ 2-byte form
+         /w* dirent-offset +!      ( adr )
+         dirent-offset @           ( adr offset )
+         cur-pino @                ( adr offset pino )
+      else                         ( adr )     \ Long form
+         l@+ over cur-pino !       ( pino adr' )
+         l@+ over dirent-offset !  ( pino offset adr' )
+         swap rot                  ( adr offset pino )
+      then                         ( adr offset pino )
+   then                            ( adr offset pino )
    true
 ;
-
 
 \ Information that we need about the working file/directory
 \ The working file changes at each level of a path search
@@ -472,7 +533,7 @@ c;
 0 instance value wf-type  \ Type - 4 for directory, d# 10 for symlink, etc
 
 1 [if]
-code (next-pino-match)  ( adr next-dirent pino cur-pino dirent-offset -- false | adr' offset hash true )
+code (next-pino-match)  ( adr next-dirent pino cur-pino dirent-offset -- false | adr' offset true )
    dx pop             \ dx: dirent-offset
    cx pop             \ cx: cur-pino
    bx pop             \ bx: pino
@@ -489,37 +550,51 @@ code (next-pino-match)  ( adr next-dirent pino cur-pino dirent-offset -- false |
 
    \ If the first encoded dirent is short-form, the pino is the same as
    \ before and thus matches.
-   ax ax xor  op: 4 [si]  ax  mov   \ ax: w
-   ax ax or  0<>  if                \ Short form
+   ax ax xor  0 [si] al mov         \ ax: b
+   ax shr  carry?  if               \ 1-byte form
       2 # ax shl  ax 0 [dx] add     \ Update dirent-offset
-      0 [si]  cx  mov               \ cx: hash
-      6 #     si  add               \ skip long hash and word offset
+      1 #     si  add               \ skip byte offset
       4 [sp]  si  xchg              \ Put adr back on stack and restore si
       0 [dx]  bp  mov               \ bp: offset
       0 [sp]  bp  xchg              \ Put offset on stack and restore bp
-      cx          push              \ Put hash on stack
       -1 #        push              \ Put true on stack
       next
    then
 
+   op: 0 [si] ax mov                \ ax: w
+   ax ax and  0<>  if               \ 2-byte form
+      2 # ax shl  ax 0 [dx] add     \ Update dirent-offset
+      2 #     si  add               \ skip word offset
+      4 [sp]  si  xchg              \ Put adr back on stack and restore si
+      0 [dx]  bp  mov               \ bp: offset
+      0 [sp]  bp  xchg              \ Put offset on stack and restore bp
+      -1 #        push              \ Put true on stack
+      next
+   then
+
+
    long-offsets on
    begin  
-      ax ax xor  op: 4 [si]  ax  mov   \ ax: w
-      ax ax or  0<>  if                \ Short form
+      ax ax xor  0 [si] al mov         \ ax: b
+      ax shr  carry?  if               \ 1-byte form
          2 # ax shl  ax 0 [dx] add     \ Update dirent-offset
-         6 #     si  add               \ skip long hash and word offset
+         1 #     si  add               \ skip byte offset
       else
-         d# 10 [si]  ax  mov   ax  0 [dx]  mov  \ Update dirent-offset
-         d#  6 [si]  ax  mov   ax  0 [cx]  mov  \ Update cur-pino
-         d# 14 #     si  add                    \ skip record
-         ax bx cmp  =  if
-            d# -14 [si]  cx  mov       \ cx: hash
-            4 [sp]  si  xchg           \ Put adr back on stack and restore si
-            0 [dx]  bp  mov            \ bp: offset
-            0 [sp]  bp  xchg           \ Put offset on stack and restore bp
-            cx          push           \ Put hash on stack
-            -1 #        push           \ Put true on stack
-            next
+         op: 0 [si]  ax  mov           \ ax: w
+         ax ax or  0<>  if                \ Short form
+            2 # ax shl  ax 0 [dx] add     \ Update dirent-offset
+            2 #     si  add               \ skip word offset
+         else
+            d#  6 [si]  ax  mov   ax  0 [dx]  mov  \ Update dirent-offset
+            d#  2 [si]  ax  mov   ax  0 [cx]  mov  \ Update cur-pino
+            d# 10 #     si  add                    \ skip record
+            ax bx cmp  =  if
+               4 [sp]  si  xchg           \ Put adr back on stack and restore si
+               0 [dx]  bp  mov            \ bp: offset
+               0 [sp]  bp  xchg           \ Put offset on stack and restore bp
+               -1 #        push           \ Put true on stack
+               next
+            then
          then
       then
    bp si cmp  = until
@@ -530,35 +605,46 @@ code (next-pino-match)  ( adr next-dirent pino cur-pino dirent-offset -- false |
    4 #     sp  add          \ clean stack
    ax ax xor  0 # 0 [sp] mov  \ return false
 c;
-: next-pino-match  ( adr -- false | pino adr' offset hash true )
+: next-pino-match  ( adr -- false | pino adr' offset true )
    next-dirent wd-inum cur-pino dirent-offset (next-pino-match)
 ;
 [then]
 
 [ifndef] next-pino-match
-: next-pino-match  ( adr -- false | adr' offset hash true )
+: next-pino-match  ( adr -- false | adr' offset true )
    dup  next-dirent  >=  if  drop false exit  then
 
    \ If the first encoded dirent is short-form, the pino is the same as
    \ before and thus matches.
-   dup la1+ w@  ?dup  if      ( adr w )
+   dup c@  dup  1 and  if     ( adr b )
+      2/ /l* dirent-offset +! ( adr )
+      dirent-offset @         ( adr offset )
+      swap  ca1+  swap        ( adr' offset )
+      true                    ( adr offset true )
+      exit
+   then                       ( adr b )
+   drop                       ( adr )
+
+   dup w@  ?dup  if           ( adr w )
       /l* dirent-offset +!    ( adr )
       dirent-offset @         ( adr offset )
-      swap  l@+  wa1+         ( offset hash adr' )
-      -rot true               ( offset hash adr' )
+      swap  wa1+  swap        ( adr' offset )
+      true                    ( adr offset true )
       exit
    then                       ( adr )
 
    begin                             ( adr )
-      la1+ w@+ swap ?dup  if         ( adr' w )
+      dup c@  dup 1 and  if          ( adr b )
+         2/ /l* dirent-offset +!     ( adr )
+         ca1+                        ( adr' )
+      w@+ swap ?dup  if              ( adr' w )
          /l* dirent-offset +!        ( adr' )
       else                           ( adr' )
          l@+ swap cur-pino !         ( adr' )
          l@+ swap dirent-offset !    ( adr' )
          wd-inum cur-pino @ =  if    ( adr' )
             dirent-offset @          ( adr' offset )
-            over -3 la+ -1 wa+ l@    ( adr' offset hash )
-            true                     ( adr' offset hash true )
+            true                     ( adr' offset true )
             exit
          then                        ( adr )
       then                           ( adr )
@@ -575,7 +661,7 @@ c;
    r@ 1 j@  r@ 2 j@            ( offset pino )
    r@ d# 22 +  r> 5 la+ c@     ( offset pino adr namelen )
    dup >r  encode-dirent       ( r: namelen )
-   r> d# 24 +                     ( len )
+   r> d# 24 +                  ( len )
 ;
 
 [ifdef] notdef
@@ -595,6 +681,7 @@ c;
       xattr-type  of  drop  d# 18   ( ." XA" cr )  endof
       xref-type   of  drop  6       ( ." R" cr  )  endof
       h# ffff     of  drop  dup  ( find-nonblank  )  endof  \ Keep scanning to end
+      debug-me
       ." Unrecognized summary node type " dup .x cr  abort
    endcase
 ;
@@ -1042,15 +1129,6 @@ instance variable outpos
    then
 ;
 
-: +dirent  ( adr -- adr' )   na1+ dup w@  0=  if 2 na+ then  wa1+  ;
-
-: #dirents  ( -- n )
-   0
-   next-dirent dirents   ( n endadr adr )
-   begin  2dup >  while   +dirent  rot 1+ -rot  repeat  ( n endadr adr )
-   2drop
-;
-
 char \ instance value delimiter
 
 defer $resolve-path
@@ -1083,19 +1161,13 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
 
 : $find-name  ( name$ -- error? )
    -1 to my-vers                         ( name$ )
-   wd-inum crctab  2over  ($crc) >r      ( name$  r: hash )
 
    0 dirent-offset !
-   dirents  begin  next-pino-match  while  ( name$  adr' offset hash )
-      \ Check for a hash match
-      r@ =  if                           ( name$ adr offset )
-         2over  ?update-dirent           ( name$ adr )
-      else                               ( name$ adr  offset )
-         drop                            ( name$ adr )
-      then                               ( name$ adr )
-   repeat                                ( name$ r: hash )
-   2drop r> drop                         ( )
-   my-vers 0<   if  true exit  then      ( )
+   dirents  begin  next-pino-match  while  ( name$  adr' offset )
+      2over  ?update-dirent                ( name$ adr )
+   repeat                                  ( name$ )
+   2drop                                   ( )
+   my-vers 0<   if  true exit  then        ( )
    wf-type 4  =  if  wf-inum to wd-inum  then
    false
 ;
@@ -1209,8 +1281,8 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
 : prep-dirents  ( -- )
    minodes 'next-minode !   \ Empty the list
    dirents                         ( adr )
-   begin  next-pino-match  while   ( adr'  offset hash )
-      drop insert-dirent           ( adr )
+   begin  next-pino-match  while   ( adr'  offset )
+      insert-dirent                ( adr )
    repeat                          ( )
 ;
 

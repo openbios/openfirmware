@@ -74,9 +74,9 @@ h#  80.0000 constant def-load-base      \ Convenient for initrd
 h#  20.0000 constant heap-size
 
 h# 300.0000 constant jffs2-dirent-base
-h# 400.0000 constant jffs2-inode-base
-h# 600.0000 constant dma-base
-h# a00.0000 constant dma-size
+h# 500.0000 constant jffs2-inode-base
+h# 700.0000 constant dma-base
+h# 900.0000 constant dma-size
 
 h# f.0000 constant suspend-base      \ In the DOS hole
 h# f.0008 constant resume-entry
