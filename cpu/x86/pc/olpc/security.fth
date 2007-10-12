@@ -361,7 +361,7 @@ d# 67 buffer: machine-id-buf
 
 : check-machine-signature  ( sig$ expiration$ -- -1|1 )
    machine-id-buf d# 51 +  swap  move  ( sig$ )
-   machine-id-buf d# 67  2swap  sha-valid?  if  1  else  -1  then
+   machine-id-buf d# 67  2swap  " sha256" invalid?  if  -1  else  1  then
 ;
 
 : set-disposition  ( adr -- )  c@  machine-id-buf d# 49 + c!  ;
@@ -696,6 +696,7 @@ stand-init: wp
          then                               ( list$ )
 
          load-from-device  if               ( list$ )
+\           write-protect-fw ec-indexed-io-off  ( list$ )
             2drop                           ( )
             ['] secure-load-ramdisk to load-ramdisk
             " init-program" $find  if
