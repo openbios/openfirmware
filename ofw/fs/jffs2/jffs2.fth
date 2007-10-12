@@ -551,7 +551,7 @@ code (next-pino-match)  ( adr next-dirent pino cur-pino dirent-offset -- false |
    \ If the first encoded dirent is short-form, the pino is the same as
    \ before and thus matches.
    ax ax xor  0 [si] al mov         \ ax: b
-   ax shr  carry?  if               \ 1-byte form
+   al shr  carry?  if               \ 1-byte form
       2 # ax shl  ax 0 [dx] add     \ Update dirent-offset
       1 #     si  add               \ skip byte offset
       4 [sp]  si  xchg              \ Put adr back on stack and restore si
@@ -563,7 +563,7 @@ code (next-pino-match)  ( adr next-dirent pino cur-pino dirent-offset -- false |
 
    op: 0 [si] ax mov                \ ax: w
    ax ax and  0<>  if               \ 2-byte form
-      2 # ax shl  ax 0 [dx] add     \ Update dirent-offset
+      1 # ax shl  ax 0 [dx] add     \ Update dirent-offset
       2 #     si  add               \ skip word offset
       4 [sp]  si  xchg              \ Put adr back on stack and restore si
       0 [dx]  bp  mov               \ bp: offset
@@ -575,14 +575,15 @@ code (next-pino-match)  ( adr next-dirent pino cur-pino dirent-offset -- false |
 
    long-offsets on
    begin  
-      ax ax xor  0 [si] al mov         \ ax: b
-      ax shr  carry?  if               \ 1-byte form
+      ax ax xor
+      0 [si] al mov                    \ ax: b
+      al shr  carry?  if               \ 1-byte form
          2 # ax shl  ax 0 [dx] add     \ Update dirent-offset
          1 #     si  add               \ skip byte offset
       else
          op: 0 [si]  ax  mov           \ ax: w
          ax ax or  0<>  if                \ Short form
-            2 # ax shl  ax 0 [dx] add     \ Update dirent-offset
+            1 # ax shl  ax 0 [dx] add     \ Update dirent-offset
             2 #     si  add               \ skip word offset
          else
             d#  6 [si]  ax  mov   ax  0 [dx]  mov  \ Update dirent-offset
@@ -626,7 +627,7 @@ c;
    drop                       ( adr )
 
    dup w@  ?dup  if           ( adr w )
-      /l* dirent-offset +!    ( adr )
+      /w* dirent-offset +!    ( adr )
       dirent-offset @         ( adr offset )
       swap  wa1+  swap        ( adr' offset )
       true                    ( adr offset true )
@@ -638,7 +639,7 @@ c;
          2/ /l* dirent-offset +!     ( adr )
          ca1+                        ( adr' )
       w@+ swap ?dup  if              ( adr' w )
-         /l* dirent-offset +!        ( adr' )
+         /w* dirent-offset +!        ( adr' )
       else                           ( adr' )
          l@+ swap cur-pino !         ( adr' )
          l@+ swap dirent-offset !    ( adr' )
