@@ -710,6 +710,11 @@ struct
 constant /chan-list-IE
 
 struct
+   /marvel-IE-hdr +
+   d# 34 field >ssid
+constant /ssid-IE
+
+struct
    1 field >bss-type
    6 field >bss-id
    /chan-list-IE field >chan-list-IE
@@ -730,6 +735,8 @@ h# 000f.ac02 constant aoui			\ WPA2 authentication suite
 h# 0050.f202 constant amoui			\ WPA authentication suite
 
 
+d# 34 instance buffer: ssid
+
 : make-chan-list-param  ( adr -- )
    #channels 0  do
       dup i /chan-list * +
@@ -742,23 +749,43 @@ h# 0050.f202 constant amoui			\ WPA authentication suite
 ;
 
 : (scan)  ( -- error? )
-   /cmd_802_11_scan 6 ( CMD_802_11_SCAN ) prepare-cmd
-   resp-wait-long to resp-wait
-   BSS_ANY outbuf >fw-data tuck >bss-type c!
+   /cmd_802_11_scan  ssid c@  if
+     /marvel-IE-hdr +  ssid c@ +
+   then
+   6 ( CMD_802_11_SCAN ) prepare-cmd              ( )
+   resp-wait-long to resp-wait                    ( )
+   BSS_ANY outbuf >fw-data tuck >bss-type c!      ( 'fw-data )
 
-   dup >chan-list-IE h# 101 over >type-id le-w!
-   #channels /chan-list * over >/payload le-w!
-   >chan-list make-chan-list-param
+   dup >chan-list-IE                              ( 'fw-data 'chan-list )
+   h# 101 over >type-id le-w!                     ( 'fw-data 'chan-list )
+   #channels /chan-list * over >/payload le-w!    ( 'fw-data 'chan-list )
+   >chan-list make-chan-list-param                ( 'fw-data )
 
-   >probes-IE h# 102 over >type-id le-w!
-   2 over >/payload le-w!
-   #probes swap >probes le-w!
+   dup >probes-IE                                 ( 'fw-data 'probes )
+   h# 102 over >type-id le-w!                     ( 'fw-data 'probes )
+   2 over >/payload le-w!                         ( 'fw-data 'probes )
+   #probes swap >probes le-w!                     ( 'fw-data )
 
-   /cmd_802_11_scan outbuf-bulk-out  if  true exit  then
+   ssid c@  if                                    ( 'fw-data )
+      \ Attach an SSID TLV to filter the result
+      /cmd_802_11_scan +                               ( 'ssid )
+      h# 000 over >type-id le-w!                       ( 'ssid )
+      ssid c@   over >/payload le-w!                   ( 'ssid )
+      ssid count  rot /marvel-IE-hdr +  swap move      ( )
+      /cmd_802_11_scan  /marvel-IE-hdr ssid c@ +  +    ( cmdlen )
+   else                                           ( 'fw-data )
+      drop
+      /cmd_802_11_scan                            ( cmdlen )
+   then                                           ( cmdlen )
+
+   outbuf-bulk-out  if  true exit  then
    wait-cmd-resp
 ;
 
 external
+\ Ask the device to look for the indicated SSID.
+: set-ssid  ( adr len -- )  h# 32 min  ssid pack drop  ;
+
 : scan  ( adr len -- actual )
    (scan)  if  2drop 0 exit  then
    respbuf /respbuf /fw-cmd /string	( adr len radr rlen )

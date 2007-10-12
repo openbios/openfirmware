@@ -730,6 +730,7 @@ h# 0050.f201 constant wpa-tag
    disable-protection
    do-scan?  if
       wifi-ssid$ ssid!
+      wifi-ssid$  " set-ssid" $call-parent
       ??cr ." Scan for: " ssid$ type cr
       scanbuf /buf scan 0=  if  ." Failed to find: " ssid$ type cr false exit  then
       debug?  if  scanbuf .scan  then
