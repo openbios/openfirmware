@@ -211,6 +211,21 @@ previous definitions
    oem-keymap  if  oem-keymap  /keymap  free-mem  then
    0 to oem-keymap
 ;
+[ifdef] olpc
+: ?olpc-keyboard  ( -- )
+    " enable-intf" $call-parent
+    begin  get-data?  while
+       drop
+       true to keyboard-present?
+       5 ms
+    repeat
+    keyboard-present?  if  exit  then
+    kbd-reset 0= to keyboard-present?
+;
+
+fload ${BP}/cpu/x86/pc/olpc/keymap.fth
+[then]
+
 : choose-type  ( -- )
    my-args  dup  if
       [char] , left-parse-string  2swap 2drop  ( $ )
@@ -230,6 +245,10 @@ previous definitions
       oem-keymap to keymap                           ( )
       exit
    then
+
+[ifdef] olpc-keymap?
+   olpc-keymap?  if  exit  then
+[then]
 
    " us" set-keyboard
 \    pc-keyboard-type set-keyboard
@@ -335,21 +354,10 @@ create func-map  81 c,  8c c,
    false
 ;
 
-: ?olpc-keyboard  ( -- )
-    " enable-intf" $call-parent
-    begin  get-data?  while
-       drop
-       true to keyboard-present?
-       5 ms
-    repeat
-    keyboard-present?  if  exit  then
-    kbd-reset 0= to keyboard-present?
-;
-
 : reset  ( -- )
    init-data
    clear-state
-[ifdef] olpc
+[ifdef] ?olpc-keyboard
    ?olpc-keyboard
 [else]
    get-initial-state
@@ -677,6 +685,8 @@ create mode-map  01 c,  06 c,
    \ Split the scancode into the up/down indicator and the key identifier
    h# 80 /mod 0=  swap                           ( down? scan )
 	
+[ifdef] ?multkey  ?multkey  [then]
+
    \ Exit if the scancode is one that is never used for ASCII characters
    dup h# 60 >=  if  2drop  false  exit  then    ( down? scan )
 

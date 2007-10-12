@@ -117,19 +117,57 @@ alias disable-security clear-wp
 : $add-tag  ( value$ name$ -- )
    ?tagname-valid                                 ( value$ name$ )
    2dup find-tag  abort" Tagname already exists"  ( value$ name$ )
+
    get-mfg-data
    ram-last-mfg-data  >r                          ( value$ name$ r: adr )
-   2 pick 1+  over +  3 +                         ( value$ name$ record-len r: adr )
+
+   \ Check for enough space for the new tag
+   2 pick                                         ( value$ name$ datalen r: adr )
+   dup d# 16383 >  abort" Tag data too long"
+   dup d# 127 >  if  4  else  3  then  +          ( value$ name$ datalen' r: adr )
+   over +                                         ( value$ name$ record-len r: adr )
    r@ over -  mfg-data-buf u<=  abort" Not enough space for new tag"
+
+   \ Ensure that the space is not being used for something else
    r@ over -  swap  ?erased                       ( value$ name$ r: adr )
+
+   \ Copy the tag name
    r@ 2- swap move                                ( value$ r: adr )
-   dup 1+  dup r@ 3 - c!  invert r@ 4 - c!        ( value$ r: adr )
-   0  r@ 5 - c!                                   ( value$ r: adr )
-   r> 5 -  over -                                 ( value$ data-adr )
-   swap move
-   put-mfg-data
+
+   \ Set the length field
+   dup                                            ( value$ len r: adr )
+   dup d# 127 >  if                               ( value$ len r: adr )
+      \ 5-byte tag format - (top) check, lowlen, highlen (bottom)
+      dup 7 rshift  swap h# 7f and                ( value$ len-high len-low r: adr )
+      2dup xor  h# ff xor                         ( value$ len-high len-low check r: adr )
+      r@ 3 - c!  r@ 4 - c!  r@ 5 - c!             ( value$ r: adr )
+      r> 5 -                                      ( value$ end-adr )
+   else                                           ( value$ len' r: adr )
+      \ 4-byte tag format - (top) len, ~len (bottom)
+      dup r@ 3 - c!  invert r@ 4 - c!             ( value$ r: adr )
+      r> 4 -                                      ( value$ end-adr )
+   then                                           ( value$ end-adr )
+
+   \ Copy the value data
+   over -  swap move                              ( )
+
+   put-mfg-data                                   ( )
 ;
 
+: add-null  ( adr len -- adr' len' )  $cstr  cscount 1+   ;
+
 : add-tag  ( "name$" "value$" -- )
-   safe-parse-word  0 parse  2swap $add-tag
+   safe-parse-word  0 parse add-null  2swap $add-tag
+;
+
+: $delete-tag  ( name$ -- )
+   tag-setup                    ( ram-value$ )
+   2dup + c@ h# 80 and          ( ram-value$ tag-style )
+   if  4  else  5  then  +  >r  ( tag-adr tag-len )
+   ram-last-mfg-data  >r        ( tag-adr r: len bot-adr ) 
+   r@  2r@ +                    ( tag-adr src-adr dst-adr r: len bot-adr )    
+   rot r@ -                     ( src-adr dst-adr copy-len r: len bot-adr ) 
+   move                         ( r: len bot-adr )
+   r> r> h# ff fill             ( )
+   put-mfg-data
 ;

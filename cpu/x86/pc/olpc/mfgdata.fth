@@ -9,23 +9,39 @@ purpose: Manufacturing data reader
 : invalid-tag?  ( adr -- data-adr flag )
    -1 hibit?  if  true exit  then  \ Name char must be 7-bit ASCII
    -2 hibit?  if  true exit  then  \ Name char must be 7-bit ASCII
-   -3 hibit?  if  true exit  then  \ Length must be 7 bits
-   dup  3 - c@                          ( adr len )
-   over 4 - c@                          ( adr len ~len )
-   xor  h# ff <>  if  true exit  then   ( adr )
-   dup  3 - c@  - 4 -                   ( adr' )
+   -3 hibit?  if  \ Long (5-byte tag) format   ( adr )
+      dup  4 - c@  dup h# 80 and  if  drop true exit  then   ( adr low )
+      over 5 - c@  dup h# 80 and  if  2drop true exit  then  ( adr low high )
+      2dup xor h# ff xor                                     ( adr low high check )
+      3 pick 3 - c@ <>  if  3drop true exit  then            ( adr low high )
+      7 << +                                                 ( adr length )
+      - 5 -                                                  ( data-adr )
+   else           \ Short (4-byte tag) format
+      dup  3 - c@                          ( adr len )
+      over 4 - c@                          ( adr len ~len )
+      xor  h# ff <>  if  true exit  then   ( adr )
+      dup  3 - c@  - 4 -                   ( data-adr )
+   then
+
    false
 ;
 
 : last-mfg-data  ( top-adr -- adr )  begin  invalid-tag?  until  ;
 
 : another-tag?  ( adr -- adr false |  adr' data$ name-adr true )
-   dup invalid-tag?  if   ( adr data-adr )
+   dup invalid-tag?  if       ( adr data-adr )
       drop false exit
-   then                   ( adr data-adr )
-   dup rot                ( data-adr data-adr adr )
-   2dup swap - 4 -        ( data-adr data-adr adr data-len )
-   swap 2-  true          ( adr' data$ adr )
+   then                       ( adr data-adr )
+   >r  2-                     ( name-adr r: data-adr )
+   dup 1- c@ h# 80 and  if    ( name-adr r: data-adr )   \ 5-byte format
+      dup 2- c@               ( name-adr lowlen r: data-adr )
+      over 3 - c@  7 lshift + ( name-adr len r: data-adr )
+   else                       ( name-adr r: data-adr )   \ 4-byte format
+      dup 1- c@               ( name-adr len r: data-adr )
+   then                       ( name-adr len r: data-adr )
+   r> rot >r                  ( len data-adr r: name-adr )
+   dup rot  r>                ( adr data$ name-adr )
+   true                       ( adr data$ name-adr true )
 ;
 
 \ Mfg data used to be at the end of the EC erase block, but
