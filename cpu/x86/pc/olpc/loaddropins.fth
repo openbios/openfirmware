@@ -58,5 +58,3 @@
    " fs.public"                                 " fspubkey"      $add-dropin \ Incompressible
    " lease.public"                              " leasepubkey"   $add-dropin \ Incompressible
    " developer.public"                          " develpubkey"   $add-dropin \ Incompressible
-
-   " hasher.img"                                " hasher"        $add-deflated-dropin
