@@ -359,6 +359,7 @@ create func-map  81 c,  8c c,
    clear-state
 [ifdef] ?olpc-keyboard
    ?olpc-keyboard
+   keyboard-present?  if  exit  then
 [else]
    get-initial-state
 
