@@ -1,8 +1,8 @@
 \ Version numbers of items included in the OLPC firmware image
 
 \ The overall firmware revision
-macro: FW_MAJOR C
-macro: FW_MINOR d01
+macro: FW_MAJOR D
+macro: FW_MINOR 01
 
 \ The EC microcode
 macro: EC_VERSION d01
