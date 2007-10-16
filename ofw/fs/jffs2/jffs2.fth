@@ -446,6 +446,7 @@ c;
 \ with millions (literally) of obsolete records.
 
 variable prev-dirent  -1 prev-dirent !  \ Needed for erasing old one
+variable prev-pino    -1 prev-pino   !  \ Needed for restoring old state for regenerating
 variable prev-offset  -1 prev-offset !  \ Needed for restoring old state for regenerating
 d# 256 instance buffer: prev-name
 
@@ -457,6 +458,8 @@ d# 256 instance buffer: prev-name
    2drop                                         ( boffset pino )
 
    dup  cur-pino @  <>  if  exit  then           ( boffset pino )
+
+   prev-pino   @ cur-pino !
    prev-dirent @ 'next-dirent !
    prev-offset @ dirent-offset !
 ;
@@ -478,6 +481,7 @@ d# 256 instance buffer: prev-name
 
    swap pack-offset  swap               ( offset pino )
    dup cur-pino @ <>  if                ( offset pino )
+      cur-pino @ prev-pino !            ( offset pino )
       dup cur-pino !                    ( offset pino )
       encode-dirent-long                ( offset dirent-len )
    else                                 ( offset pino )
