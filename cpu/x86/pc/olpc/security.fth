@@ -586,7 +586,7 @@ stand-init: wp
    r> close-file drop  false
 ;
 
-: ?toggle-secure  ( -- )  button-x game-key?  if  secure? 0= to secure?  then  ;
+: ?force-secure  ( -- )  button-x game-key?  if  true to secure?  then  ;
 
 6 buffer: fw#buf
 : (fw-version)  ( base-adr -- n )
@@ -735,7 +735,7 @@ d# 410 d# 540 2constant progress-xy
    button-rotate game-key?  if  show-warnings  then
    show-child
 
-   ?toggle-secure
+   ?force-secure
 
    secure?  0=  if  unfreeze visible  exit  then
 
