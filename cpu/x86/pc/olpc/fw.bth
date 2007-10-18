@@ -268,9 +268,6 @@ warning @  warning off
       disable-interrupts
 [ifdef] rom-loaded
       d# 300
-      h# 1454 pl@ 2 and  if
-         ." Interacting due to botched resume" cr  hex interact
-      then
       i-key-wait  if
 \        " patch false fast-boot? startup" eval
          ." Interacting" cr  hex interact
@@ -507,12 +504,23 @@ fload ${BP}/ofw/core/dualconsole.fth
    " keyboard" open-dev  ?dup  if  set-stdin  then
 ;
 
+: ?resume-botch
+   h# 1454 pl@ 2 and  if
+      red-letters
+      ." Interacting due to botched resume" cr
+      black-letters
+      hex interact
+   then
+;
+
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
    no-page
 
    console-start
+
+   ?resume-botch
 
    board-revision 0=  if
       ." EC problem - remove all power and restart" cr
