@@ -193,9 +193,16 @@ d# 10 constant #ec-retries
 \ because it continuously fetches from the SPI FLASH when it's on.  That
 \ interferes with our accesses.
 
+: ec-indexed-io-off?  ( -- flag )  h# ff14 ec@  h# ff =  ;
+: .ec-ixio-msg  ( -- )
+   ." Writing to the SPI FLASH is disabled."  cr
+   ." Disconnect/reconnect the battery and AC and try again."  cr
+;
+
 0 value kbc-off?
 : kbc-off  ( -- )
    kbc-off?  if  exit  then  \ Fast bail out
+   ec-indexed-io-off?  if  .ec-ixio-msg  abort  then
    h# d8 ec-cmd66      \ Prepare for reset
    h# ff14 ec@  1 or  h# ff14 ec!
    true to kbc-off?

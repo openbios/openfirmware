@@ -465,7 +465,7 @@ d# 410 d# 540 2constant progress-xy
 
 : security-failure  ( -- )
    visible
-   ." Security failure" cr
+   ." Stopping" cr
 
    d# 10000 ms
    power-off
@@ -636,6 +636,12 @@ stand-init: wp
                security-failure
             then
 
+            ec-indexed-io-off?  if
+               visible
+               .ec-ixio-msg
+               security-failure
+            then
+
             \ Latch alternate? flag for next startup
             alternate?  if  [char] A h# 82 cmos!  then
 
@@ -696,7 +702,7 @@ stand-init: wp
          then                               ( list$ )
 
          load-from-device  if               ( list$ )
-\           write-protect-fw ec-indexed-io-off  ( list$ )
+            write-protect-fw ec-indexed-io-off  ( list$ )
             2drop                           ( )
             ['] secure-load-ramdisk to load-ramdisk
             " init-program" $find  if
