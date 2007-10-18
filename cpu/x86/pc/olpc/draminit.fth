@@ -59,7 +59,10 @@
       0 1430 port-wl
       h# 1b # al mov  al h# 80 # out
       char r 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
-      resume-entry # sp mov  sp jmp
+
+      resume-data  # sp mov
+      resume-entry # ax mov  ax call   \ This might return if checksumming fails
+      char x 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
    then
 
    h# 1c # al mov  al h# 80 # out

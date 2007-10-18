@@ -23,6 +23,7 @@ fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
 \ create reset-smbus
 \ create reset-smbus-bitbang
 \ create restore-usb-power
+\ create checksum-test
 
 h# fe00.0000 constant gp-pa
 h# fe00.4000 constant dc-pa
@@ -256,6 +257,15 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    begin  dx ax in  h# e0 # al and  h# c0 # al cmp  loopne
 [then]
 
+[ifdef] checksum-test
+   \ Checksum memory from 1M to top (excluding framebuffer)
+   bx bx xor
+   h# 0010.0000 #  si  mov
+   h# 0ef0.0000 2 rshift #  cx  mov  \ Word count
+   begin  ax lods  ax bx add  loopa
+   bx  resume-data h# 10 - #)  mov   \ Save checksum
+[then]
+
    \ Stop video refresh
    h# 4758 #  h# fe00.4000 #)  mov  \ Unlock DC registers
    h#    0 #  h# fe00.4004 #)  mov  \ Turn off access to display memory
@@ -327,6 +337,15 @@ here resume-entry put-branch
       wrmsr
       si bx cmp
    = until
+
+[ifdef] checksum-test
+   \ Checksum memory from 1M to top (excluding framebuffer)
+   bx bx xor
+   h# 0010.0000 #  si  mov
+   h# 0ef0.0000 2 rshift #  cx  mov  \ Word count
+   begin  ax lods  ax bx add  loopa
+   bx  resume-data h# 10 - #)  cmp  <>  if  ret  then
+[then]
 
    h# 38 [bp]  si  lea    \ Save area
 
