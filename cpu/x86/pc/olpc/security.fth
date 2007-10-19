@@ -164,14 +164,23 @@ d# 256 constant /sig
    then
 ;
 
-\ Look for a line that starts with "sig01: "
+\ Look for a line that starts with "sig01: " and whose key signature
+\ matches the trailing bytes of our currently-selected public key.
 : next-sig01$  ( sig$ -- true | rem$ sig01$ false )
    begin  dup  while                   ( rem$ )
       newline left-parse-string        ( rem$' line$ )
-      2dup 7 min  " sig01: "  $=  if   ( rem$  line$ )
-         false exit
-      then                             ( rem$ line$ )
-      2drop                            ( rem$ )
+      2dup                                     ( rem$' line$ line$ )
+      bl left-parse-string  " sig01:" $=  if   ( rem$' line$ rem1$ )
+         bl left-parse-string 2drop            ( rem$' line$ rem1$ )  \ Discard hash name
+         bl left-parse-string                  ( rem$' line$ rem1$ key$ )
+         /sig 2* min  hex-decode  0=  if       ( rem$' line$ rem1$ keyb$ )
+            pubkey$  dup 3 pick -  0 max /string   ( rem$' line$ rem1$ keyb$ pubkey$' )
+            $=  if                             ( rem$' line$ rem1$ )
+               2drop false exit
+            then                               ( rem$' line$ rem1$ )
+         then                                  ( rem$' line$ rem1$ )
+      then                                     ( rem$ line$ $ )
+      4drop                            ( rem$ )
    repeat                              ( rem$ )
    2drop true
 ;
@@ -182,7 +191,7 @@ d# 256 constant /sig
    2nip  " sha256" invalid? 0=
 ;
 
-\ Find two sig01: lines, the first with sha256 and the seconcd with rmd160,
+\ Find two sig01: lines, the first with sha256 and the second with rmd160,
 \ and check their signatures
 : fw-valid?  ( data$ sig$ -- okay? )
    2swap 2>r                                    ( sig$ r: data$ )
