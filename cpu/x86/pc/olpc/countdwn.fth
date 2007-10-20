@@ -34,7 +34,7 @@ headerless
    false
 ;
 : (interrupt-auto-boot?)  ( -- flag )
-   3
+   5
    ." Type the Esc key to interrupt automatic startup" cr
    show-countdown
 ;
