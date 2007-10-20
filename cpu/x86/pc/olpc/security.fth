@@ -146,13 +146,13 @@ d# 256 constant /sig
 : invalid?  ( data$ sig01$ exp-hashname$ -- error? )
    2>r
    parse-sig  if
-      ." Bad signature format in "  bundle-name$ type  cr
+      ." Bad signature format"  cr
       2r> 2drop  true exit
    then                                     ( data$ hashname$ sig$ r: exp$ )
 
    \ Check for duplicate hashname attacks
    2swap 2dup 2r>  $=  0=  if               ( data$ sig$ hashname$ )
-      ." Wrong hash name in "  bundle-name$ type  cr
+      ." Wrong hash name" cr
       4drop 2drop true exit
    then                                     ( data$ sig$ hashname$ )
 
@@ -164,24 +164,22 @@ d# 256 constant /sig
    then
 ;
 
+: our-pubkey?  ( sig01$ -- flag )
+   bl left-parse-string  " sig01:" $=  0=  if  2drop false exit  then  ( rem$ )
+   bl left-parse-string 2drop    \ Discard hash name            ( rem$ )
+   bl left-parse-string 2nip     \ Get key signature            ( key$ )
+   /sig 2* min  hex-decode  if  2drop false exit  then          ( binary-key$ )
+   pubkey$  dup 3 pick -  0 max /string   $=                    ( flag )
+;
+
 \ Look for a line that starts with "sig01: " and whose key signature
 \ matches the trailing bytes of our currently-selected public key.
 : next-sig01$  ( sig$ -- true | rem$ sig01$ false )
-   begin  dup  while                   ( rem$ )
-      newline left-parse-string        ( rem$' line$ )
-      2dup                                     ( rem$' line$ line$ )
-      bl left-parse-string  " sig01:" $=  if   ( rem$' line$ rem1$ )
-         bl left-parse-string 2drop            ( rem$' line$ rem1$ )  \ Discard hash name
-         bl left-parse-string                  ( rem$' line$ rem1$ key$ )
-         /sig 2* min  hex-decode  0=  if       ( rem$' line$ rem1$ keyb$ )
-            pubkey$  dup 3 pick -  0 max /string   ( rem$' line$ rem1$ keyb$ pubkey$' )
-            $=  if                             ( rem$' line$ rem1$ )
-               2drop false exit
-            then                               ( rem$' line$ rem1$ )
-         then                                  ( rem$' line$ rem1$ )
-      then                                     ( rem$ line$ $ )
-      4drop                            ( rem$ )
-   repeat                              ( rem$ )
+   begin  dup  while                          ( rem$ )
+      newline left-parse-string               ( rem$' line$ )
+      2dup our-pubkey?  if  false exit  then  ( rem$  line$ )
+      2drop                                   ( rem$ )
+   repeat                                     ( rem$ )
    2drop true
 ;
 
@@ -364,13 +362,17 @@ d# 67 buffer: machine-id-buf
 \ check-machine-signature verifies the signed object consisting
 \ of the machine identification info (SN + UUID) plus the expiration
 \ time "expiration$" against the crypto signature string sig$,
-\ returning 1 if valid, -1 if invalid.  (The unusual return value
-\ encoding is because the caller of check-machine-signature returns
-\ a tree-state flag; see check-lease.)
+\ returning 1 if valid, -1 if invalid, 0 if the key signature
+\ doesn't match our pubkey.
 
 : check-machine-signature  ( sig$ expiration$ -- -1|1 )
-   machine-id-buf d# 51 +  swap  move  ( sig$ )
-   machine-id-buf d# 67  2swap  " sha256" invalid?  if  -1  else  1  then
+   2over  our-pubkey?   if                              ( sig$ exp$ )
+      machine-id-buf d# 51 +  swap  move                ( sig$ )
+      machine-id-buf d# 67  2swap                       ( id$ sig$ )
+      " sha256" invalid?  if  -1  else  1  then         ( -1|1 )
+   else                                                 ( sig$ exp$ )
+      4drop 0                                           ( 0 )
+   then                                                 ( -1|0|1 )
 ;
 
 : set-disposition  ( adr -- )  c@  machine-id-buf d# 49 + c!  ;
@@ -407,7 +409,7 @@ d# 67 buffer: machine-id-buf
       " expired" ?lease-debug-cr
       4drop -1 exit
    then                                    ( sig$ expiration$ )
-   check-machine-signature                 ( -1|1 )
+   check-machine-signature                 ( -1|0|1 )
 ;
 
 \ lease-valid? tries to read a lease file from the currently-selected
@@ -569,8 +571,9 @@ stand-init: wp
    bl left-parse-string  1 <>  if  3drop -1 exit  then  ( rem$ disp-adr )
    set-disposition                                      ( rem$ )
 
-   develkey$ to pubkey$
-   " 00000000T000000Z"  check-machine-signature
+   develkey$ to pubkey$                                 ( rem$ )
+   bl left-parse-string                                 ( sig01$ exp$ )
+   check-machine-signature                              ( -1|0|1 )
 ;
 
 \ has-developer-key? searches for a valid developer key on the
