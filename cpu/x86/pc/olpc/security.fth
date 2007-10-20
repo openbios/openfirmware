@@ -647,7 +647,9 @@ stand-init: wp
 
             ec-indexed-io-off?  if
                visible
-               .ec-ixio-msg
+               ." Restarting to enable SPI FLASH writing."  cr
+               d# 3000 ms
+               ec-reboot
                security-failure
             then
 

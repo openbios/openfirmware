@@ -336,12 +336,7 @@ fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/ofw/gui/ofpong.fth
 fload ${BP}/cpu/x86/pc/olpc/life.fth
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
-: olpc-power-off  ( -- )
-   gx-power-off   \ Try the nice way first
-   d# 20 ms
-   ec-power-off   \ Then try the hard way
-;
-' olpc-power-off to power-off
+' gx-power-off to power-off
 [then]
 
 
@@ -388,8 +383,7 @@ patch drop ms install-console
       2drop 2drop
    then
 
-   1. h# 5140.0017 wrmsr  \ DIVIL_SOFT_RESET MSR, 5536 page 367
-   begin again
+   ec-reboot   \ Tell the EC to reboot us, so the EC can reset too
 ;
 ' dcon-reset-all to reset-all
 

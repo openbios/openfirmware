@@ -189,57 +189,6 @@ d# 10 constant #ec-retries
 \ the port 66 command sequence.
 : sci-quiet  ( -- )  h# 50  h# ff03 ec!  ;
 
-\ While accessing the SPI FLASH, we have to turn off the keyboard controller,
-\ because it continuously fetches from the SPI FLASH when it's on.  That
-\ interferes with our accesses.
-
-: ec-indexed-io-off?  ( -- flag )  h# ff14 ec@  h# ff =  ;
-: .ec-ixio-msg  ( -- )
-   ." Writing to the SPI FLASH is disabled."  cr
-   ." Disconnect/reconnect the battery and AC and try again."  cr
-;
-
-0 value kbc-off?
-: kbc-off  ( -- )
-   kbc-off?  if  exit  then  \ Fast bail out
-   ec-indexed-io-off?  if  .ec-ixio-msg  abort  then
-   h# d8 ec-cmd66      \ Prepare for reset
-   h# ff14 ec@  1 or  h# ff14 ec!
-   true to kbc-off?
-;
-
-: ec-power-off  ( -- )
-   1 h# ff14 ec!
-   1 h# ff01 ec!    \ Tell the EC to bounce us on restart
-   0 h# ff14 ec!
-;
-
-\ Unfortunately, since the system reset is mediated by the keyboard
-\ controller, turning the keyboard controller back on resets the system.
-
-: kbc-on  ( -- )
-   h# ff14 ec@  1 invert and  h# ff14 ec!  \ Innocuous if already on
-
-   false to kbc-off?
-;
-: fancy-kbc-on  ( -- )
-   2 h# ff01 ec!    \ Prevent full system reset
-   h# ff14 ec@  1 invert and  h# ff14 ec!  \ Innocuous if already on
-   d# 400 ms          \ Give the EC time to start up
-   h# 44 h# fc80 ec!  \ Re-enable scan code conversion and system flag
-   h# 43 h# fc81 ec!  \ Re-enable fast gate and ibf/obf interrupts
-
-   h# f h# fe51 ec!  \ Clear pending interrupts
-   h# f h# fe50 ec!  \ Re-enable GPT interrupts
-   h# 0 h# fea7 ec!  \ Clear FLASH write enable
-   h# 4 h# fead ec!  \ fast read mode
-   h# fe95 ec@  h# 80 or  h# fe95 ec! \ Write-protect LPC
-   h# 3 h# ff04 ec!  \ enable IBF/OBF interrupts
-\  h# 40 h# ff08 ec! \ Clear some interrupt
-   h# ff30 ec@  h# 10 or  h# ff30 ec!  \ Enable interrupt from GPIO04, PCI_RST#
-
-   false to kbc-off?
-;
 
 \ kbc-pause temporarily halts execution of the keyboard controller microcode.
 \ kbc-resume makes it run again, picking up where it left off.
@@ -248,6 +197,46 @@ d# 10 constant #ec-retries
 
 : kbc-pause  ( -- )   h# dd ec-cmd66  ;
 : kbc-resume  ( -- )  h# df ec-cmd66  ;
+
+0 value kbc-off?
+
+: kbc-on  ( -- )
+   \ Release the reset line to the 8051 microcontroller in the EC,
+   \ thus letting it restart with possibly-new microcode.
+   h# ff14 ec@  1 invert and  h# ff14 ec!  \ Innocuous if already on
+
+   false to kbc-off?
+;
+
+\ This restarts the EC and the CPU, resetting the EC state to its default.
+\ EC indexed I/O will come up in enabled state.
+: ec-reboot  ( -- )   h# db ec-cmd66  begin again   ;
+
+: ec-indexed-io-off?  ( -- flag )  h# ff14 ec@  h# ff =  ;
+: ?ixio-restart  ( -- )
+   ec-indexed-io-off?  if
+      cr  red-letters
+      ." Restarting to enable SPI FLASH writing.  Try again after the system restarts."
+      black-letters cr
+      d# 5000 ms
+      ec-reboot
+   then
+;
+
+\ While accessing the SPI FLASH, we have to turn off the keyboard controller,
+\ because it continuously fetches from the SPI FLASH when it's on.  That
+\ interferes with our accesses.
+
+\ Unfortunately, since the system reset is mediated by the keyboard
+\ controller, turning the keyboard controller back on resets the system.
+
+: kbc-off  ( -- )
+   kbc-off?  if  exit  then  \ Fast bail out
+   ?ixio-restart
+   h# d8 ec-cmd66      \ Prepare for reset
+   h# ff14 ec@  1 or  h# ff14 ec!
+   true to kbc-off?
+;
 
 : io-spi@  ( reg# -- b )  h# fea8 +  ec@  ;
 : io-spi!  ( b reg# -- )  h# fea8 +  ec!  ;
@@ -261,9 +250,7 @@ d# 10 constant #ec-retries
 
 : io-spi-reprogrammed  ( -- )
    ." Restarting..."  d# 2000 ms  cr
-   kbc-on
-   begin again
-\   ." Keyboard back on" cr
+   kbc-on  begin again
 ;
 
 : io-spi-start  ( -- )
@@ -281,6 +268,7 @@ d# 10 constant #ec-retries
 ;
 : use-local-ec  ( -- )  ['] io-spi-start to spi-start  ;
 use-local-ec
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
