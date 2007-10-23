@@ -652,7 +652,7 @@ stand-init: wp
                visible
                ." Restarting to enable SPI FLASH writing."  cr
                d# 3000 ms
-               ec-reboot
+               ec-ixio-reboot
                security-failure
             then
 

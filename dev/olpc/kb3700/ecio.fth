@@ -210,7 +210,17 @@ d# 10 constant #ec-retries
 
 \ This restarts the EC and the CPU, resetting the EC state to its default.
 \ EC indexed I/O will come up in enabled state.
-: ec-reboot  ( -- )   h# db ec-cmd66  begin again   ;
+: ec-reboot  ( -- )   h# db ec-cmd66  ;
+
+: ec-ixio-reboot  ( -- )
+   ['] ec-reboot catch  if
+      ." Automatic restart failed.  Remove/reinstall the battery and AC." cr
+      d# 10,000 ms
+      power-off
+   else
+      begin again    \ Just wait for it to happen
+   then
+;
 
 : ec-indexed-io-off?  ( -- flag )  h# ff14 ec@  h# ff =  ;
 : ?ixio-restart  ( -- )
@@ -219,7 +229,7 @@ d# 10 constant #ec-retries
       ." Restarting to enable SPI FLASH writing.  Try again after the system restarts."
       black-letters cr
       d# 5000 ms
-      ec-reboot
+      ec-ixio-reboot
    then
 ;
 
