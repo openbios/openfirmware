@@ -1164,7 +1164,7 @@ d# 20 constant wake-gap
 : broadcast-wakeup  ( -- )  wake-on-unicast wake-on-broadcast or  host-sleep-config  ;
 : sleep ( -- ) host-sleep-activate  ;
 
-[ifdef] notdef  \ This is test code that only works with a special debug version of the Libertas firmware
+[ifdef] wlan-wackup  \ This is test code that only works with a special debug version of the Libertas firmware
 : autostart  ( -- )
    h# 82 h# 9b ( CMD_MESH_ACCESS ) prepare-cmd
    5 +xw  \ CMD_ACT_SET_ANYCAST

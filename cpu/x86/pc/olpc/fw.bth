@@ -336,6 +336,10 @@ fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/ofw/gui/ofpong.fth
 fload ${BP}/cpu/x86/pc/olpc/life.fth
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
+[ifdef] wlan-wackup
+fload ${BP}/cpu/x86/pc/olpc/wlantest.fth
+[then]
+fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 ' gx-power-off to power-off
 [then]
 
@@ -384,6 +388,7 @@ patch drop ms install-console
    then
 
    ec-reboot   \ Tell the EC to reboot us, so the EC can reset too
+   begin again
 ;
 ' dcon-reset-all to reset-all
 
