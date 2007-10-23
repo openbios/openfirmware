@@ -269,7 +269,7 @@ warning @  warning off
 [ifdef] rom-loaded
       d# 300
       i-key-wait  if
-\        " patch false fast-boot? startup" eval
+         ec-indexed-io-off
          ." Interacting" cr  hex interact
       then
 [ifdef] lx-devel
