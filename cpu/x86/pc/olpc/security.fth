@@ -180,6 +180,7 @@ d# 256 constant /sig
       2dup our-pubkey?  if  false exit  then  ( rem$  line$ )
       2drop                                   ( rem$ )
    repeat                                     ( rem$ )
+   "   No signature for our key" ?lease-debug-cr
    2drop true
 ;
 
