@@ -475,9 +475,12 @@ d# 410 d# 540 2constant progress-xy
    game-key@ button-check and  if  visible unfreeze  then
 ;
 
+0 value security-off?
+
 : security-failure  ( -- )
    visible
    ." Stopping" cr
+   security-off?  if  quit  then
 
    d# 10000 ms
    power-off
@@ -710,6 +713,7 @@ stand-init: wp
 
          d# 5 d# 77  +icon-xy  show-dot     ( list$ )
          has-developer-key?  if             ( list$ )
+            true to security-off?
             2drop                           ( )
             visible
             show-unlock
