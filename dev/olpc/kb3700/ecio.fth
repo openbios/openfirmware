@@ -151,7 +151,7 @@ d# 10 constant #ec-retries
 : dcon-power-on    ( -- )  1 h# 26 ec-cmd-b!  ;
 : reset-ec-warm    ( -- )  h# 27 ec-cmd  ;
 : reset-ec         ( -- )  h# 28 ec-cmd  ;
-: write-protect-fw ( -- )  h# 29 ec-cmd  ;
+: write-protect-fw ( -- )  3 ec-cmd  ;
 : ebook-mode?      ( -- b )  h# 2a ec-cmd-b@  ;
 
 : ec-indexed-io-off  ( -- )  h# fe95 ec@  h# 40 invert and  h# fe95 ec!  ;

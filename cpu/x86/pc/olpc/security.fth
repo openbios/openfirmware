@@ -721,7 +721,7 @@ stand-init: wp
          then                               ( list$ )
 
          load-from-device  if               ( list$ )
-            write-protect-fw ec-indexed-io-off  ( list$ )
+            ec-indexed-io-off               ( list$ )
             2drop                           ( )
             ['] secure-load-ramdisk to load-ramdisk
             " init-program" $find  if
