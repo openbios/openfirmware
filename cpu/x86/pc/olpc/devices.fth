@@ -153,17 +153,6 @@ fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
 
 fload ${BP}/cpu/x86/pc/olpc/cmos.fth     \ CMOS RAM indices are 1f..ff , above RTC
 
-stand-init: nand5536
-   lx?  if  exit  then
-   h# c h# 800 *  config-w@  h# 11ab  <>  if
-      0 0  " m20000000" " /" begin-package
-        " nand5536" do-drop-in
-      end-package
-   then
-;
-
-\ This alias will work for either the CS5536 NAND FLASH
-\ or the CaFe NAND FLASH, whichever is present.
 devalias nand /nandflash
 devalias mtd  /nandflash
 

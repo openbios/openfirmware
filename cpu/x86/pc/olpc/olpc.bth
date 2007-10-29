@@ -8,7 +8,6 @@ in: ${BP}/cpu/x86/pc/olpc/build/resume.di
 in: ${BP}/cpu/x86/pc/olpc/build/rmstart.img
 in: ${BP}/cpu/x86/pc/olpc/build/paging.di
 in: ${BP}/cpu/x86/pc/olpc/build/fw.dic
-in: ${BP}/dev/geode/nandflash/build/nandflash.fc
 in: ${BP}/dev/mmc/sdhci/build/sdhci.fc
 in: ${BP}/dev/mmc/sdhci/build/sdmmc.fc
 in: ${BP}/dev/geode/ac97/build/ac97.fc
