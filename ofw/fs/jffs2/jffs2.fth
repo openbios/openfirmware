@@ -85,6 +85,7 @@ variable 'next-minode    \ Pointer into per-file inode list
 : dma-free   ( len -- adr )  " dma-free" $call-parent  ;
 
 true value first-time?
+-1 value partition#
 
 : allocate-buffers  ( -- )
    /eblock  dma-alloc     to block-buf
@@ -823,7 +824,7 @@ c;
 ;
 
 : scan-occupied  ( -- )
-   first-time?  0=  if  exit  then
+   " partition#" $call-parent partition# =  if  exit  then
    init-curvars
    dirents 'next-dirent !
    inodes  'next-inode  !
@@ -1432,6 +1433,7 @@ external
 
    scan-occupied                                ( )
 
+   " partition#" $call-parent to partition#
    false to first-time?
 
    my-args " <NoFile>"  $=  if  true exit  then

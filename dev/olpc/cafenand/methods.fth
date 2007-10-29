@@ -24,7 +24,13 @@ purpose: interface methods for CaFe NAND controller
    total-pages 0=   \ Error if there are no chips
 ;
 
-: open-args  ( -- arg$ )  my-args ascii : left-parse-string 2swap 2drop  ;
+: open-args  ( -- arg$ )
+   \ If the argument string starts with :, discard the rest, because
+   \ it is intended for the selftest function.
+   my-args  dup  0>  if    ( arg$ )
+      over c@  ascii :  =  if  drop 0  then
+   then
+;
 
 external
 
@@ -40,21 +46,28 @@ external
       dma-buf-va dma-buf-pa /dma-buf  " dma-map-out" $call-parent
       /dma-buf dma-free
    then
-   ?free-resmap
 ;
 
-: size  ( -- d )
-   resmap  if
-      #reserved-eblocks /eblock
-   else
-      total-pages /page
-   then
-   um*
+: size  ( -- d )  partition-size /page  um*  ;
+
+: $set-partition  ( $ -- error? )
+   dup 0=  if  2drop false exit  then      ( $ )
+   over c@  ascii 0 ascii 9 between  if    ( $ )  \ number
+      base @ >r decimal  $number  r> base !  if  true exit  then   ( )
+      set-partition-number                 ( error? )
+   else                                    ( $ )  \ name
+      set-partition-name                   ( error? )
+   then                                    ( error? )
+   dup  if                                 ( error? )
+      ." NAND: No such partition" cr       ( error? )
+   then         
 ;
 
 : open  ( -- okay? )
    map-regs
    init
+   0 to partition#
+   0 to partition-start
    configure-all  if  false exit  then
 
    /dma-buf dma-alloc to dma-buf-va
@@ -63,37 +76,29 @@ external
    " lmove" $find  0=  if  ['] move  then  to do-lmove
 
    get-bbt
+   usable-page-limit to partition-size
+   read-partmap
 
    open-args  dup  if   ( arg$ )
       ascii , left-parse-string    ( arg2$ arg1$ )
-      2dup " zip" $=  if           ( arg2$ arg1$ )
-         2drop                         ( arg2$ )
-         map-reserved                  ( arg2$ )
-         init-deblocker  0=  if  2drop ?free-resmap false exit  then  ( arg2$ )
 
-         \ If no file is specified, open the raw archive
-         dup 0=  if  2drop true exit  then                ( arg2$ )
-      
-         \ Otherwise interpose the filesystem handler
-         " zip-file-system" find-package  if              ( arg2$ xt )
-            interpose true                                ( true )
-         else                                             ( arg2$ )
-            ." Can't find zip-file-system package" cr     ( arg2$ )
-            2drop  deblocker close-package  ?free-resmap  ( )
-            false                                         ( false )
-         then
-         exit
-      then                                                ( arg2$ arg1$ )
-
-      \ Accept either "path" or "jffs2,path"
-      2dup " jffs2" $=  if                                ( arg2$ arg1$ )
-         2drop                                            ( arg2$ )
-      else                                                ( arg2$ arg1$ )
-         \ XXX probably should check that arg$2 is empty...
+      \ Handle partitions                                 ( arg2$ arg1$ )
+      2dup 1 min  " \"  $=  if                            ( arg2$ arg1$ )
          2swap 2drop                                      ( arg1$ )
-      then                                                ( arg$ )
+         \ If there is no "mtd" specifier and there is a partition map,
+         \ select the boot partition.
+         #partitions 0>=  if                              ( arg1$ )
+            " boot" $set-partition  if  2drop false exit  then
+         then                                             ( arg2$ arg1$ )
+      else                                                ( arg2$ arg1$ )
+         \ The argument is not a file so it must be a partition spec
+         #partitions 0<  if  2drop 2drop  false exit  then  ( arg2$ arg1$ )
+         $set-partition  if  2drop false exit  then         ( arg2$ )
+      then                                                  ( arg$ )
 
-      " jffs2-file-system" find-package  if  ( arg$ xt )
+      dup 0=  if  2drop  true exit  then                    ( arg$ )
+
+      " jffs2-file-system" find-package  if                 ( arg$ xt )
          interpose  true   ( okay? )
       else                 ( arg$ )
          ." Can't find jffs2-file-system package" cr

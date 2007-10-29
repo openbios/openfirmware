@@ -121,7 +121,7 @@ d# 256 constant /sig
 \ bundle, piecing it together from the device (DN), path (PN),
 \ filename head (CN), and filename body (FN) macros.
 
-: bundle-name$  ( -- $ )  " ${DN}:${PN}\${CN}${FN}.zip" expand$  ;
+: bundle-name$  ( -- $ )  " ${DN}${PN}\${CN}${FN}.zip" expand$  ;
 
 \ bundle-present? determines the existence (or not) of a signed image
 \ bundle whose name is constructed from the current settings of the
@@ -419,7 +419,7 @@ d# 67 buffer: machine-id-buf
 \ a valid lease was found.
 
 : lease-valid?  ( -- valid? )
-   " ${DN}:\security\lease.sig" expand$            ( name$ )
+   " ${DN}\security\lease.sig" expand$            ( name$ )
    " Trying " ?lease-debug  2dup ?lease-debug-cr
    r/o open-file  if  drop false exit  then        ( ih )
    load-started
@@ -584,7 +584,8 @@ stand-init: wp
 \ device given by the DN macro.
 
 : has-developer-key?  ( -- flag )
-   " ${DN}:\security\develop.sig" expand$    ( name$ )
+   button-x game-key?  if  false exit  then
+   " ${DN}\security\develop.sig" expand$    ( name$ )
    " Trying " ?lease-debug  2dup ?lease-debug-cr
    r/o open-file  if  drop false exit  then  ( ih )
    >r
@@ -691,7 +692,7 @@ stand-init: wp
 ;
 
 : filesystem-present?  ( -- flag )
-   " ${DN}:\" expand$    ( name$ )   
+   " ${DN}\" expand$    ( name$ )   
    open-dev  dup  if  dup close-dev  then
    0<>
 ;
@@ -740,8 +741,7 @@ stand-init: wp
 
 : persistent-devkey?  ( -- flag )  " dk" find-tag  dup  if  nip nip  then  ;
 
-: all-devices$  ( -- list$ )  " disk sd fastnand nand"  ;
-
+: all-devices$  ( -- list$ )  " disk: sd: nand:"  ;
 
 d# 410 d# 540 2constant progress-xy
 : secure-startup  ( -- )

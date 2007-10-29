@@ -4,28 +4,85 @@ purpose: Secure NAND updater
 
 : get-hex#  ( -- n )
    safe-parse-word
-   push-hex
-   $number  " Bad number" ?nand-abort
-   pop-base
+   push-hex $number pop-base  " Bad number" ?nand-abort
 ;
 
-\ XXX implement this
-: map-eblock# ( block# -- block#' )  ;
+0 value partition-map-offset
+0 value next-partition-start
 
+0 value partition#
+d# 256 constant /partition-entry
+: partition-adr  ( -- adr )  partition# /partition-entry *  load-base +  ;
+: max-nand-offset  ( -- n )  " usable-page-limit" $call-nand /nand-page *  ;
+
+: add-partition  ( name$ #eblocks -- )
+   partition# " max#partitions" $call-nand >=  abort" Partition map overflow"
+
+   -rot                                                ( #eblocks name$ )
+   partition-adr /partition-entry erase                ( #eblocks name$ )
+   d# 15 min  partition-adr swap move                  ( #eblocks )
+   next-partition-start  partition-adr d# 16 + l!      ( #eblocks )
+
+   dup -1 =  if                                        ( #eblocks )
+      drop  max-nand-offset                            ( last-offset )
+      next-partition-start -                           ( #bytes )
+   else
+      /nand-block *                                    ( #bytes )
+   then                                                ( #bytes )
+
+   dup partition-adr d# 24 +  l!             \ size    ( #bytes )
+
+   next-partition-start + to next-partition-start      ( )
+   next-partition-start max-nand-offset > abort" NAND size overflow"
+
+   partition# 1+ to partition#
+;
+: start-partition-map  ( -- )
+   load-base /nand-block h# ff fill
+   0 to partition#
+\   0 to next-partition-start
+   " partition-map-page#" $call-nand  /nand-page *  to partition-map-offset
+
+   partition-map-offset to next-partition-start
+   " FIS directory" 1 add-partition   
+;
+: write-partition-map  ( -- )
+   partition-map-offset /nand-page /  dup " erase-block" $call-nand
+   load-base  swap  nand-pages/block  " write-blocks" $call-nand
+   nand-pages/block <> abort" Can't write partition map"
+;
+
+0 value partition-page-offset
+: map-eblock# ( block# -- block#' )  partition-page-offset +  ;
+
+\ XXX need to check for overwriting existing partition map
 
 vocabulary nand-commands
 also nand-commands definitions
 
+: set-partition:  ( "partition#" -- )
+   safe-parse-word " $set-partition" $call-nand abort" Nonexistent partition#" 
+;
+
+: partitions:  ( "name" "#eblocks" ... -- )
+   start-partition-map
+   begin  parse-word  dup  while   ( name$ )
+      get-hex#  add-partition      ( )
+   repeat                          ( null$ )
+   2drop
+   write-partition-map
+;
+
 : data:  ( "filename" -- )
    safe-parse-word fn-buf place
-   bundle-name$ image-name-buf place
+   " ${DN}${PN}\${CN}${FN}" expand$  image-name-buf place
    open-img
 ;
 
 : erase-all  ( -- )
    #nand-pages >eblock#  show-erasing
    ['] show-bad  ['] show-erased  ['] show-bbt-block " (wipe)" $call-nand
-   #image-eblocks show-writing
+\   #image-eblocks show-writing
 ;
 
 : eblock: ( "eblock#" "hashname" "hash-of-128KiB" -- )
@@ -80,6 +137,7 @@ previous definitions
    tuck  load-base h# 100000 +  swap move  ( len )
    load-base h# 100000 + swap
    open-nand
+
    ['] noop to show-progress
    #nand-pages >eblock#  show-init
 
@@ -112,6 +170,8 @@ previous
             2drop                     ( )
             show-unlock               ( )
             img$ do-fs-update         ( )
+            ." Rebooting in 10 seconds ..." cr
+            d# 10,000 ms  bye
             exit
          then                         ( rem$ )
          show-lock                    ( rem$ )
@@ -119,6 +179,7 @@ previous
    repeat                             ( rem$ )
    2drop
 ;
+: update-devices  " disk: sd: http:\\177.18.16.1"  ;
 : try-fs-update  ( -- )
    ." Searching for a NAND file system update image." cr
    all-devices$ fs-update-from-list

@@ -360,6 +360,7 @@ device-end
 h# 32 buffer: icon-name
 
 : show-icon  ( basename$ -- )
+   [char] : left-parse-string  2nip              ( basename$' )
    " rom:" icon-name pack  $cat                  ( )
    " .565" icon-name $cat                        ( )
    icon-name count  $show                        ( )

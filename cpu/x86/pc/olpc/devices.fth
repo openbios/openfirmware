@@ -165,6 +165,7 @@ stand-init: nand5536
 \ This alias will work for either the CS5536 NAND FLASH
 \ or the CaFe NAND FLASH, whichever is present.
 devalias nand /nandflash
+devalias mtd  /nandflash
 
 [ifdef] pseudo-nvram
 fload ${BP}/cpu/x86/pc/biosload/filenv.fth

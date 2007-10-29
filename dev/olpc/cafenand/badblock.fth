@@ -18,6 +18,7 @@ purpose: Bad block table handling for NAND FLASH
 \ Return address of byte containing bad-block info and the mask
 \ for the relevant bits.
 : >bbt  ( page# -- byte-adr mask )
+   partition-start +
    pages/eblock /        ( eblock# )
    4 /mod                ( remainder byte# )
    bbt +                 ( remainder adr )
@@ -29,20 +30,6 @@ purpose: Bad block table handling for NAND FLASH
    >bbt              ( adr mask )
    tuck swap c@ and  ( mask masked-byte )
    <>
-;
-: block-reserved?  ( page# -- flag )
-   >bbt              ( adr mask )
-   tuck swap c@ and  ( mask masked-byte )
-   swap h# aa and  =
-;
-
-
-\ Marks the block containing page# as used for another purpose
-: mark-reserved  ( page# -- )
-   >bbt                   ( adr mask )
-   dup h# aa and  -rot    ( set-mask adr mask )
-   invert over c@ and     ( set-mask adr masked-byte )
-   rot or  swap c!        ( )
 ;
 
 \ Marks the block containing page# as bad
@@ -107,6 +94,7 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
 ;
 
 : .page-byte  ( page# -- )
+    partition-start +
     push-hex
     ."  at 0x"  dup /page um*  <# #s #> type
     ."  = page 0x" dup . ." = eblock 0x" pages/eblock / u.
@@ -199,26 +187,41 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
    release-bbt
 ;
 
-\ Get the existing bad block table, or make a new one if necessary
-: get-bbt  ( -- )
-   get-existing-bbt
-   bbt 0=  if
-      ." No bad block table; making one" cr
-      make-bbt
-   then
+0 instance value #bad-blocks
+0 instance value bb-list
+: make-bb-list  ( -- )
+   0  usable-page-limit  0  ?do   ( bb# )
+      i block-bad?  if  1+  then
+   pages/eblock +loop
+   to #bad-blocks
+
+   #bad-blocks 1+  /n* alloc-mem to bb-list
+
+   bb-list  usable-page-limit  0  ?do   ( adr )
+      i block-bad?  if                  ( adr )
+         i over !  na+                  ( adr' )
+      then                              ( adr )
+   pages/eblock +loop                   ( adr )
+   h# 7fffffff swap !                   ( )   \ "Stopper" entry
 ;
 
-0 instance value resmap
-0 value #reserved-eblocks
-: ?free-resmap  ( -- )
-   resmap  if
-      resmap #reserved-eblocks /n* free-mem
-      0 to resmap
+: map-page#  ( page# -- page#' )
+   pages/eblock /mod         ( offset eblock# )
+   bb-list                   ( offset eblock# list-adr )
+   begin  2dup @  >=  while  ( offset eblock# list-adr )
+      swap 1+  swap na1+     ( offset eblock#' list-adr' )
+   repeat                    ( offset eblock#' list-adr' )
+   pages/eblock *  +         ( page#' )
+;
+: ?free-bb-list  ( -- )
+   bb-list  if
+      bb-list #bad-blocks 1+  /n*  free-mem
+      0 to bb-list
    then
 ;
 
 \ The upper limit of pages below the bad block tables
-: usable-page-limit  ( -- page# )
+: (usable-page-limit)  ( -- page# )
    bbt0  if
       bbt0
       bbt1  if  bbt1 min  then
@@ -228,20 +231,20 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
    total-pages
 ;
 
-: map-resblock  ( page# #pages -- page#' #pages )
-   swap pages/eblock /mod    ( adr #pages offset eblock# )
-   resmap swap na+ @         ( adr #pages offset res-eblock# )
-   + pages/eblock *  swap    ( adr page#' #pages )
+\ Get the existing bad block table, or make a new one if necessary
+: get-bbt  ( -- )
+   get-existing-bbt
+   bbt 0=  if
+      ." No bad block table; making one" cr
+      make-bbt
+   then
+   (usable-page-limit) to usable-page-limit  
 ;
 
 external
 \ Assumes that the page range doesn't cross an erase block boundary
 : read-blocks  ( adr page# #pages -- #read )
-   resmap  if                   ( adr page# #pages )
-      map-resblock
-   else
-      over block-bad?  if  3drop 0 exit  then
-   then
+   over block-bad?  if  3drop 0 exit  then
 
    rot >r  2dup r> -rot         ( page# #pages adr page# #pages )
    bounds  ?do                  ( page# #pages adr )
@@ -255,11 +258,7 @@ external
 ;
 
 : write-blocks  ( adr page# #pages -- #written )
-   resmap  if                   ( adr page# #pages )
-      map-resblock
-   else
-      over block-bad?  if  3drop 0 exit  then
-   then
+   over block-bad?  if  3drop 0 exit  then
 
    over >r  dup >r               ( adr page# #pages  r: page# #pages )
    bounds  ?do                   ( adr  r: page# #pages )
@@ -305,21 +304,23 @@ external
 : .bn  ( -- )  (cr .  ;  
 
 : (wipe)  ( 'show-bad 'show-erased 'show-bbt -- )
-   get-existing-bbt
-   bbt 0=  if
-      \ If there is no existing bad block table, make one from factory info
-      make-bbt
-   then                    ( 'show-bad 'show-erased 'show-bbt )
+   partition# 0=  if
+      get-existing-bbt
+      bbt 0=  if
+         \ If there is no existing bad block table, make one from factory info
+         make-bbt
+      then                    ( 'show-bad 'show-erased 'show-bbt )
 
-   bbt0  if  bbt0 pages/eblock / over execute  then
-   bbt1  if  bbt1 pages/eblock / over execute  then
+      bbt0  if  bbt0 pages/eblock / over execute  then
+      bbt1  if  bbt1 pages/eblock / over execute  then
+   then
    drop                              ( 'show-bad 'show-erased )
 
-   usable-page-limit  0  ?do         ( 'show-bad 'show-erased )
+   partition-size  0  ?do            ( 'show-bad 'show-erased )
       i block-bad?  if
-         i pages/eblock / 2 pick execute
+         i partition-start + pages/eblock / 2 pick execute
       else
-         i pages/eblock / over execute
+         i partition-start + pages/eblock / over execute
          i erase-block
       then
    pages/eblock +loop                ( 'show-bad 'show-erased )
@@ -330,32 +331,13 @@ external
 : wipe  ( -- )  ['] drop  ['] .bn  ['] drop  (wipe)  ;
 
 : show-bbt  ( -- )
-   get-bbt
    total-pages  0  ?do
-      i block-reserved?  if  ." Reserved " i .page-byte cr  else
-         i block-bad?    if  ." Bad block" i .page-byte cr  then
-      then
+      i block-bad?    if  ." Bad block" i .page-byte cr  then
    pages/eblock +loop
    bbt1  if  ." BBTable 1" bbt1 .page-byte  cr  then
    bbt0  if  ." BBTable 0" bbt0 .page-byte  cr  then
 ;
 
-: map-reserved
-   0  usable-page-limit  0  ?do
-      i block-reserved?  if  1+  then
-   pages/eblock +loop
-   dup to #reserved-eblocks
-
-   /n* alloc-mem  to resmap   ( adr )
-
-   resmap  usable-page-limit  0  ?do   ( adr )
-      i block-reserved?  if            ( adr )
-         i over !  na1+                ( adr' )
-      then                             ( adr )
-   pages/eblock +loop                  ( adr )
-   drop
-;
-      
 headers
 
 \ Copy-to-NAND functions
@@ -367,7 +349,7 @@ external
 headers
 
 : (next-page#)  ( -- true | page# false )
-   usable-page-limit  scan-page# pages/eblock +  ?do
+   partition-size  scan-page# pages/eblock +  ?do
       i block-bad? 0=  if
          i to scan-page#
          scan-page# false unloop exit
@@ -416,14 +398,14 @@ external
 
 : copy-block  ( adr -- page# error? )
    begin  (next-page#)  0=  while                    ( adr page# )
-      2dup copy&check  if  nip false exit  then      ( adr page# )
+      2dup copy&check  if  nip partition-start + false exit  then      ( adr page# )
       \ Error; retry once
       dup erase-block                                ( adr page# )
-      2dup copy&check  if  nip false exit  then     ( adr page# )
+      2dup copy&check  if  nip partition-start + false exit  then     ( adr page# )
       mark-bad  save-bbt                             ( adr )
    repeat                                            ( adr )
    drop                                              ( )
-   usable-page-limit pages/eblock -  true            ( page# error? )
+   partition-size pages/eblock - partition-start + true            ( page# error? )
 ;
 
 : put-cleanmarker  ( page# -- )
@@ -437,7 +419,7 @@ external
 : put-cleanmarkers  ( show-xt -- )
    begin  (next-page#) 0=  while  ( show-xt page# )
       dup put-cleanmarker         ( show-xt page# )
-      pages/eblock / over execute ( show-xt )
+      partition-start + pages/eblock / over execute ( show-xt )
    repeat                         ( show-xt )
    drop
 ;
@@ -479,99 +461,6 @@ external
       i @ -1 <>  if  false unloop exit  then
    /n +loop
    true
-;
-
-: block-erased?  ( page# -- flag )
-   pages/eblock  bounds  ?do
-      test-page i read-page  drop
-      test-page /page erased? 0=  if  false unloop exit  then
-   pages/eblock +loop
-   true
-;
-: enough-reserve?  ( len -- flag )
-   dup  0=  if  true exit  then                      ( len )
-   /eblock 1- +  /eblock /                           ( #eblocks-needed )
-   usable-page-limit  0  ?do                         ( #needed )
-      i  block-reserved?  if  1-  else               ( #needed' )
-         i block-erased?  if  1-  then               ( #needed' )
-      then                                           ( #needed )
-      dup 0=  if  drop true unloop exit  then        ( #needed )
-   pages/eblock +loop                                ( #needed )
-   drop  false                                       ( flag )
-;
-
-0 value any-marked?
-
-: start-fastcopy  ( len -- error? )
-   /page dma-alloc to test-page
-   enough-reserve?  0=  if
-      test-page /page dma-free
-      true exit
-   then
-   false to any-marked?
-
-   \ Erase existing fastnand area
-   usable-page-limit  0  ?do
-      i block-reserved?  if
-         i erase-block
-         i mark-good  true to any-marked?
-      then
-   pages/eblock +loop
-
-   start-scan
-   false
-;
-: next-fastcopy  ( adr -- )
-   usable-page-limit  scan-page#  ?do           ( adr )
-      i block-erased?  if                       ( adr )
-         i pages/eblock write-blocks  drop      ( )
-         i mark-reserved   true to any-marked?  ( )
-         i pages/eblock +  to scan-page#
-         unloop exit
-      then                                      ( adr )
-   pages/eblock +loop                           ( adr )
-   ." Error: no more NAND fastcopy space" cr
-   abort
-;
-: end-fastcopy  ( -- )
-   test-page /page dma-free
-   any-marked?  if  save-bbt  then
-;
-
-0 instance value deblocker
-: $call-deblocker  ( ??? adr len -- ??? )  deblocker $call-method  ;
-: init-deblocker  ( -- okay? )
-   " "  " deblocker"  $open-package  to deblocker
-   deblocker if
-      true
-   else
-      ." Can't open deblocker package"  cr  false
-   then
-;
-: seek  ( d.offset -- status )
-   resmap  0=  if  -1 exit  then
-   " seek" $call-deblocker
-;
-: position  ( -- d.offset )
-   resmap  0=  if  0. exit  then
-   " position" $call-deblocker
-;
-: read  ( adr len -- actual )
-   resmap  0=  if  2drop -1 exit  then
-   " read" $call-deblocker
-;
-: write  ( adr len -- actual )
-   resmap  0=  if  2drop -1 exit  then
-   " write" $call-deblocker
-;
-: size  ( -- d.size )
-   resmap  0=  if  0. exit  then
-   #reserved-eblocks /eblock um*
-;
-: load  ( adr -- actual )
-   resmap  0=  if  drop 0 exit   then
-   0 0 seek drop
-   size drop  read
 ;
 
 \ LICENSE_BEGIN

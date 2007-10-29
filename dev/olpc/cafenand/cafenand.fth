@@ -68,12 +68,18 @@ h# e constant bb-offset  \ Location of bad-block table signature in OOB data
 \ version of the CaFe chip spec that we have, but Jerry Zheng says
 \ that it chooses the chip select - 0 for CS0, 1 for CS1.
 
+0 instance value partition#
+0 instance value partition-start  \ Boundary between chip 0 and chip 1
+0 instance value partition-size   \ Boundary between chip 0 and chip 1
+0 instance value usable-page-limit \ #pages excluding bad block tables
+
 1 instance value chip-boundary  \ Boundary between chip 0 and chip 1
 0 instance value cs-mask        \ Chip-select bit for command 0 register
 : chip0  ( -- )  0 to cs-mask  ;
 : chip1  ( -- )  h# 80000 to cs-mask  ;
 
 : set-chip  ( page# -- page#' )
+   partition-start +
    dup  chip-boundary >=  if  chip-boundary -  chip1  else  chip0  then
 ;
 
