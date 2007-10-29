@@ -12,7 +12,13 @@ headers
 
    0 set-target				( port dev )	\ Address it as device 0
 
-   dup set-address  if  2drop exit  then ( port dev )	\ Assign it usb addr dev
+   dup set-address  if			( port dev )	\ Assign it usb addr dev
+      ." Retrying with a delay" cr
+      over reset-port  d# 5000 ms
+      dup set-address  if		( port dev )	\ Assign it usb addr dev
+         2drop exit
+      then
+   then ( port dev )
 
    dup set-target			( port dev )	\ Address it as device dev
    make-device-node			( )
@@ -76,7 +82,7 @@ external
    true
 ;
 
-: resume  ( -- )
+: do-resume  ( -- )
    init-ehci-regs
    start-usb
    claim-ownership
