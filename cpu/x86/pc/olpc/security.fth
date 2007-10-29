@@ -624,6 +624,14 @@ stand-init: wp
    u<=
 ;
 
+\ Wait until the time-stamp counter indicates a certain time after startup.
+: wait-until  ( ms -- )
+   begin   ( ms )
+      dup  tsc@ ms-factor um/mod nip  ( ms ms time-ms )
+   u<= until  ( ms )
+   drop
+;
+
 : load-from-device  ( devname$ -- done? )
 
    d# 16 0  +icon-xy  show-dot
@@ -647,17 +655,19 @@ stand-init: wp
             true to file-loaded?
             " Updating firmware" ?lease-debug-cr
 
-            ['] ?enough-power  catch  ?dup  if
-               visible
-               .error
-               security-failure
-            then
-
             ec-indexed-io-off?  if
                visible
                ." Restarting to enable SPI FLASH writing."  cr
                d# 3000 ms
                ec-ixio-reboot
+               security-failure
+            then
+
+            d# 12,000 wait-until   \ Wait for EC to notice the battery
+
+            ['] ?enough-power  catch  ?dup  if
+               visible
+               .error
                security-failure
             then
 
