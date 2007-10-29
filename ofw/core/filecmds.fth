@@ -60,11 +60,7 @@ d# 32  buffer: drive-name
 
 : file&dir  ( path$ -- basename$ dirname$ )  [char] \ right-split-string  ;
 : parse-volume  ( $1 -- path$ volume$ )
-   [char] : right-split-string   ( path$ volume$:|null$ )
-   dup  0=  if                   ( path$ null$ )
-      2drop current-volume-name  ( path$ volume$: )
-   then                          ( path$ volume$: )
-   1-   \ Remove the :           ( path$ volume$ )
+   " :" lex  if  drop  else  current-volume-name 1-  then  ( path$ volume$: )
 ;
 : drive-volume  ( -- adr len false | xt true )
    drive-name count  dup  if    ( adr len )
