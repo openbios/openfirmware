@@ -724,8 +724,8 @@ stand-init: wp
 
          d# 5 d# 77  +icon-xy  show-dot     ( list$ )
          has-developer-key?  if             ( list$ )
-            true to security-off?
             2drop                           ( )
+            true to security-off?
             visible
             show-unlock
             true exit
@@ -774,7 +774,7 @@ d# 410 d# 540 2constant progress-xy
       freeze  dcon-freeze
    then
 
-   persistent-devkey?  if  exit  then
+   persistent-devkey?  if  true to security-off?  visible  exit  then
 
    get-my-sn  if  visible  ." No serial number" cr     show-sad  security-failure  then
    get-date   if  visible  ." Invalid system date" cr  show-sad  security-failure  then
