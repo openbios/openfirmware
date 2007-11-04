@@ -50,6 +50,7 @@ d# 256 constant /partition-entry
    partition-map-offset /nand-page /  dup " erase-block" $call-nand
    load-base  swap  nand-pages/block  " write-blocks" $call-nand
    nand-pages/block <> abort" Can't write partition map"
+   " read-partmap" $call-nand
 ;
 
 0 value partition-page-offset
