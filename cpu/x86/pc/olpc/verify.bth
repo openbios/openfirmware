@@ -5,12 +5,12 @@ build-now
 
 fload ${BP}/cpu/x86/pc/olpc/versions.fth
 
-" wget -nv http://dev.laptop.org/pub/firmware/crypto/${KEYS}/os.public        -O os.public"        expand$ $sh
-" wget -nv http://dev.laptop.org/pub/firmware/crypto/${KEYS}/fw.public        -O fw.public"        expand$ $sh
-" wget -nv http://dev.laptop.org/pub/firmware/crypto/${KEYS}/fs.public        -O fs.public"        expand$ $sh
-" wget -nv http://dev.laptop.org/pub/firmware/crypto/${KEYS}/lease.public     -O lease.public"     expand$ $sh
-" wget -nv http://dev.laptop.org/pub/firmware/crypto/${KEYS}/developer.public -O developer.public" expand$ $sh
-" wget -nv http://dev.laptop.org/pub/firmware/crypto/bios_verify-${CRYPTO_VERSION}.img -O verify.img" expand$ $sh
+" wget -q http://dev.laptop.org/pub/firmware/crypto/${KEYS}/os.public        -O os.public"        expand$ $sh
+" wget -q http://dev.laptop.org/pub/firmware/crypto/${KEYS}/fw.public        -O fw.public"        expand$ $sh
+" wget -q http://dev.laptop.org/pub/firmware/crypto/${KEYS}/fs.public        -O fs.public"        expand$ $sh
+" wget -q http://dev.laptop.org/pub/firmware/crypto/${KEYS}/lease.public     -O lease.public"     expand$ $sh
+" wget -q http://dev.laptop.org/pub/firmware/crypto/${KEYS}/developer.public -O developer.public" expand$ $sh
+" wget -q http://dev.laptop.org/pub/firmware/crypto/bios_verify-${CRYPTO_VERSION}.img -O verify.img" expand$ $sh
 
 \ This forces the creation of an verify.log file, so we don't re-fetch
 writing verify.version
