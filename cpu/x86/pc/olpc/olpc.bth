@@ -22,9 +22,8 @@ in: ${BP}/dev/usb2/device/wlan/build/usb8388.fc
 in: ${BP}/dev/olpc/cafenand/build/cafenand.fc
 in: ${BP}/dev/olpc/cafecamera/build/cafecamera.fc
 in: ${BP}/clients/memtest86/memtest
-in: ec.img
-in: crypto.img
-in: usb8388.bin
+in: ${BP}/cpu/x86/pc/olpc/build/verify.img
+in: ${BP}/cpu/x86/pc/olpc/build/usb8388.bin
 in: ${BP}/dev/pci/build/pcibridg.fc
 
 build-now
