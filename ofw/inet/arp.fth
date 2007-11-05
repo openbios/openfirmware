@@ -83,7 +83,9 @@ instance variable arp-delay
 ;
 
 : .arp/rarp-timeout ( -- )
-   " Timeout waiting for ARP/RARP packet" diag-type diag-cr
+   bootnet-debug  if
+      ." Timeout waiting for ARP/RARP packet" cr
+   then
 ;
 
 : arpcom  ( his-ip his-en  my-ip my-en  req-type  en-type  -- ok? )
