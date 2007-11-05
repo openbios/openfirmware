@@ -118,7 +118,7 @@ true value first-time?
 : eblock>page  ( eblock# -- page# )  pages/eblock *  ;
 : page>eblock  ( page# -- eblock# )  pages/eblock /  ;
 
--1 ( instance ) value have-eblock#  \ For avoiding redundant reads
+-1 instance value have-eblock#  \ For avoiding redundant reads
 : (read-pages)  ( page# #pages  -- #read )
    \ Partial reads invalidate the cache
    dup pages/eblock <>  if  -1 to have-eblock#  then  ( page# #pages )
@@ -824,7 +824,7 @@ c;
 ;
 
 : scan-occupied  ( -- )
-   " partition#" $call-parent partition# =  if  exit  then
+   " partition#" $call-parent partition# =  first-time? 0= and  if  exit  then
    init-curvars
    dirents 'next-dirent !
    inodes  'next-inode  !
