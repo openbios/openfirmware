@@ -497,7 +497,8 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 : ?diags  ( -- )
    rocker-left game-key?  if
-      text-on  " test-all" eval  d# 10000 ms  power-off
+      text-on  " test-all" eval
+      ." Tests complete - powering off" cr  d# 5000 ms  power-off
    then
 ;
 : ?fs-update  ( -- )
