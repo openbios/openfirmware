@@ -156,6 +156,7 @@ constant /dl-sync
    (download-fw)
    wait-cmd-resp drop			\ A packet is sent after download completes
    ds-ready to driver-state
+   d# 200 ms
    marvel-get-mac-address
 ;
 
