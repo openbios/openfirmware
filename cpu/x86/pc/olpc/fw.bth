@@ -138,12 +138,14 @@ end-support-package
 [then]
 
 [ifdef] linux-support
+\needs unix-seconds>  fload ${BP}/ofw/fs/unixtime.fth	\ Unix time calculation
 support-package: ext2-file-system
    fload ${BP}/ofw/fs/ext2fs/ext2fs.fth	\ Linux file system
 end-support-package
 [then]
 
 [ifdef] jffs2-support
+\needs unix-seconds>  fload ${BP}/ofw/fs/unixtime.fth	\ Unix time calculation
 support-package: jffs2-file-system
    fload ${BP}/ofw/fs/jffs2/jffs2.fth	\ Journaling flash file system 2
 end-support-package
@@ -418,6 +420,23 @@ end-support-package
    " OLPCOFW"nschool-mesh-0"nschool-mesh-1"nschool-mesh-2"
 ;
 ' olpc-ssids to default-ssids
+
+fload ${BP}/ofw/inet/sntp.fth
+: olpc-ntp-servers  ( -- )
+   " time 172.18.0.1 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org"
+;
+' olpc-ntp-servers to ntp-servers
+: ntp-time&date  ( -- s m h d m y )
+   ntp-timestamp  abort" Can't contact NTP server"
+   ntp>time&date
+;
+: .clock  ( -- )
+   time&date .date space .time  ."  UTC" cr
+;
+: ntp-set-clock  ( -- )
+   ntp-time&date  " set-time"  clock-node @ $call-method
+   .clock
+;
 
 [ifdef] use-ppp
 fload ${BP}/ofw/ppp/loadppp.fth
