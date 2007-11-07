@@ -18,9 +18,10 @@ variable clock-node  ' clock-node  " clock" chosen-variable
 
 headerless
 : 2.d  ( n -- )   push-decimal  (.2)  type  pop-base  ;
+: 4.d  ( n -- )   push-decimal  <# u# u# u# u# u#>  type  pop-base  ;
 
 headers
-: .date  ( d m y -- )   swap 2.d ." /" swap 2.d ." /" d# 100 mod 2.d  ;
+: .date  ( d m y -- )   4.d ." -" 2.d ." -" 2.d  ;
 : .time  ( s m h -- )   2.d ." :" 2.d ." :" 2.d  ;
 
 \ Interactive diagnostic
