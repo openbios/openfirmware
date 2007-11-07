@@ -199,7 +199,7 @@ headers
    1 and throw                                   ( )
    get-host-addr                                 ( answer-ip )
 ;
-: (resolve)  ( hostname$ -- )
+: (resolve)  ( hostname$ -- 'ip )
    bootnet-debug  if                             ( hostname$ )
       ." Using DNS to find the IP address of "   ( hostname$ )
       2dup type cr                               ( hostname$ )
@@ -245,7 +245,11 @@ headerless
 headers
 : $set-host  ( hostname$ -- )
    dup 0= ?bad-ip
-   over c@  [char] 0 [char] 9 between  if  $>ip  else  (resolve)  then
+   2dup ['] $>ip catch  if   ( hostname$ x x )
+      2drop  (resolve)
+   else                      ( hostname$ 'ip )
+      nip nip                ( 'ip )
+   then
    set-dest-ip
 ;
 \ LICENSE_BEGIN
