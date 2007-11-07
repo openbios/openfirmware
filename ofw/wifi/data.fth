@@ -12,7 +12,7 @@ purpose: Supplicant data and environment data
 : enable-rsn   ( -- )  " enable-rsn"  $call-parent drop  ;
 : disable-rsn  ( -- )  " disable-rsn" $call-parent drop  ;
 : disable-wep  ( -- )  " disable-wep" $call-parent drop  ;
-: set-wep    ( wep4$ wep3$ wep2$ wep1$ -- )  " set-wep"   $call-parent drop  ;
+: set-wep    ( wep4$ wep3$ wep2$ wep1$ idx -- )  " set-wep"   $call-parent drop  ;
 : associate  ( ch ssid$ target-mac$ -- ok? )     " associate" $call-parent  ;
 : supported-rates$  ( -- adr len )  " supported-rates$" $call-parent  ;
 : set-common-rates  ( adr len -- )  " set-common-rates" $call-parent  ;
@@ -80,15 +80,80 @@ h# ff constant kt-none
 1 constant at-eap
 2 constant at-preshared
 
-0 0 2value country-ie			\ Address of country IE
+\ =====================================================================
+\ Country/region tables
 
+: $, ( adr len -- )  here over allot  swap move  ;
 
-\ =======================================================================
-\ Instance data 
+create countries
+   " US " $, h# 10 c,	\ US FCC
+   " CA " $, h# 10 c,	\ IC Canada
+   " SG " $, h# 10 c,	\ Singapore
+   " EU " $, h# 30 c,	\ ETSI
+   " AU " $, h# 30 c,	\ Australia
+   " KR " $, h# 30 c,	\ Republic of Korea
+   " ES " $, h# 31 c,	\ Spain
+   " FR " $, h# 32 c,	\ France
+   " JP " $, h# 40 c,	\ Japan
+   "    " $, h#  0 c,   \ END OF LIST
+
+: country>region  ( country$ -- region )
+   countries  begin  dup 3 + c@  while   ( country$ adr )
+      3dup swap comp  0=  if             ( country$ adr )
+         nip nip 3 + c@ exit
+      then                               ( country$ adr )
+      4 +                                ( country$ adr' )
+   repeat                                ( country$ adr' )
+   3drop 0
+;
+
+create regions
+   \ US        Len   	Channels 1-11, 100mW
+   h# 10 c,    3 c,     1 c, d# 11 c, d# 20 c,	
+
+   \ EU        Len 	Channels 1-13, 100mW
+   h# 30 c,    3 c,     1 c, d# 13 c, d# 20 c,
+
+   \ ES        Len 	Channels 10-11, 100mW
+   h# 31 c,    3 c,     d# 10 c, 2 c, d# 20 c,
+
+   \ FR        Len 	Channels 10-13, 100mW
+   h# 32 c,    3 c,     d# 10 c, 4 c, d# 20 c,
+
+   \ JP        Len 	Channels 1-13, 50mW	Channel 14, 50mW
+   h# 40 c,    6 c,     1 c, d# 13 c, d# 16 c,  d# 14 c, 1 c, d# 16 c,	
+
+   0 c,   \ END OF LIST
+
+\ Seach the regions table
+: region>ch/pwr  ( region-code -- ch-adr,len )
+   regions  begin  dup c@  while   ( region-code adr )
+      2dup c@ =  if                ( region-code adr )
+         nip ca1+ count exit       ( region-code adr )
+      then                         ( region-code adr )
+      ca1+ count +                 ( region-code adr' )
+   repeat                          ( region-code adr )
+   2drop null$
+;
+
+d# 15 3 * dup constant /country-ie   buffer: country-ie-buf
+
+\ country>ie fills country-ie with the country followed by the region info
+
+0 instance value country-ie-len
+
+: set-country-ie  ( country$ -- )
+   country-ie-buf /country-ie erase                   ( country$ )
+   2dup country>region ?dup 0=  if  2drop exit  then  ( country$ region# )
+   region>ch/pwr dup 0=  if  4drop exit  then         ( country$ ch-adr,len )
+   tuck country-ie-buf 3 + swap move                  ( country$ len )
+   over + to country-ie-len                           ( country$ )
+   3 max country-ie-buf swap move                     ( )
+;
 
 false instance value debug?
 false instance value scan?
-false instance value country?
+
 0 instance value wifi			\ Current wifi-node
 
 : ptk  ( -- adr )  wifi >ptk  ;
@@ -141,23 +206,6 @@ false instance value country?
    then
    last-rcnt /rcnt ff fill
 ;
-
-
-\ =======================================================================
-\ wifi-cfg data
-
-: adrlen@   ( src -- adr len )  dup @ swap na1+ @  ;
-: wifi-ssid$  ( -- $ )  wifi-cfg >wc-ssid adrlen@  ;
-: wifi-pmk$   ( -- $ )  wifi-cfg >wc-pmk  adrlen@  ;
-: wifi-wep1$  ( -- $ )  wifi-cfg >wc-wep1 adrlen@  ;
-: wifi-wep2$  ( -- $ )  wifi-cfg >wc-wep2 adrlen@  ;
-: wifi-wep3$  ( -- $ )  wifi-cfg >wc-wep3 adrlen@  ;
-: wifi-wep4$  ( -- $ )  wifi-cfg >wc-wep4 adrlen@  ; 
-: wifi-wep-idx   ( -- n )  wifi-cfg >wc-wep-idx @ 1- 0 max 4 min  ;
-: wifi-country$  ( -- $ )  wifi-cfg >wc-country 3  ;
-
-: set-country  ( adr len -- )  2dup upper  country>ie to country-ie  ;
-
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

@@ -413,9 +413,11 @@ fload ${BP}/ofw/wifi/wifi-cfg.fth
 support-package: supplicant
 fload ${BP}/ofw/wifi/loadpkg.fth
 end-support-package
-stand-init:
-   " ??,OLPCOFW" $wifi
+
+: olpc-ssids  ( -- $ )
+   " OLPCOFW"nschool-mesh-0"nschool-mesh-1"nschool-mesh-2"
 ;
+' olpc-ssids to default-ssids
 
 [ifdef] use-ppp
 fload ${BP}/ofw/ppp/loadppp.fth

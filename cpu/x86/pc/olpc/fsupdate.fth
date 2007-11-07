@@ -180,8 +180,8 @@ previous
    repeat                             ( rem$ )
    2drop
 ;
-: update-devices  " disk: sd: http:\\177.18.16.1"  ;
+: update-devices  " disk: sd: http:\\172.18.0.1"  ;
 : try-fs-update  ( -- )
    ." Searching for a NAND file system update image." cr
-   all-devices$ fs-update-from-list
+   update-devices fs-update-from-list
 ;

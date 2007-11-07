@@ -626,8 +626,8 @@ false value group-rekey?
 
 : set-bss-type  ( bss-type -- )  dup to bss-type  set-bss-type  ;
 
-: set-country-info  ( adr len -- )
-   country?  if  2drop country-ie  then	\ Overwrite the country IE
+: do-set-country-info  ( adr len -- )
+   country-ie-len  if  2drop country-ie-buf country-ie-len  then  \ Override the country IE
    3 / 3 *				\ Remove pad byte
    ?dup 0=  if  drop exit  then		\ Nothing to set
    set-country-info
@@ -680,7 +680,7 @@ false value group-rekey?
       kt-wep   of  wep-ok?  endof
       ( default )  pmk-ok? swap
    endcase
-   dup 0=  if  ." Keys in wifi-cfg are not valid" cr  then
+   dup  if  ." found"  else  ." Keys in wifi-cfg are not valid"  then  cr
 ;
 
 h# 0050.f201 constant wpa-tag
@@ -707,15 +707,16 @@ h# 0050.f201 constant wpa-tag
    dup 3 find-ie 0=  if  ." Cannot locate the channel #" cr drop false exit  then
    drop c@ channel!				\ Channel number
    dup 6 find-ie  if  drop 2 + le-w@ set-atim-window  then	\ ATIM window
-   dup 7 find-ie 0=  if  null$  then  set-country-info	\ Country channel/power info
+   dup 7 find-ie 0=  if  null$  then  do-set-country-info	\ Country channel/power info
    dup d# 48 find-ie  if  set-wpa2-ktype drop key-ok? exit  then	\ Favor RSN(WPA2) over WPA
    dup d# 221 find-ie  if  2 pick process-wpa-ie  then
    drop key-ok?
 ;
 
 : (do-associate)  ( -- ok? )
-   ??cr ." Associate with: " ssid$ type cr
+   ??cr ." Associate with: " ssid$ type space
    channel ssid$ target-mac$ associate 0=  if  false exit  then
+   cr
    ktype=wpa?  if
       do-key-handshakes
       done-group-key?
@@ -724,23 +725,40 @@ h# 0050.f201 constant wpa-tag
    then
 ;
 
-: do-scan?  ( -- scan? )   wifi-ssid$ ssid$ $= not  scan? or  valid? 0= or  ;
+\ Don't rescan the second time unless forced to
+: must-scan?  ( -- flag )
+   ssid-reset?   false to ssid-reset?    ( flag )
+   scan? or  false to scan?              ( flag' )
+   valid? 0= or
+;
+
+: scan-ssid?  ( ssid$ -- found? )
+   dup 0=  if  2drop false exit  then 
+   ssid!
+   ssid$  " set-ssid" $call-parent
+   ??cr ." Scan for: " ssid$ type space
+   scanbuf /buf scan 0=  if  ." not found" cr false exit  then
+   debug?  if  scanbuf .scan  then
+   ssid$ scanbuf find-ssid 0=  if  ." not found" cr false exit  then
+   init-common-rates
+   ssid-valid? 0=  if  exit  then
+   true valid!
+   report-associate-info
+   true
+;
+: try-scan  ( -- okay? )
+   wifi-ssid$  scan-ssid?  if  true exit  then
+   default-ssids  begin  dup  while   ( rem$ )
+      newline left-parse-string       ( rem$' ssid$ )
+      scan-ssid?  if  2drop true exit  then  ( rem$ )
+   repeat                             ( rem$ )
+   2drop false
+;
 
 : do-associate  ( -- ok? )
    disable-protection
-   do-scan?  if
-      wifi-ssid$ ssid!
-      wifi-ssid$  " set-ssid" $call-parent
-      ??cr ." Scan for: " ssid$ type cr
-      scanbuf /buf scan 0=  if  ." Failed to find: " ssid$ type cr false exit  then
-      debug?  if  scanbuf .scan  then
-      ssid$ scanbuf find-ssid 0=  if  ." Cannot find: " ssid$ type cr false exit  then
-      init-common-rates
-      ssid-valid? 0=  if  false exit  then
-      true valid!
-      report-associate-info
-   then
-   (do-associate)
+   must-scan?  if  try-scan  0= if  false exit  then  then
+   (do-associate)  dup 0=  if  true to scan?  then
 ;
 
 
@@ -771,17 +789,15 @@ h# 0050.f201 constant wpa-tag
       ascii , left-parse-string
       2dup " debug" $=  if  true to debug?  then
       2dup " scan"  $=  if  true to scan?   then	\ Force scan even if ssid$ is same
-      2dup drop " country" comp 0=  if		\ Force different country IE
+      2dup drop " country" comp 0=  if		        \ Force different country IE
          2dup [char] = left-parse-string  2drop
-         set-country
-         true to country?
+         2dup upper  set-country-ie
       then
       2drop
    repeat drop
 ;
 
 : open  ( -- ok? )
-   wifi-country$ set-country
    my-args parse-args
    mac-adr$ init-wifi-data
    first-open?  if
