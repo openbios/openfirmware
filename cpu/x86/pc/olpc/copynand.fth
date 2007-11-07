@@ -13,8 +13,11 @@ purpose: Copy a file onto the NAND FLASH
 0 value #image-eblocks
 0 value #crc-records
 
+0 value nanddump-mode?
+
 0 value crc-buf
 
+h# 40 constant /nand-oob
 
 : >crc  ( index -- 'crc )  crc-buf swap la+  ;
 
@@ -24,6 +27,7 @@ purpose: Copy a file onto the NAND FLASH
    fileih  ?dup  if  0 to fileih  close-dev  then
 ;
 : close-nand-ihs  ( -- )
+   0 to nanddump-mode?
    close-image-file
    nandih  ?dup  if  0 to nandih  close-dev  0 to #nand-pages     then
    crc-ih  ?dup  if  0 to crc-ih  close-dev  then
@@ -94,6 +98,7 @@ h# 100 buffer: crc-name-buf
 
 : ?open-crcs  ( -- )
    img-has-oob?  if  exit  then
+   nanddump-mode?  if  exit  then
    image-name$ + 4 -  " .img" caps-comp 0=  if
       image-name$ crc-name-buf place
       " crc"  crc-name$ + 3 -  swap move
@@ -114,16 +119,24 @@ h# 100 buffer: crc-name-buf
    image-name$  open-dev  to fileih
    fileih 0= " Can't open NAND image file"  ?nand-abort
    " size" fileih $call-method               ( d.size )
-   2dup  /nand-block  um/mod  swap  if       ( d.size #eblocks )
-      \ Wrong size for the no-oob data format; try the dump-nand format
-      drop                                   ( d.size #eblocks )
-      h# 21100 um/mod  swap                  ( #eblocks residue )
-      0<>  " Image file size is not a multiple of the NAND erase block size" ?nand-abort
-      true to img-has-oob?
-   else                                      ( d.size #eblocks )
+
+   nanddump-mode?  if
+      2dup  h# 20000 um/mod  swap  if  1+  then   ( d.size #eblocks )
       false to img-has-oob?
-      nip nip                                ( #eblocks )
-   then                                      ( #eblocks )
+      nip nip                                     ( #eblocks )
+   else
+      2dup  /nand-block  um/mod  swap  if       ( d.size #eblocks )
+         \ Wrong size for the no-oob data format; try the dump-nand format
+         drop                                   ( d.size #eblocks )
+         h# 21100 um/mod  swap                  ( #eblocks residue )
+         0<>  " Image file size is not a multiple of the NAND erase block size" ?nand-abort
+         true to img-has-oob?
+      else                                      ( d.size #eblocks )
+         false to img-has-oob?
+         nip nip                                ( #eblocks )
+      then                                      ( #eblocks )
+   then
+
    to #image-eblocks
 
    #image-eblocks 0= " Image file is empty" ?nand-abort
@@ -137,8 +150,17 @@ h# 100 buffer: crc-name-buf
 ;
 
 : read-image-block  ( -- )
-   load-base /nand-block  " read" fileih $call-method   ( len )
-   /nand-block <> " Bad read of .img file"  ?nand-abort ( )
+   nanddump-mode?  if
+      load-base /nand-block " read" fileih $call-method   ( len )
+      dup /nand-block <>  if                               ( len )
+         load-base over +   /nand-page rot -  h# ff fill
+      else
+         drop
+      then
+   else
+      load-base /nand-block  " read" fileih $call-method   ( len )
+      /nand-block <> " Bad read of .img file"  ?nand-abort ( )
+   then
 ;
 
 : check-mem-crc  ( record# -- )
@@ -229,6 +251,11 @@ defer show-done
    show-done
 
    close-nand-ihs
+;
+: nd-copy-nand  ( "devspec" -- )
+   true to nanddump-mode?
+   copy-nand
+   false to nanddump-mode?
 ;
 
 : verify-nand  ( "devspec" -- )
