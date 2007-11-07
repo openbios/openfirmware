@@ -122,7 +122,11 @@ h# 30 constant crc-offset   \ From end
 [ifdef] $call-method
 : make-sn-name  ( -- filename$ )
    " SN" find-tag 0=  abort" No serial number in mfg data"  ( sn$ )
-   dup  if  1-  then         ( sn$' )  \ Remove Null
+   dup  if                   ( sn$ )
+      2dup + 1- c@ 0=  if    ( sn$ )
+         1-                  ( sn$' )    \ Remove Null
+      then                   ( sn$ )
+   then                      ( sn$ )
    d# 11 over -  dup 0>  if  ( sn$' #excess )
       /string                ( sn$' )  \ Keep last 11 characters
    else                      ( sn$' #excess )
@@ -148,6 +152,23 @@ h# 30 constant crc-offset   \ From end
    mfg-data-range  " write" r@ $call-method   ( r: ihandle )
    r> close-dev
 ;
+: restore-mfg-data  ( "filename" -- )
+   reading
+   ifd @ fsize  dup /flash-block >  if  ( len )
+      drop  ifd @ fclose                ( )
+      true abort" File is too big"
+   then                                 ( len )
+   mfg-data-buf  swap                   ( adr len )
+   2dup ifd @ fgets drop                ( adr len )
+   ifd @ fclose
+
+   spi-start spi-identify
+   mfg-data-offset erase-spi-block      ( adr len )
+   mfg-data-end-offset over -           ( adr len offset )
+   write-spi-flash                      ( )
+   spi-reprogrammed                     ( )
+;
+
 [then]
 
 : ?move-mfg-data  ( -- )
