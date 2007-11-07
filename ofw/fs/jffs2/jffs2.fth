@@ -1465,37 +1465,6 @@ external
    file-size
 ;
 
-\ This code is copied from ext2fs and could be shared
-decimal
-\ date&time is number of seconds since 1970
-create days/month
-\ Jan   Feb   Mar   Apr   May   Jun   Jul   Aug   Sep   Oct   Nov   Dec
-  31 c, 28 c, 31 c, 30 c, 31 c, 30 c, 31 c, 31 c, 30 c, 31 c, 30 c, 31 c,
-
-: >d/m  ( day-in-year -- day month )
-   12 0  do
-      days/month i ca+ c@  2dup <  if
-         drop 1+  i 1+  leave
-      then
-      -
-   loop
-;
-: sec>time&date  ( seconds -- s m h d m y )
-   60 u/mod  60 u/mod  24 u/mod		( s m h days )
-   [ 365 4 * 1+ ] literal /mod >r	( s m h day-in-cycle )  ( r: cycles )
-   dup [ 365 365 + 31 + 29 + ] literal
-   2dup =  if		\ exactly leap year Feb 29
-      3drop 2 29 2			( s m h year-in-cycle d m )
-   else
-      >  if  1-  then	\ after leap year
-      365 u/mod				( s m h day-in-year year-in-cycle )
-      swap >d/m				( s m h year-in-cycle d m )
-   then
-   rot r> 4 * + 1970 +			( s m h d m y )
-;
-hex
-\ End of common code
-
 : next-file-info  ( id -- false | id' s m h d m y len attributes name$ true )
    dup 0=  if  drop prep-dirents  minodes  then   ( tdirent )
    dup next-minode =  if  drop false exit  then   ( tdirent )
@@ -1507,7 +1476,7 @@ hex
       0                         ( ... attributes r: tdirent )
    else                           ( id' rinode r: tdirent )
       >r                          ( id'  r: tdirent rinode )
-      r@ rimtime@  sec>time&date  ( id' s m h  d m y  r: tdirent rinode )
+      r@ rimtime@  unix-seconds>  ( id' s m h  d m y  r: tdirent rinode )
       r@ riisize@                 ( id' s m h  d m y  len r: tdirent rinode )
       r> rimode@                  ( id' s m h  d m y  len  mode  r: tdirent )
    then

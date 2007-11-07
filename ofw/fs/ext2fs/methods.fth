@@ -71,7 +71,7 @@ headers
    drop  bfbase @  bsize free-mem		\ Registered with initbuf
    modified? if
       false to modified?
-      time&date timestamp file-handle inode 4 la+ int! update
+      time&date >unix-seconds file-handle inode 4 la+ int! update
    then
 ;
 

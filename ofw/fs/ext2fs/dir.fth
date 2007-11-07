@@ -47,50 +47,11 @@ variable current-dir
 \
 \       After this point, the code should be independent of the disk format!
 
-\ time stamps
-
-\ date&time is number of seconds since 1970
-create days/month
-\ Jan   Feb   Mar   Apr   May   Jun   Jul   Aug   Sep   Oct   Nov   Dec
-  31 c, 28 c, 31 c, 30 c, 31 c, 30 c, 31 c, 31 c, 30 c, 31 c, 30 c, 31 c,
-
-: >d/m  ( day-in-year -- day month )
-   12 0  do
-      days/month i ca+ c@  2dup <  if
-         drop 1+  i 1+  leave
-      then
-      -
-   loop
-;
-: sec>time&date  ( seconds -- s m h d m y )
-   60 u/mod  60 u/mod  24 u/mod		( s m h days )
-   [ 365 4 * 1+ ] literal /mod >r	( s m h day-in-cycle )  ( r: cycles )
-   dup [ 365 365 + 31 + 29 + ] literal
-   2dup =  if		\ exactly leap year Feb 29
-      3drop 2 29 2			( s m h year-in-cycle d m )
-   else
-      >  if  1-  then	\ after leap year
-      365 u/mod				( s m h day-in-year year-in-cycle )
-      swap >d/m				( s m h year-in-cycle d m )
-   then
-   rot r> 4 * + 1970 +			( s m h d m y )
-;
-: timestamp   ( s m h d m y -- seconds )	\ since 1970
-   d# 1970 - 4 /mod [ d# 365 4 * 1+ ] literal *		( s m h d m yrs days )
-   swap d# 365 * +					( s m h d m days )
-   swap 1- 0 ?do  i days/month + c@ + loop		( s m h d days )
-   + 1-							( s m h days )
-   d# 24 * +   d# 60 * +   d# 60 * +
-;
-
-\ e.g.  time&date timestamp
-\ timestamp sec>time&date	should have no net effect
-
 : init-inode    ( mode inode# -- )
    inode >r			( mode )
    r@ /inode erase		( mode )
    r@ short!			( )
-   time&date timestamp		( time )
+   time&date >unix-seconds	( time )
    dup r@ 2 la+ int!		( time )	\ set access time
    dup r@ 3 la+ int!		( time )	\ set creation time
        r@ 4 la+ int!		( )		\ set modification time
@@ -256,7 +217,7 @@ variable parent-dir
    inode# inode  /inode  6 /l* /string erase
    
    \ delete inode, and set its deletion time.
-   time&date timestamp		( time )
+   time&date >unix-seconds		( time )
    inode# inode 5 la+ int! update
    inode# free-inode
 ;
@@ -292,7 +253,7 @@ external
 
 : file-info  ( id -- false | id' s m h d m y len attributes name$ true )
    inode# >r   file-handle to inode#			( id )
-   1+  file-sec sec>time&date  file-size  file-attr  file-name true
+   1+  file-sec unix-seconds>  file-size  file-attr  file-name true
    r> to inode#
 ;
 
