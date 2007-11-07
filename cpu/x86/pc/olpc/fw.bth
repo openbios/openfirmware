@@ -495,6 +495,11 @@ fload ${BP}/ofw/core/dualconsole.fth
       time&date 5drop 1 and  if  pong  else  life-demo  then
    then
 ;
+: ?diags  ( -- )
+   rocker-left game-key?  if
+      text-on  " test-all" eval  d# 10000 ms  power-off
+   then
+;
 : ?fs-update  ( -- )
    button-check button-x or  button-o or  button-square or   ( mask )
    game-key-mask over and  =  if
@@ -537,10 +542,11 @@ fload ${BP}/ofw/core/dualconsole.fth
    ['] false to interrupt-auto-boot?
    probe-usb
    interpreter-init
+   ?diags
    ?fs-update
    secure-startup
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
-   screen-ih stdout !
+   text-on
    banner
    ?usb-keyboard
    auto-boot
