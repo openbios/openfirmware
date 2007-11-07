@@ -388,29 +388,30 @@ true value got-response?
 : process-pmic-failure  ( -- )  ;
 : process-gmic-failure  ( -- )  ;
 
+: .event  ?cr  ." Event: "  type  cr ;
 : process-ind  ( adr len -- )
-   ?cr drop
-   ." Event: "
+   drop
    4 + le-l@  case
-      h# 03  of  ." Link Loss"  process-disconnect  endof
-      h# 04  of  ." Link Sensed"  endof
-      h# 06  of  ." MIB Changed"  endof
-      h# 07  of  ." Init Done"  endof
-      h# 08  of  ." Deauthenticated"  process-disconnect  endof
-      h# 09  of  ." Disassociated"  process-disconnect  endof
-      h# 0a  of  ." Awake"  process-wakeup  endof
-      h# 0b  of  ." Sleep"  process-wakeup  endof
-      h# 0d  of  ." Multicast MIC error"  process-gmic-failure  endof
-      h# 0e  of  ." Unicast MIC error"  process-pmic-failure  endof
-      h# 11  of  ." HWAC - adhoc BCN lost"  endof
-      h# 19  of  ." RSSI low"  endof
-      h# 1a  of  ." SNR low"  endof
-      h# 1b  of  ." Max fail"  endof
-      h# 1c  of  ." RSSI high"  endof
-      h# 1d  of  ." SNR high"  endof
+      h# 03  of  " Link Loss" .event  process-disconnect  endof
+      h# 04  of  " Link Sensed" .event  endof
+      h# 06  of  " MIB Changed" .event  endof
+      h# 07  of  " Init Done" .event  endof
+      h# 08  of  " Deauthenticated" .event  process-disconnect  endof
+      h# 09  of  " Disassociated" .event  process-disconnect  endof
+      h# 0a  of  " Awake" .event  process-wakeup  endof
+      h# 0b  of  " Sleep" .event  process-wakeup  endof
+      h# 0d  of  " Multicast MIC error" .event  process-gmic-failure  endof
+      h# 0e  of  " Unicast MIC error" .event  process-pmic-failure  endof
+      h# 11  of  " HWAC - adhoc BCN lost" .event  endof
+      h# 19  of  " RSSI low" .event  endof
+      h# 1a  of  " SNR low" .event  endof
+      h# 1b  of  " Max fail" .event  endof
+      h# 1c  of  " RSSI high" .event  endof
+      h# 1d  of  " SNR high" .event  endof
+      h# 23  of  endof  \ Suppress this; the user doesn't need to see it
+      \ h# 23  of  ." Mesh auto-started"  endof
       ( default )  ." Unknown " dup u.
    endcase
-   cr
 ;
 
 : process-request  ( adr len -- )
@@ -440,7 +441,8 @@ true value got-response?
       then
    then
 ;
-: wait-cmd-resp  ( -- error? )
+\ -1 error, 0 okay, 1 retry
+: wait-cmd-resp  ( -- -1|0|1 )
    false to got-response?
    false to got-data?
    resp-wait 0  do
@@ -449,7 +451,11 @@ true value got-response?
       1 ms
    loop
    got-response?  if
-      cmd-resp-error?  dup  if  ." Result = " dup u.  then
+      cmd-resp-error?  case
+         0 of  0  endof  \ No error
+         4 of  1  endof  \ Busy, so retry
+         ( default )  ." Result = " dup u. cr  dup
+      endcase
    else
       ." Timeout or USB error" cr
       true
@@ -750,7 +756,7 @@ d# 34 instance buffer: ssid
 
 : (scan)  ( -- error? )
    /cmd_802_11_scan  ssid c@  if
-     /marvel-IE-hdr +  ssid c@ +
+      /marvel-IE-hdr +  ssid c@ +
    then
    6 ( CMD_802_11_SCAN ) prepare-cmd              ( )
    resp-wait-long to resp-wait                    ( )
@@ -787,7 +793,8 @@ external
 : set-ssid  ( adr len -- )  h# 32 min  ssid pack drop  ;
 
 : scan  ( adr len -- actual )
-   (scan)  if  2drop 0 exit  then
+   begin  (scan)  dup 1 =  while  drop d# 1000 ms  repeat  \ Retry while busy
+   if  2drop 0 exit  then
    respbuf /respbuf /fw-cmd /string	( adr len radr rlen )
    rot min -rot swap 2 pick move	( actual )
 ;
