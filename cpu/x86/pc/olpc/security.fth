@@ -3,6 +3,19 @@ purpose: OLPC secure boot
 
 \ Specs at http://wiki.laptop.org/go/Firmware_Security
 
+: text-on  screen-ih stdout !  ;
+
+: visible  dcon-unfreeze text-on   ;
+
+: ?unfreeze  ( -- )
+   game-key@ button-check and  if  visible unfreeze  then
+;
+
+0 0 2value base-xy
+0 0 2value next-xy
+d# 410 d# 540 2constant progress-xy
+d# 557 d# 283 2constant sad-xy
+
 true value debug-security?
 : ?lease-debug   ( msg$ -- )
    debug-security?  if  type  else  2drop  then
@@ -12,11 +25,51 @@ true value debug-security?
 ;
 
 : fail-load  ( -- )
-   screen-ih stdout !
+   text-on
    ." OS Load Failed" cr
    quit
    begin again
 ;
+
+0 value security-off?
+
+: security-failure  ( -- )
+   visible
+   ." Stopping" cr
+   security-off?  if  quit  then
+
+   d# 10000 ms
+   power-off
+;
+
+: +icon-xy  ( delta-x,y -- )  icon-xy d+ to icon-xy  ;
+
+
+: show-going  ( -- )
+   h# c0 h# c0 h# c0  rgb>565  progress-xy  d# 500 d# 100  " fill-rectangle" $call-screen
+   d# 585 d# 613 to icon-xy  " bigdot" show-icon
+   dcon-unfreeze
+;
+: show-x  ( -- )  " x" show-icon  ;
+: show-sad  ( -- )
+   icon-xy
+   sad-xy to icon-xy  " sad" show-icon
+   to icon-xy
+;
+: show-lock    ( -- )  " lock" show-icon  ;
+: show-unlock  ( -- )  " unlock" show-icon  ;
+: show-child  ( -- )
+   " erase-screen" $call-screen
+   d# 552 d# 383 to icon-xy  " rom:xogray.565" $show-opaque
+   progress-xy to icon-xy  \ For boot progress reports
+;
+: show-warnings  ( -- )
+   " erase-screen" $call-screen
+   d# 48 d# 32 to icon-xy  " rom:warnings.565" $show-opaque
+   dcon-freeze
+;
+
+
 
 h#  20 buffer: cn-buf  \ filename prefix - either "act" or "run"
 h#  20 buffer: fn-buf  \ filename tail - either "os" or "rd"
@@ -202,39 +255,6 @@ d# 256 constant /sig
    2nip  2r> 2swap " rmd160" invalid? 0=
 ;
 
-\ earliest is the earliest acceptable date value (in seconds).
-\ It is the date that the first test version of this code was
-\ deployed.  If a laptop has any earlier date that than, that
-\ date is presumed bogus.
-
-d# 2007 d# 12 *  8 1- +  d# 31 *  d# 27 +  constant earliest
-
-0. 2value current-seconds
-
-\ get-date reads the date and time from the real time clock
-\ and converts it to seconds.
-
-\ The seconds conversion uses a simplified approach that ignores
-\ leap years and the like - it assumes that all months are 31 days.
-\ This is sufficient for comparison purposes so long as we use the
-\ same calculation in all cases.  It is not good for doing
-\ arithmetic on dates.
-: get-date  ( -- error? )
-   time&date           ( s m h d m y )
-   d# 12 *  swap 1- +  ( s m h d m' )  \ Months start at 1
-   d# 31 *  swap 1- +  ( s m h d' )    \ Days start at 1
-   dup earliest  <  if  ( s m h d' )
-      screen-ih stdout !
-      ." The clock is not set properly" cr
-      4drop true exit
-   then        ( s m h d' )
-   d# 24 * +   ( s m h' )
-   d# 60 * +   ( s m' )   \ Can't overflow so far
-   d# 60 um*   ( s d.s' )
-   swap 0 d+   to current-seconds
-   false
-;
-
 \ break$ splits a string into an initial substring of length n
 \ (head$) and the residual substring (tail$).  If the input
 \ string is shorter than n, head$ is the input string and tail$ is
@@ -294,11 +314,45 @@ d# 2007 d# 12 *  8 1- +  d# 31 *  d# 27 +  constant earliest
    dup  if  nip nip  then
 ;
 
+\ earliest is the earliest acceptable date value (in seconds).
+\ It is the date that the first test version of this code was
+\ deployed.  If a laptop has any earlier date that than, that
+\ date is presumed bogus.
+
+" 20070101T000000Z" expiration-to-seconds drop  2constant earliest
+
+0. 2value current-seconds
+
+\ get-date reads the date and time from the real time clock
+\ and converts it to seconds.
+
+\ The seconds conversion uses a simplified approach that ignores
+\ leap years and the like - it assumes that all months are 31 days.
+\ This is sufficient for comparison purposes so long as we use the
+\ same calculation in all cases.  It is not good for doing
+\ arithmetic on dates.
+: get-date  ( -- )
+   time&date           ( s m h d m y )
+   d# 12 *  swap 1- +  ( s m h d m' )  \ Months start at 1
+   d# 31 *  swap 1- +  ( s m h d' )    \ Days start at 1
+   d# 24 * +   ( s m h' )
+   d# 60 * +   ( s m' )   \ Can't overflow so far
+   d# 60 um*   ( s d.s' )
+   swap 0 d+   to current-seconds
+;
+
 \ expired? determines whether or not the expiration time string is
 \ earlier than this machine's current time (from the real time clock).
 
 : expired?  ( expiration$ -- bad? )
-   expiration-to-seconds  if  true exit  then
+   expiration-to-seconds  if  true exit  then  ( d.seconds )
+
+   current-seconds 0. d=  if                   ( d.seconds )
+   then
+
+   \ If the date is bad, leases are deemed to have expired
+   current-seconds  earliest d<  if  2drop true exit  then
+
    current-seconds  d<
 ;
 
@@ -360,6 +414,22 @@ d# 67 buffer: machine-id-buf
 : my-sn$  ( -- adr len )  machine-id-buf d# 11  ;
 
 
+: check-expiry  ( exp$ -- exp$ -1|0 )
+   \ Check for non-expiring case
+   2dup " 00000000T000000Z" $=  if  0 exit  then
+
+   dup d# 16 <>  if                        ( expiration$ )
+      " has bad expiration format" ?lease-debug-cr
+      -1 exit
+   then                                    ( expiration$ )
+
+   2dup expired?  if
+      " expired" ?lease-debug-cr
+      -1 exit
+   then                                    ( expiration$ )
+   0
+;
+
 \ check-machine-signature verifies the signed object consisting
 \ of the machine identification info (SN + UUID) plus the expiration
 \ time "expiration$" against the crypto signature string sig$,
@@ -378,6 +448,20 @@ d# 67 buffer: machine-id-buf
 
 : set-disposition  ( adr -- )  c@  machine-id-buf d# 49 + c!  ;
 
+\ Checks the tail of a timed signature - lease or developer key
+: check-timed-signature  ( rem$ -- -1|0|1 )
+   bl left-parse-string                    ( rem$ serial$ )
+   my-sn$ $=  0=  if  2drop 0 exit  then   ( rem$ )
+
+   \ Disposition code
+   bl left-parse-string  1 <>  if  3drop -1 exit  then  ( rem$ disp-adr )
+   set-disposition                         ( rem$ )
+
+   bl left-parse-string  check-expiry  if  4drop -1 exit  then   ( sig$ exp$ )
+
+   check-machine-signature                 ( -1|0|1 )
+;
+
 \ check-lease checks a lease signature record in act01: format
 
 \ -1 means lease is for this machine and is invalid
@@ -388,29 +472,8 @@ d# 67 buffer: machine-id-buf
    bl left-parse-string  " act01:"  $=  0=  if
       "   Not act01:" ?lease-debug-cr
       2drop -1 exit
-   then
-
-   bl left-parse-string                    ( rem$ serial$ )
-   my-sn$ $=  0=  if                       ( rem$ )
-      " is for a different system" ?lease-debug-cr
-      2drop 0 exit
    then                                    ( rem$ )
-
-   \ Disposition code
-   bl left-parse-string  1 <>  if  3drop -1 exit  then  ( rem$ disp-adr )
-   set-disposition                         ( rem$ )
-
-   bl left-parse-string                    ( sig$ expiration$ )
-   dup d# 16 <>  if                        ( sig$ expiration$ )
-      " has bad expiration format" ?lease-debug-cr
-      4drop -1 exit
-   then                                    ( sig$ expiration$ )
-
-   2dup expired?  if
-      " expired" ?lease-debug-cr
-      4drop -1 exit
-   then                                    ( sig$ expiration$ )
-   check-machine-signature                 ( -1|0|1 )
+   check-timed-signature                   ( -1|0|1 )
 ;
 
 \ lease-valid? tries to read a lease file from the currently-selected
@@ -419,13 +482,12 @@ d# 67 buffer: machine-id-buf
 \ a valid lease was found.
 
 : lease-valid?  ( -- valid? )
-   " ${DN}\security\lease.sig" expand$            ( name$ )
+   " ${DN}\security\lease.sig" expand$             ( name$ )
    " Trying " ?lease-debug  2dup ?lease-debug-cr
-   r/o open-file  if  drop false exit  then        ( ih )
+   r/o open-file  if  drop false exit  then   >r   ( r: ih )
+   "   Lease " ?lease-debug
    load-started
-   >r                                              ( r: ih )
-   "   Lease " ?lease-debug                        ( r: ih )
-   leasekey$ to pubkey$                            ( r: ih )
+   leasekey$ to pubkey$
    begin
       sec-line-buf /sec-line-max r@ read-line  if  ( actual -eof? )
          2drop  r> close-file drop  false exit
@@ -436,6 +498,7 @@ d# 67 buffer: machine-id-buf
          -1  of  r> close-file drop  " lock"   show-icon  false exit  endof
       endcase
    repeat         
+   "   No matching records" ?lease-debug-cr
    r> close-file drop  false
 ;
 
@@ -455,6 +518,10 @@ d# 67 buffer: machine-id-buf
 ;
 
 0 value alternate?
+: show-dot  ( -- )
+   alternate?  if  " yellowdot"  else  " lightdot"  then  show-icon
+;
+
 : set-alternate  ( -- )
    button-o game-key?  if  true to alternate? exit  then
    h# 82 cmos@  [char] A =  if
@@ -462,53 +529,6 @@ d# 67 buffer: machine-id-buf
       true to alternate?  exit
    then
    false to alternate?
-;
-
-0 0 2value base-xy
-d# 410 d# 540 2constant progress-xy
-
-: text-on  screen-ih stdout !  ;
-
-: visible  dcon-unfreeze text-on   ;
-
-: ?unfreeze  ( -- )
-   game-key@ button-check and  if  visible unfreeze  then
-;
-
-0 value security-off?
-
-: security-failure  ( -- )
-   visible
-   ." Stopping" cr
-   security-off?  if  quit  then
-
-   d# 10000 ms
-   power-off
-;
-
-: +icon-xy  ( delta-x,y -- )  icon-xy d+ to icon-xy  ;
-
-: show-going  ( -- )
-   h# c0 h# c0 h# c0  rgb>565  progress-xy  d# 500 d# 100  " fill-rectangle" $call-screen
-   d# 585 d# 613 to icon-xy  " bigdot" show-icon
-   dcon-unfreeze
-;
-: show-dot  ( -- )
-   alternate?  if  " yellowdot"  else  " lightdot"  then  show-icon
-;
-: show-x  ( -- )  " x" show-icon  ;
-: show-sad  ( -- )  " sad" show-icon  ;
-: show-lock    ( -- )  " lock" show-icon  ;
-: show-unlock  ( -- )  " unlock" show-icon  ;
-: show-child  ( -- )
-   " erase-screen" $call-screen
-   d# 552 d# 383 to icon-xy  " rom:xogray.565" $show-opaque
-   progress-xy to icon-xy  \ For boot progress reports
-;
-: show-warnings  ( -- )
-   " erase-screen" $call-screen
-   d# 48 d# 32 to icon-xy  " rom:warnings.565" $show-opaque
-   dcon-freeze
 ;
 
 \ secure-load-ramdisk is called during the process of preparing an
@@ -568,16 +588,7 @@ stand-init: wp
 
 : check-devel-key  ( dev01$ -- -1|0|1 )
    bl left-parse-string  " dev01:"  $=  0=  if  2drop -1 exit  then  ( rem$ )
-   bl left-parse-string                        ( rem$ serial$ )
-   my-sn$ $=  0=  if  2drop 0 exit  then       ( rem$ )
-
-   \ Disposition code
-   bl left-parse-string  1 <>  if  3drop -1 exit  then  ( rem$ disp-adr )
-   set-disposition                                      ( rem$ )
-
-   develkey$ to pubkey$                                 ( rem$ )
-   bl left-parse-string                                 ( sig01$ exp$ )
-   check-machine-signature                              ( -1|0|1 )
+   check-timed-signature
 ;
 
 \ has-developer-key? searches for a valid developer key on the
@@ -587,9 +598,10 @@ stand-init: wp
    button-x game-key?  if  false exit  then
    " ${DN}\security\develop.sig" expand$    ( name$ )
    " Trying " ?lease-debug  2dup ?lease-debug-cr
-   r/o open-file  if  drop false exit  then  ( ih )
-   >r
+   r/o open-file  if  drop false exit  then   >r   ( r: ih )
+   "   Devel key " ?lease-debug
    load-started
+   develkey$ to pubkey$
    begin
       sec-line-buf /sec-line-max r@ read-line  if  ( actual -eof? )
          2drop  r> close-file drop  false exit
@@ -600,6 +612,7 @@ stand-init: wp
          -1  of  r> close-file drop  false exit  endof
       endcase
    repeat         
+   "   No matching records" ?lease-debug-cr
    r> close-file drop  false
 ;
 
@@ -707,7 +720,6 @@ stand-init: wp
    0<>
 ;
 
-0 0 2value next-xy
 : load-from-list  ( list$ -- devkey? )
    " dev /jffs2-file-system ' ?unfreeze to scan-callout  dend" eval
 
@@ -753,7 +765,7 @@ stand-init: wp
 
 : all-devices$  ( -- list$ )  " disk: sd: nand:"  ;
 
-d# 410 d# 540 2constant progress-xy
+
 : secure-startup  ( -- )
    ['] noop to ?show-device
    ['] noop to load-done
@@ -777,7 +789,11 @@ d# 410 d# 540 2constant progress-xy
    persistent-devkey?  if  true to security-off?  visible  exit  then
 
    get-my-sn  if  visible  ." No serial number" cr     show-sad  security-failure  then
-   get-date   if  visible  ." Invalid system date" cr  show-sad  security-failure  then
+
+   get-date   current-seconds earliest d<  if
+      \ This is not fatal, because we don't want a brick if the RTC battery fails
+      visible  ." Invalid system date" cr  show-sad
+   then
 
    load-crypto  if  visible  ." Crytpo load failed" cr  show-sad  security-failure   then       ( )
 
