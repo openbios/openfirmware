@@ -85,8 +85,6 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
 
    \ Physical addresses from now on
 
-   h# f1 resume-progress
-
 \ suspend-physical
 \ here suspend-entry put-branch
    resume-data #  bp  mov
