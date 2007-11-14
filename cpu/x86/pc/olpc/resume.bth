@@ -64,8 +64,6 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    gs push
    ss push dx pop                 \ SS in dx
 
-   h# f0 resume-progress
-
    here 5 + dup #) call  di pop   \ Virtual address of EIP in DI
    ( here ) asm-base - #  di  sub \ Virtual address of suspend-base in DI
 
