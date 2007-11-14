@@ -87,6 +87,12 @@ variable 'next-minode    \ Pointer into per-file inode list
 true value first-time?
 -1 value partition#
 
+\ This is a run-time cache of the parent inums for the directory inums we
+\ have seen, used for resolving "..".
+d# 256 2* /n* constant /parent-buf
+/parent-buf buffer: parents
+0 value next-parent
+
 : allocate-buffers  ( -- )
    /eblock  dma-alloc     to block-buf
    /page d# 1024 max  /eblock  min  to /empty-scan
@@ -99,6 +105,7 @@ true value first-time?
 \   /page d# 100 /  pages/chip *  to alloc-len
 \   alloc-len dma-alloc  to inodes
 \   alloc-len dma-alloc  to dirents
+   parents to next-parent
 ;
 
 : release-buffers  ( -- )
@@ -1165,8 +1172,42 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    r> drop                                ( )
 ;
 
+: >parent  ( ino -- true | pino false )
+   dup 1 =  if  false exit  then                  ( ino )  \ Root is special
+   parents  begin  dup next-parent  <>  while     ( ino adr )
+      2dup @ =  if   nip na1+ @ false exit  then  ( ino adr )
+      2 na+                                       ( ino adr' )
+   repeat                                         ( ino adr )
+   2drop true
+;
+
+: remember-parent  ( pino ino -- )
+   dup >parent  if    ( pino ino )
+      next-parent parents -  /parent-buf >=  if
+         ." Parent directory cache overflow" cr
+         2drop exit
+      then
+      next-parent !  next-parent na1+ !
+      next-parent 2 na+  to next-parent
+   else               ( pino ino existing-pino )
+      3drop
+   then
+;
+
+: select-parent  ( -- error? )
+   wd-inum  >parent   if  true exit  then  ( pino )
+   to wd-inum
+   false
+;
+
 : $find-name  ( name$ -- error? )
    -1 to my-vers                         ( name$ )
+
+   2dup " ." $=  if  2drop false exit  then   ( name$ )  \ Change nothing...
+   2dup " .." $=  if                       ( name$ )
+      2drop                                ( )
+      select-parent  exit
+   then                                    ( name$ )
 
    0 dirent-offset !
    dirents  begin  next-pino-match  while  ( name$  adr' offset )
@@ -1174,7 +1215,10 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    repeat                                  ( name$ )
    2drop                                   ( )
    my-vers 0<   if  true exit  then        ( )
-   wf-type 4  =  if  wf-inum to wd-inum  then
+   wf-type 4  =  if
+      wd-inum wf-inum remember-parent
+      wf-inum to wd-inum
+   then
    false
 ;
 
