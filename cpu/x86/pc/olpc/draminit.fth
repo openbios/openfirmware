@@ -1,4 +1,8 @@
    h# 18 # al mov  al h# 80 # out
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 18 #  al mov    al  h# 71 #  out   \ Write value 01
+   then
 
    \ Enable DLL, load Extended Mode Register by set and clear PROG_DRAM
    20000018 rmsr
@@ -40,6 +44,10 @@
    ax  h# ffff0 #)  mov
 
    h# 19 # al mov  al h# 80 # out
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 19 #  al mov    al  h# 71 #  out   \ Write value 01
+   then
 
    \ Turn on the cache
    cr0	ax   mov
@@ -48,6 +56,11 @@
    invd
 
    h# 1a # al mov  al h# 80 # out
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 1a #  al mov    al  h# 71 #  out   \ Write value 01
+   then
+
    0000f001.00001400.   5140000f set-msr  \ PMS BAR
 
    \ It is tempting to test bit 0 of PM register 5c, but a 5536 erratum
@@ -58,6 +71,9 @@
    1430 port-rl  h# 9999 # ax cmp  =  if  \ Wakeup event flag
       0 1430 port-wl
       h# 1b # al mov  al h# 80 # out
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 1b #  al mov    al  h# 71 #  out   \ Write value 01
+
       char r 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
 
       resume-data  # sp mov

@@ -52,6 +52,11 @@ fload ${BP}/cpu/x86/pc/romfind.fth	\ find-dropin
 label startup
    h# 10 # al mov  al h# 80 # out
 
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 10 #  al mov    al  h# 71 #  out   \ Write value 01
+   then
+
  long-offsets on
  h# 4c000017 rmsr  h# 10 bitand  0<>  if   \ LX branch
 
@@ -118,6 +123,11 @@ label startup
 [then]  \ lx-devel
 
    h# 11 # al mov  al h# 80 # out
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 11 #  al mov    al  h# 71 #  out   \ Write value 01
+   then
+
  \ Init memory controller
 
    \ sdram_initialize,generic_sdram.c
@@ -263,6 +273,11 @@ label startup
 [then]
 
    h# 11 # al mov  al h# 80 # out
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 10 #  al mov    al  h# 71 #  out   \ Write value 01
+   then
+
  \ Init memory controller
 
    \ sdram_initialize,generic_sdram.c
@@ -322,6 +337,10 @@ label startup
 
    \ char b 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
    h# 12 # al mov  al h# 80 # out
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 12 #  al mov    al  h# 71 #  out   \ Write value 01
+   then
 
 fload ${BP}/cpu/x86/pc/olpc/draminit.fth
 
@@ -337,6 +356,11 @@ fload ${BP}/cpu/x86/pc/olpc/draminit.fth
    \ Now we can use the stack and do conventional subroutine calls
 
    h# 1f # al mov  al h# 80 # out
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 1f #  al mov    al  h# 71 #  out   \ Write value 01
+   then
+
    fload ${BP}/cpu/x86/pc/resetend.fth
 end-code
 

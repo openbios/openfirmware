@@ -33,6 +33,10 @@ h# fe01.b000 constant ehci-pa
 h# efc0.0000 constant uoc-pa
 h#      1000 constant gpio-port
 
+: resume-progress  ( byte -- )
+   " h# 34 # al mov   al h# 70 # out  ( byte ) # al mov  al h# 71 # out" eval
+;
+
 start-assembling                                \ Turn on the target assembler
 protected-mode
 
@@ -60,6 +64,8 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    gs push
    ss push dx pop                 \ SS in dx
 
+   h# f0 resume-progress
+
    here 5 + dup #) call  di pop   \ Virtual address of EIP in DI
    ( here ) asm-base - #  di  sub \ Virtual address of suspend-base in DI
 
@@ -78,6 +84,8 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    ax cr0 mov                     \ Now paging is off
 
    \ Physical addresses from now on
+
+   h# f1 resume-progress
 
 \ suspend-physical
 \ here suspend-entry put-branch
@@ -287,6 +295,8 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    \ h# 0100.ffff h# 1840 port-wl   \ Enable Power button wakeup, clear status bits
    h# ffff.ffff h# 1858 port-wl   \ Clear all status bits
 
+   h# fe resume-progress
+
    wbinvd                                 \ Flush the cache
    h# 00ff.ff00  h# 2000.0018 bitclr-msr  \ Set refresh to 0, disabling GX refresh
 
@@ -325,6 +335,8 @@ here resume-entry put-branch
 
    cld
 
+   h# 20 resume-progress
+
    \ MSR init
    h# 30 [bp]  si  mov   \ MSR table start address
    si          bx  mov
@@ -337,6 +349,8 @@ here resume-entry put-branch
       wrmsr
       si bx cmp
    = until
+
+   h# 21 resume-progress
 
 [ifdef] checksum-test
    \ Checksum memory from 1M to top (excluding framebuffer)
@@ -355,6 +369,8 @@ here resume-entry put-branch
    1 bitclr  h# 4c00.0015 wmsr  \ DOTPLL - release reset
    ax lods  ax dx xchg  ax lods  ax dx xchg  h# c000.2001 wmsr  \ Video output format
    ax lods  ax dx xchg  ax lods  ax dx xchg  h# c000.2011 wmsr  \ TFTP pad select
+
+   h# 22 resume-progress
 
 [ifdef] reset-smbus-bitbang
    \ GPIO15 is SMB_DATA
@@ -388,6 +404,8 @@ here resume-entry put-branch
    rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
    begin  rdtsc  bx ax sub  0>= until
 [then]
+
+   h# 23 resume-progress
 
    h# 1038 #     dx  mov  \ Low bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
@@ -423,6 +441,8 @@ here resume-entry put-branch
    ax lods  h# 10c0 # dx mov  ax dx out  \ Pos edge enable
    ax lods  h# 10c4 # dx mov  ax dx out  \ Neg edge enable
    ax lods  h# 10bc # dx mov  ax dx out  \ High bank lock
+
+   h# 24 resume-progress
 
 [ifdef] save-display
 
@@ -482,6 +502,8 @@ here resume-entry put-branch
    h# 500.0000 #  vp-pa h# 410 + #)  mov
 [then]
 
+   h# 25 resume-progress
+
 \   0 h# 1842 pw!   \ Disable power button during early startup
 
    \ Restore Interrupt controller setup
@@ -507,6 +529,8 @@ here resume-entry put-branch
    al lods  h# 4d0 # dx mov  al dx out   \ Edge/level low
    al lods  h# 4d1 # dx mov  al dx out   \ Edge/level high
 
+   h# 26 resume-progress
+
    \ Restore PIT (timer)
    h# 30 # al mov  al h# 43 # out  \ Load LSB,MSB for counter 0
    al lods  al h# 40 out
@@ -523,6 +547,8 @@ here resume-entry put-branch
    al lods  al h# 43 # out
    al lods  al h# 61 # out
    al lods  h# 5140.0037 wmsr   \ PIT Count Enable MSR - high bits irrelevant
+
+   h# 27 resume-progress
 
    \ SMBUS controller
    h# 18b3 # dx mov  \ SMBUS base port
@@ -571,6 +597,8 @@ here resume-entry put-branch
    \ End of DCON SMbus reset dance
 [then]
 
+   h# 28 resume-progress
+
    \ MFGPTs 0-5.  MFGPT 6 and 7 are in the standby domain, live during suspend
    h# 1800 # dx mov  \ MFGPT base port
    h# 18 # cx mov
@@ -578,6 +606,8 @@ here resume-entry put-branch
       op: ax lods  ax ax test  0<>  if  op: ax dx out  then
       dx inc  dx inc
    loopa
+
+   h# 29 resume-progress
 
    \ AC97
    \ Codec
@@ -594,6 +624,8 @@ here resume-entry put-branch
    h# 1e.0000 #  h# 4c [bx]  mov  \ HcRhDescriptorB register - Individual port power
    h#     100 #  h# 58 [bx]  mov  \ HcRhPortStatus[2] register - Power on
 [then]
+
+   h# 2a resume-progress
 
    \ Restore CaFe configuration
 
@@ -629,6 +661,8 @@ here resume-entry put-branch
    h#     100 #  h# 60 [bx]  mov  \ HcRhPortStatus[4] register - Power on
 [then]
 
+   h# 2b resume-progress
+
    \ Display stuff
    h# 4758 #  h# fe00.4000 #)  mov  \ Unlock display controller registers
 
@@ -648,6 +682,8 @@ here resume-entry put-branch
    \ DCON fiddling
    \ USB
 
+   h# 2c resume-progress
+
    h# 2c [bp]  di mov               \ VA of suspend-base in di
    h# 28 [bp]  si mov               \ PDIR VA
    h# 24 [bp]  cx mov               \ PDIR entry 0
@@ -666,6 +702,8 @@ here resume-entry put-branch
 
    \ Force the paging enable to take place
    h# eb asm8,  0 asm8,    \ jmp to next location to enable paging
+
+   h# 2d resume-progress
 
    \ Now jump back to the virtual execution address
    here asm-base - 8 + # di add  \ The add instruction is 6 bytes, the jmp is 2

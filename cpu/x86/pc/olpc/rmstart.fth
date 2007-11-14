@@ -156,8 +156,19 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
    op:  h# 510100e1 # cx mov      \ IOD Base Mask 1 MSR
    wrmsr
 
+   op:  h# 0000f001 # dx mov      \ Maps I/O space at 0x1400 to the
+   op:  h# 00001400 # ax mov      \ power management registers
+   op:  h# 5140000f # cx mov      \ PMS BAR
+   wrmsr
+
    \ Writes 4 to CODEC register 0x76 to turn off VBIAS (VREFOUT)
    op: h# 7601.0004 # ax mov  op: h# 148c # dx mov  op: ax dx out
+
+   op: h# 1430 # dx mov  op: dx ax in  op: h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 01 #  al mov    al  h# 71 #  out   \ Write value 01
+   then
+
 
    \ End of MIC LED code.
 
@@ -176,12 +187,12 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
          al al test  0=  if
             rdmsr                             \ Get base MSR value with divisors
             op: h# 04de.0000 # ax or          \ Set the startup time (de) and breadcrumb (4)
-            op: h# 0000.04d9 # dx mov         \ PLL value for 133 MB clk, 433 CPU
+            op: h# 0000.04d9 # dx mov         \ PLL value for 333 MB clk, 433 CPU
          else
             al dec  al h# 71 # out            \ Decrement safety counter
             rdmsr                             \ Get base MSR value with divisors
             op: h# 04de.0000 # ax or          \ Set the startup time (de) and breadcrumb (4)
-            op: h# 0000.04d9 # dx mov         \ PLL value for 167 MB clk, 433 CPU
+            op: h# 0000.04d3 # dx mov         \ PLL value for 333 MB clk, 333 CPU
          then
          wrmsr                             \ Put in the base value
          op: h# 0000.1800 invert # ax and  \ Turn off the BYPASS bits
@@ -207,6 +218,12 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
 
    \ Return to here after the reset
    h# 02 # al mov  al h# 80 # out
+
+   op: h# 1430 # dx mov  op: dx ax in  op: h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 02 #  al mov    al  h# 71 #  out   \ Write value 01
+   then
+
 
 [ifdef] init-com1      init-com1      [then]
 
@@ -234,6 +251,12 @@ ascii F report	 \ send it to com1 if you can...
                         \ note: CPL is now 0
 
    h# 03 # al mov  al h# 80 # out
+
+   op: h# 1430 # dx mov  op: dx ax in  op: h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 01 #  al mov    al  h# 71 #  out   \ Write value 01
+   then
+
 
    \ We are in protected mode, but we are still executing from old
    \ 16-bit code segment, and will continue to do so until the far jump
@@ -263,6 +286,12 @@ ascii h report
 [then]
 
    h# 0f # al mov  al h# 80 # out
+
+   op: h# 1430 # dx mov  op: dx ax in  op: h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 0f #  al mov    al  h# 71 #  out   \ Write value 01
+   then
+
    op: ad: ResetBase h# 10 #)  far jmp	\ Jump to Forth startup
 
    real-mode
