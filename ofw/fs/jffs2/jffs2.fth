@@ -781,12 +781,8 @@ c;
 : scan-node  ( adr -- adr' )
    dup wa1+ w@  case   ( adr nodetype )
       dirent-type  of  ( adr )
-         dup rdinode@  if  ( adr )  \ Ignore deleted entries
-            debug-scan?  if  ." d"  then
-            scan-raw-dirent             ( adr )
-         else
-            debug-scan?  if  ." D"  then
-         then                              ( adr )
+         debug-scan?  if  ." d"  then
+         scan-raw-dirent    ( adr )
 \          false to cleanmark?             ( adr )
       endof                 ( adr nodetype )
 
@@ -1214,14 +1210,14 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
       2over  ?update-dirent                ( name$ adr )
    repeat                                  ( name$ )
    2drop                                   ( )
-   my-vers 0<   if  true exit  then        ( )
+   my-vers 0<   if  true exit  then        ( )  \ Name not found
+   wf-inum 0=   if  true exit  then        ( )  \ Name was deleted
    wf-type 4  =  if
       wd-inum wf-inum remember-parent
       wf-inum to wd-inum
    then
    false
 ;
-
 
 \ The work file is a symlink.  Resolve it to a new dirent
 : dir-link  ( -- error? )
@@ -1315,17 +1311,13 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    next-minode  minodes  ?do                    ( rdirent )
       dup rdname$  i tdname$  $=  if            ( rdirent )  \ Same name
          dup rdversion@  i tdversion@  >  if    ( rdirent )  \ New version
-            dup rdinode@  if                    ( rdirent )
-               dup i replace-tdirent            ( rdirent )  \ Not unlinked
-            else                                ( rdirent )
-               i remove-tdirent                 ( rdirent )  \ Unlinked
-            then                                ( rdirent )
+            dup i replace-tdirent               ( rdirent )
          then                                   ( rdirent )
          drop unloop exit
       then                                      ( rdirent )
       i tdlen                                   ( rdirent )
    +loop                                        ( rdirent )
-   dup rdinode@  if  place-tdirent  else  drop  then   ( )
+   place-tdirent
 ;
 
 : prep-dirents  ( -- )
@@ -1509,16 +1501,33 @@ external
    file-size
 ;
 
+0 instance value last-tdirent
+0 instance value last-rinode
+: $readlink  ( name$ -- true | expansion$ false )
+   last-tdirent tdname$ $=  0=  if  true exit  then   ( )
+   last-rinode >ridata  last-rinode ridsize@ false    ( expansion$ false )
+;
+
 : next-file-info  ( id -- false | id' s m h d m y len attributes name$ true )
    dup 0=  if  drop prep-dirents  minodes  then   ( tdirent )
-   dup next-minode =  if  drop false exit  then   ( tdirent )
-   dup >r  dup tdlen +                            ( id' r: tdirent )
-   r@ tdinum@ latest-node  if                     ( id' r: tdirent )
-." Can't find data node" cr
+
+   \ Skip deleted nodes
+   begin
+      dup next-minode =  if  drop false exit  then   ( tdirent )
+      dup tdinum@  0=                                ( tdirent deleted? )
+   while                                             ( tdirent )
+      dup tdlen +                                    ( tdirent' )
+   repeat                                            ( tdirent )
+
+   dup to last-tdirent                               ( tdirent )
+   dup >r  dup tdlen +                               ( id' r: tdirent )
+   r@ tdinum@  latest-node  if                       ( id' r: tdirent )
+      ." Can't find data node" cr
       0 0 0  0 0 0           ( id' s m h  d m y  r: tdirent )
       0                                ( ... len r: tdirent )
       0                         ( ... attributes r: tdirent )
    else                           ( id' rinode r: tdirent )
+      dup to last-rinode
       >r                          ( id'  r: tdirent rinode )
       r@ rimtime@  unix-seconds>  ( id' s m h  d m y  r: tdirent rinode )
       r@ riisize@                 ( id' s m h  d m y  len r: tdirent rinode )
