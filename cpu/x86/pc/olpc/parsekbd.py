@@ -20,7 +20,8 @@ from sys import *
 from urllib import *
 from HTMLParser import HTMLParser
 
-state = 0
+indent = 0
+hidseen = False
 keys = 128*[0]
 modifiers = 128*[0]
 column = 0
@@ -110,22 +111,9 @@ def handle_key(modifier, s):
         keys[ascii] = keyid
         modifiers[ascii] = modifier
 
-class MyHTMLParser(HTMLParser):
-    def handle_starttag(self, tag, attrs):
-        global state, column, keyid
-        if tag == 'table':
-                state = state + 1
-        elif tag == 'tr':
-                column = 0
-                keyid = 0
-        elif tag == 'td':
-                column = column + 1;
-    
-    def handle_data(self, data):
-        global state, column, keyid
-        if state != 1:
-                return
-        s = data.strip()
+def do_key():
+        global column, keyid
+        s = lastdata.strip()
         if column == 1:    # XKB key
                 pass
         elif column == 2:  # HID
@@ -149,6 +137,44 @@ class MyHTMLParser(HTMLParser):
         elif column == 10:  # comment
                 pass
 
+class MyHTMLParser(HTMLParser):
+    def handle_starttag(self, tag, attrs):
+        global column, keyid, indent
+        #for i in range(indent):
+        #        print "",
+        #print "<", tag
+        #indent = indent+2
+        if tag == 'tr':
+                column = 0
+                keyid = 0
+        elif tag == 'td':
+                column = column + 1;
+    
+    def handle_endtag(self, tag):
+        global hidseen, column, keyid, indent
+        #for i in range(indent):
+        #        print "",
+        #print tag,">" 
+        #indent = indent - 2
+        #if indent < 0:
+        #        indent = 0
+
+        if tag == 'table':
+                hidseen = False
+        elif ((tag == 'th') & (lastdata == "HID")):
+                hidseen = True
+        elif (tag == 'td') & hidseen:
+                do_key()
+    
+    def handle_data(self, data):
+        global lastdata, indent
+        #for i in range(indent):
+        #        print "",
+        #print "{", data, "}"
+        lastdata = data.strip()
+        if lastdata.startswith("There is currently no text"):
+                print "No such Wiki page"
+                raise
 
 # This table converts from the IBM physical keystation number to
 # the corresponding scancode value in scan set 1.
@@ -208,12 +234,16 @@ def put_ka_format(outfile):
 if len(argv) != 2:
         print "Usage: python parsekbd.py PageName"
 else:
-        infile = urlopen('http://wiki.laptop.org/go/' + argv[1])
-        myparser=MyHTMLParser()
-        myparser.feed(infile.read())
-        myparser.close()
-        infile.close()
-        
-        outfile = open(argv[1] + '.ka', 'w')
-        put_ka_format(outfile)
-        outfile.close()
+        try:
+                print "Getting",'http://wiki.laptop.org/go/' + argv[1]
+                infile = urlopen('http://wiki.laptop.org/go/' + argv[1])
+                myparser=MyHTMLParser()
+                myparser.feed(infile.read())
+                myparser.close()
+                infile.close()
+                outfile = open(argv[1] + '.ka', 'w')
+                put_ka_format(outfile)
+                outfile.close()
+                print "Output at",argv[1] + '.ka'
+        except:
+                print "Failed"
