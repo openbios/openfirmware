@@ -86,6 +86,7 @@ variable 'next-minode    \ Pointer into per-file inode list
 
 true value first-time?
 -1 value partition#
+-1 value #writes
 
 \ This is a run-time cache of the parent inums for the directory inums we
 \ have seen, used for resolving "..".
@@ -512,28 +513,26 @@ d# 256 instance buffer: prev-name
    dirent-offset !                      ( )
 ;
 
-: c@+  ( adr -- c adr' )  dup c@ swap ca1+  ;
-: w@+  ( adr -- w adr' )  dup w@ swap wa1+  ;
-: l@+  ( adr -- l adr' )  dup l@ swap la1+  ;
+: w@+  ( adr -- w adr' )  dup wa1+ swap w@  ;
+: l@+  ( adr -- adr' l )  dup la1+ swap l@  ;
 
-: decode-dirent  ( adr -- false | adr' offset pino true )
+: decode-dirent  ( adr -- false | adr' offset true )
    dup  next-dirent  >=  if  drop false exit  then
    dup c@  dup 1 and  if           ( adr c )   \ 1-byte form
       2/  /l* dirent-offset +!     ( adr )
       ca1+                         ( adr' )
       dirent-offset @              ( adr offset )
-      cur-pino @                   ( adr offset pino )
    else                            ( adr c )   \ Longer form
+      drop                         ( adr )
       w@+  ?dup  if                ( adr' w )   \ 2-byte form
          /w* dirent-offset +!      ( adr )
          dirent-offset @           ( adr offset )
-         cur-pino @                ( adr offset pino )
       else                         ( adr )     \ Long form
-         l@+ over cur-pino !       ( pino adr' )
-         l@+ over dirent-offset !  ( pino offset adr' )
-         swap rot                  ( adr offset pino )
-      then                         ( adr offset pino )
-   then                            ( adr offset pino )
+         l@+ cur-pino !            ( adr' )
+         l@+ dirent-offset !       ( adr' )
+         dirent-offset @           ( adr offset )
+      then                         ( adr offset )
+   then                            ( adr offset )
    true
 ;
 
@@ -618,7 +617,7 @@ code (next-pino-match)  ( adr next-dirent pino cur-pino dirent-offset -- false |
    4 #     sp  add          \ clean stack
    ax ax xor  0 # 0 [sp] mov  \ return false
 c;
-: next-pino-match  ( adr -- false | pino adr' offset true )
+: next-pino-match  ( adr -- false | adr' offset true )
    next-dirent wd-inum cur-pino dirent-offset (next-pino-match)
 ;
 [then]
@@ -650,11 +649,11 @@ c;
       dup c@  dup 1 and  if          ( adr b )
          2/ /l* dirent-offset +!     ( adr )
          ca1+                        ( adr' )
-      w@+ swap ?dup  if              ( adr' w )
+      w@+ ?dup  if                   ( adr' w )
          /w* dirent-offset +!        ( adr' )
       else                           ( adr' )
-         l@+ swap cur-pino !         ( adr' )
-         l@+ swap dirent-offset !    ( adr' )
+         l@+ cur-pino !              ( adr' )
+         l@+ dirent-offset !         ( adr' )
          wd-inum cur-pino @ =  if    ( adr' )
             dirent-offset @          ( adr' offset )
             true                     ( adr' offset true )
@@ -827,7 +826,11 @@ c;
 ;
 
 : scan-occupied  ( -- )
-   " partition#" $call-parent partition# =  first-time? 0= and  if  exit  then
+   " partition#" $call-parent partition# =
+   first-time? 0= and
+   " #writes" $call-parent #writes =  and
+   if  exit  then
+
    init-curvars
    dirents 'next-dirent !
    inodes  'next-inode  !
@@ -838,6 +841,9 @@ c;
          i possible-nodes?  if  i scan-raw-nodes  then
       then
    pages/eblock +loop
+
+   " partition#" $call-parent to partition#
+   " #writes"    $call-parent to #writes
 ;
 
 0 [if]
@@ -1195,6 +1201,36 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    to wd-inum
    false
 ;
+: .finum  ( inum -- )
+   init-curvars
+   inodes  begin  next-inode curinum  amatch-inode  while    ( inum inode' offset version )
+      drop  get-node                  ( inum inode' adr )
+      ." Vers: " dup riversion@ .     ( inum inode' len adr )
+      ." Floc: " dup rioffset@ .      ( inum inode' len adr )
+      ." Dlen: " dup ridsize@ .       ( inum inode' len adr )
+      ." Mode: " dup rimode@ .        ( inum inode' len adr )
+      drop cr                         ( inum inode' len )
+   repeat                             ( inum )
+   drop
+;
+
+: .dirinum  ( inum -- )
+   >r
+   dirents  begin  decode-dirent  while  ( adr' offset pino r: )
+      get-node dup rdinode@              ( adr' node-adr this-inum r: inum )
+      r@ =  if
+         dup rdname$ type
+         ."  Vers: "  dup rdversion@ .
+         ."   Pino: " dup rdpino@ .
+\ Inum is known since we searched for it, and type is always "directory"
+\ since we searched the dirent list.
+\         ."  Inum: "  dup rdinode@ .
+         cr
+      then                               ( adr' node-adr r: inum )
+      drop                               ( adr' r: inum )
+   repeat                                ( r: inum )
+   r> drop
+;
 
 : $find-name  ( name$ -- error? )
    -1 to my-vers                         ( name$ )
@@ -1469,7 +1505,6 @@ external
 
    scan-occupied                                ( )
 
-   " partition#" $call-parent to partition#
    false to first-time?
 
    my-args " <NoFile>"  $=  if  true exit  then

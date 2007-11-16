@@ -129,6 +129,7 @@ h# 0200.0085 0 2 >cmd constant random-write-cmd
 \ : read-id  ( -- )  0 0 set-page read-id-cmd 0 cmd  wait-cmd  h# 30 cl@  ;
 : dma-off  ( -- )  0 h# 40 cl!  ;
 
+0 value #writes
 : wait-write-done  ( -- error? )
    0               ( status )
    begin           ( status )
@@ -139,6 +140,7 @@ h# 0200.0085 0 2 >cmd constant random-write-cmd
    \ If the value is completely 0 I think it means write protect     
    1 and  0<>      ( error? )
    write-disable
+   #writes 1+ to #writes
 ;
 
 \ Assumes that the range doesn't straddle a page boundary
