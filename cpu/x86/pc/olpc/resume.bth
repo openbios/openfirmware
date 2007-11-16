@@ -315,7 +315,15 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    wrmsr                                \ Write GLD_MSR_PM to self-refresh memory
    di dx mov  bx ax mov  ax dx out      \ Write PM1_CNT to initial suspend
 
-   begin again    \ Spin in this cache line while going down
+   h# fff # cx mov begin  nop  loopa   \ Spin in this cache line while going down
+
+   \ If the processor didn't really go down, perhaps because a wakeup event was
+   \ already pending, restart the memory clocks and proceed as with a wakeup
+   h# 0.  h# 2000.2004  set-msr         \ GLD_MSR_PM MSR number
+   h# 2000.0018 rmsr  h# 5000 bitset  h# 2000.0018 wmsr  \ Set refresh interval
+
+   \ Increment the CMOS byte at offset 3f
+   h# 3f # al mov   al h# 70 # out  h# 71 # al in  al inc  al h# 71 # out
 
 \ Resume code
 here resume-entry put-branch
