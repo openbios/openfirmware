@@ -59,6 +59,7 @@ hex
 : spicmd! unimp ;  : spi-cmd-wait unimp ;  : power-off unimp ;
 defer spi-start  defer spi@  defer spi!  defer spi-out  defer spi-reprogrammed
 1 value spi-us
+: disable-interrupts ;  : ignore-power-button ;
 \needs ec@ fload ecio.fth
 \needs ec-range fload ecdump.fth
 
