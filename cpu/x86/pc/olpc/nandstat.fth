@@ -197,7 +197,7 @@ end-string-array
    3dup  0 1 xy+  1 grid-h do-fill            ( color x y )
    1 grid-h xy+  grid-w 1  do-fill
 ;
-: lowlight  ( block# -- )  h# ffff cell-border  ;
+: lowlight  ( block# -- )  h# c0 h# c0 h# c0 rgb>565 cell-border  ;
 : highlight  ( block# -- )  0 cell-border  ;
 : +block  ( offset -- )
    current-block +   nand-block-limit mod  ( new-block )
@@ -223,14 +223,13 @@ end-string-array
 ;
 
 : examine-nand  ( -- )
-   0 status-line 1+ at-xy  ." Arrows, fn Arrows to move, Esc to exit" cr
+   0 status-line 1- at-xy  red-letters ." Arrows, fn Arrows to move, Esc to exit" black-letters cr
    0 to current-block
    current-block highlight
    false to examine-done?
    begin key  process-key  examine-done? until
    current-block lowlight
 ;
-
 
 : scan-nand  ( -- )
    open-nand

@@ -520,6 +520,9 @@ fload ${BP}/ofw/core/dualconsole.fth
       ." Tests complete - powering off" cr  d# 5000 ms  power-off
    then
 ;
+: ?scan-nand  ( -- )
+   rocker-up game-key?  if  text-on  scan-nand   then
+;
 : ?fs-update  ( -- )
    button-check button-x or  button-o or  button-square or   ( mask )
    game-key-mask over and  =  if
@@ -562,6 +565,7 @@ fload ${BP}/ofw/core/dualconsole.fth
    ['] false to interrupt-auto-boot?
    probe-usb
    interpreter-init
+   ?scan-nand
    ?diags
    ?fs-update
    secure-startup
