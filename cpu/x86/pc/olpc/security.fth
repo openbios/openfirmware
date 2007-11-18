@@ -13,8 +13,8 @@ purpose: OLPC secure boot
 
 0 0 2value base-xy
 0 0 2value next-xy
-d# 410 d# 540 2constant progress-xy
-d# 557 d# 283 2constant sad-xy
+d# 463 d# 540 2constant progress-xy
+d# 552 d# 283 2constant sad-xy
 
 true value debug-security?
 : ?lease-debug   ( msg$ -- )
@@ -22,6 +22,9 @@ true value debug-security?
 ;
 : ?lease-debug-cr  ( msg$2 -- )
    debug-security?  if  type cr  else  2drop  then
+;
+: ?lease-error-cr  ( msg$2 -- )
+   debug-security?  if  red-letters type black-letters cr  else  2drop  then
 ;
 
 : fail-load  ( -- )
@@ -31,15 +34,21 @@ true value debug-security?
    begin again
 ;
 
+code halt  hlt  c;  \ To save power
+
 0 value security-off?
 
 : security-failure  ( -- )
    visible
-   ." Stopping" cr
-   security-off?  if  quit  then
+   security-off?  if  ." Stopping" cr  quit  then
 
-   d# 10000 ms
-   power-off
+   button-check game-key?  if
+      ." Use power button to power off" cr
+      begin halt again
+   else
+      ." Powering off in 10 seconds" cr
+      d# 10000 ms  power-off
+   then
 ;
 
 : +icon-xy  ( delta-x,y -- )  icon-xy d+ to icon-xy  ;
@@ -56,6 +65,12 @@ true value debug-security?
    sad-xy to icon-xy  " sad" show-icon
    to icon-xy
 ;
+: .security-failure  ( error$ -- )
+   visible  red-letters type black-letters cr
+   show-sad
+   security-failure
+;
+
 : show-lock    ( -- )  " lock" show-icon  ;
 : show-unlock  ( -- )  " unlock" show-icon  ;
 : show-child  ( -- )
@@ -63,12 +78,14 @@ true value debug-security?
    d# 552 d# 383 to icon-xy  " rom:xogray.565" $show-opaque
    progress-xy to icon-xy  \ For boot progress reports
 ;
+
+0 [if]
 : show-warnings  ( -- )
    " erase-screen" $call-screen
    d# 48 d# 32 to icon-xy  " rom:warnings.565" $show-opaque
    dcon-freeze
 ;
-
+[then]
 
 
 h#  20 buffer: cn-buf  \ filename prefix - either "act" or "run"
@@ -211,7 +228,7 @@ d# 256 constant /sig
 
    pubkey$  2swap  signature-bad?  ( error? )
    dup  if
-      "   Signature invalid" ?lease-debug-cr
+      "   Signature invalid" ?lease-error-cr
    else
       "   Signature valid" ?lease-debug-cr
    then
@@ -233,7 +250,7 @@ d# 256 constant /sig
       2dup our-pubkey?  if  false exit  then  ( rem$  line$ )
       2drop                                   ( rem$ )
    repeat                                     ( rem$ )
-   " No signature for our key" ?lease-debug-cr
+   " No signature for our key" ?lease-error-cr
    2drop true
 ;
 
@@ -266,94 +283,64 @@ d# 256 constant /sig
    over r@ -  r>     ( tail$ head$ )
 ;
 
-0. 2value exp-seconds  \ Accumulator for parsing data/time strings
-
 \ numfield is a factor used for parsing 2-digit fields from date/time strings.
-\ Radix is the number to scale the result by, i.e. one more than the maximum
-\ value of the field.  Adjust is 0 for fields whose first valid value is 0
-\ (hours, minutes, seconds) or 1 for fields that start at 1 (month,day).
-
-: numfield  ( exp$ adjust radix -- exp$' )
-   >r >r                      ( exp$ r: radix adjust )
-   2 break$ $number  throw    ( exp$' num  r: radix adjust )
-   r> -                       ( exp$  num' r: radix )
-   dup r@ u>= throw           ( exp$  num  r: radix )
-
-   \ No need to multiply the top half because it can only become nonzero
-   \ on the last call to scale-time
-   exp-seconds drop  r>  um*  ( exp$  num  d.seconds )
-   rot 0  d+  to exp-seconds  ( exp$ )
+: numfield  ( exp$ min max -- exp$' )
+   >r >r                      ( exp$ r: max min )
+   2 break$ $number  throw    ( exp$' num  r: max min )
+   dup r> < throw             ( exp$  num  r: max )
+   dup r> > throw             ( exp$  num  )
 ;
 
 \ expiration-to-seconds parses an expiration date string like
 \ "20070820T130401Z", converting it to (double precision) seconds
 \ according to the simplified calculation described above for "get-date"
 
-: (expiration-to-seconds)  ( expiration$ -- true | d.seconds false )
-   4 break$ $number throw          ( exp$' year )
-   dup d# 2999 u> throw            ( exp$' year )
-   0 to exp-seconds                ( exp$' )
-
-   1 d# 12 numfield                ( exp$' )  \ Month
-   1 d# 31 numfield                ( exp$' )  \ Day
-
-   1 break$ " T" $=  0=  throw     ( exp$' )
-
-   0 d# 24 numfield                ( exp$' )  \ Hour
-   0 d# 60 numfield                ( exp$' )  \ Minute
-   0 d# 60 numfield                ( exp$' )  \ Second
-
-   " Z" $=  0=  throw              ( )
-   exp-seconds
+: (expiration-to-seconds)  ( expiration$ -- d.seconds )
+   4 break$ $number throw >r     ( exp$' r: y )
+   1 d# 12 numfield >r           ( exp$' r: y m )
+   1 d# 31 numfield >r           ( exp$' r: y m d )
+   1 break$ " T" $=  0=  throw   ( exp$' r: y m d )
+   0 d# 23 numfield >r           ( exp$' r: y m d h )
+   0 d# 59 numfield >r           ( exp$' r: y m d h m )
+   0 d# 59 numfield >r           ( exp$' r: y m d h m s )
+   " Z" $= 0= throw              ( r: y m d h m s )
+   r> r> r> r> r> r>             ( s m h m d y )
+   >unix-seconds
 ;
 
-: expiration-to-seconds  ( expiration$ -- true | d.seconds false )
+: expiration-to-seconds  ( expiration$ -- true | seconds false )
    push-decimal
-   ['] (expiration-to-seconds)  catch  ( x x true  |  d.seconds false )
+   ['] (expiration-to-seconds)  catch  ( x x true  |  seconds false )
    pop-base
    dup  if  nip nip  then
 ;
 
-\ earliest is the earliest acceptable date value (in seconds).
-\ It is the date that the first test version of this code was
-\ deployed.  If a laptop has any earlier date that than, that
-\ date is presumed bogus.
+0 value current-seconds
 
-" 20070101T000000Z" expiration-to-seconds drop  2constant earliest
+: date-bad?  ( -- flag )
+   current-seconds  0=  if
+      time&date >unix-seconds to current-seconds
+   then
 
-0. 2value current-seconds
+   \ earliest is the earliest acceptable date value (in seconds).
+   \ It is the date that the first test version of this code was
+   \ deployed.  If a laptop has any earlier date that than, that
+   \ date is presumed bogus.
 
-\ get-date reads the date and time from the real time clock
-\ and converts it to seconds.
-
-\ The seconds conversion uses a simplified approach that ignores
-\ leap years and the like - it assumes that all months are 31 days.
-\ This is sufficient for comparison purposes so long as we use the
-\ same calculation in all cases.  It is not good for doing
-\ arithmetic on dates.
-: get-date  ( -- )
-   time&date           ( s m h d m y )
-   d# 12 *  swap 1- +  ( s m h d m' )  \ Months start at 1
-   d# 31 *  swap 1- +  ( s m h d' )    \ Days start at 1
-   d# 24 * +   ( s m h' )
-   d# 60 * +   ( s m' )   \ Can't overflow so far
-   d# 60 um*   ( s d.s' )
-   swap 0 d+   to current-seconds
+   current-seconds  [ " 20070101T000000Z" expiration-to-seconds drop ] literal - 0<
 ;
+
 
 \ expired? determines whether or not the expiration time string is
 \ earlier than this machine's current time (from the real time clock).
 
 : expired?  ( expiration$ -- bad? )
-   expiration-to-seconds  if  true exit  then  ( d.seconds )
-
-   current-seconds 0. d=  if                   ( d.seconds )
-   then
+   expiration-to-seconds  if  true exit  then  ( seconds )
 
    \ If the date is bad, leases are deemed to have expired
-   current-seconds  earliest d<  if  2drop true exit  then
+   date-bad?  if  drop true exit  then         ( seconds )
 
-   current-seconds  d<
+   current-seconds -  0<
 ;
 
 d# 1024 constant /sec-line-max
@@ -380,11 +367,11 @@ d# 67 buffer: machine-id-buf
 : get-my-sn  ( -- error? )
 
    " SN" find-tag  0=  if
-      " No serial number in mfg data" ?lease-debug-cr
+      " No serial number in mfg data" ?lease-error-cr
       true exit
    then                                             ( adr len )
    ?-null  dup d# 11 <>  if
-      " Invalid serial number" ?lease-debug-cr
+      " Invalid serial number" ?lease-error-cr
       2drop true exit
    then                                             ( adr len )
    machine-id-buf  swap  move
@@ -392,11 +379,11 @@ d# 67 buffer: machine-id-buf
    [char] : machine-id-buf d# 11 + c!
 
    " U#" find-tag  0=  if
-      " No UUID in mfg data" ?lease-debug-cr
+      " No UUID in mfg data" ?lease-error-cr
       true exit
    then                                             ( adr len )
    ?-null  dup d# 36 <>  if
-      " Invalid UUID" ?lease-debug-cr
+      " Invalid UUID" ?lease-error-cr
       2drop true exit
    then                                             ( adr len )
    machine-id-buf d# 12 +  swap  move
@@ -419,12 +406,12 @@ d# 67 buffer: machine-id-buf
    2dup " 00000000T000000Z" $=  if  0 exit  then
 
    dup d# 16 <>  if                        ( expiration$ )
-      " has bad expiration format" ?lease-debug-cr
+      " has bad expiration format" ?lease-error-cr
       -1 exit
    then                                    ( expiration$ )
 
    2dup expired?  if
-      " expired" ?lease-debug-cr
+      " expired" ?lease-error-cr
       -1 exit
    then                                    ( expiration$ )
    0
@@ -454,7 +441,10 @@ d# 67 buffer: machine-id-buf
    my-sn$ $=  0=  if  2drop 0 exit  then   ( rem$ )
 
    \ Disposition code
-   bl left-parse-string  1 <>  if  3drop -1 exit  then  ( rem$ disp-adr )
+   bl left-parse-string  1 <>  if
+      "   No disposition code" ?lease-error-cr
+      3drop -1 exit
+   then                                    ( rem$ disp-adr )
    set-disposition                         ( rem$ )
 
    bl left-parse-string  check-expiry  if  4drop -1 exit  then   ( sig$ exp$ )
@@ -470,7 +460,7 @@ d# 67 buffer: machine-id-buf
 
 : check-lease  ( act01-lease$ -- -1|0|1 )
    bl left-parse-string  " act01:"  $=  0=  if
-      "   Not act01:" ?lease-debug-cr
+      "   Not act01:" ?lease-error-cr
       2drop -1 exit
    then                                    ( rem$ )
    check-timed-signature                   ( -1|0|1 )
@@ -498,7 +488,7 @@ d# 67 buffer: machine-id-buf
          -1  of  r> close-file drop  " lock"   show-icon  false exit  endof
       endcase
    repeat         
-   "   No matching records" ?lease-debug-cr
+   "   No matching records" ?lease-error-cr
    r> close-file drop  false
 ;
 
@@ -575,6 +565,7 @@ d# 67 buffer: machine-id-buf
 ;
 
 false value secure?
+false value in-factory?
 
 stand-init: wp
    " wp" find-tag  if  2drop  true to secure?  then
@@ -612,7 +603,7 @@ stand-init: wp
          -1  of  r> close-file drop  false exit  endof
       endcase
    repeat         
-   "   No matching records" ?lease-debug-cr
+   "   No matching records" ?lease-error-cr
    r> close-file drop  false
 ;
 
@@ -625,13 +616,13 @@ stand-init: wp
    base @ >r  d# 36 base !
    fw#buf 5 $number  if
       show-x
-      visible  ." Invalid firmware version number"  security-failure
+      " Invalid firmware version number"  .security-failure
    then
    pop-base
 ;
 
 : firmware-up-to-date?  ( img$ -- )
-   /flash <>  if  show-x  visible  ." Invalid Firmware image" security-failure  then  ( adr )
+   /flash <>  if  show-x  " Invalid Firmware image" .security-failure  then  ( adr )
    (fw-version)          ( file-version# )
    rom-pa (fw-version)   ( file-version# rom-version# )
    u<=
@@ -680,7 +671,7 @@ stand-init: wp
 
             ['] ?enough-power  catch  ?dup  if
                visible
-               .error
+               red-letters .error black-letters
                security-failure
             then
 
@@ -689,9 +680,7 @@ stand-init: wp
 
             reflash      \ Should power-off and reboot
             show-x
-            visible
-            ." Reflash returned, unexpectedly" cr
-            security-failure
+            " Reflash returned, unexpectedly" .security-failure
          then
          show-lock
       then
@@ -757,7 +746,6 @@ stand-init: wp
 
       next-xy to icon-xy                    ( list$ )
    repeat                                   ( list$ )
-   " sad" show-icon                         ( list$ )
    2drop false                              ( )
 ;
 
@@ -765,15 +753,19 @@ stand-init: wp
 
 : all-devices$  ( -- list$ )  " disk: sd: nand:"  ;
 
-
 : secure-startup  ( -- )
+   in-factory?  if
+      button-check button-x or  button-o or  button-square or  button-rotate or  ( mask )
+      game-key-mask =  if  exit  then
+   then
+
    ['] noop to ?show-device
    ['] noop to load-done
    ['] noop to load-started
 
    set-alternate
 
-   button-rotate game-key?  if  show-warnings  then
+\    button-rotate game-key?  if  show-warnings  then
    show-child
 
    ?force-secure
@@ -788,18 +780,58 @@ stand-init: wp
 
    persistent-devkey?  if  true to security-off?  visible  exit  then
 
-   get-my-sn  if  visible  ." No serial number" cr     show-sad  security-failure  then
+   get-my-sn  if  " No serial number" .security-failure  then
 
-   get-date   current-seconds earliest d<  if
+   date-bad?  if
       \ This is not fatal, because we don't want a brick if the RTC battery fails
-      visible  ." Invalid system date" cr  show-sad
+      visible  red-letters ." Invalid system date" black-letters cr  show-sad
    then
 
-   load-crypto  if  visible  ." Crytpo load failed" cr  show-sad  security-failure   then       ( )
+   load-crypto  if  " Crytpo load failed" .security-failure   then       ( )
 
    alternate?  if  " \boot-alt"  else  " \boot"  then  pn-buf place
 
    all-devices$ load-from-list  if  exit  then   \ Returns only if no images found
 
-   visible  ." Boot failed" cr  show-sad security-failure
+   " Boot failed" .security-failure
+;
+
+: efface-md  ( -- )
+   " md" find-tag  0=  if exit then  ( data$ )
+   + 2 +  flash-base -               ( flash-offset )
+   spi-start spi-identify            ( flash-offset )
+   " MD" rot write-spi-flash         ( )
+   spi-reprogrammed                  ( )
+;
+
+: days>seconds  ( n -- seconds )  [ d# 60 d# 60 * d# 24 * ] literal  *  ;
+: ?factory-mode  ( -- )
+   date-bad?  if  efface-md exit  then
+   " md" find-tag  if             ( data$ )
+      0 left-parse-string  2nip   ( time$ )
+      \ Erase the tag if it is invalid
+      expiration-to-seconds   if  efface-md exit  then  ( begin-seconds )
+      dup 3 days>seconds +        ( begin-seconds end-seconds )
+      \ Erase the tag if its time is up
+      current-seconds  -rot within 0=  if  efface-md exit  then  ( )
+      true to in-factory?
+   then
+;
+
+\ iso8601 date construction for activation key
+: .2digits ( .. roll# -- .. ) roll u# u# drop ;
+: >iso8601$ ( s m h d m y -- adr len )
+  push-decimal
+  <#
+  [char] Z hold 5 .2digits 4 .2digits 3 .2digits
+  [char] T hold 2 .2digits 1 .2digits u# u# u# u#
+  u#>
+  pop-base
+;
+
+: factory-mode  ( -- )
+   " md" find-tag  if  ." md tag already exists" cr  2drop exit  then
+   " MD" find-tag  if  ." MD tag already exists" cr  2drop exit  then
+   date-bad?  if  ." The RTC is not set correctly" cr  exit  then
+   time&date >iso8601$  " md" $add-tag
 ;

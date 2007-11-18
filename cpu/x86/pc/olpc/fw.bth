@@ -332,9 +332,9 @@ fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
 fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 fload ${BP}/cpu/x86/pc/olpc/linux.fth
+fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 fload ${BP}/cpu/x86/pc/olpc/fsupdate.fth
-fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/ofw/gui/ofpong.fth
 fload ${BP}/cpu/x86/pc/olpc/life.fth
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
@@ -520,12 +520,13 @@ fload ${BP}/ofw/core/dualconsole.fth
       ." Tests complete - powering off" cr  d# 5000 ms  power-off
    then
 ;
+
 : ?scan-nand  ( -- )
    rocker-up game-key?  if  text-on  scan-nand   then
 ;
 : ?fs-update  ( -- )
    button-check button-x or  button-o or  button-square or   ( mask )
-   game-key-mask over and  =  if
+   game-key-mask =  if
       try-fs-update
    then
 ;
@@ -546,6 +547,8 @@ fload ${BP}/ofw/core/dualconsole.fth
    standalone?  0=  if  exit  then
 
    no-page
+
+   ?factory-mode
 
    console-start
 
