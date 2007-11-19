@@ -121,6 +121,9 @@ d# 4096 constant /sector-max
    then
 ;
 
+\ This version of read-bpb implements Microsoft's recommended
+\ method for determining whether a filesystem is FAT-16 or FAT-32.
+variable nsects
 : ?read-bpb  ( -- )
    /sector 0=  if      \ Read bpb if necessary
       init-sector-size
@@ -132,24 +135,13 @@ d# 4096 constant /sector-max
       then
       bp_bps lew@  bps w!
       bp_spc c@    spc c!
-      bp_spf lew@  ?dup  if
-         media c@  h# f8 =  if
-            dup d# 12 <  if  fat12  else  fat16  then
-         else
-            fat12
-         then 0 0
-         0 fsinfo ! 0 fssector ! false fsinfos-dirty c!
-      else
-         bp_bspf lel@  fat32
-         bp_rdirclus  lel@
-         bp_fsinfos lew@ dup read-fsinfo
-      then
-      fsinfos w!
-      rdirclus l!
-      fat-type c!
-      spf l!
+      bp_spf lew@  ?dup  0=  if   bp_bspf lel@  then   spf l!
+      bp_nsects lew@ ?dup 0=  if  bp_xnsects lel@  then  nsects l!
 
-      init-fat-cache
+      bp_ndirs lew@  /dirent *  /sector 1- +   /sector /  #dir-sectors w!
+
+      \ nsects is TotSec
+      \ #dir-sectors is RootDirSectors
 
       \ Sector number where the FAT starts.
       \ bp_nhid is the number of sectors before the BPB sector.
@@ -158,17 +150,24 @@ d# 4096 constant /sector-max
 
       \ If the underlying disk driver handles partition offsets,
       \ we don't need to handle bp_nhid here.
-      bp_res lew@   ( bp_nhid lel@ + )              fat-sector0  w!
+      bp_res lew@   ( bp_nhid lel@ + )
+      dup fat-sector0 w!                    ( #resv-sectors )
+      spf l@  bp_nfats c@ *  +              ( #early-sectors )
+      dup dir-sector0 w!                    ( #early-sectors )
+      #dir-sectors w@ +  cl-sector0 l!      ( )
 
-      rdirclus @ ?dup  if
-         dv_cwd-cl l!
+      \ cl-sector0 is FirstDataSector
+
+      nsects l@  #dir-sectors w@ -  spc c@ /  ( #clusters )
+      dup d# 65525 >=  if                    ( #clusters )
+         drop  fat32 fat-type c!
          0 dir-sector0 w!
-         0 #dir-sectors w!
-         spf l@  bp_nfats c@ *  fat-sector0 w@ +    cl-sector0   l!
+         bp_rdirclus lel@  rdirclus l!
+         bp_fsinfos lew@ dup read-fsinfo fsinfos w!
       else
-         spf l@  bp_nfats c@ *  fat-sector0 w@ +    dir-sector0  w!
-         bp_ndirs lew@  /dirent *  /sector /        #dir-sectors w!
-         dir-sector0 w@  #dir-sectors w@ +          cl-sector0   l!
+         d# 4085 >=  if  fat16  else  fat12  then  fat-type c!
+         0 fsinfo !  0 fssector !  false fsinfos-dirty c!
+         0 fsinfos w!  0 rdirclus l!
       then
 
       \ The number of clusters is limited both by space for clusters numbers
@@ -180,16 +179,22 @@ d# 4096 constant /sector-max
       spf l@  /sector *    bytes>cl-entries   ( #clusters )
 
       \ Compare it with the number of clusters for which there is disk space
-      bp_nsects lew@ ?dup 0=  if  bp_xnsects lel@  then
+      nsects l@
       cl-sector0 l@ -  spc c@ /  2 +   min  1-
       max-cl# l!
       free-bpb
+
+      \ Start with the root directory as the current working directory
+      rdirclus @  dv_cwd-cl l! 
+
+      init-fat-cache
    then
 ;
 
 : set-device  ( device# -- )  (set-device)  ?read-bpb  ;
 
 \ : stand-init  ( -- )  stand-init  clear-device-records  ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
