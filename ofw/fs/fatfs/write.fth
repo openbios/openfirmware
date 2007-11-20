@@ -80,7 +80,7 @@ variable extended?
       \ If we need more cluster(s) and
       \ we're at or beyond the end of the file, add new cluster(s)
       dup 0>
-      current-position fh_length l@ >  last-cluster? or and if
+      current-position fh_length l@ >  last-cluster? or   and  if
          extend-file ?dup if  ?flush-fat-cache  nip  exit  then
          extended? on
       else \ same cluster?
@@ -94,17 +94,19 @@ variable extended?
          ?flush-fat-cache  true exit
       then
 
-      \ If this is a partial cluster without extension,
-      \ then adjust the length field
-      remaining @ /cluster <  extended? @ invert and if
+      \ Adjust the length field unless extend-file already did it
+      extended? @ 0=  if
          current-position remaining @ + fh_length l!
       then
 
       \ Continue with the rest of the transfer
       #cont-cls @ /cluster * dup bufadr +!  negate remaining +!
 
-      next-cl# @ ?dup if  1st-cl# !  1 #cont-cls !  next-cl# off
-      else  1st-cl# off  #cont-cls off  then
+      next-cl# @ ?dup if
+         1st-cl# !  1 #cont-cls !  next-cl# off
+      else
+         1st-cl# off  #cont-cls off
+      then
 
       last-cluster? 0= if  to-next-cluster  then 
    repeat  drop ( )
