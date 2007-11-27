@@ -4,16 +4,16 @@ purpose: Suspend/resume test with RTC wakeup
 : enable-rtc-irq   ( -- )  h# a1 pc@ h# fe and h# a1 pc!  ;
 : disable-rtc-irq  ( -- )  h# a1 pc@     1 or  h# a1 pc!  ;
 
-0 value cmos-alarm-day			\ Offset of day alarm in CMOS
-0 value cmos-alarm-month		\ Offset of month alarm in CMOS
+\ Must agree with lxmsrs.fth
+h# 3d constant cmos-alarm-day	\ Offset of day alarm in CMOS
+h# 3e constant cmos-alarm-month	\ Offset of month alarm in CMOS
+h# 32 constant cmos-century	\ Offset of century byte in CMOS
 
-: set-alarm-offsets  ( -- )
-   h# 10. h# 5140.0055 wrmsr
-   h# 11. h# 5140.0056 wrmsr
-
-   h# 5140.0055 rdmsr drop to cmos-alarm-day
-   h# 5140.0056 rdmsr drop to cmos-alarm-month
-;
+dev /rtc
+   cmos-alarm-day    " alarm_day"   integer-property
+   cmos-alarm-month  " alarm_month" integer-property
+   cmos-century      " century"     integer-property
+dend
 
 false value enable-rtc-irq?
 
@@ -51,10 +51,13 @@ d# 1 constant rtc-alarm-delay
    0 0 acpi-l!				\ Disable RTC SCI
 ;
 : rtc-wackup
-   set-alarm-offsets
    0
    begin  pm-sleep-rtc space dup . (cr 1+  key? until
    key drop
+;
+
+stand-init: Century
+   d# 20 cmos-century cmos!
 ;
 
 \ LICENSE_BEGIN

@@ -291,6 +291,9 @@ msr: 5140.0025 00000000.00001002. \ IRQM_LPC Enable mouse(12) and kbd (1)
 \ msr: 5140.004e 00000000.ef2500c0. \ LPC_SIRQ
 \ msr: 5140.004e 00000000.effd0080. \ LPC_SIRQ
 msr: 5140.004e 00000000.effd00c0. \ LPC_SIRQ - Active high bit 12 (mouse) and 2 (kbd), Enable, Quiet, 17 frames
+msr: 5140.0055 00000000.0000003d.  \ RTC alarm day (offset into CMOS RAM)
+msr: 5140.0056 00000000.0000003e.  \ RTC alarm month (offset into CMOS RAM)
+msr: 5140.0057 00000000.00000032.  \ RTC century (offset into CMOS RAM)
 
 \ USB host controller
 msr: 5120.0001 0000000b.00000000.  \ USB_GLD_MSR_CONFIG - 5536 page 262
