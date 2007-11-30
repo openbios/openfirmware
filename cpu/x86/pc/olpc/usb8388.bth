@@ -9,11 +9,12 @@ fload ${BP}/cpu/x86/pc/olpc/versions.fth
 
 " wget -q http://dev.laptop.org/pub/firmware/libertas/usb8388-${WLAN_VERSION}.bin" expand$ $sh
 
-" wget -q -O - http://dev.laptop.org/pub/firmware/libertas/MD5SUMS  | grep ${WLAN_VERSION}  >usb8388.md5" expand$ $sh
+" wget -q http://dev.laptop.org/pub/firmware/libertas/usb8388-${WLAN_VERSION}.bin.md5" expand$ $sh
 
-" md5sum usb8388-${WLAN_VERSION}.bin | cmp - usb8388.md5" expand$ $sh
+" md5sum -b usb8388-${WLAN_VERSION}.bin | cmp - usb8388-${WLAN_VERSION}.bin.md5" expand$ $sh
 
 " mv usb8388-${WLAN_VERSION}.bin usb8388.bin" expand$ $sh
+" rm usb8388-${WLAN_VERSION}.bin.md5" expand$ $sh
 
 \ This forces the creation of a .log file, so we don't re-fetch
 writing usb8388.version
