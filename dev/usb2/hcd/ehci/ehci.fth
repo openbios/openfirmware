@@ -154,7 +154,7 @@ headers
 
 : claim-ownership  ( -- )
    1 cfgflag!				\ Claim ownership to all ports
-   1 ms
+   3 ms					\ Give devices time to settle
 
    \ Power on ports if necessary
    hcsparams@ h# 10 and  if
