@@ -38,12 +38,12 @@ h# 0300 constant REPORT_FEATURE
 
 : set-boot-protocol  ( -- error? )
    0 0 my-address ( interface ) 0 DR_HIDD DR_OUT or SET_PROTOCOL
-   control-set-nostat
+   control-set
 ;
 
 : set-idle  ( ms -- error? )
    >r 0 0 my-address ( interface ) r> 4 / 8 << ( 4ms ) DR_HIDD DR_OUT or SET_IDLE 
-   control-set-nostat
+   control-set
 ;
 
 \ Key modifiers
@@ -63,7 +63,7 @@ h# 0300 constant REPORT_FEATURE
 : (set-leds)  ( led -- )
    led-buf c!
    led-buf /led-buf my-address ( interface ) REPORT_OUT DR_HIDD DR_OUT or SET_REPORT
-   control-set-nostat  drop
+   control-set  drop
 ;
 : set-leds     ( led-mask -- )  dup to led-state (set-leds)  ;
 : toggle-leds  ( led-mask -- )  led-state xor    set-leds    ;
