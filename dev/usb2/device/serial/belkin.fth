@@ -20,7 +20,7 @@ hex
 
 : belkin-set-baud  ( -- )
    belkin-rts-dtr-on
-   d# 00 ( SET_BAUDRATE_REQUEST ) d# 230400 d# 9600 / belkin-cmd
+   d# 00 ( SET_BAUDRATE_REQUEST ) d# 230400 d# 115200 / belkin-cmd
    d# 03 ( SET_PARITY_REQUEST ) 0 ( PARITY_NONE ) belkin-cmd
    d# 02 ( SET_DATA_BITS_REQUEST ) 8 5 - belkin-cmd
    d# 01 ( SET_STOP_BITS_REQUEST ) 1 1 - belkin-cmd

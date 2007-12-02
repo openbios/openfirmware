@@ -15,7 +15,8 @@ hex
    1 0 0  DR_OUT DR_VENDOR or d# 10 ( SET_MODEM_CTRL_REQUEST ) control-set  drop
 ;
 : mct-set-baud  ( -- )
-   mct-buf 8 over le-l!			\ 9600 baud rate
+   \ 300:1 600:2 1200:3 2400:4 4800:6 9600:8 19200:9 38400:a 57600:b 115200:c
+   mct-buf h# c over le-l!			\ 115200 baud rate
    4 0 0  DR_OUT DR_VENDOR or 5 ( SET_BAUD_RATE_REQUEST ) control-set  drop
 ;
 : mct-rts-dtr-off  ( -- )  8     mct-set-modem-ctrl  ;

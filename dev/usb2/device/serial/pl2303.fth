@@ -33,7 +33,7 @@ hex
 
    0 0 1 0 pl2303-vendor-write
 
-   d# 9600 pl2303-buf le-l!	\ Baud rate = 9600
+   d# 115200 pl2303-buf le-l!	\ Baud rate = 115200
    0 pl2303-buf 4 ca+ c!	\ # stop bits = 1 (0=1, 1=1.5, 2=2)
    0 pl2303-buf 5 ca+ c!	\ parity = none
 				\ (0=none, 1=odd, 2=even, 3=mark, 4=space)
