@@ -60,6 +60,9 @@ false value debug?
 : my-w@  ( offset -- w )  my-space +  " config-w@" $call-parent  ;
 : my-w!  ( w offset -- )  my-space +  " config-w!" $call-parent  ;
 
+: my-l@  ( offset -- l )  my-space +  " config-l@" $call-parent  ;
+: my-l!  ( l offset -- )  my-space +  " config-l!" $call-parent  ;
+
 : map-in   ( phys.lo,md,hi len -- vaddr )  " map-in"   $call-parent  ;
 : map-out  ( vaddr size -- )               " map-out"  $call-parent  ;
 

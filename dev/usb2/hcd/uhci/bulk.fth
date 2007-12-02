@@ -103,21 +103,24 @@ external
    bulk-in-qh my-speed insert-bulk-qh
 ;
 
+: bulk-in-actual  ( -- actual usberr )
+   bulk-in-td bulk-in-qh >qh-#tds l@ get-actual	( actual )
+   usb-error						( actual usberr )
+   bulk-in-td bulk-in-qh >qh-#tds l@ fixup-bulk-in-data
+;
+
 : bulk-in?  ( -- actual usberr )
    bulk-in-qh 0=  if  0 USB_ERR_INV_OP exit  then
    clear-usb-error
    process-hc-status
-   bulk-in-qh dup sync-qhtds
-   qh-done?  if
-      bulk-in-td bulk-in-qh >qh-#tds l@ get-actual	( actual )
-      usb-error						( actual usberr )
-      bulk-in-td bulk-in-qh >qh-#tds l@ fixup-bulk-in-data
-   else
+   bulk-in-qh dup sync-qhtds                            ( bulk-in-qh )
+   qh-done?  if                                         ( )
+      bulk-in-actual                                    ( actual usberr )
+   else                                                 ( )
       bulk-in-qh dup >hcqh-elem le-l@			( qh elem )
       1 ms  over sync-qhtds				( qh elem )
       swap >hcqh-elem le-l@ =  if			\ No movement in the past ms
-         bulk-in-td bulk-in-qh >qh-#tds l@ get-actual	( actual )
-         usb-error					( actual usberr )
+         bulk-in-actual                                 ( actual usberr )
          bulk-in-td bulk-in-qh >qh-#tds l@ fixup-bulk-in-data
       else						\ It may not be done yet
          0 usb-error					( actual usberr )
@@ -130,14 +133,16 @@ external
 
 headers
 : restart-bulk-in-td  ( td -- )
-   begin  ?dup  while
-      dup >hctd-token dup le-l@ TD_TOKEN_DATA1 invert and
-      bulk-in-data@  toggle-bulk-in-data  or  swap le-l!
-      dup >hctd-stat dup le-l@
-      TD_STAT_ANY_ERROR TD_ACTUAL_MASK or invert and
-      TD_STAT_ACTIVE or swap le-l!
-      >td-next l@
-   repeat
+   begin  ?dup  while                                 ( td )
+      toggle-bulk-in-data                             ( td )
+      dup >hctd-token                                 ( td &token )
+      dup le-l@  TD_TOKEN_DATA1 invert and            ( td &token value )
+      bulk-in-data@ or  swap le-l!                    ( td )
+      dup >hctd-stat dup le-l@                        ( td &stat value )
+      TD_STAT_ANY_ERROR TD_ACTUAL_MASK or invert and  ( td &stat value' )
+      TD_STAT_ACTIVE or swap le-l!                    ( td )
+      >td-next l@                                     ( td' )
+   repeat                                             ( )
 ;
 
 external

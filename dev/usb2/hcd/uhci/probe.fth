@@ -4,17 +4,20 @@ purpose: UHCI USB Controller probe
 hex
 headers
 
+\ We mustn't wait more than 3 ms between releasing the reset and enabling
+\ the port to begin the SOF stream, otherwise some devices (e.g. pl2303)
+\ will go into suspend state and then not respond to set-address.
 : reset-root-hub-port  ( port -- )
-   dup >r portsc@ fff5 and 200 or r@ portsc!	\ Reset port
-   10 ms
-   r@ portsc@ fff5 and 200 invert and r@ portsc!
-   10 ms
-   r@ portsc@ fff5 and 4 or r@ portsc!		\ Enable port
-   20 ms
-   r@ portsc@ a or r> portsc!			\ Clear status
+   dup >r  portsc@ h# 20e invert and    ( value r: port )  \ Clear reset, enable, status
+   dup h# 200 or  r@ portsc!	        ( value r: port )  \ Reset port
+   d# 30 ms                             ( value r: port )  \ > 10 ms - reset time
+   dup r@ portsc!                       ( value r: port )  \ Release reset
+   1 ms                                 ( value r: port )  \ > 5.3 uS - reconnect time
+   h# e or  r> portsc!	                ( )  \ Enable port and clear status
 ;
 
 : probe-root-hub-port  ( port -- )
+   dup reset-root-hub-port
    dup portsc@ 1 and 0=  if  drop exit  then		\ No device-connected
    ok-to-add-device? 0=  if  drop exit  then		\ Can't add another device
 
@@ -39,7 +42,6 @@ external
    2 0  do
       i portsc@ h# a and  if
          i rm-obsolete-children			\ Remove obsolete device nodes
-         i reset-root-hub-port
          i ['] probe-root-hub-port catch  if
             drop ." Failed to probe root port " i .d cr
          then
@@ -57,6 +59,7 @@ external
       map-regs
       first-open?  if
          false to first-open?
+         ?disable-smis
          reset-usb
          init-struct
          init-lists
@@ -73,7 +76,7 @@ external
 : close  ( -- )
    open-count 1- to open-count
    end-extra
-   open-count 0=  if  free-dma-buf unmap-regs  then
+   open-count 0=  if  free-dma-buf  then  \ Don't unmap
 ;
 
 \ LICENSE_BEGIN

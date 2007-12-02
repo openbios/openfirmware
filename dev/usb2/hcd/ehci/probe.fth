@@ -40,6 +40,29 @@ headers
    then  drop
 ;
 
+: grab-controller  ( -- error? )
+   hccparams@ 8 rshift h# ff and  dup  if    ( config-adr )
+      dup my-l@  h# 10001 =  if              ( config-adr )
+         h# 100.0000 over my-l!              ( config-adr )  \ Ask for it
+         true                                ( config-adr error? )
+         d# 100 0  do                        ( config-adr error? )
+            over my-l@ h# 101.0000 and  h# 100.0000 =  if
+               \ Turn off SMIs in Legacy Support Extended CSR
+               h# e000.0000 h# 6c my-l!      ( config-adr error? )
+               0 my-l@ h# 27cc8086 =  if
+                  h# ffff.0000  h# 70  my-l!  \ Clear EHCI Intel special SMIs
+               then
+               0= leave                      ( config-adr error?' )
+            then                             ( config-adr error? )
+            d# 10 ms                         ( config-adr error? )
+         loop                                ( config-adr error? )
+         nip exit
+      then                                   ( config-adr )
+   then                                      ( config-adr )
+   drop                                      ( )
+   false
+;
+
 external
 : power-usb-ports  ( -- )  ;
 
@@ -64,8 +87,14 @@ external
    parse-my-args
    open-count 0=  if
       map-regs
+      alloc-dma-buf
       first-open?  if
          false to first-open?
+         grab-controller  if
+            ." Can't take control of EHCI from underlying BIOS" cr
+            free-dma-buf unmap-regs
+            false exit
+         then
          0 ehci-reg@  h# ff and to op-reg-offset
          reset-usb
          init-ehci-regs
@@ -74,8 +103,6 @@ external
          init-struct
          init-extra
       then
-      alloc-dma-buf
-
       probe-root-hub
    then
    open-count 1+ to open-count

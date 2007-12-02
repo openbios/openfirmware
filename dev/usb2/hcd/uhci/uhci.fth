@@ -52,6 +52,10 @@ my-address my-space          encode-phys
 : portsc@     ( port -- data )  2* 10 + uhci-w@  ;
 : portsc!     ( data port -- )  2* 10 + uhci-w!  ;
 
+: ?disable-smis  ( -- )
+   0 my-l@ h# 27c88086 =  if   h# af00 h# 80 my-w!  then
+;
+
 : reset-usb  ( -- )
    uhci-reg dup 0=  if  map-regs  then
    4 usbcmd!			\ Global reset
