@@ -55,7 +55,9 @@ false value debug-options?
 : will  ( rem$ -- rem$' )
    next-cmd-byte  " WILL" .got
    dup  case
-      0  of  send-do   endof
+\ Since we have already sent "do binary", there is no need to re-ack it
+\     0  of  send-do   endof
+      0  of  drop      endof	\ Suppress go-ahead
 
 \ Since we have already sent "do suppressGA", there is no need to re-ack it
 \     3  of  send-do   endof	\ Suppress go-ahead
@@ -125,16 +127,26 @@ false value debug-options?
    endcase
 ;
 
+\ Remove the linefeed in a cr-lf pair.
+\ The Windows telnet client sends CR-LF per the Telnet NVT spec.
+\ The Linux telnet client just sends CR.
+0 value last-was-cr?
+
+: do-lf  ( adr len -- adr' len' )
+   last-was-cr?  if  swallow  else  1 /string  then
+;
+
 : process-escapes  ( adr len -- len' )
-   over swap                                 ( adr rem$ )
-   begin  dup  while                         ( adr rem$ )
-      over c@  #iac =  if                    ( adr rem$ )
-         do-command                          ( adr rem$' )
-      else                                   ( adr rem$ )
-         1 /string                           ( adr rem$' )
-      then                                   ( adr rem$ )
-   repeat                                    ( adr end-adr 0 )
-   drop swap -                               ( len' )
+   over swap                                   ( adr rem$ )
+   begin  dup  while                           ( adr rem$ )
+      over c@  dup >r  case                    ( adr rem$ r: char )
+         #iac of  do-command  endof            ( adr rem$' r: char )
+         linefeed of  do-lf  endof             ( adr rem$' r: char )
+         ( adr rem$ char )  >r  1 /string  r>  ( adr rem$' r: char )
+      endcase                                  ( adr rem$ r: char )
+      r> carret =  to last-was-cr?             ( adr rem$ )
+   repeat                                      ( adr end-adr 0 )
+   drop swap -                                 ( len' )
 ;
 : read  ( adr len -- actual )
    over swap  (read)              ( adr actual )
@@ -174,12 +186,21 @@ false value debug-options?
    begin
       get-msecs over d# 300 +  -  0<
    while
-      the-byte 1 (read)  case          ( msecs [byte] )
-          1 of  drop get-msecs  the-byte 1 process-escapes drop  endof
-         -1 of  drop false exit  endof
-      endcase
+      the-byte h# 10 (read)  dup  0<  if          ( msecs count )
+         \ Bail out if the connection closed
+         -1 =  if  drop false exit  then
+
+         \ The other alternative is -2, meaning no bytes available.
+         \ In that case, we'll eventually time out.
+      else                                        ( msecs count )
+         \ Keep advancing the timeout while bytes are still coming in
+         the-byte swap process-escapes drop      ( msecs )
+         drop get-msecs
+      then
    repeat
    drop
+
+   false to last-was-cr?
 
    true
 ;
