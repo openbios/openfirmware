@@ -836,6 +836,7 @@ c;
    inodes  'next-inode  !
    pages/chip  0  do
       i page>eblock  to the-eblock#
+      0 prev-name c!
       i h# 3fff and 0=  if  scan-callout  then
       i no-summary?  if
          i possible-nodes?  if  i scan-raw-nodes  then
