@@ -67,11 +67,18 @@ create read-capacity-cmd h# 25 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c,
    \ The SCSI-2 standard requires disk devices to implement
    \ the "read capacity" command.
 
-   8  read-capacity-cmd 0a  short-data-command  if  ( )
-      true
-   else                                             ( adr )
-      dup 4 + 4c@  swap 4c@  1+  false
-   then
+   \ Retry it a few times just in case that helps
+   d# 20  0  do
+      8  read-capacity-cmd 0a  short-data-command  0=  if  ( )
+         dup 4 + 4c@  swap 4c@  1+  false
+         unloop exit
+      then
+      d# 200 ms
+   loop
+
+   \ If it fails, we just guess.  Some devices violate the spec and
+   \ fail to implement read_capacity
+   d# 512  h# ffffffff  false
 ;
 
 external
