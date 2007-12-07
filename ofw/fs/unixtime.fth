@@ -31,7 +31,8 @@ create days/month
 : >unix-seconds   ( s m h d m y -- seconds )	\ since 1970
    d# 1970 - 4 /mod [ d# 365 4 * 1+ ] literal *		( s m h d m yrs days )
    swap d# 365 * +					( s m h d m days )
-   swap 1- 0 ?do  i days/month + c@ + loop		( s m h d days )
+   swap  1 max  d# 12 min				( s m h d days m' )
+   1- 0 ?do  i days/month + c@ + loop			( s m h d days )
    + 1-							( s m h days )
    d# 24 * +   d# 60 * +   d# 60 * +
 ;
