@@ -12,6 +12,23 @@ h# 100 constant button-x
 
 0 value game-key-mask
 
+: show-key  ( mask x y -- )
+   at-xy game-key-mask and if  ." *" else  ." o"  then
+;
+: update-game-keys  ( mask -- )
+   dup game-key-mask or  to game-key-mask
+   rocker-up      2 2 show-key
+   rocker-left    0 3 show-key
+   rocker-right   4 3 show-key
+   rocker-down    2 4 show-key
+   button-rotate  2 6 show-key
+
+   button-o       9 2 show-key
+   button-square  7 3 show-key
+   button-check   d# 11 3 show-key
+   button-x       9 4 show-key
+;
+
 : read-game-keys  ( -- )
 [ifdef] lx-devel  false exit  [then]
    board-revision h# b18 <  if
@@ -20,8 +37,9 @@ h# 100 constant button-x
    then
 
    game-key@  dup to game-key-mask  if
-      ." Release the game key to continue" cr
-      begin  d# 100 ms  game-key@ 0=  until
+      ." Release the game keys to continue" cr
+      begin  d# 100 ms  game-key@ dup update-game-keys 0=  until
+      0 7 at-xy
    then
 ;
 : game-key?  ( mask -- flag )  game-key-mask and 0<>  ;
