@@ -9,6 +9,8 @@
 
 : set-wp  ( -- )
    h# fffefffe 2  " wp"  $=  if  ." wp is already set" cr  exit  then
+   " SN" find-tag 0=  abort" No serial number (SN tag); enabling security would brick me." 2drop
+   " U#" find-tag 0=  abort" No U# tag; enabling security would brick me." 2drop
    h# fffefffe 2  " ww"  $=  0=  abort" No ww tag"
    spi-start  spi-identify
    " wp"  h# efffe  write-spi-flash
