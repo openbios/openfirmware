@@ -1160,8 +1160,10 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
 ;
 
 0 instance value my-vers  \ Highest version number - local to $find-name
+0 0 2value tail-name$
 
 : ?update-dirent  ( offset name$  -- )
+   2dup to tail-name$
    rot get-node >r                        ( name$  r: rdirent )
    r@ rdname$  $=  if                     ( r: rdirent )
       wd-inum  r@ rdpino@  =  if          ( r: rdirent )
@@ -1297,7 +1299,6 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    2drop false                          ( false )
 ;
 
-\ Leaves the-wd set to the containing directory
 \ : $chdir  ( path$ -- error? )
 \    \ XXX should save wf-* and restore them on failure
 \    $resolve-path  if  true exit  then  ( dirent )
@@ -1367,7 +1368,7 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
 
 \ End of "tdirent" section
 
-false [if]
+true [if]
 \ "delete file" section
 
 \ For now, just 0 the modify time, since we only support deleting
@@ -1382,6 +1383,7 @@ false [if]
    r@ 5 j!                \ dirino     ( pino version name$              r: len adr )
    dup  r@ 7 la+ c!       \ nsize      ( pino version name$              r: len adr )
    2dup crc  r@ 9 j!      \ name_crc   ( pino version name$              r: len adr )
+   dup d# 10 la+  r@ 1 j! \ node-len   ( pino version name$              r: len adr )
    r@ d# 10 la+ swap move \ name       ( pino version                    r: len adr )
    \ Null terminate?
    r@ 4 j!                \ version    ( pino                            r: len adr )
@@ -1401,35 +1403,61 @@ false [if]
 ;
 : find-empty-page   ( -- true | page# false )
    pages/chip  0  ?do
-      i 1 read-pages  0=  if
+      \ If the last page in the eblock is readable and erased ...
+      i pages/eblock + 1-  1 read-pages  0=  if
          block-buf /page erased?  if
-            i false  unloop exit
+            \ Find the first readable and erased page in that eblock
+            i pages/eblock bounds  do
+               i 1 read-pages  0=  if
+                  block-buf /page erased?  if
+                     i false  unloop unloop exit
+                  then
+               then
+            loop
          then
       then
    pages/eblock +loop
    true
 ;
 : put-node  ( adr len page# -- )
+   true to first-time?
+   -1 to have-eblock#               ( adr len page# )
    >r                               ( adr len         r: page# )
-   2dup block-buf  move             ( adr len         r: page# )
+   2dup block-buf  swap move        ( adr len         r: page# )
    tuck free-mem                    ( len             r: page# )
    block-buf /page rot /string      ( pad-adr pad-len r: page# )
    2dup erase                       ( pad-adr pad-len r: page# )
    over 1 j!                  \ totlen      ( pad-adr r: page# )
    jffs2-magic over w!        \ magic       ( pad-adr r: page# )
-   padding-type swap wa1+ w!  \ nodetype    (         r: page# )
+   padding-type over wa1+ w!  \ nodetype    ( pad-adr r: page# )
+   dup 8 crc  swap 2 j!       \ crc         (         r: page# )
    block-buf r> 1  " write-blocks" $call-parent              ( )
-   1 <>  if  ." JFFS2: write failed"  then                   ( )
+   1 <>  dup  if  ." JFFS2: write failed"  then       ( error? )
 ;
 
-\ the-wd is the parent dirent
 : $delete  ( adr len -- error? )
-   $resolve-path  if  true exit  then           ( dirent' )
-   >r r@ xxpino@  r@ xxversion@ 1+  r> xxfname$       ( parent-ino new-version name$ )
+   $resolve-path  if  true exit  then           ( )
+   wf-type 4 =  if  true exit  then             ( )  \ Don't delete directories
+   wd-inum                                      ( parent-ino )
+   my-vers 1+                                   ( parent-ino new-version )
+   tail-name$                                   ( parent-ino new-version name$ )
    0 0 make-raw-dirent                          ( adr len )
-   find-empty-page                              ( adr len page# )
+   find-empty-page  if  2drop true exit  then   ( adr len page# )
    put-node
 ;
+
+\ XXX check for empty first
+: $rmdir  ( adr len -- error? )
+   $resolve-path  if  true exit  then           ( )
+   wf-type 4 <>  if  true exit  then            ( )  \ Must be a directory
+   wf-inum  >parent  if  true exit  then        ( parent-ino )
+   my-vers 1+                                   ( parent-ino new-version )
+   tail-name$                                   ( parent-ino new-version name$ )
+   0 0 make-raw-dirent                          ( adr len )
+   find-empty-page  if  2drop true exit  then   ( adr len page# )
+   put-node
+;
+
 
 \ End of "delete file" section
 [then]
