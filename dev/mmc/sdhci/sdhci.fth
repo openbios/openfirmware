@@ -314,7 +314,7 @@ external
 d# 16 instance buffer: csd
 headers
 
-: reset-card  ( -- )  0 0 0 cmd  0 to rca  ;  \ 0 -
+: reset-card  ( -- )  0 0 0 cmd  0 to rca  1 ms  ;  \ 0 -
 
 : send-op-cond  ( voltage-range -- ocr )  h# 0102 0 cmd  response  ; \ R3
 
