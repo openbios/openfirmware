@@ -8,7 +8,7 @@ purpose: OLPC secure boot
 : visible  dcon-unfreeze text-on   ;
 
 : ?unfreeze  ( -- )
-   game-key@ button-check and  if  visible unfreeze  then
+   game-key@ button-check and  if  visible banner  unfreeze  then
 ;
 
 0 0 2value base-xy
@@ -39,7 +39,7 @@ code halt  hlt  c;  \ To save power
 0 value security-off?
 
 : security-failure  ( -- )
-   visible
+   visible banner
    security-off?  if  ." Stopping" cr  quit  then
 
    button-check game-key?  if
@@ -773,7 +773,7 @@ stand-init: wp
    secure?  0=  if  unfreeze visible  exit  then
 
    button-check game-key?  if
-      unfreeze  visible
+      unfreeze  visible  banner
    else
       freeze  dcon-freeze
    then
@@ -785,6 +785,7 @@ stand-init: wp
    date-bad?  if
       \ This is not fatal, because we don't want a brick if the RTC battery fails
       visible  red-letters ." Invalid system date" black-letters cr  show-sad
+      banner
    then
 
    load-crypto  if  " Crytpo load failed" .security-failure   then       ( )
