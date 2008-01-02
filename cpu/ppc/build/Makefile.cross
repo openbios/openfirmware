@@ -1,8 +1,36 @@
 # This setting of HOSTDIR is for cross-building on an x86 Linux system
 # For it to work, you first need to build the simulator version of ppcforth
-# in cpu/ppc/Linux and then copy the ppcforth file to cpu/x86/Linux
-HOSTDIR:=$(shell pwd)/../../../cpu/x86/Linux/
+# in cpu/x86/Linux with "make -f Makefile.ppcforth"
+OS := $(shell uname)
 
-builder.dic:
-	HOSTDIR=${HOSTDIR} build $@
+HOSTCPU:=x86
+HOSTDIR:=../../${HOSTCPU}/${OS}
 
+all: basefw.dic
+
+.PHONY: FORCE all clean
+
+.PRECIOUS: builder.dic
+
+${HOSTDIR}/forth:
+	@make -C ${HOSTDIR} forth
+
+${HOSTDIR}/ppcforth:
+	@make -C ${HOSTDIR} -f Makefile.ppcforth ppcforth
+
+build: ${HOSTDIR}/forth
+	@ln -sf $< $@
+
+%.dic: FORCE build ${HOSTDIR}/ppcforth
+	./build $@
+
+builder.dic: FORCE build
+	-[ ! -f builder.sav ] && cp builder.dic builder.sav
+	./build builder.dic
+
+inflate.bin:
+	make -C ../${OS} ../build/inflate.bin
+
+# Don't use *.dic so as not to remove builder.dic
+clean:
+	rm -f tools.dic kernel.dic basefw.dic *.log headers *~ inflate.bin build

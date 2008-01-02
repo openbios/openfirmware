@@ -1,37 +1,28 @@
-# Flags for the simulator version
-WRAPPER = pforth
+# Makefile for native PowerPC wrapper to run under Linux
+
 OPT = -O
 # OPT =
 
 BP=../../..
 
-CFLAGS = -DUNIX -DPPCSIM -DTARGET_POWERPC
+CFLAGS = -D__linux__ -DHOSTPOWERPC -DTARGET_POWERPC
 
 CC = gcc
 
 WRDIR = ${BP}/forth/wrapper
 ZIPDIR = ${WRDIR}/zip
-SIMDIR = ../ppcsim
 
 ZIPOBJS = zipmem.o deflate.o trees.o bits.o util.o inflate.o
 
-OBJS = wrapsim.o ppcsim.o logger.o ${ZIPOBJS}
-TRACEOBJS = wrapsim.o ppcsim.trace.o logger.o ${ZIPOBJS}
-SIMROMOBJS = simrom.o ppcsim.simrom.o
+OBJS = wrapper.o logger.o ${ZIPOBJS}
 
-all: ppcforth ppcforth.trace
+all: ppcforth
 
-ppcforth: $(OBJS)
+ppcforth: forth
+	ln -sf $< $@
+
+forth: $(OBJS)
 	$(CC) $(LFLAGS)  $(OBJS)  -o $@
-
-ppcforth.trace: $(TRACEOBJS)
-	$(CC) $(LFLAGS)  $(TRACEOBJS)  -o $@
-
-simrom: $(SIMROMOBJS)
-	$(CC) $(LFLAGS)  $(SIMROMOBJS)  -o $@
-
-wrapsim.o: ${WRDIR}/wrapper.c
-	${CC} -c ${CFLAGS} $< -o $@
 
 %.o: ${WRDIR}/%.c
 	${CC} -c ${CFLAGS} $< -o $@
@@ -39,19 +30,7 @@ wrapsim.o: ${WRDIR}/wrapper.c
 %.o: ${ZIPDIR}/%.c
 	${CC} -c ${CFLAGS} -I${ZIPDIR} $< -o $@
 
-ppcsim.o: $(SIMDIR)/ppcsim.c
-	$(CC) $(OPT) $(CFLAGS) -DARGREGS -DSIMNEXT -c $< -o $@
-
-ppcsim.trace.o: $(SIMDIR)/ppcsim.c
-	$(CC) $(OPT) $(CFLAGS)  -DARGREGS -DSIMNEXT -DTRACE -c $< -o $@
-
-ppcsim.simrom.o: $(SIMDIR)/ppcsim.c
-	$(CC) $(CFLAGS)  -DARGREGS -DSIMNEXT -DTRACE -DSIMROM -c $< -o $@
-
-simrom.o: $(SIMDIR)/simrom.c
-	$(CC) $(CFLAGS)  -DARGREGS -DSIMNEXT -DTRACE -DSIMROM -c $< -o $@
-
 clean:
-	@rm -f *.o ppcforth ppcforth.trace
+	@rm -f *.o forth ppcforth
 
 FRC:

@@ -1,11 +1,9 @@
 # Wrapper makefile for x86 Unix: FreeBSD, Linux, etc.
 # Copyright 1997 FirmWorks. All rights reserved.
 #
-OS := $(shell uname)
-
 BP=../../..
 
-CFLAGS	= -O -g -m32 -DUNIX -D${OS} -DX86
+CFLAGS	= -O -g -m32 -DTARGET_X86
 # CFLAGS += -DUSE_XCB
 
 WRTAIL = forth/wrapper
