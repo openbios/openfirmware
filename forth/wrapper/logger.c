@@ -227,7 +227,7 @@ void log_command_line(char *cmd, char *dictfile, int fd, int argc, char *argv[])
 #endif
     char cwdbuf[MAXPATHLEN*2];
 
-#ifdef UNIX
+#ifdef __unix__
 #ifdef MAJC
     char *hostname = "some_MAJC_machine";
 #else
@@ -235,17 +235,21 @@ void log_command_line(char *cmd, char *dictfile, int fd, int argc, char *argv[])
     (void) gethostname(hostname, 64);
 #endif
 #endif
+
 #ifdef DOS
     char *hostname = "some_NT_machine";
 #endif
+
 #ifdef WIN32
     char hostname[MAX_COMPUTERNAME_LENGTH+1];
     long hostnamelen = MAX_COMPUTERNAME_LENGTH+1;
     (void) GetComputerName(hostname, &hostnamelen);
 #endif
+
 #ifdef MACOS
     char *hostname = "some_Macintosh";
 #endif
+
 #ifdef USE_STDIO
     char *hostname = "some_machine";
 #endif

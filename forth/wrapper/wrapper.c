@@ -55,29 +55,11 @@ which is part of the Forth image file.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef UNIX
-#include <sys/mman.h>
-#include <sys/mman.h>
-#include <limits.h>    /* for PAGESIZE */
-#ifndef PAGESIZE
-#define PAGESIZE 4096
+
+#ifdef __linux__
+char *host_os = "Linux";
+#define SYS5 1
 #endif
-#ifdef MAJC
-#include <sys/unistd.h>
-#else
-#define HAVE_PSIGNAL
-#include <unistd.h>
-#endif
-#include <sys/param.h>
-#endif
-#ifdef MACOS
-#include <events.h>
-#include <files.h>
-#include <console.h>
-#endif
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
 
 #ifdef WIN32
 #define ENV_DELIM  ';'
@@ -153,20 +135,11 @@ char *host_cpu = "arm";
 #define HOST_LITTLE_ENDIAN
 #endif
 
-#ifdef __linux__
-char *host_os = "Linux";
-#define SYS5 1
 #ifdef HOSTPOWERPC
-#define LinuxPOWERPC
 char *host_cpu = "powerpc";
-#else
-# ifdef __i386__
-#  ifndef CKERNEL
-#   define LinuxX86
-#   define HOST_LITTLE_ENDIAN
-#  endif
+# ifdef __linux__
+#  define LinuxPOWERPC
 # endif
-#endif
 #endif
 
 #ifdef NT
@@ -202,8 +175,14 @@ char *target_cpu = "alpha";
 #define START_OFFSET 4
 #endif
 
-#ifdef X86
+#ifdef __i386__
 char *host_cpu = "x86";
+# ifndef CKERNEL
+#  define HOST_LITTLE_ENDIAN
+# endif
+#endif
+
+#ifdef TARGET_X86
 char *target_cpu = "x86";
 #define CPU_MAGIC 0x4d503400
 #define START_OFFSET 0
@@ -220,95 +199,121 @@ char *host_cpu = "x86";
 
 #include <errno.h>
 
+#ifdef __unix__
+# include <sys/mman.h>
+# include <sys/mman.h>
+# include <limits.h>    /* for PAGESIZE */
+# ifndef PAGESIZE
+#  define PAGESIZE 4096
+# endif
+# ifdef MAJC
+#  include <sys/unistd.h>
+# else
+#  define HAVE_PSIGNAL
+#  include <unistd.h>
+# endif
+# include <sys/param.h>
+#endif
+
+#ifdef MACOS
+# include <events.h>
+# include <files.h>
+# include <console.h>
+#endif
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
 typedef long quadlet;
 
 #ifdef WIN32
-#include <windows.h>
+# include <windows.h>
 #endif
 
 #ifdef BSD
-#include <sys/time.h>
-#include <sys/ioctl.h>	/* For FIONREAD */
+# include <sys/time.h>
+# include <sys/ioctl.h>	/* For FIONREAD */
 #endif
 
 #ifdef SYS5
-#define USE_TERMIOS
+# define USE_TERMIOS
 #endif
 
 #ifdef BSD
-#define USE_TERMIOS
+# define USE_TERMIOS
 #endif
 
 #ifdef DEMON
-#define USE_STDIO
+# define USE_STDIO
 #endif
 
 #ifdef USE_STDIO
-#include <stdio.h>
+# include <stdio.h>
 #endif
 
 /* fcntl.h will define this if the system needs it; otherwise we use 0 */
 #ifndef _O_BINARY
-#ifdef O_BINARY
-#define _O_BINARY O_BINARY
-#else
-#define _O_BINARY 0
-#endif
+# ifdef O_BINARY
+#  define _O_BINARY O_BINARY
+# else
+#  define _O_BINARY 0
+# endif
 #endif
 
 #ifndef MAXPATHLEN
-#define MAXPATHLEN 256
+# define MAXPATHLEN 256
 #endif
 
 #include <signal.h>
 
 #ifdef TARGET_POWERPC
-#ifdef LinuxPOWERPC
-#define NOGLUE
-#else
-extern   void	glue();
-#endif
+# ifdef LinuxPOWERPC
+#  define NOGLUE
+# else
+   extern   void	glue();
+# endif
 #endif
 
 #ifdef AIX
-extern   void	_sync_cache_range(char *, long);
+  extern   void	_sync_cache_range(char *, long);
 #endif
 
-#ifdef UNIX
-INTERNAL void	exit_handler();
+#ifdef __unix__
+  INTERNAL void	exit_handler();
 # ifdef BSD
-INTERNAL void	cont_handler();
-INTERNAL void	stop_handler();
+   INTERNAL void	cont_handler();
+   INTERNAL void	stop_handler();
 # endif
 #endif
 
 #ifdef WIN32
-#define isatty _isatty
-#define kbhit  _kbhit
-#define getch  _getch
-#define open   _open
-#define close  _close
-#define read   _read
-#define write  _write
-#define lseek  _lseek
-#define unlink _unlink
-#define access _access
-#define stat   _stat
-#define getcwd _getcwd
-#define chdir  _chdir
+# define isatty _isatty
+# define kbhit  _kbhit
+# define getch  _getch
+# define open   _open
+# define close  _close
+# define read   _read
+# define write  _write
+# define lseek  _lseek
+# define unlink _unlink
+# define access _access
+# define stat   _stat
+# define getcwd _getcwd
+# define chdir  _chdir
 
-INTERNAL int	getnum(char *);
-INTERNAL void	error(char *, char*);
+  INTERNAL int	getnum(char *);
+  INTERNAL void	error(char *, char*);
 
 #else
-INTERNAL void	error();
+  INTERNAL void	error();
 #endif
 
 extern char *rootname();
 extern char *basename();
 
 #ifndef LinuxPOWERPC
-extern int	read(), write();
+  extern int	read(), write();
 #endif
 
 INTERNAL char *	substr();
@@ -322,13 +327,14 @@ INTERNAL long	f_close(), f_read(), f_write();
 INTERNAL long	f_ioctl();
 INTERNAL long	f_lseek();
 INTERNAL long	f_crstr();
+
 #ifdef PPCSIM
-/* These are not INTERNAL because the PowerPC simulator uses then */
+  /* These are not INTERNAL because the PowerPC simulator uses then */
          long	c_key();
          long	s_bye();
 #else
-INTERNAL long	c_key();
-INTERNAL long	s_bye();
+  INTERNAL long	c_key();
+  INTERNAL long	s_bye();
 #endif
 
 INTERNAL long	c_emit();
@@ -378,14 +384,15 @@ extern   long   open_window(), close_window(), rgbcolor(), fill_rectangle();
 #ifdef JTAG
 #include "jtag.h"
 #endif
+
 #if defined (BSD) || defined (__linux__)
 INTERNAL long s_timeofday();
 #endif
+
 #if defined(USE_TERMIOS)
 INTERNAL long c_setraw(), c_setbaud(), c_setparity(), c_setattr();
 INTERNAL long c_getattr(), c_drain();
 #endif
-
 
 long
 nop()
@@ -442,7 +449,7 @@ long ( (*functions[])()) = {
 	pathname,
 
 /*	156 */
-#ifdef UNIX
+#ifdef __unix__
 	m_sbrk,
 #else
 	nop,
@@ -470,6 +477,7 @@ long ( (*functions[])()) = {
 	f_mkdir,	f_rmdir,
 /*	200  */
 	s_getwd0,
+
 #ifdef WIN32
 #include "win32fun.c"
 #include "jtagfun.c"
@@ -477,18 +485,21 @@ long ( (*functions[])()) = {
 	  /* Windows socket stuff 204 .. 264 */
 	  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,
 #endif
+
 #ifdef JTAG
 #include "jtagfun.c"
 #else
 	  /* 268 .. 344 */
 	  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,
 #endif
+
 #if defined(BSD) || defined(__linux__)
 	  /* 348 */
 	  s_timeofday,
 #else
 	  0,
 #endif
+
 #if defined(USE_TERMIOS)
 	  /* 352       356        360          364        368      372*/
 	  c_setraw, c_setbaud, c_setparity, c_getattr, c_setattr,  c_drain,
@@ -536,7 +547,7 @@ long ( (*functions[])()) = {
  *	failed system call.
  */
 
-#ifdef X86
+#ifdef TARGET_X86
 void
 fsyscall(long callno, long *args)
 {
@@ -611,7 +622,7 @@ qlbflips(long *adr, char *bitmap, int len)
 }
 #endif
 
-#ifdef X86
+#ifdef TARGET_X86
 int bittest(char *table, int index) 
 {
     int quot, remain ;
@@ -774,7 +785,7 @@ main(argc, argv, envp)
 	int extrak;
 	char * dictfile;
 	char *targv[10];
-#ifdef X86
+#ifdef TARGET_X86
 	char *reloc_table ;
 	int delta_org, old_org, code_size ;
 	int code_wsize, cold_code, i ;
@@ -860,7 +871,7 @@ main(argc, argv, envp)
 		exit(1);
 	}
 
-#ifdef X86	
+#ifdef TARGET_X86	
 	/*
 	 * XXX we should do an additional test to verify that it's
 	 * really a Forthmacs dictionary file and not just some other
@@ -988,7 +999,7 @@ main(argc, argv, envp)
 
 	keymode();
 
-#ifdef UNIX
+#ifdef __unix__
 	signal(SIGHUP,exit_handler);
 	signal(SIGINT,exit_handler);
 	signal(SIGILL,exit_handler);
@@ -1018,7 +1029,7 @@ main(argc, argv, envp)
 		 argc, argv, 1 /* 0=POWER, 1=PowerPC */);
 #else
 	s_flushcache(loadaddr, dictsize);  /* We're about to execute data! */
-# ifdef X86
+# ifdef TARGET_X86
 	{
 	int (*codep)();
 	/* There is a pointer to the startup code at offset 0x18 */
@@ -1146,7 +1157,7 @@ exit_handler(sig)
 		s_bye(0L);
 	} else {
 		restoremode();
-#ifdef UNIX
+#ifdef __unix__
 		kill(0,SIGQUIT);
 #endif
 	}
@@ -1173,13 +1184,13 @@ no_waitchar (int fd)		/* "don't wait for character" */
 }
 #endif
 
-#ifdef LinuxX86
+#if defined(__linux__) && defined(__i386__)
 #include <sys/io.h>
 #endif
 INTERNAL long
 s_ioperm(unsigned long  from,  unsigned long num, unsigned long on)
 {
-#ifdef LinuxX86
+#if defined(__linux__) && defined(__i386__)
   return (long)ioperm(from, num, (int)on);
 #else
   return -1L;
@@ -1205,7 +1216,7 @@ c_keyques()
 	int nchars = 0;
 
 	fflush(stdout);
-# ifdef UNIX
+# ifdef __unix__
 #  ifdef SYS5
 #   ifdef __linux__
 	no_waitchar (0);
@@ -1703,7 +1714,7 @@ error(str1,str2)
 INTERNAL long
 syserror()
 {
-#ifndef UNIX
+#ifndef __unix__
 	extern int errno;
 #endif
 
@@ -1716,7 +1727,7 @@ INTERNAL long
 pr_error(errnum)
 	long errnum;
 {
-#ifndef UNIX
+#ifndef __unix__
 	extern int errno;
 #endif
 	
@@ -1792,7 +1803,7 @@ f_creat(name, mode)
 		output_fd = result;
 	}		
 #else
-#ifdef UNIX
+#ifdef __unix__
 	result = open(expand_name(name), O_RDWR|O_CREAT|O_TRUNC, (int)mode);
 #else
 	result = open(expand_name(name), _O_BINARY|O_RDWR|O_CREAT|O_TRUNC, (int)mode);
@@ -1905,7 +1916,7 @@ f_ioctl(fd, code, buf)
 	long fd, code;
 	char *buf;
 {
-#ifdef UNIX
+#ifdef __unix__
 	return((long)ioctl((int)fd, (int)code, buf));
 #else
 	return((long)-1);
@@ -2160,7 +2171,7 @@ m_realloc(size, adr)
 	return((long)mem);
 }
 
-#ifdef UNIX
+#ifdef __unix__
 INTERNAL long
 m_sbrk(size)
 	long size;
