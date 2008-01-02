@@ -13,7 +13,7 @@ h# 100 constant button-x
 0 value game-key-mask
 
 : show-key  ( mask x y -- )
-   at-xy game-key-mask and if  ." *" else  ." o"  then
+   at-xy game-key-mask and if  ." *" else  ." ."  then
 ;
 : update-game-keys  ( mask -- )
    dup game-key-mask or  to game-key-mask
