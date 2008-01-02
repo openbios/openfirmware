@@ -1,0 +1,8 @@
+# This setting of HOSTDIR is for cross-building on an x86 Linux system
+# For it to work, you first need to build the simulator version of ppcforth
+# in cpu/ppc/Linux and then copy the ppcforth file to cpu/x86/Linux
+HOSTDIR:=$(shell pwd)/../../../cpu/x86/Linux/
+
+builder.dic:
+	HOSTDIR=${HOSTDIR} build $@
+

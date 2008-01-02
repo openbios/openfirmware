@@ -28,14 +28,14 @@ only forth also meta also forth-h also definitions
 : swap-size  ( -- n )  here-t >swap-map-size-t  ;
 : user-base  ( -- adr )  userarea-t  ;
 : user-size  ( -- n )  user-size-t  doubleword-align  ;
-: save-meta ( str -- )
+: $save-meta ( str -- )
 
    \ Doubleword alignment is required so that the user area image will
    \ not be in the same doubleword as the end of the dictionary, thus
    \ causing the copy loop to get the wrong value the first time.
    begin  here-t  7 and  while  0 c,-t  repeat
 
-   new-file
+   $new-file
 
    \ Set the text and data sizes in the program header
    h# 4800.0020          header h#  0 + l-t!		\ Branch past the header

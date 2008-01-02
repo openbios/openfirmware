@@ -79,7 +79,7 @@ fload ${BP}/cpu/ppc/finish.fth
 
 fload ${BP}/cpu/ppc/savemeta.fth
 
-.( --- Saving kernel.dic ---)  "" kernel.dic save-meta
+.( --- Saving kernel.dic ---)  " kernel.dic" $save-meta
 cr
 
 \ LICENSE_BEGIN
