@@ -555,7 +555,8 @@ fload ${BP}/ofw/core/dualconsole.fth
    ?resume-botch
 
    board-revision 0=  if
-      ." EC problem - remove all power and restart" cr
+      ." EC problem - disconnect the battery and AC adapter," cr
+      ." reconnect them, and restart." cr
       begin again
    then
 
