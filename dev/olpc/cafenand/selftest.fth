@@ -13,6 +13,8 @@ instance variable rn            \ Random number
 false value fixbbt?                     \ Flag to determine whether to mark bad eblocks
 false value selftest-err?               \ Selftest result
 
+: /oobbuf  ( -- n )  /oob pages/eblock *  ;
+
 : #fixbbt++  ( -- )  #fixbbt 1+ to #fixbbt  ;
 : .#fixbbt  ( -- )
    (cr ." # bad blocks "
@@ -32,11 +34,13 @@ false value selftest-err?               \ Selftest result
    then  
 ;
 
+0 value oobbuf                          \ Original content of OOB
 0 value sbuf                            \ Original content of block
 0 value obuf                            \ Block data written
 0 value ibuf                            \ Block data read
 : alloc-test-bufs  ( -- )
    sbuf 0=  if
+      /oobbuf    alloc-mem to oobbuf
       erase-size alloc-mem to sbuf
       erase-size alloc-mem to obuf
       erase-size alloc-mem to ibuf
@@ -44,6 +48,7 @@ false value selftest-err?               \ Selftest result
 ;
 : free-test-bufs  ( -- )
    sbuf  if
+      oobbuf /oobbuf  free-mem  0 to oobbuf
       sbuf erase-size free-mem  0 to sbuf
       obuf erase-size free-mem  0 to obuf
       ibuf erase-size free-mem  0 to ibuf
@@ -54,9 +59,69 @@ false value selftest-err?               \ Selftest result
    dup  if  ." SAVE" cr  then
 ;
 : write-eblock  ( adr page# -- error? )
-   dup erase-block
-   pages/eblock write-blocks pages/eblock <>
-   dup  if  ." RESTORE" cr  then
+   dup (erase-block)  if  2drop true exit  then   ( adr page# )
+   over /eblock erased?  if   ( adr page# )
+      2drop false
+   else                       ( adr page# )
+      pages/eblock write-blocks pages/eblock <>
+      dup  if  ." RESTORE" cr  then
+   then
+;
+
+: read-raw-eblock  ( adr page# -- error? )
+   pages/eblock bounds  ?do    ( adr )
+      dup /dma-buf i 0 dma-write-raw  if   ( adr )
+         drop true unloop exit
+      then
+      /dma-buf +
+   loop                        ( adr )
+   drop false
+;
+
+: save-eblock  ( page# -- error? )
+   sbuf over read-eblock dup record-err  if   ( page# )
+      drop true exit
+   then                                       ( page# )
+   oobbuf swap                                ( adr page# )
+   pages/eblock bounds  ?do                   ( adr )
+      dup /oob i /page pio-read               ( adr )
+      /oob +                                  ( adr' )
+   loop                                       ( adr )
+   drop false
+;
+: berased?  ( adr len -- flag )
+   bounds  ?do
+      i c@ h# ff <>  if  false unloop exit  then
+   loop
+   true
+;
+: restore-eblock  ( page# -- )
+   sbuf over write-eblock  dup record-err  if  ( page# )
+      drop exit                                ( page# )
+   then                                        ( page# )
+
+   oobbuf /ecc +   swap                        ( adr page# )
+   pages/eblock bounds  ?do                    ( adr )
+      dup  /oob /ecc -  berased?  0=  if       ( adr )
+         dup  /oob /ecc -  i  /page /ecc +     ( adr  adr len page# offset )
+         pio-write-raw record-err              ( adr )
+      then                                     ( adr )
+      /oob +                                   ( adr' )
+   loop                                        ( adr )
+   drop                                        ( )
+;
+
+
+
+: write-raw-eblock  ( adr page# -- error? )
+   dup (erase-block)  if  2drop true exit  then  ( adr page# )
+   pages/eblock bounds  ?do    ( adr )
+      dup /dma-buf i 0 dma-write-raw  if   ( adr )
+         drop true unloop exit
+      then
+      /dma-buf +
+   loop                        ( adr )
+   drop false
 ;
 : test-eblock  ( page# pattern -- error? )
    obuf erase-size 2 pick      fill
@@ -98,20 +163,22 @@ false value selftest-err?               \ Selftest result
          0 of  0                      endof
          1 of  usable-page-limit 1-   endof
          ( default )  random-page swap
-      endcase                         ( block# )
-      pages/eblock 1- invert and      ( block#' )
+      endcase                         ( page# )
+      pages/eblock 1- invert and      ( page#' )
 
-      dup block-bad?  if              ( block#' )
+      dup block-bad?  if              ( page#' )
          drop                         ( )
-      else                            ( block#' )
-         dup to cur-eblock
-         (cr dup .
-         sbuf over read-eblock dup record-err  0=  if
-            dup h# 55 test-eblock  record-err
-            dup h# aa test-eblock  record-err
-            dup h# ff test-eblock  record-err
-         then
-         sbuf swap write-eblock  record-err
+      else                            ( page#' )
+         dup to cur-eblock            ( page#' )
+         (cr dup .                    ( page#' )
+         dup save-eblock  if          ( page# )
+            drop                      ( )
+         else                                   ( page# )
+            dup h# 55 test-eblock  record-err   ( page# )
+            dup h# aa test-eblock  record-err   ( page# )
+            dup h# ff test-eblock  record-err   ( page# )
+            restore-eblock                      ( )
+         then                         ( )
       then
    loop
 
@@ -146,18 +213,18 @@ false value selftest-err?               \ Selftest result
    parse-full-args                       ( #blk blk# )
    2dup .full-arg                        ( #blk blk# )
 
-   pages/eblock * swap 1+ pages/eblock * ( page# #page )
-   usable-page-limit rot  ?do            ( #blk+1 )
-      i block-bad? not  if
-         i to cur-eblock
-         (cr i .
-         sbuf i read-eblock dup record-err  0=  if
-            i h# 55 test-eblock  record-err
-            i h# aa test-eblock  record-err
-         then
-         sbuf i write-eblock  record-err
-      then
-   dup +loop  drop
+   pages/eblock *  swap 1+ pages/eblock *    ( page# stride )
+   usable-page-limit rot  ?do                ( stride )
+      i block-bad? 0=  if                    ( stride )
+         i to cur-eblock                     ( stride )
+         (cr i .                             ( stride )
+         i save-eblock  0=  if               ( stride )
+            i h# 55 test-eblock  record-err  ( stride )
+            i h# aa test-eblock  record-err  ( stride )
+            restore-eblock                   ( stride )
+         then                                ( stride )
+      then                                   ( stride )
+   dup +loop  drop                           ( )
 
    .#fixbbt
 ;

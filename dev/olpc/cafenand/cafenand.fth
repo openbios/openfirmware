@@ -260,14 +260,13 @@ h# 10 buffer: syndrome-buf
 ;
 [then]
 
-: dma-write-raw  ( adr len page# offset -- )
+: dma-write-raw  ( adr len page# offset -- error? )
    write-enable                        ( adr len page# offset )
    set-page                            ( adr len )
    dup  false dma-setup                ( )
    write-cmd h# 110 cmd wait-cmd       ( )
    wait-write-done                     ( error? )
    dma-release                         ( error? )
-   drop
 ;
 
 : dma-write-page  ( adr page# -- error? )  \ Size is fixed
@@ -283,13 +282,14 @@ h# 10 buffer: syndrome-buf
 : write-bytes  ( adr len page# offset -- error? )  pio-write-raw  ;
 
 3 value #erase-adr-bytes  \ Chip dependent
-: erase-block  ( page# -- )
+: (erase-block)  ( page# -- error? )
    write-enable
    set-erase-page
    h# 20.0060 0 #erase-adr-bytes >cmd  h# 1d0 cmd
    wait-write-done                       ( error? )
-   drop
 ;
+
+: erase-block  ( page# -- )  (erase-block) drop  ;
 
 : read-id  ( -- adr )  8  0 0  h# c420.0090  0  generic-read  ;
 
