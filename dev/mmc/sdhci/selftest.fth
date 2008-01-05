@@ -26,15 +26,18 @@ headers
    ibuf obuf /block comp
 ;
 
+: (selftest)  ( -- error? )
+   sbuf 0  read-block  if  true exit  then
+   0 h# 5a test-block  if  true exit  then
+   0 h# a5 test-block  if  true exit  then
+   sbuf 0 write-block	   	        \ Restore original content
+;
 external
 : selftest  ( -- error? )
    open 0=  if  ." Open /sd failed" cr true exit  then
    attach-card 0=  if  ." No card inserted" cr close false exit  then
    alloc-test-bufs
-   sbuf 0  read-block  if  free-test-bufs close true exit  then
-   0 h# 5a test-block  if  free-test-bufs close true exit  then
-   0 h# a5 test-block  if  free-test-bufs close true exit  then
-   sbuf 0 write-block	   	        \ Restore original content
+   ['] (selftest) catch  if  true  then
    free-test-bufs
    close
 ;

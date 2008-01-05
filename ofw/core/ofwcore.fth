@@ -3209,15 +3209,23 @@ headers
 
       ??cr ." Testing "  pwd
       method-name 2@  current-device              ( method-adr,len phandle )
-      execute-phandle-method  drop                ( result )
-
-      ?dup  if
+      execute-phandle-method  if                  ( result )
+         ?dup  if
+            red-letters
+            ??cr ." Selftest failed. Return code = " .d cr cr
+            d# 10000 ms
+            black-letters
+         else
+            green-letters
+            ." Okay" cr cr d# 3000 ms
+            black-letters
+         then
+      else
          red-letters
-         ??cr ." Selftest failed. Return code = " .d cr
+         ." Selftest failed due to abort"  cr
          d# 10000 ms
          black-letters
       then
-
    then                                            (  )
 ;
 
