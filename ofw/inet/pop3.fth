@@ -33,13 +33,24 @@ purpose: Read your mail from the firmware
 : send-one  ( $ -- ok? )  >mail-buffer  " +OK" send  ( ok? )  ;
 : send-two  ( $2 $1 -- ok? )  >mail-buffer  mail-append  " +OK" send  ( ok? )  ;
 
-: send-user-name  ( -- ok? )
-   " pop-user" $getenv drop		( adr len )
-   " USER "  send-two			( ok? )
+: get-password  ( -- adr len )
+   pad 0
+   begin            ( adr len )
+      key  case
+         carret of  exit  then
+         bs     of  1- 0 max  2dup +  0 swap c!  then
+
+         \ default   ( adr len char )
+         over d# 32 >=  abort" Password too long"  ( adr len char )
+         3dup -rot + c!                            ( adr len char )
+         swap 1+ swap                              ( adr len' char )
+      endcase       ( adr len )
+   again
 ;
 : send-password   ( -- ok? )
-   " pop-password" $getenv drop		( adr len )
-   " PASS "  send-two			( ok? )
+   ." Password: "  get-password         ( adr len )
+   2dup  " PASS "  send-two		( adr len ok? )
+   -rot  erase   \ Don't leak password  ( ok? )      
 ;
 
 : number?  ( b -- ascii? )
@@ -73,12 +84,12 @@ h# 8 buffer: pop3-buf
    while
       d# 10 *
       pop3-buf tbuf-ptr + c@  h# 0f and +
-      +pop3-buf
+      +tbuf
    repeat			( # )
 ;
    
 : get-num  ( -- )  
-   0 to pop3-buf-ptr
+   0 to tbuf-ptr
    begin   
       begin  key?  until
       key dup emit		( key )
@@ -166,61 +177,36 @@ h# 8 buffer: pop3-buf
    quit-mail drop
 ;
 
-: rmail  ( -- )
+: open-rmail-connection  ( server$ -- )
+   debug-mail?  if  ." Opening TCP stack..." cr  then  ( server$ )
 
-   false
+   " tcp" open-dev to tcp-ih                           ( server$ )
+   tcp-ih 0=  abort" Failed to open tcp stack!"        ( server$ )
 
-   " pop-server" $getenv  if
-      cr
-      ." Missing pop-server environment variable" cr
-      ." Use ""$setenv"" to set the pop-server name:" cr
-      ."  "" <servername>"" "" pop-server"" $setenv" cr
-      drop true
-   else  2drop  then
-
-   " pop-user" $getenv  if
-      cr
-      ." Missing pop-user environment variable" cr
-      ." Use ""$setenv"" to set the pop-user name:" cr
-      ."  "" <username>"" "" pop-user"" $setenv" cr
-      drop true
-   else  2drop  then
-
-   " pop-password" $getenv  if
-      cr
-      ." Missing pop-password environment variable" cr
-      ." Use ""$setenv"" to set the pop-password name:" cr
-      ."  "" <password>"" "" pop-password"" $setenv" cr
-      drop true
-   else  2drop  then
-
-   if  exit  then
-
-   debug-mail?  if  ." Opening TCP stack..." cr  then
-
-   " tcp" open-dev to tcp-ih
-   tcp-ih 0=  if  ." Failed to open tcp stack!" exit  then
-
-   allocate-mail-buffer
+   allocate-mail-buffer                                ( server$ )
    
-   " pop-server" $getenv drop open-pop3-connection 0=  if
-      close-pop3  exit
+   open-pop3-connection 0=  if                         ( )
+      ." Can't connect to POP3 server"
+      close-pop3  abort
    then
 
    debug-mail?  if  ." Connection established" cr  then
    
    verify-pop3 0=  if
       debug-mail?  if  ." Connection did not verify" cr  then
-      close-pop3  exit
+      close-pop3  abort
    then
+;
 
+: authenticate-rmail  ( user$ -- )
    debug-mail?  if  ." Sending USER name..." cr  then
-   send-user-name  if
+
+   " USER "  send-two  if
       debug-mail?  if  ." USER accepted" cr  then
    else
       debug-mail?  if  ." Bad USER" cr  then
       close-pop3
-      exit
+      abort
    then
 
    debug-mail?  if  ." Sending password..." cr  then
@@ -229,8 +215,13 @@ h# 8 buffer: pop3-buf
    else
       debug-mail?  if  ." Bad Password" cr  then
       close-pop3
-      exit
+      abort
    then
+;
+
+: (rmail)  ( user$ server$ -- )
+   open-rmail-connection                ( user$ )
+   authenticate-rmail                   ( )
 
    debug-mail?  if  ." Getting status..." cr  then
    0 to #messages
@@ -247,17 +238,10 @@ h# 8 buffer: pop3-buf
    close-pop3
 ;
 
-: (show-pop3)  ( adr len -- )
-   2dup  $getenv  if  missing-var  else
-      2swap type ." : "  type cr
-   then
+: rmail  ( "server" "user" -- )
+   safe-parse-word  safe-parse-word  2swap  (rmail)
 ;
 
-: show-pop3  ( -- )
-   " pop-server"      (show-pop3)
-   " pop-user"        (show-pop3)
-   " pop-password"    (show-pop3)
-;
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
