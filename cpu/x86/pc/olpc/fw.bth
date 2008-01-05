@@ -512,19 +512,26 @@ fload ${BP}/ofw/core/dualconsole.fth
 : ?games  ( -- )
    rocker-right game-key?  if
       ec-indexed-io-off
-      time&date 5drop 1 and  if  pong  else  life-demo  then
+      time&date 5drop 1 and  if
+         ['] pong guarded
+      else
+         ['] life-demo guarded
+      then
+      power-off
    then
 ;
 : ?diags  ( -- )
    rocker-left game-key?  if
       ec-indexed-io-off
-      text-on  " test-all" eval
+      text-on  " test-all" ['] eval guarded
       ." Tests complete - powering off" cr  d# 5000 ms  power-off
    then
 ;
 
 : ?scan-nand  ( -- )
-   rocker-up game-key?  if  ec-indexed-io-off  text-on  scan-nand   then
+   rocker-up game-key?  if
+      ec-indexed-io-off  text-on  ['] scan-nand guarded
+   then
 ;
 : ?fs-update  ( -- )
    button-check button-x or  button-o or  button-square or   ( mask )
