@@ -27,6 +27,7 @@ purpose: Bad block table handling for NAND FLASH
 
 \ Returns true if the block containing page# is bad
 : block-bad?  ( page# -- flag )
+   bbt 0=  if  drop false exit  then
    >bbt              ( adr mask )
    tuck swap c@ and  ( mask masked-byte )
    <>
@@ -184,6 +185,9 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
    bbt0  if  bbt0  read-bbt-pages 0=  if  exit  then  then
    bbt1  if  bbt1  read-bbt-pages 0=  if  exit  then  then
 
+   bbt0 bbt1 or  if
+      ." Both bad block tables are unreadable" cr
+   then
    release-bbt
 ;
 
@@ -234,7 +238,7 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
 \ Get the existing bad block table, or make a new one if necessary
 : get-bbt  ( -- )
    get-existing-bbt
-   bbt 0=  if
+   bbt0 bbt1 or  0=  if
       ." No bad block table; making one" cr
       make-bbt
    then
@@ -306,7 +310,7 @@ external
 : (wipe)  ( 'show-bad 'show-erased 'show-bbt -- )
    partition# 0=  if
       get-existing-bbt
-      bbt 0=  if
+      bbt0 bbt1 or  0=  if
          \ If there is no existing bad block table, make one from factory info
          make-bbt
       then                    ( 'show-bad 'show-erased 'show-bbt )

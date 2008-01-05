@@ -17,23 +17,12 @@ struct fis_image_desc {
 d# 256 constant /partition-entry
 d# 8 constant max#partitions
 
-: partition-map-page#  ( -- page# )
-[ifdef] notdef
-   bbt1  if
-      bbt1  bbt0  if  bbt0 min  then           ( bbtn )
-   else                                        ( )
-      bbt0 dup 0= abort" No Bad Block Table"   ( bbt0 )
-   then                                        ( last-bbt-page# )
-   begin  pages/eblock - dup  while            ( part-page# )
-      dup block-bad?  0=  if  exit  then       ( part-page# )
-   repeat
-[else]
+: partition-map-page#  ( -- true | page# false )
    h# 10 pages/eblock *  0  do
-      i block-bad? 0=  if  i unloop exit  then
+      i block-bad? 0=  if  i false unloop exit  then
    pages/eblock +loop
-[then]
-
-   true abort" No place for partition map"
+   ." No place for partition map"
+   true
 ;
 
 : (#partitions)  ( adr -- n )
@@ -55,11 +44,11 @@ d# 8 constant max#partitions
 
 0 instance value #partitions
 : read-partmap  ( -- )
-   part-buf  partition-map-page#
+   part-buf  partition-map-page#  if  exit  then
    partition-start >r  0 to partition-start
    read-page
    r> to partition-start
-   if  true exit  then
+   if  exit  then
    part-buf (#partitions)  to #partitions
 ;
 
