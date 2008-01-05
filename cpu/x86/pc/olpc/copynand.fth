@@ -269,7 +269,8 @@ defer show-done
    #image-eblocks  0  ?do
       (cr i .
       read-image-block
-      load-base /nand-block +  " read-next-block" $call-nand           ( )
+      load-base /nand-block +  " read-next-block" $call-nand           ( end? )
+      " More image file blocks than NAND blocks" ?nand-abort           ( )
       load-base  load-base /nand-block +  /nand-block  comp  if        ( )
          cr  ." Miscompare in block starting at page# "                ( )
          " scan-page#" $call-nand  .x cr                               ( )
@@ -310,8 +311,8 @@ defer show-done
    #crc-records  0  ?do
       (cr i .
 
-      load-base " read-next-block" $call-nand              ( )
-
+      load-base " read-next-block" $call-nand              ( end? )
+      " More CRC records than NAND blocks" ?nand-abort     ( )
       load-base /nand-block  $crc  i >crc l@               ( actual-crc expected-crc )
       2dup <>  if                                          ( actual-crc expected-crc )
          cr ." CRC miscompare - expected " . ." got " .    ( )

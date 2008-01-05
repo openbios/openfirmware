@@ -162,17 +162,17 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
 ;
 
 \ Read the bad block table from NAND to memory
-: read-bbt-pages  ( page# -- )
+: read-bbt-pages  ( page# -- error? )
    bbt swap /bbt /page /  ( adr page# #pages )
    \ Can't use read-blocks because of block-bad? dependency
    bounds  ?do            ( adr )
       dup i read-page  if ( adr )
          ." BBT has uncorrectable errors" cr
-         abort
+         drop true unloop exit
       then                ( adr )
       /page +             ( adr' )
    loop                   ( adr )
-   drop
+   drop false
 ;
 
 \ Find a bad block table
@@ -181,8 +181,8 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
    alloc-bbt
    find-existing-bbt
 
-   bbt0  if  bbt0  read-bbt-pages  exit  then
-   bbt1  if  bbt1  read-bbt-pages  exit  then
+   bbt0  if  bbt0  read-bbt-pages 0=  if  exit  then  then
+   bbt1  if  bbt1  read-bbt-pages 0=  if  exit  then  then
 
    release-bbt
 ;
@@ -348,7 +348,7 @@ external
 
 headers
 
-: (next-page#)  ( -- true | page# false )
+: next-page#  ( -- true | page# false )
    partition-size  scan-page# pages/eblock +  ?do
       i block-bad? 0=  if
          i to scan-page#
@@ -356,9 +356,6 @@ headers
       then
    pages/eblock +loop
    true
-;
-: next-page#  ( -- page# )
-   (next-page#)  if  ." No more good NAND blocks" cr  abort  then
 ;
 
 0 value test-page
@@ -397,7 +394,7 @@ external
 ;
 
 : copy-block  ( adr -- page# error? )
-   begin  (next-page#)  0=  while                    ( adr page# )
+   begin  next-page#  0=  while                      ( adr page# )
       2dup copy&check  if  nip partition-start + false exit  then      ( adr page# )
       \ Error; retry once
       dup erase-block                                ( adr page# )
@@ -417,21 +414,22 @@ external
    r> drop
 ;
 : put-cleanmarkers  ( show-xt -- )
-   begin  (next-page#) 0=  while  ( show-xt page# )
+   begin  next-page# 0=  while    ( show-xt page# )
       dup put-cleanmarker         ( show-xt page# )
       partition-start + pages/eblock / over execute ( show-xt )
    repeat                         ( show-xt )
    drop
 ;
 
-: read-next-block  ( adr -- )
-   next-page#  pages/eblock  bounds  ?do   ( adr )
+: read-next-block  ( adr -- no-more? )
+   next-page#  if  drop true exit  then   ( adr page# )
+   pages/eblock  bounds  ?do              ( adr )
       dup i read-page  if                 ( adr )
          ." Uncorrectable error in page 0x" i .x cr
       then
       /page +                             ( adr' )
    loop                                   ( adr )
-   drop                                   ( )
+   drop false                             ( flag )
 ;
 
 \ : start-verify  ( -- )
