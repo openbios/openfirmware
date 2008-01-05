@@ -27,6 +27,7 @@ h# 100 constant button-x
    button-square  7 3 show-key
    button-check   d# 11 3 show-key
    button-x       9 4 show-key
+   drop
 ;
 
 : read-game-keys  ( -- )
