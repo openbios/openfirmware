@@ -392,8 +392,12 @@ true value got-response?
 : process-ind  ( adr len -- )
    drop
    4 + le-l@  case
-      h# 03  of  " Link Loss" .event  process-disconnect  endof
+      h# 00  of  " Tx PPA Free" .event  endof  \ n
+      h# 01  of  " Tx DMA Done" .event  endof  \ n
+      h# 02  of  " Link Loss with scan" .event  process-disconnect  endof
+      h# 03  of  " Link Loss no scan" .event  process-disconnect  endof
       h# 04  of  " Link Sensed" .event  endof
+      h# 05  of  " CMD Finished" .event  endof
       h# 06  of  " MIB Changed" .event  endof
       h# 07  of  " Init Done" .event  endof
       h# 08  of  " Deauthenticated" .event  process-disconnect  endof
@@ -402,6 +406,7 @@ true value got-response?
       h# 0b  of  " Sleep" .event  process-wakeup  endof
       h# 0d  of  " Multicast MIC error" .event  process-gmic-failure  endof
       h# 0e  of  " Unicast MIC error" .event  process-pmic-failure  endof
+      h# 0e  of  " WM awake" .event  endof \ n
       h# 11  of  " HWAC - adhoc BCN lost" .event  endof
       h# 19  of  " RSSI low" .event  endof
       h# 1a  of  " SNR low" .event  endof
@@ -410,6 +415,7 @@ true value got-response?
       h# 1d  of  " SNR high" .event  endof
       h# 23  of  endof  \ Suppress this; the user doesn't need to see it
       \ h# 23  of  ." Mesh auto-started"  endof
+      h# 30  of  " Firmware ready" .event  endof
       ( default )  ." Unknown " dup u.
    endcase
 ;
@@ -1057,7 +1063,7 @@ headers
    outbuf-bulk-out  if  false exit  then
    wait-cmd-resp  if  false exit  then
 
-   respbuf >fw-data 2 + le-w@ ?dup  if
+   respbuf >fw-data 2 + le-w@ ?dup  if \ This is the IEEE Status Code
       ." Failed to associate: " u. cr
       false
    else
