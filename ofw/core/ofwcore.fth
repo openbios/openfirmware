@@ -3193,6 +3193,9 @@ headers
    ['] do-method?  scan-subtree
 ;
 
+defer hold-message
+' ms to hold-message
+
 : most-tests  ( -- )
    method-name 2@  current-device  (search-wordlist)  if  ( xt )
 
@@ -3212,19 +3215,20 @@ headers
       execute-phandle-method  if                  ( result )
          ?dup  if
             red-letters
-            ??cr ." Selftest failed. Return code = " .d cr cr
-            d# 10000 ms
+            ??cr ." Selftest failed. Return code = " .d cr
             black-letters
+            d# 10000 hold-message
          else
             green-letters
-            ." Okay" cr cr d# 3000 ms
+            ." Okay" cr
             black-letters
+            d# 2000 hold-message
          then
       else
          red-letters
          ." Selftest failed due to abort"  cr
-         d# 10000 ms
          black-letters
+         d# 10000 hold-message
       then
    then                                            (  )
 ;

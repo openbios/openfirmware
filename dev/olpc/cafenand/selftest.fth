@@ -17,9 +17,10 @@ false value selftest-err?               \ Selftest result
 
 : #fixbbt++  ( -- )  #fixbbt 1+ to #fixbbt  ;
 : .#fixbbt  ( -- )
-   (cr ." # bad blocks "
-   fixbbt?  if  ." marked"  else  ." found"  then
-   ."  = "  #fixbbt .d  cr
+   (cr
+   #fixbbt ?dup  if  .d  else  ." No "  then
+   ." new bad blocks "
+   fixbbt?  if  ." marked"  else  ." found"  then  cr
 ;
 : record-err  ( error? -- )
    noop
@@ -305,6 +306,7 @@ false value selftest-err?               \ Selftest result
 : selftest  ( -- error? )
    open 0=  if  true exit  then
    get-msecs rn !
+   ." Note: a few bad blocks is normal - these are already known:"  cr
    show-bbt cr
    (selftest)
    close

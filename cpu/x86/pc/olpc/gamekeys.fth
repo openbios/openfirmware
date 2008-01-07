@@ -44,3 +44,20 @@ h# 100 constant button-x
    then
 ;
 : game-key?  ( mask -- flag )  game-key-mask and 0<>  ;
+
+: (hold-message)  ( ms -- )
+   d# 100 /            ( decisecs )
+   begin  dup  while   ( decisecs )
+      dup d# 10 /mod  swap  if  drop  else  (cr .d  then   ( decisecs )
+      d# 100 ms        ( decisecs )
+      1-               ( decisecs )
+      button-rotate game-key@ and  if  ( decisecs )
+         (cr ." Release the game button to continue"
+         begin  button-rotate game-key@ and  while  d# 100 ms  repeat
+         (cr kill-line
+         drop exit
+      then
+   repeat
+   drop  (cr kill-line
+;
+' (hold-message) to hold-message
