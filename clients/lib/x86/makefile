@@ -3,7 +3,7 @@
 # -fno-builtin has the effect of suppressing some warnings about
 # functions that conflict with gcc builtins
 CC=gcc
-CFLAGS=-g -fno-builtin
+CFLAGS=-g -m32 -fno-builtin -fno-stack-protector
 
 all: libobp.a hello hello.elf start.o
 
@@ -56,12 +56,15 @@ start.o: start.s
 # Hello is a demo program that uses the stdio library
 
 hello.elf: libobp.a start.o hello.o
-	ld -Bstatic -N -Ttext 0x100000 -o $@ start.o hello.o libobp.a -lc
+	ld -melf_i386 -Bstatic -N -Ttext 0x100000 -o $@ start.o hello.o libobp.a -lc
 	cp hello.elf hello.syms
 	strip hello.elf
 
 hello.o: ../../hello/hello.c
 	${CC} ${CFLAGS} -c ../../hello/hello.c
+
+hello: hello.o
+	${CC} -m32 $< -o $@
 
 # Binary to ELF converter program
 
