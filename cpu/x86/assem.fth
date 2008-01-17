@@ -119,7 +119,7 @@ octal
 10 2 32REGS    [EAX]   [ECX]   [EDX]   [EBX]  [ESP]   [EBP] [ESI] [EDI]
  3 2 pmREGS     [AX]    [CX]    [DX]
 
- 2 4 pmreg      [SP] 
+ 2 4 32reg      [SP] 
 
  6 3   REGS      ES      CS      SS      DS     FS      GS
  3 4   REGS       #      #)     S#)
@@ -240,7 +240,7 @@ VARIABLE SIZE   SIZE ON
 
 \ Assemble mod-r/m byte and s-i-b byte if necessary
 : SOP,  ( mr rmid mod -- )
-   protected? if
+   16bit? 0=  if
       2 pick  [SIB] =  if			( [SIB] rmid mod )
 	 [ESP] -rot  mod-rm,			( [SIB] ) \ Scaled index mode
 	 drop					( )
@@ -263,11 +263,11 @@ VARIABLE SIZE   SIZE ON
    \ (nonexistent) "<no-displacement> [EBP]" mode.
 
    OVER #) =  IF
-      protected?  if  5  else  6  then
+      16bit?  if  6  else  5  then
       swap 0 mod-rm, DROP  ADR,  EXIT
    THEN  ( disp mr rmid )
 
-   protected? if
+   16bit? 0=  if
       \ Special case for "0 [EBP]" ; use short 0 displacement
       \ instead of [EBP] (there is no [EBP] addressing mode
       \ because that encoding is used for 32-bit displacement.)
@@ -329,6 +329,8 @@ VARIABLE INTER
 \ 2MI  define ascii adjust instructions.
 : 2MI   CREATE  C,  DOES>  C@ ASM8,  12 ASM8,  normal  ;
 
+: prefix-0f  h# 0f asm8,  ;
+
 \ 3MI  define branch instructions, with one or two bytes of offset.
 : 3MI	\ conditional branches
    ( op -- )	create  c,  
@@ -337,7 +339,7 @@ VARIABLE INTER
       dup small? if			( op disp8 )
 	 swap asm8, asm8,
       else				( op disp )
-	 h# 0f asm8,  swap h# 10 + asm8,
+	 prefix-0f  swap h# 10 + asm8,
 	 real? if  2  else  4  then  -	 adr,
       then
       normal
@@ -345,7 +347,7 @@ VARIABLE INTER
 
 \ 4MI  define LDS, LEA, LES instructions.
 : 4MI   CREATE  C,
-   DOES>  C@  dup h# b2 h# b5 between  if h# 0f asm8, then  ASM8,  MEM,
+   DOES>  C@  dup h# b2 h# b5 between  if prefix-0f then  ASM8,  MEM,
       normal  
 ;
 
@@ -455,7 +457,7 @@ VARIABLE INTER
    ELSE                               ( dst apf )
       1+ OVER SEG?  IF                ( dst apf' )  \ Segment register
          OVER FS >=  IF		      ( dst apf' )  \ FS or GS
-	    H# 0F ASM8,  3 + C@       ( dst opcode )
+	    prefix-0f  3 + C@         ( dst opcode )
             SWAP GS = IF  10 OR  THEN ( opcode' )
 	    ASM8,                     ( )
          ELSE			      ( dst apf' )  \ CS, DS, ES, or SS
@@ -528,7 +530,7 @@ VARIABLE INTER
 2 1 15mi lgdt   3 1 15mi lidt   2 0 15mi lldt  3 0 15mi ltr
 
 \ LSS, LFS, LGS 
-: 16MI  CREATE  C,  DOES>  C@  H# 0F ASM8,  ASM8,  MEM,  normal  ;
+: 16MI  CREATE  C,  DOES>  C@  prefix-0f  ASM8,  MEM,  normal  ;
 
 \ TEST  bits in dest
 : TEST   (S source dest -- )
@@ -580,7 +582,7 @@ HEX
 \ 0x22 for normal->special direction, 0x20 for special->normal direction
 \ or with  0 for CRx, 1 for DRx, 4 for TRx
 : special-mov  ( s d -- )
-   h# 0f asm8,
+   prefix-0f
    [ also forth ]
    dup spec?  if  h# 22  else  swap h# 20  then   ( norm-reg spec-reg opcode )
    over o# 7000 and case
@@ -634,6 +636,10 @@ HEX
 ;
 : MOV  (MOV)  normal  ;
 
+\ Use "byte movsx" for the r8 form, "movsx" for the r16 form
+: movsx  ( r/m r -- )  prefix-0f  h# be size,  r/m,  ;
+: movzx  ( r/m r -- )  prefix-0f  h# b6 size,  r/m,  ;
+
 \ Most instructions are defined here. Those mnemonics in
 \ parenthetic comments are defined earlier or not at all.
 
@@ -681,12 +687,12 @@ HEX
  9B  1MI WAIT           ( XCHG )  D7  1MI XLAT    30 13MI XOR
  C2 14MI +RET
 
-: invd    ( -- )  h# 0f asm8,  h# 08 asm8,  ;
-: wbinvd  ( -- )  h# 0f asm8,  h# 09 asm8,  ;
-: wrmsr   ( -- )  h# 0f asm8,  h# 30 asm8,  ;
-: rdtsc   ( -- )  h# 0f asm8,  h# 31 asm8,  ;
-: rdmsr   ( -- )  h# 0f asm8,  h# 32 asm8,  ;
-: cpuid   ( -- )  h# 0f asm8,  h# a2 asm8,  ;  \ Arg in %eax, results in ax,bx,dx,cx
+: invd    ( -- )  prefix-0f  h# 08 asm8,  ;
+: wbinvd  ( -- )  prefix-0f  h# 09 asm8,  ;
+: wrmsr   ( -- )  prefix-0f  h# 30 asm8,  ;
+: rdtsc   ( -- )  prefix-0f  h# 31 asm8,  ;
+: rdmsr   ( -- )  prefix-0f  h# 32 asm8,  ;
+: cpuid   ( -- )  prefix-0f  h# a2 asm8,  ;  \ Arg in %eax, results in ax,bx,dx,cx
 
 \ Structured Conditionals
 \ single pass forces fixed size. optimize for small, fast structures:
@@ -720,7 +726,7 @@ variable long-offsets  long-offsets off
 	 drop here 2+ +                 ( addr )
          #) jmp
       else
-	 h# 0f asm8,  h# 10 + asm8,	( offset )
+	 prefix-0f  h# 10 + asm8,	( offset )
 	 real? if 2 else 4 then - adr,
       then
    then
@@ -739,7 +745,7 @@ HEX
       dup h# eb =  if
          drop h# e9 asm8,
       else
-         h# 0f asm8,  h# 10 + asm8,
+         prefix-0f  h# 10 + asm8,
       then
       real?  if  0 asm16,  else  0 asm32,  then
    else

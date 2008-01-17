@@ -28,7 +28,7 @@ nuser dis-offset
 true value op32?
 : opv@  ( -- l | w )  op32?  if  op32@  else  op16@  then  ;
 true value ad32?
-: adv@  ( -- l | w )  ad32?  if  op32@  else  op16@ wext  then  ;
+: adv@  ( -- l | w )  ad32?  if  op32@  else  op16@   then  ;
 : dis16  ( -- )  false is op32?  false is ad32?  ;
 : dis32  ( -- )  true  is op32?  true  is ad32?  ;
 \ XXX We should also change the register names e.g. from "eax" to "ax"
@@ -60,7 +60,7 @@ d# 34 buffer: disp-buf
    case
    0  of  " "  exit    endof
    1  of  op8@ bext  dup 0>=  if  ?+  then  endof
-   2  of  ?+ adv@      endof
+   2  of  ?+ adv@ wext     endof
    endcase
    (u.) disp-buf pack  count
 ;
@@ -80,7 +80,7 @@ string-array >regw
 ," eax" ," ecx" ," edx" ," ebx" ," esp" ," ebp" ," esi" ," edi"
 end-string-array
 
-: >reg  ( -- adr len )  >regw count  ;
+: >reg  ( -- adr len )  >regw count  op32? 0=  if  1 /string  then  ;
 
 : >greg  ( -- adr len )  wbit  if  >reg  else  >reg8 count  then  ;
 
@@ -101,8 +101,10 @@ end-string-array
       >scale count  $add-text            ( )
    then                                  ( )
 ;
+: .[ " ["  $add-text ;
+: .] " ]"  $add-text ;
 : add-disp  ( sib? reg mod -- )
-   " ["  $add-text               ( sib? reg mod )
+   .[                            ( sib? reg mod )
    2dup 0<>  swap 5 <>  or  if   ( sib? reg mod )   \ D32
       swap >reg $add-text        ( sib? mod )
    else                          ( sib? reg mod )
@@ -110,9 +112,53 @@ end-string-array
    then                          ( sib? mod )
    swap  if  get-scaled  then    ( mod )
    get-disp  $add-text           ( )
-   " ]"  $add-text               ( )
+   .]                            ( )
 ;
 
+: .ea32  ( reg mod -- )
+   >r                                    ( reg r: mod )
+   dup 4 =  if                           ( reg )     \ s-i-b
+      drop  get-op  true  lowbits        ( true reg )
+   else                                  ( reg )     \ displaced
+      false swap                         ( false reg )
+   then                                  ( sib? reg )
+   r> add-disp
+;
+
+string-array modes16
+   ," [bx+si]"
+   ," [bx+di]"
+   ," [bp+si]"
+   ," [bp+di]"
+   ," [si]"
+   ," [di]"
+   ," [bp]"
+   ," [bx]"
+end-string-array
+
+: add-disp16  ( disp -- )
+   h# ffff and  (u.) disp-buf pack count  $add-text
+;
+: +disp16  ( disp -- )
+   dup 0<  if
+      " -" $add-text  negate
+   else
+      " +" $add-text
+   then
+   add-disp16
+;
+
+: .ea16  ( reg mod -- )
+   over 6 =  over 0= and  if             ( reg mod )
+      \ disp16 only, takes the place of the [bp] mode
+      2drop op16@ .[ add-disp16 .] exit
+   then                                  ( reg mod )
+   swap modes16 count $add-text          ( mod )
+   case
+      1 of  op8@  +disp16  endof
+      2 of  op16@ +disp16  endof
+   endcase
+;
 : .ea  ( -- )
    " "  ea-text  place
    lowbits  hibits >r                    ( reg ) ( r: mod )
@@ -120,12 +166,7 @@ end-string-array
       >greg $add-text                    ( )
       r> drop  ea-text ". exit
    then                                  ( reg )
-   dup 4 =  if                           ( reg )     \ s-i-b
-      drop  get-op  true  lowbits        ( true reg )
-   else                                  ( reg )     \ displaced
-      false swap                         ( false reg )
-   then                                  ( sib? reg )
-   r> add-disp
+   r> ad32?  if  .ea32  else  .ea16  then
    ea-text ".
 ;
 : ,ea  ( -- )  .,  .ea  ;
@@ -133,7 +174,7 @@ end-string-array
 
 \ Display formatting
 variable start-column
-: op-col  ( -- )  start-column @  d# 8 +  #out @  -  0 max  spaces  ;
+: op-col  ( -- )  start-column @  d# 9 +  #out @  -  1 max  spaces  ;
 
 string-array >segment
    ," es"  ," cs"  ," ss"  ," ds"  ," fs"  ," gs"
@@ -164,7 +205,7 @@ end-string-array
 : iub   ( -- )  op8@       (.) type  ;
 : iw    ( -- )  op16@ (.) type  ;
 : iv    ( -- )  opv@ (.) type  ;
-: iuv   ( -- )  opv@ (u.) type  ;
+: iuv   ( -- )  adv@ (u.) type  ;
 : ,ib/v ( -- )  .,  wbit  if  opv@  else  op8@  then  (u.) type  ;
 : al/x  ( -- )  wbit  if  ." eax"  else  ." al"  then  ;
 : ,al/x ( -- )  .,  al/x  ;
@@ -186,8 +227,18 @@ string-array >cond
    ," s"  ," ns"  ," pe" ," po"  ," l"  ," ge"  ," le"  ," g"
 end-string-array
 
-: jb  ( -- )  op8@ bext  pc @ +  dup branch-target !  showaddr  ;
-: jv  ( -- )  adv@       pc @ +  dup branch-target !  showaddr  ;
+: showbranch  ( offset -- )
+   pc @  ad32?  if  ( offset pc )
+      +                    ( pc' )
+   else                    ( offset pc )
+      lwsplit  -rot        ( pc.high offset pc.low )
+      + h# ffff and        ( pc.high pc.low' )
+      swap wljoin          ( pc' )
+   then                    ( pc' )
+   dup branch-target !  showaddr
+;
+: jb  ( -- )  op8@ bext  showbranch  ;
+: jv  ( -- )  adv@  showbranch  ;
 
 : .jcc  ( -- )  ." j"  low4bits >cond ".  op-col jb  ;
 : ea,g  ( -- )  get-ea  .ea ., gb/v  ;
@@ -404,7 +455,12 @@ defer dis-body
    endcase
 ;
 
-: ap  ( -- )  adv@ ." far " op16@ .x  ." :"  showaddr  ;
+: .4x  ( n -- )  push-hex <# u# u# u# u# u#> type pop-base  ;
+: ap  ( -- )
+   adv@ ." far "
+   op16@ push-hex (.) type pop-base
+   ." :"  ad32?  if  showaddr  else  .4x  then
+;
 
 string-array >8line-ops
   ," cwde"  ," cdq"  ," call"  ," wait"  ," pushfd" ," popfd" ," sahf" ," lahf"
