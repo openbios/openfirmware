@@ -2,14 +2,14 @@
 
 \ The overall firmware revision
 macro: FW_MAJOR D
-macro: FW_MINOR 08
+macro: FW_MINOR 09
 
 \ The EC microcode
-macro: EC_VERSION test4e
+macro: EC_VERSION d08b
 
 \ Alternate command for getting EC microcode, for testing new versions.
 \ Temporarily uncomment the line and modify the path as necessary
-\ macro: GET_EC cp shiny4c.bin ec.img
+\ macro: GET_EC cp PQ2D08a.bin ec.img
 
 macro: KEYS mpkeys
 \ macro: KEYS testkeys
