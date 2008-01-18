@@ -13,7 +13,7 @@ purpose: Manufacturing data reader
       dup  4 - c@  dup h# 80 and  if  drop true exit  then   ( adr low )
       over 5 - c@  dup h# 80 and  if  2drop true exit  then  ( adr low high )
       2dup xor h# ff xor                                     ( adr low high check )
-      3 pick 3 - c@ <>  if  3drop true exit  then            ( adr low high )
+      3 pick 3 - c@ <>  if  2drop true exit  then            ( adr low high )
       7 << +                                                 ( adr length )
       - 5 -                                                  ( data-adr )
    else           \ Short (4-byte tag) format
