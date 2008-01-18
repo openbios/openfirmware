@@ -120,6 +120,7 @@ end-string-array
 dev /
 new-device
 " battery" device-name
+0 0 reg  \ Needed so test-all will run the selftest
 : selftest  ( -- error? )
    .bat
    false
