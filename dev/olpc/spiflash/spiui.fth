@@ -282,6 +282,7 @@ defer fw-filename$  ' null$ to fw-filename$
 [ifdef] dev
 dev /flash
 : selftest  ( -- error? )
+   .mfg-data
 
    slow-flash-read
 

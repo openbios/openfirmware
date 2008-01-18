@@ -117,6 +117,15 @@ end-string-array
 ;
 \ send questions to andrew at gold peak
 
+dev /
+new-device
+" battery" device-name
+: selftest  ( -- error? )
+   .bat
+   false
+;
+finish-device
+device-end
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
