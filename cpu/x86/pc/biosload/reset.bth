@@ -16,6 +16,7 @@ fload ${BP}/cpu/x86/mmuparam.fth
 hex
 
 fload ${BP}/cpu/x86/pc/finddi.fth			\ find-dropin and other tools
+fload ${BP}/cpu/x86/pc/port80.fth	\ Port 80 output
 
 h#  3e.0000 constant inflate-base
 h#  30.0000 constant workspace
@@ -32,14 +33,107 @@ fload ${BP}/cpu/x86/pc/dot.fth		\ Numeric output
 [then]
 
 fload ${BP}/cpu/x86/pc/ramfind.fth		\ find-dropin
+\  uint16_t gs;			/* Offset  0 */
+\  uint16_t fs;			/* Offset  2 */
+\  uint16_t es;			/* Offset  4 */
+\  uint16_t ds;			/* Offset  6 */
+
+\  reg32_t edi;			/* Offset  8 */
+\  reg32_t esi;			/* Offset 12 */
+\  reg32_t ebp;			/* Offset 16 */
+\  reg32_t _unused_esp;		/* Offset 20 */
+\  reg32_t ebx;			/* Offset 24 */
+\  reg32_t edx;			/* Offset 28 */
+\  reg32_t ecx;			/* Offset 32 */
+\  reg32_t eax;			/* Offset 36 */
+\
+\  reg32_t eflags;		/* Offset 40 */
+
+\ VESA modes:
+\  RESv  BPP> 4     8    15   16   24
+\  320x200              10d  10e  10f
+\  640x400        100
+\  640x480        101   110  111  112
+\  800x600  102   103   113  114  115
+\ 1024x768  104   105   116  117  118
+\ 1280x1024 106   107   119  11a  11b
+
+d# 1024 d# 768 wljoin constant TARGET_RES
+d# 16 constant TARGET_BPP
 
 label startup
+   h# 10 port80
    cli cld
 
+[ifdef] syslinux-loaded
+   fload ${BP}/cpu/x86/pc/biosload/c32vesa.fth
+[then]
+
+   h# 11 port80
    80  70  isa-c!		\ Disable NMI
    71 # dx mov  dx al in	\ Why do we do this?
 
 [ifdef] debug-startup
+h# 8000.f880 # ax mov  h# cf8 # dx mov  ax dx out
+h# 140f.0010 # ax mov  h# cfc # dx mov  ax dx out  \ Set LPC decoding
+
+h# 8000.f8f0 # ax mov  h# cf8 # dx mov  ax dx out
+h# fed1.c001 # ax mov  h# cfc # dx mov  ax dx out  \ Root complex BAR
+
+\ h# 0004.2210 # ax mov  ax  h# fed1f100 #) mov  \ Int route dev31 SMIP:INTB SATA:INTB PATA:INTA (default)
+\ h# 0000.2100 # ax mov  ax  h# fed1f104 #) mov  \ Int route dev30 AMIP:INTB AAIP:INTA (default)
+\ h# 1000.4321 # ax mov  ax  h# fed1f108 #) mov  \ Int route dev29 EIP:INTA U3P:INTD U2P:INTC U1P:INTB U0P:INTA (def)
+\ h# 0021.4321 # ax mov  ax  h# fed1f10c #) mov  \ Int route dev28 P6IP:B P5IP:A P4IP:D P3IP:C P2IP:B P1IP:A (def)
+
+h# 0146.0132 # ax mov  ax  h# fed1f140 #) mov  \ Int route dev30 D:PIRQA C:PIRQB B:PIRQE A:PIRQG
+                                               \ Int route dev31 D:PIRQA C:PIRQB B:PIRQD A:PIRQC
+h# 3201.0237 # ax mov  ax  h# fed1f144 #) mov  \ Int route dev28 D:PIRQD C:PIRQC B:PIRQA A:PIRQB
+                                               \ Int route dev29 D:PIRQA C:PIRQB B:PIRQD A:PIRQH
+h# 0000.0146 # ax mov  ax  h# fed1f148 #) mov  \ Int route dev27 D:PIRQA C:PIRQB B:PIRQE A:PIRQG
+
+h# 3 # al mov  al  h# fed1f1ff #) mov  \ Enable APIC (Root complex other interrupt control register)
+
+h# 0000.0004 # ax mov  ax  h# fed1f400 #) mov  \ Enable upper half of CMOS RAM
+h# 0000.0080 # ax mov  ax  h# fed1f404 #) mov  \ Enable High Precision Timer at fed0.0000 - fed0.03ff
+h# 0032.0061 # ax mov  ax  h# fed1f418 #) mov  \ Disable PCIe 6,5,2, AC97 modem, AC97 audio
+h# 0000.0001 # ax mov  ax  h# fed1f41c #) mov  \ Enable PCIe root port static clock gating
+
+h# 55 # al mov  al h# 2e # out  \ Superio Config mode
+
+\ h#  7 # al mov  al h# 2e # out  h#  1 # al mov  al h# 2f # out  \ Select LPT
+\ h# 60 # al mov  al h# 2e # out  h#  3 # al mov  al h# 2f # out  \ High address
+\ h# 61 # al mov  al h# 2e # out  h# 78 # al mov  al h# 2f # out  \ Low address
+\ h# 70 # al mov  al h# 2e # out  h#  7 # al mov  al h# 2f # out  \ IRQ
+\ h# 74 # al mov  al h# 2e # out  h#  4 # al mov  al h# 2f # out  \ DMA channel
+\ h# f0 # al mov  al h# 2e # out  h# 3a # al mov  al h# 2f # out  \ PP Mode
+\ h# f1 # al mov  al h# 2e # out  h#  0 # al mov  al h# 2f # out  \ PP Mode2
+\ h# f8 # al mov  al h# 2e # out  h#  4 # al mov  al h# 2f # out  \ PP Mapping
+\ h# 30 # al mov  al h# 2e # out  h#  1 # al mov  al h# 2f # out  \ Enable
+
+h#  7 # al mov  al h# 2e # out  h#  3 # al mov  al h# 2f # out  \ Select COM1
+h# 60 # al mov  al h# 2e # out  h#  3 # al mov  al h# 2f # out  \ High address
+h# 61 # al mov  al h# 2e # out  h# f8 # al mov  al h# 2f # out  \ Low address
+h# 70 # al mov  al h# 2e # out  h#  4 # al mov  al h# 2f # out  \ IRQ
+h# 30 # al mov  al h# 2e # out  h#  1 # al mov  al h# 2f # out  \ Enable
+
+\ h#  7 # al mov  al h# 2e # out  h#  4 # al mov  al h# 2f # out  \ Select Power control
+\ h# 60 # al mov  al h# 2e # out  h#  6 # al mov  al h# 2f # out  \ High address
+\ h# 61 # al mov  al h# 2e # out  h# c0 # al mov  al h# 2f # out  \ Low address
+\ h# 30 # al mov  al h# 2e # out  h#  1 # al mov  al h# 2f # out  \ Enable
+
+\ h#  7 # al mov  al h# 2e # out  h#  5 # al mov  al h# 2f # out  \ Select mouse
+\ h# 70 # al mov  al h# 2e # out  h#  c # al mov  al h# 2f # out  \ IRQ
+\ h# 30 # al mov  al h# 2e # out  h#  1 # al mov  al h# 2f # out  \ Enable
+
+h#  7 # al mov  al h# 2e # out  h#  6 # al mov  al h# 2f # out  \ Select keyboard
+h# 70 # al mov  al h# 2e # out  h#  1 # al mov  al h# 2f # out  \ IRQ
+h# 30 # al mov  al h# 2e # out  h#  1 # al mov  al h# 2f # out  \ Enable
+
+\ h#  7 # al mov  al h# 2e # out  h#  4 # al mov  al h# 2f # out  \ Select GPIO
+\ h# 60 # al mov  al h# 2e # out  h#  6 # al mov  al h# 2f # out  \ High address
+\ h# 61 # al mov  al h# 2e # out  h# 80 # al mov  al h# 2f # out  \ Low address
+\ h# 30 # al mov  al h# 2e # out  h#  1 # al mov  al h# 2f # out  \ Enable
+
 init-com1
 
 carret report
@@ -49,6 +143,7 @@ ascii o report
 ascii r report
 [then]
 
+   h# 12 port80
    " start" $find-dropin,   \ Assemble call to find-dropin with literal arg
    \ What should we do it this fails?  Perhaps call a default routine
    \ to try to initialize com1 and display a message?
@@ -56,6 +151,7 @@ ascii r report
 
    d# 32 #  ax  add	\ Skip dropin header
    ax call		\ Execute the dropin
+   h# 13 port80
 
    fload ${BP}/cpu/x86/pc/resetend.fth
 end-code

@@ -181,42 +181,16 @@ end-support-package
 [then]
 devalias nfs net//obp-tftp:last//nfs
 
+fload ${BP}/ofw/inet/loadtcp.fth
 
+support-package: http
+   fload ${BP}/ofw/inet/http.fth	\ HTTP client
+end-support-package
+
+[ifndef] use-timestamp-counter
 fload ${BP}/cpu/x86/pc/mscal.fth
-fload ${BP}/cpu/x86/pc/boot.fth
-
-\ false to stand-init-debug?
-true to stand-init-debug?
-
-
-hex
-stand-init-debug?  [if]
-warning @  warning off 
-: init
-\ initial-heap add-memory
-   init
-
-   standalone?  if
-      cr ." Type 'i' to interrupt stand-init sequence" cr 
-      d# 500 ms
-      key?  if
-         key upc ascii I  =  if  ." Interacting" cr  hex interact  then
-      then
-   then
-
-\  cr0@ h# 9fff.ffff and cr0!	\ enable L1 and L2 caches
-
-;
-warning !
 [then]
-
-fload ${BP}/cpu/x86/pc/biosload/mbootsec.fth
-
-: (.firmware)  ( -- )
-   ." Open Firmware  "  .built  cr
-   ." Copyright 1999 FirmWorks  All Rights Reserved" cr
-;
-' (.firmware) to .firmware
+fload ${BP}/cpu/x86/pc/boot.fth
 
 hex 
 \ If there is a PCI ethernet adapter, use it as the default net device,
@@ -230,6 +204,40 @@ hex
    " net" 2swap $devalias                   ( )
 ;
 
+fload ${BP}/cpu/x86/pc/biosload/usb.fth
+\ fload ${BP}/cpu/x86/pc/biosload/callbios.fth
+fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
+
+\ false to stand-init-debug?
+true to stand-init-debug?
+
+hex
+stand-init-debug?  [if]
+warning @  warning off 
+: init
+\ initial-heap add-memory
+   init
+
+   standalone?  if
+      cr ." Type 'i' to interrupt stand-init sequence" cr 
+      d# 2000 ms
+      key?  if
+         key upc ascii I  =  if  ." Interacting" cr  hex interact  then
+      then
+   then
+
+\  cr0@ h# 9fff.ffff and cr0!	\ enable L1 and L2 caches
+
+;
+warning !
+[then]
+
+: (.firmware)  ( -- )
+   ." Open Firmware  "  .built  cr
+   ." Copyright 1999 FirmWorks  All Rights Reserved" cr
+;
+' (.firmware) to .firmware
+
 : linux-logo  ( -- )
    " penguin.txt" find-drop-in  if  page type  then
 ;
@@ -242,6 +250,7 @@ hex
 [ifdef] probe-isa-modem
    probe-isa-modem
 [then]
+   probe-usb
    report-disk
    report-net
    report-pci-fb
@@ -257,10 +266,7 @@ hex
 
    auto-banner?  if
       " Probing" ?type  probe-all
-      \ install-console doesn't work with qemu, use -serial `tty` instead
-      [ifndef] qemu-loaded
       " Install console" ?type  install-console
-      [then]
       banner
    then
 
@@ -307,9 +313,11 @@ fload ${BP}/cpu/x86/pc/biosload/linux.fth
 
 fload ${BP}/cpu/x86/pc/biosload/vmdoor.fth   \ VMware interfaces
 
+fload ${BP}/cpu/x86/pc/biosload/intelfb.fth  \ Intel frame buffer setup
+
 " dhcp" ' ip-address  set-config-string-default
 
-.( Saving fw.dic ...)
+.( SAVING FW.dic ...)
 " fw.dic" $save-forth cr
 
 .( Saving fw.img ...)

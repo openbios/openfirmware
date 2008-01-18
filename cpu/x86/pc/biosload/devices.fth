@@ -32,6 +32,8 @@ stand-init: PCI host bridge
    " /pci" " init" execute-device-method drop
 ;
 
+fload ${BP}/cpu/x86/pc/biosload/i945.fth	\ Intel 945 hacks
+
 fload ${BP}/dev/pciprobe.fth		\ Generic PCI probing
 
 [ifdef] use-timestamp-counter
@@ -52,7 +54,9 @@ devalias screen /ega-text
 end-package
 [then]
 
+[ifndef] use-timestamp-counter
 fload ${BP}/cpu/x86/pc/getms.fth
+[then]
 
 [ifdef] use-mediagx
 fload ${BP}/dev/mediagx/reg.fth		\ MediaGX constants and access
@@ -141,7 +145,7 @@ devalias b /isa/fdc/disk@1
 devalias mouse /isa/8042/mouse
 
 [ifdef] use-timestamp-counter
-fload ${BP}/cpu/x86/pc/tsccal.fth
+fload ${BP}/cpu/x86/pc/tsccal1.fth
 [then]
 
 [ifdef] use-ega
@@ -176,10 +180,12 @@ stand-init: RTC
 
 fload ${BP}/cpu/x86/pc/cpunode.fth
 
+[ifndef] serial-console
 fload ${BP}/ofw/core/bailout.fth
 stand-init:  Keyboard overrides
    ?bailout
 ;
+[then]
 
 fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
 fload ${BP}/forth/lib/pattern.fth		\ Text string pattern matching

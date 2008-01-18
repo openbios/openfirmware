@@ -5,6 +5,8 @@ purpose: Common code for several versions of reset.bth
    \ memory.
 
 [ifndef] qemu-loaded
+[ifndef] syslinux-loaded
+[ifndef] preof-loaded
    \ Move GDT to low memory.  We use the first location at gdt-pa as
    \ scratch memory for sgdt, and put the actual gdt at gdt-pa + 0x10
    gdt-pa # ax mov
@@ -42,13 +44,15 @@ purpose: Common code for several versions of reset.bth
    ax fs  mov
    ax gs  mov
    ax ss  mov
-[then]
 
    h# 20 # al mov  al h# 80 # out
 
 [ifdef] mem-info-pa
    gdt-pa /page round-up #  ax  mov	\ Current low-memory high water mark
    ax     mem-info-pa 2 la+ #)  mov	\ Store in memory info area
+[then]
+[then]
+[then]
 [then]
 
    cld

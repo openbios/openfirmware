@@ -20,6 +20,12 @@ purpose: Establish address and I/O configuration definitions
   h#   08.0000 constant dropin-size
 [then]
 
+[ifdef] preof-loaded
+h# 2000.0000 constant ramsize
+h# fff8.0020 constant dropin-base  \ Location of payload in ROM
+h#   08.0000 constant dropin-size
+[then]
+
 \needs dropin-base  h# 198.0000 constant dropin-base
 \needs dropin-size  h#   8.0000 constant dropin-size
 \needs ResetBase    dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM

@@ -5,8 +5,6 @@ hex
 
 \ create make-boot-sector-only
 
-: $, ( adr len -- )  here over allot  swap move  ;
-
 create ofw-boot-sectors
 here
 fload ${BP}/cpu/x86/pc/biosload/build/bootsec.hex
@@ -77,6 +75,7 @@ here swap - constant /ofw-boot-sectors
    ." Open Firmware bootable floppy image created." cr
    ." Please copy OFW.IMG to the floppy." cr
 ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

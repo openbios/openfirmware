@@ -58,7 +58,8 @@ c;
 ;
 stand-init: Calibrating millisecond timer
    calibrate-ms
-;\ LICENSE_BEGIN
+;
+\ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
 \ Permission is hereby granted, free of charge, to any person obtaining

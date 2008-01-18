@@ -1,9 +1,9 @@
 \ See license at end of file
 purpose: Establish configuration definitions
 
-create pc		\ Demo version for generic PC
+\ create pc		\ Demo version for generic PC
 \ create pc-linux	\ Demo version for generic PC and Linux
-\ create pc-serial	\ Demo version for generic PC
+create pc-serial	\ Demo version for generic PC
 
 \ --- The environment that "boots" OFW ---
 \ - Image Format - Example Media - previous stage bootloader
@@ -24,9 +24,16 @@ create syslinux-loaded
 \ Load and run in qemu
 \ create qemu-loaded 
 
+\ Load from ROM by preOF code from Intel
+\ create preof-loaded 
+
 [ifdef] pc-serial
 create serial-console
 create pc
+[then]
+
+[ifdef] qemu-loaded  \ LinuxBIOS+OFW under QEMU currently doesn't do VGA right
+create serial-console
 [then]
 
 [ifdef] etherboot-variant
@@ -62,6 +69,20 @@ create use-isa-ide
 create use-ega
 create use-elf
 create use-ne2000
+create use-watch-all
+create use-null-nvram
+create no-floppy-node
+[then]
+
+[ifdef] preof-loaded
+create serial-console
+create use-timestamp-counter
+create resident-packages
+create addresses-assigned  \ Don't reassign PCI addresses
+\ create virtual-mode
+create use-root-isa
+create use-isa-ide
+create use-elf
 create use-watch-all
 create use-null-nvram
 create no-floppy-node

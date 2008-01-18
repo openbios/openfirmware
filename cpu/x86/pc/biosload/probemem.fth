@@ -38,9 +38,12 @@ dev /memory
 [else]
    fw-pa h# 10.0000 u>  if
       h# 10.0000   fw-pa over -  release
+      fw-pa /fw-ram +  heap-base heap-size +  umax  /ram  release
    then
 
-   dropin-base dropin-size +  /ram over -  release
+   dropin-base /ram u<  if
+      dropin-base dropin-size +  /ram over -  release
+   then
 [then]
 ;
 

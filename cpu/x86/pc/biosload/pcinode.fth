@@ -106,10 +106,13 @@ mechanism1
 
 \ The io-base handling really ought to be in the root node, but
 \ that would require more changes than I'm willing to do at present.
+warning @ warning off
 : map-out  ( vaddr size -- )
    over io-base u>=  if  2drop exit  then  ( vaddr size )
    map-out                                 ( )
 ;   
+warning !
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

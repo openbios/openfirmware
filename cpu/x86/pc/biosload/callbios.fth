@@ -173,15 +173,15 @@ c;
 : bios-config-w!  ( w adr -- )   lwsplit h# 1a { h# b10c ax bx rm-di ! rm-cx ! }   ;
 : bios-config-l!  ( l adr -- )   lwsplit h# 1a { h# b10d ax bx rm-di ! rm-cx ! }   ;
 : disk-status  ( -- stat )  h# 13 { h# 0100 ax } rm-ax @  ;
-0 value sect/trk
-0 value trk/head
+0 value #sects
+0 value #cyls
 0 value #heads
 : get-drive-params  ( -- )
    h# 13 { 8 ah h# 80 dx }
    rm-flags @ 1 and  if  true exit  then
    rm-cx @  wbsplit                     ( cl ch )
-   over h# 3f and to sect/trk           ( cl ch )
-   swap 6 rshift bwjoin 1+ to trk/head  ( )
+   over h# 3f and to #sects             ( cl ch )
+   swap 6 rshift bwjoin 1+ to #cyls     ( )
    rm-dx @ 8 rshift 1+ to #heads        ( )
 ;
 : #drive-sectors  ( -- n )
@@ -203,9 +203,10 @@ c;
 : write-sectors  ( sector1 cyl0 head0 drive0 #sectors -- )  3 do-rw  ;
 
 : lbn>sch  ( lbn -- sector cyl head )
-   sect/trk /mod  swap 1+ swap   ( sector rem )
-   trk/head /mod                    ( sector cyl head )
-   dup #heads > abort" LBN out of range"
+   #sects   /mod  swap 1+ swap   ( sector rem )
+   #heads   /mod                 ( sector head cyl )
+   dup #cyls > abort" LBN out of range"
+   swap                          ( sector cyl head )
 ;
 : lbn-read-sectors  ( lbn drive #sectors -- )  2>r lbn>sch 2r> read-sectors  ;
 : lbn-write-sectors  ( lbn drive #sectors -- )  2>r lbn>sch 2r> write-sectors  ;
