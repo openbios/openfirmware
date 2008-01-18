@@ -260,6 +260,10 @@ hex
    false
 ;
 
+: protect-fw  ( -- )
+   " wp" find-tag  if  2drop ec-indexed-io-off  then
+;
+
 \ stand-init-debug?  [if]
 warning @  warning off 
 : init
@@ -271,7 +275,7 @@ warning @  warning off
 [ifdef] rom-loaded
       d# 300
       i-key-wait  if
-         ec-indexed-io-off
+         protect-fw
          ." Interacting" cr  hex interact
       then
 [ifdef] lx-devel
@@ -511,7 +515,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 
 : ?games  ( -- )
    rocker-right game-key?  if
-      ec-indexed-io-off
+      protect-fw
       time&date 5drop 1 and  if
          ['] pong guarded
       else
@@ -522,7 +526,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 : ?diags  ( -- )
    rocker-left game-key?  if
-      ec-indexed-io-off
+      protect-fw
       text-on  " test-all" ['] eval guarded
       ." Tests complete - powering off" cr  d# 5000 ms  power-off
    then
@@ -530,12 +534,12 @@ fload ${BP}/ofw/core/dualconsole.fth
 
 : ?scan-nand  ( -- )
    rocker-up game-key?  if
-      ec-indexed-io-off  text-on  ['] scan-nand guarded
+      protect-fw  text-on  ['] scan-nand guarded
    then
 ;
 : ?fs-update  ( -- )
    button-check button-x or  button-o or  button-square or   ( mask )
-   game-key-mask =  if  ec-indexed-io-off try-fs-update  then
+   game-key-mask =  if  protect-fw try-fs-update  then
 ;
 : open-keyboard  ( -- )
    " keyboard" open-dev  ?dup  if  set-stdin  then
