@@ -251,11 +251,8 @@ warning @ warning off
    \ It expects that virtual = physical; we depend on the fact
    \ that we have low memory mapped V=P
    over  h# 10000 =  if  ( vaddr size )
-      0 mem-claim drop
-
       \ Map the frame buffer (virtual=physical)
       h# 910 config-l@ dup 100.0000 -1 mmu-map
-      exit
    then
 
    \ If it's not memtest, chain to the linux recognizer

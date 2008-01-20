@@ -145,7 +145,8 @@ fload ${BP}/cpu/x86/pc/fixkbd.fth	\ Switch keyboard scan codes
 fload ${BP}/ofw/elf/elf.fth
 fload ${BP}/ofw/elf/elfdebug.fth
 [ifdef] virtual-mode
-: (elf-map-in) ( va size -- )  swap 1 -rot  allocate-aligned  drop  ;
+\ Depends on the assumption that physical memory is mapped 1:1 already
+: (elf-map-in) ( va size -- )  0 mem-claim  drop  ;
 ' (elf-map-in) is elf-map-in
 [else]
 ' 2drop is elf-map-in
