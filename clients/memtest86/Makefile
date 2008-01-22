@@ -75,6 +75,9 @@ extra.o: config.c test.h screen_buffer.h extra.h extra.c
 spd.o: spd.c lib.c test.h screen_buffer.h ega.h
 	$(CC) -c $(CCFLAGS) -fPIC spd.c
 
+random.o: random.c
+	$(CC) -c $(CCFLAGS) -fPIC random.c
+
 controller.s: controller.c defs.h config.h test.h pci.h controller.h
 	$(CC) -S $(CCFLAGS) -fPIC controller.c
 
