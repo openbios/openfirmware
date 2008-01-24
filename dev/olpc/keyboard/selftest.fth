@@ -87,13 +87,202 @@ d# 540 constant space-key-w
    5 0  do  make-single-key  loop
 ;
 
-\ Keyboard top row: key entries    0-0x18
-\         next row: key entries 0x19-0x26
-\         next row: key entries 0x27-0x31
-\         next row: key entries 0x35-0x41
-\         next row: key entries 0x42-0x4f
-\         next row: key entries 0x50-0x58
+0 [if]
+hex
+\ This is indexed by the IBM key number (the physical key number as
+\ shown on language-independent drawings of the keyboard layout since
+\ the original IBM documentation).  The values are scanset1 codes.
+create (ibm#>scan1)
+\   0     1     3     3     4     5     6     7     8     9
+   00 c, 29 c, 02 c, 03 c, 04 c, 05 c, 06 c, 07 c, 08 c, 09 c,  \   
+   0a c, 0b c, 0c c, 0d c, 00 c, 0e c, 0f c, 10 c, 11 c, 12 c,  \ 1x
+   13 c, 14 c, 15 c, 16 c, 17 c, 18 c, 19 c, 1a c, 1b c, 2b c,  \ 2x
+   3a c, 1e c, 1f c, 20 c, 21 c, 22 c, 23 c, 24 c, 25 c, 26 c,  \ 3x
+   27 c, 28 c, 00 c, 1c c, 2a c, 56 c, 2c c, 2d c, 2e c, 2f c,  \ 4x
+   30 c, 31 c, 32 c, 33 c, 34 c, 35 c, 73 c, 36 c, 1d c, 00 c,  \ 5x
+   38 c, 39 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c,  \ 6x
+   00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c,  \ 7x
+   00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c,  \ 8x
+   45 c, 47 c, 4B c, 4F c, 00 c, 00 c, 48 c, 4C c, 50 c, 52 c,  \ 9x
+   37 c, 49 c, 4D c, 51 c, 53 c, 4A c, 4E c, 00 c, 1c c, 00 c,  \ 1   
+   01 c, 00 c, 3b c, 3c c, 3d c, 3e c, 3f c, 40 c, 41 c, 42 c,  \ 11x
+   43 c, 44 c, 57 c, 58 c, 00 c, 46 c, 00 c, 00 c, 00 c, 00 c,  \ 12x
+   79 c, 00 c, 00 c, 5c c, 73 c, 6e c, 00 c, 00 c, 00 c, 00 c,  \ 13x (analog intermediates)
+   00 c, 00 c, 00 c, 00 c, 00 c,                                \ 14x
 
+\ A program to invert the table above.  We used the inverted form.
+h# 80 buffer: sc1
+: invert-ibm  ( -- )
+   sc1 h# 80 erase
+   d# 145 0 do
+     (ibm#>scan1) i + c@  ?dup  if  i  swap sc1 +  c!  then
+   loop
+
+   h# 80 0 do
+      ." ( " i 2 u.r ."  ) "
+      i 8 bounds do
+         sc1 i + c@ push-decimal 3 u.r pop-base  ."  c, "
+      loop
+      cr
+   8 +loop
+;
+[then]
+
+\ This table is indexed by the (unescaped) scanset1 code, giving
+\ an IBM physical key number.
+
+decimal
+create (scan1>ibm#)
+\      0/8    1/9    2/a    3/b    4/c    5/d    6/e    7/f
+(  0 )   0 c, 110 c,   2 c,   3 c,   4 c,   5 c,   6 c,   7 c,  \ 01 is esc
+(  8 )   8 c,   9 c,  10 c,  11 c,  12 c,  13 c,  15 c,  16 c,
+( 10 )  17 c,  18 c,  19 c,  20 c,  21 c,  22 c,  23 c,  24 c,
+( 18 )  25 c,  26 c,  27 c,  28 c,  43 c,  58 c,  31 c,  32 c,  \ 1d is ctrl, 1c is Enter
+( 20 )  33 c,  34 c,  35 c,  36 c,  37 c,  38 c,  39 c,  40 c,
+( 28 )  41 c,   1 c,  44 c,  29 c,  46 c,  47 c,  48 c,  49 c,
+( 30 )  50 c,  51 c,  52 c,  53 c,  54 c,  55 c,  57 c, 100 c,
+( 38 )  60 c,  61 c,  30 c, 112 c, 113 c, 114 c, 115 c, 116 c,
+( 40 ) 117 c, 118 c, 119 c, 120 c, 121 c,  90 c, 125 c,  91 c,
+( 48 )  96 c, 101 c, 105 c,  92 c,  97 c, 102 c, 106 c,  93 c,
+( 50 )  98 c, 103 c,  99 c, 104 c,   0 c,   0 c,  45 c, 122 c,
+( 58 ) 123 c,  59 c,   0 c,   0 c, 133 c,   0 c,   0 c,   0 c,  \ scan h# 59 is Fn - ibm# d# 59
+( 60 )   0 c,   0 c,   0 c,   0 c,   0 c,   0 c,   0 c,   0 c,
+( 68 )   0 c,   0 c,   0 c,   0 c,   0 c,   0 c, 135 c,   0 c,
+( 70 )   0 c,   0 c,   0 c,  56 c,   0 c,   0 c,   0 c,   0 c,
+( 78 )   0 c, 130 c,   0 c,   0 c,   0 c,   0 c,   0 c,   0 c,
+
+\ This should be a lookup table.  It would be smaller that way
+: e0-scan1>ibm#  ( scancode -- ibm# )
+   case
+      h# 38 of  d# 62  endof  \ R ALT
+
+\ For a standard PC keyboard
+\     h# 1c of  d# 64  endof  \ Numeric enter
+\     h# 1d of  d# 64  endof  \ R CTRL
+\     h# 52 of  d# 75  endof  \ Insert
+\     h# 53 of  d# 76  endof  \ Delete
+\     h# 47 of  d# 80  endof  \ Home
+\     h# 4f of  d# 81  endof  \ End
+\     h# 49 of  d# 85  endof  \ PageUp
+\     h# 51 of  d# 86  endof  \ PageDown
+
+      h# 3b of  d# 112 endof  \ Fn 1
+      h# 3c of  d# 113 endof  \ Fn 2
+      h# 3d of  d# 114 endof  \ Fn 3
+      h# 3e of  d# 115 endof  \ Fn 4
+      h# 3f of  d# 116 endof  \ Fn 5
+      h# 40 of  d# 117 endof  \ Fn 6
+      h# 41 of  d# 118 endof  \ Fn 7
+      h# 42 of  d# 119 endof  \ Fn 8
+      h# 43 of  d# 120 endof  \ Fn 9
+      h# 44 of  d# 121 endof  \ Fn 10
+      h# 57 of  d# 122 endof  \ Fn 11
+      h# 58 of  d# 123 endof  \ Fn 12
+
+      h# 4b of  d# 79  endof  \ Left Arrow
+      h# 48 of  d# 83  endof  \ Up Arrow
+      h# 50 of  d# 84  endof  \ Down Arrow
+      h# 4d of  d# 89  endof  \ Right Arrow
+
+\ OLPC-specific
+      h# 47 of  d# 79  endof  \ Home
+      h# 4f of  d# 89  endof  \ End
+      h# 49 of  d# 83  endof  \ PageUp
+      h# 51 of  d# 84  endof  \ PageDown
+      h# 78 of  d# 135 endof  \ Fn View Source
+      h# 79 of  d# 135 endof  \ View Source
+      h# 77 of  d# 136 endof  \ Fn 1.5
+      h# 76 of  d# 137 endof  \ Fn 2.5
+      h# 75 of  d# 138 endof  \ Fn 3.5
+      h# 74 of  d# 139 endof  \ Fn 5.5
+      h# 73 of  d# 140 endof  \ Fn 6.5
+      h# 72 of  d# 141 endof  \ Fn 7.5
+      h# 71 of  d# 142 endof  \ Fn 9.5
+      h# 70 of  d# 143 endof  \ Fn 10.5
+      h# 6f of  d# 144 endof  \ Fn 11.5
+
+      h# 64 of  d# 145 endof  \ Fn Chat
+      h# 6e of  d# 145 endof  \ Chat
+
+      h# 01 of  d# 110 endof  \ Fn Esc
+      h# 5a of  d# 129 endof  \ Fn Frame
+      h# 5d of  d# 129 endof  \ Frame
+      h# 53 of  d# 15  endof  \ Fn Erase
+      h# 52 of  d# 57  endof  \ Fn R-shift
+      h# 7e of  d# 56  endof  \ Language
+
+      h# 5b of  d# 127 endof  \ L grab
+      h# 56 of  d# 61  endof  \ Fn space
+      h# 5c of  d# 128 endof  \ F grab
+
+      ( default )  0 swap     \ Not recognized
+   endcase
+;
+
+: scan1>ibm#  ( scancode1 esc? -- ibm# )
+   if  e0-scan1>ibm#  else  (scan1>ibm#) + c@  then
+;
+
+\ "key#" is a physical location on the screen
+\ "ibm#" is the key number as shown on the original IBM PC documents
+\ These keynum values are from the ALPS spec "CL1-matrix-20060920.pdf"
+decimal
+create ibm#s
+   \ Top row, key#s 0x00-0x18
+   110 c, 135 c,                                     \ ESC, view source
+   112 c, 136 c, 113 c, 137 c, 114 c, 138 c, 115 c,  \ Left bar
+   116 c, 139 c, 117 c, 140 c, 118 c, 141 c, 119 c,  \ Middle bar
+   120 c, 142 c, 121 c, 143 c, 122 c, 144 c, 123 c,  \ Right bar
+   145 c, 129 c,                                     \ chat, frame
+
+   \ Number row - key#s 0x19-0x26
+   1 c, 2 c, 3 c, 4 c, 5 c, 6 c, 7 c, 8 c, 9 c, 10 c, 11 c, 12 c, 13 c, 15 c,
+
+   \ Top alpha row - key#s 0x27-0x34
+   16 c, 17 c, 18 c, 19 c, 20 c, 21 c, 22 c, 23 c, 24 c, 25 c, 26 c, 27 c, 28 c, 43 c,  \ tab, chars, enter
+
+   \ Middle alpha row - key#s 0x35-0x41
+   58 c, 31 c, 32 c, 33 c, 34 c, 35 c, 36 c, 37 c, 38 c, 39 c, 40 c, 41 c, 29 c,  \ ctrl, chars
+
+   \ Bottom alpha row - key#s 0x42-0x4f
+   44 c, 46 c, 47 c, 48 c, 49 c, 50 c, 51 c, 52 c, 53 c, 54 c, 55 c, 57 c, 83 c, 56 c,  \ shift, chars, shift, up, times
+
+   \ Function row - key#s 0x50 - 0x58
+   59 c, 127 c, 60 c, 61 c, 62 c, 128 c, 79 c, 84 c, 89 c,  \ Fn, lgrab, alt, space, altgr, rgrab, left, down, right
+here ibm#s - constant /ibm#s
+
+: ibm#>key#  ( ibm# -- true | key# false )
+   /ibm#s 0  ?do   ( ibm# )
+      dup  ibm#s i + c@   =  if
+         drop i false unloop exit
+      then
+   loop                      ( ibm# )
+   drop true
+;
+
+0 [if]
+\ This is a program to invert the ibm#s table
+d# 145 buffer: sc2
+: invert-key  ( -- )
+   sc2 d# 145 erase
+   h# 59 0 do
+     i  ibm#s i + c@  sc2 +  c!
+   loop
+
+   d# 145 0 do
+      ." ( " i  push-decimal  3 u.r  pop-base  ."  ) "
+      i d# 10 bounds do
+         sc2 i + c@ push-hex  2 u.r    pop-base  ."  c, "
+      loop
+      cr
+   d# 10 +loop
+;
+[then]
+
+0 [if]
+\ These are maps from scanset 2 to key position numbers.
+\ They are no longer used
+hex
 create raw-scancode
    ( -0 )  -1 c, 10 c, 0d c, 09 c, 06 c, 02 c, 04 c, 16 c,
    ( 08 )  -1 c, 12 c, 0f c, 0b c, 08 c, 27 c, 19 c, 50 c,
@@ -131,12 +320,19 @@ create e0-scancode
    ( 78 )  14 c, -1 c, 57 c, -1 c, -1 c, 4e c, -1 c, -1 c,
 
 raw-scancode value cur-sc-table
+[then]
 
 h# 07ff constant pressed-key-color
 h# 001f constant idle-key-color
 h# ffff constant kbd-bc
 
-: scancode->key  ( scancode -- key# )  cur-sc-table + c@  ;
+0 value esc?
+
+: scan1->key#  ( scancode -- true | key# false )
+   esc?  scan1>ibm#  
+   ?dup 0=  if  true exit  then
+   ibm#>key#
+;
 
 : draw-key  ( key# color -- )
    swap
@@ -158,33 +354,31 @@ h# ffff constant kbd-bc
 ;
 
 false value verbose?
-false value exit-selftest?
-false value up-key?
 
-: process-raw  ( scan-code -- )
+: process-raw  ( scan-code -- exit? )
    verbose?  if  dup u.  then
-   dup h# f0 =  if
-      true to up-key?  drop
-   else
    dup h# e0 =  if
-      e0-scancode to cur-sc-table  drop
+      true to esc?
    else
-      scancode->key  dup h# ff =  if
-         drop
-      else
-         up-key?  if  dup 0= to exit-selftest? key-up  else  key-down  then
+      dup h# 7f and scan1->key#  if          ( scan )
+         drop                                ( )
+      else                                   ( scan key# )
+         swap h# 80 and  if                  ( key# )
+            dup key-up                       ( key# )
+            0=  if  true exit  then          ( )
+         else                                ( key# )
+            key-down                         ( )
+         then                                ( )
       then
-      false to up-key?
-      raw-scancode to cur-sc-table
-   then  then
+      false to esc?
+   then
+   false
 ;
 
 : selftest-keys  ( -- )
-   raw-scancode to cur-sc-table
-   false to exit-selftest?  false to up-key?
+   false to esc?
    begin
-      get-data?  if  process-raw  then
-      exit-selftest?
+      get-data?  if  process-raw  else  false  then  ( exit? )
    until
 ;
 
@@ -194,9 +388,12 @@ false value up-key?
    open  0=  if  true exit  then
    make-keys
    cursor-off draw-keyboard
-   toss-keys  " translation-off" $call-parent
+\   toss-keys  " translation-off" $call-parent
+   true to locked?
    selftest-keys
-   " translation-on" $call-parent  toss-keys cursor-on
+   false to locked?
+\   " translation-on" $call-parent  toss-keys
+   cursor-on
    screen-ih iselect  erase-screen  iunselect
    page
    close
