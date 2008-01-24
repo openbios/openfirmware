@@ -32,9 +32,12 @@ d#  70 constant single-key-w
 d#  70 constant single-key-h
 d# 105 constant shift-key-w
 d# 540 constant space-key-w
+d# 400 constant top-row-offset
+d#  40 constant button-w
+d#  40 constant button-h
 
 : key-adr  ( i -- adr )  /key * keys +  ;
-: top-key-row  ( -- )  row-gap to key-y  key-gap to key-x  ;
+: top-key-row  ( -- )  top-row-offset to key-y  key-gap to key-x  ;
 : next-key-row  ( -- )
    key-y single-key-h + row-gap + to key-y
    key-gap to key-x 
@@ -59,6 +62,7 @@ d# 540 constant space-key-w
    r> ++key-x
    add-key-gap
 ;
+: make-button  ( x y -- )  button-w button-h (make-key)  ;
 
 : make-keys  ( -- )
    0 to #keys
@@ -85,6 +89,17 @@ d# 540 constant space-key-w
    3 0  do  make-single-key  loop
    make-space-key
    5 0  do  make-single-key  loop
+
+   d#   80 d#  30 make-button  \ Rocker up    65
+   d#   30 d#  80 make-button  \ Rocker left  67
+   d#  130 d#  80 make-button  \ Rocker right 68
+   d#   80 d# 130 make-button  \ Rocker down  66
+   d#   80 d# 230 make-button  \ Rotate       69
+
+   d# 1080 d#  30 make-button  \ O            e0 65
+   d# 1030 d#  80 make-button  \ square       e0 67
+   d# 1130 d#  80 make-button  \ check        e0 68
+   d# 1080 d# 130 make-button  \ X            e0 66
 ;
 
 0 [if]
@@ -146,8 +161,8 @@ create (scan1>ibm#)
 ( 48 )  96 c, 101 c, 105 c,  92 c,  97 c, 102 c, 106 c,  93 c,
 ( 50 )  98 c, 103 c,  99 c, 104 c,   0 c,   0 c,  45 c, 122 c,
 ( 58 ) 123 c,  59 c,   0 c,   0 c, 133 c,   0 c,   0 c,   0 c,  \ scan h# 59 is Fn - ibm# d# 59
-( 60 )   0 c,   0 c,   0 c,   0 c,   0 c,   0 c,   0 c,   0 c,
-( 68 )   0 c,   0 c,   0 c,   0 c,   0 c,   0 c, 135 c,   0 c,
+( 60 )   0 c,   0 c,   0 c,   0 c,   0 c, 150 c, 153 c, 151 c,  \ 66-68 are left rocker
+( 68 ) 152 c, 154 c,   0 c,   0 c,   0 c,   0 c, 135 c,   0 c,  \ 69 is rotate
 ( 70 )   0 c,   0 c,   0 c,  56 c,   0 c,   0 c,   0 c,   0 c,
 ( 78 )   0 c, 130 c,   0 c,   0 c,   0 c,   0 c,   0 c,   0 c,
 
@@ -215,6 +230,10 @@ create (scan1>ibm#)
       h# 56 of  d# 61  endof  \ Fn space
       h# 5c of  d# 128 endof  \ F grab
 
+      h# 65 of  d# 156 endof  \ Button O
+      h# 66 of  d# 159 endof  \ Button X
+      h# 67 of  d# 157 endof  \ Button square
+      h# 68 of  d# 158 endof  \ Button check
       ( default )  0 swap     \ Not recognized
    endcase
 ;
@@ -249,6 +268,11 @@ create ibm#s
 
    \ Function row - key#s 0x50 - 0x58
    59 c, 127 c, 60 c, 61 c, 62 c, 128 c, 79 c, 84 c, 89 c,  \ Fn, lgrab, alt, space, altgr, rgrab, left, down, right
+
+   \ Game buttons - key#s 0x59 - 0x61  (these IBM#s are made up just for this program)
+   150 c, 151 c, 152 c, 153 c,        \ Rocker up, left, right, down
+   154 c,                             \ Rotate
+   156 c, 157 c, 158 c, 159 c,        \ Game O, square, check, X
 here ibm#s - constant /ibm#s
 
 : ibm#>key#  ( ibm# -- true | key# false )
@@ -350,7 +374,7 @@ h# ffff constant kbd-bc
 : draw-keyboard  ( -- )
    kbd-bc fill-screen
    #keys 0  ?do  i key-up  loop
-   0 d# 20 at-xy ." Press the top left key to exit"
+   0 d# 13 at-xy ." X"
 ;
 
 false value verbose?
@@ -375,10 +399,17 @@ false value verbose?
    false
 ;
 
+0 value last-timestamp
 : selftest-keys  ( -- )
    false to esc?
+   get-msecs to last-timestamp
    begin
-      get-data?  if  process-raw  else  false  then  ( exit? )
+      get-data?  if
+         process-raw
+         get-msecs to last-timestamp
+      else
+         get-msecs last-timestamp -  d# 20,000 >=
+      then             ( exit? )
    until
 ;
 
@@ -388,11 +419,9 @@ false value verbose?
    open  0=  if  true exit  then
    make-keys
    cursor-off draw-keyboard
-\   toss-keys  " translation-off" $call-parent
-   true to locked?
+   true to locked?   \ Disable the keyboard alarm handler; it steals our scancodes
    selftest-keys
    false to locked?
-\   " translation-on" $call-parent  toss-keys
    cursor-on
    screen-ih iselect  erase-screen  iunselect
    page
