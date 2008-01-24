@@ -56,12 +56,16 @@ d# 34 buffer: disp-buf
 : ?+  ( -- )
    ea-text c@ 1 >  if  " +" $add-text  then
 ;
+: ?-  ( -- )
+   ea-text c@ 1 >  if  " -" $add-text  then
+;
 : get-disp  ( mod -- adr len )
    case
    0  of  " "  exit    endof
-   1  of  op8@ bext  dup 0>=  if  ?+  then  endof
-   2  of  ?+ adv@ wext     endof
+   1  of  op8@ bext     endof
+   2  of  adv@ wext     endof
    endcase
+   dup 0>=  if  ?+  else  ?-  negate  then  
    (u.) disp-buf pack  count
 ;
 \ Used when "w" field contains 0
