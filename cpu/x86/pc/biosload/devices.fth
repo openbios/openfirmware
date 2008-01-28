@@ -207,6 +207,22 @@ stand-init: Pseudo-NVRAM
 ;
 [then]
 
+[ifdef] use-vga
+0 0  " i3c0" " /isa" begin-package
+  " vga" name
+  my-address my-space h# 20 reg
+  fload ${BP}/dev/video/common/defer.fth	\ Defered words
+  fload ${BP}/dev/video/common/graphics.fth	\ Graphics and color routines
+  fload ${BP}/dev/video/controlr/vga.fth	\ Controller code
+  use-vga
+  fload ${BP}/dev/video/common/init.fth		\ Init code
+  fload ${BP}/dev/video/common/display.fth	\ High level interface code
+  fload ${BP}/dev/video/common/textmode.fth	\ VGA text mode
+  : (map-io-regs)  h# ffff0000 to io-base  ;
+  ' (map-io-regs) to map-io-regs
+end-package
+[then]
+
 [ifdef] use-ct65550
 0 0  " i3b0" " /isa" begin-package
    fload ${BP}/dev/ct6555x/loadpkg.fth	\ Video driver
