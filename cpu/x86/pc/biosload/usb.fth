@@ -12,20 +12,38 @@ devalias u    /usb/disk
    r> to exit?
 ;
 
+: (probe-usb2)  ( -- )
+   " device_type" get-property  if  exit  then
+   get-encoded-string  " ehci" $=  if
+      pwd$ open-dev  ?dup  if  close-dev  then
+   then
+;
+: (show-usb2)  ( -- )
+   " device_type" get-property  if  exit  then
+   get-encoded-string  " ehci" $=  if
+      pwd$ $nopage-show-devs
+   then
+;
+: (probe-usb1)  ( -- )
+   " device_type" get-property  if  exit  then
+   get-encoded-string  2dup " uhci" $= >r  " ohci" $= r> or  if
+      pwd$ open-dev  ?dup  if  close-dev  then
+   then
+;
+: (show-usb1)  ( -- )
+   " device_type" get-property  if  exit  then
+   get-encoded-string  2dup " uhci" $= >r  " ohci" $= r> or  if
+      pwd$ $nopage-show-devs
+   then
+;
 : probe-usb  ( -- )
    ." USB2 devices:" cr
-   " /usb@1d,7" open-dev  ?dup  if  close-dev  then
-   " /usb" $nopage-show-devs
+   " /" ['] (probe-usb2) scan-subtree
+   " /" ['] (show-usb2) scan-subtree
 
    ." USB1 devices:" cr
-   " /usb@1d,3" open-dev  ?dup  if  close-dev  then
-   " /usb@1d,3" $nopage-show-devs
-   " /usb@1d,2" open-dev  ?dup  if  close-dev  then
-   " /usb@1d,2" $nopage-show-devs
-   " /usb@1d,1" open-dev  ?dup  if  close-dev  then
-   " /usb@1d,1" $nopage-show-devs
-   " /usb@1d,0" open-dev  ?dup  if  close-dev  then
-   " /usb@1d,0" $nopage-show-devs
+   " /" ['] (probe-usb1) scan-subtree
+   " /" ['] (show-usb1) scan-subtree
 ;
 alias p2 probe-usb
 
