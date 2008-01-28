@@ -206,7 +206,7 @@ hex
 ;
 
 fload ${BP}/cpu/x86/pc/biosload/usb.fth
-\ fload ${BP}/cpu/x86/pc/biosload/callbios.fth
+fload ${BP}/cpu/x86/pc/biosload/callbios.fth
 fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
 
 \ false to stand-init-debug?
@@ -275,7 +275,7 @@ warning !
    warning on
    only forth also definitions
 
-   install-alarm
+\   install-alarm
 
    #line off
 
@@ -323,6 +323,7 @@ fload ${BP}/cpu/x86/pc/biosload/intelfb.fth  \ Intel frame buffer setup
 
 .( Saving fw.img ...)
 " fw.img"  RAMbase save-abs-rom cr
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
