@@ -16,7 +16,7 @@ defer extended-setup
 
 : next-string  ( table-adr -- table-adr' adr len )  count 2dup + -rot  ;
 
-: set-mode  ( table -- )
+: set-vga-mode  ( table -- )
    palette-off
 
    dup c@ misc!  1+
@@ -129,11 +129,12 @@ create mode2+/3		\ 80x25, 8x16 character cell
 : fill-attrs  ( len value -- )
    ega rot 2*  bounds  do  dup i 1+ c!  2 +loop  drop
 ;
-: pc-font  ( -- )
-   write-font
-   default-font ( 2>r ) >r >r   ( adr width +-height advance  r: min,#glyphs )
+defer pc-font  ' default-font to pc-font
+: load-vga-font  ( -- )
+   pc-font ( 2>r ) >r >r   ( adr width +-height advance  r: min,#glyphs )
    1 <>  rot 8 > or  over 0>= or
    if  true " Incompatible font"  type abort  then       ( adr -height )
+   write-font
    negate  swap  ( 2r> ) r> r>  bounds   ?do             ( height adr )
       2dup  ega i h# 20 * +  rot  move         ( height adr )
       over +                                   ( height adr' )
@@ -141,6 +142,7 @@ create mode2+/3		\ 80x25, 8x16 character cell
    2drop                                       ( )
    write-text
 ;
+
 create ega-colors
 " "(00 00 00  00 00 aa  00 aa 00  00 aa aa)"  $,
 " "(aa 00 00  aa 00 aa  aa aa 00  aa aa aa)"  $,
@@ -166,16 +168,17 @@ external
 
 : text-mode3  ( -- )
    io-base -1 =  if  map-io-regs  then
-   mode2+/3 set-mode
+   mode2+/3 set-vga-mode
    ext-textmode
 \  h# c00b.8000 0  h# 8200.0000  h# 8000  " map-in" $call-parent  to ega
    h# 000b.8000 0  h# 8200.0000  h# 8000  " map-in" $call-parent  to ega
-   pc-font
+   load-vga-font
    #text-rows #text-columns  *  dup bl fill-text   7 fill-attrs
 [ifdef] strict-ega
    ega-colors  0  d# 64  (set-colors)
 [then]
 ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

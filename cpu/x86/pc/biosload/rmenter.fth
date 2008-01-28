@@ -4,14 +4,36 @@
 : seg:off>  ( offset segment -- linear )  4 lshift +  ;
 : seg:off@  ( adr -- linear )  dup w@ swap wa1+ w@  seg:off>  ;
 [then]
+: >off  ( linear -- 16-bit offset )  >seg:off drop  ;
+
+h# 9.0000 constant rm-base
+h# 9.0000 constant rm-avail
+h#   ff00 constant rm-base2
+h# 9.fc00 constant 'ebda  \ Extended BIOS Data Area, which we co-opt for our real-mode workspace
+'ebda constant new-gdt-pa
 
 [ifdef] syslinux-loaded
 h#  8 constant rm-cs
 h# 18 constant rm-ds
 h# 20 constant pm-cs
 h# 28 constant pm-ds
-: fix-gdt ;
+: fix-gdt 
+   \ 16-bit 64K code segment starting at rm-base
+   rm-base lbsplit                   ( adr.0 adr.1 adr.2 adr.3 )
+   2swap h# ffff -rot bwjoin wljoin  ( adr.2 adr.3 desc.lo )
+   -rot                              ( desc.lo adr.2 adr.3 )
+   >r  h# 9a 0  r>   bljoin          ( desc.lo desc.hi )
+   gdtr@ drop rm-cs + d!             ( )
+
+   \ 16-bit 64K data segment starting at rm-base
+   rm-base lbsplit                   ( adr.0 adr.1 adr.2 adr.3 )
+   2swap h# ffff -rot bwjoin wljoin  ( adr.2 adr.3 desc.lo )
+   -rot                              ( desc.lo adr.2 adr.3 )
+   >r  h# 93 0  r>   bljoin          ( desc.lo desc.hi )
+   gdtr@ drop rm-ds + d!             ( )
+;
 [then]
+
 [ifdef] preof-loaded
 h# 38 constant rm-cs
 h# 30 constant rm-ds
@@ -26,31 +48,28 @@ h# 18 constant pm-ds
 [then]
 
 
-h# 0.0000 constant rm-base
-: +rm  ( offset -- adr )  rm-base +  ;
-
-\ The real-mode stack pointer will start here
-h# f00 +rm constant 'rm-stack
-\ h# ef0 +rm constant 'rm-dispatch
+: +rm  ( offset -- adr )  rm-base +  rm-base2 +  ;
 
 \ Place for the initial registers upon entry to real mode.
-h# f00 +rm constant 'rm-regs
+\ The real-mode stack pointer will start here, so the registers
+\ can be loaded by popping the stack
+h# 00 +rm constant 'rm-regs
 \ (00) 4 * 2: GS,FS,ES,DS
 \ (08) 8 * 4: EDI,ESI,EBP,ESP,EBX,EDX,ECX,EAX
 \ (28) 1 * 4: CS:IP of return address
 \ (2c) 1 * 2: flags
 \ size is 2e
 
-h# f30 +rm constant 'rm-idt \ For loading RM IDT with LIDT
-h# f36 +rm constant 'rm-int \ Incoming interrupt number
-h# f38 +rm constant 'rm-sp  \ SS:SP For loading RM SP with LSS
-h# f3c +rm constant 'pm-sp  \ Save/restore area for PM SP
-h# f40 +rm constant 'pm-gdt \ For loading PM GDT with LGDT
-h# f48 +rm constant 'pm-idt \ For loading PM IDT with LGDT
+h# 30 +rm constant 'rm-idt \ For loading RM IDT with LIDT
+h# 36 +rm constant 'rm-int \ Incoming interrupt number
+h# 38 +rm constant 'rm-sp  \ SS:SP For loading RM SP with LSS
+h# 3c +rm constant 'pm-sp  \ Save/restore area for PM SP
+h# 40 +rm constant 'pm-gdt \ For loading PM GDT with LGDT
+h# 48 +rm constant 'pm-idt \ For loading PM IDT with LGDT
 
-h# f50 +rm constant 'rm-to-pm
-h# fa0 +rm constant 'pm-to-rm
-h# ff0 +rm constant 'rm-enter
+h# 50 +rm constant 'rm-to-pm
+h# a0 +rm constant 'pm-to-rm
+h# f0 +rm constant 'rm-enter
 
 : caller-regs  'rm-sp seg:off@  ;
 struct
@@ -104,6 +123,8 @@ drop
 : rm-set-cf  rm-flags@  1 or  rm-flags!  ;
 : rm-clr-cf  rm-flags@  1 invert and  rm-flags!  ;
 
+: rm-int@  'rm-int w@  h# ff and  ;
+
 true value show-rm-int?
 : noshow  false to show-rm-int?  ;
 variable save-eax
@@ -111,7 +132,7 @@ variable save-eax
    true to show-rm-int?  caller-regs >rm-eax @ save-eax !
 ;
 : showint
-  ." INT " 'rm-int w@ .  save-eax @ wbsplit ." AH " .  ." AL " .  cr
+  ." INT " rm-int@ .  save-eax @ wbsplit ." AH " .  ." AL " .  cr
 ;
 : ?showint  show-rm-int?  if  showint  then  ;
 
@@ -121,19 +142,21 @@ h# 80 constant /vectors
 /vectors buffer: saved-ofw-vectors
 
 
-\ 80ff0 is the target address of the interrupt vector
+\ 90ff0 is the target address of the interrupt vector
 \ We use different segment:offset representations of that address in
 \ the vector table, so the handler code can determine the vector 
 \ number by inspecting the code segment register value
-\ 00:  8000:0ff0
-\ 01:  8001:0fe0
+\ 00:  nn00:mff0
+\ 01:  nn01:mfe0
 \ ...
-\ ff:  80ff:0000
+\ ff:  nnff:m000
 
 : grab-rm-vector  ( vector# -- )
    >r
-   h# ff0  r@ 4 lshift  -   r@ /l* w!       \ Set offset
-   rm-base 4 rshift  r@ +   r> /l* wa1+ w!  \ Set segment
+   'rm-enter lwsplit             ( low16 high16 )
+   swap  r@ 4 lshift  -  swap    ( vec.offset high16 )     
+   d# 12 lshift  r@ +  wljoin    ( vec.seg:off )
+   r> /l* l!                     \ Set segment
 ;
 : ungrab-rm-vector  ( vector# -- )
    saved-rm-vectors over la+ l@   ( vector# value )
@@ -163,20 +186,27 @@ label rm-to-pm
    \ (low) GS,FS,ES,DS (high)
    \ CS from interrupt vector, which is the interrupt number
 
-   cs: 'rm-int #) pop        \ Save interrupt vector CS, i.e. the int#
-
    cli  \ This is unnecessary since we got here from an INT
    cs push   ds pop
 
-   sp 'rm-sp    #) mov
-   ss 'rm-sp 2+ #) mov
+   'rm-int >off  #) pop        \ Save interrupt vector CS, i.e. the int#
 
-   op: 'pm-gdt  #) lgdt
+   sp 'rm-sp    >off  #) mov
+   ss 'rm-sp 2+ >off  #) mov
+
+   op: 'pm-gdt  >off  #) lgdt
    cr0 ax mov  1 # al or  ax cr0 mov   \ Enter protected mode
 
-   here 5 +  rm-to-pm -  'rm-to-pm +  pm-cs #)  far jmp
+   \ The assembler gyrations here are subtle.  We need to jump to an address
+   \ that may be larger than 16 bits, but we are currently running from a
+   \ 16-bit code segment.  So we have to tell the assembler to go into
+   \ "protected mode" (a misnomer; that assembler directive really means
+   \ to assemble for the 32-bit instruction set) so it will put down a
+   \ ptr16:32 operand.  But we also need the op: prefix, so the processor
+   \ will interpret the operand as a ptr16:32 instead of a ptr16:16
 
    protected-mode
+   op:  here 7 +  rm-to-pm -  'rm-to-pm +  pm-cs #)  far jmp
 
    ax ax xor  pm-ds # al mov  ax ds mov  ax es mov  ax gs mov  ax gs mov  ax ss mov
    'rm-idt #) sidt
@@ -227,7 +257,7 @@ code rm-return  ( -- )
 
    cli
    sp sp xor
-   'pm-to-rm  rm-cs #) far jmp
+   'pm-to-rm >off  rm-cs #) far jmp
 end-code
 
 \ This is the common target of all the real-mode interrupt vectors.
@@ -251,8 +281,7 @@ here rm-enter - constant /rm-enter
 : move-gdt  ( -- )
    gdtr@ 1+                    ( gdt-adr gdt-len )
 
-\   dup h# 10 + alloc-mem  h# f +  h# f invert and  ( gdt-adr gdt-len new-gdt )
-   h# 900
+   new-gdt-pa                  ( gdt-adr gdt-len new-gdt-adr )
 
    swap  2dup 2>r  move   2r>  ( new-gdt gdt-len )
    1- gdtr!
@@ -270,7 +299,7 @@ here rm-enter - constant /rm-enter
 : regs>bios  ( -- )
    caller-regs bios-regs d# 40 move
    rm-flags@ bios-flags l!
-   'rm-int w@  /l* @  bios-target !
+   rm-int@  /l* @  bios-target !
 ;
 : bios>regs  ( -- )
    bios-regs caller-regs d# 40 move
@@ -304,7 +333,7 @@ here rm-enter - constant /rm-enter
     h# 11 grab-rm-vector  \ Sysinfo
     h# 12 grab-rm-vector  \ Low memory size
     h# 13 grab-rm-vector  \ Disk I/O
-\    h# 15 grab-rm-vector  \ Various system stuff
+    h# 15 grab-rm-vector  \ Various system stuff
     h# 16 grab-rm-vector  \ Keyboard
     h# 1a grab-rm-vector  \ PCI BIOS
 [else]
@@ -327,7 +356,7 @@ here rm-enter - constant /rm-enter
    prep-rm
    'rm-regs  h# 2e  erase        ( pc )
    'rm-regs  h# 28 +  seg:off!   ( )
-   'rm-stack 'rm-sp seg:off!      \ Initial stack pointer below regs
+   'rm-regs 'rm-sp seg:off!      \ Initial stack pointer must be below regs
 ;
 
 : !font  ( adr -- )
@@ -335,8 +364,9 @@ here rm-enter - constant /rm-enter
    h# 10 rm-cx!  h# 18 rm-dx!     
 ;
 : get-font  ( -- )
+   noshow
    rm-al@ h# 30 =  if
-      ." Int 10 get-font called - BH = " rm-bh@ .  cr
+\      ." Int 10 get-font called - BH = " rm-bh@ .  cr
       rm-bh@ case
 \ These numbers are cheats, pointing into the VIA BIOS
          2 of  h# c69e0 !font   endof
@@ -346,6 +376,7 @@ here rm-enter - constant /rm-enter
          6 of  h# c77e0 !font   endof
          7 of  h# c77e0 !font   
 h# 10 ungrab-rm-vector
+h# 15 ungrab-rm-vector
 endof
          ( default )  ." Unsupported get font - BH = " dup . cr  rm-set-cf
       endcase
@@ -574,12 +605,12 @@ d.base d.len l.type
 [then]
 
 create memdescs
-   h#        0. d,   h# a0000. d,  1 l,  \ 0
-\  h#    a0000. d,   h# 60000. d,  2 l,  \ 14
-   h#    f0000. d,   h# 10000. d,  2 l,  \ 14
-   h#   100000. d,          0. d,  1 l,  \ 28
-\           0. d,            0. d,  2 l,  \ 3c
-   h# ffff0000. d,   h# 10000. d,  2 l,  \ 40
+   h#         0. d, rm-avail 0  d,  1 l,  \ 0
+\  h# rm-avail 0 d,   h# 60000. d,  2 l,  \ 14
+   h#     f0000. d,   h# 10000. d,  2 l,  \ 14
+   h#    100000. d,          0. d,  1 l,  \ 28
+\             0. d,          0. d,  2 l,  \ 3c
+   h# ffff0000.  d,   h# 10000. d,  2 l,  \ 40
 here memdescs - constant /memdescs
 
 : system-memory-map  ( -- )
@@ -648,12 +679,15 @@ create sysconf
    rm-clr-cf
    rm-ah@ case
       h# 91 of  noshow 0 rm-ah!  endof   \ "pause" while waiting for I/O
+noop
       h# 53 of  apm  endof
       h# 86 of  rm-dx@  rm-cx@ wljoin us  endof  \ Delay microseconds
       h# 8a of  memory-limit h# 400.0000 - 0 max  /1k  lwsplit rm-dx! rm-ax!  endof
       h# 88 of  h# fffc rm-ax!  endof  \ Extended memory - at least 64 MB
       h# c0 of  get-conf  endof
-      h# c1 of  rm-set-cf h# 86 rm-ah!  endof
+      \ We use the extended BIOS data area as our workspace when loaded from another BIOS
+\      h# c1 of  rm-set-cf h# 86 rm-ah!  endof  \ No extended BIOS data area
+      h# c1 of  'ebda 4 rshift caller-regs >rm-es w!  endof  \ Segment address of extended BIOS data area
       h# c2 of  handle-mouse  endof
       h# e8 of  bigmem-int  endof
       ( default )  rm-set-cf
@@ -661,10 +695,11 @@ create sysconf
    endcase
 ;
 
-h# 4800 value the-key
+0 value the-key
 
 : poll-key  ( -- false | scan,ascii true )
    the-key  ?dup  if  true exit  then
+   d# 50 ms   \ I don't know why this is necessary, but without it, you don't see the key
    0 " get-scancode" kbd-ih $call-method  if    ( scancode )
       dup h# 80 and  if                         ( scancode )
          \ Discard release events and escapes (e0)
@@ -708,6 +743,7 @@ h# 4800 value the-key
       0 of  get-keystroke  endof
       1 of  poll-keystroke  endof
       2 of  0 rm-al!  endof  \ Claim that no shift keys are active
+      5 of  rm-cx@ to the-key  endof  \ Put keystroke in buffer
       ( bit 7:sysrq  6:capslock  5:numlock 4:scrlock 3:ralt 2:rctrl 1:lalt 0:lctrl )
       ( default )  ." Keyboard INT called with AH = " dup . cr
    endcase
@@ -751,6 +787,7 @@ h# 4800 value the-key
 : int-1a  ( -- )
    rm-ah@  case
       h#  0  of  get-timer-ticks  noshow  endof
+\      h#  4  of  rm-clr-cf  get-rtc-date  endof  \ ch century   cl year  dh month  dl day
       h# b1  of  pcibios          endof
       ( default )  ." Unimplemented INT 1a - AH = " dup .  cr  rm-set-cf
    endcase
@@ -758,19 +795,27 @@ h# 4800 value the-key
 
 : handle-bios-call  ( -- )
    snap-int
-   'rm-int w@  case
+   rm-int@  case
       h# 10  of  video-int     endof
       h# 11  of  sysinfo-int   endof
       h# 13  of  noshow disk-int      endof
       h# 16  of  keyboard-int  endof
       h# 15  of  system-int    endof
-      h# 12  of  h# a0000 /1k rm-ax!  endof  \ Low memory size
+      h# 12  of  rm-avail /1k rm-ax!  endof  \ Low memory size
       h# 1a  of  int-1a        endof
+      h# 18  of  ." Entering Open Firmware" cr  interact    endof
+      h# 19  of  ." Rebooting" cr  bye    endof
       ( default )  ." Interrupt " dup . cr  interact
    endcase
    ?showint
 ;
+: get-mbr
+   " /pci/ide@0" open-dev >r
+   h# 7c00 h# 3f 1 " read-blocks" r@ $call-method 1 <> abort" Didn't read MBR"
+   r> close-dev
+;
 : rm-go   ( -- )
+   get-mbr
    usb-quiet
    \ Load boot image at 7c00
    h# 7c00 rm-init-program
@@ -782,11 +827,6 @@ h# 4800 value the-key
 label xx  h# 99 # al mov  al h# 80 # out  begin again  end-code
 here xx - constant /xx
 : put-xx  ( adr -- )  xx swap /xx move  ;
-: get-mbr
-   " /pci/ide@0" open-dev >r
-   h# 7c00 h# 3f 1 " read-blocks" r@ $call-method .
-   r> close-dev
-;
 : .lreg  ( adr -- adr' )  4 -  dup l@ 9 u.r   ;
 : .wreg  ( adr -- adr' )  2 -  dup w@ 5 u.r   ;
 : .caller-regs  ( -- )

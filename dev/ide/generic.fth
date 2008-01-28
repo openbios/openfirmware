@@ -202,10 +202,17 @@ defer rblocks
 
    over 0=  if  2drop 2drop 0 exit  then
 
-   >r dup >r r-#secs!                   ( addr block# ) ( R: input? #blks )
-   lblk>cyl-head-sect                             ( addr cyl# head# sect# )
-   r-sector! drive r-head! r-cyl! r> r>           ( addr #blks input? )
-   if  rblocks  else  wblocks  then               ( actual# | error )
+   >r dup >r r-#secs!                        ( addr block# ) ( R: input? #blks )
+   /lba  if                                  ( addr block# ) ( R: input? #blks )
+      lbsplit                                ( addr 0-7 8-15 16-23 24-32 )
+      \ 4, when shifted with drive, sets the LBA bit
+      h# f and  drive 4 or  r-head!          ( addr 0-7 8-15 16-23 )
+      bwjoin r-cyl!  r-sector!               ( addr   R: input? #blks )
+   else                                      ( addr block# ) ( R: input? #blks )
+      lblk>cyl-head-sect                     ( addr cyl# head# sect# )
+      r-sector! drive r-head! r-cyl!         ( addr #blks input? R: input? #blks )
+   then
+   r>  r>  if  rblocks  else  wblocks  then               ( actual# | error )
 
    dup 0=  if
       ." Failed to transfer any blocks" cr
@@ -244,7 +251,8 @@ fload ${BP}/dev/ide/atapi.fth
    scratchbuf 3 wa+ le-w@ /heads!
    scratchbuf 6 wa+ le-w@ /secs!
 
-   /cyls h# 3fff u>=  if
+\   /cyls h# 3fff u>=  if
+   scratchbuf d# 49 wa+ w@ h# 200 and  if  \ LBA
       scratchbuf d# 60 wa+ le-w@
       scratchbuf d# 61 wa+ le-w@
       wljoin /lba!

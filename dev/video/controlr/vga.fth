@@ -1,11 +1,13 @@
 \ See license at end of file
 purpose: Generic VGA functions
 
+hex
+
 \ reset attribute address flip-flop
 : reset-attr-addr  ( -- )  3da ( input-status1 )  pc@ drop  ;
 
 : video-mode!  ( b -- )  reset-attr-addr  03c0 pc!  ;
-: attr!  ( b index -- )  03c0 pc!  03c0 pc!  ;
+: attr!  ( b index -- )  reset-attr-addr 03c0 pc!  03c0 pc!  ;
 : attr@  ( index -- b )
    reset-attr-addr  03c0 pc!  03c1 pc@  reset-attr-addr
 ;
@@ -58,12 +60,15 @@ purpose: Generic VGA functions
    ['] vga-plt! to plt!
    ['] vga-rindex! to rindex!
    ['] vga-windex! to windex!
+[ifdef] rs@
    ['] noop  to rs@
    ['] 2drop to rs!
+[then]
+[ifdef] idac@
    ['] noop  to idac@
    ['] 2drop to idac!
+[then]
 ;
-use-vga-dac
 
 : palette-off  ( -- )   0 video-mode!  ;
 : palette-on   ( -- )  20 video-mode!  ;
@@ -130,7 +135,13 @@ instance defer crt-table
 ;
 : hsync-on  ( -- )  crt-table drop  4 +  c@  4 crt!  ;	\ Set hsync position
 
-: vga-video-on  ( -- )  palette-on hsync-on  ;  ' vga-video-on to video-on
+: vga-video-on  ( -- )  palette-on hsync-on  ;
+
+: use-vga
+   use-vga-dac
+   ['] vga-video-on to video-on
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
