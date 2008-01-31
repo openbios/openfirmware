@@ -13,7 +13,7 @@ h#    f.f000 constant smm-base
 h#      1000 constant smm-size  \ We use about 3K of this, 2K for stacks
 : +smm  ( offset -- adr )  smm-base +  ;
 
-h# 28 constant /smm-gdt
+h# 30 constant /smm-gdt
 
 \ The handler code takes about h# 140 bytes
 
@@ -43,10 +43,10 @@ h# 300 constant smm-header
 
 : set-smm-descs  ( -- )
 \   smm-base -1 code32 format-descriptor  smm-gdt 8 + +smm d!  \ Boosted code32
-   smm-base smm-size 1- code16 h# 08 set-descr
-   smm-base smm-size 1- data16 h# 10 set-descr
-   0 -1 code32 h# 18 set-descr
-   0 -1 data32 h# 20 set-descr
+   smm-base smm-size 1- code16 h# 10 set-descr
+   smm-base smm-size 1- data16 h# 18 set-descr
+   0 -1 code32 h# 20 set-descr
+   0 -1 data32 h# 28 set-descr
    /smm-gdt 1-   smm-gdtp +smm      w!  \ GDT limit
    smm-gdt +smm  smm-gdtp +smm wa1+ l!  \ GDT base
 ;
@@ -58,14 +58,15 @@ label smm-handler
    16-bit
 
    cs: ds  smm-save-seg d# 00 +  #)  svdc
-   cs: smm-gdt h# 10 + #)  ds  rsdc   \ Now we have a data segment
+   cs: smm-gdt h# 18 + #)  ds  rsdc   \ GDT reference
+   \ Now we can use the data segment
    es  smm-save-seg d# 10 +  #)  svdc
    fs  smm-save-seg d# 20 +  #)  svdc
    gs  smm-save-seg d# 30 +  #)  svdc
    ss  smm-save-seg d# 40 +  #)  svdc
    cs  smm-save-seg d# 50 +  #)  svdc       \ So we can get back to the boost segment
 
-   smm-gdt h# 10 + #)  ss  rsdc
+   smm-gdt h# 18 + #)  ss  rsdc  \ GDT reference
 
    op: sp  smm-save-esp #)  mov
    smm-stack #  sp  mov      \ Now we have a stack
@@ -85,11 +86,11 @@ label smm-handler
    op: smm-gdtp     #) lgdt
 
    cr0 ax mov  1 # al or  ax cr0 mov   \ Enter protected mode
-   op: here 7 + smm-handler - +smm  h# 18 #)  far jmp
+   op: here 7 + smm-handler - +smm  h# 20 #)  far jmp  \ GDT reference
    32-bit
 
    \ Reload segment registers with protected mode bits
-   op: h# 20 # ax mov
+   op: h# 28 # ax mov   \ GDT reference
    ax ds mov  ax es mov  ax fs mov  ax gs mov  ax ss mov
 
    \ Turn on paging
@@ -131,16 +132,14 @@ code (smi-return)   \ This code field must be relocated after copying to SMM mem
    \ Turn off paging
    cr0 ax mov  h# 8000.0000 invert # ax and  ax cr0 mov	 \ Turn off Paging Enable bit
 
-   cr0 ax mov  1 invert # al and  ax cr0 mov   \ Enter real mode
-
-   \ Return to the boosted code-16 address space
-   smm-save-seg d# 50 + +smm #)  cs  rsdc
+   here 7 +  smm-handler -  h# 08 #)  far jmp     \ Get into the boosted segment
    16-bit
-   op:  here 5 +  smm-base - #) jmp  \ Decrease IP while increasing the segment register
+
+   cr0 ax mov  1 invert # al and  ax cr0 mov   \ Exit protected mode
 
    \ Reload data segment registers
-   cs: smm-gdt h# 10 + #)  ss  rsdc
-   cs: smm-gdt h# 10 + #)  ds  rsdc
+   cs: smm-gdt h# 18 + #)  ss  rsdc   \ GDT reference
+   cs: smm-gdt h# 18 + #)  ds  rsdc   \ GDT reference
 
    op: smm-save-gdt #) lgdt
 
@@ -186,11 +185,7 @@ create smm-exec  ] handle-smi smi-return [
    h# 000ff.0.00.000ff.1.01. h# 180e msr!
 
    \  Base     Limit
-\   smm-base  smm-size 1-  h# 133b msr!
-   \ The limit here must be large enough to cover the code address
-   \ between the time that we reenter real mode and the time we
-   \ reestablish the boosted descriptor.
-   smm-base  -1  h# 133b msr!   \ Big limit
+   smm-base  smm-size 1-  h# 133b msr!
 
    smm-base smm-header + 0   h# 132b msr!  \ Offset of SMM Header
 
