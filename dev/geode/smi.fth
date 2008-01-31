@@ -19,7 +19,9 @@ dup constant smm-stack
 dup constant smm-save-gdt 8 +
 dup constant smm-gdtp     8 +
 dup constant smm-gdt      /smm-gdt +
-dup constant smm-pdir     4 +
+dup constant smm-pdir     la1+
+dup constant smm-forth-origin  la1+
+dup constant smm-forth-up      la1+
 
 dup constant smm-code16  h# a +
 dup constant smm-data16  h# a +
@@ -31,7 +33,8 @@ dup constant smm-fs      h# a +
 dup constant smm-gs      h# a +
 dup constant smm-ss      h# a +
 dup constant smm-cs      h# a +
-dup constant smm-esp     4 +
+dup constant smm-esp     la1+
+dup constant smm-sp      wa1+
 drop
 
 : set-descr  ( base limit d.type sel offset -- )
@@ -48,8 +51,17 @@ drop
    smm-base smm-size 1- data16 h# 18 smm-data16 set-descr
    0 -1 code32 h# 20 smm-code32 set-descr
    0 -1 data32 h# 28 smm-data32 set-descr
-   /smm-gdt 1-   smm-gdtp +smm 4 + w!   \ GDT limit
-   smm-gdt +smm  smm-gdtp +smm l!       \ GDT base
+   /smm-gdt 1-   smm-gdtp +smm w!   \ GDT limit
+   smm-gdt +smm  smm-gdtp +smm wa1+ l!  \ GDT base
+;
+
+nuser smi-sp0
+nuser smi-rp0
+defer smi-return
+: smi-exec  ( -- )
+   ." Forth SMI handler" cr
+   quit
+   smi-return
 ;
 
 label smm-handler
@@ -74,6 +86,7 @@ label smm-handler
    op: ax         push
 
    cr3 ax mov  op: ax push
+   sp  smm-sp #)  mov
 
 \ ---
 \ Get into protected mode using the same segments 
@@ -105,20 +118,41 @@ nop nop nop nop nop nop nop
    ax cr3  mov	\ Set Page Directory Base Register
    cr0 ax mov  h# 8000.0000 # ax or  ax cr0 mov	 \ Turn on Paging Enable bit
 
+\ Beginning of Forth-specific stuff
+   smm-forth-origin +smm #)  bx  mov
+   smm-forth-up     +smm #)  up  mov
 
-\   op:  here 7 + smm-handler - smm-base +  h# 20 #)  far jmp
-\   op:  here 7 + smm-handler -   8 #)  far jmp
+   \ Exchange the stack and return stack pointer with the smi versions
+   'user sp0  sp  mov
+   'user rp0  rp  mov
 
-\ Put Forth stuff here  
+   'user smi-sp0  sp  xchg
+   'user smi-rp0  rp  xchg
 
-\   smm-code16 +smm #)  cs  rsdc
-\   smm-code16 +smm #)  cs  rsdc   \ 64K boosted
+   sp  'user sp0  mov
+   rp  'user rp0  mov
 
-   nop nop nop nop nop nop nop nop nop nop 
+   \ Set the interpreter pointer
+   'body smi-exec origin - # ip mov
+   bx ip add				\ add current origin
+
+   cld
+c;
+code (smi-return)
+   \ Exchange the stack and return stack pointer with the smi versions
+   'user sp0  sp  mov
+   'user rp0  rp  mov
+
+   'user smi-sp0  sp  xchg
+   'user smi-rp0  rp  xchg
+
+   sp  'user sp0  mov
+   rp  'user rp0  mov
+
+\ End of Forth-specific stuff
 
    \ Turn off paging
    cr0 ax mov  h# 8000.0000 invert # ax and  ax cr0 mov	 \ Turn off Paging Enable bit
-
 
    cr0 ax mov  1 invert # al and  ax cr0 mov   \ Enter real mode
    here 2 + #) jmp
@@ -136,10 +170,10 @@ nop nop nop nop nop nop nop
 
 \ >Test
 
-
    op: smm-save-gdt #) lgdt
 
 \ ---
+   smm-sp #)  sp  mov
    op: ax pop  ax cr3 mov
 
    op: ax        pop
@@ -183,9 +217,21 @@ here smm-handler - constant /smm-handler
    smm-base dup  smm-size  -1 mmu-map
 
    smm-handler smm-base  /smm-handler  move
+
+   ['] (smi-return) smm-handler -  +smm  ( cfa-adr )
+   dup ta1+ swap token!
+
    set-smm-descs
    cr3@ smm-pdir +smm l!
+   origin smm-forth-origin +smm l!
+   up@ smm-forth-up +smm l!
+   h# 1000 +smm smi-sp0 !
+   h# 2000 +smm smi-rp0 !
 ;
+: do-smi-return  ( -- )
+   ['] (smi-return) smm-handler -  +smm  execute
+;
+' do-smi-return is smi-return
 
 : enable-virtual-pci  ( -- )
    h# 5000.2012 msr@  swap h# 8002 or   swap  h# 5000.2002 msr!  \ Virtualize devices f and 1
@@ -197,27 +243,9 @@ code smi  smint  ax push  c;
 
 \ Forth stuff
 [ifdef] notyet
-   op: smm-forth-origin #)  bx  mov
-   op: smm-forth-up     #)  up  mov
 [then]
    
 [ifdef] notyet
-   \ Exchange the stack and return stack pointer with the smi versions
-   'user sp0  sp  mov
-   'user rp0  rp  mov
-
-   'user smi-sp0  sp  xchg
-   'user smi-rp0  rp  xchg
-
-   sp  'user sp0  mov
-   rp  'user rp0  mov
-
-   \ Set the interpreter pointer
-   'body smi-exec origin - # ip mov
-   bx ip add				\ add current origin
-
-   cld
-c;
 XXX code to return from Forth
 [then]
 
