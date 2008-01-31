@@ -9,64 +9,85 @@ also assembler definitions
 
 previous definitions
 
+\ The general naming convention here is that smm-* refers to
+\ addresses within the memory that is set aside for SMI handling.
+\ smi-* refers to stuff in the Forth domain.
+
 h#    f.f000 constant smm-base
 h#      1000 constant smm-size  \ We use about 3K of this, 2K for stacks
-: +smm  ( offset -- adr )  smm-base +  ;
+: +smm  ( segment-relative-adr -- adr )  smm-base +  ;
+: -smm  ( adr -- segment-relative-adr )  smm-base -  ;
 
-h# 30 constant /smm-gdt
+h# 28 constant /smm-gdt
+h#  8 constant smm-c16
+h# 10 constant smm-d16
+h# 18 constant smm-c32
+h# 20 constant smm-d32
 
-\ The handler code takes about h# 140 bytes
+\ For stuff that grows down - add the offset first
+: rm-stack ( offset len "name" -- offset' )  + dup      constant  ;
+: pm-stack ( offset len "name" -- offset' )  + dup +smm constant  ;
 
-\ The following save area + the SMM_HEADER (h# 30) takes about h# 100
-h# 200     
-dup constant smm-save-gdt      8 +
-dup constant smm-gdtp          8 +
-dup constant smm-gdt           /smm-gdt +
-dup constant smm-pdir          la1+
-dup constant smm-forth-origin  la1+
-dup constant smm-forth-up      la1+
-dup constant smm-forth-entry   la1+
+\ For individual data items - add the offset afterwards
+: pm-data  ( offset len "name" -- offset' )  over +smm constant  +  ;
+: rm-data  ( offset len "name" -- offset' )  over      constant  +  ;
 
-\ 10 bytes for each of 6 segment registers
-dup constant smm-save-seg      d# 60 +
-dup constant smm-save-esp      la1+
-dup constant smm-sp            la1+
-   \ 8x 4-byte general registers + config adr + cs3 + spare
-h# 38 + constant smm-stack
+\ Layout of SMM memory area:
+0                            \ Entry/exit handler code goes here, at the origin
+h# 180 rm-data smm-gdt       \ The GDT is embedded in the code wad
+                             \ The handler code takes about h# 160 bytes
 
-h# 300 constant smm-header
+\ The following locations are for saving/restoring registers
+\ d# 60 rm-data smm-save-seg   \ 6 10-byte segment registers
+d# 50 rm-data smm-save-seg   \ 6 10-byte segment registers
+/l    rm-data smm-save-esp   \ Caller's stack pointer
+6     rm-data smm-save-gdt   \ Caller's GDT pointer
 
-: set-descr  ( base limit d.type sel -- )
-   >r  format-descriptor   ( d.descr r: sel )
-   r> smm-gdt + +smm d!    ( )
-;
+0         pm-data  smm-regs  \ Alternate name, for use by Forth
+0         rm-data  smm-sp    \ Real-mode sp after saving registers
+d# 10 /l* rm-stack smm-stack \ CR3, portCF8, 8 general registers
 
-: set-smm-descs  ( -- )
-\   smm-base -1 code32 format-descriptor  smm-gdt 8 + +smm d!  \ Boosted code32
-   smm-base smm-size 1- code16 h# 10 set-descr
-   smm-base smm-size 1- data16 h# 18 set-descr
-   0 -1 code32 h# 20 set-descr
-   0 -1 data32 h# 28 set-descr
-   /smm-gdt 1-   smm-gdtp +smm      w!  \ GDT limit
-   smm-gdt +smm  smm-gdtp +smm wa1+ l!  \ GDT base
-;
+h# 30 pm-stack smm-header     \ Top address where hardware puts the SMM info frame
 
-nuser smi-sp0
-nuser smi-rp0
+\ These locations are set once at installation time.  The entry code reads them.
+[ifdef] virtual-mode
+/l  pm-data smm-pdir         \ Page directory pointer so we can enable paging
+[then]
+/l  pm-data smm-forth-base   \ Base address of the Forth dictionary
+/l  pm-data smm-forth-up     \ Base address of the Forth user area
+/l  pm-data smm-forth-entry  \ Entry address of Forth SMI handler
+/l  pm-data smm-save-sp0     \ Exchanged with sp0 user variable
+/l  pm-data smm-save-rp0     \ Exchanged with rp0 user variable
 
-label smm-handler
+h# 400 pm-stack smm-sp0      \ SMM Forth data stack
+h# 400 pm-stack smm-rp0      \ SMM Forth return stack
+drop
+
+label smi-handler
    16-bit
+  
+   \ GDT (with jump tucked in at the beginning)
+   \ We put the GDT right at the beginning and use the first entry (which
+   \ cannot be used as a selector) for a 2-byte jmp and the 6-byte GDT pointer
+   here /smm-gdt + #) jmp           \ Jump past GDT - 2 bytes
+   /smm-gdt 1- w,   smm-base l,     \ GDT pointer - limit.w base.l
+
+   smm-base smm-size 1- code16 format-descriptor  swap l, l,  \  8 - smm-c16
+   smm-base smm-size 1- data16 format-descriptor  swap l, l,  \ 10 - smm-d16
+   0                 -1 code32 format-descriptor  swap l, l,  \ 18 - smm-c32
+   0                 -1 data32 format-descriptor  swap l, l,  \ 20 - smm-d32
+   \ End of GDT
 
    cs: ds  smm-save-seg d# 00 +  #)  svdc
-   cs: smm-gdt h# 18 + #)  ds  rsdc   \ GDT reference
+   cs: smm-gdt smm-d16 + #)  ds  rsdc
    \ Now we can use the data segment
    es  smm-save-seg d# 10 +  #)  svdc
    fs  smm-save-seg d# 20 +  #)  svdc
    gs  smm-save-seg d# 30 +  #)  svdc
    ss  smm-save-seg d# 40 +  #)  svdc
-   cs  smm-save-seg d# 50 +  #)  svdc       \ So we can get back to the boost segment
+\   cs  smm-save-seg d# 50 +  #)  svdc       \ So we can get back to the boost segment
 
-   smm-gdt h# 18 + #)  ss  rsdc  \ GDT reference
+   smm-gdt smm-d16 + #)  ss  rsdc
 
    op: sp  smm-save-esp #)  mov
    smm-stack #  sp  mov      \ Now we have a stack
@@ -78,72 +99,65 @@ label smm-handler
    op: ax         push
 
    cr3 ax mov  op: ax push
-   sp  smm-sp #)  mov
+   \ The real-mode stack pointer is now at a known location
 
 \ Get into protected mode using the same segments 
 \ Don't bother with the IDT; we won't enable interrupts
    op: smm-save-gdt #) sgdt
-   op: smm-gdtp     #) lgdt
+   op: smm-gdt 2+ #) lgdt
 
    cr0 ax mov  1 # al or  ax cr0 mov   \ Enter protected mode
-   op: here 7 + smm-handler - +smm  h# 20 #)  far jmp  \ GDT reference
+   op: here 7 + smi-handler - +smm smm-c32 #)  far jmp
    32-bit
 
    \ Reload segment registers with protected mode bits
-   op: h# 28 # ax mov   \ GDT reference
+   op: smm-d32 # ax mov
    ax ds mov  ax es mov  ax fs mov  ax gs mov  ax ss mov
 
+[ifdef] virtual-mode
    \ Turn on paging
-   smm-pdir +smm   #)  ax  mov
+   smm-pdir #)  ax  mov
    ax cr3  mov	\ Set Page Directory Base Register
    cr0 ax mov  h# 8000.0000 # ax or  ax cr0 mov	 \ Turn on Paging Enable bit
+[then]
 
 \ Beginning of Forth-specific stuff
-   smm-forth-origin +smm #)  bx  mov
-   smm-forth-up     +smm #)  up  mov
-   smm-forth-entry  +smm #)  ip  mov
+   smm-forth-base  #)  bx  mov
+   smm-forth-up    #)  up  mov
+   smm-forth-entry #)  ip  mov
 
    \ Exchange the stack and return stack pointer with the smi versions
-   'user sp0  sp  mov
-   'user rp0  rp  mov
-
-   'user smi-sp0  sp  xchg
-   'user smi-rp0  rp  xchg
-
-   sp  'user sp0  mov
-   rp  'user rp0  mov
-
+   'user sp0 sp mov  smm-save-sp0 #) sp xchg  sp 'user sp0 mov
+   'user rp0 rp mov  smm-save-rp0 #) rp xchg  rp 'user rp0 mov
 
    cld
 c;
 code (smi-return)   \ This code field must be relocated after copying to SMM memory
    \ Exchange the stack and return stack pointer with the smi versions
-   'user sp0  sp  mov
-   'user rp0  rp  mov
-
-   'user smi-sp0  sp  xchg
-   'user smi-rp0  rp  xchg
-
-   sp  'user sp0  mov
-   rp  'user rp0  mov
+   'user sp0 sp mov  smm-save-sp0 #) sp xchg  sp 'user sp0 mov
+   'user rp0 rp mov  smm-save-rp0 #) rp xchg  rp 'user rp0 mov
 
    \ End of Forth-specific stuff
 
+[ifdef] virtual-mode
    \ Turn off paging
    cr0 ax mov  h# 8000.0000 invert # ax and  ax cr0 mov	 \ Turn off Paging Enable bit
+[then]
 
-   here 7 +  smm-handler -  h# 08 #)  far jmp     \ Get into the boosted segment
+   here 7 +  smi-handler -  smm-c16 #)  far jmp     \ Get into the boosted segment
    16-bit
+
+   smm-d16 # ax mov  ax ss mov  ax ds mov      \ Reload data and stack segments
 
    cr0 ax mov  1 invert # al and  ax cr0 mov   \ Exit protected mode
 
    \ Reload data segment registers
-   cs: smm-gdt h# 18 + #)  ss  rsdc   \ GDT reference
-   cs: smm-gdt h# 18 + #)  ds  rsdc   \ GDT reference
+\   cs: smm-gdt smm-d16 + #)  ss  rsdc
+\   cs: smm-gdt smm-d16 + #)  ds  rsdc
 
    op: smm-save-gdt #) lgdt
 
-   smm-sp #)  sp  mov
+   smm-sp #  sp  mov
    op: ax pop  ax cr3 mov
 
    op: ax        pop
@@ -162,9 +176,9 @@ code (smi-return)   \ This code field must be relocated after copying to SMM mem
 
    rsm
 end-code
-here smm-handler - constant /smm-handler
+here smi-handler - constant /smi-handler
 
-: smi-return  ( -- )  [ ' (smi-return) smm-handler -  +smm ] literal  execute  ;
+: smi-return  ( -- )  [ ' (smi-return) smi-handler -  +smm ] literal  execute  ;
 defer handle-smi  ' noop is handle-smi
 create smm-exec  ] handle-smi smi-return [
 
@@ -192,27 +206,28 @@ create smm-exec  ] handle-smi smi-return [
    \  Base     Limit
    smm-base  smm-size 1-  h# 133b msr!
 
-   smm-base smm-header + 0   h# 132b msr!  \ Offset of SMM Header
+   smm-header 0   h# 132b msr!  \ Offset of SMM Header
 
    h# 18.  h# 1301 msr!       \ Enable IO and software SMI
 
    \ Unnecessary if already in mapped memory
    \ smm-base dup  smm-size  -1 mmu-map
 
-   smm-handler smm-base  /smm-handler  move
+   smi-handler smm-base  /smi-handler  move
 
    \ Relocate the code field of the code word that is embedded in the sequence
-   ['] (smi-return) smm-handler -  +smm  ( cfa-adr )
+   ['] (smi-return) smi-handler -  +smm  ( cfa-adr )
    dup ta1+ swap token!
 
-   set-smm-descs
-   cr3@ smm-pdir +smm l!
+[ifdef] virtual-mode
+   cr3@ smm-pdir l!
+[then]
 
-   origin smm-forth-origin +smm l!
-   smm-exec smm-forth-entry +smm l!
-   up@ smm-forth-up +smm l!
-   h# 800 +smm smi-sp0 !
-   h# c00 +smm smi-rp0 !
+   origin smm-forth-base l!
+   smm-exec smm-forth-entry l!
+   up@ smm-forth-up l!
+   smm-sp0 smm-save-sp0 !
+   smm-rp0 smm-save-rp0 !
 
    enable-virtual-pci
 ;
@@ -220,18 +235,19 @@ create smm-exec  ] handle-smi smi-return [
 : smi-interact  ( -- )  ." In SMI" cr  quit  ;
 ' smi-interact is handle-smi
 
-: smm-cs-base   ( -- l )      smm-header h# 1c - +smm l@  ;
-: smm-eip       ( -- l )      smm-header h# 10 - +smm l@  ;
-: smm-next-eip  ( -- l )      smm-header h# 14 - +smm l@  ;
-: smm-flags     ( -- w )      smm-header h# 24 - +smm w@  ;
-: smm-io-port   ( -- port# )  smm-header h# 28 - +smm w@  ;
-: smm-io-size   ( -- size )   smm-header h# 26 - +smm w@  ;
-: smm-io-data   ( -- data )   smm-header h# 2c - +smm l@  ;
+\ : smm-cs-base   ( -- l )      smm-header h# 1c - l@  ;
+\ : smm-eip       ( -- l )      smm-header h# 10 - l@  ;
+\ : smm-next-eip  ( -- l )      smm-header h# 14 - l@  ;
+: smm-flags     ( -- w )      smm-header h# 24 - w@  ;
+: smm-io-port   ( -- port# )  smm-header h# 28 - w@  ;
+: smm-io-size   ( -- size )   smm-header h# 26 - w@  ;
+: smm-io-data   ( -- data )   smm-header h# 2c - l@  ;
+\ Stacked registers:  0:CR3, 1:portCF8, 2:DI, 3:SI, 4:BP, 5:SP, 6:BX, 7:DX, 8:CX, 9:AX
 : smm-config-adr  ( -- adr )
-   smm-sp +smm w@ +smm la1+ @ h# 7fff.fffc and
+   smm-regs la1+ @ h# 7fff.fffc and
    smm-io-port 3 and  or
 ;
-: smm-eax       ( -- adr )  smm-sp +smm w@ +smm 9 la+  ;
+: smm-eax       ( -- adr )  smm-regs 9 la+  ;
 
 : vr-spoof?  ( -- handled? )  false  ;
 : config-spoof?  ( -- handled? )
