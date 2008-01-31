@@ -168,6 +168,11 @@ here smm-handler - constant /smm-handler
 defer handle-smi  ' noop is handle-smi
 create smm-exec  ] handle-smi smi-return [
 
+: enable-virtual-pci  ( -- )
+   h# 5000.2012 msr@  swap h# 8002 or   swap  h# 5000.2012 msr!  \ Virtualize devices f and 1
+   h# 5000.2002 msr@  swap 8 invert and swap  h# 5000.2002 msr!  \ Enable SSMI for config accesses
+;
+
 : setup-smi  ( -- )
    \ This is how you would map the SMM region to physical memory at 4000.0000
    \ This is a Base Mask Offset descriptor - the base address
@@ -208,14 +213,58 @@ create smm-exec  ] handle-smi smi-return [
    up@ smm-forth-up +smm l!
    h# 800 +smm smi-sp0 !
    h# c00 +smm smi-rp0 !
+
+   enable-virtual-pci
 ;
 
 : smi-interact  ( -- )  ." In SMI" cr  quit  ;
 ' smi-interact is handle-smi
 
-: enable-virtual-pci  ( -- )
-   h# 5000.2012 msr@  swap h# 8002 or   swap  h# 5000.2002 msr!  \ Virtualize devices f and 1
-   h# 5000.2002 msr@  swap 8 invert and swap  h# 5000.2002 msr!  \ Enable SSMI for config accesses
+: smm-cs-base   ( -- l )      smm-header h# 1c - +smm l@  ;
+: smm-eip       ( -- l )      smm-header h# 10 - +smm l@  ;
+: smm-next-eip  ( -- l )      smm-header h# 14 - +smm l@  ;
+: smm-flags     ( -- w )      smm-header h# 24 - +smm w@  ;
+: smm-io-port   ( -- port# )  smm-header h# 28 - +smm w@  ;
+: smm-io-size   ( -- size )   smm-header h# 26 - +smm w@  ;
+: smm-io-data   ( -- data )   smm-header h# 2c - +smm l@  ;
+: smm-config-adr  ( -- adr )
+   smm-sp +smm w@ +smm la1+ @ h# 7fff.fffc and
+   smm-io-port 3 and  or
 ;
+: smm-eax       ( -- adr )  smm-sp +smm w@ +smm 9 la+  ;
+
+: vr-spoof?  ( -- handled? )  false  ;
+: config-spoof?  ( -- handled? )
+   smm-io-port 3 invert and  h# cfc <>  if  false exit  then
+
+   \ The existing Forth config spoofer does the hard work
+   smm-flags 2 and  if  \ Write
+      smm-io-data  smm-config-adr   ( data config-adr )
+      smm-io-size case
+         1 of  config-b!  endof
+         3 of  config-w!  endof
+         f of  config-l!  endof
+      endcase
+   else
+      smm-config-adr                 ( config-adr )
+      smm-io-size case
+         1 of  config-b@ smm-eax c!  endof
+         3 of  config-w@ smm-eax w!  endof
+         f of  config-l@ smm-eax l!  endof
+      endcase
+   then
+   true
+;
+: virtualize-io  ( -- )
+   smm-flags h# 80 and  0=  if  exit  then
+   config-spoof?  if  exit  then
+   vr-spoof?  if  exit  then
+;
+: soft-smi  smi-interact  ;
+: smi-dispatch  ( -- )
+   smm-flags h# 80 and  if  virtualize-io  then
+   smm-flags h#  8 and  if  soft-smi       then
+;
+' smi-dispatch is handle-smi
 
 code smi  smint  c;
