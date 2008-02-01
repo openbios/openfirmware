@@ -57,6 +57,7 @@ fload ${BP}/cpu/ppc/kerncode.fth
 
 fload ${BP}/forth/kernel/uservars.fth
 fload ${BP}/forth/kernel/double.fth
+fload ${BP}/forth/kernel/scan.fth
 
 fload ${BP}/forth/lib/bitops.fth
 fload ${BP}/cpu/ppc/kernrel.fth

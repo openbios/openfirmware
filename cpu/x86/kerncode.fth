@@ -1397,6 +1397,93 @@ code parse-line  ( adr1 len1 -- adr1 len2  adr1+len2 len1-len2 )
 
    dx si mov		\ Restore
 c;
+
+code skipwhite  ( adr len -- adr' len' )
+   si dx mov
+   cld
+   cx pop
+   cx cx or  0<>  if
+      si pop
+      begin
+         al lods
+         h# 20 # al cmp  >  if
+            si dec  si push
+            cx push  dx si mov
+            next
+         then
+      loopa
+      si push
+   then
+   cx push
+   dx si mov
+c;
+
+\ Adr2 points to the delimiter or to the end of the buffer
+\ Adr3 points to the character after the delimiter or to the end of the buffer
+code scantowhite  ( adr1 len1 -- adr1 adr2 adr3 )
+   si dx mov
+   cld
+   cx pop
+   0 [sp] si mov
+   cx cx or  0<>  if
+      begin
+         al lods
+         h# 20 # al cmp  <=  if
+            si dec si push
+            si inc si push
+            dx si mov
+            next
+         then
+      loopa
+   then
+   si push
+   si push
+   dx si mov
+c;
+
+code skipchar  ( adr len char -- adr' len' )
+   si dx mov
+   cld
+   bx pop         \ char in bx
+   cx pop
+   cx cx or  0<>  if
+      si pop
+      begin
+         al lods
+         bl al cmp
+      loope
+      0<>  if  cx inc  si dec  then
+      si push
+   then
+   cx push
+   dx si mov
+c;
+
+\ Adr2 points to the delimiter or to the end of the buffer
+\ Adr3 points to the character after the delimiter or to the end of the buffer
+code scantochar  ( adr1 len1 char -- adr1 adr2 adr3 )
+   si dx mov
+   cld
+   bx pop
+   cx pop
+   0 [sp] si mov
+   cx cx or  0<>  if
+      begin
+         al lods
+         bl al cmp
+      loopne
+      =  if
+         si dec si push
+         si inc si push
+         dx si mov
+         next
+      then
+   then
+   si push
+   si push
+   dx si mov
+c;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

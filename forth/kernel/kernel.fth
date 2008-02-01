@@ -2763,50 +2763,6 @@ nuser #source
 : set-input  ( source-adr source-len source-id -- )
    0 0 5 restore-input drop
 ;
-headerless
-: skipwhite  ( adr1 len1 -- adr2 len2  )
-   begin  dup 0>  while       ( adr len )
-      over c@  bl >  if  exit  then
-      1 /string
-   repeat                     ( adr' 0 )
-;
-
-\ Adr2 points to the delimiter or to the end of the buffer
-\ Adr3 points to the character after the delimiter or to the end of the buffer
-: scantowhite  ( adr1 len1 -- adr1 adr2 adr3 )
-   over swap                       ( adr1 adr1 len1 )
-   begin  dup 0>  while            ( adr1 adr len )
-      over c@  bl <=  if  drop dup 1+  exit  then
-      1 /string                    ( adr1 adr' len' )
-   repeat                          ( adr1 adr2 0 )
-   drop dup                        ( adr1 adr2 adr2 )
-;
-
-: skipchar  ( adr1 len1 delim -- adr2 len2 )
-   >r                         ( adr1 len1 )  ( r: delim )
-   begin  dup 0>  while       ( adr len )
-      over c@  r@ <>  if      ( adr len )
-         r> drop exit         ( adr2 len2 )
-      then                    ( adr len )
-      1 /string               ( adr' len' )
-   repeat                     ( adr' 0 )
-   r> drop                    ( adr2 0 )
-;
-
-\ Adr2 points to the delimiter or to the end of the buffer
-\ Adr3 points to the character after the delimiter or to the end of the buffer
-: scantochar  ( adr1 len1 char -- adr1 adr2 adr3 )
-   >r                              ( adr1 len1 )   ( r: delim )
-   over swap                       ( adr1 adr1 len1 )
-   begin  dup 0>  while            ( adr1 adr len )
-      over c@  r@ =  if            ( adr1 adr len )
-         r> 2drop dup 1+  exit     ( adr1 adr2 adr3 )
-      then                         ( adr1 adr len )
-      1 /string                    ( adr1 adr' len' )
-   repeat                          ( adr1 adr2 0 )
-   r> 2drop dup                    ( adr1 adr2 adr2 )
-;
-headers
 : parse-word  ( -- adr len )
    source >in @ /string  over >r   ( adr1 len1 )  ( r: adr1 )
    skipwhite                       ( adr2 len2 )
