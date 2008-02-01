@@ -143,8 +143,9 @@ d# 10 constant #ec-retries
 : bat-init-nimh-gp     ( -- )  h# 20 ec-cmd  ;
 : bat-init-lifepo4-byd ( -- )  h# 21 ec-cmd  ;
 : bat-init-lifepo4-gp  ( -- )  h# 22 ec-cmd  ;
-: wlan-off         ( -- )  0 h# 23 ec-cmd-b!  ;
-: wlan-on          ( -- )  1 h# 23 ec-cmd-b!  ;
+\ EC cmd 23 never worked right and has been deprecated
+\ : wlan-off         ( -- )  0 h# 23 ec-cmd-b!  ;
+\ : wlan-on          ( -- )  1 h# 23 ec-cmd-b!  ;
 : wlan-wake        ( -- )  h# 24 ec-cmd  ;
 : wlan-reset       ( -- )  h# 25 ec-cmd  ;
 : dcon-power-off   ( -- )  0 h# 26 ec-cmd-b!  ;
@@ -153,6 +154,7 @@ d# 10 constant #ec-retries
 : reset-ec         ( -- )  h# 28 ec-cmd  ;
 : write-protect-fw ( -- )  3 ec-cmd  ;
 : ebook-mode?      ( -- b )  h# 2a ec-cmd-b@  ;
+: wlan-freeze      ( -- )  h# 35 ec-cmd  ;
 
 : ec-indexed-io-off  ( -- )  h# fe95 ec@  h# 40 invert and  h# fe95 ec!  ;
 
