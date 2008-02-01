@@ -133,7 +133,7 @@ false value selftest-err?               \ Selftest result
 ;
 
 \ Destroy content of flash.  No argument.
-: erase  ( subarg$ -- )  2drop  ." Erasing..." cr  wipe  ;
+: erase!  ( subarg$ -- )  2drop  ." Erasing..." cr  wipe  ;
 
 \ Destroy content of flash.  Argument is hex byte pattern value.
 : .skip-bad  ( page# -- )  (cr ." Skip bad block" .page-byte cr  ;
@@ -249,7 +249,7 @@ false value selftest-err?               \ Selftest result
    ." <arg> can be one of the following:" cr
    ."   none           to do nothing" cr
    ."   help           to get this usage guide" cr
-   ."   erase          to erase the flash (destructive)" cr
+   ."   erase!         to erase the flash (destructive)" cr
    ."   fill[,<data>]  to fill the flash with hex byte pattern <data> (destructive)" cr
    ."                  Default <data> is 00" cr
    ."   fast[,<#blk>]  to non-destructively test the specified <#blk> of flash" cr
