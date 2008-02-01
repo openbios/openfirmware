@@ -742,16 +742,26 @@ c;
 
 \ This assumes that the entire erase block is in memory
 : another-node?  ( adr -- false | adr' true )
-   eb-end  swap  ?do
-      i w@ jffs2-magic =  if
-         i header-crc?  if
-            i +raw-node  eb-end  u<=  if
-               i true unloop  exit
+   eb-end over -                       ( adr len )
+   begin                               ( adr len )
+      h# ff skipchar                   ( adr' len' )
+   dup 8 >= while                      ( adr len )
+      over w@ jffs2-magic =  if        ( adr len )
+         over header-crc?  if          ( adr len )
+            drop dup +raw-node         ( adr end-adr )
+            eb-end u<=  if             ( adr )
+               true                    ( adr true )
+            else                       ( adr )
+               \ Node extends past end of erase block
+               drop false              ( false )
             then
+            exit
          then
-      then
-   loop
-   false
+      else                             ( adr len )
+         1 /string                     ( adr' len' )
+      then                             ( adr len )
+   repeat                              ( adr len )
+   2drop false
 ;
 
 : rdpino@     ( adr -- parent )   3 j@  ;
