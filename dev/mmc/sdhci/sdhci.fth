@@ -587,17 +587,24 @@ external
    dma-len /block /
 ;
 
+0 value open-count
 : open  ( -- )
-   map-regs
-   setup-host
+   open-count 0=  if
+      map-regs
+      setup-host
+   then
+   open-count 1+ to open-count
    true
 ;
 
 : close  ( -- )
-   wait-write-done
-   card-clock-off
-   card-power-off
-   unmap-regs
+   open-count  1 =  if
+      wait-write-done
+      card-clock-off
+      card-power-off
+      unmap-regs
+   then
+   open-count 1- 0 max  to open-count
 ;
 
 : init   ( -- )
