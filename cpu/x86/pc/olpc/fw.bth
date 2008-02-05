@@ -261,9 +261,9 @@ hex
    false
 ;
 
-: protect-fw  ( -- )
-   " wp" find-tag  if  2drop ec-indexed-io-off  then
-;
+false value secure?
+
+: protect-fw  ( -- )  secure?  if  ec-indexed-io-off  then  ;
 
 \ stand-init-debug?  [if]
 warning @  warning off 
@@ -349,7 +349,6 @@ fload ${BP}/cpu/x86/pc/olpc/wlantest.fth
 fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 ' gx-power-off to power-off
 [then]
-
 
 : dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
 : brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;
@@ -558,6 +557,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
+   block-exceptions
    no-page
 
    ?factory-mode
@@ -585,6 +585,7 @@ fload ${BP}/ofw/core/dualconsole.fth
    ?diags
    ?fs-update
    secure-startup
+   unblock-exceptions
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
    text-on
    banner

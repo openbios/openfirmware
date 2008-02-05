@@ -564,12 +564,28 @@ d# 67 buffer: machine-id-buf
    r> to load-path
 ;
 
-false value secure?
 false value in-factory?
 
 stand-init: wp
    " wp" find-tag  if  2drop  true to secure?  then
 ;
+
+: message-and-off  ( -- )
+   aborted? @  if
+      aborted? off
+      ." Keyboard interrupt" cr
+   else
+      (.exception)
+   then
+   ." Powering off ..."
+   d# 5000 ms
+   power-off
+;
+
+: block-exceptions  ( -- )
+   secure?  if   ['] message-and-off  to .exception  then
+;
+: unblock-exceptions  ( -- )  ['] .entry  to .exception  ;
 
 \ check-devel-key tests the developer signature string "dev01$".
 
