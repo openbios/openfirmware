@@ -381,9 +381,9 @@ false value verbose?
 
 : process-raw  ( scan-code -- exit? )
    verbose?  if  dup u.  then
-   dup h# e0 =  if
-      true to esc?
-   else
+   dup h# e0 =  if                           ( scan )
+      drop  true to esc?                     ( )
+   else                                      ( scan )
       dup h# 7f and scan1->key#  if          ( scan )
          drop                                ( )
       else                                   ( scan key# )
@@ -393,9 +393,9 @@ false value verbose?
          else                                ( key# )
             key-down                         ( )
          then                                ( )
-      then
-      false to esc?
-   then
+      then                                   ( )
+      false to esc?                          ( )
+   then                                      ( )
    false
 ;
 
