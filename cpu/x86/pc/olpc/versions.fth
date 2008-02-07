@@ -5,7 +5,7 @@ macro: FW_MAJOR D
 macro: FW_MINOR 13
 
 \ The EC microcode
-macro: EC_VERSION d11
+macro: EC_VERSION d13
 
 \ Alternate command for getting EC microcode, for testing new versions.
 \ Temporarily uncomment the line and modify the path as necessary
