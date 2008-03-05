@@ -652,6 +652,51 @@ stand-init: wp
    drop
 ;
 
+: do-firmware-update  ( img$ -- )
+   visible
+
+   tuck flash-buf  swap move   ( len )
+
+   ['] ?image-valid  catch  ?dup  if    ( )
+      visible
+      red-letters
+      ." Bad firmware image file - "  .error
+      ." Continuing with old firmware" cr
+      black-letters
+      exit
+   then
+
+   true to file-loaded?
+
+   d# 12,000 wait-until   \ Wait for EC to notice the battery
+
+   ['] ?enough-power  catch  ?dup  if
+      visible
+      red-letters
+      ." Unsafe to update firmware now - " .error
+      ."  Continuing with old firmware" cr
+      black-letters
+      exit
+   then
+
+   " Updating firmware" ?lease-debug-cr
+
+   ec-indexed-io-off?  if
+      visible
+      ." Restarting to enable SPI FLASH writing."  cr
+      d# 3000 ms
+      ec-ixio-reboot
+      security-failure
+   then
+
+   \ Latch alternate? flag for next startup
+   alternate?  if  [char] A h# 82 cmos!  then
+
+   reflash      \ Should power-off and reboot
+   show-x
+   " Reflash returned, unexpectedly" .security-failure
+;
+
 : load-from-device  ( devname$ -- done? )
 
    d# 16 0  +icon-xy  show-dot
@@ -667,36 +712,7 @@ stand-init: wp
          " new - " ?lease-debug
          fwkey$ to pubkey$
          img$  sig$  fw-valid?  if
-            visible
-
-            img$ tuck flash-buf  swap move   ( len )
-
-            ?image-valid                     ( )
-            true to file-loaded?
-            " Updating firmware" ?lease-debug-cr
-
-            ec-indexed-io-off?  if
-               visible
-               ." Restarting to enable SPI FLASH writing."  cr
-               d# 3000 ms
-               ec-ixio-reboot
-               security-failure
-            then
-
-            d# 12,000 wait-until   \ Wait for EC to notice the battery
-
-            ['] ?enough-power  catch  ?dup  if
-               visible
-               red-letters .error black-letters
-               security-failure
-            then
-
-            \ Latch alternate? flag for next startup
-            alternate?  if  [char] A h# 82 cmos!  then
-
-            reflash      \ Should power-off and reboot
-            show-x
-            " Reflash returned, unexpectedly" .security-failure
+            img$  do-firmware-update
          then
          show-lock
       then

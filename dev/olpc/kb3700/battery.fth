@@ -105,9 +105,9 @@ end-string-array
 ;
 
 : ?enough-power  ( )
-   bat-status@                                 ( stat )
-   dup  h# 10 and  0=  abort" AC not present"  ( stat )
-   dup  1 and  0=  abort" Battery not present" ( stat )
+   bat-status@                                    ( stat )
+   dup  h# 10 and  0=  abort" No external power"  ( stat )
+   dup  1 and  0=  abort" No battery"             ( stat )
    4 and  abort" Battery low"  
 ;
 
