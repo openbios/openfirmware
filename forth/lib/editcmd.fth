@@ -44,7 +44,7 @@ nuser beforechar	\ next most-recently-typed character
    name-buf "copy
    name-buf lastchar @  add-char-to-name
    name-buf count  keys token@ search-wordlist  ( false | cfa true )
-   if  execute  else  not-found  then
+   if  catch drop  else  not-found  then
 ;
 
 defer printable-char
