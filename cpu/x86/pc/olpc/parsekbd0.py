@@ -103,6 +103,8 @@ def handle_key(modifier, s):
                 if (ascii >= 0x20) & (((modifier & 1) == 0) & (keys[ascii] != keyid)):
                         if modifier < modifiers[ascii]:
                                 print "Replacing", chr(ascii), "at keyid", keys[ascii], "modifier", modifiers[ascii], "with keyid", keyid, "modifier", modifier
+                                modifiers[ascii] = modifier
+                                keys[ascii] = keyid
                         else:
                                 print "Discarding", chr(ascii), "at keyid", keyid, "modifier", modifier, "because keyid", keys[ascii], "modifier", modifiers[ascii], "is better"
                         return
