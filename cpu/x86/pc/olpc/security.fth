@@ -653,7 +653,12 @@ stand-init: wp
 ;
 
 : do-firmware-update  ( img$ -- )
-   visible
+
+\ Keep .error from printing an input sream position report
+\ which makes a buffer@<address> show up in the error message
+  ['] noop to show-error
+
+  visible
 
    tuck flash-buf  swap move   ( len )
 
