@@ -24,6 +24,7 @@ saved_keyname = 128*[0]
 keys = 128*[0]
 modifiers = 128*[0]
 
+# Map from xkb key names to scanset 1 "make" codes
 keynames = {
 'AB01':44,
 'AB02':45,
@@ -36,6 +37,7 @@ keynames = {
 'AB09':52,
 'AB10':53,
 'AB11':115,
+'I219':115,
 'AC01':30,
 'AC02':31,
 'AC03':32,
@@ -174,14 +176,15 @@ seenlines = {};
 def collect_line(line):
         global seenlines
         try:
-                s = split("\W+",sub("\t|{|}|\[|]|\,|&lt;|&gt;|;", "", line))
+                s = split("\W+",sub("\t|{|}|\[|]|\,|&lt;|&gt;|;", " ", line))
         except:
                 return
 
-        if s[1] != 'key':
-                return
-
-        seenlines[s[2]] = s[3:6]
+        if s[1] == 'key':
+                seenlines[s[2]] = s[3:6]
+        else:
+                if s[0] == 'key':
+                        seenlines[s[1]] = s[2:5]
 
 def process_keys():
         global seenlines
