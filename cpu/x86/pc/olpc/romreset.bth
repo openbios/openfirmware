@@ -17,7 +17,7 @@ fload ${BP}/cpu/x86/mmuparam.fth
 \ startmacros.fth defines some assembler macros that make MSR and I/O port
 \  access very easy by hiding the details of register use.
 
-fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
+fload ${BP}/dev/geode/startmacros.fth
 
 hex
 
@@ -346,7 +346,7 @@ label startup
       h# 12 #  al mov    al  h# 71 #  out   \ Write value 01
    then
 
-fload ${BP}/cpu/x86/pc/olpc/draminit.fth
+fload ${BP}/dev/geode/draminit.fth
 
    \ Last-minute check for LX erratum 34 - reset if the DLL didn't start correctly
    h# 4c000017 rmsr  h# 10 bitand  0<>  if   \ LX branch

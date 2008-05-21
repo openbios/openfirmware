@@ -17,7 +17,7 @@ fload ${BP}/cpu/x86/mmuparam.fth
 \ startmacros.fth defines some assembler macros that make MSR and I/O port
 \  access very easy by hiding the details of register use.
 
-fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
+fload ${BP}/dev/geode/startmacros.fth
 
 hex
 
@@ -61,6 +61,9 @@ label startup
 
    \ setup CPU interface serial to mode C on both sides
    44000020.00200013. 51000010 set-msr   \ 5536 p 229
+
+   \ Set up GPIO base register
+   0000f001.00001000.   5140000c set-msr  \ GPIO BAR
 
  \ Init UART
    \ uart_init,serial.c
@@ -123,7 +126,16 @@ label startup
    \ char b 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
    h# 12 # al mov  al h# 80 # out
 
-fload ${BP}/cpu/x86/pc/olpc/draminit.fth
+fload ${BP}/dev/geode/draminit.fth
+
+   \ Last-minute check for LX erratum 34 - reset if the DLL didn't start correctly
+   h# 4c000017 rmsr  h# 10 bitand  0<>  if   \ LX branch
+      h# 4c00000f rmsr  h# 7ff bitclr  h# 4 bitset  h# 4c00000f wmsr  \ Set DLL_OV
+      h# 4c00000f rmsr  h# 7ff # ax and  h# 104 # ax cmp  =  if       \ Check the result
+         \ The value 104 indicates that the DLL did not start, so we must reset
+         1. 5140.0017 set-msr
+      then
+   then
 
    \ Now we can use the stack and do conventional subroutine calls
 

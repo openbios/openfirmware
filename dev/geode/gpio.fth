@@ -1,48 +1,41 @@
 \ See license at end of file
-purpose: Establish configuration definitions
+purpose: Access to GPIO registers
 
-create use-lx
-create lx-devel
+\ GPIO registers
+h# 00 constant OUT_VAL 
+h# 04 constant OUT_EN  
+h# 08 constant OUT_OD_EN  
+h# 0c constant OUT_INVRT_EN  
+h# 10 constant OUT_AUX1
+h# 14 constant OUT_AUX2
+h# 18 constant PU_EN
+h# 1c constant PD_EN
+h# 20 constant IN_EN 
+h# 24 constant INV_EN 
+h# 28 constant IN_FLTR_EN 
+h# 2c constant EVNTCNT_EN 
+h# 30 constant READ_BACK 
+h# 38 constant EVNT_EN 
 
-\ --- The environment that "boots" us ---
-\ - Image Format - Example Media - previous stage bootloader
+h# 1000 value gpio-base  \ stand-init sets this from an MSR
+: gpio@  ( offset -- 0 )  gpio-base +  pl@  ;
+: gpio!  ( l offset -- )  gpio-base +  pl!  ;
 
-\ - OBMD format - ROM - direct boot from ROM
-create rom-loaded
+alias >set noop   ( mask -- mask' )  
+: >clr    ( mask -- mask' )  d# 16 lshift  ;
 
-\ - ELF format (no pheader) - ROM - LinuxBIOS direct
-\ create linuxbios-loaded
+: >hi     ( reg# -- reg#' )  h# 80 +  ;   \ High bank for GPIO bits 16..31
 
-\ - Linux kernel format - USB Key w/ FAT FS - LinuxBIOS w/ stripped Linux payload
-\ create bzimage-loaded
+: gpio-data@  ( -- l )  h# 30 gpio@  ;
 
-\ - ELF format w/ Multiboot signature - various - GRUB
-\ create grub-loaded
 
-\ - (Syslinux) COM32 format - USB Key w/ FAT FS - Syslinux
-\ create syslinux-loaded
+h# 5140000C constant MSR_LBAR_GPIO
 
-create virtual-mode
-create addresses-assigned  \ Define if base addresses are already assigned
-\ create serial-console      \ Define to default to serial port for console
-create pc
-create linux-support
-create jffs2-support
-create use-elf
-
-\ create use-timestamp-counter \ Use CPU's timestamp counter for timing ...
-			\ ... this is worthwhile if your CPU has one.
-
-create resident-packages
-\ create use-watch-all
-\ create use-root-isa
-create no-floppy-node
-create use-pci-isa
-
-create use-null-nvram
-
-fload ${BP}/cpu/x86/pc/lxdevel/addrs.fth
-
+stand-init: gpio
+   MSR_LBAR_GPIO rdmsr  ( lo hi )
+   h# 0000f001 <>  abort" GPIO not enabled"
+   h# ff00 and  to gpio-base
+;
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

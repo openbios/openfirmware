@@ -7,8 +7,6 @@ in: ${BP}/cpu/x86/pc/lxdevel/build/rmstart.img
 in: ${BP}/cpu/x86/pc/lxdevel/build/paging.di
 in: ${BP}/cpu/x86/pc/lxdevel/build/fw.dic
 in: ${BP}/dev/geode/nandflash/build/nandflash.fc
-in: ${BP}/dev/mmc/sdhci/build/sdhci.fc
-in: ${BP}/dev/mmc/sdhci/build/sdmmc.fc
 in: ${BP}/dev/geode/ac97/build/ac97.fc
 in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
 in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
@@ -17,11 +15,7 @@ in: ${BP}/dev/usb2/device/net/build/usbnet.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
-in: ${BP}/dev/usb2/device/wlan/build/usb8388.fc
-in: ${BP}/dev/olpc/cafenand/build/cafenand.fc
-in: ${BP}/dev/olpc/cafecamera/build/cafecamera.fc
 in: ${BP}/dev/pci/build/pcibridg.fc
-in: usb8388.bin
 
 build-now
 
@@ -48,7 +42,7 @@ writing lxdevel.rom
    " romreset.di"           $add-file
 \  " resume.di"             $add-file
 
-   fload ${BP}/cpu/x86/pc/olpc/loaddropins.fth
+   fload ${BP}/cpu/x86/pc/lxdevel/loaddropins.fth
    " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
 
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end

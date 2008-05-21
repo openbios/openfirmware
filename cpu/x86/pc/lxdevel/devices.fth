@@ -1,9 +1,8 @@
 \ See license at end of file
 purpose: Load device drivers according to configuration definitions
 
-: board-revision  ( -- n )
-   h# 4c00.0014 rdmsr drop 4 rshift 7 and
-;
+: gx?  ( -- flag )  h# 4c000017 msr@ drop  4 rshift  2 =  ;
+: lx?  ( -- flag )  h# 4c000017 msr@ drop  4 rshift  3 =  ;
 
 fload ${BP}/cpu/x86/pc/isaio.fth
 
@@ -221,11 +220,11 @@ stand-init: PCI properties
    dend
 ;
 
-fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
-
 \ fload ${BP}/dev/geode/lpcflash.fth           \ Reflasher for PLCC FLASH on A-test
 
 : +i encode-int encode+  ;  : 0+i  0 +i  ;
+
+false config-int tft-mode?
 
 fload ${BP}/cpu/x86/fb16-ops.fth
 fload ${BP}/ofw/termemu/fb16.fth

@@ -1,48 +1,36 @@
 \ See license at end of file
-purpose: Establish configuration definitions
+purpose: Banner customization for this system
 
-create use-lx
-create lx-devel
+headerless
 
-\ --- The environment that "boots" us ---
-\ - Image Format - Example Media - previous stage bootloader
+: .rom  ( -- )
+   ." OpenFirmware  "
+   push-decimal
+   major-release (.) type ." ." minor-release (.) type    sub-release type
+   pop-base
+[ifdef] bzimage-loaded
+   ." booted from disk - " .built
+[then]
+;
 
-\ - OBMD format - ROM - direct boot from ROM
-create rom-loaded
+: (xbanner-basics)  ( -- )
+   ?spaces  cpu-model type  ." , "   .memory
+   ?spaces  .rom
+;
+' (xbanner-basics) to banner-basics
 
-\ - ELF format (no pheader) - ROM - LinuxBIOS direct
-\ create linuxbios-loaded
+' (banner-warnings) to banner-warnings
 
-\ - Linux kernel format - USB Key w/ FAT FS - LinuxBIOS w/ stripped Linux payload
-\ create bzimage-loaded
+: stop-auto?  ( -- flag )  idprom-valid? 0=  auto-boot?  and ;
 
-\ - ELF format w/ Multiboot signature - various - GRUB
-\ create grub-loaded
+defer gui-banner  ' true to gui-banner
+: ?gui-banner  ( -- )
+   stop-auto?  if  suppress-auto-boot  then
 
-\ - (Syslinux) COM32 format - USB Key w/ FAT FS - Syslinux
-\ create syslinux-loaded
+   gui-banner drop
+;
 
-create virtual-mode
-create addresses-assigned  \ Define if base addresses are already assigned
-\ create serial-console      \ Define to default to serial port for console
-create pc
-create linux-support
-create jffs2-support
-create use-elf
-
-\ create use-timestamp-counter \ Use CPU's timestamp counter for timing ...
-			\ ... this is worthwhile if your CPU has one.
-
-create resident-packages
-\ create use-watch-all
-\ create use-root-isa
-create no-floppy-node
-create use-pci-isa
-
-create use-null-nvram
-
-fload ${BP}/cpu/x86/pc/lxdevel/addrs.fth
-
+headers
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

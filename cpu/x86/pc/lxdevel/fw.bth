@@ -83,7 +83,7 @@ dev /
 alias lmove lmove			\ Needed by CS5536 NAND FLASH driver
 dend
 
-fload ${BP}/cpu/x86/pc/olpc/gpio.fth	\ Rudimentary GPIO driver
+fload ${BP}/dev/geode/gpio.fth		\ Rudimentary GPIO driver
 fload ${BP}/cpu/x86/pc/lxdevel/probemem.fth	\ Memory probing
 
 [ifdef] virtual-mode
@@ -117,12 +117,14 @@ end-support-package
 [then]
 
 [ifdef] linux-support
+\needs unix-seconds>  fload ${BP}/ofw/fs/unixtime.fth	\ Unix time calculation
 support-package: ext2-file-system
    fload ${BP}/ofw/fs/ext2fs/ext2fs.fth	\ Linux file system
 end-support-package
 [then]
 
 [ifdef] jffs2-support
+\needs unix-seconds>  fload ${BP}/ofw/fs/unixtime.fth	\ Unix time calculation
 support-package: jffs2-file-system
    fload ${BP}/ofw/fs/jffs2/jffs2.fth	\ Journaling flash file system 2
 end-support-package
@@ -224,7 +226,7 @@ devalias nfs net//obp-tftp:last//nfs
 fload ${BP}/cpu/x86/pc/boot.fth
 
 h# 3ea constant usb-port-power-map  \ USB4:PWR2  USB3:PWR1  USB2:PWR1  USB1:PWR1
-fload ${BP}/cpu/x86/pc/olpc/usb.fth
+fload ${BP}/dev/geode/usb.fth
 
 false to stand-init-debug?
 \ true to stand-init-debug?
@@ -277,32 +279,26 @@ warning @  warning off
 ;
 
 [ifdef] linux-support
-fload ${BP}/cpu/x86/pc/olpc/linux.fth
+fload ${BP}/cpu/x86/pc/linux.fth
+\ Use values like these if you want to boot directly instead of through an intermediate script
+\ " disk:\vmlinuz"   ' boot-device  set-config-string-default
+\ " disk:\initrd" d# 128 config-string ramdisk
+
+\needs ramdisk  " " d# 128 config-string ramdisk
+" "   ' boot-file      set-config-string-default   \ Let the boot script set the cmdline
 [then]
+
+" disk:\boot\boot.fth nand:\boot\boot.fth /prober /usb/ethernet"   ' boot-device  set-config-string-default
+
 
 fload ${BP}/ofw/gui/bmptools.fth
 fload ${BP}/dev/null.fth
 fload ${BP}/ofw/core/bailout.fth
 
-[ifdef] olpc-gui
-\ GUI
-false value gui-safeboot?
-
-\ FIXME need to implement user-ok to lockout ok prompt
-: 2tuck  ( d1 d2 -- d2 d1 d2 )  2swap 2over  ;
-false value fru-test?
-: user-ok  "ok"  ;  \ This is supposed to check for authorization
-true value user-mode?
-
-fload ${BP}/cpu/x86/pc/olpc/banner.fth
-[then]
+fload ${BP}/cpu/x86/pc/lxdevel/banner.fth
 
 fload ${BP}/ofw/gui/loadmenu.fth
 \ fload ${BP}/ofw/gui/insticon.fth
-
-[ifdef] olpc-gui
-fload ${BP}/cpu/x86/pc/olpc/gui.fth
-[then]
 
 \ Eliminate 4 second delay in install console for the case where
 \ there is no keyboard.  The delay is unnecessary because the screen
@@ -347,14 +343,6 @@ end-support-package
 
 [ifdef] use-ppp
 fload ${BP}/ofw/ppp/loadppp.fth
-[then]
-
-[ifdef] pc-linux
-" a:\initrd.imz" d# 128 config-string ramdisk
-" root=/dev/ram0 mount_ramdisk=1"  ' boot-file        set-config-string-default
-" a:\vmlinuz"                      ' boot-device      set-config-string-default
-true                               ' client-symbols?  set-config-int-default
-\ Also try " console=/dev/ttyS0,9600 console=/dev/tty0" in boot-file
 [then]
 
 " dhcp" ' ip-address  set-config-string-default
@@ -492,15 +480,11 @@ alias s suspend
    quit
 ;
 
-fload ${BP}/cpu/x86/pc/olpc/copynand.fth
-
-[ifndef] olpc
 \ This sometimes helps with VGA/EGA boards, enabling I/O space access
 \ to the CRT registers that control the hardware cursor.
 : cursor  ( -- )
    " begin-select /display  3 my-space 4 + config-w! unselect" evaluate
 ;
-[then]
 
 \ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
 also hidden also keys-forth definitions

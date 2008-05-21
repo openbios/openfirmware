@@ -104,7 +104,7 @@ fload ${BP}/cpu/x86/pc/olpc/port80.fth	\ Port 80 debug messages
 ;
 [then]
 
-fload ${BP}/cpu/x86/pc/olpc/gpio.fth	\ Rudimentary GPIO driver
+fload ${BP}/dev/geode/gpio.fth		\ Rudimentary GPIO driver
 fload ${BP}/cpu/x86/pc/olpc/probemem.fth	\ Memory probing
 
 [ifdef] virtual-mode
@@ -244,7 +244,7 @@ fload ${BP}/cpu/x86/pc/boot.fth
       h# 3aa   \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR1
    then
 ;
-fload ${BP}/cpu/x86/pc/olpc/usb.fth
+fload ${BP}/dev/geode/usb.fth
 
 \ false to stand-init-debug?
 true to stand-init-debug?
@@ -336,7 +336,8 @@ fload ${BP}/cpu/x86/pc/olpc/nandstat.fth
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
 fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
-fload ${BP}/cpu/x86/pc/olpc/linux.fth
+fload ${BP}/cpu/x86/pc/linux.fth
+fload ${BP}/cpu/x86/pc/memtest.fth
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 fload ${BP}/cpu/x86/pc/olpc/fsupdate.fth
@@ -349,6 +350,13 @@ fload ${BP}/cpu/x86/pc/olpc/wlantest.fth
 fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 ' gx-power-off to power-off
 [then]
+
+" disk:\boot\olpc.fth sd:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
+   ' boot-device  set-config-string-default
+
+\needs ramdisk  " " d# 128 config-string ramdisk
+" "   ' boot-file      set-config-string-default   \ Let the boot script set the cmdline
+
 
 : dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
 : brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;

@@ -42,8 +42,12 @@ h# 40 buffer: oob-buf
 : data  ( -- )  0 h# 800 nand!  ;
 : wait-ready  ( -- )  data  begin  h# 810 nand@ 8 and  until  ;
 
+0 instance value partition#
+0 instance value partition-start  \ Boundary between chip 0 and chip 1
+0 instance value partition-size   \ Boundary between chip 0 and chip 1
+0 instance value usable-page-limit \ #pages excluding bad block tables
 
-: page-adr  ( page# -- )  dup adr  8 rshift dup adr  8 rshift adr  ;
+: page-adr  ( page# -- )  partition-start +  dup adr  8 rshift dup adr  8 rshift adr  ;
 : start-io  ( page# offset cmd -- )
    cmd                      ( page# offset )
    wbsplit swap  adr  adr   ( page# )

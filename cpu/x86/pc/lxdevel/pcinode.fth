@@ -9,6 +9,7 @@ purpose: PCI bus package
 patch nonvirtual-probe-state? probe-state? map-in
 
 \  patch noop assign-all-addresses prober
+warning @ warning off
 : assign-pci-addr  ( phys.lo phys.mid phys.hi len | -1 -- phys.hi paddr size )
    2dup -1 <>  swap virtual-pci-slot?  and  if  ( phys.lo phys.mid phys.hi len )
       2swap 2drop    >r                         ( phys.hi r: len )
@@ -17,6 +18,7 @@ patch nonvirtual-probe-state? probe-state? map-in
    then
    assign-pci-addr
 ;
+warning !
 
 : ?clear-addresses  ( -- )
    my-space virtual-pci-slot?  if  exit  then  clear-addresses
