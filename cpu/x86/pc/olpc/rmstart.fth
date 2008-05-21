@@ -183,17 +183,21 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
       h# 0017 # cx mov  rdmsr    \ Read CHIP_REVID
       h# 0014 # cx mov           \ Restore RSTPLL MSR number
       h# 30 # al cmp  >=  if     \ LX CPU
+[ifdef] cmos-startup-control
          h# 60 #  al mov    al  h# 70 #  out   h# 71 #  al in  \ Read CMOS 0x60
          al al test  0=  if
+[then]
             rdmsr                             \ Get base MSR value with divisors
             op: h# 04de.0000 # ax or          \ Set the startup time (de) and breadcrumb (4)
             op: h# 0000.04d9 # dx mov         \ PLL value for 333 MB clk, 433 CPU
+[ifdef] cmos-startup-control
          else
             al dec  al h# 71 # out            \ Decrement safety counter
             rdmsr                             \ Get base MSR value with divisors
             op: h# 04de.0000 # ax or          \ Set the startup time (de) and breadcrumb (4)
             op: h# 0000.04d3 # dx mov         \ PLL value for 333 MB clk, 333 CPU
          then
+[then]
          wrmsr                             \ Put in the base value
          op: h# 0000.1800 invert # ax and  \ Turn off the BYPASS bits
 

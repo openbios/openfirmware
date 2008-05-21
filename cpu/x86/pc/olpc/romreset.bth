@@ -147,8 +147,10 @@ label startup
    00000106.83104104.   00001983 set-msr  \ Memory delay values
    00000000.00000001.   00001980 set-msr  \ Enable memory delays
 
+[ifdef] cmos-startup-control
    h# 61 #  al mov    al  h# 70 #  out   h# 71 #  al in  \ Read CMOS 0x61
    al al test  0= if
+[then]
       18000100.6a7332a0.   20000019 set-msr
 
       \ The RAM controller is now set up
@@ -163,6 +165,7 @@ label startup
 
       \ Delay on exit from power mode 1, use unbuffered RAM
       130cd801. 2000001a set-msr    \ MC_CF1017_DATA  LX p 231
+[ifdef] cmos-startup-control
    else
       al dec  al h# 71 # out            \ Decrement safety counter
 
@@ -193,6 +196,7 @@ label startup
 
       dx dx xor  bx ax mov  2000001a wmsr    \ MC_CF1017_DATA  LX p 231
    then
+[then]
 
    00000200.00000000. 20000020 set-msr   \ Power mode entry and exit delays
 
