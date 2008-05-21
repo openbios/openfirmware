@@ -18,7 +18,7 @@ fload ${BP}/cpu/x86/pc/olpc/config.fth		\ Configuration defines
 \ startmacros.fth defines some assembler macros that make MSR and I/O port
 \  access very easy by hiding the details of register use.
 
-fload ${BP}/cpu/x86/pc/olpc/startmacros.fth
+fload ${BP}/dev/geode/startmacros.fth
 
 \ This creates and dismisses a floating point exception, which causes
 \ the IRQ13 to go high then low.
