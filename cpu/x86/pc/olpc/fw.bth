@@ -337,7 +337,7 @@ fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
 fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 fload ${BP}/cpu/x86/pc/linux.fth
-fload ${BP}/cpu/x86/pc/memtest.fth
+fload ${BP}/cpu/x86/pc/olpc/memtest.fth
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 fload ${BP}/cpu/x86/pc/olpc/fsupdate.fth
