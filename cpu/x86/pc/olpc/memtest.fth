@@ -7,6 +7,7 @@ purpose: Interface to memtest86
    over  h# 10000 =  if  ( vaddr size )
       \ Map the frame buffer (virtual=physical)
       h# 910 config-l@ dup 100.0000 -1 mmu-map
+      unfreeze
    then
 
    \ If it's not memtest, chain to the linux recognizer
