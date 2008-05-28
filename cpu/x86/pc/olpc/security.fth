@@ -571,6 +571,10 @@ warning @ warning off
    stand-init-io
    " wp" find-tag  if  2drop  true to secure?  then
 ;
+
+dev /client-services
+: enter  ( -- )  secure? 0=  security-off?  or  if  visible enter  then  ;
+dend
 warning !
 
 : message-and-off  ( -- )
