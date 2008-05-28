@@ -232,7 +232,7 @@ fload ${BP}/dev/geode/acpi.fth           \ Power management
 fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
 
 warning @ warning off
-: stand-init  stand-init  h# fff0.0000 to flash-base  ;
+: stand-init-io  stand-init-io  h# fff0.0000 to flash-base  ;
 warning !
 
 fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip

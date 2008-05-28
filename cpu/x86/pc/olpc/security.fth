@@ -566,9 +566,12 @@ d# 67 buffer: machine-id-buf
 
 false value in-factory?
 
-stand-init: wp
+warning @ warning off
+: stand-init-io
+   stand-init-io
    " wp" find-tag  if  2drop  true to secure?  then
 ;
+warning !
 
 : message-and-off  ( -- )
    aborted? @  if
