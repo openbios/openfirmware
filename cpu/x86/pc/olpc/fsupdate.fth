@@ -83,7 +83,7 @@ also nand-commands definitions
 : erase-all  ( -- )
    #nand-pages >eblock#  show-erasing
    ['] show-bad  ['] show-erased  ['] show-bbt-block " (wipe)" $call-nand
-\   #image-eblocks show-writing
+   #image-eblocks show-writing
 ;
 
 : eblock: ( "eblock#" "hashname" "hash-of-128KiB" -- )
@@ -96,6 +96,7 @@ also nand-commands definitions
       drop 
    else                                        ( eblock# )
       ." Bad hash for eblock# " .x cr
+      cr ." Your USB key may be bad.  Please try a different one." cr cr
       abort
    then                                        ( )
 
@@ -145,7 +146,7 @@ previous definitions
 \    clear-context  nand-commands
 also nand-commands
    
-   ['] include-buffer  catch  if  nip nip  .error  security-failure  then
+   ['] include-buffer  catch  ?dup  if  nip nip  .error  security-failure  then
 
 previous
 \    only forth also definitions
