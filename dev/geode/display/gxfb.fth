@@ -557,10 +557,10 @@ headers
    map-frame-buffer
    bytes/pixel case
       1 of  frame-buffer-adr /fb h#        0f  fill  endof
-      2 of  frame-buffer-adr /fb h# c0 dup dup  rgb>565  wfill  endof
+      2 of  frame-buffer-adr /fb background-rgb  rgb>565  wfill  endof
       4 of  frame-buffer-adr /fb h# ffff.ffff lfill  endof
    endcase
-   7 to background-color
+   h# f to background-color
 
    frame-buffer-adr /fb +  to graphmem
 ;

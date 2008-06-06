@@ -215,6 +215,8 @@ dev /mmu
 dend
 [then]
 
+: background-rgb  ( -- r g b )  h# ff h# ff h# ff  ;
+
 fload ${BP}/cpu/x86/pc/olpc/devices.fth
 
 fload ${BP}/cpu/x86/pc/olpc/countdwn.fth	\ Startup countdown

@@ -53,10 +53,9 @@ code halt  hlt  c;  \ To save power
 
 : +icon-xy  ( delta-x,y -- )  icon-xy d+ to icon-xy  ;
 
-
 : show-going  ( -- )
-   h# c0 h# c0 h# c0  rgb>565  progress-xy  d# 500 d# 100  " fill-rectangle" $call-screen
-   d# 585 d# 613 to icon-xy  " bigdot" show-icon
+   background-rgb  rgb>565  progress-xy  d# 500 d# 100  " fill-rectangle" $call-screen
+   d# 588 d# 638 to icon-xy  " bigdot" show-icon
    dcon-unfreeze
 ;
 : show-x  ( -- )  " x" show-icon  ;
@@ -75,7 +74,7 @@ code halt  hlt  c;  \ To save power
 : show-unlock  ( -- )  " unlock" show-icon  ;
 : show-child  ( -- )
    " erase-screen" $call-screen
-   d# 552 d# 383 to icon-xy  " rom:xogray.565" $show-opaque
+   d# 552 d# 384 to icon-xy  " rom:xogray.565" $show-opaque
    progress-xy to icon-xy  \ For boot progress reports
 ;
 
@@ -880,3 +879,27 @@ warning !
    date-bad?  if  ." The RTC is not set correctly" cr  exit  then
    time&date >iso8601$  " md" $add-tag
 ;
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2007 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
