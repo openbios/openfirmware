@@ -6,10 +6,10 @@ purpose: Display a 16bpp image expanded by 2x
 code expand-image  ( src dst --- )
    0 [sp] edi xchg
    4 [sp] esi xchg
-   d# 450 # edx mov
+   d# 450 # edx mov     \ Number of doubled output scan lines
    begin
       d# 80 # esi add   \ Skip left edge of camera image
-      d# 600 # cx mov   \ Number of doubled scan lines
+      d# 600 # cx mov   \ Number of doubled pixels
       begin
          op: ax lods                \ Get a pixel
          op: ax d# 2400 [edi] mov   \ Write to next line
