@@ -300,6 +300,16 @@ false value ov7670-detected?
    c0 3d ov!				\ Gamma enable, UV saturation auto adjust
 ;
 
+: read-agc  ( -- n )
+   3 ov@  h# c0 and  2 lshift  0 ov@ or
+;
+
+: read-aec  ( -- n )
+   7 ov@  h# 3f and  d# 10 lshift
+   h# 10 ov@  2 lshift  or
+   4 ov@  3 and  or
+;
+
 : set-hw  ( vstop vstart hstop hstart -- )
    dup  3 >> 17 ov!			\ Horiz start high bits
    over 3 >> 18 ov!			\ Horiz stop high bits
@@ -488,8 +498,18 @@ d# 10,000 constant movie-time
 0 constant test-x
 0 constant test-y
 
+\ Thanks to Cortland Setlow (AKA Blaketh) for the autobrightness code
+\ and the full-screen + mirrored display.
+
+: autobright  ( -- )
+   read-agc 3 + 3 rshift  h# f min  " bright!" " $call-screen" evaluate
+;
+: full-brightness  ( -- )  h# f " bright!" " $call-screen" evaluate  ;
+
 : display-frame  ( adr -- )
-   test-x test-y VGA_WIDTH VGA_HEIGHT " draw-rectangle" " $call-screen" evaluate
+\   test-x test-y VGA_WIDTH VGA_HEIGHT " draw-rectangle" " $call-screen" evaluate
+   " expand-to-screen" " $call-screen" evaluate
+   autobright
 ;
 
 : timeout-read  ( adr len timeout -- actual )
@@ -500,7 +520,7 @@ d# 10,000 constant movie-time
 ;
 
 : shoot-movie  ( -- error? )
-   /dma-buf #dma-bufs * dup alloc-mem swap	( adr len )
+   /dma-buf #dma-bufs * dup dma-alloc swap	( adr len )
    get-msecs movie-time + -rot			( timeout adr len )
    begin
       2dup read ?dup 0>  if			( timeout adr len actual )
@@ -510,26 +530,29 @@ d# 10,000 constant movie-time
       then					( timeout adr len )
       get-msecs 3 pick u>
    until					( timeout adr len )
-   free-mem drop false				( error? )
+   dma-free drop false				( error? )
 ;
 
 : shoot-still  ( -- error? )
-   /dma-buf dup alloc-mem tuck			( adr len adr )
+   /dma-buf dup dma-alloc tuck			( adr len adr )
    /dma-buf d# 1,000 timeout-read 0>  if	( adr len )
       over display-frame
       false
    else
       true
    then						( adr len error? )
-   -rot free-mem				( error? )
+   -rot dma-free				( error? )
 ;
+
+: mirrored  ( -- )  h# 1e ov@  h# 20 or  h# 1e ov!  ;
+: unmirrored  ( -- )  h# 1e ov@  h# 20 invert and  h# 1e ov!  ;
 
 : selftest  ( -- error? )
    open 0=  if  true exit  then
-   shoot-still  ?dup  if  close exit  then	( error? )
+   unmirrored  shoot-still  ?dup  if  close exit  then	( error? )
    d# 1,000 ms
-   shoot-movie					( error? )
-   close					( error? )
+   mirrored   shoot-movie  full-brightness		( error? )
+   close						( error? )
 ;
 
 : dump-regs  ( run# -- )

@@ -1,17 +1,32 @@
+purpose: Display a 16bpp image expanded by 2x
 \ See license at end of file
-purpose: Main load file for Geode GX frame buffer driver
 
-" display" device-name
+\ This code has the OLPC display dimensions hardcoded
 
-fload ${BP}/dev/geode/display/gxpci.fth          \ PCI interfaces
-fload ${BP}/dev/geode/display/gxfb.fth           \ Controller code
-fload ${BP}/dev/geode/display/gp.fth             \ Graphics processor support
-fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
-fload ${BP}/cpu/x86/pc/olpc/expand16.fth         \ Expand image by 2x
-fload ${BP}/dev/geode/display/gxvga.fth          \ Legacy VGA support
+code expand-image  ( src dst --- )
+   0 [sp] edi xchg
+   4 [sp] esi xchg
+   d# 450 # edx mov
+   begin
+      d# 80 # esi add   \ Skip left edge of camera image
+      d# 600 # cx mov   \ Number of doubled scan lines
+      begin
+         op: ax lods                \ Get a pixel
+         op: ax d# 2400 [edi] mov   \ Write to next line
+         op: ax stos                \ Write to this line + increment
+         op: ax d# 2400 [edi] mov   \ Write to next line
+         op: ax stos                \ Write to this line + increment
+      loopa
+      d# 2400 # edi add             \ Skip the next output line - already written
+      edx dec
+   0= until
+   edi pop
+   esi pop
+c;
+: expand-to-screen  ( src -- )  frame-buffer-adr expand-image  ;
 
 \ LICENSE_BEGIN
-\ Copyright (c) 2006 FirmWorks
+\ Copyright (c) 2008 FirmWorks
 \ 
 \ Permission is hereby granted, free of charge, to any person obtaining
 \ a copy of this software and associated documentation files (the
