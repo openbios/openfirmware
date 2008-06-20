@@ -8,7 +8,6 @@ fload ${BP}/dev/geode/display/gxfb.fth           \ Controller code
 fload ${BP}/dev/geode/display/gp.fth             \ Graphics processor support
 fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
 fload ${BP}/cpu/x86/pc/olpc/expand16.fth         \ Expand image by 2x
-fload ${BP}/dev/geode/display/gxvga.fth          \ Legacy VGA support
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
