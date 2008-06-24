@@ -43,7 +43,8 @@ create use-pci-isa
 create basic-isa
 create isa-dma-only
 
-create use-null-nvram
+create use-null-nvram  \ Don't store configuration variables
+\ create use-flash-nvram  \ Store configuration variables in SPI FLASH
 
 \ Uncomment this to compile for the LX development board
 \ It's not possible to use one ROM image for both OLPC and
