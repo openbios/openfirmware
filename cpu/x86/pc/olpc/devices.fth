@@ -79,28 +79,35 @@ warning @ warning off
 ;
 warning !
 
-0 0  dropin-base <# u#s u#>  " /" begin-package
+\ Create the top-level device node to access the entire boot FLASH device
+0 0  " fff00000"  " /" begin-package
    " flash" device-name
 
-   h# 10.0000
-   dup value /device
-   constant /device-phys
+   h# 10.0000 value /device
+   h# 10.0000 constant /device-phys
    my-address my-space /device-phys reg
-   fload ${BP}/cpu/x86/pc/flashpkg.fth
-
-   : init  ( comp$ /device -- )
-      to /device  2>r
-      0 0 encode-bytes
-      2r> encode-string encode+
-      " rom" encode-string encode+
-      " compatible" property
-[ifdef] enable-flash-select      
-      /device /device-phys <>  if  enable-flash-select  then
-[then]
-   ;
-
+   fload ${BP}/dev/flashpkg.fth
+   fload ${BP}/dev/flashwrite.fth
 end-package
-" rom"  dropin-base <# u#s " /flash@" hold$ u#>  $devalias
+
+\ Create a node below the top-level FLASH node to accessing the portion
+\ containing the dropin modules
+0 0  " 10000"  " /flash" begin-package
+   " dropins" device-name
+
+   h# c0000 constant /device
+   fload ${BP}/dev/subrange.fth
+end-package
+
+devalias dropins /dropins
+
+\ Create a pseudo-device that presents the dropin modules as a filesystem.
+0 0 " "  " /" begin-package
+   fload ${BP}/ofw/fs/dropinfs.fth
+end-package
+
+\ This devalias lets us say, for example, "dir rom:"
+devalias rom     /dropin-fs
 
 fload ${BP}/cpu/x86/forthint.fth	\ Low-level interrupt handling code
 fload ${BP}/dev/isa/irq.fth		\ ISA interrupt dispatcher
@@ -156,25 +163,32 @@ fload ${BP}/cpu/x86/pc/olpc/cmos.fth     \ CMOS RAM indices are 1f..ff , above R
 devalias nand /nandflash
 devalias mtd  /nandflash
 
-[ifdef] pseudo-nvram
-fload ${BP}/cpu/x86/pc/biosload/filenv.fth
-dev /file-nvram
-: floppy-nv-file  ( -- )  " a:\nvram.dat"  ;
-' floppy-nv-file to nv-file
-device-end
-stand-init: Pseudo-NVRAM
-   " /file-nvram" open-dev  to nvram-node
-   nvram-node 0=  if
-      ." The configuration EEPROM is not working" cr
-   then
+[ifdef] use-null-nvram
+\ For not storing configuration variable changes across reboots ...
+\ This is useful for "turnkey" systems where configurability would
+\ increase support costs.
+
+fload ${BP}/cpu/x86/pc/nullnv.fth
+stand-init: Null-NVRAM
+   " /null-nvram" open-dev  to nvram-node
    ['] init-config-vars catch drop
 ;
 [then]
 
-[ifdef] use-null-nvram
-fload ${BP}/cpu/x86/pc/nullnv.fth
-stand-init: Null-NVRAM
-   " /null-nvram" open-dev  to nvram-node
+[ifdef] use-flash-nvram
+\ For configuration variables stored in a sector of the boot FLASH ...
+
+\ Create a node below the top-level FLASH node to access the portion
+\ containing the configuration variables.
+0 0  " d0000"  " /flash" begin-package
+   " nvram" device-name
+
+   h# 10000 constant /device
+   fload ${BP}/dev/subrange.fth
+end-package
+
+stand-init: NVRAM
+   " /nvram" open-dev  to nvram-node
    ['] init-config-vars catch drop
 ;
 [then]

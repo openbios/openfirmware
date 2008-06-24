@@ -13,8 +13,7 @@ h# 1.0000 constant /ec
 
    /ec <> abort" EC image file is the wrong length"
 
-   spi-start
-   spi-identify .spi-id cr
+   flash-write-enable
 
    \ merge-mfg-data
 

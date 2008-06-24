@@ -76,11 +76,12 @@ device-end
 0 0  dropin-base <# u#s u#>  " /" begin-package
    " flash" device-name
 
-[ifdef] addresses-assigned  dropin-size  [else]  h# 4.0000  [then]
+[ifdef] addresses-assigned  dropin-size  [else]  h# 8.0000  [then]
    dup value /device
    constant /device-phys
    my-address my-space /device-phys reg
-   fload ${BP}/cpu/x86/pc/flashpkg.fth
+   fload ${BP}/dev/flashpkg.fth
+   fload ${BP}/dev/flashwrite.fth
 
    : init  ( comp$ /device -- )
       to /device  2>r
@@ -92,9 +93,28 @@ device-end
       /device /device-phys <>  if  enable-flash-select  then
 [then]
    ;
-
 end-package
-" rom"  dropin-base <# u#s " /flash@" hold$ u#>  $devalias
+
+\ Create a node below the top-level FLASH node to accessing the portion
+\ containing the dropin modules.
+\ The number in the line below is the offset from the beginning of the
+\ FLASH to the block that contains the dropin modules.
+0 0  " 0"  " /flash" begin-package
+   " dropins" device-name
+
+   h# 70000 constant /device      \ Size of the area for dropin modules
+   fload ${BP}/dev/subrange.fth
+end-package
+
+devalias dropins /dropins
+
+\ Create a pseudo-device that presents the dropin modules as a filesystem.
+0 0 " "  " /" begin-package
+   fload ${BP}/ofw/fs/dropinfs.fth
+end-package
+
+\ This devalias lets us say, for example, "dir rom:"
+devalias rom     /dropin-fs
 
 fload ${BP}/cpu/x86/forthint.fth	\ Low-level interrupt handling code
 fload ${BP}/dev/isa/irq.fth		\ ISA interrupt dispatcher
@@ -112,10 +132,6 @@ devalias mouse /isa/8042/mouse
 devalias d disk
 devalias n nand
 devalias u /usb/disk
-devalias sd /sd/disk
-
-\ If we don't do the ctlr-selftest, the keyboard won't start on the LX devel board
-\ dev /8042      patch false ctlr-selftest open   device-end
 
 0 0  " i70"  " /isa" begin-package   	\ Real-time clock node
    fload ${BP}/dev/ds1385r.fth
@@ -159,9 +175,36 @@ stand-init: Pseudo-NVRAM
 [then]
 
 [ifdef] use-null-nvram
+\ For not storing configuration variable changes across reboots ...
+\ This is useful for "turnkey" systems where configurability would
+\ increase support costs.
+
 fload ${BP}/cpu/x86/pc/nullnv.fth
 stand-init: Null-NVRAM
    " /null-nvram" open-dev  to nvram-node
+   ['] init-config-vars catch drop
+;
+[then]
+
+[ifdef] use-flash-nvram
+\ For configuration variables stored in a sector of the boot FLASH ...
+
+\ Create a node below the top-level FLASH node to access the portion
+\ containing the configuration variables.
+
+\ The number in the line below is the offset from the beginning of the
+\ FLASH to the block that contains the configuration variables.
+0 0  " 70000"  " /flash" begin-package
+   " nvram" device-name
+
+   \ Size of configuration variable area.  Typically the size of
+   \ a FLASH block (erase unit).
+   h# 10000 constant /device
+   fload ${BP}/dev/subrange.fth
+end-package
+
+stand-init: NVRAM
+   " /nvram" open-dev  to nvram-node
    ['] init-config-vars catch drop
 ;
 [then]
@@ -220,7 +263,7 @@ stand-init: PCI properties
    dend
 ;
 
-\ fload ${BP}/dev/geode/lpcflash.fth           \ Reflasher for PLCC FLASH on A-test
+fload ${BP}/dev/geode/lpcflash.fth           \ Reflasher for LPC FLASH
 
 : +i encode-int encode+  ;  : 0+i  0 +i  ;
 

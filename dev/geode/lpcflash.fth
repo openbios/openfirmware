@@ -1,19 +1,21 @@
 \ See license at end of file.
-purpose: LPC/FWH FLASH writer.  This assumes a 1 MiB device.
+purpose: LPC/FWH FLASH writer.
 
 : geode-lpc-write-enable  ( -- )
    h# 1808 rdmsr  h# ff.ffff and  h# 2100.0000 or  h# 1808 wrmsr
+;
+: geode-lpc-write-disable  ( -- )
+   h# 1808 rdmsr  h# ff.ffff and  h# 2500.0000 or  h# 1808 wrmsr
 ;
 
 h# 1.0000 constant /lpc-block
 h# fff0.0000 constant lpc-flash-base
 
-: ?lpc  ( -- )
+: lpc-flash-write-enable  ( -- )
    h# ffbc.0000 c@  ( id0 )
    dup 0=  swap h# ff =  or  abort" LPC FLASH not present"
    geode-lpc-write-enable
 ;
-
 
 : >lpc-adr  ( offset -- )  lpc-flash-base +  ;
 : lpc-jedec!  ( byte -- )  h# 5555 >lpc-adr  c!  ;
@@ -45,33 +47,114 @@ h# fff0.0000 constant lpc-flash-base
    lpc-wait-toggle
 ;
 
-: lpc-write-block  ( adr len offset -- )
-   dup lpc-erase-block         ( adr len offset )
+: lpc-flash-read  ( adr len offset -- )
+   lpc-flash-base +  -rot  move
+;
+: lpc-flash-verify  ( adr len offset -- )
+   lpc-flash-base +  -rot  comp
+   abort" LPC FLASH verify failed"
+;
+
+: lpc-flash-write  ( adr len offset -- )
    -rot  bounds  ?do           ( offset )
       i c@ over lpc!   1+      ( offset' )
    loop                        ( offset )
    drop
 ;
+: lpc-write-block  ( adr len offset -- )
+   dup lpc-erase-block         ( adr len offset )
+   lpc-flash-write
+;
 
-: lpc-reflash   ( -- )   \ Flash from data already in memory
-   ?file
-
-[ifdef] crc2-offset
-   \ Insert another CRC, this time including the mfg data
-   flash-buf  /flash  crc                  ( crc )
-   flash-buf  /flash +  crc2-offset -  l!  ( )
+\ Create defer words for generic FLASH writing routines if necessary
+[ifndef] flash-write-enable
+defer flash-write-enable   ( -- )
+defer flash-write-disable  ( -- )
+defer flash-write          ( adr len offset -- )
+defer flash-read           ( adr len offset -- )
+defer flash-verify         ( adr len offset -- )
+defer flash-erase-block    ( offset -- )
+h# 10.0000 value /flash-block
+h# 10000 value /flash-block
 [then]
 
-   ?lpc
+\ Install the LPC FLASH versions as their implementations.
+
+: use-lpc-flash  ( -- )
+   ['] lpc-flash-write-enable  to flash-write-enable
+   ['] geode-lpc-write-disable to flash-write-disable
+   ['] lpc-flash-write         to flash-write
+   ['] lpc-flash-read          to flash-read
+   ['] lpc-flash-verify        to flash-verify
+   ['] lpc-erase-block         to flash-erase-block
+   h# 8.0000  to /flash        \ Should be determined dynamically
+   /lpc-block to /flash-block
+;
+use-lpc-flash
+
+[ifndef] reflash
+\ Simple UI for reflashing, assuming that you want to overwrite
+\ the entire FLASH contents.  That's not always a good assumption;
+\ some systems use certain FLASH blocks for persistent data like
+\ configuration variables or manufacturing data ("Vital Product Data").
+
+[ifdef] load-base
+: flash-buf  load-base  ;
+[else]
+/flash buffer: flash-buf
+[then]
+0 value file-loaded?
+
+: ?image-valid   ( len -- )
+   /flash <> abort" Image file is the wrong length"
+;
+
+: $get-file  ( "filename" -- )
+   $read-open
+   flash-buf  /flash  ifd @ fgets   ( len )
+   ifd @ fclose
+
+   ?image-valid
+
+   true to file-loaded?
+;
+
+: ?file  ( -- )
+   file-loaded?  0=  if
+      ." You must first load a valid FLASH image file with" cr
+      ."    get-file filename" cr
+      abort
+   then
+;
+
+: reflash   ( -- )   \ Flash from data already in memory
+   ?file
+
+   flash-write-enable
    ." Writing" cr
 
    /flash  0  ?do
       (cr i .
-      flash-buf i +  /lpc-block  i  lpc-write-block  ( )
-   /lpc-block +loop
+      flash-buf i +  /flash-block  i  flash-write  ( )
+   /flash-block +loop
+
+   flash-write-disable
 ;
 
-: lpc-flash  ( ["filename"] -- )  get-file lpc-reflash  ;
+\ Set this defer word to return a string naming the default
+\ filename for firmware updates
+defer fw-filename$  ' null$ to fw-filename$
+
+: get-file  ( ["filename"] -- )
+   parse-word   ( adr len )
+   dup 0=  if  2drop fw-filename$  then  ( adr len )
+   ." Reading " 2dup type cr                     ( adr len )
+   $get-file
+;
+
+: flash  ( ["filename"] -- )  get-file reflash  ;
+[then]
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

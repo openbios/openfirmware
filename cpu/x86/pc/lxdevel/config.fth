@@ -39,7 +39,8 @@ create resident-packages
 create no-floppy-node
 create use-pci-isa
 
-create use-null-nvram
+\ create use-null-nvram  \ Don't store configuration variables
+create use-flash-nvram  \ Store configuration variables in SPI FLASH
 
 fload ${BP}/cpu/x86/pc/lxdevel/addrs.fth
 

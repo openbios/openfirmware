@@ -20,9 +20,9 @@ defer grow-cv-area  ( needed -- )      ' drop to grow-cv-area
 \ Generic version that just looks for an obviously broken initial name
 : (config-checksum?)  ( -- flag )
    cv-area drop  d# 32  bounds  ?do    ( )
-      \ Good if we encounter an "=" or a null before an unprintable character
-      i c@  dup 0=  swap [char] = =  or  if  unloop  true exit  then
-      \ Bad if we encounter an unprintable character before the first = or \0
+      \ Good if we encounter '=' or \0 or ff before an unprintable character
+      i c@  dup 0=  over [char] = =  or  swap h# ff = or  if  unloop  true exit  then
+      \ Bad if we encounter an unprintable character before the first = or \0 or ff
       i c@  bl 1+  h# 7f within  0=  if  unloop false exit  then
    loop
    \ Bad if the first name is too long
@@ -35,6 +35,7 @@ defer grow-cv-area  ( needed -- )      ' drop to grow-cv-area
 
 : another-ge-var?  ( adr len -- false | adr' len' value$ name$ true )
    dup 0=  if  2drop false exit  then         ( adr len )
+   over c@ h# ff =  if  2drop false exit  then ( adr len )
    0  left-parse-string                       ( adr' len' var$ )
    dup 0=  if  4drop false  exit  then        ( adr' len' var$ )
    [char] = left-parse-string                 ( adr' len' value$ name$ )
@@ -76,14 +77,20 @@ defer grow-cv-area  ( needed -- )      ' drop to grow-cv-area
    \ Clear the new piece at the top (from name+(top-rem) to top) 
    2 pick - over +                  ( rem-adr name-adr name+top-rem )
    -rot -                           ( name+top-rem rem-name )
-   erase
+   h# ff fill
 ;
 : ?delete-ge-var  ( $name -- )
    find-ge-var  0=  if  delete-ge-var  then
 ;
 : find-available  ( -- adr len )
-   cv-area
-   begin  0 left-parse-string  while  drop  repeat  ( rem$ adr )
+   cv-area  begin              ( rem$ )
+      dup  if                  ( rem$ )
+         over c@ h# ff =  if   ( rem$ )
+            exit
+         then                  ( rem$ )
+      then                     ( rem$ )
+      0 left-parse-string      ( rem$ env$ )
+   while  drop  repeat         ( rem$ adr )
    -rot  + over -                                   ( adr len )
 ;
 : (cv-unused)  ( -- len )  find-available nip  ;
@@ -108,7 +115,8 @@ defer grow-cv-area  ( needed -- )      ' drop to grow-cv-area
       tuck r@ swap move		  ( $value name-len )
       r> +  [char] = over c!  1+  ( $value nv-value-adr )
       2dup 2>r  swap move  2r>	  ( value-len nv-value-adr )
-      over +  0 over c!		  ( value-len terminator-adr )
+      over +  1-                  ( value-len last-char-adr )
+\       over +  0 over c!		  ( value-len terminator-adr )
       update-modified-adr	  ( value-len )
    then				  ( value-len | -1 )
 ;
@@ -134,8 +142,10 @@ defer grow-cv-area  ( needed -- )      ' drop to grow-cv-area
 ' show-ge-var to show-extra-env-var	\ Install in user interface
 
 : clear-ge-vars  ( -- )
-   cv-area erase
-   cv-area bounds  update-modified-adr  update-modified-adr 
+   cv-area h# ff fill
+   \ The 1- is necessary because update-modified-adr refers to
+   \ a byte that is touched, not the one just after it.
+   cv-area bounds  update-modified-adr  1- update-modified-adr 
 ;
 ' clear-ge-vars  to erase-user-env-vars
 
@@ -195,7 +205,7 @@ headers
 : clear-nvram  ( -- )
    config-rw
    0 update-modified-range drop  config-size update-modified-range drop
-   config-mem config-size  erase
+   config-mem config-size  h# ff fill
    set-mfg-defaults
    config-ro
    init-modified-range

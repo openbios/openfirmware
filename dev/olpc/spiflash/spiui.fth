@@ -7,8 +7,10 @@
 \ access the FLASH device are defined elsewhere.
 
 h# 4000 constant /chunk   \ Convenient sized piece for progress reports
-h# 100000 constant /flash
-h# 10000 constant /flash-block \ Size of erase block
+
+[ifdef] use-flash-nvram
+h# d.0000 constant nvram-offset
+[then]
 
 h# e.0000 constant mfg-data-offset
 mfg-data-offset /flash-block +  constant mfg-data-end-offset
@@ -16,15 +18,15 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
 : write-flash-range  ( adr end-offset start-offset -- )
    ." Erasing" cr
    2dup  ?do
-      i .x (cr  i erase-spi-block
-   /spi-eblock +loop  ( adr end start )
-   cr                 ( adr end start )
+      i .x (cr  i flash-erase-block
+   /flash-block +loop  ( adr end start )
+   cr                  ( adr end start )
    
    ." Writing" cr
    ?do                ( adr )
-      i .x (cr                         ( adr )
-      dup  /chunk  i  write-spi-flash  ( adr )
-      /chunk +                         ( adr' )
+      i .x (cr                           ( adr )
+      dup  /chunk  i  flash-write        ( adr )
+      /chunk +                           ( adr' )
    /chunk +loop       ( adr )
    cr  drop           ( )
 ;
@@ -33,7 +35,7 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
    ." Verifying" cr
    ?do                ( adr )
       i .x (cr
-      dup  i +  /chunk  i  verify-spi-flash
+      dup  i +  /chunk  i  flash-verify
    /chunk +loop       ( adr )
    cr  drop           ( )
 ;
@@ -85,6 +87,10 @@ h# 30 constant crc-offset   \ From end
 
    flash-buf mfg-data-offset +  /flash-block  ['] ?erased  catch
    abort" Firmware image has data in the manufacturing data block"
+[ifdef] use-flash-nvram
+   flash-buf nvram-offset +  /flash-block  ['] ?erased  catch
+   abort" Firmware image has data in the NVRAM block"
+[then]
 ;
 
 : $get-file  ( "filename" -- )
@@ -109,7 +115,7 @@ h# 30 constant crc-offset   \ From end
    writing
    /flash  0  do
       i .x (cr
-      flash-buf  i +  /chunk i  read-spi-flash
+      flash-buf  i +  /chunk i  flash-read
    /chunk +loop
    flash-buf  /flash  ofd @ fputs
    ofd @ fclose
@@ -162,11 +168,11 @@ h# 30 constant crc-offset   \ From end
    2dup ifd @ fgets drop                ( adr len )
    ifd @ fclose
 
-   spi-start spi-identify
-   mfg-data-offset erase-spi-block      ( adr len )
+   flash-write-enable
+   mfg-data-offset flash-erase-block    ( adr len )
    mfg-data-end-offset over -           ( adr len offset )
-   write-spi-flash                      ( )
-   spi-reprogrammed                     ( )
+   flash-write                          ( )
+   flash-write-disable                  ( )
 ;
 
 [then]
@@ -177,16 +183,16 @@ h# 30 constant crc-offset   \ From end
    flash-base -1 =  if
       \ Read the manufacturing data from the other FLASH
       \ First try the new location in the e.0000 block
-      flash-buf mfg-data-offset +  /flash-block  mfg-data-offset  read-spi-flash
+      flash-buf mfg-data-offset +  /flash-block  mfg-data-offset  flash-read
 
-      \ If there is no mfg data in the e.000 block, get whatever is in the
+      \ If there is no mfg data in the e.0000 block, get whatever is in the
       \ last 2K of the 0 block, where the mfg data used to live.
       flash-buf mfg-data-end-offset + invalid-tag?  if
          flash-buf mfg-data-offset +  /flash-block  h# ff  erase
 
          flash-buf mfg-data-end-offset + h# 800 -  h# 800   ( adr len )
          mfg-data-end-offset h# 800 -                       ( adr len offset )
-         read-spi-flash                                     ( )
+         flash-read                                         ( )
       then
       exit
    then
@@ -202,9 +208,9 @@ h# 30 constant crc-offset   \ From end
       2dup 2>r  move  2r>                     ( ram-adr len )                              
 
       \ Write from the memory buffer to the FLASH
-      mfg-data-offset erase-spi-block         ( ram-adr len )
+      mfg-data-offset flash-erase-block       ( ram-adr len )
       mfg-data-end-offset over -              ( ram-adr len offset )
-      write-spi-flash                         ( )
+      flash-write                             ( )
    else
       \ Copy the entire block containing the manufacturing data into the
       \ memory buffer.  This make verification easier.
@@ -216,7 +222,11 @@ h# 30 constant crc-offset   \ From end
 ;
 
 : write-firmware  ( -- )
+[ifdef] use-flash-nvram
+   flash-buf  nvram-offset     0  write-flash-range      \ Write first part
+[else]
    flash-buf  mfg-data-offset  0  write-flash-range      \ Write first part
+[then]
 
    \ Don't write the block containing the manufacturing data
 
@@ -232,9 +242,7 @@ h# 30 constant crc-offset   \ From end
 
 : reflash   ( -- )   \ Flash from data already in memory
    ?file
-   spi-start
-
-   spi-identify .spi-id cr
+   flash-write-enable
 
    ?move-mfg-data
 
@@ -247,7 +255,7 @@ h# 30 constant crc-offset   \ From end
          write-firmware
          verify
       then
-      spi-reprogrammed
+      flash-write-disable
    else
       .verify-msg
    then   
@@ -301,20 +309,20 @@ device-end
 0 [if]
 \ Erase the first block containing the EC microcode.  This is dangerous...
 
-: erase-spi-ec  ( -- )  0 erase-spi-block  ;
+: erase-ec  ( -- )  0 flash-erase-block  ;
 \ Erase everything after the first sector, thus preserving
 \ the EC microcode in the first sector.
 
-: erase-spi-firmware  ( -- )
-   h# 100000 /spi-eblock  do   (cr i .x  i erase-spi-block  /spi-eblock +loop  cr
+: erase-firmware  ( -- )
+   h# 100000 /flash-block  do   (cr i .x  i flash-erase-block  /flash-block +loop  cr
 ;
 
 : reprogram-firmware  ( adr len -- )
    check-firmware-image       ( adr len )
-   /spi-eblock  /string       ( adr+ len- )   \ Remove EC ucode from the beginning
+   /flash-block  /string      ( adr+ len- )   \ Remove EC ucode from the beginning
    ." Erasing ..." cr erase-spi-firmware  ( adr len )
-   ." Programming..."  2dup /spi-eblock  write-spi-flash  cr    ( adr len )
-   ." Verifying..."  /spi-eblock verify-spi-flash  cr  ( )
+   ." Programming..."  2dup /flash-block  flash-write  cr    ( adr len )
+   ." Verifying..."  /flash-block flash-verify  cr  ( )
 ;
 
 : flash-bios  ( -- )

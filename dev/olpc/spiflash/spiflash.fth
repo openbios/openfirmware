@@ -310,7 +310,32 @@ defer write-spi-flash  ( adr len offset -- )
    then
 ;
 
+: spi-flash-write-enable  ( -- )  spi-start spi-identify  .spi-id cr  ;
 
+\ Create defer words for generic FLASH writing routines if necessary
+[ifndef] flash-write-enable
+defer flash-write-enable   ( -- )
+defer flash-write-disable  ( -- )
+defer flash-write          ( adr len offset -- )
+defer flash-read           ( adr len offset -- )
+defer flash-verify         ( adr len offset -- )
+defer flash-erase-block    ( offset -- )
+h# 10.0000 value /flash-block
+h# 10000 value /flash-block
+[then]
+
+\ Install the SPI FLASH versions as their implementations.
+: use-spi-flash  ( -- )
+   ['] spi-flash-write-enable  to flash-write-enable
+   ['] spi-reprogrammed        to flash-write-disable
+   ['] write-spi-flash         to flash-write
+   ['] read-spi-flash          to flash-read
+   ['] verify-spi-flash        to flash-verify
+   ['] erase-spi-block         to flash-erase-block
+   h# 10.0000  to /flash
+   /spi-eblock to /flash-block
+;
+use-spi-flash
 
 0 [if]
 \ Command support by device

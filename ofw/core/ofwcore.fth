@@ -4516,7 +4516,7 @@ headerless
 partial-headers
 : open-drop-in  ( -- 0 )
    di-count dup  1+  to di-count  0=  if
-      " rom" open-dev  to rom-dev
+      " dropins" open-dev  to rom-dev
    else
       0 seek-rom
    then

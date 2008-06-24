@@ -188,6 +188,8 @@ device-end
 fload ${BP}/cpu/x86/pc/mmusetup.fth	\ Initial values for MMU lists
 [then]
 
+: background-rgb  ( -- r g b )  h# ff h# ff h# ff  ;
+
 fload ${BP}/cpu/x86/pc/lxdevel/devices.fth
 
 [ifdef] rom-loaded
