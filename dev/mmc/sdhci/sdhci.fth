@@ -460,10 +460,11 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 ;
 
 : set-timeout  ( -- )
-   \ The h# c below is supposed to be h# b, but there is a CaFe bug
-   \ in which the timeout code is off by one, which makes the timeout
-   \ be half the requested length.
-   h# c data-timeout!   \ 2^24 / 48 MHz = 0.35 sec
+   \ There is a CaFe bug in which the timeout code is off by one,
+   \ which makes the timeout be half the requested length.
+   \ But experience dictates that the timeout should be maxed out,
+   \ so we use h# e, the max value that the hardware supports.
+   h# e data-timeout!   \ 2^26 / 48 MHz = 1.4 sec
 ;
 
 : configure-transfer  ( -- )
