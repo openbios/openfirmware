@@ -41,18 +41,18 @@ false value selftest-err?               \ Selftest result
 0 value ibuf                            \ Block data read
 : alloc-test-bufs  ( -- )
    sbuf 0=  if
-      /oobbuf    alloc-mem to oobbuf
-      erase-size alloc-mem to sbuf
-      erase-size alloc-mem to obuf
-      erase-size alloc-mem to ibuf
+      /oobbuf    " dma-alloc" $call-parent to oobbuf
+      erase-size " dma-alloc" $call-parent to sbuf
+      erase-size " dma-alloc" $call-parent to obuf
+      erase-size " dma-alloc" $call-parent to ibuf
    then
 ;
 : free-test-bufs  ( -- )
    sbuf  if
-      oobbuf /oobbuf  free-mem  0 to oobbuf
-      sbuf erase-size free-mem  0 to sbuf
-      obuf erase-size free-mem  0 to obuf
-      ibuf erase-size free-mem  0 to ibuf
+      oobbuf /oobbuf  " dma-free" $call-parent  0 to oobbuf
+      sbuf erase-size " dma-free" $call-parent  0 to sbuf
+      obuf erase-size " dma-free" $call-parent  0 to obuf
+      ibuf erase-size " dma-free" $call-parent  0 to ibuf
    then
 ;
 : read-eblock  ( adr page# -- error? )

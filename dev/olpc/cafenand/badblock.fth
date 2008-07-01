@@ -145,10 +145,10 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
 ;
 
 \ Allocate and free memory for a bad block table
-: alloc-bbt  ( -- )  bbt 0=  if  /bbt alloc-mem to bbt  then  ;
+: alloc-bbt  ( -- )  bbt 0=  if  /bbt " dma-alloc" $call-parent to bbt  then  ;
 : release-bbt  ( -- )
    bbt  if
-      bbt /bbt free-mem  0 to bbt
+      bbt /bbt " dma-free" $call-parent  0 to bbt
    then
 ;
 
