@@ -137,7 +137,7 @@ false value selftest-err?               \ Selftest result
 
 \ Destroy content of flash.  Argument is hex byte pattern value.
 : .skip-bad  ( page# -- )  (cr ." Skip bad block" .page-byte cr  ;
-: fill  ( subarg$ -- )
+: pfill  ( subarg$ -- )
    $number  if  0  else  0 max h# ff min  then
    ." Fill nandflash with h# " dup u. cr
 
@@ -222,7 +222,7 @@ false value selftest-err?               \ Selftest result
          i save-eblock  0=  if               ( stride )
             i h# 55 test-eblock  record-err  ( stride )
             i h# aa test-eblock  record-err  ( stride )
-            restore-eblock                   ( stride )
+            i restore-eblock                 ( stride )
          then                                ( stride )
       then                                   ( stride )
    dup +loop  drop                           ( )
@@ -235,6 +235,7 @@ false value selftest-err?               \ Selftest result
    true to fixbbt?
    full
    #fixbbt  if  save-bbt  then
+   false to selftest-err?  \ Don't say "failed" if asked to fix the table
 ;
 
 : none  ( subarg$ -- )  2drop exit  ;
@@ -250,7 +251,7 @@ false value selftest-err?               \ Selftest result
    ."   none           to do nothing" cr
    ."   help           to get this usage guide" cr
    ."   erase!         to erase the flash (destructive)" cr
-   ."   fill[,<data>]  to fill the flash with hex byte pattern <data> (destructive)" cr
+   ."   pfill[,<data>] to fill the flash with hex byte pattern <data> (destructive)" cr
    ."                  Default <data> is 00" cr
    ."   fast[,<#blk>]  to non-destructively test the specified <#blk> of flash" cr
    ."                  Default <#blk> is decimal 10" cr
