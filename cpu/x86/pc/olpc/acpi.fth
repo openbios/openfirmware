@@ -108,8 +108,8 @@ here rsdp - constant /rsdp
 
 create rsdt
 ( 00 4 )  " RSDT"     $,  \ Signature
-( 04 4 )  h#   34     l,  \ Length
-\ ( 04 4 )  h#   30     l,  \ Length
+\ ( 04 4 )  h#   34     l,  \ Length
+( 04 4 )  h#   30     l,  \ Length
 ( 08 1 )        1     c,  \ Revision
 ( 09 1 )       00     c,  \ Checksum
 ( 0a 6 )  " OLPC  "   $,  \ Oem Id
@@ -120,7 +120,7 @@ create rsdt
 ( 24 4 )  fadt-adr    l,  \ FADT Address
 ( 28 4 )  dsdt-adr    l,  \ DSDT Address
 ( 2c 4 )  dbgp-adr    l,  \ DBGP Address
-( 30 4 )  ssdt-adr    l,  \ SSDT Address
+\ ( 30 4 )  ssdt-adr    l,  \ SSDT Address
 \ ( 30 4 )  prtn-adr    l,  \ PRTN Address
 here rsdt - constant /rsdt
 
@@ -189,11 +189,13 @@ here facs - constant /facs
    " dsdt" find-drop-in  0= abort" No DSDT "  ( adr len )
    2dup dsdt-adr swap  move  free-mem
 
+[ifdef] notdef
    \ Copy in the SSDT
    \ I suppose we could point to it in FLASH - if so don't compress it,
    \ and fixup the address in the fadt and rechecksum the fadt
    " ssdt" find-drop-in  0= abort" No SSDT "  ( adr len )
    2dup ssdt-adr swap  move  free-mem
+[then]
 
    1 8 acpi-w!  \ Set SCI_EN bit
    h# ffffffff  h# 18 acpi-l!  \ Ack all leftover events

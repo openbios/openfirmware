@@ -435,6 +435,7 @@ also extensions definitions
 : hex  ( adr len -- )  intermediate-file  ;
 : sr   ( adr len -- )  intermediate-file  ;
 : out  ( adr len -- )  intermediate-file  ;
+: aml  ( adr len -- )  intermediate-file  ;
 
 previous definitions
 

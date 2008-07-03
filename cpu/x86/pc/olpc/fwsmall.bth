@@ -139,7 +139,7 @@ fload ${BP}/cpu/x86/pc/boot.fth
       h# 3aa   \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR1
    then
 ;
-fload ${BP}/cpu/x86/pc/olpc/usb.fth
+fload ${BP}/dev/geode/usb.fth
 [then]
 
 \ false to stand-init-debug?

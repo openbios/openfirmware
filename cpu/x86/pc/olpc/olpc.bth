@@ -25,6 +25,7 @@ in: ${BP}/clients/memtest86/memtest
 in: ${BP}/cpu/x86/pc/olpc/build/verify.img
 in: ${BP}/cpu/x86/pc/olpc/build/usb8388.bin
 in: ${BP}/dev/pci/build/pcibridg.fc
+in: ${BP}/cpu/x86/pc/olpc/build/dsdt.aml
 
 build-now
 
@@ -80,7 +81,7 @@ $new-file
    " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
 [then]
    " ${BP}/cpu/x86/pc/olpc/build/dsdt.aml"      " dsdt"            $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/build/ssdt.aml"      " ssdt"            $add-deflated-dropin
+\  " ${BP}/cpu/x86/pc/olpc/build/ssdt.aml"      " ssdt"            $add-deflated-dropin
 
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
    " rmstart.img"    $add-file
