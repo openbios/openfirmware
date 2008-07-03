@@ -179,7 +179,6 @@ defer load-ramdisk
 
 0 value linux-loaded?
 
-[ifdef] virtual-mode
 : ?linux-elf-map-in  ( va size -- )
    \ The Linux startup code really wants the physical address to be
    \ virtual_address AND 0x0fff.ffff.  We recognize Linux by the virtual
@@ -196,7 +195,6 @@ defer load-ramdisk
    (elf-map-in)
 ;
 ' ?linux-elf-map-in is elf-map-in
-[then]
 
 : init-bzimage?   ( -- flag )
    loaded                               ( adr len )

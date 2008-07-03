@@ -12,10 +12,8 @@ purpose: Interface to memtest86
       unfreeze
    then
 
-[ifdef] ?linux-elf-map-in
    \ If it's not memtest, chain to the linux recognizer
    ?linux-elf-map-in
-[then]
 ;
 ' ?memtest-elf-map-in is elf-map-in
 

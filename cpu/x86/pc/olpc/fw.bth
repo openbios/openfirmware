@@ -184,10 +184,10 @@ fload ${BP}/ofw/elf/elfdebug.fth
 [ifdef] virtual-mode
 \ Depends on the assumption that physical memory is mapped 1:1 already
 : (elf-map-in) ( va size -- )  0 mem-claim  drop  ;
-' (elf-map-in) is elf-map-in
 [else]
-' 2drop is elf-map-in
+: (elf-map-in)  ( va size -- )  2drop  ;
 [then]
+' (elf-map-in) is elf-map-in
 [then]
 
 \ Reboot and re-entry code

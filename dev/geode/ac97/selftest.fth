@@ -65,10 +65,10 @@ d# 500 value tone-freq
 ;
 
 : tone  ( freq -- )
-   record-len la1+  alloc-mem to record-base
+   record-len la1+  " dma-alloc" $call-parent  to record-base
    make-tone
    d# -9 set-volume  play
-   record-base record-len la1+  free-mem
+   record-base record-len la1+  " dma-free" $call-parent
 ;
 
 : copy-cycle  ( adr #copies -- adr' )
@@ -127,10 +127,10 @@ d# 500 value tone-freq
 : selftest  ( -- error? )
    open 0=  if  ." Failed to open /audio" cr true exit  then
    wav-test
-   record-len la1+  alloc-mem to record-base
+   record-len la1+  " dma-alloc" $call-parent to record-base
    sweep-test
    mic-test
-   record-base record-len la1+  free-mem
+   record-base record-len la1+  " dma-free" $call-parent
    close false
 ;
 

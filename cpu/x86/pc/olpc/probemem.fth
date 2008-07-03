@@ -85,7 +85,9 @@ dev /memory
    begin  ?dup  while
       2 decode-ints swap		 ( rem$ chunk$ )
       2dup .chunk			 ( rem$ chunk$ )
+[ifdef] virtual-mode
       2dup over swap 3 mmu-map		 ( rem$ chunk$ )
+[then]
       memory-test-suite  if  2drop true exit  then	 ( rem$ )
    repeat  drop
    false
