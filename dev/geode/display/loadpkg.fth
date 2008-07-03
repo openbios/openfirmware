@@ -6,6 +6,7 @@ purpose: Main load file for Geode GX frame buffer driver
 fload ${BP}/dev/geode/display/gxpci.fth          \ PCI interfaces
 fload ${BP}/dev/geode/display/gxfb.fth           \ Controller code
 fload ${BP}/dev/geode/display/gp.fth             \ Graphics processor support
+fload ${BP}/dev/geode/display/gxvga.fth          \ Text mode support
 fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
 fload ${BP}/cpu/x86/pc/olpc/expand16.fth         \ Expand image by 2x
 

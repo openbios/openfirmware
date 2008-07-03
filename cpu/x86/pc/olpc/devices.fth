@@ -308,8 +308,6 @@ fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
 ' ofw-fw-filename$ to fw-filename$
 
-fload ${BP}/dev/geode/lpcflash.fth           \ Reflasher for PLCC FLASH on A-test
-
 : +i encode-int encode+  ;  : 0+i  0 +i  ;
 
 [ifdef] rom-loaded

@@ -5,13 +5,17 @@ purpose: Interface to memtest86
    \ It expects that virtual = physical; we depend on the fact
    \ that we have low memory mapped V=P
    over  h# 10000 =  if  ( vaddr size )
+[ifdef] virtual-mode
       \ Map the frame buffer (virtual=physical)
       h# 910 config-l@ dup 100.0000 -1 mmu-map
+[then]
       unfreeze
    then
 
+[ifdef] ?linux-elf-map-in
    \ If it's not memtest, chain to the linux recognizer
    ?linux-elf-map-in
+[then]
 ;
 ' ?memtest-elf-map-in is elf-map-in
 

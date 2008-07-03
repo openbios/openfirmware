@@ -331,7 +331,7 @@ here resume-entry put-branch
 \   Running from a 32-bit identity-mapped code segment
 \   Using physical addresses
 
- char < 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+\ char < 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
 
    resume-data #  bp  mov
 
@@ -730,7 +730,7 @@ here resume-entry put-branch
 
    \ Identity mapping of low memory might not exist now
 
-  char > 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+\  char > 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
 
    gs pop
 
