@@ -16,7 +16,6 @@ fload ${BP}/cpu/x86/pc/report.fth			\ Startup reports
 fload ${BP}/cpu/x86/pc/biosload/config.fth
 
 start-assembling
-protected-mode
 
 label my-entry
 

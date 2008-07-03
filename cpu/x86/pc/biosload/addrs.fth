@@ -30,6 +30,19 @@ h#   08.0000 constant dropin-size
 \needs dropin-size  h#   8.0000 constant dropin-size
 \needs ResetBase    dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
 
+[ifdef] syslinux-loaded
+\ This fits nicely with my VIA board that has "only" 256 MiB of memory
+\needs fw-pa      h# 1d80.0000 constant fw-pa     \ OFW dictionary location
+\needs /fw-ram    h#   20.0000 constant /fw-ram
+
+\needs heap-base  h# 1da0.0000 constant heap-base \ Dynamic allocation heap
+\needs heap-size  h#   20.0000 constant heap-size
+
+\needs dma-base   h# 1dc0.0000 constant dma-base  \ DMA heap
+\needs dma-size   h#   20.0000 constant dma-size
+[then]
+
+[ifndef] fw-pa
 \ This is considerably more memory than Open Firmware needs
 \ on platforms where you have a well bounded set of I/O devices.
 
@@ -41,6 +54,7 @@ h#   08.0000 constant dropin-size
 
 \needs dma-base   h# 1e0.0000 constant dma-base  \ DMA heap
 \needs dma-size   h#  20.0000 constant dma-size
+[then]
 
 \ Where OFW initially loads an OS that is is going to boot
 

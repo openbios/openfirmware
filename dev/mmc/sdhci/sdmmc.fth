@@ -62,9 +62,8 @@ external
 
 : block-size  ( -- n )  h# 200  ;
 
-: #blocks  ( -- true | n false )   \ XXX Decode CSD
-   \ " csd" $call-parent  csd>#blocks  false
-   true   
+: #blocks  ( -- n )
+   " size" $call-parent  block-size um/mod  nip
 ;
 : seek  ( offset.low offset.high -- okay? )
    offset-low offset-high d+  " seek"   deblocker $call-method

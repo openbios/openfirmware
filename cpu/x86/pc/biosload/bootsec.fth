@@ -60,12 +60,12 @@ create debug-start
 [then]
 
 start-assembling
-real-mode
 
 \ ***************************************************************************
 \ sector 0
 
 label my-entry0
+   16-bit
    e9 c,  0 le-w,  \ Branch instruction; patch later
 end-code
 
@@ -197,7 +197,7 @@ end-code
 \ ---------------------------------------------------------------------------
 \ subroutines
 label compute-start  ( -- )
-
+   16-bit
    bp-res asm-base - #) ax mov		\ Compute sector# of FAT
    dx dx xor
    bp-nhidlo asm-base - #) ax add
@@ -231,6 +231,7 @@ label compute-start  ( -- )
 end-code
 
 label hd-tk-sec ( dx:ax: sector# -- )
+   16-bit
    bp-spt asm-base - #) dx cmp
    u>=  if  stc ret  then
    bp-spt asm-base - #)  div
@@ -245,6 +246,7 @@ label hd-tk-sec ( dx:ax: sector# -- )
 end-code
 
 label read-sector  ( es:bx: address -- )
+   16-bit
    201 # ax mov			\ read 1 sector
    track asm-base - #) cx mov
    6 # ch shl
@@ -257,6 +259,7 @@ label read-sector  ( es:bx: address -- )
 end-code
 
 label display-str  ( si: msg -- )
+   16-bit
    begin
       al lodsb
       al al or
@@ -270,6 +273,7 @@ label display-str  ( si: msg -- )
 end-code
 
 label error-exit  ( -- )
+   16-bit
    boot-seg # bx mov
    bx ds mov
    err-msg asm-base - #  si  mov
@@ -284,17 +288,20 @@ label error-exit  ( -- )
 end-code
 
 label use-floppy  ( -- ds: boot-seg )
+   16-bit
    boot-seg # push
    ds pop
 end-code
 
 label floppy-entry  ( -- )
+   16-bit
    e9 c, 0 le-w,		\ Branch to load from floppy; patch later
 end-code
 
 \ ---------------------------------------------------------------------------
 \ entry point
 label start0  ( dl: drive# -- )
+   16-bit
    cli
 
 [ifdef] debug-dos
@@ -388,6 +395,7 @@ ascii e reportc
 end-code
 
 label my-entry1
+   16-bit
    e9 c, 0 le-w,	\ Branch to next sector; patch later
 end-code
 
@@ -405,6 +413,7 @@ also forth u<  if  ." 1fe Padding Overflow" cr  then  previous
 \ ---------------------------------------------------------------------------
 \ subroutines
 label read-fat  ( ax: fat-sector-offset -- )
+   16-bit
    pusha
    ax s-cfat asm-base - #) mov		\ Save sector offset
    dx dx xor
@@ -433,6 +442,7 @@ label read-fat  ( ax: fat-sector-offset -- )
 end-code
 
 label ?read-fat  ( ax: fat-sector-offset dx: byte-offset -- bx: byte-offset )
+   16-bit
    dx push
    s-cfat asm-base - #) dx mov
    dx ax cmp
@@ -456,6 +466,7 @@ end-code
 
 
 label cluster12>next  ( es: fat-seg ax: cluster# -- flags ax: next-cluster#  )
+   16-bit
    bx push  cx push  dx push
 
    ax push
@@ -493,6 +504,7 @@ label cluster12>next  ( es: fat-seg ax: cluster# -- flags ax: next-cluster#  )
 end-code
 
 label cluster16>next  ( es: fat-seg ax: cluster# -- flags ax: next-cluster# )
+   16-bit
    bx push  cx push  dx push
 
    dx dx xor				\ Compute fat sector, offset
@@ -509,6 +521,7 @@ label cluster16>next  ( es: fat-seg ax: cluster# -- flags ax: next-cluster# )
 end-code
 
 label cluster>next  ( ax: cluster# -- flags ax: next-cluster# )
+   16-bit
    es push
    bx push
    fat-seg # bx mov
@@ -532,6 +545,7 @@ label cluster>next  ( ax: cluster# -- flags ax: next-cluster# )
 end-code
 
 label cluster>sec  ( ax: cluster# -- dx:ax: sector# )
+   16-bit
    ax dec ax dec
    bx push
    bx bx xor
@@ -546,6 +560,7 @@ label cluster>sec  ( ax: cluster# -- dx:ax: sector# )
 end-code
 
 label find-ofw ( es: -- bx: directory address )
+   16-bit
    20 # ax mov				\ Compute # of sectors in root directory
    bp-ndirs asm-base - #) mul
    bp-bps asm-base - #) bx mov
@@ -594,6 +609,7 @@ end-code
 \ ---------------------------------------------------------------------------
 \ entry point (continue from start0)  C: only code
 label start1
+   16-bit
 
 \ ascii t reportc
 
@@ -639,6 +655,7 @@ label start1
 end-code
 
 label floppy-start  ( ds: boot-seg for floppy or hd-seg for c: )
+   16-bit
 
 \ ascii v reportc
 

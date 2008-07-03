@@ -37,7 +37,11 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
    h#      ffff h# cc gpio!  \ Clear negative edge status bits
 
 \  sum-forth
+[ifdef] virtual-mode
    [ also dev /mmu ]  pdir-va  h# f0000 ax-call  [ previous definitions ]
+[else]
+   sp@ 4 -  h# f0000 ax-call  \ sp@ 4 - is a dummy pdir-va location
+[then]
 \  sum-forth
 ;
 : suspend

@@ -73,6 +73,24 @@ decimal
    8 +loop
    r> base !
 ;
+: dump-gdt  ( -- )  gdtr@ nip 1+ 0 dump-dt  ;
+: format-descriptor  ( base limit 16|32 type -- low high )
+   >r >r  dup h# 100000 u>=  if         ( base limit r: type 16|32 )
+      \ 4K granularity - scale limit and set G bit
+      d# 12 rshift  h# 80.0000 or       ( base limit' r: type 16|32 )
+   then                                 ( base limit r: type 16|32 )
+   r> d# 32 =  if  h# 40.0000 or  then  ( base limit r: type )
+   lwsplit  >r >r                       ( base r: type limit.hi limit.lo )
+   lwsplit                              ( base.lo base.hi r: type limit.hi limit.lo )
+   r> rot wljoin swap                   ( descr.lo base.hi  r: type limit.hi )
+   wbsplit                              ( descr.lo base.hl base.hh  r: type limit.hi )
+   2r> rot bljoin                       ( descr.lo descr.hi )
+;
+d# 16 h# 9a 2constant code16
+d# 16 h# 92 2constant data16
+d# 32 h# 9a 2constant code32
+d# 32 h# 92 2constant data32
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

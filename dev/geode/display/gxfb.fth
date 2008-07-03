@@ -58,16 +58,15 @@ d#  768 value #scanlines	\ Screen height
 : unlock  ( -- ) 4758 0 dc!  ;
 : lock    ( -- )  0 0 dc!  ;
 
-: video-off ( -- )
-   unlock  0000.0000 8 vp!  lock	\ disable syncs, etc
-;
-: video-on  ( -- )
-   unlock
+: video-off ( -- )  0000.0000 8 vp!  ;	\ disable syncs, etc
+
+defer video-on
+: gxvideo-on  ( -- )
    0 h# 50 vp!          \ Power on for DACs, enable gamma correction 
    \ Supposed to be 1.030f but the scope says otherwise
    h# 0001.000f 8 vp!  \ SYNC_SKEW_DFL, -HSYNC, -VSYNC, enable DAC_BL,HS,VS,CRT
-   lock
 ;
+' gxvideo-on to video-on
 
 \ 1024x768-75 VESA
 \  refr xres yres pixclk Lmar Rmar Tmar Bmar Hslen Vslen  SyncPol
@@ -271,6 +270,8 @@ true value hsync-low?
    0 h# 18 dc!     \ Clear cursor buffer offset
    0 h# 1c dc!     \ Clear icon buffer offset
 
+   0 h# 94 dc!     \ Turn off scaling
+
    set-timing
 
    \ Turn on timing generator
@@ -286,17 +287,13 @@ true value hsync-low?
 ;
 
 : display-on  ( -- )
-   unlock
    8 dc@  1 or  8 dc!      \ Enable timing generator
    4 dc@  1 or  4 dc!      \ Enable FIFO
-   lock
 ;
 
 : display-off  ( -- )
-    unlock
     4 dc@  1 invert and  4 dc!  \ DC_GENERAL_CFG - disable FIFO load
     8 dc@  1 invert and  8 dc!  \ DC_DISPLAY_CFG - disable timing generator
-    lock
 ;
 
 h# 300 /n* buffer: video-state
@@ -346,13 +343,12 @@ h# 300 /n* buffer: video-state
    drop
    \ video-state - /l / . cr
 
-   unlock
    0 4 dc!  \ Turn off video memory access
    d# 25 ms \ Wait for a frame time to make sure the display is quiet
 ;
 
 : video-restore
-   h# 4758 0 dc!  \ Unlock
+   unlock
 
    video-state
    l@+ h# 10 dc!
@@ -478,8 +474,8 @@ d# 12,000  constant scanline-spins
 
 : init-controller  ( -- )
 \   " dcon-present?" evaluate to dcon?
-   video-off
    unlock
+   video-off
    
    probe-dcon
 
@@ -497,8 +493,6 @@ d# 12,000  constant scanline-spins
       d# 1024 bytes/pixel * to /scanline
       d#  768 to #scanlines
    then
-
-   lock
 ;
 
 : init-hook  ( -- )
@@ -512,13 +506,25 @@ external
    0 swap 3 /
 ;
 
+\ These are deferred so they can be overridden when switching to VGA mode
+defer plt!     ( color -- )  \ Set color palette entry
+defer plt@     ( -- color )  \ Get color palette entry
+defer windex!  ( index -- )  \ Set color palette write index
+defer rindex!  ( index -- )  \ Set color palette read index
+
+: (plt!)  ( color -- )  h# 74 dc!  ;
+: (plt@)  ( -- color )  h# 74 dc@  ;
+' (plt!) to plt!
+' (plt@) to plt@
+
 : pindex!  ( index -- )  h# 70 dc!  ;
-: plt!  ( color -- )  h# 74 dc!  ;
-: plt@  ( color -- )  h# 74 dc@  ;
+' pindex! to windex!
+' pindex! to rindex!
+
 : rgb>color  ( r g b -- l )  swap rot 0 bljoin  ;
 : color>rgb  ( l -- r g b )  lbsplit drop swap rot  ;
-: color@  ( index -- r g b )  pindex! plt@  color>rgb  ;
-: color!  ( r g b index -- )  >r  rgb>color  r> pindex! plt!  ;
+: color@  ( index -- r g b )  rindex! plt@  color>rgb  ;
+: color!  ( r g b index -- )  >r  rgb>color  r> windex! plt!  ;
 
 : set-colors  ( adr index #indices -- )
    swap pindex!

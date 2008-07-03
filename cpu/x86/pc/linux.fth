@@ -126,6 +126,16 @@ d# 20 constant /root-dev-buf
    cmdline-offset +lp  h# 228 +lp  l!  \ New command line address
 ;
 
+\ If we are running in physical address mode, make a page directory
+\ that will map up when the kernel turns on paging.
+: make-ofw-pdir  ( -- )
+   cr3@  if  exit  then
+   h# 1000  h# 1000  mem-claim cr3!
+   cr3@  h# 1000 erase
+   fw-virt-base h# 83 or  cr3@ fw-virt-base d# 22 rshift la+ l!
+   cr4@  h# 10 or  cr4!
+;
+
 : linux-fixup  ( -- )
 [ifdef] linux-logo  linux-logo  [then]
    args-buf cscount set-parameters          ( )
@@ -133,6 +143,7 @@ d# 20 constant /root-dev-buf
 
    linux-base  linux-params  (init-program)
    linux-params to %esi
+   make-ofw-pdir
 ;
 
 d# 256 buffer: ramdisk-buf

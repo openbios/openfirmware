@@ -44,7 +44,7 @@ bios-target la1+  constant bios-retloc  \ Full pointer to 'bios-ret
 bios-retloc la1+  constant bios-rflags  \ Flags in case of return via IRET
 
 label bios-call
-   real-mode
+   16-bit
    \ This must be copied to low memory
 
    rm-data-desc #  ax  mov  \ 16-bit data segment
@@ -71,6 +71,8 @@ end-code
 here bios-call - constant /bios-call
 
 label bios-ret
+   16-bit
+
    bios-target #  sp  mov   \ Set the stack pointer to the top of the rm reg area
 
    \ Copy the real-mode registers to the buffer
@@ -84,7 +86,7 @@ label bios-ret
 
    here 5 +  bios-ret -  'bios-ret +  pm-code-desc #)  far jmp
 
-   protected-mode
+   32-bit
 
    pm-data-desc # ax mov  ax ds mov  ax es mov  ax gs mov  ax gs mov  ax ss mov
    pm-idt-save #) lidt
@@ -106,11 +108,6 @@ code }bios  ( -- )
    sp sp xor
    'bios-call  rm-code-desc #) far jmp
 c;
-
-: >seg:off  ( linear -- offset segment )  lwsplit  d# 12 lshift  ;
-: seg:off!  ( linear adr -- )  >r  >seg:off  r@ 2+ w!  r> w!  ;
-: seg:off>  ( offset segment -- linear )  4 lshift +  ;
-: seg:off@  ( adr -- linear )  dup w@ swap wa1+ w@  seg:off>  ;
 
 0 value bios-prepped?
 : ?prep-bios-call  ( -- )

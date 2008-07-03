@@ -64,6 +64,14 @@ purpose: Manufacturing data reader
    r> 2drop false
 ;
 
+\ Remove bogus null characters from the end of mfg data tags (old machines
+\ have malformed tags)
+: ?-null  ( adr len -- adr' len' )
+   dup  if
+      2dup + 1- c@  0=  if  1-  then        ( adr len' )
+   then
+;
+
 : ?erased  ( adr len -- )
    bounds  ?do  i c@  h# ff <> abort" Not erased"  loop
 ;

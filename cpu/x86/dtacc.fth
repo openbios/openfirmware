@@ -29,9 +29,19 @@ d# 255 8 * constant /idt	\ Full size
       init-exceptions
    then
 ;
+\ Move the global descriptor table into the Forth region, thus freeing
+\ the low memory it currently occupies
+: move-gdt   ( -- )
+   gdtr@ 1+                       ( pa size )
+   h# 800 alloc-mem 8 round-up    ( pa size va )  \ Give it plenty of space
+   dup h# 800 erase               ( pa size va )
+   3dup swap move                 ( pa size va )
+   swap 1- gdtr!                  ( pa )
+   drop
+;
 
 stand-init: Exceptions
-   make-idt  stand-set-idt
+   make-idt  stand-set-idt  move-gdt
 ;
 
 \ LICENSE_BEGIN

@@ -22,7 +22,7 @@ create rom-loaded
 \ create syslinux-loaded
 
 
-create virtual-mode
+\ create virtual-mode
 create addresses-assigned  \ Define if base addresses are already assigned
 \ create serial-console      \ Define to default to serial port for console
 create pc
@@ -42,6 +42,7 @@ create no-lpt-node
 create use-pci-isa
 create basic-isa
 create isa-dma-only
+create use-ega
 
 create use-null-nvram  \ Don't store configuration variables
 \ create use-flash-nvram  \ Store configuration variables in SPI FLASH

@@ -23,7 +23,7 @@ h#    8.0000   constant dropin-size
 
 dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
 
-h#  1c0.0000 constant fw-pa
+h#  ec0.0000 constant fw-pa
 h#   20.0000 constant /fw-ram
 [then]
 
@@ -71,7 +71,12 @@ h#  20.0000 constant /fw-ram
 h#  80.0000 constant def-load-base      \ Convenient for initrd
 
 \ The heap starts at RAMtop, which on this system is "fw-pa /fw-ram +"
-h#  20.0000 constant heap-size
+
+\ We leave some memory in the /memory available list above the heap
+\ for DMA allocation by the sound and USB driver.  OFW's normal memory
+\ usage thus fits in one 4M page-directory mapping region.
+
+h#  18.0000 constant heap-size
 
 h# 300.0000 constant jffs2-dirent-base
 h# 500.0000 constant jffs2-inode-base
@@ -82,7 +87,26 @@ h# f.0000 constant suspend-base      \ In the DOS hole
 h# f.0008 constant resume-entry
 h# f.0800 constant resume-data
 
+\ If you change these, also change {g/l}xmsrs.fth and {g/l}xearly.fth
+h# fd00.0000 constant fb-pci-base
+h# fe00.0000 constant gp-pci-base
+h# fe00.4000 constant dc-pci-base
+h# fe00.8000 constant vp-pci-base
+h# fe00.c000 constant vip-pci-base
+h# fe01.0000 constant aes-pci-base
+h# fe01.a000 constant ohci-pci-base
+h# fe01.b000 constant ehci-pci-base
+h# fe02.0000 constant nand-pci-base
+h# fe02.4000 constant sd-pci-base
+h# fe02.8000 constant camera-pci-base
+h# efc0.0000 constant uoc-pci-base
+
 fload ${BP}/cpu/x86/pc/virtaddr.fth
+[ifndef] virtual-mode
+h# ff80.0000 to fw-virt-base  \ Override the usual setting; we use an MSR to double-map some memory up high
+h#   40.0000 to fw-virt-size
+[then]
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

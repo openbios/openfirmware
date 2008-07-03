@@ -57,7 +57,7 @@ d# 1 constant rtc-alarm-delay
 ;
 
 stand-init: Century
-   d# 20 cmos-century cmos!
+   h# 20 cmos-century cmos!   \ The century is in BCD, hence h#
 ;
 
 \ LICENSE_BEGIN

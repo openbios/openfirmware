@@ -179,11 +179,7 @@ false value looking-for-nic?
    until
 ;
 
-: .cpu-data  ( -- )
-   " /cpu@0" find-package drop	( phandle )
-   " clock-frequency" rot get-package-property  if  exit  then  ( adr )
-   decode-int nip nip  d# 1000000 /  ." CPU Speed:  "  .d ."  MHz" cr
-;
+: .cpu-data  ( -- )  cpu-mhz ." CPU Speed:  "  .d ."  MHz" cr  ;
 
 : .usb  ( -- )
    " /usb" find-package 0=  if  exit  then

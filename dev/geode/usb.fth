@@ -104,29 +104,29 @@ alias p2 probe-usb2
    : close ;
 end-package
 
+: ohci-phys-l!  ( l offset -- )  ohci-pci-base + l!  ;
 stand-init: USB setup
    \ Set up an address routing to the USB Option Controller
-   h# efc00000.efc00001. h# 5100.0029 wrmsr
-   h# 400000ef.c00fffff. h# 5101.0020 wrmsr
-   h# 00000002.efc00000. h# 5120.000b wrmsr
+   uoc-pci-base  h# 1000 1  h# 5100.0029  set-rconf
+   uoc-pci-base  h# 1000 4  h# 5101.0020  set-p2d-bm
+   uoc-pci-base  2          h# 5120.000b  msr!
 [ifdef] virtual-mode
-   h# efc00000 h# 1000 0 mmu-claim drop  \ UOC
-   h# efc00000 dup h# 1000 -1 mmu-map    \ UOC
-   h# fe01a000 h# 1000 0 mmu-claim drop  \ OHCI
-   h# fe01a000 dup h# 1000 -1 mmu-map    \ OHCI
+   uoc-pci-base  h# 1000 map-v=p   \ UOC
+   ohci-pci-base h# 1000 map-v=p   \ OHCI
 [then]
    \ Configure the assignment of 2 USB Power Enable pins to USB ports
    \ to correspond to the way they are wired on the board.
    \ USB port 1 is PWR_EN2, USB ports 2-4 are PWR_EN1
-   usb-port-power-map h# efc00000 l!
-   2 h# efc00004 l!
-   h#       1 h# fe01a008 l!   \ Reset OHCI host controller
-   h# 1e.0000 h# fe01a04c l!   \ Configure ports for individual power
-   h#     100 h# fe01a058 l!   \ Power-on ports 2 and 3
+   usb-port-power-map  uoc-pci-base      l!
+   2                   uoc-pci-base 4 +  l!
+
+   h#       1 h# 08 ohci-phys-l!   \ Reset OHCI host controller
+   h# 1e.0000 h# 4c ohci-phys-l!   \ Configure ports for individual power
+   h#     100 h# 58 ohci-phys-l!   \ Power-on ports 2 and 3
    d# 10 ms                    \ Stagger for glitch-prevention
-   h#     100 h# fe01a054 l!   \ Power-on port 1
-   h#     100 h# fe01a05c l!   \ Power-on port 3
-   h#     100 h# fe01a060 l!   \ Power-on port 4
+   h#     100 h# 54 ohci-phys-l!   \ Power-on port 1
+   h#     100 h# 5c ohci-phys-l!   \ Power-on port 3
+   h#     100 h# 60 ohci-phys-l!   \ Power-on port 4
    get-msecs d# 1000 +  to usb-power-done-time
 ;
 

@@ -2,7 +2,7 @@
 purpose: Defining words for code definitions
 
 only forth also assembler also forth definitions
-: entercode  ( -- ) !csp also assembler  ;
+: entercode  ( -- ) !csp also assembler  protected-mode  ;
 : code   \ name  ( -- )
    create  here here 4 - token!  do-entercode
 ;

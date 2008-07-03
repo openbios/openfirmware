@@ -38,6 +38,14 @@ fload ${BP}/cpu/x86/pc/olpc/lxmsrs.fth
       gx-msr-init /gx-msr-init
    then
 ;
+: find-msr-entry  ( msr# -- 'data )
+   msr-init-range  bounds  ?do      ( msr# )
+      dup i l@ =  if                ( msr# )
+         drop  i la1+  unloop exit
+      then                          ( msr# )
+   3 /l* +loop                      ( msr# )
+   drop true abort" No MSR entry"
+;
 \ [ifdef] lx-devel
 \  msr: 5000.201f 00000000.0000007b.  \ Posted writes for Legacy IDE registers
 \  msr: 5101.00e0 60000000.1f0ffff8.  \ IOD_BM Descriptor 0 ATA IO address
@@ -69,20 +77,20 @@ code msr-slam  ( adr len -- )
    bp pop
 c;
 
-h# fd00.0000 value fb-base
-h# fe00.0000 value gp-base
-h# fe00.4000 value dc-base
-h# fe00.8000 value vp-base
+: map-v=p  ( phys size -- )
+   2dup 0  mmu-claim drop   ( phys size )
+   over swap  -1  mmu-map   ( )
+;
 
 : video-map
 [ifdef] virtual-mode
-   gp-base h# c000 0  mmu-claim drop
-   gp-base dup  h# c000  -1  mmu-map
+   \ Map GP+DC+VP all at once with a large size
+   gp-pci-base h# c000 map-v=p
 [then]
 
    \ Unlock the display controller registers
 \ write_vg_32(DC_UNLOCK, DC_UNLOCK_VALUE);
-   h# 4758 dc-base 0 + l!
+   h# 4758 dc-pci-base 0 + l!
 
 \ Set up the DV Address offset in the DC_DV_CTL register to the offset from frame 
 \ buffer descriptor.  First, get the frame buffer descriptor so we can set the 
@@ -96,21 +104,20 @@ h# fe00.8000 value vp-base
 \ write_vg_32(DC_DV_CTL, mVal.high);
 
    \ The base address of the frame buffer in physical memory
-   h# 1808 msr@ drop  4 lshift  h# fff invert and  ( fb-pa )
-   h# 88 dc-base + l!   \ DV_CTL register, undocumented
+   fb-offset  h# 88 dc-pci-base + l!   \ DV_CTL register, undocumented
 
 \ hw_fb_map_init(PCI_FB_BASE);
 \ Initialize the frame buffer base related stuff.
 
-   h# fd00.0000 h#  84 dc-base + l!   \ GLIU0 Memory offset
-   h# fd00.0000 h#  4c gp-base + l!   \ GP base
-   h# fd80.0000 h# 460 vp-base + l!   \ Flat panel base (reserved on LX)
+   fb-pci-base h#  84 dc-pci-base + l!   \ GLIU0 Memory offset
+   fb-pci-base h#  4c gp-pci-base + l!   \ GP base
+   fb-pci-base h# 80.0000 + h# 460 vp-pci-base + l!   \ Flat panel base (reserved on LX)
 
    \ VGdata.hw_vga_base = h# fd7.c000
    \ VGdata.hw_cursor_base = h# fd7.bc00
    \ VGdata.hw_icon_base = h# fd7.bc00 - MAX_ICON;
 [ifdef] virtual-mode
-   gp-base h# c000  mmu-unmap
+   gp-pci-base h# c000  mmu-unmap
 [then]
 ;
 

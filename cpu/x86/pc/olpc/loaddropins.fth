@@ -50,6 +50,9 @@
    " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " sd.565"        $add-deflated-dropin
 
    " ${BP}/ofw/termemu/gallant.obf"             " font"          $add-deflated-dropin
+[ifdef] use-ega
+   " ${BP}/ofw/termemu/cp881-16.obf"            " pcfont"        $add-deflated-dropin
+[then]
 
    " verify.img"                                " verify"        $add-deflated-dropin
    " os.public"                                 " ospubkey"      $add-dropin \ Incompressible

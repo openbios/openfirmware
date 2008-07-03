@@ -1,5 +1,5 @@
 \ See license at end of file
-purpose: Calibrate Time Stamp Counter against ISA timer
+purpose: Calibrate Time Stamp Counter against ISA timer using interrupts
 
 \ This code works only for processors that have a Time Stamp Counter register
 

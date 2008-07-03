@@ -116,12 +116,59 @@ hex
    2 4 seq!				\ Enable video memory past 256K
 ;
 
-instance defer crt-table
-: (vga-crt-table)
-   " "(5f 4f 50 82 54 80 0b 3e 00 40 00 00 00 00 07 80 ea 0c df 50 00 e7 04 e3 ff)"
+h# 20 buffer: crtcbuf
+: crtc@  ( index -- value )  crtcbuf + c@  ;
 
-\  " "(5f 4f 50 82 54 80 bf 1f 00 41 00 00 00 00 00 31 9c 0e 8f 28 40 96 b9 a3 ff)"
+: .vga-mode  ( -- )
+   push-decimal
+   ." HTotal:      "  0 crtc@  4 u.r  cr
+   ." HDispEnd:    "  1 crtc@  4 u.r  cr
+   ." HBlankStart: "  2 crtc@  4 u.r  cr
+   ." HBlankEnd:   "  3 crtc@ h# 1f and  5 crtc@ h# 80 and 2 rshift or  4 u.r  cr
+   ." HSyncStart:  "  4 crtc@  4 u.r  cr
+   ." HSyncEnd:    "  5 crtc@ h# 1f and  4 u.r  cr
+   ." VTotal:      "  6 crtc@  7 crtc@ 1 and 7 lshift or  7 crtc@ h# 20 and 4 lshift or  4 u.r  cr
+   ." BytePan:     "  8 crtc@  5 rshift  4 u.r  cr
+   ." PresetRowScn:"  8 crtc@  h# 1f and  4 u.r  cr
+   ." DoubleScan:  "  9 crtc@  7 rshift  4 u.r  cr
+   ." MaxScan:     "  9 crtc@  5 rshift  4 u.r  cr
+   ." CursorOff:   "  h# a crtc@  5 rshift  1 and  4 u.r  cr
+   ." CursorStart: "  h# a crtc@  h# 1f and  4 u.r  cr
+   ." CursorSkew:  "  h# b crtc@  5 rshift  7 and  4 u.r  cr
+   ." CursorEnd:   "  h# b crtc@  h# 1f and  4 u.r  cr
+   ." StartAddress:"  h# d crtc@  h# c crtc@ bwjoin 4 u.r cr
+   ." CursorLoc:   "  h# f crtc@  h# e crtc@ bwjoin 4 u.r cr
+   ." VSyncStart:  "  h# 10 crtc@  7 crtc@ 4 and 6 lshift or  7 crtc@ h# 80 and 2 lshift or  4 u.r  cr
+   ." VSyncEnd:    "  h# 11 crtc@ h# f and  4 u.r cr
+   ." WriteProtect:"  h# 11 crtc@ 7 rshift  4 u.r cr
+   ." VDispEnd:    "  h# 12 crtc@  7 crtc@ 2 and 7 lshift or  7 crtc@ h# 40 and 3 lshift or  4 u.r  cr
+   ." Offset:      "  h# 13 crtc@  4 u.r  cr
+   ." DoubleWord:  "  h# 14 crtc@  6 rshift 1 and  4 u.r  cr
+   ." UnderlineLoc:"  h# 14 crtc@  h# 1f and  4 u.r  cr
+   ." VBlankStart: "  h# 15 crtc@  7 crtc@ 8 and 5 lshift or  9 crtc@ h# 20 and 4 lshift or  4 u.r  cr
+   ." VBlankEnd:   "  h# 16 crtc@  4 u.r  cr
+   ." EnableSyncs: "  h# 17 crtc@  7 rshift 4 u.r  cr
+   ." ByteMode:    "  h# 17 crtc@  6 rshift 1 and 4 u.r  cr
+   ." AddressWrap: "  h# 17 crtc@  5 rshift 1 and 4 u.r  cr
+   ." VCLKSelect:  "  h# 17 crtc@  2 rshift 1 and 4 u.r  cr
+   ." SelectRowScn:"  h# 17 crtc@  1 rshift 1 and 4 u.r  cr
+   ." SelectA13:   "  h# 17 crtc@  1 and 4 u.r  cr
+   ." LineCompare: "  h# 18 crtc@  4 u.r  cr
+   pop-base
 ;
+: showmode  ( adr len -- )   crtcbuf swap move  .vga-mode  ;
+
+instance defer crt-table
+: (mode12-crt-table)
+   \ AMD recommended values for mode 12
+   " "(5f 4f 50 82 51 9e 0b 3e 00 40 00 00 00 00 00 00 e9 8b df 28 00 e7 04 e3 ff)"
+;
+: (vga-crt-table)  \ 640x480, byte mode
+   " "(5f 4f 50 82 54 80 0b 3e 00 40 00 00 00 00 07 80 ea 0c df 50 00 e7 04 e3 ff)"
+;
+\ : vga-400-crt-table
+\  " "(5f 4f 50 82 54 80 bf 1f 00 41 00 00 00 00 00 31 9c 0e 8f 28 40 96 b9 a3 ff)"
+\ ;
 ' (vga-crt-table) to crt-table
 
 : crt  ( adr len -- )

@@ -186,7 +186,7 @@ warning @  warning off
 ;
 
 [ifdef] linux-support
-fload ${BP}/cpu/x86/pc/olpc/linux.fth
+fload ${BP}/cpu/x86/pc/linux.fth
 [then]
 
 fload ${BP}/dev/null.fth

@@ -136,6 +136,9 @@ d# 25 constant #ega-lines
    set-attributes
 
 \ Accessing the hardware cursor is a lot of trouble.
+\ There are two things that can go wrong:
+\ 1) The I/O space enable can be off in the display's PCI config register
+\ 2) The CRT registers can be locked
 \   d# 0 h# a crt!  d# 15 h# b crt!   \ Block cursor
 
    #ega-columns to #columns  #ega-lines to #lines

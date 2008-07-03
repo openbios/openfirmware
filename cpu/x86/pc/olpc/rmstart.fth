@@ -33,7 +33,6 @@ build-now
 hex
 
 start-assembling
-protected-mode
 hex
 
 \ Addresses where the following items will be located in the processor's
@@ -124,7 +123,7 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
    here		\ Mark the beginning of this code so its size may be determined
 		\ and so that a jump to it may be assembled later.
 
-   real-mode
+   16-bit
 
    h# 01 # al mov  al h# 80 # out
 
@@ -298,8 +297,6 @@ ascii h report
 
    op: ad: ResetBase h# 10 #)  far jmp	\ Jump to Forth startup
 
-   real-mode
-
    \ Pad the startup code so that the main entry point ends up at the
    \ correct address.
 
@@ -319,6 +316,8 @@ ascii h report
    \ 
    \ ffff.fff0 - This is the hardwired address where the processor jumps
    \             when it comes out of reset
+
+   16-bit
 
    cli cld		\ Turn off interrupts (does not affect NMI)
    #) jmp		\ Relative jump back to ffff.fc28

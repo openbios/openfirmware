@@ -1,29 +1,44 @@
 \ See license at end of file
 purpose: Create memory node properties and lists
 
-dev /memory
-
-h# f70.0000 constant /ram   \ 256 MB
-
-: release-range  ( start-adr end-adr -- )  over - release  ;
-
-: ram-limit  ( -- addr )  mem-info-pa la1+ l@  ;
-
-: ram-range  ( -- extant avail )
-[ifdef] lx-devel
-   h# 1000.0000  h# f70.0000 exit
-[then]
-   gpio-data@ 4 and  if
-      h#  800.0000  h# 770.0000
-   else
-      h# 1000.0000  h# f70.0000
+\ All RAM, including that assigned to the frame buffer
+: total-ram  ( -- ramsize )
+   h# 20000018 msr@ nip         ( msr.hi )
+   dup d# 12 rshift  h# f and   ( msr.hi dimm0size-code )
+   d# 22 + 1 swap lshift        ( msr.hi dimm0size )
+   swap  dup h# f0000 and  h#  70000 =  if  ( dimm0size msr.hi )
+      \ DIMM1 Not Installed
+      drop                      ( total-size )
+   else                         ( dimm0size msr.hi )
+      d# 28 rshift  h# f and    ( dimm0size dimm1size-code )
+      d# 22 + 1 swap lshift     ( dimm0size dimm1size )
+      +                         ( total-size )
    then
 ;
 
-: probe  ( -- )
-   ram-range to /ram    ( total-ram )
+\ Offset of frame buffer/display memory within the memory array
+: fb-offset  ( -- offset )  h# 1808 msr@ drop h# 0fffff00 and  4 lshift  ;
 
-   0 swap  reg   \ Report extant memory
+\ Excludes RAM assigned to the frame buffer
+: system-ram  ( -- extant avail )
+[ifdef] lx-devel
+   h# f70.0000 exit
+[then]
+   fb-offset
+;
+
+\ This may require adjustment if we steal additional SMI memory
+: fbsize  ( -- )  total-ram system-ram -  ;
+
+dev /memory
+
+\ Excludes RAM already used for page tables
+: ram-limit  ( -- addr )  mem-info-pa la1+ l@  ;
+
+: release-range  ( start-adr end-adr -- )  over - release  ;
+
+: probe  ( -- )
+   0 total-ram  reg   \ Report extant memory
 
    \ Put h# 10.0000-1f.ffff and 28.0000-memsize in pool,
    \ reserving 0..10.0000 for the firmware
@@ -31,7 +46,7 @@ h# f70.0000 constant /ram   \ 256 MB
 
 \   h#  0.0000  h# 02.0000  release   \ A little bit of DMA space, we hope
 \   h# 10.0000  h# 0f.ffff  release
-\   h# 28.0000  h# 80.0000 h# 28.0000 -  release
+\   h# 28.0000  h# 80.0000  release-range
 
 \ Release some of the first meg, between the page tables and the DOS hole,
 \ for use as DMA memory.
@@ -41,30 +56,22 @@ h# f70.0000 constant /ram   \ 256 MB
    \ Release from 1M up to the amount of unallocated (so far) memory
    dropin-base ram-limit u<   if
       \ Except for the area that contains the dropins, if they are in RAM
-      h# 10.0000  dropin-base over -  release
-      dropin-base dropin-size +  ram-limit  over -  release
+      h# 10.0000  dropin-base  release-range
+      dropin-base dropin-size +  ram-limit  release-range
    else
-      h# 10.0000  ram-limit  over -  release
+      h# 10.0000  ram-limit  release-range
    then
 [else]
-   h# 10.0000                             ( free-bot )
-   fw-pa                                  ( free-bot free-top )
+   h# 10.0000  system-ram  release-range
+
+   fw-pa /fw-ram 0 claim  drop
 
    \ Account for the dropin area if it is in RAM
-   dropin-base  /ram  u<  if              ( free-bot free-top )
-      dropin-base umin                    ( free-bot free-top' )
-   then                                   ( free-bot free-top )
+   dropin-base  system-ram  u<  if
+      dropin-base dropin-size 0 claim
+   then
 
-   over -  release
-
-   fw-pa /fw-ram +                        ( piece2-base )
-
-   \ Account for the dropin area if it is in RAM
-   dropin-base  /ram u<  if               ( piece2-base )
-      dropin-base dropin-size +  umax     ( piece2-base' )
-   then                                   ( piece2-base )
-
-   /ram  over -  release
+   initial-heap  swap >physical swap  0 claim  drop
 [then]
 ;
 

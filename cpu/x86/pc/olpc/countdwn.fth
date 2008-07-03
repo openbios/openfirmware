@@ -23,8 +23,10 @@ headerless
         then
 [ifdef] ukey
          ukey? if
-            ukey drop
+\            ukey drop
+          ukey  h# 1b =  if
             true unloop unloop exit
+          then
          then
 [then]
 
@@ -34,7 +36,8 @@ headerless
    false
 ;
 : (interrupt-auto-boot?)  ( -- flag )
-   5
+\   5
+   2
    ." Type the Esc key to interrupt automatic startup" cr
    show-countdown
 ;

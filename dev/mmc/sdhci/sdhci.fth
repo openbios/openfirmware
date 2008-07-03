@@ -165,18 +165,23 @@ h# 200 constant /block  \ 512 bytes
 
 : data-timeout!  ( n -- )  h# 2e cb!  ;
 
-: setup-host  ( -- )
-   reset-host
-   internal-clock-on
-
-   h#   00 h# 28 cb!  \ Not high speed, 1-bit data width, LED off
+: intstat-on  ( -- )
    h# 000b h# 34 cw!  \ normal interrupt status en reg
             \ Enable: DMA Interrupt, Transfer Complete, CMD Complete
             \ Disable: Card Interrupt, Remove, Insert, Read Ready,
             \ Write Ready, Block Gap
    h# f1ff h# 36 cw!  \ error interrupt status en reg
+;
+: intstat-off  ( -- )  h# 0 h# 34 cl!  ;  \ All interrupts off
+
+: setup-host  ( -- )
+   reset-host
+   internal-clock-on
+
+   h#   00 h# 28 cb!  \ Not high speed, 1-bit data width, LED off
    h# 0000 h# 38 cw!  \ Normal interrupt status interrupt enable reg
    h# 0000 h# 3a cw!  \ error interrupt status interrupt enable reg
+   intstat-on
 
    clear-interrupts
 ;
@@ -297,12 +302,13 @@ h# 200 constant /block  \ 512 bytes
 
 \ Store in the buffer in little-endian form
 : get-response136  ( buf -- )  \ 128 bits (16 bytes) of data.
+    h# 1f  h# 10  do  i cb@ over c! 1+  loop  drop
 \   h# 20  h# 10  do  i cl@ buf+!  4 +loop  drop
-    >r
-    h# 1c cl@  8 lshift  h# 1b cb@ or  r@ 0 la+ l!
-    h# 18 cl@  8 lshift  h# 17 cb@ or  r@ 1 la+ l!
-    h# 14 cl@  8 lshift  h# 13 cb@ or  r@ 2 la+ l!
-    h# 10 cl@  8 lshift                r> 3 la+ l!
+\     >r
+\     h# 1c cl@  8 lshift  h# 1b cb@ or  r@ 0 la+ l!
+\     h# 18 cl@  8 lshift  h# 17 cb@ or  r@ 1 la+ l!
+\     h# 14 cl@  8 lshift  h# 13 cb@ or  r@ 2 la+ l!
+\     h# 10 cl@  8 lshift                r> 3 la+ l!
 ;
 
 d# 64 instance buffer: scratch-buf
@@ -449,7 +455,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
    false to mmc?
    true to allow-timeout?
 
-   \ SD version 2 adds CMD3.  Pre-v2 cards will time out.
+   \ SD version 2 adds CMD8.  Pre-v2 cards will time out.
    false to timeout?  send-if-cond      (  )
    timeout?   if  h# 0030.0000  else  h# 4030.0000  then  to oc-mode
 
@@ -496,6 +502,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
    then
 ;
 
+[ifdef] notdef
 \ Extract bit fields from CSD or CID  (adr is either csd or cid)
 : @bits   ( bit# #bits adr -- bits )
    rot 8 -                     ( #bits adr bit# )  \ -8 accounts for elided CRC
@@ -517,6 +524,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
       1 swap lshift 1-  and    ( bits )
    then                        ( bits )
 ;
+[then]
 
 0 instance value writing?
 
@@ -539,17 +547,18 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 external
 
 : attach-card  ( -- okay? )
+   intstat-on
    card-power-off d# 20 ms
 
    card-power-on  d# 20 ms  \ This delay is just a guess
 
-   card-inserted?  0=  if  card-power-off  false exit  then   
+   card-inserted?  0=  if  card-power-off  false intstat-off  exit  then   
 
    card-clock-slow  d# 10 ms  \ This delay is just a guess
 
    reset-card     \ Cmd 0
 
-   set-operating-conditions  if  false exit  then
+   set-operating-conditions  if  false intstat-off  exit  then
 
    get-all-cids   \ Cmd 2
    mmc?  if
@@ -568,6 +577,7 @@ external
 
    set-timeout
 
+   intstat-off
    true
 ;
 
@@ -575,6 +585,7 @@ external
 : dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;
 
 : r/w-blocks  ( addr block# #blocks in? -- actual )
+   intstat-on
    >r               ( addr block# #blocks r: in? )
    rot dma-setup    ( block# r: in? )
    wait-write-done
@@ -586,6 +597,7 @@ external
    2 wait
    dma-release
    dma-len /block /
+   intstat-off
 ;
 
 0 value open-count
@@ -600,6 +612,7 @@ external
 
 : close  ( -- )
    open-count  1 =  if
+      intstat-on
       wait-write-done
       card-clock-off
       card-power-off
@@ -617,6 +630,41 @@ external
    unmap-regs
 ;
 
+\ The bit numbering follows the table on page 78 of the
+\ SD Physical Layer Simplified Specification Version 2.00.
+
+\ The "8 -" accounts for the fact that the chip's response
+\ registers omit the CRC and tag in bits [7:0]
+: csdbit  ( bit# -- b )
+   8 -
+   dup 3 rshift csd +  c@   ( bit# byte )
+   swap 7 and rshift 1 and
+;
+: csdbits  ( high low -- bits )
+   swap 0 -rot  do  2*  i csdbit  or  -1 +loop
+;
+
+\ The calculation below is shown on page 81 of the
+\ SD Physical Layer Simplified Specification Version 2.00.
+: size  ( -- d.bytes )
+   d# 128 d# 126 csdbits  case
+      0 of
+         d# 49 d# 47 csdbits      ( c_size_mult )
+         2 +  1 swap  lshift      ( mult )
+
+         d# 73 d# 62 csdbits  1+  ( mult c_size+1 )
+         *                        ( blocknr )
+
+         d# 83 d# 80 csdbits  1 swap lshift  ( blocknr block_len )
+         um*
+      endof
+      1 of
+         d# 70 d# 48 csdbits  d# 10 lshift  h# 200  um*
+      endof
+      ( default )
+      h# ffffffff 0  rot
+   endcase
+;
 external
 
 \ LICENSE_BEGIN

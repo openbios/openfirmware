@@ -1,5 +1,6 @@
 purpose: Table of MSR values to setup Geode LX processor on OLPC
 
+hex
 create lx-msr-init
 \ Memsize-dependent MSRs are set in the early startup code
 
@@ -15,16 +16,29 @@ create lx-msr-init
   msr: 0000.1a00 00000000.00000001.  \ Imprecise exceptions
 
 \ northbridgeinit: GLIUS
+\ \ 1000.0020   0  80000  2  >p2d-bm  msr,
 \ msr: 1000.0020 20000000.000fff80.   \ 0 - 7.ffff low RAM Early startup
-\ msr: 1000.0024 000000ff.fff00000.   \ Unmapped - default
+
+\ 1000.0022  gp-pci-base  4000  a  >p2d-bm msr,  \ GP  - local to GLIU0
+\ 1000.0023  vp-pci-base  4000  4  >p2d-bm msr,  \ VP  - via GLIU1
+\ 1000.0024 vip-pci-base  4000  4  >p2d-bm msr,  \ VIP - via GLIU1
+\ 1000.0025 aes-pci-base  4000  4  >p2d-bm msr,  \ AES - via GLIU1
+
   msr: 1000.0022 a00000fe.000ffffc.   \ fe00.0000 - fe00.3fff GP
-  msr: 1000.0023 400000fe.008ffff8.   \ fe00.8000 - fe00.bfff VP + VIP in GLIU1
-  msr: 1000.0024 400000fe.010ffffc.   \ fe01.0000 - fe01.3fff security block in GLIU1
-\ msr: 1000.0025 000000ff.fff00000.   \ Unmapped - default
-\ msr: 1000.0026 000000ff.fff00000.   \ Unmapped - default
+  msr: 1000.0023 400000fe.008ffffc.   \ fe00.8000 - fe00.bfff VP in GLIU1
+  msr: 1000.0024 400000fe.00cffffc.   \ fe00.c000 - fe00.ffff VIP in GLIU1
+  msr: 1000.0025 400000fe.010ffffc.   \ fe01.0000 - fe01.3fff security block in GLIU1
+
+\ msr: 1000.0026 000000ff.fff00000.   \ BMO Unmapped - default (used for low mem in gxvga.fth)
+\ msr: 1000.0027 000000ff.fff00000.   \ BMO Unmapped - default (used for low mem in gxvga.fth)
+
+\ msr: 1000.0028 2000000e.fff00100.   \ Main memory from 1M to top, fbsize
 
 \ Graphics
+\ 1000.0029 fb-pci-base fb-size fb-offset  2  >p2d-range-offset  msr,  \ fd00.0000 - fdff.ffff mapped to f00.0000 Memsize dependent, fbsize dependent
 \ msr: 1000.0029 20a7e0fd.ffffd000.   \ fd00.0000 - fdff.ffff mapped to f00.0000 Memsize dependent, fbsize dependent
+
+\ 1000.002a dc-pci-base  4000 0  8  >p2d-range-offset  msr,
   msr: 1000.002a 801ffcfe.007fe004.   \ fe00.4000 - fe00.7fff mapped to 0 in DC space
 
 \ msr: 1000.002b 00000000.000fffff.   \ Unmapped - default
@@ -44,19 +58,34 @@ create lx-msr-init
   msr: 1000.2004 00000000.00000005.   \ Clock gating
 
 \ DMA incoming maps
+\ 4000.0020  0 10.0000 2 >p2d-bm  msr, \ 0 - f.ffff low RAM, route to GLIU0
   msr: 4000.0020 20000000.000fff00.   \ 0 - f.ffff low RAM, route to GLIU0
+
+\ 4000.0022  gp-pci-base  4000  2  >p2d-bm msr,  \ GP, route to GLIU0
+\ 4000.0024  dc-pci-base  4000  2  >p2d-bm msr,  \ DC, route to GLIU0
+\ 4000.0025  vp-pci-base  4000  4  >p2d-bm msr,  \ VP, route to VP in GLIU1
+\ 4000.0026 vip-pci-base  4000  a  >p2d-bm msr,  \ VIP, route to VIP in GLIU1
+
   msr: 4000.0022 200000fe.000ffffc.   \ fe00.0000 - fe00.03ff GP, route to GLIU0
 \ msr: 4000.0023 000000ff.fff00000.   \ Unmapped - default
+
   msr: 4000.0024 200000fe.004ffffc.   \ fe00.4000 - fe00.7fff DC, route to GLIU0
   msr: 4000.0025 400000fe.008ffffc.   \ fe00.8000 - fe00.bfff VP, route to VP in GLIU1
   msr: 4000.0026 a00000fe.00cffffc.   \ fe00.c000 - fe00.ffff VIP, route to VIP in GLIU1
 \ msr: 4000.0027 000000ff.fff00000.   \ Unmapped - default
 \ msr: 4000.0028 000000ff.fff00000.   \ Unmapped - default
 \ msr: 4000.0029 000000ff.fff00000.   \ Unmapped - default
+
+\ 4000.002a fb-pci-base  fb-size 2 >p2d-range msr,  \ frame buffer - route to GLIU0, fbsize
+\ 4000.002b aes-pci-base    4000 c >p2d-range msr,  \ Security Block
+
   msr: 4000.002a 200000fd.ffffd000.   \ frame buffer - fd00.0000 .. fdff.ffff, route to GLIU0, fbsize
   msr: 4000.002b c00000fe.013fe010.   \ Security Block - fe01.0000 .. fe01.3fff
+
+\ 4000.002c 10.0000 fb-offset over -  2 >p2d-range msr,  \ 10.0000 - sysram-top - Memsize dependent
 \ msr: 4000.002c 20000007.7ff00100.   \ 10.0000 - 0f7f.ffff High RAM - Memsize dependent
 \ msr: 4000.002d 00000000.000fffff.   \ Unmapped - default
+
   msr: 4000.0080 00000000.00000001.   \ Route coherency snoops from GLIU1 to GLIU0
   msr: 4000.0081 00000000.0000c77f.   \ Port active enable
   msr: 4000.0082 80000000.00000000.   \ Arbitration scheduling
@@ -91,12 +120,21 @@ create lx-msr-init
   msr: 0000.180d 00000000.00000000.  \ Cache e0000-fffff
 \ msr: 0000.180e 00000001.00000001.  \ SMM off - default
 \ msr: 0000.180f 00000001.00000001.  \ DMM off - default
+
+\ 0000.1810 fb-pci-base  fb-size 111 >rconf msr,  \ Video (write through), fbsize
+\ 0000.1811 gp-pci-base     4000 101 >rconf msr,  \ GP registers non-cacheable
+\ 0000.1812 dc-pci-base     4000 101 >rconf msr,  \ DC registers non-cacheable
+\ 0000.1813 vp-pci-base     4000 101 >rconf msr,  \ VP registers non-cacheable
+\ 0000.1814 vip-pci-base    4000 101 >rconf msr,  \ VIP registers non-cacheable
+\ 0000.1815 aes-pci-base    4000 101 >rconf msr,  \ AES registers non-cacheable
+
   msr: 0000.1810 fdfff000.fd000111.  \ Video (write through), fbsize
-  msr: 0000.1811 fe013000.fe000101.  \ GP + DC + VP + VIP + AES registers non-cacheable
-\ msr: 0000.1812 00000000.00000000.  \ Disabled - default
-\ msr: 0000.1813 00000000.00000000.  \ Disabled - default
-\ msr: 0000.1814 00000000.00000000.  \ Disabled - default
-\ msr: 0000.1815 00000000.00000000.  \ Disabled - default
+  msr: 0000.1811 fe003000.fe000101.  \ GP registers non-cacheable
+  msr: 0000.1812 fe007000.fe004101.  \ DC registers non-cacheable
+  msr: 0000.1813 fe00b000.fe008101.  \ VP registers non-cacheable
+  msr: 0000.1814 fe00f000.fe00c101.  \ VIP registers non-cacheable
+  msr: 0000.1815 fe013000.fe010101.  \ AES registers non-cacheable
+
 \ msr: 0000.1816 00000000.00000000.  \ Disabled - default
 \ msr: 0000.1817 00000000.00000000.  \ Disabled - default
 
@@ -136,17 +174,17 @@ create lx-msr-init
 \ chipsetinit(nb);
 
 \ Set the prefetch policy for various devices
-  msr: 5150.0001 00000000.00008f000.   \ AC97
-  msr: 5140.0001 00000000.00000f000.   \ DIVIL
+  msr: 5150.0001 00000000.0008f000.   \ AC97
+  msr: 5140.0001 00000000.0000f000.   \ DIVIL
 
 \  Set up Hardware Clock Gating
-  msr: 5102.4004 00000000.000000004.  \ GLIU_SB_GLD_MSR_PM
-  msr: 5100.0004 00000000.000000005.  \ GLPCI_SB_GLD_MSR_PM
-  msr: 5170.0004 00000000.000000004.  \ GLCP_SB_GLD_MSR_PM
+  msr: 5102.4004 00000000.00000004.  \ GLIU_SB_GLD_MSR_PM
+  msr: 5100.0004 00000000.00000005.  \ GLPCI_SB_GLD_MSR_PM
+  msr: 5170.0004 00000000.00000004.  \ GLCP_SB_GLD_MSR_PM
 \ SMBus clock gating errata (PBZ 2226 & SiBZ 3977)
-  msr: 5140.0004 00000000.050554111.  \ DIVIL
-  msr: 5130.0004 00000000.000000005.  \ ATA
-  msr: 5150.0004 00000000.000000005.  \ AC97
+  msr: 5140.0004 00000000.50554111.  \ DIVIL
+  msr: 5130.0004 00000000.00000005.  \ ATA
+  msr: 5150.0004 00000000.00000005.  \ AC97
 
 \ setup_gx2();
 
@@ -189,21 +227,36 @@ create lx-msr-init
   msr: 5101.0002 0000000f.0000000f.  \ Disable SMIs
 
 \ msr: 5100.0010 44000020.00020013.  \ PCI timings - already set
-  msr: 5100.0020 018b4001.018b0001.  \ Region configs
+
+\ XXX convert to >rconf form - need an IO version
+\  msr: 5100.0020 018b4001.018b0001.  \ Region configs
+  msr: 5100.0020 06004001.06000001.  \ Region configs
   msr: 5100.0021 010fc001.01000001.  \ GPIO
   msr: 5100.0022 0183c001.01800001.  \ MFGPT
   msr: 5100.0023 0189c001.01880001.  \ IRQ mapper
   msr: 5100.0024 0147c001.01400001.  \ PMS
   msr: 5100.0025 0187c001.01840001.  \ ACPI
   msr: 5100.0026 014fc001.01480001.  \ AC97 128 bytes (0x80)
+
+\ 5100.0027 ohci-pci-base  1000  1 >rconf msr,  \ OHCI
+\ 5100.0028 ehci-pci-base  1000  1 >rconf msr,  \ EHCI
+\ 5100.0029 uoc-pci-base   1000  1 >rconf msr,  \ UOC
+
   msr: 5100.0027 fe01a000.fe01a001.  \ OHCI
   msr: 5100.0028 fe01b000.fe01b001.  \ EHCI
   msr: 5100.0029 efc00000.efc00001.  \ UOC
+
   msr: 5100.002b 018ac001.018a0001.  \ IDE bus master
   msr: 5100.002f 00084001.00084009.  \ Port 84 (what??)
+
+\ 5101.0020 uoc-pci-base   1000 4 >p2d-bm msr,  \ P2D_BM0 UOC
+\ 5101.0023 ohci-pci-base  1000 5 >p2d-bm msr,  \ P2D_BMK OHCI
+\ 5101.0024 ehci-pci-base  1000 4 >p2d-bm msr,  \ P2D_BMK EHCI
+
   msr: 5101.0020 400000ef.c00fffff.  \ P2D_BM0 UOC
   msr: 5101.0023 500000fe.01afffff.  \ P2D_BMK Descriptor 0 OHCI
   msr: 5101.0024 400000fe.01bfffff.  \ P2D_BMK Descriptor 1 EHCI
+
   msr: 5101.0083 00000000.0000ff00.  \ Disable SMIs
   msr: 5101.00e0 60000000.1f0ffff8.  \ IOD_BM Descriptor 0 ATA IO address
   msr: 5101.00e1 a0000001.480fff80.  \ IOD_BM Descriptor 1 AC97
@@ -216,6 +269,7 @@ create lx-msr-init
   msr: 5140.0002 0000fbff.00000000.  \ Disable SMIs
 
   msr: 5140.0008 0000f001.00001880.  \ LBAR_IRQ
+\ 5140.0009 ohci-pci-base 1000 1 >usb-kel msr,  \ LBAR_KEL (USB)
   msr: 5140.0009 fffff001.fe01a000.  \ LBAR_KEL (USB)
   msr: 5140.000b     f001.000018b0.  \ LBAR_SMB
   msr: 5140.000c     f001.00001000.  \ LBAR_GPIO
@@ -246,7 +300,13 @@ create lx-msr-init
   msr: 5140.0057 00000000.00000032.  \ RTC century (offset into CMOS RAM)
 
 \ USB host controller
+
   msr: 5120.0001 0000000b.00000000.  \ USB_GLD_MSR_CONFIG - 5536 page 262
+
+\ 5120.0008 ohci-pci-base  e msr,    \ USB OHC Base Address - 5536 page 266
+\ 5120.0009 ehci-pci-base  e msr,    \ USB EHC Base Address - 5536 page 266 FLADJ set
+\ 5120.000b uoc-pci-base   2 msr,    \ USB UOC Base Address - 5536 page 266
+
   msr: 5120.0008 0000000e.fe01a000.  \ USB OHC Base Address - 5536 page 266
   msr: 5120.0009 0000200e.fe01b000.  \ USB EHC Base Address - 5536 page 266 FLADJ set
   msr: 5120.000b 00000002.efc00000.  \ USB UOC Base Address - 5536 page 266

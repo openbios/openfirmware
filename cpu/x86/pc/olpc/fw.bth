@@ -20,8 +20,6 @@ create debug-startup
 : \Tags [compile] \  ; immediate
 : \NotTags [compile] \  ; immediate
 
-fload ${BP}/cpu/x86/pc/segments.fth     \ Segment selectors (address spaces)
-
 : RAMbase  ( -- adr )  fw-virt-base  ;
 : RAMtop  ( -- adr )  RAMbase /fw-ram +  ;
 
@@ -73,6 +71,11 @@ device-end
 fload ${BP}/ofw/core/clntmem1.fth	\ client services for memory
 [else]
 fload ${BP}/ofw/core/clntphy1.fth	\ client services for memory
+: >physical  ( va -- pa )
+   dup fw-virt-base - fw-virt-size u<  if   ( va )
+      fw-virt-base -  fw-pa +
+   then
+;
 [then]
 fload ${BP}/ofw/core/memlist.fth	\ Resource list common routines
 fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
@@ -340,6 +343,14 @@ fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 fload ${BP}/cpu/x86/pc/linux.fth
 fload ${BP}/cpu/x86/pc/olpc/memtest.fth
+
+fload ${BP}/cpu/x86/pc/rmtools.fth
+fload ${BP}/dev/geode/smi.fth
+fload ${BP}/cpu/x86/pc/olpc/acpi.fth
+fload ${BP}/cpu/x86/pc/olpc/smbios.fth
+\ fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
+fload ${BP}/cpu/x86/pc/biosints.fth
+
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 fload ${BP}/cpu/x86/pc/olpc/fsupdate.fth
@@ -353,12 +364,21 @@ fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 ' gx-power-off to power-off
 [then]
 
-" disk:\boot\olpc.fth sd:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
+[ifdef] use-ega
+: ega-output  ( -- )
+   \ This only works if stdout is currently /display
+   stdout @  if
+      " text-mode3" screen-ih $call-method
+   then
+   " /ega-text" output
+;
+[then]
+
+" /xp disk:\boot\olpc.fth sd:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
    ' boot-device  set-config-string-default
 
 \needs ramdisk  " " d# 128 config-string ramdisk
 " "   ' boot-file      set-config-string-default   \ Let the boot script set the cmdline
-
 
 : dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
 : brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;

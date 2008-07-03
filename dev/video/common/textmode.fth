@@ -100,6 +100,26 @@ create mode2+/3		\ 80x25, 8x16 character cell
    " "(5f 4f 50 82 55 81 bf 1f 00 4f 0d 0e 00 00 00 00 9c 8e 8f 28 1f 96 b9 a3 ff)"
    place-string				\ CRT registers
 
+create mode12-table
+\  h# 67 c,
+\   h# e7 c,  \ Maybe c7
+   h# e3 c,
+
+   " "(00 01 0f 00 06)"   \ use 0e instead of 06 for mode 13
+   place-string				\ Sequencer registers
+
+   " "(00 01 02 03 04 05 14 07 38 39 3a 3b 3c 3d 3e 3f 01 00 0f 00 00)"
+   place-string				\ Attribute registers
+
+\   " "(00 00 00 00 00 40 05 0f ff)"
+   " "(00 00 00 00 00 00 05 0f ff)"
+   place-string				\ Graphics registers
+
+   " "(5f 4f 50 82 54 80 bf 3e 00 40 00 00 00 00 00 59 ea 0c df 28 00 e7 04 e3 ff)"
+\  " "(5f 4f 50 82 54 80 0b 3e 00 40 00 00 00 00 07 80 ea 0c df 50 00 e7 04 e3 ff)"
+   place-string				\ CRT registers
+
+
 : plane-mode     ( -- )  6 4 seq!  c 6 grf!  ;
 : odd/even-mode  ( -- )  2 4 seq!  e 6 grf!  ;
 [ifdef] testing
@@ -178,6 +198,13 @@ external
    ega-colors  0  d# 64  (set-colors)
 [then]
 ;
+0 value vga
+: graphics-mode12  ( -- )
+   io-base -1 =  if  map-io-regs  then
+   mode12-table set-vga-mode
+   h# 000a.0000 0  h# 8200.0000  h# 10000  " map-in" $call-parent  to vga
+;
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

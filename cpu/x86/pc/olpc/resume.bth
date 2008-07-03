@@ -25,14 +25,6 @@ fload ${BP}/dev/geode/startmacros.fth
 \ create restore-usb-power
 \ create checksum-test
 
-h# fe00.0000 constant gp-pa
-h# fe00.4000 constant dc-pa
-h# fe00.8000 constant vp-pa
-h# fe01.a000 constant ohci-pa
-h# fe01.b000 constant ehci-pa
-h# efc0.0000 constant uoc-pa
-h#      1000 constant gpio-port
-
 : resume-progress  ( byte -- )
    " h# 34 # al mov   al h# 70 # out  ( byte ) # al mov  al h# 71 # out" eval
 ;
@@ -124,7 +116,9 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    \ We do this in top-down order to configure the AUX select
    \ registers before setting the output enables and values.
 
-   gpio-port h# 38 + #  dx  mov  \ Low bank - first contiguous GPIO register
+   h# 5140.000c rmsr  ax bx mov
+
+   h# 38 [bx]  dx  lea   \ Low bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
    begin
       dx  ax   in   \ Read GPIO control register
@@ -132,11 +126,13 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
       4 #  dx  sub  \ Next port address
    loopa
 
-   gpio-port h# 40 + # dx mov  dx ax in  ax stos  \ Pos edge enable
-   gpio-port h# 44 + # dx mov  dx ax in  ax stos  \ Neg edge enable
-   gpio-port h# 3c + # dx mov  dx ax in  ax stos  \ Low bank lock
+   h# 40 [bx] dx lea  dx ax in  ax stos  \ Pos edge enable
+   h# 44 [bx] dx lea  dx ax in  ax stos  \ Neg edge enable
+   h# 3c [bx] dx lea  dx ax in  ax stos  \ Low bank lock
 
-   gpio-port h# b8 + #  dx  mov  \ High bank - first contiguous GPIO register
+[ifndef] omit-high-gpio-restore
+   \ This is probably unnecessary, as these registers may be in the suspend well
+   h# b8 [bx] dx lea  \ High bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
    begin
       ax   dx  in   \ Read GPIO control register
@@ -144,26 +140,27 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
       4 #  dx  sub  \ Next port address
    loopa
 
-   gpio-port h# c0 + # dx mov  dx ax in  ax stos  \ Pos edge enable
-   gpio-port h# c4 + # dx mov  dx ax in  ax stos  \ Neg edge enable
-   gpio-port h# bc + # dx mov  dx ax in  ax stos  \ High bank lock
+   h# c0 [bx] dx lea  dx ax in  ax stos  \ Pos edge enable
+   h# c4 [bx] dx lea  dx ax in  ax stos  \ Neg edge enable
+   h# bc [bx] dx lea  dx ax in  ax stos  \ High bank lock
+[then]
 
    \ Switch the THRM_ALARM# pin to GPIO during suspend, so it doesn't trigger falsely.
    \ THRM_ALARM# is in the standby power well
-   h# 0400.0000 # ax mov  gpio-port h# 34 + # dx mov  ax dx out  \ GPIO, not THRM_ALARM#
+   h# 0400.0000 # ax mov  h# 34 [bx] dx lea  ax dx out  \ GPIO, not THRM_ALARM#
 
 [ifdef] save-display
 \ \ h# 3c 0  do  i gp@ l!+  4 +loop  h# 4c gp@ l!+
-\  h# f # cx mov  gp-pa set-base  begin  0 [bx] ax mov  ax stos  4 # bx add  loopa
-\  gp-pa h# 4c + #) ax mov  ax stos
+\  h# f # cx mov  gp-pci-base set-base  begin  0 [bx] ax mov  ax stos  4 # bx add  loopa
+\  gp-pci-base h# 4c + #) ax mov  ax stos
 
-   vp-pa set-base
+   vp-pci-base set-base
    h# 400 reg-save  h# 408 reg-save  h# 418 reg-save
    h#   8 reg-save
    0 # h# 38 [bx] mov  h# 100 # cx mov  begin  h# 40 reg-save  loopa  \ Gamma
    h# 410 reg-save
 
-   dc-pa set-base
+   dc-pci-base set-base
    h# 10 reg-save  h# 14 reg-save  h# 18 reg-save  h# 1c reg-save
 
    h# 20 reg-save  h# 24 reg-save  h# 28 reg-save
@@ -213,7 +210,8 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    h# 5140.0037 rmsr  al stos  \ PIT Count Enable MSR
 
    \ SMBUS controller
-   h# 18b3 # dx mov  \ SMBUS base port
+   
+   h# 5140.000b rmsr  3 [ax] dx lea \ SMBUS reg 3
            dx al in   al stos   \ Reg 3
    dx inc  dx al in   al stos   \ Reg 4
    dx inc  dx al in   al bl mov  h# fe # al and  al stos   \ Reg 5 w/o enable bit
@@ -271,8 +269,8 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
 [then]
 
    \ Stop video refresh
-   h# 4758 #  h# fe00.4000 #)  mov  \ Unlock DC registers
-   h#    0 #  h# fe00.4004 #)  mov  \ Turn off access to display memory
+   h# 4758 #  dc-pci-base     #)  mov  \ Unlock DC registers
+   h#    0 #  dc-pci-base 4 + #)  mov  \ Turn off access to display memory
 
    h# 4000.0e00 h# 1410 port-wl   \ Assert SLP_CLK_EN# 1 mS after SUSPA#
 \  This is pointless because register 14 is in the working power domain
@@ -333,7 +331,7 @@ here resume-entry put-branch
 \   Running from a 32-bit identity-mapped code segment
 \   Using physical addresses
 
-\ char < 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+ char < 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
 
    resume-data #  bp  mov
 
@@ -379,13 +377,14 @@ here resume-entry put-branch
 [ifdef] reset-smbus-bitbang
    \ GPIO15 is SMB_DATA
    \ GPIO14 is SMB_CLOCK
+   h# 5140.000c rmsr  ax bx  mov
    h#     c000 # ax mov         \ Mask to set SMB_DATA and SMB_CLOCK
-   h# 1000 # dx mov  ax dx out  \ Set output values to high
-   h# 1004 # dx mov  ax dx out  \ Set pins to output
+   h# 00 [bx] dx lea  ax dx out  \ Set output values to high
+   h# 04 [bx] dx lea  ax dx out  \ Set pins to output
    h# c0000000 # ax mov         \ Mask to clear SMB_DATA and SMB_CLOCK
-   h# 1010 # dx mov  ax dx out  \ Deselect OUT AUX1
-   h# 1014 # dx mov  ax dx out  \ Deselect OUT AUX2
-   h# 1034 # dx mov  ax dx out  \ Deselect IN AUX1
+   h# 10 [bx] dx lea  ax dx out  \ Deselect OUT AUX1
+   h# 14 [bx] dx lea  ax dx out  \ Deselect OUT AUX2
+   h# 34 [bx] dx lea  ax dx out  \ Deselect IN AUX1
 
    d# 16 # cx mov  \ Generate 8 low pulses on SMB_CLOCK
    begin
@@ -393,15 +392,19 @@ here resume-entry put-branch
       rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
       begin  rdtsc  bx ax sub  0>= until
 
-      h# 1000 # dx mov             \ Output value register
+      cx bx mov                          \ Save cx for use by rmsr
+      h# 5140.000c rmsr  ax dx  mov      \ GPIO output register
       h# 40000000 # ax mov  ax dx out    \ Clear SMB_CLOCK
+      bx cx mov                          \ Restore cx
 
       \ 5 uS delay (slightly longer for GX)
       rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
       begin  rdtsc  bx ax sub  0>= until
 
-      h# 1000 # dx mov             \ Output value register
+      cx bx mov                          \ Save cx for use by rmsr
+      h# 5140.000c rmsr  ax dx  mov      \ GPIO output register
       h#     4000 # ax mov  ax dx out    \ Set SMB_CLOCK
+      bx cx mov                          \ Restore cx
    loopa
 
    \ 5 uS delay (slightly longer for GX)
@@ -411,7 +414,8 @@ here resume-entry put-branch
 
    h# 23 resume-progress
 
-   h# 1038 #     dx  mov  \ Low bank - first contiguous GPIO register
+   h# 5140.000c rmsr  ax bx mov
+   h# 38 [bx]  dx  lea   \ Low bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
    begin
       ax lods
@@ -421,14 +425,16 @@ here resume-entry put-branch
 
    \ Clear edge detects for GPIO pins that are not powered during suspend
    h# ffff # ax mov
-   h# 1048 # dx mov  ax dx out  \ Pos edge status
-   h# 104c # dx mov  ax dx out  \ Neg edge status
+   h# 48 [bx] dx lea  ax dx out  \ Pos edge status
+   h# 4c [bx] dx lea  ax dx out  \ Neg edge status
 
-   ax lods  h# 1040 # dx mov  ax dx out  \ Pos edge enable
-   ax lods  h# 1044 # dx mov  ax dx out  \ Neg edge enable
-   ax lods  h# 103c # dx mov  ax dx out  \ Low bank lock
+   ax lods  h# 40 [bx] dx lea  ax dx out  \ Pos edge enable
+   ax lods  h# 44 [bx] dx lea  ax dx out  \ Neg edge enable
+   ax lods  h# 3c [bx] dx lea  ax dx out  \ Low bank lock
 
-   h# 10b8 #     dx  mov  \ High bank - first contiguous GPIO register
+[ifndef] omit-high-gpio-restore
+   \ This is probably unnecessary, as these registers may be in the suspend well
+   h# b8 [bx]    dx  lea  \ High bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
    begin
       ax lods
@@ -439,27 +445,28 @@ here resume-entry put-branch
    \ Clear edge detects for GPIO pins that are not powered during suspend
    \ GPIOs 28:24 are in the suspend power well.  GPIOs 31:29 don't exist.
    h# e0ff # ax mov
-   h# 10c8 # dx mov  ax dx out  \ Pos edge status
-   h# 10cc # dx mov  ax dx out  \ Neg edge status
+   h# c8 [bx] dx lea  ax dx out  \ Pos edge status
+   h# cc [bx] dx lea  ax dx out  \ Neg edge status
 
-   ax lods  h# 10c0 # dx mov  ax dx out  \ Pos edge enable
-   ax lods  h# 10c4 # dx mov  ax dx out  \ Neg edge enable
-   ax lods  h# 10bc # dx mov  ax dx out  \ High bank lock
+   ax lods  h# c0 [bx] dx lea  ax dx out  \ Pos edge enable
+   ax lods  h# c4 [bx] dx lea  ax dx out  \ Neg edge enable
+   ax lods  h# bc [bx] dx lea  ax dx out  \ High bank lock
+[then]
 
    h# 24 resume-progress
 
 [ifdef] save-display
 
 \ \ h# 3c 0  do  l@+ i gp!  4 +loop   l@+ h# 4c gp! 
-\  h# f # cx mov   gp-pa set-base  begin  ax lods  ax 0 [bx] mov  4 # bx add  loopa
-\  ax lods  ax  gp-pa h# 4c + #)  mov
+\  h# f # cx mov   gp-pci-base set-base  begin  ax lods  ax 0 [bx] mov  4 # bx add  loopa
+\  ax lods  ax  gp-pci-base h# 4c + #)  mov
 
 \ Synchronize the flat panel turn-on with the DCON blanking
 \   d# 50,000 # cx mov  \ 50K spins is about 40 mS
 \   h# 1030 # dx mov  \ GPIO data port
 \   begin  dx ax in  h# 1000 # ax test  loope  \ Wait for blanking
 
-   vp-pa set-base
+   vp-pci-base set-base
    0 #  h# 50 [bx] mov  \ Power on for DACs, enable gamma correction 
    h# 400 reg-restore
    h# 408 reg-restore
@@ -470,7 +477,7 @@ here resume-entry put-branch
 
 \   d# 1,000,000 # cx mov  begin  h# 410 [bx] ax mov  1 # al test  loope  \ Panel power up
 
-   dc-pa set-base
+   dc-pci-base set-base
    
    h# 4758 #  0 [bx]  mov  \ Unlock
    h# 10 reg-restore   h# 14 reg-restore   h# 18 reg-restore   h# 1c reg-restore
@@ -485,25 +492,26 @@ here resume-entry put-branch
 
 \ Synchronize the VGA turn-on with the DCON blanking
    d# 50,000 # cx mov  \ 50K spins is about 40 mS
-   h# 1030 # dx mov  \ GPIO data port
+   h# 5140.000c rmsr  h# 30 [ax] dx lea       \ GPIO data port
    begin  dx ax in  h# 1000 # ax test  loope  \ Wait for blanking
 
    h#  8 reg-restore   h#  4 reg-restore
 
-   0 #  dc-pa #)  mov  \ Lock
+   0 #  dc-pci-base #)  mov  \ Lock
 
 \   d# 100,000 # cx mov  begin  h# 80 #  ax in  loopa  \ Delay about 100 ms
 
    d# 80,000 # cx mov  begin  h# 80 # a in  loopa  \ Wait for panel power up
 
    \ Unfreeze image by setting the DCONLOAD bit (0x800) in the GPIO output register
-   h# 0800 h# 1000 port-wl
+   h# 5140.000c rmsr  ax dx mov   \ GPIO output register
+   h# 0800 # ax mov   ax dx out
 [else]
    \ Turn on the flat panel power as soon as possible
    \ The 400.0000 bit make the panel power-up timers use the 14 MHz clock
    \ instead of the 32 kHz clock.  That is supposed to be only for simulation,
    \ but we have DCON between the CPU and the panel, so we don't need delays.
-   h# 500.0000 #  vp-pa h# 410 + #)  mov
+   h# 500.0000 #  vp-pci-base h# 410 + #)  mov
 [then]
 
    h# 25 resume-progress
@@ -555,7 +563,7 @@ here resume-entry put-branch
    h# 27 resume-progress
 
    \ SMBUS controller
-   h# 18b3 # dx mov  \ SMBUS base port
+   h# 5140.000b rmsr  3 [ax] dx lea  \ SMBUS reg 3
    al lods          al dx out  \ Reg 3
    al lods  dx inc  al dx out  \ Reg 4
    al lods  dx inc  al dx out  \ Reg 5 without the enable bit
@@ -564,8 +572,9 @@ here resume-entry put-branch
 
 [ifdef] reset-smbus
    \ This little dance resets the DCON's SMbus interface
-   h#    1 # al mov  \ START
-   h# 18b3 # dx mov  \ SMBUS control 1
+   \ We start with dx pointing to SMBUS reg 5
+   dx dec  dx dec    \ Point back to smbus reg3 (control 1)
+   h# 1 #  al mov    \ START
    al dx out         \ Initiate an SMBUS cycle to the DCON
 
    \ We could split here and move the following down, so as to overlap
@@ -573,30 +582,30 @@ here resume-entry put-branch
    \ later CaFe chip setup will stall anyway.
 
    d#   32 # cx mov  \ Loop count (usually ready in 20 uS)
-   h# 18b1 # dx mov  \ SMBUS status
+   dx dec  dx dec    \ SMBUS reg1 (status)
    begin
       dx al in
       h# 40 # al test
    loope             \ Wait for ready to accept byte or timeout
 
    h#   1a # al mov  \ Address byte
-   h# 18b0 # dx mov  \ SMBUS data   
+   dx dec            \ SMBUS reg0 (data)
    al dx out         \ Initiate address out cycle
 
    \ Another possible split point, in case we should need to overlap
    d#  256 # cx mov  \ Loop count (usually ready in 172 uS)
-   h# 18b1 # dx mov  \ SMBUS status
+   dx inc            \ SMBUS reg1 (status)
    begin
       dx al in
       h# 50 # al test
    loope             \ Wait for done or error or timeout
 
    h#    2 # al mov  \ Stop
-   h# 18b3 # dx mov  \ SMBUS status
+   dx inc  dx inc    \ SMBUS reg3 (control 1)
    al dx out         \ Initiate STOP
 
    h#   10 # al mov  \ Ack NEGACK
-   h# 18b1 # dx mov  \ SMBUS status
+   dx dec  dx dec    \ SMBUS reg1 (status)
    al dx out         \ While acking the NEGACK
    \ End of DCON SMbus reset dance
 [then]
@@ -619,11 +628,11 @@ here resume-entry put-branch
    \ h# 8000 h# 4000.0000 or h# 1440 pl!  \ Fail-safe delay
 
    \ USB Power-to-Port assignment
-   h# 3ab #  uoc-pa     #) mov
-   h#   2 #  uoc-pa 4 + #) mov
+   h# 3ab #  uoc-pci-base     #) mov
+   h#   2 #  uoc-pci-base 4 + #) mov
 
 [ifdef] restore-usb-power
-   ohci-pa set-base
+   ohci-pci-base set-base
    h#       1 #  h# 08 [bx]  mov  \ HcCommandStatus register - Reset host controller
    h# 1e.0000 #  h# 4c [bx]  mov  \ HcRhDescriptorB register - Individual port power
    h#     100 #  h# 58 [bx]  mov  \ HcRhPortStatus[2] register - Power on
@@ -655,7 +664,7 @@ here resume-entry put-branch
    h# 6204 config-setup  ax lods  op: ax dx out    \ Camera enables
 
 [ifdef] restore-usb-power
-   ohci-pa set-base
+   ohci-pci-base set-base
    \ Do this after the CaFe setup to stagger the power-on.  The staggering
    \ might not be necessary for B3 and later.
    h#     100 #  h# 54 [bx]  mov  \ HcRhPortStatus[1] register - Power on
@@ -668,16 +677,16 @@ here resume-entry put-branch
    h# 2b resume-progress
 
    \ Display stuff
-   h# 4758 #  h# fe00.4000 #)  mov  \ Unlock display controller registers
+   h# 4758 #  dc-pci-base #)  mov  \ Unlock display controller registers
 
    h# 1808 rmsr              \ Get default region config register - low in ax
    d#  8 # ax shr            \ Discard region type bits
    d# 12 # ax shl            \ Convert page number to address
-   ax  h# fe00.4088 #)  mov  \ DV_CTL register - sets framebuffer phys base
+   ax  dc-pci-base h# 88 + #)  mov  \ DV_CTL register - sets framebuffer mem offset
 
-   h# fd00.0000 #  h# fe00.4084 #)  mov   \ GLIU0 Memory offset
-   h# fd00.0000 #  h# fe00.004c #)  mov   \ GP base
-   h# fd80.0000 #  h# fe00.8460 #)  mov   \ Flat panel base
+   fb-pci-base #  dc-pci-base h#  84 + #)  mov   \ GLIU0 Memory offset
+   fb-pci-base #  gp-pci-base h#  4c + #)  mov   \ GP base
+   fb-pci-base h# 80.0000 + #  vp-pci-base h# 460 + #)  mov   \ Flat panel base (GX only)
 
    \ There is a lot of other stuff that must be done to turn on the
    \ video - but we will let the gx driver take care of that.
@@ -721,7 +730,7 @@ here resume-entry put-branch
 
    \ Identity mapping of low memory might not exist now
 
-\  char > 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+  char > 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
 
    gs pop
 

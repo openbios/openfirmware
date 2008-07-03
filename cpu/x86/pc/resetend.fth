@@ -35,10 +35,12 @@ purpose: Common code for several versions of reset.bth
 
    \ qemu hangs when trying to do this
    here asm-base - ResetBase +  7 +   h# 60  #)  far jmp  \ 7-byte instruction
+\   here asm-base - ResetBase +  7 +   h# 10  #)  far jmp  \ 7-byte instruction
    \ nop nop nop nop
 
 \ begin again
    h# 68 # ax mov
+\   h# 18 # ax mov
    ax ds  mov
    ax es  mov
    ax fs  mov

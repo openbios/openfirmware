@@ -345,14 +345,6 @@ d# 256 constant /sig
 d# 1024 constant /sec-line-max
 /sec-line-max buffer: sec-line-buf
 
-\ Remove bogus null characters from the end of mfg data tags (old machines
-\ have malformed tags)
-: ?-null  ( adr len -- adr' len' )
-   dup  if
-      2dup + 1- c@  0=  if  1-  then        ( adr len' )
-   then
-;
-
 \ machine-id-buf is a buffer into which the machine signature string,
 \ including serial number, UUID, and expiration time, is place.
 \ That string is the signed object for lease and developer key verification.

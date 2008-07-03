@@ -11,17 +11,6 @@ dev /mmu
 
 0 value pt-pa
 
-\ Move the global descriptor table into the Forth region, thus freeing
-\ the low memory it currently occupies
-: move-gdt   ( -- )
-   gdtr@ 1+                       ( pa size )
-   h# 800 alloc-mem 8 round-up    ( pa size va )  \ Give it plenty of space
-   dup h# 800 erase               ( pa size va )
-   3dup swap move                 ( pa size va )
-   swap 1- gdtr!                  ( pa )
-   drop
-;
-
 : >p  ( va -- pa )  (translate)  0= abort" Not mapped"  drop  ;
 
 : (initial-mmu-setup)  ( -- )	\ Locate the page directory
@@ -65,9 +54,6 @@ dev /mmu
    >pt-adr  to ptab-va-pte-va
 
    RAMtop to pdir-va                              ( old-pdir-va )
-
-   \ Move the Global Descriptor Table into high memory
-   move-gdt
 
 \   0   h# 10.0000  2dup unmap 	release			\ Release old mapping
 ;

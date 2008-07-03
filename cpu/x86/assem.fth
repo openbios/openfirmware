@@ -33,6 +33,8 @@ protected-mode# value memory-mode
 
 : real-mode	  ( - bool )         real-mode# is memory-mode  ;
 : protected-mode  ( - bool )    protected-mode# is memory-mode  ;
+alias 16-bit real-mode
+alias 32-bit protected-mode
 
 : real?		( - bool )   memory-mode      real-mode# =  ;
 : protected?	( - bool )   memory-mode protected-mode# =  ;
@@ -70,6 +72,8 @@ false value data-ov
 : op:   ( -- )   true is data-ov     h# 66 asm8,  ;
 : ad:   ( -- )   true is address-ov  h# 67 asm8,  ;
 : clear-ov   ( -- )   false is data-ov   false is address-ov  ;
+
+: op16?  ( -- flag )  real? data-ov xor  ;
 
 : (asm,)  ( flag -- )  real? xor if   asm16,   else   asm32,   then  ;
 : adr,    ( n -- )  address-ov (asm,)  ;
@@ -340,7 +344,7 @@ VARIABLE INTER
 	 swap asm8, asm8,
       else				( op disp )
 	 prefix-0f  swap h# 10 + asm8,
-	 real? if  2  else  4  then  -	 adr,
+	 op16? if  2  else  4  then  -	 adr,
       then
       normal
 ;
@@ -429,13 +433,13 @@ VARIABLE INTER
    OVER #) =  IF                                ( dst mode apf )
       NIP C@ INTER @  IF                        ( offset segment code )
          1 AND  IF  352  ELSE  232  THEN  ASM8, ( offset segment )
-         SWAP ADR, ASM16,  INTER OFF            ( )
+         SWAP asm, ASM16,  INTER OFF            ( )
       ELSE					( dst code )
          SWAP HERE 2+ -  SWAP                   ( rel-dst code )
          2DUP 1 AND SWAP BIG? 0= AND  IF        ( rel-dst code )
             2 OP,  ASM8,                        ( )
          ELSE                                   ( rel-dst code )
-	    ASM8,  real? if
+	    ASM8,  op16? if
 	       1- asm16,
 	    else
 	       3 - asm32,

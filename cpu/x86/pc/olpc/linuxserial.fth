@@ -32,7 +32,7 @@ purpose: Interface to Linux serial driver via Forth wrapper
 ;
 
 : $open-serial  ( dev$ -- )  \ e.g. " /dev/ttyS0"
-   serial-fd -1 <>  if  2drop  then
+   serial-fd -1 <>  if  2drop exit  then
    $cstr  0 2 rot  8 syscall  3drop retval  to serial-fd
    serial-fd 0< abort" Can't open serial device"
    raw  8n1  blocking

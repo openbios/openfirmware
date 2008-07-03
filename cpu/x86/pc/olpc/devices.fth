@@ -4,6 +4,7 @@ purpose: Load device drivers according to configuration definitions
 : gx?  ( -- flag )  h# 4c000017 msr@ drop  4 rshift  2 =  ;
 : lx?  ( -- flag )  h# 4c000017 msr@ drop  4 rshift  3 =  ;
 
+fload ${BP}/dev/geode/msr.fth
 fload ${BP}/cpu/x86/pc/isaio.fth
 
 [ifdef] rom-loaded
@@ -42,6 +43,13 @@ stand-init:
    d# 1000 rounded-/      to us-factor                  ( )
 ;
 
+[ifdef] use-ega
+0 0 " " " /" begin-package
+   fload ${BP}/dev/egatext.fth
+end-package
+\ devalias screen /ega-text
+[then]
+
 [ifdef] use-root-isa
 0 0  " "  " /" begin-package
    fload ${BP}/cpu/x86/pc/isabus.fth	\ ISA Bus Bridge under root node
@@ -67,11 +75,6 @@ end-package
 fload ${BP}/cpu/x86/pc/olpc/timertest.fth  \ Selftest for PIT timer
 
 1 [if]
-dev /interrupt-controller
-h# 20 to vector-base0
-h# 28 to vector-base1
-device-end
-
 warning @ warning off
 : probe-pci  ( -- )
    probe-pci
@@ -112,6 +115,11 @@ devalias rom     /dropin-fs
 fload ${BP}/cpu/x86/forthint.fth	\ Low-level interrupt handling code
 fload ${BP}/dev/isa/irq.fth		\ ISA interrupt dispatcher
 fload ${BP}/cpu/x86/pc/isatick.fth	        \ Use ISA timer as the alarm tick timer
+
+dev /interrupt-controller
+irq-vector-base to vector-base0
+vector-base0 8 + to vector-base1
+device-end
 
 [ifdef] resident-packages
 support-package: 16550
@@ -255,6 +263,12 @@ fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
 
 fload ${BP}/cpu/x86/pc/olpc/boardrev.fth   \ Board revision decoding
 
+: cpu-mhz  ( -- n )
+   " /cpu@0" find-package drop	( phandle )
+   " clock-frequency" rot get-package-property  if  0 exit  then  ( adr )
+   decode-int nip nip  d# 1000000 /  
+;
+
 stand-init: Date to EC
    time&date d# 2000 -  ['] ec-date! catch  if  3drop  then
    3drop
@@ -298,6 +312,11 @@ fload ${BP}/dev/geode/lpcflash.fth           \ Reflasher for PLCC FLASH on A-tes
 
 : +i encode-int encode+  ;  : 0+i  0 +i  ;
 
+[ifdef] rom-loaded
+fload ${BP}/cpu/x86/pc/olpc/gpioinit.fth
+fload ${BP}/cpu/x86/pc/olpc/chipinit.fth
+[then]
+
 fload ${BP}/cpu/x86/fb16-ops.fth
 fload ${BP}/ofw/termemu/fb16.fth
 0 0  " 1,1"  " /pci" begin-package
@@ -306,11 +325,11 @@ fload ${BP}/ofw/termemu/fb16.fth
    fload ${BP}/dev/geode/display/loadpkg.fth     \ Geode display
 
    0 0 encode-bytes
-   h# 8200.0910 +i  0+i h# fd00.0000 +i  0+i h# 0080.0000 +i  \ Frame buffer
-   h# 8200.0914 +i  0+i h# fe00.0000 +i  0+i h# 0000.4000 +i  \ GP
-   h# 8200.0918 +i  0+i h# fe00.4000 +i  0+i h# 0000.4000 +i  \ DC
-   h# 8200.091c +i  0+i h# fe00.8000 +i  0+i h# 0000.4000 +i  \ VP
-   h# 8200.0920 +i  0+i h# fe00.c000 +i  0+i h# 0000.4000 +i  \ VIP (LX only)
+   h# 8200.0910 +i  0+i fb-pci-base  +i  0+i h# 0080.0000 +i  \ Frame buffer
+   h# 8200.0914 +i  0+i gp-pci-base  +i  0+i h# 0000.4000 +i  \ GP
+   h# 8200.0918 +i  0+i dc-pci-base  +i  0+i h# 0000.4000 +i  \ DC
+   h# 8200.091c +i  0+i vp-pci-base  +i  0+i h# 0000.4000 +i  \ VP
+   h# 8200.0920 +i  0+i vip-pci-base +i  0+i h# 0000.4000 +i  \ VIP (LX only)
    " assigned-addresses" property
 
 end-package
@@ -318,11 +337,6 @@ devalias screen /display
 also hidden  d# 34 to display-height  previous  \ For editing
 
 fload ${BP}/cpu/x86/adpcm.fth            \ ADPCM decoding
-
-[ifdef] rom-loaded
-fload ${BP}/cpu/x86/pc/olpc/gpioinit.fth
-fload ${BP}/cpu/x86/pc/olpc/chipinit.fth
-[then]
 
 warning @ warning off
 : stand-init

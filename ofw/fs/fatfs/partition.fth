@@ -37,17 +37,17 @@ purpose: FDisk partition map decoder
    \ Look for at least one recognizable partition type code
    ptable-bounds  do
       i 4 + c@                                        ( type )
-      dup 1 =
-      over 4 6 between or
+      dup 1 =                   \ FAT12
+      over 4 7 between or       \ 4: FAT16<32M  5: Extended 6: FAT16>32M 7: NTFS
       over h#  b =     or	\ FAT-32
       over h#  c =     or	\ FAT-32
       over h#  e =     or	\ FAT-16 LBA
       over h#  f =     or	\ Extended LBA
-      over h# 41 =     or
-      over iso-type =  or
-      over minix-type =  or
-      over ufs-type =  or
-      swap ext2fs-type =  or                             ( recognized? )
+      over h# 41 =     or       \ PowerPC PreP
+      over iso-type =  or       \ ISO9660
+      over minix-type =  or     \ Minix
+      over ufs-type =  or       \ Unix file system
+      swap ext2fs-type =  or    \ Linux ext2/3, reiser, etc  ( recognized? )
       if  i 4 + c@ to partition-type true unloop exit  then
    h# 10 +loop
    false

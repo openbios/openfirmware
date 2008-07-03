@@ -20,8 +20,6 @@ create debug-startup
 : \Tags [compile] \  ; immediate
 : \NotTags [compile] \  ; immediate
 
-fload ${BP}/cpu/x86/pc/segments.fth     \ Segment selectors (address spaces)
-
 : RAMbase  ( -- adr )  fw-virt-base  ;
 : RAMtop  ( -- adr )  RAMbase /fw-ram +  ;
 
@@ -206,6 +204,7 @@ hex
 ;
 
 fload ${BP}/cpu/x86/pc/biosload/usb.fth
+fload ${BP}/cpu/x86/pc/rmtools.fth
 fload ${BP}/cpu/x86/pc/biosload/callbios.fth
 fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
 

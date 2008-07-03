@@ -4,6 +4,8 @@
 0 value acpi-base
 0 value pm-base
 
+: acpi-b@  ( offset -- b )  acpi-base +  pc@ ;
+: acpi-b!  ( b offset -- )  acpi-base +  pc! ;
 : acpi-w@  ( offset -- w )  acpi-base +  pw@ ;
 : acpi-w!  ( w offset -- )  acpi-base +  pw! ;
 : acpi-l@  ( offset -- l )  acpi-base +  pl@ ;

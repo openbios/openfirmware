@@ -22,7 +22,6 @@ h#  3e.0000 constant inflate-base
 h#  30.0000 constant workspace
 
 start-assembling
-protected-mode
 
 label my-entry
    e9 c,  0 ,				\ To be patched later

@@ -16,7 +16,6 @@ fload ${BP}/cpu/x86/pc/report.fth			\ Startup reports
 fload ${BP}/cpu/x86/pc/olpc/config.fth
 
 start-assembling
-protected-mode
 
 label my-entry
 

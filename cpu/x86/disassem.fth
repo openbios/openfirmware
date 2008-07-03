@@ -56,16 +56,16 @@ d# 34 buffer: disp-buf
 : ?+  ( -- )
    ea-text c@ 1 >  if  " +" $add-text  then
 ;
-: ?-  ( -- )
-   ea-text c@ 1 >  if  " -" $add-text  then
+: ?-  ( disp -- )
+   ea-text c@ 1 >  if  " -" $add-text  negate  then
 ;
 : get-disp  ( mod -- adr len )
    case
    0  of  " "  exit    endof
    1  of  op8@ bext     endof
-   2  of  adv@ wext     endof
+   2  of  adv@  ad32? 0=  if  wext  then  endof
    endcase
-   dup 0>=  if  ?+  else  ?-  negate  then  
+   dup 0>=  if  ?+  else  ?-  then  
    (u.) disp-buf pack  count
 ;
 \ Used when "w" field contains 0
@@ -85,6 +85,7 @@ string-array >regw
 end-string-array
 
 : >reg  ( -- adr len )  >regw count  op32? 0=  if  1 /string  then  ;
+: >areg  ( -- adr len )  >regw count  ad32? 0=  if  1 /string  then  ;
 
 : >greg  ( -- adr len )  wbit  if  >reg  else  >reg8 count  then  ;
 
@@ -101,7 +102,7 @@ end-string-array
       drop                               ( scale )
       if  ?+  " UNDEF" $add-text  then   ( )
    else                                  ( scale index-reg )
-      ?+  >reg $add-text                 ( scale )
+      ?+  >areg $add-text                ( scale )
       >scale count  $add-text            ( )
    then                                  ( )
 ;
@@ -110,7 +111,7 @@ end-string-array
 : add-disp  ( sib? reg mod -- )
    .[                            ( sib? reg mod )
    2dup 0<>  swap 5 <>  or  if   ( sib? reg mod )   \ D32
-      swap >reg $add-text        ( sib? mod )
+      swap >areg $add-text       ( sib? mod )
    else                          ( sib? reg mod )
       2drop 2                    ( sib? mod=2 )
    then                          ( sib? mod )
@@ -195,6 +196,7 @@ string-array >unop
 end-string-array
 
 : .segment  ( -- )  3 2 ibits  >segment ".  ;
+
 string-array >adjust
    ," daa"  ," das"  ," aaa"  ," aas"
 end-string-array
@@ -202,6 +204,8 @@ end-string-array
 
 0 value reg-field
 : get-ea  ( -- )  get-op  midbits  is reg-field  ;
+
+: sreg  ( -- )  reg-field  >segment ".  ;
 
 : gb/v  ( -- )  reg-field  >greg type  ;
 : ib    ( -- )  op8@ bext  (.) type  ;
@@ -232,7 +236,7 @@ string-array >cond
 end-string-array
 
 : showbranch  ( offset -- )
-   pc @  ad32?  if  ( offset pc )
+   pc @  op32?  if  ( offset pc )
       +                    ( pc' )
    else                    ( offset pc )
       lwsplit  -rot        ( pc.high offset pc.low )
@@ -242,7 +246,7 @@ end-string-array
    dup branch-target !  showaddr
 ;
 : jb  ( -- )  op8@ bext  showbranch  ;
-: jv  ( -- )  adv@  showbranch  ;
+: jv  ( -- )  opv@  showbranch  ;
 
 : .jcc  ( -- )  ." j"  low4bits >cond ".  op-col jb  ;
 : ea,g  ( -- )  get-ea  .ea ., gb/v  ;
@@ -308,7 +312,7 @@ end-string-array
       7 of  ." cmpxchg" op-col          ea,g  endof
       8 of  .push  ." gs"  endof
       9 of  .pop   ." gs"  endof
-   \  a of  ???
+      a of  ." rsm"  end-found on  endof
       b of  ." bt"   op-col             ea,g  endof
       c of  ." shrd" op-col  1 is wbit  ea,g  ,ib  endof
       d of  ." shrd" op-col  1 is wbit  ea,g  ,cl  endof
@@ -353,11 +357,19 @@ end-string-array
          then
    endcase
 ;
+: 2b7op  ( -- )
+   low4bits  case
+      8 of  ." svdc"  op-col get-ea  1 is wbit  .ea  ., sreg endof
+      9 of  ." rsdc"  op-col get-ea  1 is wbit  sreg ., .ea  endof
+      .unimp
+   endcase
+;
 : msrop  ( -- )
    low4bits case
       0 of  ." wrmsr"  endof
       1 of  ." rdtsc"  endof
       2 of  ." rdmsr"  endof
+      8 of  ." smint"  endof
       .unimp
    endcase
 ;
@@ -367,6 +379,7 @@ end-string-array
       0 of  2b0op  endof
       2 of  movspec  endof
       3 of  msrop    endof
+      7 of  2b7op    endof
       8 of  ." j"   low4bits >cond ".  op-col  jv  endof
       9 of  ." set" low4bits >cond ".  op-col  0 is wbit  get-ea  .ea  endof
       a of  2baop  endof
@@ -433,7 +446,6 @@ defer dis-body
 : grp1op  ( -- )  get-ea  midbits .binop  ;
 : .test  ( -- )  ." test" op-col  ;
 
-: sreg  ( -- )  reg-field  >segment ".  ;
 : .op8  ( -- )
    low4bits  case
       0 of  grp1op    .byte .ea ., iub  endof
@@ -461,9 +473,10 @@ defer dis-body
 
 : .4x  ( n -- )  push-hex <# u# u# u# u# u#> type pop-base  ;
 : ap  ( -- )
-   adv@ ." far "
+   opv@ ." far "
    op16@ push-hex (.) type pop-base
-   ." :"  ad32?  if  showaddr  else  .4x  then
+   ." :"  op32?  if  showaddr  else  .4x  then
+   end-found on
 ;
 
 string-array >8line-ops
@@ -512,8 +525,8 @@ end-string-array
       3 of  .ret           .near            endof
       4 of  ." les"        .lfp             endof
       5 of  ." lds"        .lfp             endof
-      6 of  .mov      op-col get-ea  ?.byte .ea  ,ib/v  endof
-      7 of  .mov      op-col get-ea         .ea  ,ib/v  endof
+      6 of  .mov           get-ea  ?.byte .ea  ,ib/v  endof
+      7 of  .mov           get-ea         .ea  ,ib/v  endof
       8 of  ." enter" op-col  iw ,ib        endof
       9 of  ." leave"                       endof
       a of  .ret             .far  iw       endof
@@ -552,7 +565,7 @@ end-string-array
 : .in    ( -- )  ." in"   op-col  ;
 : .out   ( -- )  ." out"  op-col  ;
 : .call  ( -- )  ." call" op-col  ;
-: .jmp   ( -- )  ." jmp"  op-col  ;
+: .jmp   ( -- )  ." jmp"  op-col  end-found on  ;
 : dx  ( -- )  ." edx"  ;
 
 : ub    ( -- )  op8@  (.) type  ;

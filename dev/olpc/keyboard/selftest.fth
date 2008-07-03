@@ -165,6 +165,7 @@ create (scan1>ibm#)
 ( 68 ) 152 c, 154 c,   0 c,   0 c,   0 c,   0 c, 135 c,   0 c,  \ 69 is rotate
 ( 70 )   0 c,   0 c,   0 c,  56 c,   0 c,   0 c,   0 c,   0 c,
 ( 78 )   0 c, 130 c,   0 c,   0 c,   0 c,   0 c,   0 c,   0 c,
+hex
 
 \ This should be a lookup table.  It would be smaller that way
 : e0-scan1>ibm#  ( scancode -- ibm# )
@@ -274,6 +275,7 @@ create ibm#s
    154 c,                             \ Rotate
    156 c, 157 c, 158 c, 159 c,        \ Game O, square, check, X
 here ibm#s - constant /ibm#s
+hex
 
 : ibm#>key#  ( ibm# -- true | key# false )
    /ibm#s 0  ?do   ( ibm# )

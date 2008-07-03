@@ -42,9 +42,9 @@ fload ${BP}/cpu/x86/pc/report.fth			\ Startup reports
 
 start-assembling
 
-real-mode
 
 label my-entry
+16-bit
    e9 c,  0 le-w,  \ Branch instruction; patch later
 end-code
 
@@ -81,7 +81,7 @@ fload ${BP}/cpu/x86/pc/dot.fth		\ Numeric output
 \ ------->>>>> Startup code.  DOS sends us here.
 
 label dos-rm-start
-real-mode
+   16-bit
    c 3f2  risa-c!	\ Turn off floppy motor
 
 ascii 0 vr-report
@@ -198,16 +198,11 @@ ascii F report
 
       eb c,  0 c,		\ Flush prefetch queue
 
-\ The switch to protected mode does not occur until the far jmp has
-\ executed, but we need to compile the "far jmp" with a 32-bit offset,
-\ (because it uses op:), so we put the "protected-mode" (which is a
-\ misnomer; it should be "use32") here instead of after the "far jmp".
-protected-mode
-
       \ Execute a far jump to following code to reload CS with a
       \ protected mode selector.  The offset portion of the address
       \ (here asm-base - 7 +) has been relocated by the code above.
       op:  here asm-base - 7 +  10 #)  far jmp
+      32-bit
 
       \ The following 2 lines execute at compile time, patching the
       \ address portions of earlier "mov" instructions so that they
@@ -256,6 +251,7 @@ only forth also definitions  \ In case of unbalanced "label .. end-code" above
 writing biostart.img
 asm-base /dos-image ofd @ fputs
 ofd @ fclose
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
