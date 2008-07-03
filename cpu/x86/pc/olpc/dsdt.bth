@@ -5,4 +5,4 @@ build-now
 
 " iasl -vi -vr -vs ../dsdt.dsl" expand$ $sh
 \ " iasl -vi -vr -vs ../fadt.dsl" expand$ $sh
-" iasl -vi -vr -vs ../ssdt.dsl" expand$ $sh
+\ " iasl -vi -vr -vs ../ssdt.dsl" expand$ $sh
