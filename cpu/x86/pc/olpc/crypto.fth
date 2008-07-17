@@ -4,6 +4,7 @@ purpose: Interface to cryptographic code for firmware image validation
 h# c0000 constant verify-base  \ The address the code is linked to run at
 h# d0000 constant verify-bss   \ The address the code is linked to run at
 h# 10000 constant /verify-bss
+h# 9c000 constant verify-stack
 
 0 value crypto-loaded?
 : load-crypto  ( -- error? )
@@ -19,7 +20,7 @@ h# 10000 constant /verify-bss
 : signature-bad?  ( data$ sig$ key$ hashname$ -- mismatch? )
    $cstr
    verify-bss /verify-bss erase    ( data$ sig$ key$ 'hashname )
-   verify-base  dup h# 10 -  sp-call  >r  3drop 4drop  r>  ( result )
+   verify-base  verify-stack  sp-call  >r  3drop 4drop  r>  ( result )
 ;
 
 \ This is a hack that saves a lot of memory.  The crypto verifier

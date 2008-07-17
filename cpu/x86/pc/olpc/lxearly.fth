@@ -31,6 +31,9 @@ fload ${BP}/cpu/x86/pc/olpc/inituart.fth
  
    \ The LX devel board has only 512M ROM, but assigning 1M of address space is harmless
    25fff002.10f00000.      1808 set-msr  \ 1M ROM at fff0.0000, system RAM limit at 0f00.0000, fbsize
+   20000000.000fff80.  10000020 set-msr  \ memory - 0..7ffff
+   20000000.080fffe0.  10000026 set-msr  \ memory - 80000..9ffff (a0000..bffff is for VGA)
+   20000000.0c0fffc0.  10000027 set-msr  \ memory - c0000..fffff
    2000000e.fff00100.  10000028 set-msr  \ Range - Top of memory at 0eff.ffff, fbsize
    212000fd.ffffd000.  10000029 set-msr  \ Range Offset - Frame buffer at PA fd00.0000 maps to RAM at 0f00.0000, fbsize
    20f400ff.bffff800.  1000002b set-msr  \ Range Offset - OFW area ff80.0000 maps to RAM at 0ec0.0000, fbsize

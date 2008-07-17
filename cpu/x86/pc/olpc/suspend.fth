@@ -4,9 +4,14 @@ purpose: Setup and tests for suspend/resume to RAM
 stand-init:  Suspend/resume
    " resume" find-drop-in  if
       suspend-base swap move
+[ifdef] save-msrs
+      msr-ranges                        ( adr )
+[else]
       msr-init-range                    ( adr len )
       resume-data h# 34 + !             ( adr )
+[then]
       >physical  resume-data h# 30 + !  ( )
+[then]
    then
 ;
 
@@ -45,9 +50,9 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
 \  sum-forth
 ;
 : suspend
-  " video-save" stdout @ $call-method  \ Freeze display
+  " video-save" screen-ih $call-method  \ Freeze display
   s3
-   " video-restore" stdout @ $call-method  \ Unfreeze display
+   " video-restore" screen-ih $call-method  \ Unfreeze display
    " /usb@f,5" open-dev  ?dup  if  " do-resume" 2 pick $call-method  close-dev  then
 ;
 alias s suspend

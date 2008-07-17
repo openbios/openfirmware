@@ -39,6 +39,8 @@ fload ${BP}/cpu/x86/pc/olpc/inituart.fth
    \ Some of these don't really have to be set here, and could be
    \ moved to the big table of MSR values, except that the table
    \ slammer is dumb and can't handle conditionals.
+   20000000.000fff00.   10000020 set-msr  \ memory - 0..fffff
+
    1030 port-rl 4 bitand  0<> if  \ 128 MiB
       25fff002.1077e000.      1808 set-msr
       2c7be040.400fffe0.  10000026 set-msr

@@ -293,6 +293,9 @@ defer smm>physical
 defer handle-smi  ' noop is handle-smi
 create smm-exec  ] handle-smi smi-return [
 
+false value smi-debug?
+false value resume-debug?
+
 false value vpci-debug?
 : enable-virtual-pci  ( -- )
    \ Virtualize devices f and 1, or all devices if debugging
@@ -403,6 +406,7 @@ alias msr. .msr
 : vr-spoof?  ( -- handled? )  false  ;
 
 : pci-smi  ( event-mask -- )
+   smi-debug?  if  ." PCI" cr  then
    8 and  0=  if  exit  then
    smm-io-port 3 invert and  h# cfc <>  if  exit  then
    vpci-debug?  if  h# 5000.2012 msr@ 2>r  0. h# 5000.2012 msr!  then
@@ -443,6 +447,7 @@ alias msr. .msr
 0 value crc-status
 : start-crc  ( -- )   ( XXX )  ;
 : dc-smi  ( event-mask -- )
+   smi-debug?  if  ." DC" cr  then
    h# 10.0000 and 0=  if  exit  then  \ So far we only care about extended CRTC registers
    smm-flags 2 and  if  \ Write
       smm-eax-c@
@@ -540,6 +545,7 @@ defer handle-bios-call
    then
 ;
 : gliu0-smi  ( event-mask -- )
+   smi-debug?  if  ." GLIU" cr  then
    1 and 0=  if  exit  then     \ We only care about virtual register accesses
 
    smm-io-port h# fff0 and  h# 30 =  if
@@ -558,16 +564,138 @@ defer quiesce-devices  ' noop to quiesce-devices
 
 \ We just discard the event about I/O registers because we handle it in sb-smi .
 \ We don't have to deal with statistics counters because we don't enable them
-: cgliu-smi  ( event-mask -- )  drop  ;
+: cgliu-smi  ( event-mask -- )  smi-debug?  if  ." CGLIU" cr  then  drop  ;
+
+code smi  smint  c;
+
+-1 value rm-entry-adr
+: rm-run  ( eip -- )  to rm-entry-adr  smi  ;
+
+: smm-stack-w!  ( w offset -- )  smm-sp +smm +  w!  ;
+: smm-stack-l!  ( l offset -- )  smm-sp +smm +  l!  ;
+\ : smi-to-forth  ( ip -- )
+
+\ exit-smi is tricky.  It replaces the SMM saved state with the
+\ current Forth engine state so that the "smi-return" returns
+\ to the caller of this word as if nothing happened, expect that
+\ the system is no longer in SMM state.  This is used in only
+\ one place - the Windows "go to S3 power state" code.  It's
+\ needed because the Geode hardware won't suspend from SMM state,
+\ ignoring the "2000 18 acpi-l!" (actually the machine code
+\ equivalent) in resume.bth.  So we get out of SMM state, staying
+\ in Forth, then call the Forth suspend word that invokes the
+\ low-level suspend routine.  Doing it this way, instead of writing
+\ new machine code, is easier, in part because it also make its
+\ easier to return to Windows upon resume.  The ACPI resume interface
+\ requires that the final transition be done in real mode; we can
+\ do that from Forth by calling rm-run .
+
+: exit-smi  ( -- )
+   sp0 @  smm-save-sp0 !
+   rp0 @  smm-save-rp0 !
+   smm-gdt 2+ +smm   smm-save-gdt +smm  6 move
+   gs@ h# 8 smm-stack-w!
+   fs@ h# a smm-stack-w!
+   es@ h# c smm-stack-w!
+   ds@ h# e smm-stack-w!
+
+   ['] exit >body smm-next-eip!         \ PC (unnest)
+
+   \ 10 di  14 si  18 bp  1c xsp  20 bx  24 dx  28 cx  2c ax
+   up@    h# 10 smm-stack-l!    \ EDI
+\  ( ip ) h# 14 smm-stack-l!    \ ESI Pointless as EIP points to "exit"
+   rp@    h# 18 smm-stack-l!    \ EBP
+   sp@    smm-save-esp +smm l!  \ ESP
+   ss@    smm-save-ss  +smm w!  \ SS
+
+   smm-d32  smm-save-seg d# 08 + +smm w!  \ DS
+   smm-d32  smm-save-seg d# 18 + +smm w!  \ ES
+   smm-d32  smm-save-seg d# 28 + +smm w!  \ FS
+   smm-d32  smm-save-seg d# 38 + +smm w!  \ GS
+   smm-d32  smm-save-seg d# 48 + +smm w!  \ SS
+
+\   smm-gdt smm-d32 + +smm  smm-save-seg d# 10 + +smm  8 move
+\   smm-gdt smm-d32 + +smm  smm-save-seg d# 20 + +smm  8 move
+\   smm-gdt smm-d32 + +smm  smm-save-seg d# 30 + +smm  8 move
+\   smm-gdt smm-d32 + +smm  smm-save-seg d# 40 + +smm  8 move
+
+   h#    82  smm-header h# 08 - l!  \ smm-eflags (interrupts off)
+   h#    11  smm-header h# 0c - l!  \ smm-cr0
+   h#  c09b  smm-header h# 16 - w!  \ smm-cs-flags
+   smm-c32   smm-header h# 18 - w!  \ smm-cs-sel
+   0         smm-header h# 1c - l!  \ smm-cs-base
+   h# fffff  smm-header h# 20 - l!  \ smm-cs-limit
+
+   smi-return
+;
+
+: setup-smi  ( -- )
+   \ This is how you would map the SMM region to physical memory at 4000.0000
+   \ This is a Base Mask Offset descriptor - the base address
+   \ is 4000.0000 and to that is added the offset c00e.0000
+   \ to give the address 000e.0000 in the GLMC address space.
+   \ The mask is ffff.f000 , i.e. 4K
+
+   \ This is unnecessary if the SMM memory is in a region that is
+   \ already mapped with a descriptor
+   \ h# 2.c00e0.40000.fffff. h# 1000.0026 msr!
+
+   \ Put 4K SMM memory at 000f.f000 in the processor linear address space
+   \ Cacheable in SMM mode, non-cacheable otherwise
+   \ Depends on smm-base and smm-size
+   h# 000ff.0.00.000ff.1.01. h# 180e msr!
+
+   \  Base     Limit
+   smm-base  smm-size 1-  h# 133b msr!
+
+   smm-header 0   h# 132b msr!  \ Offset of SMM Header
+
+   h# 18.  h# 1301 msr!       \ Enable IO and software SMI
+
+   \ Unnecessary if already in mapped memory
+   \ smm-base dup  smm-size  -1 mmu-map
+
+   smi-handler smm-base  /smi-handler  move
+
+   \ Relocate the code field of the code word that is embedded in the sequence
+   ['] (smi-return) smi-handler -  +smm  ( cfa-adr )
+   dup ta1+ swap token!
+
+[ifdef] virtual-mode
+   cr3@ smm-pdir l!
+[then]
+
+   origin smm-forth-base l!
+   smm-exec smm-forth-entry l!
+   up@ smm-forth-up l!
+   smm-sp0 smm-save-sp0 !
+   smm-rp0 smm-save-rp0 !
+
+   enable-virtual-pci
+   enable-io-smis
+;
+
+: win-s3  ( -- )
+   \ The trick here is to transfer to "non-smi-s3" while leaving
+   \ System Management Mode.  We won't need to return to the caller
+   \ that got us here, so we can overwrite any of the saved state.
+   resume-debug?  if  debug-me  then
+   exit-smi
+   resume-debug?  if  ." enter s3" cr  then 
+   s3
+\   ." Return from S3" cr  interact
+\   noop
+   setup-smi
+   facs-adr h# c + l@  rm-run
+;
 
 : power-mode  ( value offset -- )
-   over 1 and  if                                    ( value offset )
-      dup acpi-l@ 1 and  0=  if  quiesce-devices  then   ( value offset )
-   then                                              ( value offset )
+   over 1 and  if  quiesce-devices  then             ( value offset )
 
    over h# 2000 and  if                              ( value offset )
       drop  d# 10 rshift  7 and case                 ( c:power-state )
          5 of  power-off  endof                      ( )
+         3 of  win-s3  ." returned from s3 - shouldn't happen" cr endof
          ( default )  ." Requested power state " dup .
       endcase                                        ( )
    else                                              ( value offset )
@@ -575,13 +703,17 @@ defer quiesce-devices  ' noop to quiesce-devices
    then                                              ( )
 ;
 
-: divil-smi  ( event-mask -- )  h# 80 and  if  bye  then  ;
+: divil-smi  ( event-mask -- )
+   smi-debug?  if  ." DIVIL" cr  then
+   h# 80 and  if  bye  then
+;
 
 : sb-smi  ( event-mask -- )
+   smi-debug?  if  ." SB" cr  then
    4 and 0=  if  exit  then     \ We only care about virtualized I/O registers
 
    smm-flags h# 40 and  if
-       ." Flags " smm-flags . 0 acpi-l@ .  8 acpi-l@ . 18 acpi-l@ .  1c acpi-l@ .  cr
+\      ." Flags " smm-flags . 0 acpi-l@ .  8 acpi-l@ . 18 acpi-l@ .  1c acpi-l@ .  cr
 \      0 acpi-l@ 1 and  if  0 acpi-l@  0 acpi-l!  exit  else  interact  then
       exit
    then
@@ -611,7 +743,7 @@ defer quiesce-devices  ' noop to quiesce-devices
       smm-io-size case
          1 of                     ( value acpi-offset )
               acpi-b!
-              \ ." W8 " smm-io-port .  smm-eax c@ .  cr  
+              vr-debug?  if  ." VW8 " smm-io-port .  smm-eax c@ .  cr  then
               \ smm-io-port h# 9c1f =  smm-eax c@ h# c0 =  and  if  debug-me  then
          endof
          3 of                     ( value acpi-offset )
@@ -619,37 +751,39 @@ defer quiesce-devices  ' noop to quiesce-devices
                  \ Workaround for 5536 errata - 16-bit writes to APCI registers
                  \ 0 and 2 corrupt other registers
                  0 of  drop  2 acpi-w@      wljoin  0 acpi-l!  endof
-                 2 of  drop  0 acpi-w@ swap wljoin  0 acpi-l!  endof
+                 \ When writing to register 2, we mustn't read register 0 and
+                 \ merge in its value, because its bits are "write 1 to clear".
+                 2 of  drop  0 swap         wljoin  0 acpi-l!  endof
+\                2 of  drop  0 acpi-w@ swap wljoin  0 acpi-l!  endof
                  8 of  power-mode  endof
                  ( default: value port-adr acpi-offset )  -rot acpi-w!
               endcase
-              \ ." W16 " smm-io-port .  smm-eax w@ . cr
+              vr-debug?  if  ." VW16 " smm-io-port .  smm-eax w@ . cr  then
          endof
          h# f of
               dup 8 =  if  power-mode  else  acpi-l!  then
-              \ ." W32 " smm-io-port .  smm-eax w@ .  cr
+              vr-debug?  if  ." VW32 " smm-io-port .  smm-eax w@ .  cr  then
          endof
       endcase
    else                           ( acpi-offset )
       smm-io-size case
          1 of                     ( acpi-offset )
                acpi-b@  smm-eax c!
-               \ ." R8 " smm-io-port .  smm-eax c@  .  cr
+               vr-debug?  if  ." VR8 " smm-io-port .  smm-eax c@  .  cr  then
          endof
          3 of                     ( acpi-offset )
                acpi-w@  smm-eax w!
-               \ ." R16 " smm-io-port .  smm-eax w@  .  cr
+               vr-debug?  if  ." VR16 " smm-io-port .  smm-eax w@  .  cr  then
                \ smm-io-port h# 9c00 =  if  ." ."  then
          endof
          h# f of                  ( acpi-offset )
                acpi-l@  smm-eax l!
+               vr-debug?  if  ." VR32 " smm-io-port .  smm-eax l@  .  cr  then
                \ smm-io-port  h# 9c10 <>  if  ." R32 " smm-io-port .  smm-eax l@  .  cr  then
          endof
       endcase
    then
 ;
-
-code smi  smint  c;
 
 variable sbpval
 variable sbpadr  sbpadr off
@@ -741,6 +875,7 @@ code rm-lidt  ( -- )  smm-rmidt #) lidt  c;
    h# ffff l!++  h# 9300 l!++  0 w!++  \ FS
    h# ffff l!++  h# 9300 l!++  0 w!++  \ GS
    h# ffff l!++  h# 9300 l!++  0 w!++  \ SS
+   drop
 
    h# ffff smm-rmidt w!  0 smm-rmidt wa1+ l!  \ Limit and base
 
@@ -749,10 +884,8 @@ code rm-lidt  ( -- )  smm-rmidt #) lidt  c;
 ;
 \ : rm-init-program   ( eip -- )  rm-init-program  rm-return  ;
 
--1 value rm-entry-adr
-: rm-run  ( eip -- )  to rm-entry-adr  smi  ;
-
 : soft-smi  ( -- )
+   smi-debug?  if  ." SOFT" cr  then
    rm-entry-adr -1 <>  if
       rm-entry-adr  rm-setup
       -1 to rm-entry-adr
@@ -774,6 +907,7 @@ smm-pc 'bioscall =  if  " set-mode12" eval  sgo  else
    smi-interact
 then
 ;
+
 \ smm-flags values in various cases:
 \  8080 (VGA) - ac1c read (VR), extended CRT register (dc-smi)
 \  8020 (Mem read) - 9cxx (power management) register (sb-smi)
@@ -824,52 +958,6 @@ then
    .dt                                   ( )
 ;
 
-
-: setup-smi  ( -- )
-   \ This is how you would map the SMM region to physical memory at 4000.0000
-   \ This is a Base Mask Offset descriptor - the base address
-   \ is 4000.0000 and to that is added the offset c00e.0000
-   \ to give the address 000e.0000 in the GLMC address space.
-   \ The mask is ffff.f000 , i.e. 4K
-
-   \ This is unnecessary if the SMM memory is in a region that is
-   \ already mapped with a descriptor
-   \ h# 2.c00e0.40000.fffff. h# 1000.0026 msr!
-
-   \ Put 4K SMM memory at 000f.f000 in the processor linear address space
-   \ Cacheable in SMM mode, non-cacheable otherwise
-   \ Depends on smm-base and smm-size
-   h# 000ff.0.00.000ff.1.01. h# 180e msr!
-
-   \  Base     Limit
-   smm-base  smm-size 1-  h# 133b msr!
-
-   smm-header 0   h# 132b msr!  \ Offset of SMM Header
-
-   h# 18.  h# 1301 msr!       \ Enable IO and software SMI
-
-   \ Unnecessary if already in mapped memory
-   \ smm-base dup  smm-size  -1 mmu-map
-
-   smi-handler smm-base  /smi-handler  move
-
-   \ Relocate the code field of the code word that is embedded in the sequence
-   ['] (smi-return) smi-handler -  +smm  ( cfa-adr )
-   dup ta1+ swap token!
-
-[ifdef] virtual-mode
-   cr3@ smm-pdir l!
-[then]
-
-   origin smm-forth-base l!
-   smm-exec smm-forth-entry l!
-   up@ smm-forth-up l!
-   smm-sp0 smm-save-sp0 !
-   smm-rp0 smm-save-rp0 !
-
-   enable-virtual-pci
-   enable-io-smis
-;
 
 0 [if]
 SMI sources:

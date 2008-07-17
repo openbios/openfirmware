@@ -94,10 +94,15 @@ also 386-assembler definitions
    op: # ax  mov    ( )
    op: ax dx out
 ;
-: config-rw  ( config-adr -- )  \ Returns value AX
+: config-rw  ( config-adr -- )  \ Returns value in AX
    config-setup     ( )
    ax ax xor
    op: dx ax in
+;
+: config-rb  ( config-adr -- )  \ Returns value in AL
+   config-setup     ( )
+   ax ax xor
+   dx al in
 ;
 
 : set-base  ( adr -- )  # bx mov  ;

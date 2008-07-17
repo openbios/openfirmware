@@ -64,7 +64,9 @@ hex
 \   pulse-tp
 
    \ GLIU0 P2D Base Mask Descriptors - page 85
-   20000000.000fff00.   10000020 set-msr  \ memory - 0..fffff
+   20000000.000fff80.   10000020 set-msr  \ memory - 0..7ffff
+   20000000.080fffe0.   10000026 set-msr  \ memory - 80000..9ffff
+   20000000.0c0fffc0.   10000027 set-msr  \ memory - c0000..fffff
 
    \ EXTMSR - page 449   \ Use PCI device #F for port 2
    00000000.00000f00.   5000201e set-msr  \ cs5536_setup_extmsr(void)

@@ -1,15 +1,5 @@
 \ Make some ACPI descriptor tables
 
-h# 9.fc00 constant 'ebda  \ Extended BIOS Data Area, which we co-opt for our real-mode workspace
-
-h# e0000 constant rsdp-adr
-h# e0040 constant rsdt-adr
-h# e0080 constant fadt-adr
-h# e0180 constant facs-adr
-h# e01c0 constant dbgp-adr
-
-h# fc000 constant dsdt-adr
-h# fd000 constant ssdt-adr
 h# 0. 2constant xsdt-adr
 
 create fadt

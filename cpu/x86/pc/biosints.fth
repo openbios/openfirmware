@@ -573,14 +573,15 @@ create memdescs
 
    h#      e0000. d,                h# 20000. d,  2 l,  \ 3c reserved
    h#     100000. d,                       0. d,  1 l,  \ 50 available
-               0. d,                       0. d,  4 l,  \ 64 don't reclaim (yet)
+\              0. d,                       0. d,  4 l,  \ 64 don't reclaim (yet)
+               0. d,                       0. d,  2 l,  \ 64 reserved fw memory
    h#   fff00000. d,               h# 100000. d,  2 l,  \ 78 reserved (ROM)
 here memdescs - constant /memdescs
 
 : populate-memory-map  ( -- )
    memory-limit  h# 100000 -  memdescs h# 58 + l!  \ Size of memory above 1M
    memory-limit               memdescs h# 64 + l!  \ Base of firmware memory
-   allmem memory-limit -      memdescs h# 6c + l!  \ Size of firmware memory
+   allmem fbsize - memory-limit -      memdescs h# 6c + l!  \ Size of firmware memory
 ;
 
 : system-memory-map  ( -- )  \ E820
@@ -912,13 +913,13 @@ here bounce-timer - constant /bounce-timer
 
    " keyboard"   open-dev to kbd-ih
    populate-memory-map
+   rm-platform-fixup
 ;
-: close-bios-disk  ( -- )  disk-ih close-dev   0 to disk-ih  ;
+: close-bios-disk  ( -- )  disk-ih ?dup  if  close-dev   0 to disk-ih  then  ;
 ' close-bios-disk to quiesce-devices
 
 : rm-go   ( -- )
    prep-rm
-   rm-platform-fixup
    open-bios-disk
    get-mbr   \ Load boot image at 7c00
    usb-quiet

@@ -101,6 +101,16 @@ h# fe02.4000 constant sd-pci-base
 h# fe02.8000 constant camera-pci-base
 h# efc0.0000 constant uoc-pci-base
 
+h# 9.fc00 constant 'ebda  \ Extended BIOS Data Area, which we co-opt for our real-mode workspace
+
+h# e0000 constant rsdp-adr
+h# e0040 constant rsdt-adr
+h# e0080 constant fadt-adr
+h# e0180 constant facs-adr
+h# e01c0 constant dbgp-adr
+h# fc000 constant dsdt-adr
+h# fd000 constant ssdt-adr
+
 fload ${BP}/cpu/x86/pc/virtaddr.fth
 [ifndef] virtual-mode
 h# ff80.0000 to fw-virt-base  \ Override the usual setting; we use an MSR to double-map some memory up high

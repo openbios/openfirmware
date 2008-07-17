@@ -70,6 +70,14 @@ h# 200 constant /block  \ 512 bytes
 : esr!  ( w -- )  h# 32 cw!  ;
 
 [ifdef] marvell
+: vendor-modes  ( -- )
+   \ One-time initialization of Marvell CaFe SD interface.
+   \ Marvell told us to do this once after reset.
+   \ The sw-reset command resets the registers, so you have
+   \ to do it after that, in addition to after power-up.
+   h# 0004 h# 6a cw!  \ Enable data CRC check
+   h# 7fff h# 60 cw!  \ Disable internal pull-up/down on DATA3
+;
 : enable-sd-int  ( -- )
    h# 300c cl@  h# 8000.0002 or  h# 300c cl!
 ;
@@ -82,6 +90,8 @@ h# 200 constant /block  \ 512 bytes
 : disable-sd-clk  ( -- )
    h# 3004 cw@  h# 2000 invert and  h# 3004 cw!
 ;
+[else]
+: vendor-modes  ;
 [then]
 
 : clear-interrupts  ( -- )
@@ -100,6 +110,7 @@ h# 200 constant /block  \ 512 bytes
 : reset-host  ( -- )
    0 to sd-clk
    1 sw-reset  \ RESET_ALL
+   vendor-modes
 ;
 
 : host-high-speed  ( -- )  h# 28 cb@  4 or  h# 28 cb!  ;
@@ -623,10 +634,7 @@ external
 
 : init   ( -- )
    map-regs
-   \ One-time initialization of Marvell CaFe SD interface.
-   \ Marvell told us to do this, but didn't say why.
-   h# 0004 h# 6a cw!
-   h# 7fff h# 60 cw!
+   vendor-modes
    unmap-regs
 ;
 

@@ -36,9 +36,7 @@
    1 bitset  20000018 wmsr
    1 bitclr  20000018 wmsr
 
-   \ Set up a descriptor to give access to memory
-   \ GLIU0 P2D Base Mask Descriptors - page 85
-   20000000.000fff00.   10000020 set-msr  \ memory - 0..fffff
+   \ Earlier code has set up an MSR so the fxxxx address range hits memory
 
    \ The RAM DLL needs a write to lock on
    ax  h# ffff0 #)  mov

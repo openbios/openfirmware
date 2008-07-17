@@ -101,11 +101,33 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    cld
    h# 38 [bp]  di  lea    \ Save area
 
+[ifdef] save-msrs
+   h# 30 [bp]  si  mov    \ MSR table
+   0 [si] bl mov
+
+   begin
+      1 [si] cx mov
+      5 # si add
+      begin
+         \ loop count in bl, msr# in cx
+         rdmsr
+         \ msr.lo in ax, msr.hi in dx
+         ax stos   dx ax mov  ax stos
+         cx inc
+         bl dec
+      0= until
+      0 [si] bl mov
+      bl bl and
+   0= until
+[else]
    \ Video MSRs that change between VGA and flat panel
-   h# 4c00.0014 rmsr  ax stos  dx ax mov  ax stos   \ RSTPLL
-   h# 4c00.0015 rmsr  ax stos  dx ax mov  ax stos   \ DOTPLL
    h# c000.2001 rmsr  ax stos  dx ax mov  ax stos   \ Video output format
    h# c000.2011 rmsr  ax stos  dx ax mov  ax stos   \ TFTP pad select
+[then]
+
+   \ Do these separately because they need special bit sequencing
+   h# 4c00.0014 rmsr  ax stos  dx ax mov  ax stos   \ RSTPLL
+   h# 4c00.0015 rmsr  ax stos  dx ax mov  ax stos   \ DOTPLL
 
 [ifdef] save-display
    \ Freeze image by clearing the DCONLOAD bit (0x800) in the GPIO output register
@@ -117,6 +139,11 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    \ registers before setting the output enables and values.
 
    h# 5140.000c rmsr  ax bx mov
+
+   h# ec [bx] dx lea  dx ax in  ax stos  \ GPIO_MAP_W
+   h# e8 [bx] dx lea  dx ax in  ax stos  \ GPIO_MAP_X
+   h# e4 [bx] dx lea  dx ax in  ax stos  \ GPIO_MAP_Y
+   h# e0 [bx] dx lea  dx ax in  ax stos  \ GPIO_MAP_Z
 
    h# 38 [bx]  dx  lea   \ Low bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
@@ -205,8 +232,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    rdmsr  al stos            \ PIT Counter 0 Command Word - not sure how this works
    rdmsr  al stos            \ PIT Counter 1 Command Word
    rdmsr  al stos            \ PIT Counter 2 Command Word
-   h# 43 # al in  al stos    \ Read back register 43 directly
-   h# 61 # al in  al stos    \ Read back register 43 directly
+   h# 61 # al in  al stos    \ Read back register 61 directly
    h# 5140.0037 rmsr  al stos  \ PIT Count Enable MSR
 
    \ SMBUS controller
@@ -235,13 +261,19 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    h# 24 [bx]  ax mov  ax stos  \ NAND Timing1
    h# 28 [bx]  ax mov  ax stos  \ NAND Timing2
    h# 2c [bx]  ax mov  ax stos  \ NAND Timing3
-   h# 6004 config-rw   ax stos  \ NAND enables
-   
+   h# 6004 config-rw   op: ax stos  \ NAND enables
+
+   h# 6104 config-rw   op: ax stos  \ SDHCI enables
+   h# 0  h# 618c config-ww      \ Set power state to 0 so reads will work
    h# 6110 config-rl   ax stos  \ SDHCI BAR
    ax bx mov                    \ Base address
+   6  h# 6104 config-ww         \ Enable access
+   op: h# 3004 [bx] ax mov op: ax stos  \ Clock config
+   h# 300c [bx] ax mov ax stos  \ Interrupt config
    h# 3038 [bx] ax mov ax stos  \ GPIO Config
    h# 315c [bx] ax mov ax stos  \ GPIO Data
-   h# 6104 config-rw   ax stos  \ SDHCI enables
+   h# 610d config-rb   al stos  \ SDHCI latency timer
+   h# 613c config-rb   al stos  \ SDHCI IRQ
 
    h# 6210 config-rl   ax stos  \ Camera BAR
    h# 6204 config-rw   ax stos  \ SDHCI enables
@@ -339,6 +371,7 @@ here resume-entry put-branch
 
    h# 20 resume-progress
 
+[ifndef] save-msrs
    \ MSR init
    h# 30 [bp]  si  mov   \ MSR table start address
    si          bx  mov
@@ -351,6 +384,7 @@ here resume-entry put-branch
       wrmsr
       si bx cmp
    = until
+[then]
 
    h# 21 resume-progress
 
@@ -365,12 +399,33 @@ here resume-entry put-branch
 
    h# 38 [bp]  si  lea    \ Save area
 
+[ifdef] save-msrs
+   h# 30 [bp]  di  mov   \ MSR table start address
+   0 [di]  bl  mov
+
+   begin
+      1 [di]  cx  mov
+      5 #  di  add
+      begin
+         \ loop count in bl, msr# in cx
+         ax lods  ax dx mov  ax lods  ax dx xchg
+         \ msr.lo in ax, msr.hi in dx
+         wrmsr
+         cx inc
+         bl dec
+      0= until
+      0 [di] bl mov
+      bl bl and
+   0= until
+   h# 10.00000000. h# 5120.0005 set-msr  \ Clear possible spurious error per 5536 erratum 57
+[else]
+   ax lods  ax dx xchg  ax lods  ax dx xchg  h# c000.2001 wmsr  \ Video output format
+   ax lods  ax dx xchg  ax lods  ax dx xchg  h# c000.2011 wmsr  \ TFTP pad select
+[then]
    ax lods  ax dx xchg  ax lods  ax dx xchg  h# 4c00.0014 wmsr  \ RSTPLL
    ax lods  ax dx xchg  ax lods  ax dx xchg
    1 bitset  h# 4c00.0015 wmsr  \ DOTPLL - reset to make it take the new value
    1 bitclr  h# 4c00.0015 wmsr  \ DOTPLL - release reset
-   ax lods  ax dx xchg  ax lods  ax dx xchg  h# c000.2001 wmsr  \ Video output format
-   ax lods  ax dx xchg  ax lods  ax dx xchg  h# c000.2011 wmsr  \ TFTP pad select
 
    h# 22 resume-progress
 
@@ -415,6 +470,12 @@ here resume-entry put-branch
    h# 23 resume-progress
 
    h# 5140.000c rmsr  ax bx mov
+
+   ax lods  h# ec [bx] dx lea  ax dx out  \ GPIO_MAP_W
+   ax lods  h# e8 [bx] dx lea  ax dx out  \ GPIO_MAP_X
+   ax lods  h# e4 [bx] dx lea  ax dx out  \ GPIO_MAP_Y
+   ax lods  h# e0 [bx] dx lea  ax dx out  \ GPIO_MAP_Z
+
    h# 38 [bx]  dx  lea   \ Low bank - first contiguous GPIO register
    h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
    begin
@@ -543,20 +604,39 @@ here resume-entry put-branch
 
    h# 26 resume-progress
 
+[ifdef] notdef
    \ Restore PIT (timer)
-   h# 30 # al mov  al h# 43 # out  \ Load LSB,MSB for counter 0
-   al lods  al h# 40 out
-   al lods  al h# 40 out
-   h# 70 # al mov  al h# 43 # out  \ Load LSB,MSB for counter 1
-   al lods  al h# 41 out
-   al lods  al h# 41 out
-   h# b0 # al mov  al h# 43 # out  \ Load LSB,MSB for counter 2
-   al lods  al h# 42 # out
-   al lods  al h# 42 # out
+   \ h# 30 # al mov  al h# 43 # out  \ Load LSB,MSB for counter 0
+   al lods  \ al h# 40 out
+   al lods  \ al h# 40 out
+   \ h# 70 # al mov  al h# 43 # out  \ Load LSB,MSB for counter 1
+   al lods  \ al h# 41 out
+   al lods  \ al h# 41 out
+   \ h# b0 # al mov  al h# 43 # out  \ Load LSB,MSB for counter 2
+   al lods  \ al h# 42 # out
+   al lods  \ al h# 42 # out
    al lods  \ Command word for counter 0
    al lods  \ Command word for counter 1
    al lods  \ Command word for counter 2
-   al lods  al h# 43 # out
+[else]
+   6 [esi] ah mov   ah ah or  0<>  if
+      ah al mov  h# 3f # al and  al  h# 43 # out
+      h# 10 # ah test  0<>  if  0 [esi] al mov  al h# 40 # out  then
+      h# 20 # ah test  0<>  if  1 [esi] al mov  al h# 40 # out  then
+   then
+   7 [esi] ah mov   ah ah or  0<>  if
+      ah al mov  h# 3f # al and  h# 40 # al or   al  h# 43 # out
+      h# 10 # ah test  0<>  if  2 [esi] al mov  al h# 41 # out  then
+      h# 20 # ah test  0<>  if  3 [esi] al mov  al h# 41 # out  then
+   then
+   8 [esi] ah mov   ah ah or  0<>  if
+      ah al mov  h# 3f # al and  h# 80 # al or   al  h# 43 # out
+      h# 10 # ah test  0<>  if  4 [esi] al mov  al h# 42 # out  then
+      h# 20 # ah test  0<>  if  5 [esi] al mov  al h# 42 # out  then
+   then
+  
+   9 # esi add
+[then]
    al lods  al h# 61 # out
    al lods  h# 5140.0037 wmsr   \ PIT Count Enable MSR - high bits irrelevant
 
@@ -648,17 +728,26 @@ here resume-entry put-branch
    ax lods  ax  h# 24 [bx]  mov                    \ NAND Timing 1
    ax lods  ax  h# 28 [bx]  mov                    \ NAND Timing 2
    ax lods  ax  h# 2c [bx]  mov                    \ NAND Timing 3
-   h# 6004 config-setup  ax lods  op: ax dx out    \ NAND enables
+   h# 6004 config-setup  op: ax lods  op: ax dx out    \ NAND enables
 
+   op: ax lods  ax cx mov                          \ SDHCI enables - save for later
    h# 6110 config-setup  ax lods  ax dx out        \ SDHCI BAR
    ax bx mov                                       \ Base address
    6  h# 6104 config-ww                            \ Enable access
+   op: ax lods  op: ax  h# 3004 [bx]  mov          \ Clock config
+   ax lods  ax  h# 300c [bx]  mov                  \ Interrupt config
    ax lods  ax  h# 3038 [bx]  mov                  \ GPIO Config
    ax lods  ax  h# 315c [bx]  mov                  \ GPIO Data
+   op: h# 00c0 #  h# 34 [bx]  mov                  \ Enable card detection - Marvell chip bug
    \ The next two values can't be saved/restored; the registers aren't readable
+   \ Empirically, they are readable!
    op: h# 0004 #  h# 6a [bx]  mov                  \ Magic recipe from Marvell
    op: h# 7fff #  h# 60 [bx]  mov                  \ Magic recipe from Marvell
    h# 6104 config-setup  ax lods  op: ax dx out    \ SDHCI enables
+   h# 610d config-setup  al lods  al dx out        \ SDHCI latency timer
+   h# 613c config-setup  al lods  al dx out        \ SDHCI IRQ
+   h# 6104 config-setup  cx ax mov  op: ax dx out  \ Set SDHCI enables after restoring mapped registers
+   \ Don't save/restore the power state because if you set it to D3, it clears register 34
 
    h# 6210 config-setup  ax lods  ax dx out        \ Camera BAR
    h# 6204 config-setup  ax lods  op: ax dx out    \ Camera enables

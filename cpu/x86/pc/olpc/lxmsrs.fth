@@ -312,6 +312,83 @@ create lx-msr-init
   msr: 5120.000b 00000002.efc00000.  \ USB UOC Base Address - 5536 page 266
 
 \ Clear possible spurious USB Short Serial detect bit per 5536 erratum 57
-  msr: 5120.0015 00000010.00000000.  \ USB_GLD_MSR_DIAG
+  msr: 5120.0005 00000010.00000000.  \ USB_GLD_MSR_DIAG
 
 here lx-msr-init - constant /lx-msr-init
+
+[ifdef] save-msrs
+hex
+: msrloop c, l, ;
+create msr-ranges
+    1100   1 msrloop
+    1210   1 msrloop
+    1700   1 msrloop
+    1808   1 msrloop
+    180a   e msrloop
+    1900   2 msrloop
+    1920   1 msrloop
+    1930   1 msrloop
+    1980   4 msrloop
+    1a00   1 msrloop
+    2000   6 msrloop
+10002000   6 msrloop
+10000020   d msrloop
+10000080   c msrloop
+100000a0   f msrloop
+100000c0   8 msrloop
+100000d0  10 msrloop
+100000e0   9 msrloop
+40002000   6 msrloop
+40000020   e msrloop
+40000080   c msrloop
+400000a0   f msrloop
+400000c0   8 msrloop
+400000d0  10 msrloop
+400000e0   9 msrloop
+20002000   6 msrloop
+20000012   d msrloop
+2000001f   2 msrloop
+a0002000   6 msrloop
+80002000   6 msrloop
+80002010   3 msrloop
+c0002000   6 msrloop
+c0002010   2 msrloop
+48002000   6 msrloop
+48002010   2 msrloop
+4c002001   5 msrloop
+4c000008   c msrloop  \ Omit 14 and 15; handled separately
+4c000016   1 msrloop
+4c000023   1 msrloop
+50002000   6 msrloop
+50002010  10 msrloop
+54002000   6 msrloop
+54002010   6 msrloop
+58002000   7 msrloop
+51000000   6 msrloop
+51000010   1 msrloop
+51000020  15 msrloop
+51010000   6 msrloop
+51010020   7 msrloop
+51010080   d msrloop
+510100a0   b msrloop
+510100c0   2 msrloop
+510100d0   4 msrloop
+510100e0  12 msrloop
+51024004   1 msrloop
+51200000   5 msrloop
+51200008   4 msrloop
+51300000   6 msrloop
+51300008   1 msrloop
+51300010   6 msrloop
+51400000   6 msrloop
+51400008   2 msrloop
+5140000b  1b msrloop
+51400028   3 msrloop
+51400037   a msrloop
+5140004e   3 msrloop
+51400054   4 msrloop
+51500000   6 msrloop
+51700000   6 msrloop
+51700008  10 msrloop
+0 c,
+[then]
