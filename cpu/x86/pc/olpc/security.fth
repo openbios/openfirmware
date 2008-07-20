@@ -196,10 +196,12 @@ d# 256 constant /sig
 \ bundle whose name is constructed from the current settings of the
 \ device (DN), path (PN), filename head (CN), and filename body (FN).
 
+: .trying  ( name$ -- name$ )
+   " Trying " ?lease-debug  2dup ?lease-debug-cr
+;
 : bundle-present?  ( fn$ -- flag )
    fn-buf place
-   bundle-name$
-   " Trying " ?lease-debug  2dup ?lease-debug-cr
+   bundle-name$  .trying
    ['] (boot-read) catch  if  2drop false exit  then
    true
 ;
@@ -457,15 +459,32 @@ d# 67 buffer: machine-id-buf
    check-timed-signature                   ( -1|0|1 )
 ;
 
+: open-failed?  ( $ -- ih error? )
+   expand$  .trying  r/o open-file
+;
+
+\ open-security looks for a file in the security directory.
+\ On the NAND device, it first looks in a special security partition.
+
+: open-security?  ( name$ -- ih error? )
+   fn-buf place                                 ( )
+   " ${DN}" expand$  " nand:" $=  if            ( )
+      " ${DN}security,\${FN}" open-failed?  if  ( ih )
+         drop                                   ( )
+      else                                      ( ih )
+         true exit
+      then                                      ( )
+   then
+   " ${DN}\security\${FN}" open-failed?         ( ih error? )
+;
+
 \ lease-valid? tries to read a lease file from the currently-selected
 \ device, searches it for a lease record corresponding to this machine,
 \ and checks that record for validity.  The return value is true if
 \ a valid lease was found.
 
 : lease-valid?  ( -- valid? )
-   " ${DN}\security\lease.sig" expand$             ( name$ )
-   " Trying " ?lease-debug  2dup ?lease-debug-cr
-   r/o open-file  if  drop false exit  then   >r   ( r: ih )
+   " lease.sig"  open-security?  if  drop false exit  then   >r   ( r: ih )
    "   Lease " ?lease-debug
    load-started
    leasekey$ to pubkey$
@@ -601,9 +620,7 @@ warning !
 
 : has-developer-key?  ( -- flag )
    button-x game-key?  if  false exit  then
-   " ${DN}\security\develop.sig" expand$    ( name$ )
-   " Trying " ?lease-debug  2dup ?lease-debug-cr
-   r/o open-file  if  drop false exit  then   >r   ( r: ih )
+   " develop.sig" open-security?  if  drop false exit  then   >r   ( r: ih )
    "   Devel key " ?lease-debug
    load-started
    develkey$ to pubkey$
