@@ -616,9 +616,10 @@ warning !
           1  of  r> close-file drop  true exit   endof
          -1  of  r> close-file drop  false exit  endof
       endcase
-   repeat         
-   "   No matching records" ?lease-error-cr
-   r> close-file drop  false
+   repeat                                          ( actual )
+   drop                                            ( )
+   "   No matching records" ?lease-error-cr        ( )
+   r> close-file drop  false                       ( false )
 ;
 
 : ?force-secure  ( -- )  button-x game-key?  if  true to secure?  then  ;
