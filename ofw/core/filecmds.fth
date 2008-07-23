@@ -222,7 +222,7 @@ d# 64 buffer: search-pattern
    begin-search  another-match?  dup  if  close-search  then
 ;
 
-: dir-attr?  ( attribute -- flag )  h# 4000 and 0<>  ;
+: dir-attr?  ( attribute -- flag )  h# f000 and  h# 4000 =  ;
 : dir?  ( 8attributes -- flag )  >r drop 3drop 3drop r> dir-attr? ;
 
 \ Standard file type encoding; this is a melange of Unix and DOS file
@@ -336,15 +336,14 @@ internal
 \ a "*", thus causing all the files to be listed.
 : add\  ( pstr -- )  " \" rot $cat  ;
 : ?add\  ( adr len -- adr' len' )
-   2dup is-pattern?  0=  if
-      separator?  if  exit  then  
-      2dup  begin-search  another-match?  if
-         2drop  >r 3drop 2drop 2drop  r>  h# 4000 and  if
-             string2 pack  add\  string2 count
-         then
-         close-search
-      then
-   then
+   2dup is-pattern?  0=  if                     ( adr len )
+      separator?  if  exit  then                ( adr len )
+      2dup  first-match  if                     ( adr len 8*attrs name$ )
+         2drop  dir?  if                        ( adr len )
+            string2 pack  add\  string2 count   ( adr' len' )
+         then                                   ( adr len )
+      then                                      ( adr len )
+   then                                         ( adr len )
 ;
 
 : .fs-name  ( -- )
@@ -370,6 +369,89 @@ public
 ;
 : dir  ( "pattern" -- )  parse-word  $dir  ;
 : dir" ( "pattern"" -- )  [char] " parse  $dir  ;
+
+defer handle-dirent  ( 8*attributes $name )
+
+d# 256 buffer: ls-r-name
+0 value ls-r-len
+
+: ls-r-name$  ( -- adr len )  ls-r-name ls-r-len  ;
+
+variable indent-level
+
+: .totsize  ( d.size name$ -- )
+   indent-level @ spaces  type ."  Total: "  push-decimal ud. pop-base cr
+;
+: ($ls-r)  ( name$ -- d.totsize )
+
+   search-ih >r  ls-r-len >r
+
+   \ Extend the path with the new name component and start new search
+   tuck                               ( len name$ )
+   ls-r-name$ +  swap move            ( len )
+   dup  ls-r-name$ + +  [char] \ swap c!  ( len )
+   ls-r-len + 1+  to ls-r-len         ( )
+
+   ls-r-name$ $open-dir to search-ih  ( )
+
+   1 indent-level +!                  ( )
+
+   0. 0                               ( d.totsize index )
+   begin  " next-file-info"  search-ih  $call-method  while    ( index 8*attributes name$ )
+      handle-dirent                   ( d.totsize index d.size )
+      rot >r  d+  r>                  ( d.totsize index' )
+   exit? until   \ Resolves "begin"   ( d.totsize index )
+      \ This block executes only if the loop terminates via "until"
+      drop                            ( d.totsize )
+   then          \ Resolves "while"   ( d.totsize )
+   close-search                       ( d.totsize )
+
+   -1 indent-level +!                 ( d.totsize )
+
+   2dup  ls-r-name$ .totsize          ( d.totsize )
+
+   \ Restore the path (removing the new name) and the search parameters
+   r> to ls-r-len  r> to search-ih    ( d.totsize )
+;
+
+: recursive-.file  ( 8*attributes $name -- d.size )
+   2dup " ." $= >r   2dup " .." $=  r> or  if   ( 8*attributes $name )
+      2drop 4drop 4drop  0.  exit
+   then
+
+   3 pick >r  2dup 2>r 2 pick >r    ( 8*attributes $name r: len $name attr )
+   indent-level @ spaces  .file cr  ( r: len $name attr )
+   r> dir-attr?  if                 ( r: len $name )
+      2r>  r> drop   ($ls-r)        ( d.size )
+   else                             ( r: len $name )
+      2r> 2drop  r> 0               ( d.size )
+   then
+;
+' recursive-.file to handle-dirent
+
+: $ls-r  ( pattern$ -- )
+   \ If the pattern$ is null or has no name component, add a "*" to the end
+   dup  if                     ( pattern$ )
+      ?add\                    ( pattern$' )
+      2dup file&dir 2nip       ( pattern$ dir$ )
+      dup to ls-r-len          ( pattern$ dir$ )
+      ls-r-name swap move      ( pattern$ )
+      separator?               ( pattern$ no-name? )
+   else  true  then            ( pattern$ no-name? )
+
+   if  string2 pack  " *" rot $cat  string2 count  then  ( pattern$ )
+
+   0 indent-level !                       ( pattern$ )
+   2dup 2>r                               ( pattern$ r: pattern$ )
+   begin-search    0.                     ( d.totsize )
+   begin  another-match?  while           ( d.totsize 8*attributes name$ )
+      handle-dirent  d+                   ( d.totsize' )
+      exit?  if  close-search 2drop r> 2drop  exit  then
+   repeat                                 ( d.totsize r: pattern$ )
+   2r>  .totsize                          ( )
+;
+: ls-r  ( "pattern" -- )  parse-word  $ls-r  ;
+: ls-r"  ( "pattern"" -- )  [char] " parse  $ls-r  ;
 
 internal
 
