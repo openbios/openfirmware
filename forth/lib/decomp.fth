@@ -381,6 +381,7 @@ d# 30 constant #decomp-classes
 ;
 
 headers
+also forth definitions
 : install-decomp  ( literal-acf display-acf skip-acf -- )
    ['] dummy ['] do-scan          (patch
    ['] dummy ['] .execution-class (patch
@@ -388,6 +389,7 @@ headers
 	       dup [ #decomp-classes ] literal ta+ tsearch
    drop token!
 ;
+previous definitions
 headerless
 
 \ Scan the parameter field of a colon definition and determine the
