@@ -6,6 +6,12 @@ d# 20,000 constant max-inodes
 defer scan-callout  ' noop to scan-callout
 
 0 value debug-scan?  \ True to display progress reports
+0 value warn?        \ True to warn about bad nodes
+true value first-time?
+
+also forth definitions
+: debug-jffs2  true to warn?  true to first-time?  ;
+previous definitions
 
 0 instance value block-buf    \ Start address of working buffer
 0 instance value eb-end       \ End address of working buffer
@@ -89,7 +95,6 @@ instance variable 'next-tdirent
 : dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
 : dma-free   ( len -- adr )  " dma-free" $call-parent  ;
 
-true value first-time?
 -1 value partition#
 -1 value #writes
 
@@ -187,16 +192,26 @@ d# 256 2* /n* constant /parent-buf
 
 \ Validate the summary; it's all in memory now
 \ The numeric field references are from struct jffs2_raw_summary
-: bad-summary?  ( adr -- flag )
-   dup 6 /l*  crc  ( adr crc )
-   over 7 j@ <>  if  drop true exit  then  \ Exit if bad node CRC
+: bad-summary?  ( page# adr -- flag )
+   dup 6 /l*  crc         ( page# adr crc )
+   over 7 j@ <>  if       ( page# adr )
+      warn?  if           ( page# adr )
+         ." JFFS2 warning: Bad CRC in summary node - eblock# " over page>eblock .x cr
+      then
+      2drop true exit
+   then               \ Exit if bad node CRC
 
    \ Omitting CRC check of just the node header, and the
    \ totlen check, as both are covered by the node CRC.
 
-   dup  8 la+  sumsize -8 la+  crc        ( adr crc )
-   over 6 j@ <>  if  drop true exit  then  \ Exit if bad summary data CRC
-   drop false
+   dup  8 la+  sumsize -8 la+  crc    ( page# adr crc )
+   over 6 j@ <>  if                   ( page# adr )
+      warn?  if                       ( page# adr )
+         ." JFFS2 warning: Bad CRC in summary data - eblock# " over page>eblock .x cr
+      then
+      2drop true exit
+   then  \ Exit if bad summary data CRC   ( page# adr )
+   2drop false
 ;
 
 3 /n* instance buffer: curinum  \ cur-inum, cur-vers, cur-offset
@@ -721,8 +736,8 @@ c;
    block-buf /page + -1 j@                        ( page# magic )
    h# 02851885  <>  if   drop true exit  then     ( page# )
 
-   get-summary   if  true exit  then              ( adr )
-   dup bad-summary?  if  drop true exit then      ( adr )
+   dup get-summary   if  drop true exit  then     ( page# adr )
+   tuck bad-summary?  if drop true exit  then     ( adr )
    scan-summary  false
 ;
 
@@ -763,10 +778,13 @@ c;
                drop false              ( false )
             then
             exit
+         then                          ( adr len )
+         warn?  if                     ( adr len )
+            ." JFFS2 warning: Bad CRC in node header - eblock# " have-eblock# .x
+            ." offset " over block-buf - .x  cr
          then
-      else                             ( adr len )
-         1 /string                     ( adr' len' )
       then                             ( adr len )
+      1 /string                        ( adr' len' )
    repeat                              ( adr len )
    2drop false
 ;
