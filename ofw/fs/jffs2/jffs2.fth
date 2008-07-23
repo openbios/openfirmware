@@ -40,6 +40,11 @@ variable 'next-minode    \ Pointer into per-file inode list
 : next-minode  ( -- adr ) 'next-minode @  ;
 : minodes ( -- adr )  next-inode  ;  \ Start the inode pointer list after the inodes
 
+d# 20,000 constant /tdirents   \ Arbitrary maximum size of temporary dirent buffer
+instance variable 'next-tdirent
+: next-tdirent  ( -- adr )  'next-tdirent @  ;
+0 instance value tdirents
+
 0 instance value file-buf       \ Buffer for constructing file
 0 instance value file-size      \ Actual size of file
 
@@ -117,6 +122,8 @@ d# 256 2* /n* constant /parent-buf
 \   minodes max-inodes /n*  dma-free
 
    block-buf /eblock     dma-free
+
+   tdirents  if  tdirents  /tdirents dma-free  then
 
    \ Don't free the CRC, in case somebody wants to reuse it.
    \ The memory savings is insignificant.
@@ -1330,32 +1337,32 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
 : tdlen       ( tdirent -- len )  dup tdname$ + swap -  ;
 
 \ Move down all the following tdirents to overwrite the current one.
-
 : remove-tdirent  ( tdirent -- )
    dup  tdlen              ( tdirent len )
    2dup +                  ( tdirent len  next-tdirent )
    rot                     ( len  next-tdirent tdirent )
-   next-minode 2 pick -    ( len  next-tdirent tdirent move-len )
+   next-tdirent 2 pick -   ( len  next-tdirent tdirent move-len )
    move                    ( len )
-   negate 'next-minode +!  ( )
+   negate 'next-tdirent +! ( )
 ; 
+
 : replace-tdirent  ( rdirent tdirent -- )
    over rdinode@    over      l!    ( rdirent tdirent' )  \ Inum
    swap rdversion@  swap la1+ l!    ( )                   \ Version
 ;
 
 : place-tdirent  ( rdirent -- )
-   next-minode               ( rdirent tdirent )
+   next-tdirent              ( rdirent tdirent )
    over rdinode@   l+!       ( rdirent tdirent' )
    over rdversion@ l+!       ( rdirent tdirent' )
    swap rdname$              ( tdirent name$ )
    rot pack                  ( tdirent )
-   count + 'next-minode !    ( )
+   count + 'next-tdirent !   ( )
 ;
 
 : insert-dirent  ( offset -- )
    get-node                                     ( rdirent )
-   next-minode  minodes  ?do                    ( rdirent )
+   next-tdirent  tdirents  ?do                  ( rdirent )
       dup rdname$  i tdname$  $=  if            ( rdirent )  \ Same name
          dup rdversion@  i tdversion@  >  if    ( rdirent )  \ New version
             dup i replace-tdirent               ( rdirent )
@@ -1367,12 +1374,15 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    place-tdirent
 ;
 
-: prep-dirents  ( -- )
-   minodes 'next-minode !   \ Empty the list
+: prep-dirents  ( -- tdirent )
+   /tdirents dma-alloc  to tdirents
+
+   tdirents 'next-tdirent !   \ Empty the list
    dirents                         ( adr )
    begin  next-pino-match  while   ( adr'  offset )
       insert-dirent                ( adr )
    repeat                          ( )
+   tdirents                        ( adr )
 ;
 
 \ End of "tdirent" section
@@ -1582,11 +1592,11 @@ external
 ;
 
 : next-file-info  ( id -- false | id' s m h d m y len attributes name$ true )
-   dup 0=  if  drop prep-dirents  minodes  then   ( tdirent )
+   dup 0=  if  drop prep-dirents    then             ( tdirent )
 
    \ Skip deleted nodes
    begin
-      dup next-minode =  if  drop false exit  then   ( tdirent )
+      dup next-tdirent =  if  drop false exit  then  ( tdirent )
       dup tdinum@  0=                                ( tdirent deleted? )
    while                                             ( tdirent )
       dup tdlen +                                    ( tdirent' )
