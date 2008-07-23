@@ -446,7 +446,7 @@ variable indent-level
    begin-search    0.                     ( d.totsize )
    begin  another-match?  while           ( d.totsize 8*attributes name$ )
       handle-dirent  d+                   ( d.totsize' )
-      exit?  if  close-search 2drop r> 2drop  exit  then
+      exit?  if  close-search 2drop 2r> 2drop  exit  then
    repeat                                 ( d.totsize r: pattern$ )
    2r>  .totsize                          ( )
 ;
