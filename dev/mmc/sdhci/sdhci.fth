@@ -596,6 +596,7 @@ external
 : dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;
 
 : r/w-blocks  ( addr block# #blocks in? -- actual )
+   over 0=  if  2drop 2drop  0  exit   then  \ Prevents hangs
    intstat-on
    >r               ( addr block# #blocks r: in? )
    rot dma-setup    ( block# r: in? )
@@ -655,7 +656,7 @@ external
 \ The calculation below is shown on page 81 of the
 \ SD Physical Layer Simplified Specification Version 2.00.
 : size  ( -- d.bytes )
-   d# 128 d# 126 csdbits  case
+   d# 127 d# 126 csdbits  case
       0 of
          d# 49 d# 47 csdbits      ( c_size_mult )
          2 +  1 swap  lshift      ( mult )
@@ -670,7 +671,8 @@ external
          d# 70 d# 48 csdbits  d# 10 lshift  h# 200  um*
       endof
       ( default )
-      h# ffffffff 0  rot
+      ." SD: Warning - invalid CSD; using default device size." cr
+      h# 8.0000.0000.  rot   \ 32 GB
    endcase
 ;
 external
