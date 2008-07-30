@@ -322,7 +322,7 @@ h# 200 constant /block  \ 512 bytes
 \     h# 10 cl@  8 lshift                r> 3 la+ l!
 ;
 
-d# 64 instance buffer: scratch-buf
+0 value scratch-buf
 
 0 instance value rca
 d# 16 instance buffer: cid
@@ -617,6 +617,7 @@ external
    open-count 0=  if
       map-regs
       setup-host
+      d# 64 " dma-alloc" $call-parent to scratch-buf
    then
    open-count 1+ to open-count
    true
@@ -626,6 +627,7 @@ external
    open-count  1 =  if
       intstat-on
       wait-write-done
+      scratch-buf d# 64 " dma-free" $call-parent
       card-clock-off
       card-power-off
       unmap-regs
