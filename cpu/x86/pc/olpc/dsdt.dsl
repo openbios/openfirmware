@@ -43,6 +43,125 @@ DefinitionBlock ("dsdt.aml", "DSDT", 3, "OLPC  ", "XO-1    ", 0x00001000) {
         Release (VSA4)
     }
 
+//    Mutex (ECMX, 0x00)
+
+    OperationRegion (UART, SystemIO, 0x03f8, 0x07)
+
+    Field (UART, ByteAcc, NoLock, Preserve)
+    {
+        UDAT,   8, 
+        UAR1,   8, 
+        UAR2,   8,
+        UAR3,   8,
+        UAR4,   8,
+        USTA,   8,
+        UAR5,   8
+    }
+    Method (UPUT, 1, NotSerialized)
+    {
+        While( LEqual (And (USTA, 0x20), Zero) )
+        {
+            Stall (99)
+        }
+        Store (Arg0, UDAT)
+    }
+
+    Method (UDOT, 1, NotSerialized)
+    {
+        
+        And (ShiftRight (Arg0, 4), 0xF, Local0)
+        If (LLess (Local0, 10))
+        {
+            Add (Local0, 0x30, Local0)  // '0'
+        } Else {
+            Add (Local0, 0x57, Local0)  // 'a' - 10
+        }
+        UPUT (Local0)
+        
+        And (Arg0, 0xF, Local0)
+        If (LLess (Local0, 10))
+        {
+            Add (Local0, 0x30, Local0)  // '0'
+        } Else {
+            Add (Local0, 0x57, Local0)  // 'a' - 10
+        }
+        UPUT (Local0)
+
+        UPUT (0x20)
+    }
+
+    OperationRegion (ECIX, SystemIO, 0x0381, 0x03)
+
+    Field (ECIX, ByteAcc, NoLock, Preserve)
+    {
+        EIXH,   8, 
+        EIXL,   8, 
+        EDAT,   8
+    }
+
+    Method (ECRD, 1, NotSerialized)
+    {
+//        Acquire (ECMX, 5000)
+        Store (ShiftRight (Arg0, 0x08), EIXH)
+        Store (And (Arg0, 0xFF), EIXL)
+//        Sleep (15)
+        Stall(255)
+        Store (EDAT, Local0)
+//        UDOT (Local0)
+        Stall(255)
+//        Sleep (15)
+//        Release (ECMX)
+        Return (Local0)
+    }
+
+    OperationRegion (ECCP, SystemIO, 0x068, 0x05)
+
+    Field (ECCP, ByteAcc, NoLock, Preserve)
+    {
+        ECDA,   8,   // 0x68
+            ,   8,
+            ,   8,
+            ,   8,
+        ECCM,   8,   // 0x6c
+    }
+
+    Method (ECCO, 1, NotSerialized)  // EC Command Out (command)
+    {
+        Store (1000, Local0)
+        While (And (ECCM, 2))  // Wait for IBF == 0
+        {
+           if (LEqual (Subtract(Local0, One, Local0), Zero))
+           {
+               Fatal(1, 1, 0)
+           }
+           Sleep(1)
+        }
+        Store (Arg0, ECCM)
+        Store (1000, Local0)
+        While (LNot (And (ECCM, 2)))  // Wait for IBF != 0
+        {
+           if (LEqual (Subtract(Local0, One, Local0), Zero))
+           {
+               Fatal(1, 1, 1)
+           }
+           Sleep(1)
+        }
+    }
+
+    Method (ECRB, 0, NotSerialized)  // EC Read Byte after command -> byte
+    {
+        Store (200, Local0)
+        While (LNot (And (ECCM, 1)))  // Wait for OBF != 0
+        {
+           if (LEqual (Subtract(Local0, One, Local0), Zero))
+           {
+               Fatal(1, 1, 2)
+           }
+           Sleep(1)
+        }
+        Return (ECDA)
+    }
+
     Scope (_PR) {
         Processor (CPU0, 0x01, 0x00000000, 0x00) {}
 //        Processor (CPU0, 0x01, 0x00009E00, 0x06) {
@@ -85,7 +204,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 3, "OLPC  ", "XO-1    ", 0x00001000) {
     Method (_WAK, 1, NotSerialized) {  // Arg is the sleeping state
 // VSAW(0, 9)
         Store (Zero, \_SB.ZZY2)
-        Switch (ToInteger(Arg0)) {
+        Switch (Arg0) {
             Case (One) {
                 Notify (\_SB.PCI0.USB0, Zero)
                 Notify (\_SB.PCI0.USB1, Zero)
@@ -128,16 +247,14 @@ DefinitionBlock ("dsdt.aml", "DSDT", 3, "OLPC  ", "XO-1    ", 0x00001000) {
             Notify (\_SB.PCI0.USB1, 0x02)
         }
         
-// XXX ??? Do we need a battery event at _L15 ?
-
-        // XXX probably pointless as power is off
         Method (_L1E, 0, NotSerialized) {            // Comes from IRQ/PME Mapper bit 6 - LID switch
 // VSAW(0, 6)
-            If (LEqual (\_SB.ZZY2, Zero)) {
-                If (LLess (ZZY1, 0x02)) {            // no state or working state or waking
-//                    Notify (\_SB.SLPB, 0x80)         // XXX ??? Should this be LID switch instead?
+//            UPUT(0x4C)               // L
+//            UPUT(Add(0x30, ZZY1))
+            If (LEqual (\_SB.ZZY2, Zero)) {          // Not preparing to sleep
+//                If (LLess (ZZY1, 0x02)) {            // no state or working state or waking
                     Notify (\_SB.LIDS, 0x80)         // Request to go to sleep
-                }
+//                }
             } Else {
                 Notify (\_SB.LIDS, 0x02)             // Request to wake up
             }
@@ -145,13 +262,36 @@ DefinitionBlock ("dsdt.aml", "DSDT", 3, "OLPC  ", "XO-1    ", 0x00001000) {
 
         Method (_L1F, 0, NotSerialized) {            // Comes from IRQ/PME Mapper bit 7 - SCI
 // VSAW(0, 5)
-            Notify (\_SB.PCI0, 0x02)                 // Request to wake up from EC
+//            UPUT(0x53)               // S
+
+            Store (One, Local0)
+            While (Local0)
+            {
+                ECCO(0x84)               // Read SCI Queue
+                Store (ECRB(), Local0)
+//                UDOT (Local0)
+                If (And(Local0, 0x40))
+                {
+                    Notify (\_SB.AC, 0x80)
+                }
+                If (And(Local0, 0x0e))
+                {
+                    Notify (\_SB.BATT, 0x80)
+                }
+            }
+
+//              Notify (\_SB.PCI0, 0x02)                 // Request to wake up from EC
+//              Notify (\_SB.AC, 0x80)
+//              Notify (\_SB.BATT, 0x80)
+//            UPUT(0x54)               // T
         }
     }
 
     // This is an indicator method - it sets LEDs based on the sleep state
     Scope (_SI) {
         Method (_SST, 1, NotSerialized) {
+//            UPUT(0x24)  // $
+//            UPUT(Add(0x30, Arg0))
 // VSAW(1, Arg0)
 // XXX ??? need to set LEDs by doing VR accesses - or probably the EC does it automatically
             Store (Arg0, ZZY1)
@@ -193,13 +333,22 @@ DefinitionBlock ("dsdt.aml", "DSDT", 3, "OLPC  ", "XO-1    ", 0x00001000) {
 //    VSAW(0, 1)
         }
 
-        OperationRegion (GPIO, SystemIO, 0x6100, 0x0100)
+        OperationRegion (GPIO, SystemIO, 0x1000, 0x0100)
         Field (GPIO, DWordAcc, NoLock, Preserve) {
 //                    Offset (0x38), 
 //            GLEE,   32
-                    Offset (0xB0),    // DDD geoderom doesn't have this IMPORTANT - High bank read back
+                    Offset (0xA4),
+            GHIN,   32,               // High bank Input Invert
+                    Offset (0xB0),    // High bank read back
                 ,   10, 
             LSWI,   1                 // Lid switch bit
+//                  Offset (0xB8),
+//          GHEE,   32                // High bank events enable
+//                  Offset (0xC0),
+//          GHPE,   32,               // High bank posedge enable
+//          GHNE,   32,               // High bank negedge enable
+//          GHPS,   32,               // High bank posedge status
+//          GHNS,   32,               // High bank negedge status
         }
 
         Device (LNKA) {
@@ -238,13 +387,29 @@ DefinitionBlock ("dsdt.aml", "DSDT", 3, "OLPC  ", "XO-1    ", 0x00001000) {
             Name (_STA, 0x09)
         }
 
+        Mutex (ACMX, 0x00)
         Device (AC) {  /* AC adapter */
             Name (_HID, "ACPI0003")
             Name (_PCL, Package (0x01) { _SB })  // Power consumer list - points to main system bus
 
-            // Power Source - XXX this is a stub - it doesn't really tell you if the AC is on-line
-// XXX ??? Make the AC adapter check actually do something
-            Name (_PSR, One)
+            Method (_PSR, 0, NotSerialized)
+            {
+                If (LNot (Acquire (ACMX, 5000)))
+                {
+//                    UPUT (0x70)  // p
+                    Store (ECRD (0xFA40), Local0)
+                    Release (ACMX)
+                }
+
+                If (And (Local0, One))
+                {
+                    Return (One)
+                }
+                Else
+                {
+                    Return (Zero)
+                }
+            }
 
 //            Name (_STA, 0x0F)
 Method (_STA, 0, NotSerialized) { Return (0x0F) }
@@ -263,16 +428,16 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
             0x01B3,        // granularity between low and warning
             0x09F6,        // granularity between warning and full
             "NiMH (GP) ",  // Model number
-            "MIT OLPC ",   // serial number
+            "",            // serial number
             "NiMH",        // type
             "OLPC "        // OEM info
         })
         Name (BSTP, Package (0x04)  // Battery status (dynamic) p 343
         {
             Zero,          // state - bitmask 1: discharging 2: charging 4: critical
-            0x02F8,        // current flow
-            0x0B5E,        // remaining capacity
-            0x5B0A         // voltage in mV
+            760,           // current flow
+            2910,          // remaining capacity
+            23306          // voltage in mV
         })
         Device (BATT)
         {
@@ -289,149 +454,146 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
                     Return (0x0F)
                 }
 
-//                If (LNot (Acquire (MUT0, 0x1400)))
-//                {
-//                    Store (RDEC (0xFAA4), Local0)
-//                    Release (MUT0)
-//                }
+                If (LNot (Acquire (ACMX, 5000)))
+                {
+//                    UPUT (0x73)  // s
+                    Store (ECRD (0xFAA4), Local0)
+                    Release (ACMX)
+                }
 
-//                If (And (Local0, One))
-//                {
-                      Return (0x1F)
-//                }
-//                Else
-//                {
-//                    Return (0x0F)
-//                }
+                If (And (Local0, One))
+                {
+                    Return (0x1F)
+                }
+                Else
+                {
+                    Return (0x0F)
+                }
             }
 
             Method (_BIF, 0, NotSerialized)         // Battery Info
             {
-//                If (LNot (Acquire (MUT0, 0x1400)))
-//                {
-//                    Store (RDEC (0xFB5F), Local0)
-//                    Store (RDEC (0xF929), Local1)
-//                    Store (Local0, _T00)
-//                    If (LEqual (0x22, _T00))
-//                    {
-//                        Store (0x0ED8, Index (BIFP, One))
-//                        Store (0x0BB8, Index (BIFP, 0x02))
-//                        Store (0x1770, Index (BIFP, 0x04))
-//                        Multiply (Local1, 0x1E, Local1)
-//                        Store (Local1, Index (BIFP, 0x05))
-//                        Store (0x0F, Index (BIFP, 0x06))
-//                        Subtract (Local1, 0x0F, Local2)
-//                        Store (Local2, Index (BIFP, 0x07))
-//                        Subtract (0x0BB8, Local1, Local3)
-//                        Store (Local3, Index (BIFP, 0x08))
-//                        Store ("NiMH (GP) ", Index (BIFP, 0x09))
-//                        Store ("MIT OLPC ", Index (BIFP, 0x0A))
-//                    }
-//                    Else
-//                    {
-//                        If (LEqual (0x11, _T00))
-//                        {
-//                            Store (0x0DDE, Index (BIFP, One))
-//                            Store (0x0C1C, Index (BIFP, 0x02))
-//                            Store (0x1964, Index (BIFP, 0x04))
-//                            Multiply (Local1, 0x1F, Local1)
-//                            Store (Local1, Index (BIFP, 0x05))
-//                            Store (0x0F, Index (BIFP, 0x06))
-//                            Subtract (Local1, 0x0F, Local2)
-//                            Store (Local2, Index (BIFP, 0x07))
-//                            Subtract (0x0C1C, Local1, Local3)
-//                            Store (Local3, Index (BIFP, 0x08))
-//                            Store ("LiFePo4 (BYD) ", Index (BIFP, 0x09))
-//                            Store ("MIT OLPC ", Index (BIFP, 0x0A))
-//                        }
-//                        Else
-//                        {
-//                            If (LEqual (0x12, _T00))
-//                            {
-//                                Store (0x0BB8, Index (BIFP, One))
-//                                Store (0x0AF0, Index (BIFP, 0x02))
-//                                Store (0x1770, Index (BIFP, 0x04))
-//                                Multiply (Local1, 0x1C, Local1)
-//                                Store (Local1, Index (BIFP, 0x05))
-//                                Store (0x0E, Index (BIFP, 0x06))
-//                                Subtract (Local1, 0x0E, Local2)
-//                                Store (Local2, Index (BIFP, 0x07))
-//                                Subtract (0x0AF0, Local1, Local3)
-//                                Store (Local3, Index (BIFP, 0x08))
-//                                Store ("LiFePo4 (GP) ", Index (BIFP, 0x09))
-//                                Store ("MIT OLPC ", Index (BIFP, 0x0A))
-//                            }
-//                        }
-//                    }
-//
-//                    Store (RDEC (0xFAA5), Local0)
-//                    If (And (Local0, 0x08))
-//                    {
-//                        Store ("NiMH", Index (BIFP, 0x0B))
-//                    }
-//                    Else
-//                    {
-//                        Store ("LiON", Index (BIFP, 0x0B))
-//                    }
-//
-//                    Store ("OLPC ", Index (BIFP, 0x0C))
-//                    Release (MUT0)
-//                }
+                If (LNot (Acquire (ACMX, 5000)))
+                {
+//                    UPUT (0x69)  // i
+                    Store (ECRD (0xFB5F), Local0)
+                    Store (ECRD (0xF929), Local1)
+                    Switch (Local0)
+                    {
+                        Case (0x11)
+                        {
+//                            UPUT (0x42)  // B
+                            Store (3800, Index (BIFP, One))
+                            Store (3000, Index (BIFP, 2))
+                            Store (6000, Index (BIFP, 0x04))
+                            Multiply (Local1, 30, Local1)
+                            Store (Local1, Index (BIFP, 5))
+                            Store (15, Index (BIFP, 6))
+                            Store (Subtract (Local1, 15), Index (BIFP, 7))
+                            Store (Subtract (3000, Local1), Index (BIFP, 8))
+                            Store ("NiMH (GP) ", Index (BIFP, 9))
+                            Store ("", Index (BIFP, 10))
+                            Store ("GoldPeak ", Index (BIFP, 0x0C))
+//                            UPUT (0x62)  // b
+                        }
+                        Case (0x12)
+                        {
+//                            UPUT (0x44)  // D
+                            Store (3000, Index (BIFP, One))
+                            Store (2800, Index (BIFP, 2))
+                            Store (6000, Index (BIFP, 4))
+                            Multiply (Local1, 28, Local1)
+                            Store (Local1, Index (BIFP, 5))
+                            Store (14, Index (BIFP, 6))
+                            Store (Subtract (Local1, 14), Index (BIFP, 7))
+                            Store (Subtract (2800, Local1), Index (BIFP, 8))
+                            Store ("LiFePO4 (GP) ", Index (BIFP, 9))
+                            Store ("", Index (BIFP, 10))
+                            Store ("GoldPeak ", Index (BIFP, 0x0C))
+//                            UPUT (0x64)  // d
+                        }
+                        Case (0x22)
+                        {
+//                            UPUT (0x43)  // C
+                            Store (3550, Index (BIFP, One))
+                            Store (3100, Index (BIFP, 2))
+                            Store (6500, Index (BIFP, 4))
+                            Multiply (Local1, 31, Local1)
+                            Store (Local1, Index (BIFP, 5))
+                            Store (15, Index (BIFP, 6))
+                            Store (Subtract (Local1, 15), Index (BIFP, 7))
+                            Store (Subtract (3100, Local1), Index (BIFP, 8))
+                            Store ("LiFePO4 (BYD) ", Index (BIFP, 9))
+                            Store ("", Index (BIFP, 10))
+                            Store ("BYD ", Index (BIFP, 0x0C))
+//                            UPUT (0x63)  // c
+                        }
+                    }
+
+//                    UPUT (0x49)  // I
+                    If (And (ECRD (0xFAA5), 8))
+                    {
+                        Store ("NiMH", Index (BIFP, 11))
+                    }
+                    Else
+                    {
+//x                        Store ("LiON", Index (BIFP, 11))
+                        Store ("LiFePO4", Index (BIFP, 11))
+                    }
+
+//x                    Store ("OLPC ", Index (BIFP, 0x0C))
+                    Release (ACMX)
+                }
 
                 Return (BIFP)
             }
 
             Method (_BST, 0, NotSerialized)
             {
-//                If (LNot (Acquire (MUT0, 0x1400)))
-//                {
-//                    Store (RDEC (0xFAA5), Local0)
-//                    If (And (Local0, One))
-//                    {
-//                        Store (0x02, Local1)
-//                    }
-//                    Else
-//                    {
-//                        Store (One, Local1)
-//                    }
-//
-//                    Sleep (0x0F)
-//                    Store (RDEC (0xF910), Local0)
-//                    If (LLess (Local0, 0x0F))
-//                    {
-//                        Or (Local1, 0x04, Local1)
-//                    }
-//
-//                    Store (Local1, Index (BSTP, Zero))
-//                    Sleep (0x0F)
-//                    Store (RDEC (0xFB5F), Local1)
-//                    Sleep (0x0F)
-//                    Store (Local1, _T01)
-//                    If (LEqual (0x22, _T01))
-//                    {
-//                        Store (0x02F8, Index (BSTP, One))
-//                        Multiply (Local0, 0x1E, Local2)
-//                    }
-//                    Else
-//                    {
-//                        If (LEqual (0x11, _T01))
-//                        {
-//                            Store (0x05DC, Index (BSTP, One))
-//                            Multiply (Local0, 0x1F, Local2)
-//                        }
-//                        Else
-//                        {
-//                            If (LEqual (0x12, _T01))
-//                            {
-//                                Store (0x05DC, Index (BSTP, One))
-//                                Multiply (Local0, 0x1C, Local2)
-//                            }
-//                        }
-//                    }
-//
-//                    Store (Local2, Index (BSTP, 0x02))
-//                    Release (MUT0)
-//                }
+                If (LNot (Acquire (ACMX, 5000)))
+                {
+//                    UPUT (0x74)  // t
+                    If (And (ECRD (0xFAA5), One))
+                    {
+                        Store (0x02, Local1)  // charging
+                    }
+                    Else
+                    {
+                        Store (One, Local1)  // discharging
+                    }
+
+                    Sleep (15)
+                    Store (ECRD (0xF910), Local0)
+                    If (LLess (Local0, 15))
+                    {
+                        Or (Local1, 4, Local1)  // critical
+                    }
+
+                    Store (Local1, Index (BSTP, Zero))
+                    Sleep (15)
+
+                    Switch (ECRD (0xFB5F))
+                    {
+                        Case (0x11)
+                        {
+                            Store (760, Index (BSTP, One))
+                            Multiply (Local0, 30, Local2)
+                        }
+                        Case (0x22)
+                        {
+                            Store (1500, Index (BSTP, One))
+                            Multiply (Local0, 31, Local2)
+                        }
+                        Case (0x12)
+                        {
+                            Store (1500, Index (BSTP, One))
+                            Multiply (Local0, 28, Local2)
+                        }
+                    }
+
+                    Store (Local2, Index (BSTP, 2))
+                    Release (ACMX)
+                }
 
                 Return (BSTP)
             }
@@ -442,7 +604,40 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
         Device (LIDS) {
             Name (_HID, EisaId ("PNP0C0D"))
             Name (_PRW, Package (0x02) {  0x1e, 0x03 })            // Event 1e, wakes from S3
-            Method (_LID, 0, NotSerialized) {  Return (LSWI)  }    // Lid switch bit
+            Method (_INI, 0, NotSerialized) {
+                Store (0x400, GHIN)               // Turn on invert to see falling edge
+            }
+            Method (_LID, 0, NotSerialized) {
+                // The expected state is LSWI == 1, because the inverter is either
+                // on or off depending on the previous state.
+                // If LSWI == 0, it means that the switch changed values then
+                // changed back to the previous state.
+//                UPUT (0x6c)                       // l
+                If (LSWI) {
+                    If (And(GHIN, 0x400))
+                    {                                     // Inverted, became closed
+//                        UPUT (0x30)
+                        Store (0x4000000, GHIN)           // Turn on invert to see falling edge
+                        Store (Zero, Local0)
+                    } Else {                              // Not inverted, became open
+//                        UPUT (0x31)
+                        Store (0x400, GHIN)               // Turn on invert to see falling edge
+                        Store (One, Local0)
+                    }
+                } Else {                                  // Spurious event
+                    If (And(GHIN, 0x400))
+                    {                                     // Inverted, stayed open
+                        Store (One, Local0)
+//                        UPUT (0x61)
+                    } Else {
+                        Store (Zero, Local0)
+//                        UPUT (0x62)
+                    }
+                }
+//                UPUT (0x20)
+
+                Return (Local0)
+            }
         }
 
         Device (PCI0) {
@@ -451,7 +646,7 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
 
             // XXX Probably should be sleep state 0 - can't wake from PCI as power is off
 //            Name (_PRW, Package (0x02) { 0x1f, 0x05 })
-            Name (_PRW, Package (0x02) { 0x1f, 0x03 })
+// XXX        Name (_PRW, Package (0x02) { 0x1f, 0x03 })
 
 //            Name (_STA, 0x0F)
 Method (_STA, 0, NotSerialized) { Return (0x0F) }

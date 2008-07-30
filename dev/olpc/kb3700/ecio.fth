@@ -155,6 +155,7 @@ d# 10 constant #ec-retries
 : write-protect-fw ( -- )  3 ec-cmd  ;
 : ebook-mode?      ( -- b )  h# 2a ec-cmd-b@  ;
 : wlan-freeze      ( -- )  h# 35 ec-cmd  ;
+: sci-queue@       ( -- b )  h# 84 ec-cmd-b@  ;
 
 : ec-indexed-io-off  ( -- )  h# fe95 ec@  h# 40 invert and  h# fe95 ec!  ;
 

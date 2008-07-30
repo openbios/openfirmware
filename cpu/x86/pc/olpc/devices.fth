@@ -105,9 +105,7 @@ end-package
 devalias dropins /dropins
 
 \ Create a pseudo-device that presents the dropin modules as a filesystem.
-0 0 " "  " /" begin-package
-   fload ${BP}/ofw/fs/dropinfs.fth
-end-package
+fload ${BP}/ofw/fs/dropinfs.fth
 
 \ This devalias lets us say, for example, "dir rom:"
 devalias rom     /dropin-fs
