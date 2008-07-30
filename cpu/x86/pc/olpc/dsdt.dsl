@@ -132,7 +132,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 3, "OLPC  ", "XO-1    ", 0x00001000) {
         {
            if (LEqual (Subtract(Local0, One, Local0), Zero))
            {
-               Fatal(1, 1, 0)
+               Return (One)
            }
            Sleep(1)
         }
@@ -142,10 +142,11 @@ DefinitionBlock ("dsdt.aml", "DSDT", 3, "OLPC  ", "XO-1    ", 0x00001000) {
         {
            if (LEqual (Subtract(Local0, One, Local0), Zero))
            {
-               Fatal(1, 1, 1)
+               Return (2)
            }
            Sleep(1)
         }
+        Return (Zero)
     }
 
     Method (ECRB, 0, NotSerialized)  // EC Read Byte after command -> byte
@@ -153,13 +154,32 @@ DefinitionBlock ("dsdt.aml", "DSDT", 3, "OLPC  ", "XO-1    ", 0x00001000) {
         Store (200, Local0)
         While (LNot (And (ECCM, 1)))  // Wait for OBF != 0
         {
-           if (LEqual (Subtract(Local0, One, Local0), Zero))
+           If (LEqual (Subtract(Local0, One, Local0), Zero))
            {
-               Fatal(1, 1, 2)
+               Return (0xffffffff)
            }
            Sleep(1)
         }
         Return (ECDA)
+    }
+
+    Method (ECC1, 1, NotSerialized)  // EC Command returning 1 byte
+    {
+        Store (10, Local0)                     // Ten retries
+        While (Subtract(Local0, One, Local0))  // While more tries left
+        {
+            If (ECCO (Arg0))
+            {
+                Continue                        // Command timeout
+            }
+            Store (ECRB (), Local1)
+            If (LNotEqual (Local1, 0xffffffff))
+            {
+                Return (Local1)                 // Success
+            }
+        }
+        Return (Zero)
+
     }
 
     Scope (_PR) {
@@ -267,8 +287,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 3, "OLPC  ", "XO-1    ", 0x00001000) {
             Store (One, Local0)
             While (Local0)
             {
-                ECCO(0x84)               // Read SCI Queue
-                Store (ECRB(), Local0)
+                Store (ECC1(0x84), Local0)  // Read SCI Queue
 //                UDOT (Local0)
                 If (And(Local0, 0x40))
                 {
