@@ -38,9 +38,9 @@ headers
    dup 2 =  if
       \ check (tapes, especially) for MEDIA NOT PRESENT: if the
       \ media's not there the command is not retryable
-      drop sense-buf h# c + c@  h# 3a =  sense-buf h# d + c@ 0=  and  if
-         -1 else 1 
-      then exit
+      drop                ( )
+      sense-buf h# c + c@  h# 3a =  sense-buf h# d + c@ 0=  and  ( not-present? )
+      if  -1  else  1  then  exit
    then
 
    \ Media-error(3) is not retryable
@@ -82,71 +82,17 @@ external
    then
 ;
 
-
 headers
 
 create sense-cmd  3 c, 0 c, 0 c, 0 c, ff c, 0 c,
 
-: get-sense  ( -- )     \ Issue REQUEST SENSE, which is not supposed to fail
-   sense-buf ff  true  sense-cmd 6  execute-command   0=  if  drop  then
+: get-sense  ( -- failed? )     \ Issue REQUEST SENSE
+   sense-buf ff  true  sense-cmd 6  execute-command  ( actual cswStatus )
+   if  drop true  else  8 <  then
 ;
 
 \ Give the device a little time to recover before retrying the command.
-: delay-retry  ( -- )   2000 0 do loop  ;
-
-0 value statbyte	\ Local variable used by retry?
-
-\ RETRY? is used by RETRY-COMMAND to determine whether or not to retry the
-\ command, considering the following factors:
-\  - Success or failure of the command at the hardware level (failure at
-\    this level is usually fatal, except in the case of an incoming bus reset)
-\  - The value of the status byte returned by the command
-\  - The condition indicated by the sense bytes
-\  - The number of previous retries
-\
-\ The input arguments are as returned by "scsi-exec"
-\ On output, the top of the stack is true if the command is to be retried,
-\ otherwise the top of the stack is false and the results that should be
-\ returned by retry-command are underneath it; those results indicate the type
-\ of error that occurred.
-
-: retry?  ( hw-result | statbyte 0 -- true | [[sensebuf] f-hw] error? false )
-   case
-      0          of  to statbyte  endof  \ No hardware error; continue checking
-      bus-reset  of  true exit    endof  \ Retry after incoming bus reset
-      ( hw-result )  true false  exit    \ Other hardware errors are fatal
-   endcase
-
-   statbyte 0=  if  false false exit  then  \ If successful, return  "no-error"
-
-   statbyte  2 and  if    \ "Check Condition", so get extended status
-      get-sense  classify-sense  case                  ( -1|0|1 )
-          \ If the sense information says "no sense", return "no-error"
-          0  of  false false exit                      endof
-
-         \ If the error is fatal, return "sense-buf,valid,statbyte"
-         -1  of  sense-buf false statbyte false  exit  endof
-      endcase
-
-      \ Otherwise, the error was retryable.  However, if we have
-      \ have already retried the specified number of times, don't
-      \ retry again; instead return sense buffer and status.
-      #retries 0=  if  sense-buf false statbyte false  exit  then
-   then
-
-   \ Don't retry if vendor-unique, reserved, intermediate, or
-   \ "condition met/good" bits are set. Return "no-sense,status"
-   statbyte h# f5 and  if  true statbyte false  exit  then
-
-   \ Don't retry if we have already retried the specified number
-   \ of times.  Return "no-sense,status"
-   #retries 0=  if  true statbyte false  exit  then
-
-   \ Otherwise, it was either a busy or a retryable check condition,
-   \ so we retry.
-
-   true
-;
+: delay-retry  ( -- )   1 ms  ;
 
 \ RETRY-COMMAND executes a SCSI command.  If a check condition is indicated,
 \ performs a "get-sense" command.  If the sense bytes indicate a non-fatal
@@ -162,19 +108,6 @@ create sense-cmd  3 c, 0 c, 0 c, 0 c, ff c, 0 c,
 
 \ #retries is number of times to retry (0: don't retry, -1: retry forever)
 \
-\ sensebuf is the address of the sense buffer; it is present only
-\ if f-hw is 0 and error? is non-zero.  The length of the sense buffer
-\ is 8 bytes plus the value in byte 7 of the sense buffer.
-\
-\ f-hw is non-zero if there is a hardware error -- dma fails, select fails,
-\ etc -- or if the status byte was neither 0 (okay) nor 2 (check condition)
-\
-\ error? is non-zero if there is a transaction error.  If error? is 0,
-\ f-hw and sensebuf are not returned.
-\
-\ If sensebuf is returned, the contents are valid until the next call to
-\ retry-command.  sensebuf becomes inaccessable when this package is closed.
-\
 \ dma-dir is necessary because it is not always possible to infer the DMA
 \ direction from the command.
 
@@ -189,35 +122,53 @@ create sense-cmd  3 c, 0 c, 0 c, 0 c, ff c, 0 c,
 
 external
 
-: retry-command  ( dma-buf dma-len dma-dir cmdbuf cmdlen #retries -- ... )
-           ( ... -- [[sensebuf] f-hw] error? )
+\ errcode values:  0: okay   -1: phase error  otherwise: sense-key
+
+: retry-command?  ( dma-buf dma-len dma-dir cmdbuf cmdlen #retries -- actual errcode )
    to #retries   to clen  to cbuf  to direction-in  to dlen  to dbuf
 
    begin
-      dbuf dlen  direction-in  cbuf clen  execute-command  ( hwerr | stat 0 )
-      retry?
-   while
-      #retries 1- to #retries
+      dbuf dlen  direction-in  cbuf clen  execute-command  ( actual cswStatus )
+
+      dup 0=   if  drop  0 exit  then   \ Exit reporting success
+      dup 2 >  if  drop -1 exit  then   \ Exit reporting invalid CSW result code
+
+      1 =  if                              ( actual )
+         \ Do get-sense to determine what to do next
+         get-sense  if                     ( actual )
+            \ Treat a get-sense failure like a phase error; just retry the command
+            -1                             ( actual errcode )
+         else                              ( actual )
+            classify-sense  case   ( actual -1|0|1 )
+               \ If the sense information says "no sense", return "no-error"
+               0  of  0 exit  endof
+
+               \ If the error is fatal, return the sense-key
+               -1  of  sense-buf 2+ c@  exit  endof
+            endcase
+            sense-buf 2+ c@                ( actual errcode )
+         then
+      else                                 ( actual )
+         -1     \ Was phase error          ( actual errcode )
+      then                                 ( actual errcode )
+
+      \ If we get here, the command is retryable - either a phase error
+      \ or a non-fatal sense code
+
+      #retries 1- dup  to #retries         ( actual errcode #retries )
+   while                                   ( actual errcode )
+      2drop                                ( )
       delay-retry
-   repeat
-;
-
-headers
-
-\ Collapses the complete error information returned by retry-command into
-\ a single error/no-error flag.
-
-: error?  ( false | true true | sensebuf false true -- error? )
-   dup  if  swap 0=  if  nip  then  then
+   repeat                                  ( actual errcode )
 ;
 
 external
 
-\ Simplified "retry-command" routine for commands with no data transfer phase
+\ Simplified routine for commands with no data transfer phase
 \ and simple error checking requirements.
 
 : no-data-command  ( cmdbuf -- error? )
-   >r  0 0 true  r> 6  -1  retry-command error?
+   >r  0 0 true  r> 6  -1  retry-command?  nip
 ;
 
 \ short-data-command executes a command with the following characteristics:
@@ -229,9 +180,9 @@ external
 \ The buffer contents become invalid when another SCSI command is
 \ executed, or when the driver is closed.
 
-: short-data-command  ( data-len cmdbuf cmdlen -- true | buffer false )
-   >r >r  inq-buf swap  true  r> r> -1  retry-command   ( retry-cmd-results )
-   error?  dup 0=  if  inq-buf swap  then
+: short-data-command  ( data-len cmdbuf cmdlen #retries -- true | buffer len false )
+   >r >r >r  inq-buf swap  true  r> r> r>  retry-command?   ( actual error-code )
+   if  drop true  else  inq-buf swap false  then
 ;
 
 headers
@@ -256,7 +207,7 @@ external
    \ supposed to respond with "check condition".
    \ However, empirically, on MC2 EVT1, 8 proves insufficient.
 
-   inq-buf ff  true  inquiry-cmd 6  10  retry-command  error?
+   inq-buf ff  true  inquiry-cmd 6  10  retry-command?  nip
 ;
 
 headers
@@ -318,7 +269,7 @@ external
 headers
 
 \ The diagnose command is useful for generic SCSI devices.
-\ It executes bothe "test-unit-ready" and "send-diagnostic"
+\ It executes both the "test-unit-ready" and "send-diagnostic"
 \ commands, decoding the error status information they return.
 
 create test-unit-rdy-cmd        0 c, 0 c, 0 c, 0 c, 0 c, 0 c,
@@ -331,19 +282,22 @@ external
 
 : diagnose  ( -- flag )
    0 0 true  test-unit-rdy-cmd 6   -1   ( dma$ dir cmd$ #retries )
-   retry-command  if                    ( [ sensebuf ] hardware-error? )
-      ." Test unit ready failed - "     ( [ sensebuf ] hardware-error? )
-      if                                ( )
-         ." hardware error (no such device?)" cr          ( )
-      else                              ( sensebuf )
-         ." extended status = " cr      ( sensebuf )
-         base @ >r  hex                 ( sensebuf )
-         8 bounds ?do  i 3 u.r  loop cr ( )
+   retry-command?  ?dup  if             ( actual error-code )
+      nip                               ( error-code )
+      ." Test unit ready failed - "     ( error-code )
+      dup -1  if                        ( error-code )
+         ." phase error " . cr          ( )
+      else                              ( error-code )
+         ." Sense code " .              ( )
+         ." extended status = " cr      ( )
+         base @ >r  hex                 ( )
+         sense-buf 8 bounds ?do  i 3 u.r  loop cr ( )
          r> base !
       then
       true
-   else
-      send-diagnostic  ( fail? )
+   else                                 ( actual )
+      drop                              ( )
+      send-diagnostic                   ( fail? )
    then
 ;
 

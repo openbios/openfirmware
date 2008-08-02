@@ -15,14 +15,11 @@ headers
 : parent-set-address  ( lun -- )  " set-address" $call-parent  ;
 
 
-\ Calls the parent device's "retry-command" method.  The parent device is
+\ Calls the parent device's "retry-command?" method.  The parent device is
 \ assumed to be a driver for a SCSI host adapter (device-type = "scsi")
 
-: retry-command  ( dma-addr dma-len dma-dir cmd-addr cmd-len #retries -- ... )
-           ( ... -- false )                \ No error
-           ( ... -- true true )            \ Hardware error
-           ( ... -- sensebuf false true )  \ Fatal error with extended status
-   " retry-command" $call-parent
+: retry-command?  ( dma-addr dma-len dma-dir cmd-addr cmd-len #retries -- actual errcode )
+   " retry-command?" $call-parent
 ;
 
 
@@ -30,7 +27,7 @@ headers
 
 : no-data-command  ( cmdbuf -- error? )  " no-data-command" $call-parent  ;
 
-: short-data-command  ( data-len cmdbuf cmdlen -- true | buffer false )
+: short-data-command  ( data-len cmdbuf cmdlen #retries -- true | buffer len false )
    " short-data-command" $call-parent
 ;
 
@@ -60,7 +57,7 @@ create eject-cmd  h# 1b c, 1 c, 0 c, 0 c, 2 c, 0 c,
 external
 : device-present?  ( lun -- present? )
    parent-set-address
-   " inquiry"  $call-parent  invert
+   " inquiry"  $call-parent  0=
 ;
 
 : eject ( -- )

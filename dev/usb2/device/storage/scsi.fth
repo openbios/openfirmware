@@ -111,49 +111,56 @@ h# 53425355 constant csw-signature	\ little-endian
 
 d# 15,000 constant bulk-timeout
 
-: (execute-command)  ( data-adr,len dir cbw-adr,len -- hwresult | statbyte 0 )
+: (execute-command)  ( data-adr,len dir cbw-adr,len -- actual-len cswStatus  )
    debug?  if
       2dup " dump" evaluate cr
    then
 
    bulk-out-pipe bulk-out		( data-adr,len dir usberr )
-   USB_ERR_CRC invert and		( data-adr,len dir usberr' )
-   ?dup  if  nip nip nip  exit  then	( data-adr,len dir )
+   USB_ERR_CRC invert and  if		( data-adr,len dir )
+      transport-reset  3drop 0 2 exit   ( actual=0 status=retry )
+   then                                 ( data-adr,len dir )
 
-   over  if
+   over  if                             ( data-adr,len dir )
       if				( data-adr,len )
-         bulk-in-pipe bulk-in 2drop	( )
-      else
-         bulk-out-pipe bulk-out drop	( )
-      then
+         bulk-in-pipe bulk-in           ( actual usberror )
+      else				( data-adr,len )
+         tuck bulk-out-pipe bulk-out    ( len usberror )
+         dup  if  nip 0 swap  then      ( len' usberror )
+      then				( usberror )
    else					( data-adr,len dir )
-      drop 2drop			( )
-   then
+      drop nip  0			( len usberror )
+   then					( actual usberror )
 
-   get-csw				( len usberr )
-   ?dup  if  nip exit  then
+   get-csw				( actual usberror csw-len csw-usberror )
+
+   rot  drop				( actual csw-len csw-usberror )
+
+   ?dup  if  nip exit  then		( actual csw-len csw-usberror )
+   drop                                 ( actual )
+
    debug?  if
       csw /csw " dump" evaluate cr
    then
 
-   drop csw >csw-stat c@		( cswStatus )
-   case
-      0  of  0 0  endof			\ No error
-      1  of  2 0  endof			\ Error, "check condition"
-      2  of  transport-reset		\ Phase error, reset recovery
-	     USB_ERR_STALL  endof
-      ( default )  0 0 rot		\ Reserved error
-   endcase
+   csw >csw-stat c@		        ( actual cswStatus )
+   dup 2 =  if  transport-reset  then   ( actual cswStatus )
+   \ Values are:
+   \  0: No error - command is finished
+   \  1: Error - do get-sense and possibly retry
+   \  2: Phase error - retry after transport-reset
+   \  else: Invalid status code - abort command
 ;
 
 external
 
-: execute-command  ( data-adr,len dir cmd-adr,len -- hwresult | statbyte 0 )
-   execute-command-hook
-   over c@ h# 1b = 2 pick 4 + c@ 1 = and >r	\ Start command?
+: execute-command  ( data-adr,len dir cmd-adr,len -- actual cswStatus )
+   execute-command-hook                         ( data$ dir cmd$ )
+   over c@ h# 1b =                              ( data$ dir cmd$ flag )
+   2 pick 4 + c@  1 =  and  >r	                ( data$ dir cmd$ r: Start-command? )
    2over 2swap wrap-cbw				( data-adr,len dir cbw-adr,len )
-   (execute-command)
-   r>  if  dup 0=  if  nip 0  then  then	\ Fake ok
+   (execute-command)                            ( actual cswStatus )
+   r>  if  drop 0  then  \ Fake ok if it's a start commmand
 ;
 
 : set-address  ( lun -- )

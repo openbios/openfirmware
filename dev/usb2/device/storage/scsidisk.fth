@@ -37,22 +37,23 @@ headers
    then
 ;
 
+\ Checks to see if a device is ready
+
+: unit-ready?  ( -- ready? )
+   " "(00 00 00 00 00 00)" drop  no-data-command  0=
+;
 
 \ Ensures that the disk is spinning, but doesn't wait forever
 
 create sstart-cmd  h# 1b c, 0 c, 0 c, 0 c, 1 c, 0 c,
 
 : timed-spin  ( -- error? )
-   \ Set timeout to 45 sec: some large (>1GB) drives take
-   \ up to 30 secs to spin up.
-   d# 45 d# 1000 *  set-timeout
-
-   0 0 true  sstart-cmd 6  -1 retry-command  if  ( true | sensebuf false )
+   0 0 true  sstart-cmd 6  -1 retry-command?  nip  ?dup  if  ( error-code )
       \ true on top of the stack indicates a hardware error.
       \ We don't treat "illegal request" as an error because some drives
       \ don't support the start command.  Everything else other than
       \ success is considered an error.
-      if  true  else  2+ c@ 5 <>  then           ( error? )
+      5 <>                                       ( error? )
    else                                          ( )
       false                                      ( false )
    then                                          ( error? )
@@ -62,19 +63,47 @@ create sstart-cmd  h# 1b c, 0 c, 0 c, 0 c, 1 c, 0 c,
 
 create read-capacity-cmd h# 25 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 
 
-: read-block-extent  ( -- true | block-size #blocks false )
-   \ First try "read capacity" - data returned in bytes 4,5,6,7
-   \ The SCSI-2 standard requires disk devices to implement
-   \ the "read capacity" command.
+: get-capacity  ( -- false | block-size #blocks false true )
+   8  read-capacity-cmd 0a  0  short-data-command  if  ( )
+      false
+   else                                        ( adr len )
+      8 <>  if  drop false exit  then          ( adr )
+      dup 4 + 4c@  swap 4c@  1+  false true
+   then
+;
 
-   \ Retry it a few times just in case that helps
+[ifdef] notdef
+\ This is a "read for nothing", discarding the result.  It's a
+\ workaround for a problem with the "Silicon Motion SMI331" controller
+\ as used in the "Transcend TS2GUSD-S3" USB / MicroSD reader.  That
+\ device stalls "read capacity" commands until you do the first block
+\ read. The first block read stalls too, but afterwards everything works. 
+: nonce-read  ( -- )
+   d# 512 dma-alloc  >r
+   r@ d# 512 true  " "(28 00 00 00 00 00 00 00 01 00)"  ( data$ in? cmd$ )
+   0  retry-command? 2drop
+   r> d# 512 dma-free
+;
+[then]
+
+: read-block-extent  ( -- true | block-size #blocks false )
+   \ Try "read capacity" a few times.  Support for that command is
+   \ mandatory, but some devices aren't ready for it immediately.
    d# 20  0  do
-      8  read-capacity-cmd 0a  short-data-command  0=  if  ( )
-         dup 4 + 4c@  swap 4c@  1+  false
-         unloop exit
-      then
+      get-capacity  if  unloop exit  then  ( )
       d# 200 ms
    loop
+
+[ifdef] notdef
+   \ At least one device stalls read-capacity until the first block read
+   nonce-read
+
+   \ Retry it a few more times
+   d# 18  0  do
+      get-capacity  if  unloop exit  then  ( )
+      d# 200 ms
+   loop
+[then]
 
    \ If it fails, we just guess.  Some devices violate the spec and
    \ fail to implement read_capacity
@@ -97,10 +126,13 @@ create mode-sense-geometry    h# 1a c, 0 c, 4 c, 0 c, d# 36 c, 0 c,
 
 \ Return true for error, otherwise disk geometry and false
 : geometry  ( -- true | sectors/track #heads #cylinders false )
-   d# 36  mode-sense-geometry  6  short-data-command  if  true exit  then  >r
-   r@ d# 17 + c@   r@ d# 14 + 3c@   ( heads cylinders )
-   2dup *  r> d# 4 + 4c@            ( heads cylinders heads*cylinders #blocks )
-   swap /  -rot                     ( sectors/track heads cylinders )
+   d# 36  mode-sense-geometry  6  2  ( len cmd$ #retries )
+   short-data-command  if  true exit  then   ( adr len )
+   d# 36 <>  if  drop true exit  then        ( adr )
+   >r                                ( r: adr )
+   r@ d# 17 + c@   r@ d# 14 + 3c@    ( heads cylinders )
+   2dup *  r> d# 4 + 4c@             ( heads cylinders heads*cylinders #blocks )
+   swap /  -rot                      ( sectors/track heads cylinders )
    false   
 ;
 [then]
@@ -143,9 +175,9 @@ headers
 [then]
    swap                                           ( addr dir cmdlen #blks )
    dup >r                                         ( addr input? cmdlen #blks )
-   block-size *  -rot  cmdbuf swap  -1  ( addr #bytes input? cmd cmdlen #retries )
-   retry-command  if                              ( [ sensebuf ] hw? )
-      0= if  drop  then  r> drop 0
+   block-size *  -rot  cmdbuf swap  -1  ( data-adr,len in? cmd-adr,len #retries )
+   retry-command?  nip  if                        ( r: #blks )
+      r> drop 0
    else
       r>
    then    ( actual# )
@@ -162,7 +194,13 @@ external
 \ Methods used by external clients
 
 : open  ( -- flag )
-   my-unit " set-address" $call-parent
+   my-unit parent-set-address
+
+   \ Set timeout to 45 sec: some large (>1GB) drives take
+   \ up to 30 secs to spin up.
+   d# 45 d# 1000 *  set-timeout
+
+   unit-ready?  0=  if  false  exit  then
 
    \ It might be a good idea to do an inquiry here to determine the
    \ device configuration, checking the result to see if the device
