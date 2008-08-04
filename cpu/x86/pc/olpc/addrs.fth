@@ -88,6 +88,9 @@ h# f.0008 constant resume-entry
 h# f.0800 constant resume-data
 
 \ If you change these, also change {g/l}xmsrs.fth and {g/l}xearly.fth
+h# fd00.0000 constant fw-map-base
+h# ffc0.0000 constant fw-map-limit
+
 h# fd00.0000 constant fb-pci-base
 h# fe00.0000 constant gp-pci-base
 h# fe00.4000 constant dc-pci-base
@@ -99,7 +102,7 @@ h# fe01.b000 constant ehci-pci-base
 h# fe02.0000 constant nand-pci-base
 h# fe02.4000 constant sd-pci-base
 h# fe02.8000 constant camera-pci-base
-h# efc0.0000 constant uoc-pci-base
+h# fe02.c000 constant uoc-pci-base
 
 h# 9.fc00 constant 'ebda  \ Extended BIOS Data Area, which we co-opt for our real-mode workspace
 

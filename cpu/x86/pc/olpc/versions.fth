@@ -2,7 +2,7 @@
 
 \ The overall firmware revision
 macro: FW_MAJOR E
-macro: FW_MINOR 12f
+macro: FW_MINOR 12g
 
 \ The EC microcode
 macro: EC_VERSION e11

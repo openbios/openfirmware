@@ -128,11 +128,14 @@ d# 20 constant /root-dev-buf
 
 \ If we are running in physical address mode, make a page directory
 \ that will map up when the kernel turns on paging.
+: v=p-pde  ( adr -- )
+   dup h# 83 or  cr3@  rot d# 22 rshift la+  l!
+;
 : make-ofw-pdir  ( -- )
    cr3@  if  exit  then
    h# 1000  h# 1000  mem-claim cr3!
    cr3@  h# 1000 erase
-   fw-virt-base h# 83 or  cr3@ fw-virt-base d# 22 rshift la+ l!
+   fw-map-limit fw-map-base  do  i v=p-pde  h# 40.0000 +loop
    cr4@  h# 10 or  cr4!
 ;
 
