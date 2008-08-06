@@ -1,0 +1,14 @@
+purpose: Load file for Lattice Ethernet interface (dnet)
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing dnet.fc
+
+FCode-version2
+fload ${BP}/dev/dnet/dnet.fth
+end0
+
+end-tokenizing

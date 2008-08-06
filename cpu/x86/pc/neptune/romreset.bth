@@ -1,0 +1,199 @@
+\ See license at end of file
+purpose: Build file for dropin dispatcher  - version for direct ROM startup
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/x86/pc/neptune/config.fth	\ Address configuration
+
+
+\needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+fload ${BP}/cpu/x86/mmuparam.fth
+
+\ startmacros.fth defines some assembler macros that make MSR and I/O port
+\  access very easy by hiding the details of register use.
+
+fload ${BP}/dev/geode/startmacros.fth
+
+hex
+
+fload ${BP}/cpu/x86/pc/finddi.fth	\ find-dropin and other tools
+
+h#  3e.0000 constant inflate-base
+h#  30.0000 constant workspace
+
+: pulse-tp  ( -- )
+   [ also assembler ]
+    1. 4c00.0016 set-msr
+   10. 4c00.000c set-msr
+   20. 4c00.000c set-msr
+   10. 4c00.000c set-msr
+   [ previous ]
+;
+
+
+start-assembling
+
+label my-entry
+   e9 c,  0 ,				\ To be patched later
+end-code
+
+[ifdef] debug-startup
+fload ${BP}/cpu/x86/pc/dot.fth		\ Numeric output
+[then]
+
+fload ${BP}/cpu/x86/pc/romfind.fth	\ find-dropin
+
+label startup
+   h# 10 # al mov  al h# 80 # out
+
+   \ The next few MSRs allow us to access the 5536
+   \ EXTMSR - page 449   \ Use PCI device #F for port 2
+   00000000.00000f00.   5000201e set-msr  \ cs5536_setup_extmsr(void)
+
+   \ write IDSEL to the write once register at address 0x0000
+   02000000 0 port-wl  \ This is the default value so we need not set it
+
+   \ setup CPU interface serial to mode C on both sides
+   44000020.00200013. 51000010 set-msr   \ 5536 p 229
+
+   \ Set up GPIO base register
+   0000f001.00001000.   5140000c set-msr  \ GPIO BAR
+
+
+ \ Init Internal UART
+    \ enable GPIO 8 to OUT AUX1, 9 to IN_AUX1
+    100 dup 1004 port-wl 1010 port-wl \ GPIOL_OUTPUT_ENABLE, GPIOL_OUT_AUX1_SELECT
+    200 dup 1020 port-wl 1034 port-wl  \ GPIOL_INPUT_ENABLE, GPIOL_IN_AUX1_SELECT
+
+    \ set address to 3f8
+    51400014 rmsr    \ MDD_LEG_IO
+    h# 00007.0000 # ax or
+    51400014 wmsr
+
+
+    00000000.00000001. 5140003A set-msr \ SOFTRESET->MDD_UART1_CONF
+    00000000.00000012. 5140003A set-msr \ DEVEN | EN_BANKS -> MDD_UART1_CONF
+
+
+   \ uart_init,serial.c
+   \ This is a garden-variety 8250 UART setup sequence
+    0 3f9 port-wb  \ disable interrupt
+    1 3fa port-wb
+   83 3fb port-wb  \ DLAB
+    1 3f8 port-wb  \ 115200 divisor low
+    0 3f9 port-wb  \ 115200 divisor high
+    3 3fb port-wb  \ !DLAB
+   \ At this point we could send characters out the serial port
+   \ End of serial init
+
+   char + 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+
+   h# 11 # al mov  al h# 80 # out
+ \ Init memory controller
+
+   \ sdram_initialize,generic_sdram.c
+   \ sdram_set_spdregisters(),auto.c
+ 
+   \ The LX devel board has only 512M ROM, but assigning 1M of address space is harmless
+   25fff002.10f80000.      1808 set-msr  \ 1M ROM at fff0.0000, system RAM limit at 0f80.0000
+   2000000f.7ff00100.  10000028 set-msr  \ Top of memory at 0f7f.ffff
+   212800fd.7fffd000.  10000029 set-msr  \ Range Offset - Frame buffer at PA fd00.0000 maps to RAM at 0f80.0000
+\ XXX do we need to make the OFW area cacheable via MSR 1817 ?
+   10076013.00005040.  20000018 set-msr  \ DIMM1 empty, DIMM0 256 MB, 1 module bank, 8K pages
+   2000000f.7ff00100.  4000002c set-msr  \ DMA to memory from 1M to RAM limit at 0f80.0000
+   0f7ff000.00100130.  50002019 set-msr  \ PCI DMA to memory from 1M to RAM limit at 0f80.0000
+
+   \ 20000019 rmsr            \ SDRAM timing and mode program
+
+   00000000.2814d352.   00001981 set-msr  \ Memory delay values
+   00000000.1068334d.   00001982 set-msr  \ Memory delay values
+   00000106.83104104.   00001983 set-msr  \ Memory delay values
+   00000000.00000001.   00001980 set-msr  \ Enable memory delays
+
+	\ olpc: 18000100.3b8332a3.
+	\ coreboot: 18000100. 364221a3.
+	\ coreboot: nuovo pll 386222a3
+   18000100.364221a3.   20000019 set-msr
+
+   \ The RAM controller is now set up
+
+ \ Init the SDRAMs
+ \ sdram_enable,src/northbridge/amd/gx2/raminit.c
+
+   \ Clock gating for PMode
+   \ Clocks always on in mode 1, hardware gating in mode 0
+\   20002004 rmsr  4 bitclr  1 bitset  20002004 wmsr  \ GX p 199
+   1. 20002004 set-msr  \ GX p 199
+
+   \ Delay on exit from power mode 1, use unbuffered RAM
+   140dd101. 2000001a set-msr    \ MC_CF1017_DATA  LX p 231
+   00000200.00000000. 20000020 set-msr   \ Power mode entry and exit delays
+
+   \ Unmask CKE1 and CKE0
+   1000. 2000001d set-msr   \ MC_CFCLK_DBG Clear 300 bits, don't tristate in IDLE
+
+   \ Reset memory controller
+   20000018 rmsr    \ MC_CF07_DATA
+   2 bitset  20000018 wmsr
+   2 bitclr  20000018 wmsr
+
+   char b 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+   h# 12 # al mov  al h# 80 # out
+
+fload ${BP}/dev/geode/draminit.fth
+
+   \ Last-minute check for LX erratum 34 - reset if the DLL didn't start correctly
+   h# 4c000017 rmsr  h# 10 bitand  0<>  if   \ LX branch
+      h# 4c00000f rmsr  h# 7ff bitclr  h# 4 bitset  h# 4c00000f wmsr  \ Set DLL_OV
+      h# 4c00000f rmsr  h# 7ff # ax and  h# 104 # ax cmp  =  if       \ Check the result
+         \ The value 104 indicates that the DLL did not start, so we must reset
+         char x 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+         h# FA # al mov  al h# 80 # out
+         1. 5140.0017 set-msr
+      then
+   then
+
+   \ Now we can use the stack and do conventional subroutine calls
+
+   h# 1f # al mov  al h# 80 # out
+   fload ${BP}/cpu/x86/pc/resetend.fth
+
+   char c 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+end-code
+
+also 386-assembler
+startup  my-entry  put-branch
+previous
+
+end-assembling
+
+writing romreset.di
+asm-base  here over -  0  " reset" write-dropin
+ofd @ fclose
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2006 FirmWorks
+\
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
