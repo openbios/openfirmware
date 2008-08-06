@@ -306,7 +306,7 @@ external
    \ If len is -1, reset any temporary allocations
    dup -1 =  if  first-io set-next-io  first-mem set-next-mem  drop exit  then
 
-   probemsg?  if  ??cr ." Assigning PCI Space of length " dup 8 u.r  then
+   probemsg?  if  ??cr ." Assigning PCI Space of length " dup 8 u.r  cr  then
 
    >r nip                                           ( phys.lo phys.hi )
    dup find-boundary                                ( phys.lo phys.hi mask )
@@ -604,6 +604,13 @@ headerless
 : fcode-image?  ( PCI-struct-adr -- flag )
    dup " PCIR" comp  if  drop false exit  then
 
+   probemsg?  if
+      ??cr
+      ."   Function:" " vendor-id" get-int-property 4 u.r
+      ."   Function:" " device-id" get-int-property 4 u.r
+      ??cr
+   then
+
    \ always accept ROMs with vendor-id and device-id = ffff
    dup h# 04 + le-w@  dup h# ffff <>  if             ( adr id )
       " vendor-id" get-int-property  <>  if          ( adr )
@@ -896,6 +903,13 @@ headers
 vocabulary builtin-drivers
 headerless
 : no-builtin-fcode?  ( -- flag )
+   probemsg?  if  
+      ??cr ."   Checking for built-in FCode match for "
+      ??cr
+      ."   Vendor:" " vendor-id" get-int-property 4 u.r
+      ."   Device:" " device-id" get-int-property 4 u.r
+      ??cr
+   then
    probemsg?  if  ??cr ."   Checking for built-in FCode match... "  then
    name-property-value  ['] builtin-drivers  (search-wordlist)  if  ( xt )
       probemsg?  if  ." BUILTIN NAME MATCH " cr  then
@@ -1230,6 +1244,7 @@ defer no-probe?    ' (no-probe?)  is  no-probe?
       diag-cr
    else
       " Nothing there" diag-type-cr
+      probemsg?  if  ." Nothing there" cr  then
    then
    5drop
 ;
