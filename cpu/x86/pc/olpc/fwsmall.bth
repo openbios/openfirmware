@@ -128,9 +128,6 @@ fload ${BP}/cpu/x86/pc/boot.fth
 
 [ifdef] use-usb
 : usb-port-power-map  ( -- n )
-[ifdef] lx-devel
-   h# 3ea exit     \ USB4:PWR2  USB3:PWR1  USB2:PWR1  USB1:PWR1
-[then]
    board-revision  h# b10  h# b2f between  if  \ B1 and B2
       h# 3ab   \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR2
    else

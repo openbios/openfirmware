@@ -9,15 +9,9 @@ h#   f.c000 constant /fw-ram
 [then]
 
 [ifdef] rom-loaded
-[ifdef] lx-devel
-h# fff8.0000   constant rom-pa		\ Physical address of boot ROM
-h#    8.0000   constant /rom		\ Size of boot ROM
-rom-pa         constant dropin-base
-[else]
 h# fff0.0000   constant rom-pa		\ Physical address of boot ROM
 h#   10.0000   constant /rom		\ Size of boot ROM
 rom-pa  h# 1.0000 +  constant dropin-base
-[then]
 
 h#    8.0000   constant dropin-size
 

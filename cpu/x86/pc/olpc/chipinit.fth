@@ -46,11 +46,6 @@ fload ${BP}/cpu/x86/pc/olpc/lxmsrs.fth
    3 /l* +loop                      ( msr# )
    drop true abort" No MSR entry"
 ;
-\ [ifdef] lx-devel
-\  msr: 5000.201f 00000000.0000007b.  \ Posted writes for Legacy IDE registers
-\  msr: 5101.00e0 60000000.1f0ffff8.  \ IOD_BM Descriptor 0 ATA IO address
-\  msr: 5130.0008 00000000.000018a1.  \ IDE_IO_BAR - IDE bus master registers
-\ [then]
 
 : init-msr  ( adr -- )  dup la1+ 2@  rot @  wrmsr  ;
 

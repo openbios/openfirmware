@@ -21,9 +21,6 @@ purpose: Create memory node properties and lists
 
 \ Excludes RAM assigned to the frame buffer
 : system-ram  ( -- extant avail )
-[ifdef] lx-devel
-   h# f70.0000 exit
-[then]
    fb-offset
 ;
 

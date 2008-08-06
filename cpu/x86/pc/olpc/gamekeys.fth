@@ -31,7 +31,6 @@ h# 100 constant button-x
 ;
 
 : read-game-keys  ( -- )
-[ifdef] lx-devel  false exit  [then]
    board-revision h# b18 <  if
       button-x to game-key-mask  \ Force slow boot
       exit

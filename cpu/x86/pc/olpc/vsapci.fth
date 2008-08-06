@@ -230,7 +230,7 @@ create ide-hdr
          0 ,        0 ,        0 ,        0 ,
   fffffff0 ,        0 ,        0 ,        0 , \ Maybe wrong
 
-  209a1022 ,  2a00040 ,  1018001 ,     f800 ,
+  209a1022 ,  2a00041 ,  1018001 ,     f800 ,
          0 ,        0 ,        0 ,        0 ,
       18a1 ,        0 ,        0 , 209a1022 ,
          0 ,        0 ,        0 ,        0 ,
@@ -490,7 +490,6 @@ variable bar-probing
 ;
 
 : preassigned-pci-slot?  ( config-adr -- flag )
-[ifdef] lx-devel  virtual-pci-slot? exit  [then]
    drop true
 ;
 
@@ -529,7 +528,6 @@ warning @ warning off
       h#      10e  gxfb-hdr +methods h# 5c + w!  \ Interrupt pin and line - INTA, IRQ 14
    then
 
-[ifdef] lx-devel  exit  [then]
    assign-cafe
    \ FIXME - we really should fixup the NB and FB headers to use the
    \ AMD device IDs, add the AES device, and insert the VIP BAR.

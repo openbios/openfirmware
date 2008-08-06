@@ -136,9 +136,7 @@ devalias n nand
 devalias sd /sd/disk
 
 dev /8042
-[ifndef] lx-devel
    patch false ctlr-selftest open
-[then]
 device-end
 
 0 0  " i70"  " /isa" begin-package   	\ Real-time clock node
@@ -274,8 +272,6 @@ stand-init: Date to EC
 ;
 
 stand-init: Wireless reset
-[ifdef] lx-devel  exit  [then]
-
    \ Hit the reset on the Marvell wireless.  It sometimes (infrequently)
    \ fails to enumerate after a power-cycle, and reset seems to fix it.
    \ We need > 85 ms between wlan-reset and probe-usb, but console-start
@@ -345,7 +341,6 @@ warning @ warning off
       \ The "1-" removes the null byte
       " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
 
-[ifndef] lx-devel
       8 ec-cmd-b@  " ec-version" integer-property
 
       " PQ2" h# fff0.0000 h# 1.0000 sindex  dup 0>=  if  ( offset )
@@ -354,7 +349,6 @@ warning @ warning off
          drop  " UNKNOWN"
       then
       " ec-name" string-property
-[then]
 
    dend
 

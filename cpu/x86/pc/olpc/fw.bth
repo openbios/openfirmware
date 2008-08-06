@@ -89,24 +89,6 @@ dend
 
 fload ${BP}/cpu/x86/pc/olpc/port80.fth	\ Port 80 debug messages
 
-[ifdef] lx-devel
-: pnp!  ( b reg# -- )  h# 2e pc!  h# 2f pc!  ;
-: pnp@  ( reg# -- b )  h# 2e pc!  h# 2f pc@  ;
-
-: init-superio  ( -- )
-   h# 87 h# 2e pc!  h# 87 h# 2e pc!  \ Enable PNP registers
-   h# 20 pnp@  h# 52 =  if  \ Check device ID
-      h#  5 h#  7 pnp!  \ Select keyboard controller
-      h# 60 h# 61 pnp!  \ Port 60
-      h# 64 h# 63 pnp!  \ Port 64
-      h#  1 h# 70 pnp!  \ Keyboard interrupt 1
-      h#  c h# 72 pnp!  \ Keyboard interrupt 12
-      h# 83 h# f0 pnp!  \ i8042 clock, fast reset, fast A20
-      h#  1 h# 30 pnp!  \ Enable
-   then
-;
-[then]
-
 fload ${BP}/dev/geode/gpio.fth		\ Rudimentary GPIO driver
 fload ${BP}/cpu/x86/pc/olpc/probemem.fth	\ Memory probing
 
@@ -238,9 +220,6 @@ devalias nfs net//obp-tftp:last//nfs
 fload ${BP}/cpu/x86/pc/boot.fth
 
 : usb-port-power-map  ( -- n )
-[ifdef] lx-devel
-   h# 3ea exit     \ USB4:PWR2  USB3:PWR1  USB2:PWR1  USB1:PWR1
-[then]
    board-revision  h# b10  h# b2f between  if  \ B1 and B2
       h# 3ab   \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR2
    else
@@ -284,9 +263,6 @@ warning @  warning off
          protect-fw
          ." Interacting" cr  hex interact
       then
-[ifdef] lx-devel
-      init-superio
-[then]
 
       setup
 [else]

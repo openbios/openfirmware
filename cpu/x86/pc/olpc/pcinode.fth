@@ -59,9 +59,6 @@ h# 0000 encode-int			\ Mask of implemented add-in slots
 also forth definitions
 
 : pci-probe-list  ( -- adr len )
-[ifdef] lx-devel
-   " 2,3,4,5,6,7,8,9,a,b,c,d,e,f" exit
-[then]
    " 1,c,f"
 ;
 \    " c,f" dup  config-string pci-probe-list
@@ -85,10 +82,6 @@ h# 0000.8000 to first-io		\ Avoid mappings established by BIOS
 \ returning "int-line true" if the child's interrupt line register should
 \ be set or "false" otherwise.
 : assign-int-line  ( phys.hi.func INTx -- irq true )
-[ifdef] lx-devel
-   \ XXX this is not good.  We need to really assign
-   drop  h# 3c +  config-b@  true  exit
-[then]
 
 [ifdef] rom-loaded
    \ The IRQ for the CaFe chip is b.  The other devices aren't really

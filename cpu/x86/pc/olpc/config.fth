@@ -35,7 +35,7 @@ create use-elf
 
 create resident-packages
 \ create use-watch-all
-\ create use-root-isa
+\ create use-root-isa   \ If defined, isa node is in the devtree root, not under /pci
 create no-floppy-node
 create no-com2-node
 create no-lpt-node
@@ -46,12 +46,7 @@ create use-ega
 create save-msrs
 
 create use-null-nvram  \ Don't store configuration variables
-\ create use-flash-nvram  \ Store configuration variables in SPI FLASH
-
-\ Uncomment this to compile for the LX development board
-\ It's not possible to use one ROM image for both OLPC and
-\ the LX board, because of the ROM size difference.
-\ create lx-devel   \ Support for the LX development board
+\ create use-flash-nvram  \ Store configuration variables in firmware FLASH
 
 fload ${BP}/cpu/x86/pc/olpc/addrs.fth
 

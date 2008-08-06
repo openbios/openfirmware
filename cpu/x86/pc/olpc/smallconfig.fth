@@ -45,11 +45,6 @@ create isa-dma-only
 
 create use-null-nvram
 
-\ Uncomment this to compile for the LX development board
-\ It's not possible to use one ROM image for both OLPC and
-\ the LX board, because of the ROM size difference.
-\ create lx-devel   \ Support for the LX development board
-
 fload ${BP}/cpu/x86/pc/olpc/addrs.fth
 
 \ LICENSE_BEGIN

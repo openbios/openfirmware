@@ -14,7 +14,6 @@
    " ${BP}/dev/usb2/device/wlan/build/usb8388.fc" " usb1286,2001"   $add-deflated-dropin
    " usb8388.bin" " usb8388.bin"                                    $add-deflated-dropin
 
-   \ XXX the PCI device IDs should be different for the different CaFe functions
    " ${BP}/dev/olpc/cafenand/build/cafenand.fc"     " class050101"    $add-deflated-dropin
    " ${BP}/dev/olpc/cafecamera/build/cafecamera.fc" " pci11ab,4102"   $add-deflated-dropin
 

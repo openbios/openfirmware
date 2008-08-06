@@ -14,9 +14,7 @@
    0000f001.00001000.   5140000c set-msr  \ GPIO BAR
 
  \ Init UART
-[ifndef] lx-devel
 fload ${BP}/cpu/x86/pc/olpc/inituart.fth
-[then]  \ lx-devel
 
    h# 11 # al mov  al h# 80 # out
    h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if

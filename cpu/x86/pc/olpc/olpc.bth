@@ -51,18 +51,12 @@ hex
 ;
 
 .( --- Saving as )
-[ifdef] lx-devel
-" lxd${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
-[else]
 " ${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
-[then]
 2dup type cr  ( adr len )
 $new-file
-[ifndef] lx-devel
    " ec.img"                $add-file
 
    dropin-base rom-pa -  pad-file
-[then]
 
    " romreset.di"           $add-file
 \   " romstart.di"           $add-file
@@ -71,15 +65,10 @@ $new-file
    fload ${BP}/cpu/x86/pc/olpc/loaddropins.fth
    " sourceurl"   " sourceurl"                    $add-dropin
 
-[ifndef] lx-devel
    " ${BP}/clients/memtest86/memtest"               " memtest"  $add-deflated-dropin
 \   " ${BP}/cpu/x86/pc/olpc/images/olpc16EQima.wav"  " splash"   $add-deflated-dropin
 \   " ${BP}/cpu/x86/pc/olpc/images/Edge1-16k-EQ-Comp-Amp-ima.wav"  " splash"   $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
-[then]
-[ifdef] lx-devel
-   " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
-[then]
    " ${BP}/cpu/x86/pc/olpc/build/dsdt.aml"      " dsdt"            $add-deflated-dropin
 \  " ${BP}/cpu/x86/pc/olpc/build/ssdt.aml"      " ssdt"            $add-deflated-dropin
 

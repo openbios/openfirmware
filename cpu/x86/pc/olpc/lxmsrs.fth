@@ -213,12 +213,9 @@ create lx-msr-init
 
   msr: 5000.2014 00000000.00ffffff.  \ Enables PCI access to low mem
 
-[ifdef] lx-devel
-  msr: 4800.2001 00000000.00040c00.  \ Set VP reference clock divider to 0xc, not 0xe, CRT mode
-[else]
 \  msr: 4800.2001 00000000.00040c08.  \ Set VP reference clock divider to 0xc, not 0xe, TFT mode
   msr: 4800.2001 00000000.00048c08.  \ Set VP reference clock divider to 0xc, not 0xe, TFT + CRT mode
-[then]
+
   \ The datasheet says the MSR number is 4800.0011, but that is wrong
   msr: 4800.2011 0000003f.dfffffff.  \ Set TFT pads to registered
 
