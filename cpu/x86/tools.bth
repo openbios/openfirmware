@@ -9,6 +9,8 @@ build-now
 \ ' $report-name is include-hook
 \ : rn  (cr 2dup type 15 spaces  ;  ' rn is include-hook
 
+" tools.tag" r/w create-file drop  tag-file !
+
 create resident-packages
 
 fload ${BP}/forth/lib/fwsetup.fth
@@ -37,8 +39,12 @@ fload ${BP}/cpu/x86/loadmach.fth	\ CPU-specific extensions
 resident   dispose   0 0 set-transize   \ true is suppress-transient
 \ .(   zeroed: ) dot
 
+tag-file @ fclose  tag-file off
+
 ' noop is include-hook  ' noop is include-exit-hook
 .( --- Saving tools.dic --- )  " tools.dic" $save-forth cr
+
+
 [then]
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

@@ -69,6 +69,8 @@ only forth also definitions
 
 fload ${BP}/cpu/x86/metainit.fth
 
+" kernel.tag" r/w create-file drop  meta-tag-file !
+
 always-headers
 
 \ Comment out the following line(s) when debugging
@@ -108,6 +110,8 @@ fload ${BP}/forth/kernel/init.fth
 fload ${BP}/cpu/x86/finish.fth
 
 ' (do-literal) is do-literal
+
+meta-tag-file @ fclose  meta-tag-file off
 
 fload ${BP}/cpu/x86/saveexp.fth
 fload ${BP}/cpu/x86/savemeta.fth

@@ -6,6 +6,7 @@ command: &x86forth &dictionary &this
 in: builton.fth
 build-now
 
+" fw.tag" r/w create-file drop  tag-file !
 
 hex
 \ ' $report-name is include-hook
@@ -616,6 +617,8 @@ warning @  warning off
 : esc-o  key lastchar !  [""] esc-[ do-command  ;
 warning !
 previous previous definitions
+
+tag-file @ fclose  tag-file off
 
 .( --- Saving fw.dic ...)
 " fw.dic" $save-forth cr

@@ -5,6 +5,8 @@ dictionary: ${BP}/cpu/x86/build/tools.dic
 command: &x86forth &dictionary &this
 build-now
 
+" basefw.tag" r/w create-file drop  tag-file !
+
 \ ' $report-name is include-hook
 \ ' noop is include-hook
 
@@ -120,7 +122,10 @@ defines: $partition
 [ifndef] no-heads
 resident   dispose   0 0 set-transize   \ true is suppress-transient
 
+tag-file @ fclose  tag-file off
+
 cr .( --- Saving basefw.dic --- )  " basefw.dic" $save-forth  cr
+
 [then]
 
 \ LICENSE_BEGIN

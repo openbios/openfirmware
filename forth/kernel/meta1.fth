@@ -14,6 +14,8 @@ variable dp-t
 variable current-t
 variable context-t
 
+variable meta-tag-file
+
 \ Return the host address where the given target address is being compiled
 : >hostaddr  ( target-address -- host-address )
    origin-t -   compilation-base l+
@@ -57,7 +59,9 @@ variable context-t
    context link@ >r   current link@ >r   warning @ >r
    context link!  definitions
    warning off
+   tag-file @ >r  meta-tag-file @ tag-file !
    $create
+   r> tag-file !
    r> warning !   r> current link!   r> context link!
 ;
 \ : vcreate  ( str voc-cfa -- )  count $vcreate  ;

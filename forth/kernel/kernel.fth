@@ -1362,8 +1362,23 @@ nuser last
 
 headerless
 
+nuser tag-file
+
+decimal
+: $tag-field  ( $ -- )  tag-file @ fputs  ;
+: tag-char  ( char -- )  tag-file @ fputc  ;
+: $tagout  ( name$ -- )
+   tag-file @ 0=  if  2drop exit  then
+   source-id -1 =  if  2drop exit  then
+   $tag-field  9 tag-char
+   source-id file-name  $tag-field  9 tag-char
+   base @ decimal  source-id file-line (.) $tag-field  base !
+   newline-string $tag-field
+;
+
 : $make-header  ( adr len voc-acf -- )
    -rot                        ( voc-acf adr,len )
+   2dup $tagout
    dup 1+ /link +              ( voc-acf adr,len hdr-len )
 
    here +                       ( voc-acf adr,len  addr' )

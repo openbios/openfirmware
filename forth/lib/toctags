@@ -1,0 +1,10 @@
+#! /bin/sh
+# Converts a collection of .tag files to ctag format
+
+# Usage: toctag BASEDIR file.tag ...
+
+homedir=$1
+shift
+
+sed -e "s,\${BP},${homedir}," $* | LC_ALL=C sort >tags
+

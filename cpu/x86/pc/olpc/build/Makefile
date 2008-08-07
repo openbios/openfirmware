@@ -1,6 +1,14 @@
 OS := $(shell uname)
 
-all: olpc.rom
+BASEDIR= `(cd ../../../../..; pwd;)`
+TAGFILES= ../../../build/*.tag *.tag
+
+all: olpc.rom tags
+
+fw.tag: olpc.rom
+
+tags: fw.tag
+	@${BASEDIR}/forth/lib/toctags ${BASEDIR} ${TAGFILES}
 
 ofw.elf: FORCE build ../../../build/inflate.bin
 	./build $@
