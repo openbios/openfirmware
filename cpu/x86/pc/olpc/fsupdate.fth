@@ -196,7 +196,7 @@ previous
    boot-read
    loaded do-fs-update
 ;
-: update-nand  ( "devspec" -- )  safe-parse-word  $fs-update  ;
+: update-nand  ( "devspec" -- )  safe-parse-word  $update-nand  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks
