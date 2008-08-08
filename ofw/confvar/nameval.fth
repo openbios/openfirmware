@@ -260,28 +260,34 @@ stand-init:
    read-ge-area
 ;
 
+: >cv$  ( cv-adr -- cv-adr cv-len )
+   dup  begin                              ( cv-adr adr )
+      dup c@  dup 0<>  swap h# ff <> and   ( cv-adr adr more? )
+   while                                   ( cv-adr adr )
+      1+                                   ( cv-adr adr' )
+   repeat                                  ( cv-adr adr )
+   over -    ( cv-adr cv-len )
+;
+
 : config-adr  ( apf -- adr )  l@ config-mem +  ;
 
-: (cv-flag@)  ( apf -- flag )  cv-adr  if  cscount $>flag  else  @ 0<>  then  ;
+: (cv-flag@)  ( apf -- flag )  cv-adr  if  >cv$ $>flag  else  @ 0<>  then  ;
 : (cv-flag!)  ( flag apf -- )  2dup default-value? 2>r flag>$ 2r> put-env$  ;
 
-: (cv-int@)  ( apf -- n )  cv-adr  if  cscount $>number  else  @  then  ;
+: (cv-int@)  ( apf -- n )  cv-adr  if  >cv$ $>number  else  @  then  ;
 : (cv-int!)  ( n apf -- )  2dup default-value? 2>r (.d)   2r> put-env$  ;
 
-: (cv-string@)  ( apf -- adr len )  cv-adr  if  cscount  else  count  then  ;
-: (cv-string!)  ( adr len apf -- )  3dup $default-value? put-env$  ;
-
 \ It uses three forms for the data: values in binary, strings in ASCII, 
-\ and a packed binary form in NVRAM. The packed form eliminates nulls
-\ in the array by using FF as an escape: the next character represents
-\ 1..7F nulls (if msb is 0) or 1..7F FFs (if msb is 1).
+\ and a packed binary form in NVRAM. The packed form eliminates nulls and
+\ FFs in the array by using FE as an escape: the next character represents
+\ 1..3F nulls (if msbs are 00) or FEs (if msbs are 01) or FF (if msbs are 10).
 
 h# ffe constant /pack-buf
 /pack-buf 2+ buffer: pack-buf
 0 value pntr
 : #consecutive  ( adr b -- n )
    swap                            ( b adr )
-   h# 7f 0  do	                   ( b adr )
+   h# 3f 0  do	                   ( b adr )
       2dup i ca+ c@ <> if	   ( b adr )
 	 2drop i unloop exit       ( n )
       then                         ( b adr )
@@ -295,16 +301,24 @@ h# ffe constant /pack-buf
 ;
 : pack-env   ( adr len -- adr' len' )	\ Binary to packed
    0 to pntr   bounds ?do		( )
-      1  i c@ dup 0= if			( step c )
-         h# ff pack-byte                ( step c )
-	 2drop i 0 #consecutive dup	( n n )
-      else				( step c )
-	 dup h# ff = if			( step c )
-            h# ff pack-byte             ( step c )
-	    2drop i h# ff #consecutive  ( step n )
-            dup 80 or			( step n )
-	 then				( step n )
-      then				( step n )
+      i c@  case                        ( c: char )
+         0 of    			( )
+            h# fe pack-byte       	( )
+	    i 0 #consecutive    	( step )
+            dup                         ( step code )
+         endof				( step code )
+         h# fe  of 			( )
+            h# fe pack-byte       	( )
+	    i h# fe #consecutive 	( step )
+            dup h# 40 or                ( step code )
+         endof				( step code )
+	 h# ff  of			( )
+            h# fe pack-byte       	( )
+	    i h# ff #consecutive  	( step )
+            dup h# 80 or		( step code )
+	 endof				( step code )
+         ( default )  1 swap dup        ( step char char )
+      endcase				( step code|char )
       pack-byte ?leave   		( step )
    +loop                                ( )
    pack-buf pntr                        ( adr len )
@@ -312,10 +326,13 @@ h# ffe constant /pack-buf
 : unpack-env   ( adr len -- adr' len' )	\ Packed to binary
    0 to pntr   bounds ?do	        ( )
       /pack-buf pntr u<= ?leave
-      1  i c@ dup h# ff = if		( 1 c )
+      1  i c@ dup h# fe =  if		( 1 c )
 	 2drop  2  i 1+ c@		( 2 n' )
-	 dup h# 7f and >r		( 2 n' )
-	 80 and 0<> h# ff and		( 2 c' )
+	 dup h# 3f and >r		( 2 n' )
+
+         6 rshift			( 2 index )
+         " "(00 fe ff ff)" drop + c@	( 2 c' )
+
 	 pack-buf pntr ca+		( 2 c' a )
 	 r@ /pack-buf pntr - min	( 2 c' a len )
 	 rot fill			( 2 )
@@ -330,7 +347,7 @@ h# ffe constant /pack-buf
 
 : (cv-bytes@)  ( apf -- adr len )
    cv-adr  if				( nvram-adr )
-      cscount unpack-env                ( adr len )
+      >cv$ unpack-env                   ( adr len )
    else					( dictionary-adr )
       dup @ swap la1+ taligned swap	( adr len )
    then
@@ -344,6 +361,9 @@ h# ffe constant /pack-buf
       r> false put-env$                 ( )
    then                                 ( )
 ;
+
+: (cv-string@)  ( apf -- adr len )  cv-adr  if  >cv$ unpack-env  else  count  then  ;
+: (cv-string!)  ( adr len apf -- )  (cv-bytes!)  ;
 
 ' (cv-flag@)   to cv-flag@
 ' (cv-flag!)   to cv-flag!
