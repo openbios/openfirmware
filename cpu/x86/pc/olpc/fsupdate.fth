@@ -62,7 +62,7 @@ d# 256 constant /partition-entry
 vocabulary nand-commands
 also nand-commands definitions
 
-: set-partition:  ( "partition#" -- )
+: set-partition:  ( "partitionid" -- )  \ partitionid is number or name
    safe-parse-word " $set-partition" $call-nand abort" Nonexistent partition#" 
 ;
 
@@ -139,11 +139,11 @@ previous definitions
 
 : do-fs-update  ( img$ -- )
    tuck  load-base h# 100000 +  swap move  ( len )
-   load-base h# 100000 + swap
-   open-nand
+   load-base h# 100000 + swap              ( adr len )
+   open-nand                               ( adr len )
 
-   ['] noop to show-progress
-   #nand-pages >eblock#  show-init
+   ['] noop to show-progress               ( adr len )
+   #nand-pages >eblock#  show-init         ( adr len )
 
 \    clear-context  nand-commands
 also nand-commands
@@ -188,6 +188,15 @@ previous
    ." Searching for a NAND file system update image." cr
    update-devices fs-update-from-list
 ;
+
+: $update-nand  ( devspec$ -- )
+   load-crypto abort" Can't load the crypto functions"
+   null$ cn-buf place  null$ pn-buf place              ( devspec$ )
+   2dup  [char] \ split-string  2drop  dn-buf place    ( devspec$ )
+   boot-read
+   loaded do-fs-update
+;
+: update-nand  ( "devspec" -- )  safe-parse-word  $fs-update  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

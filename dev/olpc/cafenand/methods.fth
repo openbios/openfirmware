@@ -60,7 +60,7 @@ external
    then                                    ( error? )
    dup  if                                 ( error? )
       ." NAND: No such partition" cr       ( error? )
-   then         
+   then
 ;
 
 : open  ( -- okay? )

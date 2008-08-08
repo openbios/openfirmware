@@ -15,7 +15,7 @@ struct fis_image_desc {
 [then]
 
 d# 256 constant /partition-entry
-d# 8 constant max#partitions
+d# 7 constant max#partitions  \ Not counting the FIS directory entry
 
 : partition-map-page#  ( -- true | page# false )
    h# 10 pages/eblock *  0  do
@@ -27,10 +27,10 @@ d# 8 constant max#partitions
 
 : (#partitions)  ( adr -- n )
    0 swap                                          ( seen adr )
-   max#partitions  0  ?do                          ( seen adr )
+   max#partitions 1+  0  ?do                       ( seen adr )
       dup i /partition-entry * +                   ( seen adr padr )
       dup w@ h# ffff =  if                         ( seen adr padr )
-         2drop  if  i  else  -1  then              ( n )
+         2drop  if  i 1-  else  -1  then           ( n )
          unloop exit                               ( n )
       then                                         ( seen adr padr )
       " FIS directory" rot swap comp  0=  if       ( seen adr )
@@ -63,8 +63,9 @@ d# 8 constant max#partitions
 
    dup to partition#                             ( partition# )
 
-   \ Partition 1 (the FIS directory entry) begins at offset 0
-   1- /partition-entry *  part-buf +             ( adr )
+   \ "Real" partitions are numbered starting at 1
+   \ The partition buffer entry at offset 0 is the FIS directory
+   /partition-entry *  part-buf +                ( adr )
    dup d# 16 + l@ /page / to partition-start     ( adr )
    d# 24 + l@ /page / to partition-size          ( )
    false
@@ -85,13 +86,13 @@ d# 8 constant max#partitions
 
 : set-partition-name  ( name$ -- error? )
    #partitions  dup 0<  if  2drop false exit  then  ( name$ #partitions )
-   /partition-entry *                            ( name$ len )
+   1+  /partition-entry *                        ( name$ part-buf-len )
    part-buf swap  bounds  ?do                    ( name$ )
       2dup  i d# 16 ncstr  $=  if                ( name$ )
          2drop                                   ( )
          i d# 16 + l@ /page / to partition-start ( )
          i d# 24 + l@ /page / to partition-size  ( )
-         i part-buf - /partition-entry / 1+ to partition#
+         i part-buf - /partition-entry / to partition#
          start-scan
          false  unloop exit
       then                                       ( name$ )
