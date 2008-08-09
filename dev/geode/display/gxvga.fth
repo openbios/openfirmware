@@ -1,6 +1,11 @@
 purpose: Put the Geode display in VGA mode to use text mode 3
 \ See license at end of file
 
+0 [if]
+: tap3,  ( coef1 coef2 coef3 -- )  d# 10 lshift or  d# 10 lshift or  ,  ;
+: tap5,  ( coef1 .. coef5 -- )  2>r  tap3,  2r> 0  tap3,  ;
+[then]
+
 hex
 create hfilter
 1284A7D5 , 000017D5 ,          \  -43,  297,  296,  -43,    5
@@ -542,47 +547,37 @@ create vfilter
    \ 1919.1919.1919.1919. 0000.180b msr!  \ Write-burstable frame buffer
 ;
 
-: all-off
+: all-off  ( -- )
    unlock
    4 dc@ 2000.00e0 invert and 4 dc! \ Compr. line buf (2000.0000), Video (8), Color cursor (4), Cursor (2)
    8 dc@ 1 invert and 8 dc!   \ Timing generator
    1 ms                       \ Let memory accesses finish
    4 dc@ 1 invert and 4 dc!   \ Turn off FIFO load
 ; 
-: 8bpp  c200.0019 8 dc!  ;  \ drop down to 8bpp mode
-: vga-start
+: 8bpp  ( -- )  8 dc@ h# 300 invert and 8 dc!  ;  \ drop down to 8bpp mode
+: vga-start  ( -- )
    8 dc@ 1 or 8 dc!         \ Timing generator
-   4 dc@ 40080 or  4 dc!    \ VGA mode (80), VGA Fixed Timing (40000)
+   \ Fixed timing must be off to use the upscaler
+   4 dc@  h# 40000 invert and  h# 80 or  4 dc!    \ Fixed Timing (40000) off, VGA (80) on
 ;
 
 : display-lfb  ( -- )  5601 4 dc!  ;  \ Enable linear framebuffer
 
-: setup-filter-mode3
-
+: setup-filter-mode3  ( -- )
 \   d# 400 1-  d# 640 1-  wljoin  h# 5c dc!
    d# 400 1-  d# 720 1-  wljoin  h# 5c dc!
-
-   1c802666 90 dc!
-\   1c802222 90 dc!
-\   30003000 90 dc!
+   h# 1c802666 h# 90 dc!
    filter-taps
-\   1aaa3000 90 dc!
 ;
-: setup-filter-mode12
-
-\   d# 400 1-  d# 640 1-  wljoin  h# 5c dc!
+: setup-filter-mode12  ( -- )
    d# 480 1-  d# 640 1-  wljoin  h# 5c dc!
-
-   22222222 90 dc!
-\   1c802222 90 dc!
-\   30003000 90 dc!
+   h# 22222222 h# 90 dc!
    filter-taps
-\   1aaa3000 90 dc!
 ;
-: filteron  1000 94 dc!  ;
-: filteroff
-  40004000 90 dc!  
-  000 94 dc!
+: filteron  ( -- )  h# 1000 h# 94 dc!  ;
+: filteroff  ( -- )
+   h# 40004000  h# 90 dc!  
+   0 h# 94 dc!
 ;
 
 \ XXX get these from video/common/defer.fth
@@ -647,7 +642,6 @@ fload ${BP}/dev/video/common/textmode.fth
    \ otherwise the filter and the VGA don't synchronize to the
    \ frame and the sequencer shuts off after one frame.
    \ That can be fixed with all-off vga-start
-\   filteroff
    setup-filter-mode12 filteron
 
    all-off  8bpp  vga-start
