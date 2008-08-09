@@ -107,7 +107,7 @@ d# 20 constant /root-dev-buf
        h#   0  h# 1fc +lp  w!	\ root_dev - see init/main.c:parse_root_dev
 
            0  h# 1ff +lp  c!	\ Aux device - set to AA if PS2 mouse present
- /ramdisk 0<> h# 210 +lp  w!	\ loader type - set non0 to enable ramdisk info
+ /ramdisk 0<> h# 210 +lp  c!	\ loader type - set non0 to enable ramdisk info
 \  h# 100000  h# 214 +lp  l!	\ kernel start - unused
  ramdisk-adr  h# 218 +lp  l!	\ initrd start
     /ramdisk  h# 21c +lp  l!	\ initrd size
