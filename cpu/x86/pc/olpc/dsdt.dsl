@@ -480,7 +480,7 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
                     Release (ACMX)
                 }
 
-                If (And (Local0, One))
+                If (And (Local0, One))  // ECRD(0xfaa4) & 0x01 => Battery inserted
                 {
                     Return (0x1F)
                 }

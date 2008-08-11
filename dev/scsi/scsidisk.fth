@@ -110,7 +110,8 @@ create mode-sense-geometry    h# 1a c, 0 c, 4 c, 0 c, d# 36 c, 0 c,
 ;
 [then]
 
-: #blocks  ( -- true | n false )
+: #blocks  ( -- u )
+   \ true is all ones, the maximum unsigned value
    read-block-extent  if  true  else  nip  then
 ;
 
