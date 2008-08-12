@@ -93,10 +93,10 @@ end-package
 
 \ Create a node below the top-level FLASH node to accessing the portion
 \ containing the dropin modules
-0 0  " 10000"  " /flash" begin-package
+0 0  " 00000"  " /flash" begin-package
    " dropins" device-name
 
-   h# c0000 constant /device
+   h# 70000 constant /device
    fload ${BP}/dev/subrange.fth
 end-package
 
