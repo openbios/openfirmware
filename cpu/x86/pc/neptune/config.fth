@@ -51,8 +51,8 @@ create isa-dma-only
 \ create use-ega
 \ create save-msrs
 
-create use-null-nvram  \ Don't store configuration variables
-\ create use-flash-nvram  \ Store configuration variables in firmware FLASH
+\ create use-null-nvram  \ Don't store configuration variables
+create use-flash-nvram  \ Store configuration variables in firmware FLASH
 
 fload ${BP}/cpu/x86/pc/neptune/addrs.fth
 

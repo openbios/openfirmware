@@ -4,11 +4,17 @@ purpose: Establish address and I/O configuration definitions
 h# fff0.0000   constant rom-pa		\ Physical address of boot ROM
 h#   10.0000   constant /rom		\ Size of boot ROM
 
+h#    0.0000   constant config-vars-offset
 h#    8.0000   constant dropin-offset
 rom-pa dropin-offset +  constant dropin-base
 h#    8.0000   constant dropin-size
 
 dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
+
+\ Firmware reflash parameters
+h# 8.0000 constant fw-offset       \ Where to start reflashing
+h# 8.0000 constant /fw-reflash     \ Expected size of a reflash image
+h#    -30 constant fw-crc-offset   \ Location of firmware CRC (- is from end)
 
 h#  1c0.0000 constant fw-pa
 h#   20.0000 constant /fw-ram

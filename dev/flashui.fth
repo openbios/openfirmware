@@ -1,38 +1,29 @@
 purpose: Simple FLASH write user interface, calling flash node methods
 \ See license at end of file.
 
-[ifndef] reflash
-0 value flash-buf
-0 value /flash
-0 value /flash-block
-
-\ Simple UI for reflashing, assuming that you want to overwrite
-\ the entire FLASH contents.  That's not always a good assumption;
+\ Simple UI for reflashing.  That's not always a good assumption;
 \ some systems use certain FLASH blocks for persistent data like
 \ configuration variables or manufacturing data ("Vital Product Data").
 
-0 value file-loaded?
-
-: ?image-valid   ( len -- )
-   /flash <> abort" Image file is the wrong length"
-;
-
 0 value flash-ih
+0 value /flash-block
 
 : $call-flash  ( ??? -- ??? )  flash-ih $call-method  ;
 : close-flash  ( -- )
    flash-ih  if
       flash-ih close-dev
       0 to flash-ih
-      flash-buf /flash free-mem
    then
 ;
 
-: ?open-flash  ( -- )
+: open-flash  ( -- )
    flash-ih  if  exit  then
 
    " flash" open-dev to flash-ih
-   flash-ih 0=  abort" Can't open FLASH device"
+   flash-ih 0=  if
+      close-flash
+      true abort" Can't open FLASH device"
+   then
 
    " writable?"  $call-flash  0=  if
       close-flash
@@ -40,56 +31,88 @@ purpose: Simple FLASH write user interface, calling flash node methods
    then
 
    " block-size" $call-flash  to /flash-block
-   " size"       $call-flash  drop  to /flash
-   /flash alloc-mem to flash-buf
 ;
 
-: $get-flash-file  ( "filename" -- )
-   $read-open
-   flash-buf  /flash  ifd @ fgets   ( len )
-   ifd @ fclose
+: crc  ( adr len -- crc )  0 crctab  2swap ($crc)  ;
 
-   ?image-valid
+: ?crc  ( adr len -- )
+   fw-crc-offset -1 =  if  2drop exit  then   \ -1 means don't check
 
-   true to file-loaded?
-;
+   ." Checking integrity ..." cr
 
-: ?file  ( -- )
-   file-loaded?  0=  if
-      ." You must first load a valid FLASH image file with" cr
-      ."    get-file filename" cr
-      abort
+   \ Negative offsets are from the end
+   fw-crc-offset 0<  if  2dup +  else  over  then   ( adr len crc-base )
+   fw-crc-offset +                                  ( crc-adr )
+
+   dup l@  >r                        ( adr len crc-adr r: crc )
+   -1 over l!                        ( adr len crc-adr r: crc )
+
+   -rot  crc                         ( crc-adr calc-crc r: crc )
+   r@ rot l!                         ( calc-crc r: crc )
+   r> <>  if
+      true abort" Firmware image has bad internal CRC"
    then
 ;
 
-: reflash   ( -- )   \ Flash from data already in memory
-   ?open-flash
-   ?file
+: ?image-valid   ( adr len -- )
+   dup /fw-reflash <>  if
+      true abort" Firmware image length is wrong"
+   then
+   ?crc
+;
 
-   ." Writing" cr
+\ No error checking so you can override the standard parameters
+: ($reflash)  ( adr len offset -- )
+   open-flash                                 ( adr len offset )
 
-   /flash  0  ?do
-      (cr i .
-      flash-buf i +  /flash-block  i  " flash-write" $call-flash  ( )
-   /flash-block +loop
+   tuck  u>d  " seek" $call-flash drop        ( adr offset len )
+
+   ." Writing" cr                             ( adr offset len )
+
+   0  ?do                                     ( adr offset )
+      (cr dup i + .x                          ( adr offset )
+      over i +  /flash-block                  ( adr offset adr' len )
+      " write" $call-flash drop               ( adr offset )
+   /flash-block +loop                         ( adr offset )
+   2drop                                      ( )
 
    close-flash
 ;
 
-\ Set this defer word to return a string naming the default
-\ filename for firmware updates
-defer fw-filename$  ' null$ to fw-filename$
-
-: get-flash-file  ( ["filename"] -- )
-   ?open-flash
-   parse-word   ( adr len )
-   dup 0=  if  2drop fw-filename$  then  ( adr len )
-   ." Reading " 2dup type cr                     ( adr len )
-   $get-flash-file
+: $reflash   ( adr len -- )   \ Flash from data already in memory
+   2dup ?image-valid
+   fw-offset ($reflash)
 ;
 
-: flash  ( ["filename"] -- )  get-flash-file reflash  ;
-[then]
+0 value flash-buf
+
+: get-flash-file  ( "filename" -- adr len )
+   safe-parse-word                       ( filename$ )
+   ." Reading " 2dup type cr             ( filename$ )
+   $read-open                            ( )
+   ifd @ fsize  /fw-reflash <>  if       ( )
+      ifd @ fclose
+      true abort" Firmware image file size is wrong"
+   then                                  ( )
+
+   /fw-reflash alloc-mem to flash-buf    ( )
+
+   flash-buf  /fw-reflash  ifd @ fgets   ( len )
+   ifd @ fclose                          ( )
+   /fw-reflash <>  if
+      flash-buf /fw-reflash free-mem
+      true abort" Firmware image read failure"
+   then
+
+   flash-buf /fw-reflash                 ( adr len )
+;
+
+: flash  ( "filename" -- )
+   get-flash-file                  ( adr len )
+   ['] $reflash catch              ( false | x x throw-code )
+   flash-buf /fw-reflash free-mem  ( false | x x throw-code )
+   throw
+;
 
 
 \ LICENSE_BEGIN

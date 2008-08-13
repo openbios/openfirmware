@@ -23,9 +23,27 @@ purpose: Support routines for NOR FLASH writing
 \   Otherwise, copy the existing contents of the erase unit to a buffer,
 \   merge in the new data, erase, then write back the buffer.
 
-: left-in-block  ( len offset -- #left )
+0 instance value /chunk
+
+: set-chunk-size  ( len -- )
+   dup /device =  if                           ( len )
+      seek-ptr 0=  if  to /chunk  exit  then   ( len )
+   then                                        ( len )
+   /block >=  if  /block  else  /sector  then  to /chunk
+;
+
+: erase-chunk  ( offset -- )
+   /chunk case                  ( offset )
+      /sector  of  erase-sector     endof
+      /block   of  erase-block      endof
+      /device  of  drop erase-chip  endof
+      true abort" flashwritepkg: Internal error - bad value for /chunk"
+   endcase
+;
+
+: left-in-chunk  ( len offset -- #left )
    \ Determine how many bytes are left in the page containing offset
-   block-size  swap block-size 1- and -  ( len left-in-page )
+   /chunk  swap /chunk 1- and -  ( len left-in-page )
    min                                   ( #left )
 ;
 
@@ -42,37 +60,37 @@ purpose: Support routines for NOR FLASH writing
 ;
 
 : erase+write  ( adr len -- )
-   dup block-size =  if
+   dup /chunk =  if                         ( adr len )
       \ If we are going to overwrite the entire block, there's no need to
       \ preserve the old data.  This can only happen if we are already
       \ aligned on an erase block boundary.
-      seek-ptr erase-block           ( adr len )
-      seek-ptr flash-write                 ( )
+      seek-ptr erase-chunk                  ( adr len )
+      seek-ptr flash-write                  ( )
    else
       \ Allocate a buffer to save the old block contents
-      block-size alloc-mem  >r                  ( adr len )
+      /chunk alloc-mem  >r                  ( adr len )
 
-      seek-ptr block-size round-down            ( adr len block-start )
+      seek-ptr /chunk round-down            ( adr len block-start )
 
       \ Copy existing data from FLASH block to the buffer
-      dup device-base +  r@  block-size lmove   ( adr len block-start )
+      dup device-base +  r@  /chunk lmove   ( adr len block-start )
 
       \ Merge new bytes into the buffer
-      -rot                                      ( block-start adr len )
-      seek-ptr block-size mod                   ( block-start adr len buf-offset )
-      r@ +  swap move                           ( block-start )
+      -rot                                  ( block-start adr len )
+      seek-ptr /chunk mod                   ( block-start adr len buf-offset )
+      r@ +  swap move                       ( block-start )
 
       \ Erase the block and rewrite it from the buffer
-      dup  erase-block                          ( block-start )
-      r@  block-size  rot  flash-write          ( )
+      dup  erase-chunk                      ( block-start )
+      r@  /chunk  rot  flash-write          ( )
 
       \ Release the buffer
-      r> block-size free-mem
+      r> /chunk free-mem
    then
 ;
 
 : handle-block  ( adr len -- adr' len' )
-   dup seek-ptr left-in-block         ( adr len #left )
+   dup seek-ptr left-in-chunk         ( adr len #left )
    >r                                 ( adr len r: #left )
    over r@ must-erase?  if            ( adr len r: #left )
       over r@ erase+write             ( adr len r: #left )
@@ -85,6 +103,7 @@ purpose: Support routines for NOR FLASH writing
 
 : write  ( adr len -- #written )
    writable?  0=  if  2drop 0 exit  then
+   dup set-chunk-size                         ( adr len )
    tuck                                       ( len adr len )
    begin  dup  while  handle-block  repeat    ( len adr' remain' )
    2drop                                      ( len )

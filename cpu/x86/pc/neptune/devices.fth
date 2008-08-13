@@ -79,16 +79,50 @@ warning @ warning off
 ;
 warning !
 
+\ Create the secondary FLASH node.  This device exists only when an external
+\ card is attached to the board.  It is used for initial programming of
+\ the primary FLASH, by swapping the ID selects for the internal and external
+\ FLASH chips.  The external FLASH appears as the primary boot FLASH (fff00000)
+\ and the internal one as the secondary (ffe00000).  In normal operation,
+\ the internal FLASH is primary (fff00000) and the secondary doesn't exist.
+
+\ We define the secondary node first so that "/flash" will refer to the primary
+\ (pathname matching finds the most recent match first).
+
+0 0  " ffe00000"  " /" begin-package
+   " flash" device-name
+
+   h# 10.0000 constant /device
+   h#  1.0000 constant /block
+   h#    1000 constant /sector
+   my-address my-space /device reg
+
+   h# 40.0000 negate  constant regs-offset
+
+   : write-enable  ( -- )
+      h# 1808 rdmsr  h# ff.ffff and  h# 2100.0000 or  h# 1808 wrmsr
+   ;
+   : write-disable  ( -- )
+      h# 1808 rdmsr  h# ff.ffff and  h# 2500.0000 or  h# 1808 wrmsr
+   ;
+
+   fload ${BP}/dev/flashpkg.fth
+   fload ${BP}/dev/lpcflash.fth
+   fload ${BP}/dev/flashwritepkg.fth
+end-package
+
 \ Create the top-level device node to access the entire boot FLASH device
 0 0  " fff00000"  " /" begin-package
    " flash" device-name
 
    h# 10.0000 value /device
+   my-address my-space /device reg
+
    h# 10.0000 constant /device-phys
-   my-address my-space /device-phys reg
+   h#  1.0000 constant /block
+   h#    1000 constant /sector
 
    h# 40.0000 negate constant regs-offset
-   h#  1.0000 value block-size
 
    : write-enable  ( -- )
       h# 1808 rdmsr  h# ff.ffff and  h# 2100.0000 or  h# 1808 wrmsr
@@ -106,7 +140,7 @@ devalias flash /flash@fff00000
 
 \ Create a node below the top-level FLASH node to accessing the portion
 \ containing the dropin modules
-0 0   dropin-offset <# u#s u#>   " /flash" begin-package
+0 0   dropin-offset <# u#s u#>   " flash" begin-package
    " dropins" device-name
 
    dropin-size constant /device
@@ -120,29 +154,6 @@ fload ${BP}/ofw/fs/dropinfs.fth
 
 \ This devalias lets us say, for example, "dir rom:"
 devalias rom     /dropin-fs
-
-\ Create the top-level device node to access the entire boot FLASH device
-0 0  " ffe00000"  " /" begin-package
-   " flash" device-name
-
-   h# 10.0000 value /device
-   h# 10.0000 constant /device-phys
-   my-address my-space /device-phys reg
-   h#  1.0000 value block-size
-
-   h# 40.0000 negate  constant regs-offset
-
-   : write-enable  ( -- )
-      h# 1808 rdmsr  h# ff.ffff and  h# 2100.0000 or  h# 1808 wrmsr
-   ;
-   : write-disable  ( -- )
-      h# 1808 rdmsr  h# ff.ffff and  h# 2500.0000 or  h# 1808 wrmsr
-   ;
-
-   fload ${BP}/dev/flashpkg.fth
-   fload ${BP}/dev/lpcflash.fth
-   fload ${BP}/dev/flashwritepkg.fth
-end-package
 
 fload ${BP}/cpu/x86/forthint.fth	\ Low-level interrupt handling code
 fload ${BP}/dev/isa/irq.fth		\ ISA interrupt dispatcher
@@ -218,10 +229,10 @@ stand-init: Null-NVRAM
 
 \ Create a node below the top-level FLASH node to access the portion
 \ containing the configuration variables.
-0 0  " d0000"  " /flash" begin-package
+0 0  config-vars-offset <# u#s u#>  " flash" begin-package
    " nvram" device-name
 
-   h# 10000 constant /device
+   h# 1000 constant /device      \ 4K - SST49LF080A sector size
    fload ${BP}/dev/subrange.fth
 end-package
 

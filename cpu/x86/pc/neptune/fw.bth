@@ -422,6 +422,28 @@ false exit
 
 fload ${BP}/dev/flashui.fth
 
+\ Copies internal flash to external - everything, including config vars
+: clone-flash  ( -- )
+   " /flash@fff00000" open-dev >r
+   load-base /rom  " read" r@  $call-method drop
+   r> close-dev
+
+   " devalias flash /flash@ffe00000" evaluate
+   load-base /rom  0  ($reflash)
+   " devalias flash /flash@fff00000" evaluate
+;
+
+: clone-firmware  ( -- )
+   " /flash@fff00000" open-dev >r
+   fw-offset u>d          " seek" r@  $call-method drop
+   load-base /fw-reflash  " read" r@  $call-method drop
+   r> close-dev
+
+   " devalias flash /flash@ffe00000" evaluate
+   load-base /fw-reflash  $reflash
+   " devalias flash /flash@fff00000" evaluate
+;
+
 : vme ( -- )
 	." Running Lattice programmer "
 	com1 io
