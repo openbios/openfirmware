@@ -80,23 +80,36 @@ warning @ warning off
 warning !
 
 \ Create the top-level device node to access the entire boot FLASH device
-\ 0 0  " fff00000"  " /" begin-package
-0 0  dropin-base <# u#s u#>  " /" begin-package
+0 0  " fff00000"  " /" begin-package
    " flash" device-name
 
    h# 10.0000 value /device
    h# 10.0000 constant /device-phys
    my-address my-space /device-phys reg
+
+   h# 40.0000 negate constant regs-offset
+   h#  1.0000 value block-size
+
+   : write-enable  ( -- )
+      h# 1808 rdmsr  h# ff.ffff and  h# 2100.0000 or  h# 1808 wrmsr
+   ;
+   : write-disable  ( -- )
+      h# 1808 rdmsr  h# ff.ffff and  h# 2500.0000 or  h# 1808 wrmsr
+   ;
+
    fload ${BP}/dev/flashpkg.fth
-   fload ${BP}/dev/flashwrite.fth
+   fload ${BP}/dev/lpcflash.fth
+   fload ${BP}/dev/flashwritepkg.fth
 end-package
+
+devalias flash /flash@fff00000
 
 \ Create a node below the top-level FLASH node to accessing the portion
 \ containing the dropin modules
-0 0  " 00000"  " /flash" begin-package
+0 0   dropin-offset <# u#s u#>   " /flash" begin-package
    " dropins" device-name
 
-   h# 70000 constant /device
+   dropin-size constant /device
    fload ${BP}/dev/subrange.fth
 end-package
 
@@ -107,6 +120,29 @@ fload ${BP}/ofw/fs/dropinfs.fth
 
 \ This devalias lets us say, for example, "dir rom:"
 devalias rom     /dropin-fs
+
+\ Create the top-level device node to access the entire boot FLASH device
+0 0  " ffe00000"  " /" begin-package
+   " flash" device-name
+
+   h# 10.0000 value /device
+   h# 10.0000 constant /device-phys
+   my-address my-space /device-phys reg
+   h#  1.0000 value block-size
+
+   h# 40.0000 negate  constant regs-offset
+
+   : write-enable  ( -- )
+      h# 1808 rdmsr  h# ff.ffff and  h# 2100.0000 or  h# 1808 wrmsr
+   ;
+   : write-disable  ( -- )
+      h# 1808 rdmsr  h# ff.ffff and  h# 2500.0000 or  h# 1808 wrmsr
+   ;
+
+   fload ${BP}/dev/flashpkg.fth
+   fload ${BP}/dev/lpcflash.fth
+   fload ${BP}/dev/flashwritepkg.fth
+end-package
 
 fload ${BP}/cpu/x86/forthint.fth	\ Low-level interrupt handling code
 fload ${BP}/dev/isa/irq.fth		\ ISA interrupt dispatcher
@@ -258,10 +294,6 @@ stand-init: PCI properties
    d# 66,666,667  " clock-frequency" integer-property
    dend
 ;
-
-fload ${BP}/cpu/x86/pc/neptune/lpcflash.fth
-
-fload ${BP}/dev/geode/lpcflash.fth           \ Reflasher for PLCC FLASH on A-test
 
 : +i encode-int encode+  ;  : 0+i  0 +i  ;
 

@@ -1,66 +1,17 @@
 \ See license at end of file
 purpose: Establish address and I/O configuration definitions
 
-[ifdef] use-meg0
-h#  f0.0000 constant dropin-base
-h#  08.0000 constant dropin-size
-h#   0.4000 constant fw-pa
-h#   f.c000 constant /fw-ram
-[then]
+h# fff0.0000   constant rom-pa		\ Physical address of boot ROM
+h#   10.0000   constant /rom		\ Size of boot ROM
 
-[ifdef] rom-loaded
-h# fff8.0000   constant rom-pa		\ Physical address of boot ROM
-h#    8.0000   constant /rom		\ Size of boot ROM
-rom-pa         constant dropin-base
-
+h#    8.0000   constant dropin-offset
+rom-pa dropin-offset +  constant dropin-base
 h#    8.0000   constant dropin-size
 
 dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
 
 h#  1c0.0000 constant fw-pa
 h#   20.0000 constant /fw-ram
-[then]
-
-[ifdef] linuxbios-loaded
-\ h#  d8.0000 constant dropin-base
-h# fff2.0000 constant dropin-base  \ Location of payload in FLASH
-\ h# fff8.0000 constant dropin-base  \ Location of payload in FLASH
-dropin-base h# 80 + h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
-h#   08.0000 constant dropin-size
-h#  1e0.0000 constant fw-pa
-h#   20.0000 constant /fw-ram
-h# fff0.0000 constant rom-pa
-h#   10.0000 constant /rom
-[then]
-
-[ifdef] old-bzimage-loaded
-\ h#  d8.0000 constant dropin-base
-h#   10.0020 constant dropin-base  \ RAM address where Linux normally loads 
-h#   08.0000 constant dropin-size
-h#   20.0000 constant fw-pa
-h#   20.0000 constant /fw-ram
-[then]
-
-[ifdef] bzimage-loaded
-h#  1d8.0020 constant dropin-base  \ RAM address where we want to end up
-h#   08.0000 constant dropin-size
-h#  1e0.0000 constant fw-pa
-h#   20.0000 constant /fw-ram
-[then]
-
-[ifdef] syslinux-loaded
-h#  10.1020 constant dropin-base
-h#  07.e0e0 constant dropin-size
-h#  20.0000 constant fw-pa
-h#  20.0000 constant /fw-ram
-[then]
-
-[ifdef] grub-loaded
-h# 1b8.0000 constant dropin-base
-h#  08.0000 constant dropin-size
-h# 1c0.0000 constant fw-pa
-h#  20.0000 constant /fw-ram
-[then]
 
 h#  80.0000 constant def-load-base      \ Convenient for initrd
 
@@ -100,7 +51,7 @@ h# fe02.c000 constant uoc-pci-base
 
 fload ${BP}/cpu/x86/pc/virtaddr.fth
 [ifndef] virtual-mode
-h# ff80.0000 to fw-virt-base  \ Override the usual setting; we use an MSR to double-map some memory up high
+h# fec0.0000 to fw-virt-base  \ Override the usual setting; we use an MSR to double-map some memory up high
 h#   40.0000 to fw-virt-size
 [then]
 

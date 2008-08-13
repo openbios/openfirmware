@@ -420,14 +420,7 @@ false exit
 
 ;
 
-h# ffac0000 constant lpc-flash2-phys
-h# 40000 constant /lpc-flash2                \ size
-
-: neptune-flash2-map
-
-  lpc-flash2-phys  /lpc-flash2  0 mmu-claim drop     \ Reserve the virtual address range
-  lpc-flash2-phys  dup  /lpc-flash2  -1  mmu-map    \ Create a mapping
-;
+fload ${BP}/dev/flashui.fth
 
 : vme ( -- )
 	." Running Lattice programmer "

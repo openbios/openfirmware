@@ -219,7 +219,7 @@ create msr-init
 \ msr: 5140.0012  \ LBAR_FLSH2
 \ msr: 5140.0013  \ LBAR_FLSH3
 \ msr: 5140.0014 00000000.80070003.  \ LEG_IO already set in romreset
-  msr: 5140.0015 00000000.00000f7d.  \ BALL_OPTS - IDE pins are IDE, not NAND
+  msr: 5140.0015 00000000.00000f71.  \ BALL_OPTS - IDE pins are IDE, not NAND, LPC FLASH mode
 \ msr: 5140.001b 00000000.07770777.  \ NANDF_DATA - default
 \ msr: 5140.001c 00000000.00000777.  \ NANDF_CTL - default
   msr: 5140.001f 00000000.00000011.  \ KEL_CTRL
