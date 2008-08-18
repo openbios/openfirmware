@@ -115,8 +115,7 @@ defer grow-cv-area  ( needed -- )      ' drop to grow-cv-area
       tuck r@ swap move		  ( $value name-len )
       r> +  [char] = over c!  1+  ( $value nv-value-adr )
       2dup 2>r  swap move  2r>	  ( value-len nv-value-adr )
-      over +  1-                  ( value-len last-char-adr )
-\       over +  0 over c!		  ( value-len terminator-adr )
+      over +  0 over c!		  ( value-len terminator-adr )
       update-modified-adr	  ( value-len )
    then				  ( value-len | -1 )
 ;
