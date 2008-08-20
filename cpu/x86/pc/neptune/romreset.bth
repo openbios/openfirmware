@@ -67,16 +67,21 @@ label startup
     \ enable GPIO 8 to OUT AUX1, 9 to IN_AUX1
     100 dup 1004 port-wl 1010 port-wl \ GPIOL_OUTPUT_ENABLE, GPIOL_OUT_AUX1_SELECT
     200 dup 1020 port-wl 1034 port-wl  \ GPIOL_INPUT_ENABLE, GPIOL_IN_AUX1_SELECT
+    \ enable GPIO 4 to OUT AUX1, 3 to IN_AUX1
+    010 dup 1004 port-wl 1010 port-wl \ GPIOL_OUTPUT_ENABLE, GPIOL_OUT_AUX1_SELECT
+    008 dup 1020 port-wl 1034 port-wl  \ GPIOL_INPUT_ENABLE, GPIOL_IN_AUX1_SELECT
 
-    \ set address to 3f8
     51400014 rmsr    \ MDD_LEG_IO
-    h# 00007.0000 # ax or
+    h# 00007.0000 # ax or \ set address to 3f8 for COM1
+    h# 00050.0000 # ax or \ set address to 2f8 for COM2
     51400014 wmsr
 
 
     00000000.00000001. 5140003A set-msr \ SOFTRESET->MDD_UART1_CONF
     00000000.00000012. 5140003A set-msr \ DEVEN | EN_BANKS -> MDD_UART1_CONF
 
+    00000000.00000001. 5140003E set-msr \ SOFTRESET->MDD_UART2_CONF
+    00000000.00000012. 5140003E set-msr \ DEVEN | EN_BANKS -> MDD_UART2_CONF
 
    \ uart_init,serial.c
    \ This is a garden-variety 8250 UART setup sequence

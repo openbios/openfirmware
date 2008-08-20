@@ -169,7 +169,8 @@ variable bar-probing
 ;
 
 : preassigned-pci-slot?  ( config-adr -- flag )
-   drop true
+\   drop true
+	d# 11 rshift  h# 1fff and  dup h# f =  swap 1 =  or
 ;
 
 : config-setup  ( a1 -- a2 special? )

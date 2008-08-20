@@ -35,8 +35,8 @@ InInv - 0000 3081
 : gpio-init  ( -- )
    h# 0000 h# 1090 pl!  h# c802 h# 1010 pl!  \ Output AUX1
    h# 0000 h# 1094 pl!  h#  100 h# 1014 pl!  \ Output AUX2
-   h# 0900 h# 1084 pl!  h# c91a h# 1004 pl!  \ Output Enable
-   h# 1600 h# 10a0 pl!  h# f6f5 h# 1020 pl!  \ Input Enable
+   h# 0900 h# 1084 pl!  h# c912 h# 1004 pl!  \ Output Enable
+   h# 1600 h# 10a0 pl!  h# f6e5 h# 1020 pl!  \ Input Enable
    h# 1200 h# 10b4 pl!  h# c604 h# 1034 pl!  \ Input AUX1
 
    h# 0000 h# 10a4 pl!  h# 3081 h# 1024 pl!  \ Input Invert (Int lines)
