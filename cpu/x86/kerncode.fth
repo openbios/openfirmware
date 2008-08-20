@@ -251,8 +251,14 @@ meta
 \ Loop index for current do loop
 code i  (s -- n )   0 [rp] ax mov   /n [rp] ax add   1push  c;
 
+\ Loop limit for current do loop
+code ilimit  ( -- n )  1 /n* [rp] ax mov  80000000 # ax sub  1push  c;
+
 \ Loop index for next enclosing do loop
 code j   (s -- n )  3 /n* [rp] ax mov   4 /n* [rp] ax add   1push  c;
+
+\ Loop limit for next enclosing do loop
+code jlimit  ( -- n )  4 /n* [rp] ax mov  80000000 # ax sub  1push  c;
 
 code (leave)  (s -- )
 mloclabel pleave

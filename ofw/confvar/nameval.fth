@@ -284,14 +284,15 @@ stand-init:
 h# ffe constant /pack-buf
 /pack-buf 2+ buffer: pack-buf
 0 value pntr
-: #consecutive  ( adr b -- n )
-   swap                            ( b adr )
-   h# 3f 0  do	                   ( b adr )
-      2dup i ca+ c@ <> if	   ( b adr )
-	 2drop i unloop exit       ( n )
-      then                         ( b adr )
-   loop                            ( b adr )
-   2drop  h# 7f
+: #consecutive  ( lastadr adr b -- n )
+   -rot                            ( b lastadr adr )
+   tuck -  h# 3f min               ( b adr maxn )
+   -rot  2 pick  0  do	           ( maxn b adr )
+      2dup i ca+ c@ <> if	   ( maxn b adr )
+	 3drop i unloop exit       ( n )
+      then                         ( maxn b adr )
+   loop                            ( maxn b adr )
+   2drop                           ( maxn )
 ;
 : pack-byte  ( b -- full? )
    pack-buf pntr ca+ c!
@@ -302,18 +303,18 @@ h# ffe constant /pack-buf
    0 to pntr   bounds ?do		( )
       i c@  case                        ( c: char )
          0 of    			( )
-            h# fe pack-byte       	( )
-	    i 0 #consecutive    	( step )
+            h# fe pack-byte ?leave     	( )
+	    ilimit i 0 #consecutive    	( step )
             dup                         ( step code )
          endof				( step code )
          h# fe  of 			( )
-            h# fe pack-byte       	( )
-	    i h# fe #consecutive 	( step )
+            h# fe pack-byte ?leave	( )
+	    ilimit i h# fe #consecutive ( step )
             dup h# 40 or                ( step code )
          endof				( step code )
 	 h# ff  of			( )
-            h# fe pack-byte       	( )
-	    i h# ff #consecutive  	( step )
+            h# fe pack-byte ?leave	( )
+	    ilimit i h# ff #consecutive ( step )
             dup h# 80 or		( step code )
 	 endof				( step code )
          ( default )  1 swap dup        ( step char char )
@@ -322,9 +323,32 @@ h# ffe constant /pack-buf
    +loop                                ( )
    pack-buf pntr                        ( adr len )
 ;
+0 value unpack-buf
+0 value /unpack-buf
+: not-packed?  ( adr len -- flag )
+   dup false                                   ( adr len  len packed? )
+   2swap  bounds  ?do                          ( ulen packed? )
+      i c@  h# fe =  if                        ( ulen packed? )
+         drop  2-               \ fe and next  ( ulen' )
+         i 1+ c@ h# 3f and  +   \ #inserted    ( ulen' )
+         true 2                                ( ulen packed? advance )
+      else                                     ( ulen packed? )
+         1                                     ( ulen packed? advance )
+      then                                     ( ulen advance )
+   +loop                                       ( ulen packed? )
+   if                                          ( ulen )
+      dup to /unpack-buf                       ( ulen )
+      alloc-mem to unpack-buf                  ( )
+      false                                    ( false )
+   else                                        ( ulen )
+      drop true                                ( true )
+   then                                        ( flag )
+;
+
 : unpack-env   ( adr len -- adr' len' )	\ Packed to binary
+   2dup not-packed?  if  exit  then     ( adr len )
    0 to pntr   bounds ?do	        ( )
-      /pack-buf pntr u<= ?leave
+      /unpack-buf pntr u<= ?leave
       1  i c@ dup h# fe =  if		( 1 c )
 	 2drop  2  i 1+ c@		( 2 n' )
 	 dup h# 3f and >r		( 2 n' )
@@ -332,16 +356,16 @@ h# ffe constant /pack-buf
          6 rshift			( 2 index )
          " "(00 fe ff ff)" drop + c@	( 2 c' )
 
-	 pack-buf pntr ca+		( 2 c' a )
-	 r@ /pack-buf pntr - min	( 2 c' a len )
+	 unpack-buf pntr ca+		( 2 c' a )
+	 r@ /unpack-buf pntr - min	( 2 c' a len )
 	 rot fill			( 2 )
 	 r> pntr + to pntr		( 2 )
       else				( 1 c )
-	 pack-buf pntr ca+ c!		( 1 )
+	 unpack-buf pntr ca+ c!		( 1 )
 	 pntr 1+ to pntr		( 1 )
       then				( step )
    +loop                                ( )
-   pack-buf  pntr                       ( adr len )
+   unpack-buf  pntr                     ( adr len )
 ;
 
 : (cv-bytes@)  ( apf -- adr len )

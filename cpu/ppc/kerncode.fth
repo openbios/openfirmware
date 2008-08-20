@@ -291,12 +291,26 @@ code i  (s -- n )
    add     tos,tos,t0
 c;
 
+\ Loop limit for current do loop
+code ilimit  (s -- n )
+   push-tos
+   lwz     tos,1cell(rp)
+   addis   tos,tos,h#-8000	\ Bias by h#8000.0000
+c;
+
 \ Loop index for next enclosing do loop
 code j   (s -- n )
    push-tos
    lwz     tos,12(rp)
    lwz     t0,16(rp)
    add     tos,tos,t0
+c;
+
+\ Loop limit for next enclosing do loop
+code jlimit   (s -- n )
+   push-tos
+   lwz     tos,16(rp)
+   addis   tos,tos,h#-8000	\ Bias by h#8000.0000
 c;
 
 code (leave)  (s -- )
