@@ -308,6 +308,12 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 \ fload ${BP}/ofw/gui/insticon.fth
 
 [ifdef] olpc
+: setup-for-os  ( -- )
+   [ ' go-hook behavior compile, ]    \ Chain to old behavior
+   vpci-devices-on   \ Do this after quieting USB
+;
+' setup-for-os to go-hook
+
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/suspend.fth      \ Suspend/resume setup
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic

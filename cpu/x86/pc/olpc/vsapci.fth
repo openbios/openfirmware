@@ -506,6 +506,12 @@ variable bar-probing
 : config-w!  ( w a -- )  config-setup  if  h#     ffff vpci!  else  rw!  then  ;
 : config-l!  ( l a -- )  config-setup  if  h# ffffffff vpci!  else  rl!  then  ;
 
+: vpci-devices-on  ( -- )
+   h# 49  h# 7804 config-w!  \ ISA
+   h# 45  h# 7b04 config-w!  \ AC97
+   h# 06  h# 7c04 config-w!  \ OHCI
+   h# 06  h# 7d04 config-w!  \ EHCI
+;
 : assign-cafe  ( -- )
    nand-pci-base    h# 6010 config-l!
    sd-pci-base      h# 6110 config-l!
