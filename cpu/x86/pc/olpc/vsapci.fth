@@ -507,6 +507,7 @@ variable bar-probing
 : config-l!  ( l a -- )  config-setup  if  h# ffffffff vpci!  else  rl!  then  ;
 
 : vpci-devices-on  ( -- )
+   h# 06  h#  a04 config-w!  \ AES
    h# 49  h# 7804 config-w!  \ ISA
    h# 45  h# 7b04 config-w!  \ AC97
    h# 06  h# 7c04 config-w!  \ OHCI
