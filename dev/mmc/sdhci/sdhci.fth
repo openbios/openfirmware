@@ -176,14 +176,17 @@ h# 200 constant /block  \ 512 bytes
 
 : data-timeout!  ( n -- )  h# 2e cb!  ;
 
+\ We leave the remove and insert interrupt enables on because the
+\ hardware has a bug that blocks the card detection status bits
+\ unless the interrupt enables are on.
 : intstat-on  ( -- )
-   h# 000b h# 34 cw!  \ normal interrupt status en reg
-            \ Enable: DMA Interrupt, Transfer Complete, CMD Complete
+   h# 00cb h# 34 cw!  \ normal interrupt status en reg
+            \ Enable: Remove, Insert, DMA Interrupt, Transfer Complete, CMD Complete
             \ Disable: Card Interrupt, Remove, Insert, Read Ready,
             \ Write Ready, Block Gap
    h# f1ff h# 36 cw!  \ error interrupt status en reg
 ;
-: intstat-off  ( -- )  h# 0 h# 34 cl!  ;  \ All interrupts off
+: intstat-off  ( -- )  h# c0 h# 34 cl!  ;  \ Remove, Insert on, others off
 
 : setup-host  ( -- )
    reset-host
