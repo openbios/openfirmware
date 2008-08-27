@@ -537,11 +537,11 @@ c;
    base @ >r decimal
    fdup #idigits
    #places @ over -  fpack
-   dup abs <# #s nlswap sign ascii E hold
+   dup abs <# u#s nlswap sign ascii E hold
       #places @ 1 max  0  do  i fdigit   loop
       ascii . hold
       ?-
-   #>
+   u#>
    r> base !
    frestore
 ;	
