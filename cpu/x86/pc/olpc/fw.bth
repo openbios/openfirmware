@@ -326,7 +326,8 @@ fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
 fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 fload ${BP}/cpu/x86/pc/olpc/memtest.fth
-: emacs  " rom:emacs" $boot  ;
+
+: emacs  ( -- )  boot-getline to boot-file   " rom:emacs" $boot  ;
 
 fload ${BP}/cpu/x86/pc/rmtools.fth
 fload ${BP}/dev/geode/smi.fth
