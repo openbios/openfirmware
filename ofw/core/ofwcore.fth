@@ -245,11 +245,18 @@ copyright: Copyright 1990-2001 Sun Microsystems, Inc.  All Rights Reserved
 
 defer interpret-string  ( adr len -- )  ' evaluate is interpret-string
 
+: safe-include-buffer  ( adr len -- ? )
+   dup alloc-mem          ( adr len adr1 )
+   swap 2>r               ( adr r: adr1,len )
+   2r@ move               ( r: adr1,len )
+   2r@ include-buffer     ( ? r: adr1,len )
+   2r> free-mem           ( ? )
+;
 : execute-buffer  ( adr len -- )  true abort" Unrecognized program format"  ;
 : execute-buffer    ( adr len -- )              \ Try Forth
-   " \ "         2over substring?  if  include-buffer exit  then   ( adr len )
-   " purpose: "  2over substring?  if  include-buffer exit  then   ( adr len )
-   " id: "       2over substring?  if  include-buffer exit  then   ( adr len )
+   " \ "         2over substring?  if  safe-include-buffer exit  then   ( adr len )
+   " purpose: "  2over substring?  if  safe-include-buffer exit  then   ( adr len )
+   " id: "       2over substring?  if  safe-include-buffer exit  then   ( adr len )
 
    execute-buffer
 ;
