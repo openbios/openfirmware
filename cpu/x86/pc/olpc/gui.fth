@@ -312,10 +312,13 @@ false value error-shown?
    then
 
    cursor-off  ['] fix-cursor to (ok)	\ hide text cursor
-   avoid-logo
-   
+
    0 to image-width  0 to image-height   \ In case $show-bmp fails
+   
 [ifdef] old-way
+\ The graphical boot sequence display at the top of the screen
+\ has been superseded by the new secure pretty-boot scheme .
+  avoid-logo
   " rom:olpc.565" $show&advance
 [then]
 
@@ -390,15 +393,15 @@ h# 32 buffer: icon-name
 : dcon-freeze    ( -- )  0 " set-source" $call-screen d# 30 ms  ;
 : dcon-unfreeze  ( -- )  1 " set-source" $call-screen d# 30 ms  ;
 
-: go-hook-unfreeze
-   [ ' go-hook behavior compile, ]
+: linux-hook-unfreeze
+   [ ' linux-hook behavior compile, ]
 ;
-: go-hook-freeze
-   [ ' go-hook behavior compile, ]
+: linux-hook-freeze
+   [ ' linux-hook behavior compile, ]
    0 " set-source" $call-screen
 ;
-: freeze    ( -- )  ['] go-hook-freeze   to go-hook  ;
-: unfreeze  ( -- )  ['] go-hook-unfreeze to go-hook  ;
+: freeze    ( -- )  ['] linux-hook-freeze   to linux-hook  ;
+: unfreeze  ( -- )  ['] linux-hook-unfreeze to linux-hook  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

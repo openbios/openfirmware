@@ -219,6 +219,7 @@ end-support-package
 devalias nfs net//obp-tftp:last//nfs
 
 fload ${BP}/cpu/x86/pc/boot.fth
+fload ${BP}/cpu/x86/pc/linux.fth
 
 : usb-port-power-map  ( -- n )
    board-revision  h# b10  h# b2f between  if  \ B1 and B2
@@ -308,11 +309,11 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 \ fload ${BP}/ofw/gui/insticon.fth
 
 [ifdef] olpc
-: setup-for-os  ( -- )
-   [ ' go-hook behavior compile, ]    \ Chain to old behavior
+: setup-for-linux  ( -- )
+   [ ' linux-hook behavior compile, ]    \ Chain to old behavior
    vpci-devices-on   \ Do this after quieting USB
 ;
-' setup-for-os to go-hook
+' setup-for-linux to linux-hook
 
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/suspend.fth      \ Suspend/resume setup
@@ -324,8 +325,8 @@ fload ${BP}/cpu/x86/pc/olpc/nandstat.fth
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
 fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
-fload ${BP}/cpu/x86/pc/linux.fth
 fload ${BP}/cpu/x86/pc/olpc/memtest.fth
+: emacs  " rom:emacs" $boot  ;
 
 fload ${BP}/cpu/x86/pc/rmtools.fth
 fload ${BP}/dev/geode/smi.fth

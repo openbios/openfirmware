@@ -16,6 +16,8 @@ purpose: Linux bzImage program loading
 \ " ro root=mtd0 rootfstype=jffs2 console=ttyS0,115200 console=tty0"
 \   ' boot-file set-config-string-default
 
+defer linux-hook  ' noop to linux-hook
+
 0 value ramdisk-adr
 0 value /ramdisk
 
@@ -147,6 +149,7 @@ d# 20 constant /root-dev-buf
    linux-base  linux-params  (init-program)
    linux-params to %esi
    make-ofw-pdir
+   linux-hook
 ;
 
 d# 256 buffer: ramdisk-buf
