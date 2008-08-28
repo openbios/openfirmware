@@ -66,7 +66,7 @@ extern struct qelem adjhead, buckets[NBUCKETS];
 
 #ifndef CURBRK
 #define CURBRK	sbrk(0)
-#endif CURBRK
+#endif
 
 extern void insque(), remque();
 extern char *malloc(), *realloc();

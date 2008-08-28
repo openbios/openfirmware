@@ -27,9 +27,9 @@ LIBS=		$(LIBDIR)/libobp.a
 
 emacs:	$(LIBDIR)/start.o $(OFILES) $(LIBS) Makefile
 	$(LD) $(LFLAGS) -o $@ $(LIBDIR)/start.o $(OFILES) $(LIBS)
-	size $@
-	nm -n $@ >emacs.nm
-	strip $@
+	@# size $@
+	@# nm -n $@ >emacs.nm
+	@strip $@
 
 $(LIBDIR)/start.o:	$(LIBDIR)/start.s
 	(cd $(LIBDIR); make start.o)
