@@ -43,5 +43,4 @@ $(LIBDIR)/libobp.a:	$(HLIBDIR)/lib.c
 main.o: $(SRCDIR)/ebind.h
 
 clean:
-	-rm -f *.o *.a
-
+	-rm -f *.o *.a emacs
