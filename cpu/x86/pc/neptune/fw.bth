@@ -222,6 +222,7 @@ end-support-package
 devalias nfs net//obp-tftp:last//nfs
 
 fload ${BP}/cpu/x86/pc/boot.fth
+fload ${BP}/cpu/x86/pc/linux.fth
 
 h# 3ea constant usb-port-power-map  \ USB4:PWR2  USB3:PWR1  USB2:PWR1  USB1:PWR1
 fload ${BP}/dev/geode/usb.fth
@@ -285,8 +286,6 @@ fload ${BP}/cpu/x86/pc/neptune/banner.fth
 
 fload ${BP}/ofw/gui/loadmenu.fth
 \ fload ${BP}/ofw/gui/insticon.fth
-
-fload ${BP}/cpu/x86/pc/linux.fth
 
 \ Use values like these if you want to boot directly instead of through an intermediate script
  " u:\boot\bzImage"   ' boot-device  set-config-string-default

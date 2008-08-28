@@ -135,8 +135,41 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
    al bl mov
    op: h# fc00.0000 # ax and  0=  if    \ Start the PLL if not already on
 
-[ifndef] lx-pll-autoconfig
-	0 [if]
+[ifdef] lx-pll-autoconfig
+
+   \ PLL autoconfiguration from bootstrap pins
+   \ EDX,EAX contains the value of MSR 4c00.0014 - RSTPLL
+   \ The bootstrap bits are 7..1
+
+   al bl mov        \ Get a copy of the BOOTSTRAP bits
+   h# 1 #  bl shr   \ Shift out CHIP_RESET and align the field at bit 0
+
+   \ The bl comparison values are the BOOTSTRAP pin settings.
+   \ The h#40 bit is 0 for 33 MHz PCI clock, 1 for 66 MHz.
+   \ The dx values are from table 6-87 in the LX databook,with h# 41 added to
+   \ set both predivider bits (for 66 MHz PCI clock).
+
+   \ The comparison values below correspond to the validated timings from the table in the schematic.
+
+   h# 4c # bl cmp  0=  if   op: h# 0000.04d7 # dx mov  else  \ Core 400 Mem 333
+   h# 54 # bl cmp  0=  if   op: h# 0000.05db # dx mov  else  \ Core 466 Mem 400
+   h# 55 # bl cmp  0=  if   op: h# 0000.03dd # dx mov  else  \ Core 500 Mem 266
+   h# 5e # bl cmp  0=  if   op: h# 0000.04e3 # dx mov  else  \ Core 600 Mem 333
+   h# 5f # bl cmp  0=  if   op: h# 0000.05e3 # dx mov  else  \ Core 600 Mem 333
+
+   \ The default value below is for Mitch's test board whose bootstrap value
+   \ h# 48 should mean 366/200, but that board is really 500/333
+
+                            op: h# 0000.04dd # dx mov        \ Core 500 Mem 333
+
+   then then then then then  \ Same number of then's as number of if's above
+
+   op: h# 0000.1800 invert # ax and  \ Clear bypass bits
+   op: h# 04ff.6001 # ax or          \ Set SWFLAGS=1, HOLD_COUNT=ff, GLIUPD,COREPD,CHIP_RESET
+   wrmsr                             \ Start the PLL and reset the CPU
+
+[else]
+   0 [if]
       \ pll manual configuration
 	  rdmsr                             \ Get base MSR value with divisors
       op: h# 07de.0000 # ax or          \ Set the startup time (de) and breadcrumb (4)
@@ -148,8 +181,9 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
       op: h# 0000.1800 invert # ax and  \ Turn off the BYPASS bits
 
       h# 6001 # ax or                   \ Set PD, RESETPLL
+      wrmsr                             \ Start the PLL and reset the CPU
 
-	[else]
+   [else]
       \ pll manual configuration (easier version..)
 
       \ op: h# 0000.03DD # dx mov	\ 500 MHz + 266 MHz
@@ -159,22 +193,13 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
       op: h# 0000.04DD # dx mov		\ 500 MHz + 333 MHz
       \ op: h# 0000.05DD # dx mov	\ 500 MHz + 400 MHz
 	  
-	  
-	  \ op: h# 04DE.6001 # ax mov
-	  op: h# 04FF.6001 # ax mov \ longer reset time for pll startup
-
-	 [then]
-
-[else]
-      \ pll auto configuration from bootstrap pin
-
-      op: h# 00ff.0000 invert # ax and
-      op: h# 00de.0000 # ax or
-
-      op: h# 0000.1800 invert # ax and
-      op: h# 0700.6001 # ax or
-[then]
+      \ op: h# 04DE.6001 # ax mov
+      op: h# 04FF.6001 # ax mov         \ longer reset time for pll startup
       wrmsr                             \ Start the PLL and reset the CPU
+
+   [then]
+
+[then]
    then
 
    \ Return to here after the reset
