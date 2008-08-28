@@ -1,0 +1,371 @@
+Mmain	main.c	/^main(argc, argv)$/
+addline	buffer.c	/^addline(text)$/
+adjustmode	random.c	/^adjustmode(kind, global)	\/* change the editor mode/
+agios	hp150.c	/^agios(buf, len)	\/* perform an AGIOS call *\/$/
+amg_flush	termio.c	/^amg_flush()$/
+ansibcol	ansi.c	/^ansibcol(color)		\/* set the current background col/
+ansibeep	ansi.c	/^ansibeep()$/
+ansiclose	ansi.c	/^ansiclose()$/
+ansieeol	ansi.c	/^ansieeol()$/
+ansieeop	ansi.c	/^ansieeop()$/
+ansifcol	ansi.c	/^ansifcol(color)		\/* set the current output color */
+ansihello	ansi.c	/^ansihello()$/
+ansimove	ansi.c	/^ansimove(row, col)$/
+ansiopen	ansi.c	/^ansiopen()$/
+ansiparm	ansi.c	/^ansiparm(n)$/
+ansirev	ansi.c	/^ansirev(state)		\/* change reverse video state *\/$/
+anycb	buffer.c	/^anycb()$/
+backchar	basic.c	/^backchar(f, n)$/
+backdel	random.c	/^backdel(f, n)$/
+backhunt	search.c	/^backhunt(f, n)	\/* hunt backward for the last searc/
+backline	basic.c	/^backline(f, n)$/
+backpage	basic.c	/^backpage(f, n)$/
+backsearch	search.c	/^backsearch(f, n)$/
+backword	word.c	/^backword(f, n)$/
+bakscan	isearch.c	/^int bakscan (patrn)		\/* Scan backwards for a match/
+bclear	buffer.c	/^bclear(bp)$/
+bfind	buffer.c	/^bfind(bname, cflag, bflag)$/
+bindtokey	bind.c	/^bindtokey(f, n)$/
+bktoshell	spawn.c	/^bktoshell()		\/* suspend MicroEMACS and wait to wak/
+bsearchcom	search.c	/^bsearchcom(f, n)$/
+capword	word.c	/^capword(f, n)$/
+cbuf	exec.c	/^cbuf(f, n, bufnum)$/
+cbuf1	exec.c	/^cbuf1(f, n)$/
+cbuf10	exec.c	/^cbuf10(f, n)$/
+cbuf11	exec.c	/^cbuf11(f, n)$/
+cbuf12	exec.c	/^cbuf12(f, n)$/
+cbuf13	exec.c	/^cbuf13(f, n)$/
+cbuf14	exec.c	/^cbuf14(f, n)$/
+cbuf15	exec.c	/^cbuf15(f, n)$/
+cbuf16	exec.c	/^cbuf16(f, n)$/
+cbuf17	exec.c	/^cbuf17(f, n)$/
+cbuf18	exec.c	/^cbuf18(f, n)$/
+cbuf19	exec.c	/^cbuf19(f, n)$/
+cbuf2	exec.c	/^cbuf2(f, n)$/
+cbuf20	exec.c	/^cbuf20(f, n)$/
+cbuf21	exec.c	/^cbuf21(f, n)$/
+cbuf22	exec.c	/^cbuf22(f, n)$/
+cbuf23	exec.c	/^cbuf23(f, n)$/
+cbuf24	exec.c	/^cbuf24(f, n)$/
+cbuf25	exec.c	/^cbuf25(f, n)$/
+cbuf26	exec.c	/^cbuf26(f, n)$/
+cbuf27	exec.c	/^cbuf27(f, n)$/
+cbuf28	exec.c	/^cbuf28(f, n)$/
+cbuf29	exec.c	/^cbuf29(f, n)$/
+cbuf3	exec.c	/^cbuf3(f, n)$/
+cbuf30	exec.c	/^cbuf30(f, n)$/
+cbuf31	exec.c	/^cbuf31(f, n)$/
+cbuf32	exec.c	/^cbuf32(f, n)$/
+cbuf33	exec.c	/^cbuf33(f, n)$/
+cbuf34	exec.c	/^cbuf34(f, n)$/
+cbuf35	exec.c	/^cbuf35(f, n)$/
+cbuf36	exec.c	/^cbuf36(f, n)$/
+cbuf37	exec.c	/^cbuf37(f, n)$/
+cbuf38	exec.c	/^cbuf38(f, n)$/
+cbuf39	exec.c	/^cbuf39(f, n)$/
+cbuf4	exec.c	/^cbuf4(f, n)$/
+cbuf40	exec.c	/^cbuf40(f, n)$/
+cbuf5	exec.c	/^cbuf5(f, n)$/
+cbuf6	exec.c	/^cbuf6(f, n)$/
+cbuf7	exec.c	/^cbuf7(f, n)$/
+cbuf8	exec.c	/^cbuf8(f, n)$/
+cbuf9	exec.c	/^cbuf9(f, n)$/
+cex	main.c	/^cex()	\/* dummy function for binding to control-x p/
+checknext	isearch.c	/^int checknext (chr, patrn, dir, sts)\/* Check next /
+cinsert	random.c	/^cinsert()	\/* insert a newline and indentation for /
+ckeyoff	hp150.c	/^ckeyoff()	\/* turn control-C trapping off *\/$/
+ckeyon	hp150.c	/^ckeyon()	\/* turn control-C trapping on *\/$/
+closehp	hp150.c	/^closehp()		\/* close the HP150 keyboard for input */
+clrmes	random.c	/^clrmes(f, n)$/
+cmdstr	bind.c	/^cmdstr(c, seq)	\/* change a key command to a string/
+copyregion	region.c	/^copyregion(f, n)$/
+ctlxe	main.c	/^ctlxe(f, n)$/
+ctlxlp	main.c	/^ctlxlp(f, n)$/
+ctlxrp	main.c	/^ctlxrp(f, n)$/
+ctrlg	main.c	/^ctrlg(f, n)$/
+deblank	random.c	/^deblank(f, n)$/
+defkey	hp150.c	/^defkey()	\/* change all special keys to intercept m/
+delbword	word.c	/^delbword(f, n)$/
+delfword	word.c	/^delfword(f, n)$/
+delgmode	random.c	/^delgmode(f, n)	\/* prompt and delete a global edito/
+delmode	random.c	/^delmode(f, n)	\/* prompt and delete an editor mode /
+delwind	window.c	/^delwind(f,n)$/
+desbind	bind.c	/^desbind(f, n)	\/* describe bindings$/
+deskey	bind.c	/^deskey(f, n)	\/* describe the command for a certain/
+dg10bcol	dg10.c	/^dg10bcol(color)		\/* set the current background col/
+dg10beep	dg10.c	/^dg10beep()$/
+dg10close	dg10.c	/^dg10close()$/
+dg10eeol	dg10.c	/^dg10eeol()$/
+dg10eeop	dg10.c	/^dg10eeop()$/
+dg10fcol	dg10.c	/^dg10fcol(color)		\/* set the current output color */
+dg10hello	dg10.c	/^dg10hello()$/
+dg10move	dg10.c	/^dg10move(row, col)$/
+dg10open	dg10.c	/^dg10open()$/
+dg10rev	dg10.c	/^dg10rev(state)		\/* change reverse video state *\/$/
+dobuf	exec.c	/^dobuf(bp)$/
+docmd	exec.c	/^docmd(cline)$/
+dofile	exec.c	/^dofile(fname)$/
+echochar	isearch.c	/^int echochar(c,col)$/
+edinit	main.c	/^edinit(bname)$/
+eltoa	buffer.c	/^eltoa(buf, width, num)$/
+emacs_main	main.c	/^emacs_main(argc, argv)$/
+enlargewind	window.c	/^enlargewind(f, n)$/
+eq	search.c	/^eq(bc, pc)$/
+errexit	main.c	/^errexit()$/
+execbuf	exec.c	/^execbuf(f, n)$/
+execcmd	exec.c	/^execcmd(f, n)$/
+execfile	exec.c	/^execfile(f, n)	\/* execute a series of commands in /
+execute	main.c	/^execute(c, f, n)$/
+expandp	search.c	/^expandp(srcstr, deststr, maxlength)$/
+far_out	ibmpc.c	/^far_out(source, dest, size)$/
+ffclose	fileio.c	/^ffclose()$/
+ffgetline	fileio.c	/^ffgetline(buf, nbuf)$/
+ffputline	fileio.c	/^ffputline(buf, nbuf)$/
+ffropen	fileio.c	/^ffropen(fn)$/
+ffwopen	fileio.c	/^ffwopen(fn)$/
+filefind	file.c	/^filefind(f, n)$/
+filename	file.c	/^filename(f, n)$/
+fileread	file.c	/^fileread(f, n)$/
+filesave	file.c	/^filesave(f, n)$/
+filewrite	file.c	/^filewrite(f, n)$/
+fillpara	word.c	/^fillpara(f, n)	\/* Fill the current paragraph accor/
+filter	spawn.c	/^filter(f, n)$/
+fisearch	isearch.c	/^int fisearch(f, n)$/
+fmatch	random.c	/^fmatch(ch)$/
+fncmatch	bind.c	/^int (*fncmatch(fname))() \/* match fname to a funct/
+forscan	search.c	/^forscan(patrn,leavep)	\/*	search forward for a <pat/
+forwchar	basic.c	/^forwchar(f, n)$/
+forwdel	random.c	/^forwdel(f, n)$/
+forwhunt	search.c	/^forwhunt(f, n)$/
+forwline	basic.c	/^forwline(f, n)$/
+forwpage	basic.c	/^forwpage(f, n)$/
+forwsearch	search.c	/^forwsearch(f, n)$/
+forwword	word.c	/^forwword(f, n)$/
+get1key	input.c	/^get1key()$/
+get_char	isearch.c	/^int get_char ()$/
+getccol	random.c	/^getccol(bflg)$/
+getckey	bind.c	/^getckey(mflag)	\/* get a command key sequence from /
+getcmd	input.c	/^getcmd()$/
+getfile	file.c	/^getfile(fname, lockfl)$/
+getgoal	basic.c	/^getgoal(dlp)$/
+gethpkey	hp150.c	/^gethpkey()	\/* get a key from the HP keyboard while/
+getname	input.c	/^int (*getname())()$/
+getregion	region.c	/^getregion(rp)$/
+gettok	exec.c	/^char *gettok(src, tok)$/
+gotobob	basic.c	/^gotobob(f, n)$/
+gotobol	basic.c	/^gotobol(f, n)$/
+gotobop	basic.c	/^gotobop(f, n)	\/* go back to the begining of the cu/
+gotoeob	basic.c	/^gotoeob(f, n)$/
+gotoeol	basic.c	/^gotoeol(f, n)$/
+gotoeop	basic.c	/^gotoeop(f, n)	\/* go forword to the end of the curr/
+gotoline	basic.c	/^gotoline(f, n)		\/* move to a particular line.$/
+h15hello	hp150.c	/^h15hello()$/
+hello	tcap.c	/^hello()$/
+hellovms	vmsvt.c	/^hellovms()$/
+help	bind.c	/^help(f, n)	\/* give me some help!!!!$/
+hp15bcol	hp150.c	/^hp15bcol()	\/* we really can't do colors here, so j/
+hp15beep	hp150.c	/^hp15beep()$/
+hp15eeol	hp150.c	/^hp15eeol()$/
+hp15eeop	hp150.c	/^hp15eeop()$/
+hp15fcol	hp150.c	/^hp15fcol()	\/* we really can't do colors here, so j/
+hp15move	hp150.c	/^hp15move(row, col)$/
+hp15parm	hp150.c	/^hp15parm(n)$/
+hp15rev	hp150.c	/^hp15rev(status)		\/* change the reverse video statu/
+hpflush	hp150.c	/^hpflush()$/
+ibmbcol	ibmpc.c	/^ibmbcol(color)		\/* set the current background colo/
+ibmbeep	ibmpc.c	/^ibmbeep()$/
+ibmclose	ibmpc.c	/^ibmclose()$/
+ibmeeol	ibmpc.c	/^ibmeeol()	\/* erase to the end of the line *\/$/
+ibmeeop	ibmpc.c	/^ibmeeop()$/
+ibmfcol	ibmpc.c	/^ibmfcol(color)		\/* set the current output color *\//
+ibmhello	ibmpc.c	/^ibmhello()$/
+ibmmove	ibmpc.c	/^ibmmove(row, col)$/
+ibmopen	ibmpc.c	/^ibmopen()$/
+ibmputc	ibmpc.c	/^ibmputc(ch)	\/* put a character at the current posi/
+ibmrev	ibmpc.c	/^ibmrev(state)		\/* change reverse video state *\/$/
+ifile	file.c	/^ifile(fname)$/
+indent	random.c	/^indent(f, n)$/
+insbrace	random.c	/^insbrace(n, c)	\/* insert a brace into the text her/
+insfile	file.c	/^insfile(f, n)$/
+inspound	random.c	/^inspound()	\/* insert a # into the text here...we a/
+insspace	line.c	/^insspace(f, n)	\/* insert spaces forward into text /
+inword	word.c	/^inword()$/
+isearch	isearch.c	/^isearch(f, n)$/
+istring	random.c	/^istring(f, n)	\/* ask for and insert a string into /
+kbdtext	input.c	/^kbdtext(buf)	\/* add this text string to the curren/
+kdelete	line.c	/^kdelete()$/
+keycoff	hp150.c	/^keycoff()	\/* turn keycode mode off *\/$/
+keycon	hp150.c	/^keycon()	\/* turn keycode mode on *\/$/
+killbuffer	buffer.c	/^killbuffer(f, n)$/
+killpara	word.c	/^killpara(f, n)	\/* delete n paragraphs starting wit/
+killregion	region.c	/^killregion(f, n)$/
+killtext	random.c	/^killtext(f, n)$/
+kinsert	line.c	/^kinsert(c)$/
+lalloc	line.c	/^lalloc(used)$/
+lback	estruct.h	/^#define lback(lp)       ((lp)->l_bp)$/
+lback	estructp.h	/^#define lback(lp)       ((lp)->l_bp)$/
+lchange	line.c	/^lchange(flag)$/
+lckerror	lock.c	/^lckerror(errstr)	\/* report a lock error *\/$/
+lckhello	lock.c	/^lckhello()	\/* dummy function *\/$/
+ldelete	line.c	/^ldelete(n, kflag)$/
+ldelnewline	line.c	/^ldelnewline()$/
+lforw	estruct.h	/^#define lforw(lp)       ((lp)->l_fp)$/
+lforw	estructp.h	/^#define lforw(lp)       ((lp)->l_fp)$/
+lfree	line.c	/^lfree(lp)$/
+lgetc	estruct.h	/^#define lgetc(lp, n)    ((lp)->l_text[(n)]&0xFF)$/
+lgetc	estructp.h	/^#define lgetc(lp, n)    ((lp)->l_text[(n)]&0xFF)$/
+linsert	line.c	/^linsert(n, c)$/
+listbuffers	buffer.c	/^listbuffers(f, n)$/
+llength	estruct.h	/^#define llength(lp)     ((lp)->l_used)$/
+llength	estructp.h	/^#define llength(lp)     ((lp)->l_used)$/
+lnewline	line.c	/^lnewline()$/
+lock	lock.c	/^lock(fname)$/
+lockchk	lock.c	/^lockchk(fname)$/
+lockrel	lock.c	/^lockrel()$/
+lowerregion	region.c	/^lowerregion(f, n)$/
+lowerword	word.c	/^lowerword(f, n)$/
+lputc	estruct.h	/^#define lputc(lp, n, c) ((lp)->l_text[(n)]=(c))$/
+lputc	estructp.h	/^#define lputc(lp, n, c) ((lp)->l_text[(n)]=(c))$/
+makelist	buffer.c	/^makelist()$/
+makename	file.c	/^makename(bname, fname)$/
+match_pat	isearch.c	/^int match_pat (patrn)	\/* See if the pattern string/
+meta	main.c	/^meta()	\/* dummy function for binding to meta prefi/
+mlerase	display.c	/^mlerase()$/
+mlputf	display.c	/^mlputf(s)$/
+mlputi	display.c	/^mlputi(i, r)$/
+mlputli	display.c	/^mlputli(l, r)$/
+mlputs	display.c	/^mlputs(s)$/
+mlreply	input.c	/^mlreply(prompt, buf, nbuf)$/
+mlreplyt	input.c	/^mlreplyt(prompt, buf, nbuf, eolchar)$/
+mlwrite	display.c	/^mlwrite(fmt, arg)$/
+mlyesno	input.c	/^mlyesno(prompt)$/
+modeline	display.c	/^modeline(wp)$/
+movecursor	display.c	/^movecursor(row, col)$/
+mvdnwind	window.c	/^mvdnwind(f, n)$/
+mvupwind	window.c	/^mvupwind(f, n)$/
+namebuffer	buffer.c	/^namebuffer(f,n)		\/*	Rename the current buffer	*\/$/
+namedcmd	exec.c	/^namedcmd(f, n)$/
+newline	random.c	/^newline(f, n)$/
+nextbuffer	buffer.c	/^nextbuffer(f, n)	\/* switch to the next buffer in t/
+nextwind	window.c	/^nextwind(f, n)$/
+nxtarg	exec.c	/^nxtarg(tok)$/
+onlywind	window.c	/^onlywind(f, n)$/
+openhp	hp150.c	/^openhp()		\/* open the HP150 keyboard for input *\/$/
+openline	random.c	/^openline(f, n)$/
+pipe	spawn.c	/^pipe(f, n)$/
+prevwind	window.c	/^prevwind(f, n)$/
+promptpattern	isearch.c	/^int promptpattern(prompt)$/
+putline	display.c	/^putline(row, col, buf)$/
+putnpad	tcap.c	/^putnpad(str, n)$/
+putpad	tcap.c	/^putpad(str)$/
+qreplace	search.c	/^qreplace(f, n)	\/*	search and replace with query (E/
+quickexit	main.c	/^quickexit(f, n)$/
+quit	main.c	/^quit(f, n)$/
+quote	random.c	/^quote(f, n)$/
+rawoff	hp150.c	/^rawoff()	\/* put the HP150 keyboard into COOKED mod/
+rawon	hp150.c	/^rawon()		\/* put the HP150 keyboard into RAW mode */
+rdonly	main.c	/^rdonly()$/
+readin	file.c	/^readin(fname, lockfl)$/
+readpattern	search.c	/^readpattern(prompt)$/
+reeat	isearch.c	/^int reeat(c)$/
+reframe	display.c	/^reframe(wp)$/
+refresh	window.c	/^refresh(f, n)$/
+replaces	search.c	/^replaces(kind, f, n)$/
+reposition	window.c	/^reposition(f, n)$/
+resize	window.c	/^resize(f, n)$/
+restwnd	window.c	/^restwnd(f, n)		\/* restore the saved screen *\/$/
+risearch	isearch.c	/^int risearch(f, n)$/
+rtfrmshell	spawn.c	/^rtfrmshell()$/
+savewnd	window.c	/^savewnd(f, n)		\/* save ptr to current window *\/$/
+scanmore	isearch.c	/^int scanmore(patrn,dir,sts)	\/* search forward or b/
+scinit	ibmpc.c	/^scinit()	\/* initialize the screen head pointers *\//
+scrnextdw	window.c	/^scrnextdw(f, n)		\/* scroll the next window down (f/
+scrnextup	window.c	/^scrnextup(f, n)		\/* scroll the next window up (bac/
+scwrite	ibmpc.c	/^scwrite(row, outstr, forg, bacg)	\/* write a line o/
+setfillcol	random.c	/^setfillcol(f, n)$/
+setgmode	random.c	/^setgmode(f, n)	\/* prompt and set a global editor m/
+setmark	basic.c	/^setmark(f, n)$/
+setmode	random.c	/^setmode(f, n)	\/* prompt and set an editor mode *\/$/
+showcpos	random.c	/^showcpos(f, n)$/
+shrinkwind	window.c	/^shrinkwind(f, n)$/
+spawn	spawn.c	/^spawn(f, n)$/
+spawncli	spawn.c	/^spawncli(f, n)$/
+splitwind	window.c	/^splitwind(f, n)$/
+sreplace	search.c	/^sreplace(f, n)	\/*	Search and replace (ESC-R)	*\/$/
+startup	bind.c	/^startup(sfname)$/
+storemac	exec.c	/^storemac(f, n)$/
+swapmark	basic.c	/^swapmark(f, n)$/
+swbuffer	buffer.c	/^swbuffer(bp)	\/* make buffer BP current *\/$/
+sys	spawn.c	/^sys(cmd)$/
+sys	spawn.c	/^sys(cmd, tail)$/
+system	spawn.c	/^#define	system(a)	spawnlp(P_WAIT, a, NULL)$/
+system	spawn.c	/^system(cmd)$/
+tab	random.c	/^tab(f, n)$/
+tcapbcol	tcap.c	/^tcapbcol()	\/* no colors here, ignore this *\/$/
+tcapbeep	tcap.c	/^tcapbeep()$/
+tcapeeol	tcap.c	/^tcapeeol()$/
+tcapeeop	tcap.c	/^tcapeeop()$/
+tcapfcol	tcap.c	/^tcapfcol()	\/* no colors here, ignore this *\/$/
+tcapmove	tcap.c	/^tcapmove(row, col)$/
+tcapopen	tcap.c	/^tcapopen()$/
+tcaprev	tcap.c	/^tcaprev(state)		\/* change reverse video status *\/$/
+ttclose	termio.c	/^ttclose()$/
+ttflush	termio.c	/^ttflush()$/
+ttgetc	termio.c	/^ttgetc()$/
+ttopen	termio.c	/^ttopen()$/
+ttputc	termio.c	/^ttputc(c)$/
+ttputs	vmsvt.c	/^ttputs(string)$/
+twiddle	random.c	/^twiddle(f, n)$/
+typahead	termio.c	/^typahead()$/
+unbindkey	bind.c	/^unbindkey(f, n)$/
+undefkey	hp150.c	/^undefkey()	\/* change all special keys to intercept/
+uneat	isearch.c	/^int uneat()$/
+unlock	lock.c	/^unlock(fname)$/
+unmark	buffer.c	/^unmark(f, n)	\/* unmark the current buffers change /
+updall	display.c	/^updall(wp)$/
+update	display.c	/^update(force)$/
+updateline	display.c	/^updateline(row, vp1)$/
+updateline	display.c	/^updateline(row, vp1, vp2)$/
+upddex	display.c	/^upddex()$/
+updext	display.c	/^updext()$/
+updgar	display.c	/^updgar()$/
+updone	display.c	/^updone(wp)$/
+updpos	display.c	/^updpos()$/
+updupd	display.c	/^updupd(force)$/
+upmode	display.c	/^upmode()	\/* update all the mode lines *\/$/
+upperregion	region.c	/^upperregion(f, n)$/
+upperword	word.c	/^upperword(f, n)$/
+upscreen	display.c	/^upscreen(f, n)$/
+usebuffer	buffer.c	/^usebuffer(f, n)$/
+viewfile	file.c	/^viewfile(f, n)	\/* visit a file in VIEW mode *\/$/
+vmsbcol	vmsvt.c	/^vmsbcol()$/
+vmsbeep	vmsvt.c	/^vmsbeep()$/
+vmseeol	vmsvt.c	/^vmseeol()$/
+vmseeop	vmsvt.c	/^vmseeop()$/
+vmsfcol	vmsvt.c	/^vmsfcol()$/
+vmsgtty	vmsvt.c	/^vmsgtty()$/
+vmsmove	vmsvt.c	/^vmsmove(row, col)$/
+vmsopen	vmsvt.c	/^vmsopen()$/
+vmspad	vmsvt.c	/^vmspad(count)$/
+vmsrev	vmsvt.c	/^vmsrev(status)$/
+vt52bcol	vt52.c	/^vt52bcol()	\/* set the background color [NOT IMPLIM/
+vt52beep	vt52.c	/^vt52beep()$/
+vt52eeol	vt52.c	/^vt52eeol()$/
+vt52eeop	vt52.c	/^vt52eeop()$/
+vt52fcol	vt52.c	/^vt52fcol()	\/* set the forground color [NOT IMPLIME/
+vt52move	vt52.c	/^vt52move(row, col)$/
+vt52open	vt52.c	/^vt52open()$/
+vt52rev	vt52.c	/^vt52rev(status)	\/* set the reverse video state *\/$/
+vteeol	display.c	/^vteeol()$/
+vtinit	display.c	/^vtinit()$/
+vtmove	display.c	/^vtmove(row, col)$/
+vtputc	display.c	/^vtputc(c)$/
+vtpute	display.c	/^vtpute(c)$/
+vttidy	display.c	/^vttidy()$/
+wordcount	word.c	/^wordcount(f, n)$/
+wpopup	window.c	/^wpopup()$/
+wrapword	word.c	/^wrapword(n)$/
+writemsg	random.c	/^writemsg(f, n)$/
+writeout	file.c	/^writeout(fn)$/
+yank	line.c	/^yank(f, n)$/
+zotbuf	buffer.c	/^zotbuf(bp)	\/* kill the buffer pointed to by bp *\/$/

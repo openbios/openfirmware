@@ -1,0 +1,94 @@
+;	EMACS.RC:	Startup file for MicroEMACS 3.4
+;
+;			This file is executed everytime the
+;			editor is entered
+
+;	***** Rebind the Function key group
+
+bind-to-key execute-macro-11		FNP
+bind-to-key execute-named-command	FNQ
+bind-to-key hunt-forward		FNW
+bind-to-key hunt-backward		FNx
+bind-to-key next-window			FNt
+bind-to-key find-file                   FNu
+bind-to-key save-file			FNq
+bind-to-key exit-emacs			FNr
+
+;	set screen colors
+add-global-mode "blue"
+
+;	Enter Help
+11 store-macro
+	help
+	8 resize-window
+	bind-to-key execute-macro-12 FN? ; page up
+	bind-to-key execute-macro-13 FN/ ; page down
+	bind-to-key execute-macro-14 FNP ; fixed
+	add-mode "red"
+	begining-of-file
+	2 forward-character
+	clear-message-line
+[end]
+
+;	bring up the function key window
+1 store-macro
+	2 split-current-window
+	select-buffer "Function Keys"
+	add-mode "red"
+	begining-of-file
+	2 resize-window
+	insert-string "      F1 Help on/off       F5 Open File       F6 Save File       F7 Exit"
+	newline
+	insert-string "            Move with arrow keys, PageUp, PageDown, Home, and End"
+	begining-of-file
+	unmark-buffer
+;	bind-to-key execute-macro-15 FNT
+	next-window
+[end]
+
+; reselect function key window
+15 store-macro
+	2 split-current-window
+	select-buffer "Function Keys"
+	begining-of-file
+	2 resize-window
+	add-mode "red"
+	next-window
+[end]
+
+;	consult file
+3 store-macro
+	2 split-current-window
+	previous-window
+	view-file "@File to Consult: "
+	8 resize-window
+	add-mode "green"
+	add-mode "Black"
+	next-window
+[end]
+
+;	Exit Help
+14 store-macro
+	bind-to-key previous-page FN?
+	bind-to-key next-page FN/
+	bind-to-key execute-macro-11 FNP ; fixed
+	delete-window
+	clear-message-line
+[end]
+
+;	last help page
+12 store-macro
+	begining-of-line
+	search-reverse "=>"
+	1 redraw-display
+[end]
+
+;	next help page
+13 store-macro
+	begining-of-line
+	2 forward-character
+	search-forward "=>"
+	1 redraw-display
+[end]
+
+execute-macro-1

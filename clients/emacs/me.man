@@ -1,0 +1,810 @@
+From: sun!oliveb!hplabs!hp-pcd!craig 
+Article 2071 of net.emacs:
+Relay-Version: version B 2.10.2 9/18/84 SMI; site sun.uucp
+Posting-Version: notesfiles - hp 1.2 08/01/83; site hp-pcd.UUCP
+Path: sun!oliveb!hplabs!hp-pcd!craig
+>From: craig@hp-pcd.UUCP (craig)
+Newsgroups: net.emacs
+Subject: Re: MicroEmacs manual
+Message-ID: <9900002@hpcvlo.UUCP>
+Date: 20 Jul 86 06:38:00 GMT
+Date-Received: 21 Jul 86 23:22:09 GMT
+References: <9900001@hpcvlo.UUCP>
+Organization: Hewlett-Packard - Corvallis, OR
+Lines: 583
+Nf-ID: #R:hpcvlo:9900001:hpcvlo:9900002:000:25482
+Nf-From: hpcvlo!craig    Jul 19 22:38:00 1986
+
+
+	ME Documentation
+For the most part, read the Goslings or Unipress EMACS manuals.
+
+Soft keys and Function keys
+keyboard      ME key	Bound to
+   F1		~1
+   F2		~2
+   F3		~3
+   F4		~4
+   F5		~5
+   F6		~6
+   F7		~7
+   F8		~8
+   F9		~9
+   F10		~0
+  home		~A	(mark-and-home)
+  end		~B	(mark-and-end)
+  up arrow	~C	(previous-line)
+  down arrow    ~D	(next-line)
+  right arrow   ~E	(forward-character)
+  left arrow    ~F	(backward-character)
+  insert 	~G	(center-cursor)
+  delete	~H	(delete-char)
+  page up	~I	(previous-page)
+  page down	~J	(next-page)
+  clear line	~K	(kill-line)
+  delete line	~L	(delete-line)
+  insert line	~M	(insert-line)
+  select	~N	(set-mark)
+  roll up 	~O	(scroll-down)
+  roll down 	~P	(scroll-up)
+
+  ALT 0..9A..Z!	mapped to META 0..9A..Z!
+  Use the ALT key like the control key (ie hold it down while you press the
+    next key).
+
+Anytime you are being queried on the message line the softkeys return
+their internal value.  So if you want to bind F1, you can press F1
+when bind-to-key asks for a key.
+
+Case of letters:
+  Meta keys and Control X commands: next letter is ALWAYS uppercase.
+  Softkeys are case sensitive.
+
+TERMS
+args	Parameters or arguments that will be requested by the command.  If
+   [] surround the arg, then it will only be requested in certain cases.
+binding	See bound.
+bound	A key is attached or bound to a command or program.  If the key is
+   pressed, whatever it is bound to is invoked.
+buffer	A buffer is the internal workspace.  If a buffer is visible, it is
+   shown through one or more windows.  It is usually attached to a file (ie
+   contains the contents of the file).  If the buffer is created by reading
+   in a file, the buffer name is created by removing the path from it (and
+   leaving only the name and extension).
+command	A ME built in command such as (search-forward).  These can be bound
+   to a key to make executing them easier.
+dot	The place between two characters.  It is immediately to the left of
+   the cursor.  Also known as point.  One per window or buffer.
+file	
+   For MS-DOS, you can use forward slashes "/" as part of the path name.
+Kill buffer	An invisible buffer that holds things created by
+   (kill-region) and (copy-region).  Used to cut and paste or just paste.
+  If you want to move a block of text about: 1, set the mark at one end
+    and then move the dot to the other end.  2, kill the region. 3, move
+    the dot to the start of where you want the text to begin and 4, yank
+    the kill buffer.  Bingo.
+  Copy and kill append to the kill buffer if last command was also a
+    kill or copy, otherwise the kill buffer is cleared before the new text
+    is entered.
+macro	A sequence of keystrokes that can be replayed on command.  Used
+   when you don't want to spend the time writing a program.  Created by
+   going through the motions (which are actually done so you can verify
+   that what you want to happen is actually happening) (see (start-macro)
+   and (end-macro)).  When replayed, the exact sequence you typed in is
+   reentered.
+mark	A user settable dot.  One per window or buffer.
+message line or
+minibuffer	The bottom line of the screen.  This is the
+   place where all questions are asked, error messages sent, etc.
+MUT	The built in programming language.  Refer to the MUT documentation.
+n	Argument prefix (set by ^U).  This means repeat the key (or what
+   its bound to) or command n times.  If ^U is not used then n
+   defaults to 1.
+program	A program created by (defun).  Very few of these are builtin - most
+  of them are created by the user to make his editing easier.
+region	The area between dot and mark.
+window	A portion of the screen.  A window provides a view of a buffer.
+   There can be more than one window showing a buffer.  Windows are
+   separated from each by a mode line.  Mode lines look like:
+   -* MicroEMACS -- buffer_name -- file_name ---------------
+   The * is present only if the buffer has been modified.  The
+   file_name is present only if a file is associated with the buffer.
+word	A string of letters, digits, "$" or "_".
+
+COMMAND	 default binding, args and comments
+(abort)		^G
+  Back out of anything.
+  If remembering a macro, forget it.
+  If executing a program, stop it.
+(apropos)	$?	args: keyword
+  List all commands and programs that have a keyword in them.  For example,
+    if you apropos commands with "mark" in them you would get:
+	PROGRAMS:
+	mark-and-end               ~B
+	mark-and-home              ~A
+	COMMANDS:
+	exchange-dot-and-mark      ^X^X 
+	set-mark                   ^@ $SPACE ~N
+    On the left is the command name.  On the right is the key(s) it is
+    bound to.  So, in this case, (set-mark) is bound to control-@,
+    escape-space and softkey-N.
+  Command completion is on.
+  See also: (describe-bindings).
+
+(backward-character)	^B ~F (left arrow)
+  Move the dot backwards by a character.
+  See also: (forward-character).
+(backward-word)		$B
+  Move backwards until dot is at the beginning of a word or beginning of
+    buffer.
+  Word is a digit, letter, "$" or "_".
+  See also: (delete-previous-word), (delete-next-word), (forward-word).
+(beginning-of-buffer)	$<
+  Move the dot to the top of the buffer.
+  See also: (end-of-buffer), (mark-and-end), (mark-and-home).
+(beginning-of-line)	^A
+  Move the dot to the start of the line.
+  See also: (end-of-line).
+(bind-to-key)		Not bound.	args: command name, keystroke(s)
+  Attach a key to a command or program.  When ever the key is pressed, the
+    command or program will be executed (except when a question is being
+    asked).
+  Possible keys are single key strokes, soft keys and double keystrokes.
+    Double keystrokes are prefixed keys.  Prefix keys are: ^X
+    and escape (^[).  They can be prefixed to any key except soft keys.
+  When asked for the key you can press the key(s) or enter the keycode.
+    Keycodes are ascii (ie no control characters and such) representations
+    of a key.  For example, escape-D is represented by the 3 characters ^[D,
+    control-C by the 2 characters ^C and function key 1 (aka soft key 1) by
+    ~1.  Keycodes should be used when programming to avoid screwing up
+    things like printers (when you print out the file).
+    eg (bind-to-key "foo" "~1")
+    Note: Always use uppercase for control keys.
+  Command completion is on.
+  See also: (defun).
+
+(case-region-lower)	^X^L
+  Convert a region to lower case.
+(case-region-upper)	^X^U
+  Convert a region to upper case.
+(case-word-capitalize)	$C
+  Capitalize word after dot.
+  If dot is between words, searches forward to the start of the next word
+    and capitalizes that one.
+(case-word-lower)	$L
+  Convert word to lower case.
+  If dot is between words, searches forward to the start of the next word
+    and lower case that one.
+(case-word-upper)	$U
+  Convert word to upper case.
+  If dot is between words, searches forward to the start of the next word
+    and upper case that one.
+(center-cursor)		~G (insert)
+  Center the dot vertically in the current window.
+  Same as (arg-prefix 0) (reposition-window).
+  See also: (refresh-screen), (reposition-window).
+(completion)		Not bound	args: word to complete
+  Asks for a command, allows command completion and inserts the
+    command.  The arg prefix selects the list to be completed
+    Selector: or the lists you want (default is 3 (system & program)).
+	bit   value	list
+	 0	1	system keywords
+	 1	2	program names
+   	 2	4	MUT keywords
+   	 3	8	buffer names
+(copy-region)		$W
+  Copy a region to the kill buffer.  If the last command was
+    a kill command, append to the kill buffer.  The region is uneffected.
+  See also: (kill-region), (yank-from-killbuffer).
+
+(decompile)		Not bound	args: program name
+  Dump a program at the dot.  It is ready to be recompiled
+    (with (execute-buffer) or (load)) but will need to be formatted before
+    you save it to a file.
+  Command completion is on.
+  See also: (defun).
+(delete-blank-lines)	Not bound
+  Delete blank line above and below the dot.  If the dot is not on a blank
+    line, this command does nothing.  A blank line is one with nothing on
+    it (and that includes whitespace).  Does not put deleted lines
+    in kill buffer.
+(delete-char)		^D or ~H (delete)
+  Delete the character after the dot (visually under the cursor).  If at
+    the end of the line, the next line is joined to the current line.  If
+    given an argument, deleted characters are put into the kill buffer.
+(delete-line)		~L (delete line)
+  Make a line disappear.  Saved to the kill buffer.
+  Same as (beginning-of-line) (arg-prefix 1) (kill-line).
+(delete-next-word)	$D
+  Delete a word.  Save them in the kill buffer.
+(delete-other-windows)	^X1
+  Make the current window the only window on the screen.
+  See also: (split-window).
+(delete-previous-character)	^H or DEL
+  Delete the character before the dot (visually to the left of the cursor).
+    If at the beginning of the line, the current line is joined to the end
+    of the previous line.  If given an argument, deleted characters are put
+    into the kill buffer.
+(delete-previous-word)	$DEL or $^H
+  Delete the previous word.  Save them in the kill buffer.
+(describe-bindings)	Not bound
+  List all commands and programs along with their key bindings in the same
+    format as (apropos).
+  See also: (apropos).
+(describe-key)		Not bound	args: keystroke(s)
+  Tell what command a key is bound to.  If n, inserts the command name.
+  For example, (describe-key "^A") returns "^A is bound to
+  beginning-of-line".
+  For MUT programmer types, a handy program is:
+  (defun "deref-key"	; surround a command with braces
+  {
+    (set-mark) (let-user-respond) (arg-prefix 1)	; get a key
+    (if (describe-key)	; if it is bound put braces around it
+    {
+	(insert-text ")") (exchange-dot-and-mark) (insert-text "(")
+	(exchange-dot-and-mark)
+    } {})
+  })
+  This allows programming using keys rather than remembering command
+    names.
+  See also: (completion), (apropos).
+
+(end-macro)	^X)
+  Stop remembering keystrokes.  The keystrokes are stored in the macro
+    buffer ready to be replayed by (execute-macro).
+  See also: (execute-macro), (start-macro).
+(end-of-buffer)	$>
+  Move the dot to the bottom of the buffer.
+  See also: (beginning-of-buffer), (mark-and-end), (mark-and-home).
+(end-of-line)	^E
+  Move the dot to the end of the line.
+  See also: (beginning-of-line).
+(enlarge-window)	^XZ
+  Enlarge the current window by a line.
+  See also: (shrink-window).
+(exchange-dot-and-mark)	^X^X
+  Move the dot to the mark and set the mark to old dot value.  Visually,
+    move to where the mark was set.  Repeating this command will undo it.
+  See also: (set-mark).
+(execute-buffer)	Not bound	args: buffer name
+  Execute cmds or MUT programs in a buffer.  You can't execute the buffer you
+    are in (since if you changed the buffer you would change the program
+    which would probably tank ME).  The dot will track the pc (program
+    counter) so, if there is an error, the dot will (hopefully) be right 
+    after the error (when you switch to the buffer).  If you are single
+    stepping, ^L will cause the code that is executing to be on screen
+    (assuming the buffer is on screen).
+  Command completion is on.
+  See also: (execute-line), (load), document on MUT programming.
+(execute-extended-command)	$X	args: command or program name
+  Execute a command or program.  ie one of the things listed in this
+    document.  When asked what to Execute: use the name as listed here
+    (without the "()"'s).  eg Execute: execute-extended-command
+  Command completion is in effect.
+(execute-line)		$$	args: MUT code
+  Execute one line of MUT code.  eg (= HELP 0) or (bind-to-key "foo" "^F")
+  See also: (execute-buffer).
+(execute-macro)		^XE
+  Replay the keystrokes saved in the macro buffer.
+  See also: (start-macro), (end-macro).
+(execute-monitor-command)	^X!	args: op sys command
+  Call the operating system to perform a command or run a program and then
+    return to editing.
+  MS-DOS example:  To copy a file: (execute-monitor-command "copy foo bar")
+    To get a directory listing: (execute-monitor-command "ls").
+  See also: (spawn-cli).
+(exit)			^C or ^X^C	args: [yes or no]
+  Exit emacs.  If there is a modified buffer (one that has changed since it
+    was last saved), ask the user the user about it.
+  If n, quit no matter what and without making any noise.
+  See also: (quick-exit).
+
+(filter-region)		Not bound	args: filter name
+  Take a region and give to a filter as standard input.
+  Take the output of the filter and use it to replace the region.
+  For example:  If the region is a paragraph and adjust is a program that
+    formats text then (filter-region "adjust") will replace the paragraph
+    with a formatted copy.
+    If you don't want to remove anything, just make a null region (set the
+    mark at the dot).  eg (set-mark)(filter-region "ls") will insert a
+    directory listing at the dot.
+(forward-character)	^F or ~E (right arrow)
+  Move right a character.
+  See also: (backward-character).
+(forward-word)		$F
+  Move forwards until dot is after the end of a word or end of buffer.
+  Word is a digit, letter, "$" or "_".
+  See also: (backward-word), (delete-previous-word), (delete-next-word).
+
+(goto-line)		$G
+  Goto the nth line.
+
+(insert-file)		^X^I	args: file name
+  Insert a file at the dot.
+  See also: (read-file), (visit-file), (write-file).
+(insert-line)		~M (insert line)
+  Same as (beginning-of-line) (open-line)
+
+(kill-buffer)		^XK	args: buffer name, [yes or no]
+  Remove a buffer.  It disappears into ness-ness land.  Ask if the buffer
+    has been modified.  If the buffer is the only one on the screen,
+    replace it with the (next-buffer).  If it is the only buffer, replace
+    it with "main".
+  Defaults to the current buffer.
+  Command completion is on.
+  See also: (delete-other-windows).
+(kill-line)		^K or ~K (clear line)
+  Delete text from dot to the end of the line.
+    If an argument is given:
+	If n = 0: kill from beginning of line to dot.
+	If n > 0: kill forward over n newlines.
+	If n < 0: kill backword over n newlines.
+  The deleted text is put into the kill buffer or appended to the kill
+    buffer if the last command was also a kill command.
+  See also: (delete-next-word), (delete-previous-word),
+    (yank-from-killbuffer).
+(kill-region)		^W
+  Delete a region and save it in the kill buffer.  If the last command was
+    a kill command, append to the kill buffer.
+  See also: (copy-region), (yank-from-killbuffer).
+
+(list-buffers)		^X^B
+  List all the buffers currently loaded.  Magic buffers are not listed
+  (such as the list-buffers buffer).
+	C   Size Buffer           File
+	-   ---- ------           ----
+	     933 init.mut         ../init.mut
+	*  14287 me.doc           me.doc
+  C is * if the buffer is modified.  Size in bytes of the buffer or file.
+  File is the name of the file associated with a buffer.
+(load)		Not bound	args: file name
+  Load a file filled with MUT commands.
+  The file "init.mut" is loaded when ME is fired up (unless it does not
+  exist).
+  If the file is not in the current directory, it is looked
+    for in ME directory (pointed to by the ME environment variable).  Note
+    that the ME var must end with a slash (eg ME=A:\foo\).
+  See also: (execute-buffer), (execute-line), document on MUT programming.
+(mark-and-end)		~B (end)
+  Same as (set-mark) (end-of-buffer).
+  See also: (beginning-of-buffer), (end-of-buffer), (mark-and-home).
+(mark-and-home)		~A (end)
+  Same as (set-mark) (beginning-of-buffer).
+  See also: (beginning-of-buffer), (end-of-buffer), (mark-and-end).
+
+(newline)		^M
+  Insert a newline before the dot (visually before the cursor).
+  See also: (newline-and-indent), (open-line).
+(newline-and-indent)	^J
+  Insert a newline before the dot and duplicate the indentation of the
+    previous line (the one the dot just left).
+  See also: (newline), (open-line).
+(next-buffer)		Not bound
+  Replace the current buffer with the next buffer in the
+    buffer list.  The buffer list is in alphabetical order.
+  See also:  (list-buffers), (switch-to-buffer), (use-old-buffer).
+(next-line)		^N or ~D (down arrow)
+  Move the dot vertically down the screen.  Trys to stay in the same
+    column.
+  See also: (previous-line).
+(next-page)		^V or ~J (page down)
+  Scroll forwards a page (window size -2).
+  See also: (previous-page).
+(next-window)		^XN
+  Move to the next window down the screen and make it the current window.
+  See Also: (previous-window)
+(not-modified)		Not bound
+  Mark the current buffer as not modified.  When this has been done,
+    (save-buffer) will not write out the file until further changes are
+    made, (exit) won't complain about modified buffer, etc.
+
+(open-line)		^O (oh, not zero)
+  Insert a newline after the dot.  The dot does not move.
+  See also: (newline), (newline-and-indent).
+
+(previous-line)		^P or ~C (up arrow)
+  Move the dot vertically up the screen.  Trys to stay in the same
+    column.
+  See also: (next-line).
+(previous-page)		$V or ~I (page up)
+  Scroll backwards a page (window size -2).
+  See also: (next-page).
+(previous-window)	^XP
+  Move to the window immediately above the current window and make it the
+  current window.
+  See also: (next-window).
+
+(query-replace)		$Q	args: search string, replace string
+  Interactively search and replace strings.  The mark is set at the point
+    where the search started and returned there after a successful
+    (query-replace).
+  <ESC>,n,N : No, don't replace.  Go on to next match.
+  <SPACE>,y,Y : Yes, replace and go to next match.
+  ! : Replace all the rest without asking.
+  ^G : Abort.  The command stops and the cursor is left where it is.  To
+  	get to the start of the query-replace, use (exchange-dot-and-mark).
+  Patterns are saved across searches.  See (search-forward).
+  See also: (replace-string), (search-xxx).
+(quick-exit)		Not bound	args: [yes or no]
+  Write out the current buffer if it has changed, exit.  If any modified
+    buffers exist, ask about them.  If n, don't ask about modified buffers.
+  See also: (exit).
+(quote)			^Q or ^^ (control-^)
+  Insert the next character typed into the buffer.  This is how to get
+    control characters and the like into the buffer.
+  Note: This is not much use with ALT keys or softkeys.
+
+(read-file)		^X^R	args: file name, [yes or no]
+  Clear the current buffer (asking if the buffer has been modified) and read
+    in a file.
+  The file name defaults to the file name of the current buffer.
+  See also: (insert-file), (visit-file), (write-file).
+(refresh-screen)	^L
+  Repaint the screen.  If n, then center the dot vertically in the window.
+  See also: (center-cursor), (reposition-window).
+(rename-buffer)		Not bound	args: new file name
+  Change the file name associated with the current buffer.  If you want to
+    disassociate the buffer from a file, use a null response.
+  Command completion is on.
+(replace-string)	$R	args: search string, replace string
+  Search and replace string without asking.
+  Patterns are saved across searches.  See (search-forward).
+  See also: (query-replace), (search-xxx).
+(reposition-window)	$!
+  Move the current window so that the line the dot is on is n lines
+    from the top of the window.
+  If n<0, move the dot so that it is n lines from the bottom.
+  If n==0, the dot is centered vertically centered in the window.
+  See also: (center-cursor), (refresh-screen).
+
+(save-buffer)		^X^S
+  Write the current buffer to the file associated with it.  Does not
+    do anything if the buffer is unmodified.  If you want to force a write,
+    use (write-file).
+  See also:  (write-file).
+(scroll-down)		^X^N or ~O (oh) (roll up)
+  Move the current window down by a line.  Visually, the dot moves up the
+    screen.
+(scroll-up)		^X^P or ~P (roll down)
+  Move the current window up by a line.  Visually, the dot moves down the
+    screen.
+(search-forward)	^\ or ^S	args: search string
+(search-reverse)	^R		args: search string
+  Search for a string.
+  CR ends patterns, LF (^J) => start of line.
+	The pattern is saved across searches.  The pattern is also the
+	default search pattern for the replace commands.  Whenever the
+	search pattern changes, the replace pattern is cleared (this is so
+	you can replace something with nothing).
+  (search-forward) The dot is after the last character matched.
+  (search-reverse) The dot is before the last character matched, or put
+    another way, to the left of the first character of the search string.
+  See also: (query-replace), (replace-string).
+(set-fill-column)	^XF
+  Sets the column at which wordwrap is attempted.  Wordwrap is also turned
+    on.  If no n the fill-column is set to the current column.  If n==0,
+    turn off wordwrap.
+  See also: Note on wordwrap.
+(set-mark)		^@ or $SPACE or ~N (select)
+  Set the mark at the dot.  Visually, under the cursor.
+  See also: (exchange-dot-and-mark).
+(show-position)		^X=
+  Show stats in the form:
+	Row=rrr Col=c Y=y CH=h .=dddd (x% of z) Unused=a
+  where Row is the buffer row, Col is screen column, Y is screen row, CH is
+    the character after the dot, . is the position of the dot (the number of
+    characters between the beginning-of-buffer and dot), x% percent of the
+    buffer is before the dot, z is the size of the buffer and Unused is how
+    much wasted space there is in the buffer.
+(shrink-window)		^X^Z
+  Shrink the current window by a line.
+  See also: (enlarge-window).
+(spawn-cli)		^_
+  Jump to the operating system (shell) for a while.  ME is still loaded and
+    will sit in the background until you exit the shell (via exit in MS-DOS).
+  See also: (execute-monitor-command).
+(split-window)		^X2
+  Make 2 windows out of the current window.  A window with less than 3
+    lines  cannot be split.
+  See also: (delete-other-windows).
+(start-macro)		^X(
+  Start remembering keystrokes until (end-macro).
+  See also: (end-macro), (execute-macro).
+(switch-to-buffer)	^XB	args: buffer name
+  Replace the current window with another buffer.
+  Command completion is on.
+  See also: (list-buffers), (next-buffer), (use-old-buffer).
+
+(tab)			^I or the tab key
+  Set tab stops or insert a tab.
+  If given an argument then set the tab stops to every nth column.
+    If n==0 use the tab character.
+    If n>1 use spaces to simulate the tab character.
+  If no argument then move to the next tab stop.
+(transpose-characters)	^T
+  Swaps the 2 characters on either side of the dot.  If you want to change
+  "ab" to "ba" then put the cursor on the b and (transpose-characters).
+
+(use-old-buffer)	^X^O (oh)	args: name of existing buffer
+  Replace the current window with a buffer that already exists.
+  Command completion is on.
+  See also: (list-buffers), (switch-to-buffer).
+
+(version)		Not bound
+  Show the current version of ME.
+(visit-file)		^X^F or ^X^V	args: file name
+  Split the current buffer.  If the file (buffer) is already loaded, switch
+    to it.  Otherwise, read in the file.  The dot is set to the beginning of
+    the buffer and the mark is erased.
+  See also: (insert-file), (read-file), (write-file).
+
+(write-file)		^X^W	args: file name
+  Write the current buffer to a file.  If the file existed, it is
+    overwritten.  If the file does not already exist, it is created.
+  The file name defaults to the file name of the current buffer.
+  See also: (insert-file), (read-file), (save-buffer), (visit-file).
+
+(yank-from-killbuffer)	^Y
+  Insert the contents of the killbuffer before the dot (visually before the
+    cursor).  Does not affect the kill buffer.
+  The dot is left after the yanked text.  The mark does not move.
+  See also: (copy-region), (kill-region).
+
+VAR		COMMENTS
+HELP		Set the help level.  0 => no help.
+
+Notes:
+If you are being asked a question:
+  Key bindings are not in effect.  This means if have bound a normal key to
+	something by accident, you can unbind it without undo grief.
+  "Special" keys:
+    ^H or DEL	Backspace.
+    ^G	Abort out of the question.  Also causes command to be aborted.
+    ^I	Tab.
+    ^J	Returns the code for newline.  handy for searches.
+    ^M or return	End the question.
+    ^U	Erase everything and start over.
+    Control keys in general return the code for the key.
+    Function keys	return the function key itself NOT what its bound to.
+
+  If you answer the question by hitting <return or enter> and the line is
+    empty, you have entered the null line zone.  This can be interpreted as:
+	1.  An empty line.  It will then be ignored or complained about or
+	  stop the command.
+	2.  A ^M.  (bind-to-key) does this.
+	3.  A request to the default.  This is usually the current thing
+	  being manipulated (where thing is buffer, file, etc).
+	  eg (write-file) defaults to current file name and (kill-buffer)
+	  defaults to current buffer name.
+
+Command completion is triggered by the SPACE key.  Can be used if the
+	invoked command uses one of the lists that can be completed.
+  See also: (completion).
+
+Marks:  If the mark is at the dot (ie where it is when the mark is set) and
+  do something (insert text, yank text, etc), it is done between the dot
+  and mark, that is, the mark is before the change and the dot after.
+
+Word wrap:  Setting the (set-fill-column)>0 turns it on, 0 turns it off.
+	When you are typing at the end of a line and cross the fill column
+	the last "word" is wrapped to the next line.  If have some left
+	margin you wish to preserve, bind CR to newline-and-indent
+	(bind-to-key "newline-and-indent" "^M").
+
+What me does not have that emacs does (partial list):
+* file name completion
+* local key bindings
+* over write mode
+* recursive editing
+* regular expressions
+bunch more
+
+
+From: sun!oliveb!hplabs!hp-pcd!craig 
+Article 2072 of net.emacs:
+Relay-Version: version B 2.10.2 9/18/84 SMI; site sun.uucp
+Posting-Version: notesfiles - hp 1.2 08/01/83; site hp-pcd.UUCP
+Path: sun!oliveb!hplabs!hp-pcd!craig
+>From: craig@hp-pcd.UUCP (craig)
+Newsgroups: net.emacs
+Subject: Re: MicroEmacs manual
+Message-ID: <9900003@hpcvlo.UUCP>
+Date: 20 Jul 86 06:38:00 GMT
+Date-Received: 21 Jul 86 23:22:53 GMT
+References: <9900001@hpcvlo.UUCP>
+Organization: Hewlett-Packard - Corvallis, OR
+Lines: 189
+Nf-ID: #R:hpcvlo:9900001:hpcvlo:9900003:000:6422
+Nf-From: hpcvlo!craig    Jul 19 22:38:00 1986
+
+
+	MICROEMACS  COMMAND  SUMMARY
+	   Note: n means argument prefix (set by ^U).
+		dot is current cursor position.
+	^@	Set mark at current position (dot).
+	^A	Move cursor to beginning of line.
+	^B	Move cursor back one character.
+	^C	Exit without saving buffers (same as ^x^C).
+	^D	Delete current character.  If n then save to kill buffer.
+	^E	Move cursor to end of line.
+	^F	Move cursor forward one character.
+	^G	Abort any command. (shades of Teco).
+	^H	(backspace) Delete previous character.
+		  If n, save to kill buffer.
+	^I	Tab.  If n = 0 use tab.  If n>1, set tab stops & use blanks.
+	^J	Newline and match indent of previous line.
+	^K	Kill (delete) to end of line.
+		  If n = 0: kill from begining of line to dot.
+		  If n > 0: kill forward over n newlines.
+		  If n < 0: kill backword over n newlines.
+	^L	Redisplay screen.  If n, center cursor.
+	^M	Carriage return.
+	^N	Move cursor to next line.
+	^O	Open a new line.
+	^P	Move to previous line.
+	^Q	Quote the next character (insert the next character typed).
+	^R	Reverse search.
+	^S	Forward search.
+	^T	Transpose characters.
+	^U	Enter repeat count for next command (set n).
+	^V	View the next screen (scroll up one screen).
+	^W	Kill region (all text between cursor and last mark set).
+	^Y	Yank (undelete) last text killed (deleted).
+	^_	Push to a new interactive command shell.
+	^^	Quote the next character (same as ^Q).
+	^\	Forward search (same as ^S).
+	
+	^x!	Fork a command.
+	^x(	Begin keyboard macro.
+	^x)	End keyboard macro.
+	^x=	Show current position.
+	^x1	Display only current window.
+	^x2	Split the current window.
+	^xB	Prompt for new buffer.  If given n, buffer must exist.
+	^xE	Execute keyboard macro.
+	^xF	Set fill column (for word wrap).
+		  If n, set to n else set to current column.
+		  if n = 0, turn off word wrap.
+	^xK	Kill a buffer.
+	^xN	Move to next window.
+	^xP	Move to previous window.
+	^xZ	Enlarge current window by n lines.
+	
+	^x^B	Show active buffers.
+	^x^C	Exit without saving buffers.
+	^x^F	Visit file.
+	^x^G	Abort.
+	^x^I	Insert file at dot.
+	^x^L	Lower case region.
+	^x^N	Scroll current window up by n lines.
+	^x^O	Use old buffer.  Same as ^U^xB
+	^x^P	Scroll current window down by n lines.
+	^x^R	Read file into current buffer.  Defaults to current file name.
+	^x^S	Save (write) current buffer to its file.
+		  Only writes if changed.
+	^x^U	Uppercase region.
+	^x^V	Visit a file. Read file and display in current window.
+	^x^W	Write buffer to file.  Defaults to current file name.
+		  Always writes.
+	^x^X	Swap dot and mark.
+	^x^Z	Reduce current window by n lines.
+	
+	<del>	delete previous character.
+	
+	$!	Move current line to n lines from top of window.
+		if n = 0 center cursor.
+	$$	Execute-line.
+	$<space> Set mark.
+	$<	Move cursor to beginning of buffer.
+	$>	Move cursor to end of buffer.
+	$?	List all commands that have keyword in them.
+	$1, $2, $3, $4, $5, $6, $7, $8, $9
+		  Enter n for next command (like ^U).
+	$B	Move cursor back one word.
+	$C	Capitalize word.
+	$D	Delete next word.
+	$<del>	Delete previous word.
+	$F	Move cursor forward one word.
+	$G	Move cusor to line specified by n.
+ 	$^G	Abort.
+	$L	Lowercase next word.
+	$Q	Query replace.  Mark is set to begining of search.
+	$U	Uppercase next word.
+	$V	View the previous screen (scroll down one screen).
+	$W	Copy region to kill buffer.
+	$X	Execute meta command (such as goto-line).  Command
+		  completation when SPACE typed.
+
+      COMMAND			BINDING
+	PROGRAMS:
+	center-cursor              ~G 
+	delete-line                ~L 
+	insert-line                ~M 
+	mark-and-end               ~B 
+	mark-and-home              ~A 
+	COMMANDS:
+	abort                      ^G 
+	apropos                    $? 
+	backward-character         ^B ~F 
+	backward-word              $B 
+	beginning-of-buffer        $< 
+	beginning-of-line          ^A 
+	bind-to-key                Not bound
+	case-region-lower          ^X^L 
+	case-region-upper          ^X^U 
+	case-word-capitalize       $C 
+	case-word-lower            $L 
+	case-word-upper            $U 
+	completion                 Not bound
+	copy-region                $W 
+	decompile                  Not bound
+	delete-blank-lines         Not bound
+	delete-char                ^D ~H 
+	delete-next-word           $D 
+	delete-other-windows       ^X1 
+	delete-previous-character  ^H DEL 
+	delete-previous-word       $DEL $^H 
+	describe-bindings          Not bound
+	describe-key               Not bound
+	end-macro                  ^X) 
+	end-of-buffer              $> 
+	end-of-line                ^E 
+	enlarge-window             ^XZ 
+	exchange-dot-and-mark      ^X^X 
+	execute-buffer             Not bound
+	execute-extended-command   $X 
+	execute-line               $^[ 
+	execute-macro              ^XE 
+	execute-monitor-command    ^X! 
+	exit                       ^C ^X^C 
+	filter-region              Not bound
+	forward-character          ^F ~E 
+	forward-word               $F 
+	goto-line                  $G 
+	insert-file                ^X^I 
+	kill-buffer                ^XK 
+	kill-line                  ^K ~K 
+	kill-region                ^W 
+	list-buffers               ^X^B 
+	load                       Not bound
+	newline                    ^M 
+	newline-and-indent         ^J 
+	next-buffer                Not bound
+	next-line                  ^N ~D 
+	next-page                  ^V ~J 
+	next-window                ^XN 
+	not-modified               Not bound
+	open-line                  ^O 
+	previous-line              ^P ~C 
+	previous-page              $V ~I 
+	previous-window            ^XP 
+	query-replace              $Q 
+	quick-exit                 Not bound
+	quote                      ^^ ^Q 
+	read-file                  ^X^R 
+	refresh-screen             ^L 
+	rename-buffer              Not bound
+	replace-string             $R 
+	reposition-window          $! 
+	save-buffer                ^X^S 
+	scroll-down                ^X^N ~O 
+	scroll-up                  ^X^P ~P 
+	search-forward             ^\ ^S 
+	search-reverse             ^R 
+	set-fill-column            ^XF 
+	set-mark                   ^@ $SPACE ~N 
+	show-position              ^X= 
+	shrink-window              ^X^Z 
+	spawn-cli                  ^_ 
+	split-window               ^X2 
+	start-macro                ^X( 
+	switch-to-buffer           ^XB 
+	tab                        ^I 
+	transpose-characters       ^T 
+	use-old-buffer             ^X^O 
+	version                    Not bound
+	visit-file                 ^X^F ^X^V 
+	write-file                 ^X^W 
+	yank-from-killbuffer       ^Y 
+
+

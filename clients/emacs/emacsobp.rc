@@ -1,0 +1,56 @@
+;	EMACS.RC:	Startup file for MicroEMACS 3.4
+;
+;			This file is executed everytime the
+;			editor is entered
+;
+;	This version of the file contains bindings for Open Firmware.
+
+; Set up bindings
+
+; bind-to-key meta-prefix			`
+
+bind-to-key find-file			^X^V
+bind-to-key delete-window               ^X^D
+bind-to-key next-window			^XN
+bind-to-key search-forward		^S
+bind-to-key search-forward		^\
+bind-to-key search-reverse		^R
+bind-to-key save-file			^XS
+bind-to-key apropos			M-?
+bind-to-key select-buffer		^X^O
+bind-to-key delete-buffer		^XK
+bind-to-key move-window-down		^Z
+bind-to-key move-window-up		M-Z
+
+
+;	set screen colors
+add-global-mode "blue"
+add-global-mode "WHITE"
+
+;	consult file
+3 store-macro
+	2 split-current-window
+	previous-window
+	view-file "@File to Consult: "
+	8 resize-window
+	add-mode "green"
+	add-mode "Black"
+	next-window
+[end]
+
+;	last help page
+12 store-macro
+	begining-of-line
+	search-reverse "=>"
+	1 redraw-display
+[end]
+
+;	next help page
+13 store-macro
+	begining-of-line
+	2 forward-character
+	search-forward "=>"
+	1 redraw-display
+[end]
+
+execute-macro-1

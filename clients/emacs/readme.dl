@@ -1,0 +1,382 @@
+		MicroEMACS 3.7 release notes
+
+	First off, I would like to thank all the people that send in
+various comments, bug fixes and code segments.  I have included as many
+of these as possible in this current source.  All the new features which
+are larger than a couple of lines are IFDEF'ed by symbols in the
+ESTRUCT.H header file.  As long as everyone keeps sending these in, I
+will keep trying to incorporate them, at least in spirit. 
+
+	Installation is fairly straight forward.  Copy or compile the
+appropriate version of the editor into EMACS (EMACS.EXE on MS/PC DOS)
+somewhere on your executable path.  Then copy the emacs.hlp file to one
+of the directories names in the epath.h file for your system.  A startup
+file .emacsrc (EMACS.RC on PC/MS DOS) can be placed in the directory
+pointed to by your HOME environment variable. 
+	
+[	Note for AMIGA users: Lattice 3.02 was giving me some rather
+mysterious software task failure errors while compiling some of the
+modules. Not having the Amiga long enough to solve this, I upgraded to
+Lattice 3.03 and these problems disappeared. If enough people are stuck
+with 3.02 and someone comes up with a fix and sends it to me, I will
+incorporate it into the master sources. Remember to say "stack 16000"
+before compiling the larger files.]
+
+	A new reference manual with a listing of all the commands and
+descriptions is now included.  Commands are listed in logical groups.
+Also coming in the near future will be a beginner's document to replace
+"emacs.tut".
+
+	Also included are two files, "menu.cmd" and "menu1" that make up
+a simple menu driven interface to MicroEMACS 3.7.  For people who prefer
+menu driven interfaces, rename "menu.cmd" as "emacs.rc" and place it
+where a startup file would be expected.  Also find a place for the text
+file "menu1" and change your "emacs.rc" to view-file from that directory
+for "menu1".
+
+	MicroEMACS 3.7 is distributed on three 5 1/4" diskettes, or as one
+3 1/2" diskette, or as apx. ten shell archives.  The shell archives are
+posted to USENET mod.sources and do not include the executable files. 
+The executable PC and AMIGA versions will also be posted in the relevent
+USENET groups. 
+
+Disk ONE contains:
+
+	readme		this file
+
+	acemacs.exe	MSDOS ansi color executable
+	icemacs.exe	PCDOS color executable
+
+	ebind.h		default biding structures
+	edef.h		static global data declarations
+	efunc.h		function names binding table
+	epath.h		help/startup file path definitions
+	estruct.h	structure and configuration header file
+
+	emacs.hlp	online help file
+	emacs.key	command wall chart
+	emacs.rc	standard startup file
+	emacs2.mss	reference manual (in MicroSCRIBE format)
+	emacs.tut	beginers tutorial file
+	makefile	UNIX V7/BSD 4.2 compilation command file
+	azmap.cmd	an example MicroEMACS macro file
+	menu.cmd	Menu driven command driver script
+	menu1		data file for menu.cmd
+
+Disk TWO contains:
+
+	ansi.c		ANSI screen driver
+	basic.c		cursor movement
+	bind.c		bind/unbind and help commands
+	buffer.c	buffer management
+	display.c	display update functions
+	dg10.c		Data General System/10 screen driver
+	exec.c		macro line execution functions
+	file.c		use file commands
+	fileio.c	file I/O functions
+	hp150.c		HP150 screen/keyboard driver
+	ibmpc.c		IBM-PC screen driver
+	input.c		message line input routines
+	isearch.c	interactive search commands
+	line.c		line editing functions
+	lock.c		file locking front end
+	main.c		command line and keyboard command parsing
+	random.c	some random commands
+	region.c	wipe/copy/yank commands
+	search.c	normal search commands
+	spawn.c		DOS interface commands
+	tcap.c		UNIX screen drivers
+	termio.c	Keyboard I/O routines
+	vmsvt.c		VMS screen drivers
+	vt52.c		VT52 screen drivers
+	window.c	window management commands
+	word.c		word move/delete/reformat commands
+
+Disk THREE contains:
+
+	hpemacs.exe	HP150 executable
+	dgemacs.exe	Data General System/10 executable
+	wgemacs.exe	Wang PC executable
+	amemacs.exe	Commodore AMIGA executable
+
+	The next version of MicroEMACS (3.8) will probably not be until
+late fall 1986, but it will probably be accompanied by the first version
+of MicroSCRIBE, a text formater to go along with MicroEMACS.  As I will
+continue to support MicroEMACS, ideas, comments, bug fixes and new code
+should be send to:
+
+	Daniel Lawrence
+	617 New York St
+	Lafayette, IN 47091
+
+	or
+
+	ihnp4!pur-ee!pur-phy!duncan!lawrence on USENET
+
+	and, as before, copies of MicroEMACS 3.7 may be gotten by
+sending a self addressed, self stamped mailer with two 5 1/4" diskettes
+to the above address.
+
+-------------------------------------------------------------------------------
+		MicroEMACS 3.7	-	New Features
+
+***	COLOR!!!!
+
+	The forground and backgound color of buffers may be set
+with the add-mode and add-global-mode commands. Forgound colors
+are set with capitalized color names, and background colors with
+lower case color names. Availible colors are the ANSI color set:
+
+black, blue, red, green, yellow, cyan, magenta, and white
+
+	This feature is only availible on machines that support
+color properly in text mode. (IBM-PC w/color graphics adapter
+and its clones)
+
+***	Pipe command
+
+	The pipe-command (^X-@) command allows you to execute an
+operating system command and send the results into a buffer.
+MicroEMACS will make a buffer by the name of "command" for the
+results. This is only supported on systems that allow I/O redirection.
+
+***	Filter buffer
+
+	The filter-buffer (^X-#) command allows you to send an
+existing buffer's contents through a filter which runs under the
+current operating system. The result replaces the contents of
+the current buffer (beware of non-existant filters). Its a good
+idea to make a backup of the buffer to be filtered.
+
+***	Switchar is fixed
+
+	MicroEMACS under PC/MS DOS no longer cares about the
+setting of the switchar. It uses the DOS call to look it up and
+use it in its fork and system calls.
+
+***	CMODE is configurable
+
+	Automatic entering of CMODE for .c and .h extension
+files is now configurable with the ACMODE symbol in estruct.h
+
+***	Query-replace UNDO command
+
+	While making a query-replace (M-^R) run, the U key now
+undoes the last replace.
+
+***	New cursor position report
+
+	Re-wrote the buffer-position (^X-=) command to give more
+usefull information on # lines in file, current line and column,
+percentage of text before cursor and the hex value of the
+character the cursor is on.
+
+***	Word wrapping improved
+
+	Words are now only broken at spaces and tabs by the word
+wrapping algorithm. No more disapearing punctuation delimiters.
+
+***	IBM-PC Color board display driver
+
+	A new screen driver for the IBM-PC color board is in the
+file IBMPC.C and this vastly improves the paging speed and
+eliminates the retrace flicker. However, under the color
+version, the update while adding text is a little more slugish
+than I would hope. We will be working to improve this in the future.
+
+***	Destroying windows!!
+
+	A new command, delete-window (^X-0 [zero]) allows you to
+delete just the current window from the screen, leaving all the
+others intact, (and one of them bigger). This is very convient
+when you have a lot of windows on the screen.
+
+***	Execute Macro commands
+
+	Buffers holding commands can now be executed as a "macro". The
+names of these buffers is in the form "[Macro nn]" where nn is a number
+from 1 to 20.  Each buffer has a corrosponding execute-macro-nn command,
+the first ten of which are bound to the shifted function keys on the IBM
+versions.
+
+***	Macro loading
+
+	Macroes can be loaded from a command file (or startup file) with
+the use of the store-macro command. For example, to make macro 5 insert
+a blank line at the begining of the current line, one would put the
+following in their startup file:
+
+;	Open up a line before the current line
+
+5 store-macro
+	begining-of-line
+	open-line
+[end]
+
+	more details on this can be found in the standard startup file
+and the reference manual.
+
+***	Clear message line
+
+	Sometimes when executing macroes you want the last command not
+to leave a message on the message line at the bottom of the screen. The
+clear-message-line command does just that.
+
+***	Absolute window resizing
+
+	This new command, resize-window (^X-W) allows you to specify the
+number of lines you wish to have in the current window. For example,
+M 12 ^X W forces the current window to a size of 12 lines if possible.
+
+***	Interactive macro arguments
+
+	When executing a command line, if any of the arguments begin
+with an at sign (@) MicroEMACS will prompt the user for that argument on
+the message line, using whatever text follows. A quick macro
+demonstating this can be:
+
+;	consult file
+2 store-macro
+	2 split-current-window
+	previous-window
+	view-file "@File to Consult: "
+	8 resize-window
+	add-mode "green"
+	add-mode "Black"
+	next-window
+[end]
+
+***	Buffer Macro arguments
+
+	When executing a command line, any arguments begining with a
+pound sign (#) mean that the argument is to be fetched from the current
+line of the named buffer. The point in that buffer is then advanced one
+line if that buffer is not currently being displayed.
+
+***	Split window modified
+
+	The split window command normally leaves the cursor in the window
+where the cursor was originaly. Now a numeric argument of one forces the
+cursor into the upper window, and an argument of 2 forces the cursor
+into the lower window.
+
+***	MicroSoft C compiler support
+
+	The MicroSoft C compiler (version 3) now can be used
+successfully to compile MicroEMACS. Use the large data, small program
+model for best results. Thanks to Oliver Sharp for the needed
+modifications.
+
+***	VMS terminal support upgraded
+
+	VMS now uses the newer terminal modes when executing MicroEMACS.
+Also some bugs were fixed. Both of these are thanks to Guy Streeter.
+
+***	CMODE enhanced
+
+	Lines starting with # as the first non-blank character (ie
+pre-processer directives) force the # into column one.  Also, if
+matching open parenthises and braces are being displayed when the
+closing one is typed, the cursor will breifly flash to the open and
+back.
+
+***	Special character quoting
+
+	When typing in search/replace strings, ^Q quotes the following
+character, allowing keys like <ESC> to be searched for.
+
+***	Bindable prefix keys
+
+	The META and ^X prefixes may now be bound to other keys. Only
+one key may be a prefix key at a time, when one of these is rebound, the
+old key is automatically unbound.
+
+***	New command line options
+
+	@<file>		Specifies an alternative startup file(s) to
+			run instead of emacs.rc or .emacsrc
+
+	-g<n>		go to line <n> of the first file read in
+
+	-s<string>	search the first file for <string> and leave
+			the cursor there.
+
+***	Wang keyboard support
+
+	The Wang-PC keyboard and is function keys are now supported.
+(Define WANG in estruct.h as 1) Thanks to Sid Shapiro for this code.
+
+***	System V support
+
+	Unix system V should now compile and execute MicroEMACS
+properly. Code for this was submited by Linwood Varney.
+
+***	Unix definitions reorginized
+
+	Now only ONE of the unix symbols should be defined when
+compiling on unices.
+
+***	Incremental Search added
+
+	For those clamering for it.....Isearch commands. This code was
+submited by D. R. Banks and seems to work well. (Later we will merge it
+with parts of the normal searching code to conserve space) This is
+availible conditionally depending on the ISRCH symbol in estruct.h
+
+***	Insert string command
+
+	The insert-string command (unbound) allows you to insert text
+into a line from a macro.  This can be used to build special help and
+text screens.
+
+***	Unmark buffer command
+
+	The unmark-command (unbound) allows you to unmark a buffer. 
+This will keep the exit commands from complaining abount unchanged
+buffers.  This is most usefull when you have built up a text screen from
+a macro and have no intention of saving it.
+
+***	Special characters
+
+	Inside of string argument in macroes, the following special
+characters are active:
+
+	~n	newline
+	~t	tab
+	~b	backspace
+	~f	formfeed
+
+***	Fixed large file problems
+
+	Several problems caused by keeping character counts in integers
+have been fixed by making these counts be longs.  Also regions can now
+be larger than 65535 chars.
+
+***	Kill buffer re-coded
+
+	New kill buffer routines should (and do) work faster.  Also an
+unlimited (except by RAM) amount of text can be killed safely.
+
+***	Word counting
+
+	The count-words (M-^C) command counts the number of words,
+characters and lines in the current region.  It also gives an average
+words/character total. 
+
+***	Changed delete-word behavior
+
+	Delete-next-word no longer kills the newline as it deletes tha
+last word on the line.  It does however then delete the newline as it
+deletes the first word on the next line.
+
+***	Next/Previous buffer cammands augmented
+
+	Both now take a numeric argument to switch to the nth window
+from the top/bottom.
+
+***	Data General Support
+
+	MicroEMACS now supprts the Data General System/10 computer under
+MSDOS.
+
+

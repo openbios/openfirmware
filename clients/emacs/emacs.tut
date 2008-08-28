@@ -1,0 +1,636 @@
+You are looking at the MICRO-EMACS tutorial.  Comments on this document
+may be refered to Dana Hoggatt or Dan Lawrance.
+
+EMACS commands generally involve the CONTROL key (sometimes labelled CTRL or 
+CTL) or the META key (generally labelled ESCAPE).  Rather than write out META 
+or CONTROL each time we want you to prefix a character, we'll use the following
+abbreviations:
+
+   ^<chr>   means hold the CONTROL key while typing the character <chr>
+            Thus, ^F would be: hold the CONTROL key and type F.
+
+   ESC-<chr>  means type the ESCAPE key and release it, then type the 
+              character <chr>.  The <chr> can be upper or lower case 
+              and it will have the same meaning.
+
+Important note: if you must exit at some point, type ^X ^C.  
+
+This tutorial attempts to help you "learn by doing".  The characters ">>" 
+at the left margin of your screen indicate directions for you to try using 
+a command.  For instance:
+
+>>  Now type ^V (View next screen) to move to the next screen.
+    (go ahead, do it by depressing the control key and V together).
+
+From now on, you'll be expected to type ^V whenever you finish reading the 
+current screen.
+
+Note that there is an overlap when going from screen to screen; this
+provides some continuity when moving through the file.
+
+The first thing that you need to know is how to move around from place to 
+place in the file.  You already know how to move forward a screen, with ^V.  
+To move backwards a screen, type ^Z. (depress the CTRL key and type Z).
+
+>>  Try typing ^Z and then ^V to move back and forth a few times.
+
+
+SUMMARY
+-------
+
+The following commands are useful for viewing screenfuls:
+
+     ^V      Move forward one screenful
+     ^Z      Move backward one screenful
+     <ESC>^L Clear screen and redisplay everything
+             putting the text near the cursor at the center.
+
+>> find the cursor and remember what text is near it.
+   Then type a <ESC>^L.
+   Find the cursor again and see what text is near it now.
+
+
+BASIC CURSOR CONTROL
+--------------------
+
+Getting from screenful to screenful is useful, but how do you reposition 
+yourself within a given screen to a specific place?  There are several ways 
+you can do this.  One way (not the best, but the most basic) is to use the 
+commands previous, backward, forward and next.  As you can imagine these 
+commands (which are given to EMACS as ^P, ^B, ^F, and ^N  respectively) move 
+the cursor from where it currently is to a new place in the given direction.  
+Here, in a more graphical form are the commands:
+ 
+                          Previous line, ^P
+                                  :
+                                  :
+   Backward, ^B .... Current cursor position .... Forward, ^F
+                                  :
+                                  :
+                          Next line, ^N
+
+You'll probably find it easy to think of these by letter.  P for
+previous, N for next, B for backward and F for forward.  These are
+the basic cursor positioning commands and you'll be using them ALL
+the time so it would be of great benefit if you learn them now.
+
+>> Do a few ^N's to bring the cursor down to this line.
+
+>> Move into the line with ^F's and then up with several ^P's.
+   See what ^P does when the cursor is in the middle of the line.
+
+Lines are separated by a single Linefeed character, which is what
+Unix calls a Newline.
+
+>> Try to ^B at the beginning of a line.  Do a few more ^B's.
+   Then do ^F's back to the end of the line and beyond.
+
+When you go off the top or bottom of the screen, the text beyond
+the edge is shifted onto the screen so that your instructions can
+be carried out while keeping the cursor on the screen.
+
+>> Try to move the cursor off the bottom of the screen with ^N and
+   see what happens.
+
+If moving by characters is too slow, you can move by words.  ESC-F
+(Meta-F) moves forward a word and ESC-B moves back a word.
+
+>> Type a few ESC-F's and ESC-B's.  Intersperse them with ^F's and ^B's.
+
+Notice the parallel between ^F and ^B on the one hand, and ESC-F and ESC-B on 
+the other hand.  Very often Meta characters are used for operations related 
+to English text whereas Control characters operate on the basic textual units 
+that are independent of what you are editing (characters, lines, etc).  There 
+is a similar parallel between lines and sentences: ^A and ^E move to the 
+beginning or end of a line. and ESC-A and ESC-E move to the beginning or end 
+of a sentence.
+
+###  Note:  ESC-A and ESC-E are not implimented yet (DLH - 1/22/86)  ###
+
+>> Try a couple of ^A's, and then a couple of ^E's.
+   Try a couple of ESC-A's, and then a couple of ESC-E's.
+
+See how repeated ^A's do nothing, but repeated ESC-A's
+keep moving farther.  Do you think that this is right?
+
+Two other simple cursor motion commands are ESC-< (Meta Less-than),
+which moves to the beginning of the file, and ESC-> (Meta Greater-than),
+which moves to the end of the file.  You probably don't need to try
+them, since finding this spot again will be boring.  If you need the
+shift key to type a "<", then you must also use the shift key to type
+ESC-<.  Otherwise, you would be typing ESC-, .
+
+The location of the cursor within the text is also called "point".  To 
+paraphrase, the cursor shows on the screen where point is located in the text.
+
+Here is a summary of simple moving operations including
+the word and sentence moving commands:
+
+     ^F        Move forward a character
+     ^B        Move backward a character
+
+     ESC-F     Move forward a word
+     ESC-B     Move backward a word
+
+     ^N        Move to next line
+     ^P        Move to previous line
+
+     ESC-N     Move to next paragraph
+     ESC-P     Move to previous paragraph 
+
+     ^A        Move to beginning of line
+     ^E        Move to end of line
+
+     ESC-A     Move back to beginning of sentence  (not functional)
+     ESC-E     Move forward to end of sentence     (not functional)
+
+     ESC-<     Go to beginning of file
+     ESC->     Go to end of file
+
+>> Try all of these commands now a few times for practice.
+   Since the last two will take you away from this screen,
+   you can come back here with ^Z's and ^V's.  These are
+   the most often used commands.
+
+Like all other commands in EMACS, these commands can be given
+arguments which cause them to be executed repeatedly.  The way you
+give a command a repeat count is by typing META and then the digits
+before you type the command.  (Remember META is ususally called ESCAPE)
+
+For instance, META 8 ^F moves forward eight characters.
+
+>> Try giving a suitable argument to ^N or ^P to come as close
+   as you can to this line in one jump.
+
+This also applies to the screen moving commands, ^V and ^Z.  When
+given an argument, they scroll the screen up or down by that many
+screenfuls.  As a special case, typing just ^U is equivalent to ESC-4.
+
+>> Try typing ESC-3 ^V now.
+
+If you would like to scroll it down, you can give an argument to ^Z.
+
+
+QUITTING FROM COMMANDS
+----------------------
+
+The character in EMACS used to quit out of all commands which request
+input is ^G.  For example, you can use ^G to discard a numeric argument
+or the beginning of a command that you don't want to finish.
+
+>> Type ESC-100 to make a numeric arg of 100, then type ^G.
+   Now type ^F.  How many characters does it move?
+   If you have typed an <ESC> by mistake, you can get rid of it
+   with a ^G.
+
+
+IBM CURSOR KEYS
+---------------
+
+On the IBM-PC version, the cursor keypad has been bound to some of the
+more useful screen movement commands. The mappings are as follows:
+
+     Cursor-Right    ^F        Move forward a character
+     Cursor-Left     ^B        Move backward a character
+
+     ^Cursor-Right   ESC-F     Move forward a word
+     ^Cursor-Left    ESC-B     Move backward a word
+
+     Cursor-Down     ^N        Move to next line
+     Cursor-UP       ^P        Move to previous line
+
+     Pg-Dn           ^V        Move to next screen
+     Pg-Up           ^Z        Move to previous screen
+
+     Home            ESC-<     Go to beginning of file
+     End             ESC->     Go to end of file
+
+     Insert          ^O        Open up a new line
+     Delete          ^K        Kill to end of line
+
+Usage of the ^O and ^K commands is described later in the tutorial. A
+map of the key layout looks something like this:
+
+              -------------------------------------------------
+              | 7             | 8             | 9             |
+              | Home          | ^             | Pg Up         |
+              |               | |             |               |
+              |     ESC-<     |      ^P       |     ^Z        |
+              -------------------------------------------------
+              | 4             | 5             | 6             |
+              | <--           |               | -->           |
+              |               |               |               |
+              |      ^B       |               |      ^F       |
+              -------------------------------------------------
+              | 1             | 2             | 3             |
+              | End           | |             | Pg Dn         |
+              |               | v             |               |
+              |     ESC->     |      ^N       |      ^V       |
+  -------------------------------------------------------------
+  | 0                         | .                             |
+  | Insert                    | Delete                        |
+  |                           |                               |
+  |             ^O            |             ^K                |
+  -------------------------------------------------------------
+
+>> if you have an IBM-PC, practice using the cursor keypad.
+
+
+
+ERRORS
+------
+
+Sometimes you may do something which EMACS doesn't allow. If it is
+something simple, such as typing a control key sequence which is not
+associated with any command, EMACS will just beep at you. Otherwise,
+EMACS will also display an informative error message at the bottom of
+the screen.
+
+Some versions of EMACS do not have all the features described in this
+tutorial implemented yet.  If you come across such an unimplemented
+feature, you may get an error message when you try to use it.  Just
+type a space and proceed on to the next section of the tutorial.
+
+
+INSERTING AND DELETING
+----------------------
+
+If you want to type text, just do it.  Characters which you can see, such 
+as A, 7, *, etc. are taken by EMACS as text and are immediately inserted.  
+Type <Return> (the carriage-return key) to insert a line separator.
+
+You can delete the last character you typed by typing either <Delete> or ^H.  
+On some keyboards, there is a dedicated key for creating a ^H.  If so, it is 
+usually labeled as either "Backspace" or "<--".  <Delete> is a key on the 
+keyboard, which may be labeled "Rubout" instead of "Delete" on some terminals.
+More generally, <Delete> deletes the character immediately before the current 
+cursor position.
+
+>> Do this now, type a few characters and then delete them by typing
+   <Delete> a few times.  Don't worry about this file being changed;
+   you won't affect the master tutorial.  This is just a copy of it.
+
+>> Now start typing text until you reach the right margin, and keep
+   typing.  When a line of text gets too big for one line on the
+   screen, the line of text is "continued" off the edge of the screen
+   The dollar sign at the right margin indicates a line which has
+   been continued.  EMACS scrolls the line over so you can see what you 
+   are editing.  The '$' at the left or right edge of the screen indicates 
+   that the current line extends off in that direction.  
+
+>> The following line actually goes off the edge.  Trying typing enough ^F's
+   so that you move off the right hand end of this line.  This is a long line of text.  Note the "$"s at each edge.  Keep typing ^F's and watch where EMACS decides to scroll the line.  Now, type ^B's until EMACS decides to scroll the line again.
+
+This is one of those gizmos which is easier to understand by playing with it 
+than by reading about it.
+
+>> Use ^D's or <Delete>s to delete the text until the text line fits on 
+   one screen line again.  The continuation "$" will go away.
+
+>> Move the cursor to the beginning of a line and type <Delete>.  This
+   deletes the line separator before the line and merges the line onto
+   the previous line.  The resulting line may be too long to fit, in
+   which case it has a continuation indication.
+
+>> Type <Return> to insert the separator again.
+
+Internally, EMACS will allow you to have lines of nearly any length, limited 
+only by the amount of memory available.  Externally, however, EMACS can only 
+read or write lines, to or from a file, which are less than or equal to 255 
+characters.
+
+Remember that most EMACS commands can be given a repeat count;  Note
+that this includes characters which insert themselves.
+
+>>  Try that now -- type META 8 * and see what happens.
+
+If you want to create a blank line in between two lines, move to the
+second of the two lines and type ^O.
+
+>>  Try moving to a line and typing ^O now.
+
+You've now learned the most basic way of typing something in
+EMACS and correcting errors.  You can delete by words or lines
+as well.  Here is a summary of the delete operations:
+
+     <Delete>      delete the character just before the cursor
+     ^H            delete the character just before the cursor
+     ^D            delete the next character after the cursor
+
+     ESC-<Delete>  kill the word immediately before the cursor
+     ESC-^H        kill the word immediately before the cursor
+     ESC-D         kill the next word after the cursor
+
+     ^K            kill from the cursor position to end of line
+
+Notice that <Delete> and ^D vs ESC-<Delete> and ESC-D extend the parallel
+started by ^F and ESC-F (well, <Delete> isn't really a control
+character, but let's not worry about that).
+
+Now suppose you kill something, and then you decide that you want to get 
+it back?  Well, whenever you kill something bigger than a character, EMACS 
+saves it for you.  To yank it back, use ^Y.  Note that you don't have to 
+be in the same place to do ^Y; This is a good way to move text around.  
+Also note that the difference between "Killing" and "Deleting" something 
+is that "Killed" things can be yanked back, and "Deleted" things cannot.  
+Generally, the commands that can destroy a lot of text save it, while the 
+ones that attack only one character, or nothing but blank lines and spaces, 
+do not save.
+
+For instance, type ^N a couple times to postion the cursor
+at some line on this screen.
+
+>> Do this now, move the cursor and kill that line with ^K.
+
+Note that a single ^K kills the contents of the line, and a second
+^K kills the line itself, and make all the other lines move up.  If
+you give ^K a repeat count, it kills that many lines AND their contents.
+
+The text that has just disappeared is saved so that you can
+retrieve it.  To retrieve the last killed text and put it where
+the cursor currently is, type ^Y.
+
+>> Try it; type ^Y to yank the text back.
+
+Think of ^Y as if you were yanking something back that someone took away 
+from you.  Notice that if you do several ^K's in a row the text that is 
+killed is all saved together so that one ^Y will yank all of the lines.
+
+>> Do this now, type ^K several times.
+
+Now to retrieve that killed text:
+
+>> Type ^Y.  Then move the cursor down a few lines and type ^Y
+   again.  You now see how to copy some text.
+
+What do you do if you have some text you want to yank back, and then
+you kill something else?  ^Y would yank the more recent kill.
+
+>> Kill a line, move around, kill another line.
+   Then do ^Y to get back the second killed line.
+
+
+FILES
+-----
+
+In order to make the text you edit permanent, you must put it in a file.
+Otherwise, it will go away when you leave EMACS.  While you are editing a
+file in EMACS, your changes are actually being made to a private
+"scratch" copy of the file.  However, the changes still don't become
+permanent until you "save" the file.  This is so you can have control to
+avoid leaving a half-changed file around when you don't want to.
+
+If you look near the botton of the screen you will see a line that
+looks like this:
+
+    =* MicroEMACS 3.1 (NORMAL) == emacs.tut == File: emacs.tut ==========
+                                               ---------------
+
+Note that EMACS indicates the name of the file you are currently editing.
+This is the name of your own temporary copy of the text of the EMACS
+tutorial; the file you are now editing.  Whatever file you edit, that
+file's name will appear in that precise spot.
+
+The commands for finding and saving files are unlike the other commands you
+have learned in that they consist of two characters. They both start with the
+character Control-X.  There is a whole series of commands that start with
+Control-X; many of them have to do with files, buffers, and related things,
+and all of them consist of Control-X followed by some other character.  As
+with ESC, the character is interpreted the same regardless of case.
+
+Another thing about the command for finding a file is that you have to say
+what file name you want.  We say the command "reads an argument from the
+terminal" (in this case, the argument is the name of the file).  After you
+type the command
+
+     ^X ^F   Find a file
+
+EMACS will ask you for the file name.  You should end the name with
+the Return key.  After this command, you will see the contents of the
+file in your EMACS.  You can edit the contents.  When you wish to make
+the changes permanent, issue the command
+
+     ^X ^S   Save the file
+
+A new version of the file will be created.  When the operation is
+finished, EMACS prints the name and number of lines saved.
+
+If you forget to save and edit a different file and then decide to quit,
+EMACS will remind you that you made changes that have not been save and
+then ask you whether you really want to quit.  (If you don't save them,
+they will be thrown away.  That might be what you want!)  You should
+answer with a "N" to save them or a "Y" to throw the changes away.
+
+To make a new file, just edit it "as if" it already existed.  Then start 
+typing in the text.  When you ask to "save" the file, EMACS will really 
+create the file with the text that you have inserted.  From then on, you 
+can consider yourself to be editing an already existing file.
+
+It is not easy for you to try out editing a file and continue with the 
+tutorial.  But you can always come back into the tutorial by starting it 
+over and skipping forward.  So, when you feel ready, you should try editing 
+a file named "FOO", putting some text in it, and saving it; then exit from 
+EMACS and look at the file to be sure that it worked.
+
+
+EXTENDING THE COMMAND SET
+-------------------------
+
+###   The mechanisms for extending the command set and setting   ###
+###   the key bindings has not been installed yet.  Skip forward ###
+###   to the next section (TEXT REPLACEMENT).    DLH  (1/22/86)  ###
+
+There are many, many more EMACS commands than could possibly be put
+on all the control and meta characters.  EMACS gets around this with
+the X (eXtend) command.  This comes in two flavors:
+
+     ^X       Character eXtend.  Followed by one character.
+     ESC-X    Named command eXtend.  Followed by a long name.
+
+These are commands that are generally useful but used less than the commands 
+you have already learned about.  You have already seen two of them: the file 
+commands ^X ^F to Find and ^X ^S to Save.  Another example is the command to 
+tell EMACS that you'd like to stop editing.  The command to do this is ^X ^C.
+
+There are many ^X commands.  The ones you need immediately are:
+
+     ^X ^F     Find file.
+     ^X ^S     Save file.
+     ^X ^C     Quit EMACS.  This does not save your files auto-
+                 matically, though if your files have been modi-
+                 fied, EMACS asks if you really want to quit.  The
+                 standard way to save and exit is ^X ^S ^X ^C.
+
+Named eXtended commands are commands which are used even less
+frequently, or commands which are used only in certain modes. These
+commands are usually called "functions". An example is the function
+"apropos", which prompts for a keyword and then gives the names of all
+the functions that apropos for that keyword. When you type ESC-X, EMACS
+prompts you at the bottom of the screen with ":" and you should type the
+name of the function you wish to call; in this case, "apropos". Just
+type "apr<Space>" and EMACS will complete the name. EMACS will ask you
+for a keyword or phrase and you type the string that you want ask about.
+
+>> Try typing ESC-X, followed by "apropos" or "apr" and then Return.
+   Then try typing "file" followed by a Return.
+
+
+TEXT REPLACEMENT
+---- -----------
+
+>> Move the cursor to the blank line two lines below this one.
+   Then type ESC-r changed<Escape>altered<Escape>.
+
+   Notice how this line has changed: you've replaced
+   the word c-h-a-n-g-e-d with "altered" wherever it occurs
+   after the cursor.
+
+The more customary command for replacing strings is the interactive
+command query-replace-search, which has several options. In essence, it
+shows each occurance of the first string and asks you if you want to
+replace it or not. You can also choose to edit around the string, or go
+on and replace all occurances without asking further. It is described in
+detail in the EMACS manual.  Also, typing a '?' when it asks you if you
+wish to replace will list out the various options.
+
+
+MODE LINE
+---------
+
+The bottom line of the screen is known as the communications line.  This
+is where EMACS interactively communicates with you.  You have already
+seen how emacs prompts you for information (like when searching).  EMACS
+can also report things to you as well.
+
+>> Type ^X = and see what you get in the communications line.
+
+The line immediately above the communications line is called the MODE
+LINE. The mode line says something like
+
+    =* MicroEMACS 3.1 (NORMAL) == emacs.tut == File: emacs.tut ==========
+
+This is a very useful "information" line.
+
+The star means that you have made changes to the text.  Right after
+you visit or save a file, there is no star.
+
+The buffername is the name EMACS gave to the buffer, and it is usually
+related to the filename. You already know what the filename means -- it
+is the file you have edited.
+
+The part of the mode line inside the parentheses is to tell you what
+modes you are in. The default mode is NORMAL which is what you are in
+now. It is an example of a "major mode". There are several major modes
+in EMACS for editing different languages and text, such as C mode, Text
+mode, etc. At any time one and only one major mode is active, and its
+name can always be found in the mode line just where "NORMAL" is now.
+
+Each major mode makes a few commands behave differently. For example,
+there are commands for creating comments in a program, and since each
+programming language has a different idea of what a should look like,
+each major mode has to insert comments differently. Each major mode is
+controlled by a EMACS variable which can be manipulated and queried with
+the "set" and "print" extended commands.
+
+Major modes are called major because there are also minor modes. They
+are called minor because they aren't alternatives to the major modes,
+just minor modifications of them. Each minor mode can be turned on or
+off by itself, regardless of what major mode you are in, and regardless
+of the other minor modes. So you can use no minor modes, or one minor
+mode, or any combination of several minor modes.
+
+One minor mode which is very useful, especially for editing English
+text, is WRAP mode. When this mode is on, EMACS breaks the line in
+between words automatically whenever the line gets too long. You can
+turn this mode on by doing ^X M wrap <return>. When the mode is on, you
+can turn it off by doing ^X ^M wrap <Return>.
+
+>> Type "^X ^M wrap <Return>" now.  Then insert a line of "asdf " over 
+   again until you see it divide into two lines.  You must put in spaces 
+   between them because Auto Fill breaks lines only at spaces.  Note that 
+   "WRAP" appears in the mode line, indicating that you are in WRAP mode.
+
+The margin is usually set at 72 characters, but it can be shanged.  
+Simply type ESC nn ^X F, where "nn" is the column number for the right 
+hand margin.  
+
+
+SEARCHING
+---------
+
+EMACS can do searches for strings (these are groups of contiguous
+characters or words) either forward through the file or backward
+through it.  
+
+>> Now type ^S to start a search.  Type the word 'cursor', then ESCAPE.
+
+>> Type ^S ESCAPE to find the next occurrence of "cursor".
+
+The ^S starts a search that looks for any occurrence of the search
+string AFTER the current cursor position.  But what if you want to
+search for something earlier in the text?  To do this one should
+type ^R for Reverse search.  Everything that applies to ^S applies
+to ^R except that the direction of the search is reversed.
+
+
+GETTING MORE HELP
+-----------------
+
+In this tutorial we have tried to supply just enough information to
+get you started using EMACS.  There is so much available in EMACS that
+it would be impossible to explain it all here.  However, you may want
+to learn more about EMACS since it has numerous desirable features
+that you don't know about yet.
+
+###   The on-line help features have not been implimented yet.  DLH   ###
+
+The most basic HELP feature is the describe-key function which is
+available by typing ^X ? and then a command character. EMACS prints one
+line line on the bottom of the screen tell what function is bound to
+that key.
+
+The describe-command function ESC-? will prompt for the name of a function
+and print out the section from the manual about that command. When you
+are finished reading it, type a Space or a ^G (quit) to bring your text
+back on the screen.
+
+>> Type ^X ? Control-P.  The message at the bottom of the screen should
+   be something like "^P is bound to previous-line".
+
+Multi-character commands such as ^X ^Z and <ESC>V are also allowed
+after ^X ?.
+
+Now lets get more information about the previous-line command.
+
+>> Type ESC-? previous-line.  When you are finished reading the
+   output, type a Space.
+
+The "name of the function" is important for people who are customizing
+EMACS.  It is what appears in the EMACS CHART as the documentation for
+the command character.
+
+
+CONCLUSION
+----------
+
+Remember, to exit use ^X ^C.
+
+This tutorial is meant to be understandable to all new users, so if
+you found something unclear, don't sit and blame yourself - complain!
+
+You'll probably find that if you use EMACS for a few days you won't
+be able to give it up.  Initially it may give you trouble.  But remember
+that this is the case with any editor, especially one that can do many,
+many things.  And EMACS can do practically everything.
+
+
+Acknowledgements
+----------------
+
+This is a modified version of the "JOVE Tutorial" by Jonathan Payne 
+(19 January 86). That document was in turn a modified version of the
+tutorial "Teach-Emacs" from MIT as modified by Steve Zimmerman at
+CCA-UNIX (31 October 85).
+
+This document was last updated on 2-7-86 by Dana Hoggatt.
+

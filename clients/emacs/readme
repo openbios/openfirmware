@@ -1,0 +1,48 @@
+This directory contains the C source code for MicroEMACS 3.7 .
+
+MicroEMACS is an implementation of the EMACS text editor that was
+written and placed in the public domain by Dave Conroy, circa 1985.
+Daniel Lawrence subsequently extended it quite substantially,
+creating the 3.x series of versions.
+
+Version 3.7 is the last version that was released to the public domain.
+
+Version 3.8 and subsequent versions are copyrighted by Daniel Lawrence.
+3.11 is the latest version that I know of; it was relased in late 1991
+or early 1992.  The copyrighted versions have been made available to
+users under quite generous terms, but they cannot be incorporated into
+commercial products.  That is the one of the reasons why version 3.7,
+and not a more recent version, is included with Forthmacs.
+
+Another reason is "creeping featurism".  Many of the later features
+are, in my opinion, of marginal utility, and the size of the 3.11
+distribution is much larger than the 3.7 distribution.  Some of the
+new features (such as mouse support) are worthwhile, but the whole
+package is just too big to deal with (some people may think the same
+of Forthmacs!).
+
+This copy of MicroEMACS 3.7 has been modified slightly.  A few of the
+modifications are simple bug fixes.  The others are changes that were
+necessary in order to make MicroEMACS callable from Forth, so that
+you could go back and forth between Forth and MicroEMACS, without
+losing either environment's state.  Primarily, this involved changes
+in the initilization code and elimination of calls to "exit()" (they
+now essentially do subroutine returns rather than process exits).
+
+The other category of changes, limited to the ibmpc.c file, involved
+making the video driver work under 32-bit protected mode.  This was
+accomplished by using a far pointer to access the video memory.
+
+I also changed the binding of the F1 function key in the emacs.rc
+startup file, so it now executes the help function (DOS applications
+commonly use F1 for help).
+
+In this directory, MicroEMACS may be compiled either as a self-contained
+application (EMACS.EXE) or as a component of Forth (a set of subroutines
+linked into FORTH.EXE).  See the makefile in this directory for more
+information.  The makefile is set up to compile with Zortech C++.  It
+would be possible to compile the self-contained version of EMACS with
+another C compiler, such as Microsoft C or Borland C.  However, the
+"component of Forth" version must currently be compiled with Zortech C++,
+since Forth requires the 32-bit code generation and DOS Extender features
+of Zortech C++.

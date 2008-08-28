@@ -1,0 +1,115 @@
+--<<01>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 WORD CASE/SCREEN CONTROL   F2  PAGING/SCROLLING
+[Main Menu]         F3 CUT & PASTE                F4  SEARCH AND REPLACE
+                    F5 DELETION COMMANDS          F6  WORD PROCESSING
+                    F7 INSERTION COMMANDS         F8  EDITOR CONTROL
+ 06/18/86           F9 CURSOR MOVEMENT            F10 exit MicroEMACS
+--<<02>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 BUFFER CONTROL             F2  MACROS
+[Editor control]    F3 COLOR CHANGES              F4  MODES
+                    F5 DOS COMMANDS               F6  SCRIPTS
+                    F7 FILE ACCESS                F8  WINDOWS
+                    F9 KEY BINDINGS               F10 exit to MAIN MENU
+--<<03>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 upper case a word          F2  upper case a region
+ Word case &        F3 lower case a word          F4  lower case a region
+  Screen control    F5 capitilize a word
+                    F7 redraw the screen          F8  mark a region
+                    F9 center the current line    F10 exit to MAIN MENU
+--<<04>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1  mark a region
+  Cut & Paste       F3  delete the region
+                    F5  copy the region to the kill buffer
+                    F7  insert the kill buffer into the text here
+                                                  F10 exit to MAIN MENU
+--<<05>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 delete the last character
+  Deletions         F3 delete the next character
+                    F5 delete to the end of the current line
+                    F7 delete all the blank lines around the cursor
+                                                  F10 exit to MAIN MENU
+--<<06>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 open a blank line          F2  insert a prompted string
+  Insertion         F3 insert a tab               F4  quote the next character
+                    F5 insert a space             F6  transpose last 2 chars
+                    F7 insert a newline and indent like the last line
+                    F9 insert a newline           F10 exit to MAIN MENU
+--<<07>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 begining of the file       F2  up one line
+  Cursor Movement   F3 left                       F4  right
+        F^2         F5 end of the file            F6  down one line
+    F3 < + > F4     F7 begining of line           F8  end of line
+        FV6         F9 goto line                  F10 exit to MAIN MENU
+--<<08>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1  go up one page            F2  go down one page
+  Paging and        F3  scroll the screen up      F4  scroll the screen down
+     Scrolling      F5  make the next widow go up one page
+                    F7  make the next window go down one page
+                    F9  exchange cursor & mark    F10 exit to MAIN MENU
+--<<09>>-----------------------------------------------------------------------
+MicroEMACS 3.7      f1  search forward            f2  seach backwards
+  Search and        F3  hunt forward              f4  hunt backwards
+    Replace         F5  isearch forward           F6  isearch backward
+                    F7  replace string            F8  replace string w/query
+                                                  F10 exit to MAIN MENU
+--<<10>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 go back a word             F2  go forward a word
+  Word processing   F3 go back a paragraph        F4  go forward a paragraph
+                    F5 fill paragraph             F6  delete current paragraph
+                    F7 delete last word           F8  delete next word
+                    F9 count words in region      F10 exit to MAIN MENU
+--<<11>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 report position            F2  unmark buffer
+  Buffer Control    F3 delete buffer              F4  switch to next buffer
+                    F5 list all buffers           F6  filter buffer through
+                    F7 rename current buffer             DOS program
+                    F9 select buffer              F10 exit to CONTROL MENU
+--<<12>>-----------------------------------------------------------------------
+MicroEMACS 3.7      Colors:           |  F1 current window's forground color
+  Color changes       Black   Magenta |  F3 current window's background color
+                      Blue    Cyan    |  F5 global forground color
+                      Red     Yellow  |  F7 global background color
+                      Green   White   |           F10  exit to CONTROL MENU
+--<<13>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1  execute one DOS command
+  DOS commands      F3  pipe one DOS command to a buffer
+                    F5  shell up to a new command interpeter
+                    F7  QUICK exit (write out all changed buffers and exit)
+                    F9  exit MicroEMACS           F10 exit to CONTROL MENU
+--<<14>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 find file                  F2 save current file
+  File Access       F3 view file (in VIEW mode)   F4 write file w/ new name
+                    F5 read file into buffer      F6 change current file name
+                    F7 insert file into buffer
+                                                  F10  exit to CONTROL MENU
+--<<15>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 bind a function to a key
+  Key Bindings      F3 unbind a key
+                    F5 describe a key
+                    F7 describe all bindings
+                                                  F10  exit to CONTROL MENU
+--<<16>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 define macro         The keyboard macro only works
+  Keyboard Macro    F3 end macro            for standard commands, NOT for
+                    F5 execute macro        menu selections.
+
+                                                  F10  exit to CONTROL MENU
+--<<17>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 set mode                   F2  set global mode
+  Modes             F3 delete mode                F4  delete global mode
+            Standard modes are:                   F6  set fill column
+                WRAP  VIEW  CMODE  EXACT OVER MAGIC
+                                                  F10 exit to CONTROL MENU
+--<<18>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 execute script file        F2  execute script line
+  Script            F3 execute script in buffer   F4  execute command (by name)
+            Script line format:
+         {<repeat count>} <command name> {<argument(s)> | "<argument(s)>"}
+                                                  F10  exit to CONTROL MENU
+--<<19>>-----------------------------------------------------------------------
+MicroEMACS 3.7      F1 split current window       F2  delete all other windows
+  Windows           F3 resize window              F4  delete current window
+                    F5 shrink window              F6  enlarge window
+                    F7 next window                F8  previous window
+                                                  F10 exit to CONTROL MENU
+-------------------------------------------------------------------------------
