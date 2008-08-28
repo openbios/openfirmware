@@ -176,6 +176,19 @@ OFFinddevice( char *devicename)
 }
 
 ihandle
+OFCreate( char *devicename)
+{
+	ULONG argarray[] = { (ULONG)"firmworks,create",1,1,0,0};
+
+	argarray[CIF_HANDLER_IN+0] = (long)devicename;
+	if (call_firmware(argarray) != 0)
+	{
+		return (ihandle)0;
+	}
+	return ((ihandle) argarray[CIF_HANDLER_IN+1]);
+}
+
+ihandle
 OFOpen( char *devicename)
 {
 	ULONG argarray[] = { (ULONG)"open",1,1,0,0};

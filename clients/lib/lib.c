@@ -103,9 +103,14 @@ fopen (char *name, char *mode)
   if (fp == (FILE *)NULL)
       return ((FILE *)NULL);
 
-  if ((fp->id = OFOpen(name)) == 0)
+  if ((fp->id = OFOpen(name)) == 0) {
+      if (mode[0] == 'w' && ((fp->id = OFCreate(name)) != 0))
+          goto good;
+
       return ((FILE *)NULL);
+  }
   
+ good:
   fp->bufc = 0;
   return(fp);
 }

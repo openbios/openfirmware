@@ -525,6 +525,12 @@ public
 ;
 ' $create-file to _ofcreate
 
+dev /client-services
+: firmworks,create  ( cstr -- ihandle )
+   cscount  ['] $create-file  catch  if  2drop 0  then
+;
+device-end
+
 internal
 
 : ?delete-file  ( path$ -- continue? )

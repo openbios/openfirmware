@@ -243,6 +243,24 @@ OFOpen( char *devicename)
 	return ((ihandle) argarray[CIF_HANDLER_IN+LOW(1)]);
 }
 
+/* FirmWorks extension */
+ihandle
+OFCreate( char *devicename)
+{
+#ifdef CIF64
+	ULONG argarray[] = { 0,(ULONG)"firmworks,create", 0,1, 0,1, 0,0, 0,0};
+#else
+	cell_t argarray[] = { (cell_t)"firmworks,create", 1,1,0,0};
+#endif
+
+	argarray[CIF_HANDLER_IN+LOW(0)] = (long)devicename;
+	if (call_firmware(argarray) != 0)
+	{
+		return (ihandle)0;
+	}
+	return ((ihandle) argarray[CIF_HANDLER_IN+LOW(1)]);
+}
+
 void
 OFClose(ihandle id)
 {
