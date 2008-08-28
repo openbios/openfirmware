@@ -159,7 +159,7 @@ fgetc(FILE *fp)
     {
       fp->bufc = count-1;
       fp->inbufp = fp->buf;
-      return(*fp->inbufp++);
+      return((*fp->inbufp++) & 0xff);
     }
 
   /* otherwise return EOF */

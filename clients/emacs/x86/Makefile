@@ -25,11 +25,7 @@ OFILES=     	ansi.o  basic.o  bind.o  buffer.o  display.o  \
 
 LIBS=		$(LIBDIR)/libobp.a
 
-# emacs.elf:	emacs.obp
-#	$(BP)/tools/xcftobin <emacs.obp >emacs.bin
-#	$(BP)/tools/bintoelf -e$(ORIGIN) <emacs.bin >emacs.elf
-
-emacs.obp:	$(LIBDIR)/start.o $(OFILES) $(LIBS) Makefile
+emacs:	$(LIBDIR)/start.o $(OFILES) $(LIBS) Makefile
 	$(LD) $(LFLAGS) -o $@ $(LIBDIR)/start.o $(OFILES) $(LIBS)
 	size $@
 	nm -n $@ >emacs.nm

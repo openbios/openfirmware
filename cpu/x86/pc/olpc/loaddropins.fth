@@ -48,10 +48,14 @@
    " ${BP}/cpu/x86/pc/olpc/images/xo.565"       " xo.565"        $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " sd.565"        $add-deflated-dropin
 
-   " ${BP}/ofw/termemu/gallant.obf"             " font"          $add-deflated-dropin
+   " ${BP}/ofw/termemu/15x30pc.psf"             " font"          $add-deflated-dropin
 [ifdef] use-ega
    " ${BP}/ofw/termemu/cp881-16.obf"            " pcfont"        $add-deflated-dropin
 [then]
+
+   " ${BP}/clients/emacs/x86/emacs"             " emacs"         $add-deflated-dropin
+   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
+   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
 
    " verify.img"                                " verify"        $add-deflated-dropin
    " os.public"                                 " ospubkey"      $add-dropin \ Incompressible

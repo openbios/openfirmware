@@ -2,6 +2,8 @@ OS := $(shell uname)
 
 BASEDIR= `(cd ../../../../..; pwd;)`
 TAGFILES= ../../../build/*.tag *.tag
+CLIENTDIR=../../../../../clients
+CLIENTPROGS=${CLIENTDIR}/memtest86/memtest ${CLIENTDIR}/emacs/x86/emacs
 
 all: olpc.rom tags
 
@@ -13,7 +15,7 @@ tags: fw.tag
 ofw.elf: FORCE build ../../../build/inflate.bin
 	./build $@
 
-olpc.rom: FORCE build ../../../build/inflate.bin ../../../../../clients/memtest86/memtest
+olpc.rom: FORCE build ../../../build/inflate.bin ${CLIENTPROGS}
 	./build $@
 
 ../../../${OS}/forth:
@@ -22,8 +24,11 @@ olpc.rom: FORCE build ../../../build/inflate.bin ../../../../../clients/memtest8
 ../../../build/inflate.bin:
 	@make -C ../../../build inflate.bin
 
-../../../../../clients/memtest86/memtest:
-	@make -C ../../../../../clients/memtest86 memtest
+${CLIENTDIR}/memtest86/memtest:
+	@make -C ${CLIENTDIR}/memtest86 memtest
+
+${CLIENTDIR}/emacs/x86/emacs:
+	@make -C ${CLIENTDIR}/emacs/x86 emacs
 
 build: ../../../${OS}/forth
 	@ln -sf ../../../${OS}/forth build
