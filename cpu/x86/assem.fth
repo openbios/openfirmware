@@ -335,12 +335,14 @@ VARIABLE INTER
 
 : prefix-0f  h# 0f asm8,  ;
 
+variable long-offsets  long-offsets off
+
 \ 3MI  define branch instructions, with one or two bytes of offset.
 : 3MI	\ conditional branches
    ( op -- )	create  c,  
    ( dest -- )	does>   c@		( dest op )
       swap here 2+ - 			( op disp )
-      dup small? if			( op disp8 )
+      dup small?  long-offsets @  0= and  if	( op disp8 )
 	 swap asm8, asm8,
       else				( op disp )
 	 prefix-0f  swap h# 10 + asm8,
@@ -703,8 +705,6 @@ HEX
 \ always use 8-bit offsets.
 
 \ Assembler version of forward/backward mark/resolve.
-
-variable long-offsets  long-offsets off
 
 : >MARK     (S -- addr )  HERE  ;  \ Address of opcode, not offset byte
 : >RESOLVE  (S addr -- )  
