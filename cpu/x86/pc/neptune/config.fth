@@ -34,6 +34,7 @@ create jffs2-support
 create use-elf
 
 create lx-pll-autoconfig   \ enable pll autoconfiguration from bootstrap pin
+create mem-autoconfig      \ autoconfigure different memory sizes
 create use-memtest86
 
 \ create use-timestamp-counter \ Use CPU's timestamp counter for timing ...

@@ -46,7 +46,79 @@ fload ${BP}/cpu/x86/pc/dot.fth		\ Numeric output
 
 fload ${BP}/cpu/x86/pc/romfind.fth	\ find-dropin
 
+label dramtry
+   char b 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+   h# 12 # al mov  al h# 80 # out
+
+   \ Unmask CKE1 and CKE0
+   1000. 2000001d set-msr   \ MC_CFCLK_DBG Clear 300 bits, don't tristate in IDLE
+
+   \ Reset memory controller
+   20000018 rmsr    \ MC_CF07_DATA
+   2 bitset  20000018 wmsr
+   2 bitclr  20000018 wmsr
+
+   \ Enable DLL, load Extended Mode Register by set and clear PROG_DRAM
+   10000001 bitset  20000018 wmsr
+   10000001 bitclr  20000018 wmsr
+
+   \ Reset DLL (bit 27 is undocumented in GX datasheet, but is in the LX one)
+   08000001 bitset  20000018 wmsr
+   08000001 bitclr  20000018 wmsr
+
+   \ Here we are supposed to wait 200 SDCLK cycles to let the DLL settle.
+   \ That is approximately 2 uS.  The ROM instruction access is so slow that
+   \ anything we do will take quite a bit longer than that, so we just let the
+   \ "rmsr, bitset" sequence take care of the time delay for us.
+
+   \ In the following sequence of writes the 2000.0018 MSR, we
+   \ take advantage of the fact that the existing value stays
+   \ in EAX/EDX, so we don't have to re-read the value.
+
+   \ Generate 2 refresh requests.  The refresh queue is 8 deep, and we
+   \ need to make sure 2 refreshes hit the chips, so we have to issue
+   \ 10 requests to the queue.  According to the GX datasheet, we don't
+   \ have to clear the REF_TST bit (8) explicitly between writes 
+   20000018 rmsr  8 bitset
+   wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr wrmsr
+   8 bitclr
+
+   \ Load Mode Register
+   1 bitset  20000018 wmsr
+   1 bitclr  20000018 wmsr
+
+   \ Earlier code has set up an MSR so the fxxxx address range hits memory
+
+   \ The RAM DLL needs a write to lock on
+   ax  h# ffff0 #)  mov
+
+   \ The following simple test determines how much memory is present.
+
+   \ Set locations just below power-of-two boundaries to the boundary value
+   h# 4000.0000 # si mov     \ Start address
+   h#  400.0000 # di mov     \ End address
+   si ax mov
+   begin
+      ax  -4 [ax]  mov       \ Set e.g. loc 3ffffffc to 40000000
+      1 # ax shr             \ Step down to the next power of two
+      di  ax cmp   \ Stop at 64 MiB; can't buy RAMs that small
+   <= until
+
+   \ Look for a location that contains the expected data
+   si ax mov
+   begin
+      -4 [ax]  bx  mov
+      bx  ax  cmp  =  if  esp jmp  then  \ Exit if found
+      1 # ax shr
+      di  ax cmp
+   <= until
+
+   \ Not found, return 0
+   ax ax xor
+   esp jmp
+
 label startup
+   long-offsets on
    h# 10 # al mov  al h# 80 # out
 
    \ The next few MSRs allow us to access the 5536
@@ -102,6 +174,208 @@ label startup
    \ sdram_initialize,generic_sdram.c
    \ sdram_set_spdregisters(),auto.c
  
+[ifdef] mem-autoconfig
+   20000000.000fff00.  10000020 set-msr  \ memory - 0..fffff
+
+   \ We start with address map settings for the largest possible memory configuration,
+   \ probe and test the memory, then reduce the values as necessary
+   \ We'll deal with DMA and the frame buffer after memory has been sized.
+
+   25ffe002.14000000.      1808 set-msr  \ 2M ROM at ffe0.0000, system RAM limit at 4000.0000
+   2000003f.fff00100.  10000028 set-msr  \ Top of memory at 3fff.ffff
+
+   00000000.2814d352.  00001981 set-msr  \ Memory delay values
+   00000000.1068334d.  00001982 set-msr  \ Memory delay values
+   00000106.83104104.  00001983 set-msr  \ Memory delay values
+   00000000.00000001.  00001980 set-msr  \ Enable memory delays
+
+ \ Init the SDRAMs
+ \ sdram_enable,src/northbridge/amd/gx2/raminit.c
+
+   \ Clock gating for PMode
+   \ Clocks always on in mode 1, hardware gating in mode 0
+\   20002004 rmsr  4 bitclr  1 bitset  20002004 wmsr  \ GX p 199
+   1. 20002004 set-msr  \ GX p 199
+
+   00000200.00000000. 20000020 set-msr   \ Power mode entry and exit delays
+
+[ifdef] support-1g-drams
+   \ Try 1-Gbit chip, 1 GiB total config
+
+                1300.  2000001d set-msr  \ Mask CKE1,0 while setting new config
+   10078113.00005040.  20000018 set-msr  \ DIMM1 off, DIMM0 1024 MB, 2 module banks, 8K pages
+   18000100.364221a3.  20000019 set-msr
+            140dd101.  2000001a set-msr  \ MC_CF1017_DATA  LX p 231
+
+   here d# 10 +  asm-base -  ResetBase + # esp mov  \ Return address (no stack)
+   dramtry #) jmp   h# 4000.0000 # ax cmp  1 F: je
+
+   \ Try 1-Gbit chip, 512 MiB total config
+
+                1300.  2000001d set-msr  \ Mask CKE1,0 while setting new config
+   10077013.00005040.  20000018 set-msr  \ DIMM1 off, DIMM0 512 MB, 1 module bank, 8K pages
+   18000100.364221a3.  20000019 set-msr
+            140dd101.  2000001a set-msr  \ MC_CF1017_DATA  LX p 231
+
+   here d# 10 +  asm-base -  ResetBase + # esp mov  \ Return address (no stack)
+   dramtry #) jmp   h# 2000.0000 # ax cmp  1 F: je
+[then]
+
+   \ Try 512-Mbit chip, 512 MiB total config
+
+                1300.  2000001d set-msr  \ Mask CKE1,0 while setting new config
+   10077113.00005040.  20000018 set-msr  \ DIMM1 off, DIMM0 512 MB, 2 module banks, 8K pages
+   18000100.364221a3.  20000019 set-msr
+            140dd101.  2000001a set-msr  \ MC_CF1017_DATA  LX p 231
+   here d# 10 +  asm-base -  ResetBase + # esp mov  \ Return address (no stack)
+   dramtry #) jmp   h# 2000.0000 # ax cmp  1 F: je
+
+
+   \ Try 512-Mbit chip, 256 MiB total config
+                1300.  2000001d set-msr  \ Mask CKE1,0 while setting new config
+   10076013.00005040.  20000018 set-msr  \ DIMM1 off, DIMM0 256 MB, 1 module bank, 8K pages
+   18000100.364221a3.  20000019 set-msr
+            140dd101.  2000001a set-msr  \ MC_CF1017_DATA  LX p 231
+
+   here d# 10 +  asm-base -  ResetBase + # esp mov  \ Return address (no stack)
+   dramtry #) jmp  h# 1000.0000 # ax cmp  1 F: je
+
+
+   \ Can't find a working RAM configuration - emit a message and POST code
+   char * 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+   char R 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+   char A 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+   char M 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+   char * 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+   h# 1e # al mov  al h# 80 # out
+   begin  hlt  again
+
+1 L:   \ DRAM is okay; size in EAX
+   ax  bp  mov              \ Move DRAM size to EBP so we can use EAX for MSR ops
+   fb-size #  bp  sub    \ Subtract off frame buffer size
+
+   \ Shrink system RAM limit in RCONF_DEFAULT MSR
+   00001808 rmsr
+   bp ax mov  4 # ax shr    \ Move DRAM size to SYSTOP field
+   h# 1000.0000 # ax or     \ Set DEVRP (high nibble) and SYSRP (low byte)
+   00001808 wmsr
+
+   \ Map frame buffer (see page 83 of LX manual)
+   \ This is tricky because we have to compute several field values and distribute
+   \ them across two registers.
+
+   bp dx mov                \ EDX: Frame buffer address in RAM array
+   fb-pci-base # bx mov     \ EBX: Frame buffer address in CPU address space
+   bx dx sub                \ EDX: Offset from FB CPU address to RAM array address
+   d# 4 # dx shr            \ Move offset to OFFSET field of P2D_RO high word
+   h# 2000.0000 #  dx  or   \ Merge in PDID1 field
+
+   bx ax mov                \ EAX: Frame buffer CPU address
+   fb-size #     ax  add    \ EAX: Frame buffer limit
+   h#    1000 #  ax  sub    \ EAX: Frame buffer top page
+   ax si mov                \ Save a copy in ESI
+   d# 24 #  ax  shr         \ Top 8 bits of frame buffer top page to PMAX field
+   ax  dx  or               \ EDX: completed high word of MSR value  EAX: dead
+
+   bx ax mov                \ EAX: Frame buffer CPU address
+   d# 12 #  ax  shr         \ Move to PMIN field
+   d#  8 #  si  shl         \ Move low bits of frame buffer limit to PMAX low
+   si       ax  add         \ EAX: completed high word of MSR value  ESI: dead  EBX: dead
+   10000029 wmsr            \ P2D_RO0 - Frame buffer at PA fd00.0000 maps to RAM at 0f80.0000
+
+   \ The remaining fields use the top page instead of the limit
+   h# 1000 #  bp  sub       \ EBP: RAM top page address
+
+   \ Set above-1M memory address map - P2D_R descriptors
+   bp dx mov   d# 24 # dx shr  \ Top 8 bits to PMAX field in high word
+   bp ax mov   d#  8 # ax shl  \ Low bits to PMAX field in low word
+   h# 2000.0000 # dx or        \ Merge in PDID1 field
+   h# 0000.0100 # ax or        \ Merge in PMIN field (1 MiB)
+   10000028 wmsr               \ Write P2D_R descriptor for GLIU0 (outgoing)
+   4000002c wmsr               \ Write P2D_R descriptor for GLIU1 (incoming)
+
+   \ Set PCI DMA to memory descriptor to map incoming DMA from 1M to RAM limit
+   bp dx mov                   \ TOP field in high word   
+   h# 00100130 # ax mov        \ BASE field (1 MiB), EN (100), PF(20), WC(10)
+   50002019 wmsr               \ Write GLPCI_R1 MSR
+
+\ This is the tail of ${BP}/dev/geode/draminit.fth
+
+   h# 19 # al mov  al h# 80 # out
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 19 #  al mov    al  h# 71 #  out   \ Write value 01
+   then
+
+   \ Turn on the cache
+   cr0	ax   mov
+   6000.0000 bitclr  \ Cache-disable off, coherent
+   ax   cr0  mov
+   invd
+
+   h# 1a # al mov  al h# 80 # out
+   h# 1430 # dx mov  dx ax in  h# 9999 # ax cmp  =  if
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 1a #  al mov    al  h# 71 #  out   \ Write value 01
+   then
+
+   0000f001.00001400.   5140000f set-msr  \ PMS BAR
+
+   \ It is tempting to test bit 0 of PM register 5c, but a 5536 erratum
+   \ prevents that bit from working.  Bit 1 works, but LX errata 34
+   \ sometimes requires that we reset the system to fix the memory DLL,
+   \ which destroys all the bits of PM register 5c.  So we put a breadcrumb
+   \ in a PM register that we don't otherwise use.
+   1430 port-rl  h# 9999 # ax cmp  =  if  \ Wakeup event flag
+      0 1430 port-wl
+      h# 1b # al mov  al h# 80 # out
+      h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
+      h# 1b #  al mov    al  h# 71 #  out   \ Write value 01
+
+      char r 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+
+      resume-data  # sp mov
+      resume-entry # ax mov  ax call   \ This might return if checksumming fails
+      char x 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+   then
+
+   h# 1c # al mov  al h# 80 # out
+   h# 1808 rmsr                \ Default region configuration properties MSR
+   h# 0fffff00 # ax and        \ Top of System Memory field
+   4 # ax shl                  \ Shift into place
+   ax mem-info-pa 4 + #)  mov  \ Put it where resetend.fth can find it
+
+   \ char D 3f8 port-wb  begin  3fd port-rb 40 bitand  0<> until
+
+   \ Memory is now on
+   h# 8.0000 #  sp  mov        \ Setup a stack pointer for later code
+
+   h# 1d # al mov  al h# 80 # out
+\ Some optional debugging stuff ...
+[ifdef] debug-startup
+init-com1
+
+carret report
+linefeed report
+ascii F report
+ascii o report
+ascii r report
+[then]
+
+\ fload ${BP}/cpu/x86/pc/ramtest.fth
+
+0 [if]
+ax ax xor
+h# 12345678 #  bx mov
+bx 0 [ax] mov
+h# 5555aaaa #  4 [ax] mov
+0 [ax] dx  mov
+dx bx cmp  <>  if  ascii B report  ascii A report  ascii D report  begin again  then
+[then]
+
+[else]
+   \ This is the single-configuration DRAM startup code
+
    25ffe002.10f80000.      1808 set-msr  \ 2M ROM at ffe0.0000, system RAM limit at 0f80.0000
    20000000.000fff00.  10000020 set-msr  \ memory - 0..fffff
    2000000f.7ff00100.  10000028 set-msr  \ Top of memory at 0f7f.ffff
@@ -150,6 +424,7 @@ label startup
 
 fload ${BP}/dev/geode/draminit.fth
 
+[then]
    \ Last-minute check for LX erratum 34 - reset if the DLL didn't start correctly
    h# 4c000017 rmsr  h# 10 bitand  0<>  if   \ LX branch
       h# 4c00000f rmsr  h# 7ff bitclr  h# 4 bitset  h# 4c00000f wmsr  \ Set DLL_OV

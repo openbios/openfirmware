@@ -38,6 +38,8 @@ h# f.0000 constant suspend-base      \ In the DOS hole
 h# f.0008 constant resume-entry
 h# f.0800 constant resume-data
 
+h#   80.0000 constant fb-size
+
 \ If you change these, also change {g/l}xmsrs.fth and {g/l}xearly.fth
 h# fd00.0000 constant fw-map-base
 h# ffc0.0000 constant fw-map-limit
