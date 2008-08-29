@@ -802,7 +802,10 @@ warning !
    2drop false                              ( )
 ;
 
-: persistent-devkey?  ( -- flag )  " dk" find-tag  dup  if  nip nip  then  ;
+: persistent-devkey?  ( -- flag )
+  button-x game-key?  if  false exit  then
+  " dk" find-tag  dup  if  nip nip  then
+;
 
 : all-devices$  ( -- list$ )  " disk: sd: nand:"  ;
 
