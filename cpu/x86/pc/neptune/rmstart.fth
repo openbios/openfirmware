@@ -132,7 +132,7 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
    \ GLCP_SYS_RSTPLL - page 406
    \ If the PLL is already set up, we don't redo the 5536 setup
    op: h# 4c000014 # cx mov   rdmsr     \ MSR value in dx,ax
-   al bl mov
+   al bl mov                            \ Save BOOTSTRAP bits
    op: h# fc00.0000 # ax and  0=  if    \ Start the PLL if not already on
 
 [ifdef] lx-pll-autoconfig
@@ -141,7 +141,7 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
    \ EDX,EAX contains the value of MSR 4c00.0014 - RSTPLL
    \ The bootstrap bits are 7..1
 
-   al bl mov        \ Get a copy of the BOOTSTRAP bits
+   \ A copy of the BOOTSTRAP bits is already in bl
    h# 1 #  bl shr   \ Shift out CHIP_RESET and align the field at bit 0
 
    \ The bl comparison values are the BOOTSTRAP pin settings.
@@ -154,15 +154,17 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
    h# 4c # bl cmp  0=  if   op: h# 0000.04d7 # dx mov  else  \ Core 400 Mem 333
    h# 54 # bl cmp  0=  if   op: h# 0000.05db # dx mov  else  \ Core 466 Mem 400
    h# 55 # bl cmp  0=  if   op: h# 0000.03dd # dx mov  else  \ Core 500 Mem 266
+   h# 57 # bl cmp  0=  if   op: h# 0000.05dd # dx mov  else  \ Core 500 Mem 400
    h# 5e # bl cmp  0=  if   op: h# 0000.04e3 # dx mov  else  \ Core 600 Mem 333
-   h# 5f # bl cmp  0=  if   op: h# 0000.05e3 # dx mov  else  \ Core 600 Mem 333
+   h# 5f # bl cmp  0=  if   op: h# 0000.05e3 # dx mov  else  \ Core 600 Mem 400
 
    \ The default value below is for Mitch's test board whose bootstrap value
    \ h# 48 should mean 366/200, but that board is really 500/333
 
-                            op: h# 0000.04dd # dx mov        \ Core 500 Mem 333
+                            op: h# 0000.03d7 # dx mov        \ Core 400 Mem 266
+\                           op: h# 0000.04dd # dx mov        \ Core 500 Mem 333
 
-   then then then then then  \ Same number of then's as number of if's above
+   then then then then then then  \ Same number of then's as number of if's above
 
    op: h# 0000.1800 invert # ax and  \ Clear bypass bits
    op: h# 04ff.6001 # ax or          \ Set SWFLAGS=1, HOLD_COUNT=ff, GLIUPD,COREPD,CHIP_RESET
