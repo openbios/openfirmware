@@ -32,7 +32,9 @@ external
    0 to base-adr
    0 to seek-ptr                                    ( )
    my-args  dup  if                                 ( adr len )
-      2dup  " \"  $=  0=  if                        ( adr len )
+      2dup  " \"  $=  if                            ( adr len )
+         2drop true exit
+      else                                          ( adr len )
          over c@  [char] \  =  if  1 /string  then  ( adr' len' )
          find-drop-in  dup  if                      ( di-adr di-len true )
             -rot  to image-size  to base-adr        ( true )
