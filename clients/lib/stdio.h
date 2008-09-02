@@ -3,6 +3,8 @@
 typedef struct _file {
   long id;
   int  bufc;
+  int  readonly;
+  int  dirty;
   char *inbufp;
   char buf[128];
 } FILE;

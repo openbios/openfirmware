@@ -111,6 +111,8 @@ fopen (char *name, char *mode)
   }
   
  good:
+  fp->dirty = 0;
+  fp->readonly = (strcmp(mode, "r") == 0) || (strcmp(mode, "rb") == 0);
   fp->bufc = 0;
   return(fp);
 }
@@ -121,26 +123,33 @@ ferror(FILE *fp)
   return(0);	/* Implement me */
 }
 
-void
+int
 fputc(char c, FILE *fp)
 {
+  if (fp->readonly)
+    return -1;  // EOF
+
   if (fp == stdout && c == '\n')
-    fputc('\r', fp);
+    (void) fputc('\r', fp);
 
   fp->buf[fp->bufc++] = c;
+  fp->dirty = 1;
 
   if ((fp->bufc == 127) || (fp == stdout && c == '\n')) {
     OFWrite(fp->id, fp->buf, fp->bufc);
     fp->bufc = 0;
+    fp->dirty = 0;
   }
+  return (int)c;
 }
 
 void
 fflush (FILE *fp)
 {
-  if (fp->bufc != 0) {
+  if (fp->dirty && fp->bufc != 0) {
     OFWrite(fp->id, fp->buf, fp->bufc);
     fp->bufc = 0;
+    fp->dirty = 0;
   }
 }
 
