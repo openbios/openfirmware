@@ -3,50 +3,22 @@
 # -fno-builtin has the effect of suppressing some warnings about
 # functions that conflict with gcc builtins
 CC=gcc
-CFLAGS=-g -m32 -fno-builtin -fno-stack-protector
+CFLAGS=-g -m32 -fno-builtin -fno-stack-limit -fno-stack-protector
 
 all: libobp.a hello hello.elf start.o
 
 # Create a library file containing all the library routines
 
-libobp.a: lib.o printf.o wrappers.o malloc.o strings.o printf.o debug.o main.o intprop.o regprop.o strprop.o mem.o
-	ar rcv libobp.a lib.o malloc.o wrappers.o strings.o printf.o debug.o main.o intprop.o regprop.o strprop.o mem.o
+OBJS=lib.o printf.o wrappers.o malloc.o strings.o printf.o debug.o main.o intprop.o regprop.o strprop.o mem.o callofw.o
+
+libobp.a: ${OBJS}
+	ar rcv libobp.a ${OBJS}
 	ranlib libobp.a
 
 # Build machine-independent library routines
 
-main.o: ../main.c
-	${CC} ${CFLAGS} -c ../main.c
-
-lib.o: ../lib.c
-	${CC} ${CFLAGS} -c ../lib.c
-
-printf.o: ../printf.c
-	${CC} ${CFLAGS} -c ../printf.c
-
-debug.o: ../debug.c
-	${CC} ${CFLAGS} -c ../debug.c
-
-strings.o: ../strings.c
-	${CC} ${CFLAGS} -c ../strings.c
-
-mem.o: ../mem.c
-	${CC} ${CFLAGS} -c ../mem.c
-
-intprop.o: ../intprop.c
-	${CC} ${CFLAGS} -c ../intprop.c
-
-regprop.o: ../regprop.c
-	${CC} ${CFLAGS} -c ../regprop.c
-
-strprop.o: ../strprop.c
-	${CC} ${CFLAGS} -c ../strprop.c
-
-wrappers.o: ../wrappers.c
-	${CC} ${CFLAGS} -c ../wrappers.c
-
-malloc.o: ../malloc.c
-	${CC} ${CFLAGS} -c ../malloc.c
+%.o: ../%.c
+	${CC} ${CFLAGS} -c $<
 
 # Build processor-specific startup code and call gateway
 

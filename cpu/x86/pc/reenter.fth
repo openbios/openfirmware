@@ -28,6 +28,8 @@ stand-init:
 
 \ Temporary hacks until we implement these functions correctly
 
+0 value client-rerun?
+
 defer user-interface ' quit to user-interface
 also client-services definitions
 \ " reenter.fth: Implement 'exit' client service correctly" ?reminder
@@ -38,6 +40,7 @@ also client-services definitions
    " restore"  stdout @  ['] $call-method  catch  if  3drop  then
    " restore"  stdin  @  ['] $call-method  catch  if  3drop  then
 
+   client-rerun? 0= to already-go?
    user-interface
 ;
 : enter  ( -- )  interact  ;

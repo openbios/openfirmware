@@ -165,10 +165,11 @@ fload ${BP}/cpu/x86/pc/fixkbd.fth		\ Switch keyboard scan codes
 fload ${BP}/ofw/elf/elf.fth
 fload ${BP}/ofw/elf/elfdebug.fth
 [ifdef] virtual-mode
-: (elf-map-in) ( va size -- )  swap 1 -rot  allocate-aligned  drop  ;
-\ Depends on the assumption that physical memory is mapped 1:1 already
-\ : (elf-map-in) ( va size -- )  0 mem-claim  drop  ;
-' (elf-map-in) is elf-map-in
+\ This version dynamically allocates physical memory
+\ : (elf-map-in) ( va size -- )  swap 1 -rot  allocate-aligned  drop  ;
+
+\ This version depends on the assumption that physical memory is mapped 1:1 already
+: (elf-map-in)  ( va size -- )  2drop  ;
 [else]
 : (elf-map-in)  ( va size -- )  2drop  ;
 [then]
@@ -178,6 +179,7 @@ fload ${BP}/ofw/elf/elfdebug.fth
 \ Reboot and re-entry code
 fload ${BP}/cpu/x86/pc/reboot.fth	\ Restart the client program
 fload ${BP}/cpu/x86/pc/reenter.fth	\ Various entries into Forth
+true to client-rerun?
 
 headerless
 [ifdef] virtual-mode
@@ -198,8 +200,9 @@ dev /mmu
 
 \ The LPC FLASH chips decode several addresses below the FLASH "memory" array,
 \ for "registers" used for programming and access to general purpose inputs.
-\ The FPGA programming program wants to access the GPI register at virtual
-\ address = physical address, so we pre-claim that range of virtual addresses.
+\ We pre-claim that range of virtual addresses just in case someone needs to
+\ access the LPC device with virtual-address = physical address.  (OFW and
+\ ispVME both use dynamically-mapped virtual addresses for that region.)
 
 : claim-lpc  ( -- )
    (initial-claim)
@@ -404,13 +407,8 @@ fload ${BP}/dev/flashui.fth
 lpc-gpi0-pa value lpc-gpi-pa
 
 : vme ( -- )
-   ." Running Lattice programmer "
-
-   lpc-gpi-pa lpc-gpi-pa h# 100 -1 mmu-map
    \ verbose-cif
    " rom:\isp u:\neptune.vme" $boot
-	
-   lpc-gpi-pa h# 100 mmu-unmap
 ;
 
 fload ${BP}/cpu/x86/pc/neptune/versions.fth

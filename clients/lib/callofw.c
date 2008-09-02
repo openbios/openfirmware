@@ -6,13 +6,9 @@
  */
 
 #include <stdarg.h>
-#include <asm/callofw.h>
-#include <linux/types.h>
-#include <linux/spinlock.h>
+typedef unsigned long u32;
 
-u32 (*call_firmware)(u32 *);
-
-static DEFINE_SPINLOCK(prom_lock);
+extern u32 call_firmware(u32 *);
 
 #define MAXARGS 20
 int callofw(char *name, int numargs, int numres, ...)
@@ -23,9 +19,6 @@ int callofw(char *name, int numargs, int numres, ...)
 	int retval;
 	int *intp;
 	unsigned long flags;
-
-	if (call_firmware == NULL)
-		return -1;
 
 	argarray[0] = (u32)name;
 	argarray[1] = numargs;
@@ -38,9 +31,7 @@ int callofw(char *name, int numargs, int numres, ...)
 	while (numargs--)
 		argarray[argnum++] = va_arg(ap, int);
 
-	spin_lock_irqsave(&prom_lock, flags);
 	retval = call_firmware(argarray);
-	spin_unlock_irqrestore(&prom_lock, flags);
 
 	if (retval == 0) {
 		while (numres--) {
