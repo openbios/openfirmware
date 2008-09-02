@@ -1,0 +1,7 @@
+purpose: Build script for paging.di
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/x86/pc/olpc/config.fth
+fload ${BP}/cpu/x86/pc/paging.fth
