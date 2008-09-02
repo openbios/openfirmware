@@ -26,11 +26,9 @@ fload ${BP}/dev/pciprobe.fth		\ Generic PCI probing
 
 \ Use the CPU chip's Time Stamp Counter for timing; it does just what we want
 fload ${BP}/cpu/x86/tsc.fth
-\ d# 366,666 to ms-factor  \ XXX is this right????
-\ d# 367 to us-factor
 
 stand-init:
-   d# 366,666,667  " AMD,Geode LX"
+   cpu-speed  " AMD,Geode LX"
 
    " /cpu" find-device                                  ( cpu-clock-hz model$ )
       " model" string-property                          ( cpu-clock-hz )
@@ -300,7 +298,7 @@ fload ${BP}/dev/geode/acpi.fth           \ Power management
 
 stand-init: PCI properties
    " /pci" find-device
-   d# 66,666,667  " clock-frequency" integer-property
+   pci-speed  " clock-frequency" integer-property
    dend
 ;
 
@@ -339,6 +337,7 @@ warning @ warning off
 \ XXX perhaps report subordinate version info?
       " Neptune"  model
       " Dave Neptune" " banner-name" string-property
+      gl-speed " clock-frequency" integer-property
    dend
 
    " /openprom" find-device

@@ -3,25 +3,13 @@ purpose: Banner customization for this system
 
 headerless
 
-: geode-print-pll ( -- )
-   ." Geode CPU Speed "
-   h# 4c00.0014 rdmsr swap drop
-   h# 3E and 2/
-   1 + d# 66 * 2/ decimal . cr
-
-   ." GeodeLink Speed "
-   h# 4c00.0014 rdmsr swap drop
-   h# FFF and 7 >>
-   1 + d# 66 * 2/ decimal . cr
-
-   ." PCI Speed "
-   h# 4c00.0014 rdmsr drop
-   1 7 << and
-   0= if d# 33 . else d# 66 . then cr
-
-   hex
+: show-speeds  ( -- )
+   \ Round so the numbers come out the way they are conventionally cited
+   ." CPU "     cpu-speed d# 1,000,000 rounded-/ .d  ." MHz, "
+   ." Memory "   gl-speed d# 1,000,000         / .d  ." MHz, "
+   ." PCI "     pci-speed d# 1,000,000         / .d  ." MHz" cr
 ;
-' geode-print-pll to banner-extras
+' show-speeds to banner-extras
 
 : .rom  ( -- )
    ." OpenFirmware  "
@@ -34,8 +22,7 @@ headerless
 ;
 
 : (xbanner-basics)  ( -- )
-   ?spaces  cpu-model type  ." , "   .memory  cr
-   ?spaces  .rom cr
+   ?spaces  cpu-model type  ." , "   .memory  ." , "  .rom cr
 ;
 ' (xbanner-basics) to banner-basics
 

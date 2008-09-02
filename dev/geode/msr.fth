@@ -81,6 +81,23 @@ h# ff.fff00000. 2constant p2d-bm-disabled
 : usb-base-off  ( msr# -- )  0. rot  msr!  ;
 : usb-kel-off   ( msr# -- )  0. rot  msr!  ;
 
+: pci-speed  ( -- hz )
+   h# 4c00.0014 rdmsr drop    ( low )
+   1 7 << and  if  d# 66,666,667  else d# 33,333,333  then
+;
+: gl-speed  ( -- hz )
+   pci-speed                         ( hz )
+   h# 4c00.0014 rdmsr  nip >r        ( hz r: high )
+   r@ 6 rshift 1 and  if  2/  then   ( hz' r: high )
+   r> 7 rshift h# 1f and 1+ *        ( hz' )
+;
+: cpu-speed  ( -- hz )
+   pci-speed                         ( hz )
+   h# 4c00.0014 rdmsr  nip >r        ( hz r: high )
+   r@ 1 and  if  2/  then            ( hz' r: high )
+   r> 1 rshift h# 1f and 1+ *        ( hz' )
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2008 FirmWorks
 \ 
