@@ -186,11 +186,9 @@ devalias sd /sd/disk
    8 encode-int  0 encode-int encode+    " interrupts" property
    2 encode-int " device#" property
 end-package
-0 [if]  \ XXX check me
 stand-init: RTC
    " /rtc" open-dev  clock-node !
 ;
-[then]
 
 fload ${BP}/cpu/x86/pc/cpunode.fth
 fload ${BP}/cpu/x86/k6cputest.fth	\ Burnin test for K6 CPU
