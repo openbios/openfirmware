@@ -340,7 +340,7 @@ warning @ warning off
    root-device
 \ XXX perhaps report subordinate version info?
       " Neptune"  model
-      " Neptune" " banner-name" string-property
+      " Dave Neptune" " banner-name" string-property
    dend
 
    " /openprom" find-device

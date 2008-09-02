@@ -18,6 +18,7 @@ in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
 in: ${BP}/dev/pci/build/pcibridg.fc
 in: ${BP}/dev/dnet/build/dnet.fc
 \ in: ${BP}/clients/memtest86/memtest
+in: vme.elf
 
 build-now
 
@@ -72,6 +73,7 @@ writing neptune.rom
    " ${BP}/clients/memtest86/memtest"               " memtest"  $add-deflated-dropin
 [then]
    " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
+   " vme.elf"                                   " isp"             $add-deflated-dropin
 
    dropin-size h# 400 - pad-file	\ rmstart image must start 0x400 from end
    " rmstart.img"    $add-file

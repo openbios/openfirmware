@@ -6,6 +6,7 @@ command: &x86forth &dictionary &this
 in: builton.fth
 build-now
 
+" fw.tag" r/w create-file drop  tag-file !
 
 hex
 \ ' $report-name is include-hook
@@ -193,14 +194,19 @@ device-end
 
 [ifdef] virtual-mode
 fload ${BP}/cpu/x86/pc/mmusetup.fth	\ Initial values for MMU lists
-\ XXX check me
-\ dev /mmu
-\ : claim-rom  ( -- )
-\    (initial-claim)
-\   rom-pa  h# ffff.0000 over -  claim-virtual drop   \ ROM 1-1 map
-\ ;
-\ ' claim-rom to initial-claim
-\ dend
+dev /mmu
+
+\ The LPC FLASH chips decode several addresses below the FLASH "memory" array,
+\ for "registers" used for programming and access to general purpose inputs.
+\ The FPGA programming program wants to access the GPI register at virtual
+\ address = physical address, so we pre-claim that range of virtual addresses.
+
+: claim-lpc  ( -- )
+   (initial-claim)
+   lpc-pa  /lpc  claim-virtual drop   \ Space for 1-1 mapping LPC GPIO stuff
+;
+' claim-lpc to initial-claim
+dend
 [then]
 
 : background-rgb  ( -- r g b )  h# ff h# ff h# ff  ;
@@ -226,7 +232,7 @@ fload ${BP}/cpu/x86/pc/linux.fth
 
 h# 3ea constant usb-port-power-map  \ USB4:PWR2  USB3:PWR1  USB2:PWR1  USB1:PWR1
 fload ${BP}/dev/geode/usb.fth
-\ ' noop to go-hook	\ this is required for accessing USB device from client program (e.g. VME)
+' noop to go-hook	\ this is required for accessing USB device from client program (e.g. VME)
 
 \ false to stand-init-debug?
 true to stand-init-debug?
@@ -274,24 +280,20 @@ warning @  warning off
 ' (.firmware) to .firmware
 
 : probe-all  ( -- )
-   probe-pci
-   probe-usb
+   ." Probe PCI" cr  probe-pci
+   ." Probe USB" cr  probe-usb
 ;
 
-fload ${BP}/ofw/gui/bmptools.fth
 fload ${BP}/dev/null.fth
 fload ${BP}/ofw/core/bailout.fth
 
 fload ${BP}/cpu/x86/pc/neptune/banner.fth
 
-fload ${BP}/ofw/gui/loadmenu.fth
-\ fload ${BP}/ofw/gui/insticon.fth
-
 \ Use values like these if you want to boot directly instead of through an intermediate script
  " u:\boot\bzImage"   ' boot-device  set-config-string-default
 \ " console=uart,io,0x3f8,115200" ' boot-file  set-config-string-default
  \ " console=uart,io,0x3f8,115200 root=/dev/nfs rw nfsroot=192.168.42.100:/usr/local/rfs_x86,proto=tcp,hard ip=192.168.42.99:192.168.42.100::255.255.255.0:neptune:eth0:off init=/bin/sh" ' boot-file  set-config-string-default
- " console=uart,io,0x3f8,115200 console=tty0 root=/dev/nfs rw nfsroot=192.168.0.23:/home/shared/devel/neptune/sw/rfs/x86_32_rfs,proto=tcp,hard ip=192.168.0.77:192.168.0.23::255.255.255.0:neptune:eth0:off video=1027x768M@60m init=/bin/bash" ' boot-file  set-config-string-default
+ " console=uart,io,0x3f8,115200 root=/dev/nfs rw nfsroot=192.168.0.23:/home/shared/devel/neptune/sw/rfs/x86_32_rfs,proto=tcp,hard ip=192.168.0.78:192.168.0.23::255.255.255.0:neptune:eth0:off video=1027x768M@60m ethaddr=00:50:C2:1E:AF:B0 init=/bin/sh" ' boot-file  set-config-string-default
 \ \needs ramdisk  " u:\boot\initrd.img" d# 128 config-string ramdisk
 \needs ramdisk  " " d# 128 config-string ramdisk
 \ " "   ' boot-file      set-config-string-default   \ Let the boot script set the cmdline
@@ -349,16 +351,6 @@ fload ${BP}/ofw/ppp/loadppp.fth
 \ fload ${BP}/cpu/x86/pc/report.fth
 fload ${BP}/ofw/core/dualconsole.fth
 
-true constant user-switch?  ( -- flag )
-: fast-boot?  ( -- flag )
-[ifdef] rom-loaded
-false exit
-   user-switch? 0=
-[else]
-   false
-[then]
-;
-
 : interpreter-init  ( -- )
    hex
    warning on
@@ -376,47 +368,12 @@ false exit
 [ifdef] rom-loaded
    video-map cr
 [then]
-   " screen" open-dev  ?dup  if
-      set-stdout
-\       logo-banner drop
-\       close-dev
-\       0 stdout !
-   then
-
+   install-console
+\  ?usb-keyboard
    install-dual-console
 
-   ?gui-banner
-   " probe-" do-drop-in
-\   ." nvramrc" cr
-\   use-nvramrc?  if  nvramrc safe-evaluate  then
-;
-: debug-interact  ( -- )
-   early-interact?  if
-      " Interrupting startup sequence prior to probing" .because
-      ." Type 'resume'  to resume normal startup sequence." cr
-      \ fallback-device io console-io
-      ( help-msg ) interact
-   then
-;
-
-: geode-print-pll ( -- )
-   ." Geode CPU Speed "
-   h# 4c00.0014 rdmsr swap drop
-   h# 3E and 2/
-   1 + d# 66 * 2/ decimal . cr
-
-   ." GeodeLink Speed "
-   h# 4c00.0014 rdmsr swap drop
-   h# FFF and 7 >>
-   1 + d# 66 * 2/ decimal . cr
-
-   ." PCI Speed "
-   h# 4c00.0014 rdmsr drop
-   1 7 << and
-   0= if d# 33 . else d# 66 . then cr
-
-   hex
-
+   " nvramrc-" do-drop-in
+   use-nvramrc?  if  nvramrc safe-evaluate  then
 ;
 
 fload ${BP}/dev/flashui.fth
@@ -443,48 +400,36 @@ fload ${BP}/dev/flashui.fth
    " devalias flash /flash@fff00000" evaluate
 ;
 
+\ Change this to lpc-gpi1-pa to use the dongle LPC FLASH
+lpc-gpi0-pa value lpc-gpi-pa
+
 : vme ( -- )
-	." Running Lattice programmer "
-	com1 io
-	verbose-cif
-	" u:\neptune.vme" to boot-file
-	" u:\vme.elf" $boot
+   ." Running Lattice programmer "
+
+   lpc-gpi-pa lpc-gpi-pa h# 100 -1 mmu-map
+   \ verbose-cif
+   " rom:\isp u:\neptune.vme" $boot
+	
+   lpc-gpi-pa h# 100 mmu-unmap
 ;
 
 fload ${BP}/cpu/x86/pc/neptune/versions.fth
 
-: optional-startup  ( -- )
-   probe-usb
-   ?usb-keyboard
-;
+0 to major-release
+9 to minor-release
+: subrel  " .3"  ;  ' subrel to sub-release
 
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
 \   ?bailout
 
-   no-page
-
+   probe-all
    console-start
-	." Welcome to Dave Neptune (OFW 0.9.3)" cr
-   geode-print-pll
+   banner
 
-   fast-boot?   if
-      probe-pci
-      ['] false to interrupt-auto-boot?
-      interpreter-init
-      auto-boot
-      optional-startup
-   else
-      ." Interactive boot" cr
-
-      ." PCI Probe" cr
-       probe-pci
-      ." USB probe" cr
-      optional-startup
-      interpreter-init
-      auto-boot
-   then
+   interpreter-init
+   auto-boot
 
    blue-letters ." Type 'help' for more information." black-letters
    cr cr
@@ -498,6 +443,8 @@ warning @  warning off
 : esc-o  key lastchar !  [""] esc-[ do-command  ;
 warning !
 previous previous definitions
+
+tag-file @ fclose  tag-file off
 
 .( --- Saving fw.dic ...)
 " fw.dic" $save-forth cr

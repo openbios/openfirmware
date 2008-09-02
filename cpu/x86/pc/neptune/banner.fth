@@ -3,6 +3,26 @@ purpose: Banner customization for this system
 
 headerless
 
+: geode-print-pll ( -- )
+   ." Geode CPU Speed "
+   h# 4c00.0014 rdmsr swap drop
+   h# 3E and 2/
+   1 + d# 66 * 2/ decimal . cr
+
+   ." GeodeLink Speed "
+   h# 4c00.0014 rdmsr swap drop
+   h# FFF and 7 >>
+   1 + d# 66 * 2/ decimal . cr
+
+   ." PCI Speed "
+   h# 4c00.0014 rdmsr drop
+   1 7 << and
+   0= if d# 33 . else d# 66 . then cr
+
+   hex
+;
+' geode-print-pll to banner-extras
+
 : .rom  ( -- )
    ." OpenFirmware  "
    push-decimal
@@ -14,21 +34,13 @@ headerless
 ;
 
 : (xbanner-basics)  ( -- )
-   ?spaces  cpu-model type  ." , "   .memory
-   ?spaces  .rom
+   ?spaces  cpu-model type  ." , "   .memory  cr
+   ?spaces  .rom cr
 ;
 ' (xbanner-basics) to banner-basics
 
 ' (banner-warnings) to banner-warnings
 
-: stop-auto?  ( -- flag )  idprom-valid? 0=  auto-boot?  and ;
-
-defer gui-banner  ' true to gui-banner
-: ?gui-banner  ( -- )
-   stop-auto?  if  suppress-auto-boot  then
-
-   gui-banner drop
-;
 
 headers
 \ LICENSE_BEGIN
