@@ -40,30 +40,39 @@ atoi(char *s)
 }
 
 STATIC int
-printbase(ULONG x, int base)
+printbase(ULONG x, int base, int fieldlen, char padchar, int upcase)
 {
-	static char itoa[] = "0123456789abcdef";
+	static char lc_digits[] = "0123456789abcdef";
+	static char uc_digits[] = "0123456789ABCDEF";
 	ULONG j;
-	char buf[16], *s = buf;
+	char buf[32], *s = buf;
 	int n = 0;
 
-	if (x == 0) {
-		putchar('0');
-		n++;
-		return (n);
+	memset(buf, 32, 0);
+
+	if (base == 10 && (LONG) x < 0) {
+		*s++ = '-';
+		x = -x;
 	}
-	memset(buf, 16, 0);
-	while (x) {
+
+	do {
 		j = x % base;
-		*s++ = itoa[j];
+		*s++ = upcase ? uc_digits[j] : lc_digits[j];
 		x -= j;
 		x /= base;
+	} while (x);
+
+cvtdone:
+	for (fieldlen -= (s-buf); fieldlen > 0; --fieldlen) {
+		putchar(padchar);
+		n++;
 	}
 
 	for (--s; s >= buf; --s) {
 		putchar(*s);
 		n++;
 	}
+
 	return (n);
 }
 
@@ -73,6 +82,8 @@ _printf(char *fmt, va_list args)
 	ULONG x;
 	char c, *s;
 	int n = 0;
+        int fieldlen;
+	char padchar;
 
 	while (c = *fmt++) {
 		if (c != '%') {
@@ -80,23 +91,43 @@ _printf(char *fmt, va_list args)
 			n++;
 			continue;
 		}
-		switch (c = *fmt++) {
+                if ((c = *fmt++) == '\0')
+			goto out;
+		
+		if (c == '.')        // Ignore the numeric grouping flag
+			if ((c = *fmt++) == '\0')
+				goto out;
+
+		padchar = ' ';
+		if (c == '0') {
+			padchar = c;
+			if ((c = *fmt++) == '\0')
+				goto out;
+		}
+
+                fieldlen = 0;
+                while (c >= '0' && c <= '9') {
+			fieldlen = (fieldlen * 10) + (c - '0');
+			if ((c = *fmt++) == '\0')
+				goto out;
+		}
+
+		switch (c) {
 		case 'x':
 			x = va_arg(args, ULONG);
-			n += printbase(x, 16);
+			n += printbase(x, 16, fieldlen, padchar, 0);
+			break;
+		case 'X':
+			x = va_arg(args, ULONG);
+			n += printbase(x, 16, fieldlen, padchar, 1);
 			break;
 		case 'o':
 			x = va_arg(args, ULONG);
-			n += printbase(x, 8);
+			n += printbase(x, 8, fieldlen, padchar, 0);
 			break;
 		case 'd':
 			x = va_arg(args, ULONG);
-			if ((LONG) x < 0) {
-				putchar('-');
-				n++;
-				x = -x;
-			}
-			n += printbase(x, 10);
+			n += printbase(x, 10, fieldlen, padchar, 0);
 			break;
 		case 'c':
 			c = va_arg(args, int);
@@ -116,6 +147,7 @@ _printf(char *fmt, va_list args)
 			break;
 		}
 	}
+out:
 	return(n);
 }
 
