@@ -276,7 +276,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    h# 613c config-rb   al stos  \ SDHCI IRQ
 
    h# 6210 config-rl   ax stos  \ Camera BAR
-   h# 6204 config-rw   ax stos  \ SDHCI enables
+   h# 6204 config-rw   ax stos  \ Camera enables
 
    \ Other state we might want to save:
    \ ISA DMA Controller
