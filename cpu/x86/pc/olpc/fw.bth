@@ -314,7 +314,13 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
    vpci-devices-on   \ Do this after quieting USB
 ;
 ' setup-for-linux to linux-hook
+: screen-#lines  ( -- n )
+   screen-ih 0=  if  default-#lines exit  then
+   screen-ih  package( #lines )package
+;
+' screen-#lines to lines/page
 
+fload ${BP}/cpu/x86/pc/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/suspend.fth      \ Suspend/resume setup
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
