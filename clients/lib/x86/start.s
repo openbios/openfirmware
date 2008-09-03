@@ -35,8 +35,6 @@ _start:
 #L1:
 #	leave
 	ret
-Lfe1:
-	.size	 _start,Lfe1-_start
 
 .globl call_firmware
 	.type	 call_firmware,@function
@@ -47,8 +45,6 @@ call_firmware:
 	call *%ebx
 	pop %ebx
 	ret
-Lfe2:
-	.size	 _call_firmware,Lfe2-_call_firmware
 
 # LICENSE_BEGIN
 # Copyright (c) 2006 FirmWorks

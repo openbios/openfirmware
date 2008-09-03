@@ -9,7 +9,9 @@ SRCDIR=..
 HLIBDIR=$(BP)/clients/lib
 LIBDIR=$(HLIBDIR)/x86
 
-CFLAGS=   -I. -I$(SRCDIR) -I$(HLIBDIR)
+INCS=-I. -I$(SRCDIR) -I$(HLIBDIR)
+MODES=-g -m32 -fno-builtin -fno-stack-limit -fno-stack-protector
+CFLAGS= $(INCS) $(MODES)
 
 CC=		gcc
 LFLAGS= 	-T emacs.lds -N -e _start
