@@ -1,54 +1,67 @@
 purpose: Suspend/resume test with RTC wakeup
 \ See license at end of file
 
-: enable-rtc-irq   ( -- )  h# a1 pc@ h# fe and h# a1 pc!  ;
-: disable-rtc-irq  ( -- )  h# a1 pc@     1 or  h# a1 pc!  ;
-
 \ Must agree with lxmsrs.fth
 h# 3d constant cmos-alarm-day	\ Offset of day alarm in CMOS
 h# 3e constant cmos-alarm-month	\ Offset of month alarm in CMOS
 h# 32 constant cmos-century	\ Offset of century byte in CMOS
 
 dev /rtc
-   cmos-alarm-day    " alarm_day"   integer-property
-   cmos-alarm-month  " alarm_month" integer-property
-   cmos-century      " century"     integer-property
-dend
 
-false value enable-rtc-irq?
+cmos-alarm-day    " alarm_day"   integer-property
+cmos-alarm-month  " alarm_month" integer-property
+cmos-century      " century"     integer-property
 
-: rtc-handler  ( -- )  h# c cmos@ drop  ." R"  ;	\ Clear RTC interrupt flags
+\ There are a couple of reasons why you might not want to enable the IRQ:
+\ a) It might be shared with the timer IRQ so it is already enabled
+\ b) When using the alarm to wakeup from sleep, the IRQ might be unnecessary.
 
-: enable-rtc-alarm   ( -- )
+0 value alarm-irq
+false value enable-alarm-irq?
+
+defer alarm-hook  ' noop to alarm-hook
+
+: disable-alarm  ( -- )
+   enable-alarm-irq?  if  alarm-irq disable-interrupt  then
+   h# b cmos@ h# 20 invert and h# b cmos!  
+;
+
+: rtc-handler  ( -- )
+   disable-alarm
+   h# c cmos@ drop	\ Clear RTC interrupt flags
+   alarm-hook   
+;
+
+: enable-alarm   ( -- )
    ['] rtc-handler 8 interrupt-handler!
-
-   enable-rtc-irq?  if  enable-rtc-irq  then
+   enable-alarm-irq?  if  alarm-irq disable-interrupt  then
    h# c cmos@ drop				\ Clear RTC interrupt flags
    h# b cmos@ h# 20 or h# b cmos!  
 ;
-: disable-rtc-alarm  ( -- )
-   disable-rtc-irq
-   h# b cmos@ h# 20 invert and h# b cmos!  
-;
-: bcd-cmos!  ( binary -- )  " bcd!" clock-node @ $call-method  ;
-: set-rtc-alarm  ( secs -- )
-   disable-rtc-alarm
+
+: set-alarm  ( [ handler-xt ] secs -- )  \ No handler-xt if secs is 0
+   disable-alarm
+   ?dup  0=  if  exit  then                     ( handler-xt secs )
+   swap to alarm-hook                           ( secs )
    now						( secs s m h )
    d# 60 * d# 60 * swap d# 60 * + + +		( s )
    d# 60 /mod d# 60 /mod d# 24 mod		( s m h )
    h# c0 cmos-alarm-month cmos!			( s m h )	\ Any day
    h# c0 cmos-alarm-day cmos!			( s m h )	\ Any month
-   5 bcd-cmos!  3 bcd-cmos!  1 bcd-cmos!	( )
-   enable-rtc-alarm
+   5 bcd!  3 bcd!  1 bcd!	( )
+   enable-alarm
 ;
+
+dend
+
+: show-rtc-wake  ." R"  ;
+
 d# 1 constant rtc-alarm-delay
 : pm-sleep-rtc  ( -- )
-   false to enable-rtc-irq?		\ Spec says that IRQ is not necessary
-   rtc-alarm-delay set-rtc-alarm
-   h# 400.0000 0 acpi-l!		\ Enable RTC SCI
+   0 acpi-l@ h# 400.0000 or  0 acpi-l!	\ Enable RTC SCI
+   ['] show-rtc-wake  rtc-alarm-delay " set-alarm" clock-node @ $call-method
    s
-   disable-rtc-alarm
-   0 0 acpi-l!				\ Disable RTC SCI
+   0 acpi-l@ h# 400.0000 invert and  0 acpi-l!	\ Disable RTC SCI
 ;
 : rtc-wackup
    0
