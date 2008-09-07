@@ -7,6 +7,8 @@ decimal
 
 external
 
+: free-bytes  ( -- d )  total-free-blocks bsize um*  ;
+
 : $create   ( name$ -- error? )
    o# 100666 ($create)
 ;
@@ -103,7 +105,7 @@ headers
    \ XXX I am sceptical about this line.
    dup  0>  if  lblk#++  then				( actual )
    true to modified?
-   flush					\ XXX kludge for tests
+\   flush					\ XXX kludge for tests
 ;
 
 : $ext2fsopen  ( adr len mode -- false | fid fmode size align close seek write read true )

@@ -66,7 +66,10 @@ create buf-table  #bufs allot
    dup dirty? if			( buffer# )
       false over dirty!
       dup >buffer  swap blk#		( buffer-adr block# )
-      dup 3 < if  dup . ." attempt to corrupt superblock or group desciptor" abort  then
+      dup gds-fs-block# <=  if
+         dup . ." attempt to corrupt superblock or group descriptor" abort
+      then
+      bbug? if ." W " dup . cr then
       write-fs-block abort" write error "
    else
       drop

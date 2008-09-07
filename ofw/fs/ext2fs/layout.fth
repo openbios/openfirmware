@@ -221,19 +221,20 @@
 
 \ **** Allocate memory for necessary data structures
 : allocate-buffers  ( -- error? )
-   /super-block alloc-mem is super-block
+   init-io
+   /super-block do-alloc is super-block
    get-super-block ?dup  if
-      super-block /super-block free-mem exit
+      super-block /super-block do-free exit
    then
 
-   /gds alloc-mem is gds
+   /gds do-alloc is gds
    gds /gds gds-block# read-ublocks dup  if
-      gds         /gds          free-mem
-      super-block /super-block  free-mem exit
+      gds         /gds          do-free
+      super-block /super-block  do-free exit
    then
 
    bsize /buf-hdr + dup to /buffer
-   #bufs *  alloc-mem is block-bufs
+   #bufs *  do-alloc is block-bufs
    empty-buffers
 
    bsize /l /  dup to #ind-blocks1  ( #ind-blocks1 )
@@ -242,9 +243,9 @@
 ;
 
 : release-buffers  ( -- )
-   gds             /gds             free-mem
-   block-bufs      /buffer #bufs *  free-mem
-   super-block     /super-block     free-mem
+   gds             /gds             do-free
+   block-bufs      /buffer #bufs *  do-free
+   super-block     /super-block     do-free
 ;
 
 \ LICENSE_BEGIN

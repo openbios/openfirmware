@@ -8,6 +8,8 @@ decimal
 1024    constant /super-block
 h# ef53 constant fs-magic
 
+0 instance partition-offset
+
 0 instance value super-block
 0 instance value gds
 
@@ -20,9 +22,11 @@ defer int!    ( l adr -- )  ' be-l! to int!
 \ superblock data
 : +sbl  ( index -- value )  super-block  swap la+ int@  ;
 : +sbw  ( index -- value )  super-block  swap wa+ short@  ;
+: datablock0    ( -- n )   5 +sbl  ;
 : logbsize	( -- n )   6 +sbl 1+  ;
 : bsize		( -- n )   1024  6 +sbl lshift  ;	\ 1024
 : /frag		( -- n )   1024  7 +sbl lshift  ;	\ 1024
+: bpg		( -- n )   8 +sbl  ;			\ h#2000 blocks_per_group
 : fpg		( -- n )   9 +sbl  ;			\ h#2000 frags_per_group
 : ipg		( -- n )  10 +sbl  ;			\ h#790  inodes_per_group
 : magic         ( -- n )  28 +sbw  ;
@@ -36,31 +40,49 @@ defer int!    ( l adr -- )  ' be-l! to int!
 
 \ : total-inodes		( -- n )   0 +sbl  ;
 : total-blocks		( -- n )   1 +sbl  ;
-\ : total-free-blocks	( -- n )   3 +sbl  ;
+: total-free-blocks	( -- n )   3 +sbl  ;
 \ : total-free-inodes	( -- n )   4 +sbl  ;
 \ : total-free-blocks+!	( -- n )   3 +sbl  +  super-block  3 la+ int!  ;
 \ : total-free-inodes+!	( -- n )   4 +sbl  +  super-block  4 la+ int!  ;
 : total-free-blocks!	( -- n )   super-block  3 la+ int!  ;
 : total-free-inodes!	( -- n )   super-block  4 la+ int!  ;
-: #groups   ( -- n )   total-blocks fpg ceiling  ;
+: #groups   ( -- n )   total-blocks bpg ceiling  ;
 
 \ Don't write to a disk that uses extensions we don't understand
 : unknown-extensions?   ( -- unsafe? )
-   0  super-block h# 54 +  h# 14 bounds do   i l@ or   4 +loop  0<>
+   24 +sbl 4 and   if  ." ext3 journal needs recovery" cr  then 
+
+   23 +sbl h# ffffffff invert and        \ Accept all compat extensions
+   24 +sbl h# 00000002 invert and  or    \ Incompatible - accept FILETYPE
+   25 +sbl h# 00000001 invert and  or    \ RO - accept SPARSE_SUPER
+;
+
+: do-alloc  ( adr len -- )  " dma-alloc" $call-parent  ;
+: do-free   ( adr len -- )  " dma-free" $call-parent  ;
+
+: init-io  ( -- )
+   " offset-low" $call-parent  " offset-high" $call-parent
+   ublock um/mod nip  to partition-offset
 ;
 
 : write-ublocks  ( adr len dev-block# -- error? )
-   ublock um* " seek" $call-parent ?dup  if  exit  then		( adr len )
-   tuck " write" $call-parent <>
+\   ublock um* " seek" $call-parent ?dup  if  exit  then		( adr len )
+\   tuck " write" $call-parent <>
+   partition-offset +  swap ublock 1- + 9 rshift             ( adr block# #blocks )
+   dup >r  " write-blocks" $call-parent  r> <>
 ;
 : put-super-block  ( -- error? )
    super-block /super-block super-block# write-ublocks
 ;
 
 : read-ublocks  ( adr len dev-block# -- error? )
-   ublock um* " seek" $call-parent ?dup  if  exit  then		( adr len )
-   tuck " read" $call-parent <>
+   partition-offset +  swap ublock 1- + 9 rshift             ( adr block# #blocks )
+   dup >r  " read-blocks" $call-parent  r> <>
+
+\   ublock um* " seek" $call-parent ?dup  if  exit  then		( adr len )
+\   tuck " read" $call-parent <>
 ;
+
 : get-super-block  ( -- error? )
    super-block /super-block super-block# read-ublocks ?dup  if  exit  then
 
@@ -73,11 +95,13 @@ defer int!    ( l adr -- )  ' be-l! to int!
    magic fs-magic <>
 ;
 
-: gds-block#  ( -- dev-block# )
+: gds-fs-block#  ( -- fs-block# )
    bsize d# 1024 =  if  2  else  1  then	( logical block# )
-   bsize ublock / *				( dev-block# )
 ;
-: /gds  ( -- size )  #groups h# 20 *  ;
+: gds-block#  ( -- dev-block# )
+   gds-fs-block#  bsize ublock / *		( dev-block# )
+;
+: /gds  ( -- size )  #groups h# 20 *  ublock round-up  ;
 : group-desc  ( group# -- adr )  h# 20 *  gds +  ;
 : gpimin    ( group -- block# )   group-desc  2 la+ int@  ;
 : blkstofrags  ( #blocks -- #frags )  ;		\ XXX is this needed?

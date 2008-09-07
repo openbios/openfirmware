@@ -18,12 +18,31 @@ variable current-dir
 
 \ **** Return the address of the current directory entry
 : dirent  ( -- adr )  dir-block# block diroff @ +  ;
+\ Dirent fields:
+\ 00.l inode
+\ 04.w offset to next dirent
+\ 06.b name length
+\ 07.b flags?
+\ 08.s name string
+
+: >reclen   ( name-length -- record-length )   8 + 4 round-up  ;
+
+: dirent-inode@  ( -- n )  dirent int@  ;
+: dirent-inode!  ( n -- )  dirent int!  ;
+: dirent-len@  ( -- n )  dirent la1+ short@  ;
+: dirent-len!  ( n -- )  dirent la1+ short!  ;
+: dirent-nameadr   ( -- adr )  dirent la1+ 2 wa+  ;
+: dirent-namelen@  ( -- b )  dirent la1+ wa1+ c@  ;
+: dirent-namelen!  ( b -- )  dirent la1+ wa1+ c!  ;
+: dirent-type@     ( -- b )  dirent la1+ wa1+ ca1+  c@  ;
+: dirent-type!     ( b -- )  dirent la1+ wa1+ ca1+  c!  ;
+: dirent-reclen    ( -- n )  dirent-namelen@ >reclen  ;
 
 : lblk#++  ( -- )   lblk# 1+ to lblk#  ;
 
 \ **** Select the next directory entry
 : next-dirent  ( -- end? )
-   dirent  la1+ short@  dup diroff +!  totoff +!
+   dirent-len@  dup diroff +!  totoff +!
    totoff @  file-size >=  if  true exit  then
    diroff @  bsize =  if
       lblk#++  get-dirblk  if  true exit  then
@@ -34,12 +53,12 @@ variable current-dir
 
 \ **** From directory, get handle of the file or subdir that it references
 \ For Unix, file handle is the inode #
-: file-handle  ( -- i# )  dirent int@  ;
+: file-handle  ( -- i# )  dirent-inode@  ;
 
 \ **** From directory, get name of file
 : file-name  ( -- adr len )
    dirent la1+ wa1+  dup wa1+    ( len-adr name-adr )
-   swap short@  h# ff and   ( adr len )
+   swap c@                       ( adr len )
 ;
 
 \
@@ -59,53 +78,92 @@ variable current-dir
    update
    r> drop
 ;
-: >reclen   ( name-length -- record-length )   8 + 4 round-up  ;
+
+\ On entry:
+\   current-dir @  is the inode of the directory file
+\   dir-block# is the physical block number of the first directory block
+\   diroff @ is 0
+\ On successful exit:
+\   dir-block# is the physical block number of the current directory block
+\   diroff @ is the within-block offset of the new dirent
+: no-dir-space?  ( #needed -- true | offset-to-next false )
+   begin						( #needed )
+      dirent-inode@  if					( #needed )
+         dup  dirent-len@ dirent-reclen -  <=  if	( #needed )
+            \ Carve space out of active dirent
+            drop					( )
+            dirent-len@ dirent-reclen -			( offset-to-next )
+            dirent-reclen  dup dirent-len!  diroff +!	( offset-to-next )
+            false exit
+         then
+      else						( #needed )
+         dup  dirent-len@  <=  if			( #needed )
+            \ Reuse deleted-but-present dirent
+            drop					( )
+            dirent-len@					( offset-to-next )
+            false exit
+         then						( #needed )
+      then						( #needed )
+      next-dirent					( #needed )
+   until						( #needed )
+   drop true
+;
+
 \ a directory entry needs 8+n 4-aligned bytes, where n is the name length
 \ the last entry has a larger size; it points to the end of the block
-: (last-dirent)   ( -- penultimate-offset last-offset )
-   diroff off   0 0
-   begin						( previous' last' )
-      nip diroff @					( previous last )
-      dirent la1+ short@				( previous last rec-len )
-      dup diroff @ + bsize <				( previous last rec-len not-end? )
-      over dirent la1+ wa1+ short@ >reclen = and	( previous last rec-len not-end? )
-   while						( previous last rec-len )
-      diroff +!						( previous last )
-   repeat						( previous last rec-len )
-   drop
+: (last-dirent)   ( -- penultimate-offset )
+   diroff off   0
+   begin						( last )
+      dirent-len@				        ( last rec-len )
+      dup diroff @ + bsize <				( last rec-len not-end? )
+\     over dirent-reclen =  and				( last rec-len not-end? )
+   while						( last rec-len )
+      nip diroff @ swap					( last' rec-len )
+      diroff +!						( last )
+   repeat						( last )
+   drop							( last )
 ;
 : last-dirent   ( -- free-bytes )
    file-size bsize /mod swap 0= if  1-  then to lblk#	( )
    lblk# >pblk# to dir-block#
-   (last-dirent) 2drop
-   dirent la1+ dup short@  swap wa1+ short@ >reclen -
+   (last-dirent) drop
+   dirent-len@  dirent-reclen  -
 ;
 : set-dirent   ( name$ rec-len inode# -- )
    dirent int!						( name$ rec-len )
-   dirent la1+ short!					( name$ )
-   dup dirent la1+ wa1+ short!
-   dirent la1+ 2 wa+ swap move
+   dirent-len!						( name$ )
+   dup dirent-namelen!					( name$ )
+   \ XXX set actual file type here if EXT2_FEATURE_INCOMPAT_FILETYPE
+   0 dirent-type!					( name$ )
+   dirent-nameadr swap move				( )
    update
+;
+
+: to-previous-dirent  ( -- )
+   diroff @  					( this )
+   0 diroff !					( this )
+   begin					( this )
+      dup  diroff @ dirent-len@ +  <>		( this not-found? )
+   while					( this )
+      dirent-len@ diroff +!			( this )
+   repeat					( this )
+   diroff @ swap -  totoff +!			( )
 ;
 
 \ delete directory entry at diroff
 : del-dirent   ( -- error? )
-   diroff @ >r
-   (last-dirent) dup r@ = if				( prev last )
-      \ current entry is the last
-      r> 2drop						( prev )
-      diroff @ 0= abort" delete this block in directory" \ XXX last is also first
-      dirent  bsize diroff @ - erase			( prev )
-   else							( prev last )
-      nip						( last )
-      r> diroff !					( last )
-      dirent  dup la1+ wa1+ short@ >reclen		( last dirent oldlen )
-      rot over - -rot					( last' dirent oldlen )
-      2dup + -rot					( last' nextent dirent reclen )
-      diroff @ + bsize swap - move			( last' )
-   then							( last )
-   dup diroff !
-   bsize swap -  dirent la1+ short!
+   diroff @  if
+      \ Not first dirent in block; coalesce with previous
+      dirent-len@				( deleted-len )
+      to-previous-dirent			( deleted-len )
+      dirent-len@ + dirent-len!			( )
+      dirent dirent-reclen +			( adr )
+      dirent-len@ dirent-reclen -  erase	( )
+   else
+      \ First dirent in block; zap its inode
+      0 dirent-inode!
+      
+   then      
    update
    false
 ;
@@ -113,19 +171,16 @@ variable current-dir
 : ($create)   ( name$ mode -- error? )
    >r							( name$ )
    \ check for room in the directory, and expand it if necessary
-   dup >reclen  last-dirent  tuck <  if			( name$ free )
-      
-      \ there is room. update previous entry, and point to new entry
-      dirent la1+ wa1+ short@ >reclen			( name$ free old-len )
-      dup dirent la1+ short!  diroff +!			( name$ free )
-   else							( name$ free )
+   dup >reclen  no-dir-space?   if			( name$ new-reclen )
       \ doesn't fit, allocate more room
-      drop bsize					( name$ bsize )
+      bsize						( name$ bsize )
       append-block
       lblk#++ get-dirblk drop
    then							( name$ rec-len )
+
+   \ At this point dirent points to the place for the new dirent
    alloc-inode set-dirent false				( error? )
-   r> file-handle init-inode
+   r> dirent-inode@ init-inode
 ;
 
 \ On entry:
@@ -138,7 +193,9 @@ variable current-dir
 \   totoff @ is the overall offset of the directory entry that matches name$
 : lookup  ( name$ -- not-found? )
    begin
-      2dup file-name  $=  if  2drop false exit  then
+      dirent-inode@  if   \ inode=0 for a deleted dirent at the beginning of a block
+         2dup file-name  $=  if  2drop false exit  then
+      then
       next-dirent
    until
    2drop true
@@ -257,7 +314,7 @@ external
    r> to inode#
 ;
 
-\ Linux sometimes leaves a deleted file in the directory with an inode of 0
+\ Deleted files at the beginning of a directory block have inode=0
 : next-file-info  ( id -- false | id' s m h d m y len attributes name$ true )
    dup  if  
       begin
