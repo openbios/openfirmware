@@ -5,8 +5,8 @@ typedef struct _file {
   int  bufc;
   int  readonly;
   int  dirty;
-  char *inbufp;
-  char buf[128];
+  unsigned char *inbufp;
+  unsigned char buf[128];
 } FILE;
 
 extern FILE *stdin;

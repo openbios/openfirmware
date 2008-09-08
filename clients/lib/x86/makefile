@@ -45,7 +45,7 @@ bintoelf: ../bintoelf.c
 
 
 clean:
-	rm *~ *.o hello* *.a
+	rm -f *~ *.o hello* *.a
 
 
 dist:
