@@ -56,7 +56,7 @@ code halt  hlt  c;  \ To save power
 : show-going  ( -- )
    background-rgb  rgb>565  progress-xy  d# 500 d# 100  " fill-rectangle" $call-screen
    d# 588 d# 638 to icon-xy  " bigdot" show-icon
-   dcon-unfreeze
+   " vga?" $call-screen  0=  if  dcon-unfreeze dcon-freeze  then
 ;
 : show-x  ( -- )  " x" show-icon  ;
 : show-sad  ( -- )
