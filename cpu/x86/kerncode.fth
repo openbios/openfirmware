@@ -551,6 +551,31 @@ code lfill  (s start-addr count char -- )
    dx di mov
 c;
 
+\ Skip initial occurrences of bvalue, returning the residual length
+code bskip  ( adr len bvalue -- residue )
+   di dx mov
+   ax pop         \ BX: compare value
+   cx pop         \ CX: Length
+   di pop         \ SI: address
+   cld  repz byte scas
+   <>  if  cx inc  then
+   dx di mov
+   cx push
+c;
+
+\ Skip initial occurrences of lvalue, returning the residual length
+code lskip  ( adr len lvalue -- residue )
+   di dx mov
+   ax pop         \ BX: compare value
+   cx pop         \ CX: Length
+   2 # cx shr     \ Convert CX to longword count
+   di pop         \ SI: address
+   cld  repz scas
+   <>  if  cx inc  then
+   dx di mov
+   2 # cx shl  cx push
+c;
+
 code noop (s -- )  c;
 
 code n->l (s n.unsigned -- l ) c;
