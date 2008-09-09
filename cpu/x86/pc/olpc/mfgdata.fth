@@ -77,27 +77,31 @@ purpose: Manufacturing data reader
 
 : $tag-printable?  ( adr len -- flag )
    ?-null   \ Ignore trailing null
-   bounds  ?do  i c@ printable?  0=  if  false unloop exit  then  loop
+   bounds  ?do  i c@  bl h# 7f within 0=  if  false unloop exit  then  loop
    true
 ;
 
 : wrapped-cdump  ( adr len -- )
    lmargin @ >r  rmargin @ >r  tabstops @ >r
-   4 lmargin !  d# 78 rmargin !  3 tabstops !
+   4 lmargin !  d# 71 rmargin !  3 tabstops !
+   dup >r
+   blue-letters
    bounds ?do
       3 .tab  i c@  <# u# u# u#> type
    loop
+   black-letters
+   r> d# 10 >  if  cr  then
    r> tabstops !  r> rmargin !  r> lmargin !
 ;
 
 : .mfg-data  ( -- )
-   0 lmargin !  d# 78 rmargin !  d# 44 tabstops !
+   0 lmargin !  d# 78 rmargin !  d# 42 tabstops !
    ??cr
    mfg-data-top        ( adr )
    begin  another-tag?  while   ( adr' data$ tname-adr )
       over 4 + .tab
       2 type 2 spaces           ( adr' data$ )
-      2dup $tag-printable?  if  ?-null type  else  wrapped-cdump  cr  then
+      2dup $tag-printable?  if  ?-null type  else  wrapped-cdump  then
       exit?  if  drop exit  then
    repeat
    drop
