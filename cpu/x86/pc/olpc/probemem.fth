@@ -35,6 +35,8 @@ dev /memory
 : release-range  ( start-adr end-adr -- )  over - release  ;
 
 : probe  ( -- )
+   system-ram /fw-area - to fw-pa
+
    0 total-ram  reg   \ Report extant memory
 
    \ Put h# 10.0000-1f.ffff and 28.0000-memsize in pool,

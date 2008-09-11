@@ -154,7 +154,7 @@ create nb-hdr  \ All R/O except cmd/stat, cache line size, latency
 
 create gxfb-hdr  \ All R/O except cmd/stat and cache line size
   ' gxfb-cmd-reg token,    ' >hdr-value token,  
-  ff000000 , ffffc000 , ffffc000 , ffffc000 ,
+  ff800000 , ffffc000 , ffffc000 , ffffc000 ,
          0 ,        0 ,        0 ,        0 ,
 
     30100b ,  2200002 ,  3000000 ,        8 ,

@@ -17,8 +17,9 @@ h#    8.0000   constant dropin-size
 
 dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
 
-h#  ec0.0000 constant fw-pa
+h#  ec0.0000 value    fw-pa     \ Changed in probemem.fth
 h#   20.0000 constant /fw-ram
+h#   40.0000 constant /fw-area
 [then]
 
 [ifdef] linuxbios-loaded

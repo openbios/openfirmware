@@ -52,7 +52,7 @@ msr: 4000.0025 200000fe.008ffffc.   \ fe00.8000 - fe00.bfff VP, route to GLIU0
 \ msr: 4000.0027 000000ff.fff00000.   \ Unmapped - default
 \ msr: 4000.0028 000000ff.fff00000.   \ Unmapped - default
 \ msr: 4000.0029 20000007.7df00100.   \ 10.0000 - 0f7d.f000 High RAM - Memsize dependent
-msr: 4000.002a 200000fd.7fffd000.   \ frame buffer - fd00.0000 .. fd7f.ffff, route to GLIU0
+msr: 4000.002a 200000fd.7fffd000.   \ frame buffer - fd00.0000 .. fd7f.ffff, route to GLIU0, fbsize
 \ msr: 4000.002d 20000000.f0000003.   \ 000f.0000 - 000f.ffff expansion ROM; XXX - no expansion ROM
 msr: 4000.0080 00000000.00000001.   \ Route coherency snoops from GLIU1 to GLIU0
 msr: 4000.0083 00000000.0000ff00.   \ Disable SMIs
