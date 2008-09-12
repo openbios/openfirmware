@@ -19,6 +19,25 @@ variable 'get-data? 'get-data? off
 ;
 
 
+h# f800.f800 constant red
+h# 07e0.07e0 constant green
+h# 001f.001f constant blue
+h# ffe0.ffe0 constant yellow
+h# f81f.f81f constant magenta
+h# 07ff.07ff constant cyan
+h# ffff.ffff constant white
+h# 0000.0000 constant black
+
+variable pixcolor
+
+h# 4 value y-offset
+0 value fbadr
+0 value maxx
+0 value maxy
+0 value /line
+2 value /pixel
+
+
 \ This program depends on the following routines from the
 \ existing Open Firmware mouse driver:
 
@@ -70,16 +89,16 @@ variable ptr
 \ "identify" command; the response (for a mouse-like device) is 0x00
 : alps-prefix  ( -- )  3 0  do  h# f2 read1 drop  loop  ;
 
-variable mode
+variable mode  \ 0 - unknown  1 - GS  2 - PT  3 - mouse
 
 \ Ref: 5.2.10 (3) of Hybrid-GP2B-T-1.pdf
 : gs-only  ( -- )
-   mode @  1 =  if  exit  then
+   mode @  dup 1 =  swap 3 =  or  if  exit  then
    alps-prefix mouse1:1    \ f2 f2 f2 e6
    1 mode !
 ;
 : pt-only  ( -- )
-   mode @  2 =  if  exit  then
+   mode @  dup 2 =  swap 3 =  or  if  exit  then
    alps-prefix mouse2:1    \ f2 f2 f2 e7
    2 mode !
 ;
@@ -88,7 +107,14 @@ variable mode
 \ : simultaneous-mode  ( -- )  alps-prefix 2 set-resolution  ;
 
 \ Put the device into advanced mode and enable it
-: start  ( -- )  0 mode !  setup advanced-mode  stream-on  ;
+: start  ( -- )
+   setup
+   olpc-touchpad?  if
+      0 mode !  advanced-mode stream-on
+   else
+      remote-mode  3 mode !
+   then
+;
 
 \ I have been unable to get this to work.  The response is always
 \ 64 0 <something>, which doesn't agree with the spec.
@@ -237,7 +263,7 @@ variable miss?
          h# ff  of  decode-gs  true exit  endof
 \        h# eb  of  decode-simultaneous exit  endof
          h# aa  of
-            0 d# 28 at-xy red-screen white-letters
+            0 d# 26 at-xy red-screen white-letters
             ." Unexpected touchpad reset"
             white-screen black-letters
             cr
@@ -256,10 +282,30 @@ variable miss?
    again
 ;
 
+variable mouse-x
+variable mouse-y
+
+: clipx  ( delta -- x )  mouse-x @ +  0 max  maxx min  dup mouse-x !  ;
+: clipy  ( delta -- y )  mouse-y @ +  0 max  maxy min  dup mouse-y !  ;
+
 \ Try to receive a GS-format packet.  If one arrives within
 \ 20 milliseconds, return true and the decoded information.
 \ Otherwise return false.
 : pad?  ( -- false | x y z tap? true )
+   mode @ 3 =  if
+      poll-event   if    ( dx dy buttons )
+         >r                                ( dx dy )
+         swap clipx  swap negate clipy  0  ( x y z )
+         0  r@ 1 and or                    ( x y z tap )
+         r> 4 and 0<> 2 and or             ( x y z tap' )
+         8 or                              ( x y z tap' )
+         true
+      else
+         false
+      then
+      exit
+   then
+
    poll-touchpad  0=  if  false exit  then
 
    gx @ gy @ gz @  taps @ 2 lshift  switches @  or   true
@@ -295,31 +341,13 @@ variable miss?
    key? until
 ;
 
-h# f800.f800 constant red
-h# 07e0.07e0 constant green
-h# 001f.001f constant blue
-h# ffe0.ffe0 constant yellow
-h# f81f.f81f constant magenta
-h# 07ff.07ff constant cyan
-h# ffff.ffff constant white
-h# 0000.0000 constant black
-
-variable pixcolor
-
-h# 4 value y-offset
-0 value fbadr
-0 value maxx
-0 value maxy
-0 value /line
-2 value /pixel
-
 : button  ( color x -- )
    maxy d# 50 -  d# 200  d# 30  " fill-rectangle" $call-screen
 ;
 : background  ( -- )
    fbadr  maxy 2+  /line *  erase
-   0 d# 30 at-xy  ." Touchpad test.  Both buttons clears screen.  Type a key to exit" cr
-   0 d# 20 at-xy  ." Pressure: "
+   0 d# 27 at-xy  ." Touchpad test.  Both buttons clears screen.  Type a key to exit" cr
+   mode @ 3 <>  if  0 d# 20 at-xy  ." Pressure: "  then
 ;
 : track-init  ( -- )
    screen-ih package(
@@ -330,7 +358,13 @@ h# 4 value y-offset
 
 : show-up  ( x y z -- )  3drop  d# 10 d# 20 at-xy  ." UP "  ;
 
-: show-pressure  ( -- )  push-decimal  d# 10 d# 20 at-xy  3 u.r  pop-base  ;
+: show-pressure  ( z -- )
+   mode @ 3 =  if
+      drop
+   else
+      push-decimal  d# 10 d# 20 at-xy  3 u.r  pop-base
+   then
+;
 
 : dot  ( x y -- )
    y-offset +  maxy min  /line *          ( x line-adr )
