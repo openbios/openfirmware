@@ -155,9 +155,22 @@ d# 308 constant /options-field
 \ Options common to discover, inform, and request messages
 : other-parameters  ( -- )
    set-vendor-class
+
+
+   \ Parameter request list
+   \ h# 01 -  1 Subnet mask
+   \ h# 03 -  3 Router IP address
+   \ h# 06 -  6 Name Server IP address
+   \ h# 0c - 12 Client name
+   \ h# 0f - 15 Domain name
+   \ h# 11 - 17 Root path
+   \ h# 1c - 28 Broadcast IP address
+   \ h# 2b - 43 Vendor options
+   \ h# 36 - 54 Server IP address
+   " "(01 03 06 0c 0f 11 1c 2b 36)" d# 55 +option
+
    \ Later: Add requested IP address if we know it
    \ Later: Add requested IP lease time if we have a preference
-   \ Later: Add parameter request list if we care
    \ Later: Add maximum message size if we should need to
 ;
 : use-ip-broadcast  ( -- )  broadcast-ip-addr set-dest-ip  ;
@@ -288,10 +301,36 @@ headerless
 ;
 
 partial-headers
-\ For now we'll take the first offer we get.
+\ wanted? is the DHCP offer filter.  Many environments have multiple DHCP
+\ servers, some giving incomplete information.  You can set wanted? to
+\ require specific characteristics in the offer data.
+
+\ A better approach would be to collect several offers within a time period
+\ and choose the best among them, stopping early if a "perfect" offer arrives.
 
 \ The default value of wanted? accepts the first DHCPOFFER that is received
 defer wanted?  ( -- flag )  ' true to wanted?
+
+\ This filter accepts offers that specify a router
+: router?  ( -- flag )
+   3 find-option  dup  if  nip nip  then
+;
+
+\ This filter accepts offers that specify a name server
+: ns?  ( -- flag )
+   6 find-option  dup  if  nip nip  then
+;
+
+: router+ns?  ( -- flag )  router? ns? and  ;
+
+: adaptive-wanted?  ( -- flag )
+   backoff  case
+      d#  8000 of  router+ns? exit  endof
+      d# 16000 of  router?    exit  endof
+   endcase
+   true
+;
+' adaptive-wanted? to wanted?		\ By default, we accept all DHCP offers
 
 \ This filter rejects offers whose siaddr field is empty, (Microsoft's
 \ DHCP server doesn't fill in siaddr), since we are hosed if we don't know
@@ -304,8 +343,8 @@ defer wanted?  ( -- flag )  ' true to wanted?
       " The DHCP 'siaddr' field is empty" .dhcp-msg
    then
 ;
-' true to wanted?		\ By default, we accept all DHCP offers
 \ ' (wanted?) to wanted?
+
 
 \ Another plausible criterion for choosing a particular offer might be:
 \    If a vendor class identifier is supplied, reject offers that do
