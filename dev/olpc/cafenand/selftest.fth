@@ -56,7 +56,7 @@ false value selftest-err?               \ Selftest result
    then
 ;
 : read-eblock  ( adr page# -- error? )
-   pages/eblock read-blocks pages/eblock <>
+   pages/eblock read-pages pages/eblock <>
    dup  if  ." SAVE" cr  then
 ;
 : write-eblock  ( adr page# -- error? )
@@ -64,7 +64,7 @@ false value selftest-err?               \ Selftest result
    over /eblock erased?  if   ( adr page# )
       2drop false
    else                       ( adr page# )
-      pages/eblock write-blocks pages/eblock <>
+      pages/eblock write-pages pages/eblock <>
       dup  if  ." RESTORE" cr  then
    then
 ;

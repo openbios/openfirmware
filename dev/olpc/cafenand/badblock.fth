@@ -247,7 +247,7 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
 
 external
 \ Assumes that the page range doesn't cross an erase block boundary
-: read-blocks  ( adr page# #pages -- #read )
+: read-pages  ( adr page# #pages -- #read )
    over block-bad?  if  3drop 0 exit  then
 
    rot >r  2dup r> -rot         ( page# #pages adr page# #pages )
@@ -261,7 +261,7 @@ external
    drop nip
 ;
 
-: write-blocks  ( adr page# #pages -- #written )
+: write-pages  ( adr page# #pages -- #written )
    over block-bad?  if  3drop 0 exit  then
 
    over >r  dup >r               ( adr page# #pages  r: page# #pages )
@@ -279,11 +279,8 @@ external
    tuck  bounds  ?do  i erase-block  pages/eblock +loop
 ;
 
-: block-size    ( -- n )  /page  ;
-
-: erase-size    ( -- n )  /eblock  ;
-
-: max-transfer  ( -- n )  /eblock  ;
+: page-size    ( -- n )  /page  ;
+: erase-size   ( -- n )  /eblock  ;
 
 : dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
 

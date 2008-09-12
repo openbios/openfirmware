@@ -143,7 +143,9 @@ headerless
 ;
 false value type32?
 : init-bpb  ( #mbytes type name$ -- )
-   string2 pack >r  " :1,<NoFile>" r@ $cat r> count  select-dev
+   ." Initializing file system ..." cr
+
+   string2 pack >r  " :1//fat-file-system:<NoFile>" r@ $cat r> count  select-dev
    fat32? to type32?
    dup type32? compute-cluster-size swap 2>r	( R: spc #mbytes )
    1 h# 40 h# 20 			( #hid-sec #heads sec/trk ) ( R: spc #mbytes )
@@ -175,7 +177,7 @@ headers
    \ We don't bother with the cylinder/head/sector numbers, because they
    \ rarely matter anymore, and we don't have a good way to find them.
 
-   1  h# 1c6 +buf le-l!         \ Begin the partition at logical block 1
+   h# 10  h# 1c6 +buf le-l!         \ Begin the partition at logical block 16
 
    dup >r
    ( #mbytes )  d# 2048 *  ( #blocks )  h# 1ca +buf le-l!

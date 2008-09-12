@@ -41,6 +41,7 @@ external
 : close  ( -- )
    \ Leave the timing registers set so the OS driver can get the
    \ right values from them.
+   lba-close
    soft-reset timing-configure unmap-regs
    dma-buf-va  ?dup  if
       dma-buf-va dma-buf-pa /dma-buf  " dma-map-out" $call-parent
@@ -48,7 +49,10 @@ external
    then
 ;
 
-: size  ( -- d )  partition-size /page  um*  ;
+: size  ( -- d )
+   lba-size?  if  exit  then
+   partition-size /page  um*
+;
 
 : $set-partition  ( $ -- error? )
    dup 0=  if  2drop false exit  then      ( $ )
@@ -66,14 +70,13 @@ external
 : open  ( -- okay? )
    map-regs
    init
+   lba-nand?  if  exit  then
    0 to partition#
    0 to partition-start
    configure-all  if  false exit  then
 
-   /dma-buf dma-alloc to dma-buf-va
-   dma-buf-va /dma-buf false " dma-map-in" $call-parent to dma-buf-pa
-
-   " lmove" $find  0=  if  ['] move  then  to do-lmove
+   alloc-dma-buf
+   set-lmove
 
    get-bbt
    usable-page-limit to partition-size

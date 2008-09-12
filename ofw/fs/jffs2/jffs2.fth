@@ -143,7 +143,7 @@ d# 256 2* /n* constant /parent-buf
    \ Partial reads invalidate the cache
    dup pages/eblock <>  if  -1 to have-eblock#  then  ( page# #pages )
 
-   block-buf -rot  " read-blocks" $call-parent        ( #read )
+   block-buf -rot  " read-pages" $call-parent         ( #read )
 ;
 : read-pages  ( page# #pages  -- error? )  tuck (read-pages) <>  ;
 : read-eblock  ( eblock# -- )
@@ -1468,7 +1468,7 @@ true [if]
    jffs2-magic over w!        \ magic       ( pad-adr r: page# )
    padding-type over wa1+ w!  \ nodetype    ( pad-adr r: page# )
    dup 8 crc  swap 2 j!       \ crc         (         r: page# )
-   block-buf r> 1  " write-blocks" $call-parent              ( )
+   block-buf r> 1  " write-pages" $call-parent               ( )
    1 <>  dup  if  ." JFFS2: write failed"  then       ( error? )
 ;
 
@@ -1515,7 +1515,7 @@ headerless
 : set-sizes   ( -- )
    -1 to file-size
 
-   " block-size" $call-parent to /page
+   " page-size" $call-parent to /page
 
    " erase-size" ['] $call-parent    ( adr len xt )
    catch  if  2drop h# 20000  then   ( n )

@@ -72,7 +72,9 @@ public	\ Called with $call-self
    dup alloc-mem dup bpb ! over erase
   
    r@  if  set-params32  else  set-params16  then
+   bpb>device
    r> r>			( fat32? bps )
+
    bpb @ over 1- + h# aa over c! 1- h# 55 swap c!
    0 1 bpb @ write-sectors	( fat32? bps error? )
    rot  if	\ Write file system info sector
@@ -92,6 +94,7 @@ public	\ Called with $call-self
    bpb @ rot free-mem
    if  "CaW ". ." sector 0"  abort  then
 
+   0 bps w!    \ Force reread
    ?read-bpb   \ Now read back the BIOS parameter block
 
    \ Clear the FATs. (0 means "free cluster")

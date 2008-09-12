@@ -14,6 +14,8 @@ fload ${BP}/dev/olpc/cafenand/cafenand.fth
 fload ${BP}/dev/olpc/cafenand/configure.fth
 fload ${BP}/dev/olpc/cafenand/badblock.fth
 fload ${BP}/dev/olpc/cafenand/redboot.fth
+\ : lba-nand?  0  ;  : lba-close  ;
+fload ${BP}/dev/olpc/cafenand/lbanand.fth
 fload ${BP}/dev/olpc/cafenand/methods.fth
 fload ${BP}/dev/olpc/cafenand/selftest.fth
 

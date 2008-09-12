@@ -121,73 +121,78 @@ d# 4096 constant /sector-max
    then
 ;
 
-\ This version of read-bpb implements Microsoft's recommended
-\ method for determining whether a filesystem is FAT-16 or FAT-32.
+\ This BPB parser implements Microsoft's recommended method
+\ for determining whether a filesystem is FAT-16 or FAT-32.
 variable nsects
+
+: bpb>device  ( -- )
+   bp_media c@  media c!
+   bp_bps lew@  bps w!
+   bp_spc c@    spc c!
+   bp_spf lew@  ?dup  0=  if   bp_bspf lel@  then   spf l!
+   bp_nsects lew@ ?dup 0=  if  bp_xnsects lel@  then  nsects l!
+
+   bp_ndirs lew@  /dirent *  /sector 1- +   /sector /  #dir-sectors w!
+
+   \ nsects is TotSec
+   \ #dir-sectors is RootDirSectors
+
+   \ Sector number where the FAT starts.
+   \ bp_nhid is the number of sectors before the BPB sector.
+   \ bp_res is the number of sectors from the BPT sector to the
+   \ first FAT sector.
+
+   \ If the underlying disk driver handles partition offsets,
+   \ we don't need to handle bp_nhid here.
+   bp_res lew@   ( bp_nhid lel@ + )
+   dup fat-sector0 w!                    ( #resv-sectors )
+   spf l@  bp_nfats c@ *  +              ( #early-sectors )
+   dup dir-sector0 w!                    ( #early-sectors )
+   #dir-sectors w@ +  cl-sector0 l!      ( )
+
+   \ cl-sector0 is FirstDataSector
+
+   nsects l@  #dir-sectors w@ -  spc c@ /  ( #clusters )
+   dup d# 65525 >=  if                    ( #clusters )
+      drop  fat32 fat-type c!
+      0 dir-sector0 w!
+      bp_rdirclus lel@  rdirclus l!
+      bp_fsinfos lew@ dup read-fsinfo fsinfos w!
+   else
+      d# 4085 >=  if  fat16  else  fat12  then  fat-type c!
+      0 fsinfo !  0 fssector !  false fsinfos-dirty c!
+      0 fsinfos w!  0 rdirclus l!
+   then
+
+   \ The number of clusters is limited both by space for clusters numbers
+   \ in the FAT and by disk space for storage of the actual clusters.
+   \ It would be silly to waste disk space by making the FAT too small,
+   \ but I am paranoid so I check both limits.
+
+   \ Calculate the number of clusters the FAT can represent
+   spf l@  /sector *    bytes>cl-entries   ( #clusters )
+
+   \ Compare it with the number of clusters for which there is disk space
+   nsects l@
+   cl-sector0 l@ -  spc c@ /  2 +   min  1-
+   max-cl# l!
+;
+
 : ?read-bpb  ( -- )
    /sector 0=  if      \ Read bpb if necessary
       init-sector-size
       find-bpb
-
-      bp_media c@  media c!
       bp_bps lew@  bps w@ <>  if
          ." WARNING: BPB sector size differs from device sector size" cr
       then
-      bp_bps lew@  bps w!
-      bp_spc c@    spc c!
-      bp_spf lew@  ?dup  0=  if   bp_bspf lel@  then   spf l!
-      bp_nsects lew@ ?dup 0=  if  bp_xnsects lel@  then  nsects l!
+      bpb>device
 
-      bp_ndirs lew@  /dirent *  /sector 1- +   /sector /  #dir-sectors w!
-
-      \ nsects is TotSec
-      \ #dir-sectors is RootDirSectors
-
-      \ Sector number where the FAT starts.
-      \ bp_nhid is the number of sectors before the BPB sector.
-      \ bp_res is the number of sectors from the BPT sector to the
-      \ first FAT sector.
-
-      \ If the underlying disk driver handles partition offsets,
-      \ we don't need to handle bp_nhid here.
-      bp_res lew@   ( bp_nhid lel@ + )
-      dup fat-sector0 w!                    ( #resv-sectors )
-      spf l@  bp_nfats c@ *  +              ( #early-sectors )
-      dup dir-sector0 w!                    ( #early-sectors )
-      #dir-sectors w@ +  cl-sector0 l!      ( )
-
-      \ cl-sector0 is FirstDataSector
-
-      nsects l@  #dir-sectors w@ -  spc c@ /  ( #clusters )
-      dup d# 65525 >=  if                    ( #clusters )
-         drop  fat32 fat-type c!
-         0 dir-sector0 w!
-         bp_rdirclus lel@  rdirclus l!
-         bp_fsinfos lew@ dup read-fsinfo fsinfos w!
-      else
-         d# 4085 >=  if  fat16  else  fat12  then  fat-type c!
-         0 fsinfo !  0 fssector !  false fsinfos-dirty c!
-         0 fsinfos w!  0 rdirclus l!
-      then
-
-      \ The number of clusters is limited both by space for clusters numbers
-      \ in the FAT and by disk space for storage of the actual clusters.
-      \ It would be silly to waste disk space by making the FAT too small,
-      \ but I am paranoid so I check both limits.
-
-      \ Calculate the number of clusters the FAT can represent
-      spf l@  /sector *    bytes>cl-entries   ( #clusters )
-
-      \ Compare it with the number of clusters for which there is disk space
-      nsects l@
-      cl-sector0 l@ -  spc c@ /  2 +   min  1-
-      max-cl# l!
-      free-bpb
+      init-fat-cache
 
       \ Start with the root directory as the current working directory
       rdirclus @  dv_cwd-cl l! 
 
-      init-fat-cache
+      free-bpb
    then
 ;
 

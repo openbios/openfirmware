@@ -61,8 +61,15 @@ h# e constant bb-offset  \ Location of bad-block table signature in OOB data
 
 : clr-ints  ( -- )   h# ffff.ffff h# 10 cl!  ;
 
-\ Wait not busy - XXX need timeout
-: ctrl-wait  ( -- )  begin  h# c cl@  h# 8000.0000 and 0=  until  ;
+: wait-ready  ( -- )
+   get-msecs d# 1000 +  begin            ( target-time )
+      h# c cl@ h# 4000.0000 and  if      ( target-time )
+         drop exit
+      then                               ( target-time )
+      dup get-msecs - 0<                 ( target-time reached? )
+   until                                 ( target-time )
+   drop
+;
 
 \ Bit 19 in the command (0) register is reserved according to the
 \ version of the CaFe chip spec that we have, but Jerry Zheng says
@@ -211,6 +218,15 @@ h# 0200.0085 0 2 >cmd constant random-write-cmd
 0 instance value dma-buf-pa
 0 instance value dma-buf-va
 defer do-lmove
+
+: alloc-dma-buf  ( -- )
+   /dma-buf " dma-alloc" $call-parent to dma-buf-va
+   dma-buf-va /dma-buf false " dma-map-in" $call-parent to dma-buf-pa
+;
+: set-lmove  ( -- )
+   " lmove" $find  0=  if  ['] move  then  to do-lmove
+;
+
 h# 10 buffer: syndrome-buf
 : syndrome  ( -- adr )
    8  0  do  h# 50 i wa+ cw@  i syndrome-buf array!  loop
@@ -291,10 +307,10 @@ h# 10 buffer: syndrome-buf
 
 : erase-block  ( page# -- )  (erase-block) drop  ;
 
-: read-id  ( -- adr )  8  0 0  h# c420.0090  0  generic-read  ;
+: read-id  ( -- adr )  8  0 0  h# c400.0090  0  generic-read  ;
 
 : send-reset-cmd  ( -- )
-   ctrl-wait
+   wait-ready
    h# 8000.00ff 0 cmd  wait-cmd  \ NAND Reset command
 ;
 

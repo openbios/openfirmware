@@ -55,7 +55,7 @@ h# 40 constant /nand-oob
    " /nandflash" open-dev to nandih
    nandih 0=  " Can't open NAND FLASH device"  ?nand-abort
    " erase-size" $call-nand to /nand-block
-   " block-size" $call-nand to /nand-page
+   " page-size" $call-nand to /nand-page
    " size" $call-nand  /nand-page  um/mod nip to #nand-pages
    /nand-block /nand-page /  to nand-pages/block
    " start-scan" $call-nand
@@ -220,6 +220,269 @@ defer show-strange
 defer show-done
 ' cr to show-done
 
+: written?  ( adr len -- flag )  h# ffffffff lskip 0<>  ;
+
+
+d# 24 d# 24 2value ulhc
+
+d# 22 constant status-line
+
+8 constant glyph-w
+8 constant glyph-h
+
+9 constant grid-w
+9 constant grid-h
+
+d# 128 value #cols
+: xy+  ( x1 y1 x2 y2 -- x3 y3 )  rot + -rot  + swap  ;
+: xy*  ( x y w h -- x*w y*h )  rot *  >r  * r>  ;
+
+0 value nand-block-limit
+
+: do-fill  ( color x y w h -- )  " fill-rectangle" $call-screen  ;
+
+\ States:  0:erased  1:bad  2:waiting for write  3:written
+
+: >loc  ( eblock# -- x y )  #cols /mod  grid-w grid-h xy*  ulhc xy+  ;
+
+: show-state  ( eblock# state -- )  swap >loc  glyph-w glyph-h  do-fill  ;
+
+dev screen  : erase-screen erase-screen ;  dend
+
+h# 80 h# 80 h# 80  rgb>565 constant bbt-color      \ gray
+    0     0     0  rgb>565 constant erased-color   \ black
+h# ff     0     0  rgb>565 constant bad-color      \ red
+    0     0 h# ff  rgb>565 constant clean-color    \ blue
+h# ff h# ff     0  rgb>565 constant pending-color  \ yellow
+    0 h# ff     0  rgb>565 constant written-color  \ green
+    0 h# ff h# ff  rgb>565 constant strange-color  \ cyan
+h# ff h# ff h# ff  rgb>565 constant starting-color \ white
+
+: gshow-init  ( #eblocks -- )
+   #nand-pages nand-pages/block /  to nand-block-limit
+
+   cursor-off  " erase-screen" $call-screen
+
+   " bbt0" $call-nand nand-pages/block /  bbt-color show-state
+   " bbt1" $call-nand nand-pages/block /  bbt-color show-state
+
+   starting-color   ( #eblocks color )
+   swap 0  ?do  i over show-state  loop
+   drop
+   0 status-line at-xy  
+;
+
+: gshow-erasing ( #eblocks -- )   drop  ." Erasing  "  ;
+
+: gshow-erased    ( eblock# -- )  erased-color  show-state  ;
+: gshow-bad       ( eblock# -- )  bad-color     show-state  ;
+: gshow-bbt-block ( eblock# -- )  bbt-color     show-state  ;
+: gshow-clean     ( eblock# -- )  clean-color   show-state  ;
+: gshow-strange   ( eblock# -- )  strange-color show-state  ;
+
+: gshow-cleaning ( -- )  d# 26 status-line at-xy  ." Cleanmarkers"  cr  ;
+: gshow-done  ( -- )  cursor-on  ;
+
+: gshow-pending  ( eblock# -- )  pending-color  show-state  ;
+
+: gshow-writing  ( #eblocks -- )
+   ." Writing  "
+   0  swap 0  ?do              ( eblock# )
+      dup nand-pages/block * " block-bad?" $call-nand  0=  if  ( eblock# )
+         dup show-pending      ( eblock# )
+         1                     ( eblock# increment )
+      else                     ( eblock# )
+         0                     ( eblock# increment )
+      then                     ( eblock# increment )
+      swap 1+ swap             ( eblock#' increment )
+   +loop                       ( eblock#' )
+   drop
+;
+
+: show-eblock#  ( eblock# -- )  d# 20 status-line at-xy .x  ;
+: gshow-written  ( eblock# -- )
+   dup  written-color  show-state
+   show-eblock#
+;
+
+: gshow
+   ['] gshow-init      to show-init
+   ['] gshow-erasing   to show-erasing
+   ['] gshow-erased    to show-erased
+   ['] gshow-bad       to show-bad
+   ['] gshow-bbt-block to show-bbt-block
+   ['] gshow-clean     to show-clean
+   ['] gshow-cleaning  to show-cleaning
+   ['] gshow-pending   to show-pending
+   ['] gshow-writing   to show-writing
+   ['] gshow-written   to show-written
+   ['] gshow-strange   to show-strange
+   ['] gshow-done      to show-done
+;
+
+gshow
+
+\ 0 - marked bad block : show-bad
+\ 1 - unreadable block : show-bad
+\ 2 - jffs2 w/  summary: show-written
+\ 3 - jffs2 w/o summary: show-pending
+\ 4 - clean            : show-clean
+\ 5 - non-jffs2 data   : show-strange
+\ 6 - erased           : show-erased
+\ 7 - primary   bad-block-table  : show-bbt-block
+\ 8 - secondary bad-block-table  : show-bbt-block
+: show-status  ( status eblock# -- )
+   swap case
+      0  of  show-bad        endof
+      1  of  show-bad        endof
+      2  of  show-written    endof
+      3  of  show-pending    endof
+      4  of  show-clean      endof
+      5  of  show-strange    endof
+      6  of  show-erased     endof
+      7  of  show-bbt-block  endof
+      8  of  show-bbt-block  endof
+   endcase
+;
+
+0 value nand-map
+0 value working-page
+: classify-block  ( page# -- status )
+   to working-page
+
+   \ Check for block marked bad in bad-block table
+   working-page  " block-bad?" $call-nand  if  0 exit  then
+
+   \ Try to read the first few bytes
+   load-base 4  working-page  0  " pio-read" $call-nand
+
+   \ Check for a JFFS2 node at the beginning
+   load-base w@ h# 1985 =  if
+      \ Look for a summary node
+      load-base 4  working-page h# 3f +  h# 7fc  " pio-read" $call-nand
+      load-base " "(85 18 85 02)" comp  if  3  else  2  then
+      exit
+   then
+
+   \ Check for non-erased, non-JFFS2 data
+   load-base l@ h# ffff.ffff <>  if  5 exit  then
+
+   \ Check for various signatures in the OOB area
+   working-page " read-oob" $call-nand  d# 14 +  ( adr )
+
+   \ .. Cleanmarker
+   dup  " "(85 19 03 20 08 00 00 00)" comp  0=  if  drop 4 exit  then
+
+   \ .. Bad block tables
+\ These can't happen because the BBT table blocks are marked "bad"
+\ so they get filtered out at the top of this routine.
+\   dup  " Bbt0" comp  0=  if  drop 7 exit  then
+\   dup  " 1tbB" comp  0=  if  drop 8 exit  then
+   drop
+
+   \ See if the whole thing is really completely erased
+   load-base  working-page  nand-pages/block  ( adr block# #blocks )
+   " read-blocks" $call-nand  nand-pages/block  <>  if  1 exit  then
+
+   \ Not completely erased
+   load-base  /nand-block  written?  if  5 exit  then
+
+   \ Erased
+   6
+;
+
+0 value current-block
+0 value examine-done?
+
+string-array status-descriptions
+   ," Marked bad in Bad Block Table"  \ 0
+   ," Read error"                     \ 1
+   ," JFFS2 data with summary"        \ 2
+   ," JFFS2 data, no summary"         \ 3
+   ," Clean (erased with JFFS2 cleanmarker)"  \ 4
+   ," Dirty, with non-JFFS2 data"     \ 5 
+   ," Erased, no cleanmarker"         \ 6
+   ," Primary Bad Block Table"        \ 7
+   ," Secondary Bad Block Table"      \ 8
+end-string-array
+
+: show-block-status  ( block# -- )
+   dup show-eblock#
+   nand-map + c@  status-descriptions count type  kill-line
+;
+
+: cell-border  ( block# color -- )
+   swap >loc      ( color x y )
+   -1 -1 xy+
+   3dup  grid-w 1   do-fill                    ( color x y )
+   3dup  grid-w 0 xy+  1 grid-h  do-fill  ( color x y )
+   3dup  0 1 xy+  1 grid-h do-fill            ( color x y )
+   1 grid-h xy+  grid-w 1  do-fill
+;
+: lowlight  ( block# -- )  background-rgb rgb>565 cell-border  ;
+: highlight  ( block# -- )  0 cell-border  ;
+: point-block  ( block# -- )
+   current-block lowlight
+   to current-block
+   current-block highlight
+;
+: +block  ( offset -- )
+   current-block +   nand-block-limit mod  ( new-block )
+   point-block
+   current-block  show-block-status
+;
+
+: process-key  ( char -- )
+   case
+      h# 9b     of  endof
+      [char] A  of  #cols negate +block  endof  \ up
+      [char] B  of  #cols        +block  endof  \ down
+      [char] C  of  1            +block  endof  \ right
+      [char] D  of  -1           +block  endof  \ left
+      [char] ?  of  #cols 8 * negate +block  endof  \ page up
+      [char] /  of  #cols 8 *        +block  endof  \ page down
+      [char] K  of  8                +block  endof  \ page right
+      [char] H  of  -8               +block  endof  \ page left
+      h# 1b     of  d# 20 ms key?  0=  if  true to examine-done?  then  endof
+   endcase
+;
+
+: examine-nand  ( -- )
+   0 status-line 1- at-xy  red-letters ." Arrows, fn Arrows to move, Esc to exit" black-letters cr
+   0 to current-block
+   current-block highlight
+   false to examine-done?
+   begin key  process-key  examine-done? until
+   current-block lowlight
+;
+
+: (scan-nand)  ( -- )
+   nand-map 0=  if
+      #nand-pages nand-pages/block /  alloc-mem  to nand-map
+   then
+
+   " usable-page-limit" $call-nand   
+   dup  nand-pages/block /  show-init  ( page-limit )
+
+   7 " bbt0" $call-nand  nand-pages/block /  nand-map + c!
+   8 " bbt1" $call-nand  nand-pages/block /  nand-map + c!
+
+   0  ?do
+      i classify-block       ( status )
+      i nand-pages/block /   ( status eblock# )
+      2dup nand-map + c!     ( status eblock# )
+      show-status
+   nand-pages/block +loop  ( )
+
+   show-done
+;
+
+: scan-nand  ( -- )
+   open-nand (scan-nand) close-nand-ihs
+   examine-nand
+;
+
+
 : >eblock#  ( page# -- eblock# )  nand-pages/block /  ;
 
 : copy-nand  ( "devspec" -- )
@@ -326,13 +589,6 @@ defer show-done
    close-nand-ihs
 ;
 
-
-: written?  ( adr len -- flag )
-   false -rot   bounds  ?do            ( flag )
-      i @ -1 <>  if  0= leave  then    ( flag )
-   /n +loop                            ( flag )
-;
-
 true value dump-oob?
 : make-new-file  ( devspec$ -- fileih )
    2dup ['] $delete  catch  if  2drop  then  ( name$ )
@@ -388,42 +644,70 @@ true value dump-oob?
    fileih 0=  " Can't open output"  ?nand-abort
 ;
 
-: (dump-nand)  ( "devspec" -- )
-   open-nand
-   get-img-filename
+: dump-eblock?  ( block# -- flag )
+   \ Dump JFFS2 w/summary (2), JFFS2 w/o summary (3), non JFFS2 data (5)
+   nand-map + c@  dup 2 =  over 3 = or  swap 5 = or
+;
 
-   dump-oob?  0=  if  alloc-crc-buf  then
-   image-name$ open-dump-file
+: eblock>file  ( -- )
+   load-base /nand-block  " write" fileih $call-method
+   /nand-block  <>  " Write to dump file failed" ?nand-abort
+   load-base /nand-block $crc #image-eblocks >crc l!
+   #image-eblocks 1+ to #image-eblocks
+;
 
-   0 to #image-eblocks
-
+: fastdump-nand  ( -- )
    \ The stack is empty at the end of each line unless otherwise noted
-   dump-oob?  if  #nand-pages  else  " usable-page-limit" $call-nand  then
-   0  do
+   (scan-nand)
+
+   cursor-off
+   d# 20 status-line at-xy   ."          "
+
+   " usable-page-limit" $call-nand  >eblock#  0  do
+      i dump-eblock?  if
+         i point-block
+         i show-eblock#
+         load-base  i nand-pages/block *  nand-pages/block  " read-pages" $call-nand  ( #read )
+         nand-pages/block <>  " Read failed" ?nand-abort
+         eblock>file
+      then
+   loop
+   show-done
+;
+
+: slowdump-nand  ( -- )
+   \ The stack is empty at the end of each line unless otherwise noted
+   #nand-pages  0  do
       (cr i >eblock# .
-      load-base  i  nand-pages/block  " read-blocks" $call-nand
+      load-base  i  nand-pages/block  " read-pages" $call-nand  ( #read )
       nand-pages/block =  if
          load-base /nand-block  written?  if
             ." w"
-            load-base /nand-block  " write" fileih $call-method
-            /nand-block  <>  " Write to dump file failed" ?nand-abort
-            dump-oob?  if
-               i  nand-pages/block  bounds  ?do
-                  i " read-oob" $call-nand  h# 40  ( adr len )
-                  " write" fileih $call-method drop
-                  h# 40 <>  " Write of OOB data failed" ?nand-abort
-                  i pad !  pad 4 " write" fileih $call-method
-                  4 <>  " Write of eblock number failed" ?nand-abort
-               loop
-            else
-               load-base /nand-block $crc #image-eblocks >crc l!
-            then
-            #image-eblocks 1+ to #image-eblocks
+            eblock>file
+            i  nand-pages/block  bounds  ?do
+               i " read-oob" $call-nand  h# 40  ( adr len )
+               " write" fileih $call-method
+               h# 40 <>  " Write of OOB data failed" ?nand-abort
+               i pad !  pad 4 " write" fileih $call-method
+               4 <>  " Write of eblock number failed" ?nand-abort
+            loop
          else
             ." s"
          then
       then
    nand-pages/block +loop
+;
+
+: (dump-nand)  ( "devspec" -- )
+   open-nand
+   get-img-filename
+
+   alloc-crc-buf
+   image-name$ open-dump-file
+
+   0 to #image-eblocks
+
+   dump-oob?  if  slowdump-nand  else  fastdump-nand  then
    cr  ." Done" cr
 
    close-image-file
