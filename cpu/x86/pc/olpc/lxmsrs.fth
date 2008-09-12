@@ -170,6 +170,7 @@ create lx-msr-init
 \ AES
 \ msr: 5800.2002 00000007.00000007.  \ SMI mask - default is all off
 \ msr: 5800.2004 00000000.00000015.  \ Clock gating - default
+  msr: 5800.2006 00000000.00000503.  \ AES control - Random number generator noise, LFSR output
 
 \ chipsetinit(nb);
 
