@@ -66,21 +66,16 @@ defer int!    ( l adr -- )  ' be-l! to int!
 ;
 
 : write-ublocks  ( adr len dev-block# -- error? )
-\   ublock um* " seek" $call-parent ?dup  if  exit  then		( adr len )
-\   tuck " write" $call-parent <>
-   partition-offset +  swap ublock 1- + 9 rshift             ( adr block# #blocks )
-   dup >r  " write-blocks" $call-parent  r> <>
+   ublock um* " seek" $call-parent ?dup  if  exit  then		( adr len )
+   tuck " write" $call-parent <>
 ;
 : put-super-block  ( -- error? )
    super-block /super-block super-block# write-ublocks
 ;
 
 : read-ublocks  ( adr len dev-block# -- error? )
-   partition-offset +  swap ublock 1- + 9 rshift             ( adr block# #blocks )
-   dup >r  " read-blocks" $call-parent  r> <>
-
-\   ublock um* " seek" $call-parent ?dup  if  exit  then		( adr len )
-\   tuck " read" $call-parent <>
+   ublock um* " seek" $call-parent ?dup  if  exit  then		( adr len )
+   tuck " read" $call-parent <>
 ;
 
 : get-super-block  ( -- error? )
