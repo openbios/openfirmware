@@ -24,6 +24,7 @@ h# 4000.0000 constant pm-enable
 
 \ This turns off the main CPU, but the EC stays on.
 : gx-power-off  ( -- )
+   h# 8000 0 acpi-l!                 \ Clear WAK_FLAG; it prevents power-off
    \ Enable all of these controls with 0 delay
    pm-enable   h# 10 pm!             \ PM_SCLK
    pm-enable   h# 20 pm!             \ PM_IN_SLPCTL
