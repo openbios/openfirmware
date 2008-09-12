@@ -2061,13 +2061,16 @@ headerless
    then
 ;
 
+: align-byte#  ( d.byte# -- d.aln-byte# )  fid @ alignop @ execute  ;
+: byte#-aligned?  ( d.byte# -- flag )  2dup align-byte#  d=  ;
+
 \ An implementation factor which
 \ fills the buffer with a block from the current file.  The block will
 \ be chosen so that the file address "d.byte#" is somewhere within that
 \ block.
 
 : fillbuf  ( d.byte# -- )
-   fid @ alignop @ execute  ( d.byte# ) \ Aligns position to a buffer boundary
+   align-byte#              ( d.byte# ) \ Aligns position to a buffer boundary
    2dup fstart 2!           ( d.byte# )
    fid @ seekop @ execute               ( )
    bfbase @   bflimit @ over -          ( adr #bytes-to-read )
@@ -2080,7 +2083,39 @@ headerless
 \ returns the address within the buffer corresponding to the
 \ selected position "d.byte#" within the current file.
 
+: bufaddr>  ( bufaddr -- d.byte# )  bfbase @ - s>d  fstart 2@ d+  ;
 : >bufaddr  ( d.byte# -- bufaddr )  fstart 2@ d- drop  bfbase @ +  ;
+
+\ This is called from fputs to open up space in the buffer for block-sized
+\ chunks, avoiding prefills that would be completely overwritten.
+: prefill?  ( endaddr curaddr -- endaddr curraddr flag )
+
+   \ If the current buffer pointer is not block-aligned, must prefill
+   bfcurrent @  bufaddr>  byte#-aligned?  0=  if  true  exit  then  ( end curr )
+
+   2dup -  0 align-byte# drop           ( end curr aln-size )
+
+   \ If the incoming data won't fill a block, must prefill
+   ?dup  0=  if  true exit  then        ( end curr aln-size )
+
+   \ If there is still space in the buffer, just open it up for copyin
+   bflimit @ bfend @ -  ?dup  if        ( end curr aln-len buffer-avail )
+      min  bfend +!  false exit
+   then                                 ( end curr aln-len )
+
+   \ Save current on stack because ?flushbuf clears it
+   bfcurrent @                          ( end curr aln-len current )
+
+   \ The buffer is full; clear out its old contents
+   ?flushbuf                            ( end curr aln-len )
+
+   \ Advance the file pointer to the new buffer starting position
+   bufaddr> fstart 2!                   ( end curr aln-len )
+
+   bfbase @ + bflimit @ umin  bfend !   ( end curr )  \ Room for new bytes
+   bfbase @  dup bftop !  bfcurrent !   ( end curr )  \ No valid bytes yet
+   false
+;
 
 \ An implementation factor which
 \ advances to the next block in the file.  This is used when accesses
@@ -2352,8 +2387,16 @@ headers
    over bfend @ bfbase @ -  u>= or  if ( d.byte# offset )
       \ Not in buffer
       \ Flush the buffer and get the one containing the desired byte.
-      drop ?flushbuf 2dup fillbuf      ( d.byte# )
-      >bufaddr                         ( bufaddr )
+      drop ?flushbuf                         ( d.byte# )
+      2dup byte#-aligned?  if                ( d.byte# )
+         \ If the new offset is on a block boundary, don't read yet,
+         \ because the next op could be a large write that fills the buffer.
+         fstart 2!                           ( )
+         bfbase @  dup bftop !  dup bfend !  ( bufaddr )
+      else
+         2dup fillbuf                        ( d.byte# )
+         >bufaddr                            ( bufaddr )
+      then                                   ( bufaddr )
    else
       \ The desired byte is already in the buffer.
       nip nip  bfbase @ +           ( bufaddr )
@@ -2429,13 +2472,14 @@ headers
 \ Writes count bytes from memory starting at "adr" to the current file
 : fputs  ( adr count fd -- )
    file @ >r  file !
-   over + swap  ( endaddr startaddr )
-   begin  copyin  2dup u>
-   while
-      \ Here there should be some code to see if there are enough remaining
-      \ bytes in the request to justify bypassing the file buffer and writing
-      \ directly from the user's buffer.  'Enough' = more than one file buffer
-      sync  bfcurrent @ shortseek ( endaddr curraddr )
+   over + swap                    ( endaddr startaddr )
+   begin  copyin  2dup u>  while  ( endaddr curraddr )
+      sync                        ( endaddr curraddr )
+      \ Prefill? tries to avoid unnecessary reads by opening up space
+      \ in the buffer for chunks that will completely fill a block.
+      prefill?  if                ( endaddr curraddr )
+         bfcurrent @ shortseek    ( endaddr curraddr )
+      then
    repeat
    2drop
    r> file !
