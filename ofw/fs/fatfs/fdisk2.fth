@@ -149,7 +149,7 @@ false value type32?
    fat32? to type32?
    dup type32? compute-cluster-size swap 2>r	( R: spc #mbytes )
    1 h# 40 h# 20 			( #hid-sec #heads sec/trk ) ( R: spc #mbytes )
-   r> d# 1024 * d# 1024 * /sector /	( #hid-sec #heads sec/trk #secs ) ( R: spc )
+   r> h# 10.0000 /sector /*		( #hid-sec #heads sec/trk #secs ) ( R: spc )
    dup r@ / swap >r			( #hid-sec #heads sec/trk #clusters ) ( R: spc #secs )
    type32?  if
       4 *
