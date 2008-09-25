@@ -19,6 +19,28 @@ h#   ff00 constant rm-base2
 h# e.8000 constant new-gdt-pa
 
 
+[ifdef] virtualbox-loaded
+h#  8 constant rm-cs
+h# 18 constant rm-ds
+h# 20 constant pm-cs
+h# 28 constant pm-ds
+: fix-gdt 
+   \ 16-bit 64K code segment starting at rm-base
+   rm-base lbsplit                   ( adr.0 adr.1 adr.2 adr.3 )
+   2swap h# ffff -rot bwjoin wljoin  ( adr.2 adr.3 desc.lo )
+   -rot                              ( desc.lo adr.2 adr.3 )
+   >r  h# 9a 0  r>   bljoin          ( desc.lo desc.hi )
+   gdtr@ drop rm-cs + d!             ( )
+
+   \ 16-bit 64K data segment starting at rm-base
+   rm-base lbsplit                   ( adr.0 adr.1 adr.2 adr.3 )
+   2swap h# ffff -rot bwjoin wljoin  ( adr.2 adr.3 desc.lo )
+   -rot                              ( desc.lo adr.2 adr.3 )
+   >r  h# 93 0  r>   bljoin          ( desc.lo desc.hi )
+   gdtr@ drop rm-ds + d!             ( )
+;
+[then]
+
 [ifdef] syslinux-loaded
 h#  8 constant rm-cs
 h# 18 constant rm-ds
@@ -149,12 +171,12 @@ label rm-to-pm
    cli  \ This is unnecessary since we got here from an INT
    cs push   ds pop
 
-   'rm-int >off  #) pop        \ Save interrupt vector CS, i.e. the int#
+   'rm-int >seg:off drop  #) pop        \ Save interrupt vector CS, i.e. the int#
 
-   sp 'rm-sp    >off  #) mov
-   ss 'rm-sp 2+ >off  #) mov
+   sp 'rm-sp    >seg:off drop  #) mov
+   ss 'rm-sp 2+ >seg:off drop  #) mov
 
-   op: 'pm-gdt  >off  #) lgdt
+   op: 'pm-gdt  >seg:off drop  #) lgdt
    cr0 ax mov  1 # al or  ax cr0 mov   \ Enter protected mode
 
    \ We are still running in 16-bit mode, but the target address might
@@ -213,7 +235,7 @@ code rm-return  ( -- )
 
    cli
    sp sp xor
-   'pm-to-rm >off  rm-cs #) far jmp
+   'pm-to-rm >seg:off drop  rm-cs #) far jmp
 end-code
 
 : rm-init-program  ( pc -- )
@@ -240,7 +262,7 @@ here rm-enter - constant /rm-enter
    saved-rm-vectors  over la+ l@   swap /l* l!
 ;
 
-: move-gdt  ( -- )
+: safe-gdt  ( -- )
    gdtr@ 1+                    ( gdt-adr gdt-len )
 
    new-gdt-pa                  ( gdt-adr gdt-len new-gdt-adr )
@@ -279,7 +301,7 @@ here rm-enter - constant /rm-enter
 : setup-rm-gateway  ( -- )
    fix-gdt
 
-   move-gdt
+   safe-gdt
 
    rm-enter 'rm-enter   /rm-enter   move
    rm-to-pm 'rm-to-pm   /rm-to-pm   move
