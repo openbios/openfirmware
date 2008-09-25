@@ -76,7 +76,7 @@ variable ptr
 ;
 
 : olpc-touchpad?  ( -- flag )
-   touchpad-id  dup  h# ffff and  h# 0067 =
+   touchpad-id  h# ffff and  h# 0067 =
 ;
 
 \ Ref: 5.2.10 (2-1) of Hybrid-GP2B-T-1.pdf
