@@ -9,7 +9,7 @@ in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
 in: ${BP}/dev/usb2/hcd/uhci/build/uhci.fc
 in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
 in: ${BP}/dev/usb2/device/hub/build/hub.fc
-\ in: ${BP}/dev/usb2/device/net/build/usbnet.fc
+in: ${BP}/dev/usb2/device/net/build/usbnet.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
