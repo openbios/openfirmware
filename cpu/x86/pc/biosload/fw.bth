@@ -206,7 +206,7 @@ hex
 fload ${BP}/cpu/x86/pc/biosload/usb.fth
 fload ${BP}/cpu/x86/pc/rmtools.fth
 fload ${BP}/cpu/x86/pc/biosload/callbios.fth
-fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
+\ fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
 
 \ false to stand-init-debug?
 true to stand-init-debug?
