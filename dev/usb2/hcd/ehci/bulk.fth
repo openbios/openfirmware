@@ -78,6 +78,7 @@ d# 500 constant bulk-out-timeout
    my-#qtds 0  do				( dir qtd )
       my-buf my-buf-phys /my-buf 3 pick fill-qtd-bptrs
 						( dir qtd /bptr )
+      \ Setup the token word
       2 pick over d# 16 << or			( dir qtd /bptr token )
       TD_C_ERR3 or TD_STAT_ACTIVE or		( dir qtd /bptr token' )
       3 pick TD_PID_IN =  if			( dir qtd /bptr token' )
@@ -86,6 +87,7 @@ d# 500 constant bulk-out-timeout
          bulk-out-data@ toggle-bulk-out-data
       then  or					( dir qtd /bptr token' )
       2 pick >hcqtd-token le-l!			( dir qtd /bptr )
+
       my-buf++					( dir qtd )
       dup fixup-last-qtd			( dir qtd )
       >qtd-next l@				( dir qtd' )
@@ -100,8 +102,8 @@ external
    debug?  if  ." begin-bulk-in" cr  then
    bulk-in-qh  if  3drop exit  then		\ Already started
 
-   dup to bulk-in-pipe
-   bulk-in-timeout process-bulk-args
+   dup to bulk-in-pipe                                ( buf len pipe )
+   bulk-in-timeout process-bulk-args                  ( )
    alloc-bulk-qhqtds  to bulk-in-qtd  to bulk-in-qh
 
    \ IN qTDs
@@ -133,14 +135,20 @@ external
 ;
 
 headers
+\ Fixup the host-controller-writable fields in the chain of qTDs -
+\ current offset, bytes_to_transfer, and status
 : restart-bulk-in-qtd  ( qtd -- )
-   begin  ?dup  while
-      dup >hcqtd-bptr0 dup le-l@ h# ffff.f000 and swap le-l!
-      dup >qtd-/buf l@ d# 16 <<
-      TD_STAT_ACTIVE or TD_C_ERR3 or TD_PID_IN or
-      bulk-in-data@ or  toggle-bulk-in-data
-      over >hcqtd-token le-l!
-      >qtd-next l@
+   begin  ?dup  while        ( qtd )
+      \ Clear "Current Offset" field in first buffer pointer
+      dup >hcqtd-bptr0 dup le-l@ h# ffff.f000 and swap le-l!  ( qtd )
+
+      \ Reset the "token" word which contains various transfer control bits
+      dup >qtd-/buf l@ d# 16 <<                    ( qtd token_word )
+      TD_STAT_ACTIVE or TD_C_ERR3 or TD_PID_IN or  ( qtd token_word' )
+      bulk-in-data@ or  toggle-bulk-in-data        ( qtd token_word' )
+      over >hcqtd-token le-l!                      ( qtd )
+
+      >qtd-next l@                                 ( qtd' )
    repeat
 ;
 
