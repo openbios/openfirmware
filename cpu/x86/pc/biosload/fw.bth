@@ -232,6 +232,23 @@ warning @  warning off
 warning !
 [then]
 
+[ifdef] virtualbox-loaded
+also hidden also keys-forth definitions
+\ The VirtualBox "serial port" can be accessed via a telnet client.
+\ Telnet normally sends CR-LF at the end of the line and it is hard
+\ to turn that off because of incompatibilies between various clients
+\ and servers.  So if there is a key already queued up right after a
+\ newline, we just eat it.
+: telnet-newline  ( -- )
+   new-line-or-done  key?  if  key drop  then
+;
+warning @ warning off
+: ^m telnet-newline  ;
+: ^j telnet-newline  ;
+warning !
+previous previous definitions
+[then]
+
 : (.firmware)  ( -- )
    ." Open Firmware  "  .built  cr
    ." Copyright 1999 FirmWorks  All Rights Reserved" cr
