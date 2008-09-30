@@ -17,7 +17,9 @@ fload ${BP}/dev/3c90xb/method.fth
    mac-address encode-bytes " mac-address" property
    unmap-regs
 ;
-init\ LICENSE_BEGIN
+init
+
+\ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
 \ Permission is hereby granted, free of charge, to any person obtaining
