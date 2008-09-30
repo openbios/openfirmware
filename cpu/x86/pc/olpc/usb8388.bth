@@ -11,7 +11,7 @@ fload ${BP}/cpu/x86/pc/olpc/versions.fth
 
 " wget -q http://dev.laptop.org/pub/firmware/libertas/usb8388-${WLAN_VERSION}.bin.md5" expand$ $sh
 
-" md5sum -b usb8388-${WLAN_VERSION}.bin | cmp - usb8388-${WLAN_VERSION}.bin.md5" expand$ $sh
+" md5sum usb8388-${WLAN_VERSION}.bin | cmp - usb8388-${WLAN_VERSION}.bin.md5" expand$ $sh
 
 " mv usb8388-${WLAN_VERSION}.bin usb8388.bin" expand$ $sh
 " rm usb8388-${WLAN_VERSION}.bin.md5" expand$ $sh
