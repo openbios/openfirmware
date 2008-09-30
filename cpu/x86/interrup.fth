@@ -20,6 +20,25 @@ code interrupts-enabled?  ( -- flag )
    h# 200 # bx test  0<> if  ax dec  then   \ Test interrupt flag bit
    ax push
 c;
+
+\ Unconditional halt - stops instruction execution until an interrupt.
+\ If interrupts are disabled, this could hang forever.
+code halt  hlt  c;
+
+\ Safe halt that is a no-op if interrupts are disabled
+code ?halt  ( -- )
+   pushf  ax pop
+   h# 200 # ax  test  0<>  if  hlt  then
+c;
+
+\ You can install this in "key" to lower the idle power or to make
+\ the system use fewer CPU cycles when running on an emulator.
+
+: halting-key  ( -- )
+   begin  key? 0=  while  ?halt  repeat
+   (key
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
