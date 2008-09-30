@@ -400,9 +400,37 @@ headers
    2drop false
 ;
 
+: setup-multicast  ( -- )
+   server-ip-addr my-ip-addr copy-ip-addr
+   " set-multicast" my-parent ihandle>phandle find-method  if   ( acf )
+      " "(01 00 5e)" his-en-addr swap move                      ( acf )
+      my-ip-addr 1+  his-en-addr 3 +  3 move                    ( acf )
+      his-en-addr 3 + c@ h# 7f and his-en-addr 3 + c!           ( )
+      his-en-addr /e  rot my-parent call-package                ( )
+      exit
+   then
+   " enable-promiscuous" my-parent ihandle>phandle find-method  if   ( acf )
+      my-parent call-package
+      exit
+   then
+   " promiscuous-mode" my-parent ihandle>phandle find-method  if   ( acf )
+      my-parent call-package
+      exit
+   then
+   " promiscuous" my-parent ihandle>phandle find-method  if   ( acf )
+      my-parent call-package
+      exit
+   then
+   \ Try setting the unicast address to the multicast address?
+   ." Can't enable multicast reception in network driver" cr
+;
+
 defer configured  ' noop to configured
 : configure  ( -- )
    use-last?  if  configured exit  then
+
+   server-ip-addr multicast?  if  setup-multicast exit  then
+
    use-bootp?  if
       nvram-ip?  0=  if  process-bootp  then
    else

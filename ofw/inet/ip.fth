@@ -61,6 +61,7 @@ create unknown-ip-addr   h# 00 c,  h# 00 c,  h# 00 c,  h# 00 c,
 
 : ip=  ( ip-addr1  ip-addr2 -- flag  )   /i comp  0=  ;
 
+: multicast?  ( adr-buf -- flag )  c@  h# f0 and  h# e0 =  ;
 : unknown-ip-addr?   ( adr-buf -- flag )  unknown-ip-addr  ip=  ;
 : known?  ( adr-buf -- flag )  unknown-ip-addr? 0=  ;
 
