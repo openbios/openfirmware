@@ -3,13 +3,13 @@ purpose: Establish configuration definitions
 
 \ create pc		\ Demo version for generic PC
 \ create pc-linux	\ Demo version for generic PC and Linux
-create pc-serial	\ Demo version for generic PC
+\ create pc-serial	\ Demo version for generic PC
 
 \ --- The environment that "boots" OFW ---
 \ - Image Format - Example Media - previous stage bootloader
 
 \ - (Syslinux) COM32 format - USB Key w/ FAT FS - Syslinux
-create syslinux-loaded
+\ create syslinux-loaded
 
 \ - Linux kernel format - USB Key w/ FAT FS - LinuxBIOS w/ stripped Linux payload
 \ create bzimage-loaded
@@ -24,6 +24,9 @@ create syslinux-loaded
 \ Load and run in qemu
 \ create qemu-loaded 
 
+\ Load and run in VirtualBox
+create virtualbox-loaded 
+
 \ Load from ROM by preOF code from Intel
 \ create preof-loaded 
 
@@ -32,8 +35,26 @@ create serial-console
 create pc
 [then]
 
-[ifdef] qemu-loaded  \ LinuxBIOS+OFW under QEMU currently doesn't do VGA right
+[ifdef] qemu-loaded  \ LinuxBIOS+OFW under QEMU currently does not do VGA right
 create serial-console
+[then]
+
+[ifdef] virtualbox-loaded
+\ create debug-startup
+\ create serial-console
+create resident-packages
+create addresses-assigned  \ Don't reassign PCI addresses
+\ create virtual-mode
+\ create use-root-isa
+create use-timestamp-counter
+create use-pci-isa
+create use-isa-ide
+create use-ega
+create use-elf
+\ create use-ne2000
+create use-watch-all
+create use-null-nvram
+\ create no-floppy-node
 [then]
 
 [ifdef] etherboot-variant
@@ -51,7 +72,7 @@ create serial-console
 \ and physical addresses.
 
 \ Here we use virtual mode for Linux, so that we can debug past
-\ the point where Linux starts using the MMU.  It isn't strictly
+\ the point where Linux starts using the MMU.  It is not strictly
 \ necessary to use virtual mode if you just want to boot Linux
 \ and then have OFW disappear.
 create virtual-mode
@@ -89,6 +110,7 @@ create no-floppy-node
 [then]
 
 fload ${BP}/cpu/x86/pc/biosload/addrs.fth
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
