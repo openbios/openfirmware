@@ -623,6 +623,16 @@ fload ${BP}/ofw/core/dualconsole.fth
 \   " wifi media lab 802.11" eval
 \   " flash http:\\18.85.46.172\new.rom" eval
 ;
+: mcastnand
+   " boot rom:mcastnand 239.255.1.2 12345 /nandflash" eval
+;
+: nmcastnand  \ Boot from network, for testing
+   " boot http:\\10.20.0.14\mcastnand 239.255.1.2 12345 /nandflash" eval
+;
+: dmcastnand  \ Boot from USB disk, for testing
+   " boot disk:\mcnand 239.255.1.2 12345 /nandflash" eval
+;
+
 
 \ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
 also hidden also keys-forth definitions

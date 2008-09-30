@@ -27,6 +27,7 @@ in: ${BP}/cpu/x86/pc/olpc/build/verify.img
 in: ${BP}/cpu/x86/pc/olpc/build/usb8388.bin
 in: ${BP}/dev/pci/build/pcibridg.fc
 in: ${BP}/cpu/x86/pc/olpc/build/dsdt.aml
+in: ${BP}/cpu/x86/pc/olpc/build/mcastnand.bin
 
 build-now
 
@@ -72,6 +73,8 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/build/dsdt.aml"      " dsdt"            $add-deflated-dropin
 \  " ${BP}/cpu/x86/pc/olpc/build/ssdt.aml"      " ssdt"            $add-deflated-dropin
+
+   " ${BP}/cpu/x86/pc/olpc/build/mcastnand.bin" " mcastnand"       $add-deflated-dropin
 
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
    " rmstart.img"    $add-file
