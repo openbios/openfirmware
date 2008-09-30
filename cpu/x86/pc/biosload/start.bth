@@ -28,7 +28,7 @@ fload ${BP}/cpu/x86/pc/dot.fth			\ Numeric display
 
 label startup
 [ifdef] debug-startup
-ascii x report
+\ ascii x report
 [then]
 
    ret

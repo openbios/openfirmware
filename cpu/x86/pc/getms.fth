@@ -56,7 +56,7 @@ c;
       \ We use "0<" instead of "0<=" so that we are sure to wait at least
       \ the requested time; otherwise we might not wait long enough if the
       \ first call to get-msecs were to occur just before the timer ticked.
-      begin   dup get-msecs -  0<=  until   \ Loop until target time reached
+      begin   dup ?halt get-msecs -  0<=  until   \ Loop until target time reached
 
       drop                  ( )
    else                     ( #ms )

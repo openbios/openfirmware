@@ -23,10 +23,6 @@ fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
 [then]
 
    fload ${BP}/cpu/x86/pc/biosload/pcinode.fth	\ System-specific words for PCI
-   [ifdef] use-mediagx
-   h# 4100.0000 to first-mem		\ Avoid scratchpad RAM
-   h# ff00.0000 to mem-space-top
-   [then]
 end-package
 stand-init: PCI host bridge
    " /pci" " init" execute-device-method drop
@@ -58,38 +54,17 @@ end-package
 fload ${BP}/cpu/x86/pc/getms.fth
 [then]
 
-[ifdef] use-mediagx
-fload ${BP}/dev/mediagx/reg.fth		\ MediaGX constants and access
-fload ${BP}/dev/mediagx/dump.fth
-[then]
-
 [ifdef] use-pci-isa
 
 [ifdef] addresses-assigned
 \ This must precede isamisc.fth in the load file, to execute it first
-fload ${BP}/cpu/x86/pc/biosload/moveisa.fth
+fload ${BP}/cpu/x86/pc/moveisa.fth
 [then]
 
 0 0  " 0"  " /pci" begin-package
    fload ${BP}/dev/pci/isa.fth		\ ISA bus bridge under PCI node
    fload ${BP}/dev/pci/isamisc.fth
 end-package
-
-[ifdef] addresses-assigned
-fload ${BP}/dev/mediagx/cx5530/nomapsmi.fth
-[then]
-[then]
-
-dev /interrupt-controller
-h# 20 to vector-base0
-h# 28 to vector-base1
-device-end
-
-[ifdef] use-mediagx
-0 0 " 40008100" " /" begin-package
-   fload ${BP}/dev/mediagx/video/loadpkg.fth
-end-package
-devalias screen /display
 [then]
 
 [ifdef] use-pc87560
@@ -97,6 +72,11 @@ devalias screen /display
    fload ${BP}/dev/pc87560.fth	\ SouthBridge ISA bus bridge
 end-package
 [then]
+
+dev /interrupt-controller
+h# 20 to vector-base0
+h# 28 to vector-base1
+device-end
 
 [ifdef] use-pc87317
 fload ${BP}/dev/pc87317.fth		\ National PC87317 superIO
@@ -109,21 +89,29 @@ fload ${BP}/dev/pc87317.fth		\ National PC87317 superIO
    dup value /device
    constant /device-phys
    my-address my-space /device-phys reg
-   fload ${BP}/cpu/x86/pc/flashpkg.fth
-
-   : init  ( comp$ /device -- )
-      to /device  2>r
-      0 0 encode-bytes
-      2r> encode-string encode+
-      " rom" encode-string encode+
-      " compatible" property
-[ifdef] enable-flash-select      
-      /device /device-phys <>  if  enable-flash-select  then
-[then]
-   ;
-
+\   fload ${BP}/cpu/x86/pc/flashpkg.fth
+   fload ${BP}/dev/flashpkg.fth
 end-package
-" rom"  dropin-base <# u#s " /flash@" hold$ u#>  $devalias
+
+[ifdef] notdef
+\ Create a node below the top-level FLASH node to accessing the portion
+\ containing the dropin modules
+0 0   0 0    " flash" begin-package
+   " dropins" device-name
+
+   dropin-size constant /device
+   fload ${BP}/dev/subrange.fth
+end-package
+[then]
+
+\ devalias dropins /dropins
+devalias dropins /flash
+
+\ Create a pseudo-device that presents the dropin modules as a filesystem.
+fload ${BP}/ofw/fs/dropinfs.fth
+
+\ This devalias lets us say, for example, "dir rom:"
+devalias rom     /dropin-fs
 
 fload ${BP}/cpu/x86/forthint.fth	\ Low-level interrupt handling code
 fload ${BP}/dev/isa/irq.fth		\ ISA interrupt dispatcher
@@ -195,8 +183,8 @@ fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
 [ifdef] pseudo-nvram
 fload ${BP}/cpu/x86/pc/biosload/filenv.fth
 dev /file-nvram
-: floppy-nv-file  ( -- )  " a:\nvram.dat"  ;
-' floppy-nv-file to nv-file
+: hd-nv-file  ( -- )  " c:\nvram.dat"  ;
+' hd-nv-file to nv-file
 device-end
 stand-init: Pseudo-NVRAM
    " /file-nvram" open-dev  to nvram-node

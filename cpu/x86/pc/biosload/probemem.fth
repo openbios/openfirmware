@@ -41,9 +41,9 @@ dev /memory
       fw-pa /fw-ram +  heap-base heap-size +  umax  /ram  release
    then
 
-   dropin-base /ram u<  if
-      dropin-base dropin-size +  /ram over -  release
-   then
+\   dropin-base /ram u<  if
+\      dropin-base dropin-size +  /ram over -  release
+\   then
 [then]
 ;
 

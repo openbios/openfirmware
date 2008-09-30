@@ -20,6 +20,14 @@ purpose: Establish address and I/O configuration definitions
   h#   08.0000 constant dropin-size
 [then]
 
+[ifdef] virtualbox-loaded
+  h#   f0.0000 constant dropin-base  \ Location of payload in RAM
+  h#   08.0000 constant dropin-size
+  h#    1.0000 constant dma-base  \ DMA heap
+  h#    8.0000 constant dma-size
+
+[then]
+
 [ifdef] preof-loaded
 h# 2000.0000 constant ramsize
 h# fff8.0020 constant dropin-base  \ Location of payload in ROM

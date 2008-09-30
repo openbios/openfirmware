@@ -15,7 +15,7 @@ create debug-startup
 
 hex
 
-fload ${BP}/cpu/x86/pc/biosload/addrs.fth
+fload ${BP}/cpu/x86/pc/biosload/config.fth
 
 h# 0.0400 constant gdt-pa
 h# 0.1000 constant stacktop
