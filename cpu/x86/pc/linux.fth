@@ -167,7 +167,19 @@ defer load-ramdisk
    cr                                             ( throw-code r: xt )
    r> to load-path                                ( throw-code )
    throw
-   loaded to /ramdisk  to ramdisk-adr
+
+   loaded to /ramdisk                             ( adr )
+
+   \ Move ramdisk to top of memory
+
+   \ The initrd_addr_max field appeared in boot protocol 2.03
+   h# 22c +lp l@                                  ( adr ramdisk-limit )
+   ?dup  if  1+  else  h# 8000.0000  then         ( adr ramdisk-limit )
+
+   memory-limit  umin  /ramdisk -                 ( adr new-ramdisk-adr )
+   dup to ramdisk-adr                             ( adr new-ramdisk-adr )
+
+   /ramdisk move                                  ( )
 ;
 : cv-load-ramdisk  ( -- )
    " ramdisk" eval  dup 0=  if  2drop exit  then  ( name$ )
@@ -180,7 +192,6 @@ defer load-ramdisk
    0 0 1meg -1 mmu-map     ( )		\ Make the parameter area accessible
 [then]
    0 +lp  h# 1000 0 mem-claim drop      \ Play nice with memory reporting
-   0 +lp  h# 1000  erase
 ;
 
 0 value linux-loaded?
