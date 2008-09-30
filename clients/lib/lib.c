@@ -9,15 +9,24 @@ extern char *get_str_prop();
 extern int  get_int_prop();
 extern int  get_int_prop_def();
 
+#include "stdio.h"
+
+FILE _stdin  = { -1, 0, 0};
+FILE _stdout = { -1, 0, 0};
+FILE *stdin  = &_stdin;
+FILE *stdout = &_stdout;
+
 void
 abort()
 {
+  fflush(stdout);
   OFExit();
 }
 
 void
-exit()
+exit(int code)
 {
+  fflush(stdout);
   OFExit();
 }
 
@@ -30,13 +39,6 @@ sleep(ULONG delay)
 }
 
 /* files */
-
-#include "stdio.h"
-
-FILE _stdin  = { -1, 0, 0};
-FILE _stdout = { -1, 0, 0};
-FILE *stdin  = &_stdin;
-FILE *stdout = &_stdout;
 
 char _homedir[128];
 

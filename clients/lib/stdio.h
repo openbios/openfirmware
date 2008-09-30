@@ -15,6 +15,8 @@ extern FILE *stdout;
 #define EOF -1
 extern FILE *fopen();
 
+void fflush (FILE *fp);
+int printf(char *fmt, ...);
 
 // LICENSE_BEGIN
 // Copyright (c) 2006 FirmWorks

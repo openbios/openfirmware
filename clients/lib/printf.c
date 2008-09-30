@@ -83,6 +83,7 @@ _printf(char *fmt, va_list args)
 	char c, *s;
 	int n = 0;
         int fieldlen;
+        unsigned long mask;
 	char padchar;
 
 	while (c = *fmt++) {
@@ -91,6 +92,7 @@ _printf(char *fmt, va_list args)
 			n++;
 			continue;
 		}
+                mask = 0xffffffff;
                 if ((c = *fmt++) == '\0')
 			goto out;
 		
@@ -112,21 +114,34 @@ _printf(char *fmt, va_list args)
 				goto out;
 		}
 
+                if (c == 'l') {	// Ignore "long" modifier
+			if ((c = *fmt++) == '\0')
+				goto out;
+                }
+                while (c == 'h') {	// Mask for short modifier
+			if (mask = 0xffff)
+				mask = 0xff;
+			else
+				mask = 0xffff;
+			if ((c = *fmt++) == '\0')
+				goto out;
+                }
+
 		switch (c) {
 		case 'x':
-			x = va_arg(args, ULONG);
+			x = va_arg(args, ULONG) & mask;
 			n += printbase(x, 16, fieldlen, padchar, 0);
 			break;
 		case 'X':
-			x = va_arg(args, ULONG);
+			x = va_arg(args, ULONG) & mask;
 			n += printbase(x, 16, fieldlen, padchar, 1);
 			break;
 		case 'o':
-			x = va_arg(args, ULONG);
+			x = va_arg(args, ULONG) & mask;
 			n += printbase(x, 8, fieldlen, padchar, 0);
 			break;
 		case 'd':
-			x = va_arg(args, ULONG);
+			x = va_arg(args, ULONG) & mask;
 			n += printbase(x, 10, fieldlen, padchar, 0);
 			break;
 		case 'c':
@@ -180,8 +195,8 @@ fatal(char *fmt, ...)
 
 	va_start(args, fmt);
 	(void)_printf(fmt, args);
-	OFExit();
 	va_end(args);
+	exit();
 } 
 
 // LICENSE_BEGIN

@@ -36,27 +36,6 @@ Abstract:
 
 #include "1275.h"
 
-#ifdef SPRO
-typedef long long cell_t;
-#else
-typedef unsigned long cell_t ;
-#endif
-
-#ifdef CIF64
-#define LOW(index) ((index*2) + 1)
-#else
-#define LOW(index) (index)
-#endif
-
-extern int call_firmware(ULONG *);
-extern void warn(char *fmt, ...);
-
-#ifdef CIF64
-#define CIF_HANDLER_IN 6
-#else
-#define CIF_HANDLER_IN 3
-#endif
-
 // Device tree routines
 
 //
@@ -449,6 +428,56 @@ OFCallMethod(
 	return ((LONG)argarray[CIF_HANDLER_IN+LOW(3)]);
 }
 
+#include <stdarg.h>
+
+#define MAXARGS 12
+long
+OFCallMethodV(
+    char *method,
+    ihandle id,
+    int numargs,
+    int numres,
+    ...
+    )
+{
+#ifdef CIF64
+	ULONG argarray[(MAXARGS+6)*2] = { 0 };
+#else
+	cell_t argarray[MAXARGS+6] = { 0 };
+#endif
+	va_list ap;
+	int retval;
+	int *intp;
+	int argnum = 0;
+	unsigned long flags;
+
+	argarray[LOW(argnum++)] = (cell_t)"call-method";
+	argarray[LOW(argnum++)] = (cell_t)numargs+2;
+	argarray[LOW(argnum++)] = (cell_t)numres+1;
+	argarray[LOW(argnum++)] = (cell_t)method;
+	argarray[LOW(argnum++)] = (cell_t)id;
+
+	if ((numargs + numres) > MAXARGS)
+		return -1;
+
+	va_start(ap, numres);
+	while (numargs--)
+		argarray[LOW(argnum++)] = va_arg(ap, int);
+
+	retval = call_firmware(argarray);
+	if (retval == 0) {
+		retval = argarray[LOW(argnum++)];  // Catch result
+		if (retval == 0) {
+			while (numres--) {
+				intp = va_arg(ap, int *);
+				*intp = argarray[LOW(argnum++)];
+			}
+		}
+	}
+	va_end(ap);
+	return retval;
+}
+
 long
 OFInterpret0(
     char *cmd
@@ -467,6 +496,52 @@ OFInterpret0(
 	}
 	return ((LONG)argarray[CIF_HANDLER_IN+LOW(1)]);
 }
+
+long
+OFInterpretV(
+    char *cmd,
+    int numargs,
+    int numres,
+    ...
+    )
+{
+#ifdef CIF64
+	ULONG argarray[(MAXARGS+5)*2] = { 0 };
+#else
+	cell_t argarray[MAXARGS+5] = { 0 };
+#endif
+	va_list ap;
+	int retval;
+	int *intp;
+	int argnum = 0;
+	unsigned long flags;
+
+	argarray[LOW(argnum++)] = (cell_t)"interpret";
+	argarray[LOW(argnum++)] = (cell_t)numargs+1;
+	argarray[LOW(argnum++)] = (cell_t)numres+1;
+	argarray[LOW(argnum++)] = (cell_t)cmd;
+
+	if ((numargs + numres) > MAXARGS)
+		return -1;
+
+	va_start(ap, numres);
+	while (numargs--)
+		argarray[LOW(argnum++)] = va_arg(ap, int);
+
+	retval = call_firmware(argarray);
+	if (retval == 0) {
+		retval = argarray[LOW(argnum++)];  // Catch result
+		if (retval == 0) {
+			while (numres--) {
+				intp = va_arg(ap, int *);
+				*intp = argarray[LOW(argnum++)];
+			}
+		}
+	}
+	va_end(ap);
+	return retval;
+}
+
 
 ULONG
 OFMilliseconds( VOID )
