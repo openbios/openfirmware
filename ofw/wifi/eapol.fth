@@ -504,10 +504,10 @@ false value group-rekey?
    ."   Beacon interval: " dup d# 17 + le-w@ .d cr
    ."   Capabilities: " dup d# 19 + le-w@ cr .cap
    dup le-w@ swap 2 + swap d# 19 /string	( adr' len' )
-   begin  ?dup  while			( adr len )
+   begin  dup 0>  while			( adr len )
       over .ie				( adr len )
       over 1+ c@ 2 + /string		( adr' len' )
-   repeat  drop				( )
+   repeat  2drop			( )
 ;
 
 : .scan  ( adr -- )
