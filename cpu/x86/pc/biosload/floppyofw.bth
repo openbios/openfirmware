@@ -44,7 +44,7 @@ fload ${BP}/cpu/x86/pc/builton.bth
 
 hex
 
-.( Saving as ofw.img - floppy-load format) cr
+.( Saving as floppyofw.img - floppy-load format) cr
 writing floppyofw.img
    " biostart.img"          $add-file
    " reset.di"              $add-file
