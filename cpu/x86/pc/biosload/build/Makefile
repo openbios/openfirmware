@@ -2,6 +2,9 @@ OS := $(shell uname)
 
 all: ofw.c32
 
+floppyofw.img: FORCE build ../../../build/inflate.bin
+	./build $@
+
 ofw.c32: FORCE build ../../../build/inflate.bin
 	./build $@
 
