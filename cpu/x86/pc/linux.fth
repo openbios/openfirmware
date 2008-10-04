@@ -42,8 +42,13 @@ h# 10.0000 value linux-base
 : code16-size  ( -- #bytes )   load-base h# 1f1 + c@ 1+  d# 512 *   ;
 0 value cmdline-offset
 
+0 value linux-memtop
+
 \ Find the end of the largest piece of memory
 : memory-limit  ( -- limit )
+   \ If we have already loaded a RAMdisk in high memory, its base is the memory limit
+   ramdisk-adr  ?dup  if  exit  then
+
    " /memory" find-package 0= abort" No /memory node"  ( phandle )
    " available" rot get-package-property abort" No memory node available property"  ( $ )
    \ Find the memory piece that starts at 1 Meg
@@ -92,11 +97,11 @@ d# 20 constant /root-dev-buf
 : set-parameters  ( cmdline$ -- )
    screen-info  linux-params  /screen-info  move  \ Ostensibly screen info
 
-   memory-limit ( #bytes )
+   linux-memtop ( #bytes )
    d# 1023 invert and  d# 1024 /  ( #kbytes )
    d# 1024 -  h# 002 +lp  w!	\ Kbytes of extended (not the 1st meg) memory
 
-   memory-limit ( #bytes )
+   linux-memtop ( #bytes )
    d# 1023 invert and  d# 1024 /  ( #kbytes )
    d# 1024 -  h# 1e0 +lp  l!    \ Alternate amount of extended memory
 
@@ -156,6 +161,27 @@ d# 256 buffer: ramdisk-buf
 ' ramdisk-buf  " ramdisk" chosen-string
 
 defer load-ramdisk
+: place-ramdisk  ( adr len -- )
+   to /ramdisk                                    ( adr )
+
+   \ Move ramdisk to top of memory for new kernels.  In principle,
+   \ this should work for older kernels too, but for some reason it doesn't.
+   h# 206 +lp w@  h# 207 <  if                    ( adr )
+      dup load-base <>  if                        ( adr )
+         load-base tuck /ramdisk move             ( adr' )
+      then                                        ( adr )
+      memory-limit                                ( adr memtop )
+   else
+      \ The initrd_addr_max field appeared in boot protocol 2.03
+      h# 22c +lp l@                               ( adr ramdisk-limit )
+      ?dup  if  1+  else  h# 8000.0000  then      ( adr ramdisk-limit )
+
+      memory-limit  umin  /ramdisk -              ( adr new-ramdisk-adr )
+      tuck /ramdisk move                          ( new-ramdisk-adr )
+      dup
+   then                                           ( ramdisk-adr memtop )
+   to linux-memtop  to ramdisk-adr
+;
 : $load-ramdisk  ( name$ -- )
    0 to /ramdisk                                  ( name$ )
 
@@ -168,18 +194,7 @@ defer load-ramdisk
    r> to load-path                                ( throw-code )
    throw
 
-   loaded to /ramdisk                             ( adr )
-
-   \ Move ramdisk to top of memory
-
-   \ The initrd_addr_max field appeared in boot protocol 2.03
-   h# 22c +lp l@                                  ( adr ramdisk-limit )
-   ?dup  if  1+  else  h# 8000.0000  then         ( adr ramdisk-limit )
-
-   memory-limit  umin  /ramdisk -                 ( adr new-ramdisk-adr )
-   dup to ramdisk-adr                             ( adr new-ramdisk-adr )
-
-   /ramdisk move                                  ( )
+   loaded place-ramdisk
 ;
 : cv-load-ramdisk  ( -- )
    " ramdisk" eval  dup 0=  if  2drop exit  then  ( name$ )

@@ -562,9 +562,7 @@ d# 67 buffer: machine-id-buf
       "   RD found - " ?lease-debug
       img$  sig$  sha-valid?  if
          show-unlock
-         load-base to ramdisk-adr
-         img$ dup to /ramdisk     ( adr len )
-         load-base swap move      ( )
+         img$ place-ramdisk
          exit
       else
          show-unlock
@@ -762,6 +760,10 @@ warning !
    0<>
 ;
 
+: set-cmdline   ( -- )
+   " console=ttyS0,115200 console=tty0 fbcon=font:SUN12x22" args-buf place-cstr drop
+;
+
 : load-from-list  ( list$ -- devkey? )
    " dev /jffs2-file-system ' ?unfreeze to scan-callout  dend" eval
 
@@ -780,7 +782,7 @@ warning !
          has-developer-key?  if             ( list$ )
             2drop                           ( )
             true to security-off?
-            visible
+            visible unfreeze
             show-unlock
             true exit
          then                               ( list$ )
@@ -790,6 +792,7 @@ warning !
             2drop                           ( )
             ['] secure-load-ramdisk to load-ramdisk
             " init-program" $find  if
+               set-cmdline
                execute  show-going  go
             then
             show-x
@@ -826,7 +829,7 @@ warning !
 
    ?force-secure
 
-   secure?  0=  if  unfreeze visible  exit  then
+   secure?  0=  if  visible unfreeze  exit  then
 
    button-check game-key?  if
       unfreeze  visible  banner
@@ -834,7 +837,7 @@ warning !
       freeze  dcon-freeze
    then
 
-   persistent-devkey?  if  true to security-off?  visible  exit  then
+   persistent-devkey?  if  true to security-off?  visible unfreeze  exit  then
 
    get-my-sn  if  " No serial number" .security-failure  then
 

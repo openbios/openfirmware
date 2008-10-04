@@ -398,7 +398,7 @@ h# 32 buffer: icon-name
 ;
 : linux-hook-freeze
    [ ' linux-hook behavior compile, ]
-   0 " set-source" $call-screen
+   dcon-freeze
 ;
 : freeze    ( -- )  ['] linux-hook-freeze   to linux-hook  ;
 : unfreeze  ( -- )  ['] linux-hook-unfreeze to linux-hook  ;
