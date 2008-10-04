@@ -102,9 +102,17 @@ false value alt-gr?		\ True if the AltGr key is down
 
 : clear-out-buf  ( -- )  " clear-out-buf" $call-parent  ;
 
+: timed-read  ( #ms -- true | data false )
+   0  do
+      get-data?  if  unloop false exit  then
+      1 ms
+   loop
+   true
+;
+
 : ?ack  ( response -- )
    begin  h# fa <>  while		  \ Consume stuff while waiting for ack
-      d# 10 ms  get-data?  0=  if  exit then
+      d# 10 timed-read  if  exit then
    repeat
 ;
 
@@ -211,16 +219,34 @@ previous definitions
    oem-keymap  if  oem-keymap  /keymap  free-mem  then
    0 to oem-keymap
 ;
+
 [ifdef] olpc
 : ?olpc-keyboard  ( -- )
     " enable-intf" $call-parent
-    begin  get-data?  while
+    begin  5 timed-read 0=  while
        drop
        true to keyboard-present?
-       5 ms
     repeat
     keyboard-present?  if  exit  then
     kbd-reset 0= to keyboard-present?
+;
+
+\ For the ENE keyboard controller we have to tell the EC to use
+\ a different internal mapping table.  OLPC switched from an
+\ ALPS to an ENE controller in late 2007.
+: olpc-set-ec-keymap  ( -- )
+   h# f2 cmd
+
+   \ Keyboards return the ID sequence  ab XX
+   2 timed-read  if  exit  then  ( id1 )
+   h# ab <>  if  exit  then
+
+   \ The ENE keyboard controller return  ab 41
+   2 timed-read  if  exit  then  ( id2 )
+   h# 41 <>  if  exit  then
+   
+   \ This looks like an ENE controller, so flip the mapping table
+   h# f7 cmd
 ;
 
 fload ${BP}/cpu/x86/pc/olpc/keymap.fth
@@ -328,13 +354,13 @@ create func-map  81 c,  8c c,
    " us" set-keyboard
 \   choose-type
 ;
-: consume  ( -- )   begin  5 ms  get-data?  while  drop  repeat  ;
+: consume  ( -- )   begin  5 timed-read  0=  while  drop  repeat  ;
 
 : get-initial-state  ( -- )
    d# 200 ms      \ Give the keyboard time to respond
 
    \ 5 ms is less than the standard auto-repeat rate
-   begin  5 ms  get-data?  while  handle-initial-scan  repeat
+   begin  5 timed-read  0=  while  handle-initial-scan  repeat
 
    default-disable-kbd	\ Clear last typematic key, if any
    consume
@@ -359,7 +385,7 @@ create func-map  81 c,  8c c,
    clear-state
 [ifdef] ?olpc-keyboard
    ?olpc-keyboard
-   keyboard-present?  if  exit  then
+   keyboard-present?  if  olpc-set-ec-keymap exit  then
 [else]
    get-initial-state
 
