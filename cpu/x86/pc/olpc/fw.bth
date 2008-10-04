@@ -82,6 +82,7 @@ fload ${BP}/ofw/core/memlist.fth	\ Resource list common routines
 fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
 fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
 fload ${BP}/ofw/core/availpm.fth	\ Available memory list
+fload ${BP}/ofw/core/allocmor.fth	\ Secondary allocator
 
 fload ${BP}/cpu/x86/pc/rootnode.fth	\ Platform-specific root node changes
 dev /
@@ -625,12 +626,19 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 : mcastnand
    " boot rom:mcastnand 239.255.1.2 12345 /nandflash" eval
+   false to already-go?
+;
+: ucastnand
+   " boot rom:mcastnand 10.20.0.16,,10.20.0.44 12345 /nandflash" eval
+   false to already-go?
 ;
 : nmcastnand  \ Boot from network, for testing
    " boot http:\\10.20.0.14\mcastnand 239.255.1.2 12345 /nandflash" eval
+   false to already-go?
 ;
 : dmcastnand  \ Boot from USB disk, for testing
    " boot disk:\mcnand 239.255.1.2 12345 /nandflash" eval
+   false to already-go?
 ;
 
 
