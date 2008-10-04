@@ -99,6 +99,7 @@ false instance value force-open?
 : close  ( -- )
    opencount @ 1-  0 max  opencount !
    opencount @ 0=  if
+      disable-multicast
       link-up?  if  target-mac$ deauthenticate  then
       ['] 2drop to ?process-eapol
       end-bulk-in
