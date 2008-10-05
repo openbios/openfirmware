@@ -25,8 +25,34 @@ d# 20 constant apex-timeout
 \    apex?  0=  if  " get-data" $call-parent  ?ack  then
 \ ;
 
+: timed-read  ( #ms -- true | data false )
+   0  do
+      get-data?  if  unloop false exit  then
+      1 ms
+   loop
+   true
+;
+
+: put-get-data  ( cmd -- data )  " put-get-data" $call-parent  ;
 : send-cmd  ( cmd -- )  " put-data" $call-parent  ;
-: cmd  ( cmd -- )  " put-get-data" $call-parent ?ack  ;
+
+: cmd?  ( cmd -- error? )
+   dup put-get-data                   ( cmd response )
+   begin                              ( cmd response )
+      case                            ( cmd response )
+         h# fa of  drop false exit   endof   \ ACK
+         h# fe of  dup put-get-data  endof   \ RESEND - try again
+         ( cmd response )
+            d# 10 timed-read  if      ( cmd response )
+              2drop true exit
+            then                      ( cmd response new-response )
+            swap                      ( cmd new-response response )
+      endcase                         ( cmd new-response )
+   again
+;
+: cmd  ( cmd -- )  cmd? drop  ;
+
+\ : cmd  ( cmd -- )  " put-get-data" $call-parent ?ack  ;
 
 \ This serves the same purpose as "cmd", but it handles a bug in the
 \ Apex concentrator in which said device neglects to acknowledge certain
@@ -100,13 +126,6 @@ create buttons  0 c,  1 c,  4 c,  5 c,  2 c,  3 c,  6 c,  7 c,
 \ PS2 mouse packets have no framing information, so we must depend on
 \ timing information for framing
 : clear-queue  ( -- )  begin  get-data?  while  drop  repeat  ;
-: timed-read  ( #ms -- true | data false )
-   0  do
-      get-data?  if  unloop false exit  then
-      1 ms
-   loop
-   true
-;
 : no-event  ( -- 0 0 0 )  clear-queue  0 0 0  ;
 
 headers
@@ -148,9 +167,7 @@ headerless
 
 : identify  ( -- true | char false )
 \   h# f2  ['] read1  catch  dup  if  nip  then
-   h# f2  send-cmd
-
-   apex-timeout timed-read  if  true exit  else  drop  then
+   h# f2  cmd?  if  true exit  then
    apex-timeout timed-read
 ;
 
@@ -198,7 +215,7 @@ headers
    remote-mode
    true
 ;
-: close  ( -- )  ;
+: close  ( -- )  stream-off  ;
 
 headerless
 \ Filter out large negative motions; they're probably spurious
