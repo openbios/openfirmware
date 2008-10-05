@@ -271,8 +271,8 @@ variable miss?
          endof
          ( default )
             \ If the high bit is set it means it's the first byte
-            \ of a packet.  Abort if we don't recognize the type.
-            dup h# 80 and  abort" Touchpad protocol botch"
+            \ of a packet.  Complain if we don't recognize the type.
+            dup h# 80 and  if ." Protocol botch"  then
 
             \ If the high bit is not set, we have missed a start of packet
             miss? @ 0=  if  ." miss "  then
@@ -417,6 +417,9 @@ d# 600 d# 512 2value last-rel
 
    cursor-off  track-init  start
 
+   \ Consume already-queued keys to prevent premature exit
+   begin  key?  while  key drop  repeat
+
    background
    gs-only
    begin
@@ -441,6 +444,7 @@ d# 600 d# 512 2value last-rel
    until
 
    close
+   page
    0
 ;
 
