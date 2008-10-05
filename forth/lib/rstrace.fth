@@ -43,7 +43,16 @@ headerless
    then                                        ( rs-adr n )
    9 u.r
 ;
-: .traceline  ( rs-adr -- rs-adr' )
+: .traceline  ( ipaddr -- )
+   push-hex
+   dup reasonable-ip?
+   if    dup .last-executed ip>token .caller   else  9 u.r   then   cr
+   pop-base
+;
+\ Heuristic display of return stack items, recognizing Forth word nesting,
+\ catch frames, and do loop frames.
+\ For later: It would also be nice to recognize input stream nesting frames.
+: rtraceline  ( rs-adr -- rs-adr' )
    push-hex                    ( rs-adr )
    @+                          ( rs-adr' ip )
    dup reasonable-ip?  if      ( rs-adr ip )
@@ -59,7 +68,7 @@ headerless
 ;
 : (rstrace  ( end-adr start-adr -- )
     begin  2dup u>  while           ( end-adr adr )
-       .traceline                   ( end-adr adr' )
+       rtraceline                   ( end-adr adr' )
        exit?  if  2drop exit  then  ( end-adr adr )
     repeat                          ( end-adr adr )
     2drop
