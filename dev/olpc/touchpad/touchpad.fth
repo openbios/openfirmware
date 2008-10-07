@@ -444,6 +444,7 @@ d# 600 d# 512 2value last-rel
    until
 
    close
+   cursor-on
    page
    0
 ;

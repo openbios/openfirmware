@@ -49,7 +49,7 @@ d# 256 constant /partition-entry
 ;
 : write-partition-map  ( -- )
    partition-map-offset /nand-page /  dup " erase-block" $call-nand
-   load-base  swap  nand-pages/block  " write-blocks" $call-nand
+   load-base  swap  nand-pages/block  " write-pages" $call-nand
    nand-pages/block <> abort" Can't write partition map"
    " read-partmap" $call-nand
 ;
