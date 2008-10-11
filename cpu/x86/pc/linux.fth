@@ -258,6 +258,7 @@ warning @ warning off
    init-program
    linux-loaded?  if
       claim-params
+      memory-limit to linux-memtop  \ load-ramdisk may change this
       ['] load-ramdisk guarded
       linux-fixup
    then
