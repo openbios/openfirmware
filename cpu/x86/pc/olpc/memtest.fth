@@ -10,6 +10,7 @@ purpose: Interface to memtest86
       h# 910 config-l@ dup 100.0000 -1 mmu-map
 [then]
       unfreeze
+      usb-quiet
    then
 
    \ If it's not memtest, chain to the linux recognizer
