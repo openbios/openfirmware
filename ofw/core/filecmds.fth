@@ -527,7 +527,18 @@ public
 
 dev /client-services
 : firmworks,create  ( cstr -- ihandle )
-   cscount  ['] $create-file  catch  if  2drop 0  then
+   cscount                   ( path$ )
+
+   \ If the file already exists, delete it so it can be
+   \ recreated with 0 initial length.
+   2dup ['] $open-file catch  if  ( path$ x x )
+      2drop                       ( path$ )
+   else                           ( path$ ih )
+      close-dev                   ( path$ )
+      2dup ['] $delete catch  if  2drop  then  ( path$ )
+   then                           ( path$ )
+
+   ['] $create-file  catch  if  2drop 0  then
 ;
 device-end
 

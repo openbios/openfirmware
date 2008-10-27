@@ -105,10 +105,13 @@ fopen (char *name, char *mode)
   if (fp == (FILE *)NULL)
       return ((FILE *)NULL);
 
-  if ((fp->id = OFOpen(name)) == 0) {
-      if (mode[0] == 'w' && ((fp->id = OFCreate(name)) != 0))
-          goto good;
+  if (mode[0] == 'w') {
+      if ((fp->id = OFCreate(name)) == 0)
+          return ((FILE *)NULL);
+      goto good;
+  }
 
+  if ((fp->id = OFOpen(name)) == 0) {
       return ((FILE *)NULL);
   }
   
