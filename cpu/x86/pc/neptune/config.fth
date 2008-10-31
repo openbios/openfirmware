@@ -30,7 +30,7 @@ create addresses-assigned  \ Define if base addresses are already assigned
 create serial-console      \ Define to default to serial port for console
 create pc
 create linux-support
-create jffs2-support
+\ create jffs2-support
 create use-elf
 
 create lx-pll-autoconfig   \ enable pll autoconfiguration from bootstrap pin
