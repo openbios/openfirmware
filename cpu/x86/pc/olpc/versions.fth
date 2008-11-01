@@ -2,10 +2,10 @@
 
 \ The overall firmware revision
 macro: FW_MAJOR E
-macro: FW_MINOR 20
+macro: FW_MINOR 21
 
 \ The EC microcode
-macro: EC_VERSION e18c
+macro: EC_VERSION e21
 
 \ Alternate command for getting EC microcode, for testing new versions.
 \ Temporarily uncomment the line and modify the path as necessary
