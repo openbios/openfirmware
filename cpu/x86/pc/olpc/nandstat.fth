@@ -159,7 +159,7 @@ gshow
 
    \ See if the whole thing is really completely erased
    load-base  working-page  nand-pages/block  ( adr block# #blocks )
-   " read-blocks" $call-nand  nand-pages/block  <>  if  1 exit  then
+   " read-pages" $call-nand  nand-pages/block  <>  if  1 exit  then
 
    \ Not completely erased
    load-base  load-base h# 100000 +  /nand-block  comp  if  5 exit  then
