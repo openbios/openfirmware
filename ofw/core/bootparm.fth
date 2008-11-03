@@ -66,7 +66,7 @@ d# 256 buffer: path-buf
 headers
 ' path-buf  " bootpath" chosen-string
 headerless
-d# 128 buffer: args-buf
+d# 256 buffer: args-buf
 headers
 ' args-buf  " bootargs" chosen-string
 
@@ -82,6 +82,13 @@ defer load-path
 ' path-buf is load-path
 
 headerless
+: limit-255  ( adr len -- adr len )
+   dup d# 255 >  if
+      ." Warning: limiting string length to 255 characters" cr
+      drop d# 255
+   then
+;
+
 : (boot-read)  ( adr len -- )
    opened-ih  if                        ( adr len )
       2drop  opened-ih  0 to opened-ih  ( ihandle )
@@ -92,7 +99,7 @@ headerless
       ( print-probe-list )
       true abort" "r"nCan't open boot device"r"n"
    then                                         ( fileid )
-   dup ihandle>devname load-path place-cstr drop ( fileid )
+   dup ihandle>devname limit-255 load-path place-cstr drop ( fileid )
    >r                                           ( )
    load-started
    0 !load-size  load-base                      ( load-adr )
@@ -196,7 +203,7 @@ headers
    ."   Arguments: "  2over type              ( file-str device-str )
    )collect ?show-message                     ( file-str device-str )
 
-   2swap args-buf  place-cstr drop	      ( device-str )
+   2swap limit-255 args-buf  place-cstr drop  ( device-str )
 
    boot-read                                  ( )
 ;
