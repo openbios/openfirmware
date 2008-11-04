@@ -66,7 +66,7 @@ d# 20 constant apex-timeout
 : mouse2:1       h# e7 cmd  ;
 : stream-on      h# f4 cmd  ;
 : stream-off     h# f5 cmd  ;
-: stream-mode    h# ea cmd  ;
+: stream-mode    h# ea cmd  stream-on  ;
 
 \ The Apex concentrator refuses to send motion and button events
 \ unless stream data is enabled!
@@ -104,7 +104,7 @@ d# 20 constant apex-timeout
 ;
 [then]
 
-\ Translate RML to RML
+\ Translate MRL to RML
 create buttons  0 c,  1 c,  4 c,  5 c,  2 c,  3 c,  6 c,  7 c,
 
 \ create Mitsumi	\ Comment out this line if you don't support Mitsumi mouse
@@ -128,7 +128,123 @@ create buttons  0 c,  1 c,  4 c,  5 c,  2 c,  3 c,  6 c,  7 c,
 : clear-queue  ( -- )  begin  get-data?  while  drop  repeat  ;
 : no-event  ( -- 0 0 0 )  clear-queue  0 0 0  ;
 
+0 instance value mouse-byte#
+instance variable mouse-bytes
+0 instance value mouse-timestamp
+2 instance value poll-delay
+
+: save-byte  ( byte -- )
+   mouse-bytes @  8 lshift or  mouse-bytes !  ( )
+   mouse-byte# 1+ to mouse-byte#              ( )
+   get-msecs to mouse-timestamp
+   2 to poll-delay
+;
+: out-of-packet  ( -- )
+   0 to mouse-byte#
+   0 to mouse-timestamp
+;
+
+: stream-event  ( byte -- false | x y buttons true )
+   mouse-byte#  case                          ( byte )
+      0  of
+         \ Discard if framing error
+         dup 8 and  if  save-byte  else  drop  then  ( )
+         false exit
+      endof
+
+      1  of  save-byte  false exit  then
+   endcase                                    ( byte3 )
+
+   \ Fall through if already have 2 mouse bytes (this is the third)
+   out-of-packet
+
+   mouse-bytes @ wbsplit  ( byte3-ylow byte2-xlow byte1-stat )
+
+   dup 7 and buttons + c@ >r              ( ylow xlow stat )
+   swap   over h# 10 ?negative  -rot      ( x ylow stat )
+   h# 20 ?negative r>                     ( x y buttons )
+
+   true exit
+;
+
+\ Time-based resynchronization.  If we are in the middle of a packet,
+\ but we poll and see no bytes and the interval since the last byte
+\ was longer than the possible time between bytes within a packet,
+\ we discard the queued-up bytes.
+: ?reframe  ( -- )
+   mouse-byte#  if
+      \ We don't trust time intervals <= ms/tick because the timestamp
+      \ could have happened just before a tick and the next sample
+      \ right after a tick, so the actual elapsed time could be almost
+      \ zero, but the reported time difference would be ms/tick .
+      get-msecs mouse-timestamp - ms/tick - 0 max  d# 5  >  if
+         out-of-packet
+       then
+   then
+;
 headers
+
+: stream-poll?  ( -- false | x y buttons true )
+   begin  get-data?  while     ( byte )
+      \ If we have a packet, retry soon because there is likely to be another
+      \ right on its heels.  The packet generation rate is 100/sec, but some
+      \ could be queued up, so we don't wait a full 10 ms
+      stream-event  ?dup  if  exit  then
+   repeat                      ( )
+
+   ?reframe
+   false
+;
+
+\ delay-ms is a suggested delay until the next poll.  It tells you when
+\ a call to stream-poll? is likely to have something worthwhile to do.
+\ In the middle of an incoming mouse packet, delay-ms will be a couple of
+\ milliseconds, a bit longer than the interval between successive PS/2 bytes.
+\ Just after receiving a packet, it will be a bit more than 10 mS, since
+\ another packet is likely to follow (the standard mouse packet rate is
+\ 100 packets/second).  When idle, the delay is 56 milliseconds, just
+\ longer than a worst-case PC tick interval, but short enough that a
+\ human won't notice a delay.
+\ This strikes a good balance between responsive, accurate mouse tracking
+\ and minimal polling overhead.
+
+: adaptive-poll?  ( -- false delay-ms | x y buttons true delay-ms )
+   begin  get-data?  while     ( byte )
+      \ If we have a packet, retry soon because there is likely to be another
+      \ right on its heels.  The packet generation rate is 100/sec, but some
+      \ could be queued up, so we don't wait a full 10 ms
+      stream-event  ?dup  if  poll-delay  exit  then
+   repeat                      ( )
+
+   ?reframe
+   false  poll-delay                 ( false delay-ms )
+
+   dup 2 = if  9  else  d# 32  then  to poll-delay  ( false delay-ms )
+;
+0 [if]
+: adaptive-track  ( -- )
+   stream-mode
+   begin
+      adaptive-poll?  >r  if   ( x y stat r: next-poll )
+         (cr . 4 .r 4 .r     ( r: next-poll )
+      then                   ( r: next-poll )
+      r> ms                  ( )
+   key? until                ( )
+   stream-off
+;
+: stream-track  ( -- )
+   stream-mode
+   begin
+      stream-poll?  if       ( x y stat )
+         (cr . 4 .r 4 .r     ( )
+      then                   ( )
+      5 ms                   ( )
+   key? until                ( )
+   stream-off
+;
+
+[then]
+
 : poll  ( -- x y buttons )
    clear-queue
 
