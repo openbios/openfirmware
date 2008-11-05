@@ -51,7 +51,7 @@ instance variable 'next-tdirent
 : next-tdirent  ( -- adr )  'next-tdirent @  ;
 0 instance value tdirents
 
-0 instance value file-buf       \ Buffer for constructing file
+-1 instance value file-buf       \ Buffer for constructing file
 0 instance value file-size      \ Actual size of file
 
 0 ( instance ) value /empty-scan    \ When to give up looking for nodes
