@@ -90,15 +90,16 @@ variable ptr
 : alps-prefix  ( -- )  3 0  do  h# f2 read1 drop  loop  ;
 
 variable mode  \ 0 - unknown  1 - GS  2 - PT  3 - mouse
+0 instance value packet-type
 
 \ Ref: 5.2.10 (3) of Hybrid-GP2B-T-1.pdf
 : gs-only  ( -- )
-   mode @  dup 1 =  swap 3 =  or  if  exit  then
+   mode @  3 =  if  exit  then
    alps-prefix mouse1:1    \ f2 f2 f2 e6
    1 mode !
 ;
 : pt-only  ( -- )
-   mode @  dup 2 =  swap 3 =  or  if  exit  then
+   mode @  swap 3 =  if  exit  then
    alps-prefix mouse2:1    \ f2 f2 f2 e7
    2 mode !
 ;
@@ -172,7 +173,7 @@ variable mode  \ 0 - unknown  1 - GS  2 - PT  3 - mouse
 \ variable py    \ Pen mode y value
 variable gx    \ Glide pad x value
 variable gy    \ Glide pad y value
-variable gz    \ Glide pad z value, also used fo pen mode x
+variable gz    \ Glide pad z value, also used for pen mode x
 variable taps      \ Bitmask of tap flags
 variable switches  \ Bitmask of switch flags
 
@@ -233,6 +234,7 @@ create swbits  0 c,  2 c,  1 c,  3 c,
 \ Ref: 5.2.9 (2) (1) of Hybrid-GP2B-T-1.pdf
 : decode-pt  ( -- )
    show-raw?  if  ." P "  then
+   2 to packet-type
    decode-common
    taps @ 0=  if  d# 10 exit-pt !  then
 ;
@@ -240,6 +242,7 @@ create swbits  0 c,  2 c,  1 c,  3 c,
 \ Ref: 5.2.9 (2) (2) of Hybrid-GP2B-T-1.pdf
 : decode-gs  ( -- )
    show-raw?  if  ." G "  then
+   1 to packet-type  \ In case we get out of sync
    decode-common
    taps @  1 and  if  pt-only  then   \ Switch to pen mode
 ;
@@ -395,7 +398,7 @@ d# 600 d# 512 2value last-rel
 ;
 
 : track  ( x y z buttons -- )
-   mode @ 2 =  if  yellow  else  cyan  then  pixcolor !  ( x y z but )
+   packet-type 2 =  if  yellow  else  cyan  then  pixcolor !  ( x y z but )
 
    dup 3 and 3 =  if  background  load-base ptr !  then
    dup  1 and  if  green  else  black  then  d# 100 button
@@ -406,7 +409,23 @@ d# 600 d# 512 2value last-rel
 
    show-pressure                          ( x y )
 
-   relative?  if  abs>rel  then
+   relative?  if             ( x y )
+      abs>rel                ( x' y' )
+   else                      ( x y )
+      \ Display cyan dots (GS) in the center of the screen
+      \ The offset attempts to register the GS with the PT.
+      \ The offset should be 333, but the PT is expanded,
+      \ so we have to scale the 333 to match.
+      packet-type 1 =  if    ( x y )
+         swap  d# 400 +      ( y x' )  \ GS
+         swap                ( x' y )
+      then                   ( x y )
+      \ Expand the PT (0..999) to the screen width (1200)
+      packet-type 2 =  if    ( x y )
+         swap d# 1200 d# 1000 */
+         swap d# 1200 d# 1000 */
+      then                   ( x y )
+   then                      ( x y )
 
    dot
 ;
