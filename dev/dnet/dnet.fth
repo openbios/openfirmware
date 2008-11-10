@@ -1,118 +1,244 @@
-purpose: Ethenet Driver for Lattice Ethernet device (dnet)
+purpose: Driver for DAVE Ethernet FPGA (Lattice IP)
 \ See license at end of file
 
-hex
-headers
-
-: copyright ( -- )
-   ." Copyright (c) 2008 Dave Srl. All Rights Reserved." cr
-;
-
-\ Register offsets from the adapter’s base address
-
-\ TODO remove the following
-0 constant control \ 1 byte W/O - writing one bits causes things to happen
-2 constant unicast-addr \ 6 bytes R/W - Ethernet address for reception
-8 constant xmit-status \ 1 byte - 0 => busy 1 => okay else => error
-9 constant xmit-fifo \ 1 byte - write repetitively to setup packet
-a constant xmit-len \ 16 bits - length of packet to send
-c constant rcv-rdy \ 1 byte - count of waiting packets
-d constant rcv-fifo \ 1 byte - read repetitively to remove first packet
-e constant rcv-len \ 16 bits
-10 constant local-addr \ 6 bytes R/O - Factory-assigned Ethernet address
-\ until here
-
-
-\ dnet register definition
-
-0 constant rx-len-fifo
-4 constant rx-data-fifo
-8 constant tx-len-fifo
-c constant rx-data-fifo
-
-100 constant verid
-104 constant intr-src
-108 constant intr-enb
-10c constant rx-status
-110 constant tx-status
-114 constant rx-frames-cnt
-118 constant tx-frames-cnt
-11c constant rx-fifo-th
-120 constant tx-fifo-th
-124 constant sys-ctl
-128 constant pause-tmr
-
-200 constant macreg-data
-204 constant macreg-addr
-1 d# 31 << constant macreg-write
-
-\ TODO: dnet rx & tx statistics counter registers
-
-
-\ macreg register definition
-0 constant macreg-mode
-2 constant macreg-rxtx-mode
-4 constant macreg-max_pkt_size
-8 constant macreg-igp
-a constant macreg-mac_addr_0
-c constant macreg-mac_addr_1
-e constant macreg-mac_addr_2
-12 constant macreg-tx_rx_sts
-14 constant macreg-gmii_mng_ctl
-16 constant macreg-gmii_mng_dat
-
-100000 constant /regs \ Total size of adapter’s register bank
-10000000 constant /real-regs \ Total size of adapter’s register bank
-
-: map-in ( addr space size -- virt ) " map-in" $call-parent ;
-
-: map-out ( virt size -- ) " map-out" $call-parent ;
-
-: my-w@ ( offset -- w ) my-space + " config-w@" $call-parent ;
-: my-w! ( w offset -- ) my-space + " config-w!" $call-parent ;
-
-" ethernet" device-name
+" ethernet" name
 " Lattice,tri-speed-eth" encode-string " compatible" property
 " network" device-type
 
-\ Some of Apple’s Open Firmware implementations have a bug in their map-in method. The
-\ bug causes phys.lo and phys.mid to be treated as absolute addresses rather than
-\ offsets even when working with relocatable addresses.
-\ To overcome this bug, the Open Firmware Working Group in conjunction with Apple has
-\ adopted a workaround that is keyed to the presence or absence of the add-range method
-\ in the PCI node. If the add-range method is present in an Apple ROM, the map-in
-\ method is broken. If the add-range property is absent, the map-in method behaves
-\ correctly.
-\ The following methods allow the FCode driver to accomodate both broken and working
-\ map-in methods.
-: map-in-broken? ( -- flag )
-   \ Look for the method that is present when the bug is present
-   " add-range" my-parent ihandle>phandle ( adr len phandle )
-   find-method dup if nip then ( flag ) \ Discard xt if present
+h#   100000 constant /irq-regs \ Total size of adapter’s register bank
+h# 10000000 constant /mac-regs \ Total size of adapter’s register bank
+
+\ Define "reg" property
+\ PCI Configuration Space
+my-address my-space encode-phys 0 encode-int encode+ 0 encode-int encode+
+
+\ Memory Space Base Address Register 10
+my-address my-space h# 0200.0010 or encode-phys  encode+
+0 encode-int encode+  /irq-regs encode-int encode+
+
+\ Memory Space Base Address Register 14
+my-address my-space h# 0200.0014 or encode-phys  encode+
+0 encode-int encode+  /mac-regs encode-int encode+
+
+\ \ PCI Expansion ROM - not present
+\ my-address my-space h# 200.0030 or encode-phys encode+
+\ 0 encode-int encode+ h# 10.0000 encode-int encode+
+
+" reg" property
+
+0 instance value chip
+: map-regs  ( -- )
+   h# 0040.0000 0  my-space h# 14 +  h# 0200.0000 or  h# 1000
+   " map-in" $call-parent to chip
+   2 my-space 4 + " config-w!" $call-parent
+;
+: unmap-regs  ( -- )
+   0 my-space 4 + " config-w!" $call-parent
+   chip h# 1000 " map-out" $call-parent
+;
+: reg@  ( offset -- l )  chip + rl@  ;
+: reg!  ( l offset -- )  chip + rl!  ;
+
+: rx-cmd-fifo@   ( -- l )  0 reg@  ;
+: rx-data-fifo@  ( -- l )  4 reg@  ;
+: tx-cmd-fifo!   ( l -- )  8 reg!  ;
+: tx-data-fifo!  ( l -- )  h# c reg!  ;
+
+: capa@       ( -- l )  h# 100 reg@  ;
+
+1 constant mdio
+2 constant irq
+4 constant gigabit
+8 constant dma
+h# 10 constant rmii
+
+: intr-src@   ( -- l )  h# 104 reg@  ;
+: intr-src!   ( l -- )  h# 104 reg!  ;
+: intr-enb@   ( -- l )  h# 108 reg@  ;
+: intr-enb!   ( l -- )  h# 108 reg!  ;
+
+4 constant tx-dat-ae
+h# 10 constant tx-fifo-f
+h# 100 constant rx-cmd-af
+h# 200 constant rx-cmd-ff
+h# 400 constant rx-data-af
+h# 1000 constant tx-smry
+h# 2000 constant rx-smry
+h# 4000 constant glob-enb
+h# 8000 constant phy
+
+: rx-status@  ( -- l )  h# 10c reg@  ;
+: rx-status!  ( l -- )  h# 10c reg!  ;
+
+1 constant stat-rx-cmd-af
+2 constant stat-rx-cmd-ff
+4 constant stat-rx-data-f
+
+: tx-status@  ( -- l )  h# 110 reg@  ;
+: tx-status!  ( l -- )  h# 110 reg!  ;
+
+4 constant stat-tx-data-ae
+h# 10 constant stat-tx-fifo-f
+
+: rx-fifo-th@  ( -- l )  h# 11c reg@  ;
+: rx-fifo-th!  ( l -- )  h# 11c reg!  ;
+: tx-fifo-th@  ( -- l )  h# 120 reg@  ;
+: tx-fifo-th!  ( l -- )  h# 120 reg!  ;
+: sys-ctl@     ( -- l )  h# 124 reg@  ;
+: sys-ctl!     ( l -- )  h# 124 reg!  ;
+
+8 constant rx-flush
+h# 10 constant tx-flush
+
+defer us-delay
+: set-delay  ( -- )
+   " us" $find  0=  if  2drop ['] ms  then  to us-delay
 ;
 
-\ Return phys.lo and phys.mid of the address assigned to the PCI base address
-\ register indicated by phys.hi .
-: get-base-address ( phys.hi -- phys.lo phys.mid phys.hi )
-   " assigned-addresses" get-my-property if ( phys.hi )
-   ." No address property found!" cr
-   0 0 rot exit \ Error exit
-   then ( phys.hi adr len )
-   rot >r ( adr len ) ( r: phys.hi )
-   \ Found assigned-addresses, get address
-   begin dup while ( adr len' ) \ Loop over entries
-      decode-phys ( adr len' phys.lo phys.mid phys.hi )
-      h# ff and r@ h# ff and = if ( adr len' phys.lo phys.mid ) \ This one?
-         2swap 2drop ( phys.lo phys.mid ) \ This is the one
-         r> exit ( phys.lo phys.mid phys.hi )
-      else ( adr len’ phys.lo phys.mid ) \ Not this one
-         2drop ( adr len’ )
-      then ( adr len’ )
-      decode-int drop decode-int drop \ Discard boring fields
-   repeat
-   2drop ( )
-   ." Base address not assigned!" cr
-   0 0 r> ( 0 0 phys.hi )
+: be-w@  ( adr -- w )  dup 1+ c@ swap c@ bwjoin ;
+: be-w!  ( w adr -- w )  >r wbsplit r@ c!  r> 1+ c!  ;
+
+: pause-tmr@   ( -- l )  h# 128 reg@  ;
+: pause-tmr!   ( l -- )  h# 128 reg!  ;
+: rx-fifo-wcnt@   ( -- l )  h# 12c reg@  ;
+: tx-fifo-wcnt@   ( -- l )  h# 130 reg@  ;
+
+: tmac@  ( reg# -- w )  h# 204 reg!  1 us-delay  h# 200 reg@  ;
+: tmac!  ( w reg# -- )  swap h# 200 reg!  h# 8000.0000 or  h# 204 reg!  1 us-delay  ;
+
+: mode@  ( -- w )  0 tmac@  ;
+: mode!  ( w -- )  0 tmac!  ;
+
+\ Mode register bits
+1 constant gbit-en
+2 constant fc-en
+4 constant rx-en
+8 constant tx-en
+
+: tx-rx-ctl@  ( -- w )  2 tmac@  ;
+: tx-rx-ctl!  ( w -- )  2 tmac!  ;
+
+\ tx-rx-ctl bits
+
+     1 constant prms
+     2 constant discard-fcs
+     4 constant tx-dis-fcs
+     8 constant receive-pause
+h#  10 constant receive-mltcst
+h#  20 constant hden
+h#  40 constant drop-control
+h#  80 constant receive-brdcst
+h# 100 constant receive-short
+
+: max-pkt-size@  ( -- w )  4 tmac@  ;
+: max-pkt-size!  ( w -- )  4 tmac!  ;
+
+: ipg-val@  ( -- w )  8 tmac@  ;
+: ipg-val!  ( w -- )  8 tmac!  ;
+
+: mac-addr@  ( index -- w )  /w* h# a + tmac@  ;
+: mac-addr!  ( n index -- )  /w* h# a + tmac!  ;
+
+: set-mac-addr  ( adr len -- )
+   drop
+   dup be-w@  0 mac-addr!  wa1+
+   dup be-w@  1 mac-addr!  wa1+
+       be-w@  2 mac-addr!
+;
+: get-mac-addr  ( adr 6 -- )
+   drop
+   0 mac-addr@ over be-w!  wa1+
+   1 mac-addr@ over be-w!  wa1+
+   2 mac-addr@ swap be-w!
+;
+
+: tx-rx-stat@  ( -- w )  h# 12 tmac@  ;
+: tx-rx-stat!  ( w -- )  h# 12 tmac!  ;
+
+\ tx-rx-stat bits
+
+     1 constant tx-idle
+     2 constant pause-frame
+     4 constant crc-error
+     8 constant error-frame
+h#  10 constant long-frame
+h#  20 constant short-frame
+h#  40 constant ipg-shrink
+h#  80 constant multcst-frame
+h# 100 constant brdcst-frame
+h# 200 constant tagged-frame
+h# 400 constant rx-idle
+
+: gmii-mng-ctl@  ( -- w )  h# 14 tmac@  ;
+: gmii-mng-ctl!  ( w -- )  h# 14 tmac!  ;
+
+\ gmii-mng-ctl bits
+
+h# 2000 constant rw-phyreg
+h# 4000 constant cmd-fin
+
+: gmii-mng-dat@  ( -- w )  h# 16 tmac@  ;
+: gmii-mng-dat!  ( w -- )  h# 16 tmac!  ;
+
+: gmii-wait  ( -- )
+   d# 100 0  do
+      gmii-mng-ctl@ cmd-fin and  if  unloop exit  then
+      d# 10 us-delay
+   loop
+   ." Lattice Ethernet - GMII_MNG_CTL stuck busy" cr
+   abort
+;
+
+0 instance value phy#
+: mii-read  ( reg -- w )  
+   phy# bwjoin gmii-mng-ctl!  ( )
+   gmii-wait gmii-mng-dat@
+;
+: mii-write  ( n reg -- )
+   swap gmii-mng-dat!                      ( reg )
+   phy# bwjoin rw-phyreg or gmii-mng-ctl!  ( )
+   gmii-wait
+;
+: find-phy  ( -- error? )
+   h# 20 0  do
+     i to phy#
+     2 mii-read h# ffff <>  if  false unloop exit  then
+   loop
+   true
+;
+
+: vlan-tag@  ( -- w )  h# 32 tmac@  ;
+: vlan-tag!  ( w -- )  h# 32 tmac!  ;
+
+: mlt-tab@   ( index -- w )  /w*  h# 32 + tmac@  ;
+: mlt-tab!   ( n index -- )  /w*  h# 32 + tmac!  ;
+
+: paus-op@  ( -- w )  h# 34 tmac@  ;
+: paus-op!  ( w -- )  h# 34 tmac!  ;
+
+: link-down  ( -- )
+   mode@  rx-en tx-en or  invert and  mode!
+;
+
+: set/clear  ( val bits set? -- val' )
+   if  or  else  invert and  then
+;
+
+: link-up  ( gigabit? half-duplex? -- )
+   tx-rx-ctl@ hden rot set/clear tx-rx-ctl!  ( gigabit? )
+   mode@  gbit-en  rot set/clear             ( mode' )
+   rx-en tx-en or  or  mode!                 ( )
+;
+
+: marvell-fixup  ( -- )  h# 4148 h# 18 mii-write  ;
+
+: reset-hw  ( -- )
+   fc-en mode!
+   d# 20 rx-fifo-th!
+   d# 25 tx-fifo-th!
+   rx-flush tx-flush or  sys-ctl!
+   1 ms
+   0 sys-ctl!
 ;
 
 \ String comparision
@@ -121,210 +247,159 @@ e constant macreg-mac_addr_2
    swap comp 0=
 ;
 
-\ Define "reg" property
-\ PCI Configuration Space
-my-address my-space encode-phys 0 encode-int encode+ 0 encode-int encode+
+\ Handle some possible argument values
+0 instance value promiscuous?
 
-\ Memory Space Base Address Register 10
-my-address my-space 0200.0010 or encode-phys encode+
-0 encode-int encode+ /regs encode-int encode+
+0 instance value tftp-args
+0 instance value tftp-len
 
-\ Memory Space Base Address Register 14
-my-address my-space 0200.0014 or encode-phys encode+
-0 encode-int encode+ /real-regs encode-int encode+
-
-\ PCI Expansion ROM
-my-address my-space h# 200.0030 or encode-phys encode+
-0 encode-int encode+ h# 10.0000 encode-int encode+
-" reg" property
-
--1 instance value chipbase
--1 instance value real-chipbase
-
-: map-regs ( -- )
-   map-in-broken? if
-      my-space h# 8200.0010 or get-base-address ( phys.lo phys.mid phys.hi )
-   else
-      my-address my-space h# 200.0010 or ( phys.lo phys.mid phys.hi )
-   then ( phys.lo phys.mid phys.hi )
-
-   /regs map-in to chipbase
-   4 dup my-w@ 2 or swap my-w! \ Enable memory space
-   chipbase encode-int " address" property
-
-   map-in-broken? if
-      my-space h# 8200.0010 or get-base-address ( phys.lo phys.mid phys.hi )
-   else
-      my-address my-space h# 200.0014 or ( phys.lo phys.mid phys.hi )
-   then ( phys.lo phys.mid phys.hi )
-
-   /real-regs map-in to real-chipbase
-   real-chipbase encode-int " real-address" property
-
+: parse-args  ( -- )
+   my-args  begin                                               ( rem$ )
+      2dup to tftp-len to tftp-args                             ( rem$ )
+   dup  while                                                   ( rem$ )
+      ascii , left-parse-string                                 ( rem$ head$ )
+      2dup  " promiscuous" $=  if  true  to promiscuous?  else  ( rem$ head$ )
+\     2dup  " loopback"    $=  if  true  to loopback?     else  ( rem$ head$ )
+                                   2drop 2drop exit             ( )
+      then                                                      ( rem$ head$ )
+      2drop                                                     ( rem$ )
+   repeat                                                       ( rem$ )
+   2drop                                                        ( )
 ;
 
-: unmap-regs ( -- )
-   4 dup my-w@ 4 invert and swap my-w! \ Disable memory space
-   chipbase /regs map-out -1 to chipbase
-   real-chipbase /real-regs map-out -1 to chipbase
-   " address" delete-property
-;
-
-: e@ ( register -- byte ) real-chipbase 4000000 + + rb@ ;
-: e! ( byte register -- ) real-chipbase 4000000 + + rb! ;
-: ew@ ( register -- 16-bits ) real-chipbase 4000000 + + rw@ ;
-: ew! ( 16-bits register -- ) real-chipbase 4000000 + + rw! ;
-: el@ ( register -- 16-bits ) real-chipbase 4000000 + + rl@ ;
-: el! ( 16-bits register -- ) real-chipbase 4000000 + + rl! ;
-
-: mac@ ( register -- 16-bits)
-	\ write address to address register
-	macreg-addr el!
-	\ read data register
-	macreg-data el@
-;
-
-: mac! ( 16-bits register -- 16-bits )
-	\ write data to data register
-	swap macreg-data el!
-	\ write address to address register
-	macreg-write or macreg-addr el!
-
-;
-
-: control-on ( control-bit -- ) control e@ or control e! ;
-: control-off ( control-bit -- ) invert control e@ and control e! ;
-
-: reset-chip ( -- ) 1 control e! ;
-: receive-on ( -- ) 2 control-on ;
-: return-buffer ( -- ) 4 control-on ;
-: start-xmit ( -- ) 8 control-on ;
-: promiscuous ( -- ) 10 control-on ;
-: loopback-on ( -- ) 20 control-on ;
-: loopback-off ( -- ) 20 control-off ;
-
-: receive-ready? ( -- #pkts-waiting ) rcv-rdy e@ ;
-: wait-for-packet ( -- ) begin key? receive-ready? or until ;
-
-\ Create local-mac-address property from the information in the chip
-map-regs
-6 alloc-mem ( mem-addr )
-6 0 do local-addr i + rb@ over i + c! loop ( mem-addr )
-6 2dup encode-string " local-mac-address" property ( mem-addr 6 )
-free-mem
-unmap-regs
-
-: initchip ( -- )
-   reset-chip
-   \ Ask the host system for the station address and give it to the adapter
-   mac-address 0 do ( addr )
-   dup i + c@ unicast-addr i + e! ( addr )
-   loop drop
-   receive-on \ Enable reception
-;
-
-: net-init ( -- succeeded? )
-   \ loopback-on loopback-test loopback-off if init-chip true else false then
+\ Wait for autonegotiation complete.  Returns true if the link is down.
+: phy-wait  ( -- error? )
+   d# 500 0  do
+      1 mii-read h# 20 and  if  false unloop exit  then
+      1 ms
+   loop
    true
 ;
 
-\ Check for incoming Ethernet packets while using promiscuous mode.
-: watch-test ( -- )
-   ." Looking for Ethernet packets." cr
-   ." ’.’ is a good packet. ’X’ is a bad packet." cr
-   ." Press any key to stop." cr
-   begin
-      wait-for-packet
-      receive-ready? if
-         rcv-len ew@ 8000 and 0= if ." ." else ." X" then
-         return-buffer
-      then
-      key? dup if key drop then
-   until
+\ Determine whether to use gigabit mode and half-duplex mode
+\ based on information from the PHY
+
+: link-type  ( -- gigabit? half-duplex? )
+   \ Merge together our 1000BT capabilites and the link partner's
+   9 mii-read 2 lshift  d# 10 mii-read and   ( bits )
+
+   \ Gigabit if either 1000BT full duplex or 1000BT half duplex
+   dup h# c00 and  if   \ 1000BT ?           ( bits )
+      \ Half duplex if not full duplex
+      true  swap h# 800 and 0=               ( gigabit? half-duplex? )
+      exit
+   then                                      ( bits )
+   drop                                      ( )
+
+   false                                     ( gigabit? )
+   \ Merge our 10/100BT capabilities and the link partner's
+   4 mii-read  5 mii-read  and               ( gigabit? bits )
+
+   \ 100BT FD?
+   dup h# 100 and  if  drop false exit  then ( gigabit? bits )
+
+   \ 100BT HD?
+   dup h#  80 and  if  drop true  exit  then ( gigabit? bits )
+
+   \ Half duplex if not 10BT FD
+   h# 40 and 0=                              ( gigabit? half-duplex? )
 ;
 
-: (watch-net) ( -- )
+: ?marvell-fix  ( -- )
+   1 mii-read h# 0141 <>  if  exit  then
+   2 mii-read h# 0cc0 <>  if  exit  then
+   h# 4148 h# 18 mii-write  \ LINK1000 as Link LED, TX as activity LED
+;
+
+: setup-link  ( -- okay? )
+   find-phy  if
+      ." Lattice Ethernet: Can't find the PHY" cr
+      false exit
+   then
+
+   ?marvell-fix
+
+   phy-wait  if  ." Link down" cr  false exit  then 
+
+   link-type link-up
+   true
+;
+
+: init-hw  ( -- )
+   reset-hw
+
+   mac-address set-mac-addr
+
+   tx-rx-ctl@
+   promiscuous?  if  prms or  then
+   \ Not supporting multicast yet
+   receive-pause or
+   receive-brdcst or
+   drop-control or
+   discard-fcs or
+   tx-rx-ctl!
+   intr-src@ drop   \ Clear IRQs
+   0 intr-enb!      \ Disable IRQs
+;
+: open  ( -- okay? )
    map-regs
-   promiscuous
-   net-init if watch-test reset-chip then
+   set-delay
+   parse-args
+   init-hw
+   setup-link  ( okay? )
+;
+
+: close  ( -- )
+   reset-hw    \ Includes the effect of link-down
    unmap-regs
 ;
 
-: le-selftest ( -- passed? )
-   net-init
-   \ dup if net-off then
+: read  ( adr len -- actual )
+   rx-fifo-wcnt@ d# 16 rshift  if    ( adr len )
+      rx-cmd-fifo@ lwsplit           ( adr len actual stats )
+      h# df18 and  ?dup  if          ( adr len actual error )
+         ." RX packet error " .x  cr ( adr len actual )
+         3drop -2 exit
+      then                           ( adr len actual )
+      min tuck                       ( actual' adr actual' )
+      bounds  ?do  rx-data-fifo@ i l!  /l +loop
+   else
+      2drop -2
+   then
 ;
 
-external
-: read ( addr requested-len -- actual-len )
-   \ Exit if packet not yet available
-   receive-ready? 0= if 2drop -2 exit then
-      rcv-len ew@ dup 8000 and = if ( addr requested-len packet-len )
-      3drop return-buffer \ Discard bad packet
-      -1 exit
-   then ( addr requested-len packet-len )
+d# 2048 constant dnet-fifo-size
 
-   \ Truncate to fit into the supplied buffer
-   min ( addr actual-len )
-
-   \ Note: For a DMA-based adapter, the driver would have to synchronize caches (e.g.
-   \ with "dma-sync") and copy the packet from the DMA buffer into the result buffer.
-
-   tuck bounds ?do rcv-fifo e@ i c! loop ( actual-len )
-   return-buffer ( actual-len )
+: write  ( adr len -- actual )
+   tuck                                    ( actual adr len )
+   over 3 and  over 3 + + 2 rshift >r      ( actual adr len r: #words )
+   dnet-fifo-size r@ -                     ( actual adr len needed r: #words )
+   begin  dup tx-fifo-wcnt@ >  until       ( actual adr len needed r: #words )
+   drop                                    ( actual adr len )
+   over 3 and d# 16 lshift + swap          ( actual tx-cmd adr r: #words )
+   3 invert and  r> /l* bounds  ?do        ( actual tx-cmd )
+      i l@ tx-data-fifo!                   ( actual tx-cmd )
+   /l +loop                                ( actual tx-cmd )
+   tx-cmd-fifo!                            ( actual )   
 ;
 
-: close ( -- ) reset-chip unmap-regs ;
+: load  ( adr -- len )
+   " obp-tftp" find-package  if      ( adr phandle )
+      tftp-args tftp-len rot  open-package      ( adr ihandle|0 )
+   else                              ( adr )
+      0                              ( adr 0 )
+   then                              ( adr ihandle|0 )
 
-: open ( -- ok? )
-   map-regs
-   mac-address encode-string " mac-address" property
-   \ initchip
-   \ my-args " promiscuous" $= if promiscuous then
-
-   \ Note: For a DMA-based adapter, the driver would have to allocate DMA memory for
-   \ packet buffers, construct buffer descriptor data structures, and possibly
-   \ synchronize caches (e.g. with "dma-sync").
-   true
-;
-
-: write ( addr len -- actual )
-   begin xmit-status e@ 0<> until
-   \ Note: For a DMA-based adapter, the driver would have to copy the
-   \ packet into the DMA buffer and synchronize caches (e.g. with "dma-sync").
-   \ Copy packet into chip
-   tuck bounds ?do i c@ xmit-fifo e! loop
-   \ Set length register
-   dup h# 64 max xmit-len ew!
-   start-xmit
-;
-
-: load ( addr -- len )
-   " obp-tftp" find-package if ( addr phandle )
-      my-args rot open-package ( addr ihandle|0 )
-   else ( addr )
-      0 ( addr 0 )
-   then ( addr ihandle|0 )
-   dup 0= abort" Can’t open obp-tftp support package" ( addr ihandle )
+   dup  0=  if  ." Can't open obp-tftp support package" abort  then
+                                     ( adr ihandle )
 
    >r
-   " load" r@ $call-method ( len )
+   " load" r@ $call-method           ( len )
    r> close-package
 ;
 
-: selftest ( -- failed? )
-   map-regs
-   le-selftest 0=
-   unmap-regs
-;
-
-: watch-net ( -- )
-   selftest 0= if (watch-net) then
-;
-fcode-end
-
 \ LICENSE_BEGIN
-\ Copyright (c) 2008 Dave Srl
+\ Copyright (c) 2008 FirmWorks
 \
 \ Permission is hereby granted, free of charge, to any person obtaining
 \ a copy of this software and associated documentation files (the
