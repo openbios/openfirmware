@@ -238,6 +238,8 @@ stand-init: NVRAM
 ;
 [then]
 
+fload ${BP}/cpu/x86/pc/neptune/mfgdata.fth
+
 \ Create the alias unless it already exists
 : $?devalias  ( alias$ value$ -- )
    2over  not-alias?  if  $devalias exit  then  ( alias$ value$ alias$ )

@@ -239,29 +239,6 @@ fload ${BP}/dev/geode/usb.fth
 
 devalias net  /ethernet
 
-8 buffer: mac-address-buf
-: random-mac-address  ( -- adr len )
-   mac-address-buf @  0=  if
-      \ Get a pseudo-random number
-
-      \ Seed it with the real time clock and the timestamp counter
-      time&date xor xor xor xor xor   ( seed )
-      tsc@ xor xor                    ( seed' )
-
-      \ Scramble it a bit with a linear congruence
-      d# 1103515245 *  d# 12345 +   h# 7FFFFFFF and  ( rn1 )
-      dup mac-address-buf !                          ( rn1 )
-      d# 1103515245 *  d# 12345 +   h# 7FFFFFFF and  ( rn2 )
-      mac-address-buf 3 + !                          ( )
-
-      \ Turn off the multicast bit and turn on the locally-assigned bit
-      mac-address-buf c@  h# fe and  2 or  mac-address-buf c!
-   then
-
-   mac-address-buf 6
-;
-' random-mac-address to system-mac-address
-
 \ false to stand-init-debug?
 true to stand-init-debug?
 

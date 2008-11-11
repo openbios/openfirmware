@@ -5,6 +5,7 @@ h# fff0.0000   constant rom-pa		\ Physical address of boot ROM
 h#   10.0000   constant /rom		\ Size of boot ROM
 
 h#    0.0000   constant config-vars-offset
+h#    0.1000   constant mfg-data-offset
 h#    8.0000   constant dropin-offset
 rom-pa dropin-offset +  constant dropin-base
 h#    8.0000   constant dropin-size
