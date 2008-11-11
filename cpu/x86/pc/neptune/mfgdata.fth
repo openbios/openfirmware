@@ -51,8 +51,9 @@ false value using-mfg-data?
 
 stand-init: Manufacturing data
    dangerous-select-mfg-data
-   read-nvram        \ Read the manufacturing data into memory
-   read-ge-area      \ Incorporate it into the config variables
+   read-nvram  0=  if      \ Read the manufacturing data into memory
+      read-ge-area         \ Incorporate it into the config variables
+   then
    unselect-mfg-data
 ;
 
@@ -100,9 +101,6 @@ action: ( apf -- adr len )   la1+ dup la1+ swap @  ;
 
 " " 6 config-mac-address mfg-mac-address
 
-' mfg-mac-address to system-mac-address
-
-0 [if]
 8 buffer: mac-address-buf
 : random-mac-address  ( -- adr len )
    mac-address-buf @  0=  if
@@ -124,8 +122,13 @@ action: ( apf -- adr len )   la1+ dup la1+ swap @  ;
 
    mac-address-buf 6
 ;
-' random-mac-address to system-mac-address
-[then]
+
+: choose-mac-address  ( -- adr len )
+   mfg-mac-address  dup 6 <>  if  ( adr len )
+      2drop  random-mac-address   ( adr' len' )
+   then                           ( adr len )
+;
+' choose-mac-address to system-mac-address
 
 
 \ LICENSE_BEGIN
