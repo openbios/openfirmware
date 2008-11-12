@@ -7,6 +7,12 @@ headers
 : make-root-hub-node  ( port -- )
    ok-to-add-device? 0=  if  drop exit  then		\ Can't add another device
 
+   0 set-target				( port )	\ Address it as device 0
+
+   speed-high 0 di-speed!     \ Use high speed for getting the device descriptor
+   \ Some devices (e.g. Lexar USB-to-SD) don't work unless you do this first
+   dev-desc-buf h# 40 get-cfg-desc drop
+
    new-address				( port dev )
    speed-high over di-speed!		( port dev )
 
