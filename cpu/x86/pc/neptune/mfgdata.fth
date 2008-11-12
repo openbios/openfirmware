@@ -59,7 +59,7 @@ stand-init: Manufacturing data
 
 : 2u#:  u# u#  [char] : hold  drop  ;
 : encode-enaddr  ( adr len -- adr' len' )  \ binary to ASCII
-   6 <>  if  " " exit  then
+   6 <>  if  drop " " exit  then
    6 bounds  do  i c@  loop   ( b0 b1 b2 b3 b4 b5 b6 )
    push-hex
    <# 2u#: 2u#: 2u#: 2u#: 2u#: u# u# u#>
