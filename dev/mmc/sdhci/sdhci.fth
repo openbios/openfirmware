@@ -17,6 +17,8 @@ purpose: Driver for SDHCI (Secure Digital Host Controller)
 
 " sdhci" " compatible" string-property
 
+create marvell
+
 h# 4000 constant /regs
 
 : phys+ encode-phys encode+  ;
