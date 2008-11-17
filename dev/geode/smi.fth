@@ -1,14 +1,16 @@
 purpose: SMI setup and handler for Geode LX
 
-also assembler definitions
+\ Extend the assembler with some Geode-specific (I think) instructions
+\ related to SMI handling.
 
+also assembler definitions
 : smint  ( -- )  prefix-0f  h# 38 asm8,  ;
 : rsm    ( -- )  prefix-0f  h# aa asm8,  ;
 : svdc  ( sr m80 -- )  prefix-0f  h# 78 asm8,  rot r/m,  ;
 : rsdc  ( m80 sr -- )  prefix-0f  h# 79 asm8,  r/m,   ;
-
 previous definitions
 
+\ Location of the SMM handler code...
 \ The general naming convention here is that smm-* refers to
 \ addresses within the memory that is set aside for SMI handling.
 \ smi-* refers to stuff in the Forth domain.
@@ -17,6 +19,13 @@ h#    f.f000 constant smm-base
 h#      1000 constant smm-size  \ We use about 3K of this, 2K for stacks
 : +smm  ( segment-relative-adr -- adr )  smm-base +  ;
 : -smm  ( adr -- segment-relative-adr )  smm-base -  ;
+
+\ This is a trick for using SMM to handle BIOS INTs.  The problem it solves
+\ is that Windows sometimes calls the BIOS from V86 mode instead of real mode.
+\ V86 mode prevents easy entry into protected mode (and we want to run OFW
+\ in protected mode), so we first trap into SMM by accessing some emulated
+\ registers, and run OFW code from SMM protected mode.  The following is a
+\ table of "INT handler" instruction sequences indexed by the INT number.
 
 label int-entry
    16-bit
@@ -39,6 +48,8 @@ label int-entry
 end-code
 here int-entry -  constant /int-entry
 
+
+\ Data structures for the SMM gateway
 
 h# 28 constant /smm-gdt
 h#  8 constant smm-c16
@@ -100,6 +111,13 @@ h# 30 pm-stack smm-header    \ Top address where hardware puts the SMM info fram
 h# 400 pm-stack smm-sp0      \ SMM Forth data stack
 h# 400 pm-stack smm-rp0      \ SMM Forth return stack
 drop
+
+
+\ The basic SMI gateway.  This code lives at (is copied to) smm-base.
+\ It executes when the processor enters System Management Mode (SMM)
+\ for whatever reason.  It saves a bunch of state, sets up the world
+\ so Forth code can run (in 32-bit protected mode), and runs the Forth
+\ handler - typically "smi-dispatch" (via smm-exec and handle-smi).
 
 label smi-handler
    16-bit
@@ -178,6 +196,10 @@ label smi-handler
 
    cld
 c;
+
+\ When the Forth SMI handler finishes, it calls (smi-return) to return
+\ to the context that invoked the SMI.  This is the inverse of smi-handler.
+
 code (smi-return)   \ This code field must be relocated after copying to SMM memory
    cli
 
@@ -231,6 +253,10 @@ code (smi-return)   \ This code field must be relocated after copying to SMM mem
 end-code
 here smi-handler - constant /smi-handler
 
+\ Access words for fields within the processor state that the
+\ Geode CPU saves on entry to SMM.  See the description of the
+\ RSM instruction in the Geode LX databook (section 8.3.4.7).
+
 : smm-dr7       ( -- l )      smm-header h#  4 - l@  ;
 : smm-eflags    ( -- l )      smm-header h#  8 - l@  ;
 : smm-cr0       ( -- l )      smm-header h#  c - l@  ;
@@ -256,11 +282,16 @@ here smi-handler - constant /smi-handler
 : smm-eax  ( -- adr )  smm-gregs  7 la+  ;
 : smm-ebp  ( -- adr )  smm-gregs  2 la+  ;
 
+\ Finds a page table or page directory entry
+\ Implementation factor of (smm>physical)
 : >ptable  ( table vadr shift -- table' unmapped? )
    rshift  h# ffc and + l@
    dup h# fff invert and  swap 1 and 0=
 ;
 
+\ Converts a virtual address to a physical address via the page tables
+\ This is used by debugging tools, so that we can look at OS resources
+\ via their virtual addresses while we are running with paging disabled.
 \ XXX need to handle mapped-at-pde-level
 defer smm>physical
 : (smm>physical)  ( vadr -- padr )
@@ -288,21 +319,32 @@ defer smm>physical
 : use-physical  ( -- )  ['] noop to smm>physical  ;
 : use-virtual   ( -- )  ['] (smm>physical) to smm>physical  ;
 
+\ Some simple glue code to help make the transition from assembly language
+\ to Forth and back.
 
 : smi-return  ( -- )  [ ' (smi-return) smi-handler -  +smm ] literal  execute  ;
 defer handle-smi  ' noop is handle-smi
 create smm-exec  ] handle-smi smi-return [
 
+\ Set to true to display brief messages showing every entry to SMM
 false value smi-debug?
+
+\ Set to true to invoke the Forth debugger when the OS tries to suspend (S3)
 false value resume-debug?
 
+\ Set to true to show all the OS's PCI config space accesses
 false value vpci-debug?
+
+\ Turns on PCI virtualization (called from setup-smi)
 : enable-virtual-pci  ( -- )
    \ Virtualize devices f and 1, or all devices if debugging
    vpci-debug?  if  h# ffff  else  h# 8002  then  >r
    h# 5000.2012 msr@  swap r>  or       swap  h# 5000.2012 msr!
    h# 5000.2002 msr@  swap 8 invert and swap  h# 5000.2002 msr!  \ Enable SSMI for config accesses
 ;
+
+\ Some tools for dispatching to the right sub-handler, by reading and ACKing
+\ the various MSRs that tell you the cause of this SMI.
 
 \ : msr-ack  ( msr# -- )  >r  r@  msr@  r> msr!  ;
 code msr-ack  ( msr# -- )  cx pop  rdmsr  wrmsr  c;
@@ -337,6 +379,12 @@ code msr-sense16p  ( err-msr# -- false | statbits statbits )
 c;
 
 alias msr. .msr
+
+\ Turns on I/O register virtualization (called by setup-smi)
+\ We virtualize ACPI registers and the 0xAC1C "virtual register".
+\ The "virtual register" is not a legacy hardware register, but
+\ rather an API to call the VSA module to do various things.
+
 : enable-io-smis  ( -- )
    \ XXX these settings need to be folded into the MSR table for resume
    h# 0000.0009.c00fffc0. h# 5101.00e4 msr!  \ Virtualize ACPI registers
@@ -361,6 +409,10 @@ alias msr. .msr
    h# ff00  h# 4000.0082 msr-clr   h# ff00  h# 4000.0083 msr-clr
    h# 38. h# 1301 msr!
 ;
+
+\ Some debugging tools to display MSRs related to SMI dispatch
+\ These are useful for figuring out how to turn on SMIs for various things.
+
 \ 10002002 records ac1c accesses in bit 0  (1)
 \ 51010002 records 9c00 accesses in bit 32 (1.0000.0000)
 \ 51000002 records 9c00 accesses in bit 18 (     4.0000)
@@ -390,6 +442,7 @@ alias msr. .msr
    h# 4000 .msr4
    ."   " h# 1301 msr..   cr
 ;
+\ Ack all the SMI dispatch MSRs
 : ma
    h# 10002002 msr-ack  h# 10002003 msr-ack 
    h# 40002002 msr-ack  h# 40002003 msr-ack 
@@ -400,15 +453,31 @@ alias msr. .msr
    \ h# 51010083 msr-ack \ This one has status bits, but they are RO
 ;
 
+\ This is a stub SMI handler that just invokes the Forth command
+\ interpreter so you can poke around.  Normally handle-smi calls
+\ smi-dispatch to do all the virtualization work, instead of this.
+
 : smi-interact  ( -- )  ." In SMI" cr  interact  ;
 ' smi-interact is handle-smi
 
 : vr-spoof?  ( -- handled? )  false  ;
 
+\ Handler for PCI config space virtualization.
+\ This determines the PCI config register number and the access size
+\ from the information saved by the SMI gateway, then calls OFW's
+\ PCI config access functions to do the work.
+
 : pci-smi  ( event-mask -- )
    smi-debug?  if  ." PCI" cr  then
+
+   \ Error checks
    8 and  0=  if  exit  then
    smm-io-port 3 invert and  h# cfc <>  if  exit  then
+
+   \ If we are tracing all PCI config accesses, not just the ones that
+   \ don't really exist, we must turn off virtualization while Forth
+   \ is accessing the "real" PCI config registers, otherwise we'll
+   \ hang due to recursion.
    vpci-debug?  if  h# 5000.2012 msr@ 2>r  0. h# 5000.2012 msr!  then
 
    \ The existing Forth config spoofer does the hard work
@@ -429,10 +498,18 @@ alias msr. .msr
          h# f of  config-l@ smm-eax l!  endof
       endcase
    then
+
+   \ Reinstate virtualization
    vpci-debug?  if  2r> h# 5000.2012 msr!  then
 ;
+
 : smm-eax-c!  ( b -- )  smm-eax c!  ;
 : smm-eax-c@  ( -- b )  smm-eax c@  ;
+
+\ "SoftVG" display functions (subset) as documented in
+\ _AMD Geode(TM) GX Processors Graphics Software Specification"
+\ (available to OEMs via AMD's restricted web site)
+
 0 value requested-mode
 0 value color-depth   \ 1:8bpp 2:XRGB444 3:RGB555 4:RGB565 5:24bpp
 0 value refresh-rate
@@ -501,7 +578,16 @@ alias msr. .msr
 ;
 [then]
 
+\ Partial implementation of 0xAC1C Virtual Registers as documented in
+\ _AMD Geode(TM) GX and LX Processor Based Systems Virtual Register Specification_
+\ (available to OEMs via AMD's restricted web site)
+\ Ironically, none of the VR's that we actually implement are actually
+\ described in that document; most are described in the Graphics Software
+\ spec mentioned earlier.
+
 0 value vr-index
+
+\ Set to true to display accesses to 0xAC1C Virtual Registers
 false value vr-debug?
 
 true value vr-locked?
@@ -544,10 +630,17 @@ defer handle-bios-call
       endcase
    then
 ;
+
+\ The GLIU0 SMI encompasses Virtual Register (0xAC1C) accesses and
+\ also accesses to the 0x30..0x3f I/O port bank that we "steal" for
+\ bouncing BIOS INTs into SMM.
+
 : gliu0-smi  ( event-mask -- )
    smi-debug?  if  ." GLIU" cr  then
    1 and 0=  if  exit  then     \ We only care about virtual register accesses
 
+   \ Handle BIOS INTs that were bounced into SMM by accessing
+   \ I/O ports 0x30..0x3f
    smm-io-port h# fff0 and  h# 30 =  if
       smm-io-port h# 20 -  to rm-int@
       rm-sp la1+ >caller-physical w@  smm-rmeflags w!
@@ -560,13 +653,22 @@ defer handle-bios-call
    do-vr
 ;
 
+\ This hook can be set to turn off devices that the firmware uses.
+\ It is called when the OS takes responsibility for power management
+\ by writing a 1 to bit 0 of the ACPI PM1_CNT .
+
 defer quiesce-devices  ' noop to quiesce-devices
 
 \ We just discard the event about I/O registers because we handle it in sb-smi .
 \ We don't have to deal with statistics counters because we don't enable them
 : cgliu-smi  ( event-mask -- )  smi-debug?  if  ." CGLIU" cr  then  drop  ;
 
+\ Trap into SMM from Forth
 code smi  smint  c;
+
+\ This is a gateway to get into real mode by going through SMM .
+\ It's used to implement the ACPI "resume from S3" semantics that
+\ require jumping to a given address in real mode.
 
 -1 value rm-entry-adr
 : rm-run  ( eip -- )  to rm-entry-adr  smi  ;
@@ -629,6 +731,8 @@ code smi  smint  c;
    smi-return
 ;
 
+\ Call this to enable SMI support
+
 : setup-smi  ( -- )
    \ This is how you would map the SMM region to physical memory at 4000.0000
    \ This is a Base Mask Offset descriptor - the base address
@@ -675,6 +779,10 @@ code smi  smint  c;
    enable-io-smis
 ;
 
+\ Implement the ACPI S3 (suspend to RAM) semantics using the OFW
+\ "S3 looks like a subroutine call" semantics.  This requires
+\ some fancy mode switching.
+
 : win-s3  ( -- )
    \ The trick here is to transfer to "non-smi-s3" while leaving
    \ System Management Mode.  We won't need to return to the caller
@@ -688,6 +796,14 @@ code smi  smint  c;
    setup-smi
    facs-adr h# c + l@  rm-run
 ;
+
+\ Emulate the ACPI PM_CNT power management control register semantics;
+\ the 5536 partially implements that register in hardware, but software
+\ must handle a lot of the details, particularly bits 0 and 12:10
+\ The way we do this is by telling the OS that the register bank starts
+\ at port 9c00, but it really starts at port 1840.  We trap accesses
+\ to the 9cxx range, run the emulation code, then the emulation code
+\ accesses the real register as needed.
 
 : power-mode  ( value offset -- )
    over 1 and  if  quiesce-devices  then             ( value offset )
@@ -703,10 +819,14 @@ code smi  smint  c;
    then                                              ( )
 ;
 
+\ Handler for emulated port 92 for system reset
+
 : divil-smi  ( event-mask -- )
    smi-debug?  if  ." DIVIL" cr  then
    h# 80 and  if  bye  then
 ;
+
+\ Handler for southbridge SMIs - ACPI registers 
 
 : sb-smi  ( event-mask -- )
    smi-debug?  if  ." SB" cr  then
@@ -785,12 +905,18 @@ code smi  smint  c;
    then
 ;
 
+\ SMI breakpoints - simple (but very useful) debugging tool.
+
 variable sbpval
 variable sbpadr  sbpadr off
 defer sbp-hook
 
 : .9x  push-hex  9 u.r  pop-base  ;
 : .smir   ( n -- )   smm-gregs swap la+  l@ .9x  ;
+
+
+\ Displays the saved register values
+
 : .smiregs   ( -- )
    ."       EAX      EBX      ECX      EDX      ESI      EDI      EBP      ESP" cr
         7 .smir  4 .smir  6 .smir  5 .smir  1 .smir  0 .smir  2 .smir  smm-save-esp +smm l@ .9x
@@ -811,6 +937,10 @@ defer sbp-hook
    dup 5 - c@ h# e8 <>  if  2drop exit  then           ( retadr pretadr )
    4 - l@ + 9 u.r
 ;
+
+\ Displays a subroutine call backtrace.  This pretty dependent on compiler
+\ code generation rules, so it might not work in some cases.
+
 : smm-trace  ( -- )
    ."      EBP   RETADR   CALLTO" cr
    smm-ebp
@@ -829,13 +959,27 @@ defer sbp-hook
 ;
 
 : unboost  ( adr -- adr' )  h# 7fff.ffff and  ;
+
+\ Set an SMI breakpoint at "adr".  You can only set one breakpoint.
+\ "adr" is either virtual or physical depending on whether you have
+\ previously executed "use-physical" or "use-virtual"
+
 : sbp  ( adr -- )
    fixsbp
    dup smm>physical w@  sbpval !  dup sbpadr !
    h# 380f swap smm>physical w!
 ;
+
+\ Disassemble starting from the breakpoint address
+
 : sdis  ( -- )  smm-pc smm>physical dis  ;
+
+\ Resume execution of the breakpointed code
+
 : sgo  ( -- )  smm-pc smm-next-eip!   resume  ;
+
+\ This is a workaround for a problem with video mode setting from V86 mode
+\ The problem was eventually fixed properly so this probably isn't needed
 
 h# 806f1a41 constant 'bioscall
 : hack-fix-mode  ( -- )
@@ -847,6 +991,11 @@ h# 806f1a41 constant 'bioscall
 : w!++  ( adr w -- adr' )  over w!  wa1+  ;
 
 code rm-lidt  ( -- )  smm-rmidt #) lidt  c;
+
+\ rm-setup fudges the saved SMM state so that, instead of returning
+\ to the context that invoked the SMI, the next exit from SMM returns
+\ to the address "eip" in real mode.  This is an implementation
+\ factor of the "rm-run" mechanism.
 
 : rm-setup  ( eip -- )
    >seg:off 2>r   ( r: off seg )
@@ -884,6 +1033,10 @@ code rm-lidt  ( -- )  smm-rmidt #) lidt  c;
 ;
 \ : rm-init-program   ( eip -- )  rm-init-program  rm-return  ;
 
+\ Handler for software SMIs, i.e. for explicit execution of the
+\ SMINT instruction.  It's used for things like the rm-run facility
+\ and SMI breakpoints.
+
 : soft-smi  ( -- )
    smi-debug?  if  ." SOFT" cr  then
    rm-entry-adr -1 <>  if
@@ -907,6 +1060,10 @@ smm-pc 'bioscall =  if  " set-mode12" eval  sgo  else
    smi-interact
 then
 ;
+
+\ smi-dispatch is the top-level dispatcher for SMIs.  It looks
+\ at various MSRs to determine the SMI cause and invokes the
+\ corresponding subordinate handlers.
 
 \ smm-flags values in various cases:
 \  8080 (VGA) - ac1c read (VR), extended CRT register (dc-smi)
@@ -951,6 +1108,8 @@ then
    8 +loop                               ( gdt-adr )
    drop
 ;
+
+\ Debugging tool for displaying the saved Global Descriptor Table
 
 : .smm-gdt  ( -- )
    smm-save-gdt +smm  dup 2+ l@ smm>physical  ( 'gdt gdt-adr )
@@ -1055,6 +1214,9 @@ PCI BARs:
 
 
 [then]
+
+\ setup-rm-gateway initializes the real mode interrupt vector table
+\ so that real mode code can call BIOS INTs.
 
 \  setup-rm-gateway  ( -- ) Init this module
 \  caller-regs  ( -- adr )  Base address of incoming registers
