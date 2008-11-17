@@ -42,6 +42,7 @@ d# 255 8 * constant /idt	\ Full size
 
 stand-init: Exceptions
    make-idt  stand-set-idt  move-gdt
+   true to hardware-step?
 ;
 
 \ LICENSE_BEGIN

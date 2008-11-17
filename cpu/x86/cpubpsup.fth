@@ -10,6 +10,8 @@ headerless
 
 : .instruction  ( -- )  %eip pc!dis1  ;
 
+true value hardware-step?   \ True if the environment permits hardware single-step
+
 also hidden also definitions
 
 headerless
@@ -55,9 +57,24 @@ create sizes 0 c, 1 c, 4 c,
 \ addressing mode bytes.  Returns the address following those addressing
 \ mode bytes, or step-adr if the instruction is not a call or if following-
 \ jsrs is true.
-true value hardware-step?   \ True if the environment permits hardware single-step
+
+: jmp-indirect?  ( -- false | pc1 pc2 true )
+   %eip c@  h# fe and  h# c2 =  if   \ RET NEAR
+      %esp l@  0  true  exit
+   then
+
+   %eip c@  h# ff and  if
+      %eip 1+ c@  3 rshift 7 and  2 5 between  if
+         ." Single-stepping indirect call/jmp doesn't work in software breakpoint mode" cr
+      then
+   then
+   false
+;
+
 : find-successors  ( -- pc1 pc2 )
    hardware-step?  if  step-adr 0  exit  then
+
+   jmp-indirect?  if  exit  then
 
    ['] cr behavior >r  ['] type behavior >r
    ['] noop to cr  ['] 2drop to type
