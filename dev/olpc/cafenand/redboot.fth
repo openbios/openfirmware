@@ -44,11 +44,11 @@ d# 7 constant max#partitions  \ Not counting the FIS directory entry
 
 0 instance value #partitions
 : read-partmap  ( -- )
-   part-buf  partition-map-page#  if  exit  then
-   partition-start >r  0 to partition-start
-   read-page
-   r> to partition-start
-   if  exit  then
+   part-buf  partition-map-page#  if  drop exit  then   ( buf page# )
+   partition-start >r  0 to partition-start             ( buf page# )
+   read-page                                            ( error? )
+   r> to partition-start                                ( error? )
+   if  exit  then                                       ( )
    part-buf (#partitions)  to #partitions
 ;
 
