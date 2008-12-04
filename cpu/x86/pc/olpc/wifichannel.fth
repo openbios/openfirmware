@@ -51,40 +51,34 @@ d# 2048 buffer: scan-buf
 
 d# 15 constant rssi-limit
 
-: scan-mesh-channels  ( -- chan# max-rssi )
-   d# 11 channel-stats  0=  if   ( total-rssi max-rssi )
-      2drop  d# 11 0  exit
-   then                          ( total-rssi max-rssi )
-   nip  d# 11                    ( max-rssi chan# )
-
-   d# 6 channel-stats  0=  if    ( max-rssi11 chan11 total-rssi max-rssi )
-      4drop  6 0  exit
-   then                          ( max-rssi11 chan11 total-rssi max-rssi )
-   nip                           ( max-rssi11 chan11 max-rssi6 )
-   rot over >  if                ( max-rssi11 chan11 max-rssi6 )
-      nip nip 6                  ( max-rssi6 chan6 )
-   else                          ( max-rssi11 chan11 max-rssi6 )
-      drop                       ( max-rssi11 chan11 )
-   then                          ( max-rssiN chan# )
-
-   d# 1 channel-stats  0=  if    ( max-rssiN chan# total-rssi1 max-rssi1 )
-      4drop  1 0  exit
-   then                          ( max-rssiN chan# total-rssi1 max-rssi1 )
-   nip                           ( max-rssiN chan# max-rssi1 )
-   rot over >  if                ( max-rssiN chan# max-rssi1 )
-      nip nip 1                  ( max-rssi1 chan1 )
-   else                          ( max-rssiN chan# max-rssi1 )
-      drop                       ( max-rssiN chan# )
-   then                          ( max-rssiN chan# )
-   swap                          ( chan# max-rssi )
+\ Keep the rssi,chan pair with the lowest max-rssi value
+: lowest-rssi  ( max-rssiN chanN max-rssiM chanM -- max-rssiP P )
+   3 pick  2 pick                    ( max-rssiN chanN max-rssiM chanM max-rssiN max-rssiM )
+   u>  if  2nip  else  2drop  then   ( max-rssiP chanP )
 ;
 
-: quietest-mesh-channel  ( -- chan# max-rssi )
+: try-channel  ( max-rssiN N chan# -- max-rssiN' N' no-beacons? )
+   >r r@  channel-stats  0=  if      ( max-rssiN N total-rssi max-rssi r: chan# )
+      \ No beacons - this one is an automatic winner
+      4drop  0 r> true               ( max-rssiN' N' no-beacons? )
+   else                              ( max-rssiN N total-rssi max-rssi r: chan# )
+      \ Some activity on this channel - keep it if it's the quietest so far
+      nip r>  lowest-rssi  false     ( max-rssiN' N' no-beacons? )
+   then                              ( max-rssiN' N' no-beacons? )
+;
+
+: scan-mesh-channels  ( -- max-rssi chan# )
+   h# ffffffff 0                       ( max-rssi0 0 )  \ This high rssi always loses
+   d# 11 try-channel  if  exit  then   ( max-rssiN chanN )
+   d#  6 try-channel  if  exit  then   ( max-rssiN chanN )
+   d#  1 try-channel  drop             ( max-rssi chan# )
+;
+
+: quietest-mesh-channel  ( -- max-rssi chan# )
    open-wlan
    scan-mesh-channels
    wlan-ih close-dev
 ;
-
 
 : multinand-traffic?  ( channel# -- flag )
    " mesh-start" wlan-ih $call-method drop
@@ -116,12 +110,12 @@ d# 15 constant rssi-limit
 ;
 : enand  ( -- )
    find-multinand-server abort" No multicast NAND server"  ( chan# )
-   #enand
+   #nb
 ;
 
 d# 10 constant rssi-threshold
 : ether-clone  ( -- )
-   quietest-mesh-channel  ( chan# rssi )
-   rssi-threshold > abort" No quiet channels"  ( chan# )
-   #ether-clone
+   quietest-mesh-channel  ( rssi chan# )
+   swap rssi-threshold > abort" No quiet channels"  ( chan# )
+   #nb-clone
 ;

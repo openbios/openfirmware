@@ -69,7 +69,7 @@ parse_homedir(char *progname)
 int
 ofw_setup()
 {
-  static char *argv[8];
+  static char *argv[10];
   phandle ph;
   char *argstr;
   int i;
@@ -82,7 +82,7 @@ ofw_setup()
   argv[0] = get_str_prop(ph, "bootpath", ALLOC);
   argstr  = get_str_prop(ph, "bootargs", ALLOC);
 
-  for (i = 1; i < 8;) {
+  for (i = 1; i < 10;) {
     if (*argstr == '\0')
       break;
     argv[i++] = argstr;

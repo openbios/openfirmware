@@ -2,7 +2,7 @@
 
 \ The overall firmware revision
 macro: FW_MAJOR E
-macro: FW_MINOR 22b
+macro: FW_MINOR 22h
 
 \ The EC microcode
 macro: EC_VERSION e21
@@ -26,5 +26,6 @@ macro: CRYPTO_VERSION 0.2
 \ With a specific ID, mcastnand.bth will download a tarball without .git stuff.
 \ With "test", mcastnand.bth will clone the git head if build/multicast-nand/
 \ is not already present, then you can modify the git subtree as needed.
-macro: MCNAND_VERSION 5f202b05147826ad69fcb849b92290681a56c70c
+\ macro: MCNAND_VERSION 5f202b05147826ad69fcb849b92290681a56c70c
 \ macro: MCNAND_VERSION test
+macro: MCNAND_VERSION HEAD

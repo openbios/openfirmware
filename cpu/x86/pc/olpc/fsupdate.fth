@@ -196,10 +196,13 @@ previous
 
 : $update-nand  ( devspec$ -- )
    load-crypto abort" Can't load the crypto functions"
-   null$ cn-buf place  null$ pn-buf place              ( devspec$ )
-   2dup  [char] \ split-string  2drop  dn-buf place    ( devspec$ )
-   boot-read
-   loaded do-fs-update
+   null$ cn-buf place                           ( devspec$ )
+   2dup                                         ( devspec$ devspec$ )
+   [char] : right-split-string dn-buf place     ( devspec$ path+file$ )
+   [char] \ right-split-string                  ( devspec$ file$ path$ )
+   dup  if  1-  then  pn-buf place              ( devspec$ file$ )
+   2drop                                        ( devspec$ )
+   boot-read loaded do-fs-update                ( )
 ;
 : update-nand  ( "devspec" -- )  safe-parse-word  $update-nand  ;
 

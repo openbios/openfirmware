@@ -11,47 +11,72 @@ purpose: User interface for NAND multicast updater
       " olpc-mesh" $essid
    then
 ;
+: $file-to-mem  ( filename$ -- adr len )
+   $read-open
+   ifd @ fsize  dup alloc-mem  swap     ( adr len )
+   2dup ifd @ fgets                     ( adr len actual )
+   ifd @ fclose                         ( adr len actual )
+   over <>  abort" Can't read file" cr  ( adr len )
+;
+: load-read  ( filename$ -- )
+   open-dev  dup 0=  abort" Can't open file"  >r  ( r: ih )
+   load-base " load" r@ $call-method  !load-size
+   r> close-dev
+;
 
-: #enand  ( channel# -- )
-   depth 1 < abort" Usage: channel# enand"
-   " rom:mcastnand ether:%d" sprintf boot-load go
+d# 20 value redundancy
+
+: #nb  ( channel# -- )
+   depth 1 < abort" Usage: channel# #nb"
+   " rom:nb_rx ether:%d" sprintf boot-load go
 ;
-: #ether-clone  ( channel# -- )
-   depth 1 < abort" Usage: channel# ether-clone"
-   " rom:cloner ether:%d" sprintf boot-load go
+: #nb-clone  ( channel# -- )
+   depth 1 < abort" Usage: channel# #nb-clone"
+   redundancy swap
+   " rom:nb_tx ether:%d nand: %d" sprintf boot-load go
 ;
-: ether-clone1  ( -- )  1 #ether-clone  ;
-: ether-clone6  ( -- )  6 #ether-clone  ;
-: ether-clone11  ( -- )  d# 11 #ether-clone  ;
-: enand1  ( -- )  1 #enand  ;
-: enand6  ( -- )  6 #enand  ;
-: enand11  ( -- )  d# 11 #enand  ;
+: #nb-update  ( placement-filename$ image-filename$ channel# -- )
+   depth 5 < abort" #nb-update - too few arguments"
+   >r 2>r                             ( placement-filename$ r: channel# image-filename$ )
+   $file-to-mem                       ( spec$ r: channel# image-filename$ )
+   swap  redundancy  2r> r>           ( speclen specadr redundancy image-filename$ channel# )
+   " rom:nb_tx ether:%d %s 131072 %d %d %d" sprintf boot-load go
+;
+: #nb-secure  ( zip-filename$ image-filename$ channel# -- )
+   depth 5 < abort" #nb-secure-update - too few arguments"
+   >r 2>r                             ( placement-filename$ r: channel# image-filename$ )
+   load-read  sig$ ?save-string swap  ( siglen sigadr r: channel# image-filename$ )
+   img$ ?save-string swap             ( siglen sigadr speclen specadr r: channel# image-filename$ )
+   redundancy  2r> r>                 ( siglen sigadr speclen specadr redundancy image-filename$ channel# )
+   " rom:nb_tx ether:%d %s 131072 %d %d %d %d %d" sprintf boot-load go
+;
+: t1  " u:\os767.plc" " u:\os767.img" d# 11 #nb-update  ;
+: t2  " u:\fs.zip" " u:\os767.img" d# 11 #nb-secure  ;
+
+: nb-clone1  ( -- )  1 #nb-clone  ;
+: nb-clone6  ( -- )  6 #nb-clone  ;
+: nb-clone11  ( -- )  d# 11 #nb-clone  ;
+: nb1  ( -- )  1 #nb  ;
+: nb6  ( -- )  6 #nb  ;
+: nb11  ( -- )  d# 11 #nb  ;
 
 : mesh-clone
    use-mesh
    false to already-go?
-   " boot rom:cloner 239.255.1.2" eval
+   redundancy " boot rom:nb_tx udp:239.255.1.2 nand: %d" sprintf eval
 ;
 
 : meshnand
    use-mesh
    false to already-go?
-   " boot rom:mcastnand 239.255.1.2" eval
+   " boot rom:nb_rx 239.255.1.2" eval
 ;
 
-: mcastnand
+: nb_rx
    false to already-go?
-   " boot rom:mcastnand 239.255.1.2" eval
+   " boot rom:nb_rx 239.255.1.2" eval
 ;
 : ucastnand
    false to already-go?
-   " boot rom:mcastnand 10.20.0.16,,10.20.0.44" eval
-;
-: nmcastnand  \ Boot from network, for testing
-   false to already-go?
-   " boot http:\\10.20.0.14\mcastnand 239.255.1.2" eval
-;
-: dmcastnand  \ Boot from USB disk, for testing
-   false to already-go?
-   " boot disk:\mcnand 239.255.1.2" eval
+   " boot rom:nb_rx 10.20.0.16,,10.20.0.44" eval
 ;

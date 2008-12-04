@@ -5,9 +5,10 @@
 #include "1275.h"
 
 #include <stdarg.h>
+#include "stdio.h"
 
 int
-atoi(char *s)
+atoi(const char *s)
 {
 	int temp = 0, base = 10;
 
@@ -175,6 +176,7 @@ printf(char *fmt, ...)
 	va_start(args, fmt);
 	i = _printf(fmt, args);
 	va_end(args);
+        fflush(stdout);
 	return (i);
 }
 

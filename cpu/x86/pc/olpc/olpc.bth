@@ -74,9 +74,11 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/build/dsdt.aml"      " dsdt"            $add-deflated-dropin
 \  " ${BP}/cpu/x86/pc/olpc/build/ssdt.aml"      " ssdt"            $add-deflated-dropin
 
-   " ${BP}/cpu/x86/pc/olpc/build/mcastnand.bin" " mcastnand"       $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/build/blaster.bin"   " blaster"         $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/build/cloner.bin"    " cloner"          $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/build/nandblaster_rx.bin" " nb_rx"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/build/nandblaster_tx.bin" " nb_tx"      $add-deflated-dropin
+\   " ${BP}/cpu/x86/pc/olpc/build/multicast-nand/mcastnand.elf" " mcastnand"       $add-deflated-dropin
+\   " ${BP}/cpu/x86/pc/olpc/build/blaster.bin"   " blaster"         $add-deflated-dropin
+\   " ${BP}/cpu/x86/pc/olpc/build/cloner.bin"    " cloner"          $add-deflated-dropin
 
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
    " rmstart.img"    $add-file
