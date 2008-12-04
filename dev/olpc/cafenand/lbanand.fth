@@ -18,7 +18,7 @@
    tuck set-page                            ( adr #sectors )
    sectors>bytes                            ( adr #bytes )
    dup  false dma-setup                     ( )
-   h# e220.0080 h# 0000.0110 cmd wait-cmd   ( )  \ No ECC, write cmd
+   h# e220.0080 h# 0000.0110 cmd            ( )  \ No ECC, write cmd
    wait-write-done                          ( error? )
 \   dma-release
 ;

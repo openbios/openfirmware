@@ -51,7 +51,15 @@ h# 40 instance value pages/eblock
    to pages/chip  
 ;  
 
+: configure-capabilities  ( adr -- adr )
+   dup 2 + c@                ( adr id3 )
+   dup h# 80 and 0<> to cached-write?
+   dup h# 40 and 0<> to interleave?
+   4 rshift 3 and   1 swap lshift  to #simultaneous-writes
+;
+
 : configure-auto  ( adr -- adr )
+   configure-capabilities
    pages-auto
    configure-size
 ;

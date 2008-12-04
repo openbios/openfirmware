@@ -37,6 +37,11 @@ my-address my-space h# 200.0010 + encode-phys encode+
 h#     800 instance value /page
 h#  2.0000 instance value /eblock
 
+\ Chip capabilities
+false instance value interleave?       \ Chip-interleaved simultaneous programming
+false instance value cached-write?     \ Cached write support
+1 instance value #simultaneous-writes  \ Number of planes programmable at once
+
 h# 40 constant /oob
 h# e constant /ecc
 h# e constant bb-offset  \ Location of bad-block table signature in OOB data
@@ -137,17 +142,20 @@ h# 0200.0085 0 2 >cmd constant random-write-cmd
 : dma-off  ( -- )  0 h# 40 cl!  ;
 
 0 value #writes
-: wait-write-done  ( -- error? )
+: (wait-write-done)  ( -- status )
    0               ( status )
    begin           ( status )
      drop          ( )
      read-status   ( status )
      dup h# 40 and ( status flag )
    until           ( status )
+   #writes 1+ to #writes
+;
+: wait-write-done  ( -- error? )
+   (wait-write-done)
    \ If the value is completely 0 I think it means write protect     
    1 and  0<>      ( error? )
    write-disable
-   #writes 1+ to #writes
 ;
 
 \ Assumes that the range doesn't straddle a page boundary
@@ -285,13 +293,52 @@ h# 10 buffer: syndrome-buf
    dma-release                         ( error? )
 ;
 
-: dma-write-page  ( adr page# -- error? )  \ Size is fixed
+: start-write-page  ( adr page# -- )  \ Size is fixed
    write-enable                          ( adr page# )
    0 set-page                            ( adr )
    h# 800 h# 80e  false dma-setup        ( )
    write-cmd h# 4800.0110 cmd wait-cmd   ( )  \ Auto-ECC, RS, write cmd
+;
+: dma-write-page  ( adr page# -- error? )  \ Size is fixed
+   start-write-page
    wait-write-done                       ( error? )
 \   dma-release
+;
+: async-write-page  ( adr page# -- prev-error? )
+   wait-write-done  if  2drop true exit  then
+   start-write-page
+   0
+;
+
+: fast-write-pages  ( adr page# #pages -- #written )
+   write-enable
+   dup >r
+   begin  dup  while    ( adr page# #rem r: #pages )
+      over 0 set-page                        ( adr page# #rem )
+      2 pick h# 800 h# 80e  false dma-setup  ( adr page# #rem )
+      write-cmd  h# 4800.0110                ( adr page# #rem cmd cmd2 )
+      cached-write?  if                      ( adr page# #rem cmd cmd2 )
+         2 pick 1 <>  if                     ( adr page# #rem cmd cmd2 )
+            5 +  \ make cmd2 cached write    ( adr page# #rem cmd cmd2 )
+         then                                ( adr page# #rem cmd cmd2 )
+      then                                   ( adr page# #rem cmd cmd2 )
+      cmd wait-cmd                           ( adr page# #rem )
+      \ For normal write, this waits for completion.
+      \ For cached write, it waits until the cache register is free.
+      (wait-write-done)  dup 3 and  if       ( adr page# #rem status )
+         \ If the 2 bit is set, the error was on the previous page
+         \ during the program operation.  Otherwise the error was
+         \ on the current page during the download.
+         2 and  if  1+   then                ( adr page# #rem )
+         \ Calculate #written
+         nip nip  r> swap - exit
+      else                                   ( adr page# #rem status )
+         drop                                ( adr page# #rem )
+      then                                   ( adr page# #rem )
+      rot h# 800 +  rot 1+  rot 1-           ( adr' page#' #rem' )
+   repeat              ( adr page# #rem r: #pages )
+   3drop r>
+   write-disable
 ;
 
 : write-page   ( adr page# -- error? )  dma-write-page  ;
