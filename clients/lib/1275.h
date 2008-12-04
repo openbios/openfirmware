@@ -47,7 +47,7 @@ extern void warn(char *fmt, ...);
 
 extern int call_firmware(ULONG *);
 extern void warn(char *fmt, ...);
-int atoi(char *s);
+int atoi(const char *s);
 
 void OFClose(ihandle id);
 phandle OFPeer(phandle device_id);
