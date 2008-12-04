@@ -463,8 +463,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
       drop d# 10 ms
    loop                      ( )
 
-   ." SDHCI: Card didn't power up after 1 second" cr
-   abort
+   true
 ;
 
 : set-operating-conditions  ( -- error? )
@@ -560,21 +559,36 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
    false to writing?
 ;
 
+\ -1 means error, 1 means retry
+: power-up-card  ( -- false | retry? true )
+   intstat-on
+   card-power-off d# 20 ms
+   card-power-on  d# 20 ms  \ This delay is just a guess
+   card-inserted?  0=  if  card-power-off  intstat-off  false true exit  then   
+   card-clock-slow  d# 10 ms  \ This delay is just a guess
+   reset-card     \ Cmd 0
+   set-operating-conditions  if  intstat-off  true true exit  then
+   false
+;
+
 external
 
 : attach-card  ( -- okay? )
-   intstat-on
-   card-power-off d# 20 ms
-
-   card-power-on  d# 20 ms  \ This delay is just a guess
-
-   card-inserted?  0=  if  card-power-off  false intstat-off  exit  then   
-
-   card-clock-slow  d# 10 ms  \ This delay is just a guess
-
-   reset-card     \ Cmd 0
-
-   set-operating-conditions  if  false intstat-off  exit  then
+   power-up-card  if         ( retry? )
+      \ The first try at powering up failed.
+      if                     ( )
+         \ The card was detected, but didn't go to "powered up" state.
+         \ Sometimes that can be fixed by power cycling, so we retry
+         power-up-card  if   ( retry? )
+            if  ." SD card did not power up" cr  then
+            false exit
+         then
+         \ The second attempt to power up the card worked
+      else
+         \ The card was not detected, so we give up
+         false exit
+      then
+   then
 
    get-all-cids   \ Cmd 2
    mmc?  if
