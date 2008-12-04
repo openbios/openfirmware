@@ -16,15 +16,10 @@ h# e.0000 constant mfg-data-offset
 mfg-data-offset /flash-block +  constant mfg-data-end-offset
 
 : write-flash-range  ( adr end-offset start-offset -- )
-   ." Erasing" cr
-   2dup  ?do
-      i .x (cr  i flash-erase-block
-   /flash-block +loop  ( adr end start )
-   cr                  ( adr end start )
-   
    ." Writing" cr
    ?do                ( adr )
       i .x (cr                           ( adr )
+      i /flash-block mod 0=  if  i flash-erase-block  then
       dup  /chunk  i  flash-write        ( adr )
       /chunk +                           ( adr' )
    /chunk +loop       ( adr )
