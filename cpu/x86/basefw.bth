@@ -23,6 +23,8 @@ code call  ( address -- )   dx pop   dx call  c;
 
 \ fload ${BP}/forth/lib/showmsgs.fth	\ List error messages
 
+fload ${BP}/cpu/x86/occhksum.fth	\ IP checksum primitive
+
 fload ${BP}/ofw/core/ofwcore.fth	\ Device tree and other OBP routines
 [ifndef] no-tools
 fload ${BP}/ofw/core/ofwfw.fth		\ FirmWorks enhancements
