@@ -108,13 +108,13 @@ d# 15 constant rssi-limit
    search-channels
    wlan-ih close-dev
 ;
-: enand  ( -- )
+: nandblaster  ( -- )
    find-multinand-server abort" No multicast NAND server"  ( chan# )
    #nb
 ;
 
 d# 10 constant rssi-threshold
-: ether-clone  ( -- )
+: nb-clone  ( -- )
    quietest-mesh-channel  ( rssi chan# )
    swap rssi-threshold > abort" No quiet channels"  ( chan# )
    #nb-clone
