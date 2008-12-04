@@ -112,6 +112,7 @@ d# 15 constant rssi-limit
    find-multinand-server abort" No multicast NAND server"  ( chan# )
    #nb
 ;
+alias nb nandblaster
 
 d# 10 constant rssi-threshold
 : nb-clone  ( -- )

@@ -40,7 +40,7 @@ d# 20 value redundancy
    >r 2>r                             ( placement-filename$ r: channel# image-filename$ )
    $file-to-mem                       ( spec$ r: channel# image-filename$ )
    swap  redundancy  2r> r>           ( speclen specadr redundancy image-filename$ channel# )
-   " rom:nb_tx ether:%d %s 131072 %d %d %d" sprintf boot-load go
+   " rom:nb_tx ether:%d %s %d 131072 %d %d" sprintf boot-load go
 ;
 : #nb-secure  ( zip-filename$ image-filename$ channel# -- )
    depth 5 < abort" #nb-secure-update - too few arguments"
@@ -48,7 +48,7 @@ d# 20 value redundancy
    load-read  sig$ ?save-string swap  ( siglen sigadr r: channel# image-filename$ )
    img$ ?save-string swap             ( siglen sigadr speclen specadr r: channel# image-filename$ )
    redundancy  2r> r>                 ( siglen sigadr speclen specadr redundancy image-filename$ channel# )
-   " rom:nb_tx ether:%d %s 131072 %d %d %d %d %d" sprintf boot-load go
+   " rom:nb_tx ether:%d %s %d 131072 %d %d %d %d" sprintf boot-load go
 ;
 : t1  " u:\os767.plc" " u:\os767.img" d# 11 #nb-update  ;
 : t2  " u:\fs.zip" " u:\os767.img" d# 11 #nb-secure  ;
