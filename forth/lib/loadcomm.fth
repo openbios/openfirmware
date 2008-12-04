@@ -70,6 +70,7 @@ fload ${BP}/forth/lib/array.fth
 fload ${BP}/forth/lib/linklist.fth		\ Linked list routines
 
 fload ${BP}/forth/lib/lex.fth
+fload ${BP}/forth/lib/printf.fth
 
 fload ${BP}/forth/lib/autold.fth		\ Autoload mechanism
 
