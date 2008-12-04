@@ -238,7 +238,7 @@ struct
 \   6 field >rx-snap-hdr
 \   0 field >rx-data
 d# 22 +  \ Size of an Ethernet header with SNAP
-constant /rx-min  
+constant /rx-min
 
 \ >rx-stat constants
 1 constant rx-stat-ok
@@ -442,7 +442,7 @@ true value got-indicator?
 : process-request  ( adr len -- )
    2dup vdump			( adr len )
    to /respbuf			( adr )
-   respbuf  /respbuf  move	( ) 
+   respbuf  /respbuf  move	( )
    true to got-response?	( )
 ;
 
@@ -1057,7 +1057,7 @@ headers
 : (mesh-start)  ( channel tlv -- error? )
    " "(dd 0e 00 50 43 04 00 00 00 00 00 04)mesh"  ( channel tlv adr len )
    2swap swap  1  ( adr len tlv channel action )  \ 1 is CMD_ACT_MESH_CONFIG_START
-   mesh-config-set   
+   mesh-config-set
 ;
 
 : mesh-stop  ( -- error? )
@@ -1429,7 +1429,7 @@ create mesh_start_cmd
    d# 221 c,            d# 14 c,
 
    \  OUI....................  type  subtyp vers  proto metric cap
-   h# 00 c, h# 50 c, h# 43 c,  4 c,  0 c,   0 c,  0 c,  0 c,   0 c, 
+   h# 00 c, h# 50 c, h# 43 c,  4 c,  0 c,   0 c,  0 c,  0 c,   0 c,
 
    \ ssidlen   ssid (set@12)
    d# 04 c,   here 4 allot  " mesh" rot swap move

@@ -151,7 +151,7 @@ d# 500 constant bulk-out-timeout
 : alloc-ring-qhqtds  ( buf-pa /buf #bufs -- qh qtd )
    0 swap  0 ?do		( pa /buf #qtds )
       >r 2dup cal-#qtd >r 	( pa /buf r: #qtds this-#qtds )
-      tuck + swap		( pa' /buf r: #qtds this-#qtds ) 
+      tuck + swap		( pa' /buf r: #qtds this-#qtds )
       r> r> +			( pa' /buf #qtds' )
    loop				( pa' /buf #qtds' )
    nip nip  alloc-qhqtds	( qh qtd0 )

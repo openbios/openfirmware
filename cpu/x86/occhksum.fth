@@ -49,19 +49,19 @@ code (oc-checksum)  ( accum adr len -- checksum )
       ax ax xor
       op: ax lods
       ax dx add
-      0 # dx adc  \ Possible carry 
+      0 # dx adc  \ Possible carry
    then
 
    1 # bx test  0<>  if      \ Leftover byte?
       ax ax xor
       al lodsb
       ax dx add
-      0 # dx adc  \ Possible carry   
+      0 # dx adc  \ Possible carry
    then
 
    dx ax mov  d# 16 # ax shr  h# ffff # dx and  ax dx add  \ Add two halves
    dx ax mov  d# 16 # ax shr  h# ffff # dx and  ax dx add  \ Again for carry
-   dl dh xchg   \ Byte swap   
+   dl dh xchg   \ Byte swap
 
    si pop
    dx push

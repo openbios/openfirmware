@@ -207,7 +207,7 @@ code fb16-invert  ( adr width height bytes/line fg-color bg-color -- )
 	 then
          ax        op: stos  \ Write it back
          cx            dec   \ Decrement pixel counter
-      0= until		     \ End inner loop 
+      0= until		     \ End inner loop
       si           di  add   \ increment adr to next line
       5 /n* [sp]   cx  mov   \ restore starting width value
       dx               dec   \ decrement height
@@ -235,12 +235,12 @@ code fb16-paint
    ax         3 #  shr  \ Convert to bytes
    ax  9 /n* [sp]  sub  \ Account for incrementing of byte pointer
                         \ item 9 is now the excess to add for the next scan line
-   
+
 \  4 /n* [sp]  bl  mov	\ Foreground
    3 /n* [sp]  bx  mov	\ Background
    6 /n* [sp]  di  mov	\ Screenadr - start address in frame buffer
    7 /n* [sp]  bp  mov	\ Height - character height in pixels
-  h# 0a /n* [sp]  si  mov 
+  h# 0a /n* [sp]  si  mov
 \ Fontadr - start address (of this char) in font table
 
 
@@ -254,7 +254,7 @@ code fb16-paint
          dx          dx   or
       0<> while
          8 #         dx   cmp
-         >  if			 
+         >  if
             8 #      cx   mov
          else
 	    dx       cx   mov
@@ -276,7 +276,7 @@ code fb16-paint
             ax         op: stos  \ Write to frame buffer
             cx             dec   \ Increment width pixel count
          0= until                \ Repeat until width count = 0
-      repeat       
+      repeat
 
       9 /n* [sp]   si   add   \ Next scan line in font table
       5 /n* [sp]   di   add   \ Increment frame buffer addr to next line
