@@ -105,6 +105,23 @@ external
    bulk-in-ed insert-my-bulk-in
 ;
 
+: bulk-in-ready?  ( -- false | error true |  buf actual 0 true )
+   clear-usb-error				( )
+   process-hc-status				( )
+   bulk-in-ed dup sync-edtds			( ed )
+   ed-done?  if					( )
+      bulk-in-td error? ?dup 0=  if		( )
+         bulk-in-td >td-cbp l@			( buf )
+         bulk-in-td get-actual			( buf actual )
+         2dup bulk-in-td >td-pcbp l@ swap dma-sync	( buf actual )
+         0					( buf actual 0 )
+      then					( error | buf actual 0 )
+      bulk-in-ed fixup-bulk-in-data		( error | buf actual 0 )
+   else
+      false                                     ( false )
+   then
+;
+
 : bulk-in?  ( -- actual usberr )
    bulk-in-ed 0=  if  0 USB_ERR_INV_OP exit  then
    clear-usb-error				( )

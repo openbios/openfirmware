@@ -105,6 +105,8 @@ dup constant /hcqtd
    4 field >qtd-/buf-all		\ Buffer length (size of the entire buffer)
 					\ Only the first qTD has the entire size of buffer
 					\ For bulk and intr qTDs
+   4 field >qtd-unaligned		\ Unaligned buffer address
+   4 field >qtd-size		        \ Unaligned buffer size
 d# 32 round-up
 constant /qtd
 
@@ -154,6 +156,11 @@ dup constant /hcqh
    4 field >qh-unaligned		\ QH's unaligned address
    4 field >qh-size			\ Size of QH+qTDs 
    4 field >qh-#qtds			\ # of qTDs in the list
+   4 field >qh-#bufs			\ # of bufs
+   4 field >qh-/buf			\ size of each buf
+   4 field >qh-buf			\ buf start va
+   4 field >qh-buf-pa			\ buf start pa
+   4 field >qh-timeout			\ Timeout
 d# 32 round-up
 constant /qh
 
@@ -180,34 +187,50 @@ h# c000.0000 constant QH_MULT3
 
 : sync-qh      ( qh  -- )  dup >qh-phys  l@ /hcqh  dma-sync  ;
 : sync-qtd     ( qtd -- )  dup >qtd-phys l@ /hcqtd dma-sync  ;
-: sync-qhqtds  ( qh  -- )  dup >qh-phys  l@ over >qh-size l@  dma-sync  ;
+: sync-qtds    ( qtd -- )  dup >qtd-phys l@ over >qtd-size l@  dma-sync  ;
+: sync-qhqtds  ( qh  -- )  dup >qh-phys  l@ over >qh-size  l@  dma-sync  ;
 
 : map-out-bptrs  ( qtd -- )
    dup >qtd-buf l@ over >qtd-pbuf l@ rot >qtd-/buf-all l@ hcd-map-out
 ;
 
-: init-qh  ( qh.u,v,p len #qtds -- )
-   3 pick >qh-#qtds l!			( qh.u,v,p len )
-   2 pick >qh-size l!			( qh.u,v,p )
-   over >qh-phys l!			( qh.u,v )
-   TERMINATE 2 pick >hcqh-next le-l!	( qh.u,v )
-   >qh-unaligned l!			( )
-;
 : link-qtds  ( qtd.v qtd.p #qtds -- )
-   1- 0  ?do				( qtd.v qtd.p )
-      TERMINATE 2 pick >hcqtd-next-alt le-l!	( qtd.v qtd.p )
-      2dup swap >qtd-phys l!		( qtd.v qtd.p )
-      /qtd +				( qtd.v qtd.p' )
-      2dup swap >hcqtd-next le-l!	( qtd.v qtd.p )
-      swap dup /qtd + tuck swap >qtd-next l!	( qtd.p qtd.v' )
-      swap				( qtd.v qtd.p )
+   1- 0  ?do					( v p )
+      TERMINATE 2 pick >hcqtd-next-alt le-l!	( v p )
+      2dup swap >qtd-phys l!			( v p )
+      /qtd +					( v p' )
+      2dup swap >hcqtd-next le-l!		( v p )
+      swap dup /qtd + tuck swap >qtd-next l!	( p v' )
+      swap					( v p )
    loop
 
    \ Fix up the last qTD
-   over >qtd-phys l!			( qtd.v )
-   TERMINATE over >hcqtd-next le-l!	( qtd.v )
-   TERMINATE swap >hcqtd-next-alt le-l!	( )
+   over >qtd-phys l!				( v )
+   TERMINATE over >hcqtd-next le-l!		( v )
+   TERMINATE swap >hcqtd-next-alt le-l!		( )
 ;
+
+: alloc-qtds  ( #qtds -- qtd )
+   dup >r  /qtd * dup >r		( len )  ( R: #qtds len )
+   aligned32-alloc-map-in		( u v p )  ( R: #qtds len )
+   swap					( u p v )  ( R: #qtds len )
+   dup r@ erase				( u p v )  ( R: #qtds len )
+
+   \ Record QTD size for later freeing
+   rot over >qtd-unaligned l!		( p v )  ( R: #qtds len )
+   r> over >qtd-size l!			( p v )  ( R: #qtds )
+
+   dup rot r> link-qtds			( qtd.v )
+;
+
+: free-qtds  ( qtd -- )
+   >r					( R: qtd )
+   r@ >qtd-unaligned l@			( u )  ( R: qtd )
+   r@ dup >qtd-phys l@			( u v p )  ( R: qtd )
+   r> >qtd-size l@			( u v p size )
+   aligned32-free-map-out		( )
+;
+
 : link-qhqtd  ( qtd.p qh -- )
    >hcqh-overlay tuck			( qh.overlay qtd.p qh.overlay )
    >hcqtd-next le-l!			( qh.overlay )
@@ -223,6 +246,30 @@ h# c000.0000 constant QH_MULT3
    link-qtds				( )			\ Link qTDs
 ;
 
+: init-qh  ( qh.u,v,p len #qtds -- )
+   3 pick >qh-#qtds l!			( qh.u,v,p len )
+   2 pick >qh-size l!			( qh.u,v,p )
+   over >qh-phys l!			( qh.u,v )
+   TERMINATE 2 pick >hcqh-next le-l!	( qh.u,v )
+   >qh-unaligned l!			( )
+;
+
+: alloc-qh  ( -- qh )
+   /qh aligned32-alloc-map-in		( u v p )
+   over /qh erase			( u v p )
+   over >r				( u v p r: v )
+   /qh 0 init-qh			( r: v )
+   TERMINATE r@ link-qhqtd		( r: v )
+   r>					( qh.v )
+;
+: free-qh  ( qh -- )
+   >r					( R: qh )
+   r@ >qh-unaligned l@			( qh.u )  ( R: qh )
+   r@ dup >qh-phys l@			( qh.u,v,p )  ( R: qh )
+   r> >qh-size l@			( qh.u,v,p size )
+   aligned32-free-map-out		( )
+;
+
 : alloc-qhqtds  ( #qtds -- qh qtd )
    dup >r  /qtd * /qh + dup >r		( len )  ( R: #qtds len )
    aligned32-alloc-map-in		( qh.u,v,p )  ( R: #qtds len )
@@ -234,13 +281,17 @@ h# c000.0000 constant QH_MULT3
    r> 4 pick link-qhqtds		( qh qtd )
 ;
 
-: free-qhqtds  ( qh -- )
+: free-qh  ( qh -- )
    >r					( R: qh )
    r@ >qh-unaligned l@			( qh.u )  ( R: qh )
    r@ dup >qh-phys l@			( qh.u,v,p )  ( R: qh )
    r> >qh-size l@			( qh.u,v,p size )
    aligned32-free-map-out		( )
 ;
+
+\ Same as free-qh because the size field tells all
+: free-qhqtds  ( qh -- )  free-qh  ;
+
 : reuse-qhqtds  ( #qtds qh -- qh qtd )
    swap dup >r  /qtd * /qh + >r		( qh )  ( R: #qtds len )
    dup >qh-unaligned l@ swap		( qh.u,v )  ( R: #qtds len )
@@ -332,6 +383,7 @@ bptr-ofs-mask invert constant bptr-mask		\ Buffer Pointer mask
       qh-ptr >hcqh-next le-l@ r@ >hcqh-next le-l!
       r@ qh-ptr >qh-next l!
       r@ >qh-phys l@ qh-ptr >hcqh-next le-l!
+
       r> sync-qhqtds
       qh-ptr sync-qh
    else
@@ -344,6 +396,25 @@ bptr-ofs-mask invert constant bptr-mask		\ Buffer Pointer mask
       r> sync-qhqtds
       enable-async
    then
+;
+: fix-wraparound-qh  ( qh -- )
+   \ Find the end of the list, the node that points back to the beginning
+   dup >r                ( thisqh r: qh0 )
+   begin                 ( thisqh r: qh0 )
+      dup >qh-next l@    ( thisqh nextqh r: qh0 )
+   dup r@ <>  while      ( thisqh nextqh r: qh0 )
+      nip                ( thisqh' r: qh0 )
+   repeat                ( thisqh nextqh r: qh0 )
+
+   drop
+   \ Change that node's next pointers to skip the removed qh
+   r> >qh-next l@        ( lastqh nextqh )
+   swap                  ( nextqh lastqh )
+   over >qh-phys l@      ( nextqh lastqh next-phys )
+   over >hcqh-next le-l@ ( nextqh lastqh next-phys last-phys )
+   TYP_QH and or         ( nextqh lastqh next-phys' )
+   over >hcqh-next le-l! ( nextqh lastqh next-phys' )
+   >qh-next l!           ( )
 ;
 
 : remove-qh  ( qh -- )
@@ -364,10 +435,11 @@ bptr-ofs-mask invert constant bptr-mask		\ Buffer Pointer mask
          else
             drop
          then
-      else
-         >qh-next l@ to qh-ptr
-         qh-ptr >hcqh-endp-char dup le-l@ QH_HEAD or swap le-l!
-         0 qh-ptr >qh-prev l!
+      else                          ( qh )
+         dup >qh-next l@ to qh-ptr  ( qh )
+         qh-ptr >hcqh-endp-char dup le-l@ QH_HEAD or swap le-l!  ( qh )
+         fix-wraparound-qh          ( )
+         0 qh-ptr >qh-prev l!       ( )
 	 qh-ptr sync-qh
       then
       ring-doorbell
@@ -450,8 +522,6 @@ d# 32 constant intr-interval		\ 4 ms poll interval
 \ were found in the TDs.
 \ ---------------------------------------------------------------------------
 
-0 value timeout
-
 : .qtd-error  ( cc -- )
    dup TD_STAT_HALTED  and  if  " Stalled; "                USB_ERR_STALL       set-usb-error  then
    dup TD_STAT_DBUFF   and  if  " Data Buffer Error; "      USB_ERR_DBUFERR     set-usb-error  then
@@ -461,22 +531,25 @@ d# 32 constant intr-interval		\ 4 ms poll interval
    TD_STAT_SPLIT_ERR   and  if  " Periodic split-x error; " USB_ERR_SPLIT       set-usb-error  then
 ;
 
-: qh-done?  ( qh -- done? )
-   >hcqh-overlay			( olay )
-   dup >hcqtd-next le-l@ 		( olay pnext )
-   swap >hcqtd-token le-l@ 		( pnext token )
-   dup TD_STAT_HALTED and -rot		( halted? pnext token )
-   TD_STAT_ACTIVE and 0= swap		( halted? inactive? pnext )
-   TERMINATE = and			( halted? done? )
+: qtd-done?  ( qtd -- done? )
+   >hcqtd-token le-l@			( token )
+   dup TD_STAT_HALTED and		( token halted? )
+   swap TD_STAT_ACTIVE and 0=		( halted? inactive? )
    or					( done?' )
 ;
+
+: qh-done?  ( qh -- done? )  >hcqh-overlay qtd-done?  ;
+
 : done?  ( qh -- usberr )
    begin
-      process-hc-status
-      ( qh ) dup sync-qh
-      ( qh ) dup qh-done? ?dup 0=  if
+      process-hc-status		( qh )
+      dup sync-qh		( qh )
+      dup qh-done? ?dup 0=  if  ( qh )
          1 ms
-         timeout 1- dup to timeout 0=
+         dup >qh-timeout	( qh timeout-adr )
+         dup l@ 1-		( qh timeout-adr timeout' )
+         dup rot l!		( qh timeout' )
+         0=
       then
    until
 
@@ -484,12 +557,14 @@ d# 32 constant intr-interval		\ 4 ms poll interval
    usb-error
 ;
 
-: error?  ( qh -- usberr )
-   dup >hcqh-endp-char le-l@ d# 12 >> 3 and
-   speed-high =  if  h# fc  else  h# fd  then
-   swap >hcqh-overlay >hcqtd-token le-l@  and ?dup  if  .qtd-error  then
+: qtd-error?  ( qtd qh -- usberr )
+   >hcqh-endp-char le-l@ d# 12 >> 3 and         ( qtd speed )
+   speed-high =  if  h# fc  else  h# fd  then   ( qtd error-mask )
+   swap >hcqtd-token le-l@  and ?dup  if  .qtd-error  then
    usb-error
 ;
+
+: error?  ( qh -- usberr )  dup >hcqh-overlay  swap  qtd-error?   ;
 
 : get-actual  ( qtd #qtd -- actual )
    0 -rot 0  ?do			( actual qtd )
@@ -503,6 +578,25 @@ d# 32 constant intr-interval		\ 4 ms poll interval
       then
       >qtd-next l@			( actual qtd )
    loop  drop				( qtd )
+;
+
+: qtd-get-actual  ( qtd -- actual )
+   0 swap  begin			( actual qtd )
+      dup sync-qtd			( actual qtd )
+      dup >hcqtd-token le-l@ dup TD_STAT_ACTIVE and 0=  if
+         over >qtd-/buf l@		( actual qtd token len )
+         swap d# 16 >> h# 7fff and -	( actual qtd len' )
+         rot + swap			( actual' qtd )
+      else
+         drop				( actual qtd )
+      then
+      dup >hcqtd-next l@		( actual qtd next )
+      over >hcqtd-next-alt l@		( actual qtd next alt-next )
+   <> while
+      \ If next and alt differ, the next one is part of the same transaction.
+      \ If they are the same, it's a different transaction
+      >qtd-next l@			( actual qtd' )
+   repeat  drop				( actual )
 ;
 
 \ ---------------------------------------------------------------------------

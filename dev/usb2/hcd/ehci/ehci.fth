@@ -75,14 +75,18 @@ my-address my-space          encode-phys
 : halted?    ( -- flag )  usbsts@ h# 1000 and  ;
 : halt-wait  ( -- )       begin  halted?  until  ;
 
-: process-hc-status  ( -- )  
+: process-hc-status  ( -- )
    usbsts@ dup usbsts!		\ Clear interrupts and errors
    h# 10  and  if  " Host system error" USB_ERR_HCHALTED set-usb-error  then
 ;
+: get-hc-status  ( -- status )
+   usbsts@ dup usbsts!		\ Clear interrupts and errors
+   dup h# 10  and  if  " Host system error" USB_ERR_HCHALTED set-usb-error  then
+;
 
 : doorbell-wait  ( -- )
-   \ Wait until interupt on async advance bit is set.
-   \ But, some HC fails to set the async advance bit sometimes.  Therefore,
+   \ Wait until interrupt on async advance bit is set.
+   \ But, some HCs fail to set the async advance bit sometimes.  Therefore,
    \ we add a timeout and clear the status all the same.
    h# 100 0  do  usbsts@ h# 20 and  if  leave  then  loop
    h# 20 usbsts!			\ Clear status

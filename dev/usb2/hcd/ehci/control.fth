@@ -24,6 +24,7 @@ headers
 0 value my-buf					\ Virtual address of data buffer
 0 value my-buf-phys				\ Physical address of data buffer
 0 value /my-buf					\ Size of data buffer
+0 value my-dir					\ Direction (in or out)
 
 0 value my-qtd					\ Current TD head
 0 value my-qh					\ Current QH
@@ -49,10 +50,11 @@ defer set-my-dev		' set-normal-dev to set-my-dev
 ;
 
 : alloc-control-qhqtds  ( extra-qtds -- )
-   >r
-   my-buf-phys /my-buf cal-#qtd dup to my-#qtds
-   dup  if  data-timeout  else  nodata-timeout  then  to timeout
-   r> + alloc-qhqtds  to my-qtd  to my-qh
+   >r						( r: extra-qtds )
+   my-buf-phys /my-buf cal-#qtd dup to my-#qtds	( #data-qtds r: extra-qtds )
+   dup r> + alloc-qhqtds  to my-qtd  to my-qh	( #data-qtds )
+   if  data-timeout  else  nodata-timeout  then	( timeout )
+   my-qh >qh-timeout l!				( )
 ;
 
 : fill-qh  ( qh pipetype -- )
@@ -85,10 +87,11 @@ defer set-my-dev		' set-normal-dev to set-my-dev
    fill-qtd-bptrs  drop
 ;
 
-: my-buf++ ( len -- )
-   /my-buf     over - to /my-buf
-   my-buf-phys over + to my-buf-phys
-   my-buf      swap + to my-buf
+: my-buf++  ( len -- )
+   /my-buf min				( len' )
+   /my-buf     over - to /my-buf	( len )
+   my-buf-phys over + to my-buf-phys	( len )
+   my-buf      swap + to my-buf		( )
 ;
 : fixup-last-qtd  ( td -- )
    /my-buf  if  drop exit  then

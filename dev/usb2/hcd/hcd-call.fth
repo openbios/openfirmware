@@ -66,6 +66,10 @@ external
 : set-bulk-in-timeout  ( t -- )
    " set-bulk-in-timeout" $call-parent
 ;
+: bulk-in-ready?  ( -- false | error true | buf len 0 true )
+   " bulk-in-ready?" $call-parent
+;
+
 
 \ Interrupt pipe operations
 : begin-intr-in  ( buf len pipe interval -- )

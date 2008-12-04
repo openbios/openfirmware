@@ -72,17 +72,14 @@ headers
 d# 2048 value /outbuf   \ Power of 2 larger than max-frame-size
                         \ Override as necessary
 
-0 value inbuf
 d# 2048 value /inbuf    \ Power of 2 larger than max-frame-size
                         \ Override as necessary
 
 : init-buf  ( -- )
    outbuf 0=  if  /outbuf dma-alloc to outbuf  then
-   inbuf  0=  if  /inbuf  dma-alloc to inbuf   then
 ;
 : free-buf  ( -- )
    outbuf  if  outbuf /outbuf dma-free  0 to outbuf  then
-   inbuf   if  inbuf  /inbuf  dma-free  0 to inbuf   then
 ;
 
 : property-or-abort  ( name$ -- n )
@@ -96,6 +93,12 @@ d# 2048 value /inbuf    \ Power of 2 larger than max-frame-size
    init
    " vendor-id"  property-or-abort  to vid
    " device-id"  property-or-abort  to pid
+;
+
+: bulk-out  ( adr len pipe -- error? )
+   drop
+   " send-out" $call-parent  ( qtd )
+   " wait-out" $call-parent  ( error? )
 ;
 
 headers

@@ -54,6 +54,8 @@ headers
 
 false instance value use-promiscuous?
 
+: end-out-ring  ( -- )  " end-out-ring" $call-parent  ;
+
 external
 
 \ Set to true to force open the driver without association.
@@ -76,9 +78,12 @@ false instance value force-open?
    device set-target
    opencount @ 0=  if
       init-buf
-      ?load-fw 0=  if  free-buf false exit  then
+      /outbuf     4 bulk-out-pipe " begin-out-ring" $call-parent
+      /inbuf  h# 40 bulk-in-pipe  " begin-in-ring"  $call-parent
+      ?load-fw 0=  if  end-bulk-in end-out-ring free-buf false exit  then
       my-args " supplicant" $open-package to supplicant-ih
-      supplicant-ih 0=  if  free-buf false exit  then
+      supplicant-ih 0=  if  end-bulk-in end-out-ring free-buf false exit  then
+      nonce-cmd
       force-open?  if  true exit  then
       link-up? 0=  if
          ['] 2drop to ?process-eapol
@@ -86,8 +91,6 @@ false instance value force-open?
          ds-disconnected reset-driver-state
          ds-associated set-driver-state
          ['] do-process-eapol to ?process-eapol
-      else
-         inbuf /inbuf bulk-in-pipe begin-bulk-in
       then
       start-nic
    then
@@ -100,10 +103,13 @@ false instance value force-open?
    opencount @ 1-  0 max  opencount !
    opencount @ 0=  if
       disable-multicast
+      mesh-stop drop
       link-up?  if  target-mac$ deauthenticate  then
       ['] 2drop to ?process-eapol
-      end-bulk-in
       stop-nic
+      mac-off
+      end-bulk-in
+      end-out-ring
       free-buf
       supplicant-ih ?dup  if  close-package 0 to supplicant-ih  then
    then
@@ -113,26 +119,28 @@ false instance value force-open?
 \ Used by the /supplicant support package to perform key handshaking.
 : write-force  ( adr len -- actual )
    tuck wrap-msg			( actual adr' len' )
-   bulk-out-pipe bulk-out		( actual usberr )
-   if  drop -1  then			( actual )
+   " send-out" $call-parent drop 	( actual )
 ;
 : read-force  ( adr len -- actual )
-   false to got-data?
-   bulk-in?  if
-      restart-bulk-in -1 exit		\ USB error
-   else
-      ?dup  if
-         inbuf respbuf rot dup to /respbuf move
-         restart-bulk-in
-         respbuf /respbuf process-rx
-      then
-   then
+   bulk-in-ready?  0=  if  		( adr len )
+      2drop  -2  exit
+   then                                 ( adr len [ error | buf actual 0 ] )
 
-   got-data?  if
+   if					( adr len )
+      restart-bulk-in			( adr len )
+      2drop  -1  exit
+   then					( adr len buf actual )
+
+   false to got-data?			( adr len buf actual )
+   process-rx				( adr len )
+
+   got-data?  if			( adr len )
       /data min tuck data -rot move	( actual )
-   else
+   else					( adr len )
       2drop -2				\ No data
-   then
+   then					( actual )
+
+   restart-bulk-in
 ;
 
 \ Normal read and write methods.
@@ -178,8 +186,8 @@ false instance value force-open?
 
    (scan)  if
       ." Failed to scan" true cr
-   else
-      respbuf /fw-cmd + .scan false
+   else    ( adr len )
+      drop .scan false
    then
 
    close

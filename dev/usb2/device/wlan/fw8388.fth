@@ -67,26 +67,35 @@ constant /dl-sync
 
 : dl-seq++  ( -- )  dl-seq 1+ to dl-seq  ;
 
-: cmd-fw-dl-ok?  ( len -- flag )
-   inbuf over vldump
-   /boot-ack <>  if  " Bad command status length" vtype false exit  then
-   inbuf >boot-magic le-l@ boot-magic <>  if  " Bad signature" vtype false exit  then
-   inbuf >cmd-status c@ boot-ack-ok =
+: cmd-fw-dl-ok?  ( adr len -- flag )
+   2dup vldump                              ( adr len )
+   /boot-ack <>  if                         ( adr )
+      drop                                  ( )
+      " Bad command status length" vtype
+      false exit
+   then                                     ( adr )
+   dup >boot-magic le-l@ boot-magic <>  if  ( adr )
+      drop                                  ( )
+      " Bad signature" vtype                ( )
+      false exit
+   then                                     ( adr )
+   >cmd-status c@ boot-ack-ok =             ( ok? )
 ;
 
 : wait-cmd-fw-dl-ack  ( -- acked? )
-   false d# 100 0  do
-      bulk-in?  if
-         restart-bulk-in drop leave	\ USB error
-      else
-         ?dup  if
-            cmd-fw-dl-ok? nip
-            restart-bulk-in
-            leave
-         then
-      then
-      1 ms
-   loop
+   d# 100 0  do			( )
+      bulk-in-ready?  if	( error | buf len 0 )
+         if			( )
+            false		( acked? )
+         else			( buf len )
+            cmd-fw-dl-ok?	( acked? )
+         then			( acked? )
+         restart-bulk-in	( acked? )
+         unloop exit
+      then			( )
+      1 ms			( )
+   loop				( )
+   false			( acked? )
 ;
 
 : download-fw-init  ( -- )
@@ -94,34 +103,28 @@ constant /dl-sync
    boot-magic outbuf >boot-magic le-l!
    cmd-fw-dl  outbuf >boot-cmd   c!
 
-   inbuf /inbuf bulk-in-pipe begin-bulk-in
    5 0  do
       outbuf /boot-cmd bulk-out-pipe bulk-out drop
       wait-cmd-fw-dl-ack  if  leave  then
    loop
 ;
 
-: process-dl-resp  ( len -- )
-   inbuf over vldump
+: process-dl-resp  ( adr len -- )
+   2dup vldump
    h# 8 <  if  ." Response too short" abort  then
-   inbuf >dl-sync-seq le-l@ dl-seq <>  if  ." Bad sequence" abort  then
-   inbuf >dl-sync-ack le-l@ if  ." Image download failed" abort  then
+   dup >dl-sync-seq le-l@ dl-seq <>  if  drop  ." Bad sequence" abort  then
+   >dl-sync-ack le-l@  if  ." Image download failed" abort  then
 ;
 
 : wait-fw-dl-ack  ( -- )
-   d# 500 0  do
-      bulk-in?  if
-         drop restart-bulk-in  leave
-      else
-         ?dup if
-            process-dl-resp
-            restart-bulk-in
-            leave
-         else
-            1 ms
-         then
-      then
-   loop
+   d# 500 0  do				( )
+      bulk-in-ready?  if		( error | buf len 0 )
+         0= if  process-dl-resp  then	( )
+         restart-bulk-in		( )
+         leave
+      then				( )
+      1 ms				( )
+   loop					( )
 ;
 
 : (download-fw)  ( adr len -- )
@@ -149,14 +152,33 @@ constant /dl-sync
    until  2drop
 ;
 
+: wait-fw  ( -- )
+   \ We first get a response packet saying that the download completed
+   wait-cmd-resp  if
+      ." No firmware download response; continuing anyway"  cr
+      d# 200 ms   \ Backwards compatibility with old firmware
+      exit
+   then
+
+   \ Wait for the "started" indicator
+   wait-event  if
+      ." Timeout waiting for firmware-started event" cr
+      exit
+   then    ( event )
+
+   h# 30 <>  if
+      ." Unexpected event while waiting for firmware-started" cr
+   then
+;
 : download-fw  ( adr len -- )
    driver-state ds-not-ready <>  if  " Firmware downloaded" vtype 2drop exit  then
-   2dup fw-image-ok? 0=  if  ." Bad WLAN firmware image" abort  then
+   2dup fw-image-ok? 0=  if  ." Bad WLAN firmware image" cr  exit  then
    download-fw-init
    (download-fw)
-   wait-cmd-resp drop			\ A packet is sent after download completes
+
+   wait-fw
+
    ds-ready to driver-state
-   d# 200 ms
    marvel-get-mac-address
 ;
 
