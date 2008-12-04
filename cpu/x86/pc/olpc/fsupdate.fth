@@ -186,7 +186,12 @@ previous
 : update-devices  " disk: sd: http:\\172.18.0.1"  ;
 : try-fs-update  ( -- )
    ." Searching for a NAND file system update image." cr
-   update-devices fs-update-from-list
+   " disk: sd:" fs-update-from-list
+   secure? 0=  if
+      ." Trying multicast update" cr
+      ['] enand catch  0=  if  exit  then
+   then
+   " http:\\172.18.0.1" fs-update-from-list
 ;
 
 : $update-nand  ( devspec$ -- )

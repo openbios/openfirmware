@@ -153,7 +153,7 @@ h# beef.face constant CMD_TYPE_INDICATION
 
 -1 value fw-seq
 
-: fw-seq++  ( -- )  fw-seq 1+ to fw-seq  ;
+: fw-seq++  ( -- seq )  fw-seq 1+ dup to fw-seq  ;
 
 d#     30 constant resp-wait-tiny
 d#  1,000 constant resp-wait-short
@@ -310,6 +310,7 @@ constant /rx-min
 : +xw  ( n -- )  'x le-w!  /w +x  ;
 : +xb  ( n -- )  'x c!     /c +x  ;
 : +xbl ( n -- )  'x be-l!  /l +x  ;
+: +xerase  ( n -- )  'x over erase  +x  ;
 
 : outbuf-bulk-out  ( dlen -- error? )
    /fw-cmd + outbuf swap		( adr len )
@@ -385,13 +386,26 @@ constant /rx-min
    dup .cmd
    resp-wait-short to resp-wait
    outbuf 2 pick /fw-cmd + erase                  ( len cmd )
-   fw-seq++					  ( len cmd )
    CMD_TYPE_REQUEST      outbuf >fw-req    le-l!  ( len cmd )
    ( cmd )               outbuf >fw-cmd    le-w!  ( len )
    ( len ) /fw-cmd-hdr + outbuf >fw-len    le-w!  ( )
-   fw-seq                outbuf >fw-seq    le-w!  ( )
+   fw-seq++              outbuf >fw-seq    le-w!  ( )
    0                     outbuf >fw-result le-w!  ( )
    set-fw-data-x				  ( )
+;
+: start-cmd  ( cmd -- )
+   dup .cmd
+   resp-wait-short to resp-wait
+   outbuf to x  0 to /x
+   CMD_TYPE_REQUEST +xl		( cmd )
+   ( cmd )          +xw		( )
+   0                +xw		( )  \ Set len later
+   fw-seq++         +xw		( )
+   0                +xw		( )
+;
+: finish-cmd  ( -- len )
+   /x 4 -  outbuf 6 + le-w!	\ Set len field
+   /x
 ;
 
 true value got-response?
@@ -742,14 +756,15 @@ headers
 
 1 constant #probes
 
+d# 14 constant #channels
+
+[ifdef] notdef
 struct
    2 field >type-id
    2 field >/payload
 dup constant /marvel-IE-hdr
    2 field >probes
 constant /probes-IE
-
-d# 14 constant #channels
 
 struct
    1 field >radio-type
@@ -775,6 +790,7 @@ struct
    /chan-list-IE field >chan-list-IE
    /probes-IE    field >probes-IE
 constant /cmd_802_11_scan
+[then]
 
 1 constant BSS_INDEPENDENT
 2 constant BSS_INFRASTRUCTURE
@@ -790,12 +806,13 @@ h# 000f.ac02 constant aoui			\ WPA2 authentication suite
 h# 0050.f202 constant amoui			\ WPA authentication suite
 
 
-d# 34 instance buffer: ssid
+d# 34 instance buffer: scan-ssid
 
 0 value scan-type
 : active-scan  ( -- )  0 to scan-type  ;
 : passive-scan  ( -- )  1 to scan-type  ;
 
+[ifdef] notdef
 : make-chan-list-param  ( adr -- )
    #channels 0  do
       dup i /chan-list * +
@@ -807,9 +824,9 @@ d# 34 instance buffer: ssid
    loop  drop
 ;
 
-: (scan)  ( -- error? | adr len 0 )
-   /cmd_802_11_scan  ssid c@  if
-      /marvel-IE-hdr +  ssid c@ +
+: (oldscan)  ( -- error? | adr len 0 )
+   /cmd_802_11_scan  scan-ssid c@  if
+      /marvel-IE-hdr +  scan-ssid c@ +
    then
    6 ( CMD_802_11_SCAN ) prepare-cmd              ( )
    resp-wait-long to resp-wait                    ( )
@@ -825,13 +842,13 @@ d# 34 instance buffer: ssid
    2 over >/payload le-w!                         ( 'fw-data 'probes )
    #probes swap >probes le-w!                     ( 'fw-data )
 
-   ssid c@  if                                    ( 'fw-data )
+   scan-ssid c@  if                               ( 'fw-data )
       \ Attach an SSID TLV to filter the result
       /cmd_802_11_scan +                               ( 'ssid )
       h# 000 over >type-id le-w!                       ( 'ssid )
-      ssid c@   over >/payload le-w!                   ( 'ssid )
-      ssid count  rot /marvel-IE-hdr +  swap move      ( )
-      /cmd_802_11_scan  /marvel-IE-hdr ssid c@ +  +    ( cmdlen )
+      scan-ssid c@   over >/payload le-w!              ( 'ssid )
+      scan-ssid count  rot /marvel-IE-hdr +  swap move      ( )
+      /cmd_802_11_scan  /marvel-IE-hdr scan-ssid c@ +  +    ( cmdlen )
    else                                           ( 'fw-data )
       drop
       /cmd_802_11_scan                            ( cmdlen )
@@ -842,8 +859,62 @@ d# 34 instance buffer: ssid
       respbuf /respbuf /fw-cmd /string  rot       ( adr len 0 )
    then
 ;
+[then]
+
+h# 7ffe instance value channel-mask
+
+: +chan-list-tlv  ( -- )
+   h# 101 +xw
+   0 +xw  'x >r       ( r: 'payload )
+   #channels 1+  1  do
+      1 i lshift  channel-mask  and  if
+         0 +xb            \ Radio type
+         i +xb            \ Channel #
+         scan-type +xb    \ Scan type - 0:active  or  1:passive
+         d# 100 +xw       \ Min scan time
+         d# 100 +xw       \ Max scan time
+      then
+   loop
+   'x r@ -  r> 2- le-w!
+;
+
+: +probes-tlv  ( -- )
+   h# 102 +xw        \ Probes TLV
+   2 +xw             \ length
+   #probes +xw       \ #probes
+;
+
+: +ssid-tlv  ( -- )
+   scan-ssid c@  if
+      0 +xw        \ SSID TLV
+      scan-ssid c@ +xw  \ length
+      scan-ssid count +x$
+   then
+;
+
+: (scan)  ( -- error? | adr len 0 )
+   6 ( CMD_802_11_SCAN ) start-cmd
+   resp-wait-long to resp-wait
+
+   BSS_ANY +xb
+   6 +xerase           \ BSS ID
+
+   +chan-list-tlv
+   +probes-tlv
+   +ssid-tlv
+
+   finish-cmd outbuf-wait			  ( error? )
+   dup  0=  if 				          ( error? )
+      respbuf /respbuf /fw-cmd /string  rot       ( adr len 0 )
+   then
+;
+
 
 external
+: set-channel-mask  ( n -- )
+   h# 7ffe and   to channel-mask
+;
+
 \ Ask the device to look for the indicated SSID.
 : set-ssid  ( adr len -- )
    \ This is an optimization for NAND update over the mesh.
@@ -851,7 +922,7 @@ external
    \ from transmitting when they come on-line.
    2dup  " olpc-mesh"  $=  if  passive-scan  then
 
-   h# 32 min  ssid pack drop
+   h# 32 min  scan-ssid pack drop
 ;
 
 : scan  ( adr len -- actual )
@@ -1073,7 +1144,14 @@ headers
 : mesh-start  ( channel -- error? )
    \ h# 223 (0x100 + 291) is an old value
    \ h# 125 (0x100 + 37) is an "official" value that doesn't work
-   h# 223 (mesh-start)  dup  0=  if   ( error? )
+   dup h# 223 (mesh-start)  if        ( channel )
+      \ Retry once
+      h# 223 (mesh-start)             ( error? )
+   else
+      drop false                      ( error? )
+   then
+     
+   dup 0=  if                         ( error? )
       tx-ctrl  TX_WDS or to tx-ctrl   ( error? )
       ds-associated set-driver-state  ( error? )
    then                               ( error? )

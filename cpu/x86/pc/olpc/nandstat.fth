@@ -199,11 +199,14 @@ end-string-array
 ;
 : lowlight  ( block# -- )  background-rgb rgb>565 cell-border  ;
 : highlight  ( block# -- )  0 cell-border  ;
-: +block  ( offset -- )
-   current-block +   nand-block-limit mod  ( new-block )
+: highlight-block  ( block# -- )
    current-block lowlight
    to current-block
    current-block highlight
+;
+: +block  ( offset -- )
+   current-block +  nand-block-limit mod  ( new-block )
+   highlight-block
    current-block  show-block-status
 ;
 
@@ -231,7 +234,7 @@ end-string-array
    current-block lowlight
 ;
 
-: scan-nand  ( -- )
+: (scan-nand)  ( -- )
    open-nand
    nand-map 0=  if
       #nand-pages nand-pages/block /  alloc-mem  to nand-map
@@ -255,9 +258,8 @@ end-string-array
 
    show-done
    close-nand-ihs
-
-   examine-nand
 ;
+: scan-nand  ( -- )  (scan-nand) examine-nand  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

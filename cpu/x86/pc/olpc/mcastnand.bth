@@ -7,7 +7,7 @@ fload ${BP}/cpu/x86/pc/olpc/versions.fth
 
 " ${MCNAND_VERSION}" expand$ " test" $=  [if]
    " multicast-nand/Makefile" $file-exists?  0=  [if]
-      " git clone --depth 1 -q git://dev.laptop.org/users/wmb/multicast-nand" expand$ $sh
+      " git clone -q git://dev.laptop.org/users/wmb/multicast-nand" expand$ $sh
    [then]
 [else]   
 " rm -rf multicast-nand" $sh

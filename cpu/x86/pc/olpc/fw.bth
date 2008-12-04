@@ -344,7 +344,6 @@ fload ${BP}/cpu/x86/pc/biosints.fth
 
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
-fload ${BP}/cpu/x86/pc/olpc/fsupdate.fth
 fload ${BP}/ofw/gui/ofpong.fth
 fload ${BP}/cpu/x86/pc/olpc/life.fth
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
@@ -436,6 +435,7 @@ support-package: http
    fload ${BP}/ofw/inet/http.fth	\ HTTP client
 end-support-package
 
+
 fload ${BP}/ofw/wifi/wifi-cfg.fth
 support-package: supplicant
 fload ${BP}/ofw/wifi/loadpkg.fth
@@ -445,6 +445,10 @@ end-support-package
    " OLPCOFW"nschool-mesh-0"nschool-mesh-1"nschool-mesh-2"
 ;
 ' olpc-ssids to default-ssids
+
+fload ${BP}/cpu/x86/pc/olpc/nandcastui.fth
+fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
+fload ${BP}/cpu/x86/pc/olpc/fsupdate.fth
 
 fload ${BP}/ofw/inet/sntp.fth
 : olpc-ntp-servers  ( -- )
@@ -624,8 +628,6 @@ fload ${BP}/ofw/core/dualconsole.fth
 \   " wifi media lab 802.11" eval
 \   " flash http:\\18.85.46.172\new.rom" eval
 ;
-
-fload ${BP}/cpu/x86/pc/olpc/nandcastui.fth
 
 \ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
 also hidden also keys-forth definitions

@@ -38,6 +38,16 @@ strlen(const char *s)
 	return((size_t) i);
 }
 
+size_t
+strnlen(const char *s, size_t maxlen)
+{
+	int i;
+
+	for (i = 0; i < maxlen && s[i] != '\0'; ++i)
+		;
+	return((size_t) i);
+}
+
 char *
 strcpy(char *to, const char *from)
 {
@@ -71,8 +81,9 @@ strcat(char *to, const char *from)
 	strcpy(to, from);
 	return (ret);
 }
+
 char *
-index(char *s, int c)
+strchr(char *s, int c)
 {
 	while (*s) {
 		if (*s == c)
@@ -92,7 +103,7 @@ strctok(char *s, const char sep)
 		saved_str = s;
 	if (saved_str == NULL)
 		return(NULL);
-	s = index(saved_str, sep);
+	s = strchr(saved_str, sep);
 	if (s != NULL) {
 		*s++ = '\0';
 		while (*s && (*s == sep))

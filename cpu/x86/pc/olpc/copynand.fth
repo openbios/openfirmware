@@ -26,10 +26,13 @@ h# 40 constant /nand-oob
 : close-image-file  ( -- )
    fileih  ?dup  if  0 to fileih  close-dev  then
 ;
+: close-nand  ( -- )
+   nandih  ?dup  if  0 to nandih  close-dev  0 to #nand-pages  then
+;
 : close-nand-ihs  ( -- )
    0 to nanddump-mode?
    close-image-file
-   nandih  ?dup  if  0 to nandih  close-dev  0 to #nand-pages     then
+   close-nand
    crc-ih  ?dup  if  0 to crc-ih  close-dev  then
    #crc-records  if
       crc-buf #crc-records /l* free-mem
@@ -51,13 +54,16 @@ h# 40 constant /nand-oob
     " Stopped by keystroke"   ?nand-abort
 ;
 
-: open-nand  ( -- )
-   " /nandflash" open-dev to nandih
-   nandih 0=  " Can't open NAND FLASH device"  ?nand-abort
+: set-nand-vars  ( -- )
    " erase-size" $call-nand to /nand-block
    " page-size" $call-nand to /nand-page
    " size" $call-nand  /nand-page  um/mod nip to #nand-pages
    /nand-block /nand-page /  to nand-pages/block
+;
+: open-nand  ( -- )
+   " /nandflash" open-dev to nandih
+   nandih 0=  " Can't open NAND FLASH device"  ?nand-abort
+   set-nand-vars
    " start-scan" $call-nand
 ;
 
@@ -237,8 +243,6 @@ d# 128 value #cols
 : xy+  ( x1 y1 x2 y2 -- x3 y3 )  rot + -rot  + swap  ;
 : xy*  ( x y w h -- x*w y*h )  rot *  >r  * r>  ;
 
-0 value nand-block-limit
-
 : do-fill  ( color x y w h -- )  " fill-rectangle" $call-screen  ;
 
 \ States:  0:erased  1:bad  2:waiting for write  3:written
@@ -247,20 +251,28 @@ d# 128 value #cols
 
 : show-state  ( eblock# state -- )  swap >loc  glyph-w glyph-h  do-fill  ;
 
+code map-color  ( color24 -- color565 )
+   bx pop
+   bx ax mov  3 # ax shr  h#   1f # ax and            \ Blue in correct place
+   bx cx mov  5 # cx shr  h#  7e0 # cx and  cx ax or  \ Green and blue in place
+              8 # bx shr  h# f800 # bx and  bx ax or  \ Red, green and blue in place
+   ax push   
+c;
+: show-color  ( eblock# color32 -- )  map-color show-state  ;
+
 dev screen  : erase-screen erase-screen ;  dend
 
 h# 80 h# 80 h# 80  rgb>565 constant bbt-color      \ gray
     0     0     0  rgb>565 constant erased-color   \ black
 h# ff     0     0  rgb>565 constant bad-color      \ red
     0     0 h# ff  rgb>565 constant clean-color    \ blue
+h# ff     0 h# ff  rgb>565 constant partial-color  \ magenta
 h# ff h# ff     0  rgb>565 constant pending-color  \ yellow
     0 h# ff     0  rgb>565 constant written-color  \ green
     0 h# ff h# ff  rgb>565 constant strange-color  \ cyan
 h# ff h# ff h# ff  rgb>565 constant starting-color \ white
 
 : gshow-init  ( #eblocks -- )
-   #nand-pages nand-pages/block /  to nand-block-limit
-
    cursor-off  " erase-screen" $call-screen
 
    " bbt0" $call-nand nand-pages/block /  bbt-color show-state
@@ -371,13 +383,15 @@ gshow
    working-page " read-oob" $call-nand  d# 14 +  ( adr )
 
    \ .. Cleanmarker
-   dup  " "(85 19 03 20 08 00 00 00)" comp  0=  if  drop 4 exit  then
+   dup  " "(85 19 03 20 08 00 00 00)" comp  0=  if  drop 4 exit  then  ( adr )
 
    \ .. Bad block tables
 \ These can't happen because the BBT table blocks are marked "bad"
 \ so they get filtered out at the top of this routine.
 \   dup  " Bbt0" comp  0=  if  drop 7 exit  then
 \   dup  " 1tbB" comp  0=  if  drop 8 exit  then
+
+[ifdef] notdef
    drop
 
    \ See if the whole thing is really completely erased
@@ -386,6 +400,9 @@ gshow
 
    \ Not completely erased
    load-base  /nand-block  written?  if  5 exit  then
+[else]
+   ( adr )  h# 40 written?  if  5  then
+[then]
 
    \ Erased
    6
@@ -426,6 +443,8 @@ end-string-array
    to current-block
    current-block highlight
 ;
+
+0 value nand-block-limit
 : +block  ( offset -- )
    current-block +   nand-block-limit mod  ( new-block )
    point-block
@@ -449,6 +468,7 @@ end-string-array
 
 : examine-nand  ( -- )
    0 status-line 1- at-xy  red-letters ." Arrows, fn Arrows to move, Esc to exit" black-letters cr
+   #nand-pages nand-pages/block /  to nand-block-limit
    0 to current-block
    current-block highlight
    false to examine-done?

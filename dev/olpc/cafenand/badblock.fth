@@ -33,6 +33,70 @@ purpose: Bad block table handling for NAND FLASH
    <>
 ;
 
+: block#-bad?  ( block# -- flag )
+   dup 2 rshift             ( block# byte# )
+   bbt + c@                 ( block# byte )
+   swap 3 and 2* rshift     ( bits )
+   3 and 3 <>
+;
+
+: next-bad-block  ( block# -- block#' )
+   usable-page-limit pages/eblock /  swap 1+  ?do
+      i block#-bad?  if  i unloop exit  then
+   loop
+   -1
+;
+
+defer xskipchar
+: abs-block>page  ( abs-block# -- rel-page# )
+   pages/eblock * partition-start -
+;
+: page>next-abs-block  ( rel-page# -- abs-block# )
+   dup -1 =  if
+      drop partition-start
+   else
+      partition-start +  pages/eblock /  1+
+   then
+;
+
+\ This is a very fast way to extract the bad block information,
+\ taking advantage of the sparseness of bad blocks.
+\ * To find the first bad block, call it with page# = -1.
+\ * Then call it with the page# that was returned the last time.
+\ * When there are no more bad blocks, it returns page# = -1.
+\ Finding all N bad blocks requires only N+1 calls, whereas
+\ using block-bad? would require total#blocks calls.
+\ The implementation skips long spans of good blocks very rapidly.
+
+: next-bad-block  ( page# -- page#' )
+   page>next-abs-block
+   usable-page-limit pages/eblock /  swap     ( limit block# )
+
+   \ Handle initial fragments the hard way
+   begin  dup 3 and  while                    ( limit block# )
+      2dup <=  if  2drop -1 exit  then        ( limit block# )
+      dup block#-bad?  if
+         nip abs-block>page exit
+      then                                    ( limit block# )
+      1+                                      ( limit block#' )
+   repeat                                     ( limit block#' )
+
+   \ Rapid scan for a non-ff byte
+   2dup - 2 rshift                            ( limit block# #bytes )
+   swap 2 rshift bbt +  swap                  ( limit adr #bytes )
+   h# ff xskipchar drop                       ( limit adr' )
+   bbt - 2 lshift                             ( limit block# )
+   
+   \ Slow scan (4 iterations max) to find the specific block 
+   ?do                                        ( )
+      i block#-bad?  if
+         i abs-block>page  unloop exit
+      then
+   loop
+   -1
+;
+
+
 \ Marks the block containing page# as bad
 : mark-bad  ( page# -- )
    >bbt                   ( adr mask )
@@ -237,6 +301,7 @@ h# 10 constant #bbtsearch   \ Number of erase blocks to search for a bbt
 
 \ Get the existing bad block table, or make a new one if necessary
 : get-bbt  ( -- )
+   " skipchar" $find  if  to xskipchar  then
    get-existing-bbt
    bbt0 bbt1 or  0=  if
       ." No bad block table; making one" cr

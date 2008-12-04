@@ -159,6 +159,22 @@ fflush (FILE *fp)
 }
 
 int
+kbhit()
+{
+  int  count;
+
+  if (stdin->bufc != 0)
+      return 1;
+  count = OFRead(stdin->id, stdin->buf, 1);
+  if (count > 0) {
+      stdin->bufc = count;
+      stdin->inbufp = stdin->buf;
+      return 1;
+  }
+  return 0;
+}
+
+int
 fgetc(FILE *fp)
 {
   int  count;

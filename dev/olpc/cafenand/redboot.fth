@@ -52,6 +52,36 @@ d# 7 constant max#partitions  \ Not counting the FIS directory entry
    part-buf (#partitions)  to #partitions
 ;
 
+: cscount  ( adr -- adr len )
+   dup  begin  dup c@  while  ca1+  repeat  ( adr adr' )
+   over -
+;   
+
+\ partition# = 0 means the entire disk, -1 means the partition map
+\ type=0:unspecified  -1:partition map
+
+: partition-info  ( partition# -- start size granularity name$ type )
+   ?dup 0=  if
+      0 usable-page-limit pages/eblock /  /eblock  " "  0
+      exit
+   then                                   ( partition# )
+
+   \ Redboot partition entry 0 describes the partition map block
+   \ -1 on input asks for info about the partition map area .
+   dup -1 =  if  1+  then                 ( partition#' )
+
+   dup #partitions >  if                  ( partition# )
+      drop  0 0 0  " "  -1  exit
+   then                                   ( partition# )
+
+   /partition-entry *  part-buf +  >r     ( r: adr )
+   r@ d# 16 + l@ /eblock /                ( start )
+   r@ d# 24 + l@ /eblock /                ( start size )
+   /eblock                                ( start size granularity )
+   r@ cscount d# 16 min                   ( start size granularity name$ )
+   r> part-buf =  if  -1  else  0  then   ( start size granularity name$ type )
+;
+
 : set-partition-number  ( partition# -- error? )
    dup 0=  if                                    ( partition# )
       to partition#

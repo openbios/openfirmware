@@ -18,11 +18,21 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
 : write-flash-range  ( adr end-offset start-offset -- )
    ." Writing" cr
    ?do                ( adr )
-      i .x (cr                           ( adr )
-      i /flash-block mod 0=  if  i flash-erase-block  then
-      dup  /chunk  i  flash-write        ( adr )
-      /chunk +                           ( adr' )
-   /chunk +loop       ( adr )
+      \ Save time - don't write if the data is the same
+      i .x (cr                              ( adr )
+      flash-base -1 =  if                   ( adr )
+         true                               ( adr must-write? )
+      else                                  ( adr )
+         dup  flash-base i +  /flash-block comp   ( adr must-write? )
+      then                                  ( adr must-write? )
+
+      if
+\         i /flash-block mod 0=  if  i flash-erase-block  then
+         i flash-erase-block
+         dup  /flash-block  i  flash-write  ( adr )
+      then
+      /flash-block +                        ( adr' )
+   /flash-block +loop                       ( adr )
    cr  drop           ( )
 ;
 
@@ -30,8 +40,8 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
    ." Verifying" cr
    ?do                ( adr )
       i .x (cr
-      dup  i +  /chunk  i  flash-verify
-   /chunk +loop       ( adr )
+      dup  i +  /flash-block  i  flash-verify
+   /flash-block +loop       ( adr )
    cr  drop           ( )
 ;
 
