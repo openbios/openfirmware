@@ -21,7 +21,7 @@ d#  768 value #scanlines	\ Screen height
    then
 ;
 
-: /fb  ( -- )  /scanline #scanlines * bytes/pixel *  ;	\ Size of framebuffer
+: /fb  ( -- )  /scanline #scanlines *  ;	\ Size of framebuffer
 
 0 instance value dc-base
 0 instance value gp-base
@@ -278,7 +278,13 @@ true value hsync-low?
    \ TGEN, GDEN, VDEN, PALB, A20M, A18M, (8BPP=0  16BPP=100)
    \ The "c" part (A20M, A18M) is unnecessary for LX, but harmless
    \ The "2" part (PALB) is unnecessary for GX, but harmless
-   h# c200.0019  bytes/pixel 2 =  if  h# 0100 or  then  8 dc!
+   h# c200.0019
+   bytes/pixel case
+      1 of      0  endof
+      2 of h# 100  endof
+      4 of h# 300  endof
+   endcase
+   or  8 dc!
 
    \ Turn on FIFO
    4 dc@  h# 180000 invert and  h# 6501 or  4 dc!

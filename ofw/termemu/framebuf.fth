@@ -69,6 +69,13 @@ d#  900 termemu-value screen-height
 d# 34 termemu-value #lines
 d# 80 termemu-value #columns
 
+\ Things that change for different pixel depths
+termemu-defer pix*
+termemu-defer fb-invert
+termemu-defer fb-fill
+termemu-defer fb-paint
+termemu-defer fb-16map
+
 termemu-defer draw-character
 termemu-defer insert-characters
 termemu-defer delete-characters

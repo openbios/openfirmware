@@ -60,9 +60,6 @@ dev /packages
    finish-device
 device-end
 
-defer fb-move  ' move  is fb-move
-defer fb-fill  ' fill  is fb-fill
-
 [ifdef] include-fb1
 fload ${BP}/ofw/termemu/fb1.fth		\ Generic 1-bit raster ops
 [then]

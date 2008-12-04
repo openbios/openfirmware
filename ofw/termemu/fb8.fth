@@ -42,9 +42,7 @@
 purpose: High-level part of fb8 8-bit framebuffer support package
 copyright: Copyright 1990 Sun Microsystems, Inc.  All Rights Reserved
 
-\ 8-bit generic frame-buffer driver
-\ Uses 8 bits (1 byte) per pixel.  Code is similar to fb1.fth, but
-\ simpler.
+\ Now supports 8bpp, 16bpp, and 32bpp frame buffer
 
 \ Uses the following routines:
 \ #lines	( -- n ) Number of text line positions in the window
@@ -74,41 +72,78 @@ copyright: Copyright 1990 Sun Microsystems, Inc.  All Rights Reserved
 headerless
 decimal
 
+hex
+: rgb>565  ( r g b -- w )
+   3 rshift
+   swap 2 rshift  5 lshift or
+   swap 3 rshift  d# 11 lshift or
+;
 
-\ Moved to framebuf.fth
-\  0 value emu-bytes/line	\ Later set to "#columns char-width *"
-\  				\ this is the window width
-: bytes/line  screen-width  ;
-: lines/screen  screen-height  ;
-: bytes/screen  ( -- n )  bytes/line  lines/screen *  ;
+create colors-8bpp
+   0 , 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9 , a , b , c , d , e , f ,
 
-: screen-background  ( -- n )
-   16-color?  if
-      inverse?  if  foreground-color  else  background-color  then
-   else
-      inverse-screen?  if  h# ff  else  0  then
-   then
+create colors-565
+   00 00 00 rgb>565 ,  \ Black
+   00 00 aa rgb>565 ,  \ Dark blue
+   00 aa 00 rgb>565 ,  \ Dark green
+   00 aa aa rgb>565 ,  \ Dark cyan
+   aa 00 00 rgb>565 ,  \ Dark red
+   aa 00 aa rgb>565 ,  \ Dark magenta
+   aa 55 aa rgb>565 ,  \ Brown
+\  aa aa aa rgb>565 ,  \ Light gray
+   c0 c0 c0 rgb>565 ,  \ Light gray (OLPC background)
+   55 55 55 rgb>565 ,  \ Dark gray
+   55 55 ff rgb>565 ,  \ Light blue
+   55 ff 55 rgb>565 ,  \ Light green
+   55 ff ff rgb>565 ,  \ Light cyan
+   ff 55 55 rgb>565 ,  \ Light red (pink)
+   ff 55 ff rgb>565 ,  \ Light magenta
+   ff ff 55 rgb>565 ,  \ Light yellow
+   ff ff ff rgb>565 ,  \ White
+
+create colors-32bpp
+   000000 l,  \ Black
+   0000aa l,  \ Dark blue
+   00aa00 l,  \ Dark green
+   00aaaa l,  \ Dark cyan
+   aa0000 l,  \ Dark red
+   aa00aa l,  \ Dark magenta
+   aa55aa l,  \ Brown
+\  aaaaaa l,  \ Light gray
+   c0c0c0 l,  \ Light gray (OLPC background)
+   555555 l,  \ Dark gray
+   5555ff l,  \ Light blue
+   55ff55 l,  \ Light green
+   55ffff l,  \ Light cyan
+   ff5555 l,  \ Light red (pink)
+   ff55ff l,  \ Light magenta
+   ffff55 l,  \ Light yellow
+   ffffff l,  \ White
+decimal
+
+: >16-map  ( fg/bg- -- color )
+   if  foreground-color  else  background-color  then  
+   h# f and  fb-16map swap na+ @
 ;
-: text-background  ( -- n )
-   16-color?  if
-      inverse?  if  foreground-color  else  background-color  then
-   else
-      inverse?  if  h# ff  else  0  then
-   then
-;
-: text-foreground  ( -- n )
-   16-color?  if
-      inverse?  if  background-color  else  foreground-color  then
-   else
-      inverse?  if  0  else  h# ff  then
-   then
-;
-: logo-foreground  ( -- n )  16-color?  if  text-foreground  else  1  then  ;
+: fg  ( -- n )  true  >16-map  ;
+: bg  ( -- n )  false >16-map  ;
+: screen-background  ( -- n )  inverse?  >16-map  ;
+: text-background    ( -- n )  inverse?  >16-map  ;
+: text-foreground    ( -- n )  inverse?  0= >16-map  ;
+: logo-foreground    ( -- n )  text-foreground  ;
+
+\ defer pix*       ' noop        to pix*
+\ defer fb-invert  ' fb8-invert  to fb-invert
+\ defer fb-paint   ' fb8-paint   to fb-paint
 
 headers
+: bytes/line  ( -- n )  screen-width pix*  ;
+: bytes/char  ( -- n )  char-width pix*  ;
+: bytes/screen  ( -- n )  bytes/line  screen-height *  ;
+
 : fb8-invert-screen  ( -- )
    frame-buffer-adr  screen-width screen-height bytes/line
-   text-foreground screen-background  fb8-invert
+   text-foreground screen-background  fb-invert
 ;
 : fb8-erase-screen  ( -- )
    frame-buffer-adr  bytes/screen  screen-background fb-fill
@@ -121,7 +156,7 @@ headerless
 
 : screen-adr  ( column# line# -- adr )
     char-height *  window-top   +               ( column# ypixels )
-    swap  char-width  *  window-left  +   swap  ( xpixels ypixels )
+    swap  bytes/char  *  window-left  +   swap  ( xpixels ypixels )
     bytes/line *  +  frame-buffer-adr  +
 ;
 : line-adr  ( line# -- adr )  0 swap screen-adr  ;
@@ -133,23 +168,23 @@ headers
    >font fontbytes  char-width char-height
    cursor-adr bytes/line  text-foreground text-background
    ( fontadr fontbytes width height screenadr bytes/line fg-color bg-color )
-   fb8-paint
+   fb-paint
 ;
 : fb8-toggle-cursor  ( -- )
    cursor-adr char-width char-height bytes/line
-   text-foreground text-background  fb8-invert
+   text-foreground text-background  fb-invert
 ;
 
 : fb8-draw-logo  ( line# logoadr logowidth logoheight -- )
    2swap swap line-adr >r  -rot   ( logoadr width height )  ( r: scrn-adr )
    swap dup 7 + 8 /               ( logoadr height width linebytes )
    swap rot                       ( logoadr linebytes width height )
-   r> bytes/line  logo-foreground screen-background  fb8-paint
+   r> bytes/line  logo-foreground screen-background  fb-paint
 ;
 
 headerless
 
-: move-line    ( src-line-adr dst-line-adr -- )  emu-bytes/line fb-move  ;
+: move-line    ( src-line-adr dst-line-adr -- )  emu-bytes/line fb-window-move  ;
 : erase-line   ( line-adr -- )  emu-bytes/line screen-background fb-fill  ;
 : erase-lines  ( last-line first-line -- )
    ?do  i erase-line  bytes/line +loop
@@ -171,7 +206,7 @@ headers
 : fb8-delete-lines  ( delta-#lines -- )
     dup break-high swap break-low  ( break-high break-low )
     cursor-y  over window-bottom swap -  ( b-hi b-lo cursor-y  bottom-blo )
-    bytes/line emu-bytes/line  fb8-window-move   ( break-hi )
+    bytes/line emu-bytes/line  fb-window-move   ( break-hi )
     window-bottom swap  erase-lines
 ;
 
@@ -191,20 +226,20 @@ headers
 headerless
 
 : move-chars  ( source-col# dest-col# -- )
-    2dup max  #columns swap -         ( src dst #chars )
-    char-width * -rot                 \ count is linelength-maxcol#
-    swap column-adr  swap column-adr  ( count src-adr dst-adr )
-    char-height 0  do
-       3dup rot move   ( count src-adr dst-adr )
-       swap bytes/line +  swap bytes/line +
-    loop    2drop drop
+    2dup max  #columns swap -                ( src dst #chars )
+    bytes/char *  -rot                       ( #bytes src dst )
+    swap column-adr  swap column-adr         ( #bytes src dst )
+    char-height 0  do                        ( #bytes src dst )
+       3dup rot move                         ( #bytes src dst )
+       swap bytes/line +  swap bytes/line +  ( #bytes src' dst' )
+    loop    3drop                            ( )
 ;
 : erase-chars  ( #chars start-col# -- )
-    swap char-width * swap
-    column-adr char-height 0  do  ( count adr )
-        2dup swap text-background fb-fill  ( count adr )
-        bytes/line +
-    loop  2drop
+    swap bytes/char * swap                  ( #bytes start-col# )
+    column-adr char-height 0  do            ( #bytes adr )
+        2dup swap text-background fb-fill   ( #bytes adr )
+        bytes/line +                        ( #bytes adr' )
+    loop  2drop                             ( )
 ;
 headers
 : fb8-insert-characters  ( #chars -- )
@@ -221,23 +256,46 @@ headerless
 
 : center-display  ( -- )
     screen-height  #lines   char-height * -  2/  is window-top
-    screen-width   #columns char-width  * -  2/  -32 and  is window-left
+    screen-width   #columns char-width  * -  2/  8 pix* negate and  is window-left
 ;
 
 headers
-: fb8-install  ( screen-width screen-height #columns #lines -- )
+: fb-install  ( screen-width screen-height #columns #lines bytes/pixel -- )
+   case
+      1 of
+         ['] noop       to pix*
+         ['] fb8-invert to fb-invert
+         ['] fill       to fb-fill
+         ['] fb8-paint  to fb-paint
+         ['] colors-8bpp  to fb-16map
+      endof
 
-   " iso6429-1983-colors" get-my-property  0=  dup to 16-color?  if
-      ['] not-dark to light
-      \ Discard the property value (adr,len)
-      2drop    ( screen-width screen-height #columns #lines )
-   then        ( screen-width screen-height #columns #lines )
+      2 of
+         ['] /w*         to pix*
+         ['] fb16-invert to fb-invert
+         ['] wfill       to fb-fill
+         ['] fb16-paint  to fb-paint
+         ['] colors-565  to fb-16map
+      endof
+
+      4 of
+         ['] /l*         to pix*
+         ['] fb32-invert to fb-invert
+         ['] lfill       to fb-fill
+         ['] fb32-paint  to fb-paint
+         ['] colors-32bpp to fb-16map
+      endof
+   endcase
+
+   \ Assume that the driver supports the 16-color extension
+   true to 16-color?
+   ['] not-dark to light
 
    \ my-self is display device's ihandle
    screen-#rows    min  is #lines
    screen-#columns min  is #columns
    is screen-height  is screen-width
-   #columns char-width *  is emu-bytes/line
+   #columns bytes/char *  is emu-bytes/line
    center-display
    ['] fb8-reset-screen   	is reset-screen
    ['] fb8-toggle-cursor  	is toggle-cursor
@@ -247,10 +305,11 @@ headers
    ['] fb8-insert-characters	is insert-characters
    ['] fb8-delete-characters	is delete-characters
    ['] fb8-insert-lines	        is insert-lines
-   bytes/line 8 mod
+   bytes/line 8 pix* mod
    if   ['] fb8-delete-lines-slow
    else ['] fb8-delete-lines
    then     			is delete-lines
    ['] fb8-draw-character	is draw-character
    ['] fb8-draw-logo		is draw-logo
 ;
+: fb8-install  ( width height #cols #lines -- )  1 fb-install  ;

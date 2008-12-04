@@ -354,7 +354,7 @@ variable mouse-y
 ;
 : track-init  ( -- )
    screen-ih package(
-      frame-buffer-adr  screen-width  screen-height bytes/line16
+      frame-buffer-adr  screen-width  screen-height  bytes/line
    )package  to /line  2- to maxy  2- to maxx  to fbadr
    load-base ptr !
 ;

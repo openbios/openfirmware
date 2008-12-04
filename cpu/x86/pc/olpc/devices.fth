@@ -310,8 +310,6 @@ fload ${BP}/cpu/x86/pc/olpc/gpioinit.fth
 fload ${BP}/cpu/x86/pc/olpc/chipinit.fth
 [then]
 
-fload ${BP}/cpu/x86/fb16-ops.fth
-fload ${BP}/ofw/termemu/fb16.fth
 0 0  " 1,1"  " /pci" begin-package
    fload ${BP}/dev/olpc/dcon/dconsmb.fth         \ SMB access to DCON chip
    fload ${BP}/dev/olpc/dcon/dcon.fth            \ DCON control

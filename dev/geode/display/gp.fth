@@ -3,8 +3,8 @@ purpose: Geode LX graphics acceleration
 
 alias depth+ wa+
 
-: dst!  ( x y -- )  bytes/line16 * swap depth+ 0 gp!  ;
-: src!  ( x y -- )  bytes/line16 * swap depth+ 4 gp!  ;
+: dst!  ( x y -- )  bytes/line * swap depth+ 0 gp!  ;
+: src!  ( x y -- )  bytes/line * swap depth+ 4 gp!  ;
 : stride!  ( dst-stride src-stride -- )  wljoin  8 gp!  ;
 : wh!  ( width height -- )  swap wljoin h# c gp!  ;
 \ : fg!  ( foreground-color -- )  h# 10 gp!  ;
@@ -25,10 +25,18 @@ alias depth+ wa+
 \ Finished with all the queued-up commands
 : gp-wait-done   ( -- )  begin  h# 44 gp@  1 and 0=  until  ;
 
+0 instance value rop-high
+
 \ Do this once
 : gp-setup  ( -- )
    frame-buffer-adr >physical  dup dup offset!
-   bytes/line16 dup stride!
+   bytes/line dup stride!
+   bytes/pixel  case
+      1 of            0 endof  \  8-bpp 3:3:2
+      2 of h# 6000.0000 endof  \ 16-bpp 5:6:5
+      4 of h# 8000.0000 endof  \ 32-bpp 8:8:8:8
+   endcase
+   to rop-high
 ;
 
 \ This one is a big win compared to doing it with the CPU
@@ -36,7 +44,7 @@ alias depth+ wa+
 : gp-move  ( src-x,y dst-x,y w,h -- )
    gp-wait-ready
    wh!  dst!  src!
-   h# 6000.00cc ropmode!  \ RGB565, Output = source
+   h# cc rop-high or  ropmode!  \ Output = source
    1 blt!      \ Source data from framebuffer
    gp-wait-done
 ;
@@ -46,7 +54,7 @@ alias depth+ wa+
 : gp-fill  ( color dst-x,y w,h -- )
    gp-wait-ready
    wh!  dst!  0 pattern!
-   h# 6000.00f0 ropmode!  \ RGB565, Output = pattern
+   h# f0 rop-high or  ropmode!  \ Output = pattern
    h# 0 blt!   \ No source or destination data from framebuffer
    gp-wait-done
 ;
@@ -61,7 +69,7 @@ alias depth+ wa+
    screen-height char-height -   gp-move
 ;
 : gp-fill-last-line  ( color -- )
-   bg16  0 screen-height char-height -  screen-width char-height  gp-fill
+   bg  0 screen-height char-height -  screen-width char-height  gp-fill
 ;
 [then]
 
@@ -75,14 +83,13 @@ alias depth+ wa+
    0  line#        rc>window    ( src-x,y dst-x,y r: delta )
    #columns  #lines r@ -  rc>pixels    ( src-x,y dst-x,y w,h r: delta )
    gp-move                      ( r: delta )
-   screen-background16          ( color r: delta )
+   screen-background            ( color r: delta )
    0  #lines r@ -  rc>window    ( color dst-x,y r: delta )
    #columns  r>    rc>pixels    ( color dst-x,y w,h )
    gp-fill
 ;
 
-: gp-fb16-install  ( -- )
-   fb16-install
+: gp-install  ( -- )
    gp-setup
    ['] fbgeode-delete-lines is delete-lines
 ;
@@ -92,10 +99,7 @@ alias depth+ wa+
    default-font set-font
    /scanline bytes/pixel /  #scanlines     ( width height )
    over char-width / over char-height /    ( width height rows cols )
-   bytes/pixel  case                       ( width height rows cols )
-      1 of  fb8-install      endof         ( )
-      2 of  gp-fb16-install  endof         ( )
-   endcase                                 ( )
+   bytes/pixel fb-install gp-install       ( )
    init-hook
 ;
 
