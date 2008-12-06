@@ -69,6 +69,11 @@ here swap - constant /ofw-boot-sectors
    ofw-boot-sectors 11 + lew@ 20 * /sector / 0 ?do
       sector-buf /sector ofd @ fputs
    loop
+
+   \ Fill the rest of the disk image with zeros
+   d# 1440 d# 1024 *  ofd @ fsize  ?do
+      sector-buf /sector ofd @ fputs
+   /sector +loop
 [then]
 
    ofd @ fclose
