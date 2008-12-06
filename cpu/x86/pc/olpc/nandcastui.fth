@@ -24,16 +24,27 @@ purpose: User interface for NAND multicast updater
    r> close-dev
 ;
 
+: secure$  ( -- adr len )
+   secure?  if  " secure"  else  null$  then
+;
+
 d# 20 value redundancy
 
 : #nb  ( channel# -- )
    depth 1 < abort" Usage: channel# #nb"
-   " rom:nb_rx ether:%d" sprintf boot-load go
+   secure$ rot
+   " rom:nb_rx ether:%d %s" sprintf boot-load go
 ;
 : #nb-clone  ( channel# -- )
    depth 1 < abort" Usage: channel# #nb-clone"
    redundancy swap
    " rom:nb_tx ether:%d nand: %d" sprintf boot-load go
+;
+: #nb-copy  ( image-filename$ channel# -- )
+   depth 3 < abort" #nb-copy - too few arguments"
+   >r 2>r                             ( placement-filename$ r: channel# image-filename$ )
+   redundancy  2r> r>                 ( redundancy image-filename$ channel# )
+   " rom:nb_tx ether:%d %s %d 131072" sprintf boot-load go
 ;
 : #nb-update  ( placement-filename$ image-filename$ channel# -- )
    depth 5 < abort" #nb-update - too few arguments"
@@ -50,12 +61,19 @@ d# 20 value redundancy
    redundancy  2r> r>                 ( siglen sigadr speclen specadr redundancy image-filename$ channel# )
    " rom:nb_tx ether:%d %s %d 131072 %d %d %d %d" sprintf boot-load go
 ;
-: t1  " u:\os767.plc" " u:\os767.img" d# 11 #nb-update  ;
-: t2  " u:\fs.zip" " u:\os767.img" d# 11 #nb-secure  ;
 
 : nb-clone1  ( -- )  1 #nb-clone  ;
 : nb-clone6  ( -- )  6 #nb-clone  ;
 : nb-clone11  ( -- )  d# 11 #nb-clone  ;
+
+: nb-update1  ( -- )  1 #nb-update  ;
+: nb-update6  ( -- )  6 #nb-update  ;
+: nb-update11  ( -- )  d# 11 #nb-update  ;
+
+: nb-secure1  ( -- )  1 #nb-secure  ;
+: nb-secure6  ( -- )  6 #nb-secure  ;
+: nb-secure11  ( -- )  d# 11 #nb-secure  ;
+
 : nb1  ( -- )  1 #nb  ;
 : nb6  ( -- )  6 #nb  ;
 : nb11  ( -- )  d# 11 #nb  ;

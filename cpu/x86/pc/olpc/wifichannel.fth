@@ -115,8 +115,12 @@ d# 15 constant rssi-limit
 alias nb nandblaster
 
 d# 10 constant rssi-threshold
-: nb-clone  ( -- )
+: nb-auto-channel  ( -- chan# )
    quietest-mesh-channel  ( rssi chan# )
    swap rssi-threshold > abort" No quiet channels"  ( chan# )
-   #nb-clone
 ;
+
+: nb-clone  ( -- )  nb-auto-channel #nb-clone  ;
+
+: nb-update  " u:\fs.plc" " u:\fs.img" nb-auto-channel #nb-update  ;
+: nb-secure  " u:\fs.zip" " u:\fs.img" nb-auto-channel #nb-secure  ;

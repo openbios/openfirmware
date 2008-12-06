@@ -187,10 +187,8 @@ previous
 : try-fs-update  ( -- )
    ." Searching for a NAND file system update image." cr
    " disk: sd:" fs-update-from-list
-   secure? 0=  if
-      ." Trying NANDblaster" cr
-      ['] nandblaster catch  0=  if  exit  then
-   then
+   ." Trying NANDblaster" cr
+   ['] nandblaster catch  0=  if  exit  then
    " http:\\172.18.0.1" fs-update-from-list
 ;
 

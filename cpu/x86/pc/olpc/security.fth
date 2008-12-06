@@ -582,6 +582,7 @@ warning @ warning off
 
 dev /client-services
 : enter  ( -- )  secure? 0=  security-off?  or  if  visible enter  then  ;
+: exit   ( -- )  secure?  if  security-failure  then  exit  ;
 dend
 warning !
 
