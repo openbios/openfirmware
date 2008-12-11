@@ -116,11 +116,14 @@ alias nb nandblaster
 
 d# 10 constant rssi-threshold
 : nb-auto-channel  ( -- chan# )
-   quietest-mesh-channel  ( rssi chan# )
-   swap rssi-threshold > abort" No quiet channels"  ( chan# )
+   quietest-mesh-channel             ( rssi chan# )
+   swap rssi-threshold >  if         ( chan# )
+      ." No wireless channels are quiet.  The quietest is channel " dup .d cr  ( chan# )
+      " Do you want to use that channel" confirmedn?   ( chan# proceed? )
+      0= abort" Stopping."
+   then                              ( chan# )
 ;
 
-: nb-clone  ( -- )  nb-auto-channel #nb-clone  ;
-
-: nb-update  " u:\fs.plc" " u:\fs.img" nb-auto-channel #nb-update  ;
-: nb-secure  " u:\fs.zip" " u:\fs.img" nb-auto-channel #nb-secure  ;
+: nb-clone    ( -- )  nb-auto-channel  #nb-clone  ;
+: nb-secure   ( -- )  nb-auto-channel  #nb-secure-def  ;
+: nb-update   ( -- )  nb-auto-channel  #nb-update-def  ;

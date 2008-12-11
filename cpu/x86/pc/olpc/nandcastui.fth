@@ -62,20 +62,23 @@ d# 20 value redundancy
    " rom:nb_tx ether:%d %s %d 131072 %d %d %d %d" sprintf boot-load go
 ;
 
-: nb-clone1  ( -- )  1 #nb-clone  ;
-: nb-clone6  ( -- )  6 #nb-clone  ;
+: #nb-update-def  ( channel# -- )  >r " u:\fs.plc" " u:\fs.img" r> #nb-update  ;
+: #nb-secure-def  ( channel# -- )  >r " u:\fs.zip" " u:\fs.img" r> #nb-secure  ;
+
+: nb-clone1   ( -- )      1 #nb-clone  ;
+: nb-clone6   ( -- )      6 #nb-clone  ;
 : nb-clone11  ( -- )  d# 11 #nb-clone  ;
 
-: nb-update1  ( -- )  1 #nb-update  ;
-: nb-update6  ( -- )  6 #nb-update  ;
-: nb-update11  ( -- )  d# 11 #nb-update  ;
+: nb-update1   ( -- )      1 #nb-update-def  ;
+: nb-update6   ( -- )      6 #nb-update-def  ;
+: nb-update11  ( -- )  d# 11 #nb-update-def  ;
 
-: nb-secure1  ( -- )  1 #nb-secure  ;
-: nb-secure6  ( -- )  6 #nb-secure  ;
-: nb-secure11  ( -- )  d# 11 #nb-secure  ;
+: nb-secure1   ( -- )      1 #nb-secure-def  ;
+: nb-secure6   ( -- )      6 #nb-secure-def  ;
+: nb-secure11  ( -- )  d# 11 #nb-secure-def  ;
 
-: nb1  ( -- )  1 #nb  ;
-: nb6  ( -- )  6 #nb  ;
+: nb1  ( -- )       1 #nb  ;
+: nb6  ( -- )       6 #nb  ;
 : nb11  ( -- )  d# 11 #nb  ;
 
 : mesh-clone
