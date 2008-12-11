@@ -177,7 +177,7 @@ d# 500 constant bulk-out-timeout
    unmap&free
 ;
 
-: set-bulk-in-timeout  ( ms -- )  ?dup  if  bulk-in-qh >qh-timeout l!  then  ;
+: set-bulk-in-timeout  ( ms -- )   to bulk-in-timeout  ;
 
 : alloc-ring-bufs  ( /buf #bufs qh -- )
    >r
