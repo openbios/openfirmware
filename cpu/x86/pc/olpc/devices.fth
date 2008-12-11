@@ -338,10 +338,12 @@ warning @ warning off
       board-revision " board-revision-int" integer-property
       \ The "1-" removes the null byte
       " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
+      8 ec-cmd-b@ dup " ec-version" integer-property
 
-      8 ec-cmd-b@  " ec-version" integer-property
+      \ EC code API 56 and greater changes the version numbering
+      h# 56 >= if " Ver:" else " PQ2" then
 
-      " PQ2" h# fff0.0000 h# 1.0000 sindex  dup 0>=  if  ( offset )
+      h# fff0.0000 h# 1.0000 sindex  dup 0>=  if         ( offset )
          h# fff0.0000 +  cscount                         ( name )
       else
          drop  " UNKNOWN"
