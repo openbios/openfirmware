@@ -500,7 +500,7 @@ false value group-rekey?
 
 : .ap  ( adr -- )
    ."   Address: " dup 2 + .enaddr cr
-   ."   RSSI: " dup 8 + c@ u. cr
+   ."   RSSI: " dup 8 + c@ .d cr
    ."   Beacon interval: " dup d# 17 + le-w@ .d cr
    ."   Capabilities: " dup d# 19 + le-w@ cr .cap
    dup le-w@ swap 2 + swap d# 19 /string	( adr' len' )
