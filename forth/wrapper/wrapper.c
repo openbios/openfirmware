@@ -130,7 +130,7 @@ char *host_os = "netbsd";
 char *host_os = "freebsd";
 #endif
 
-#ifdef HOSTARM
+#ifdef __arm__
 char *host_cpu = "arm";
 #define HOST_LITTLE_ENDIAN
 #endif
@@ -158,7 +158,6 @@ char *target_cpu = "powerpc";
 
 #ifdef ARM
 char *target_cpu = "arm";
-char *host_cpu = "arm";
 #define CPU_MAGIC 0xe1a00000
 #define START_OFFSET 8
 #endif
@@ -937,7 +936,7 @@ main(argc, argv, envp)
 
 #else 
 
-# if defined(HOST_LITTLE_ENDIAN)
+# if defined(TARGET_POWERPC) && defined(HOST_LITTLE_ENDIAN)
 	lbflips((long *)&header, sizeof(header));
 # endif
 
@@ -1549,6 +1548,7 @@ struct { int baud; int code; } baudcodes[] =
      1200,     B1200,     1800,     B1800,     2400,     B2400,
      4800,     B4800,     9600,     B9600,    19200,    B19200,
     38400,    B38400,    57600,    B57600,   115200,   B115200,
+#ifdef B230400
    230400,   B230400,
 
 #ifdef B4000000
@@ -1557,6 +1557,7 @@ struct { int baud; int code; } baudcodes[] =
   1152000,  B1152000,  1500000,  B1500000,  2000000,  B2000000,
   2500000,  B2500000,  3000000,  B3000000,  3500000,  B3500000,
   4000000,  B4000000,
+#endif
 #endif
        -1,        -1, 
 };
