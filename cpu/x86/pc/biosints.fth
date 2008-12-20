@@ -1,7 +1,8 @@
+purpose: Emulate legacy PC BIOS real-mode INTs
+\ See license at end of file
 
-[ifdef] syslinux-loaded   : disk-name  ( -- $ )  " /pci/ide@0"  ;  [then]
-[ifdef] preof-loaded      : disk-name  ( -- $ )  " /pci/ide@0"  ;  [then]
-[ifdef] rom-loaded        : disk-name  ( -- $ )  " sd:0"  ;        [then]
+8 /l* buffer: init-regs
+h# 80 value bios-boot-dev#
 
 struct
   2 field >rm-gs
@@ -74,6 +75,8 @@ drop
 : rm-esi@  caller-regs >rm-esi l@  ;
 : rm-esi!  caller-regs >rm-esi l!  ;
 
+: rm-si@  caller-regs >rm-esi w@  ;
+
 : rm-retaddr@  caller-regs >rm-retaddr seg:off@  ;
 
 : rm-flags@  caller-regs >rm-flags w@  ;
@@ -84,6 +87,7 @@ drop
 
 true value show-rm-int?
 : noshow  false to show-rm-int?  ;
+: noshow!  false to show-rm-int?  ;
 variable save-eax
 : snap-int
    true to show-rm-int?  rm-eax@ save-eax !
@@ -399,18 +403,41 @@ here mode-120-info -  constant /mode-120-info
    h# 26 rm-eax!   \ 32 bits
 ;
 
-0 value disk-ih
+0 value bios-ih
+0 value bios-cdrom-ih
+0 value bios-disk-ih
+
 false value show-reads?
 -1 value read-match
 
-: disk-read-sectors  ( adr sector# #sectors -- #read )
+: drive-sectors  ( -- n )  " #blocks" bios-ih $call-method  ;
+: drive-/sector  ( -- n )  " block-size" bios-ih $call-method  ;
+[ifndef] notdef
+: (bios-read-sectors)  ( adr sector# #sectors -- #sectors-read )
+   drive-/sector  >r                      ( adr #sectors d.byte# r: /sector )
+   swap r@ um*                            ( adr #sectors d.byte# r: /sector )
+   " seek" bios-ih $call-method  if       ( adr #sectors r: /sector )
+      r> 3drop  0  exit
+   then                                   ( adr #sectors r: /sector )
+   r@ *  " read" bios-ih $call-method     ( actual#bytes r: /sector )
+   r> /                                   ( #sectors-read )
+;
+[else]
+: (bios-read-sectors)  ( adr sector# #sectors -- #sectors-read )
+   " read-blocks" bios-ih $call-method
+;
+[then]
+
+: bios-read-sectors  ( adr sector# #sectors -- #sectors-read )
    noshow
    over read-match = if  ." Reading block " read-match .  debug-me  then
 
-   show-reads?  if  ." Read " 2 pick . over . dup .  ." -- "  then
-   " read-blocks" disk-ih $call-method
-   show-reads?  if  dup .  cr  then
+   show-reads?  if  ." Read " 2 pick . over . dup .  ." -- "  then  ( adr sec# #sec )
 
+   (bios-read-sectors)                     ( #sectors-read )
+\   " read-blocks" bios-ih $call-method
+
+   show-reads?  if  dup .  cr  then
 ;
 
 0 value entry-count
@@ -420,43 +447,53 @@ false value show-reads?
    then
 ;
 
-: disk-write-sectors  ( adr sector# #sectors -- #read )
+: bios-write-sectors  ( adr sector# #sectors -- #read )
 \   ?hack
    noshow
 
 \ ." Write " 2 pick . over . dup .  ." -- "
 \ over h# 8b74aaa =  if  debug-me  then
-   " write-blocks" disk-ih $call-method
+   " write-blocks" bios-ih $call-method
 \ dup .  cr
 ;
 
+: select-bios-disk  ( drive# -- )
+   h# 82 =  if  bios-cdrom-ih  else  bios-disk-ih  then  to bios-ih
+;
 : check-drive  ( -- error? )
-   rm-dl@  h# 80 <>  if  rm-set-cf  7 rm-ah!  true exit  then
-   disk-ih  0=  dup  if  rm-set-cf  h# aa rm-ah!   then
+   show-reads?  if  ." Drive " rm-dl@ .x  then
+   rm-dl@  h# 80 h# 81 between 0=  if  rm-set-cf  7 rm-ah!  true exit  then
+   bios-disk-ih to bios-ih
+   bios-ih  0=  dup  if  rm-set-cf  h# aa rm-ah!   then
 ;
-: read-sectors  ( -- )
+: lba-check-drive  ( -- error? )
+   show-reads?  if  ." Drive " rm-dl@ .x  then
+   rm-dl@  h# 80 h# 82 between 0=  if  rm-set-cf  7 rm-ah!  true exit  then
+   rm-dl@  select-bios-disk
+   bios-ih  0=  dup  if  rm-set-cf  h# aa rm-ah!   then
+;
+: chs-read-sectors  ( -- )
    check-drive  if  exit  then
-   disk-ih  0=  if  rm-set-cf  h# aa rm-ah! exit  then
+   bios-ih  0=  if  rm-set-cf  h# aa rm-ah! exit  then
    rm-ch@  rm-cl@ 6 rshift  bwjoin  ( cylinder# )
    h# ff *   rm-dh@ +               ( trk# )     \ 255 heads
    h# 3f *  rm-cl@ h# 3f and 1-  +  ( sector# )  \ 63 is max sector#
 
    rm-bx@  rm-es@  seg:off>  ( sector# adr )
    swap  rm-al@                             ( adr sector# #sectors )
-   disk-read-sectors  rm-al!
+   bios-read-sectors  rm-al!
 ;
-: write-sectors  ( -- )
+: chs-write-sectors  ( -- )
    check-drive  if  exit  then
-   disk-ih  0=  if  rm-set-cf  h# aa rm-ah! exit  then
+   bios-ih  0=  if  rm-set-cf  h# aa rm-ah! exit  then
    rm-ch@  rm-cl@ 6 rshift  bwjoin  ( cylinder# )
    h# ff *   rm-dh@ +               ( trk# )     \ 255 heads
    h# 3f *  rm-cl@ h# 3f and 1-  +  ( sector# )  \ 63 is max sector#
 
    rm-bx@  rm-es@  seg:off>  ( sector# adr )
    swap  rm-al@                             ( adr sector# #sectors )
-   disk-write-sectors  rm-al!
+   bios-write-sectors  rm-al!
 ;
-: drive-sectors  ( -- n )  " #blocks" disk-ih $call-method  ;
 : drive-params  ( -- )
    noshow
    check-drive  if  exit  then
@@ -472,37 +509,45 @@ false value show-reads?
    rm-clr-cf
 ;
 
-: ds:si  ( -- adr )  rm-esi@  rm-ds@  seg:off>  ;
+: ds:si  ( -- adr )  rm-si@  rm-ds@  seg:off>  ;
 : lba-read  ( -- )
-   check-drive  if  exit  then
+   lba-check-drive  if  exit  then
    ds:si  ( packet-adr )
    >r  r@ 4 + seg:off@  r@ 8 + l@   r@ 2+ w@     ( adr sector# #sectors )
 \ ." LBA "
-   disk-read-sectors  r> 2+ w!
+   bios-read-sectors  r> 2+ w!
 ;
 : lba-write  ( -- )
-   check-drive  if  exit  then
+   lba-check-drive  if  exit  then
    ds:si  ( packet-adr )
    >r  r@ 4 + seg:off@  r@ 8 + l@   r@ 2+ w@     ( adr sector# #sectors )
 \ ." LBA "
-   disk-write-sectors  r> 2+ w!
+   bios-write-sectors  r> 2+ w!
 ;
 
 : check-disk-extensions  ( -- )
    noshow
-   check-drive  if  0 rm-bx! exit  then
+   lba-check-drive  if  0 rm-bx! exit  then
    rm-bx@  h# 55aa <>  if  exit  then
    h# aa55 rm-bx!
    h# 20 rm-ah!  1 rm-cx!
 ;
 : ext-get-drive-params  ( -- )
    noshow
-   check-drive  if  exit  then
+   lba-check-drive  if  exit  then
    0 rm-ah!
    ds:si  >r    ( adr )
    r@ 2 +  h# 0e  erase   \ CHS info not valid
+
+   \ h# 70 is ATAPI, removable, LBA
+   \ h# 10 is LBA
+\   rm-dl@ h# 81 =  if  h# 70 else  h# 10  then r@ h# a + w!
+\ XXX this might be a problem
+   rm-dl@ h# 82 =  if  ( 4 ) h# 34  else  0  then  r@ 2 + w!
+
    drive-sectors r@ h# 10 + l!  0 r@ h# 14 + l!  \ Total #sectors
-   h# 200 r@ h# 18 + w!   \ Sector len
+
+   drive-/sector r@ h# 18 + w!   \ Sector len
    h# 1a                  ( written-length )
    r@ w@  h# 1e >=  if
       -1  r@ h# 1a + l!      \ No EDD
@@ -525,26 +570,56 @@ false value show-reads?
 ;
 : reset-disks  ( -- )  noshow  ;
 
+\ c.f. El Torito CD booting spec
+\ We construct a valid status packet, even though NT doesn't look at its
+\ contents.  It only looks at the return value in AX.  Most of the fields
+\ herein are irrelevant for the "get status" function anyway.
+create cd-stat
+\      len   type   drive#  ctlr#    LBA  devspec(master/slave, SCSI LUN, etc)
+   h# 13 c,  0 c,  h# 82 c,  0 c,   0 l,     0 w,
+\   userbuf  loadseg  #sectors  #cyls  sec,cyl  #heads
+       0 w,    0 w,       0 w,   0 c,     0 c,    0 c,
+
+: cdrom-status  ( -- )
+   \ We don't distinguish between AL=00 and AL=01; both return the same
+   \ status.  AL=00 also terminates hard disk emulation, but we don't
+   \ do emulation, so that is effectively a no-op.  The NT SETUPLDR
+   \ only uses AL=01 anyway.
+   \ DL should be the drive number (82); we don't check that
+   cd-stat ds:si h# 13 move
+   \ This is the return code.  The El Torito spec doesn't say what
+   \ the return codes are supposed to be. NT SETUPLDR fails if anything
+   \ other than 0 is returned.
+   0 rm-ax!
+   rm-set-cf  \ CF set means that the system is not in emulation mode
+;
+
 : disk-int  ( -- )  \ INT 13 handler
    rm-ah@ case
       h# 00  of  reset-disks            endof  \ Reset disk system
-      h# 02  of  read-sectors           endof
-      h# 03  of  write-sectors          endof
+      h# 02  of  chs-read-sectors       endof
+      h# 03  of  chs-write-sectors      endof
       h# 08  of  drive-params           endof
       h# 15  of  get-disk-type          endof
       h# 41  of  check-disk-extensions  endof
       h# 42  of  lba-read   endof
       h# 43  of  lba-write  endof
       h# 48  of  ext-get-drive-params  endof
+      h# 4b  of  cdrom-status  endof
       ( default )  ." Unsupported disk INT 13 - AH = " dup . cr
    endcase
 ;
+
+false value debug-mem?
 
 : /1k  d# 10 rshift  ;
 : bigmem-16bit  ( -- )
    memory-limit
    dup h# 100.0000  min  h# 10.0000 -  0 max  /1k  dup rm-ax!  rm-cx!
    h# 100.0000 -  0 max  d# 16 rshift  dup rm-bx!  rm-dx!
+   debug-mem?  if
+      ." Bigmem 16: " rm-ax@ .  rm-cx@ .  rm-bx@ .  rm-dx@ .  cr
+   then
 ;
 : allmem  ( -- n )
    " /memory" find-package 0= abort" No /memory node"  ( phandle )
@@ -571,7 +646,8 @@ create memdescs
       h# 9fc00 0  d,   h# a0000 h# 9fc00 - 0  d,  2 l,  \ 28 reserved
 \ End test
 
-   h#      e0000. d,                h# 20000. d,  2 l,  \ 3c reserved
+\  h#      e0000. d,                h# 20000. d,  2 l,  \ 3c reserved
+   h#      e8000. d,                h# 08000. d,  2 l,  \ 3c reserved
    h#     100000. d,                       0. d,  1 l,  \ 50 available
 \              0. d,                       0. d,  4 l,  \ 64 don't reclaim (yet)
                0. d,                       0. d,  2 l,  \ 64 reserved fw memory
@@ -597,6 +673,9 @@ here memdescs - constant /memdescs
    \ Otherwise copy out the next table entry, return length in ECX and next address in EBX
    dup  rm-edi@ h# ffff and rm-es@  seg:off>  ( adr dst )
    rm-ecx@  move                              ( adr )
+   debug-mem?  if
+      ." E820 Mem: " dup rm-ecx@ ldump cr
+   then
    rm-ecx@ +  rm-ebx!                         ( )  \ Continuation
 ;
 
@@ -688,8 +767,12 @@ create sysconf
 noop
       h# 53 of  apm  endof
       h# 86 of  rm-dx@  rm-cx@ wljoin us  endof  \ Delay microseconds
-      h# 8a of  memory-limit h# 400.0000 - 0 max  /1k  lwsplit rm-dx! rm-ax!  endof
-      h# 88 of  h# fffc rm-ax!  endof  \ Extended memory - at least 64 MB
+      h# 8a of  memory-limit h# 400.0000 - 0 max  /1k  lwsplit rm-dx! rm-ax!
+         debug-mem?  if  ." Mem 15/8a: " rm-dx@ .  rm-ax@ .  cr  then
+      endof
+      h# 88 of  h# fffc rm-ax!  
+         debug-mem?  if  ." Mem 15/88: " rm-ax@ .  cr  then
+      endof  \ Extended memory - at least 64 MB
       h# c0 of  get-conf  endof
       \ We use the extended BIOS data area as our workspace when loaded from another BIOS
 \      h# c1 of  rm-set-cf h# 86 rm-ah!  endof  \ No extended BIOS data area
@@ -727,7 +810,7 @@ noop
 0 value polled?
 : poll-keystroke  ( -- )
    noshow
-   polled?  0=  if  ." ? "  then
+\   polled?  0=  if  ." ? "  then
    true to polled?
    poll-key  if  ( scancode,ascii )
       rm-ax!
@@ -743,15 +826,16 @@ noop
    0 to the-key
    rm-ax!
 
-   rm-al@ [char] q =  if  debug-me  then
+\   rm-al@ [char] d =  if  debug-me  then
    false to polled?
 ;
 
 : keyboard-int  ( -- )  \ INT 16 handler
+   noshow!
    rm-ah@ case
       0 of  get-keystroke  endof
       1 of  poll-keystroke  endof
-      2 of  noshow  0 rm-al!  endof  \ Claim that no shift keys are active
+      2 of  0 rm-al!  endof  \ Claim that no shift keys are active
       5 of  rm-cx@ to the-key  endof  \ Put keystroke in buffer
       ( bit 7:sysrq  6:capslock  5:numlock 4:scrlock 3:ralt 2:rctrl 1:lalt 0:lctrl )
       ( default )  ." Keyboard INT called with AH = " dup . cr
@@ -830,12 +914,14 @@ noop
       h# 13  of  disk-int      endof
       h# 16  of  keyboard-int  endof
       h# 15  of  system-int    endof
-      h# 12  of  'ebda /1k rm-ax!  endof  \ Low memory size
+      h# 12  of  'ebda /1k rm-ax!
+            debug-mem?  if  ." Lowmem: " rm-ax@ .  cr  then
+      endof  \ Low memory size
       h# 1a  of  int-1a        endof
       h# 18  of  ." Entering Open Firmware" cr  interact    endof
       h# 19  of  ." Rebooting" cr  bye    endof
       h# 17  of  printer-int  endof
-      h# 1c  of  noshow  0 dispatch-interrupt    endof  \ Timer bounce vector
+      h# 1c  of  noshow!  0 dispatch-interrupt    endof  \ Timer bounce vector
       ( default )  ." Interrupt " dup . cr  interact
    endcase
    ?showint
@@ -844,9 +930,12 @@ noop
 
 h# 7c00 constant mbr-base
 : get-mbr  ( -- )
-\   mbr-base h# 3f 1  disk-read-sectors 1 <> abort" Didn't read MBR"
-   mbr-base 0 1  disk-read-sectors 1 <> abort" Didn't read MBR"
+\   mbr-base h# 3f 1  bios-read-sectors 1 <> abort" Didn't read MBR"
+   mbr-base 0 1  bios-read-sectors 1 <> abort" Didn't read MBR"
 ;
+
+\ : #hard-drives  ( -- n )  bios-boot-dev# h# 82 =  if  2  else  1  then  ;
+: #hard-drives  ( -- n )  1  ;
 
 : make-bda  ( -- )
    h# 400 h# 200 erase
@@ -863,6 +952,7 @@ h# 7c00 constant mbr-base
    \ 46c.l is tick count, 470.b is midnight flag
    \ 4701.b bit 0x80 is ctrl-break flag
    h# 1234 h# 472 w!  \ Skip memory test
+   #hard-drives  h# 475 c!  \ Number of hard drives
    d# 25 1- h# 484 c! \ Screen max row #
    d# 16   h# 485 w!  \ Character height
    h# 100.0000 h# 487 l!  \ Video RAM size
@@ -870,7 +960,7 @@ h# 7c00 constant mbr-base
    1 'ebda w!         \ Size of EBDA in KiB
    \ 'ebda h# 3d +   ..  HD0 parameter table
    \ 'ebda h# 4d +   ..  HD1 parameter table
-   1 'ebda h# 70 + c!   \ Number of hard disks
+   #hard-drives 'ebda h# 70 + c!   \ Number of hard disks
 ;
 
 label bounce-timer  \ Redirect the timer interrupt through INT 1c
@@ -894,11 +984,6 @@ here bounce-timer - constant /bounce-timer
    0 h# 82 w!  h# c0 h# 80 w!  \ CS = 0, IP = h# c0 = INT 30
 ;
 
-: open-bios-disk  ( -- )
-   disk-ih  if  exit  then
-   disk-name open-dev to disk-ih
-;
-
 0 value rm-prepped?
 : prep-rm  ( -- )
    rm-prepped?  if  exit  then   true to rm-prepped?
@@ -915,25 +1000,33 @@ here bounce-timer - constant /bounce-timer
    populate-memory-map
    rm-platform-fixup
 ;
-: close-bios-disk  ( -- )  disk-ih ?dup  if  close-dev   0 to disk-ih  then  ;
-' close-bios-disk to quiesce-devices
+: close-bios-disk  ( -- )  bios-disk-ih ?dup  if  close-dev   0 to bios-disk-ih  then  ;
+: close-bios-cdrom  ( -- )  bios-cdrom-ih ?dup  if  close-dev   0 to bios-cdrom-ih  then  ;
+: close-bios-devices  ( -- )  close-bios-disk  close-bios-cdrom  ;
+' close-bios-devices to quiesce-devices
 
+[ifdef] notdef  \ Doesn't work with CD-ROM
 : rm-go   ( -- )
    prep-rm
    open-bios-disk
    get-mbr   \ Load boot image at 7c00
-   usb-quiet
-   mbr-base rm-run
+\   usb-quiet
+   init-regs mbr-base rm-run
 ;
+[then]
 
+0 value mbr-boot?
 : is-mbr?  ( adr len -- flag )
-   h# 200 <>  if  drop false exit  then
-   h# 1fe + w@  h# aa55 = 
+   mbr-boot? 0=  if  2drop false exit  then
+   + 2 - le-w@  h# aa55 = 
 ;
 : init-program  ( -- )
    loaded is-mbr?  if
       prep-rm
-      load-base mbr-base h# 200 move
+      loaded mbr-base swap move
+\      init-regs /sregs+gregs erase
+      \ XXX
+      bios-boot-dev#  init-regs >rm-edx c!   \ DL
       exit
    then
    init-program
@@ -943,32 +1036,110 @@ here bounce-timer - constant /bounce-timer
 : execute-buffer  ( adr len -- )
    rm-prepped?  if      ( adr len )
       2drop             ( )
-      usb-quiet         ( )
-      mbr-base rm-run   ( )
+\     usb-quiet         ( )
+      init-regs mbr-base rm-run   ( )
       exit  \ Precautionary; rm-run shouldn't return
    then
    execute-buffer
 ;
 
+0 value boot-sector#
+1 value boot-#sectors
+: get-cdrom-sector  ( sector# -- error? )
+   load-base swap 1  (bios-read-sectors) 1 <>
+;
+: close-bios-ih  ( -- )  bios-ih  ?dup  if  close-dev  0 to bios-ih  then  ;
+: bootable-cdrom?  ( -- flag )
+   drive-/sector h# 800 <>  if  false exit  then
+
+   \ Check Boot Record
+   h# 11 get-cdrom-sector  if  false exit  then
+   load-base " "(00)CD001"(01)EL TORITO SPECIFICATION" comp  if  false exit  then
+
+   \ Check Boot Catalog and Section Entry
+   load-base h# 47 + le-l@   get-cdrom-sector  if  false exit  then
+   load-base le-l@ 1 <>  if  false exit  then
+   0  load-base h# 20 bounds  do  i le-w@ +  /w +loop
+   h# ffff and  if  false exit  then
+   load-base 1+ c@  if  false exit  then   \ Must be for x86 platform
+
+   \ Record pointer to boot code
+   load-base h# 20 + c@  h# 88 <>  if  false exit  then  \ Must be bootable
+   load-base h# 28 + le-l@ to boot-sector#
+   load-base h# 26 + le-w@ 4 / 1 max  to boot-#sectors
+
+   true
+;
+: set-hd-boot  ( dev$ -- )
+   open-dev to bios-disk-ih
+   0 to boot-sector#  1 to boot-#sectors
+   h# 80 to bios-boot-dev#
+   bios-disk-ih to bios-ih
+;
+: get-one-sector  ( dev$ -- error? )
+   open-dev to bios-ih
+   load-base 0 1 (bios-read-sectors)   ( #read )
+   close-bios-ih                       ( #read )
+   1 <>                                ( error? )
+;
+: mbr-bootable?  ( dev$ -- flag )
+   get-one-sector  if  false exit  then
+   load-base h# 1be + c@  h# 80 =
+;
+
+: ntfs?  ( dev$ -- flag )
+   get-one-sector  if  false exit  then
+   load-base 3 +  " NTFS    "  comp  0=                   ( flag )
+;
+
+: mbr-load  ( adr -- #bytes )
+   bios-boot-dev#  select-bios-disk
+   boot-sector# boot-#sectors bios-read-sectors
+   bios-boot-dev#  h# 82 =  if  h# 800  else  h# 200  then  *
+   true to mbr-boot?
+;
+
 0 0 " " " /" begin-package
    " xp" device-name
    : open
-      " sd:1" open-dev  ?dup  0=  if  false exit  then  ( ih )
-      >r
-      load-base h# 200 " read" r@ $call-method          ( #read )
-      r> close-dev
-      h# 200 <>  if  false exit  then
-      load-base 3 +  " NTFS    "  comp  if  false exit  then
-      true
+      " sd:1" ntfs?  if  " sd:0" set-hd-boot  true exit  then
+      false
    ;
    : close ;
-   \ Possible change: load at adr, then have init-program do all
-   \ the other fixups (prep-rm) and move the MBR to mbr-base
-   : load  ( adr -- 0 )
-      open-bios-disk
-      0 1  disk-read-sectors h# 200 *
-   ;      
+   : load  ( adr -- nbytes )  mbr-load  ;      
 end-package
+
+0 0 " " " /" begin-package
+   " xpinstall" device-name
+   : open
+      " /usb/disk:0" open-dev  ?dup  if      ( ih )
+         to bios-ih
+         bootable-cdrom?  if
+            bios-ih to bios-cdrom-ih
+            " sd:0" open-dev ?dup  if
+               to bios-disk-ih
+            else
+               ." Can't open SD device.  Install from CD-ROM probably won't work."  cr
+            then
+            h# 82 to bios-boot-dev#
+            true exit
+         then
+         close-bios-ih
+      then
+
+      \ The device was not a bootable CDROM, but it might be a USB memory stick
+
+      " /usb/disk:0" mbr-bootable?  if  " /usb/disk:0" set-hd-boot  true exit  then
+
+      " sd:0" mbr-bootable?  if  " sd:0" set-hd-boot  true exit  then
+
+      false
+   ;
+   : close ;
+   : load  ( adr -- nbytes )  mbr-load  ;      
+end-package
+
+: install-xp  ( -- )  " /xpinstall" $boot  ;
 
 label xx  h# 99 # al mov  al h# 80 # out  begin again  end-code
 here xx - constant /xx
@@ -1073,3 +1244,27 @@ code switch-seg
 c;
 
 [then]
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2008 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

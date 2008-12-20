@@ -644,6 +644,8 @@ defer handle-bios-call
    smm-io-port h# fff0 and  h# 30 =  if
       smm-io-port h# 20 -  to rm-int@
       rm-sp la1+ >caller-physical w@  smm-rmeflags w!
+      \ Bias by -2 to point to INT instruction
+      rm-sp >caller-physical l@ 2-  smm-retaddr l!
       handle-bios-call
       smm-rmeflags w@  rm-sp la1+ >caller-physical w!
       exit
@@ -671,7 +673,9 @@ code smi  smint  c;
 \ require jumping to a given address in real mode.
 
 -1 value rm-entry-adr
-: rm-run  ( eip -- )  to rm-entry-adr  smi  ;
+0 value rm-regs
+
+: rm-run  ( 'gregs eip -- )  to rm-entry-adr  to rm-regs  smi  ;
 
 : smm-stack-w!  ( w offset -- )  smm-sp +smm +  w!  ;
 : smm-stack-l!  ( l offset -- )  smm-sp +smm +  l!  ;
@@ -943,7 +947,7 @@ defer sbp-hook
 
 : smm-trace  ( -- )
    ."      EBP   RETADR   CALLTO" cr
-   smm-ebp
+   smm-ebp l@
    begin  ?dup  while                           ( ebp )
       dup 8 u.r  smm>physical                   ( padr )
       dup la1+ l@ dup 9 u.r  .callto  cr        ( padr )
@@ -997,25 +1001,29 @@ code rm-lidt  ( -- )  smm-rmidt #) lidt  c;
 \ to the address "eip" in real mode.  This is an implementation
 \ factor of the "rm-run" mechanism.
 
-: rm-setup  ( eip -- )
-   >seg:off 2>r   ( r: off seg )
+4 /w*  8 /l*  +  constant /sregs+gregs
 
-   smm-header h# 30 -
-   h#      38  l!++          \ SMM_CTL
-   0           l!++          \ I/O DATA
-   0           l!++          \ I/O ADDRESS, I/O SIZE
-   h#  938009  l!++          \ SS_FLAGS, SMM Flags
-   h#    ffff  l!++          \ CS_LIMIT
-   r@ 4 lshift l!++          \ CS_BASE
-   r>  h# 9a wljoin l!++     \ CS_FLAGS.CS_INDEX
-   r>          l!++          \ NEXT_IP
-   0           l!++          \ CURRENT_IP
-   h# 10       l!++          \ CR0
-   h# 2        l!++          \ EFLAGS
-   h# 400      l!++          \ DR7
+: rm-setup  ( -- )
+   rm-entry-adr >seg:off 2>r    ( off seg )
+
+   smm-header h# 30 - ( adr )
+   h#      38  l!++ ( adr' ) \ SMM_CTL
+   0           l!++ ( adr' ) \ I/O DATA
+   0           l!++ ( adr' ) \ I/O ADDRESS, I/O SIZE
+   h#  938009  l!++ ( adr' ) \ SS_FLAGS, SMM Flags
+   h#    ffff  l!++ ( adr' ) \ CS_LIMIT
+   r@ 4 lshift l!++ ( adr' ) \ CS_BASE
+
+   r> h# 9a wljoin l!++ ( adr' ) \ CS_FLAGS.CS_INDEX
+   r>          l!++ ( adr' ) \ NEXT_IP
+   0           l!++ ( adr' ) \ CURRENT_IP
+   h# 10       l!++ ( adr' ) \ CR0
+   h# 2        l!++ ( adr' ) \ EFLAGS
+   h# 400      l!++ ( adr' ) \ DR7
    drop
 
-   smm-sregs 4 /w* erase  smm-gregs 8 /l* erase
+   rm-regs  caller-regs  /sregs+gregs  move
+
    0 smm-save-esp +smm  l!
 
    smm-save-seg +smm
@@ -1040,11 +1048,12 @@ code rm-lidt  ( -- )  smm-rmidt #) lidt  c;
 : soft-smi  ( -- )
    smi-debug?  if  ." SOFT" cr  then
    rm-entry-adr -1 <>  if
-      rm-entry-adr  rm-setup
+      rm-setup
       -1 to rm-entry-adr
       exit
    then
 
+   smm-pc smm-retaddr l!   \ So .caller-regs will work
    sbpadr @  if
       sbpadr @ smm>physical  smm-pc smm>physical <>  if
          ." Not at SMI breakpoint!" cr

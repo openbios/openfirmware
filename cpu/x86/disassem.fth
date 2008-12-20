@@ -160,8 +160,8 @@ end-string-array
    then                                  ( reg mod )
    swap modes16 count $add-text          ( mod )
    case
-      1 of  op8@  +disp16  endof
-      2 of  op16@ +disp16  endof
+      1 of  op8@  bext +disp16  endof
+      2 of  op16@ wext +disp16  endof
    endcase
 ;
 : .ea  ( -- )
