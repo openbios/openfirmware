@@ -542,6 +542,7 @@ d# 125  d# 1024 *  constant issincr	\ Increments for iss each second
 0 value cantrcvmore?
 
 : set-flag  ( bitmask -- )  t_flags or  to t_flags  ;
+: clear-flag  ( bitmask -- )  invert t_flags and  to t_flags  ;
 : set-acknow  ( -- )  acknow set-flag  ;
 : clear-iflag  ( flag -- )  iflags swap invert and  to iflags  ;
 : iflag?  ( bitmask -- )  iflags and  0<>  ;
@@ -961,7 +962,7 @@ d# 32 buffer: opt
    win 0>   rcv_nxt win +  rcv_adv  s>  and  if
       rcv_nxt win +  to rcv_adv
    then
-   t_flags  acknow delack or  invert and  to t_flags
+   acknow delack or clear-flag
 ;
 
 : tcp_output  ( -- )
@@ -1063,8 +1064,8 @@ d# 32 buffer: opt
 
       \ ACK for outgoing data
 
-      iack snd_una - 0>
-      iack snd_max - 0<=  and
+      iack snd_una s>
+      iack snd_max s<=  and
       snd_cwnd snd_wnd >=   and
       t_dupacks tcprexmtthresh <  and  if
          \ This is a pure ack for outstanding data
@@ -1541,6 +1542,7 @@ d# 32 buffer: opt
    acked wbuf-actual >  dup  if                ( flag )
       snd_wnd wbuf-actual -  to snd_wnd        ( flag )
       wbuf-actual wbuf-drop                    ( flag )
+      sentfin clear-flag
    else                                        ( flag )
       acked wbuf-drop                          ( flag )
       snd_wnd acked -  to snd_wnd              ( flag )
@@ -1635,7 +1637,7 @@ d# 32 buffer: opt
 
    iack snd_max =  if
       tcpt_rexmt off
-      1 to needoutput
+      true to needoutput
    else
       tcpt_persist @ 0=  if  t_rxtcur  tcpt_rexmt !  then
    then
@@ -1994,7 +1996,7 @@ nodetype: tcpnode
 false instance value do-delack?
 : do-delack  ( -- )
    do-delack?  if
-      t_flags  delack invert and  acknow or  to t_flags
+      delack clear-flag  acknow set-flag
       tcp_output
       false to do-delack?
    then
