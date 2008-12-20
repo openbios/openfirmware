@@ -1,0 +1,10 @@
+purpose: Build file for native.dic
+
+dictionary: ${BP}/cpu/arm/build/tools.dic
+command: &armforth &dictionary &this
+build-now
+
+fload ${BP}/ofw/tokenizer/tokenize.fth
+fload ${BP}/forth/lib/builder.fth
+
+.( --- Saving native.dic --- )  cr "" native.dic save-forth

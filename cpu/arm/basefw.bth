@@ -1,0 +1,107 @@
+purpose: Load file for base firmware - no platform specifics
+\ See license at end of file
+
+dictionary: ${BP}/cpu/arm/build/tools.dic
+command: &armforth &dictionary &this
+build-now
+
+\ ' $report-name is include-hook
+
+create include-help			\ Include help facility
+
+alias cfill fill
+fload ${BP}/ofw/core/ofwcore.fth	\ Device tree and other OBP routines
+fload ${BP}/ofw/core/ofwfw.fth		\ FirmWorks enhancements
+fload ${BP}/ofw/core/memops.fth		\ Call memory node methods
+fload ${BP}/ofw/core/mmuops.fth		\ Call MMU node methods
+\ : cfill fill ;
+
+fload ${BP}/cpu/arm/scc.fth		\ System Control Coprocessor registers
+fload ${BP}/cpu/arm/traps.fth		\ Exception handlers
+fload ${BP}/cpu/arm/psr.fth		\ Special registers
+fload ${BP}/cpu/arm/getms.fth		\ Timer access
+
+fload ${BP}/cpu/arm/centry.fth		\ Low-level client entry and exit
+fload ${BP}/cpu/arm/fb8-ops.fth		\ 8-bit frame buffer primitives
+
+fload ${BP}/ofw/confvar/loadcv.fth	\ Configuration variables
+fload ${BP}/ofw/core/silentmd.fth	\ NVRAM variable silent-mode?
+
+fload ${BP}/ofw/termemu/loadfb.fth	\ Frame buffer support
+fload ${BP}/ofw/termemu/difont.fth	\ Get font from a dropin module
+
+fload ${BP}/ofw/gui/alert.fth		\ Basic dialogs and alerts
+fload ${BP}/dev/stringio.fth		\ Output diversion
+
+fload ${BP}/ofw/core/loadmore.fth	\ Load additional core stuff
+
+fload ${BP}/ofw/inet/loadtftp.fth	\ Trivial File Transfer Protocol pkg.
+
+fload ${BP}/cpu/arm/forthint.fth	\ Alarm handler
+
+fload ${BP}/cpu/arm/regacc.fth		\ Register access words
+
+fload ${BP}/cpu/arm/memtest.fth		\ Memory test primitives
+
+fload ${BP}/ofw/fcode/loadfcod.fth	\ S Fcode interpreter
+
+fload ${BP}/ofw/fcode/regcodes.fth	\ Register access words
+fload ${BP}/ofw/fcode/extcodes.fth	\ Firmworks extension FCodes
+
+fload ${BP}/ofw/core/initprog.fth	\ FCode and Forth source load formats 
+
+fload ${BP}/ofw/core/infltdi.fth	\ Support for compressed dropin drivers
+
+fload ${BP}/cpu/arm/initpgm.fth		\ Basic boot handler
+
+[ifdef] resident-packages
+support-package: fat-file-system
+   fload ${BP}/ofw/fs/fatfs/loadpkg.fth	\ FAT file system reader
+end-support-package
+
+support-package: iso9660-file-system
+   fload ${BP}/ofw/fs/cdfs/loadpkg.fth	\ ISO 9660 CD-ROM file system reader
+end-support-package
+
+support-package: disk-label
+   fload ${BP}/ofw/disklabel/loadpkg.fth	\ Disk label package
+end-support-package
+[then]
+
+[ifdef] resident-packages
+fload ${BP}/ofw/fs/fatfs/fdisk2.fth	\ Partition map administration
+[else]
+autoload: fdisk2.fth
+defines: $.partitions
+defines: .partitions
+\ defines: init-nt-disk
+defines: $partition
+[then]
+
+[ifndef] no-heads
+.( --- Saving basefw.dic --- )  cr " basefw.dic" $save-forth
+[then]
+
+\ LICENSE_BEGIN
+\ Copyright (c) 1994 FirmWorks
+\
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
