@@ -260,7 +260,7 @@ previous definitions
 
    " GET " tcp-write                    ( send$ prefix$ server$ )
    2swap tcp-write  2swap tcp-write     ( server$ )
-   "  HTTP/1.1"r"nUser-Agent: FirmWorks/1.1"r"nHost: " tcp-write
+   "  HTTP/1.1"r"nUser-Agent: FirmWorks/1.1"r"nConnection: close"r"nHost: " tcp-write
    tcp-write  " "r"n"r"n" tcp-write
 
    " flush-writes" $call-parent
