@@ -1,7 +1,7 @@
 \ See license at end of file
 purpose: From Forth, call the C subroutine whose address is on the stack
 
-code sp-call  ( [ arg7 .. arg0 ] adr sp -- [ arg5 .. arg0 ] result )
+code sp-call  ( [ arg19 .. arg0 ] adr sp -- [ arg19 .. arg0 ] result )
    bx  pop			\ Get the new stack pointer
    ax  pop			\ Get the subroutine address
 
@@ -9,7 +9,21 @@ code sp-call  ( [ arg7 .. arg0 ] adr sp -- [ arg5 .. arg0 ] result )
    rp  'user saved-rp  mov	\ Save for callbacks
 
    sp  bx  xchg			\ Switch to new SP, with EBX set to old SP
-   7 /n* [ebx]  push		\ Copy the arguments to the new stack
+
+   \ Copy the arguments to the new stack
+   d# 19 /n* [ebx]  push
+   d# 18 /n* [ebx]  push
+   d# 17 /n* [ebx]  push
+   d# 16 /n* [ebx]  push
+   d# 15 /n* [ebx]  push
+   d# 14 /n* [ebx]  push
+   d# 13 /n* [ebx]  push
+   d# 12 /n* [ebx]  push
+   d# 11 /n* [ebx]  push
+   d# 10 /n* [ebx]  push
+   9 /n* [ebx]  push
+   8 /n* [ebx]  push
+   7 /n* [ebx]  push
    6 /n* [ebx]  push
    5 /n* [ebx]  push
    4 /n* [ebx]  push
