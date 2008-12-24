@@ -1143,9 +1143,6 @@ INTERNAL void
 exit_handler(sig)
 	int sig;
 {
-	printf("Mama\n");
-        while (1) ;
-
 #ifdef HAVE_PSIGNAL
 	psignal(sig, "forth");
 #else
