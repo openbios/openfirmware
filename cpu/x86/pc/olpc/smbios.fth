@@ -309,6 +309,8 @@ create end-array
 ( 02 )  h# 7f01 w,   \ Handle
 
 
+: test-name$  ( -- $ )  "  IE8y2D ScD%g4r2bAIFA."  ;
+: test-version$  ( -- $ )  " OLPC Ver 1.00.01"  ;
 : fw-version$  ( -- $ )
    " /openprom" find-package if
       " model" rot get-package-property  0=  if
@@ -378,8 +380,10 @@ c;
    'smbios h# 1f +                   ( adr )
 
    bios-info copy-smbios-table       ( adr )
-      +OLPC
-      fw-version$ +smbios$
+      test-name$ +smbios$
+      test-version$ +smbios$
+\      +OLPC
+\      fw-version$ +smbios$
       fw-date$    +smbios$
    end-smbios-table
 
