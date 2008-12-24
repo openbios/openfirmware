@@ -401,7 +401,7 @@ gshow
    \ Not completely erased
    load-base  /nand-block  written?  if  5 exit  then
 [else]
-   ( adr )  h# 40 written?  if  5  then
+   ( adr )  h# 40 written?  if  5 exit  then
 [then]
 
    \ Erased
