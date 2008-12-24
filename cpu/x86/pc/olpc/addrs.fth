@@ -80,7 +80,7 @@ h# 900.0000 constant dma-size
 
 h# f.0000 constant suspend-base      \ In the DOS hole
 h# f.0008 constant resume-entry
-h# f.0800 constant resume-data
+h# f.1000 constant resume-data
 
 \ If you change these, also change {g/l}xmsrs.fth and {g/l}xearly.fth
 h# fd00.0000 constant fw-map-base

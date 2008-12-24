@@ -19,6 +19,7 @@ fload ${BP}/dev/geode/startmacros.fth
 
 \ This code will be copied to RAM at suspend-base
 
+\ create measure-suspend
 \ create save-display
 \ create reset-smbus
 \ create reset-smbus-bitbang
@@ -61,7 +62,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
 
    \ Page directory VA in AX
    ax      si  mov                \ Save PDIR VA
-   0 [si]  cx  mov                \ Save old PDIR entry 0
+   0 [si]  cx  mov  forget-msr    \ Save old PDIR entry 0
    h# 83 # 0 [ax] mov             \ Punch a 4M mapping 0->0 into the page directory
    cr3 ax mov  ax cr3 mov         \ Invalide the TLB to activate the mapping
    h# f0060 # ax mov  ax jmp      \ Jump to suspend-physical, disabling paging
@@ -101,19 +102,23 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    cld
    h# 38 [bp]  di  lea    \ Save area
 
+[ifdef] measure-suspend
+   rdtsc  eax h# 10 #) mov  edx h# 14 #) mov
+[then]
+
 [ifdef] save-msrs
    h# 30 [bp]  si  mov    \ MSR table
    0 [si] bl mov
 
    begin
-      1 [si] cx mov
+      1 [si] cx mov  forget-msr
       5 # si add
       begin
          \ loop count in bl, msr# in cx
          rdmsr
          \ msr.lo in ax, msr.hi in dx
          ax stos   dx ax mov  ax stos
-         cx inc
+         cx inc  forget-msr
          bl dec
       0= until
       0 [si] bl mov
@@ -130,8 +135,28 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    h# 4c00.0015 rmsr  ax stos  dx ax mov  ax stos   \ DOTPLL
 
 [ifdef] save-display
+   \ Wait until it's safe to set the DCONLOAD bit; if you do it at the wrong time
+   \ you get screen artifacts
+
+   \ Wait for VSYNC
+   begin
+      dc-pci-base h# 6c + #)  ax mov   \ DC_LINE_CNT/STATUS Register
+      h# 2000.0000 # ax test           \ VSYNC bit
+   0<> until
+
+   \ Wait until the line count is 38.
+   \ Testing shows that it suffices to wait for any line in the range 36..911
+   \ If DCONLOAD is cleared during lines 0..35, display artifacts will appear
+   \ at the bottom of the screen.
+   begin
+      dc-pci-base h# 6c + #)  ax mov   \ DC_LINE_CNT/STATUS Register
+      h# 3ff # ax and                  \ DOT_LINE_CNT field
+      d# 38 # ax cmp
+   = until             \ Loop until line count is 38 (empirically good)
+
    \ Freeze image by clearing the DCONLOAD bit (0x800) in the GPIO output register
-   h# 0800.0000 h# 1000 port-wl
+   h# 5140.000c rmsr  h# 00 [ax] dx lea       \ GPIO output port
+   h# 0800.0000 # ax mov  ax dx out
 [then]
 
    \ Save the GPIO setup   
@@ -146,7 +171,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    h# e0 [bx] dx lea  dx ax in  ax stos  \ GPIO_MAP_Z
 
    h# 38 [bx]  dx  lea   \ Low bank - first contiguous GPIO register
-   h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
+   h# 3c /l / #  cx  mov  forget-msr  \ Register count (stop at lock register)
    begin
       dx  ax   in   \ Read GPIO control register
       ax stos       \ Save
@@ -160,7 +185,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
 [ifndef] omit-high-gpio-restore
    \ This is probably unnecessary, as these registers may be in the suspend well
    h# b8 [bx] dx lea  \ High bank - first contiguous GPIO register
-   h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
+   h# 3c /l / #  cx  mov  forget-msr  \ Register count (stop at lock register)
    begin
       ax   dx  in   \ Read GPIO control register
       ax stos       \ Save
@@ -178,13 +203,22 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
 
 [ifdef] save-display
 \ \ h# 3c 0  do  i gp@ l!+  4 +loop  h# 4c gp@ l!+
-\  h# f # cx mov  gp-pci-base set-base  begin  0 [bx] ax mov  ax stos  4 # bx add  loopa
+\  h# f # cx mov  forget-msr  gp-pci-base set-base  begin  0 [bx] ax mov  ax stos  4 # bx add  loopa
 \  gp-pci-base h# 4c + #) ax mov  ax stos
+   gp-pci-base set-base
+   h# 00 reg-save  h# 04 reg-save  h# 08 reg-save  h# 0c reg-save
+   h# 10 reg-save  h# 14 reg-save  h# 18 reg-save  h# 1c reg-save
+   h# 20 reg-save  h# 24 reg-save  h# 28 reg-save  h# 2c reg-save
+   h# 30 reg-save  h# 34 reg-save  h# 38 reg-save  ( h# 3c reg-save )
+   ( h# 40 reg-save  h# 44 reg-save  h# 48 reg-save ) h# 4c reg-save
+   h# 50 reg-save  h# 54 reg-save  ( h# 58 reg-save  h# 5c reg-save )
+   h# 60 reg-save  h# 64 reg-save  h# 68 reg-save  h# 6c reg-save
+   h# 70 reg-save  h# 74 reg-save  h# 78 reg-save  ( h# 7c reg-save )
 
    vp-pci-base set-base
    h# 400 reg-save  h# 408 reg-save  h# 418 reg-save
    h#   8 reg-save
-   0 # h# 38 [bx] mov  h# 100 # cx mov  begin  h# 40 reg-save  loopa  \ Gamma
+   0 # h# 38 [bx] mov  h# 100 # cx mov  forget-msr  begin  h# 40 reg-save  loopa  \ Gamma
    h# 410 reg-save
 
    dc-pci-base set-base
@@ -195,7 +229,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    h# 40 reg-save  h# 44 reg-save  h# 48 reg-save
    h# 50 reg-save  h# 54 reg-save  h# 58 reg-save
    h# 60 reg-save  h# 64 reg-save  h# 68 reg-save
-   0 # h# 70 [bx] mov  h# 100 # cx mov  begin  h# 74 reg-save  loopa
+   0 # h# 70 [bx] mov  h# 100 # cx mov  forget-msr  begin  h# 74 reg-save  loopa
    h# 80 reg-save  h# 84 reg-save
    h#  8 reg-save  h#  4 reg-save
 
@@ -246,7 +280,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
 
    \ MFGPTs 0-5.  MFGPT 6 and 7 are in the standby domain, live during suspend
    h# 1800 # dx mov  \ MFGPT base port
-   h# 18 # cx mov    \ Save registers up to h# 30.
+   h# 18 # cx mov  forget-msr   \ Save registers up to h# 30.
    begin
       op: dx ax in
       op: ax stos
@@ -286,8 +320,8 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
 
 [ifdef] save-display
    \ Wait until the DCON has loaded a frame - DCONIRQ=1 and DCONSTAT=10
-   d# 50,000 # cx mov  \ 50K spins is about 40 mS
-   h# 1030 # dx mov
+   h# 5140.000c rmsr  h# 30 [ax] dx lea       \ GPIO data port
+   d# 50,000 # cx mov  forget-msr  \ 50K spins is about 40 mS
    begin  dx ax in  h# e0 # al and  h# c0 # al cmp  loopne
 [then]
 
@@ -295,9 +329,14 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    \ Checksum memory from 1M to top (excluding framebuffer)
    bx bx xor
    h# 0010.0000 #  si  mov
-   h# 0ef0.0000 2 rshift #  cx  mov  \ Word count
+   h# 0ef0.0000 2 rshift #  cx  mov  forget-msr  \ Word count
    begin  ax lods  ax bx add  loopa
    bx  resume-data h# 10 - #)  mov   \ Save checksum
+[then]
+
+[ifdef] measure-suspend
+   di 0 #) mov
+   rdtsc ax h# 18 #) mov  dx h# 1c #) mov
 [then]
 
    \ Stop video refresh
@@ -333,7 +372,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    \ Setup the register values in advance so the active instruction sequence
    \ is as short as possible, thus keeping all the activity in one cache line.
    h# 4. # dx mov # ax mov              \ Value to write to MSR
-   h# 2000.2004 # cx mov                \ GLD_MSR_PM MSR number
+   h# 2000.2004 # cx mov  forget-msr    \ GLD_MSR_PM MSR number
    h# 2000 # bx mov                     \ Value to write to PM1_CNT register
    h# 1848 # di mov                     \ PM1_CNT I/O port number
 
@@ -345,7 +384,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    wrmsr                                \ Write GLD_MSR_PM to self-refresh memory
    di dx mov  bx ax mov  ax dx out      \ Write PM1_CNT to initial suspend
 
-   h# fff # cx mov begin  nop  loopa   \ Spin in this cache line while going down
+   h# fff # cx mov  forget-msr  begin  nop  loopa   \ Spin in this cache line while going down
 
    \ If the processor didn't really go down, perhaps because a wakeup event was
    \ already pending, restart the memory clocks and proceed as with a wakeup
@@ -371,6 +410,10 @@ here resume-entry put-branch
 
    h# 20 resume-progress
 
+[ifdef] measure-suspend
+   rdtsc  eax h# 20 #) mov  edx h# 24 #) mov
+[then]
+
 [ifndef] save-msrs
    \ MSR init
    h# 30 [bp]  si  mov   \ MSR table start address
@@ -378,7 +421,7 @@ here resume-entry put-branch
    h# 34 [bp]  bx  add   \ MSR table end address
 
    begin
-      ax lods  ax cx  mov   \ msr#
+      ax lods  ax cx  mov   forget-msr  \ msr#
       ax lods  ax dx  mov   \ msr.hi
       ax lods               \ msr.lo
       wrmsr
@@ -392,7 +435,7 @@ here resume-entry put-branch
    \ Checksum memory from 1M to top (excluding framebuffer)
    bx bx xor
    h# 0010.0000 #  si  mov
-   h# 0ef0.0000 2 rshift #  cx  mov  \ Word count
+   h# 0ef0.0000 2 rshift #  cx  mov  forget-msr  \ Word count
    begin  ax lods  ax bx add  loopa
    bx  resume-data h# 10 - #)  cmp  <>  if  ret  then
 [then]
@@ -404,14 +447,14 @@ here resume-entry put-branch
    0 [di]  bl  mov
 
    begin
-      1 [di]  cx  mov
+      1 [di]  cx  mov  forget-msr
       5 #  di  add
       begin
          \ loop count in bl, msr# in cx
          ax lods  ax dx mov  ax lods  ax dx xchg
          \ msr.lo in ax, msr.hi in dx
          wrmsr
-         cx inc
+         cx inc  forget-msr
          bl dec
       0= until
       0 [di] bl mov
@@ -441,7 +484,7 @@ here resume-entry put-branch
    h# 14 [bx] dx lea  ax dx out  \ Deselect OUT AUX2
    h# 34 [bx] dx lea  ax dx out  \ Deselect IN AUX1
 
-   d# 16 # cx mov  \ Generate 8 low pulses on SMB_CLOCK
+   d# 16 # cx mov  forget-msr  \ Generate 8 low pulses on SMB_CLOCK
    begin
       \ 5 uS delay (slightly longer for GX)
       rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
@@ -450,7 +493,7 @@ here resume-entry put-branch
       cx bx mov                          \ Save cx for use by rmsr
       h# 5140.000c rmsr  ax dx  mov      \ GPIO output register
       h# 40000000 # ax mov  ax dx out    \ Clear SMB_CLOCK
-      bx cx mov                          \ Restore cx
+      bx cx mov  forget-ms               \ Restore cx
 
       \ 5 uS delay (slightly longer for GX)
       rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
@@ -459,7 +502,7 @@ here resume-entry put-branch
       cx bx mov                          \ Save cx for use by rmsr
       h# 5140.000c rmsr  ax dx  mov      \ GPIO output register
       h#     4000 # ax mov  ax dx out    \ Set SMB_CLOCK
-      bx cx mov                          \ Restore cx
+      bx cx mov  forget-msr              \ Restore cx
    loopa
 
    \ 5 uS delay (slightly longer for GX)
@@ -477,7 +520,7 @@ here resume-entry put-branch
    ax lods  h# e0 [bx] dx lea  ax dx out  \ GPIO_MAP_Z
 
    h# 38 [bx]  dx  lea   \ Low bank - first contiguous GPIO register
-   h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
+   h# 3c /l / #  cx  mov  forget-msr  \ Register count (stop at lock register)
    begin
       ax lods
       ax   dx  out  \ Write to GPIO control register
@@ -496,7 +539,7 @@ here resume-entry put-branch
 [ifndef] omit-high-gpio-restore
    \ This is probably unnecessary, as these registers may be in the suspend well
    h# b8 [bx]    dx  lea  \ High bank - first contiguous GPIO register
-   h# 3c /l / #  cx  mov  \ Register count (stop at lock register)
+   h# 3c /l / #  cx  mov  forget-msr  \ Register count (stop at lock register)
    begin
       ax lods
       ax   dx  out  \ Write to GPIO control register
@@ -519,13 +562,24 @@ here resume-entry put-branch
 [ifdef] save-display
 
 \ \ h# 3c 0  do  l@+ i gp!  4 +loop   l@+ h# 4c gp! 
-\  h# f # cx mov   gp-pci-base set-base  begin  ax lods  ax 0 [bx] mov  4 # bx add  loopa
+\  h# f # cx mov  forget-msr  gp-pci-base set-base  begin  ax lods  ax 0 [bx] mov  4 # bx add  loopa
 \  ax lods  ax  gp-pci-base h# 4c + #)  mov
 
 \ Synchronize the flat panel turn-on with the DCON blanking
-\   d# 50,000 # cx mov  \ 50K spins is about 40 mS
-\   h# 1030 # dx mov  \ GPIO data port
+\   h# 5140.000c rmsr  h# 30 [ax] dx lea    \ GPIO data port
+\   h# 1030 # dx mov
+\   d# 50,000 # cx mov  forget-msr  \ 50K spins is about 40 mS
 \   begin  dx ax in  h# 1000 # ax test  loope  \ Wait for blanking
+
+   gp-pci-base set-base
+   h# 00 reg-restore  h# 04 reg-restore  h# 08 reg-restore  h# 0c reg-restore
+   h# 10 reg-restore  h# 14 reg-restore  h# 18 reg-restore  h# 1c reg-restore
+   h# 20 reg-restore  h# 24 reg-restore  h# 28 reg-restore  h# 2c reg-restore
+   h# 30 reg-restore  h# 34 reg-restore  h# 38 reg-restore  ( h# 3c reg-restore )
+   ( h# 40 reg-restore  h# 44 reg-restore  h# 48 reg-restore )    h# 4c reg-restore
+   h# 50 reg-restore  h# 54 reg-restore  ( h# 58 reg-restore  h# 5c reg-restore )
+   h# 60 reg-restore  h# 64 reg-restore  h# 68 reg-restore  h# 6c reg-restore
+   h# 70 reg-restore  h# 74 reg-restore  h# 78 reg-restore  ( h# 7c reg-save )
 
    vp-pci-base set-base
    0 #  h# 50 [bx] mov  \ Power on for DACs, enable gamma correction 
@@ -533,10 +587,11 @@ here resume-entry put-branch
    h# 408 reg-restore
    h# 418 reg-restore
    h#   8 reg-restore
-   0 #  h# 38 [bx] mov  h# 100 # cx mov  begin  h# 40 reg-restore  loopa  \ Gamma
+   0 #  h# 38 [bx] mov  h# 100 # cx mov  forget-msr  begin  h# 40 reg-restore  loopa  \ Gamma
    h# 410 reg-restore
 
-\   d# 1,000,000 # cx mov  begin  h# 410 [bx] ax mov  1 # al test  loope  \ Panel power up
+h# 34 resume-progress
+\   d# 1,000,000 # cx mov  forget-msr  begin  h# 410 [bx] ax mov  1 # al test  loope  \ Panel power up
 
    dc-pci-base set-base
    
@@ -548,25 +603,34 @@ here resume-entry put-branch
    h# 40 reg-restore   h# 44 reg-restore   h# 48 reg-restore
    h# 50 reg-restore   h# 54 reg-restore   h# 58 reg-restore
    h# 60 reg-restore   h# 64 reg-restore   h# 68 reg-restore
-   0 #  h# 70  [bx] mov   h# 100 # cx mov   begin  h# 74 reg-restore  loopa
+   0 #  h# 70  [bx] mov   h# 100 # cx mov  forget-msr  begin  h# 74 reg-restore  loopa
    h# 80 reg-restore   h# 84 reg-restore
 
+h# 35 resume-progress
 \ Synchronize the VGA turn-on with the DCON blanking
-   d# 50,000 # cx mov  \ 50K spins is about 40 mS
    h# 5140.000c rmsr  h# 30 [ax] dx lea       \ GPIO data port
+   d# 50,000 # cx mov  forget-msr \ 50K spins is about 40 mS
    begin  dx ax in  h# 1000 # ax test  loope  \ Wait for blanking
 
    h#  8 reg-restore   h#  4 reg-restore
 
+h# 36 resume-progress
    0 #  dc-pci-base #)  mov  \ Lock
 
-\   d# 100,000 # cx mov  begin  h# 80 #  ax in  loopa  \ Delay about 100 ms
+   \ Turn on the flat panel power as soon as possible
+   \ The 400.0000 bit make the panel power-up timers use the 14 MHz clock
+   \ instead of the 32 kHz clock.  That is supposed to be only for simulation,
+   \ but we have DCON between the CPU and the panel, so we don't need delays.
+   h# 500.0000 #  vp-pci-base h# 410 + #)  mov
 
-   d# 80,000 # cx mov  begin  h# 80 # a in  loopa  \ Wait for panel power up
+\ XX    d# 80,000 # cx mov  forget-msr  begin  h# 80 # ax in  loopa  \ Wait for panel power up
+   d# 1,000 # cx mov  forget-msr  begin  h# 80 # ax in  loopa  \ Wait for panel power up
 
+h# 36 resume-progress
    \ Unfreeze image by setting the DCONLOAD bit (0x800) in the GPIO output register
    h# 5140.000c rmsr  ax dx mov   \ GPIO output register
    h# 0800 # ax mov   ax dx out
+h# 37 resume-progress
 [else]
    \ Turn on the flat panel power as soon as possible
    \ The 400.0000 bit make the panel power-up timers use the 14 MHz clock
@@ -661,7 +725,7 @@ here resume-entry put-branch
    \ the delay time with other work, but it doesn't matter because the
    \ later CaFe chip setup will stall anyway.
 
-   d#   32 # cx mov  \ Loop count (usually ready in 20 uS)
+   d#   32 # cx mov  forget-msr \ Loop count (usually ready in 20 uS)
    dx dec  dx dec    \ SMBUS reg1 (status)
    begin
       dx al in
@@ -673,7 +737,7 @@ here resume-entry put-branch
    al dx out         \ Initiate address out cycle
 
    \ Another possible split point, in case we should need to overlap
-   d#  256 # cx mov  \ Loop count (usually ready in 172 uS)
+   d#  256 # cx mov  forget-msr  \ Loop count (usually ready in 172 uS)
    dx inc            \ SMBUS reg1 (status)
    begin
       dx al in
@@ -694,7 +758,7 @@ here resume-entry put-branch
 
    \ MFGPTs 0-5.  MFGPT 6 and 7 are in the standby domain, live during suspend
    h# 1800 # dx mov  \ MFGPT base port
-   h# 18 # cx mov
+   h# 18 # cx mov  forget-msr
    begin
       op: ax lods  ax ax test  0<>  if  op: ax dx out  then
       dx inc  dx inc
@@ -719,7 +783,6 @@ here resume-entry put-branch
 [then]
 
    h# 2a resume-progress
-
    \ Restore CaFe configuration
 
    h# 6010 config-setup  ax lods  ax dx out        \ NAND BAR
@@ -730,7 +793,7 @@ here resume-entry put-branch
    ax lods  ax  h# 2c [bx]  mov                    \ NAND Timing 3
    h# 6004 config-setup  op: ax lods  op: ax dx out    \ NAND enables
 
-   op: ax lods  ax cx mov                          \ SDHCI enables - save for later
+   op: ax lods  ax cx mov forget-msr               \ SDHCI enables - save for later
    h# 6110 config-setup  ax lods  ax dx out        \ SDHCI BAR
    ax bx mov                                       \ Base address
    6  h# 6104 config-ww                            \ Enable access
@@ -743,7 +806,7 @@ here resume-entry put-branch
    \ Empirically, they are readable!
    op: h# 0004 #  h# 6a [bx]  mov                  \ Magic recipe from Marvell
    op: h# 7fff #  h# 60 [bx]  mov                  \ Magic recipe from Marvell
-   h# 6104 config-setup  ax lods  op: ax dx out    \ SDHCI enables
+\   h# 6104 config-setup  ax lods  op: ax dx out    \ SDHCI enables
    h# 610d config-setup  al lods  al dx out        \ SDHCI latency timer
    h# 613c config-setup  al lods  al dx out        \ SDHCI IRQ
    h# 6104 config-setup  cx ax mov  op: ax dx out  \ Set SDHCI enables after restoring mapped registers
@@ -774,7 +837,9 @@ here resume-entry put-branch
    ax  dc-pci-base h# 88 + #)  mov  \ DV_CTL register - sets framebuffer mem offset
 
    fb-pci-base #  dc-pci-base h#  84 + #)  mov   \ GLIU0 Memory offset
+[ifndef] save-display
    fb-pci-base #  gp-pci-base h#  4c + #)  mov   \ GP base
+[then]
    fb-pci-base h# 80.0000 + #  vp-pci-base h# 460 + #)  mov   \ Flat panel base (GX only)
 
    \ There is a lot of other stuff that must be done to turn on the
@@ -784,11 +849,16 @@ here resume-entry put-branch
    \ DCON fiddling
    \ USB
 
+[ifdef] measure-suspend
+   rdtsc  eax h# 28 #) mov  edx h# 2c #) mov
+   si 4 #) mov
+[then]
+
    h# 2c resume-progress
 
    h# 2c [bp]  di mov               \ VA of suspend-base in di
    h# 28 [bp]  si mov               \ PDIR VA
-   h# 24 [bp]  cx mov               \ PDIR entry 0
+   h# 24 [bp]  cx mov forget-msr    \ PDIR entry 0
    h# 20 [bp]  ax mov  ax cr4 mov  
    h# 1c [bp]  ax mov  ax cr3 mov  
    h# 18 [bp]  ax mov
