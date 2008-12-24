@@ -45,6 +45,10 @@ only forth also definitions
 
 fload ${BP}/cpu/ppc/metainit.fth
 
+" kernel.tag" r/w create-file drop  meta-tag-file !
+
+always-headers
+
 \ Comment out the following line(s) when debugging
 -1  threshold  !	\ Turn OFF ALL debugging messages
 warning-t  off  	\ Turn OFF target warning messages
@@ -77,6 +81,8 @@ fload ${BP}/cpu/ppc/filecode.fth
 fload ${BP}/cpu/ppc/boot.fth
 fload ${BP}/forth/kernel/init.fth
 fload ${BP}/cpu/ppc/finish.fth
+
+meta-tag-file @ fclose  meta-tag-file off
 
 fload ${BP}/cpu/ppc/savemeta.fth
 

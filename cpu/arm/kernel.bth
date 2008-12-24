@@ -56,7 +56,7 @@ init-labels
 only forth also definitions
 \needs bitset  fload ${BP}/forth/lib/bitops.fth
 
-fload ${BP}/forth/kernel/nswapmap.fth	\ Null swap map
+fload ${BP}/forth/kernel/metanswapmap.fth	\ Null swap map
 \ : : : lastacf .name cr ;
 fload ${BP}/cpu/arm/target.fth
 fload ${BP}/forth/kernel/forward.fth
