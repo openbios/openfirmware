@@ -1,4 +1,5 @@
 purpose: User interface for NAND multicast updater
+\ See license at end of file
 
 : mesh-ssids  ( -- $ )
    " olpc-mesh"nolpc-mesh"nolpc-mesh"nolpc-mesh"nolpc-mesh"nolpc-mesh"
