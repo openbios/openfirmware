@@ -1,4 +1,4 @@
-== Booting OFW Under QEMU ==
+== Booting OFW Under QEMU or VirtualBox ==
 
 You can boot OFW directly from the BIOS in QEMU; you don't need
 Coreboot (formerly LinuxBIOS) or external bootloaders like GRUB
@@ -19,7 +19,7 @@ other emulators.
 
 The "config-virtualbox.fth" configuration is known to work with QEMU.
 Other configurations may work also - but the "qemu-loaded" config
-option isn't what you want for this technique, because itt is a subcase
+option isn't what you want for this technique, because it's a subcase
 of the CoreBoot-payload configuration.
 
 You will use the "floppyofw.img" output file in a later step.
@@ -62,7 +62,11 @@ biosload/bootsec.fth .
 The "makefloppy.fth" program that creates the image is pretty simple; it copies
 bootsec.img to the output file "floppy.img", creates a couple of initially
 empty FAT tables, zeros the root directory area, and fills the data area with
-zeros.  Here's a pair of Linux commands that accomplish the same thing
+zeros.
+
+== Making a Prototype Floppy Image with Linux Commands ==
+
+Here's a pair of Linux commands that accomplish the same thing
 as makefloppy.fth:
 
  Step6a $ /sbin/mkdosfs -C -f 2 -F 12 -R 2 -r 224 -s 1 -S 512 floppy.img 1440
@@ -72,11 +76,10 @@ The arguments to mkdosfs force the filesystem layout to match the layout that
 is specified in the BIOS parameter block in bootsec.img.
 
 The advantage of makefloppy.fth is that it reads the filesystem layout parameters
-from the BPB in bootsec.img, so its guaranteed to be conistent.  If bootsec.fth
+from the BPB in bootsec.img, so its guaranteed to be consistent.  If bootsec.fth
 were edited to change the layout, the arguments to "mkdosfs" would have to change.
 (But there's little need to change that layout, since it's a standard floppy
 size.)
 
 The advantage of the Linux command sequence is that it creates a file with
-"holes", thus saving disk space for awhile (until something happens to fill
-in the holes).
+"holes", thus saving disk space for awhile (until something fills in the holes).
