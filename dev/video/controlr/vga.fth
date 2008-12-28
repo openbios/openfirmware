@@ -199,11 +199,13 @@ instance defer crt-table
    4 feature-ctl!		\ Vertical sync ctl
    hsync-on
 ;
+[ifdef] init-dac
 : basic-vga  ( -- )
    ['] (vga-crt-table) to crt-table
    ['] basic-vga-init to init-controller
    ['] noop is init-dac   
 ;
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
