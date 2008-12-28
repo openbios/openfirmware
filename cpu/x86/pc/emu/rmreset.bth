@@ -1,0 +1,260 @@
+\ See license at end of file
+purpose: x86 real mode startup code.
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/x86/pc/emu/config.fth
+
+\ 386/486 processors begin executing at address ffff.fff0 in real mode
+\ when they come out of reset.  Normally, that address would not be
+\ accessable in real mode, but the processor does some magic things to
+\ the Code Segment register so that the high order address lines are
+\ "boosted" up to the ffff.xxxx range just after reset.  The "boosting"
+\ persists until the CS register is modified (i.e. with a far jump).
+
+\ The other segment register are not "boosted", so they can only access
+\ the normal real mode range, essentially just the first megabyte.
+
+\ The startup code must establish a Global Descriptor Table containing
+\ suitable mappings, and then enter protected mode.  The space between
+\ ffff.fff0 and the end of the ROM is insufficient to do this, so the
+\ first few instructions must jump elsewhere, to a place where there
+\ is enough room.
+
+\ The code below is rather tricky, especially since the Forth assembler
+\ always assumes 32-bit operand size and 32-bit addressing modes.
+\ The code is executing in 16-bit mode, so the assembler must be used
+\ carefully to ensure generation of the correct opcodes, and override
+\ prefixes where necessary.
+
+
+\needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+hex
+
+start-assembling
+hex
+
+\ Addresses where the following items will be located in the processor's
+\ physical address space:
+
+\ ffff.fc00:  GDT  ( 3 entries ) + padding
+\ ffff.fc20:  GDT address + size ( 6 bytes ) plus padding
+\ ffff.fc28:  Startup code plus padding
+\ ffff.fff0:  Reset entry point - jump to startup code plus padding to end
+
+\ Assembler macros for startup diagnostics
+
+\ write a byte to an ISA port
+: risa-c!   ( n a - )  "  # dx mov  # al mov   al dx out " evaluate  ;
+
+: num>asc  ( al: b -- al: low ah: hi )
+   " al ah mov " evaluate
+   " h# f # al and " evaluate
+   " h# 9 # al cmp  >  if h# 57 # al add  else  h# 30 # al add  then " evaluate
+
+   " ah shr  ah shr  ah shr  ah shr " evaluate	\ shift down four bits
+   " h# f # ah and " evaluate
+   " h# 9 # ah cmp  >  if h# 57 # ah add  else  h# 30 # ah add then " evaluate
+
+   " al bl mov  ah al mov  bl ah mov " evaluate
+
+;
+
+[ifdef] no-port80
+: port80  ( byte -- )  drop  ;
+[else]
+: port80  ( byte -- )  " # al mov  al h# 80 # out" evaluate  ;
+[then]
+
+\ The simple COM port initialization in this file assumes that the hardware
+\ path to the COM port (southbridge+superIO or whatever) is active immediately
+\ after reset, requiring no special initialization.  That's usually not a good
+\ assumption for modern machines.  So it's often best to ignore the serial
+\ debugging feature in this file, perhaps using it in later files after the
+\ bridges have been set up.  Port80 debug generally suffices herein.
+
+[ifdef] debug-reset
+.( debug reports enabled ) cr
+: init-com1  ( -- )
+    1 3fc  risa-c!	\ DTR on
+   80 3fb  risa-c!	\ Switch to bank 1 to program baud rate
+   01 3f8  risa-c!	\ Baud rate divisor low - 115200 baud
+    0 3f9  risa-c!	\ Baud rate divisor high - 115200 baud
+    3 3fb  risa-c!	\ 8 bits, no parity, switch to bank 0
+;
+\ Assembler macro to assemble code to send the character "char" to COM1
+: report  ( char -- )
+   " begin   3fd # dx mov   dx al in   20 # al and  0<> until" evaluate
+   ( char )  " # al mov   3f8 # dx mov  al dx out  " evaluate
+   " begin   3fd # dx mov   dx al in   20 # al and  0<> until" evaluate
+;
+\ Put character in al
+: reportc
+   " al ah mov " eval
+   " begin   3fd # dx mov  dx al in   20 # al and  0<> until" evaluate
+   ( char )  " ah al mov   3f8 # dx mov  al dx out  " evaluate
+   " begin   3fd # dx mov  dx al in   20 # al and  0<> until" evaluate
+;
+[else]
+: report    ( char -- )  drop  ;
+: reportc  ( -- )    ;
+[then]
+
+\ Real Mode Startup
+
+label rm-startup	\ Executes in real mode with 16-bit operand forms
+
+   \ ffff.fc00	GDT
+hex
+
+   0    w,  0         l,	 0      w,  \ 0 Mandatory null descriptor
+   0    w,  0         l,	 0      w,  \ * Another null descriptor
+   ffff w,  9b.000000 l,  00.c.f w,  \ 10 Code, linear=physical, full 4Gbytes
+   ffff w,  93.000000 l,  00.c.f w,  \ 18 Data, linear=physical, full 4Gbytes
+
+   \ ffff.fc20	GDT limit + address
+
+   1f w,  ffff.fc00 l,	\ # slots (4 * 8 - 1) ,  starting address
+   0  w,		\ Padding
+
+   \ ------->>>>> Startup code, reached by branch from main entry point below
+   \
+   \ ffff.fc28
+
+   here		\ Mark the beginning of this code so its size may be determined
+		\ and so that a jump to it may be assembled later.
+
+   16-bit
+
+   h# 01 port80
+   cld
+
+\ Normally it's best to keep this file short, thus minimizing the time spend
+\ in 16-bit real mode (which is painful to program in).  But some CPUs start
+\ out with a really slow clock, only running fast after you turn on the PLL.
+\ On such machines, if you are trying to achieve the fastest possible startup,
+\ it makes sense to put the PLL turnon code here, thus minimizing the number
+\ of instructions executed in slow mode.
+
+   h# 02 port80
+
+[ifdef] debug-reset
+init-com1
+carret report	 \ send it to com1 if you can...
+linefeed report  \ send it to com1 if you can...
+ascii F report	 \ send it to com1 if you can...
+[then]
+
+   \ The following instruction uses the CS: segment override because
+   \ that segment is currently "boosted" up into the ROM space.
+   \ It uses the operation size override to load a 32-bit pointer.
+   \ The address override is not used; the GDT limit/address data structure
+   \ above is reachable with a 16-bit address and through the "boosted"
+   \ code segment.
+
+   op: cs:  0f c, 01 c, 16 c, fc20 w,	\ lgdte  cs:[fc20]   Setup GDT
+
+   op: cr0  bx  mov	\ Get existing CR0 value
+
+   1 #  bl  or		\ Set "protected mode" bit
+
+   bx  cr0  mov		\ Enter protected mode
+   ahead  then		\ jmp to next location to flush prefetch queue
+                        \ note: CPL is now 0
+
+   h# 03 port80
+
+   \ We are in protected mode, but we are still executing from old
+   \ 16-bit code segment, and will continue to do so until the far jump
+   \ below
+
+[ifdef] debug-reset
+ascii o report
+[then]
+
+   \ set segment registers
+   bx   bx  xor			\ Clear high byte
+   h# 18 # bl  mov		\ Data segment selector
+   bx   ds  mov			\ Set segment register
+   bx   es  mov			\ Set segment register
+   bx   fs  mov			\ Set segment register
+   bx   gs  mov			\ Set segment register
+
+[ifdef] debug-reset
+ascii r report
+[then]
+
+   bx   ss  mov			\ Set segment register
+
+[ifdef] debug-reset
+ascii t report
+ascii h report
+[then]
+
+   h# 0f port80
+
+   op: ad: ResetBase h# 10 #)  far jmp	\ Jump to Forth startup
+
+   \ Pad the startup code so that the main entry point ends up at the
+   \ correct address.
+
+   here over -   ( adr , size-of-preceding-code )
+
+   \ ffff.fc28 is the location of the code that follows the GDT
+   h# ffff.fff0 h# ffff.fc28 - swap - ( address #bytes-to-pad )
+
+   \ The code mustn't extend past ffff.ffc0, because that is where PC
+   \ manufacturers put the 0x10-byte BIOS version string.
+   dup h# 30 -  also forth 0< previous abort" Real mode startup code is too big"
+
+   also forth  here over h# ff fill  previous	\ fill with FFs
+   ( #bytes-to-pad ) allot	\ Pad out to ffff.fff0
+
+   \ ------->>>>> Main Entry Point
+   \ 
+   \ ffff.fff0 - This is the hardwired address where the processor jumps
+   \             when it comes out of reset
+
+   16-bit
+   cli			\ Turn off interrupts (does not affect NMI) 
+   #) jmp		\ Relative jump back to ffff.fc28
+   h# ffffffff l,
+   h# ffffffff l,
+   h# ffffffff l,	\ Good place to put a CRC
+end-code
+
+end-assembling
+
+writing rmreset.img
+rm-startup here over - ofd @ fputs
+ofd @ fclose
+
+here rm-startup - constant /rm-startup
+/rm-startup h# 400 <>  abort" Real mode startup code is not the right size"
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2008 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

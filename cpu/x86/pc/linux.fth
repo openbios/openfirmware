@@ -135,6 +135,7 @@ d# 20 constant /root-dev-buf
 
 \ If we are running in physical address mode, make a page directory
 \ that will map up when the kernel turns on paging.
+[ifdef] fw-map-limit
 : v=p-pde  ( adr -- )
    dup h# 83 or  cr3@  rot d# 22 rshift la+  l!
 ;
@@ -145,6 +146,7 @@ d# 20 constant /root-dev-buf
    fw-map-limit fw-map-base  do  i v=p-pde  h# 40.0000 +loop
    cr4@  h# 10 or  cr4!
 ;
+[then]
 
 : linux-fixup  ( -- )
 [ifdef] linux-logo  linux-logo  [then]
@@ -153,7 +155,7 @@ d# 20 constant /root-dev-buf
 
    linux-base  linux-params  (init-program)
    linux-params to %esi
-   make-ofw-pdir
+   [ifdef] make-ofw-pdir  make-ofw-pdir  [then]
    linux-hook
 ;
 

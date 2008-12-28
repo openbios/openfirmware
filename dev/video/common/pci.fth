@@ -69,6 +69,7 @@ reg-props /reg-props erase			\ Clean it up
 0 instance value fb-base-reg
 
 : munge-map-size  ( raw -- new )	\ Makes a proper map-size argument
+   dup 0=  if  exit  then
 
    1 to mask-val		\ Basically, just walk a one up mask-val value,
    begin			\ anding all the way looking for first non-zero
@@ -128,7 +129,7 @@ reg-props /reg-props erase			\ Clean it up
       use-cirrus-words		\ Cirrus stuff is inside S3 code      
       " CL54xx" add-arc-ident
       dup case			\ Look for known ID values.
-         b8 of gd5434 endof
+         b8 of gd5434 endof     \ Actually gd5446, but gd5434 is close enough
          a8 of gd5434 endof
          a0 of gd5430 endof
          ac of gd5436 endof
@@ -220,23 +221,26 @@ headers
    0 encode-int encode+ r> encode-int encode+
 ;
 
-false instance value needs-rom
+: add-rom-regs  ( -- )
+   \ If this driver is used for an on board frame buffer, the builtin.fth
+   \ file for that platform should declare a "no-rom" property in the node 
+   \ where this driver is used. This will prevent the reg property from 
+   \ including an entry for a non-existent ROM
+
+   " no-rom" get-my-property 0=  if
+      2drop exit
+   then
+
+   h# 30 get-map-size  if
+      0 0m h# 200.0030 0 h# 30 get-map-size h# 30 >reg-props \ ROM
+   then
+;
 
 : encode-reg-property  ( -- )
 
-   " no-rom" get-my-property 0=  if	\ If this driver is used for an on
-      false to needs-rom 2drop		\ board frame buffer, the builtin.fth
-   else					\ file for that platform should declare
-      true to needs-rom			\ a "no-rom" property in the node 
-   then					\ where this driver is used. This will
-					\ prevent the reg property from 
-					\ including an entry for a non-existent
-					\ ROM
    cirrus?  if
          0 0m h# 200.0010 0 h# 10 get-map-size h# 10 >reg-props	\ Frame buffer
-         needs-rom  if
-            0 0m h# 200.0030 0 h# 30 get-map-size h# 30 >reg-props \ ROM
-         then
+         add-rom-regs
          legacy-regs
    then
 
@@ -244,9 +248,7 @@ false instance value needs-rom
 
       s3-928? s3-964? or s3-864? or s3-868? or if
          h# 000.0000 0m 200.0010 0 h# 100.0000 10 >reg-props	\ Frame buffer
-         needs-rom  if
-            0 0m h# 200.0030 0 h# 30 get-map-size h# 30 >reg-props \ ROM
-         then
+         add-rom-regs
          legacy-regs
          h#  102 0m a100.0000 0 1 0  >reg-props		\ Non-relocatable regs
          s3-common-regs
@@ -258,9 +260,7 @@ false instance value needs-rom
          h# 100.0000 0m 200.0010 0 h# 1.80a0 10 >reg-props   \ LE MMIO regs
          h# 300.0000 0m 200.0010 0 h# 1.80a0 10 >reg-props   \ BE MMIO regs
 
-         needs-rom  if
-            0 0m h# 200.0030 0 h# 30 get-map-size h# 30 >reg-props \ ROM
-         then
+         add-rom-regs
 
          legacy-regs
          h#  102 0m a100.0000 0 1 0  >reg-props		\ Non-relocatable regs
@@ -282,9 +282,7 @@ false instance value needs-rom
          h# 100.0000 0m 200.0010 0 h# 1.80a0 10 >reg-props   \ LE MMIO regs
          h# 300.0000 0m 200.0010 0 h# 1.80a0 10 >reg-props   \ BE MMIO regs
 
-         needs-rom  if
-            0 0m h# 200.0030 0 h# 30 get-map-size h# 30 >reg-props \ ROM
-         then
+         add-rom-regs
 
          h# a8000 0m a200.0000 0 6900 0 >reg-props	\ MMIO regs
          legacy-regs
@@ -302,26 +300,20 @@ false instance value needs-rom
       0 0m h# 200.001c 0 h# 14 get-map-size h# 1c >reg-props
       \ Can't actually probe 20, set = 18
       0 0m h# 200.0020 0 h# 18 get-map-size h# 20 >reg-props
-      needs-rom  if
-         0 0m h# 200.0030 0 h# 30 get-map-size h# 30 >reg-props	\ ROM
-      then
+      add-rom-regs
    then
    
 
    mga?  if
       0 0m h# 200.0014 0 h# 14 get-map-size h# 14 >reg-props	\ Frame Buffer
       0 0m h# 200.0010 0 h# 10 get-map-size h# 10 >reg-props	\ IO
-      needs-rom  if
-         0 0m h# 200.0030 0 h# 30 get-map-size h# 30 >reg-props	\ ROM
-      then
+      add-rom-regs
       legacy-regs
    then
 
    weitek?  if
       0 0m h# 200.0010 0 h# 10 get-map-size h# 10 >reg-props	\ Memory
-      needs-rom  if
-         0 0m h# 200.0030 0 h# 30 get-map-size h# 30 >reg-props	\ ROM
-      then
+      add-rom-regs
       legacy-regs
       h# 102 0m a100.0000 0 1 0 >reg-props	\ Unique non-relocateable IO
       s3-common-regs
@@ -334,16 +326,12 @@ false instance value needs-rom
       0 0m h# 200.001c 0 h# 1c get-map-size h# 1c >reg-props	\ Base 3
       0 0m h# 200.0020 0 h# 20 get-map-size h# 20 >reg-props	\ Base 4
       0 0m h# 100.0024 0 h# 24 get-map-size h# 24 >reg-props	\ Base 5
-      needs-rom  if
-         0 0m h# 200.0030 0 h# 30 get-map-size h# 30 >reg-props	\ ROM
-      then
+      add-rom-regs
    then
 
    ct?  if
       0 0m h# 200.0010 0 h# 10 get-map-size h# 10 >reg-props	\ Frame buffer
-      needs-rom  if
-         0 0m h# 200.0030 0 h# 30 get-map-size h# 30 >reg-props \ ROM
-      then
+      add-rom-regs
       legacy-regs
    then
 
@@ -373,7 +361,6 @@ false instance value needs-rom
    " reg" property
 
    reg-props /reg-props free-mem		\ Release the tempory buffer
-
 ;
 
 encode-reg-property			\ Build the reg property now

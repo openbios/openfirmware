@@ -1,0 +1,17 @@
+\ See license at end of file
+purpose: Main load file for driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing ne2kpci.fc
+
+FCode-version2
+
+fload ${BP}/dev/ne2000/ne2kpci.fth
+
+end0
+
+end-tokenizing

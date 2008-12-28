@@ -58,13 +58,14 @@ headerless
 : use-cirrus-words  ( -- )	\ Turns on the Cirrus-specific words
    ['] init-cirrus-controller to init-controller
    ['] cirrus-textmode        to ext-textmode
-   use-vga-dac
+   use-vga
 ;
 
 : probe-dac  ( -- )		\ Chained probing word...sets the dac type
-   cirrus?  if  use-cirrus-dac exit  then
+   cirrus?  if    use-cirrus-dac exit  then
    probe-dac				\ Try someone else's probe
 ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

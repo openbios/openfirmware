@@ -120,7 +120,7 @@ h# 20 buffer: crtcbuf
 : crtc@  ( index -- value )  crtcbuf + c@  ;
 
 : .vga-mode  ( -- )
-   push-decimal
+   base @ >r decimal
    ." HTotal:      "  0 crtc@  4 u.r  cr
    ." HDispEnd:    "  1 crtc@  4 u.r  cr
    ." HBlankStart: "  2 crtc@  4 u.r  cr
@@ -154,7 +154,7 @@ h# 20 buffer: crtcbuf
    ." SelectRowScn:"  h# 17 crtc@  1 rshift 1 and 4 u.r  cr
    ." SelectA13:   "  h# 17 crtc@  1 and 4 u.r  cr
    ." LineCompare: "  h# 18 crtc@  4 u.r  cr
-   pop-base
+   r> base !
 ;
 : showmode  ( adr len -- )   crtcbuf swap move  .vga-mode  ;
 
@@ -187,6 +187,22 @@ instance defer crt-table
 : use-vga
    use-vga-dac
    ['] vga-video-on to video-on
+;
+
+: basic-vga-init  ( -- )
+   vga-reset
+   seq-regs
+   attr-regs
+   grf-regs
+
+   crt-regs
+   4 feature-ctl!		\ Vertical sync ctl
+   hsync-on
+;
+: basic-vga  ( -- )
+   ['] (vga-crt-table) to crt-table
+   ['] basic-vga-init to init-controller
+   ['] noop is init-dac   
 ;
 
 \ LICENSE_BEGIN

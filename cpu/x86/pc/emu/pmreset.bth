@@ -1,0 +1,156 @@
+\ See license at end of file
+purpose: Build file for dropin dispatcher  - version for direct ROM startup
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/x86/pc/emu/config.fth
+
+\ If debug-startup is not defined in config.fth, the "init-com1" and "report"
+\ macros will be noops; otherwise they will generate COM port access code.
+
+\needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+fload ${BP}/cpu/x86/mmuparam.fth
+
+\ startmacros.fth defines some assembler macros that make it easy to
+\ access MSRs, I/O ports, and PCI config registers.
+
+fload ${BP}/cpu/x86/startmacros.fth
+
+hex
+
+fload ${BP}/cpu/x86/pc/finddi.fth	\ find-dropin and other tools
+
+h#  3e.0000 constant inflate-base       \ Where to put the inflater in memory
+h#  30.0000 constant workspace          \ when inflating the Forth part of OFW
+
+start-assembling
+
+label my-entry
+   h# e9 c,  0 l,	\ Skip support subroutines, jmp offset patched later
+end-code
+
+[ifdef] debug-startup
+fload ${BP}/cpu/x86/pc/dot.fth		\ Numeric output
+[then]
+
+fload ${BP}/cpu/x86/pc/romfind.fth	\ Support subroutine: find-dropin
+
+label startup		\ Target of jmp instruction at my-entry
+   h# 10 port80
+
+\ Perform low-level initialization of bridges here, typically at least
+\ to the level where it's possible to talk to the COM port
+
+   h# 12 port80
+
+   init-com1
+   carret report  linefeed report
+   char F report
+
+\ Perform RAM controller initialization here.
+
+   h# 14 port80
+   char o report
+
+   h# 80000 # sp mov   \ Temporary stack pointer for debugging
+
+[ifdef] notdef
+   \ This is an example of how you could display numeric information
+   \ on the serial port during startup.  This only works after memory
+   \ is turned on, because it requires a stack.  Before memory is on,
+   \ you can display individual characters with "report", but not numbers.
+   ax push       \ Save EAX because "dot" destroys it
+   dot #) call   \ Display whatever is in EAX as a hex number
+   ax pop        \ Restore saved EAX
+[then]
+
+   \ Determine the memory size
+
+   \ Adjust assembler structured conditionals to permit long blocks
+   long-offsets on
+
+   \ Set locations just below power-of-two boundaries to the boundary value
+   h# 8000.0000 # si mov     \ Start address
+   h#  200.0000 # di mov     \ End address (assume at least 32 MiB)
+   si ax mov
+   begin
+      ax  -4 [ax]  mov       \ Set e.g. loc 3ffffffc to 40000000
+      1 # ax shr             \ Step down to the next power of two
+      di  ax cmp             \ Stop at lower limit
+   < until
+
+   \ Look for a location that contains the expected data
+   si ax mov
+   begin
+      -4 [ax]  bx  mov
+      bx  ax  cmp
+   <> while
+      1 # ax shr
+      di  ax cmp
+      <  if
+         \ Halt with a message if we go below the end address
+         h# 1e port80
+         bl report
+         char B report  char A report  char D report
+         char M report  char E report  char M report
+         begin hlt again
+      then
+   repeat
+
+   \ Put the memory size where resetend.fth can find it
+   ax mem-info-pa #)  mov      \ Total size
+   ax mem-info-pa 4 + #)  mov  \ Allocation pointer
+
+   \ Turn on the cache
+   cr0	ax   mov
+   6000.0000 bitclr  \ Cache-disable off, coherent
+   ax   cr0  mov
+   invd
+
+   \ Now we can use the stack and do conventional subroutine calls
+   h# 16 port80
+   char r report
+
+   \ resetend.fth finds the Forth part of OFW, moves/uncompresses it
+   \ into RAM, and runs it.  It's independent of board-specific
+   \ I/O hardware, so it can be shared between different board ports.
+
+   fload ${BP}/cpu/x86/pc/resetend.fth
+end-code
+
+also 386-assembler
+startup  my-entry  put-branch
+previous
+
+end-assembling
+
+writing pmreset.di
+asm-base  here over -  0  " pmreset" write-dropin
+ofd @ fclose
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2008 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

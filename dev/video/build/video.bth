@@ -1,0 +1,12 @@
+purpose: Load file for Video "super driver"
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing video.fc
+
+fload ${BP}/dev/video/build/loadfcod.fth
+
+end-tokenizing
