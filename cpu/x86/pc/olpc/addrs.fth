@@ -22,47 +22,6 @@ h#   20.0000 constant /fw-ram
 h#   40.0000 constant /fw-area
 [then]
 
-[ifdef] linuxbios-loaded
-\ h#  d8.0000 constant dropin-base
-h# fff2.0000 constant dropin-base  \ Location of payload in FLASH
-\ h# fff8.0000 constant dropin-base  \ Location of payload in FLASH
-dropin-base h# 80 + h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
-h#   08.0000 constant dropin-size
-h#  1e0.0000 constant fw-pa
-h#   20.0000 constant /fw-ram
-h# fff0.0000 constant rom-pa
-h#   10.0000 constant /rom
-[then]
-
-[ifdef] old-bzimage-loaded
-\ h#  d8.0000 constant dropin-base
-h#   10.0020 constant dropin-base  \ RAM address where Linux normally loads 
-h#   08.0000 constant dropin-size
-h#   20.0000 constant fw-pa
-h#   20.0000 constant /fw-ram
-[then]
-
-[ifdef] bzimage-loaded
-h#  1d8.0020 constant dropin-base  \ RAM address where we want to end up
-h#   08.0000 constant dropin-size
-h#  1e0.0000 constant fw-pa
-h#   20.0000 constant /fw-ram
-[then]
-
-[ifdef] syslinux-loaded
-h#  10.1020 constant dropin-base
-h#  07.e0e0 constant dropin-size
-h#  20.0000 constant fw-pa
-h#  20.0000 constant /fw-ram
-[then]
-
-[ifdef] grub-loaded
-h# 1b8.0000 constant dropin-base
-h#  08.0000 constant dropin-size
-h# 1c0.0000 constant fw-pa
-h#  20.0000 constant /fw-ram
-[then]
-
 h#  80.0000 constant def-load-base      \ Convenient for initrd
 
 \ The heap starts at RAMtop, which on this system is "fw-pa /fw-ram +"

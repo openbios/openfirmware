@@ -33,21 +33,16 @@ hex
 
 [ifdef] grub-loaded
   fload ${BP}/cpu/x86/pc/elfhdr.fth
-  [ifdef] etherboot-variant
-    .( --- Saving as ofwnet.elf - GRUB multiboot format) cr
-    writing ofwnet.elf
-  [else]
     .( --- Saving as ofwgrub.elf - GRUB multiboot format) cr
     writing ofwgrub.elf
-  [then]
   elf-header /elf-header  ofd @ fputs
 [then]
 
-[ifdef] linuxbios-loaded
-  .( --- Saving as ofwlb.elf - LinuxBIOS payload format) cr
+[ifdef] coreboot-loaded
+  .( --- Saving as ofwlb.elf - Coreboot payload format) cr
   fload ${BP}/cpu/x86/pc/elfhdr.fth
   writing ofwlb.elf
-  [ifdef] qemu-loaded
+  [ifdef] coreboot-qemu
     elf-header /elf-header ofd @ fputs
   [else]
     elf-header /elf-header  0  " elf-header"  write-dropin
@@ -62,6 +57,7 @@ hex
 [then]
 
 [ifdef] bzimage-loaded
+  \ - Linux kernel format - USB Key w/ FAT FS - Coreboot w/ stripped Linux payload
   .( --- Saving as ofw.bzi - Linux kernel format) cr
   fload ${BP}/cpu/x86/pc/bzhdr.fth
   writing ofw.bzi
@@ -137,15 +133,14 @@ hex
    " ${BP}/ofw/termemu/cp881-16.obf"            " font"        $add-deflated-dropin
 [then]
 
-
 [ifdef] grub-loaded
-   ofd @ fsize   pad !      \ file size; store in memory for convenience below
+   ofd @ fsize h# 60 -  pad !      \ file size; store in memory for convenience below
    h# 44 ofd @ fseek        \ Seek to file size field; see elfhdr.bth
    pad 4 ofd @ fputs        \ Patch file size
    pad 4 ofd @ fputs        \ Patch memory size
 [then]
 
-[ifdef] qemu-loaded
+[ifdef] coreboot-qemu
    ofd @ fsize pad !        \ file size; store in memory for convenience below
    h# 44 ofd @ fseek        \ Seek to file size field; see elfhdr.bth
    pad 4 ofd @ fputs        \ Patch file size

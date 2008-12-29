@@ -4,9 +4,8 @@ purpose: Common code for several versions of reset.bth
    \ The memory layout information from the start dropin is stored in low
    \ memory.
 
-[ifndef] qemu-loaded
-[ifndef] syslinux-loaded
-[ifndef] preof-loaded
+   \ Beginning of "switch to new GDT" section
+
    \ Move GDT to low memory.  We use the first location at gdt-pa as
    \ scratch memory for sgdt, and put the actual gdt at gdt-pa + 0x10
    gdt-pa # ax mov
@@ -17,30 +16,26 @@ purpose: Common code for several versions of reset.bth
    cx inc
 
    gdt-pa h# 10 + # di mov		\ New GDT base
-   di 2 [ax] mov			\ Set new GDT base
    rep movsb				\ Copy ROM GDT to RAM
 
-   \ Copy code and data segment descriptors from 10,18 to 60,68
-   gdt-pa h# 10 + h# 10 + #   si  mov   \ Descriptor 0x10 - src
-   gdt-pa h# 10 + h# 60 + #   di  mov   \ Descriptor 0x60 - dst
-   4 # cx mov                           \ 4 longwords, 2 descriptors
-   rep movs
+   \ Move the code and data descriptors to 60,68
+   gdt-pa h# 10 + h# 60 + #   di  mov   \ Destination - New descriptor 0x60
 
-   op: h# ff #   0 [ax]  mov            \ Make GDT bigger for Linux
+   cs si mov  2 [ax]  si add		\ Source - Current code descriptor
+   movs movs                            \ 2 longwords (1 descriptor) -> 60
 
+   ds si mov  2 [ax]  si add		\ Source - Current data descriptor
+   movs movs                            \ 2 longwords (1 descriptor) -> 68
+
+   op: h# ff #   0 [ax]  mov            \ New GDT size
+   gdt-pa h# 10 + #  2 [ax]  mov	\ New GDT base
    0 [ax] lgdt				\ Setup RAM GDT
 
-   \ Next time segment registers are changed, they will be
-   \ reloaded from memory.
-
-   \ qemu hangs when trying to do this
+   \ Reload code segment descriptor from new table
    here asm-base - ResetBase +  7 +   h# 60  #)  far jmp  \ 7-byte instruction
-\   here asm-base - ResetBase +  7 +   h# 10  #)  far jmp  \ 7-byte instruction
-   \ nop nop nop nop
 
-\ begin again
+   \ Reload data segment descriptors from new table
    h# 68 # ax mov
-\   h# 18 # ax mov
    ax ds  mov
    ax es  mov
    ax fs  mov
@@ -49,12 +44,11 @@ purpose: Common code for several versions of reset.bth
 
    h# 20 # al mov  al h# 80 # out
 
+   \ End of "switch to new GDT" section
+
 [ifdef] mem-info-pa
    gdt-pa /page round-up #  ax  mov	\ Current low-memory high water mark
    ax     mem-info-pa 2 la+ #)  mov	\ Store in memory info area
-[then]
-[then]
-[then]
 [then]
 
    cld

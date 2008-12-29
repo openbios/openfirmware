@@ -5,13 +5,11 @@ purpose: Configuration setting for OFW as a Coreboot payload under QEMU
 \ that control the boot device to boot vmlinuz from drive A.
 create pc-linux
 
-\ - ELF format (no pheader) - ROM - LinuxBIOS direct
-create linuxbios-loaded
+\ - ELF format (no pheader) - ROM - Coreboot direct
+create coreboot-loaded
+create coreboot-qemu       \ Coreboot QEMU variant
 
-\ Load and run in qemu
-create qemu-loaded 
-
-\ LinuxBIOS+OFW under QEMU currently does not do VGA right
+\ Coreboot+OFW under QEMU currently does not do VGA right
 create serial-console
 
 \ In virtual mode, OFW runs with the MMU on.  The advantages are

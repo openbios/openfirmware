@@ -9,19 +9,6 @@ create olpc             \ OLPC-specific build
 \ - OBMD format - ROM - direct boot from ROM
 create rom-loaded
 
-\ - ELF format (no pheader) - ROM - LinuxBIOS direct
-\ create linuxbios-loaded
-
-\ - Linux kernel format - USB Key w/ FAT FS - LinuxBIOS w/ stripped Linux payload
-\ create bzimage-loaded
-
-\ - ELF format w/ Multiboot signature - various - GRUB
-\ create grub-loaded
-
-\ - (Syslinux) COM32 format - USB Key w/ FAT FS - Syslinux
-\ create syslinux-loaded
-
-
 \ create virtual-mode
 create addresses-assigned  \ Define if base addresses are already assigned
 \ create serial-console      \ Define to default to serial port for console

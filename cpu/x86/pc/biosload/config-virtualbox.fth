@@ -1,45 +1,12 @@
 \ See license at end of file
 purpose: Establish configuration definitions
 
-\ create pc		\ Demo version for generic PC
-\ create pc-linux	\ Demo version for generic PC and Linux
-\ create pc-serial	\ Demo version for generic PC
-
 \ --- The environment that "boots" OFW ---
 \ - Image Format - Example Media - previous stage bootloader
 
-\ - (Syslinux) COM32 format - USB Key w/ FAT FS - Syslinux
-\ create syslinux-loaded
-
-\ - Linux kernel format - USB Key w/ FAT FS - LinuxBIOS w/ stripped Linux payload
-\ create bzimage-loaded
-
-\ - ELF format w/ Multiboot signature - various - GRUB
-\ create grub-loaded
-\ create etherboot-variant  \ Enable additional tweaks for Etherboot
-
-\ - ELF format (no pheader) - ROM - LinuxBIOS direct
-\ create linuxbios-loaded
-
-\ Load and run in qemu
-\ create qemu-loaded 
-
-\ Load and run in VirtualBox
+\ Load and run in VirtualBox (also works for other emulators)
 create virtualbox-loaded 
 
-\ Load from ROM by preOF code from Intel
-\ create preof-loaded 
-
-[ifdef] pc-serial
-create serial-console
-create pc
-[then]
-
-[ifdef] qemu-loaded  \ LinuxBIOS+OFW under QEMU currently does not do VGA right
-create serial-console
-[then]
-
-[ifdef] virtualbox-loaded
 \ create debug-startup
 \ create serial-console
 create resident-packages
@@ -55,59 +22,6 @@ create use-elf
 create use-watch-all
 create use-null-nvram
 \ create no-floppy-node
-[then]
-
-[ifdef] etherboot-variant
-create debug-startup
-create serial-console
-[then]
-
-[ifdef] pc-linux
-\ In virtual mode, OFW runs with the MMU on.  The advantages are
-\ that OFW can automatically locate itself out of the way, at the
-\ top of physical memory, it can dynamically allocate exactly as
-\ much physical memory as it needs, and it can remain alive after
-\ the OS starts.  The disadvantage is that it is more confusing -
-\ you always have to be aware of the distinction between virtual
-\ and physical addresses.
-
-\ Here we use virtual mode for Linux, so that we can debug past
-\ the point where Linux starts using the MMU.  It is not strictly
-\ necessary to use virtual mode if you just want to boot Linux
-\ and then have OFW disappear.
-create virtual-mode
-create pc
-create linux-support
-[then]
-
-[ifdef] pc
-\ create pseudo-nvram
-create resident-packages
-create addresses-assigned  \ Don't reassign PCI addresses
-\ create virtual-mode
-create use-root-isa
-create use-isa-ide
-create use-ega
-create use-elf
-create use-ne2000
-create use-watch-all
-create use-null-nvram
-create no-floppy-node
-[then]
-
-[ifdef] preof-loaded
-create serial-console
-create use-timestamp-counter
-create resident-packages
-create addresses-assigned  \ Don't reassign PCI addresses
-\ create virtual-mode
-create use-root-isa
-create use-isa-ide
-create use-elf
-create use-watch-all
-create use-null-nvram
-create no-floppy-node
-[then]
 
 fload ${BP}/cpu/x86/pc/biosload/addrs.fth
 

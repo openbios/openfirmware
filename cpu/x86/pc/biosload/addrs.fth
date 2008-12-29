@@ -8,8 +8,8 @@ purpose: Establish address and I/O configuration definitions
 \ early startup code - the first few instructions in the image -
 \ copies it to get it out of the way of things like OS load areas.
 
-[ifdef] linuxbios-loaded
-  [ifdef] qemu-loaded
+[ifdef] coreboot-loaded
+  [ifdef] coreboot-qemu
     \ when running in qemu OFW is not in ROM but loaded to RAM by elfboot
     h# 198.0080 constant dropin-base  \ Location of payload in RAM
     dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in RAM

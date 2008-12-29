@@ -14,7 +14,6 @@ other emulators.
  $ cd cpu/x86/pc/biosload/
  $ cp config-virtualbox.fth config.fth
  $ cd build
- $ cd cpu/x86/pc/biosload/build
  $ make floppyofw.img
 
 The "config-virtualbox.fth" configuration is known to work with QEMU.
