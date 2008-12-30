@@ -66,6 +66,7 @@ local void treat_stdin  OF((void));
 local void do_exit      OF((int exitcode));
       int zip_memory    OF((void *inbuf,  int insize,
 			    void *outbuf, int outsize));
+      int simple_zip OF((void));
 
 local int read_mem	OF((int fd, void *buf, size_t size));
 

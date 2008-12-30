@@ -13,6 +13,7 @@ static char rcsid[] = "$Id: util.c,v 1.1 1997/01/08 08:30:22 wmb Exp $";
 #include "tailor.h"
 #include "gzip.h"
 
+extern int write_mem(); /* found in zipmem.c */
 extern ulg crc_32_tab[];   /* crc table, defined below */
 
 /* ===========================================================================

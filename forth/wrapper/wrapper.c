@@ -9,7 +9,7 @@ solve in porting Forthmacs to a different machine.
 3) At which address will the binary run (relocation)
 
 This C program finesses problems 1 and 2 by assuming that the C
-compiler/linker knows how to do those those things.  The Forth
+compiler/linker knows how to do those things.  The Forth 
 interpreter itself is stored in a file whose format is system-independent.
 The C program mallocs an array, reads the Forth image into that array,
 and calls the array as a subroutine, passing it the address of another
@@ -56,6 +56,16 @@ which is part of the Forth image file.
 #include <stdlib.h>
 #include <string.h>
 
+/* 
+ * The following #includes and externs fix GCC warnings when compiled with
+ * -Wimplicit-function-declarations, which I'm doing while trying to get
+ * this working on Darwin hosts.
+ */
+#include <ctype.h>
+/* zlib externs */
+extern int inflate();
+extern int zip_memory();
+
 #ifdef __linux__
 char *host_os = "Linux";
 #define SYS5 1
@@ -89,6 +99,11 @@ char *host_cpu = "powerpc";
 char *host_cpu = "m68k";
 #define CPU_MAGIC 0x601e0000
 #define START_OFFSET 0x10
+#endif
+
+#if defined(__APPLE__)
+char *host_os = "Darwin";
+#define BSD 1
 #endif
 
 #ifdef MIPS
@@ -200,7 +215,6 @@ char *host_cpu = "x86";
 
 #ifdef __unix__
 # include <sys/mman.h>
-# include <sys/mman.h>
 # include <limits.h>    /* for PAGESIZE */
 # ifndef PAGESIZE
 #  define PAGESIZE 4096
@@ -305,13 +319,19 @@ typedef long quadlet;
   INTERNAL void	error(char *, char*);
 
 #else
+  INTERNAL int  getnum(char *);
   INTERNAL void	error();
 #endif
 
+/* externs from logger.c */
 extern char *rootname();
 extern char *basename();
+extern void log_output();
+extern void log_input();
+extern void log_command_line();
+extern void log_env();
 
-#ifndef LinuxPOWERPC
+#if !defined(LinuxPOWERPC) && !defined(__APPLE__)
   extern int	read(), write();
 #endif
 

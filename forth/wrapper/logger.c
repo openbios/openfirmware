@@ -11,6 +11,7 @@
 #endif
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #ifndef USE_STDIO
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -18,6 +19,8 @@
 #include <time.h>
 #ifdef MAJC
 #include <sys/unistd.h>
+#else
+#include <unistd.h>
 #endif
 
 #ifndef MAXPATHLEN

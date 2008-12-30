@@ -32,6 +32,9 @@ code (wrapper-call)  ( arg call# memtop -- )
       0 [bx]  sp  lss
    then
 
+   \ Nonce pushes to enforce 16-byte stack args alignment for Darwin
+   ax push  ax push
+
    cx push				\ my SP
    gs push				\ my SS
    ds push				\ my DS
@@ -65,6 +68,8 @@ code (wrapper-call)  ( arg call# memtop -- )
 
    bx pop				\ my SS
    cx pop				\ my SP
+
+   ax pop  ax pop  \ Undo nonce pushes
 
    1 #  'user flat?  test   0= if
       bx ss mov				\ Reload my SS:SP
