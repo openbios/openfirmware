@@ -31,10 +31,10 @@ alias depth+ wa+
 : gp-setup  ( -- )
    frame-buffer-adr >physical  dup dup offset!
    bytes/line dup stride!
-   bytes/pixel  case
-      1 of            0 endof  \  8-bpp 3:3:2
-      2 of h# 6000.0000 endof  \ 16-bpp 5:6:5
-      4 of h# 8000.0000 endof  \ 32-bpp 8:8:8:8
+   depth  case
+      8      of            0 endof  \  8-bpp 3:3:2
+      d# 16  of h# 6000.0000 endof  \ 16-bpp 5:6:5
+      d# 32  of h# 8000.0000 endof  \ 32-bpp 8:8:8:8
    endcase
    to rop-high
 ;
@@ -97,9 +97,9 @@ alias depth+ wa+
 : display-install  ( -- )
    init-all
    default-font set-font
-   /scanline bytes/pixel /  #scanlines     ( width height )
+   width  height                           ( width height )
    over char-width / over char-height /    ( width height rows cols )
-   bytes/pixel fb-install gp-install       ( )
+   /scanline depth fb-install gp-install   ( )
    init-hook
 ;
 

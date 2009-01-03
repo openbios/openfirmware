@@ -11,7 +11,8 @@ headers
 : display-install  ( -- )
    init
    default-font set-font
-   /scanline #scanlines over char-width / over char-height / fb8-install
+   width height  over char-width /  over char-height /
+   /scanline  depth  " fb-install" eval
    init-hook
 ;
 

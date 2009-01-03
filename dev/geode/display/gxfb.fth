@@ -4,24 +4,24 @@ purpose: Initialize Cyrix MediaGX video Controller
 hex
 headers
 
-2 value bytes/pixel
 
-d# 1024 value /scanline		\ Frame buffer line width
-d# 1024 value /displine		\ Displayed line width
-d#  768 value #scanlines	\ Screen height
+d# 1024 instance value width		\ Frame buffer line width
+d#  768 instance value height		\ Screen height
+d#   16 instance value depth		\ Bits per pixel
+d# 1024 instance value /scanline	\ Frame buffer line width
 
 : declare-props  ( -- )		\ Instantiate screen properties
    " width" get-my-property  if  
-      /displine bytes/pixel /  encode-int " width"     property
-      #scanlines               encode-int " height"    property
-      bytes/pixel 8 *          encode-int " depth"     property
-      /scanline                encode-int " linebytes" property
+      width  encode-int " width"     property
+      height encode-int " height"    property
+      depth  encode-int " depth"     property
+      /scanline  encode-int " linebytes" property
    else
       2drop
    then
 ;
 
-: /fb  ( -- )  /scanline #scanlines *  ;	\ Size of framebuffer
+: /fb  ( -- )  /scanline height *  ;	\ Size of framebuffer
 
 0 instance value dc-base
 0 instance value gp-base
@@ -123,8 +123,8 @@ true value dcon?
 
 : set-timing  ( -- )
    timing  3 na+  ( adr )
-   @+ bytes/pixel *  3 rshift       h# 34 dc!  \ Graphics pitch  ( adr )
-   @+ bytes/pixel *  3 rshift  2 +  h# 30 dc!  \ Line size       ( adr )
+   @+ depth *  6 rshift       h# 34 dc!  \ Graphics pitch  ( adr )
+   @+ depth *  6 rshift  2 +  h# 30 dc!  \ Line size       ( adr )
 
    @+ h# 40 dc!   \ H_ACTIVE
    @+ h# 44 dc!   \ H_BLANK
@@ -279,10 +279,10 @@ true value hsync-low?
    \ The "c" part (A20M, A18M) is unnecessary for LX, but harmless
    \ The "2" part (PALB) is unnecessary for GX, but harmless
    h# c200.0019
-   bytes/pixel case
-      1 of      0  endof
-      2 of h# 100  endof
-      4 of h# 300  endof
+   depth case
+      8      of      0  endof
+      d# 16  of h# 100  endof
+      d# 32  of h# 300  endof
    endcase
    or  8 dc!
 
@@ -489,20 +489,20 @@ d# 12,000  constant scanline-spins
    \ change the mode back to VGA timing and resolution
 
    dcon? tft-mode? and  if
-      d# 1200 bytes/pixel * to /displine
-      d# 1200 bytes/pixel * to /scanline
-      d# 900 to #scanlines
+      d# 1200 to width 
+      width depth * 3 rshift to /scanline
+      d# 900 to height
    else
       set-mode                \ Redo the mode for VGA
 
-      d# 1024 bytes/pixel * to /displine
-      d# 1024 bytes/pixel * to /scanline
-      d#  768 to #scanlines
+      d# 1024 to width
+      width depth * 3 rshift  to /scanline
+      d#  768 to height
    then
 ;
 
 : init-hook  ( -- )
-   /displine " emu-bytes/line" eval - 2/ to window-left
+   width  #columns char-width *  - 2/  to window-left
 ;
 
 external
@@ -567,10 +567,10 @@ headers
    video-on			\ Turn on video
 
    map-frame-buffer
-   bytes/pixel case
-      1 of  frame-buffer-adr /fb h#        0f  fill  endof
-      2 of  frame-buffer-adr /fb background-rgb  rgb>565  wfill  endof
-      4 of  frame-buffer-adr /fb h# ffff.ffff lfill  endof
+   depth case
+      8      of  frame-buffer-adr /fb h#        0f  fill  endof
+      d# 16  of  frame-buffer-adr /fb background-rgb  rgb>565  wfill  endof
+      d# 32  of  frame-buffer-adr /fb h# ffff.ffff lfill  endof
    endcase
    h# f to background-color
 

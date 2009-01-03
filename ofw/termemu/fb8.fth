@@ -137,7 +137,6 @@ decimal
 \ defer fb-paint   ' fb8-paint   to fb-paint
 
 headers
-: bytes/line  ( -- n )  screen-width pix*  ;
 : bytes/char  ( -- n )  char-width pix*  ;
 : bytes/screen  ( -- n )  bytes/line  screen-height *  ;
 
@@ -155,8 +154,8 @@ headers
 headerless
 
 : screen-adr  ( column# line# -- adr )
-    char-height *  window-top   +               ( column# ypixels )
-    swap  bytes/char  *  window-left  +   swap  ( xpixels ypixels )
+    char-height *  window-top   +                  ( column# ypixels )
+    swap  char-width *  window-left +  pix*  swap  ( xpixels ypixels )
     bytes/line *  +  frame-buffer-adr  +
 ;
 : line-adr  ( line# -- adr )  0 swap screen-adr  ;
@@ -260,9 +259,9 @@ headerless
 ;
 
 headers
-: fb-install  ( screen-width screen-height #columns #lines bytes/pixel -- )
+: fb-install  ( screen-width screen-height #columns #lines bytes/line depth -- )
    case
-      1 of
+      8 of
          ['] noop       to pix*
          ['] fb8-invert to fb-invert
          ['] fill       to fb-fill
@@ -270,7 +269,7 @@ headers
          ['] colors-8bpp  to fb-16map
       endof
 
-      2 of
+      d# 16 of
          ['] /w*         to pix*
          ['] fb16-invert to fb-invert
          ['] wfill       to fb-fill
@@ -278,7 +277,7 @@ headers
          ['] colors-565  to fb-16map
       endof
 
-      4 of
+      d# 32 of
          ['] /l*         to pix*
          ['] fb32-invert to fb-invert
          ['] lfill       to fb-fill
@@ -291,11 +290,12 @@ headers
    true to 16-color?
    ['] not-dark to light
 
-   \ my-self is display device's ihandle
-   screen-#rows    min  is #lines
-   screen-#columns min  is #columns
-   is screen-height  is screen-width
-   #columns bytes/char *  is emu-bytes/line
+   \ my-self is display device's ihandle      ( width height #columns #lines bytes/line )
+   is bytes/line                              ( width height #columns #lines )
+   screen-#rows    min  is #lines             ( width height #columns )
+   screen-#columns min  is #columns           ( width height )
+   is screen-height  is screen-width          ( )
+   #columns bytes/char *  is emu-bytes/line   ( )
    center-display
    ['] fb8-reset-screen   	is reset-screen
    ['] fb8-toggle-cursor  	is toggle-cursor
@@ -312,4 +312,4 @@ headers
    ['] fb8-draw-character	is draw-character
    ['] fb8-draw-logo		is draw-logo
 ;
-: fb8-install  ( width height #cols #lines -- )  1 fb-install  ;
+: fb8-install  ( width height #cols #lines -- )  3 pick 8 fb-install  ;

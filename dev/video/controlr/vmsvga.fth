@@ -16,21 +16,23 @@ purpose: Display driver for VMware virtual SVGA
 \ operation - it transmits the current change box to the virtual hardware,
 \ thus telling it to update the physical display on the host system.
 
-d# 640 value /scanline			  \ Active screen width
-d# 480 value #scanlines			  \ Active screen height
-: /fb  ( -- )  /scanline #scanlines *  ;  \ Size of active framebuffer
-
-: 640-resolution  ( -- )
-   d# 640 to /scanline
-   d# 480 to #scanlines
+d# 640 instance value width			  \ Active screen width
+d# 480 instance value height			  \ Active screen height
+8 instance value depth
+d# 640 instance value /scanline			  \ Active screen width
+: (set-resolution)  ( width height depth -- )
+   to depth  to height  to width
 ;
 
-: 1024-resolution  ( -- )
-   d# 1024 to /scanline
-   d#  768 to #scanlines
-;
+: 640-resolution  ( -- )  d# 640 d# 480 8 (set-resolution)  ;
 
-0 value regs   \ Base address of index/data registers
+: 1024-resolution  ( -- )  d# 1024 d# 768 8 (set-resolution)  ;
+: 1024x768x16  ( -- )  d# 1024 d# 768 d# 16 (set-resolution)  ;
+: 1200x900x16  ( -- )  d# 1200 d# 900 d# 16 (set-resolution)  ;
+: 1200x900x32  ( -- )  d# 1200 d# 900 d# 32 (set-resolution)  ;
+: 640x480x32  ( -- )  d# 640 d# 480 d# 32 (set-resolution)  ;
+
+0 instance value regs   \ Base address of index/data registers
 
 \ It seems strange to access a 32-bit port at an odd address (1+),
 \ but that's the way it works.  It's not a real hardware port.
@@ -75,13 +77,24 @@ d# 480 value #scanlines			  \ Active screen height
 -1 value fifo
 : /fb    ( -- #bytes )  d# 15 reg@  ;
 : /fifo  ( -- #bytes )  d# 19 reg@  ;
+
+\ 1200x900x32
+\ 640x480x32
+1024x768x16
+
+h# 200.0000 instance value /mem
 : map-regs  ( -- )
-   0 0 h# 01007810  h# 10  " map-in" $call-parent to regs
+   0 0 my-space h# 0100.0010 +  h# 10  " map-in" $call-parent to regs
 ;
 : map-mem  ( -- )
-   0 0 h# 02007814  /fb    " map-in" $call-parent  to frame-buffer-adr
-   0 0 h# 02007818  /fifo  " map-in" $call-parent  to fifo
-   3 h# 7804 " config-w!" $call-parent
+   my-space h# 14 +  " config-l@" $call-parent   if
+      0 0 my-space  h# 0200.0014 +  /fb    " map-in" $call-parent  to frame-buffer-adr
+      0 0 my-space  h# 0200.0018 +  /fifo  " map-in" $call-parent  to fifo
+   else
+      0   0 my-space  h# 0200.0018 +  /fb    " map-in" $call-parent  to frame-buffer-adr
+      /fb 0 my-space  h# 0200.0018 +  /fifo  " map-in" $call-parent  to fifo
+   then
+   3  my-space   h# 04 + " config-w!" $call-parent
 ;
 : unmap-regs  ( -- )  regs  h# 10  " map-out" $call-parent  ;
 : unmap-mem  ( -- )
@@ -104,7 +117,11 @@ d# 480 value #scanlines			  \ Active screen height
    abort  \ We don't support version 0
 ;
 : init-fb  ( -- )
-   /scanline 2 reg!  #scanlines 3 reg!  d# 8 7 reg!  \ Dimensions
+   depth 7 reg!  7 reg@ depth <>  if  7 reg@  to depth  then
+   
+   width 2 reg!  height 3 reg!  \ Dimensions
+   d# 12 reg@ to /scanline
+
    1 1 reg!           \ Enable SVGA
 ;
 : init-fifo  ( -- )
@@ -114,7 +131,7 @@ d# 480 value #scanlines			  \ Active screen height
    d# 16 d# 10 d# 1024 * +  fifo-max!
    d# 16  fifo-next!
    d# 16  fifo-stop!
-   1 d# 20 reg!
+   1 d# 20 reg!       \ Config done; adapter accepts fifo values
 ;
 : sync-fifo  ( -- )  1 d# 21 reg!  begin  d# 22 reg@  0=  until  ;
 : fifo-full?  ( -- flag )  fifo-next@ la1+  fifo-stop@  =  ;
@@ -133,12 +150,28 @@ d# 480 value #scanlines			  \ Active screen height
    fifo-max@ =  if  fifo-min@ fifo-next!  then   \ Wrap back at the end
 ;
 
+: +fifo  ( offset -- offset' )
+   fifo-next@ swap la+  dup  fifo-max@  >=  if  ( n fifo-offset )
+      fifo-max@ -  fifo-min@ +                  ( n fifo-offset' )
+   then                                         ( n fifo-offset )
+;
+: fifo!  ( n offset -- )  +fifo  fifo + l!  ;
+
+: need-fifo-entries  ( n -- )
+   fifo-next@ swap la+                 ( next+ )
+   fifo-stop@ dup fifo-next@ <  if     ( next+ stop )
+      fifo-max@ +  fifo-min@ -         ( next+ stop' )
+   then                                ( next+ stop )
+   <  if  sync-fifo  then              ( )
+;
+
 \ Pass the change box to the display engine
 : fb-update  ( xmin xlen ymin ylen -- )
-   1 fifo-put
-   2swap swap fifo-put   ( ymin ylen xlen )
-   rot fifo-put          ( ymin xlen )
-   fifo-put  fifo-put    ( )
+   5 need-fifo-entries
+
+   1 0 fifo!  ( xmin xlen ymin ylen )  \ command 
+   4 fifo!  2 fifo!  3 fifo!  1 fifo!  ( )
+   5 +fifo fifo-next!
 ;
 
 : cursor-x  ( -- n )  column# char-width   *  window-left +  ;
@@ -149,7 +182,7 @@ d# 480 value #scanlines			  \ Active screen height
 ;
 
 \ For a whole-screen update we set the box to emcompass the entire screen
-: screen-changed  ( -- )  0  /scanline  0 #scanlines  fb-update  ;
+: screen-changed  ( -- )  0  width  0 height  fb-update  ;
 
 \ Extend by the size of a character at the current position
 : char-changed  ( -- )
@@ -157,11 +190,11 @@ d# 480 value #scanlines			  \ Active screen height
 ;
 \ Extend to include the remainder of the current line 
 : line-changed  ( -- )
-   cursor-x   /scanline   cursor-y   char-height  fb-update
+   cursor-x   width   cursor-y   char-height  fb-update
 ;
 \ Extend from the current line to the bottom of the screen, full width
 : changed-to-end  ( -- )
-   0 /scanline  cursor-y #scanlines  fb-update
+   0 width  cursor-y height  fb-update
 ;
 
 \ Color map (palette) access words
@@ -205,9 +238,9 @@ headers
 
 : declare-props  ( -- )		\ Instantiate screen properties
    " width" get-my-property  if  
-      /scanline  encode-int " width"     property
-      #scanlines encode-int " height"    property
-               8 encode-int " depth"     property
+      width  encode-int " width"     property
+      height encode-int " height"    property
+      depth  encode-int " depth"     property
       /scanline  encode-int " linebytes" property
    else
       2drop
@@ -256,7 +289,8 @@ headers
    init
    set-dac-colors
    default-font set-font
-   d# 12 reg@  #scanlines  over char-width /  over char-height /  fb8-install
+   width  height  over char-width /  over char-height /
+   /scanline  depth  " fb-install" eval
 
    \ Replace the fb8-version of toggle-cursor with the wrapped version
    ['] vm-toggle-cursor to toggle-cursor

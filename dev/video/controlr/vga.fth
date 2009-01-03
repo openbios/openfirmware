@@ -176,11 +176,13 @@ instance defer crt-table
    0  ?do  dup i + c@  i crt!  loop  drop
 ;
 
-: crt-regs  ( -- )
+0 value crt-reg4
+: (crt-regs)  ( adr len -- )
    \ Don't program hsync (at offset 4) until later
-   crt-table  0  ?do  i 4 <>  if  dup i + c@  i  crt!  then  loop  drop
+   0  ?do  dup i + c@  i 4 =  if  to crt-reg4  else  i  crt!  then  loop  drop
 ;
-: hsync-on  ( -- )  crt-table drop  4 +  c@  4 crt!  ;	\ Set hsync position
+: crt-regs  ( -- )  crt-table  (crt-regs)  ;
+: hsync-on  ( -- )  crt-reg4 4 crt!  ;	\ Set hsync position
 
 : vga-video-on  ( -- )  palette-on hsync-on  ;
 

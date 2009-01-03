@@ -60,31 +60,45 @@ false instance value 6-bit-primaries?	\ Indicate if DAC only supports 6bpp
 : pl@  ( offset -- lwrd )  io-base + rl@  ;
 : pl!  ( lwrd offset -- )  io-base + rl!  ;
 
-d# 640 value /scanline				\ Screen width
-d# 480 value #scanlines				\ Screen height
+d# 640 instance value width		\ Screen width
+d# 480 instance value height            \ Screen height
+8 instance value depth			\ Bits per pixel
 
-: 640-resolution  ( -- )
-   d# 640 to /scanline
-   d# 480 to #scanlines
+d# 640 instance value /scanline		\ Bytes per line
+
+: set-depth  ( depth -- )
+   to depth
+   \ The following is correct for framebuffers without extra padding
+   \ at the end of each scanline.  Adjust /scanline for others.
+   width depth *  8 /  to /scanline
+;
+: (set-resolution)  ( width height depth -- )
+   >r  to height  to width  r> set-depth
 ;
 
-: 1024-resolution  ( -- )
-   d# 1024 to /scanline
-   d#  768 to #scanlines
-;
+: 640x480x8  ( -- )  d# 640 d# 480 8 (set-resolution)  ;
+: 1024x768x8  ( -- )  d# 1024 d# 768 8 (set-resolution)  ;
+: 1024x768x16  ( -- )  d# 1024 d# 768 d# 16 (set-resolution)  ;
+: 1024x768x32  ( -- )  d# 1024 d# 768 d# 32 (set-resolution)  ;
+: 1280x1024x8  ( -- )  d# 1280 d# 1024 8 (set-resolution)  ;
+: 1280x1024x16  ( -- )  d# 1280 d# 1024 d# 16 (set-resolution)  ;
+: 1280x1024x32  ( -- )  d# 1280 d# 1024 d# 32 (set-resolution)  ;
+
+: 640-resolution  ( -- )  d# 640 d# 480 8 (set-resolution)  ;
+: 1024-resolution  ( -- )  d# 1024 d# 768 8 (set-resolution)  ;
 
 : declare-props  ( -- )		\ Instantiate screen properties
    " width" get-my-property  if  
-      /scanline  encode-int " width"     property
-      #scanlines encode-int " height"    property
-               8 encode-int " depth"     property
+      width  encode-int " width"     property
+      height encode-int " height"    property
+      depth  encode-int " depth"     property
       /scanline  encode-int " linebytes" property
    else
       2drop
    then
 ;
 
-: /fb  ( -- )  /scanline #scanlines *  ;	\ Size of framebuffer
+: /fb  ( -- )  /scanline height *  ;	\ Size of framebuffer
 
 \ Helper words...
 

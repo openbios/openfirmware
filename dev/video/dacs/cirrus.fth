@@ -2,7 +2,7 @@
 purpose: Initialize Cirrus RAMDAC
 
 hex
-headerless
+\ headerless
 
 : init-cirrus-dac ( -- )
    ff rmr!

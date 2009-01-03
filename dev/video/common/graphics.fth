@@ -20,7 +20,7 @@ external
    0 swap 3 /
 ;
 
-headerless
+\ headerless
 
 \ For 6-to-8 conversion, we set the low bits to the same as the high bits,
 \ so that the colors are spread out evenly

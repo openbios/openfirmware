@@ -29,10 +29,8 @@ external
    loop
    3drop
 ;
-: dimensions  ( -- width height )
-   /scanline	( width )
-   #scanlines	( width height )
-;
+: dimensions  ( -- width height )  width height  ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

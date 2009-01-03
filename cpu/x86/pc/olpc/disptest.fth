@@ -69,7 +69,7 @@ d# 60,000 constant burnin-time		\ 1 minute
 ;
 
 : selftest  ( -- error? )
-   bytes/pixel 2 <>  if  false exit  then
+   depth d# 16 <>  if  false exit  then
    .horizontal-bars16
    d# 2000 ms
    .vertical-bars16

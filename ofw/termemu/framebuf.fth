@@ -64,6 +64,7 @@ d#  900 termemu-value screen-height
 0 termemu-value window-left		\ Pixel position of left of text area
 
 0 termemu-value emu-bytes/line
+0 termemu-value bytes/line		\ Framebuffer pitch
 
 \ Interfaces to device-dependent graphics primitives:
 d# 34 termemu-value #lines

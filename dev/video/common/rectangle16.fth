@@ -4,23 +4,25 @@ purpose: Drawing functions for 16-bit graphics extension
 external
 
 : rectangle-setup  ( x y w h -- wb fbadr h )
-   swap bytes/pixel * swap                 ( x y wbytes h )
+   swap depth * 3 rshift swap              ( x y wbytes h )
    2swap  /scanline * frame-buffer-adr +   ( wbytes h x line-adr )
-   swap bytes/pixel * +                    ( wbytes h fbadr )
+   swap depth * 3 rshift +                 ( wbytes h fbadr )
    swap                                    ( wbytes fbadr h )
 ;
 : fill-rectangle  ( color x y w h -- )
-   rectangle-setup  0  ?do                 ( color wbytes fbadr )
-      3dup swap rot                        ( color wbytes fbadr adr wb color )
-      bytes/pixel  case                    ( color wbytes fbadr adr wb color )
-         1  of   fill  endof
-         2  of  wfill  endof
-         4  of  lfill  endof
-      endcase                              ( color wbytes fbadr )
-      /scanline +                          ( color wbytes fbadr' )
-   loop                                    ( color wbytes fbadr' )
+   rot /scanline *  frame-buffer-adr +          ( color x w h fbadr )
+   -rot >r                                      ( color x fbadr w  r: h )
+   \ The loop is inside the case for speed
+   depth  case                                  ( color x fbadr w  r: h )
+      \ The stack before ?do is                 ( color width-bytes fbadr h 0 )
+      8     of      -rot         +  r> 0  ?do  3dup swap rot  fill  /scanline +  loop  endof
+      d# 16 of  /w* -rot  swap wa+  r> 0  ?do  3dup swap rot wfill  /scanline +  loop  endof
+      d# 32 of  /l* -rot  swap la+  r> 0  ?do  3dup swap rot lfill  /scanline +  loop  endof
+      ( default )  r> drop nip    ( color x fbadr bytes/pixel )
+   endcase                                      ( color width-bytes fbadr )
    3drop
 ;
+
 : draw-rectangle  ( adr x y w h -- )
    rectangle-setup  0  ?do                 ( adr wbytes fbadr )
       3dup swap move                       ( adr wbytes fbadr )
@@ -55,10 +57,7 @@ external
    loop                                    ( adr' wbytes fbadr' )
    3drop
 ;
-: dimensions  ( -- width height )
-   /scanline bytes/pixel /	( width )
-   #scanlines			( width height )
-;
+: dimensions  ( -- width height )  width height  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
