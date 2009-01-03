@@ -22,6 +22,7 @@ in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
 in: ${BP}/dev/pci/build/pcibridg.fc
 in: ${BP}/dev/ide/build/leghier.fc
 in: ${BP}/dev/video/build/cirrus.fc
+in: ${BP}/dev/video/build/vmsvga.fc
 in: ${BP}/dev/ne2000/build/ne2kpci.fc
 in: ${BP}/dev/amd79970/build/vmlance.fc
 \ in: ${BP}/dev/video/build/video.fc
@@ -56,6 +57,7 @@ writing emuofw.rom
 
 \ Just use a driver targeted at the specific chipset that QEMU emulates
    " ${BP}/dev/video/build/cirrus.fc"           " pci1013,b8"      $add-deflated-dropin
+   " ${BP}/dev/video/build/vmsvga.fc"           " pci15ad,405"     $add-deflated-dropin
 
    " ${BP}/dev/ne2000/build/ne2kpci.fc"         " pci10ec,8029"    $add-deflated-dropin
    " ${BP}/dev/amd79970/build/vmlance.fc"       " pci1022,2000"    $add-deflated-dropin
