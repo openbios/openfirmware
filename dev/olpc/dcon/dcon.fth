@@ -138,7 +138,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
    h# dc02 =
 ;
 
-: dcon-enable  ( -- )
+: dcon-setup  ( -- )
    \ Switch to OLPC mode
 
    atest?  if    \ A-test boards have a DCON FPGA
@@ -169,6 +169,10 @@ d# 905 value resumeline  \ Configurable; should be set from args
       h# 0101  h# 41 dcon!
       h# 0101  h# 42 dcon!
    then
+   h# 12 mode!
+;
+: dcon-enable  ( -- )
+   dcon-setup
    true set-color
    h# f bright!
 ;
@@ -176,7 +180,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
 dconstat dconblnk or dconirq or  constant in-gpios  
 dconload constant out-gpios
 
-: dcon-init  ( -- )
+: dcon-gpio-init  ( -- )
    out-gpios in-gpios wljoin  OUT_EN gpio!
    in-gpios out-gpios wljoin  IN_EN  gpio!
 

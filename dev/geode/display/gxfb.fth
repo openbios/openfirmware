@@ -168,7 +168,7 @@ h# 4c00.0015 constant dotpll
    set-dotpll                       ( )
 ;
 
-[ifndef] dcon-init
+[ifndef] dcon-gpio-init
 false to dcon?
 false constant atest?
 \ : tft-mode?  ( -- flag )  h# c000.2001 msr@  drop h# 40 and  0<>  ;
@@ -413,7 +413,7 @@ previous definitions
 
 \ fload ${BP}/dev/mediagx/video/bitblt.fth
 
-[ifdef] dcon-init
+[ifdef] dcon-gpio-init
 
 \ This is a horrible hack to get the DCON PLL started.
 \ What is going on is that you have to start the video timing
@@ -462,9 +462,17 @@ d# 12,000  constant scanline-spins
    irq@905?                     ( flag )
 ;
 
+: dcon-restart  ( -- )
+   dcon-gpio-init
+   d# 50 0  do
+      good-dcon?  if  dcon-setup  h# 11 mode!  leave  then
+   loop
+   set-mode
+;
+
 : probe-dcon  ( -- )
    true to dcon?  set-mode
-   dcon-init   \ GPIO stuff
+   dcon-gpio-init   \ GPIO stuff
    d# 50 0  do
       good-dcon?  if  dcon-enable  maybe-set-cmos  unloop exit  then
    loop

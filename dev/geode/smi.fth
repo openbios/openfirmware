@@ -794,7 +794,11 @@ code smi  smint  c;
    resume-debug?  if  debug-me  then
    exit-smi
    resume-debug?  if  ." enter s3" cr  then 
+   dcon-power-off
    s3
+   dcon-power-on
+   d# 10 ms
+   " dcon-restart" screen-ih $call-method
 \   ." Return from S3" cr  interact
 \   noop
    setup-smi
