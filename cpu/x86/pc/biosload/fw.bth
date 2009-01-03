@@ -180,6 +180,12 @@ end-support-package
 [then]
 devalias nfs net//obp-tftp:last//nfs
 
+[ifdef] use-iscsi
+support-package: iscsi
+   fload ${BP}/ofw/inet/iscsi/loadiscsi.fth
+end-support-package
+[then]
+
 fload ${BP}/ofw/inet/loadtcp.fth
 
 support-package: http
