@@ -1085,6 +1085,14 @@ d# 16 buffer: already-assigned
       4drop   exit
    then                           ( phys.lo,mid,hi size.lo )
 
+   over io?  if                   ( phys.lo,mid,hi size.lo )
+      dup h# 4000 u>=  if         ( phys.lo,mid,hi size.lo )
+         ." Can't assign more than 16K of I/O space" cr
+         ." Probably a non-writable BAR at PCI config address " drop h# ff.ffff and u. cr
+         2drop exit
+      then
+   then
+
    \ Mark as already assigned
    1  2 pick  >assigned dup 1+ >r c!  ( phys.lo,mid,hi size.lo ) ( r: adr)
    r> 2 pick 64mem?  if  1 swap c!  else  drop  then
