@@ -183,8 +183,9 @@ fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
 [ifdef] pseudo-nvram
 fload ${BP}/cpu/x86/pc/biosload/filenv.fth
 dev /file-nvram
+: fd-nv-file  ( -- )  " a:\nvram.dat"  ;
 : hd-nv-file  ( -- )  " c:\nvram.dat"  ;
-' hd-nv-file to nv-file
+' fd-nv-file to nv-file
 device-end
 stand-init: Pseudo-NVRAM
    " /file-nvram" open-dev  to nvram-node

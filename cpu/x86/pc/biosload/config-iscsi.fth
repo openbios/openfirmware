@@ -4,10 +4,10 @@ purpose: Establish configuration definitions
 \ --- The environment that "boots" OFW ---
 \ - Image Format - Example Media - previous stage bootloader
 
-\ Load and run in VirtualBox (also works for other emulators)
-create virtualbox-loaded 
+\ - ELF format w/ Multiboot signature - various media - GRUB
+create grub-loaded
 
-\ create debug-startup
+create debug-startup
 \ create serial-console
 create resident-packages
 create addresses-assigned  \ Don't reassign PCI addresses
@@ -23,6 +23,7 @@ create use-watch-all
 create pseudo-nvram
 \ create use-null-nvram
 \ create no-floppy-node
+create use-iscsi
 
 fload ${BP}/cpu/x86/pc/biosload/addrs.fth
 
