@@ -65,14 +65,15 @@ headers
    loop
 ;
 
-\ We set both the block size and the maximum transfer size to one cylinder.
-\ Reading a cylinder at a time improves the performance dramatically
-\ compared to reading a block at at a time.
-\ XXX: Override these values if the installed drive isn't 3.5-inch 1.44MB.
 : sec/cyl       ( -- n )  sec/trk 2*  ;
-: max-transfer  ( -- n )  h# 200 sec/cyl *  ;
+
+\ It is tempting to set the block size and the maximum transfer size to
+\ one cylinder to get better performance, but that doesn't work well
+\ with filesystems that expect the block size to be 512.
+\ : max-transfer  ( -- n )  h# 200 sec/cyl *  ;
 \ : block-size    ( -- n )  max-transfer  ;
 \ : #blocks       ( -- n )  d# 80  ;	\ For 1.44 MByte floppies
+: max-transfer  ( -- n )  h# 200  ;
 : block-size    ( -- n )  h# 200  ;
 : #blocks       ( -- n )  d# 80 sec/cyl * ;	\ For 1.44 MByte floppies
 

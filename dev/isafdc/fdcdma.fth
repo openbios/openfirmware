@@ -5,7 +5,7 @@ hex
 headerless
 
 : dma-setup  ( vadr len write-memory? -- vadr devaddr len )
-   14 8 pc!		           \ disable the chip while programming it
+   4 8 pc!		           \ disable the chip while programming it
 
    if  46  else  4a  then   b pc!  \ single transfer, increment addr,
 				   \ no autoinit, ch 2
@@ -30,9 +30,10 @@ headerless
    0 d4 pc!			   \ Release channel 4 (master for chs. 0-3)
    2 a pc!			   \ Release channel 2
 
-   10 8 pc!			   \ re-enable the chip
+   0 8 pc!			   \ re-enable the chip
 
 ;
+[ifdef] notdef
 : dma-wait  ( vaddr devaddr len -- timeout? )
    true
    d# 400  0  do
@@ -43,6 +44,18 @@ headerless
    " dma-map-out" $call-parent
    r>
 ;
+[else]
+: dma-wait  ( vaddr devaddr len -- timeout? )
+   true
+   d# 400  0  do
+      0 c pc!  5 pc@ 5 pc@ bwjoin  h# ffff =  if  0= leave  then
+      d# 10 ms
+   loop
+   >r
+   " dma-map-out" $call-parent
+   r>
+;
+[then]
 
 headers
 external
