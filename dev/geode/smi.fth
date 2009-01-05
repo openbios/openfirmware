@@ -795,7 +795,9 @@ code smi  smint  c;
    exit-smi
    resume-debug?  if  ." enter s3" cr  then 
    dcon-power-off
+   wlan-freeze
    s3
+   wlan-reset
    dcon-power-on
    d# 10 ms
    " dcon-restart" screen-ih $call-method
