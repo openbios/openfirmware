@@ -27,7 +27,7 @@ h# 40 constant /nand-oob
    fileih  ?dup  if  0 to fileih  close-dev  then
 ;
 : close-nand  ( -- )
-   nandih  ?dup  if  0 to nandih  close-dev  0 to #nand-pages  then
+   nandih  ?dup  if  0 to nandih  close-dev  then
 ;
 : close-nand-ihs  ( -- )
    0 to nanddump-mode?
@@ -697,7 +697,7 @@ true value dump-oob?
 
 : slowdump-nand  ( -- )
    \ The stack is empty at the end of each line unless otherwise noted
-   #nand-pages  0  do
+   #nand-pages  0  ?do
       (cr i >eblock# .
       load-base  i  nand-pages/block  " read-pages" $call-nand  ( #read )
       nand-pages/block =  if
