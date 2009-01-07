@@ -99,7 +99,7 @@ variable mode  \ 0 - unknown  1 - GS  2 - PT  3 - mouse
    1 mode !
 ;
 : pt-only  ( -- )
-   mode @  swap 3 =  if  exit  then
+   mode @  3 =  if  exit  then
    alps-prefix mouse2:1    \ f2 f2 f2 e7
    2 mode !
 ;
