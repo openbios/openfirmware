@@ -344,6 +344,7 @@ fload ${BP}/cpu/x86/pc/olpc/acpi.fth
 fload ${BP}/cpu/x86/pc/olpc/smbios.fth
 \ fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
 fload ${BP}/cpu/x86/pc/biosints.fth
+fload ${BP}/cpu/x86/pc/olpc/biosresume.fth
 
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth

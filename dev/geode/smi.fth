@@ -783,6 +783,12 @@ code smi  smint  c;
    enable-io-smis
 ;
 
+defer suspend-devices  ' noop to suspend-devices
+defer resume-devices   ' noop to resume-devices
+
+defer freeze-ps2  ' noop to freeze-ps2
+defer unfreeze-ps2  ' noop to unfreeze-ps2
+
 \ Implement the ACPI S3 (suspend to RAM) semantics using the OFW
 \ "S3 looks like a subroutine call" semantics.  This requires
 \ some fancy mode switching.
@@ -794,13 +800,13 @@ code smi  smint  c;
    resume-debug?  if  debug-me  then
    exit-smi
    resume-debug?  if  ." enter s3" cr  then 
-   dcon-power-off
-   wlan-freeze
+
+   suspend-devices
+
    s3
-   wlan-reset
-   dcon-power-on
-   d# 10 ms
-   " dcon-restart" screen-ih $call-method
+
+   resume-devices
+
 \   ." Return from S3" cr  interact
 \   noop
    setup-smi
