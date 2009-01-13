@@ -1,0 +1,255 @@
+= iSCSI for OFW =
+
+== Introduction ==
+
+The purpose of this code is to allow a system to boot from 
+an iSCSI target device. It acts as an iSCSI initiator, performing
+target discovery, normal login, and SCSI reads.
+
+This is a minimal implementation. Many features of the iSCSI protocol 
+are not supported, including multiple connections and failover, 
+encrypted connections, and header digests.
+
+== Usage ==
+
+Normal boot syntax is
+
+  boot iscsi:server//disk:,\filename
+
+e.g.
+
+  boot iscsi:10.0.0.100//disk:,\system.img
+
+If the target requires CHAP authentcation, two environment variables
+must be set:
+
+  iscsi-user
+  iscsi-password
+
+e.g.
+
+  setenv iscsi-user testy
+  setenv iscsi-password rudeword
+
+The usual OFW methods are supported, so it is possible to select
+a dvice for reading and writing. For example,
+
+  select iscsi:10.0.0.100//disk:0
+  load-base 0 20 read-blocks .
+
+
+== Limitations ==
+
+Targets with multiple LUNs have not been tried, and may not work
+correctly.
+
+Most negotiated parameters are ignored.
+
+Targets that require DataDigest	or HeaderDigest set to CRC32 are 
+not supported. Support for digests would probably not be difficult 
+to add.
+
+SCSI writes are implemented, but have had minimal testing.
+
+The ISID is hard-coded to that of Sun Microsystems. It might be
+better to set it dynamically somehow.
+
+== Parameter Negotiation ==
+
+All negotiable parameters, or "keys", in RFC3270 are supported.
+If a target sets an unknown key login will fail.
+In most cases the values that have been negotiated are not used.
+
+This initiator specifies certain values during login, then accepts
+whatever values the target requests.
+
+In particular, MaxRecvDataSegmentLength is set to the actual length
+of the input buffer that has been allocated. The SCSI code limits
+data sizes to max-transfer, which will be the smaller of the buffer 
+size and MaxRecvDataSegmentLength.
+
+SCSI writes should also be limited by FirstBurstLength if it happens
+to be smaller. That has not been implemented as writes are not likely
+to be used.
+
+== A walk through the code ==
+
+The ofw iSCSI package is optionally included in cpu/x86/pc/biosload/fw.bth
+as follows.
+
+  support-package: iscsi
+     fload ${BP}/ofw/inet/loadiscsi.fth	\ iSCSI client
+  end-support-package
+
+The file loadiscsi.fth declares a devalias, loads the rest of
+the iscsi files, and creates a disk node in packages.
+
+  devalias iscsi tcp//iscsi
+
+We make heavy use of the interposer mechanism.
+
+  load iscsi:10.0.0.100//disk:,\README
+
+becomes
+
+  load net//obp-tftp:last//tcp//iscsi:10.0.0.100//disk:,\README
+
+This allows iscsi access to tcp methods using $call-parent,
+and allows the disk node access to iscsi using $call-parent.
+
+Two debug flags are defined.
+
+Set debug? true for general diganostic messages, including 
+a brief description of each iSCSI Protocol Data Unit (PDU) 
+that is sent or received.
+
+Set verbose? true to see a hex dump of each PDU,
+
+
+=== Files in /iscsi/ ===
+
+low.fth contains calls to the parent tcp node. They are used to 
+select a target server, connect to a remote port, disconnect, 
+and to read and write tcp packets.
+
+  wait-read  ( adr len -- actual )
+
+uses tcp-read to get up to len bytes into the buffer at adr.
+it returns the number actually read, or -1 if the connection
+has been disconnected. wait-read will retry tcp-reads until
+it times out, currently after 60 seconds.
+
+low.fth also contains some minor words used elsewhere.
+
+buffer.fth defines the data structure variations for the PDUs,
+naming the fields that are used, and allocates input and output 
+buffers. It defines words to read and write various fields, and
+words to send and receive PDUs.
+
+The output buffer is small, as any large writes will send the data
+segment from whatever address it happens to occupy. 
+
+The input buffer is large, as writes are first accepted into it
+then moved to their destination.
+
+It is assumed the there are no Additional Header Segments.
+
+send-pdu and get-pdu are deferred to allow using the debug
+versions of each. The default values are (send-pdu) and (get-pdu).
+
+There are actually two words for sending a PDU.
+send-pdu sends everything from the output buffer.
+send-pdu+data sends the header from the output buffer, and specified 
+data. In retrospect it might have been better to combine them into 
+a single routine.
+
+get-pdu first reads the header using read-all, determines the
+length of the remaining data (if any) from the header, and
+reads the rest with read-all.
+
+  read-all   ( adr total -- )
+
+retries until it reads exactly total bytes into the buffer at adr.
+
+  init-pdu
+
+initializes an outgoing PDU. 
+
+During parameter negotiation, various strings are concatenated
+onto the output buffer, each terminated with a null.
+append, append0, and addnull are used in that process.
+
+debug.fth may be omitted out to save space. 
+(That has not been tested recently.)
+It defines variants of the PDU send and receive words which
+display the PDUs.
+
+keys.fth handles the details of parameter negotiation.
+All known keys are defined in a set of vocabularies grouped
+by behavior. 
+
+bkeys has keys with boolean values (Yes or No).
+
+dkeys has keys with digest values (CRC32C ot None).
+
+nkeys has keys with numeric values.
+
+tkeys has keys with text values.
+
+  get-key   ( $key -- $value )
+
+takes a key and returns a string with its value.
+
+  set-key   ( $value $key -- )
+
+assigns a value to a key.
+
+  set-iname  ( -- )
+
+sets InitiatorAlias to iqn.1986-03.com.sun:boot plus
+the mac-address.
+
+get-hex is used to the CHAP challenge CHAP_C
+
+put-hex is used for the CHAP response CHAP_R
+
+append-key builds on the earlier append methods for parameter negotiation.
+
+parse-keys handles incoming parameters. during negotiation.
+
+inet/random.fth is included to set the low 15 bits of the isid
+to a random value at the start of each session. This is done
+to ensure uniqueness, as a target will reject duplicate session
+ids.
+
+ppp/md5.fth is used for CHAP authentication.
+
+chap.fth contains the actual calculation of a CHA response.
+
+ipackets,fth handles incoming PDUs.
+get-response is deffered to allow using the debug version.
+(get-response) gets an incoming PDU and dispatches it to a handler
+based on its opcode.
+
+nop-in must send a nop-out if the nop-in was unsolicited.
+
+Targets may choose to respond to a read request with a series
+of scsi-data-in PDUs.
+scsi-data-in moves incoming data to its destination, and
+recursively calls get-response if the PDU was not final. 
+
+
+opackets.fth defines and handles outgoing PDUs.
+send-cmd sends the PDU in the output buffer, and calls get-response.
+
+opackets.fth also defines execute-command, on which the SCSI depends.
+
+The bulk of opackets.fth is concerned with login.
+login-discovery sets the keys to default values, then
+sends a PDU to initiates a discovery login (with login-d).
+If the target set AuthMethod to CHAP, auth-login performs
+CHAP authentication using the environment variable iscsi-user
+and iscsi-password. Otherwise it does login-none which ensure that
+the target is past the authentication stage.
+
+login-discovery then uses login-dp to negotiate parameters,
+and login-st to send a "SendTargets" request. The repsonse
+should set TargetAddress, which is used during normal login.
+
+login-discovery then logs out (possibly not necessary) and 
+disconnects.
+
+login-normal goes through a similar process using login-n and login-np.
+
+methods.fth defines the usual OFW device words open-hardware and such.
+The bulk of the work is in mount, which sets the target address,
+connects to its ISCSI port, and does login-discovery and login-normal.
+
+scsi.fth defines stubs for some routines that the SCSI code wants,
+though they are not useful here.
+Note: that might change when support for targets with multiple LUNs
+is added.
+
+scsi.fth also defines max-transfer which the SCSI code uses to limit 
+the size of data transfers. It is set to the minimum of our input
+buffer size and MaxRecvDataSegmentLength.
