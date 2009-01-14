@@ -2,8 +2,8 @@ purpose: Save the Forth dictionary image in a ROM-bootable format
 \ See license at end of file
 
 \ Save an image of the target system in a file.
-: save-rom  ( str -- )
-   >r
+: $save-rom  ( filename$ -- )
+   2>r
    make-arm-header
 
    \ Turn off the relocation bitmap maintainer
@@ -14,7 +14,7 @@ purpose: Save the Forth dictionary image in a ROM-bootable format
    " stand-init-io" $find-name is init-io
    " stand-init"    init-save
 
-   aif-header  h# 80  r>  save-image
+   aif-header  h# 80  2r>  $save-image
 ;
 
 \ LICENSE_BEGIN
