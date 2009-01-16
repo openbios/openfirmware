@@ -1,10 +1,16 @@
 OS := $(shell uname)
 
 BASEDIR= `(cd ../../../..; pwd;)`
+TAGFILES= ../../build/*.tag *.tag
 CLIENTDIR=../../../../clients
 CLIENTPROGS=
 
-all: qemubase.rom
+all: qemubase.rom tags
+
+qemubase.tag: qemubase.rom
+
+tags: qemubase.tag
+	@${BASEDIR}/forth/lib/toctags ${BASEDIR} ${TAGFILES}
 
 qemubase.rom: FORCE build ${CLIENTPROGS}
 	./build $@

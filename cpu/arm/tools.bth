@@ -9,6 +9,8 @@ build-now
 \ ' noop is include-hook
 \ : rn  (cr 2dup type 15 spaces  ;  ' rn is include-hook
 
+" tools.tag" r/w create-file drop  tag-file !
+
 fload ${BP}/forth/lib/fwsetup.fth
 
 transient
@@ -19,6 +21,10 @@ fload ${BP}/forth/lib/loadcomm.fth		\ CPU-independent Forth tools
 fload ${BP}/cpu/arm/loadmach.fth  \ CPU and OS-specific extensions
 
 [ifndef] no-heads
+resident   dispose   0 0 set-transize   \ true is suppress-transient
+
+tag-file @ fclose  tag-file off
+
 .( --- Saving tools.dic --- )  " tools.dic" $save-forth cr
 [then]
 

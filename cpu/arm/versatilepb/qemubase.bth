@@ -10,8 +10,9 @@ dictionary: ${BP}/cpu/arm/build/basefw.dic
 command: &armforth &dictionary &this
 build-now
 
-\ ' $report-name is include-hook
+" qemubase.tag" r/w create-file drop  tag-file !
 
+\ ' $report-name is include-hook
 
 h# 8.0000 constant initial-heap-size
 
@@ -19,30 +20,15 @@ h# 8.0000 constant initial-heap-size
 ' (initial-heap) to initial-heap
 
 
-h# 101f1000 constant uart-base  \ UART0 base address on VersatilePB board
-
 fload ${BP}/cpu/arm/pl011-diaguart.fth	\ PL011 UART
+h# 101f1000 to pl011-base  \ UART0 base address on VersatilePB board
 
-\ Setup the console I/O vectors for a simple UART
-: install-uart-io  ( -- )
-   inituarts
-
-   ['] lf-pstr          is newline-pstring
-   ['] ukey?            is key?
-   ['] ukey             is (key
-   ['] uemit            is (emit
-   ['] default-type     is (type
-   ['] emit1            is emit
-   ['] type1            is type
-   ['] crlf             is cr
-   ['] true             is (interactive?
-   ['] cancel           is light
-;
+fload ${BP}/forth/lib/sysuart.fth	\ Set console I/O vectors to UART
 
 \ Install the simple UART driver from the standalone I/O init chain
 : stand-init-io  ( -- )
    stand-init-io
-   install-uart-io
+   init-pl011  install-uart-io
 ;
 
 \ This is some glue code to convert the machine setup that QEMU gives us
@@ -64,6 +50,8 @@ code stand-cold-code    ( r0: 0  r1: board-id  r2: &kernel-args  lr: &aif_header
    b     'code start-forth  \ Branch to the generic startup code
 end-code
 
+
+tag-file @ fclose  tag-file off
 
 fload ${BP}/cpu/arm/saverom.fth  \ Save the dictionary for standalone startup
 

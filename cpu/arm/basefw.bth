@@ -5,7 +5,9 @@ dictionary: ${BP}/cpu/arm/build/tools.dic
 command: &armforth &dictionary &this
 build-now
 
-\ ' $report-name is include-hook
+" basefw.tag" r/w create-file drop  tag-file !
+
+\  ' $report-name is include-hook
 
 create include-help			\ Include help facility
 
@@ -79,6 +81,10 @@ defines: $partition
 [then]
 
 [ifndef] no-heads
+resident   dispose   0 0 set-transize   \ true is suppress-transient
+
+tag-file @ fclose  tag-file off
+
 .( --- Saving basefw.dic --- )  cr " basefw.dic" $save-forth
 [then]
 
