@@ -1,0 +1,61 @@
+== Booting OFW from BIOS via a USB Drive ==
+
+You need a USB drive (hard disk, FLASH stick, pendrive) that is formatted with a FAT filesystem
+(they come that way from the factory).
+
+These instructions assume that you know the basics of mounting USB drives and copying files to and from them.
+
+=== Build OFW ===
+
+On a Linux system with gcc and Subversion installed:
+
+  $ svn co svn://openbios.org/openfirmware
+  $ cd openfirmware/cpu/x86/pc/biosload
+  $ cp config-usbkey.fth config.fth
+  $ cd build
+  $ make
+
+The output file is ofw.c32 .  It is in "COM32" format, as used by SYSLINUX.
+
+* Copy ofw.c32 to the USB drive's root directory
+
+* Copy openfirmware/cpu/x86/biosload/syslinux.cfg to the USB drive's root directory
+
+=== Make the USB Key Bootable ... ===
+
+==== ... On Linux ====
+
+* Install the "syslinux" package (e.g. "apt-get install syslinux" or "yum install syslinux" or get the whole distribution from http://www.kernel.org/pub/linux/utils/boot/syslinux/ and use linux/syslinux therein).
+
+* Unmount any filesystems that are currently mounted on the USB drive
+
+* Find the USB drive's device name.  It will probably be something like /dev/sda .  You want the name of the whole drive (just sda), NOT a subordinate partition (NOT sda1).
+
+* Run this command, replacing "/dev/sda" with the appropriate device name for your USB drive:
+
+   $ syslinux /dev/sda
+
+
+==== ... On Windows ====
+
+* Open My Computer and find the drive corresponding to the USB key.  The following instructions assume that it is "F".
+
+* Download and extract the following onto your host machine: http://www.kernel.org/pub/linux/utils/boot/syslinux/syslinux-3.72.zip
+
+* Open a cmd window
+
+* cd to the directory where you unzipped the syslinux files
+
+* cd to the win32 subdirectory
+
+* Run this command line, replacing "f" with the drive letter for your USB key:
+
+      syslinux f:
+
+* Use the "Safely Remove Hardware" icon in the system tray to stop the USB key device, then remove that device
+
+=== Setup Your BIOS to Boot From USB ===
+
+... depends on your particular BIOS, but in general, you must set the
+boot order so something like "USB HDD" is the first choice.  You do not
+want "USB ZIP drive" or "USB floppy".

@@ -49,6 +49,7 @@ true ' fcode-debug? set-config-int-default
 
 \ XXX should be loaded by basefw.bth
 fload ${BP}/cpu/x86/initpgm.fth		\ Basic boot handler
+fload ${BP}/cpu/x86/msr.fth	        \ Access to machine specific registers
 
 : (cpu-arch  ( -- adr len )
    " architecture" ['] root-node  get-package-property  drop
@@ -61,7 +62,7 @@ d# 12   to pageshift
 
 dev /
 1 encode-int  " #address-cells"  property
-
+1 encode-int  " #size-cells"     property
 " Generic PC" model
 " PC" encode-string  " architecture" property
 
@@ -79,6 +80,7 @@ fload ${BP}/ofw/core/memlist.fth	\ Resource list common routines
 fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
 fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
 fload ${BP}/ofw/core/availpm.fth	\ Available memory list
+fload ${BP}/ofw/core/allocmor.fth	\ Secondary allocator
 
 fload ${BP}/cpu/x86/pc/rootnode.fth	\ Platform-specific root node changes
 
@@ -114,6 +116,7 @@ end-support-package
 [then]
 
 [ifdef] linux-support
+\needs unix-seconds>  fload ${BP}/ofw/fs/unixtime.fth	\ Unix time calculation
 support-package: ext2-file-system
    fload ${BP}/ofw/fs/ext2fs/ext2fs.fth	\ Linux file system
 end-support-package
@@ -145,10 +148,10 @@ fload ${BP}/ofw/elf/elfdebug.fth
 [ifdef] virtual-mode
 \ Depends on the assumption that physical memory is mapped 1:1 already
 : (elf-map-in) ( va size -- )  0 mem-claim  drop  ;
-' (elf-map-in) is elf-map-in
 [else]
-' 2drop is elf-map-in
+: (elf-map-in)  ( va size -- )  2drop  ;
 [then]
+' (elf-map-in) is elf-map-in
 [then]
 
 \ Reboot and re-entry code
@@ -166,6 +169,15 @@ device-end
 
 [ifdef] virtual-mode
 fload ${BP}/cpu/x86/pc/mmusetup.fth	\ Initial values for MMU lists
+[ifdef] olpc
+dev /mmu
+: claim-rom  ( -- )
+   (initial-claim)
+   rom-pa  h# ffff.0000 over -  claim-virtual drop   \ ROM 1-1 map
+;
+' claim-rom to initial-claim
+dend
+[then]
 [then]
 
 fload ${BP}/cpu/x86/pc/biosload/devices.fth
@@ -265,6 +277,11 @@ previous previous definitions
    " penguin.txt" find-drop-in  if  page type  then
 ;
 
+[ifdef] olpc
+fload  ${BP}/cpu/x86/pc/olpc/usbpwr.fth
+devalias net /wlan
+[then]
+
 : probe-all  ( -- )
    " probe-" do-drop-in
    ." probe-pci"  cr
@@ -273,9 +290,14 @@ previous previous definitions
 [ifdef] probe-isa-modem
    probe-isa-modem
 [then]
+[ifdef] olpc
+   power-cycle-usb
    probe-usb
-   report-disk
+[else]
+   probe-usb
    report-net
+[then]
+   report-disk
    report-pci-fb
 ;
 

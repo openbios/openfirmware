@@ -96,6 +96,10 @@ hex
    " ${BP}/dev/usb2/device/net/build/usbnet.fc"         " usbnet"      $add-deflated-dropin
    " ${BP}/dev/usb2/device/serial/build/usbserial.fc"   " usbserial"   $add-deflated-dropin
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"  $add-deflated-dropin
+[ifdef] olpc
+   " ${BP}/dev/usb2/device/wlan/build/usb8388.fc"  " usb1286,2001"   $add-deflated-dropin
+   " ../../olpc/build/usb8388.bin"                 " usb8388.bin"    $add-deflated-dropin
+[then]
 
    " builton.fth"                       " probe-"          $add-dropin
 [ifndef] resident-packages

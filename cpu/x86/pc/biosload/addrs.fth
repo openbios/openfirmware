@@ -34,6 +34,21 @@ h# fff8.0020 constant dropin-base  \ Location of payload in ROM
 h#   08.0000 constant dropin-size
 [then]
 
+[ifdef] olpc
+\ System has limited memory (256M for most versions, 128M for a few)
+\needs fw-pa      h#  e00.0000 constant fw-pa     \ OFW dictionary location
+\needs /fw-ram    h#   20.0000 constant /fw-ram
+
+\needs heap-base  h#  e20.0000 constant heap-base \ Dynamic allocation heap
+\needs heap-size  h#   20.0000 constant heap-size
+
+\needs dma-base   h#  e40.0000 constant dma-base  \ DMA heap
+\needs dma-size   h#   20.0000 constant dma-size
+
+                  h#  e60.0000 constant dropin-base  \ Location of payload in RAM
+                  h#   08.0000 constant dropin-size
+[then]
+
 \needs dropin-base  h# 198.0000 constant dropin-base
 \needs dropin-size  h#   8.0000 constant dropin-size
 \needs ResetBase    dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM

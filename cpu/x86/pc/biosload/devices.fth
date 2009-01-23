@@ -82,6 +82,19 @@ device-end
 fload ${BP}/dev/pc87317.fth		\ National PC87317 superIO
 [then]
 
+[ifdef] olpc
+\ Create the top-level device node to access the entire boot FLASH device
+0 0  " fff00000"  " /" begin-package
+   " flash" device-name
+
+   h# 10.0000 value /device
+   h# 10.0000 constant /device-phys
+   my-address my-space /device-phys reg
+   fload ${BP}/dev/flashpkg.fth
+   fload ${BP}/dev/flashwrite.fth
+end-package
+[then]
+
 0 0  dropin-base <# u#s u#>  " /" begin-package
    " flash" device-name
 
@@ -176,7 +189,8 @@ stand-init:  Keyboard overrides
 [then]
 
 fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
-fload ${BP}/forth/lib/pattern.fth		\ Text string pattern matching
+fload ${BP}/forth/lib/pattern.fth	\ Text string pattern matching
+fload ${BP}/forth/lib/tofile.fth	\ to-file and append-to-file
 \ XXX remove the OS file commands from tools.dic
 fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
 
@@ -302,6 +316,34 @@ fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 fload ${BP}/cpu/x86/pc/egauart.fth		\ Output also to EGA
 
 fload ${BP}/cpu/x86/pc/reset.fth		\ reset-all
+
+[ifdef] olpc
+\ true constant lx?			\ 
+h# fff0.0000   constant rom-pa		\ Physical address of boot ROM
+fload ${BP}/dev/geode/acpi.fth           \ Power management
+fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
+
+warning @ warning off
+: stand-init-io  stand-init-io  h# fff0.0000 to flash-base  ;
+warning !
+
+fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
+
+fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
+
+\ fload ${BP}/cpu/x86/pc/olpc/boardrev.fth   \ Board revision decoding
+fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
+fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
+fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
+
+fload ${BP}/dev/olpc/spiflash/spiflash.fth   \ SPI FLASH programming
+fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
+fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
+fload ${BP}/cpu/x86/pc/olpc/iflash.fth       \ Insyde BIOS replacement tools
+: ofw-fw-filename$  " u:\olpcofw.rom"  ;
+' ofw-fw-filename$ to fw-filename$
+[then]
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
