@@ -1,0 +1,9 @@
+#!/bin/sh
+# This script demonstrates the ability to build the wrapper with tcc
+# (Tiny C Compiler)
+
+BP=../../..
+W=${BP}/forth/wrapper
+Z=${W}/zip
+
+tcc -DTARGET_X86 -o forth  ${W}/wrapper.c ${W}/logger.c ${Z}/zipmem.c ${Z}/deflate.c ${Z}/trees.c ${Z}/bits.c ${Z}/util.c ${Z}/inflate.c
