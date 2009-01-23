@@ -1,6 +1,5 @@
 # Wrapper makefile for x86 Unix: FreeBSD, Linux, etc.
-# Copyright 1997 FirmWorks. All rights reserved.
-#
+
 BP=../../..
 
 CFLAGS	= -O -g -m32 -DTARGET_X86

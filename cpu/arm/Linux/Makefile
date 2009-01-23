@@ -1,6 +1,5 @@
 # Wrapper makefile for ARM Linux
-# Copyright 2008 FirmWorks. All rights reserved.
-#
+
 BP=../../..
 
 CFLAGS = -DARM -mlittle-endian
