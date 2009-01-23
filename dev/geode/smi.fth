@@ -402,11 +402,10 @@ alias msr. .msr
 
    h# 11 h# 4c00.2002 msr-clr  \   h# 10 h# 4c00.2002 msr-clr
 
-   0. h# 1000.0083 msr!  \ Enable ASMIs in LX GLIU0
-   0. h# 5101.0083 msr!  \ Enable ASMIs in 5536 GLIU0
+   h# ff00  h# 1000.0083 msr-clr  \ Enable ASMIs in LX GLIU0
+   h# ff00  h# 4000.0083 msr-clr  \ Enable ASMIs in LX GLIU1
+   h# ff00  h# 5101.0083 msr-clr  \ Enable ASMIs in 5536 GLIU0
 
-   h# ff00  h# 1000.0082 msr-clr   h# ff00  h# 1000.0083 msr-clr
-   h# ff00  h# 4000.0082 msr-clr   h# ff00  h# 4000.0083 msr-clr
    h# 38. h# 1301 msr!
 ;
 
@@ -782,6 +781,48 @@ code smi  smint  c;
    enable-virtual-pci
    enable-io-smis
 ;
+
+[ifdef] notdef   \ We don't need this, but it's nice to have the recipe
+: disable-virtual-pci  ( -- )
+   \ Virtualize devices f and 1, or all devices if debugging
+   h# 5000.2012 msr@  swap h# ffff invert and  swap  h# 5000.2012 msr!
+   h# 5000.2002 msr@  swap 8 or swap  h# 5000.2002 msr!  \ Disable SSMI for config accesses
+;
+: disable-io-smis  ( -- )
+   h# 1301 msr@  swap h# 20 invert and swap  h# 1301 msr!
+
+   \ XXX these settings need to be folded into the MSR table for resume
+   h# 0000.00ff.fff00000. h# 5101.00e4 msr!  \ Unvirtualize ACPI registers
+   1. h# 5101.0002 msr!  \ Disable SSMI in GLIU_GLD_MSR_SMI
+   0. h# 5100.0002 msr!  \ Enable SSMI in GLPCI_GLD_MSR_SMI
+
+   \ Virtual registers
+                0. h# 1000.00e3 msr!   \ AC1C..AC1F
+   h# ff.fff00000. h# 1000.00e2 msr!   \ 30..3f - for bouncing INTs to SMIs
+                0. h# 5140.0002 msr!   \ Port 92 INIT (bit 0 - reset)
+
+   1. h# 1000.2002 msr!  \ AC1C generates SMI
+   0. h# 1000.2003 msr!  \ AC1C does not generate ERR
+   1. h# 4000.2002 msr!
+
+   h# 1f. h# 4c00.2002 msr!  \   h# 10 h# 4c00.2002 msr-clr
+
+   h# ff00. h# 1000.0083 msr!  \ Enable ASMIs in LX GLIU0
+   h# ff00. h# 4000.0084 msr!  \ Enable AERRSs in LX GLIU0
+   h# ff00. h# 5101.0083 msr!  \ Enable ASMIs in 5536 GLIU0
+;
+: unsetup-smi  ( -- )
+   disable-io-smis
+   disable-virtual-pci
+
+   0.  h# 1301 msr!  \ Disable IO and software SMI
+
+   0.  h# 132b msr!  \ Offset of SMM Header
+   0.  h# 133b msr!
+
+   h# 00000.0.01.00000.0.01. h# 180e msr!  \ Default value
+;
+[then]
 
 defer suspend-devices  ' noop to suspend-devices
 defer resume-devices   ' noop to resume-devices

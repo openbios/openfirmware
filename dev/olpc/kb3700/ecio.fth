@@ -156,6 +156,8 @@ d# 10 constant #ec-retries
 : ebook-mode?      ( -- b )  h# 2a ec-cmd-b@  ;
 : wlan-freeze      ( -- )  h# 35 ec-cmd  ;
 : sci-queue@       ( -- b )  h# 84 ec-cmd-b@  ;
+: sci-inhibit      ( -- )  h# 32 ec-cmd  ;
+: sci-uninhibit    ( -- )  h# 34 ec-cmd  ;
 
 : ec-indexed-io-off  ( -- )  h# fe95 ec@  h# 40 invert and  h# fe95 ec!  ;
 

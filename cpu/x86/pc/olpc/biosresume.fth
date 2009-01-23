@@ -61,13 +61,36 @@ h# 4000.0000 constant lid-pme  \ PME mapper 6
    " enable-scan" kbd-ih $call-method   \ Restart keyboard
 ;
 
+: enable-uoc  ( -- )
+   uoc-pci-base h# 1000 4 h# 5151.0020 set-p2d-bm
+   h# 5120.000b msr@ 2 or h# 5120.000b msr!
+;
+: disable-uoc  ( -- )
+   h# 5120.000b msr@ 2 invert and h# 5120.000b msr!
+   h# 5101.0020 p2d-bm-off
+;
+' disable-uoc to more-platform-fixup
+: video-refresh-off  ( -- )
+   h# 1000.002a msr@ drop d# 12 lshift   ( dc-base )
+   h# 4758 over l!  0 swap 4 + l!
+   d# 25 ms
+;
+
 : (suspend-devices)  ( -- )
-   dcon-power-off
+   dcon-power-off  video-refresh-off
+
    wlan-freeze
    suspend-ps2
    [ifdef] setup-lid-wakeup  setup-lid-wakeup  [then]
+   sci-inhibit   \ This prevents SCIs during a critical period
+   0 sci-mask!   \ No SCIs during sleep
+   enable-uoc    \ So resume can turn on USB power
+   h# 99 h# 34 cmos!
 ;
 : (resume-devices)  ( -- )
+   disable-uoc   \ Because Windows doesn't want to see the UOC
+   h# 4e sci-mask!
+   sci-uninhibit
    [ifdef] cleanup-lid-wakeup  cleanup-lid-wakeup  [then]
    resume-ps2
    wlan-reset

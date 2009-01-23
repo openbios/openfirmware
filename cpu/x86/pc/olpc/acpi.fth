@@ -192,6 +192,7 @@ here facs - constant /facs
 ;
 
 h# 6000 constant xp-smbus-base
+defer more-platform-fixup  ' noop to more-platform-fixup
 : rm-platform-fixup  ( -- )
    xp-smbus-base h# f001   h# 5140.000b  3dup msr!  find-msr-entry  2!
    xp-smbus-base 1+  h# 10 isa-hdr  >hdr-value  l!
@@ -201,4 +202,5 @@ h# 6000 constant xp-smbus-base
    h# 4e sci-mask!                \ Include in the mask only events we care about
 
    0 h# 40 pm!                    \ Restore long delay for power-off button
+   more-platform-fixup
 ;

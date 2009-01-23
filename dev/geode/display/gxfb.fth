@@ -352,6 +352,7 @@ h# 300 /n* buffer: video-state
    drop
    \ video-state - /l / . cr
 
+   unlock
    0 4 dc!  \ Turn off video memory access
    d# 25 ms \ Wait for a frame time to make sure the display is quiet
 ;

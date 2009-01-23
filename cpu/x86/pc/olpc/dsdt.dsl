@@ -201,7 +201,7 @@ DefinitionBlock ("dsdt.aml", "DSDT", 3, "OLPC  ", "XO-1    ", 0x00001000) {
     }
 
     Name (_S0, Package (0x04) { Zero, Zero, Zero, Zero })  // Values for PM1a,b_CNT.SLP_TYP registers
-    Name (_S1, Package (0x04) { One, One, Zero, Zero })
+//  Name (_S1, Package (0x04) { One, One, Zero, Zero })
     Name (_S3, Package (0x04) { 0x03, 0x03, Zero, Zero })
     Name (_S5, Package (0x04) { 0x05, 0x05, Zero, Zero })
     Name (SLPS, Zero)  // Current state - see _SST page 298 for values
@@ -779,6 +779,9 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
                             Memory32Fixed (ReadOnly, 0xFFF00000, 0x00100000, )  // GeodeROM has f0000000,10000000
 
                             IO (Decode16, 0x0092, 0x0092, 0x00, 0x01, )
+
+                            IO (Decode16, 0x0030, 0x0030, 0x00, 0x10, )         // I/O ports to fake out SMI interrupts
+                            IO (Decode16, 0x03c0, 0x03c0, 0x00, 0x20, )         // Claim VGA I/O ports
                         })
                         CreateDWordField (MBRB, \_SB.PCI0.SBF0.MEM._CRS._Y06._LEN, EM1L)
                         Store (MEMK, Local0)                // Memory size in Kbytes (from EBDA)
@@ -822,7 +825,38 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
                     })
                 }
 
-// Elided UART
+                Device (UAR1)
+                {
+                    Name (_HID, EisaId ("PNP0501"))
+                    Name (_UID, One)
+                    Name (_DDN, "COM1")
+                    Name (_STA, 3)  // Present and decoding resources, but shouldn't be shown
+                    Name (_CRS, ResourceTemplate () {
+                        IO (Decode16, 0x03F8, 0x03F8, 0x00, 0x08, )
+                        IRQNoFlags () {4}
+                    })
+                }
+
+                Device(EC0) { 
+                    Name (_HID, EISAID("PNP0C09"))
+                    Name (_CRS, ResourceTemplate() {
+                         IO (Decode16, 0x62, 0x62, 0, 1)
+                         IO (Decode16, 0x66, 0x66, 0, 1)
+                         IO (Decode16, 0x61, 0x61, 0, 1)
+                         IO (Decode16, 0x68, 0x68, 0, 1)
+                         IO (Decode16, 0x6c, 0x6c, 0, 1)
+                         IO (Decode16, 0x380, 0x380, 0, 4)
+                    })
+  
+//                  // Define that the EC SCI is bit 0 of the GP_STS register 
+//                  Name(_GPE, 0) {
+//                    OperationRegion(ECOR, EmbeddedControl, 0, 0xFF) 
+//                    Field(ECOR, ByteAcc, Lock, Preserve) { 
+//                    // Field definitions go here 
+//                    } 
+//                  }
+
+                }
 
 // Elided superio
 
@@ -831,8 +865,8 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
                     Name (_HID, EisaId ("PNP0303"))
                     Name (_CID, 0x0B03D041)
 
-                    // Return this one if can wake from keyboard - XXX maybe need to be 3 instead of One
-                    Name (_PRW, Package (0x02) { Zero, One })
+                    // Return this one if can wake from keyboard
+//                  Name (_PRW, Package (0x02) { Zero, 3 })
 
                     Method (_PSW, 1, NotSerialized) { }
 
@@ -849,7 +883,7 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
                 Device (PS2M) {
                     Name (_HID, EisaId ("PNP0F03"))     // ALPS Pointing device
                     Name (_CID, 0x130FD041)
-                    Name (_PRW, Package (0x02) { Zero, One })
+//                  Name (_PRW, Package (0x02) { Zero, 3 })
                     Method (_PSW, 1, NotSerialized) { }
                     Name (_CRS, ResourceTemplate () { IRQNoFlags () {12} })
                     Name (_STA, 0x0F )
@@ -865,14 +899,14 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
                 Name (_STR, Unicode ("CS553x USB Controller 0"))
                 Name (_STA, 0x0F)
 
-                Name (_PRW, Package (0x02) { 0x06, One })
+//              Name (_PRW, Package (0x02) { 0x06, 3 })
             }
 
             Device (USB1) {
                 Name (_ADR, 0x000F0005)
                 Name (_STR, Unicode ("CS553x USB Controller 1"))
                 Name (_STA, 0x0F)
-                Name (_PRW, Package (0x02) { 0x06, One })
+//              Name (_PRW, Package (0x02) { 0x06, 3 })
             }
 
 //            Device (USB2) {

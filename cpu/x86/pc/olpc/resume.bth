@@ -291,23 +291,25 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
 
    h# 6010 config-rl   ax stos  \ NAND BAR
    ax bx mov                    \ Base address
-   6  h# 6004 config-ww         \ Enable access
+   h# 6004 config-rw   ax stos  \ NAND enables
+   2  h# 6004 config-ww         \ Enable access
    h# 24 [bx]  ax mov  ax stos  \ NAND Timing1
    h# 28 [bx]  ax mov  ax stos  \ NAND Timing2
    h# 2c [bx]  ax mov  ax stos  \ NAND Timing3
-   h# 6004 config-rw   op: ax stos  \ NAND enables
+   0  h# 6004 config-ww         \ Disable access
 
-   h# 6104 config-rw   op: ax stos  \ SDHCI enables
+   h# 6104 config-rw   ax stos  \ SDHCI enables
    h# 0  h# 618c config-ww      \ Set power state to 0 so reads will work
    h# 6110 config-rl   ax stos  \ SDHCI BAR
    ax bx mov                    \ Base address
-   6  h# 6104 config-ww         \ Enable access
+   2  h# 6104 config-ww         \ Enable access
    op: h# 3004 [bx] ax mov op: ax stos  \ Clock config
    h# 300c [bx] ax mov ax stos  \ Interrupt config
    h# 3038 [bx] ax mov ax stos  \ GPIO Config
    h# 315c [bx] ax mov ax stos  \ GPIO Data
    h# 610d config-rb   al stos  \ SDHCI latency timer
    h# 613c config-rb   al stos  \ SDHCI IRQ
+   0  h# 6104 config-ww         \ Disable access
 
    h# 6210 config-rl   ax stos  \ Camera BAR
    h# 6204 config-rw   ax stos  \ Camera enables
@@ -323,25 +325,39 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    h# 5140.000c rmsr  h# 30 [ax] dx lea       \ GPIO data port
    d# 50,000 # cx mov  forget-msr  \ 50K spins is about 40 mS
    begin  dx ax in  h# e0 # al and  h# c0 # al cmp  loopne
+
+[ifdef] ineffective
+   \ XXX this doesn't work as-is because you have to wait a frame time
+   \ afterwards before the accesses will actually stop.  I suppose that
+   \ it might be possible to turn it off just in time, but that would
+   \ require careful verification.
+
+   \ Stop video refresh
+   h# 1000.002a rmsr  d# 12 # ax shl  ax bx mov    \ DC PCI base address
+   h# 4758 #  0 [bx]  mov  \ Unlock DC registers
+   0 #  4 [ax]  mov        \ Turn off access to display memory
+[then]
+
 [then]
 
 [ifdef] checksum-test
    \ Checksum memory from 1M to top (excluding framebuffer)
-   bx bx xor
    h# 0010.0000 #  si  mov
-   h# 0ef0.0000 2 rshift #  cx  mov  forget-msr  \ Word count
-   begin  ax lods  ax bx add  loopa
-   bx  resume-data h# 10 - #)  mov   \ Save checksum
+   h# 4d534b43 # ax mov  ax stos    \ Marker 'CKSM'
+   di resume-data h# 10 - #)  mov   \ Save checksum base address
+   begin
+      bx bx xor
+      h# 10.0000 2 rshift #  cx  mov  forget-msr  \ Word count for 1MB
+      begin  ax lods  ax bx add  loopa
+      ax stos
+      h# ec0.0000 # si cmp
+   = until
 [then]
 
 [ifdef] measure-suspend
    di 0 #) mov
    rdtsc ax h# 18 #) mov  dx h# 1c #) mov
 [then]
-
-   \ Stop video refresh
-   h# 4758 #  dc-pci-base     #)  mov  \ Unlock DC registers
-   h#    0 #  dc-pci-base 4 + #)  mov  \ Turn off access to display memory
 
    h# 4000.0e00 h# 1410 port-wl   \ Assert SLP_CLK_EN# 1 mS after SUSPA#
 \  This is pointless because register 14 is in the working power domain
@@ -433,11 +449,20 @@ here resume-entry put-branch
 
 [ifdef] checksum-test
    \ Checksum memory from 1M to top (excluding framebuffer)
-   bx bx xor
    h# 0010.0000 #  si  mov
-   h# 0ef0.0000 2 rshift #  cx  mov  forget-msr  \ Word count
-   begin  ax lods  ax bx add  loopa
-   bx  resume-data h# 10 - #)  cmp  <>  if  ret  then
+   resume-data h# 10 - #)  di  mov   \ Save checksum base address
+   begin
+      bx bx xor
+      h# 10.0000 2 rshift #  cx  mov  forget-msr  \ Word count for 1MB
+      begin  ax lods  ax bx add  loopa
+      ax  0 [di]  cmp
+      <>  if
+         char C 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+         ret
+      then   
+      4 [di]  di  lea
+      h# ec0.0000 # si cmp
+   = until
 [then]
 
    h# 38 [bp]  si  lea    \ Save area
@@ -787,13 +812,14 @@ h# 37 resume-progress
 
    h# 6010 config-setup  ax lods  ax dx out        \ NAND BAR
    ax bx mov                                       \ Base address
+   ax lods  ax cx mov forget-msr                   \ NAND enables - save for later
    6  h# 6004 config-ww                            \ Enable access
    ax lods  ax  h# 24 [bx]  mov                    \ NAND Timing 1
    ax lods  ax  h# 28 [bx]  mov                    \ NAND Timing 2
    ax lods  ax  h# 2c [bx]  mov                    \ NAND Timing 3
-   h# 6004 config-setup  op: ax lods  op: ax dx out    \ NAND enables
+   h# 6004 config-setup  cx ax mov  op: ax dx out  \ NAND enables
 
-   op: ax lods  ax cx mov forget-msr               \ SDHCI enables - save for later
+   ax lods  ax cx mov forget-msr                   \ SDHCI enables - save for later
    h# 6110 config-setup  ax lods  ax dx out        \ SDHCI BAR
    ax bx mov                                       \ Base address
    6  h# 6104 config-ww                            \ Enable access
