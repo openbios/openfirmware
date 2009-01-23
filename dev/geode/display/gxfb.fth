@@ -5,8 +5,11 @@ hex
 headers
 
 
-d# 1024 instance value width		\ Frame buffer line width
-d#  768 instance value height		\ Screen height
+\ width and height are global instead of instance values because
+\ the seltest method needs to get their values in a fresh instance
+\ with re-running the open method.
+d# 1024 ( instance ) value width	\ Frame buffer line width
+d#  768 ( instance ) value height	\ Screen height
 d#   16 instance value depth		\ Bits per pixel
 d# 1024 instance value /scanline	\ Frame buffer line width
 
