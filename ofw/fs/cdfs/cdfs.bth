@@ -1,0 +1,12 @@
+purpose: Build script for demand-loaded ISO 9660 file system package
+
+command: &native &this
+build-now
+
+start-inclusion
+fload ${BP}/ofw/fs/cdfs/loadpkg.fth
+end-inclusion
+
+writing cdfs.di
+inclusion  " iso9660-file-system" write-deflated-dropin
+ofd @ fclose
