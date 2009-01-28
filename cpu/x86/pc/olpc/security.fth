@@ -101,7 +101,7 @@ also macros definitions
 : PN  pn-buf count  ;
 previous definitions
 
-0 0 2value pubkeylist$  \ adr,len of a concatenated sequence of keys 
+0 0 2value pubkey$      \ adr,len of a concatenated sequence of keys 
 0 value pubkeylen       \ Length of each key in the list
 
 \ Copy a string to allocated memory
@@ -117,12 +117,15 @@ previous definitions
 2 buffer: tagname
 : find-key-tag  ( n -- false | value$ true )
    [char] 0 +  tagname 1+ c!
-   tagname 2  find-tag
-;
-
-: ?bad-tag-len  ( explen actlen -- )
-   <>  if
-      ." Warning - override key length mismatch for tag " tagname 2 type cr
+   tagname 2  find-tag  if   ( value$ )
+      dup pubkeylen <>  if   ( value$ )
+         ." Warning - ignoring key with bad length: " tagname 2 type cr
+         2drop false         ( false )
+      else                   ( value$ )
+         true                ( true )
+      then
+   else                      ( )
+      false                  ( false )
    then
 ;
 
@@ -131,8 +134,7 @@ previous definitions
 : #augment-keys  ( keylen -- n )
    0  d# 10 1  do                 ( len n )
       i find-key-tag  if          ( len n value$ )
-         nip 2 pick ?bad-tag-len  ( len n )
-         1+                       ( len n' )
+         2drop 1+                 ( len n' )
       then                        ( len n )
    loop                           ( len n )
    nip
@@ -142,32 +144,33 @@ previous definitions
 \ manufacturing data.
 
 : augment-key$  ( olpc-key$ mfg-data$ -- key$' )
-   tagname swap move            ( key$ )
+   tagname swap move            ( olpc-key$ )
 
-   0  find-key-tag  if          ( key$ value$ )
-      \ If we have an override key with tag suffix 0, replace the OLPC key
-      2 pick over ?bad-tag-len  ( key$ value$ )
+   \ Determine how much memory to allocate
 
-      2swap free-mem            ( value$ )
-      preserve$                 ( key$' )
-      exit
-   then                         ( key$ )
+   dup #augment-keys 1+         ( olpc-key$ #extra )
+   over *  dup alloc-mem swap   ( olpc-key$ list$ )
 
-   \ Otherwise add augment keys to the list  ( key$ )
-   \ First determine how much memory to allocate
-   dup #augment-keys 1+         ( key$ #extra )
-   over *  dup alloc-mem swap   ( key$ total$ )
-   2over  2over drop            ( key$ total$ key$ total-adr )
-   swap move                    ( key$ total$ )
-   2swap tuck free-mem          ( total$ keylen )
-   2 pick over +                ( total$ keylen curadr )
-   d# 10 1  do                  ( total$ keylen curadr )
-      i find-key-tag  if        ( total$ keylen curadr value$ )
-         drop over 3 pick move  ( total$ keylen curadr )
-         over +                 ( total$ keylen curadr' )
-      then                      ( total$ keylen curadr )
-   loop                         ( total$ keylen curadr )
-   2drop                        ( total$ )
+   \ If there is an override key, use it instead of the OLPC key
+   0  find-key-tag  0=  if      ( olpc-key$ list$ )
+      2over                     ( olpc-key$ list$ first-key$ )
+   then                         ( olpc-key$ list$ first-key$ )
+
+   \ Install the first key in the list
+   3 pick swap move             ( olpc-key$ list$ )
+
+   \ Free the memory used by olpc-key$ (it came from find-drop-in)
+   2swap free-mem               ( list$ )
+
+   \ Add additional keys to the list
+   over  pubkeylen tuck +       ( list$ keylen curadr )
+   d# 10 1  do                  ( list$ keylen curadr )
+      i find-key-tag  if        ( list$ keylen curadr value$ )
+         drop over 3 pick move  ( list$ keylen curadr )
+         over +                 ( list$ keylen curadr' )
+      then                      ( list$ keylen curadr )
+   loop                         ( list$ keylen curadr )
+   2drop                        ( list$ )
 ;
 
 \ key: is a defining word whose children return key strings.
@@ -207,10 +210,10 @@ previous definitions
 " develpubkey,d"  key: develkey$
 " leasepubkey,a"  key: leasekey$
 
-\ pubkey$ is a global variable that points to the currently-selected
+\ thiskey$ is a global variable that points to the currently-selected
 \ public key string.  It simplifies the stack manipulations for other
 \ words, since the same key string is often used multiple times.
-0 0 2value pubkey$
+0 0 2value thiskey$
 
 \ sig-buf is used for storing the binary version of signature strings
 \ that have been decoded from the hex representation.
@@ -291,7 +294,7 @@ d# 256 constant /sig
 \ attacks based on reuse of the same (presumably compromized) hash.
 
 \ invalid? checks the validity of data$ against the ASCII signature
-\ record sig01$, using the public key that pubkey$ points to.
+\ record sig01$, using the public key that thiskey$ points to.
 \ It also verifies that the hashname contained in sig01$ is the
 \ expected one.
 
@@ -308,7 +311,7 @@ d# 256 constant /sig
       4drop 2drop true exit
    then                                     ( data$ sig$ hashname$ )
 
-   pubkey$  2swap  signature-bad?  ( error? )
+   thiskey$  2swap  signature-bad?  ( error? )
    dup  if
       "   Signature invalid" ?lease-error-cr
    else
@@ -338,15 +341,15 @@ d# 256 constant /sig
 \ True if short$ matches the end of long$ 
 : tail$=  ( short$ long$ -- flag )  2 pick  - +  swap comp 0=  ;
 
-: key-in-list?  ( key$ -- flag )  \ Sets pubkey$ as an important side effect
+: key-in-list?  ( key$ -- flag )  \ Sets thiskey$ as an important side effect
    2>r                                   ( r: key$ )
-   pubkeylist$  begin  dup  while        ( rem$  r: key$ )
-      pubkeylen break$                   ( rem$' pubkey$  r: key$ )
-      2r@ 2over tail$=  if               ( rem$ pubkey$  r: key$ )
-         to pubkey$                      ( rem$  r: key$ )
+   pubkey$  begin  dup  while            ( rem$  r: key$ )
+      pubkeylen break$                   ( rem$' thiskey$  r: key$ )
+      2r@ 2over tail$=  if               ( rem$ thiskey$  r: key$ )
+         to thiskey$                     ( rem$  r: key$ )
          2r> 4drop  true                 ( true )
          exit
-      then                               ( rem$' pubkey$  r: key$ )
+      then                               ( rem$' thiskey$  r: key$ )
       2drop                              ( rem$'  r: key$ )
    repeat                                ( rem$'  r: key$ )
    2r> 4drop false
@@ -359,7 +362,7 @@ d# 256 constant /sig
 
 : our-pubkey?  ( sig01$ -- flag )
    sig01$>key$  if  false exit  then    ( key$ )
-   pubkey$  tail$=                      ( flag )
+   thiskey$  tail$=                     ( flag )
 ;
 
 \ Look for a line that starts with "sig01: " whose key signature
@@ -607,7 +610,7 @@ d# 67 buffer: machine-id-buf
    " lease.sig"  open-security?  if  drop false exit  then   >r   ( r: ih )
    "   Lease " ?lease-debug
    load-started
-   leasekey$ to pubkeylist$
+   leasekey$ to pubkey$
    begin
       sec-line-buf /sec-line-max r@ read-line  if  ( actual -eof? )
          2drop  r> close-file drop  false exit
@@ -743,7 +746,7 @@ warning !
    " develop.sig" open-security?  if  drop false exit  then   >r   ( r: ih )
    "   Devel key " ?lease-debug
    load-started
-   develkey$ to pubkeylist$
+   develkey$ to pubkey$
    begin
       sec-line-buf /sec-line-max r@ read-line  if  ( actual -eof? )
          2drop  r> close-file drop  false exit
@@ -843,11 +846,11 @@ warning !
 
 : ?disable-indexed-io  ( -- )
    debug-security? >r  false to debug-security?
-   pubkeylist$ 2>r  fwkey$ to pubkeylist$
+   pubkey$ 2>r  fwkey$ to pubkey$
 
    img$  sig$  fw-valid?  0=  if  ec-indexed-io-off  then
 
-   2r> to pubkeylist$
+   2r> to pubkey$
    r> to debug-security?
 ;
 
@@ -864,7 +867,7 @@ warning !
       else
          " minus" show-icon
          " new - " ?lease-debug
-         fwkey$ to pubkeylist$
+         fwkey$ to pubkey$
          img$  sig$  fw-valid?  if
             img$  do-firmware-update
          then
@@ -878,7 +881,7 @@ warning !
    d# 16 0  +icon-xy  show-dot
    " os" bundle-present?  if
       "   OS found - " ?lease-debug
-      oskey$ to pubkeylist$
+      oskey$ to pubkey$
       img$  sig$  sha-valid?  if
 \        ?disable-indexed-io
          img$ tuck load-base swap move  !load-size
