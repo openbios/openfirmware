@@ -184,8 +184,7 @@ h# 200 constant /block  \ 512 bytes
 : intstat-on  ( -- )
    h# 00cb h# 34 cw!  \ normal interrupt status en reg
             \ Enable: Remove, Insert, DMA Interrupt, Transfer Complete, CMD Complete
-            \ Disable: Card Interrupt, Remove, Insert, Read Ready,
-            \ Write Ready, Block Gap
+            \ Disable: Card Interrupt, Read Ready, Write Ready, Block Gap
    h# f1ff h# 36 cw!  \ error interrupt status en reg
 ;
 : intstat-off  ( -- )  h# c0 h# 34 cl!  ;  \ Remove, Insert on, others off
