@@ -8,6 +8,13 @@ h# 380 constant iobase
 : ec@  ( index -- b )  wbsplit iobase 1+ pc!  iobase 2+ pc!  iobase 3 + pc@  ;
 : ec!  ( b index -- )  wbsplit iobase 1+ pc!  iobase 2+ pc!  iobase 3 + pc!  ;
 
+: autowak!        ( value -- )   f64f ec! ;
+: autowak-on      ( -- )         1 autowak! ;
+: autowak-off     ( -- )         0 autowak! ;
+: autowak-delay   ( delay -- )   wbsplit f650 ec! f651 ec! ;
+: kbc-debug-on    ( -- )         1 fbfe ec! ;
+: kbc-debug-off   ( -- )         0 fbfe ec! ;
+
 : ec-dump  ( offset len -- )
    ." Addr   0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f" cr  cr
    push-hex
@@ -156,9 +163,11 @@ d# 10 constant #ec-retries
 : ebook-mode?      ( -- b )  h# 2a ec-cmd-b@  ;
 : wlan-freeze      ( -- )  h# 35 ec-cmd  ;
 : sci-queue@       ( -- b )  h# 84 ec-cmd-b@  ;
+: ec-api-ver@      ( -- b )  h# 08 ec-cmd-b@  ;
 : sci-inhibit      ( -- )  h# 32 ec-cmd  ;
 : sci-uninhibit    ( -- )  h# 34 ec-cmd  ;
 
+: sci-inhibit-delay  ( delay -- )   wbsplit f64d ec! f64e ec! ;
 : ec-indexed-io-off  ( -- )  h# fe95 ec@  h# 40 invert and  h# fe95 ec!  ;
 
 0 [if]
