@@ -1102,7 +1102,11 @@ here bounce-timer - constant /bounce-timer
 0 0 " " " /" begin-package
    " xp" device-name
    : open
-      " sd:1" ntfs?  if  " sd:0" set-hd-boot  true exit  then
+      " sd:1" ntfs?  if
+         " sd:0" set-hd-boot
+         dcon-unfreeze unfreeze
+         true exit
+      then
       false
    ;
    : close ;

@@ -616,10 +616,10 @@ fload ${BP}/ofw/core/dualconsole.fth
    secure-startup
    unblock-exceptions
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
-   text-on
-   banner
    ?usb-keyboard
    auto-boot
+
+   unfreeze visible
 
    blue-letters ." Type 'help' for more information." black-letters
    cr cr

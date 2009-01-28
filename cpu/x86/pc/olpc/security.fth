@@ -3,18 +3,9 @@ purpose: OLPC secure boot
 
 \ Specs at http://wiki.laptop.org/go/Firmware_Security
 
-: text-on  screen-ih stdout !  ;
-
-: visible  dcon-unfreeze text-on   ;
-
 : ?unfreeze  ( -- )
    game-key@ button-check and  if  visible banner  unfreeze  then
 ;
-
-0 0 2value base-xy
-0 0 2value next-xy
-d# 463 d# 540 2constant progress-xy
-d# 552 d# 283 2constant sad-xy
 
 true value debug-security?
 : ?lease-debug   ( msg$ -- )
@@ -51,41 +42,11 @@ code halt  hlt  c;  \ To save power
    then
 ;
 
-: +icon-xy  ( delta-x,y -- )  icon-xy d+ to icon-xy  ;
-
-: show-going  ( -- )
-   background-rgb  rgb>565  progress-xy  d# 500 d# 100  " fill-rectangle" $call-screen
-   d# 588 d# 638 to icon-xy  " bigdot" show-icon
-   " vga?" $call-screen  0=  if  dcon-unfreeze dcon-freeze  then
-;
-: show-x  ( -- )  " x" show-icon  ;
-: show-sad  ( -- )
-   icon-xy
-   sad-xy to icon-xy  " sad" show-icon
-   to icon-xy
-;
 : .security-failure  ( error$ -- )
    visible  red-letters type black-letters cr
    show-sad
    security-failure
 ;
-
-: show-lock    ( -- )  " lock" show-icon  ;
-: show-unlock  ( -- )  " unlock" show-icon  ;
-: show-child  ( -- )
-   " erase-screen" $call-screen
-   d# 552 d# 384 to icon-xy  " rom:xogray.565" $show-opaque
-   progress-xy to icon-xy  \ For boot progress reports
-;
-
-0 [if]
-: show-warnings  ( -- )
-   " erase-screen" $call-screen
-   d# 48 d# 32 to icon-xy  " rom:warnings.565" $show-opaque
-   dcon-freeze
-;
-[then]
-
 
 h#  20 buffer: cn-buf  \ filename prefix - either "act" or "run"
 h#  20 buffer: fn-buf  \ filename tail - either "os" or "rd"
@@ -617,8 +578,8 @@ d# 67 buffer: machine-id-buf
       then                                         ( actual -eof? )
    while                                           ( actual )
       sec-line-buf swap check-lease  case          ( -1|0|1 )
-          1  of  r> close-file drop  " unlock" show-icon  true  exit  endof
-         -1  of  r> close-file drop  " lock"   show-icon  false exit  endof
+          1  of  r> close-file drop  show-unlock  true  exit  endof
+         -1  of  r> close-file drop  show-lock    false exit  endof
       endcase
    repeat                                          ( actual )
    drop                                            ( )
@@ -639,11 +600,6 @@ d# 67 buffer: machine-id-buf
       lease-valid?  if  " run"  else  " act"  then
    then
    cn-buf place
-;
-
-0 value alternate?
-: show-dot  ( -- )
-   alternate?  if  " yellowdot"  else  " lightdot"  then  show-icon
 ;
 
 : set-alternate  ( -- )
@@ -677,7 +633,7 @@ d# 67 buffer: machine-id-buf
    ['] load-path behavior >r                      ( r: xt )
    ['] ramdisk-buf to load-path                   ( r: xt )
 
-   d# 16 0  +icon-xy  show-dot
+   show-dot
    \ cn-buf is already set as a result of the ?leased that
    \ happened before loading the OS file
    " rd" bundle-present?  if
@@ -856,16 +812,16 @@ warning !
 
 : load-from-device  ( devname$ -- done? )
 
-   d# 16 0  +icon-xy  show-dot
+   show-dot
    null$ cn-buf place
    " bootfw" bundle-present?  if
       "   FW found - " ?lease-debug
 
       img$  firmware-up-to-date?  if
-         " plus" show-icon
+         show-plus
          " current FW is up-to-date" ?lease-debug-cr
       else
-         " minus" show-icon
+         show-minus
          " new - " ?lease-debug
          fwkey$ to pubkey$
          img$  sig$  fw-valid?  if
@@ -875,10 +831,10 @@ warning !
       then
    then
 
-   d# 16 0  +icon-xy  show-dot
+   show-dot
    ?leased                \ Sets cn-buf
 
-   d# 16 0  +icon-xy  show-dot
+   show-dot
    " os" bundle-present?  if
       "   OS found - " ?lease-debug
       oskey$ to pubkey$
@@ -904,20 +860,16 @@ warning !
 ;
 
 : load-from-list  ( list$ -- devkey? )
-   " dev /jffs2-file-system ' ?unfreeze to scan-callout  dend" eval
-
    begin  dup  while                        ( list$ )
       ?unfreeze
       bl left-parse-string                  ( list$ devname$ )
       2dup dn-buf place                     ( list$ devname$ )
 
-      show-icon                             ( list$ xy )
-      icon-xy to base-xy
-      icon-xy image-width 0 d+ to next-xy   ( list$ )
+      show-dev-icon                         ( list$ )
 
       filesystem-present?  if               ( list$ )
 
-         d# 5 d# 77  +icon-xy  show-dot     ( list$ )
+         show-dot                           ( list$ )
          has-developer-key?  if             ( list$ )
             2drop                           ( )
             true to security-off?
@@ -933,14 +885,12 @@ warning !
             " init-program" $find  if
                set-cmdline
                execute
-               show-going  go
+               go
             then
             show-x
             security-failure
          then
       then                                  ( list$ )
-
-      next-xy to icon-xy                    ( list$ )
    repeat                                   ( list$ )
    2drop false                              ( )
 ;
@@ -967,17 +917,22 @@ warning !
 \    button-rotate game-key?  if  show-warnings  then
    show-child
 
-   ?force-secure
-
-   secure?  0=  if  visible unfreeze  exit  then
-
    button-check game-key?  if
       unfreeze  visible  banner
    else
       freeze  dcon-freeze
+
+      \ The following is a hack to let the user unfreeze the screen during
+      \ the several-second period while JFFS2 is scanning the NAND
+      " dev /jffs2-file-system ' ?unfreeze to scan-callout  dend" eval
    then
 
-   persistent-devkey?  if  true to security-off?  visible unfreeze  exit  then
+   \ The screen may be frozen when we exit, because we want pretty
+   \ boot even when not secure.
+
+   ?force-secure
+   persistent-devkey?  if  true to security-off?  exit  then
+   secure?  0=  if  exit  then
 
    get-my-sn  if  " No serial number" .security-failure  then
 

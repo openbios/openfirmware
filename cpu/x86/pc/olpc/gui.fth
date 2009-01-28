@@ -393,15 +393,69 @@ h# 32 buffer: icon-name
 : dcon-freeze    ( -- )  0 " set-source" $call-screen d# 30 ms  ;
 : dcon-unfreeze  ( -- )  1 " set-source" $call-screen d# 30 ms  ;
 
+\ === Stuff moved from security.fth ===
+
+: text-on  screen-ih stdout !  ;
+
+: visible  dcon-unfreeze text-on   ;
+
+0 0 2value next-icon-xy
+0 0 2value next-dot-xy
+d# 463 d# 540 2constant progress-xy
+
+: show-going  ( -- )
+   background-rgb  rgb>565  progress-xy  d# 500 d# 100  " fill-rectangle" $call-screen
+   d# 588 d# 638 to icon-xy  " bigdot" show-icon
+   " vga?" $call-screen  0=  if  dcon-unfreeze dcon-freeze  then
+;
+: show-x  ( -- )  " x" show-icon  ;
+: show-sad  ( -- )
+   icon-xy
+   d# 552 d# 283 to icon-xy  " sad" show-icon
+   to icon-xy
+;
+: show-lock    ( -- )  " lock" show-icon  ;
+: show-unlock  ( -- )  " unlock" show-icon  ;
+: show-plus    ( -- )  " plus" show-icon  ;
+: show-minus   ( -- )  " minus" show-icon  ;
+: show-child  ( -- )
+   " erase-screen" $call-screen
+   d# 552 d# 384 to icon-xy  " rom:xogray.565" $show-opaque
+   progress-xy to next-icon-xy  \ For boot progress reports
+;
+
+0 [if]
+: show-warnings  ( -- )
+   " erase-screen" $call-screen
+   d# 48 d# 32 to icon-xy  " rom:warnings.565" $show-opaque
+   dcon-freeze
+;
+[then]
+
+0 value alternate?
+: show-dot  ( -- )
+   next-dot-xy to icon-xy  next-dot-xy  d# 16 0 d+  to next-dot-xy    ( )
+   alternate?  if  " yellowdot"  else  " lightdot"  then  show-icon
+;
+
+: show-dev-icon  ( devname$ -- )
+   next-icon-xy                               ( devname$ )
+   2dup to icon-xy                            ( devname$ )
+   2dup image-width 0 d+  to next-icon-xy     ( devname$ )
+   2dup  d# 5 d# 77 d+  to next-dot-xy        ( devname$ )
+   show-icon                                  ( )
+;
+
 : linux-hook-unfreeze
    [ ' linux-hook behavior compile, ]
 ;
 : linux-hook-freeze
    [ ' linux-hook behavior compile, ]
-   dcon-freeze
+   show-going
 ;
 : freeze    ( -- )  ['] linux-hook-freeze   to linux-hook  ;
 : unfreeze  ( -- )  ['] linux-hook-unfreeze to linux-hook  ;
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
