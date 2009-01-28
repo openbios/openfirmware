@@ -4,7 +4,9 @@ purpose: OLPC secure boot
 \ Specs at http://wiki.laptop.org/go/Firmware_Security
 
 : ?unfreeze  ( -- )
-   game-key@ button-check and  if  visible banner  unfreeze  then
+   game-key@ button-check and  if
+     frozen?  if  unfreeze  visible banner  then
+   then
 ;
 
 true value debug-security?
@@ -37,8 +39,8 @@ code halt  hlt  c;  \ To save power
       ." Use power button to power off" cr
       begin halt again
    else
-      ." Powering off in 10 seconds" cr
-      d# 10000 ms  power-off
+      ." Powering off in 30 seconds" cr
+      d# 30000 ms  power-off
    then
 ;
 
@@ -873,7 +875,6 @@ warning !
          has-developer-key?  if             ( list$ )
             2drop                           ( )
             true to security-off?
-            visible unfreeze
             show-unlock
             true exit
          then                               ( list$ )

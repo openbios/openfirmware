@@ -619,7 +619,9 @@ fload ${BP}/ofw/core/dualconsole.fth
    ?usb-keyboard
    auto-boot
 
-   unfreeze visible
+   frozen?            ( frozen? )
+   unfreeze visible   ( frozen? )
+   if  banner  then  \ Reissue banner if it was suppressed
 
    blue-letters ." Type 'help' for more information." black-letters
    cr cr

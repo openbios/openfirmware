@@ -390,6 +390,7 @@ h# 32 buffer: icon-name
 ;
 ' (?show-device) to ?show-device
 
+: frozen?  ( -- flag )  " vga?" $call-screen 0=  ;
 : dcon-freeze    ( -- )  0 " set-source" $call-screen d# 30 ms  ;
 : dcon-unfreeze  ( -- )  1 " set-source" $call-screen d# 30 ms  ;
 
@@ -439,10 +440,10 @@ d# 463 d# 540 2constant progress-xy
 ;
 
 : show-dev-icon  ( devname$ -- )
-   next-icon-xy                               ( devname$ )
-   2dup to icon-xy                            ( devname$ )
-   2dup image-width 0 d+  to next-icon-xy     ( devname$ )
-   2dup  d# 5 d# 77 d+  to next-dot-xy        ( devname$ )
+   next-icon-xy                               ( devname$ x y )
+   2dup to icon-xy                            ( devname$ x y )
+   2dup image-width 0 d+  to next-icon-xy     ( devname$ x y )
+   d# 5 d# 77 d+  to next-dot-xy              ( devname$ )
    show-icon                                  ( )
 ;
 
