@@ -101,30 +101,111 @@ also macros definitions
 : PN  pn-buf count  ;
 previous definitions
 
+0 0 2value pubkeylist$  \ adr,len of a concatenated sequence of keys 
+0 value pubkeylen       \ Length of each key in the list
+
+\ Copy a string to allocated memory
+: preserve$  ( $ -- $' )
+   >r                ( adr1 r: len )
+   r@ alloc-mem      ( adr1 adr2 )
+   tuck r@ move  r>  ( $' )
+;
+
+\ find-key-tag finds a tag like "s0" or "s8".  The caller sets tagname[0]
+\ to 's' and then calls find-key-tag with different "n" arguments.
+
+2 buffer: tagname
+: find-key-tag  ( n -- false | value$ true )
+   [char] 0 +  tagname 1+ c!
+   tagname 2  find-tag
+;
+
+: ?bad-tag-len  ( explen actlen -- )
+   <>  if
+      ." Warning - override key length mismatch for tag " tagname 2 type cr
+   then
+;
+
+\ Count the number of additional keys, so we know how much memory to allocate
+
+: #augment-keys  ( keylen -- n )
+   0  d# 10 1  do                 ( len n )
+      i find-key-tag  if          ( len n value$ )
+         nip 2 pick ?bad-tag-len  ( len n )
+         1+                       ( len n' )
+      then                        ( len n )
+   loop                           ( len n )
+   nip
+;
+
+\ Amend the key list string with alternative or additional keys from
+\ manufacturing data.
+
+: augment-key$  ( olpc-key$ mfg-data$ -- key$' )
+   tagname swap move            ( key$ )
+
+   0  find-key-tag  if          ( key$ value$ )
+      \ If we have an override key with tag suffix 0, replace the OLPC key
+      2 pick over ?bad-tag-len  ( key$ value$ )
+
+      2swap free-mem            ( value$ )
+      preserve$                 ( key$' )
+      exit
+   then                         ( key$ )
+
+   \ Otherwise add augment keys to the list  ( key$ )
+   \ First determine how much memory to allocate
+   dup #augment-keys 1+         ( key$ #extra )
+   over *  dup alloc-mem swap   ( key$ total$ )
+   2over  2over drop            ( key$ total$ key$ total-adr )
+   swap move                    ( key$ total$ )
+   2swap tuck free-mem          ( total$ keylen )
+   2 pick over +                ( total$ keylen curadr )
+   d# 10 1  do                  ( total$ keylen curadr )
+      i find-key-tag  if        ( total$ keylen curadr value$ )
+         drop over 3 pick move  ( total$ keylen curadr )
+         over +                 ( total$ keylen curadr' )
+      then                      ( total$ keylen curadr )
+   loop                         ( total$ keylen curadr )
+   2drop                        ( total$ )
+;
+
 \ key: is a defining word whose children return key strings.
 \ Each child word has the name of its key stored in the dictionary.
 \ The first time that a child word executes, it uses the key name
 \ to find the key value and caches the key value in RAM so subsequent
 \ uses are faster.
 
+\ The key name includes both the name that is used in the dropin
+\ module list (e.g. "fspubkey") and the prefix letter for mfg data
+\ tags (e.g. "s").
+
 : key:  ( name$ "name" -- key$ )
    create 0 , 0 ,  ",   \ adr len name
    does>   ( apf -- key$ )
    dup @  if  2@ exit  then   ( apf )
    dup 2 na+ count            ( apf name$ )
-   2dup  find-drop-in  if     ( apf name$ key$ )
-      2nip
-   else                       ( apf name$ )
-      ." Can't load key " type cr
+   [char] , left-parse-string ( apf mfg-data$ dropin-name$ )
+   2dup  find-drop-in  if     ( apf mfg-data$ name$ key$ )
+      2nip                    ( apf mfg-data$ key$ )
+   else                       ( apf mfg-data$ name$ )
+      ." Can't load key " type cr  ( apf mfg-data$ )
+      2drop                   ( apf )
       " Missing Key"          ( apf bad-key$ )
-   then
+      dup to pubkeylen        ( apf bad-key$ )
+      rot >r  2dup r> 2!      ( key$ )
+      exit
+   then                       ( apf mfg-data$ key$ )
+   dup to pubkeylen           ( apf mfg-data$ key$ )
+   2swap                      ( apf key$ mfg-data$ )
+   augment-key$               ( apf key$' )
    rot >r  2dup r> 2!         ( key$ )
 ;
-" fspubkey"     key: fskey$
-" ospubkey"     key: oskey$
-" fwpubkey"     key: fwkey$
-" develpubkey"  key: develkey$
-" leasepubkey"  key: leasekey$
+" fspubkey,s"     key: fskey$
+" ospubkey,o"     key: oskey$
+" fwpubkey,w"     key: fwkey$
+" develpubkey,d"  key: develkey$
+" leasepubkey,a"  key: leasekey$
 
 \ pubkey$ is a global variable that points to the currently-selected
 \ public key string.  It simplifies the stack manipulations for other
@@ -235,44 +316,6 @@ d# 256 constant /sig
    then
 ;
 
-: our-pubkey?  ( sig01$ -- flag )
-   bl left-parse-string  " sig01:" $=  0=  if  2drop false exit  then  ( rem$ )
-   bl left-parse-string 2drop    \ Discard hash name            ( rem$ )
-   bl left-parse-string 2nip     \ Get key signature            ( key$ )
-   /sig 2* min  hex-decode  if  2drop false exit  then          ( binary-key$ )
-   pubkey$  dup 3 pick -  0 max /string   $=                    ( flag )
-;
-
-\ Look for a line that starts with "sig01: " and whose key signature
-\ matches the trailing bytes of our currently-selected public key.
-: next-sig01$  ( sig$ -- true | rem$ sig01$ false )
-   begin  dup  while                          ( rem$ )
-      newline left-parse-string               ( rem$' line$ )
-      2dup our-pubkey?  if  false exit  then  ( rem$  line$ )
-      2drop                                   ( rem$ )
-   repeat                                     ( rem$ )
-   " No signature for our key" ?lease-error-cr
-   2drop true
-;
-
-\ Find a sig01: line and check its sha256/rsa signature
-: sha-valid?  ( data$ sig01$ -- okay? )
-   next-sig01$  if  2drop false exit  then  ( data$ rem$ sig01$ )
-   2nip  " sha256" invalid? 0=
-;
-
-\ Find two sig01: lines, the first with sha256 and the second with rmd160,
-\ and check their signatures
-: fw-valid?  ( data$ sig$ -- okay? )
-   2swap 2>r                                    ( sig$ r: data$ )
-   next-sig01$  if  2r> 2drop false exit  then  ( rem$ sig01$ )
-   2r@ 2swap sha-valid?  0=  if                 ( rem$ r: data$ )
-      2r> 4drop false exit
-   then                                         ( rmd-sig$ r: data$ )
-   next-sig01$  if  2r> 2drop false exit  then  ( rem$ sig01$ )
-   2nip  2r> 2swap " rmd160" invalid? 0=
-;
-
 \ break$ splits a string into an initial substring of length n
 \ (head$) and the residual substring (tail$).  If the input
 \ string is shorter than n, head$ is the input string and tail$ is
@@ -282,6 +325,83 @@ d# 256 constant /sig
    2dup <  if  drop null$ 2swap exit  then
    dup >r  /string   ( tail$ )
    over r@ -  r>     ( tail$ head$ )
+;
+
+: sig01$>key$  ( sig01$ -- true | binary-key$ false )
+   bl left-parse-string  " sig01:" $=  0=  if  2drop true exit  then  ( rem$ )
+   bl left-parse-string 2drop    \ Discard hash name            ( rem$ )
+   bl left-parse-string 2nip     \ Get key signature            ( key$ )
+   /sig 2* min  hex-decode  if  2drop true exit  then           ( binary-key$ )
+   false
+;
+
+\ True if short$ matches the end of long$ 
+: tail$=  ( short$ long$ -- flag )  2 pick  - +  swap comp 0=  ;
+
+: key-in-list?  ( key$ -- flag )  \ Sets pubkey$ as an important side effect
+   2>r                                   ( r: key$ )
+   pubkeylist$  begin  dup  while        ( rem$  r: key$ )
+      pubkeylen break$                   ( rem$' pubkey$  r: key$ )
+      2r@ 2over tail$=  if               ( rem$ pubkey$  r: key$ )
+         to pubkey$                      ( rem$  r: key$ )
+         2r> 4drop  true                 ( true )
+         exit
+      then                               ( rem$' pubkey$  r: key$ )
+      2drop                              ( rem$'  r: key$ )
+   repeat                                ( rem$'  r: key$ )
+   2r> 4drop false
+;
+
+: in-pubkey-list?  ( sig01$ -- flag )
+   sig01$>key$  if  false exit  then     ( key$ )
+   key-in-list?                          ( flag )
+;
+
+: our-pubkey?  ( sig01$ -- flag )
+   sig01$>key$  if  false exit  then    ( key$ )
+   pubkey$  tail$=                      ( flag )
+;
+
+\ Look for a line that starts with "sig01: " whose key signature
+\ matches the trailing bytes of a public key in our current list.
+: next-sig01-in-list$  ( sig$ -- true | rem$ sig01$ false )
+   begin  dup  while                               ( rem$ )
+      newline left-parse-string                    ( rem$' line$ )
+      2dup in-pubkey-list?  if  false exit  then   ( rem$  line$ )
+      2drop                                        ( rem$ )
+   repeat                                          ( rem$ )
+   " No signature for our key list" ?lease-error-cr
+   2drop true
+;
+
+\ Look for a line that starts with "sig01: " whose key signature
+\ matches the trailing bytes of our currently-selected public key.
+: next-sig01$  ( sig$ -- true | rem$ sig01$ false )
+   begin  dup  while                               ( rem$ )
+      newline left-parse-string                    ( rem$' line$ )
+      2dup our-pubkey?  if  false exit  then       ( rem$  line$ )
+      2drop                                        ( rem$ )
+   repeat                                          ( rem$ )
+   " No signature for our key" ?lease-error-cr
+   2drop true
+;
+
+\ Find a sig01: line and check its sha256/rsa signature
+: sha-valid?  ( data$ sig01$ -- okay? )
+   next-sig01-in-list$  if  2drop false exit  then  ( data$ rem$ sig01$ )
+   2nip  " sha256" invalid? 0=
+;
+
+\ Find two sig01: lines, the first with sha256 and the second with rmd160,
+\ and check their signatures
+: fw-valid?  ( data$ sig$ -- okay? )
+   2swap 2>r                                    ( sig$ r: data$ )
+   next-sig01-in-list$  if  2r> 2drop false exit  then  ( rem$ sig01$ )
+   2r@ 2swap sha-valid?  0=  if                 ( rem$ r: data$ )
+      2r> 4drop false exit
+   then                                         ( rmd-sig$ r: data$ )
+   next-sig01$  if  2r> 2drop false exit  then  ( rem$ sig01$ )
+   2nip  2r> 2swap " rmd160" invalid? 0=
 ;
 
 \ numfield is a factor used for parsing 2-digit fields from date/time strings.
@@ -417,7 +537,7 @@ d# 67 buffer: machine-id-buf
 \ doesn't match our pubkey.
 
 : check-machine-signature  ( sig$ expiration$ -- -1|1 )
-   2over  our-pubkey?   if                              ( sig$ exp$ )
+   2over  in-pubkey-list?   if                          ( sig$ exp$ )
       machine-id-buf d# 51 +  swap  move                ( sig$ )
       machine-id-buf d# 67  2swap                       ( id$ sig$ )
       " sha256" invalid?  if  -1  else  1  then         ( -1|1 )
@@ -487,7 +607,7 @@ d# 67 buffer: machine-id-buf
    " lease.sig"  open-security?  if  drop false exit  then   >r   ( r: ih )
    "   Lease " ?lease-debug
    load-started
-   leasekey$ to pubkey$
+   leasekey$ to pubkeylist$
    begin
       sec-line-buf /sec-line-max r@ read-line  if  ( actual -eof? )
          2drop  r> close-file drop  false exit
@@ -497,7 +617,8 @@ d# 67 buffer: machine-id-buf
           1  of  r> close-file drop  " unlock" show-icon  true  exit  endof
          -1  of  r> close-file drop  " lock"   show-icon  false exit  endof
       endcase
-   repeat         
+   repeat                                          ( actual )
+   drop                                            ( )
    "   No matching records" ?lease-error-cr
    r> close-file drop  false
 ;
@@ -622,7 +743,7 @@ warning !
    " develop.sig" open-security?  if  drop false exit  then   >r   ( r: ih )
    "   Devel key " ?lease-debug
    load-started
-   develkey$ to pubkey$
+   develkey$ to pubkeylist$
    begin
       sec-line-buf /sec-line-max r@ read-line  if  ( actual -eof? )
          2drop  r> close-file drop  false exit
@@ -717,6 +838,19 @@ warning !
    " Reflash returned, unexpectedly" .security-failure
 ;
 
+\ Turn off indexed I/O unless the OS is signed with the firmware
+\ key in addition to the OS key.
+
+: ?disable-indexed-io  ( -- )
+   debug-security? >r  false to debug-security?
+   pubkeylist$ 2>r  fwkey$ to pubkeylist$
+
+   img$  sig$  fw-valid?  0=  if  ec-indexed-io-off  then
+
+   2r> to pubkeylist$
+   r> to debug-security?
+;
+
 : load-from-device  ( devname$ -- done? )
 
    d# 16 0  +icon-xy  show-dot
@@ -730,7 +864,7 @@ warning !
       else
          " minus" show-icon
          " new - " ?lease-debug
-         fwkey$ to pubkey$
+         fwkey$ to pubkeylist$
          img$  sig$  fw-valid?  if
             img$  do-firmware-update
          then
@@ -744,8 +878,9 @@ warning !
    d# 16 0  +icon-xy  show-dot
    " os" bundle-present?  if
       "   OS found - " ?lease-debug
-      oskey$ to pubkey$
+      oskey$ to pubkeylist$
       img$  sig$  sha-valid?  if
+\        ?disable-indexed-io
          img$ tuck load-base swap move  !load-size
          show-unlock
          true  exit
@@ -794,7 +929,8 @@ warning !
             ['] secure-load-ramdisk to load-ramdisk
             " init-program" $find  if
                set-cmdline
-               execute  show-going  go
+               execute
+               show-going  go
             then
             show-x
             security-failure

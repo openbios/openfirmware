@@ -173,3 +173,18 @@ alias disable-security clear-wp
    r> r> h# ff fill             ( )
    put-mfg-data
 ;
+
+: delete-tag  ( "name" -- )  safe-parse-word $delete-tag  ;
+
+: add-tag-from-file  ( "name" "filename" -- )
+   safe-parse-word 2>r  ( r: name$ )
+   reading              ( r: name$ )
+   ifd @ fsize >r       ( r: name$ len )
+   r@ alloc-mem         ( adr r: name$ len )
+   dup r@ ifd @ fgets   ( adr actual r: name$ len )
+   ifd @ fclose         ( adr actual r: name$ len )
+   r@ <> abort" File read error"  ( adr r: name$ len )
+   r>  2dup  2r>        ( data$ data$ name$ )
+   $add-tag             ( data$ )
+   free-mem
+;

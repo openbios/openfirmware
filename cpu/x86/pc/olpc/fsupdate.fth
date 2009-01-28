@@ -169,7 +169,7 @@ previous
       null$ cn-buf place              ( rem$ )
       " fs" bundle-present?  if       ( rem$ )
          " Filesystem image found - " ?lease-debug
-         fskey$ to pubkey$            ( rem$ )
+         fskey$ to pubkeylist$        ( rem$ )
          img$  sig$  sha-valid?  if   ( rem$ )
             2drop                     ( )
             show-unlock               ( )
