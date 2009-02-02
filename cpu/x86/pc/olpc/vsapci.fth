@@ -242,11 +242,18 @@ create ide-hdr
    h# 51010081 2 pick  4 and  if  msr-set  else  msr-clr  then
 ;
 : ac97-cmd-reg  ( object value -- )
-   set-cmd-reg           ( adr value )
+   set-cmd-reg
+   h# 300 ?bus-master                  ( adr value )
+   1 and  if                           ( adr )
+      >bar-info                        ( base-adr size )
+      2dup 1 h# 5100.0026 set-io-rconf ( base-adr size )
+      h# a   h# 5101.00e1 set-iod-bm   ( )
+   else                                ( adr )
+      drop                             ( )
+      h# 5100.0026 rconf-off           ( )
+      h# 5101.00e1 iod-bm-off          ( )
+   then
 
-   h# 300 ?bus-master    ( adr value )
-
-   2drop
    \ The MSRs are:
    \ 5101.00e1  a0000001.480fff80.  IOD_BM
    \ 5100.0026  014f0001.01480001.  io-rconf

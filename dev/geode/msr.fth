@@ -36,7 +36,7 @@ h# fffff. 2constant p2d-range-disabled
 
 : p2d-range-off  ( msr# -- )  p2d-range-disabled  rot msr!  ;
 
-: >p2d-bm  ( ( base size type -- d.msrval )
+: >p2d-bm  ( base size type -- d.msrval )
    >r                 ( base size               r: type )
    negate page#       ( base mask-page       r: type )
    swap page#         ( base-page mask-page  r: type )
@@ -59,6 +59,15 @@ h# ff.fff00000. 2constant p2d-bm-disabled
 
 : p2d-bm-off  ( msr# -- )  p2d-bm-disabled  rot msr!  ;
 
+: >iod-bm  ( base size type -- d.msrval )
+   >r                   ( base size   r: type )
+   negate h# fffff and  ( base mask   r: type )
+   swap                 ( mask base   r: type )
+   0  r>  p2d-format    ( msr.low msr.hi' )
+;
+: set-iod-bm  ( base size type msr# -- )   >r  >iod-bm  r> msr!  ;
+alias iod-bm-off p2d-bm-off
+
 : >rconf  ( base-adr size mode -- d.msrval )
    >r                ( base-adr size     r: mode )
    bounds            ( end-adr base-adr  r: mode )
@@ -68,6 +77,15 @@ h# ff.fff00000. 2constant p2d-bm-disabled
 0. 2constant rconf-disabled
 
 : set-rconf  ( base-adr size mode msr# -- )  >r >rconf r> msr!  ;
+
+: >io-rconf  ( base-adr size mode -- d.msrval )
+   >r                           ( base-adr size    r: mode )
+   bounds                       ( end-adr base-adr  r: mode )
+   d# 12 lshift  r> or          ( end-adr msr.low  )
+   swap 4 - d# 12 lshift  1 or  ( msr.low msr.high )
+;
+
+: set-io-rconf  ( base-adr size mode msr# -- )  >r >io-rconf r> msr!  ;
 
 : rconf-off  ( msr# -- )  rconf-disabled  rot msr!  ;
 
