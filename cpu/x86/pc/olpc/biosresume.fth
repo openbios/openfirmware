@@ -69,7 +69,13 @@ h# 4000.0000 constant lid-pme  \ PME mapper 6
    h# 5120.000b msr@ 2 invert and h# 5120.000b msr!
    h# 5101.0020 p2d-bm-off
 ;
-' disable-uoc to more-platform-fixup
+: xo-platform-fixup  ( -- )
+   disable-uoc
+   dcon-unfreeze unfreeze
+   wlan-reset
+;
+' xo-platform-fixup to more-platform-fixup
+
 : video-refresh-off  ( -- )
    h# 1000.002a msr@ drop d# 12 lshift   ( dc-base )
    h# 4758 over l!  0 swap 4 + l!

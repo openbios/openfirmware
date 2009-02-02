@@ -84,17 +84,20 @@ false instance value force-open?
       my-args " supplicant" $open-package to supplicant-ih
       supplicant-ih 0=  if  end-bulk-in end-out-ring free-buf false exit  then
       nonce-cmd
-      force-open?  if  true exit  then
-      link-up? 0=  if
-         ['] 2drop to ?process-eapol
-         do-associate 0=  if  free-buf false exit  then
-         ds-disconnected reset-driver-state
-         ds-associated set-driver-state
-         ['] do-process-eapol to ?process-eapol
+      force-open?  0=  if
+         link-up? 0=  if
+            ['] 2drop to ?process-eapol
+            do-associate 0=  if  free-buf false exit  then
+            ds-disconnected reset-driver-state
+            ds-associated set-driver-state
+            ['] do-process-eapol to ?process-eapol
+         then
+         start-nic
       then
-      start-nic
    then
-   use-promiscuous?  if  enable-promiscuous  else  disable-promiscuous  then
+   force-open?  0=  if
+      use-promiscuous?  if  enable-promiscuous  else  disable-promiscuous  then
+   then
    opencount @ 1+ opencount !
    true
 ;

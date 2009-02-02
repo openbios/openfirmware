@@ -1078,6 +1078,7 @@ here bounce-timer - constant /bounce-timer
 ;
 : get-one-sector  ( dev$ -- error? )
    open-dev to bios-ih
+   bios-ih 0=  if  true exit  then
    load-base 0 1 (bios-read-sectors)   ( #read )
    close-bios-ih                       ( #read )
    1 <>                                ( error? )
@@ -1104,7 +1105,6 @@ here bounce-timer - constant /bounce-timer
    : open
       " sd:1" ntfs?  if
          " sd:0" set-hd-boot
-         dcon-unfreeze unfreeze
          true exit
       then
       false
