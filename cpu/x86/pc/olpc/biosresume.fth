@@ -71,7 +71,7 @@ h# 4000.0000 constant lid-pme  \ PME mapper 6
 ;
 : xo-platform-fixup  ( -- )
    disable-uoc
-   dcon-unfreeze unfreeze
+   visible
    wlan-reset
 ;
 ' xo-platform-fixup to more-platform-fixup
