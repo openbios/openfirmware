@@ -782,6 +782,15 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
 
                             IO (Decode16, 0x0030, 0x0030, 0x00, 0x10, )         // I/O ports to fake out SMI interrupts
                             IO (Decode16, 0x03c0, 0x03c0, 0x00, 0x20, )         // Claim VGA I/O ports
+                            // We claim the EC ports here instead of in an EC node
+                            // because we don't want Windows to load an EC driver
+                            // nor to complain about not being able to do so.
+                            IO (Decode16, 0x62, 0x62, 0, 1)                     // Claim EC I/O ports
+                            IO (Decode16, 0x66, 0x66, 0, 1)
+                            IO (Decode16, 0x61, 0x61, 0, 1)    // Extra EC I/O ports
+                            IO (Decode16, 0x68, 0x68, 0, 1)
+                            IO (Decode16, 0x6c, 0x6c, 0, 1)
+                            IO (Decode16, 0x380, 0x380, 0, 4)
                         })
                         CreateDWordField (MBRB, \_SB.PCI0.SBF0.MEM._CRS._Y06._LEN, EM1L)
                         Store (MEMK, Local0)                // Memory size in Kbytes (from EBDA)
@@ -837,26 +846,26 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
                     })
                 }
 
-                Device(EC0) { 
-                    Name (_HID, EISAID("PNP0C09"))
-                    Name (_CRS, ResourceTemplate() {
-                         IO (Decode16, 0x62, 0x62, 0, 1)
-                         IO (Decode16, 0x66, 0x66, 0, 1)
-                         IO (Decode16, 0x61, 0x61, 0, 1)
-                         IO (Decode16, 0x68, 0x68, 0, 1)
-                         IO (Decode16, 0x6c, 0x6c, 0, 1)
-                         IO (Decode16, 0x380, 0x380, 0, 4)
-                    })
-  
-//                  // Define that the EC SCI is bit 0 of the GP_STS register 
-//                  Name(_GPE, 0) {
-//                    OperationRegion(ECOR, EmbeddedControl, 0, 0xFF) 
-//                    Field(ECOR, ByteAcc, Lock, Preserve) { 
-//                    // Field definitions go here 
-//                    } 
-//                  }
-
-                }
+//                Device(EC0) { 
+//                    Name (_HID, EISAID("PNP0C09"))
+//                    Name (_CRS, ResourceTemplate() {
+//                         IO (Decode16, 0x62, 0x62, 0, 1)
+//                         IO (Decode16, 0x66, 0x66, 0, 1)
+////                       IO (Decode16, 0x61, 0x61, 0, 1)
+////                       IO (Decode16, 0x68, 0x68, 0, 1)
+////                       IO (Decode16, 0x6c, 0x6c, 0, 1)
+////                       IO (Decode16, 0x380, 0x380, 0, 4)
+//                    })
+//
+//                    // Define that the EC SCI is bit 0 of the GP_STS register 
+//                    Name(_GPE, 0) // Possibly wrong
+//
+////                  OperationRegion(ECOR, EmbeddedControl, 0, 0xFF) {
+////                      Field(ECOR, ByteAcc, Lock, Preserve) { 
+////                      // Field definitions go here 
+////                      }
+////                  }
+//                }
 
 // Elided superio
 
