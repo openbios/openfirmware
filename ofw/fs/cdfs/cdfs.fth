@@ -137,7 +137,6 @@ instance variable totoff	\ Total offset into the directory
    max-name min                 ( adr len' )
    tuck sought-name swap move   ( len' )
    sought-name  swap	        ( adr' len' )
-   2dup upper       	        ( adr' len' )
    -period                      ( adr' len'' )
 ;
 : froot  ( -- )  root-dirent select-file set-dir  ;
