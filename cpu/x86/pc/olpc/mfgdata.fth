@@ -51,8 +51,8 @@ purpose: Manufacturing data reader
    nip  if  drop flash-base h# f.0000 +  then
 ;
 
-: find-tag  ( name$ -- false | data$ true )
-   drop >r  mfg-data-top        ( adr r: name-adr )
+: (find-tag)  ( name$ top-adr -- false | data$ true )
+   -rot  drop >r                ( adr r: name-adr )
    begin  another-tag?  while   ( adr' data$ tname-adr r: name-adr )
       r@ 2 comp 0=  if          ( adr' data$ r: name-adr )
          r> drop  rot drop      ( data$ )
@@ -61,6 +61,9 @@ purpose: Manufacturing data reader
       2drop                     ( adr' r: name-adr )
    repeat                       ( adr' r: name-adr )
    r> 2drop false
+;
+: find-tag  ( name$ -- false | data$ true )
+   mfg-data-top  (find-tag)
 ;
 
 \ Remove bogus null characters from the end of mfg data tags (old machines

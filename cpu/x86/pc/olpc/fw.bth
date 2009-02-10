@@ -529,7 +529,6 @@ fload ${BP}/ofw/core/dualconsole.fth
    install-dual-console
 
    ?gui-banner
-   " probe-" do-drop-in
 \   ." nvramrc" cr
 \   use-nvramrc?  if  nvramrc safe-evaluate  then
 ;
@@ -603,12 +602,17 @@ fload ${BP}/ofw/core/dualconsole.fth
 
    read-game-keys
    stdout off  \ 
+
+   " probe-" do-drop-in
+
    probe-pci
    sound
    open-keyboard
    ?games
    ['] false to interrupt-auto-boot?
    probe-usb
+   " probe+" do-drop-in
+
    interpreter-init
    ?scan-nand
    ?diags

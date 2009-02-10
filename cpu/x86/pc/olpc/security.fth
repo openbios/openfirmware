@@ -20,14 +20,14 @@ true value debug-security?
    debug-security?  if  red-letters type black-letters cr  else  2drop  then
 ;
 
+code halt  hlt  c;  \ To save power
+
 : fail-load  ( -- )
+   show-sad
    text-on
    ." OS Load Failed" cr
-   quit
-   begin again
+   begin halt again
 ;
-
-code halt  hlt  c;  \ To save power
 
 0 value security-off?
 
@@ -943,7 +943,7 @@ warning !
       banner
    then
 
-   load-crypto  if  " Crytpo load failed" .security-failure   then       ( )
+   load-crypto  if  " Crypto load failed" .security-failure   then       ( )
 
    alternate?  if  " \boot-alt"  else  " \boot"  then  pn-buf place
 

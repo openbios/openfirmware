@@ -7,9 +7,16 @@
 \ require a full erase.  That is faster and safer than copying out the
 \ data, erasing the block and rewriting it.
 
-: set-wp  ( -- )
+: enable-security  ( "serialnumber" -- )
+   board-revision  h# b48 <  abort" Only supported on B4 and later"
    h# fffefffe 2  " wp"  $=  if  ." wp is already set" cr  exit  then
-   " SN" find-tag 0=  abort" No serial number (SN tag); enabling security would brick me." 2drop
+   " SN" find-tag 0=  abort" No serial number (SN tag); enabling security would brick me."  ( sn$ )
+   safe-parse-word  ( sn$ confirmation$ )
+   $= 0=  abort" Confirmation code mismatch"   
+
+   " Enabling security is dangerous.  Are you sure you want to do it?" confirmedn?
+   0= abort" Canceled"
+
    " U#" find-tag 0=  abort" No U# tag; enabling security would brick me." 2drop
    h# fffefffe 2  " ww"  $=  0=  abort" No ww tag"
    spi-start  spi-identify
@@ -25,10 +32,18 @@
    rom-pa mfg-data-offset +  mfg-data-buf  /flash-block lmove
 ;
 
+: (put-mfg-data)
+   mfg-data-buf  mfg-data-end-offset mfg-data-offset  write-flash-range
+;
+
+: ram-find-tag  ( name$ -- false | data$ true )
+   mfg-data-buf /flash-block +  (find-tag)
+;
+
 \ Write mfg data from RAM to FLASH
 : put-mfg-data  ( -- )
    spi-start spi-identify
-   mfg-data-buf  mfg-data-end-offset mfg-data-offset  write-flash-range
+   (put-mfg-data)
    spi-reprogrammed
 ;
 
@@ -52,12 +67,14 @@
    r>
 ;
 
+[ifdef] notdef
 \ Change the "ww" tag to "wp"
 : hard-set-wp  ( -- )
    " ww" mfg-data-setup  ( ram-adr )
    [char] p  swap 1+ c!  ( )
    put-mfg-data
 ;
+[then]
 
 \ Change the "wp" tag to "ww"
 : clear-wp  ( -- )
@@ -68,13 +85,11 @@
 
 alias disable-security clear-wp
 
-: enable-security  ( -- )
-   board-revision  h# b48 <  abort" Only supported on B4 and later"
-   set-wp
-;
-
 : ?tagname-valid  ( tagname$ -- tagname$ )
    dup 2 <> abort" Tag name must be 2 characters long"
+;
+: ?wp-tag  ( tagname$ -- tagname$ )
+   2dup " wp" $=  abort" Use enable-security for the wp tag"
 ;
 : tag-setup  ( tagname$ -- ram-value$ )
    ?tagname-valid
@@ -100,6 +115,7 @@ alias disable-security clear-wp
 ;
 
 : $change-tag  ( value$ tagname$ -- )
+   ?wp-tag
    tag-setup  ( new-value$ old-value$ )
    2over 2over  value-mismatch?  abort" New value and old value have different lengths"
    drop swap move   ( )
@@ -116,11 +132,7 @@ alias disable-security clear-wp
    mfg-data-buf /flash-block +  last-mfg-data
 ;
 
-: $add-tag  ( value$ name$ -- )
-   ?tagname-valid                                 ( value$ name$ )
-   2dup find-tag  abort" Tagname already exists"  ( value$ name$ )
-
-   get-mfg-data
+: ($add-tag)  ( value$ name$ -- )
    ram-last-mfg-data  >r                          ( value$ name$ r: adr )
 
    \ Check for enough space for the new tag
@@ -152,7 +164,14 @@ alias disable-security clear-wp
 
    \ Copy the value data
    over -  swap move                              ( )
+;
+: $add-tag  ( value$ name$ -- )
+   ?wp-tag
+   ?tagname-valid                                 ( value$ name$ )
+   2dup find-tag  abort" Tagname already exists"  ( value$ name$ )
 
+   get-mfg-data                                   ( value$ name$ )
+   ($add-tag)                                     ( )
    put-mfg-data                                   ( )
 ;
 

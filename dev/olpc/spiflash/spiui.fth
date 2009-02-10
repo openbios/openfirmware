@@ -40,8 +40,9 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
    ." Verifying" cr
    ?do                ( adr )
       i .x (cr
-      dup  i +  /flash-block  i  flash-verify
-   /flash-block +loop       ( adr )
+      dup   /flash-block  i  flash-verify
+      /flash-block +  ( adr' )
+   /flash-block +loop ( adr )
    cr  drop           ( )
 ;
 
@@ -226,7 +227,18 @@ h# 30 constant crc-offset   \ From end
    then
 ;
 
-: write-firmware  ( -- )
+: verify-firmware  ( -- )
+[ifdef] use-flash-nvram
+   flash-buf  nvram-offset     0  verify-flash-range     \ Verify first part
+[else]
+   flash-buf  mfg-data-offset  0  verify-flash-range     \ Verify first part
+[then]
+
+   \ Don't verify the block containing the manufacturing data
+
+   flash-buf mfg-data-end-offset +  /flash mfg-data-end-offset  verify-flash-range   \ Verify last part
+;
+: write-firmware   ( -- )
 [ifdef] use-flash-nvram
    flash-buf  nvram-offset     0  write-flash-range      \ Write first part
 [else]
@@ -235,8 +247,7 @@ h# 30 constant crc-offset   \ From end
 
    \ Don't write the block containing the manufacturing data
 
-   flash-buf mfg-data-end-offset +          ( adr )
-   /flash mfg-data-end-offset  write-flash-range         \ Write last part
+   flash-buf mfg-data-end-offset +   /flash  mfg-data-end-offset  write-flash-range  \ Write last part
 ;
 
 : .verify-msg  ( -- )
@@ -334,11 +345,11 @@ device-end
    ?file
 
    \ Don't overwrite the EC code
-   flash-buf  /flash  /ec  write-flash-range
+   flash-buf /ec +  /flash  /ec  write-flash-range
 
    .verify-msg
 ;
-: verify-bios  ( -- )  flash-buf  /flash  /ec  verify-flash-range  ;
+: verify-bios  ( -- )  flash-buf /ec +  /flash  /ec  verify-flash-range  ;
 
 : flash-ec  ( -- )
    ?file
