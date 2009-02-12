@@ -5,6 +5,7 @@ purpose: Sniff the battery state from EC internal variables
 : ec@ wbsplit h#  381 pc! h# 382 pc! h# 383 pc@ ;
 : ec! wbsplit h#  381 pc! h# 382 pc! h# 383 pc! ;
 [then]
+
 : wextend  ( w -- n )  dup h# 8000 and  if  h# ffff.0000 or  then  ;
 : rr ec@ . ;
 : ww ec! ;
@@ -115,7 +116,347 @@ end-string-array
    begin  (cr .bat kill-line  d# 1000 ms  key?  until
    key drop
 ;
-\ send questions to andrew at gold peak
+
+\ A few commands for looking at what the EC is doing in
+\ the battery state machine.
+\ Unless you are on a serial console with stdout turned off
+\ (stdout off) this will miss some state changes.
+\
+: next-bstate
+        begin
+         f780 ec@ tuck <>
+        until
+;
+
+: see-bstate
+        0 begin
+            next-bstate dup .
+                dup 4 = if
+                  cr
+            then key?
+        until
+;
+
+: next-e1-state
+   begin 
+      fae1 ec@ tuck <>
+   until
+;
+
+: see-e1
+        0 begin
+            next-e1-state dup .
+            key?
+        until
+;
+
+\ Turn on the charging mosfet
+: bat-enable-charge ( -- ) fc21 ec@ 40 or fc21 ec! ;
+
+\ Turn off the charging mosfet
+: bat-disable-charge ( -- ) fc21 ec@ 40 invert and fc21 ec! 03 fc24 ec! ;
+
+\ Turn on the trickle charge with max system voltage
+: bat-enable-trickle ( -- ) fc23 ec@ 1 or fc23 ec! 01 fc24 ec! ;
+
+\ Turn off the trickle charger
+: bat-disable-trickle ( -- ) fc23 ec@ 1 invert and fc23 ec! ;
+
+\ Access the 1-wire data line via the EC GPIO ports
+
+h# 383 constant dataport
+h# 382 constant lowadr
+4 constant dq-bit
+0 value high
+0 value low
+false value 1w-initialized
+0 value fileih
+
+: disable-ec-charging
+   1 h# fa07 ec!
+;
+
+: disable-ec-1w
+   1 h# fa08 ec!
+;
+
+: enable-ec-charging
+   0 h# fa07 ec!
+;
+
+: enable-ec-1w
+   0 h# fa08 ec!
+;
+
+: 1w-init  ( -- )
+   disable-interrupts
+   h# fc24 ec@  dq-bit invert and  fc24 ec!
+   h# fc14 ec@ dup dq-bit or to low    dq-bit invert and to high
+   high fc14 ec!
+   true to 1w-initialized
+   1 ms
+;
+
+
+\ New ec revs can turn off the battery subsystem without
+\ putting the ec into reset allowing the user to
+\ use the XO keyboard.
+: init-ec-live
+   disable-ec-charging
+   disable-ec-1w
+   1w-init
+;
+
+: init-ec-dead
+   kbc-off
+   1w-init
+;
+
+\ EC code at the time these commands were added can stop
+\ the battery subsystem with out putting the EC into reset.
+\ so we always do a live init
+: batman-init init-ec-live 500 ms bat-disable-charge bat-disable-trickle ;
+: batman-init? 1w-initialized if else batman-init then ;
+
+
+: batman-start batman-init? ;
+
+: batman-stop
+   enable-ec-1w
+   enable-ec-charging
+   enable-interrupts
+   false to 1w-initialized
+;
+
+: bit?  ( us -- flag )  \ Test the data after a delay
+   us  h# 34 lowadr pc!  dataport pc@  dq-bit and  0<>
+;
+
+: 1w-pulse  ( us -- )  \ Pulse the wire low for some duration
+   h# 14 lowadr pc!  low dataport pc!  us  high dataport pc!
+;
+
+\ Generic 1-wire primitives
+
+: 1w-reset  ( -- )
+   d# 480 1w-pulse
+   d# 67 bit?  abort" No response from battery"
+   begin  1 bit?  until
+;
+
+: 1w-write-byte  ( byte -- )
+   8 0  do                     ( byte )
+      dup  1 and  if           ( byte )
+         1 1w-pulse  d# 60 us  ( byte )
+      else                     ( byte )
+         d# 60 1w-pulse        ( byte )
+      then                     ( byte )
+      2/                       ( byte' )
+   loop                        ( byte )
+   drop                        ( )
+;
+
+: 1w-read-byte  ( -- )
+   0   8 0  do
+      1 1w-pulse
+      \ Shift bits in from the left, little endian
+      d# 10 bit?  h# 100 and  or  2/  d# 50 us
+   loop
+;
+
+: 1w-skip-address  ( -- )  h# cc 1w-write-byte  ;
+
+: 1w-cmd   ( arg cmd -- )  1w-reset  1w-skip-address  1w-write-byte  1w-write-byte  ;
+
+\ Basic commands for the DS2756 chip
+
+: 1w-read   ( adr len start -- )
+   h# 69 1w-cmd                            ( adr len )
+   bounds  ?do  1w-read-byte i c!  loop    ( )
+   1w-reset
+;
+
+: 1w-write   ( adr len start -- )
+   h# 6c 1w-cmd                            ( adr len )
+   bounds  ?do  i c@ 1w-write-byte  loop   ( )
+   1w-reset
+;
+
+: 1w-write-start ( start -- )
+   h# 6c 1w-cmd
+;
+
+: 1w-copy    ( start -- )  h# 48 1w-cmd  d# 10 ms  ;
+
+: 1w-recall  ( start -- )  h# b8 1w-cmd  ;
+
+\ : 1w-lock    ( start -- )  h# 6a 1w-cmd  ;
+
+: 1w-sync  ( -- )  0  h# d2 1w-cmd  ;
+
+\ Some higher-level commands for accessing battery data
+
+\ buffer for reading bank data
+h# 20 constant /ds-bank     \ Bytes per bank in the battery sensor chip
+h# 60 constant /ds-eeprom   \ Bytes in the eeprom
+h# 01 constant ni-mh
+h# 02 constant li-fe
+h# 00 constant ds-regs
+h# 10 constant ds-acr
+h# 20 constant ds-bank0
+h# 25 constant ds-bat-misc-flag
+h# 2d constant ds-last-dis-soc
+h# 2e constant ds-last-dis-acr-msb
+h# 2f constant ds-last-dis-acr-lsb
+h# 40 constant ds-bank1
+h# 60 constant ds-bank2
+h# 68 constant ds-remain-acr-msb
+h# 69 constant ds-remain-acr-lsb
+h# 5f constant ds-batid
+
+h# 01 constant ds-bat-low-volt
+h# 20 constant ds-bat-full
+
+h# 20 buffer: ds-bank-buf
+
+: ds-bank$  ( -- adr len )  ds-bank-buf /ds-bank  ;
+
+: bat-id  ( -- id )  ds-bank-buf 1 ds-batid 1w-read  ds-bank-buf c@ h# 0f and  ;
+
+: read-bank  ( offset -- )  ds-bank$ rot 1w-read  ;
+
+: bat-read-eeprom ( -- ) ds-bank-buf /ds-eeprom ds-bank0 1w-read ;
+
+: bat-ds-regs@ ( -- )  ds-regs  read-bank  ;
+: bat-bank0@   ( -- )  ds-bank0 read-bank  ;
+: bat-bank1@   ( -- )  ds-bank1 read-bank  ;
+: bat-bank2@   ( -- )  ds-bank2 read-bank  ;
+
+: bat-dump-bank  ( -- )  ds-bank$ dump  ;
+
+: bat-dump-banks ( -- )
+   batman-init? 
+   cr ." Regs"
+   bat-ds-regs@ bat-dump-bank
+   cr cr ." Bank 0"
+   bat-bank0@ bat-dump-bank
+   cr cr ." Bank 1"
+   bat-bank1@ bat-dump-bank
+   cr cr ." Bank 2"
+   bat-bank2@ bat-dump-bank
+;
+
+: bat-dump-regs ( -- ) batman-init? bat-ds-regs@ bat-dump-bank ;
+
+: w16>d32 ( 16bit -- 32bit_sign-extended )
+   d# 16 << d# 16 >>a
+;
+
+: bat-save  ( -- )
+   " disk:\battery.dmp"
+   2dup ['] $delete  catch  if  2drop  then  ( name$ )
+   $create-file to fileih
+
+   1w-init
+   h# 80 0  do
+      ds-bank$ i 1w-read
+      ds-bank$ " write" fileih $call-method
+   /ds-bank +loop
+
+   fileih close-dev
+;
+
+\ bg-* words access the gauge directly via 1w rather than
+\ read the value from the ec cache
+: bg-acr@     ( -- acr )
+   batman-init?
+   ds-bank-buf 2 ds-acr 1w-read                  ( )
+   ds-bank-buf c@ 8 <<                          ( msb )
+   ds-bank-buf 1 + c@ or w16>d32                ( acr )
+;
+
+: bg-acr! ( acr -- )
+   batman-init?
+   wbsplit
+   ds-acr 1w-write-start
+   1w-write-byte
+   1w-write-byte
+   1w-reset
+;
+
+: bg-last-dis-soc@ ( -- last-dis-soc )
+   batman-init?
+   ds-bank-buf 1 ds-last-dis-soc 1w-read
+   ds-bank-buf c@ 
+;
+
+: bg-last-dis-soc! ( soc -- )
+   batman-init?
+   ds-bank0 1w-recall
+   ds-last-dis-soc 1w-write-start
+   1w-write-byte
+   ds-last-dis-soc 1w-copy
+   1w-reset
+;
+
+: bg-last-dis-acr@ ( -- last-dis-acr )
+   batman-init?
+   ds-bank-buf 2 ds-last-dis-acr-msb 1w-read ( )
+   ds-bank-buf c@ 8 <<                          ( last-dis-acr-msb )
+   ds-bank-buf 1 + c@ or w16>d32                ( last-dis-acr )
+;
+
+: bg-last-dis-acr! ( last-dis-acr --)
+   batman-init?
+   wbsplit
+   ds-bank0 1w-recall
+   ds-last-dis-acr-msb 1w-write-start
+   1w-write-byte
+   1w-write-byte
+   ds-last-dis-acr-msb 1w-copy
+   1w-reset
+;
+
+: bg-misc@ ( -- misc-flag )
+   batman-init?
+   ds-bank-buf 1 ds-bat-misc-flag 1w-read
+   ds-bank-buf c@
+;
+
+: bg-set-full-flag ( -- )
+   bg-misc@
+   ds-bat-full or
+   ds-bank0 1w-recall
+   ds-bat-misc-flag 1w-write-start
+   1w-write-byte
+   ds-bat-misc-flag  1w-copy
+   1w-reset
+;
+
+: bg-clear-full-flag ( -- )
+   bg-misc@
+   ds-bat-full not and
+   ds-bank0 1w-recall
+   ds-bat-misc-flag 1w-write-start
+   1w-write-byte
+   ds-bat-misc-flag  1w-copy
+   1w-reset
+;
+
+: .bg-eeprom
+   base @ >r
+   decimal
+   ."          acr: " bg-acr@ . cr
+   ." Last dis soc: " bg-last-dis-soc@ . cr
+   ." Last dis acr: " bg-last-dis-acr@ . cr
+   hex
+   ."   Misc flags: " bg-misc@ dup . ."  : "
+   dup ds-bat-full and if ." fully charged " then
+   dup ds-bat-low-volt and if ." low voltage " then
+   drop
+   cr
+   r> base !
+;
 
 dev /
 new-device

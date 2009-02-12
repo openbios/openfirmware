@@ -8,6 +8,18 @@ h# 380 constant iobase
 : ec@  ( index -- b )  wbsplit iobase 1+ pc!  iobase 2+ pc!  iobase 3 + pc@  ;
 : ec!  ( b index -- )  wbsplit iobase 1+ pc!  iobase 2+ pc!  iobase 3 + pc!  ;
 
+\ Write a word to an EC index.
+: ecw! ( wdata index )
+   wbsplit           ( wdata index_lsb index_msb ) 
+   iobase 1+ pc!        ( wdata index_lsb )
+   dup iobase 2+ pc!    ( wdata index_lsb )
+   swap wbsplit      ( index_lsb wdata_lsb wdata_msb )
+   iobase 3 + pc!        ( index_lsb wdata_lsb )
+   swap 1 +          ( wdata_lsb index_lsb+1 ) 
+   iobase 2+ pc!        ( wdata_lsb )
+   iobase 3 + pc!
+;
+
 : autowak!        ( value -- )   f64f ec! ;
 : autowak-on      ( -- )         1 autowak! ;
 : autowak-off     ( -- )         0 autowak! ;
@@ -144,6 +156,8 @@ d# 10 constant #ec-retries
    loop                  ( d m y )
    too-many-retries
 ;
+
+: ec-wakeup!   ( wakeup -- ) lbsplit h# 36 ec-cmd-out ec-wb ec-wb ec-wb ec-wb ;
 
 : ec-abnormal@   ( -- b )  h# 1f ec-cmd-b@  ;
 
