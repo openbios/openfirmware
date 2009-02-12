@@ -5,13 +5,6 @@ purpose: Inject additional keys into manufacturing data
 
 \ See HowItWorks near end of file for a description of the overall procedure
 
-create test-me
-[ifdef] test-me
-.( WARNING WARNING - keyjector test code installed) cr
-[else]
-.( Warning - keyjector version) cr
-[then]
-
 \ !!! Re-implement this for each different deployment
 : wrong-sku?  ( -- flag )
    " P#" find-tag 0=  if  true exit  then              ( pn$ )
