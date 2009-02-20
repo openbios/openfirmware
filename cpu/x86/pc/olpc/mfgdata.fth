@@ -90,6 +90,7 @@ purpose: Manufacturing data reader
    dup >r
    blue-letters
    bounds ?do
+      #out @ 3 +  rmargin @  >  if  exit? ?leave  then
       3 .tab  i c@  <# u# u# u#> type
    loop
    black-letters
