@@ -337,23 +337,26 @@ d# 10 buffer: fw-date-buf
 ;
 : get-tag$  ( tag$ -- value$ )  find-tag  0=  if  " Not Available"  then  ?-null  ;
 
-: too-long?  ( dst-adr -- dst-adr flag )  dup pad - d# 10 >=  ;
+: too-long?  ( dst-adr -- dst-adr flag )  dup pad - h# 10 >=  ;
 : (uuid)  ( -- true | adr len false )
    " U#" find-tag   if     ( adr len )
+      ?-null               ( adr len' )
       pad  -rot            ( dst-adr adr len )
       bounds  ?do                      ( dst-adr )
          too-long?  if  drop true unloop exit  then
          i c@ h# 10 digit  if          ( dst-adr digith )
             i 1+ c@  h# 10 digit  if   ( dst-adr digith digitl )
-               swap bwjoin  over c!    ( dst-adr )
-               1+                      ( dst-adr' )
+               swap 4 lshift or        ( dst-adr byte )
+               over c!  1+             ( dst-adr' )
+               2                       ( dst-adr advance )
             else                       ( dst-adr digith char )
                3drop true unloop exit
             then                       ( dst-adr )
          else                          ( dst-adr char )
             [char] - <>  if  drop true unloop exit  then
-         then                          ( dst-adr )
-      loop                             ( dst-adr )
+            1                          ( dst-adr advance )
+         then                          ( dst-adr advance )
+      +loop                            ( dst-adr )
       pad tuck -                       ( adr len )
       dup h# 10 =  if                  ( adr len )
          false   \ Good UUID           ( adr len false )
