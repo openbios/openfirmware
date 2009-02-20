@@ -22,6 +22,7 @@ mfg-data-end-offset /mfg-data-merge - constant mfg-data-merge-offset
    /mfg-data-merge move
 ;
 
+[ifdef] get-mfg-data
 \ unpollute-mfg-data clears the Insyde BIOS residue from the beginning
 \ of the manufacturing data area, restoring it to erased state
 : unpollute-mfg-data  ( -- )
@@ -30,6 +31,7 @@ mfg-data-end-offset /mfg-data-merge - constant mfg-data-merge-offset
    mfg-data-buf mfg-data-merge-offset h# ff fill
    put-mfg-data
 ;
+[then]
 
 : get-insyde  ( ["filename"] -- )
    parse-word   ( adr len )

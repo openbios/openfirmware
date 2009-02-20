@@ -226,6 +226,10 @@ fload ${BP}/cpu/x86/pc/rmtools.fth
 fload ${BP}/cpu/x86/pc/biosload/callbios.fth
 \ fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
 
+[ifdef] syslinux-loaded
+fload ${BP}/cpu/x86/pc/biosload/callvbe.fth
+[then]
+
 \ false to stand-init-debug?
 true to stand-init-debug?
 

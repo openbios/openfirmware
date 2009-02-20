@@ -1,8 +1,8 @@
 purpose: Call VESA BIOS functions via syslinux c32 callback
 
-[ifdef] notdef-get-com32-ptr
-\  sp  0 #)  mov  \ Save COM32 stack pointer to get parameters
-[then]
+\ [ifdef] notdef-get-com32-ptr
+   sp  0 #)  mov  \ Save COM32 stack pointer for possible later use
+\ [then]
 [ifdef] notdef-getvbe
    \ There is an extra return address on the stack from the e9 call above
    d# 16 [sp]  bp  mov  \ COM32 intcall helper function
