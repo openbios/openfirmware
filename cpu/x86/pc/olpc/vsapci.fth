@@ -157,7 +157,7 @@ create gxfb-hdr  \ All R/O except cmd/stat and cache line size
   ff800000 , ffffc000 , ffffc000 , ffffc000 ,
          0 ,        0 ,        0 ,        0 ,
 
-    30100b ,  2200002 ,  3000000 ,        8 ,
+    30100b ,  2200003 ,  3000000 ,        8 ,
   fb-pci-base , gp-pci-base , dc-pci-base , vp-pci-base , \ FB, GP, DC, VP
          0 ,        0 ,        0 ,   30100b , \ VIP (LX only)
          0 ,        0 ,        0 ,        0 ,
