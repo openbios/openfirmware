@@ -233,8 +233,8 @@ fload ${BP}/cpu/x86/pc/linux.fth
 ;
 fload ${BP}/dev/geode/usb.fth
 
-\ false to stand-init-debug?
-true to stand-init-debug?
+false to stand-init-debug?
+\ true to stand-init-debug?
 
 hex
 : i-key-wait  ( ms -- pressed? )
