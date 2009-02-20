@@ -265,11 +265,11 @@ h# 30 constant crc-offset   \ From end
    write-firmware
 
    spi-us d# 20 <  if
-      ['] verify catch  if
+      ['] verify-firmware catch  if
          ." Verify failed.  Retrying once"  cr
          spi-identify
          write-firmware
-         verify
+         verify-firmware
       then
       flash-write-disable
    else
