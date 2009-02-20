@@ -77,7 +77,7 @@ create bios-info
 ( 06 )   h# f000 w,  \ BIOS starting address segment
 ( 08 )         3 c,  \ Release date index
 ( 09 )     h# 0f c,  \ BIOS ROM size in 64K chunks, minus 1
-( 0a )  h# 91880 l,  \ BIOS characteristics - PCI, Reflash, selectable boot, EDD
+( 0a )  h# 99880 l,  \ BIOS characteristics - PCI, Reflash, shadowing, CD boot, selectable boot, EDD
 ( 0e )         0 l,  \ Vendor and system specific BIOS characteristics
 ( 12 )         1 c,  \ ACPI is supported
 \        " OLPC" c$,  \ Vendor string
@@ -92,12 +92,13 @@ create system-info
 ( 04 )         1 c,  \ Manufacturer string index
 ( 05 )         2 c,  \ Product name string index
 ( 06 )         3 c,  \ Version string index
-( 07 )         0 c,  \ Serial number string index
+( 07 )         4 c,  \ Serial number string index
 ( 08 )  here to uuid-adr  h# 10 allot  \ SETME
 ( 18 )         6 c,  \ Wake up type
 \       " OLPC" c$,  \ 1: Manufacturer
 \         " XO" c$,  \ 2: Product Name
 \          " 1" c$,  \ 3: Version
+\       " <sn>" c$,  \ 4: Serial number
 \              0 c,
 
 create base-board-info
@@ -108,7 +109,7 @@ create base-board-info
 ( 05 )         2 c,  \ Product string index
 ( 06 )         3 c,  \ Version string index
 ( 07 )         4 c,  \ Serial number string index
-\       " OLPC" c$,  \ 1: Manufacturer
+\     " QUANTA" c$,  \ 1: Manufacturer
 \         " XO" c$,  \ 2: Product Name
 \          " 1" c$,  \ 3: Version
 
@@ -157,7 +158,7 @@ create l1-icache-info
 ( 01 )    h# 13 c,   \ Length
 ( 02 )  h# 0701 w,   \ Handle
 ( 04 )        0 c,   \ Socket string index
-( 05 )   h# 181 w,   \ Writeback, enabled, internal, not socketed, L1
+( 05 )   h# 180 w,   \ Writeback, enabled, internal, not socketed, L1
 ( 07 )  h# 8002 w,   \ Max size - 128K
 ( 09 )  h# 8002 w,   \ Installed size - 128K
 ( 0b )        1 w,   \ Supported SRAM type - unknown
@@ -174,7 +175,7 @@ create l1-dcache-info
 ( 01 )    h# 13 c,   \ Length
 ( 02 )  h# 0702 w,   \ Handle
 ( 04 )        0 c,   \ Socket string index
-( 05 )   h# 181 w,   \ Writeback, enabled, internal, not socketed, L1
+( 05 )   h# 180 w,   \ Writeback, enabled, internal, not socketed, L1
 ( 07 )  h# 8001 w,   \ Max size - 64K
 ( 09 )  h# 8001 w,   \ Installed size - 64K
 ( 0b )        1 w,   \ Supported SRAM type - unknown
@@ -191,7 +192,7 @@ create l2-cache-info
 ( 01 )    h# 13 c,   \ Length
 ( 02 )  h# 0703 w,   \ Handle
 ( 04 )        0 c,   \ Socket string index
-( 05 )   h# 182 w,   \ Writeback, enabled, internal, not socketed, L2
+( 05 )   h# 181 w,   \ Writeback, enabled, internal, not socketed, L2
 ( 07 )  h# 8002 w,   \ Max size - 128K
 ( 09 )  h# 8002 w,   \ Installed size - 128K
 ( 0b )        1 w,   \ Supported SRAM type - unknown
@@ -396,10 +397,11 @@ c;
       +OLPC
       " XO" +smbios$
       " 1" +smbios$    \ Version
+      " SN" get-tag$ +smbios$
    end-smbios-table
 
    base-board-info copy-smbios-table        ( adr )
-      +OLPC
+      " QUANTA" +smbios$
       " XO" +smbios$
       " 1" +smbios$    \ Version
       " SN" get-tag$ +smbios$
