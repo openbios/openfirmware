@@ -839,8 +839,9 @@ noop
       h# c1 of  'ebda 4 rshift rm-es!  endof  \ Segment address of extended BIOS data area
       h# c2 of  handle-mouse  endof
       h# e8 of  bigmem-int  endof
-\     h# e9 of  endof   \ Don't know what this is.  Ralf Brown's interrupt list says
-\                       \ PhysTechSoft PTS ROM-DOS, but I doubt that is right
+      h# e9 of  rm-set-cf   endof   \ Don't know what this is.  Ralf Brown's interrupt list says
+                        \ PhysTechSoft PTS ROM-DOS, but I doubt that is right
+                        \ Windows invokes it but seems to be okay with it failing
       ( default )  rm-set-cf
          ." Unsupported INT 15 AH=" dup . cr
    endcase
@@ -927,7 +928,10 @@ noop
       h# 0b of  rm-cl@  cfgadr config-b!  endof
       h# 0c of  rm-cx@  cfgadr config-w!  endof
       h# 0d of  rm-ecx@ cfgadr config-l!  endof
+
+      h# 0e of  h# 81 rm-ah!  rm-set-cf  endof  \ Fail PCI interrupt routing for now
  \    h# 0e of  pci-int-rout  endof
+
  \    h# 0f of  set-pci-int   endof
 
       ( default )     h# 81 rm-ah!     rm-set-cf
