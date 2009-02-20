@@ -771,7 +771,6 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
                     Name (_UID, One)
                     Method (_CRS, 0, NotSerialized) {
                         Name (MBRB, ResourceTemplate () {
-                            Memory32Fixed (ReadWrite, 0x00000000, 0x000A0000, )
                             Memory32Fixed (ReadOnly,  0x000E0000, 0x00020000, )
                             Memory32Fixed (ReadWrite, 0x00100000, 0x00000000, _Y06)  // Edited below
                             // Assumes that the SMM memory is at 8040.0000, I think
@@ -781,7 +780,6 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
                             IO (Decode16, 0x0092, 0x0092, 0x00, 0x01, )
 
                             IO (Decode16, 0x0030, 0x0030, 0x00, 0x10, )         // I/O ports to fake out SMI interrupts
-                            IO (Decode16, 0x03c0, 0x03c0, 0x00, 0x20, )         // Claim VGA I/O ports
                             // We claim the EC ports here instead of in an EC node
                             // because we don't want Windows to load an EC driver
                             // nor to complain about not being able to do so.
@@ -839,7 +837,7 @@ Method (_STA, 0, NotSerialized) { Return (0x0F) }
                     Name (_HID, EisaId ("PNP0501"))
                     Name (_UID, One)
                     Name (_DDN, "COM1")
-                    Name (_STA, 3)  // Present and decoding resources, but shouldn't be shown
+                    Name (_STA, 0xf)  // You can use the serial port if you open the box
                     Name (_CRS, ResourceTemplate () {
                         IO (Decode16, 0x03F8, 0x03F8, 0x00, 0x08, )
                         IRQNoFlags () {4}

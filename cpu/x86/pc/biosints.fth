@@ -200,18 +200,20 @@ create mode3-info \ w b b w w w w d w   w w b b b b b b b b b
 create mode12-info \ w b b w w w w d w   w w b b b b b b b b b 
    h# db w,  \ Linear, (VGA), Graphics, Color, no TTY Output, D1=1, hardware-supported
 
-create mode-115-info
-   h# fb w,    \ Linear, NotVGA, Graphics, Color, no TTY Output, D1=1, hardware-supported
-   0 c,  0 c,  0 w,  d# 64 w,  0 w,  0 w,  0 l,  \ Not windowed
-   0 w,        \ BytesPerScanLine irrelevant in linear mode
-   d#  800 w,  d# 600 w,  \ X, Y res
-   d#   15 c,  d#  18 w,  \ Char width, height (sort of irrelevant)
-   1 c,        \ NumPlanes (irrelevant for linear?)
-   d# 24 c,    \ Bits/pixel
+create mode-112-info
+\   h# bf w,    \ Linear, VGA, Graphics, Color, TTY Output, D1=1, hardware-supported
+\   7 c,  0 c,  d# 64 w,  d# 64 w,  h# a000 w,  0 w,  0 l,  \ Not windowed
+   h# fb w,    \ Linear, noVGA, Graphics, Color, noTTY Output, D1=1, hardware-supported
+   0 c,  0 c,  d# 0 w,  d# 0 w,  0 w,  0 w,  0 l,  \ Not windowed
+   d#  640 /l* w,         \ BytesPerScanLine
+   d#  640 w,  d# 480 w,  \ X, Y res
+   d#    8 c,  d#  16 c,  \ Char width, height
+   1 c,        \ NumPlanes
+   d# 32 c,    \ Bits/pixel
    1 c,        \ NumBanks
-   6 c,        \ MemModel - DirectColor (?)
+   6 c,        \ MemModel - DirectColor
    0 c,        \ Bank size (not banked)
-   0 c,        \ NumImagePages
+   2 c,        \ NumImagePages
    1 c,        \ Reserved
 
    \ Banked Color info
@@ -221,11 +223,43 @@ create mode-115-info
    fb-pci-base l,  0 l,  0 w,   \ Framebuffer address
 
    \ Linear info
-   d# 4096 /w*  w,    \ Bytes per scan line
+   d# 640 /l* w,     \ Bytes per scan line
+   0 c,              \ No banks
+   
+\  fbsize  d# 640 /  d# 480 /  4 /  c,  ( need to account for cmd buffer )
+   d# 11 c,          \ Number of images that will fit in framebuffer
+
+   8 c, d# 16 c,   8 c, 8 c,   8 c,  0 c,   0 c,  0 c,  \ {RGBX}{Bits,Pos}
+
+   d# 56,200,000 l,  \ Max pixel clock
+here mode-112-info -  constant /mode-112-info
+
+create mode-115-info
+   h# fb w,    \ Linear, VGA, Graphics, Color, TTY Output, D1=1, hardware-supported
+   0 c,  0 c,  d# 0 w,  d# 0 w,  h# 0 w,  0 w,  0 l,  \ Not windowed
+   d#  800 /l* w,         \ BytesPerScanLine
+   d#  800 w,  d# 600 w,  \ X, Y res
+   d#    8 c,  d#  16 c,  \ Char width, height
+   1 c,        \ NumPlanes
+   d# 32 c,    \ Bits/pixel
+   1 c,        \ NumBanks
+   6 c,        \ MemModel - DirectColor
+   0 c,        \ Bank size (not banked)
+   2 c,        \ NumImagePages
+   1 c,        \ Reserved
+
+   \ Banked Color info
+   8 c, d# 16 c,    8 c, 8 c,   8 c,  0 c,   0 c,  0 c,  \ {RGBX}{Bits,Pos}
+   0 c,        \ Gamma fixed (change if we implement function 9)
+
+   fb-pci-base l,  0 l,  0 w,   \ Framebuffer address
+
+   \ Linear info
+   d# 800 /l* w,     \ Bytes per scan line
    0 c,               \ No banks
    
-\  fbsize  d# 1200 /  d# 900 /  2/  c,
-   3 c,               \ Number of images that will fit in framebuffer
+\  fbsize  d# 800 /  d# 600 /  4/  c,
+   7 c,               \ Number of images that will fit in framebuffer
 
    8 c, d# 16 c,   8 c, 8 c,   8 c,  0 c,   0 c,  0 c,  \ {RGBX}{Bits,Pos}
 
@@ -233,17 +267,18 @@ create mode-115-info
 here mode-115-info -  constant /mode-115-info
 
 create mode-118-info
-   h# fb w,    \ Linear, NotVGA, Graphics, Color, no TTY Output, D1=1, hardware-supported
-   0 c,  0 c,  0 w,  d# 64 w,  0 w,  0 w,  0 l,  \ Not windowed
-   0 w,        \ BytesPerScanLine irrelevant in linear mode
+   h# fb w,    \ Linear, VGA, Graphics, Color, TTY Output, D1=1, hardware-supported
+   0 c,  0 c,  d# 0 w,  d# 0 w,  h# 0 w,  0 w,  0 l,  \ Not windowed
+   d# 1024 /l* w,         \ BytesPerScanLine
    d# 1024 w,  d# 768 w,  \ X, Y res
-   d#   15 c,  d#  18 w,  \ Char width, height (sort of irrelevant)
-   1 c,        \ NumPlanes (irrelevant for linear?)
-   d# 24 c,    \ Bits/pixel
+\   d#   12 c,  d#  15 c,  \ Char width, height
+   d#    8 c,  d#  16 c,  \ Char width, height (sort of irrelevant)
+   1 c,        \ NumPlanes
+   d# 32 c,    \ Bits/pixel
    1 c,        \ NumBanks
-   6 c,        \ MemModel - DirectColor (?)
+   6 c,        \ MemModel - DirectColor
    0 c,        \ Bank size (not banked)
-   0 c,        \ NumImagePages
+   2 c,        \ NumImagePages
    1 c,        \ Reserved
 
    \ Banked Color info
@@ -253,11 +288,11 @@ create mode-118-info
    fb-pci-base l,  0 l,  0 w,   \ Framebuffer address
 
    \ Linear info
-   d# 4096 /w*  w,    \ Bytes per scan line
+   d# 1024 /l* w,     \ Bytes per scan line
    0 c,               \ No banks
    
-\  fbsize  d# 1200 /  d# 900 /  2/  c,
-   3 c,               \ Number of images that will fit in framebuffer
+\  fbsize  d# 1024 /  d# 768 /  4 /  c,
+   4 c,               \ Number of images that will fit in framebuffer
 
    8 c, d# 16 c,   8 c, 8 c,   8 c,  0 c,   0 c,  0 c,  \ {RGBX}{Bits,Pos}
 
@@ -266,11 +301,11 @@ here mode-118-info -  constant /mode-118-info
 
 create mode-120-info
    h# fb w,    \ Linear, NotVGA, Graphics, Color, no TTY Output, D1=1, hardware-supported
-   0 c,  0 c,  0 w,  d# 64 w,  0 w,  0 w,  0 l,  \ Not windowed
-   0 w,        \ BytesPerScanLine irrelevant in linear mode
+   0 c,  0 c,  d# 0 w,  d# 0 w,  h# 0 w,  0 w,  0 l,  \ Not windowed
+   d# 1200 /w* w,  \ BytesPerScanLine
    d# 1200 w,  d# 900 w,  \ X, Y res
-   d#   15 c,  d#  18 w,  \ Char width, height (sort of irrelevant)
-   1 c,        \ NumPlanes (irrelevant for linear?)
+   d#   15 c,  d#  18 c,  \ Char width, height (sort of irrelevant)
+   1 c,        \ NumPlanes
    d# 16 c,    \ Bits/pixel
    1 c,        \ NumBanks
    6 c,        \ MemModel - DirectColor (?)
@@ -289,7 +324,7 @@ create mode-120-info
    0 c,               \ No banks
    
 \  fbsize  d# 1200 /  d# 900 /  2/  c,
-   7 c,               \ Number of images that will fit in framebuffer
+   6 c,               \ Number of images that will fit in framebuffer
 
    5 c, d# 11 c,   6 c, 5 c,   5 c,  0 c,   0 c,  0 c,  \ {RGBX}{Bits,Pos}
 
@@ -309,9 +344,11 @@ here mode-120-info -  constant /mode-120-info
 
 : vbe-ok  ( -- )  h# 4f rm-ax!  ;
 : vbe-modes  ( -- )
+\ ." vbe-modes" cr
    ?vbe2
    h# 41534556              0 >vbe-pa l!   \ VbeSignature
-   h# 0300                  4 >vbe-pa w!   \ VbeVersion
+\   h# 0300                  4 >vbe-pa w!   \ VbeVersion
+   h# 0200                  4 >vbe-pa w!   \ VbeVersion
    1                    d# 10 >vbe-pa l!   \ Capabilities - 8-bit DACs
    vbebuf d# 34 +       d# 14 >vbe-pa seg:off!   \ VbeFarPtr to mode list
    fbsize d# 16 rshift  d# 18 >vbe-pa w!   \ TotalMemory
@@ -328,33 +365,56 @@ here mode-120-info -  constant /mode-120-info
    d# 34 >vbe-pa
 \        3 w!++  \ Text mode 3
 \   h#  12 w!++  \ Graphics mode 12
-   h# 115 w!++  \ 800x600x24
-   h# 118 w!++  \ 1024x768x24
-   h# 120 w!++  \ OLPC native mode
+    h# 112 w!++  \ 640x480x32
+    h# 115 w!++  \ 800x600x32
+    h# 118 w!++  \ 1024x768x32
+\   h# 120 w!++  \ OLPC native mode
    -1 swap w!   \ End of list
 
    vbe-ok
 ;
 : vbe-get-mode  ( -- )
-    rm-cx@  case
-       h# 115 of  mode-115-info /mode-115-info  endof
-       h# 118 of  mode-118-info /mode-118-info  endof
-       h# 120 of  mode-120-info /mode-120-info  endof
+
+    rm-cx@  
+\ ." vbe-get-mode " dup . cr
+h# 1ff and  case
+        h# 112 of  mode-112-info /mode-112-info  endof
+        h# 115 of  mode-115-info /mode-115-info  endof
+        h# 118 of  mode-118-info /mode-118-info  endof
+\       h# 120 of  mode-120-info /mode-120-info  endof
        ( default )  ." Bad VBE mode number " dup . cr  0 0 rot  
     endcase   ( adr len )
 
    0 >vbe-pa h# 100 erase
    0 >vbe-pa swap move
+   vbe-ok
 ;
+: vbe-error  ( -- )  h# 014f rm-ax!  ;
+0 value vbe-this-mode
 : vbe-set-mode  ( -- )
-   ." VBE set mode " rm-cx@ .  cr
-   debug-me
+   rm-bx@ case
+      h# 4112 of  " 640x480x32"   endof
+      h# 4115 of  " 800x600x32"   endof
+      h# 4118 of  " 1024x768x32"  endof
+      ( default )  drop  vbe-error  exit
+   endcase
+
+   " screen-ih" eval ['] $call-method catch  if
+      3drop  vbe-error exit
+   then
+   rm-bx@ to vbe-this-mode
+   vbe-ok
+;
+: vbe-current-mode  ( -- )
+   vbe-this-mode rm-bx!
+   vbe-ok
 ;
 : vesa-bios  ( -- )
    rm-al@  case
       h# 00  of  vbe-modes      endof
       h# 01  of  vbe-get-mode   endof
       h# 02  of  vbe-set-mode   endof
+      h# 03  of  vbe-current-mode   endof
       ( default )  ." Unsupported VBE function" dup .x  cr
    endcase
 ;

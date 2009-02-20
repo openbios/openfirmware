@@ -554,24 +554,36 @@ create vfilter
    1 ms                       \ Let memory accesses finish
    4 dc@ 1 invert and 4 dc!   \ Turn off FIFO load
 ; 
-: 8bpp  ( -- )  8 dc@ h# 300 invert and 8 dc!  ;  \ drop down to 8bpp mode
+:  8bpp  ( -- )  8 dc@ h# 300 invert and 8 dc!  ;
+: 16bpp  ( -- )  8 dc@ h# 300 invert and h# 100 or 8 dc!  ;
+: 24bpp  ( -- )  8 dc@ h# 300 invert and h# 200 or 8 dc!  ;
+: 32bpp  ( -- )  8 dc@ h# 300 or 8 dc!  ;
 : vga-start  ( -- )
    8 dc@ 1 or 8 dc!         \ Timing generator
    \ Fixed timing must be off to use the upscaler
    4 dc@  h# 40000 invert and  h# 80 or  4 dc!    \ Fixed Timing (40000) off, VGA (80) on
 ;
 
-: display-lfb  ( -- )  5601 4 dc!  ;  \ Enable linear framebuffer
+: display-lfb  ( -- )  6501 4 dc!  ;  \ Enable linear framebuffer
 
-: setup-filter-mode3  ( -- )
-\   d# 400 1-  d# 640 1-  wljoin  h# 5c dc!
+: setup-filter-720x400  ( -- )
    d# 400 1-  d# 720 1-  wljoin  h# 5c dc!
    h# 1c802666 h# 90 dc!
    filter-taps
 ;
-: setup-filter-mode12  ( -- )
+: setup-filter-640x480  ( -- )
    d# 480 1-  d# 640 1-  wljoin  h# 5c dc!
    h# 22222222 h# 90 dc!
+   filter-taps
+;
+: setup-filter-800x600  ( -- )
+   d# 600 1-  d# 800 1-  wljoin  h# 5c dc!
+   h# 2ab42ab4 h# 90 dc!
+   filter-taps
+;
+: setup-filter-1024x768  ( -- )
+   d# 768 1-  d# 1024 1-  wljoin  h# 5c dc!
+   h# 369d369d h# 90 dc!
    filter-taps
 ;
 : filteron  ( -- )  h# 1000 h# 94 dc!  ;
@@ -629,7 +641,7 @@ fload ${BP}/dev/video/common/textmode.fth
    \ otherwise the filter and the VGA don't synchronize to the
    \ frame and the sequencer shuts off after one frame.
    \ That can be fixed with all-off vga-start
-   setup-filter-mode3 filteron
+   setup-filter-720x400 filteron
 
    all-off  8bpp  vga-start
    use-vga-dac
@@ -642,7 +654,7 @@ fload ${BP}/dev/video/common/textmode.fth
    \ otherwise the filter and the VGA don't synchronize to the
    \ frame and the sequencer shuts off after one frame.
    \ That can be fixed with all-off vga-start
-   setup-filter-mode12 filteron
+   setup-filter-640x480 filteron
 
    all-off  8bpp  vga-start
    use-vga-dac
@@ -657,6 +669,36 @@ warning @ warning off
 : graphics-mode12  ( -- )
    switch-to-vga-mode12  graphics-mode12
 ;
+: 640x480x32   ( -- )  \ vesa-mode112
+   set-mode   \ Get back into native resolution linear mode
+   unlock
+   32bpp
+   d# 640 d# 32 * 6 rshift  dup h# 30 dc!  h# 34 dc!
+   all-off setup-filter-640x480  filteron
+   display-on
+   lock
+;
+
+: 800x600x32   ( -- )  \ vesa-mode115
+   set-mode   \ Get back into native resolution linear mode
+   unlock
+   32bpp
+   d# 800 d# 32 * 6 rshift  dup h# 30 dc!  h# 34 dc!
+   all-off setup-filter-800x600  filteron
+   display-on
+   lock
+;
+
+: 1024x768x32   ( -- )  \ vesa-mode118
+   set-mode   \ Get back into native resolution linear mode
+   unlock
+   32bpp
+   d# 1024 d# 32 * 6 rshift  dup h# 30 dc!  h# 34 dc!
+   all-off setup-filter-1024x768  filteron
+   display-on
+   lock
+;
+
 warning !
 
 \ LICENSE_BEGIN
