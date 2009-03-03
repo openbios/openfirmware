@@ -1,11 +1,11 @@
 \ Version numbers of items included in the OLPC firmware image
 
 \ The overall firmware revision
-macro: FW_MAJOR E
-macro: FW_MINOR 33
+macro: FW_MAJOR F
+macro: FW_MINOR 02
 
 \ The EC microcode
-macro: EC_VERSION e32
+macro: EC_VERSION 1_1_2
 
 \ Alternate command for getting EC microcode, for testing new versions.
 \ Temporarily uncomment the line and modify the path as necessary
