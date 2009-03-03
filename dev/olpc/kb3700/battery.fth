@@ -122,6 +122,10 @@ end-string-array
 \ Unless you are on a serial console with stdout turned off
 \ (stdout off) this will miss some state changes.
 \
+
+h# FA00 constant ec-rambase
+: ec-ram@ ec-rambase + ec@ ;
+
 : next-bstate
         begin
          f780 ec@ tuck <>
@@ -348,7 +352,7 @@ h# 20 buffer: ds-bank-buf
 
 : bat-dump-regs ( -- ) batman-init? bat-ds-regs@ bat-dump-bank ;
 
-: w16>d32 ( 16bit -- 32bit_sign-extended )
+: s16>s32 ( signed16bit -- 32bit_sign-extended )
    d# 16 << d# 16 >>a
 ;
 
@@ -372,7 +376,7 @@ h# 20 buffer: ds-bank-buf
    batman-init?
    ds-bank-buf 2 ds-acr 1w-read                  ( )
    ds-bank-buf c@ 8 <<                          ( msb )
-   ds-bank-buf 1 + c@ or w16>d32                ( acr )
+   ds-bank-buf 1 + c@ or s16>s32                ( acr )
 ;
 
 : bg-acr! ( acr -- )
@@ -403,7 +407,7 @@ h# 20 buffer: ds-bank-buf
    batman-init?
    ds-bank-buf 2 ds-last-dis-acr-msb 1w-read ( )
    ds-bank-buf c@ 8 <<                          ( last-dis-acr-msb )
-   ds-bank-buf 1 + c@ or w16>d32                ( last-dis-acr )
+   ds-bank-buf 1 + c@ or s16>s32                ( last-dis-acr )
 ;
 
 : bg-last-dis-acr! ( last-dis-acr --)
@@ -456,6 +460,128 @@ h# 20 buffer: ds-bank-buf
    drop
    cr
    r> base !
+;
+
+: >sd.ddd  ( n -- formatted )
+   base @ >r  decimal
+   dup abs <# u# u# u# [char] . hold u#s rot sign u#>
+   r> base !
+;
+
+: >sd.dd  ( n -- formatted )
+   base @ >r  decimal
+   dup abs <# u# u# [char] . hold u#s rot sign u#>
+   8 over - 0 max spaces
+   r> base !
+;
+
+: bg-acr>mAh ( raw-value -- acr_in_mAh )
+   abs
+   d# 625 ( mV ) * d# 15 ( mOhm ) /
+   over 0<  if  negate  then
+;
+
+: bg-V>V ( raw-value - Volts )
+   abs
+   d# 488 ( mV ) * 2* d# 100 / 5 >>
+   over 0<  if  negate  then
+;
+
+: bg-I>mA ( raw-value -- I_in_mA )
+   abs 3 >>
+   d# 15625 ( nV ) * d# 15 ( mOhm ) / d# 10 /
+   over 0< if  negate  then
+;
+
+: bg-temp>degc ( raw-value -- temp_in_degc )
+   abs
+   d# 125 * d# 10 / 5 >>
+   over 0<  if  negate  then
+;
+
+h# 90 buffer: logstr
+: >sd
+   <# "  " hold$ u#s u#>
+;
+
+: >sdx
+   <# "  " hold$ u#s " 0x" hold$ u#>
+;
+
+: bat-lfp-dataf@
+      base @ >r 
+      0 logstr c!
+
+      decimal
+      now drop <# " :" hold$ u#s u#> logstr $cat  <# "  " hold$ u#s u#> logstr $cat   \ Running time
+      h# 10 bat-b@        \ SOC
+      >sd logstr $cat
+
+      hex
+      h# e0 ec-ram@       \ C state
+      >sdx logstr $cat
+      h# e1 ec-ram@       \ w1 state index
+      >sdx logstr $cat  
+      h# F780 ec@         \ w1 state
+      >sdx logstr $cat
+      h# 40 ec-ram@       \ pwr_flag
+      >sdx logstr $cat
+      h# a4 ec-ram@       \ bat_status
+      >sdx logstr $cat
+      h# a5 ec-ram@       \ chg status
+      >sdx logstr $cat
+      h# a6 ec-ram@       \ bat misc
+      >sdx logstr $cat
+      h# a7 ec-ram@       \ bat misc2
+      >sdx logstr $cat
+      h# 70 bat-b@        \ AbnormalCauseCode
+      >sdx logstr $cat
+
+      decimal
+      h# 54 bat-b@ 8 << h# 55 bat-b@ or s16>s32    \ ACR
+      bg-acr>mAh >sd.dd logstr $cat "  " logstr $cat
+      h# 00 bat-b@ 8 << h# 01 bat-b@ or s16>s32    \ V
+      bg-V>V >sd.ddd logstr $cat "  " logstr $cat
+      h# 02 bat-b@ 8 << h# 03 bat-b@ or s16>s32    \ I
+      bg-I>mA >sd.dd logstr $cat "  " logstr $cat
+      h# 06 bat-b@ 8 << h# 07 bat-b@ or            \ Temp
+      bg-temp>degc >sd.dd logstr $cat "  " logstr $cat
+\      h# 17 bat-b@ 8 << h# 18 bat-b@ or            \ NiMh Chargetime
+\      >sd logstr $cat
+
+      \ Chemistry specific stuff below here
+      h# 11 bat-b@        \ bat_state
+      >sd logstr $cat
+
+      hex
+      h# FBD1 ec@          \ ProcessBatteryCharge
+      >sdx logstr $cat
+      h# FBD0 ec@          \ ChargeFlowControl
+      >sdx logstr $cat
+
+      r> base !
+;
+
+: bat-debug
+   begin
+      bat-lfp-dataf@
+      logstr count type
+      cr
+      200 ms key?
+   until key drop 
+;
+
+: bat-debug-log
+   " disk:\batdbug.log" $new-file
+   begin
+      bat-lfp-dataf@
+      logstr count ftype
+      logstr count type
+      fcr
+      cr
+      200 ms key?
+   until key drop 
+   ofd @ fclose
 ;
 
 dev /
