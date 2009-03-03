@@ -471,7 +471,6 @@ h# 20 buffer: ds-bank-buf
 : >sd.dd  ( n -- formatted )
    base @ >r  decimal
    dup abs <# u# u# [char] . hold u#s rot sign u#>
-   8 over - 0 max spaces
    r> base !
 ;
 

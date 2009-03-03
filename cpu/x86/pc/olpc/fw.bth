@@ -639,55 +639,8 @@ fload ${BP}/ofw/core/dualconsole.fth
 \   " flash http:\\18.85.46.172\new.rom" eval
 ;
 
-:  bat-log-append ( adr len -- )
-   " sd:\charge.log" $append-open   \ hardcode the path for now
-      ftype
-      fcr
-      ofd @ fclose
-;
-
-
-0 value start-acr
-d# 15 value wake-delay
-
-: bat-charge-dataf@
-      base @ >r  decimal
-      0 logstr c!
-      time&date >unix-seconds >sd logstr $cat
-      soc >sd logstr $cat
-      uvolt@ >sd logstr $cat 
-      cur@ >sd logstr $cat
-      bat-temp >sd logstr $cat
-      bat-acr@ s16>s32 dup >sd logstr $cat
-      start-acr - bg-acr>mAh >sd.dd logstr $cat       
-      r> base !
-
-\ space cur@ .d space soc .d space bat-temp .d space
-\      bat-acr@ s16>s32 dup .d space
-\      start-acr - bg-acr>mAh .sd.dd
-;
-
-: bat-charge-log ( -- )
-   " sd:\charge.log" $new-file      \ Make sure the file exists and is empty.
-   ofd @ fclose
-
-   \ Allow for suspend to be super low power
-   dcon-power-off
-   wlan-freeze
-
-   sci-wakeup
-   bat-acr@ s16>s32 to start-acr
-   begin
-      bat-charge-dataf@
-      logstr count type cr
-      logstr count bat-log-append
-      0 acpi-l@ h# 400.0000 or  0 acpi-l!  \ Enable RTC SCI
-      ['] noop  wake-delay " set-alarm" clock-node @ $call-method
-      s3
-      0 0 acpi-l!                          \ Disable RTC SCI
-      key?
-   until key drop
-;
+\ Fancy battery charge logger.
+fload ${BP}/cpu/x86/pc/olpc/charge.fth
 
 \ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
 also hidden also keys-forth definitions
