@@ -11,6 +11,7 @@
    board-revision  h# b48 <  abort" Only supported on B4 and later"
    h# fffefffe 2  " wp"  $=  if  ." wp is already set" cr  exit  then
    " SN" find-tag 0=  abort" No serial number (SN tag); enabling security would brick me."  ( sn$ )
+   -null            ( sn$' )
    safe-parse-word  ( sn$ confirmation$ )
    $= 0=  abort" Confirmation code mismatch"   
 
