@@ -11,11 +11,9 @@ fload ${BP}/cpu/x86/pc/olpc/versions.fth
    [then]
 [else]   
 " rm -rf multicast-nand" $sh
-
-" wget -q -O multicast-nand.tar.gz http://dev.laptop.org/git?p=users/wmb/multicast-nand\;a=snapshot;h=${MCNAND_VERSION}" expand$ $sh
+" wget -q -O multicast-nand.tar.gz http://dev.laptop.org/git/users/wmb/multicast-nand/snapshot/multicast-nand-${MCNAND_VERSION}.tar.gz" expand$ $sh
 " tar xfz multicast-nand.tar.gz" $sh
-" mv users/wmb/multicast-nand ." $sh
-" rm -rf users/wmb" $sh
+" mv multicast-nand-${MCNAND_VERSION} multicast-nand" expand$ $sh
 " rm multicast-nand.tar.gz" $sh
 [then]
 
