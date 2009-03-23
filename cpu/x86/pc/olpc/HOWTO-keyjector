@@ -1,0 +1,52 @@
+A keyjector is an intermediate firmware release that installs
+additional customer-specific security keys in manufacturing data.
+OLPC signs is so it can be auto-reflashed.  When it starts, it inserts
+the new keys, then replaces itself with a higher-rev firmware version
+so it doesn't run again.
+
+The version number for the keyjector is between two "real" releases.
+It has to be higher than any version number that might already exist
+on the customer's target machines.  For example, if the customer has
+only q2e34 and earlier, the keyjector version might be q2e34x, and the
+successor firmware might be q2e35.  In the worst case, this means that
+you would have to make a new real firmware release so there is a
+successor (q2e35 in this example).
+
+The keyjector itself is built with an abbreviated release procedure,
+within the existing build tree for the release right before the
+successor.  In the example, the keyjector would be build in the
+existing tree for q2e34.
+
+The steps are:
+
+* Unpack the tar file containing the new keys into, for example, /home/wmb/Uruguay
+
+* Note the list of key names, e.g. d0 a1 o1 s1 t1 w1
+
+$ cd /home/firmware/q2e34/openfirmware/cpu/x86/pc/olpc/build
+
+* Edit ../keyjector.bth :
+
+** Change the "macro: FW_MINOR " line to the keyjector's intermediate version number, e.g. 34x
+** Changing lines like below to the right file and key names.
+     " /space/bios-crypto/build/k2.public"         " s1"              $add-dropin
+
+* Edit ../keyjector.fth :
+
+** In wrong-sku?, set the list of SKUs.  This guards against "hijacking" of other country's laptops.
+** In keyject-expired?, set an appropriate expiration date for the keyjector.
+** In new-key-list$, set the key list.
+
+$ ./build keyject
+
+It should build really quickly, because it is using nearly all the same modules as the base build.
+
+* Verify the version number in the new file:
+
+** $ xxd q2e34x.rom | tail -4
+
+* If you have to make a new "real" release so the keyjector has a successor, do so now.
+
+* Sign the keyjector, naming the .zip file "bootfw.zip".
+
+* Sign the successor firmware, name the .zip file "bootfw2.zip"
