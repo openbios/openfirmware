@@ -31,7 +31,8 @@ in: ${BP}/cpu/x86/pc/olpc/build/mcastnand.bin
 
 build-now
 
-fload ${BP}/cpu/x86/pc/olpc/kjversions.fth
+fload ${BP}/cpu/x86/pc/olpc/versions.fth
+macro: FW_MINOR 34x
 
 " macro: FW_VERSION Q2${FW_MAJOR}${FW_MINOR}" expand$ eval
 
