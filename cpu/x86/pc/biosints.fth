@@ -126,10 +126,8 @@ variable save-eax
 ;
 
 : set-mode3  ( -- )
-   stdout @  if
-      " text-mode3" stdout @ $call-method
-      stdout off
-   then
+   stdout off  \ Stop using OFW driver
+   " text-mode3" screen-ih $call-method
 ;
 \ VBE status: AL = 4f -> function supported  else not supported
 \ AH = 0: success  1: fail  2: not supported in this config  3: invalid in this mode
