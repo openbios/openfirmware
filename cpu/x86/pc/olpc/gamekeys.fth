@@ -60,3 +60,5 @@ h# 100 constant button-x
    drop  (cr kill-line
 ;
 ' (hold-message) to hold-message
+
+: bypass-bios-boot?  ( -- flag )  button-square game-key?  ;

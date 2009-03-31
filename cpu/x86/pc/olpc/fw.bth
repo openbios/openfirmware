@@ -515,6 +515,18 @@ fload ${BP}/ofw/core/dualconsole.fth
 \   .built cr
 ;
 
+: ?factory-boot-sequence  ( -- flag )
+   \ TS is the "test station" tag.  Its value is set to "DL" at the
+   \ end of manufacturing test.
+   " TS" find-tag  if  ( adr len )
+      ?-null  " DL" $=  0=  if
+         " disk:\boot\olpc.fth nand:\boot\olpc.fth /xp sd:\boot\olpc.fth /prober /usb/wlan"
+         to boot-device
+      then
+   then
+;
+
+
 : console-start  ( -- )
 [ifdef] rom-loaded
    video-map cr
@@ -589,6 +601,7 @@ fload ${BP}/ofw/core/dualconsole.fth
    no-page
 
    ?factory-mode
+   ?factory-boot-sequence
 
    console-start
 
