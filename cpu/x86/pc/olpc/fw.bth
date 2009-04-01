@@ -518,12 +518,16 @@ fload ${BP}/ofw/core/dualconsole.fth
 : ?factory-boot-sequence  ( -- flag )
    \ TS is the "test station" tag.  Its value is set to "DL" at the
    \ end of manufacturing test.
-   " TS" find-tag  if  ( adr len )
-      ?-null  " DL" $=  0=  if
-         " disk:\boot\olpc.fth nand:\boot\olpc.fth /xp sd:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
-         to boot-device
-      then
-   then
+   " TS" find-tag  if       ( adr len )
+      ?-null  " DL" $=  0=  ( in-factory? )
+   else                     ( )
+      \ Missing TS tag is treated as in factory
+      true                  ( in-factory? )
+   then                     ( in-factory? )
+   if                       ( )
+      " disk:\boot\olpc.fth nand:\boot\olpc.fth /xp sd:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
+      to boot-device
+   then                     ( )
 ;
 
 
