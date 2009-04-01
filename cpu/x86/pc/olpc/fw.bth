@@ -520,7 +520,7 @@ fload ${BP}/ofw/core/dualconsole.fth
    \ end of manufacturing test.
    " TS" find-tag  if  ( adr len )
       ?-null  " DL" $=  0=  if
-         " disk:\boot\olpc.fth nand:\boot\olpc.fth /xp sd:\boot\olpc.fth /prober /usb/wlan"
+         " disk:\boot\olpc.fth nand:\boot\olpc.fth /xp sd:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
          to boot-device
       then
    then
