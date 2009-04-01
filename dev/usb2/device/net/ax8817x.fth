@@ -17,6 +17,8 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
       h# 2001.3c05  of  true exit  endof  \ ID for D-Link DUB-E100 rev B
       h# 07d1.3c05  of  true exit  endof  \ Alternate ID for D-Link DUB-E100 rev B
       h# 0b95.7720  of  true exit  endof  \ Another 88772 device, possibly ST Labs
+      h# 0b95.772a  of  true exit  endof  \ Chip on VIA demo board
+      h# 05ac.1402  of  true exit  endof  \ Apple
    endcase
    false
 ;
