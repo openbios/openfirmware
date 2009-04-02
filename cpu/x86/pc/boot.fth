@@ -103,8 +103,10 @@ end-code
    h# 20 report
    " dx pop   cx pop   bx pop   ax pop" eval
 ;
+fload ${BP}/cpu/x86/pc/egareport.fth
 [else]
 : report  ( char -- )  drop  ;
+: v-report  ( char -- )  drop  ;
 : mdot  ( reg -- )  drop  ;
 [then]
 
