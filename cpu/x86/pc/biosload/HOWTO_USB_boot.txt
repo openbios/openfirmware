@@ -50,7 +50,7 @@ The output file is ofw.c32 .  It is in "COM32" format, as used by SYSLINUX.
 
 * Run this command line, replacing "f" with the drive letter for your USB key:
 
-      syslinux f:
+      syslinux -m -a f:
 
 * Use the "Safely Remove Hardware" icon in the system tray to stop the USB key device, then remove that device
 
