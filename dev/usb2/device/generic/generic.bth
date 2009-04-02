@@ -1,0 +1,17 @@
+purpose: Load file for generic USB device
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing generic.fc
+
+FCode-version2
+
+fload ${BP}/dev/usb2/hcd/hcd-call.fth		\ HCD interface forwarded to children
+fload ${BP}/dev/usb2/device/generic/generic.fth	\ Hub driver
+
+end0
+
+end-tokenizing

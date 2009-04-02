@@ -14,6 +14,7 @@ in: ${BP}/dev/geode/ac97/build/ac97.fc
 in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
 in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
 in: ${BP}/dev/usb2/device/hub/build/hub.fc
+in: ${BP}/dev/usb2/device/generic/build/generic.fc
 in: ${BP}/dev/usb2/device/net/build/usbnet.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc

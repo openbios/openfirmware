@@ -95,6 +95,7 @@ false value probemsg?	\ Optional probing messages
    0 2  do
       i class$ $load  if  unloop exit  then
    -1 +loop
+   " usbdevice" $load drop
 ;
 
 \ LICENSE_BEGIN

@@ -7,6 +7,7 @@
    " ${BP}/dev/usb2/hcd/ohci/build/ohci.fc"	" class0c0310"      $add-deflated-dropin
    " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"      $add-deflated-dropin
    " ${BP}/dev/usb2/device/hub/build/hub.fc"     " usb,class9"      $add-dropin
+   " ${BP}/dev/usb2/device/generic/build/generic.fc"  " usbdevice"  $add-deflated-dropin
    " ${BP}/dev/usb2/device/net/build/usbnet.fc"       " usbnet"     $add-deflated-dropin
    " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"  " usb,class3,1" $add-dropin
    " ${BP}/dev/usb2/device/serial/build/usbserial.fc" " usbserial"  $add-deflated-dropin
