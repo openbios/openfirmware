@@ -111,6 +111,8 @@ ascii h report
       ax call			\ Inflate the firmware
    else
       h# 26 # al mov  al h# 80 # out
+      ascii h report
+
       \ The firmware dropin isn't compressed, so we just copy it to RAM
       4 [ax]          cx  mov	\ Length of firmware (byte-swapped)
       cx                  bswap	\ cx: Length of firmware
@@ -119,7 +121,6 @@ ascii h report
       fw-virt-base #  di  mov	\ Firmware RAM address (destination)
       cld  rep byte movs	\ Copy the firmware
 
-      ascii h report
       ascii m report
    then
    long-offsets off
