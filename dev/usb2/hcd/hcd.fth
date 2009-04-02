@@ -57,6 +57,9 @@ false value debug?
 \ Common routines
 \ ---------------------------------------------------------------------------
 
+: my-b@  ( offset -- b )  my-space +  " config-b@" $call-parent  ;
+: my-b!  ( b offset -- )  my-space +  " config-b!" $call-parent  ;
+
 : my-w@  ( offset -- w )  my-space +  " config-w@" $call-parent  ;
 : my-w!  ( w offset -- )  my-space +  " config-w!" $call-parent  ;
 

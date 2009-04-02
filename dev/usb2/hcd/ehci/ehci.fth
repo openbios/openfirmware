@@ -27,7 +27,8 @@ my-address my-space          encode-phys
    0 0 my-space h# 0200.0010 + /regs  map-in to ehci-reg
 ;
 : unmap-regs  ( -- )
-   4 my-w@  7 invert and  4 my-w!
+   \ Don't disable because somebody else might be using the controller.
+   \ 4 my-w@  7 invert and  4 my-w!
    ehci-reg  /regs  map-out  0 to ehci-reg
 ;
 
@@ -97,6 +98,32 @@ my-address my-space          encode-phys
    doorbell-wait
 ;
 
+0 value dbgp-offset
+0 value dbgp-bar
+
+: find-dbgp-regs  ( -- )
+   h# 34 my-l@                   ( capability-ptr )
+   begin  dup  while             ( cap-offset )
+      dup my-b@ h# 0a =  if      ( cfg-adr )
+         2+ my-w@                ( dbgp-ptr )
+         dup h# 1fff and to dbgp-offset  ( )
+         d# 13 rshift  7 and  1- /l* h# 10 +  to dbgp-bar
+         exit
+      then                       ( cfg-adr )
+      1+ my-b@                   ( cap-offset' )
+   repeat                        ( cap-offset )
+   drop
+;
+: debug-port-active?  ( -- flag )
+   hcsparams@  h# f0.0000 and  0=  if  false exit  then
+   find-dbgp-regs
+   dbgp-offset 0=  if  false exit  then
+   \ We should take dbgp-bar into account, but for now we
+   \ just assume it's the same BAR as for the main registers.
+   dbgp-offset ehci-reg@
+   h# 1000.0000 and 0<>
+;
+
 external
 
 : start-usb  ( -- )
@@ -113,7 +140,8 @@ external
 ;
 
 : reset-usb  ( -- )
-   ehci-reg dup 0=  if  map-regs  then
+   ehci-reg dup 0=  if  map-regs  then  ( reg )
+   debug-port-active?  if  drop exit  then   \ Don't kill the debug port!
    usbcmd@ 2 or 1 invert and usbcmd!	\ HCReset
    d# 10 0  do
       usbcmd@ 2 and  0=  ?leave

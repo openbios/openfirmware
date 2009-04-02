@@ -13,6 +13,16 @@ variable refcount  0 refcount !
 
 : /string  ( adr len cnt -- adr' len' )  tuck - -rot + swap  ;
 
+\ Don't do this until someone calls read.  That makes the device
+\ work as a console, with separate input and output instances
+0 value read-started?
+: ?start-reading  ( -- )
+   read-started?  if  exit  then
+   read-q init-q
+   inbuf /bulk-in-pipe bulk-in-pipe begin-bulk-in
+   true to read-started?
+;
+
 external
 
 : install-abort  ( -- )  ['] poll-tty d# 100 alarm  ;   \ Check for break
@@ -21,6 +31,7 @@ external
 \ Read at most "len" characters into the buffer at adr, stopping when
 \ no more characters are immediately available.
 : read  ( adr len -- #read )   \ -2 for none available right now
+   ?start-reading
    rpoll
    dup  0=  if  nip exit  then                   ( adr len )
    read-q deque?  0=  if                         ( adr len )
@@ -43,9 +54,8 @@ external
 : open  ( -- flag )
    device set-target
    refcount @ 0=  if
-      init-buf read-q init-q
+      init-buf
       inituart rts-dtr-on
-      inbuf /bulk-in-pipe bulk-in-pipe begin-bulk-in
    then
    refcount @ 1+  refcount !
    true

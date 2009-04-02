@@ -3,6 +3,10 @@ purpose: Vendor/product Tables for USB serial devices
 headers
 hex
 
+create uart-generic-list  here
+	525 w, 127a w,		\ Ajays USB 2.0 Debug Cable
+here swap - constant /uart-generic-list
+
 create uart-pl2303-list  here
 	557 w, 2008 w,		\ ATEN, IOGear
 	67b w, 2303 w,		\ PL2303
@@ -25,6 +29,11 @@ create uart-belkin-list  here
 	921 w, 1000 w,		\ GoHubs single port
 here swap - constant /uart-belkin-list
 
+: uart-generic?  ( vid pid -- flag )
+   uart-generic-list /uart-generic-list  find-vendor-product?
+;
+
+
 : uart-pl2303?  ( vid pid -- flag )
    uart-pl2303-list /uart-pl2303-list  find-vendor-product?
 ;
@@ -41,5 +50,7 @@ here swap - constant /uart-belkin-list
    2dup uart-pl2303?  if  2drop true exit  then
 \ Not debugged yet...
 \   2dup uart-mct?     if  2drop true exit  then
-   uart-belkin?
+   2dup uart-belkin?   if  2drop true  exit  then
+   2dup uart-generic?  if  2drop true  exit  then
+   2drop false
 ;
