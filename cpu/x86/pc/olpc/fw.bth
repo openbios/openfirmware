@@ -525,7 +525,7 @@ fload ${BP}/ofw/core/dualconsole.fth
       true                  ( in-factory? )
    then                     ( in-factory? )
    if                       ( )
-      " disk:\boot\olpc.fth nand:\boot\olpc.fth /xp sd:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
+      " /prober /usb/ethernet disk:\boot\olpc.fth nand:\boot\olpc.fth /xp sd:\boot\olpc.fth /usb/wlan"
       to boot-device
    then                     ( )
 ;
