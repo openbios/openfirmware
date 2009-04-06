@@ -52,6 +52,8 @@ source code, which contained the following:
  */
 [then]
 
+\ This code only works right on 32-bit systems
+
 decimal
 
 headers
