@@ -9,7 +9,7 @@ begin-tokenizing generic.fc
 
 FCode-version2
 
-fload ${BP}/dev/usb2/hcd/hcd-call.fth		\ HCD interface forwarded to children
+fload ${BP}/dev/usb2/device/common.fth		\ HCD interface forwarded to children
 fload ${BP}/dev/usb2/device/generic/generic.fth	\ Hub driver
 
 end0
