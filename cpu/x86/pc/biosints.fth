@@ -1058,7 +1058,9 @@ here bounce-timer - constant /bounce-timer
 
    'ebda 4 rshift  h# 40e w!   \ Extended BIOS data area segment address
 
-   " keyboard"   open-dev to kbd-ih
+   \ The USB keyboard is unsuitable for this purpose, as USB is
+   \ turned off when control is transferred to the Windows booter.
+   " /isa/keyboard"   open-dev to kbd-ih
    populate-memory-map
    rm-platform-fixup
 ;
