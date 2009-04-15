@@ -521,8 +521,8 @@ fload ${BP}/ofw/core/dualconsole.fth
    " TS" find-tag  if       ( adr len )
       ?-null  " DL" $=  0=  ( in-factory? )
    else                     ( )
-      \ Missing TS tag is treated as in factory
-      true                  ( in-factory? )
+      \ Missing TS tag is treated as not factory mode
+      false
    then                     ( in-factory? )
    if                       ( )
       " /prober /usb/ethernet disk:\boot\olpc.fth nand:\boot\olpc.fth /xp sd:\boot\olpc.fth /usb/wlan"
