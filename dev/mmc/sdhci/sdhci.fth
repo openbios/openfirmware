@@ -349,22 +349,22 @@ external
 d# 16 instance buffer: csd
 headers
 
-: reset-card  ( -- )  0 0 0 cmd  0 to rca  1 ms  ;  \ 0 -
+: reset-card  ( -- )  0 0 0 cmd  0 to rca  1 ms  ;  \ CMD0
 
-: send-op-cond  ( voltage-range -- ocr )  h# 0102 0 cmd  response  ; \ R3
+: send-op-cond  ( voltage-range -- ocr )  h# 0102 0 cmd  response  ; \ CMD1 R3
 
 \ Get card ID; Result is in cid buffer
-: get-all-cids  ( -- )  0 h# 0209 0 cmd  cid get-response136  ;  \ 2 R2
+: get-all-cids  ( -- )  0 h# 0209 0 cmd  cid get-response136  ;  \ CMD2 R2
 
 \ Get relative card address
-: get-rca  ( -- )  0 h# 031a 0 cmd  response  h# ffff0000 and  to rca  ; \ 3 R6 - SD
-: set-rca  ( rca -- )  to rca  rca h# 031a 0 cmd  ; \ 3 R1 - MMC
+: get-rca  ( -- )  0 h# 031a 0 cmd  response  h# ffff0000 and  to rca  ; \ CMD3 R6 - SD
+: set-rca  ( rca -- )  to rca  rca h# 031a 0 cmd  ; \ CMD3 R1 - MMC
 
-: set-dsr  ( -- )  0 h# 0400 0 cmd  ;  \ 4 - UNTESTED
+: set-dsr  ( -- )  0 h# 0400 0 cmd  ;  \ CMD4 - UNTESTED
 
 \ 5 - CMD5 is for SDIO.  It is defined below in the SDIO section.
 
-\ cmd6 (R1) is switch-function.  It can be used to enter high-speed mode
+\ CMD6 (R1) is switch-function.  It can be used to enter high-speed mode
 : switch-function  ( arg -- adr )
    scratch-buf  d# 64  d# 64  (dma-setup)
    h# 063b h# 11 cmd  ( response drop )
@@ -373,24 +373,24 @@ headers
    scratch-buf
 ;
 
-: deselect-card  ( -- )   0   h# 0700 0 cmd  ;  \ 7 - with null RCA
-: select-card    ( -- )   rca h# 071b 0 cmd  ;  \ 7 R1b
+: deselect-card  ( -- )   0   h# 0700 0 cmd  ;  \ CMD7 - with null RCA
+: select-card    ( -- )   rca h# 071b 0 cmd  ;  \ CMD7 R1b
 
-: send-if-cond  ( -- )  h# 1aa h# 081a 0 cmd  ( response h# 1aa <>  if  ." Error"  then )   ;  \ 8 R7 (SD)
+: send-if-cond  ( -- )  h# 1aa h# 081a 0 cmd  ( response h# 1aa <>  if  ." Error"  then )   ;  \ CMD8 R7 (SD)
 
-\ : send-ext-csd  ( adr -- )  0 h# 0812 0 cmd  ;  \ 8 R1 (MMC) Untested - requires data transfer
+\ : send-ext-csd  ( adr -- )  0 h# 0812 0 cmd  ;  \ CMD8 R1 (MMC) Untested - requires data transfer
 
 \ Get Card-specific data
-: get-csd    ( -- )  rca  h# 0909 0 cmd  csd get-response136  ;  \ 9 R2
-: get-cid    ( -- )  rca  h# 0a09 0 cmd  cid get-response136  ;  \ 10 R2 UNTESTED
+: get-csd    ( -- )  rca  h# 0909 0 cmd  csd get-response136  ;  \ CMD9 R2
+: get-cid    ( -- )  rca  h# 0a09 0 cmd  cid get-response136  ;  \ CMD10 R2 UNTESTED
 
-: stop-transmission  ( -- )  rca  h# 0c1b 0 cmd  ;        \ 12 R1b UNTESTED
+: stop-transmission  ( -- )  rca  h# 0c1b 0 cmd  ;        \ CMD12 R1b UNTESTED
 
-: get-status ( -- status )  rca  h# 0d1a 0 cmd  response  ;  \ 13 R1 UNTESTED
+: get-status ( -- status )  rca  h# 0d1a 0 cmd  response  ;  \ CMD13 R1 UNTESTED
 
-: go-inactive  ( -- )  rca  h# 0f00 0 cmd  ;         \ 15 - UNTESTED
+: go-inactive  ( -- )  rca  h# 0f00 0 cmd  ;         \ CMD15 - UNTESTED
 
-: set-blocklen  ( blksize -- )  h# 101a 0 cmd  ;     \ 16 R1 SET_BLOCKLEN
+: set-blocklen  ( blksize -- )  h# 101a 0 cmd  ;     \ CMD16 R1 SET_BLOCKLEN
 
 \ Data transfer mode bits for register 0c (only relevant for reads, writes,
 \ and switch-function)
@@ -401,46 +401,46 @@ headers
 \ 10.0000  direction: 1 for read, 0 for write
 \ 20.0000  multi (set for multiple-block transfers)
 
-: read-single     ( address -- )  h# 113a h# 13 cmd  ;  \ 17 R1 READ_SINGLE_BLOCK
-: read-multiple   ( address -- )  h# 123a h# 37 cmd  ;  \ 18 R1 READ_MULTIPLE
-: write-single    ( address -- )  h# 183a h# 03 cmd  ;  \ 24 R1 WRITE_SINGLE_BLOCK
-: write-multiple  ( address -- )  h# 193a h# 27 cmd  ;  \ 25 R1 WRITE_MULTIPLE
+: read-single     ( address -- )  h# 113a h# 13 cmd  ;  \ CMD17 R1 READ_SINGLE_BLOCK
+: read-multiple   ( address -- )  h# 123a h# 37 cmd  ;  \ CMD18 R1 READ_MULTIPLE
+: write-single    ( address -- )  h# 183a h# 03 cmd  ;  \ CMD24 R1 WRITE_SINGLE_BLOCK
+: write-multiple  ( address -- )  h# 193a h# 27 cmd  ;  \ CMD25 R1 WRITE_MULTIPLE
 
-: program-csd  ( -- )     0  h# 1b1a 0 cmd  ;  \ R1 27 UNTESTED
-: protect     ( group# -- )  h# 1c1b 0 cmd  ;  \ R1b 28 UNTESTED
-: unprotect   ( group# -- )  h# 1d1b 0 cmd  ;  \ R1b 29 UNTESTED
-: protected?  ( group# -- 32-bits )  h# 1e1a cmd  response  ;  \ 30 R1 UNTESTED
+: program-csd  ( -- )     0  h# 1b1a 0 cmd  ;  \ CMD27 R1 UNTESTED
+: protect     ( group# -- )  h# 1c1b 0 cmd  ;  \ CMD28 R1b UNTESTED
+: unprotect   ( group# -- )  h# 1d1b 0 cmd  ;  \ CMD29 R1b UNTESTED
+: protected?  ( group# -- 32-bits )  h# 1e1a cmd  response  ;  \ CMD30 R1 UNTESTED
 
 : erase-blocks  ( block# #blocks -- ) \ UNTESTED
    dup  0=  if  2drop exit  then
    1- bounds        ( last first )
-   h# 201a 0 cmd    ( last )   \ cmd32 - R1
-   h# 211a 0 cmd    ( )        \ cmd33 - R1
-   h# 261b 0 cmd               \ cmd38 - R1b (wait for busy)
+   h# 201a 0 cmd    ( last )   \ CMD32 - R1
+   h# 211a 0 cmd    ( )        \ CMD33 - R1
+   h# 261b 0 cmd               \ CMD38 - R1b (wait for busy)
 ;
 
-\ cmd40 is MMC
+\ CMD40 is MMC
 
 \ See table 4-5 in sandisk spec
-\ : lock/unlock  ( -- ) 0 h# 2a1a 0 cmd  ;  \ 42 R1 LOCK_UNLOCK not sure how it works
+\ : lock/unlock  ( -- ) 0 h# 2a1a 0 cmd  ;  \ CMD42 R1 LOCK_UNLOCK not sure how it works
 
-: app-prefix  ( -- )  rca  h# 371a 0 cmd  ;  \ 55 R1 app-specific command prefix
+: app-prefix  ( -- )  rca  h# 371a 0 cmd  ;  \ CMD55 R1 app-specific command prefix
 
-: set-bus-width  ( mode -- )  app-prefix  h# 61a 0 cmd  ;  \ a6 R1 Set mode
+: set-bus-width  ( mode -- )  app-prefix  h# 61a 0 cmd  ;  \ ACMD6 R1 Set mode
 
-: set-oc ( ocr -- ocr' )  app-prefix  h# 2902 0 cmd  response  ;  \ a41 R3
+: set-oc ( ocr -- ocr' )  app-prefix  h# 2902 0 cmd  response  ;  \ ACMD41 R3
 
 \ This sends back 512 bits in a single data block.
-: app-get-status  ( -- status )  app-prefix  0 h# 0d1a h# 12 cmd  response  ;  \ a13 R1 UNTESTED
+: app-get-status  ( -- status )  app-prefix  0 h# 0d1a h# 12 cmd  response  ;  \ ACMD13 R1 UNTESTED
 
-: get-#write-blocks  ( -- n )  app-prefix  0 h# 161a 0 cmd  response  ;  \ a22 R1 UNTESTED
+: get-#write-blocks  ( -- n )  app-prefix  0 h# 161a 0 cmd  response  ;  \ ACMD22 R1 UNTESTED
 
 \ You might want to turn this off for data transfer, as it controls
 \ a resistor on one of the data lines
-: set-card-detect  ( on/off -- )  app-prefix  h# 2a1a 0 cmd  ;  \ a42 R1 UNTESTED
+: set-card-detect  ( on/off -- )  app-prefix  h# 2a1a 0 cmd  ;  \ ACMD42 R1 UNTESTED
 : get-scr  ( -- adr )
    scratch-buf  d# 8  d# 8  (dma-setup)
-   app-prefix  0 h# 333a h# 11 cmd  ( response drop )  \ a51 R1
+   app-prefix  0 h# 333a h# 11 cmd  ( response drop )  \ ACMD51 R1
    2 wait
    dma-release
    scratch-buf
@@ -451,11 +451,11 @@ headers
 \ We can't set the 10 bit in the cmd register here, because the R4 response
 \ format doesn't echo the command index in the response.
 
-: io-send-op-cond  ( voltage-range -- ocr )  h# 050a 0 cmd  response  ;  \ 5 R4
+: io-send-op-cond  ( voltage-range -- ocr )  h# 050a 0 cmd  response  ;  \ CMD5 R4 (SDIO)
 
 : >io-arg  ( reg# function# -- arg )  7 and  d# 28 lshift   or  ;
 
-\ The following are CMD52 variants
+\ The following are CMD52 (SDIO) variants
 \ Flags: 80:CRC_ERROR  40:ILLEGAL_COMMAND  30:IO_STATE (see spec)
 \        08:ERROR  04:reserved  02:INVALID_FUNCTION#  01:OUT_OF_RANGE
 : io-b@  ( reg# function# -- value flags )
@@ -471,7 +471,7 @@ headers
    response wbsplit
 ;
 
-\ CMD53 - IO_RW_EXTENDED
+\ CMD53 (SDIO) - IO_RW_EXTENDED
 \ These commands - io-{read,write}-{bytes,blocks} will need to be
 \ enclosed in a method like r/w-blocks, in order to set up the DMA hardware.
 
