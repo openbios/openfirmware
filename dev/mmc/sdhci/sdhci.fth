@@ -17,8 +17,6 @@ purpose: Driver for SDHCI (Secure Digital Host Controller)
 
 " sdhci" " compatible" string-property
 
-create marvell
-
 h# 4000 constant /regs
 
 : phys+ encode-phys encode+  ;
@@ -71,15 +69,18 @@ h# 200 constant /block  \ 512 bytes
 : esr@  ( -- w )  h# 32 cw@  ;
 : esr!  ( w -- )  h# 32 cw!  ;
 
-[ifdef] marvell
+: marvell?  ( -- flag )  0 my-w@ h# 11ab =  ;
 : vendor-modes  ( -- )
-   \ One-time initialization of Marvell CaFe SD interface.
-   \ Marvell told us to do this once after reset.
-   \ The sw-reset command resets the registers, so you have
-   \ to do it after that, in addition to after power-up.
-   h# 0004 h# 6a cw!  \ Enable data CRC check
-   h# 7fff h# 60 cw!  \ Disable internal pull-up/down on DATA3
+   marvell?  if  \ Marvel CaFe chip
+      \ One-time initialization of Marvell CaFe SD interface.
+      \ Marvell told us to do this once after reset.
+      \ The sw-reset command resets the registers, so you have
+      \ to do it after that, in addition to after power-up.
+      h# 0004 h# 6a cw!  \ Enable data CRC check
+      h# 7fff h# 60 cw!  \ Disable internal pull-up/down on DATA3
+   then
 ;
+\ Some Marvell-specific stuff
 : enable-sd-int  ( -- )
    h# 300c cl@  h# 8000.0002 or  h# 300c cl!
 ;
@@ -92,9 +93,6 @@ h# 200 constant /block  \ 512 bytes
 : disable-sd-clk  ( -- )
    h# 3004 cw@  h# 2000 invert and  h# 3004 cw!
 ;
-[else]
-: vendor-modes  ;
-[then]
 
 : clear-interrupts  ( -- )
    isr@ drop  esr@ drop
@@ -137,10 +135,13 @@ h# 200 constant /block  \ 512 bytes
    \ Card power on does not work if a removal interrupt is pending
    h# c0  isr!              \ Clear any pending insert/remove events
 
-   \ XXX should use the capabilities register (40 cl@) to determine
-   \ which power choices are available.
-   h# c  h# 29  cb!   \ 3.0V
-   h# d  h# 29  cb!   \ 3.0V + on
+   \ The 200.0000 bit is set if 3.0V is supported.  If it is,
+   \ use it (value c for reg 29), otherwise use 3.3V (value e).
+   \ For now we don't handle the 1.8V possibility.
+
+   h# 40 cl@  h# 200.0000 and  if  h# c  else  h# e  then  ( voltage )
+   dup h# 29  cb!   ( voltage )  \ First set the voltage
+   1 or h# 29  cb!  ( )          \ Then turn it on
 ;
 : card-power-off  ( -- )  0  h# 29  cb!  ;
 
@@ -169,8 +170,10 @@ h# 200 constant /block  \ 512 bytes
    card-clock-off
    h# 003     \ division = 2^0, clocks on
 
-   \ OLPC-specific hack: fast clock doesn't work on the FPGA CaFe chip
-   " board-revision" evaluate h# b20 <  if  drop h# 103  then
+   marvell?  if
+      \ OLPC-specific hack: fast clock doesn't work on the FPGA CaFe chip
+      " board-revision" evaluate h# b20 <  if  drop h# 103  then
+   then
 
    h# 2c cw!   \ Set divisor to 2^0, leaving internal clock on
    card-clock-on
@@ -249,6 +252,17 @@ h# 200 constant /block  \ 512 bytes
 
 : .sderror  ( isr -- )
    esr@ dup esr!           ( isr esr )
+
+   dup 1 and  if           ( isr esr )
+      \ Reset CMD line if necessary
+      present-state@ 1 and  if  2 sw-reset  then
+   then                    ( isr esr )
+
+   dup h# 10 and  if       ( isr esr )
+      \ Reset DAT line if necessary
+      present-state@ 2 and  if  4 sw-reset  then
+   then                    ( isr esr )
+
    allow-timeout?  if      ( isr esr )
       dup 1 =  if  true to timeout?  2drop exit  then
    then                    ( isr esr )
@@ -348,6 +362,8 @@ headers
 
 : set-dsr  ( -- )  0 h# 0400 0 cmd  ;  \ 4 - UNTESTED
 
+\ 5 - CMD5 is for SDIO.  It is defined below in the SDIO section.
+
 \ cmd6 (R1) is switch-function.  It can be used to enter high-speed mode
 : switch-function  ( arg -- adr )
    scratch-buf  d# 64  d# 64  (dma-setup)
@@ -429,6 +445,66 @@ headers
    dma-release
    scratch-buf
 ;
+
+\ SDIO-specific commands:
+
+\ We can't set the 10 bit in the cmd register here, because the R4 response
+\ format doesn't echo the command index in the response.
+
+: io-send-op-cond  ( voltage-range -- ocr )  h# 050a 0 cmd  response  ;  \ 5 R4
+
+: >io-arg  ( reg# function# -- arg )  7 and  d# 28 lshift   or  ;
+
+\ The following are CMD52 variants
+\ Flags: 80:CRC_ERROR  40:ILLEGAL_COMMAND  30:IO_STATE (see spec)
+\        08:ERROR  04:reserved  02:INVALID_FUNCTION#  01:OUT_OF_RANGE
+: io-b@  ( reg# function# -- value flags )
+   >io-arg  h# 341a 0 cmd
+   response  wbsplit
+;
+: io-b!  ( value reg# function# -- flags )
+   >io-arg  or  h# 8000.0000 or  h# 341a 0 cmd
+   response wbsplit nip
+;
+: io-b!@  ( value reg# function# -- value' flags )  \ Write then read back
+   >io-arg  or  h# 8800.0000 or  h# 341a 0 cmd
+   response wbsplit
+;
+
+\ CMD53 - IO_RW_EXTENDED
+\ These commands - io-{read,write}-{bytes,blocks} will need to be
+\ enclosed in a method like r/w-blocks, in order to set up the DMA hardware.
+
+0 instance value io-block-len
+
+\ In FIFO mode, the address inside the card does not autoincrement
+\ during the transfer.
+: >io-xarg  ( reg# function# fifo-mode? -- arg )
+   >r  >io-arg  r> 0=  if  h# 0400.0000 or  then
+;
+
+\ Set up memory address in caller
+: io-read-bytes  ( len reg# function# fifo? -- flags )  \ 1 <= len <= 512
+   >io-xarg                     ( len arg )
+   swap h# 1ff and or           ( arg' )  \ Byte count
+   h# 353a h# 13 cmd            ( )
+;
+: io-read-blocks  ( adr len reg# function# fifo? -- flags )
+   >io-xarg h# 0800.0000 or     ( len arg )
+   swap io-block-len / or       ( arg' )  \ Block count
+   h# 353a h# 37 cmd            ( )
+;
+: io-write-bytes  ( len reg# function# fifo? -- flags )
+   >io-xarg  h# 8000.0000 or    ( len arg )
+   swap h# 1ff and or           ( arg' )  \ Byte count
+   h# 353a h# 03 cmd
+;
+: io-write-blocks  ( len reg# function# fifo? -- flags )
+   >io-xarg  h# 8800.0000 or    ( len arg )
+   swap io-block-len / or       ( arg' )  \ Block count
+   h# 353a h# 27 cmd
+;
+
 
 9 instance value address-shift
 h# 8010.0000 value oc-mode  \ Voltage settings, etc.
@@ -602,9 +678,9 @@ external
 
    select-card       \ Cmd 7 - Select
 
-   configure-transfer
-
    set-timeout
+
+   configure-transfer
 
    intstat-off
    true
