@@ -96,7 +96,7 @@ purpose: Call VESA BIOS functions via syslinux c32 callback
    d# 12 # sp add
 [then]
 
-[ifndef] notdef-modemap
+[ifdef] notdef-modemap
    \ Registers:
    \ edx: pointer to register array for calling the gateway function
    \ ebp: address of gateway function

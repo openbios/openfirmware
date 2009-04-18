@@ -70,7 +70,23 @@ c;
    h# 4f00 vbe-call
    h# 200 +c32-regs      ( adr )
 ;   
-: .vesa-modes  ( -- )
+: vesa-mode-info  ( mode# -- adr )
+   'c32-cx l!                   ( )
+   h# 200 +c32-regs c32-es:di!  ( )
+   h# 4f01 vbe-call             ( )
+   h# 200 +c32-regs             ( adr )
+;
+: .vesa-mode-info  ( mode# -- )
+   push-hex  dup 3 u.r space
+   vesa-mode-info >r  ( r: adr )
+   decimal
+   r@ h# 12 + w@ (.) type
+   ." x" r@ h# 14 + w@ (.) type
+   ." x" r@ h# 19 + c@ (.) type cr
+   r> drop
+   pop-base
+;
+: .vesa-mode-list  ( -- )
    vbe-info                     ( adr )
    dup l@  h# 41534556 <>  if   ( adr )
       ." VBE info call failed" cr
@@ -80,11 +96,25 @@ c;
    d# 14 + seg:off@             ( 'mode-list )
    begin  dup w@ dup h# ffff <>  while  .  wa1+  repeat  cr  2drop
 ;
-: vesa-mode-info  ( mode# -- adr )
-   'c32-cx l!                   ( )
-   h# 200 +c32-regs c32-es:di!  ( )
-   h# 4f01 vbe-call             ( )
-   h# 200 +c32-regs             ( adr )
+
+: #vesa-modes  ( 'mode-list -- n )
+   0   begin   over w@ dup h# ffff <>  while     ( 'mode-list n mode# )
+      drop  swap wa1+ swap  1+                   ( 'mode-list n' )
+   repeat                                        ( 'mode-list n mode# )
+   drop nip                                      ( n )
+;
+: .vesa-modes  ( -- )
+   vbe-info                     ( adr )
+   dup l@  h# 41534556 <>  if   ( adr )
+      ." VBE info call failed" cr
+      drop exit
+   then                         ( adr )
+   dup 6 + seg:off@  .cstr cr   ( adr )
+   d# 14 + seg:off@             ( 'mode-list )
+   dup #vesa-modes 1+           ( 'mode-list #modes )
+   /w* dup alloc-mem            ( 'mode-list modes-len adr )
+   dup >r swap move r>          ( adr )
+   begin  dup w@ dup h# ffff <>  while  .vesa-mode-info  wa1+  repeat  cr  2drop
 ;
 
 [ifdef] Commentary
@@ -137,3 +167,6 @@ c;
 [then]
 
 : current-vesa-mode  ( -- mode# )  h# 4f03 vbe-call  'c32-bx l@  ;
+: set-vesa-mode  ( mode# -- )   'c32-bx w!  h# 4f02 vbe-call  ;
+: set-linear-mode  ( mode# -- )  h# 4000 or  set-vesa-mode  ;
+: vesa-lfb-adr  ( mode# -- padr )  h# 4000 or vesa-mode-info h# 28 + l@  ;
