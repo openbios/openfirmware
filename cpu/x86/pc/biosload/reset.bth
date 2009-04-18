@@ -4,8 +4,6 @@ purpose: Dropin dispatcher for i386
 command: &builder &this
 build-now
 
-create debug-startup
-
 fload ${BP}/cpu/x86/pc/biosload/config.fth
 
 \needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
@@ -72,7 +70,7 @@ label startup
    80  70  isa-c!		\ Disable NMI
    71 # dx mov  dx al in	\ Why do we do this?
 
-[ifdef] debug-startup
+[ifdef] intel-chip-stuff
 h# 8000.f880 # ax mov  h# cf8 # dx mov  ax dx out
 h# 140f.0010 # ax mov  h# cfc # dx mov  ax dx out  \ Set LPC decoding
 
@@ -132,7 +130,9 @@ h# 30 # al mov  al h# 2e # out  h#  1 # al mov  al h# 2f # out  \ Enable
 \ h# 60 # al mov  al h# 2e # out  h#  6 # al mov  al h# 2f # out  \ High address
 \ h# 61 # al mov  al h# 2e # out  h# 80 # al mov  al h# 2f # out  \ Low address
 \ h# 30 # al mov  al h# 2e # out  h#  1 # al mov  al h# 2f # out  \ Enable
+[then]
 
+[ifdef] debug-startup
 init-com1
 
 carret report

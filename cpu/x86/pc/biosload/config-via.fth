@@ -1,46 +1,35 @@
 \ See license at end of file
-purpose: Low-level startup code for DOS-loaded x86 Forth
+purpose: Configuration for loading from a USB key via Syslinux
 
-command: &builder &this
-build-now
+\ --- The environment that "boots" OFW ---
+\ - Image Format - Example Media - previous stage bootloader
 
-\needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
-\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+\ - (Syslinux) COM32 format - USB Key w/ FAT FS - Syslinux
+create syslinux-loaded
 
-hex
+create via-demo
 
-fload ${BP}/cpu/x86/pc/biosload/config.fth
+create debug-startup
 
-fload ${BP}/cpu/x86/pc/report.fth			\ Startup reports
+\ create serial-console
+create use-usb-debug-port
+create pc
 
-start-assembling
+\ create pseudo-nvram
+create resident-packages
+create addresses-assigned  \ Don't reassign PCI addresses
+\ create virtual-mode
+create use-root-isa
+create use-isa-ide
+create use-ega
+create use-elf
+create use-watch-all
+\ create use-null-nvram
+create pseudo-nvram
+create no-floppy-node
 
-label my-entry
-[ifdef] debug-startup
-   e9 c,  0 ,				\ To be patched later
-end-code
+fload ${BP}/cpu/x86/pc/biosload/addrs.fth
 
-fload ${BP}/cpu/x86/pc/dot.fth			\ Numeric display
-[then]
-
-label startup
-[ifdef] debug-startup
-\ ascii x report
-[then]
-   ret
-end-code
-
-[ifdef] debug-startup
-also 386-assembler
-startup  my-entry  put-branch
-previous
-[then]
-
-end-assembling
-
-writing start.di
-asm-base  here over -  0  " start" write-dropin
-ofd @ fclose
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

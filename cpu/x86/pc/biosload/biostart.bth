@@ -8,8 +8,6 @@ build-now
 
 fload ${BP}/cpu/x86/asmtools.fth
 
-create debug-startup
-
 : le-w,  here  /w allot  le-w!  ;
 : le-l,  here  /l allot  le-l!  ;
 
@@ -29,15 +27,7 @@ h# 0.1000 constant stacktop
    "  # dx mov   # al mov   al dx out " evaluate
 ;
 
-: v-report  ( char -- )
-   " # al mov  al h# b8000 #) mov  h# 1d # al mov  al h# b8001 #) mov" evaluate
-;
-: vr-report  ( char -- )  \ Real mode version
-   " ds push  h# b000 # push ds pop" evaluate   
-   " # al mov  al h# 8000 #) mov   h# 1d # al mov  al h# 8001 #) mov"  evaluate
-   " ds pop" evaluate
-;
-
+fload ${BP}/cpu/x86/pc/egareport.fth			\ Startup reports
 fload ${BP}/cpu/x86/pc/report.fth			\ Startup reports
 
 start-assembling
@@ -150,9 +140,9 @@ ascii 4 vr-report
 
 ascii 5 vr-report
 
-carret report
-linefeed report
-ascii F report
+\ carret report
+\ linefeed report
+\ ascii F report
 
 \ copy GDT template to a fixed place in memory (gdt-pa)
 
@@ -222,9 +212,9 @@ ascii F report
       stacktop #  sp  mov	\ Initialize the 32-bit stack pointer
 
 ascii 6 v-report
-ascii o report
+\ ascii o report
 
-ascii r report
+\ ascii r report
 
       0 #  si mov  here 4 - >r	\ Get offset to following dropins
       cx    si add		\ Absolute address of following dropins

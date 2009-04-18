@@ -14,6 +14,11 @@ devalias u    /usb/disk
 
 : (probe-usb2)  ( -- )
    " device_type" get-property  if  exit  then
+[ifdef] use-usb-debug-port
+   \ I haven't figured out how to turn on the EHCI cleanly
+   \ when the Debug Port is running
+   dbgp-off
+[then]
    get-encoded-string  " ehci" $=  if
       pwd$ open-dev  ?dup  if  close-dev  then
    then
@@ -52,7 +57,12 @@ alias p2 probe-usb
       drop " /usb"  comp  0=  if  ( )
          red-letters  ." Using USB keyboard." cr  black-letters
          " keyboard" input
+         exit
       then
+   then
+   " /usb/serial" open-dev  ?dup  if
+      red-letters  ." Using USB serial console." cr  black-letters
+      dup set-stdin set-stdout
    then
 ;
 

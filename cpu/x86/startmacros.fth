@@ -111,6 +111,11 @@ also 386-assembler definitions
    ax ax xor
    op: dx ax in
 ;
+: config-wb  ( b config-adr -- )
+   config-setup     ( )
+   # al  mov        ( )
+   al dx out
+;
 : config-rb  ( config-adr -- )  \ Returns value in AL
    config-setup     ( )
    ax ax xor
