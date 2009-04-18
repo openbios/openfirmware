@@ -22,7 +22,7 @@ d# 1024 buffer: spbuf
    then
 ;
 
-: handle%  ( ... tail$ -- ... tail$' )  \ Handle % escapes
+: replace%  ( ... tail$ -- ... tail$' )  \ Handle % escapes
    1/string              ( ... tail$ char )
    case
       [char] d  of   push-decimal rot <# u#s u#> +spbuf  pop-base  endof
@@ -34,7 +34,7 @@ d# 1024 buffer: spbuf
    endcase
 ;
 
-: handle\  ( ... tail$ -- ... tail$' )   \ Handle backslash escapes
+: replace\  ( ... tail$ -- ... tail$' )   \ Handle backslash escapes
    1/string              ( ... tail$ char )
    case
       [char] n  of  newline   +spchar  then
@@ -44,7 +44,7 @@ d# 1024 buffer: spbuf
       [char] l  of  linefeed  +spchar  then
       [char] b  of  control h +spchar  then
       [char] !  of  bell      +spchar  then
-      ( default ) +spchar
+      ( default ) dup +spchar
    endcase
 ;
 
@@ -54,7 +54,7 @@ d# 1024 buffer: spbuf
    begin  dup  while              ( ... adr len )
       " %\" lex  if               ( ... tail$ head$ delim )
          -rot +spbuf              ( ... tail$ delim )
-         [char] %  =  if  handle%  else  handle\  then  ( ... tail$ )
+         [char] %  =  if  replace%  else  replace\  then  ( ... tail$ )
       else                        ( ... tail$ )
          +spbuf 0 0               ( ... 0 0 )
       then                        ( ... tail$ )
