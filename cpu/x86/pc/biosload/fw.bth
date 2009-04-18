@@ -16,7 +16,6 @@ fload ${BP}/cpu/x86/pc/biosload/config.fth
 
 ' (quit) to quit
 
-create debug-startup
 : \Tags [compile] \  ; immediate
 : \NotTags [compile] \  ; immediate
 
@@ -247,9 +246,7 @@ warning @  warning off
          key upc ascii I  =  if  ." Interacting" cr  hex interact  then
       then
    then
-
 \  cr0@ h# 9fff.ffff and cr0!	\ enable L1 and L2 caches
-
 ;
 warning !
 [then]
@@ -303,6 +300,13 @@ devalias net /wlan
 [then]
    report-disk
    report-pci-fb
+   \ In case the config vars are stored on a USB stick ...
+   [ifdef] reread-config-vars
+      config-valid? 0=  if
+         reread-config-vars
+         use-nvramrc?  if  nvramrc safe-evaluate  then
+      then
+   [then]
 ;
 
 : startup  ( -- )
@@ -316,6 +320,7 @@ devalias net /wlan
    auto-banner?  if
       " Probing" ?type  probe-all
       " Install console" ?type  install-console
+      ?usb-keyboard
       banner
    then
 

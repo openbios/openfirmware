@@ -199,14 +199,19 @@ fload ${BP}/cpu/x86/pc/biosload/filenv.fth
 dev /file-nvram
 : fd-nv-file  ( -- )  " a:\nvram.dat"  ;
 : hd-nv-file  ( -- )  " c:\nvram.dat"  ;
-' fd-nv-file to nv-file
+: usb-nv-file  ( -- )  " u:\nvram.dat"  ;
+' usb-nv-file to nv-file
 device-end
+: reread-config-vars  ( -- )
+   config-valid?  if  exit  then
+   ['] init-config-vars catch drop
+;
 stand-init: Pseudo-NVRAM
    " /file-nvram" open-dev  to nvram-node
    nvram-node 0=  if
       ." The configuration EEPROM is not working" cr
    then
-   ['] init-config-vars catch drop
+   reread-config-vars
 ;
 [then]
 
@@ -310,8 +315,13 @@ device-end
 end-package
 [then]
 
+[ifdef] use-usb-debug-port
+fload ${BP}/dev/usb2/device/debugport.fth	\ ISA COM port driver
+[else]
 fload ${BP}/dev/isa/diaguart.fth	\ ISA COM port driver
 h# 3f8 is uart-base
+[then]
+
 fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 fload ${BP}/cpu/x86/pc/egauart.fth		\ Output also to EGA
 
