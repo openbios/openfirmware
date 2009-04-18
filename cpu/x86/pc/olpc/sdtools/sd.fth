@@ -63,12 +63,26 @@ defer spi-start  defer spi@  defer spi!  defer spi-out  defer spi-reprogrammed
 \needs ec@ fload ecio.fth
 \needs ec-range fload ecdump.fth
 
+\ from olpc/addrs.fth
+h# fd00.0000 constant fb-pci-base
+h# fe00.0000 constant gp-pci-base
+h# fe00.4000 constant dc-pci-base
+h# fe00.8000 constant vp-pci-base
+h# fe00.c000 constant vip-pci-base
+h# fe01.0000 constant aes-pci-base
+h# fe01.a000 constant ohci-pci-base
+h# fe01.b000 constant ehci-pci-base
+h# fe02.0000 constant nand-pci-base
+h# fe02.4000 constant sd-pci-base
+h# fe02.8000 constant camera-pci-base
+h# fe02.c000 constant uoc-pci-base
+
 : map-io  ( -- )
-   h# fe01.0000 h#    4000 mmap to sd-base
    h# fff0.0000 h# 10.0000 mmap to flash-base
-   h# fe00.8000 h#    4000 mmap to vp-base
-   h# fe00.4000 h#    4000 mmap to dc-base
-   h# fe00.0000 h#    4000 mmap to gp-base
+   sd-pci-base  h#    4000 mmap to sd-base
+   vp-pci-base  h#    4000 mmap to vp-base
+   dc-pci-base  h#    4000 mmap to dc-base
+   gp-pci-base  h#    4000 mmap to gp-base
 ;
 map-io
 
