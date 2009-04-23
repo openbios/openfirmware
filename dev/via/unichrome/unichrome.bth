@@ -1,0 +1,14 @@
+purpose: Load file for Via Unichrome Frame Buffer FCode driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing unichrome.fc
+
+FCode-version2
+fload ${BP}/dev/via/unichrome/loadpkg.fth
+end0
+
+end-tokenizing
