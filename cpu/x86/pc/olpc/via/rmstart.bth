@@ -1,0 +1,10 @@
+\ See license at end of file
+purpose: Build script fo x86 real mode startup code.
+
+command: &builder &this
+build-now
+
+\ create debug-reset
+
+fload ${BP}/cpu/x86/pc/olpc/via/config.fth
+fload ${BP}/cpu/x86/pc/olpc/via/rmstart.fth

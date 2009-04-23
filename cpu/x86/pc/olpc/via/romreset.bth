@@ -1,0 +1,811 @@
+\ See license at end of file
+purpose: Build file for dropin dispatcher  - version for direct ROM startup
+
+command: &builder &this
+build-now
+
+create debug-startup
+
+fload ${BP}/cpu/x86/pc/olpc/via/config.fth	\ Address configuration
+
+
+\needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+fload ${BP}/cpu/x86/mmuparam.fth
+
+\ startmacros.fth defines some assembler macros that make MSR and I/O port
+\  access very easy by hiding the details of register use.
+
+fload ${BP}/cpu/x86/startmacros.fth
+fload ${BP}/cpu/x86/pc/port80.fth
+
+\ DEBUG
+[ifdef] config-to-port80
+also 386-assembler definitions
+: config-wb
+   h# 77 port80  dup wbsplit port80  port80  over port80
+   config-wb
+;
+previous definitions
+[then]
+
+hex
+
+fload ${BP}/cpu/x86/pc/finddi.fth	\ find-dropin and other tools
+
+\ Locations of cacheable areas for cache-as-ram setup
+\ We have to be careful that the instruction-cached area doesn't
+\ collide with the data cache.  The instructions, accessed from
+\ ROM, are recoverable, but the data has no backing store so we
+\ mustn't let it be evicted.
+
+\ With the layout below, we should be okay.  The L2 cache is big
+\ enough to hold I and D ranges.  The dcached range is just below
+\ dropin base and the stack is at the top of that range.  The
+\ instructions that we will execute, and their in-line data tables,
+\ are just above dropin base, so they shouldn't collide with the
+\ stack that is near the top of a 64K range.
+
+h# 8000 constant /dcached  \ Size of VIA DCache
+h# 8000 constant /icached  \ Size of VIA ICache
+dropin-base /dcached - constant dcached-base
+
+h#   10.0000 constant ramtest-start
+h#   20.0000 constant ramtest-end
+create uart-debug-startup
+
+: devfunc  ( dev func -- )
+   h# 100 *  swap h# 800 * or  h# 8000.0000 or
+   [ also assembler ]
+   # ebp mov  " masked-config-writes" evaluate  #) call
+   [ previous ]
+;
+: end-table  0 c,  ;
+
+: mreg  ( reg# and or -- )  rot c, swap c, c,  ;
+: wait-us  ( us -- )
+   " # ax mov  usdelay #) call" evaluate
+;
+
+: showreg  ( reg# -- )
+   " h# ff port80  d# 200000 wait-us" eval
+   " config-rb  al 80 # out  d# 1000000 wait-us" eval
+;
+
+start-assembling
+
+label my-entry
+   e9 c,  0 ,				\ To be patched later
+end-code
+
+[ifdef] uart-debug-startup
+fload ${BP}/cpu/x86/pc/dot.fth		\ Numeric output
+[then]
+
+fload ${BP}/cpu/x86/pc/romfind.fth	\ find-dropin
+
+hex
+
+\ %ebp contains the config address
+\ %ebp used for merging config write data
+
+label masked-config-writes   \ return address points to the table
+   esi pop
+   cld
+   begin
+      al lods                    \ al: register offset
+   al al or  0<> while
+      al bl mov                  \ bl: register offset
+
+[ifdef] config-to-port80
+   h# 77 # al mov  al h# 80 # out
+   ebp eax mov  ah al mov  al h# 80 # out
+   bl al mov  al h# 80 # out
+[then]
+
+      ebp eax mov                \ Config address base
+      bl  al  mov                \ Merge in register number
+      h# ffff.fffc # ax and      \ Remove low bits
+      h# cf8 # dx mov            \ Config address register port #
+      ax dx out                  \ Write to config address register
+
+      4 # dl add                 \ DX: cfc
+      3 # bl and                 \ Byte offset
+      bl  dl add                 \ Config data register port #
+
+      al lods  al not            \ Get AND mask
+      al al or  0<>  if          \ Do we need to read-modify-write?
+         al ah mov               \ Save mask
+         dx al in                \ Get existing value
+[ifdef] config-to-port80
+   al h# 80 # out
+[then]
+         ah al and               \ Apply AND mask
+         al ah mov
+         al lods                 \ Get OR mask
+         ah al or                \ Now we have the final value
+      else                       \ AND mask is 0 so we don't have to R-M-W
+         al lods                 \ Get final value (== OR mask)
+      then
+
+[ifdef] config-to-port80
+   al h# 80 # out
+[then]
+
+      al dx out                  \ Write final value to config data register
+   repeat
+   esi push
+   ret
+end-code
+   
+[ifdef] uart-debug-startup
+label cominit
+   \ Turn on frame buffer
+   0 3 devfunc
+   a1 ff 80 mreg   \ Not sure why this is needed, the PM says it's the default
+   a7 ff 08 mreg   \ Internal GFX allocation
+   end-table
+
+   \ Turn on I/O and memory space access for display controller
+   1 0 devfunc
+   04 ff 07 mreg
+   end-table
+
+   01 3c3 port-wb                    \ Graphics Chip IO port access on
+   10 3c4 port-wb   01 3c5 port-wb   \ Graphics Chip register protection off
+   78 3c4 port-wb   86 3c5 port-wb   \ South module pad share enable on (80)
+
+   d# 17 0 devfunc
+   \ The following is for UART on VCP port
+   46 3f 40 mreg
+   \ The following is for UART on DVP port
+   \ 46 3f c0 mreg
+
+   \ Standard COM2 and COM1 IRQ routing
+   b2 00 34 mreg
+
+   \ For COM1 - 3f8 (ff below is 3f8 3 >> 80 or )
+
+   b0 cf 10 mreg
+   b4 00 ff mreg   \ 3f8 3 >>  80 or  - com base port
+
+   \ For COM2 - 2f8 (df below is 2f8 3 >> 80 or )
+   \ b0 cf 20 mreg
+   \ b5 00 df mreg
+   end-table
+
+   \ The usual setup dance for a PC UART...
+   01 3fc port-wb  \ DTR on
+   80 3fb port-wb  \ Switch to bank 1 to program baud rate
+   01 3f8 port-wb  \ Baud rate divisor low - 115200 baud
+   00 3f9 port-wb  \ Baud rate divisor high - 115200 baud
+   03 3fb port-wb  \ 8 bits, no parity, switch to bank 0
+   00 3f9 port-wb  \ Interrupts off
+   00 3fa port-wb
+
+   ret
+end-code
+[then]
+
+\ Delay N microseconds, N in ax
+label usdelay
+   cx push
+
+   ax cx mov
+   begin  h# 80 # al in  loopa
+
+   cx pop
+   ret
+end-code
+
+\ This is the dance you have to do for each DDR rank to turn on the RAM chips
+label DDRinit
+   11 36b config-wb  \ SDRAM NOP
+   0 #) ax mov       \ Access RAM
+   d# 200 wait-us
+
+   12 36b config-wb  \ SDRAM Precharge All
+   0 #) ax mov       \ Access RAM
+      
+   13 36b config-wb  \ SDRAM MRS Enable
+   20200 #) ax mov   \ Access RAM for DLL enable - 150 ohm (20020 for 75 ohm)
+     800 #) ax mov   \ Access RAM for DLL reset
+
+   12 36b config-wb  \ SDRAM Precharge All
+   0 #) ax mov       \ Access RAM
+
+   14 36b config-wb  \ SDRAM CBR Cycle Enable
+
+   8 # cx mov
+   begin
+      0 #) ax mov
+      d# 100 wait-us
+   loopa
+   
+   13 36b config-wb  \ SDRAM MRS Enable
+   101258 #) ax mov  \ Depends on Twr, CL, and Burst Length
+
+   21e00 #) ax mov   \ For 150 ohm; 75 ohm is 21c20
+   20200 #) ax mov   \ For 150 ohm; 75 ohm is 21c20
+
+   10 36b config-wb  \ SDRAM Normal
+
+   ret
+end-code
+
+
+label startup
+\   h# 10 port80
+   2 92 port-wb  \ Enable A20
+   \ External A20GATE is disabled automatically because the internal KBC is on by default (cfg reg 8851 bit 0)
+
+\ Enable cache as RAM
+   cr0 ax mov  h# 4000.0000 bitset  ax cr0 mov  invd  \ Disable cache
+
+   00000000.00000c00. 2ff set-msr  \ Enable fixed and variable MTRRs in DefType
+   00000000.00000000. 250 set-msr  \ Clear fixed MTRR
+   258 wmsr  259 wmsr  268 wmsr  269 wmsr  26a wmsr \ Fixed MTRRs
+   26b wmsr  26c wmsr  26d wmsr  26e wmsr  26f wmsr \ Fixed MTRRs
+   200 wmsr  201 wmsr  202 wmsr  203 wmsr  204 wmsr \ Variable MTRRs
+   205 wmsr  206 wmsr  207 wmsr  208 wmsr  209 wmsr \ Variable MTRRs
+   20a wmsr  20b wmsr  20c wmsr  20d wmsr  20e wmsr \ Variable MTRRs
+   20f wmsr                                         \ Last variable one
+
+   dcached-base 6 +          0  200 set-msr   \ Dcache base address, write back
+   /dcached negate h# 800 +  f  201 set-msr   \ Dcache size
+   dropin-base 6 +           0  202 set-msr   \ ROM base address
+   /icached negate h# 800 +  f  203 set-msr   \ Icache size
+
+   00000000.00000800.           2ff set-msr   \ Enable variable MTRRs in DefType   
+
+
+   cr0 ax mov  h# 6000.0000 bitclr  ax cr0 mov  invd  \ Cache on
+
+   cld
+
+   \ Access ROM to load it into the dcache
+   dropin-base #  esi  mov
+   /icached 4 / #  ecx  mov
+   rep  eax lods
+
+   \ Access "RAM" area to load it into the dcache
+   dcached-base #  esi  mov
+   /dcached 4 / #  ecx  mov
+   rep  eax lods
+
+   \ Put the stack pointer at the top of the dcached area
+   dcached-base /dcached + 4 - #  esp  mov
+   ds ax mov  ax ss mov
+
+\ We are now running from cache, and can use the stack
+
+\   h# 20 port80    d# 300000 wait-us
+
+\ cache_as_ram_auto.c: amd64_main() 
+
+   01 004f config-wb   \ Enable device 0 multiple functions
+
+\ 8898 config-rb  al 80 # out  d# 300000 wait-us
+
+   00 8898 config-wb   \ Disable BIOS init timer GP3
+
+[ifdef] uart-debug-startup
+ cominit #) call
+ carret report
+ linefeed report
+[then]
+
+\ This is a device ID backdoor to fake out the ID so Ubuntu will install
+\   8879 config-rb  h# 40 # al or  al dx out  \ I don't know what this is, but coreboot does it
+
+1 [if]
+ \ This turns an OS reboot into a real cold start - from coreboot
+   4001 8888 config-ww   \ Set ACPI base address
+   84 8881 config-wb   \ Enable ACPI regs and guard RTC against power glitches
+   4004 port-rw        \ Get APCI Status register
+   d# 10 # ax shr  7 # ax and  1 # ax cmp  <>  if  \ Not a wakeup from S3
+      380 config-rb  ax ax or  0<>  if             \ C-page shadowing not on yet
+         6 cf9 port-wb                             \ Force a full system reset
+      then
+   then
+[then]
+
+ \ enable_mainboard_devices()
+\  41 8f4f config-wb   \ Enable P2P Bridge Header for External PCI Bus (coreboot value)
+   43 8f4f config-wb   \ As above, plus support extended PCIe config space
+
+\  4f6 config-rb   \ Get Northbridge revision ... don't need it because the
+                   \ init table contains no revision-specific entries
+
+ \ via_pci_inittable(NBrevision,mNbStage1InitTbl)
+
+   \ Enable extended config space for PCIe
+   0 5 devfunc  \ NB_APIC
+   61 ff 0e mreg  \ Set Exxxxxxx as PCIe MMIO config range
+   60 f4 0b mreg  \ Support extended cfg address of PCIe (preserve 28 bits)
+   end-table
+
+   0 2 devfunc  \ HOST CPU CTL
+   50 1f 08 mreg  \ Request phase ctrl: Dynamic Defer Snoop Stall Count = 8
+   51 ff 7c mreg  \ CPU I/F Ctrl-1: Disable Fast DRDY and RAW
+   52 cb cb mreg  \ CPU I/F Ctrl-2: Enable all for performance
+   53 ff 44 mreg  \ Arbitration: Host/Master Occupancy timer = 4*4 HCLK
+   54 1e 1c mreg  \ Misc Ctrl: Enable 8QW burst Mem Access
+
+   55 06 04 mreg  \ Miscellaneous Control 2
+   56 f7 63 mreg  \ Write Policy 1
+   5d ff a2 mreg  \ Write Policy
+   5e ff 88 mreg  \ Bandwidth Timer
+   5f 46 46 mreg  \ CPU Misc Ctrl
+
+   96 0b 0a mreg \ Write Policy
+   98 c1 41 mreg \ Bandwidth Timer
+   99 0e 06 mreg \ CPU Misc Ctrl
+   97 ff 00 mreg \ APIC Related Control
+   end-table
+
+   0 3 devfunc
+   86 d6 29 mreg  \ SMM and APIC Decoding: enable APIC, MSI and SMRAM A-Seg
+   end-table
+
+\ Detection.c
+\  DRAMCmdRate
+    
+   0 3 devfunc
+   50 11 00 mreg  \ Use stable 2T command rate
+   end-table
+
+\   h# 23 port80   d# 300000 wait-us
+
+\ FreqSetting.c : DRAMFreqSetting()
+   \ The following register is undocumented.  coreboot has this comment:
+   \ Must use "CPU delay" to make sure VLINK is dis-connect
+   0 7 devfunc  47 00 04 mreg  end-table  d# 20 wait-us
+   0 3 devfunc  90 07 07 mreg  end-table  d# 20 wait-us  \ First set DRAM Freq to invalid
+   0 3 devfunc  90 07 04 mreg  end-table  d# 20 wait-us  \ 266 MHz
+   0 3 devfunc  6b d0 c0 mreg  end-table  d# 20 wait-us  \ PLL Off
+   0 3 devfunc  6b 00 10 mreg  end-table  d# 20 wait-us  \ PLL On
+   0 3 devfunc  6b c0 00 mreg  end-table  \ Adjustments off
+   0 7 devfunc  47 04 00 mreg  end-table  \ disable V_LINK Auto-Disconnect
+
+\   h# 24 port80   d# 300000 wait-us
+
+\  TimingSetting.c
+   0 3 devfunc
+   61 ff 55 mreg  \ Trfc, Trrd
+   62 ff 8a mreg  \ CL, Trp, Tras
+   63 ff 49 mreg  \ Twr, Twtr, Trtp
+   64 ff 66 mreg  \ Trp, Trcd
+   end-table
+
+\ DRDR_BL.c
+\  DRAMDRDYsetting
+   0 2 devfunc
+   60 ff aa mreg  \ DRDY Timing Control 1 for Read Line
+   61 ff 0a mreg  \ DRDY Timing Control 2 for Read Line
+   62 ff 00 mreg  \ Reserved, probably channel B
+   63 ff aa mreg  \ DRDY Timing Control 1 for Read QW
+   64 ff 0a mreg  \ DRDY Timing Control 2 for Read QW
+   65 ff 00 mreg  \ Reserved, probably channel B
+   66 ff 00 mreg  \ Burst DRDR Timing Control for Second cycle in burst
+   67 ff 00 mreg  \ Reserved, probably channel B
+   54 0a 08 mreg  \ Misc ctl 1 - special mode for DRAM cycles
+   51 00 80 mreg  \ Last step - enable DRDY timing - should the mask be f7 ?
+   end-table
+
+\  DRAMBurstLength
+   0 3 devfunc
+   6c 08 08 mreg  \ Burst length 8
+\ DrivingSetting.c
+\  DrivingODT
+   d0 ff 88 mreg    \ Pull up/down Termination strength
+   d6 fc fc mreg    \ DCLK/SCMD/CS drive strength
+   d3 fb 01 mreg    \ Compensation control - enable DDR Compensation
+   9e 30 10 mreg    \ SRAM ODT Control 1 - 1T wait state turnaround
+   9f 11 11 mreg    \ SDRAM ODT Control 2 - Late extension values
+   d5 a0 00 mreg    \ DQ/DQS Burst and ODT Range Select - disable bursts for channel A
+   d7 80 00 mreg    \ SCMD/MA Burst - Disable SDMD/MAA burst
+   d5 0c 04 mreg    \ Enable DRAM MD Pad ODT of Channel  A High 32 bits
+
+   9c ff e1 mreg    \ ODT Lookup table
+   d4 36 30 mreg    \ ChannelA MD ODT dynamic-on
+   9e 00 01 mreg    \ Enable Channel A differential DQS Input
+   9e 00 80 mreg    \ Enable ODT controls
+
+\  DrivingDQS,DQ,CS,MA,DCLK
+   e0 ff ee mreg \ DQS A
+   e1 ff 00 mreg \ DQS B
+   e2 ff ac mreg \ DQ A
+   e3 ff 00 mreg \ DQ B
+   e4 ff 44 mreg \ CS A
+   e5 ff 00 mreg \ CS B
+   e6 ff ff mreg \ MCLK A
+   e7 ff 88 mreg \ MCKL B
+   e8 ff 86 mreg \ MA A
+   e9 ff 00 mreg \ MA B
+
+\ ClkCtrl.c  (register tables in mainboard/via/6413e/DrivingClkPhaseData.c)
+\  DutyCycleCtrl
+   ec ff 30 mreg  \ DQS/DQ Output duty control
+   ee f0 00 mreg  \ DCLK Output duty control
+   ef 30 00 mreg  \ DQ CKG Input Delay - going with Phoenix value; coreboot uses 30
+
+\  DRAMClkCtrl
+\   WrtDataPhsCtrl
+   74 07 00 mreg \ DQS Phase Offset
+   75 07 00 mreg \ DQ Phase Offset
+   76 ef 07 mreg \ Write data Phase control
+   8c 03 03 mreg \ DQS Output Control
+
+\   ClkPhsCtrlFBMDDR2
+   91 07 00 mreg \ DCLK Phase
+   92 07 03 mreg \ CS/CKE Phase
+   93 07 04 mreg \ SCMD/MA Phase
+
+\   DQDQSOutputDlyCtrl
+   f0 ff 00 mreg \ Group A0/1
+   f1 ff 00 mreg \ Group A2/3
+   f2 ff 00 mreg \ Group A4/5
+   f3 ff 00 mreg \ Group A6/7
+
+\   DQSInputCaptureCtrl
+   77 bf 8a mreg \ DQS Input Delay - Manual
+   78 3f 03 mreg \ DQS Input Capture Range Control A
+   7a 0f 00 mreg \ Reserved
+   7b 7f 20 mreg \ Read Data Phase Control
+
+\   DCLKPhsCtrl
+   99 1e 12 mreg \ MCLKOA[4,3,0] outputs
+   end-table
+
+\ DevInit.c
+\  DRAMRegInitValue
+
+   0 3 devfunc
+   50 ee ee mreg \ DDR default MA7 for DRAM init
+   51 ee 60 mreg \ DDR default MA3 for CHB init
+   52 ff 33 mreg \ DDR use BA0=M17, BA1=M18,
+   53 ff 3F mreg \ DDR	  BA2=M19
+
+   54 ff 00 mreg \ default PR0=VR0; PR1=VR1
+   55 ff 00 mreg \ default PR2=VR2; PR3=VR3
+   56 ff 00 mreg \ default PR4=VR4; PR5=VR5
+   57 ff 00 mreg \ default PR4=VR4; PR5=VR5
+
+   60 ff 00 mreg \ disable fast turn-around
+   65 ff D9 mreg \ AGP timer = D; Host timer = 8;
+   66 ff 88 mreg \ DRAMC Queue Size = 4; park at the last bus owner,Priority promotion timer = 8
+   68 ff 0C mreg
+   69 0F 04 mreg \ set RX69[3:0]=0000b
+   6A ff 00 mreg \ refresh counter
+   6E 07 80 mreg \ must set 6E[7],or else DDR2  probe test will fail
+   85 ff 00 mreg
+   40 ff 00 mreg
+   end-table
+
+   80 4a3 config-wb       \ Enable toggle reduction on MA/SCMD per coreboot
+
+\  DRAMInitializeProc
+
+   0 3 devfunc
+   6c 00 04 mreg \ Enable channel A only
+
+   54 ff 80 mreg \ Enable rank 0, disable rank 1
+   55 ff 00 mreg \ Disable ranks 2 and 3
+   40 ff 10 mreg \ Rank 0 top
+   48 ff 00 mreg \ Rank 0 base
+   end-table
+
+\   h# 25 port80   d# 300000 wait-us
+
+   DDRinit #) call
+
+   h# 11 port80
+
+   0 3 devfunc
+   40 ff 00 mreg \ Rank 1 top back to 0 to work on other ranks
+
+   54 ff 09 mreg \ Enable rank 1
+   55 ff 00 mreg \ Disable ranks 2 and 3
+   41 ff 10 mreg \ Rank 1 top
+   49 ff 00 mreg \ Rank 1 base
+   end-table
+
+   DDRinit #) call
+
+   0 3 devfunc
+   41 ff 00 mreg \ Rank 1 top back to 0 to work on other ranks
+   end-table
+
+   h# 14 port80
+
+0 [if] \ This is for a DIMM in the other socket
+   0 3 devfunc
+   54 ff 00 mreg \ Disable ranks 0,1
+   55 ff a0 mreg \ Enable Rank 2
+   42 ff 10 mreg \ Rank 2 top
+   4a ff 00 mreg \ Rank 2 base
+   end-table
+
+   DDRinit #) call 
+
+   0 3 devfunc
+   42 ff 00 mreg \ Rank 2 top back to 0 to work on other ranks
+   54 ff 00 mreg \ Disable ranks 0,1
+   55 ff 0b mreg \ Enable Rank 3
+   43 ff 10 mreg \ Rank 3 top
+   4b ff 00 mreg \ Rank 3 base
+   end-table
+
+   DDRinit #) call
+
+   0 3 devfunc
+   43 ff 00 mreg \ Rank 3 top back to 0 to work on other ranks
+   end-table
+[then]
+
+   0 3 devfunc
+   69 03 03 mreg \ Reinstate page optimizations (03) - FF #ranks
+
+\ RankMap.c
+\  DRAMBankInterleave
+\   (see 69 above)
+   87 ff 00 mreg \ Channel B #banks or some such - FF BA  
+\ SizingMATypeM
+
+   50 ff 20 mreg \ MA Map type - ranks 0/1 type 1 - 2 bank bits, 10 column bits
+   51 ff 60 mreg \ "Reserved"
+   52 ff 33 mreg \ Bank interleave on A17, A18, and
+   53 ff 3f mreg \ A19 (but BA2 off because 4 banks), Rank interleave on A20 and A21
+                 \ Different interleave bits might improve performance on some workloads
+
+   54 ff 89 mreg \ Rank map A 0/1
+   55 ff 00 mreg \ Rank map A 2/3
+   56 ff 00 mreg \ Rank map B ?
+   57 ff 00 mreg \ Rank map B ?
+
+   40 ff 04 mreg \ Rank top 0
+   41 ff 08 mreg \ Rank top 1
+   42 ff 00 mreg \ Rank top 2
+   43 ff 00 mreg \ Rank top 3
+
+   48 ff 00 mreg \ Rank base 0
+   49 ff 04 mreg \ Rank base 1
+   4a ff 00 mreg \ Rank base 2
+   4b ff 00 mreg \ Rank base 3
+   end-table
+
+   20 8f60 config-wb                    \ DRAM Bank 7 ending address - controls DMA upstream
+   0388 config-rb  ax bx mov  0385 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to reg 85
+   0388 config-rb  ax bx mov  8fe5 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to SB Low Top e5
+
+0 [if]  \ Very simple memtest
+ax ax xor
+h# 12345678 #  bx mov
+bx 0 [ax] mov
+h# 5555aaaa #  4 [ax] mov
+0 [ax] dx  mov
+dx bx cmp  =  if
+   ascii G report  ascii 2 report  h# 20 report
+else
+   dx ax mov  dot #) call
+   ascii B report  ascii 2 report  h# 20 report
+   hlt
+then
+[then]
+
+    \ Low 2 bits of 86:
+    \ x1 to write to SMM shadow memory behind VGA
+    \ 00 to run - Axxxxx hits VGA in normal mode, hits shadow DRAM in SMM
+    \ 01 to access VGA when in SMM (data cycles only)
+
+\   d# 17 7 devfunc
+\   e6 ff 07 mreg \ Enable Top, High, and Compatible SMM
+\   end-table
+
+
+\ DQSSearch.c
+\  DRAMDQSOutputSearch
+   0 3 devfunc
+   70 ff 00 mreg \ Output delay
+   71 ff 04 mreg
+
+\  DRAMDQSInputSearch
+   77 ff 00 mreg \ Input delay auto
+
+\ FinalSetting.c
+\  RefreshCounter
+   6a ff 86 mreg \ Refresh interval - FF frequency
+
+\  DRAMRegFinalValue
+    60 00 d0 mreg \ Fast turn-around
+    66 30 80 mreg \ DRAMC queue = 4 (already set to 88 up above), park at last owner
+    69 00 07 mreg \ Enable multiple page
+    95 ff 0d mreg \ Self-refresh controls
+    96 f0 a0 mreg \ Auto self-refresh stuff
+    fb ff 3e mreg \ Dynamic clocks
+    fd ff a9 mreg \ Dynamic clocks
+    fe ff 0f mreg \ Chips select power saving for self-refresh
+    ff ff 3d mreg \ DSQB input delay, SCMD enabled
+    96 0f 03 mreg \ Enable self-refresh for ranks 0 and 1
+    end-table
+    
+    0 4 devfunc  \ PM_table
+    a0 f0 f0 mreg \ Enable dynamic power management
+    a1 e0 e0 mreg \ Dynamic power management for DRAM
+    a2 ff fe mreg \ Dynamic clock stop controls
+    a3 80 80 mreg \ Toggle reduction on
+    a5 81 81 mreg \ "Reserved"
+    end-table
+    
+1 [if]
+ax ax xor
+h# 12345678 #  bx mov
+bx 0 [ax] mov
+h# 5555aaaa #  4 [ax] mov
+0 [ax] dx  mov
+dx bx cmp  <>  if  ascii B report  ascii A report  ascii D report  begin again  then
+[then]
+
+\ fload ${BP}/cpu/x86/pc/ramtest.fth
+
+\ UMARamSetting.c
+\  SetUMARam
+    0 3 devfunc
+    a1 00 80 mreg \ Enable internal GFX
+    a2 ff ee mreg \ Set GFX timers
+    a4 ff 01 mreg \ GFX Data Delay to Sync with Clock
+    a6 ff 76 mreg \ Page register life timer
+    a7 ff 8c mreg \ Internal GFX allocation
+    b3 ff 9a mreg \ Disable read past write
+    de ff 06 mreg \ Enable CHA and CHB merge mode (but description says this value disable merging!)
+    end-table
+
+    0 3 devfunc
+    a1 70 40 mreg \ Set frame buffer size to 64M (8M:10, 16M:20, 32M:30, etc) - fbsize
+    end-table
+
+    1 0 devfunc
+                  \ Reg 1b2 controls the number of writable bits in the BAR at 810
+    b2 ff 70 mreg \ Offset of frame buffer, depends on size - fbsize
+    04 ff 07 mreg \ Enable IO and memory access to display
+    end-table
+
+    d000.0000 810 config-wl  \ S.L. Base address
+    f000.0000 814 config-wl  \ MMIO Base address
+         cd01 3a0 config-ww  \ Set frame buffer size and CPU-relative address and enable
+
+    0 0 devfunc
+    d4 00 03 mreg \ Enable MMIO and S.L. access in Host Control device
+    fe 00 10 mreg \ 16-bit I/O port decoding for VGA (no aliases)
+    end-table
+
+    1 0 devfunc
+    b0 07 03 mreg \ VGA memory selection (coreboot uses 03, Phoenix 01.  I think 03 is correct)
+    end-table
+
+    01 3c3 port-wb                  \ Graphics chip IO port access on
+    10 3c4 port-wb  01 3c5 port-wb  \ Turn off register protection
+    67 3c2 port-wb                  \ Enable CPU Display Memory access (2), use color not mono port (1)
+
+    68 3c4 port-wb  e0 3c5 port-wb  \ Size of System Local Frame Buffer - Value depends on frame buffer size - fbsize
+                                    \ 00:512MB 80:256MB c0:128MB e0:64MB f0:32MB f8:16MB fc:8MB fe:4MB ff:2MB
+
+    \ These 2 are scratch registers that communicate with the VGA BIOS
+    3d 3d4 port-wb  74 3d5 port-wb  \ Value depends on DIMM frequency - used by VGA BIOS
+    39 3c4 port-wb  10 3c5 port-wb  \ BIOS Reserved Register 0 - FBsize_MiB/4 - fbsize - VGA BIOS
+
+    5a 3c4 port-wb  01 3c5 port-wb  \ Point to secondary registers
+    4c 3c4 port-wb  83 3c5 port-wb  \ LCDCK Clock Synthesizer Value 2
+    5a 3c4 port-wb  00 3c5 port-wb  \ Point back to primary registers
+
+    6d 3c4 port-wb  e0 3c5 port-wb  \ Base address [28:21] of SL in System Memory - base is 1c00.0000 - fbsize, memsize
+    6e 3c4 port-wb  00 3c5 port-wb  \ Base address [36:29] of SL in System Memory
+    6f 3c4 port-wb  00 3c5 port-wb  \ Base address [47:37] of SL in System Memory
+
+    36 3c4 port-wb  11 3c5 port-wb  \ Subsystem Vendor ID 1
+    35 3c4 port-wb  06 3c5 port-wb  \ Subsystem Vendor ID 0
+    38 3c4 port-wb  51 3c5 port-wb  \ Subsystem ID 1
+    37 3c4 port-wb  22 3c5 port-wb  \ Subsystem ID 0
+
+    f3 3c4 port-wb  00 3c5 port-wb  \ 1a for snapshot mode
+    f3 3d4 port-wb  12 3c5 port-wb  \ Snapshot mode control - 1a for snapshot mode
+
+\ cache_as_ram_auto.c : enable_shadow_ram
+    0 3 devfunc
+    80 ff ff mreg \ Enable R/W memory access to Cxxxx bank
+    81 ff ff mreg \ Enable R/W memory access to Dxxxx bank
+    82 ff ff mreg \ Enable R/W memory access to Exxxx bank
+    83 30 30 mreg \ Enable R/W memory access to Fxxxx bank (30), no memory hole (0c), SMM switching of Axxxx bank (03)
+\   86 ff 85 mreg \ 4 MiB Top SMM Memory (80), enable top SMM memory (04), enable compatible SMM (01)
+    end-table
+
+   h# 1c00.0000 # mem-info-pa 4 + #) mov   \ Top of memory
+
+   long-offsets on
+
+   h# 1e port80
+
+\ Fix the MTRRs so the real RAM is cacheable, instead of the fake nonexistent area
+   cr0 ax mov  h# 6000.0000 bitset  ax cr0 mov  \ Cache off
+   
+   0000.0000.0000.0c00.  2ff set-msr   \ Enable fixed and variable MTRRs in DefType   
+
+   0000.0000.0000.0006.  200 set-msr   \ RAM starting at 0
+   0000.000f.c000.0800.  201 set-msr   \ 1 GiB
+   0000.0000.ff00.0006.  202 set-msr   \ ROM in last meg
+   0000.000f.ff00.0800.  203 set-msr   \ 1 MiB
+   0000.0000.d000.0001.  204 set-msr   \ Frame buffer - Write Combining mode
+   0000.000f.f000.0800.  205 set-msr   \ 256 MB
+
+   0606.0606.0606.0606.  250 set-msr   \ Cache 00000-7FFFF
+   0606.0606.0606.0606.  258 set-msr   \ Cache 80000-9FFFF
+   0000.0000.0000.0000.  259 set-msr   \ Don't Cache VGA range from A0000 to BFFFF
+   0606.0606.0606.0606.  268 set-msr   \ Cache C0000-C7FFF
+   0606.0606.0606.0606.  269 set-msr   \ Cache C8000-CFFFF
+   0606.0606.0606.0606.  26a set-msr   \ Cache D0000-D7FFF
+   0606.0606.0606.0606.  26b set-msr   \ Cache D8000-DFFFF
+   0606.0606.0606.0606.  26c set-msr   \ Cache E0000-E7FFF
+   0606.0606.0606.0606.  26d set-msr   \ Cache E8000-EFFFF
+   0606.0606.0606.0606.  26e set-msr   \ Cache F0000-F7FFF
+   0606.0606.0606.0606.  26f set-msr   \ Cache F8000-FFFFF
+
+   cr0 ax mov  h# 6000.0000 bitclr  ax cr0 mov  \ Cache on
+   h# 10.0000 # sp mov  \ Move stack to real memory
+
+\ Cache is now back on, with the final MTRR setup
+
+   \ Now we can use the stack and do conventional subroutine calls
+
+\ Enable the keyboard controller
+   
+\   8851 config-rb  2 # ax or  ax bx mov
+\   8851 config-setup  bx ax mov  al dx out  \ Enable the keyboard configuration port
+\   e2 2e port-wb   7 2f port-wb
+
+\ XXX need to set some registers in D17F7 "SNMIC" per chapter 21 of the BIOS Porting Guide
+
+   h# 1f port80
+[ifdef] uart-debug-startup
+ char F report
+ char o report
+ char r report
+[then]
+
+   fload ${BP}/cpu/x86/pc/resetend.fth
+end-code
+
+also 386-assembler
+startup  my-entry  put-branch
+previous
+
+end-assembling
+
+writing romreset.di
+asm-base  here over -  0  " reset" write-dropin
+ofd @ fclose
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2009 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
