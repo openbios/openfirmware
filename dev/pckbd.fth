@@ -221,6 +221,7 @@ previous definitions
 ;
 
 [ifdef] olpc
+[ifndef] demo-board
 : ?olpc-keyboard  ( -- )
     " enable-intf" $call-parent
     begin  5 timed-read 0=  while
@@ -250,6 +251,7 @@ previous definitions
 ;
 
 fload ${BP}/cpu/x86/pc/olpc/keymap.fth
+[then]
 [then]
 
 : choose-type  ( -- )
