@@ -12,7 +12,7 @@ create via-demo
 create debug-startup
 
 \ create serial-console
-create use-usb-debug-port
+\ create use-usb-debug-port
 create pc
 
 \ create pseudo-nvram
