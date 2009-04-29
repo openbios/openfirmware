@@ -294,38 +294,3 @@ dx bx cmp  <>  if  ascii B report  ascii A report  ascii D report  begin again  
 [then]
 
 \ fload ${BP}/cpu/x86/pc/ramtest.fth
-
-\ UMARamSetting.c
-\  SetUMARam
-    0 3 devfunc
-    a1 00 80 mreg \ Enable internal GFX
-    a2 ff ee mreg \ Set GFX timers
-    a4 ff 01 mreg \ GFX Data Delay to Sync with Clock
-    a6 ff 76 mreg \ Page register life timer
-    a7 ff 8c mreg \ Internal GFX allocation
-    b3 ff 9a mreg \ Disable read past write
-    de ff 06 mreg \ Enable CHA and CHB merge mode (but description says this value disable merging!)
-    end-table
-
-    0 3 devfunc
-    a1 70 40 mreg \ Set frame buffer size to 64M (8M:10, 16M:20, 32M:30, etc) - fbsize
-    end-table
-
-    1 0 devfunc
-                  \ Reg 1b2 controls the number of writable bits in the BAR at 810
-    b2 ff 70 mreg \ Offset of frame buffer, depends on size - fbsize
-    04 ff 07 mreg \ Enable IO and memory access to display
-    end-table
-
-    d000.0000 810 config-wl  \ S.L. Base address
-    f000.0000 814 config-wl  \ MMIO Base address
-         cd01 3a0 config-ww  \ Set frame buffer size and CPU-relative address and enable
-
-    0 0 devfunc
-    d4 00 03 mreg \ Enable MMIO and S.L. access in Host Control device
-    fe 00 10 mreg \ 16-bit I/O port decoding for VGA (no aliases)
-    end-table
-
-    1 0 devfunc
-    b0 07 03 mreg \ VGA memory selection (coreboot uses 03, Phoenix 01.  I think 03 is correct)
-    end-table
