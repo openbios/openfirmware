@@ -15,16 +15,23 @@ fload ${BP}/dev/pciprobe.fth		\ Generic PCI probing
 \ Use the CPU chip's Time Stamp Counter for timing; it does just what we want
 fload ${BP}/cpu/x86/tsc.fth
 
-stand-init:
+\ Calibrate the Time Stamp Counter using the ACPI timer
+fload ${BP}/cpu/x86/acpitimer.fth
+
+fload ${BP}/cpu/x86/pc/olpc/via/smbus.fth	\ SMBUS driver
+
+\ Do this early so the interact timing works right
+: stand-init-io  ( -- )
+   stand-init-io
+
    d# 1,500,000,000  " VIA,C7"
 
    " /cpu" find-device                                  ( cpu-clock-hz model$ )
       " model" string-property                          ( cpu-clock-hz )
-      dup " clock-frequency" integer-property           ( cpu-clock-hz )
-   device-end                                           ( cpu-clock-hz )
+      " clock-frequency" integer-property               ( )
+   device-end                                           ( )
 
-   d# 2000 / dup  to ms-factor                          ( cpu-clock-khz )
-   d# 1000 /      to us-factor                          ( )
+   acpi-calibrate-tsc
 ;
 
 [ifdef] use-ega

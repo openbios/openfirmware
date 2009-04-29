@@ -73,9 +73,9 @@ h# 0000.0fff constant pci-pagemask
 \ XXX we need a sophisticated IO space allocator that accounts for
 \ hardwired devices
 
-: self-b@  ( phys.hi -- l )  " config-b@" $call-self  ;
-: self-l@  ( phys.hi -- l )  " config-l@" $call-self  ;
-: self-l!  ( l phys.hi -- )  " config-l!" $call-self  ;
+: self-b@  ( phys.hi -- l )  h# ff.ffff and  " config-b@" $call-self  ;
+: self-l@  ( phys.hi -- l )  h# ff.ffff and  " config-l@" $call-self  ;
+: self-l!  ( l phys.hi -- )  h# ff.ffff and  " config-l!" $call-self  ;
 : 64mem?  ( phys.hi -- flag ) self-l@  7 and 4 = ;
 : io?  ( phys.hi -- flag )
    \ For expansion ROM base address registers, the LSB is an enable bit,

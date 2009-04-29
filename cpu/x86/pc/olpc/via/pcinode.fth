@@ -30,11 +30,13 @@ patch nonvirtual-probe-state? probe-state? map-in
 \  patch noop assign-all-addresses prober
 warning @ warning off
 : assign-pci-addr  ( phys.lo phys.mid phys.hi len | -1 -- phys.hi paddr size )
-   2dup -1 <>  swap preassigned-pci-slot?  and  if  ( phys.lo phys.mid phys.hi len )
-      2swap 2drop    >r                         ( phys.hi r: len )
-      dup config-l@  1 invert and  r>           ( phys.hi paddr len )
-      exit
-   then
+   dup -1 <>  if   ( phys.lo phys.mid phys.hi len )
+      over preassigned-pci-slot?  if               ( phys.lo phys.mid phys.hi len )
+         2swap 2drop    >r                         ( phys.hi r: len )
+         dup config-l@  1 invert and  r>           ( phys.hi paddr len )
+         exit
+      then         ( phys.lo phys.mid phys.hi len )
+   then            ( phys.lo phys.mid phys.hi len | -1 )
    assign-pci-addr
 ;
 warning !

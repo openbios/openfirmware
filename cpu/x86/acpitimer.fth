@@ -1,42 +1,41 @@
 \ See license at end of file
-purpose: Establish configuration definitions
+purpose: Timing functions using the ACPI timer
 
-create olpc             \ OLPC-specific build
+\ The ACPI timer counts at 3.579545 MHz.
+\ 3.579545 * 1024 is 3665
+: acpi-timer@  ( -- counts )  acpi-io-base 8 + pl@  ;
+: acpi-us  ( us -- )
+   d# 3664 * d# 10 rshift  acpi-timer@ +  ( end )
+   begin   dup acpi-timer@ -  0< until    ( end )
+   drop
+;
+: acpi-ms  ( us -- )
+   d# 3580 * acpi-timer@ +  ( end )
+   begin   dup acpi-timer@ -  0< until    ( end )
+   drop
+;
 
-create demo-board
+[ifdef] tsc@
+: acpi-calibrate-tsc  ( -- )
+   tsc@  d# 100 acpi-ms  tsc@           ( d.start d.end )
+   2swap d-                             ( d.delta )
+   2dup d# 100 um/mod nip to ms-factor  ( d.delta ms )
+   d# 100,000  um/mod nip to us-factor  ( )
+;
+[else]
+: us  ( us -- )  acpi-us  ;
+' acpi-ms to ms
+\ Timing tools
+variable timestamp1
+: t(  ( -- )  acpi-timer@ timestamp1 ! ;
+: )t  ( -- )
+   acpi-timer@  timestamp1 @  -  d# 1000 d# 3580 */  ( microseconds )
+   push-decimal
+   <#  u# u# u#  [char] , hold  u# u#s u#>  type  ."  uS "
+   pop-base
+;
 
-\ --- The environment that "boots" us ---
-\ - Image Format - Example Media - previous stage bootloader
-
-\ - OBMD format - ROM - direct boot from ROM
-create rom-loaded
-
-\ create virtual-mode
-create addresses-assigned  \ Define if base addresses are already assigned
-\ create serial-console      \ Define to default to serial port for console
-create pc
-create linux-support
-create use-elf
-
-\ create use-timestamp-counter \ Use CPU's timestamp counter for timing ...
-			\ ... this is worthwhile if your CPU has one.
-
-create resident-packages
-\ create use-watch-all
-\ create use-root-isa   \ If defined, isa node is in the devtree root, not under /pci
-create no-floppy-node
-create no-com2-node
-create no-lpt-node
-create use-pci-isa
-create basic-isa
-create isa-dma-only
-create use-ega
-create save-msrs
-
-create use-null-nvram  \ Don't store configuration variables
-\ create use-flash-nvram  \ Store configuration variables in firmware FLASH
-
-fload ${BP}/cpu/x86/pc/olpc/via/addrs.fth
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks

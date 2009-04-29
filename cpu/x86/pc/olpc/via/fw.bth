@@ -64,8 +64,7 @@ d# 12   to pageshift
 dev /
 1 encode-int  " #address-cells"  property
 1 encode-int  " #size-cells"     property
-" OLPC" encode-string  " architecture" property
-device-end
+dend
 
 \ Memory management services
 [ifdef] virtual-mode
@@ -85,6 +84,17 @@ fload ${BP}/ofw/core/availpm.fth	\ Available memory list
 fload ${BP}/ofw/core/allocmor.fth	\ Secondary allocator
 
 fload ${BP}/cpu/x86/pc/rootnode.fth	\ Platform-specific root node changes
+
+dev /
+1 encode-int  " #address-cells"  property
+1 encode-int  " #size-cells"     property
+" OLPC" encode-string  " architecture" property
+[ifdef] demo-board
+" VIA Demo Board" " banner-name" string-property
+[else]
+" OLPC XO 1.5" " banner-name" string-property
+[then]
+device-end
 
 fload ${BP}/cpu/x86/pc/olpc/port80.fth	\ Port 80 debug messages
 
@@ -233,11 +243,10 @@ false to stand-init-debug?
 
 hex
 : i-key-wait  ( ms -- pressed? )
-   ['] key? (see)
    cr ." Type 'i' to interrupt stand-init sequence" cr 
    0  do
-      key?  if
-         key upc ascii I  =  if  true unloop exit  then
+      ukey?  if
+         ukey upc ascii I  =  if  true unloop exit  then
       then
       1 ms
    loop
@@ -258,9 +267,8 @@ warning @  warning off
 
    standalone?  if
       disable-interrupts
-interact
-[ifdef] Later
-      d# 300
+\ interact
+      d# 1000
       i-key-wait  if
   [ifdef] Later
          protect-fw
@@ -271,9 +279,6 @@ interact
   [ifdef] Later
       setup
   [then]
-[else]
- cr
-[then]
    then
 ;
 \ warning !
@@ -548,12 +553,8 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 [then]
 
-
 [ifdef] Later
 : console-start  ( -- )
-[ifdef] rom-loaded
-   video-map cr
-[then]
    " screen" open-dev  ?dup  if
       set-stdout
 \       logo-banner drop
@@ -568,6 +569,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 \   use-nvramrc?  if  nvramrc safe-evaluate  then
 ;
 [then]
+
 : debug-interact  ( -- )
    early-interact?  if
       " Interrupting startup sequence prior to probing" .because
@@ -657,6 +659,9 @@ fload ${BP}/ofw/core/dualconsole.fth
 [then]
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
    ?usb-keyboard
+   install-console
+   install-dual-console
+   banner
 [ifdef] Later
    auto-boot
 [then]
@@ -665,10 +670,10 @@ fload ${BP}/ofw/core/dualconsole.fth
    frozen?            ( frozen? )
    unfreeze visible   ( frozen? )
    if  banner  then  \ Reissue banner if it was suppressed
-[then]
 
    blue-letters ." Type 'help' for more information." black-letters
    cr cr
+[then]
 
    quit
 ;

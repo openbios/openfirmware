@@ -17,15 +17,29 @@ purpose: Driver for SDHCI (Secure Digital Host Controller)
 
 " sdhci" " compatible" string-property
 
-h# 4000 constant /regs
+h# 100 value /regs   \ Standard size of SDHCI register block
+1 value #slots
 
 : phys+ encode-phys encode+  ;
 : i+  encode-int encode+  ;
 
-0 0 encode-bytes
-0 0 h# 0000.0000  my-space +  phys+   0 i+  h# 0000.0100 i+   \ Config registers
-0 0 h# 0100.0010  my-space +  phys+   0 i+         /regs i+   \ Frame buffer
-" reg" property
+: make-reg  ( -- )
+   0 0 encode-bytes
+   0 0 h# 0000.0000  my-space +  phys+   0 i+  h# 0000.0100 i+   \ Config registers
+
+   my-space " config-l@" $call-parent h# 410111ab =  if  \ Marvell CaFe chip
+      h# 4000 to /regs
+   then
+
+   h# 40 my-space + " config-b@" $call-parent  ( slot_info )
+   4 rshift 7 and  1+                          ( #slots )
+   0  ?do
+      0 0 h# 0100.0010  i 4 * +  my-space +  phys+   0 i+   /regs i+   \ Operational regs for slot N
+   loop
+   " reg" property
+;
+make-reg
+
 
 0 value debug?
 
@@ -638,7 +652,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 : power-up-card  ( -- false | retry? true )
    intstat-on
    card-power-off d# 20 ms
-   card-power-on  d# 20 ms  \ This delay is just a guess
+   card-power-on  d# 40 ms  \ This delay is just a guess (20 was barely too slow for a Via board)
    card-inserted?  0=  if  card-power-off  intstat-off  false true exit  then   
    card-clock-slow  d# 10 ms  \ This delay is just a guess
    reset-card     \ Cmd 0

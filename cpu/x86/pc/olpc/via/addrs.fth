@@ -50,6 +50,13 @@ h# fe01.a000 constant ohci-pci-base
 h# fe01.b000 constant ehci-pci-base
 h# fe02.4000 constant sd-pci-base
 h# fe02.8000 constant camera-pci-base
+h# fec0.0000 constant ioapic-mmio-base
+h# fed0.0000 constant hpet-mmio-base
+h# fed3.0000 constant spi-mmio-base
+h# fed4.0000 constant wdt-mmio-bast
+
+h#      4000 constant acpi-io-base
+h#      4100 constant smbus-io-base
 
 h# 9.fc00 constant 'ebda  \ Extended BIOS Data Area, which we co-opt for our real-mode workspace
 
