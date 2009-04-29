@@ -94,11 +94,9 @@ purpose: Driver for USB 2.0 Debug Device via EHCI Debug Port
    1 2 dbgp-b!                     \ Turn off the done bit
    0 dbgp-b@ h# 40 and  if         \ Error
       0 dbgp-l@ 7 rshift 7 and
-      case
-         1 of  ." DBGP USB hardware error" cr  endof
-         2 of  ." DBGP transacation error" cr  endof
-      endcase
-      abort
+      dup 1 =  abort" DBGP USB hardware error"
+      dup 2 =  abort" DBGP transacation error
+      0<> abort" DBGP reserved exception"
    then
 ;
 : data-toggle  ( -- )  5 dbgp-b@  h# 88 xor  5 dbgp-b!  ;
