@@ -59,7 +59,7 @@ h# 200 constant /block  \ 512 bytes
 : unmap-regs  ( -- )
    chip  0=  if  exit  then
    0 4 my-w!
-   chip  h# 4000  " map-out" $call-parent
+   chip  /regs  " map-out" $call-parent
    0 to chip
 ;
 
