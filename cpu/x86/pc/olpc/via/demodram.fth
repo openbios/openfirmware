@@ -42,7 +42,7 @@
    66 ff 00 mreg  \ Burst DRDR Timing Control for Second cycle in burst
    67 ff 00 mreg  \ Reserved, probably channel B
    54 0a 08 mreg  \ Misc ctl 1 - special mode for DRAM cycles
-   51 00 80 mreg  \ Last step - enable DRDY timing - should the mask be f7 ?
+   51 80 80 mreg  \ Last step - enable DRDY timing
    end-table
 
 \  DRAMBurstLength
@@ -125,7 +125,7 @@
    57 ff 00 mreg \ default PR4=VR4; PR5=VR5
 
    60 ff 00 mreg \ disable fast turn-around
-   65 ff D9 mreg \ AGP timer = D; Host timer = 8;
+   65 ff d1 mreg \ AGP timer = D; Host timer = 1; (coreboot uses 9 for host timer)
    66 ff 88 mreg \ DRAMC Queue Size = 4; park at the last bus owner,Priority promotion timer = 8
    68 ff 0C mreg
    69 0F 04 mreg \ set RX69[3:0]=0000b
@@ -274,14 +274,6 @@ then
     fe ff 0f mreg \ Chips select power saving for self-refresh
     ff ff 3d mreg \ DSQB input delay, SCMD enabled
     96 0f 03 mreg \ Enable self-refresh for ranks 0 and 1
-    end-table
-    
-    0 4 devfunc  \ PM_table
-    a0 f0 f0 mreg \ Enable dynamic power management
-    a1 e0 e0 mreg \ Dynamic power management for DRAM
-    a2 ff fe mreg \ Dynamic clock stop controls
-    a3 80 80 mreg \ Toggle reduction on
-    a5 81 81 mreg \ "Reserved"
     end-table
     
 1 [if]

@@ -20,19 +20,22 @@ fload ${BP}/cpu/x86/acpitimer.fth
 
 fload ${BP}/cpu/x86/pc/olpc/via/smbus.fth	\ SMBUS driver
 
-\ Do this early so the interact timing works right
-: stand-init-io  ( -- )
-   stand-init-io
-
+stand-init: CPU node
    d# 1,500,000,000  " VIA,C7"
 
    " /cpu" find-device                                  ( cpu-clock-hz model$ )
       " model" string-property                          ( cpu-clock-hz )
       " clock-frequency" integer-property               ( )
    device-end                                           ( )
+;
 
+\ Do this early so the interact timing works right
+warning @ warning off
+: stand-init-io  ( -- )
+   stand-init-io
    acpi-calibrate-tsc
 ;
+warning !
 
 [ifdef] use-ega
 0 0 " " " /" begin-package

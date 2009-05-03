@@ -23,7 +23,7 @@ h#   20.0000 constant /fw-ram
 h#   40.0000 constant /fw-area
 [then]
 
-h#  80.0000 constant def-load-base      \ Convenient for initrd
+h# 100.0000 constant def-load-base      \ Convenient for initrd
 
 \ The heap starts at RAMtop, which on this system is "fw-pa /fw-ram +"
 
@@ -53,12 +53,11 @@ h# fe02.8000 constant camera-pci-base
 h# fec0.0000 constant ioapic-mmio-base
 h# fed0.0000 constant hpet-mmio-base
 h# fed3.0000 constant spi-mmio-base
-h# fed4.0000 constant wdt-mmio-bast
+h# fed4.0000 constant wdt-mmio-base
+h# fee0.0000 constant apic-mmio-base
 
 h#      4000 constant acpi-io-base
 h#      4100 constant smbus-io-base
-
-h# 9.fc00 constant 'ebda  \ Extended BIOS Data Area, which we co-opt for our real-mode workspace
 
 h# e0000 constant rsdp-adr
 h# e0040 constant rsdt-adr

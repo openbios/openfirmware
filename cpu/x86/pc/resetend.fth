@@ -7,7 +7,7 @@ purpose: Common code for several versions of reset.bth
    \ Beginning of "switch to new GDT" section
 
    \ Move GDT to low memory.  We use the first location at gdt-pa as
-   \ scratch memory for sgdt, and put the actual gdt at gdt-pa + 0x10
+   \ the pointer, so you can't use description 0.
    gdt-pa # ax mov
    0 [ax] sgdt				\ Read GDT
    2 [ax] si mov			\ GDT base
@@ -15,11 +15,11 @@ purpose: Common code for several versions of reset.bth
    ffff # cx and
    cx inc
 
-   gdt-pa h# 10 + # di mov		\ New GDT base
+   gdt-pa # di mov			\ New GDT base
    rep movsb				\ Copy ROM GDT to RAM
 
    \ Move the code and data descriptors to 60,68
-   gdt-pa h# 10 + h# 60 + #   di  mov   \ Destination - New descriptor 0x60
+   gdt-pa h# 60 + #   di  mov		\ Destination - New descriptor 0x60
 
    cs si mov  2 [ax]  si add		\ Source - Current code descriptor
    movs movs                            \ 2 longwords (1 descriptor) -> 60
@@ -27,8 +27,8 @@ purpose: Common code for several versions of reset.bth
    ds si mov  2 [ax]  si add		\ Source - Current data descriptor
    movs movs                            \ 2 longwords (1 descriptor) -> 68
 
-   op: h# ff #   0 [ax]  mov            \ New GDT size
-   gdt-pa h# 10 + #  2 [ax]  mov	\ New GDT base
+   op: gdt-size 1- #   0 [ax]  mov      \ New GDT size
+   gdt-pa #  2 [ax]  mov		\ New GDT base
    0 [ax] lgdt				\ Setup RAM GDT
 
    \ Reload code segment descriptor from new table

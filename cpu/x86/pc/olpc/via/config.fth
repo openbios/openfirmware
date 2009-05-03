@@ -11,7 +11,7 @@ create demo-board
 \ - OBMD format - ROM - direct boot from ROM
 create rom-loaded
 
-\ create virtual-mode
+create virtual-mode
 create addresses-assigned  \ Define if base addresses are already assigned
 \ create serial-console      \ Define to default to serial port for console
 create pc

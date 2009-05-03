@@ -2,16 +2,20 @@
 purpose: Create memory node properties and lists
 
 \ All RAM, including that assigned to the frame buffer
+0 value total-ram-cached
 : total-ram  ( -- ramsize )
+   total-ram-cached ?dup  if  exit  then
    \ Search for the last "top of rank" value
    h# 340  h# 343  do
       i config-b@ ?dup  if    ( chunks )  \ Each chunk is 64 MiB
          d# 26 lshift         ( bytes )
+         dup to total-ram-cached
          unloop exit
       then
    -1 +loop
    ." Can't get total RAM size!" cr
    h# 1000.0000
+   dup to total-ram-cached
 ;
 
 \ Offset of frame buffer/display memory within the memory array

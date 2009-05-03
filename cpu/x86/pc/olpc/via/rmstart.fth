@@ -84,19 +84,14 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
 
    \ ffff.fc00	GDT
 
-   0    w,  0         l,	 0      w,  \ 0 Mandatory null descriptor
-   0    w,  0         l,	 0      w,  \ * Another null descriptor
+   1f   w,  ffff.fc00 l,	 0      w,  \ 0 Pointer to GDT in first slot
+   0    w,  0         l,	 0      w,  \ * Null descriptor
    ffff w,  9b.000000 l,  00.c.f w,  \ 10 Code, linear=physical, full 4Gbytes
    ffff w,  93.000000 l,  00.c.f w,  \ 18 Data, linear=physical, full 4Gbytes
 
-   \ ffff.fc20	GDT limit + address
-
-   1f w,  ffff.fc00 l,	\ # slots (4 * 8 - 1) ,  starting address
-   0  w,		\ Padding
-
    \ ------->>>>> Startup code, reached by branch from main entry point below
    \
-   \ ffff.fc28
+   \ ffff.fc20
 
    here		\ Mark the beginning of this code so its size may be determined
 		\ and so that a jump to it may be assembled later.
@@ -127,7 +122,7 @@ ascii F report	 \ send it to com1 if you can...
    \ above is reachable with a 16-bit address and through the "boosted"
    \ code segment.
       
-   op: cs:  0f c, 01 c, 16 c, fc20 w,	\ lgdte  cs:[fc20]   Setup GDT
+   op: cs:  0f c, 01 c, 16 c, fc00 w,	\ lgdte  cs:[fc00]   Setup GDT
 
    op: cr0  bx  mov	\ Get existing CR0 value
 
@@ -179,8 +174,8 @@ ResetBase .x cr
 
    here over -   ( adr , size-of-preceding-code )
 
-   \ ffff.fc28 is the location of the code that follows the GDT
-   ffff.fff0 ffff.fc28 - swap - ( address #bytes-to-pad )
+   \ ffff.fc20 is the location of the code that follows the GDT
+   ffff.fff0 ffff.fc20 - swap - ( address #bytes-to-pad )
 
    \ The code mustn't extend past ffff.ffc0, because that is where PC
    \ manufacturers put the 0x10-byte BIOS version string.
@@ -196,7 +191,7 @@ ResetBase .x cr
 
    16-bit
    cli cld		\ Turn off interrupts (does not affect NMI)
-   #) jmp		\ Relative jump back to ffff.fc28
+   #) jmp		\ Relative jump back to ffff.fc20
    0 w, 0 c,		\ align "pad" to end of ROM
    loader-version# l,	\ version#
    loader-format#  w,	\ "format" (>1 when crc present)

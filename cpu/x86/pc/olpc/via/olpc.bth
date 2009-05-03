@@ -21,8 +21,8 @@ in: ${BP}/clients/memtest86/memtest
 in: ${BP}/clients/emacs/x86/emacs
 in: ${BP}/cpu/x86/pc/olpc/via/build/verify.img
 in: ${BP}/dev/pci/build/pcibridg.fc
+in: ${BP}/dev/ide/build/leghier.fc
 \ in: ${BP}/cpu/x86/pc/olpc/via/build/camera.fc
-\ VIA-PATA
 \ in: ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml
 \ in: ${BP}/cpu/x86/pc/olpc/via/build/mcastnand.bin
 \ in: ${BP}/dev/hdaudio/build/hdaudio.fc
@@ -66,13 +66,11 @@ $new-file
    " resume.di"             $add-file
 [then]
 
-[ifndef] Later
 \ Loads the set of drivers that is common to different output formats
 
-\   " paging.di"             $add-file
+   " paging.di"             $add-file
    " ${BP}/cpu/x86/build/inflate.bin"        " inflate"         $add-dropin
    " fw.img"   " firmware"  $add-deflated-dropin
-[then]
 
    " ${BP}/dev/usb2/hcd/ohci/build/ohci.fc"	" class0c0310"      $add-deflated-dropin
    " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"      $add-deflated-dropin
@@ -84,6 +82,7 @@ $new-file
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
 \  " mrv8686.bin" " mrv8686.bin"                                    $add-deflated-dropin
 
+   " ${BP}/dev/ide/build/leghier.fc"             " class01018a"   $add-deflated-dropin
    " ${BP}/dev/mmc/sdhci/build/sdhci.fc"         " class080501"   $add-deflated-dropin
    " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"         " sdmmc"         $add-deflated-dropin
    " builton.fth"                       " probe-"          $add-dropin

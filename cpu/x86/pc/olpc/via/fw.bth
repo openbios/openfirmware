@@ -228,7 +228,6 @@ true ' local-mac-address? set-config-int-default
 support-package: nfs
    fload ${BP}/ofw/fs/nfs/loadpkg.fth
 end-support-package
-
 [then]
 devalias nfs net//obp-tftp:last//nfs
 
@@ -267,7 +266,6 @@ warning @  warning off
 
    standalone?  if
       disable-interrupts
-\ interact
       d# 1000
       i-key-wait  if
   [ifdef] Later

@@ -323,12 +323,12 @@ label startup
    \ Enable extended config space for PCIe
    0 5 devfunc  \ NB_APIC
    61 ff 0e mreg  \ Set Exxxxxxx as PCIe MMIO config range
-   60 f4 0b mreg  \ Support extended cfg address of PCIe (preserve 28 bits)
+   60 f4 13 mreg  \ Support extended cfg address of PCIe (preserve 28 bits) (coreboot used vx800 bit resv in vx855)
    end-table
 
    0 2 devfunc  \ HOST CPU CTL
    50 1f 08 mreg  \ Request phase ctrl: Dynamic Defer Snoop Stall Count = 8
-   51 ff 7c mreg  \ CPU I/F Ctrl-1: Disable Fast DRDY and RAW
+   51 ff 78 mreg  \ CPU I/F Ctrl-1: Disable Fast DRDY and RAW (coreboot uses 7c)
    52 cb cb mreg  \ CPU I/F Ctrl-2: Enable all for performance
    53 ff 44 mreg  \ Arbitration: Host/Master Occupancy timer = 4*4 HCLK
    54 1e 1c mreg  \ Misc Ctrl: Enable 8QW burst Mem Access
@@ -345,12 +345,75 @@ label startup
    97 ff 00 mreg \ APIC Related Control
    end-table
 
-   0 3 devfunc
-   86 d6 29 mreg  \ SMM and APIC Decoding: enable APIC, MSI and SMRAM A-Seg
-   end-table
-
 fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
 
+   0 3 devfunc
+   86 38 38 mreg  \ SMM and APIC Decoding: enable APIC lowest int arb, IOAPIC split decode, MSI (SMM later)
+   end-table
+
+
+\ Also from FinalSetting.c
+
+    0 4 devfunc  \ PM_table
+    a0 80 80 mreg \ Enable dynamic power management (coreboot for vx800 uses f0; 70 bits are reserved on vx855)
+    a1 e0 e0 mreg \ Dynamic power management for DRAM
+    a2 d6 d6 mreg \ Dynamic clock stop controls (coreboot for vx8000 uses ff fe; 29 bits are reserved on vx800)
+    a3 80 80 mreg \ Toggle reduction on
+    a5 81 81 mreg \ "Reserved"
+
+    \ Additional PM settings not in coreboot
+    84 ff db mreg \ Dynamic clocks
+    85 ff 05 mreg \ Dynamic clocks
+    89 ff f8 mreg \ Dynamic clocks
+    8b ff bf mreg \ Dynamic clocks
+    8d ff 20 mreg \ Self-refresh in C3 and C4
+    90 ff ff mreg \ Gate clocks
+    91 ff ff mreg \ Gate clocks
+    92 cc cc mreg \ Dynamic buffer control, power down comparators
+    a8 20 20 mreg \ Central traffic controller dynamic clock stop
+   end-table
+    
+   \ Additional Power Management Setup not in coreboot
+   0 2 devfunc
+   76 08 08 mreg  \ AGTL Power down buffers in S3
+   92 ff 40 mreg  \ ACPI IO Base address
+   end-table
+
+   0 3 devfunc
+   86 38 38 mreg  \ SMM and APIC Decoding: enable APIC lowest int arb, IOAPIC split decode, MSI (SMM later)
+   end-table
+
+   0 5 devfunc
+   54 8f 80 mreg  \ SM request gets high priority, PCCA occupancy timer off
+   55 0f 04 mreg  \ PCCA P2C Promote Timer value 4
+   59 0f 02 mreg  \ IGFX Promote Timer value 2
+   5f 0f 06 mreg  \ IPI Promote Timer value 6
+   64 20 00 mreg  \ Upstream MSI doesn't flush queued P2C Write Data
+   80 0b 08 mreg  \ Upstream Request 1T earlier
+   83 ff 81 mreg  \ P2PW down arb timer timer 8, P2PR down arb timer timer 1
+   84 7f 28 mreg  \ Downstream arbitration Timeout timer for C2P
+   85 c0 c0 mreg  \ Abort P2P cycle to PCI1, CPU to PCI1 cycle blocks next C2P cycle
+   end-table
+
+   d# 12 0 devfunc  \ SDIO tuning
+   44 01 01 mreg  \ Enable backdoor
+   8b 05 05 mreg  \ Report both 1.8V and 3.3V
+   8c c3 03 mreg  \ Falling edge trigger for Slots 1 and 2 data in high speed
+   8e ff 7e mreg  \ Delay host clock for Slots 1, 2, 3 by 4.8 nS
+   8f 09 0a mreg  \ Falling edge trigger on slot 3 output clock under high speed
+   99 ff f9 mreg  \ Two slots not 3 (FIXME for OLPC)
+   end-table
+
+   d# 15 0 devfunc  \ EIDE tuning
+   40 02 01 mreg  \ Enable primary channel
+   4a ff 5e mreg  \ Drive1 timing
+   4b ff 20 mreg  \ Drive0 timing
+   4c f0 60 mreg  \ Address setup time
+   52 df 0e mreg  \ Ultra dma wait strobe timing
+   53 df c6 mreg  \ Ultra DMA mode control
+   c4 1d 18 mreg  \ Config 1
+   d4 ac 24 mreg  \ Config 3
+   end-table
 
 \ UMARamSetting.c
 \  SetUMARam
@@ -361,7 +424,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
     a6 ff 76 mreg \ Page register life timer
     a7 ff 8c mreg \ Internal GFX allocation
     b3 ff 9a mreg \ Disable read past write
-    de ff 06 mreg \ Enable CHA and CHB merge mode (but description says this value disable merging!)
+\   de ff 06 mreg \ Enable CHA and CHB merge mode (but description says this value disable merging!) 00 for compatibility
     end-table
 
     0 3 devfunc
@@ -379,6 +442,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
          cd01 3a0 config-ww  \ Set frame buffer size and CPU-relative address and enable
 
     0 0 devfunc
+    c6 02 02 mreg \ Enable MDA forwarding (not in coreboot)
     d4 00 03 mreg \ Enable MMIO and S.L. access in Host Control device
     fe 00 10 mreg \ 16-bit I/O port decoding for VGA (no aliases)
     end-table
@@ -416,17 +480,36 @@ fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
 
 \ cache_as_ram_auto.c : enable_shadow_ram
     0 3 devfunc
+
+\ Initial DOS hole settings, so the firmware can set things up
     80 ff ff mreg \ Enable R/W memory access to Cxxxx bank
     81 ff ff mreg \ Enable R/W memory access to Dxxxx bank
     82 ff ff mreg \ Enable R/W memory access to Exxxx bank
     83 30 30 mreg \ Enable R/W memory access to Fxxxx bank (30), no memory hole (0c), SMM switching of Axxxx bank (03)
-\   86 ff 85 mreg \ 4 MiB Top SMM Memory (80), enable top SMM memory (04), enable compatible SMM (01)
+
+\ Final DOS hole settings, after stuff has been copied in, for reference
+\   80 ff 2a mreg \ CC000-CFFFF off, C0000-C7FFF RO
+\   81 ff 00 mreg \ D0000-DFFFF off
+\   82 ff aa mreg \ E0000-EFFFF RO
+\   83 ff 20 mreg \ Enable R/W memory access to Fxxxx bank (20), no memory hole (0c), SMM switching of Axxxx bank (03)
+
     end-table
 
     \ Low 2 bits of 86:
     \ x1 to write to SMM shadow memory behind VGA
     \ 00 to run - Axxxxx hits VGA in normal mode, hits shadow DRAM in SMM
     \ 01 to access VGA when in SMM (data cycles only)
+
+   \ APIC setup
+   0 2 devfunc
+   59 01 01 mreg \ MSI Flat model support
+   5c 10 10 mreg  \ Data bit 11 mask for MSI
+   97 01 01 mreg  \ Redirect lowest priority MSI requests to APIC 00
+   end-table
+
+   0 3 devfunc
+   86 38 38 mreg  \ SMM and APIC Decoding: enable APIC lowest int arb, IOAPIC split decode, MSI (SMM later)
+   end-table
 
    h# 1c00.0000 # mem-info-pa 4 + #) mov   \ Top of memory
 
