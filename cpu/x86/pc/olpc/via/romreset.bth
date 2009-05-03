@@ -354,35 +354,112 @@ fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
 
 \ Also from FinalSetting.c
 
-    0 4 devfunc  \ PM_table
-    a0 80 80 mreg \ Enable dynamic power management (coreboot for vx800 uses f0; 70 bits are reserved on vx855)
-    a1 e0 e0 mreg \ Dynamic power management for DRAM
-    a2 d6 d6 mreg \ Dynamic clock stop controls (coreboot for vx8000 uses ff fe; 29 bits are reserved on vx800)
-    a3 80 80 mreg \ Toggle reduction on
-    a5 81 81 mreg \ "Reserved"
-
-    \ Additional PM settings not in coreboot
-    84 ff db mreg \ Dynamic clocks
-    85 ff 05 mreg \ Dynamic clocks
-    89 ff f8 mreg \ Dynamic clocks
-    8b ff bf mreg \ Dynamic clocks
-    8d ff 20 mreg \ Self-refresh in C3 and C4
-    90 ff ff mreg \ Gate clocks
-    91 ff ff mreg \ Gate clocks
-    92 cc cc mreg \ Dynamic buffer control, power down comparators
-    a8 20 20 mreg \ Central traffic controller dynamic clock stop
+   0 4 devfunc  \ PM_table
+   a0 80 80 mreg \ Enable dynamic power management (coreboot for vx800 uses f0; 70 bits are reserved on vx855)
+   a1 e0 e0 mreg \ Dynamic power management for DRAM
+   a2 d6 d6 mreg \ Dynamic clock stop controls (coreboot for vx8000 uses ff fe; 29 bits are reserved on vx800)
+   a3 80 80 mreg \ Toggle reduction on
+   a5 81 81 mreg \ "Reserved"
    end-table
-    
+
+\ UMARamSetting.c
+\  SetUMARam
+   0 3 devfunc
+   a1 00 80 mreg \ Enable internal GFX
+   a2 ff ee mreg \ Set GFX timers
+   a4 ff 01 mreg \ GFX Data Delay to Sync with Clock
+   a6 ff 76 mreg \ Page register life timer
+   a7 ff 8c mreg \ Internal GFX allocation
+   b3 ff 9a mreg \ Disable read past write
+\  de ff 06 mreg \ Enable CHA and CHB merge mode (but description says this value disable merging!) 00 for compatibility
+   end-table
+
+   0 3 devfunc
+   a1 70 40 mreg \ Set frame buffer size to 64M (8M:10, 16M:20, 32M:30, etc) - fbsize
+   end-table
+
+   1 0 devfunc
+                 \ Reg 1b2 controls the number of writable bits in the BAR at 810
+   b2 ff 70 mreg \ Offset of frame buffer, depends on size - fbsize
+   04 ff 07 mreg \ Enable IO and memory access to display
+   end-table
+
+   d000.0000 810 config-wl  \ S.L. Base address
+   f000.0000 814 config-wl  \ MMIO Base address
+        cd01 3a0 config-ww  \ Set frame buffer size and CPU-relative address and enable
+
+   0 0 devfunc
+   c6 02 02 mreg \ Enable MDA forwarding (not in coreboot)
+   d4 00 03 mreg \ Enable MMIO and S.L. access in Host Control device
+   fe 00 10 mreg \ 16-bit I/O port decoding for VGA (no aliases)
+   end-table
+
+   1 0 devfunc
+   b0 07 03 mreg \ VGA memory selection (coreboot uses 03, Phoenix 01.  I think 03 is correct)
+   end-table
+
+   01 3c3 port-wb                  \ Graphics chip IO port access on
+   10 3c4 port-wb  01 3c5 port-wb  \ Turn off register protection
+   67 3c2 port-wb                  \ Enable CPU Display Memory access (2), use color not mono port (1)
+
+   68 3c4 port-wb  e0 3c5 port-wb  \ Size of System Local Frame Buffer - Value depends on frame buffer size - fbsize
+                                   \ 00:512MB 80:256MB c0:128MB e0:64MB f0:32MB f8:16MB fc:8MB fe:4MB ff:2MB
+
+   \ These 2 are scratch registers that communicate with the VGA BIOS
+   3d 3d4 port-wb  74 3d5 port-wb  \ Value depends on DIMM frequency - used by VGA BIOS
+   39 3c4 port-wb  10 3c5 port-wb  \ BIOS Reserved Register 0 - FBsize_MiB/4 - fbsize - VGA BIOS
+
+   5a 3c4 port-wb  01 3c5 port-wb  \ Point to secondary registers
+   4c 3c4 port-wb  83 3c5 port-wb  \ LCDCK Clock Synthesizer Value 2
+   5a 3c4 port-wb  00 3c5 port-wb  \ Point back to primary registers
+
+   6d 3c4 port-wb  e0 3c5 port-wb  \ Base address [28:21] of SL in System Memory - base is 1c00.0000 - fbsize, memsize
+   6e 3c4 port-wb  00 3c5 port-wb  \ Base address [36:29] of SL in System Memory
+   6f 3c4 port-wb  00 3c5 port-wb  \ Base address [47:37] of SL in System Memory
+
+   36 3c4 port-wb  11 3c5 port-wb  \ Subsystem Vendor ID 1
+   35 3c4 port-wb  06 3c5 port-wb  \ Subsystem Vendor ID 0
+   38 3c4 port-wb  51 3c5 port-wb  \ Subsystem ID 1
+   37 3c4 port-wb  22 3c5 port-wb  \ Subsystem ID 0
+
+   f3 3c4 port-wb  00 3c5 port-wb  \ 1a for snapshot mode
+   f3 3d4 port-wb  12 3c5 port-wb  \ Snapshot mode control - 1a for snapshot mode
+
+\ cache_as_ram_auto.c : enable_shadow_ram
+
+   0 3 devfunc
+\ Initial DOS hole settings, so the firmware can set things up
+   80 ff ff mreg \ Enable R/W memory access to Cxxxx bank
+   81 ff ff mreg \ Enable R/W memory access to Dxxxx bank
+   82 ff ff mreg \ Enable R/W memory access to Exxxx bank
+   83 30 30 mreg \ Enable R/W memory access to Fxxxx bank (30), no memory hole (0c), SMM switching of Axxxx bank (03)
+
+\ Final DOS hole settings, after stuff has been copied in, for reference
+\  80 ff 2a mreg \ CC000-CFFFF off, C0000-C7FFF RO
+\  81 ff 00 mreg \ D0000-DFFFF off
+\  82 ff aa mreg \ E0000-EFFFF RO
+\  83 ff 20 mreg \ Enable R/W memory access to Fxxxx bank (20), no memory hole (0c), SMM switching of Axxxx bank (03)
+   end-table
+
    \ Additional Power Management Setup not in coreboot
    0 2 devfunc
    76 08 08 mreg  \ AGTL Power down buffers in S3
    92 ff 40 mreg  \ ACPI IO Base address
    end-table
 
-   0 3 devfunc
-   86 38 38 mreg  \ SMM and APIC Decoding: enable APIC lowest int arb, IOAPIC split decode, MSI (SMM later)
+   0 4 devfunc
+   84 ff db mreg  \ Dynamic clocks
+   85 ff 05 mreg  \ Dynamic clocks
+   89 ff f8 mreg  \ Dynamic clocks
+   8b ff bf mreg  \ Dynamic clocks
+   8d ff 20 mreg  \ Self-refresh in C3 and C4
+   90 ff ff mreg  \ Gate clocks
+   91 ff ff mreg  \ Gate clocks
+   92 cc cc mreg  \ Dynamic buffer control, power down comparators
+   a8 20 20 mreg  \ Central traffic controller dynamic clock stop
    end-table
-
+    
+   \ Bus tuning
    0 5 devfunc
    54 8f 80 mreg  \ SM request gets high priority, PCCA occupancy timer off
    55 0f 04 mreg  \ PCCA P2C Promote Timer value 4
@@ -415,91 +492,6 @@ fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
    d4 ac 24 mreg  \ Config 3
    end-table
 
-\ UMARamSetting.c
-\  SetUMARam
-    0 3 devfunc
-    a1 00 80 mreg \ Enable internal GFX
-    a2 ff ee mreg \ Set GFX timers
-    a4 ff 01 mreg \ GFX Data Delay to Sync with Clock
-    a6 ff 76 mreg \ Page register life timer
-    a7 ff 8c mreg \ Internal GFX allocation
-    b3 ff 9a mreg \ Disable read past write
-\   de ff 06 mreg \ Enable CHA and CHB merge mode (but description says this value disable merging!) 00 for compatibility
-    end-table
-
-    0 3 devfunc
-    a1 70 40 mreg \ Set frame buffer size to 64M (8M:10, 16M:20, 32M:30, etc) - fbsize
-    end-table
-
-    1 0 devfunc
-                  \ Reg 1b2 controls the number of writable bits in the BAR at 810
-    b2 ff 70 mreg \ Offset of frame buffer, depends on size - fbsize
-    04 ff 07 mreg \ Enable IO and memory access to display
-    end-table
-
-    d000.0000 810 config-wl  \ S.L. Base address
-    f000.0000 814 config-wl  \ MMIO Base address
-         cd01 3a0 config-ww  \ Set frame buffer size and CPU-relative address and enable
-
-    0 0 devfunc
-    c6 02 02 mreg \ Enable MDA forwarding (not in coreboot)
-    d4 00 03 mreg \ Enable MMIO and S.L. access in Host Control device
-    fe 00 10 mreg \ 16-bit I/O port decoding for VGA (no aliases)
-    end-table
-
-    1 0 devfunc
-    b0 07 03 mreg \ VGA memory selection (coreboot uses 03, Phoenix 01.  I think 03 is correct)
-    end-table
-
-    01 3c3 port-wb                  \ Graphics chip IO port access on
-    10 3c4 port-wb  01 3c5 port-wb  \ Turn off register protection
-    67 3c2 port-wb                  \ Enable CPU Display Memory access (2), use color not mono port (1)
-
-    68 3c4 port-wb  e0 3c5 port-wb  \ Size of System Local Frame Buffer - Value depends on frame buffer size - fbsize
-                                    \ 00:512MB 80:256MB c0:128MB e0:64MB f0:32MB f8:16MB fc:8MB fe:4MB ff:2MB
-
-    \ These 2 are scratch registers that communicate with the VGA BIOS
-    3d 3d4 port-wb  74 3d5 port-wb  \ Value depends on DIMM frequency - used by VGA BIOS
-    39 3c4 port-wb  10 3c5 port-wb  \ BIOS Reserved Register 0 - FBsize_MiB/4 - fbsize - VGA BIOS
-
-    5a 3c4 port-wb  01 3c5 port-wb  \ Point to secondary registers
-    4c 3c4 port-wb  83 3c5 port-wb  \ LCDCK Clock Synthesizer Value 2
-    5a 3c4 port-wb  00 3c5 port-wb  \ Point back to primary registers
-
-    6d 3c4 port-wb  e0 3c5 port-wb  \ Base address [28:21] of SL in System Memory - base is 1c00.0000 - fbsize, memsize
-    6e 3c4 port-wb  00 3c5 port-wb  \ Base address [36:29] of SL in System Memory
-    6f 3c4 port-wb  00 3c5 port-wb  \ Base address [47:37] of SL in System Memory
-
-    36 3c4 port-wb  11 3c5 port-wb  \ Subsystem Vendor ID 1
-    35 3c4 port-wb  06 3c5 port-wb  \ Subsystem Vendor ID 0
-    38 3c4 port-wb  51 3c5 port-wb  \ Subsystem ID 1
-    37 3c4 port-wb  22 3c5 port-wb  \ Subsystem ID 0
-
-    f3 3c4 port-wb  00 3c5 port-wb  \ 1a for snapshot mode
-    f3 3d4 port-wb  12 3c5 port-wb  \ Snapshot mode control - 1a for snapshot mode
-
-\ cache_as_ram_auto.c : enable_shadow_ram
-    0 3 devfunc
-
-\ Initial DOS hole settings, so the firmware can set things up
-    80 ff ff mreg \ Enable R/W memory access to Cxxxx bank
-    81 ff ff mreg \ Enable R/W memory access to Dxxxx bank
-    82 ff ff mreg \ Enable R/W memory access to Exxxx bank
-    83 30 30 mreg \ Enable R/W memory access to Fxxxx bank (30), no memory hole (0c), SMM switching of Axxxx bank (03)
-
-\ Final DOS hole settings, after stuff has been copied in, for reference
-\   80 ff 2a mreg \ CC000-CFFFF off, C0000-C7FFF RO
-\   81 ff 00 mreg \ D0000-DFFFF off
-\   82 ff aa mreg \ E0000-EFFFF RO
-\   83 ff 20 mreg \ Enable R/W memory access to Fxxxx bank (20), no memory hole (0c), SMM switching of Axxxx bank (03)
-
-    end-table
-
-    \ Low 2 bits of 86:
-    \ x1 to write to SMM shadow memory behind VGA
-    \ 00 to run - Axxxxx hits VGA in normal mode, hits shadow DRAM in SMM
-    \ 01 to access VGA when in SMM (data cycles only)
-
    \ APIC setup
    0 2 devfunc
    59 01 01 mreg \ MSI Flat model support
@@ -510,6 +502,13 @@ fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
    0 3 devfunc
    86 38 38 mreg  \ SMM and APIC Decoding: enable APIC lowest int arb, IOAPIC split decode, MSI (SMM later)
    end-table
+
+   \ Low 2 bits of 86:
+   \ x1 to write to SMM shadow memory behind VGA
+   \ 00 to run - Axxxxx hits VGA in normal mode, hits shadow DRAM in SMM
+   \ 01 to access VGA when in SMM (data cycles only)
+
+   \ USB Tuning
 
    h# 1c00.0000 # mem-info-pa 4 + #) mov   \ Top of memory
 
