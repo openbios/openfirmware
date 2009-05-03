@@ -158,7 +158,11 @@ fload ${BP}/cpu/x86/pc/reboot.fth	\ Restart the client program
 fload ${BP}/cpu/x86/pc/reenter.fth	\ Various entries into Forth
 
 headerless
+[ifdef] virtual-mode
+: (initial-heap)  ( -- adr len )  sp0 @ ps-size -  dict-limit  tuck -  ;
+[else]
 : (initial-heap)  ( -- adr len )  heap-base heap-size  ;
+[then]
 ' (initial-heap) is initial-heap
 headers
 
@@ -207,6 +211,7 @@ end-support-package
 fload ${BP}/cpu/x86/pc/mscal.fth
 [then]
 fload ${BP}/cpu/x86/pc/boot.fth
+fload ${BP}/cpu/x86/pc/linux.fth
 
 hex 
 \ If there is a PCI ethernet adapter, use it as the default net device,
@@ -353,6 +358,9 @@ fload ${BP}/cpu/x86/pc/saveabs.fth
 
 fload ${BP}/forth/lib/selstr.fth
 
+\needs ramdisk  " " d# 128 config-string ramdisk
+" console=tty0 console=ttyS0,115200"   ' boot-file    set-config-string-default
+
 [ifdef] pc-linux
 " a:\initrd.imz" d# 128 config-string ramdisk
 " root=/dev/ram0 mount_ramdisk=1"  ' boot-file        set-config-string-default
@@ -361,9 +369,10 @@ true                               ' client-symbols?  set-config-int-default
 \ Also try " console=/dev/ttyS0,9600 console=/dev/tty0" in boot-file
 [then]
 
-[ifdef] linux-support
-fload ${BP}/cpu/x86/pc/biosload/linux.fth
-[then]
+\ XXX delete me
+\ [ifdef] linux-support
+\ fload ${BP}/cpu/x86/pc/biosload/linux.fth
+\ [then]
 
 fload ${BP}/cpu/x86/pc/biosload/vmdoor.fth   \ VMware interfaces
 

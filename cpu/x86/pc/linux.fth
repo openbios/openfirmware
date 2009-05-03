@@ -115,6 +115,7 @@ d# 20 constant /root-dev-buf
 
            0  h# 1ff +lp  c!	\ Aux device - set to AA if PS2 mouse present
  /ramdisk 0<> h# 210 +lp  c!	\ loader type - set non0 to enable ramdisk info
+ h# 211 +lp dup c@ h# 40 or swap c!  \ Set the "KEEP_SEGMENTS" bit (new as of about 2.6.29)
 \  h# 100000  h# 214 +lp  l!	\ kernel start - unused
  ramdisk-adr  h# 218 +lp  l!	\ initrd start
     /ramdisk  h# 21c +lp  l!	\ initrd size
@@ -148,9 +149,25 @@ d# 20 constant /root-dev-buf
 ;
 [then]
 
+\ Add some entries to the GDT for Linux
+: amend-gdt   ( -- )
+   gdtr@ drop                        ( va )
+   h# 0000.ffff over h# 10 + l!      ( va ) \ user 4 GB code at 0
+   h# 00cf.9a00 over h# 14 + l!      ( va )
+   h# 0000.ffff over h# 18 + l!      ( va ) \ user 4 GB data at 0
+   h# 00cf.9200 over h# 1c + l!      ( va )
+
+   h# 0000.ffff over h# 20 + l!      ( va ) \ user 4 GB code at 0
+   h# 00cf.9a00 over h# 24 + l!      ( va )
+   h# 0000.ffff over h# 28 + l!      ( va ) \ user 4 GB data at 0
+   h# 00cf.9200 over h# 2c + l!      ( va )
+   drop
+;
+
 : linux-fixup  ( -- )
 [ifdef] linux-logo  linux-logo  [then]
    args-buf cscount set-parameters          ( )
+   amend-gdt                                ( )
    h# ff h# 21 pc!	\ Squelch the timer interrupt and others
 
    linux-base  linux-params  (init-program)
@@ -206,7 +223,10 @@ defer load-ramdisk
 
 : claim-params  ( -- )
 [ifdef] virtual-mode
-   0 0 1meg -1 mmu-map     ( )		\ Make the parameter area accessible
+\ We don't need this because we assume that low memory is already mapped 1-1
+\ If low mem is mapped with 4M pages, mmu-map will overwrite the page at 0 
+\ because the MMU methods don't handle 4M pages correctly.
+\   0 0 1meg -1 mmu-map     ( )		\ Make the parameter area accessible
 [then]
    0 +lp  h# 1000 0 mem-claim drop      \ Play nice with memory reporting
 ;

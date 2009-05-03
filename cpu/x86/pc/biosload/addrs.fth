@@ -96,7 +96,7 @@ h#   08.0000 constant dropin-size
 
 \ Where OFW initially loads an OS that is is going to boot
 
-h#  80.0000 constant def-load-base      \ Convenient for initrd
+h# 100.0000 constant def-load-base      \ Convenient for initrd
 
 fload ${BP}/cpu/x86/pc/virtaddr.fth
 

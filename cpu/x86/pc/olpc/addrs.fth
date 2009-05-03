@@ -58,8 +58,6 @@ h# fe02.4000 constant sd-pci-base
 h# fe02.8000 constant camera-pci-base
 h# fe02.c000 constant uoc-pci-base
 
-h# 9.fc00 constant 'ebda  \ Extended BIOS Data Area, which we co-opt for our real-mode workspace
-
 h# e0000 constant rsdp-adr
 h# e0040 constant rsdt-adr
 h# e0080 constant fadt-adr

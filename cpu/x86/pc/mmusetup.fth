@@ -4,7 +4,12 @@ purpose: Establish the initial values for the MMU and virtual lists
 \ The code in this file depends in detail on the initial MMU setup
 \ established by initmmu.fth
 
-: (memory?)  ( adr -- flag )  h# 1000.0000 u<  ;
+[ifdef] total-ram
+: (memory?)  ( adr -- flag )  total-ram u<  ;
+[else]
+h# 8000.0000 value ram-boundary
+: (memory?)  ( adr -- flag )  ram-boundary u<  ;
+[then]
 ' (memory?) is memory?
 
 dev /mmu

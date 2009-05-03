@@ -158,6 +158,11 @@ d# 20 constant /root-dev-buf
 \ Add some entries to the GDT for Linux
 : amend-gdt   ( -- )
    gdtr@ drop                        ( va )
+   h# 0000.ffff over h# 10 + l!      ( va ) \ user 4 GB code at 0
+   h# 00cf.fa00 over h# 14 + l!      ( va )
+   h# 0000.ffff over h# 18 + l!      ( va ) \ user 4 GB data at 0
+   h# 00cf.f200 over h# 1c + l!      ( va )
+
    h# 0000.ffff over h# 20 + l!      ( va ) \ user 4 GB code at 0
    h# 00cf.fa00 over h# 24 + l!      ( va )
    h# 0000.ffff over h# 28 + l!      ( va ) \ user 4 GB data at 0
