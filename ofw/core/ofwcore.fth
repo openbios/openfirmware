@@ -4663,6 +4663,7 @@ headers
       di-name=  if                        ( name-adr,len id )
          nip nip                          ( id )
          ?inflate  true                   ( virtual size true )
+         close-drop-in                    ( virtual size true )
          exit
       then
    repeat
