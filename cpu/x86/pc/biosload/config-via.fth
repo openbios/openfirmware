@@ -11,6 +11,8 @@ create via-demo
 
 create debug-startup
 
+create virtual-mode
+create linux-support
 \ create serial-console
 \ create use-usb-debug-port
 create pc
@@ -20,7 +22,7 @@ create resident-packages
 create addresses-assigned  \ Don't reassign PCI addresses
 \ create virtual-mode
 create use-root-isa
-create use-isa-ide
+\ create use-isa-ide
 create use-ega
 create use-elf
 create use-watch-all
