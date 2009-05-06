@@ -29,6 +29,7 @@ build-now
 
 \needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
 \needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+fload ${BP}/cpu/x86/pc/port80.fth
 
 hex
 
@@ -58,7 +59,6 @@ hex
    " h# 9 # ah cmp  >  if h# 57 # ah add  else  h# 30 # ah add then " evaluate
 
    " al bl mov  ah al mov  bl ah mov " evaluate
-
 ;
 
 [ifdef] debug-reset
@@ -106,26 +106,21 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
 
    \ ffff.fc00	GDT
 
-   0    w,  0         l,	 0      w,  \ 0 Mandatory null descriptor
-   0    w,  0         l,	 0      w,  \ * Another null descriptor
+   1f   w,  ffff.fc00 l,	 0      w,  \ 0 Pointer to GDT in first slot
+   0    w,  0         l,	 0      w,  \ * Null descriptor
    ffff w,  9b.000000 l,  00.c.f w,  \ 10 Code, linear=physical, full 4Gbytes
    ffff w,  93.000000 l,  00.c.f w,  \ 18 Data, linear=physical, full 4Gbytes
 
-   \ ffff.fc20	GDT limit + address
-
-   1f w,  ffff.fc00 l,	\ # slots (4 * 8 - 1) ,  starting address
-   0  w,		\ Padding
-
    \ ------->>>>> Startup code, reached by branch from main entry point below
    \
-   \ ffff.fc28
+   \ ffff.fc20
 
    here		\ Mark the beginning of this code so its size may be determined
 		\ and so that a jump to it may be assembled later.
 
    16-bit
 
-   h# 01 # al mov  al h# 80 # out
+   h# 01 port80
 
    \ The following code sequence is a workaround for a hardware situation.
    \ The MIC-on LED defaults to "on", because the CODEC chip powers on with
@@ -220,7 +215,7 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
    then
 
    \ Return to here after the reset
-   h# 02 # al mov  al h# 80 # out
+   h# 02 port80
 
    op: h# 1430 # dx mov  op: dx ax in  op: h# 9999 # ax cmp  =  if
       h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
@@ -243,7 +238,7 @@ ascii F report	 \ send it to com1 if you can...
    \ above is reachable with a 16-bit address and through the "boosted"
    \ code segment.
       
-   op: cs:  0f c, 01 c, 16 c, fc20 w,	\ lgdte  cs:[fc20]   Setup GDT
+   op: cs:  0f c, 01 c, 16 c, fc00 w,	\ lgdte  cs:[fc00]   Setup GDT
 
    op: cr0  bx  mov	\ Get existing CR0 value
 
@@ -253,7 +248,7 @@ ascii F report	 \ send it to com1 if you can...
    eb c, 0 c,		\ jmp to next location to flush prefetch queue
                         \ note: CPL is now 0
 
-   h# 03 # al mov  al h# 80 # out
+   h# 03 port80
 
    op: h# 1430 # dx mov  op: dx ax in  op: h# 9999 # ax cmp  =  if
       h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
@@ -288,7 +283,7 @@ ascii t report
 ascii h report
 [then]
 
-   h# 0f # al mov  al h# 80 # out
+   h# 0f port80
 
    op: h# 1430 # dx mov  op: dx ax in  op: h# 9999 # ax cmp  =  if
       h# 34 #  al mov    al  h# 70 #  out   \ Write to CMOS 0x34
@@ -302,8 +297,8 @@ ascii h report
 
    here over -   ( adr , size-of-preceding-code )
 
-   \ ffff.fc28 is the location of the code that follows the GDT
-   ffff.fff0 ffff.fc28 - swap - ( address #bytes-to-pad )
+   \ ffff.fc20 is the location of the code that follows the GDT
+   ffff.fff0 ffff.fc20 - swap - ( address #bytes-to-pad )
 
    \ The code mustn't extend past ffff.ffc0, because that is where PC
    \ manufacturers put the 0x10-byte BIOS version string.
@@ -318,9 +313,8 @@ ascii h report
    \             when it comes out of reset
 
    16-bit
-
    cli cld		\ Turn off interrupts (does not affect NMI)
-   #) jmp		\ Relative jump back to ffff.fc28
+   #) jmp		\ Relative jump back to ffff.fc20
    0 w, 0 c,		\ align "pad" to end of ROM
    loader-version# l,	\ version#
    loader-format#  w,	\ "format" (>1 when crc present)
