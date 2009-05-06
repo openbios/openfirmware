@@ -231,6 +231,14 @@ d# 1024 d# 16 * constant /wbuf
    then
 ;
 
+h# 555 value next-tcp-local-port
+
+: alloc-next-tcp-local-port  ( -- port )
+   next-tcp-local-port 1+                ( port )
+   h# ffff and  h# 555 max               ( port )
+   dup to next-tcp-local-port            ( port )
+;
+
 \ send sequence variables
 0 instance value snd_una		\ send unacknowledged
 0 instance value snd_nxt		\ send next
@@ -2337,7 +2345,7 @@ false instance value do-delack?
 
    ['] protocol-tick  d# 500  alarm
 
-   h# 555 to my-tcp-port  \ XXX
+   alloc-next-tcp-local-port to my-tcp-port
    true to alive?
 
    true
