@@ -1,27 +1,34 @@
 \ See license at end of file
-purpose: Establish configuration definitions
+purpose: Configuration for loading from a USB key via Syslinux
 
 \ --- The environment that "boots" OFW ---
 \ - Image Format - Example Media - previous stage bootloader
 
-\ Load and run in VirtualBox (also works for other emulators)
-create virtualbox-loaded 
+\ - (Syslinux) COM32 format - USB Key w/ FAT FS - Syslinux
+create syslinux-loaded
 
-\ create debug-startup
+create via-demo
+
+create debug-startup
+
+create virtual-mode
+create linux-support
 \ create serial-console
+\ create use-usb-debug-port
+create pc
+
+\ create pseudo-nvram
 create resident-packages
 create addresses-assigned  \ Don't reassign PCI addresses
 \ create virtual-mode
-\ create use-root-isa
-create use-timestamp-counter
-create use-pci-isa
-create use-isa-ide
+create use-root-isa
+\ create use-isa-ide
 create use-ega
 create use-elf
-\ create use-ne2000
 create use-watch-all
-create use-null-nvram
-\ create no-floppy-node
+\ create use-null-nvram
+create pseudo-nvram
+create no-floppy-node
 
 fload ${BP}/cpu/x86/pc/biosload/addrs.fth
 

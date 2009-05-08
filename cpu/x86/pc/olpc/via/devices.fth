@@ -19,6 +19,7 @@ fload ${BP}/cpu/x86/tsc.fth
 fload ${BP}/cpu/x86/acpitimer.fth
 
 fload ${BP}/cpu/x86/pc/olpc/via/smbus.fth	\ SMBUS driver
+fload ${BP}/cpu/x86/apic.fth			\ APIC driver
 
 stand-init: CPU node
    d# 1,500,000,000  " VIA,C7"
@@ -33,7 +34,8 @@ stand-init: CPU node
 warning @ warning off
 : stand-init-io  ( -- )
    stand-init-io
-   acpi-calibrate-tsc
+\  acpi-calibrate-tsc
+   d# 800 to us-factor  d# 800000 to ms-factor
 ;
 warning !
 
@@ -128,6 +130,7 @@ devalias mouse /isa/8042/mouse
 devalias d disk
 devalias n nand
 devalias sd /sd/disk
+devalias c /ide@0/disk
 
 [ifndef] demo-board
 .( Removing ctlr-selftest from 8042 open !!!) cr
@@ -161,6 +164,8 @@ fload ${BP}/forth/lib/tofile.fth	\ to-file and append-to-file
 fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
 
 fload ${BP}/cpu/x86/pc/olpc/cmos.fth     \ CMOS RAM indices are 1f..ff , above RTC
+.( XXX Not clearing CMOS) cr
+patch noop init-bios-cmos stand-init
 
 devalias nand /nandflash
 devalias mtd  /nandflash

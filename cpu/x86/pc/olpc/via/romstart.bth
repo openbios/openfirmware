@@ -1,0 +1,117 @@
+\ See license at end of file
+purpose: Build file for dropin dispatcher  - version for direct ROM startup
+
+command: &builder &this
+build-now
+
+create debug-startup
+
+fload ${BP}/cpu/x86/pc/olpc/via/config.fth	\ Address configuration
+
+
+\needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+fload ${BP}/cpu/x86/mmuparam.fth
+
+\ startmacros.fth defines some assembler macros that make MSR and I/O port
+\  access very easy by hiding the details of register use.
+
+fload ${BP}/cpu/x86/startmacros.fth
+fload ${BP}/cpu/x86/pc/port80.fth
+
+hex
+
+fload ${BP}/cpu/x86/pc/finddi.fth	\ find-dropin and other tools
+
+fload ${BP}/cpu/x86/pc/olpc/via/startmacros.fth  \ Via-oriented startup macros
+
+start-assembling
+
+label my-entry
+   e9 c,  0 ,				\ To be patched later
+end-code
+
+[ifdef] debug-startup
+fload ${BP}/cpu/x86/pc/dot.fth		\ Numeric output
+[then]
+
+fload ${BP}/cpu/x86/pc/romfind.fth	\ find-dropin
+
+hex
+
+fload ${BP}/cpu/x86/pc/olpc/via/startcfgio.fth   \ masked config write subroutine
+
+[ifdef] debug-startup
+fload ${BP}/cpu/x86/pc/olpc/via/startcominit.fth \ cominit subroutine
+[then]
+
+label startup
+   00 8898 config-wb   \ Disable BIOS init timer GP3
+   'ebda # sp mov  \ Move stack to real memory
+
+[ifdef] debug-startup
+   cominit #) call
+[then]
+
+   carret report
+   linefeed report
+   char F report
+   h# 1d port80
+   char o report
+   h# 1e port80
+
+   fload ${BP}/cpu/x86/pc/olpc/via/startmtrrinit.fth
+   fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
+
+1 [if]
+   0 3 devfunc
+   86 c4 84 mreg  \ Enable top SMM memory (04) of size 4 MB (80 in c0 field)
+   end-table
+
+   d# 17 7 devfunc
+   e6 04 04 mreg  \ Enable top SMM memory in North/South module
+   end-table
+[then]
+
+   fload ${BP}/cpu/x86/pc/olpc/via/startmemtop.fth
+
+   h# 1f port80
+   char r report
+
+   fload ${BP}/cpu/x86/pc/resetend.fth
+end-code
+
+also 386-assembler
+startup  my-entry  put-branch
+previous
+
+end-assembling
+
+writing romstart.di
+asm-base  here over -  0  " start" write-dropin
+ofd @ fclose
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2009 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

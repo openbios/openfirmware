@@ -53,248 +53,52 @@ dropin-base /dcached - constant dcached-base
 
 h#   10.0000 constant ramtest-start
 h#   20.0000 constant ramtest-end
-create uart-debug-startup
 
-: devfunc  ( dev func -- )
-   h# 100 *  swap h# 800 * or  h# 8000.0000 or
-   [ also assembler ]
-   # ebp mov  " masked-config-writes" evaluate  #) call
-   [ previous ]
-;
-: end-table  0 c,  ;
-
-: mreg  ( reg# and or -- )  rot c, swap c, c,  ;
-: wait-us  ( us -- )
-   " # ax mov  usdelay #) call" evaluate
-;
-
-: showreg  ( reg# -- )
-   " h# ff port80  d# 200000 wait-us" eval
-   " config-rb  al 80 # out  d# 1000000 wait-us" eval
-;
+fload ${BP}/cpu/x86/pc/olpc/via/startmacros.fth  \ Via-oriented startup macros
 
 start-assembling
+
+hex
 
 label my-entry
    e9 c,  0 ,				\ To be patched later
 end-code
 
-[ifdef] uart-debug-startup
-fload ${BP}/cpu/x86/pc/dot.fth		\ Numeric output
+fload ${BP}/cpu/x86/pc/romfind.fth	           \ find-dropin subroutine
+
+fload ${BP}/cpu/x86/pc/olpc/via/startusdelay.fth   \ microsecond delay subroutine
+fload ${BP}/cpu/x86/pc/olpc/via/startcfgio.fth     \ masked config write subroutine
+fload ${BP}/cpu/x86/pc/olpc/via/startdraminit.fth  \ DDRinit subroutine
+
+[ifdef] debug-startup
+fload ${BP}/cpu/x86/pc/dot.fth			   \ Numeric output subroutine
+fload ${BP}/cpu/x86/pc/olpc/via/startcominit.fth   \ cominit subroutine
 [then]
-
-fload ${BP}/cpu/x86/pc/romfind.fth	\ find-dropin
-
-hex
-
-\ %ebp contains the config address
-\ %ebp used for merging config write data
-
-label masked-config-writes   \ return address points to the table
-   esi pop
-   cld
-   begin
-      al lods                    \ al: register offset
-   al al or  0<> while
-      al bl mov                  \ bl: register offset
-
-[ifdef] config-to-port80
-   h# 77 # al mov  al h# 80 # out
-   ebp eax mov  ah al mov  al h# 80 # out
-   bl al mov  al h# 80 # out
-[then]
-
-      ebp eax mov                \ Config address base
-      bl  al  mov                \ Merge in register number
-      h# ffff.fffc # ax and      \ Remove low bits
-      h# cf8 # dx mov            \ Config address register port #
-      ax dx out                  \ Write to config address register
-
-      4 # dl add                 \ DX: cfc
-      3 # bl and                 \ Byte offset
-      bl  dl add                 \ Config data register port #
-
-      al lods  al not            \ Get AND mask
-      al al or  0<>  if          \ Do we need to read-modify-write?
-         al ah mov               \ Save mask
-         dx al in                \ Get existing value
-[ifdef] config-to-port80
-   al h# 80 # out
-[then]
-         ah al and               \ Apply AND mask
-         al ah mov
-         al lods                 \ Get OR mask
-         ah al or                \ Now we have the final value
-      else                       \ AND mask is 0 so we don't have to R-M-W
-         al lods                 \ Get final value (== OR mask)
-      then
-
-[ifdef] config-to-port80
-   al h# 80 # out
-[then]
-
-      al dx out                  \ Write final value to config data register
-   repeat
-   esi push
-   ret
-end-code
-   
-[ifdef] uart-debug-startup
-label cominit
-   \ Turn on frame buffer
-   0 3 devfunc
-   a1 ff 80 mreg   \ Not sure why this is needed, the PM says it's the default
-   a7 ff 08 mreg   \ Internal GFX allocation
-   end-table
-
-   \ Turn on I/O and memory space access for display controller
-   1 0 devfunc
-   04 ff 07 mreg
-   end-table
-
-   01 3c3 port-wb                    \ Graphics Chip IO port access on
-   10 3c4 port-wb   01 3c5 port-wb   \ Graphics Chip register protection off
-   78 3c4 port-wb   86 3c5 port-wb   \ South module pad share enable on (80)
-
-   d# 17 0 devfunc
-   \ The following is for UART on VCP port
-   46 3f 40 mreg
-   \ The following is for UART on DVP port
-   \ 46 3f c0 mreg
-
-   \ Standard COM2 and COM1 IRQ routing
-   b2 00 34 mreg
-
-   \ For COM1 - 3f8 (ff below is 3f8 3 >> 80 or )
-
-   b0 cf 10 mreg
-   b4 00 ff mreg   \ 3f8 3 >>  80 or  - com base port
-
-   \ For COM2 - 2f8 (df below is 2f8 3 >> 80 or )
-   \ b0 cf 20 mreg
-   \ b5 00 df mreg
-   end-table
-
-   \ The usual setup dance for a PC UART...
-   01 3fc port-wb  \ DTR on
-   80 3fb port-wb  \ Switch to bank 1 to program baud rate
-   01 3f8 port-wb  \ Baud rate divisor low - 115200 baud
-   00 3f9 port-wb  \ Baud rate divisor high - 115200 baud
-   03 3fb port-wb  \ 8 bits, no parity, switch to bank 0
-   00 3f9 port-wb  \ Interrupts off
-   00 3fa port-wb
-
-   ret
-end-code
-[then]
-
-\ Delay N microseconds, N in ax
-label usdelay
-   cx push
-
-   ax cx mov
-   begin  h# 80 # al in  loopa
-
-   cx pop
-   ret
-end-code
-
-\ This is the dance you have to do for each DDR rank to turn on the RAM chips
-label DDRinit
-   11 36b config-wb  \ SDRAM NOP
-   0 #) ax mov       \ Access RAM
-   d# 200 wait-us
-
-   12 36b config-wb  \ SDRAM Precharge All
-   0 #) ax mov       \ Access RAM
-      
-   13 36b config-wb  \ SDRAM MRS Enable
-   20200 #) ax mov   \ Access RAM for DLL enable - 150 ohm (20020 for 75 ohm)
-     800 #) ax mov   \ Access RAM for DLL reset
-
-   12 36b config-wb  \ SDRAM Precharge All
-   0 #) ax mov       \ Access RAM
-
-   14 36b config-wb  \ SDRAM CBR Cycle Enable
-
-   8 # cx mov
-   begin
-      0 #) ax mov
-      d# 100 wait-us
-   loopa
-   
-   13 36b config-wb  \ SDRAM MRS Enable
-   101258 #) ax mov  \ Depends on Twr, CL, and Burst Length
-
-   21e00 #) ax mov   \ For 150 ohm; 75 ohm is 21c20
-   20200 #) ax mov   \ For 150 ohm; 75 ohm is 21c20
-
-   10 36b config-wb  \ SDRAM Normal
-
-   ret
-end-code
-
 
 label startup
-\   h# 10 port80
+   h# 10 port80
+
    2 92 port-wb  \ Enable A20
    \ External A20GATE is disabled automatically because the internal KBC is on by default (cfg reg 8851 bit 0)
 
-\ Enable cache as RAM
-   cr0 ax mov  h# 4000.0000 bitset  ax cr0 mov  invd  \ Disable cache
+   fload ${BP}/cpu/x86/pc/olpc/via/startcacheasram.fth
 
-   00000000.00000c00. 2ff set-msr  \ Enable fixed and variable MTRRs in DefType
-   00000000.00000000. 250 set-msr  \ Clear fixed MTRR
-   258 wmsr  259 wmsr  268 wmsr  269 wmsr  26a wmsr \ Fixed MTRRs
-   26b wmsr  26c wmsr  26d wmsr  26e wmsr  26f wmsr \ Fixed MTRRs
-   200 wmsr  201 wmsr  202 wmsr  203 wmsr  204 wmsr \ Variable MTRRs
-   205 wmsr  206 wmsr  207 wmsr  208 wmsr  209 wmsr \ Variable MTRRs
-   20a wmsr  20b wmsr  20c wmsr  20d wmsr  20e wmsr \ Variable MTRRs
-   20f wmsr                                         \ Last variable one
-
-   dcached-base 6 +          0  200 set-msr   \ Dcache base address, write back
-   /dcached negate h# 800 +  f  201 set-msr   \ Dcache size
-   dropin-base 6 +           0  202 set-msr   \ ROM base address
-   /icached negate h# 800 +  f  203 set-msr   \ Icache size
-
-   00000000.00000800.           2ff set-msr   \ Enable variable MTRRs in DefType   
-
-
-   cr0 ax mov  h# 6000.0000 bitclr  ax cr0 mov  invd  \ Cache on
-
-   cld
-
-   \ Access ROM to load it into the dcache
-   dropin-base #  esi  mov
-   /icached 4 / #  ecx  mov
-   rep  eax lods
-
-   \ Access "RAM" area to load it into the dcache
-   dcached-base #  esi  mov
-   /dcached 4 / #  ecx  mov
-   rep  eax lods
-
-   \ Put the stack pointer at the top of the dcached area
-   dcached-base /dcached + 4 - #  esp  mov
-   ds ax mov  ax ss mov
-
-\ We are now running from cache, and can use the stack
-
-\   h# 20 port80    d# 300000 wait-us
+   \ We are now running from cache and can use the stack
 
 \ cache_as_ram_auto.c: amd64_main() 
 
    01 004f config-wb   \ Enable device 0 multiple functions
 
-\ 8898 config-rb  al 80 # out  d# 300000 wait-us
-
    00 8898 config-wb   \ Disable BIOS init timer GP3
 
-[ifdef] uart-debug-startup
- cominit #) call
- carret report
- linefeed report
+[ifdef] debug-startup
+   cominit #) call
 [then]
+
+   carret report
+   linefeed report
+   char F report
+   h# 1d port80
 
 \ This is a device ID backdoor to fake out the ID so Ubuntu will install
 \   8879 config-rb  h# 40 # al or  al dx out  \ I don't know what this is, but coreboot does it
@@ -311,362 +115,18 @@ label startup
    then
 [then]
 
- \ enable_mainboard_devices()
-\  41 8f4f config-wb   \ Enable P2P Bridge Header for External PCI Bus (coreboot value)
-   43 8f4f config-wb   \ As above, plus support extended PCIe config space
+   fload ${BP}/cpu/x86/pc/olpc/via/starthostctl.fth
+   fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
 
-\  4f6 config-rb   \ Get Northbridge revision ... don't need it because the
-                   \ init table contains no revision-specific entries
-
- \ via_pci_inittable(NBrevision,mNbStage1InitTbl)
-
-   \ Enable extended config space for PCIe
-   0 5 devfunc  \ NB_APIC
-   61 ff 0e mreg  \ Set Exxxxxxx as PCIe MMIO config range
-   60 f4 13 mreg  \ Support extended cfg address of PCIe (preserve 28 bits) (coreboot used vx800 bit resv in vx855)
-   end-table
-
-   0 2 devfunc  \ HOST CPU CTL
-   50 1f 08 mreg  \ Request phase ctrl: Dynamic Defer Snoop Stall Count = 8
-   51 ff 78 mreg  \ CPU I/F Ctrl-1: Disable Fast DRDY and RAW (coreboot uses 7c)
-   52 cb cb mreg  \ CPU I/F Ctrl-2: Enable all for performance
-   53 ff 44 mreg  \ Arbitration: Host/Master Occupancy timer = 4*4 HCLK
-   54 1e 1c mreg  \ Misc Ctrl: Enable 8QW burst Mem Access
-
-   55 06 04 mreg  \ Miscellaneous Control 2
-   56 f7 63 mreg  \ Write Policy 1
-   5d ff a2 mreg  \ Write Policy
-   5e ff 88 mreg  \ Bandwidth Timer
-   5f 46 46 mreg  \ CPU Misc Ctrl
-
-   96 0b 0a mreg \ Write Policy
-   98 c1 41 mreg \ Bandwidth Timer
-   99 0e 06 mreg \ CPU Misc Ctrl
-   97 ff 00 mreg \ APIC Related Control
-   end-table
-
-fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
-
-   0 3 devfunc
-   86 38 38 mreg  \ SMM and APIC Decoding: enable APIC lowest int arb, IOAPIC split decode, MSI (SMM later)
-   end-table
-
-
-\ Also from FinalSetting.c
-
-   0 4 devfunc  \ PM_table
-   a0 80 80 mreg \ Enable dynamic power management (coreboot for vx800 uses f0; 70 bits are reserved on vx855)
-   a1 e0 e0 mreg \ Dynamic power management for DRAM
-   a2 d6 d6 mreg \ Dynamic clock stop controls (coreboot for vx8000 uses ff fe; 29 bits are reserved on vx800)
-   a3 80 80 mreg \ Toggle reduction on
-   a5 81 81 mreg \ "Reserved"
-   end-table
-
-\ UMARamSetting.c
-\  SetUMARam
-   0 3 devfunc
-   a1 00 80 mreg \ Enable internal GFX
-   a2 ff ee mreg \ Set GFX timers
-   a4 ff 01 mreg \ GFX Data Delay to Sync with Clock
-   a6 ff 76 mreg \ Page register life timer
-   a7 ff 8c mreg \ Internal GFX allocation
-   b3 ff 9a mreg \ Disable read past write
-\  de ff 06 mreg \ Enable CHA and CHB merge mode (but description says this value disable merging!) 00 for compatibility
-   end-table
-
-   0 3 devfunc
-   a1 70 40 mreg \ Set frame buffer size to 64M (8M:10, 16M:20, 32M:30, etc) - fbsize
-   end-table
-
-   1 0 devfunc
-                 \ Reg 1b2 controls the number of writable bits in the BAR at 810
-   b2 ff 70 mreg \ Offset of frame buffer, depends on size - fbsize
-   04 ff 07 mreg \ Enable IO and memory access to display
-   end-table
-
-   d000.0000 810 config-wl  \ S.L. Base address
-   f000.0000 814 config-wl  \ MMIO Base address
-        cd01 3a0 config-ww  \ Set frame buffer size and CPU-relative address and enable
-
-   0 0 devfunc
-   c6 02 02 mreg \ Enable MDA forwarding (not in coreboot)
-   d4 00 03 mreg \ Enable MMIO and S.L. access in Host Control device
-   fe 00 10 mreg \ 16-bit I/O port decoding for VGA (no aliases)
-   end-table
-
-   1 0 devfunc
-   b0 07 03 mreg \ VGA memory selection (coreboot uses 03, Phoenix 01.  I think 03 is correct)
-   end-table
-
-   01 3c3 port-wb                  \ Graphics chip IO port access on
-   10 3c4 port-wb  01 3c5 port-wb  \ Turn off register protection
-   67 3c2 port-wb                  \ Enable CPU Display Memory access (2), use color not mono port (1)
-
-   68 3c4 port-wb  e0 3c5 port-wb  \ Size of System Local Frame Buffer - Value depends on frame buffer size - fbsize
-                                   \ 00:512MB 80:256MB c0:128MB e0:64MB f0:32MB f8:16MB fc:8MB fe:4MB ff:2MB
-
-   \ These 2 are scratch registers that communicate with the VGA BIOS
-   3d 3d4 port-wb  74 3d5 port-wb  \ Value depends on DIMM frequency - used by VGA BIOS
-   39 3c4 port-wb  10 3c5 port-wb  \ BIOS Reserved Register 0 - FBsize_MiB/4 - fbsize - VGA BIOS
-
-   5a 3c4 port-wb  01 3c5 port-wb  \ Point to secondary registers
-   4c 3c4 port-wb  83 3c5 port-wb  \ LCDCK Clock Synthesizer Value 2
-   5a 3c4 port-wb  00 3c5 port-wb  \ Point back to primary registers
-
-   6d 3c4 port-wb  e0 3c5 port-wb  \ Base address [28:21] of SL in System Memory - base is 1c00.0000 - fbsize, memsize
-   6e 3c4 port-wb  00 3c5 port-wb  \ Base address [36:29] of SL in System Memory
-   6f 3c4 port-wb  00 3c5 port-wb  \ Base address [47:37] of SL in System Memory
-
-   36 3c4 port-wb  11 3c5 port-wb  \ Subsystem Vendor ID 1
-   35 3c4 port-wb  06 3c5 port-wb  \ Subsystem Vendor ID 0
-   38 3c4 port-wb  51 3c5 port-wb  \ Subsystem ID 1
-   37 3c4 port-wb  22 3c5 port-wb  \ Subsystem ID 0
-
-   f3 3c4 port-wb  00 3c5 port-wb  \ 1a for snapshot mode
-   f3 3d4 port-wb  12 3c5 port-wb  \ Snapshot mode control - 1a for snapshot mode
-
-\ cache_as_ram_auto.c : enable_shadow_ram
-
-   0 3 devfunc
-\ Initial DOS hole settings, so the firmware can set things up
-   80 ff ff mreg \ Enable R/W memory access to Cxxxx bank
-   81 ff ff mreg \ Enable R/W memory access to Dxxxx bank
-   82 ff ff mreg \ Enable R/W memory access to Exxxx bank
-   83 30 30 mreg \ Enable R/W memory access to Fxxxx bank (30), no memory hole (0c), SMM switching of Axxxx bank (03)
-
-\ Final DOS hole settings, after stuff has been copied in, for reference
-\  80 ff 2a mreg \ CC000-CFFFF off, C0000-C7FFF RO
-\  81 ff 00 mreg \ D0000-DFFFF off
-\  82 ff aa mreg \ E0000-EFFFF RO
-\  83 ff 20 mreg \ Enable R/W memory access to Fxxxx bank (20), no memory hole (0c), SMM switching of Axxxx bank (03)
-   end-table
-
-   \ Additional Power Management Setup not in coreboot
-   0 2 devfunc
-   76 08 08 mreg  \ AGTL Power down buffers in S3
-   92 ff 40 mreg  \ ACPI IO Base address
-   end-table
-
-   0 4 devfunc
-   84 ff db mreg  \ Dynamic clocks
-   85 ff 05 mreg  \ Dynamic clocks
-   89 ff f8 mreg  \ Dynamic clocks
-   8b ff bf mreg  \ Dynamic clocks
-   8d ff 30 mreg  \ Self-refresh in C3 and C4
-   90 ff ff mreg  \ Gate clocks
-   91 ff ff mreg  \ Gate clocks
-   92 cc cc mreg  \ Dynamic buffer control, power down comparators
-   a8 20 20 mreg  \ Central traffic controller dynamic clock stop
-   end-table
-    
-   \ Bus tuning
-   0 5 devfunc
-   54 8f 80 mreg  \ SM request gets high priority, PCCA occupancy timer off
-   55 0f 04 mreg  \ PCCA P2C Promote Timer value 4
-   59 0f 02 mreg  \ IGFX Promote Timer value 2
-   5f 0f 06 mreg  \ IPI Promote Timer value 6
-   64 20 00 mreg  \ Upstream MSI doesn't flush queued P2C Write Data
-   80 0b 08 mreg  \ Upstream Request 1T earlier
-   83 ff 81 mreg  \ P2PW down arb timer timer 8, P2PR down arb timer timer 1
-   84 7f 28 mreg  \ Downstream arbitration Timeout timer for C2P
-   85 c0 c0 mreg  \ Abort P2P cycle to PCI1, CPU to PCI1 cycle blocks next C2P cycle
-   end-table
-
-   d# 12 0 devfunc  \ SDIO tuning
-   44 01 01 mreg  \ Enable backdoor
-   8b 05 01 mreg  \ Do not report 1.8V support
-   8c c3 03 mreg  \ Falling edge trigger for Slots 1 and 2 data in high speed
-   8e ff 7e mreg  \ Delay host clock for Slots 1, 2, 3 by 4.8 nS
-   8f 09 01 mreg  \ Falling edge trigger on slot 3 output clock under high speed
-[ifdef] demo-board
-   99 ff f9 mreg  \ Two slots
-[else]
-   99 ff fa mreg  \ Three slots
-[then]
-   end-table
-
-   d# 15 0 devfunc  \ EIDE tuning
-   40 02 02 mreg  \ Enable primary channel
-   4a ff 5e mreg  \ Drive1 timing
-   4b ff 20 mreg  \ Drive0 timing
-   4c f0 60 mreg  \ Address setup time
-   52 df 0e mreg  \ Ultra dma wait strobe timing
-   53 df c6 mreg  \ Ultra DMA mode control
-   c4 1d 18 mreg  \ Config 1
-   d4 ac 24 mreg  \ Config 3
-   end-table
-
-   \ USB Tuning
-   d# 16 0 devfunc  \ UHCI Ports 0,1
-   4a 02 02 mreg  \ Enable Stop Bus Master Cycle if HALT Bit is Asserted
-   4b 60 60 mreg  \ Enable New UHCI Dynamic Scheme - 66MHz (40) & 33MHz (20)
-   c1 20 00 mreg  \ Disable USB PIRQ
-   end-table
-
-   d# 16 1 devfunc  \ UHCI Ports 2,3
-   4a 02 02 mreg  \ Enable Stop Bus Master Cycle if HALT Bit is Asserted
-   4b 60 60 mreg  \ Enable New UHCI Dynamic Scheme - 66MHz (40) & 33MHz (20)
-   c1 20 00 mreg  \ Disable USB PIRQ
-   end-table
-
-   d# 16 2 devfunc  \ UHCI Ports 4,5
-   4a 02 02 mreg  \ Enable Stop Bus Master Cycle if HALT Bit is Asserted
-   4b 60 60 mreg  \ Enable New UHCI Dynamic Scheme - 66MHz (40) & 33MHz (20)
-   c1 20 00 mreg  \ Disable USB PIRQ
-   end-table
-
-   d# 16 4 devfunc  \ EHCI
-   42 40 40 mreg  \ Enable Check PRESOF of ITDOUT Transaction during Fetching Data from DRAM
-   43 c0 c0 mreg  \ Enable Dynamic Clock Scheme - 66MHz (80) & 33MHz (40)
-   48 20 00 mreg  \ Disable DMA bursts
-   4c 03 03 mreg  \ Squelch detector fine tune - 01 is 112.5 mV
-\  4d 01 01 mreg  \ reserved bit
-\  4e 03 03 mreg  \ reserved bit - setting is appropriate for vx800
-   4f 10 10 mreg  \ Enable Clear RUN Bit when EHCI_IDLE
-   50 80 80 mreg  \ Fetch one more QH before de-asserting Doorbell
-   55 ff ff mreg  \ Disconnect level fine tune - 575 mV for ports 0-3
-   56 0f 0f mreg  \ Disconnect level fine tune - 575 mV for ports 4-5
-   5a ff cc mreg  \ HS termination resistor fine tune - 45 ohm, 48 ohm for ports 0,1
-   5b ff cc mreg  \ HS termination resistor fine tune - 45 ohm, 48 ohm for ports 2,3
-   5c 0f 00 mreg  \ DPLL Track Speed 2, DPLL Lock Speed 2
-   5d ff cc mreg  \ HS termination resistor fine tune - 45 ohm, 48 ohm for ports 4,5
-   64 05 05 mreg  \ Bump NULL-SOF valid time to 8 micro frames (04), Inhibit C4 state on USB 1.1 ISO activity (01)
-   end-table
-
-   d# 17 0 devfunc  \ Bus control and power management
-   40 44 44 mreg  \ Enable I/O Recovery time (40), Enable ports 4d0/4d1 for edge/level setting (04)
-   42 fc f0 mreg  \ Various setting related to DMA line  buffers
-   43 0f 0b mreg  \ Enable PCI delayed transactions (08), Write transaction timer (02), Read transaction timer (01)
-\  4d 01 01 mreg  \ Enable LPC TPM
-   4e 08 08 mreg  \ Enable ports 74/75 for CMOS RAM access
-   52 1b 19 mreg  \ No wait state between SIRQ transactions (10), Enable SIRQ (08), SIRQ frame is 6 clocks (3>1)
-   53 80 80 mreg  \ Enable PC/PCI DMA
-   55 ff a0 mreg  \ INTA and External General interrupt routing - INTA:IRQ10
-   56 ff b9 mreg  \ INTB,C routing - INTC:IRQ11, INTB:IRQ9
-   57 f0 a0 mreg  \ INTD routing - INTD:IRQ10
-   58 40 40 mreg  \ Enable Internal APIC
-   5b 10 10 mreg  \ Enable APIC Clock Gating
-   68 80 80 mreg  \ Enable HPETs
-   69 ff 00 mreg  \ HPET base low
-   6a ff d0 mreg  \ HPET base mid
-   6b ff fe mreg  \ HPET base high
-   6e ff 18 mreg  \ COMB not pos decoded but otherwise set to 2f8, COMA pos decoded at 3f8
-   70 ff 06 mreg  \ SVID backdoor
-   71 ff 11 mreg  \ SVID backdoor
-   72 ff 37 mreg  \ SVID backdoor
-   73 ff 33 mreg  \ SVID backdoor
-   80 20 20 mreg  \ Debounce power button
-\  81 08 00 mreg  \ 24-bit ACPI timer - why?
-   84 ff da mreg  \ IRQs 7,6,4,3,1 are primary wakeups
-   85 ff 40 mreg  \ IRQ 14 is primary wakeup
-   8a 9f 1f mreg  \ C-state auto switching with normal latencies
-[ifdef] demo-board
-   8d 18 18 mreg  \ fast clock as throttle timer tick, hold SMI# low until event status cleared (FIXME for OLPC)
-[else]
-   8d 18 10 mreg  \ fast clock as throttle timer tick, do not hold SMI# low
-[then]
-\  9b 80 80 mreg  \ reserved bit
-   b4 80 00 mreg  \ No positive decoding for UART1 ???
-   b8 fc 80 mreg  \ UART DMA Control Registers Base low (port is 4080)
-   b9 ff 40 mreg  \ UART DMA Control Registers Base high
-   ba 77 44 mreg  \ COM1 DMA Channel Selects - DMA0 for both Transmit and Receive
-   bc ff 00 mreg  \ SPI MMIO Base Address 15:8  (address is fed30000)
-   bd ff d3 mreg  \ SPI MMIO Base Address 23:16
-   be ff fe mreg  \ SPI MMIO Base Address 31:24
-   d0 f0 00 mreg  \ SMBUS IO Base Address low (port is 4100)
-   d1 ff 41 mreg  \ SMBUS IO Base Address high
-   d2 0f 01 mreg  \ Enable SMBUS and set other characteristics
-   e2 80 80 mreg  \ Inhibit C4 during USB isochronous transaction
-   e4 ff a0 mreg  \ Enable short C3/C4 (80), select various multi-function pins
-   e5 60 60 mreg  \ Enable NM bus master as source of bus master status, enable NB int to wakeup from Cx
-   e6 20 20 mreg  \ Enable USB Device Mode Bus Master as Break Event
-   e7 80 80 mreg  \ Enable APIC Cycle Reflect to ALL Bus Master Activity Effective Signal
-   fc 06 04 mreg  \ DPSLP# to SLP# Latency Adjustment - 22.5 us
-   end-table
-
-   d# 17 7 devfunc  \ South-North Module Interface Control
-   50 df 08 mreg  \ SM priorities - HDAC high priority, others low
-   51 80 80 mreg  \ Enable subtractive decode for P2P cycle
-   54 7b 02 mreg  \ CCA REQ timing - synchronize USB REQ but not others
-0 [if]
-   61 ff 2a mreg  \ Page C ROM shadow - C0000-CBFFF RO, CC000-CFFFF off
-   62 ff 00 mreg  \ Page D ROM shadow - D0000-DFFFF off
-   63 f3 a0 mreg  \ Page E/F ROM shadow - E0000-EFFFF RO, F0000-FFFFF RO, no memory hole
-   64 ff aa mreg  \ Page E ROM shadow - E0000-EFFFF RO
-[then]
-   70 fb 82 mreg  \ CPU to PCI flow control - CPU to PCI posted write, Enable Delay Transaction
-   72 af ee mreg  \ Read caching and prefix - various knobs (40 bit is reserved)
-   73 79 01 mreg  \ Enable PCI broken master timer & various knobs
-   74 d8 08 mreg  \ Lock Cycle Issued by CPU Blocks P2C Cycles (04 bit is reserved)
-   75 ff 0f mreg  \ Use New grant mechanism for PCI arbitration, PCI Master Bus Timeout is 7x16 PCI clock
-   76 fd 50 mreg  \ Enable PCI parking, Grant to CPU after 2 PC master grants
-   77 58 48 mreg  \ PCI1 FIFO empty blocks CPU to PCI read, Read FIFO times out after 1 ms
-   80 07 07 mreg  \ PCI1 and HDAC upstream read does not pass write, APCI blocks upstream write
-   82 3e 20 mreg  \ Monitor CCA and SDIO2
-   e0 e0 80 mreg  \ Dynamic CCA clock
-   e2 1e 00 mreg  \ Use dynamic clocks for Downstream Interface, PCI1, Downstream HDAC, Downstream SM Internal PCI device
-   e3 ff 5e mreg  \ PCI1 dynamic clock, PCI clock on when GRANT# asserted, Enable P2CR data timeout at 7*8 PCI clocks
-\  e6 1f 1f mreg  \ Split APIC decoding, Snoop FEEx.xxxx, Enable top SMM, High SMM, Compat SMM (20 bit is reserved)
-   e6 1f 19 mreg  \ Split APIC decoding, Snoop FEEx.xxxx, Enable top SMM, High SMM, Compat SMM (20 bit is reserved)
-   fc 40 40 mreg  \ Enable CCA Read Clock When MTXCTL state machine is not idle
-   end-table
-
-   d# 20 0 devfunc
-   41 01 01 mreg  \ Dynamic clock for HDAC
-   end-table
-
-   \ APIC setup
-   0 2 devfunc
-   59 01 01 mreg \ MSI Flat model support
-   5c 10 10 mreg  \ Data bit 11 mask for MSI
-   97 01 01 mreg  \ Redirect lowest priority MSI requests to APIC 00
-   end-table
-
-   0 3 devfunc
-   86 38 38 mreg  \ SMM and APIC Decoding: enable APIC lowest int arb, IOAPIC split decode, MSI (SMM later)
-   end-table
-
-   \ Low 2 bits of 86:
-   \ x1 to write to SMM shadow memory behind VGA
-   \ 00 to run - Axxxxx hits VGA in normal mode, hits shadow DRAM in SMM
-   \ 01 to access VGA when in SMM (data cycles only)
-
-   h# 1c00.0000 # mem-info-pa 4 + #) mov   \ Top of memory
-
-   long-offsets on
-
+   char o report
    h# 1e port80
 
-\ Fix the MTRRs so the real RAM is cacheable, instead of the fake nonexistent area
-   cr0 ax mov  h# 6000.0000 bitset  ax cr0 mov  \ Cache off
-   
-   0000.0000.0000.0c00.  2ff set-msr   \ Enable fixed and variable MTRRs in DefType   
+   fload ${BP}/cpu/x86/pc/olpc/via/startmtrrinit.fth
+   \ Cache is now setup normally, backed by memory
+   'ebda # sp mov  \ Move stack to real memory
 
-   0000.0000.0000.0006.  200 set-msr   \ RAM starting at 0
-   0000.000f.c000.0800.  201 set-msr   \ 1 GiB
-   0000.0000.ff00.0006.  202 set-msr   \ ROM in last meg
-   0000.000f.ff00.0800.  203 set-msr   \ 1 MiB
-   0000.0000.d000.0001.  204 set-msr   \ Frame buffer - Write Combining mode
-   0000.000f.f000.0800.  205 set-msr   \ 256 MB
-
-   0606.0606.0606.0606.  250 set-msr   \ Cache 00000-7FFFF
-   0606.0606.0606.0606.  258 set-msr   \ Cache 80000-9FFFF
-   0000.0000.0000.0000.  259 set-msr   \ Don't Cache VGA range from A0000 to BFFFF
-   0606.0606.0606.0606.  268 set-msr   \ Cache C0000-C7FFF
-   0606.0606.0606.0606.  269 set-msr   \ Cache C8000-CFFFF
-   0606.0606.0606.0606.  26a set-msr   \ Cache D0000-D7FFF
-   0606.0606.0606.0606.  26b set-msr   \ Cache D8000-DFFFF
-   0606.0606.0606.0606.  26c set-msr   \ Cache E0000-E7FFF
-   0606.0606.0606.0606.  26d set-msr   \ Cache E8000-EFFFF
-   0606.0606.0606.0606.  26e set-msr   \ Cache F0000-F7FFF
-   0606.0606.0606.0606.  26f set-msr   \ Cache F8000-FFFFF
-
-   cr0 ax mov  h# 6000.0000 bitclr  ax cr0 mov  \ Cache on
-   h# 10.0000 # sp mov  \ Move stack to real memory
-
-\ Cache is now back on, with the final MTRR setup
-
-   \ Now we can use the stack and do conventional subroutine calls
+   fload ${BP}/cpu/x86/pc/olpc/via/startgfxinit.fth
+   fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
 
 \ Enable the keyboard controller
    
@@ -674,14 +134,10 @@ fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
 \   8851 config-setup  bx ax mov  al dx out  \ Enable the keyboard configuration port
 \   e2 2e port-wb   7 2f port-wb
 
-\ XXX need to set some registers in D17F7 "SNMIC" per chapter 21 of the BIOS Porting Guide
+   fload ${BP}/cpu/x86/pc/olpc/via/startmemtop.fth
 
    h# 1f port80
-[ifdef] uart-debug-startup
- char F report
- char o report
- char r report
-[then]
+   char r report
 
    fload ${BP}/cpu/x86/pc/resetend.fth
 end-code

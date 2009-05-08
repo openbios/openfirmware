@@ -3,6 +3,7 @@ purpose: Construct the Open Firmware module collection
 command: &builder &this
 in: ${BP}/cpu/x86/pc/olpc/via/build/ec.img
 in: ${BP}/cpu/x86/pc/olpc/via/build/romreset.di
+in: ${BP}/cpu/x86/pc/olpc/via/build/romstart.di
 in: ${BP}/cpu/x86/pc/olpc/via/build/resume.di
 in: ${BP}/cpu/x86/pc/olpc/via/build/rmstart.img
 in: ${BP}/cpu/x86/pc/olpc/via/build/paging.di
@@ -59,8 +60,11 @@ $new-file
 
    dropin-base rom-pa -  pad-file
 
+[ifdef] coreboot-loaded
+   " romstart.di"           $add-file
+[else]
    " romreset.di"           $add-file
-\   " romstart.di"           $add-file
+[then]
 
 [ifdef] Later
    " resume.di"             $add-file
@@ -82,6 +86,7 @@ $new-file
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
 \  " mrv8686.bin" " mrv8686.bin"                                    $add-deflated-dropin
 
+   " ${BP}/dev/pci/build/pcibridg.fc"            " class060400"   $add-deflated-dropin
    " ${BP}/dev/ide/build/leghier.fc"             " class01018a"   $add-deflated-dropin
    " ${BP}/dev/mmc/sdhci/build/sdhci.fc"         " class080501"   $add-deflated-dropin
    " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"         " sdmmc"         $add-deflated-dropin
@@ -145,6 +150,10 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_tx.bin" " nb_tx"      $add-deflated-dropin
 [then]
 
+[ifdef] coreboot-loaded
+   /rom h# 10000 - pad-file	\ coreboot init image must be in last FLASH block
+   " coreboot.img"   $add-file
+[else]
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
    " rmstart.img"    $add-file
 
@@ -184,6 +193,7 @@ crcbuf /l ofd @ fputs
 
 /rom h# 80 - ofd @ fseek
 sipbuf /sipbuf ofd @ fputs
+[then]
 
 ofd @ fclose
 

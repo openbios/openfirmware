@@ -41,27 +41,27 @@ d# 1024 instance value /scanline	\ Frame buffer line width
 ;
 
 
-\ VGA register access
-
-\ reset attribute address flip-flop
-: reset-attr-addr  ( -- )  h# 3da ( input-status1 )  pc@ drop  ;
-
-: video-mode!  ( b -- )  reset-attr-addr  h# 03c0 pc!  ;
-: attr!  ( b index -- )  reset-attr-addr h# 03c0 pc!  h# 03c0 pc!  ;
-: attr@  ( index -- b )
-   reset-attr-addr  h# 03c0 pc!  h# 03c1 pc@  reset-attr-addr
-;
-: grf!   ( b index -- )  h# 03ce pc!  h# 03cf pc!  ;
-: grf@   ( index -- b )  h# 03ce pc!  h# 03cf pc@  ;
-
-: crt@  ( index -- byte )  h# 3d4 pc!  h# 3d5 pc@  ;
-: crt!  ( byte index -- )  h# 3d4 pc!  h# 3d5 pc!  ;
-
-: seq@  ( index -- byte )  h# 3c4 pc!  h# 3c5 pc@  ;
-: seq!  ( byte index -- )  h# 3c4 pc!  h# 3c5 pc!  ;
-
-: misc@  ( -- byte )  h# 3cc pc@  ;
-: misc!  ( byte -- )  h# 3c2 pc!  ;
+\ \ VGA register access
+\ 
+\ \ reset attribute address flip-flop
+\ : reset-attr-addr  ( -- )  h# 3da ( input-status1 )  pc@ drop  ;
+\ 
+\ : video-mode!  ( b -- )  reset-attr-addr  h# 03c0 pc!  ;
+\ : attr!  ( b index -- )  reset-attr-addr h# 03c0 pc!  h# 03c0 pc!  ;
+\ : attr@  ( index -- b )
+\    reset-attr-addr  h# 03c0 pc!  h# 03c1 pc@  reset-attr-addr
+\ ;
+\ : grf!   ( b index -- )  h# 03ce pc!  h# 03cf pc!  ;
+\ : grf@   ( index -- b )  h# 03ce pc!  h# 03cf pc@  ;
+\ 
+\ : crt@  ( index -- byte )  h# 3d4 pc!  h# 3d5 pc@  ;
+\ : crt!  ( byte index -- )  h# 3d4 pc!  h# 3d5 pc!  ;
+\ 
+\ : seq@  ( index -- byte )  h# 3c4 pc!  h# 3c5 pc@  ;
+\ : seq!  ( byte index -- )  h# 3c4 pc!  h# 3c5 pc!  ;
+\ 
+\ : misc@  ( -- byte )  h# 3cc pc@  ;
+\ : misc!  ( byte -- )  h# 3c2 pc!  ;
 
 : pll,  ( v44 v45 v46 misc -- )  bljoin l,  ;
 
@@ -88,7 +88,8 @@ here res-table - constant /res-table
 
 \ width  height  htotal  hsync hsyncend  vtotal  vsync vsyncend        --pll-- misc
 create mode3-table
-  640 w,  400 w,  800 w,  680 w,  776 w,  449 w,  412 w,  430 w,  hex  35 04 05 67 pll,  decimal
+\  640 w,  400 w,  800 w,  680 w,  776 w,  449 w,  412 w,  430 w,  hex  35 04 05 67 pll,  decimal
+  640 w,  400 w,  800 w,  680 w,  776 w,  449 w,  412 w,  430 w,  hex  54 90 03 67 pll,  decimal
 
 \ width  height  htotal  hsync hsyncend  vtotal  vsync vsyncend        --pll-- misc
 create mode12-table
@@ -99,7 +100,13 @@ create mode12-table
 : mode-3?   ( -- flag )  res-entry mode3-table  =  ;
 : mode-12?  ( -- flag )  res-entry mode12-table =  ;
 
-: find-timing-table  ( width height -- error? )
+: find-timing-table  ( width height depth  -- error? )
+   \ Mode12 check
+   4 =  if  2drop mode12-table to res-entry  false exit  then   ( width height )
+
+   \ Text mode 3 check
+   dup d# 400 =  if  2drop mode3-table to res-entry  false exit  then  ( width height )
+
    res-table /res-table bounds  ?do  ( width height )
       over i w@ =  if                ( width height )
          dup i wa1+ w@ =  if         ( width height )
@@ -132,7 +139,10 @@ hex
    mode-12?  if  8 +  then
 ;
 : hblankend  ( -- n )
-   mode-3? mode-12? or  if  d# 792 else  htotal  then
+\  mode-3?  if  d# 288 exit  then
+   mode-3?  if  d# 792 exit  then
+   mode-12? if  d# 792 exit  then
+   htotal
 ;
 : vdisplay ( -- n )  height  ;
 : vblank   ( -- n )
@@ -205,8 +215,9 @@ hex
 : seq-set  ( mask reg# -- )  tuck seq@ or swap seq!  ;
 : seq-clr  ( mask reg# -- )  tuck seq@ swap invert and swap seq!  ;
 
-: crt-set  ( mask reg# -- )  tuck crt@ or swap crt!  ;
-: crt-clr  ( mask reg# -- )  tuck crt@ swap invert and swap crt!  ;
+\ : crt-set  ( mask reg# -- )  tuck crt@ or swap crt!  ;
+\ : crt-clr  ( mask reg# -- )  tuck crt@ swap invert and swap crt!  ;
+: crt-clr  crt-clear  ;
 
 : pixels>bytes  ( pixels -- bytes )
    depth d# 24 =  if  d# 32   else  depth  then  *  3 >>  ( bytes )
@@ -237,16 +248,22 @@ hex
 : legacy-settings  ( -- )
    \ Some EGA legacy mode settings
    03 00 seq!  \ Release reset bits
-   01 01 seq!  \ 8/9 timing (0 for mode 3)
-   0f 02 seq!  \ Enable map planes 0 and 1 (3 for mode 3)
+   mode-3?  if  00  else  01  then
+      01 seq!  \ 8/9 timing (0 for mode 3)
+   mode-3?  if  03  else  0f  then
+      02 seq!  \ Enable map planes 0 and 1 (3 for mode 3)
    00 03 seq!  \ Character map select
-   0e 04 seq!  \ Extended memory present (2 for mode 3)
+   mode-3?  if  02  else  0e  then
+      04 seq!  \ Extended memory present (2 for mode 3)
    0d 0a crt!  \ Cursor start (text mode)
    0e 0b crt!  \ Cursor end (text mode)
    00 0e crt!  \ Cursor loc (text mode)
    00 0f crt!  \ Cursor loc (text mode)
-   10 11 crt!  \ Refreshes per line, disable vertical interrupt (60 in mode 3, 70 in mode 12)
-   23 17 crt!  \ address wrap, sequential access, not CGA compat mode (63 in mode 12)
+   mode-3?  if  60  else  mode-12?  if  70  else  10  then  then
+      11 crt!  \ Refreshes per line, disable vertical interrupt (60 in mode 3, 70 in mode 12)
+   mode-12?  if  63  else  23  then
+      17 crt!  \ address wrap, sequential access, not CGA compat mode (63 in mode 12)
+
 
    04 0e crt!  \ Make the register dump match the snapshots
    60 0f crt!
@@ -273,8 +290,10 @@ hex
 \ SRs set in romreset: 35-38,39,4c,68,6d-6f,78,f3
 
 : tune-fifos  ( -- )
-   20 3f 16 seq-mask  \ FIFO threshold (VX855 value) (value is c in modes 3 and 12)
-   7f ff 17 seq-mask  \ FIFO depth (VX855 value)  (value is 1f in modes 3 and 12)
+   mode-3? mode-12? or  if  0c  else  20  then
+      3f 16 seq-mask  \ FIFO threshold (VX855 value) (value is c in modes 3 and 12)
+   mode-3? mode-12? or  if  1f  else  7f  then
+      ff 17 seq-mask  \ FIFO depth (VX855 value)  (value is 1f in modes 3 and 12)
    60 ff 18 seq-mask  \ Display Arbiter (VX855 value)
 
    18 21 seq!  \ (typical request track FIFO number channel 0
@@ -323,17 +342,24 @@ hex
       dup c@  i grf!  1+
    loop  drop
 
+   \ For mode  3, add:   10 5 grf!  0e 6 grf!  0 7 grf!
+   mode-3?  if
+      10 5 grf!
+      0e 6 grf!
+      00 7 grf!
+   then
 \ For mode 13, add:   40 5 grf!
-\ For mode  3, add:   10 5 grf!  0e 6 grf!  0 7 grf!
 
    0 20 grf!  0 21 grf!  0 22 grf!
 
    \ AT6 is 6 not 14, AT8-f is 8-f, not 38-3f (different intensities)
    10 0  do  i i attr!  loop
-   01 10 attr! \ mode control (0c for text mode 3)
+   mode-3?  if  0c  else  01  then
+      10 attr! \ mode control (0c for text mode 3)
    00 11 attr! \ overscan color
    0f 12 attr! \ color plane enable
-   00 13 attr! \ horizontal pixel pan - (08 for text mode 3)
+   mode-3?  if  08  else  00  then
+      13 attr! \ horizontal pixel pan - (08 for text mode 3)
    00 14 attr! \ high bits of color palette index
 
    htotal    3 >> 5 - dup 00 crt!  5 >> 08  36 crt-mask
@@ -359,10 +385,12 @@ hex
    ff 18 crt!  10 7 crt-set  40 9 crt-set  10 35 crt-set
 
    \ HSYNC adjust
-   06 07 33 crt-mask  \ 01 for text mode 3, 00 for mode 12
+   mode-3?  if  01  else  mode-12?  if  00  else  06  then  then
+      07 33 crt-mask  \ 01 for text mode 3, 00 for mode 12
 
    \ Max scan line value 0
-   1f 9 crt-clr  1f 14 crt!
+   mode-3?  if  0f  else  00  then  1f 9 crt-mask
+   1f 14 crt!  \ Underline location
  
    vblank    1-  dup 15 crt!  dup 5 >> 08 07 crt-mask  dup 4 >> 20 09 crt-mask  7 >> 08 35 crt-mask
    vblankend 1-      16 crt!
@@ -372,8 +400,13 @@ hex
    c8 33 crt-clr  \ Gamma, interlace, prefetch, HSYNC shift
 
    \ Offset
-   width pixels>bytes to /scanline
-   /scanline bytes>chunks dup 13 crt!  3 >> e0 35 crt-mask
+   mode-3?  if
+      d# 40
+   else
+      width pixels>bytes to /scanline
+      /scanline bytes>chunks
+   then
+   dup 13 crt!  3 >> e0 35 crt-mask
 
    \ fetch count
    hdisplay pixels>bytes bytes>chunks 8 +  dup 1 >> 1c seq!  9 >> 03 1d seq-mask
@@ -383,7 +416,7 @@ hex
 
 : set-primary-mode  ( width height depth -- error? )
    to depth  to height  to width
-   width height find-timing-table  ?dup  if  exit  then
+   width height depth find-timing-table  ?dup  if  exit  then
 
    80 17 crt-clr  \ Assert reset
 
@@ -404,10 +437,10 @@ hex
 \   depth 8 <> set-gamma   \ No gamma for 8bpp palette mode
    false set-gamma
 
-   \ Maybe do some power-up thingy here
-   pll set-primary-dotclock
-   
-   use-ext-clock
+   mode-3?  0=  if
+      pll set-primary-dotclock
+      use-ext-clock
+   then
 
 \  01 6b crt-clr  \ Appears to be reserved RO bit
 

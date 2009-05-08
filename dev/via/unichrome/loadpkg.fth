@@ -4,9 +4,20 @@ purpose: Main load file for Via Unichrome frame buffer driver
 " display" device-name
 
 fload ${BP}/dev/via/unichrome/pci.fth            \ PCI interfaces
+defer idac@			\ Indexed DAC read
+defer idac!			\ Indexed DAC write
+defer rmr@			\ Pixel read mask read
+defer rmr!			\ Pixel read mask write
+defer plt@			\ Palette read
+defer plt!			\ Palette write
+defer rindex!			\ Read index for palette read
+defer windex!			\ Write index for palatte write
+defer index!			\ Index for generic IO
+defer video-on
+fload ${BP}/dev/video/controlr/vga.fth           \ Standard VGA interfaces
 fload ${BP}/dev/via/unichrome/unichrome.fth      \ Controller code
 \ fload ${BP}/dev/via/unichrome/accel2d.fth      \ Accelerator
-\ fload ${BP}/dev/via/unichrome/gxvga.fth          \ Text mode support
+fload ${BP}/dev/via/unichrome/vgamodes.fth       \ Text mode support
 fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
 fload ${BP}/cpu/x86/pc/olpc/expand16.fth         \ Expand image by 2x
 

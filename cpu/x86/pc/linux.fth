@@ -97,6 +97,17 @@ d# 20 constant /root-dev-buf
 : set-parameters  ( cmdline$ -- )
    screen-info  linux-params  /screen-info  move  \ Ostensibly screen info
 
+   h#  40 +lp  h#  14 erase       \ apm_bios_info (APM BIOS info)
+   h#  54 +lp  h#  0c erase       \ pad2
+   h#  60 +lp  h#  10 erase       \ ist_info (Intel SpeedStep BIOS info)
+   h#  70 +lp  h#  10 erase       \ pad3
+   h#  80 +lp  h#  10 erase       \ hd0_info (obsolete)
+   h#  90 +lp  h#  10 erase       \ hd1_info (obsolete)
+   h#  a0 +lp  h#  10 erase       \ sys_desc_table (from MCA - Microchannel)
+   h#  b0 +lp  h#  90 erase       \ pad4  
+   h# 140 +lp  h#  80 erase       \ edid_info
+   h# 1c0 +lp  h#  20 erase       \ efi_info
+
    linux-memtop ( #bytes )
    d# 1023 invert and  d# 1024 /  ( #kbytes )
    d# 1024 -  h# 002 +lp  w!	\ Kbytes of extended (not the 1st meg) memory

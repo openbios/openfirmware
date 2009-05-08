@@ -7,7 +7,7 @@ purpose: Common code for several versions of reset.bth
    \ Beginning of "switch to new GDT" section
 
    \ Move GDT to low memory.  We use the first location at gdt-pa as
-   \ the pointer, so you can't use description 0.
+   \ the pointer since 0 is an invalid descriptor number anyway.
    gdt-pa # ax mov
    0 [ax] sgdt				\ Read GDT
    2 [ax] si mov			\ GDT base

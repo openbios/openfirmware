@@ -67,7 +67,7 @@ h# 0000 encode-int			\ Mask of implemented add-in slots
 also forth definitions
 
 : pci-probe-list  ( -- adr len )
-   " 1,c,f,10,13,14"
+   " 1,2,3,4,5,6,7,8,9,a,b,c,d,e,f,10,11,12,13,14"
 ;
 \    " c,f" dup  config-string pci-probe-list
 
@@ -85,6 +85,16 @@ h# 2000.0000 to mem-space-top
 h# 0000.8000 to first-io		\ Avoid mappings established by BIOS
 [then]
 
+: pirq@  ( n -- irq )
+   case
+   0  of  h# 8855 config-b@ 4 rshift  endof
+   1  of  h# 8856 config-b@ h# f and  endof
+   2  of  h# 8856 config-b@ 4 rshift  endof
+   3  of  h# 8857 config-b@ 4 rshift  endof
+   ( default )  0 swap
+   endcase
+;
+
 \ Determine the parent interrupt information (the "interrupt line" in PCI
 \ parlance) from the child's "interrupt pin" and the child's address,
 \ returning "int-line true" if the child's interrupt line register should
@@ -92,7 +102,18 @@ h# 0000.8000 to first-io		\ Avoid mappings established by BIOS
 : assign-int-line  ( phys.hi.func INTx -- irq true )
    \ Reiterate the value that is already in the int line register,
    \ which was placed there by lower level init code
-   drop  h# 3c +  config-b@  true
+   drop case
+      h# 5800 of  1 pirq@ true exit  endof  \ USB device - PIRQB
+      h# 6000 of  0 pirq@ true exit  endof  \ SDIO - PIRQA
+      h# 6800 of  0 pirq@ true exit  endof  \ SDC - PIRQA
+      h# 7800 of  1 pirq@ true exit  endof  \ EIDE - PIRQB
+      h# 8000 of  0 pirq@ true exit  endof  \ UHCI01 - PIRQ A
+      h# 8100 of  1 pirq@ true exit  endof  \ UHCI23 - PIRQ B
+      h# 8200 of  2 pirq@ true exit  endof  \ UHCI45 - PIRQ C
+      h# 8400 of  3 pirq@ true exit  endof  \ EHCI - PIRQ D
+      h# a000 of  1 pirq@ true exit  endof  \ HDAudio - PIRQ B
+      ( default )  dup h# 3c + config-b@ true  rot    \ Reiterate previous setting
+   endcase
 ;
 
 0 value interrupt-parent

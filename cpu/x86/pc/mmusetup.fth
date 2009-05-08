@@ -5,11 +5,18 @@ purpose: Establish the initial values for the MMU and virtual lists
 \ established by initmmu.fth
 
 [ifdef] total-ram
-: (memory?)  ( adr -- flag )  total-ram u<  ;
+: in-ram?  ( adr -- flag )  total-ram u<  ;
 [else]
 h# 8000.0000 value ram-boundary
-: (memory?)  ( adr -- flag )  ram-boundary u<  ;
+: in-ram?  ( adr -- flag )  ram-boundary u<  ;
 [then]
+: (memory?)  ( adr -- flag )
+   dup in-ram?  if   ( adr )
+      h# a0000 h# 100000 within 0=  \ Don't cache the DOS Hole
+   else              ( adr )
+      drop  false
+   then
+;
 ' (memory?) is memory?
 
 dev /mmu

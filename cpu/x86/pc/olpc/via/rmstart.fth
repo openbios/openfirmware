@@ -98,10 +98,7 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
 
    16-bit
 
-   \ PLL startup?
-
-   \ Return to here after the reset
-   h# 02 port80
+   h# 01 port80
 
    \ Invalidate TLB
    op: ax ax xor
@@ -166,7 +163,6 @@ ascii h report
 
    h# 0f port80
 
-ResetBase .x cr
    op: ad: ResetBase h# 10 #)  far jmp	\ Jump to Forth startup
 
    \ Pad the startup code so that the main entry point ends up at the

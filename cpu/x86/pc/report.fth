@@ -11,6 +11,8 @@ purpose: Assembler macro for tracing progress through startup code
    h# 01  h# 3f8  isa-c!	\ Baud rate divisor low - 115200 baud
    h#  0  h# 3f9  isa-c!	\ Baud rate divisor high - 115200 baud
    h#  3  h# 3fb  isa-c!	\ 8 bits, no parity
+   h#  0  h# 3f9  isa-c!        \ Interrupts off
+   h#  1  h# 3fa  isa-c!        \ Enable FIFO
 ;
 
 \ Assembler macro to assemble code to send the character "char" to COM1
@@ -23,6 +25,7 @@ purpose: Assembler macro for tracing progress through startup code
 : init-com1  ( -- )  ;
 : report  ( char -- )  drop  ;
 [then]
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

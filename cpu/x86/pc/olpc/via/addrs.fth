@@ -50,7 +50,7 @@ h# fe01.a000 constant ohci-pci-base
 h# fe01.b000 constant ehci-pci-base
 h# fe02.4000 constant sd-pci-base
 h# fe02.8000 constant camera-pci-base
-h# fec0.0000 constant ioapic-mmio-base
+h# fec0.0000 constant io-apic-mmio-base
 h# fed0.0000 constant hpet-mmio-base
 h# fed3.0000 constant spi-mmio-base
 h# fed4.0000 constant wdt-mmio-base

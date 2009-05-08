@@ -383,6 +383,17 @@ fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 \needs ramdisk  " " d# 128 config-string ramdisk
 " "   ' boot-file      set-config-string-default   \ Let the boot script set the cmdline
 
+: upup
+   " u:\irdpup.gz" to ramdisk
+   " console=ttyS0,115200 ide=nodma pmedia=ataflash nosmp noacpi" to boot-file
+   " u:\vmlpup" to boot-device
+;
+: cpup
+   " c:\initrd.gz" to ramdisk
+   " console=ttyS0,115200 ide=nodma pmedia=ataflash nosmp noacpi" to boot-file
+   " c:\vmlinuz" to boot-device
+;
+
 [ifdef] Later
 : dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
 : brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;
