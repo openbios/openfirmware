@@ -207,6 +207,20 @@ support-package: http
    fload ${BP}/ofw/inet/http.fth	\ HTTP client
 end-support-package
 
+[ifdef] via-demo
+fload ${BP}/ofw/wifi/wifi-cfg.fth
+support-package: supplicant
+fload ${BP}/ofw/wifi/loadpkg.fth
+end-support-package
+
+: olpc-ssids  ( -- $ )
+   " OLPCOFW"nschool-mesh-0"nschool-mesh-1"nschool-mesh-2"
+;
+' olpc-ssids to default-ssids
+
+devalias net /wlan
+[then]
+
 [ifndef] use-timestamp-counter
 fload ${BP}/cpu/x86/pc/mscal.fth
 [then]
@@ -285,6 +299,9 @@ previous previous definitions
 
 [ifdef] olpc
 fload  ${BP}/cpu/x86/pc/olpc/usbpwr.fth
+devalias net /wlan
+[then]
+[ifdef] via-demo
 devalias net /wlan
 [then]
 

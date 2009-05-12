@@ -22,8 +22,10 @@ in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
 in: ${BP}/dev/pci/build/pcibridg.fc
 in: ${BP}/dev/ide/build/leghier.fc
 in: ${BP}/cpu/x86/pc/biosload/linux.fth
-in: ${BP}/dev/mmc/sdhci/build/sdhci.fc
+in: ${BP}/dev/mmc/sdhci/build/sdhci2.fc
 in: ${BP}/dev/mmc/sdhci/build/sdmmc.fc
+in: ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc
+in: sd8686.bin
 
 build-now
 
@@ -91,8 +93,16 @@ hex
    " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
    " ${BP}/dev/ide/build/leghier.fc"            " class01018a"     $add-deflated-dropin
 
+[ifdef] via-demo
+   " ${BP}/dev/mmc/sdhci/build/sdhci2.fc"       " class080501"     $add-deflated-dropin
+   " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"        " sdmmc"           $add-deflated-dropin
+   " ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc" " mv8686"         $add-deflated-dropin
+   " sd8686_helper.bin"                         " helper_sd.bin"   $add-deflated-dropin
+   " sd8686.bin"                                " sd8686.bin"      $add-deflated-dropin
+[else]
    " ${BP}/dev/mmc/sdhci/build/sdhci.fc"        " class080501"     $add-deflated-dropin
    " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"        " sdmmc"           $add-deflated-dropin
+[then]
 
    " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"     $add-deflated-dropin
 
