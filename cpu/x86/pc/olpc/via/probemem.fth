@@ -37,8 +37,9 @@ dev /memory
 : release-range  ( start-adr end-adr -- )  over - release  ;
 
 : probe  ( -- )
-[ifdef] relocated-fw
-   system-ram /fw-area - to fw-pa
+[ifdef] virtual-mode
+   origin >physical  to fw-pa
+   fw-pa /dma-extra - to dma-base
 [then]
 
    0 total-ram  reg   \ Report extant memory

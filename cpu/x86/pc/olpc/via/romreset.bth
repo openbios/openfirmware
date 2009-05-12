@@ -105,9 +105,9 @@ label startup
 
 1 [if]
  \ This turns an OS reboot into a real cold start - from coreboot
-   4001 8888 config-ww   \ Set ACPI base address
+   acpi-io-base 1 + 8888 config-ww   \ Set ACPI base address
    8c 8881 config-wb   \ Enable ACPI regs, 32-bit PM timer, guard RTC against power glitches
-   4004 port-rw        \ Get APCI Status register
+   acpi-io-base 4 + port-rw           \ Get APCI Status register
    d# 10 # ax shr  7 # ax and  1 # ax cmp  <>  if  \ Not a wakeup from S3
       380 config-rb  ax ax or  0<>  if             \ C-page shadowing not on yet
          6 cf9 port-wb                             \ Force a full system reset
@@ -135,6 +135,7 @@ label startup
 \   e2 2e port-wb   7 2f port-wb
 
    fload ${BP}/cpu/x86/pc/olpc/via/startmemtop.fth
+   fload ${BP}/cpu/x86/pc/olpc/via/startcpuspeed.fth
 
    h# 1f port80
    char r report

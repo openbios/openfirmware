@@ -34,7 +34,7 @@ stand-init: CPU node
 warning @ warning off
 : stand-init-io  ( -- )
    stand-init-io
-\  acpi-calibrate-tsc
+   acpi-calibrate-tsc
    d# 800 to us-factor  d# 800000 to ms-factor
 ;
 warning !

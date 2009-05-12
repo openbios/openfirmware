@@ -8,8 +8,9 @@ in: ${BP}/cpu/x86/pc/olpc/via/build/resume.di
 in: ${BP}/cpu/x86/pc/olpc/via/build/rmstart.img
 in: ${BP}/cpu/x86/pc/olpc/via/build/paging.di
 in: ${BP}/cpu/x86/pc/olpc/via/build/fw.dic
-in: ${BP}/dev/mmc/sdhci/build/sdhci.fc
+in: ${BP}/dev/mmc/sdhci/build/sdhci2.fc
 in: ${BP}/dev/mmc/sdhci/build/sdmmc.fc
+in: ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc
 in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
 in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
 in: ${BP}/dev/usb2/device/hub/build/hub.fc
@@ -22,7 +23,8 @@ in: ${BP}/clients/memtest86/memtest
 in: ${BP}/clients/emacs/x86/emacs
 in: ${BP}/cpu/x86/pc/olpc/via/build/verify.img
 in: ${BP}/dev/pci/build/pcibridg.fc
-in: ${BP}/dev/ide/build/leghier.fc
+in: ${BP}/dev/ide/build/idehier.fc
+\ in: ${BP}/dev/ide/build/leghier.fc
 \ in: ${BP}/cpu/x86/pc/olpc/via/build/camera.fc
 \ in: ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml
 \ in: ${BP}/cpu/x86/pc/olpc/via/build/mcastnand.bin
@@ -87,9 +89,11 @@ $new-file
 \  " mrv8686.bin" " mrv8686.bin"                                    $add-deflated-dropin
 
    " ${BP}/dev/pci/build/pcibridg.fc"            " class060400"   $add-deflated-dropin
-   " ${BP}/dev/ide/build/leghier.fc"             " class01018a"   $add-deflated-dropin
-   " ${BP}/dev/mmc/sdhci/build/sdhci.fc"         " class080501"   $add-deflated-dropin
+\   " ${BP}/dev/ide/build/leghier.fc"             " class01018a"   $add-deflated-dropin
+   " ${BP}/dev/ide/build/idehier.fc"             " class01018a"   $add-deflated-dropin
+   " ${BP}/dev/mmc/sdhci/build/sdhci2.fc"        " class080501"   $add-deflated-dropin
    " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"         " sdmmc"         $add-deflated-dropin
+   " ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc" " mv8686"        $add-deflated-dropin
    " builton.fth"                       " probe-"          $add-dropin
 
    " ${BP}/clients/emacs/x86/emacs"             " emacs"         $add-deflated-dropin

@@ -51,14 +51,16 @@ hex
 [then]
 ;
 
-dma-base   dup dma-size +  2constant dma-range
+: dma-range  ( -- start end )  dma-base   dup dma-size +  ;
 
+0 [if]  \ This is fairly useless since the DMA ranges can be dynamic
 \ We hereby establish the convention that the implied "#address-cells"
 \ for the (nonexistent) parent of the root node is 0, so the parent
 \ address portion of the ranges property is empty.
 0 0 encode-bytes
    dma-base encode-int encode+  dma-size encode-int encode+
 " dma-ranges" property
+[then]
 
 \ x86 caches are coherent
 h# 3 constant dma-map-mode		\ Cacheable

@@ -369,11 +369,6 @@ true                               ' client-symbols?  set-config-int-default
 \ Also try " console=/dev/ttyS0,9600 console=/dev/tty0" in boot-file
 [then]
 
-\ XXX delete me
-\ [ifdef] linux-support
-\ fload ${BP}/cpu/x86/pc/biosload/linux.fth
-\ [then]
-
 fload ${BP}/cpu/x86/pc/biosload/vmdoor.fth   \ VMware interfaces
 
 fload ${BP}/cpu/x86/pc/biosload/intelfb.fth  \ Intel frame buffer setup

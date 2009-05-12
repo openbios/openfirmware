@@ -31,7 +31,8 @@
    \ Additional Power Management Setup not in coreboot
    0 2 devfunc
    76 08 08 mreg  \ AGTL Power down buffers in S3
-   92 ff 40 mreg  \ ACPI IO Base address
+\   92 ff 00 mreg  \ ACPI IO Base address
+\   93 ff 04 mreg  \ ACPI IO Base address
    end-table
 
    0 4 devfunc
@@ -62,7 +63,7 @@
 
    d# 12 0 devfunc  \ SDIO tuning
    44 01 01 mreg  \ Enable backdoor
-   8b 05 01 mreg  \ Do not report 1.8V support
+\   8b 05 01 mreg  \ Do not report 1.8V support
    8c c3 03 mreg  \ Falling edge trigger for Slots 1 and 2 data in high speed
    8e ff 7e mreg  \ Delay host clock for Slots 1, 2, 3 by 4.8 nS
    8f 09 01 mreg  \ Falling edge trigger on slot 3 output clock under high speed
@@ -79,7 +80,8 @@
    4b ff 20 mreg  \ Drive0 timing
    4c f0 60 mreg  \ Address setup time
    52 df 0e mreg  \ Ultra dma wait strobe timing
-   53 df c6 mreg  \ Ultra DMA mode control
+\   53 df c6 mreg  \ Ultra DMA mode control
+   53 df 06 mreg  \ Ultra DMA mode control
    c4 1d 18 mreg  \ Config 1
 \  d4 ac 24 mreg  \ Config 3
    d4 bc 34 mreg  \ Config 3 - 10 res be like Phx

@@ -64,7 +64,7 @@ label startup
    fload ${BP}/cpu/x86/pc/olpc/via/startmtrrinit.fth
    fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
 
-1 [if]
+0 [if]
    0 3 devfunc
    86 c4 84 mreg  \ Enable top SMM memory (04) of size 4 MB (80 in c0 field)
    end-table
@@ -75,6 +75,7 @@ label startup
 [then]
 
    fload ${BP}/cpu/x86/pc/olpc/via/startmemtop.fth
+   fload ${BP}/cpu/x86/pc/olpc/via/startcpuspeed.fth
 
    h# 1f port80
    char r report

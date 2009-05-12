@@ -20,7 +20,6 @@ dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
 
 h# 1bc0.0000 value    fw-pa     \ Changed in probemem.fth
 h#   20.0000 constant /fw-ram
-h#   40.0000 constant /fw-area
 [then]
 
 h# 100.0000 constant def-load-base      \ Convenient for initrd
@@ -33,8 +32,9 @@ h# 100.0000 constant def-load-base      \ Convenient for initrd
 
 h#  18.0000 constant heap-size
 
-h# 900.0000 constant dma-size
-fw-pa dma-size - constant dma-base
+h# 20.0000 constant /dma-extra          \ In case the firmware region isn't enough
+/fw-ram /dma-extra + constant dma-size  \ We let the DMA area overlap the FW area
+fw-pa /dma-extra - constant dma-base
 
 h# f.0000 constant suspend-base      \ In the DOS hole
 h# f.0008 constant resume-entry
@@ -56,8 +56,8 @@ h# fed3.0000 constant spi-mmio-base
 h# fed4.0000 constant wdt-mmio-base
 h# fee0.0000 constant apic-mmio-base
 
-h#      4000 constant acpi-io-base
-h#      4100 constant smbus-io-base
+h#   400 constant acpi-io-base
+h#   500 constant smbus-io-base
 
 h# e0000 constant rsdp-adr
 h# e0040 constant rsdt-adr

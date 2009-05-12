@@ -105,14 +105,17 @@ fload ${BP}/dev/geode/gpio.fth		\ Rudimentary GPIO driver
 fload ${BP}/cpu/x86/pc/isaio.fth
 fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
 
-fload ${BP}/cpu/x86/pc/olpc/via/probemem.fth	\ Memory probing
-
 [ifdef] virtual-mode
 fload ${BP}/cpu/x86/loadvmem.fth	\ /mmu node
 
 stand-init: MMU
    " /mmu" open-dev mmu-node !
 ;
+[then]
+
+fload ${BP}/cpu/x86/pc/olpc/via/probemem.fth	\ Memory probing
+
+[ifdef] virtual-mode
 fload ${BP}/cpu/x86/pc/initdict.fth	\ Dynamic dictionary allocation
 [then]
 
