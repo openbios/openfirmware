@@ -35,6 +35,7 @@ external
 : dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;
 
 : open  ( -- )
+   0 my-unit " set-address" $call-parent
    " attach-card" $call-parent  0=  if  false exit  then
 
    " "  " deblocker"  $open-package  ?dup  if
@@ -56,6 +57,7 @@ external
 ;
 
 : close  ( -- )
+   " detach-card" $call-parent
    label-package close-package
    deblocker close-package
 ;

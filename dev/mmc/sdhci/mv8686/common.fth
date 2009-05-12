@@ -1,8 +1,25 @@
-purpose: Common USB ethernet driver stuff
+purpose: Common ethernet driver stuff
 \ See license at end of file
 
 hex
 headers
+
+false instance value debug?
+
+: debug-on  ( -- )  true to debug?  ;
+
+: dma-alloc    ( size -- virt )              " dma-alloc" $call-parent    ;
+: dma-free     ( virt size -- )              " dma-free" $call-parent     ;
+
+: usec  ( us -- )  " us" evaluate  ;
+
+: 4drop  ( n1 n2 n3 n4 -- )  2drop 2drop  ;
+
+\ Little endian operations
+: le-w@   ( a -- w )   dup c@ swap ca1+ c@ bwjoin  ;
+: le-w!   ( w a -- )   >r  wbsplit r@ ca1+ c! r> c!  ;
+: le-l@   ( a -- l )   >r  r@ c@  r@ 1+ c@  r@ 2+ c@  r> 3 + c@  bljoin  ;
+: le-l!   ( l a -- )   >r lbsplit  r@ 3 + c!  r@ 2+ c!  r@ 1+ c!  r> c!  ;
 
 \ String comparision
 : $=  ( adr0 len0 adr1 len1 -- equal? )

@@ -12,13 +12,15 @@ purpose: Driver for SDHCI (Secure Digital Host Controller)
 \ begin-select /pci/pci11ab,4101
 
 " sd" device-name
-0  " #address-cells" integer-property
+1  " #address-cells" integer-property
 0  " #size-cells" integer-property
 
 " sdhci" " compatible" string-property
 
 h# 100 value /regs   \ Standard size of SDHCI register block
 1 value #slots
+
+0 instance value rca
 
 : phys+ encode-phys encode+  ;
 : i+  encode-int encode+  ;
@@ -32,7 +34,7 @@ h# 100 value /regs   \ Standard size of SDHCI register block
    then
 
    h# 40 my-space + " config-b@" $call-parent  ( slot_info )
-   4 rshift 7 and  1+                          ( #slots )
+   4 rshift 7 and  1+ dup to #slots            ( #slots )
    0  ?do
       0 0 h# 0100.0010  i 4 * +  my-space +  phys+   0 i+   /regs i+   \ Operational regs for slot N
    loop
@@ -43,7 +45,8 @@ make-reg
 
 0 value debug?
 
-0 value chip
+0 instance value slot
+0 instance value chip
 
 h# 200 constant /block  \ 512 bytes
 
@@ -52,16 +55,23 @@ h# 200 constant /block  \ 512 bytes
 
 : map-regs  ( -- )
    chip  if  exit  then
-   0 0 h# 0200.0010 my-space +  /regs " map-in" $call-parent
+   0 0 h# 0200.0010 slot 1- 4 * + my-space +  /regs " map-in" $call-parent
    to chip
    6 4 my-w!
 ;
 : unmap-regs  ( -- )
    chip  0=  if  exit  then
-   0 4 my-w!
+\  0 4 my-w!
    chip  /regs  " map-out" $call-parent
    0 to chip
 ;
+
+external
+: set-address  ( rca slot -- )  to slot  to rca  map-regs  ;
+: get-address  ( -- rca )       rca  ;
+: decode-unit  ( addr len -- lun )  push-hex  $number  if  0  then  pop-base  ;
+: encode-unit  ( lun -- adr len )   push-hex (u.) pop-base  ;
+headers
 
 : cl!  ( l adr -- )  chip + rl!  ;
 : cl@  ( adr -- l )  chip + rl@  ;
@@ -94,6 +104,7 @@ h# 200 constant /block  \ 512 bytes
       h# 7fff h# 60 cw!  \ Disable internal pull-up/down on DATA3
    then
 ;
+
 \ Some Marvell-specific stuff
 : enable-sd-int  ( -- )
    h# 300c cl@  h# 8000.0002 or  h# 300c cl!
@@ -145,9 +156,22 @@ h# 200 constant /block  \ 512 bytes
    present-state@ h# 40000 and  h# 40000 =
 ;
 
+: ?via-quirk  ( -- )
+   \ This is a workaround for an odd problem with the Via Vx855 chip.
+   \ You have to tell it to use 1.8 V, otherwise when you tell it
+   \ it to use 3.3V, it will use 1.8 V instead!  You only have to
+   \ do this 1.8V thing once after power-up to fix it until the
+   \ next power cycle.  The "fix" survives resets; it takes a power
+   \ cycle to break it again.
+
+   my-space " config-l@" $call-parent h# 95d01106 =  if  h# 0a h# 29 cb!  then
+;
+
 : card-power-on  ( -- )
    \ Card power on does not work if a removal interrupt is pending
    h# c0  isr!              \ Clear any pending insert/remove events
+
+   ?via-quirk
 
    \ The 200.0000 bit is set if 3.0V is supported.  If it is,
    \ use it (value c for reg 29), otherwise use 3.3V (value e).
@@ -221,6 +245,8 @@ h# 200 constant /block  \ 512 bytes
 0 instance value dma-vadr
 0 instance value dma-padr
 0 instance value dma-len
+0 instance value io-block-len
+0 instance value io-#blocks
 
 : (dma-setup)  ( adr #bytes block-size -- )
    h# 7000 or  4 cw!                 ( adr #bytes )  \ Block size register
@@ -238,6 +264,11 @@ h# 200 constant /block  \ 512 bytes
 ;
 : dma-release  ( -- )
    dma-vadr dma-padr dma-len  " dma-map-out" $call-parent
+;
+
+: iodma-setup  ( adr len -- )
+   io-#blocks 6 cw!                      ( adr len ) \ Set block count
+   io-block-len  (dma-setup)             ( )
 ;
 
 : decode-esr  ( esr -- )
@@ -333,6 +364,7 @@ h# 200 constant /block  \ 512 bytes
 \ Response types:
 \ R1: mirrored command and status
 \ R3: OCR register
+\ R5: 8-bit flags, 8-bit data (for CMD52)
 \ R6: RCA
 \ R2: 136 bits (CID (cmd 2 or 9) or CSD (cmd 10))
 \ R7: 136 bits (Interface condition, for CMD8)
@@ -356,7 +388,6 @@ h# 200 constant /block  \ 512 bytes
 
 0 value scratch-buf
 
-0 instance value rca
 d# 16 instance buffer: cid
 
 external
@@ -467,9 +498,9 @@ headers
 
 : io-send-op-cond  ( voltage-range -- ocr )  h# 050a 0 cmd  response  ;  \ CMD5 R4 (SDIO)
 
-: >io-arg  ( reg# function# -- arg )  7 and  d# 28 lshift   or  ;
+: >io-arg  ( reg# function# -- arg )  7 and  d# 28 lshift  swap 9 lshift  or  ;
 
-\ The following are CMD52 (SDIO) variants
+\ The following are CMD52 (SDIO R5) variants
 \ Flags: 80:CRC_ERROR  40:ILLEGAL_COMMAND  30:IO_STATE (see spec)
 \        08:ERROR  04:reserved  02:INVALID_FUNCTION#  01:OUT_OF_RANGE
 : io-b@  ( reg# function# -- value flags )
@@ -489,36 +520,43 @@ headers
 \ These commands - io-{read,write}-{bytes,blocks} will need to be
 \ enclosed in a method like r/w-blocks, in order to set up the DMA hardware.
 
-0 instance value io-block-len
+: write-blksz  ( blksz function# -- )
+   over to io-block-len         ( blksz function# )
+   h# 100 * h# 11 + 		( blksz reg# )
+   swap wbsplit rot tuck	( blksz.lo reg# blksz.hi reg# )
+   0 io-b! drop                 ( blksz.lo reg# )
+   1- 0 io-b! drop              ( )
+;
 
 \ In FIFO mode, the address inside the card does not autoincrement
 \ during the transfer.
-: >io-xarg  ( reg# function# fifo-mode? -- arg )
+: >io-xarg  ( reg# function# inc? -- arg )
    >r  >io-arg  r> 0=  if  h# 0400.0000 or  then
 ;
 
 \ Set up memory address in caller
-: io-read-bytes  ( len reg# function# fifo? -- flags )  \ 1 <= len <= 512
-   >io-xarg                     ( len arg )
-   swap h# 1ff and or           ( arg' )  \ Byte count
+: io-read-bytes  ( reg# function# inc? len -- flags )  \ 1 <= len <= 512
+   >r                           ( reg# function# inc? r: len )
+   >io-xarg                     ( arg r: len )
+   r> h# 1ff and or             ( arg' )  \ Byte count
    h# 353a h# 13 cmd            ( )
 ;
-: io-read-blocks  ( adr len reg# function# fifo? -- flags )
-   >io-xarg h# 0800.0000 or     ( len arg )
-   swap io-block-len / or       ( arg' )  \ Block count
-   h# 353a h# 37 cmd            ( )
+: io-read-blocks  ( reg# function# inc? -- flags )
+   >io-xarg h# 0800.0000 or     ( arg )
+   io-#blocks or                ( arg' )  \ Block count
+   h# 353a h# 33 cmd            ( )
 ;
-: io-write-bytes  ( len reg# function# fifo? -- flags )
-   >io-xarg  h# 8000.0000 or    ( len arg )
-   swap h# 1ff and or           ( arg' )  \ Byte count
+: io-write-bytes  ( reg# function# inc? len -- flags )
+   >r                           ( reg# function# inc? r: len )
+   >io-xarg  h# 8000.0000 or    ( arg r: len )
+   r> h# 1ff and or             ( arg' )  \ Byte count
    h# 353a h# 03 cmd
 ;
-: io-write-blocks  ( len reg# function# fifo? -- flags )
-   >io-xarg  h# 8800.0000 or    ( len arg )
-   swap io-block-len / or       ( arg' )  \ Block count
-   h# 353a h# 27 cmd
+: io-write-blocks  ( reg# function# inc? -- flags )
+   >io-xarg  h# 8800.0000 or    ( arg )
+   io-#blocks or                ( arg' )  \ Block count
+   h# 353a h# 23 cmd
 ;
-
 
 9 instance value address-shift
 h# 8010.0000 value oc-mode  \ Voltage settings, etc.
@@ -660,9 +698,26 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
    false
 ;
 
+\ -1 means error, 1 means retry
+: power-up-sdio-card  ( -- false | retry? true )
+   intstat-on
+   card-power-off d# 20 ms
+   card-power-on  d# 40 ms  \ This delay is just a guess (20 was barely too slow for a Via board)
+   card-inserted?  0=  if  card-power-off  intstat-off  false true exit  then   
+   card-clock-slow  d# 10 ms  \ This delay is just a guess
+   reset-card     \ Cmd 0
+   false
+;
+
+: set-sdio-voltage  ( -- )
+   0 io-send-op-cond                       \ Cmd 5: get card voltage
+   h# ff.ffff and io-send-op-cond drop     \ Cmd 5: set card voltage
+;
+
 external
 
 : attach-card  ( -- okay? )
+   setup-host
    power-up-card  if         ( retry? )
       \ The first try at powering up failed.
       if                     ( )
@@ -688,7 +743,7 @@ external
 
    card-clock-25
 
-   get-csd           \ Cmd 9 - Get card-specific data
+\  get-csd           \ Cmd 9 - Get card-specific data
 
    select-card       \ Cmd 7 - Select
 
@@ -698,6 +753,42 @@ external
 
    intstat-off
    true
+;
+
+: detach-card  ( -- )
+   card-clock-off
+   card-power-off
+;
+
+: attach-sdio-card  ( -- okay? )
+   setup-host
+   power-up-sdio-card  if         ( retry? )
+      \ The first try at powering up failed.
+      if                     ( )
+         \ The card was detected, but didn't go to "powered up" state.
+         \ Sometimes that can be fixed by power cycling, so we retry
+         power-up-sdio-card  if   ( retry? )
+            if  ." SD card did not power up" cr  then
+            false exit
+         then
+         \ The second attempt to power up the card worked
+      else
+         \ The card was not detected, so we give up
+         false exit
+      then
+   then
+
+   set-sdio-voltage
+   get-rca           \ Cmd 3 (SD) - Get relative card address
+   card-clock-25
+   select-card       \ Cmd 7 - Select
+   set-timeout
+   4-bit
+   22 7 0 io-b!      \ Cmd 52 - Set 4-bit bus width and ECSI bit
+   h# cf and 0=
+;
+
+: detach-sdio-card  ( -- )
 ;
 
 : dma-alloc   ( size -- vadr )  " dma-alloc"  $call-parent  ;
@@ -720,11 +811,28 @@ external
    intstat-off
 ;
 
+: r/w-ioblocks  ( reg# function# inc? addr len blksz in? -- actual )
+   2 pick 0=  if  2drop 2drop 2drop drop  0  exit   then  \ Prevents hangs
+   intstat-on
+   >r                          ( reg# function# inc? addr len blksz r: in? )
+   2dup tuck 1- + swap / to io-#blocks   ( reg# function# inc? addr len blksz r: in? )
+   4 pick write-blksz          ( reg# function# inc? addr len r: in? )
+   iodma-setup                 ( reg# function# inc? r: in? )
+   wait-write-done
+   r>  if                      ( reg# function# inc? )
+      io-read-blocks
+   else
+      io-write-blocks          ( true to writing? )
+   then
+   2 wait
+   dma-release
+   dma-len
+\   intstat-off
+;
+
 0 value open-count
 : open  ( -- )
    open-count 0=  if
-      map-regs
-      setup-host
       d# 64 " dma-alloc" $call-parent to scratch-buf
    then
    open-count 1+ to open-count
@@ -736,14 +844,13 @@ external
       intstat-on
       wait-write-done
       scratch-buf d# 64 " dma-free" $call-parent
-      card-clock-off
-      card-power-off
-      unmap-regs
    then
+   unmap-regs
    open-count 1- 0 max  to open-count
 ;
 
 : init   ( -- )
+   0 1 set-address
    map-regs
    vendor-modes
    unmap-regs

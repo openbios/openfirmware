@@ -1,7 +1,6 @@
 purpose: Marvel USB 8388 firmware loader
 \ See license at end of file
 
-
 \ =======================================================================
 \ Firmware download data structures
 \ =======================================================================
@@ -32,7 +31,7 @@ constant /boot-ack
 0 constant boot-ack-ok			\ Download ok
 1 constant boot-ack-fail		\ Download failed
 
-\ Bulk out transfer: USB image download
+\ USB image download request structure
 struct
    4 field >dl-cmd			\ Download command
    4 field >dl-ba			\ Address in the device
@@ -74,23 +73,22 @@ constant /dl-sync
       " Bad command status length" vtype
       false exit
    then                                     ( adr )
-   dup >boot-magic le-l@ boot-magic <>  if  ( adr )
-      drop                                  ( )
-      " Bad signature" vtype                ( )
-      false exit
-   then                                     ( adr )
-   >cmd-status c@ boot-ack-ok =             ( ok? )
+   >boot-magic le-l@  case                  ( )
+      0 of  false exit  endof  \ BOOT_CMD_RESP_FAIL
+      1 of  true  exit  endof  \ BOOT_CMD_RESP_OK
+      2 of  false exit  endof  \ BOOT_CMD_RESP_NOT_SUPPORTED
+   endcase
 ;
 
 : wait-cmd-fw-dl-ack  ( -- acked? )
    d# 100 0  do			( )
-      bulk-in-ready?  if	( error | buf len 0 )
+      got-packet?  if		( error | buf len 0 )
          if			( )
             false		( acked? )
          else			( buf len )
             cmd-fw-dl-ok?	( acked? )
          then			( acked? )
-         restart-bulk-in	( acked? )
+         recycle-packet         ( acked? )
          unloop exit
       then			( )
       1 ms			( )
@@ -104,7 +102,7 @@ constant /dl-sync
    cmd-fw-dl  outbuf >boot-cmd   c!
 
    5 0  do
-      outbuf /boot-cmd bulk-out-pipe bulk-out drop
+      outbuf /boot-cmd packet-out drop
       wait-cmd-fw-dl-ack  if  leave  then
    loop
 ;
@@ -118,9 +116,9 @@ constant /dl-sync
 
 : wait-fw-dl-ack  ( -- )
    d# 500 0  do				( )
-      bulk-in-ready?  if		( error | buf len 0 )
+      got-packet?  if			( error | buf len 0 )
          0= if  process-dl-resp  then	( )
-         restart-bulk-in		( )
+         recycle-packet			( )
          leave
       then				( )
       1 ms				( )
@@ -134,7 +132,7 @@ constant /dl-sync
       dl-seq outbuf >dl-seq le-l!	\ Add sequence number to outbuf
       dup /dl-header + outbuf >dl-data 2 pick >dl-len le-l@ dup >r move
 					\ Move payload to outbuf
-      outbuf r@ /dl-header + 4 + bulk-out-pipe bulk-out drop
+      outbuf r@ /dl-header + 4 + packet-out drop
 					\ Send command
       wait-fw-dl-ack			\ Wait for ACK
       r> + /dl-header +			\ Advance pointer
@@ -170,18 +168,21 @@ constant /dl-sync
       ." Unexpected event while waiting for firmware-started" cr
    then
 ;
-: download-fw  ( adr len -- )
-   driver-state ds-not-ready <>  if  " Firmware downloaded" vtype 2drop exit  then
-   2dup fw-image-ok? 0=  if  ." Bad WLAN firmware image" cr  exit  then
+: download-fw  ( adr len -- error? )
+   2dup fw-image-ok? 0=  if  ." Bad WLAN firmware image" cr  true  exit  then
    download-fw-init
    (download-fw)
 
    wait-fw
-
-   ds-ready to driver-state
-   marvel-get-mac-address
+   false
 ;
 
+: load-8388-fw  ( -- error? )
+   wlan-fw find-fw  ( adr len )
+   dup  if  download-fw  else  2drop true  then
+;
+
+' load-8388-fw to load-all-fw
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

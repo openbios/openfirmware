@@ -29,32 +29,23 @@ headers
 ;
 
 : init-net  ( -- )
+   marvel-get-mac-address
    ?make-mac-address-property
 ;
 
-: load-fw  ( $ -- adr len )
-   over " rom:" comp  if
-      " boot-read" evaluate		\ Not a dropin
-      " loaded" evaluate
-   else
-      4 - swap 4 + swap " find-drop-in" evaluate  0=  if  null$  then
-   then
-;
-: ?load-fw  ( -- ok? )
+: ?load-fw  ( -- error? )
    driver-state ds-not-ready =  if
-      wlan-fw load-fw ?dup  if  download-fw  else  drop  then
-      driver-state ds-not-ready =  if
+      load-all-fw  if
          ." Failed to download firmware" cr
-         false exit
+         true exit
       then
+      ds-ready to driver-state
    then
    init-net
-   true
+   false
 ;
 
 false instance value use-promiscuous?
-
-: end-out-ring  ( -- )  " end-out-ring" $call-parent  ;
 
 external
 
@@ -75,14 +66,13 @@ false instance value force-open?
 
 : open  ( -- ok? )
    my-args parse-args
-   device set-target
+   set-parent-channel
    opencount @ 0=  if
       init-buf
-      /outbuf     4 bulk-out-pipe " begin-out-ring" $call-parent
-      /inbuf  h# 40 bulk-in-pipe  " begin-in-ring"  $call-parent
-      ?load-fw 0=  if  end-bulk-in end-out-ring free-buf false exit  then
+      /inbuf /outbuf setup-bus-io  if  free-buf false exit  then
+      ?load-fw  if  release-bus-resources free-buf false exit  then
       my-args " supplicant" $open-package to supplicant-ih
-      supplicant-ih 0=  if  end-bulk-in end-out-ring free-buf false exit  then
+      supplicant-ih 0=  if  release-bus-resources free-buf false exit  then
       nonce-cmd
       force-open?  0=  if
          link-up? 0=  if
@@ -111,31 +101,32 @@ false instance value force-open?
       ['] 2drop to ?process-eapol
       stop-nic
       mac-off
-      end-bulk-in
-      end-out-ring
-      free-buf
       supplicant-ih ?dup  if  close-package 0 to supplicant-ih  then
+      release-bus-resources
    then
 ;
 
 \ Read and write ethernet messages regardless of the associate state.
 \ Used by the /supplicant support package to perform key handshaking.
 : write-force  ( adr len -- actual )
-   tuck wrap-msg			( actual adr' len' )
-   " send-out" $call-parent drop 	( actual )
+   tuck					( actual adr len )
+   wrap-msg				( actual adr' len' )
+   data-out                             ( actual )
 ;
+
 : read-force  ( adr len -- actual )
-   bulk-in-ready?  0=  if  		( adr len )
+   got-packet?  0=  if  		( adr len )
       2drop  -2  exit
    then                                 ( adr len [ error | buf actual 0 ] )
 
-   if					( adr len )
-      restart-bulk-in			( adr len )
+   if	\ receive error			( adr len )
+      recycle-packet			( adr len )
       2drop  -1  exit
    then					( adr len buf actual )
 
    false to got-data?			( adr len buf actual )
    process-rx				( adr len )
+   recycle-packet			( adr len )
 
    got-data?  if			( adr len )
       /data min tuck data -rot move	( actual )
@@ -143,7 +134,6 @@ false instance value force-open?
       2drop -2				\ No data
    then					( actual )
 
-   restart-bulk-in
 ;
 
 \ Normal read and write methods.
@@ -185,7 +175,7 @@ false instance value force-open?
    true to force-open?
    open
    false to force-open?
-   0=  if  ." Can't open USB8388 wireless" cr true close  exit  then
+   0=  if  ." Can't open Marvell wireless" cr true close  exit  then
 
    (scan)  if
       ." Failed to scan" true cr
@@ -201,14 +191,6 @@ false instance value force-open?
 : selftest  ( -- error? )  (scan-wifi)  ;
 
 headers
-
-: init  ( -- )
-   init
-   device set-target
-   configuration set-config  if  ." Failed to set ethernet configuration" cr  then
-;
-
-init
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

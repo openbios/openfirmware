@@ -35,6 +35,7 @@ headers
 external
 : selftest  ( -- error? )
    open 0=  if  ." Open /sd failed" cr true exit  then
+   0 1 set-address
    attach-card 0=  if  ." No card inserted" cr close false exit  then
    alloc-test-bufs
    ['] (selftest) catch  if  true  then
