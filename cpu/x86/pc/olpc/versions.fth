@@ -26,6 +26,6 @@ macro: CRYPTO_VERSION 0.2
 \ With a specific ID, mcastnand.bth will download a tarball without .git stuff.
 \ With "test", mcastnand.bth will clone the git head if build/multicast-nand/
 \ is not already present, then you can modify the git subtree as needed.
-macro: MCNAND_VERSION 0c73b4a084a27f0687b152dd0395c67fdf54b10f
+macro: MCNAND_VERSION d2ad2d7714959dd91c0bed3bacb60243b22d7d03
 \ macro: MCNAND_VERSION test
 \ macro: MCNAND_VERSION HEAD
