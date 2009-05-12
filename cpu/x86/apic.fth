@@ -31,18 +31,23 @@ code cpu-capabilities  ( -- n )
    dx push
 c;
 : apic-present?  ( -- flag )  cpu-capabilities h# 200 and  0<>  ;
-: soft-on  ( -- )
-   h# f0 apic@
-   h# 100 or          \ APIC on
-   h# 200 invert and  \ Focus processor checking
-   h#  ff or          \ Spurious IRQ vector ff
-   h# f0 apic!
-;
 
 \ Methods
 
+: taskpri@  ( -- n )  h# 80 apic@  ;
+: taskpri!  ( n -- )  h# 80 apic!  ;
+: arbpri@  ( -- n )  h# 90 apic@  ;
+: arbpri!  ( n -- )  h# 90 apic!  ;
+: spiv@  ( -- n )  h# f0 apic@  ;
+: spiv!  ( n -- )  h# f0 apic!  ;
+
 : id!  ( id -- )  d# 24 lshift  d# 20 apic!  ;
 : id@  ( -- id )  d# 20 apic@  d# 24 rshift  ;
+: lvt0@  ( -- n )  h# 350 apic@  ;
+: lvt0!  ( n -- )  h# 350 apic@  ;
+: lvt1@  ( -- n )  h# 360 apic@  ;
+: lvt1!  ( n -- )  h# 360 apic@  ;
+
 : lvt0-disable-irq  ( -- )  h# 10000 h# 350 apic-set  ;  \ Disable LINT0
 : lvt0-enable-irq   ( -- )  h# 10000 h# 350 apic-clr  ;  \ Enable LINT0
 : lvt1-disable-irq  ( -- )  h# 10000 h# 360 apic-set  ;  \ Disable LINT1
@@ -60,11 +65,28 @@ c;
 
 : ack-irq  ( -- )  h# f0 apic@ drop  0 h# b0 apic!  ;  \ b0 is eoi
 
+: soft-on  ( -- )
+   spiv@
+   h# 100 or          \ APIC on
+   h# 200 invert and  \ Focus processor checking
+   h#  ff or          \ Spurious IRQ vector ff
+   spiv!
+;
+
+
 : open  ( -- okay? )
    apic-base  0=  if
       apic-mmio-base h# 400 " map-in" $call-parent to apic-base
       apic-on
+      taskpri@ h# ff invert and  taskpri!  \ "Accept All"
+      soft-on
+      \ Virtual wire mode
+      \ REMOTE_IRR (4000), SEND_PENDING (1000), DELIVERY_MODE_EXTINT (700)
+      lvt0@  h# 1ff00 invert and  h# 5700 or  lvt0!
+      \ REMOTE_IRR (4000), SEND_PENDING (1000), DELIVERY_MODE_NMI (400)
+      lvt1@  h# 1ff00 invert and  h# 5400 or  lvt1!
    then
+
    true
 ;
 : close  ( -- )  ;
