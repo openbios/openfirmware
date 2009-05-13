@@ -1628,7 +1628,6 @@ false instance value force-open?
 
    false to got-data?			( adr len buf actual )
    process-rx				( adr len )
-   recycle-packet			( adr len )
 
    got-data?  if			( adr len )
       /data min tuck data -rot move	( actual )
@@ -1636,6 +1635,7 @@ false instance value force-open?
       2drop -2				\ No data
    then					( actual )
 
+   recycle-packet			( actual )
 ;
 
 \ Normal read and write methods.

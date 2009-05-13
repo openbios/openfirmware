@@ -48,8 +48,8 @@ fw-blksz 2 * 4 - constant /fw-tx
       outbuf over sdio-fw! <>  if
          4 3 1 sdio-reg!			\ FN1 CFG = write iomem fail
       then
-      sdio-poll-dl-ready 0=  if  true exit  then
-      fw-dn-blksz ?dup 0=  if  true exit  then
+      sdio-poll-dl-ready 0=  if  ." Download fw died" cr true exit  then
+      fw-dn-blksz ?dup 0=  if  false exit  then
       dup 1 and  if
          dn-retry 1+ dup to dn-retry
          2 >  if  ." Retry fail" cr true exit  then
