@@ -12,6 +12,7 @@ fload ${BP}/dev/mmc/sdhci/sdhci.fth
 
 init
 new-device
+   1 encode-int " reg" property
    " sdmmc" " $load-driver" eval drop
 finish-device
 

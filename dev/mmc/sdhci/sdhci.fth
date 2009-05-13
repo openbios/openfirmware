@@ -743,7 +743,7 @@ external
 
    card-clock-25
 
-\  get-csd           \ Cmd 9 - Get card-specific data
+   get-csd           \ Cmd 9 - Get card-specific data
 
    select-card       \ Cmd 7 - Select
 
