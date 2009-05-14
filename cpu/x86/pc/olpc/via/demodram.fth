@@ -14,7 +14,8 @@
    \ Must use "CPU delay" to make sure VLINK is dis-connect
    0 7 devfunc  47 00 04 mreg  end-table  d# 20 wait-us
    0 3 devfunc  90 07 07 mreg  end-table  d# 20 wait-us  \ First set DRAM Freq to invalid
-   0 3 devfunc  90 07 04 mreg  end-table  d# 20 wait-us  \ 266 MHz
+\  0 3 devfunc  90 07 03 mreg  end-table  d# 20 wait-us  \ 200 MHz ATEST
+   0 3 devfunc  90 07 04 mreg  end-table  d# 20 wait-us  \ 266 MHz !ATEST
    0 3 devfunc  6b d0 c0 mreg  end-table  d# 20 wait-us  \ PLL Off
    0 3 devfunc  6b 00 10 mreg  end-table  d# 20 wait-us  \ PLL On
    0 3 devfunc  6b c0 00 mreg  end-table  \ Adjustments off
@@ -24,10 +25,45 @@
 
 \  TimingSetting.c
    0 3 devfunc
-   61 ff 55 mreg  \ Trfc, Trrd
-   62 ff 8a mreg  \ CL, Trp, Tras
-   63 ff 49 mreg  \ Twr, Twtr, Trtp
-   64 ff 66 mreg  \ Trp, Trcd
+[ifdef] phoenix-timings
+   61 ff 55 mreg  \ Trfc: 0x15+8 = 29 * 3.75 = 108.75 ns, Trrd: 01 -> 3T
+   62 ff 8a mreg  \ Tras: 8+5=13 *3.75=48.75, 8bank-timing constraint, CL 2+2=4
+   63 ff 49 mreg  \ Twr:2+2=4 *3.75=15, Trtp:1+2=3 *3.75=11.25, Twtr:1+2=3 *3.75=11.25
+   64 ff 66 mreg  \ Trp 5, Trcd 5 
+[then]
+[ifdef] coreboot-timings
+   61 ff 54 mreg  \ Trfc: 0x14+8 = 28 * 3.75 = 105.00 ns, Trrd: 01 -> 3T
+   62 ff 7a mreg  \ Tras: 7+5=12 *3.75=45.00, 8bank-timing constraint, CL 2+2=4
+   63 ff 40 mreg  \ Twr:2+2=4 *3.75=15, Trtp:0+2=2 *3.75=7.5, Twtr:0+2=2 *3.75=7.5
+   64 ff 44 mreg  \ Trp 2+2=4, Trcd 2+2=4
+[then]
+[ifdef] compute-timings
+\ The subtractions below (e.g. "2 -") account for the way that numbers are
+\ encoded in bit fields - e.g. 00b means 2T, 01b means 3T, etc.
+\ The shifts below (e.g. "6 <<") move the value into the correct bit position.
+
+   61 3f  Trfc ns>tck 8 -       mreg   \ Trfc: ceil(127.50/5) = 26   - 8 = 0x12
+   61 c0  Trrd ns>tck 2 - 6 <<  mreg   \ Trrd: ceil(  7.50/5) =  2   - 0 = 0x00
+
+\  61 ff 12 mreg  \ Trfc, Trrd  Trfc = 0x39+8 = 65  Trrd=4T ceil(7.5ns/5ns)
+
+   62 07  TCL  2 -              mreg   \ CL 3
+   62 08  08                    mreg   \ 8-bank timing constraint
+   62 f0  Tras ns>tck 5 - 4 <<  mreg   \ Tras: ceil( 40.00/5) = 8     - 5 = 0x03
+
+\  62 ff 3a mreg  \ CL, 8-bank constraint, Tras  Tras = 8T (3+5=8)
+
+   63 e0  Twr  ns>tck 2 - 5 <<  mreg   \ Twr:  ceil( 15.00/5) = 3     - 2 = 0x01
+   63 08  Trtp ns>tck 2 - 3 <<  mreg   \ Trtp: ceil(  7.00/5) = 2     - 2 = 0x00
+   63 03  Twtr ns>tck 2 -       mreg   \ Twtr: ceil( 10.00/5) = 2     - 2 = 0x00
+
+\  63 ff 20 mreg  \ Twr, Twtr, Trtp  Twr=3T (15ns/5), Twtr=2T (10/5)  Trtp=2T ceil(7.5/5)
+
+   64 0e  Trp  ns>tck 2 - 1 <<  mreg   \ Trp:  ceil( 15.00/5) = 3     - 2 = 0x01
+   64 e0  Trcd ns>tck 2 - 5 <<  mreg   \ Trcd: ceil( 15.00/5) = 3     - 2 = 0x01
+
+\  64 ff 22 mreg  \ Trp 3, Trcd 3
+[then]
    end-table
 
 \ DRDR_BL.c
@@ -154,6 +190,7 @@
 
    h# 11 port80
 
+forth  #ranks 2 >=  assembler  [if]
    0 3 devfunc
    40 ff 00 mreg \ Rank 1 top back to 0 to work on other ranks
 
@@ -164,14 +201,15 @@
    end-table
 
    DDRinit #) call
+[then]
 
+forth  #ranks 3 >=  assembler  [if]
    0 3 devfunc
    41 ff 00 mreg \ Rank 1 top back to 0 to work on other ranks
    end-table
 
    h# 14 port80
 
-0 [if] \ This is for a DIMM in the other socket
    0 3 devfunc
    54 ff 00 mreg \ Disable ranks 0,1
    55 ff a0 mreg \ Enable Rank 2
@@ -183,6 +221,11 @@
 
    0 3 devfunc
    42 ff 00 mreg \ Rank 2 top back to 0 to work on other ranks
+   end-table
+[then]
+
+forth  #ranks 4 >=  assembler  [if]
+   0 3 devfunc
    54 ff 00 mreg \ Disable ranks 0,1
    55 ff 0b mreg \ Enable Rank 3
    43 ff 10 mreg \ Rank 3 top
@@ -197,7 +240,8 @@
 [then]
 
    0 3 devfunc
-   69 03 03 mreg \ Reinstate page optimizations (03) - FF #ranks
+   69 03 03 mreg \ Reinstate page optimizations (03) - FF #ranks !ATEST
+\  69 c3 c3 mreg \ Reinstate page optimizations (03) - FF #ranks  ATEST 8-bank interleave
 
 \ RankMap.c
 \  DRAMBankInterleave
@@ -205,29 +249,37 @@
    87 ff 00 mreg \ Channel B #banks or some such - FF BA  
 \ SizingMATypeM
 
-   50 ff 20 mreg \ MA Map type - ranks 0/1 type 1 - 2 bank bits, 10 column bits
+   50 ff 20 mreg \ MA Map type - ranks 0/1 type 1 - 2 bank bits, 10 column bits !ATEST
+\  50 ff a1 mreg \ 1T Command Rate, RMA Map type - ranks 0/1 type 5 - 3 bank bits, 14 row bits, 10 col bits ATEST
    51 ff 60 mreg \ "Reserved"
    52 ff 33 mreg \ Bank interleave on A17, A18, and
-   53 ff 3f mreg \ A19 (but BA2 off because 4 banks), Rank interleave on A20 and A21
+   53 ff 3f mreg \ A19 (but BA2 off because 4 banks), Rank interleave on A20 and A21  !ATEST
+\  53 ff bf mreg \ BA2 on (80), A19, Rank interleave on A20 and A21   ATEST
                  \ Different interleave bits might improve performance on some workloads
 
-   54 ff 89 mreg \ Rank map A 0/1
+   54 ff 89 mreg \ Rank map A 0/1   !ATEST
+\  54 ff 80 mreg \ Rank map A 0/1    ATEST  Rank 0 only
    55 ff 00 mreg \ Rank map A 2/3
    56 ff 00 mreg \ Rank map B ?
    57 ff 00 mreg \ Rank map B ?
 
-   40 ff 04 mreg \ Rank top 0
-   41 ff 08 mreg \ Rank top 1
+   40 ff 04 mreg \ Rank top 0 !ATEST
+\  40 ff 10 mreg \ Rank top 0  ATEST  1 GiB
+   41 ff 08 mreg \ Rank top 1 !ATEST
+\  41 ff 00 mreg \ Rank top 1  ATEST
+
    42 ff 00 mreg \ Rank top 2
    43 ff 00 mreg \ Rank top 3
 
    48 ff 00 mreg \ Rank base 0
-   49 ff 04 mreg \ Rank base 1
+   49 ff 04 mreg \ Rank base 1 !ATEST
+\  49 ff 00 mreg \ Rank base 1  ATEST
    4a ff 00 mreg \ Rank base 2
    4b ff 00 mreg \ Rank base 3
    end-table
 
-   20 8f60 config-wb                    \ DRAM Bank 7 ending address - controls DMA upstream
+   20 8f60 config-wb                    \ DRAM Bank 7 ending address - controls DMA upstream !ATEST
+\  40 8f60 config-wb                    \ DRAM Bank 7 ending address - controls DMA upstream  ATEST
    0388 config-rb  ax bx mov  0385 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to reg 85
    0388 config-rb  ax bx mov  8fe5 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to SB Low Top e5
 
@@ -261,7 +313,8 @@ then
 
 \ FinalSetting.c
 \  RefreshCounter
-   6a ff 86 mreg \ Refresh interval - FF frequency
+   6a ff 86 mreg \ Refresh interval - FF frequency !ATEST
+\  6a ff ca mreg \ Refresh interval - FF frequency  ATEST
 
 \  DRAMRegFinalValue
     60 00 d0 mreg \ Fast turn-around

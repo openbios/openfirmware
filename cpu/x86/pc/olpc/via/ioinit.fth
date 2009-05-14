@@ -179,8 +179,8 @@
    bc ff 00 mreg  \ SPI MMIO Base Address 15:8  (address is fed30000)
    bd ff d3 mreg  \ SPI MMIO Base Address 23:16
    be ff fe mreg  \ SPI MMIO Base Address 31:24
-   d0 f0 00 mreg  \ SMBUS IO Base Address low (port is 4100)
-   d1 ff 41 mreg  \ SMBUS IO Base Address high
+   d0 f0 00 mreg  \ SMBUS IO Base Address low (port is 0500)
+   d1 ff 05 mreg  \ SMBUS IO Base Address high
    d2 0f 01 mreg  \ Enable SMBUS and set other characteristics
    e2 80 80 mreg  \ Inhibit C4 during USB isochronous transaction
    e4 ff a0 mreg  \ Enable short C3/C4 (80), select various multi-function pins
