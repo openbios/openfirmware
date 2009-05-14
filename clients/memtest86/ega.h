@@ -14,7 +14,7 @@ char get_ega_color(int y, int x);
 #define SCREEN_ADR	0xb8000
 #define SCREEN_END_ADR  (SCREEN_ADR + 80*25*2)
 
-#define EGA_ADR(y, x, offset)  *(char *)(SCREEN_ADR + (y * 160) + (x * 2) + offset)
+#define EGA_ADR(y, x, offset)  *(char *)(SCREEN_ADR + ((y) * 160) + ((x) * 2) + offset)
 
 #define ega_init()  do { } while(0)
 #define set_ega_char(y, x, ch)  EGA_ADR(y, x, 0) = (ch)
