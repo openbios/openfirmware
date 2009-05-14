@@ -438,13 +438,6 @@ void restart()
 	v->ecount = 0;
 	v->ecc_ecount = 0;
 
-        /* Clear the screen */
-        for (i=0; i<24; i++) {
-	  for (j=0; j<80; j++) {
-	    set_ega_char (i, j, ' ');
-	  }
-	}
-
 	run_at(LOW_TEST_ADR);
 }
 
