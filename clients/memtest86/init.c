@@ -15,6 +15,7 @@
 #include "pci.h"
 #include "io.h"
 #include "ega.h"
+#include "msr.h"
 
 extern short memsz_mode;
 extern short firmware;
@@ -107,7 +108,7 @@ void init(void)
 	cprint(LINE_CPU+2, 0, "L2 Cache: Unknown ");
 	cprint(LINE_CPU+3, 0, "Memory  : ");
 	aprint(LINE_CPU+3, 10, v->test_pages);
-	cprint(LINE_CPU+4, 0, "Chipset : ");
+//	cprint(LINE_CPU+4, 0, "Chipset : ");
 
 	/*
 	 * Need to find out CPU type before seting up pci. This is
@@ -788,12 +789,34 @@ void cpu_type(void)
 				off = 12;
 				break;
 			case 6: // VIA C3
-				if (cpu_id.step < 8) {
-					cprint(LINE_CPU, 0, "VIA C3 Samuel2");
-					off = 14;
-				} else {
-					cprint(LINE_CPU, 0, "Via C3 Eden");
-					off = 11;
+				{
+					unsigned long vall, valh, code;
+					rdmsr(0x1153, vall, valh);
+					code = ((vall >> 20) & 3) ^ ((vall >> 18) & 3);
+					switch (code) {
+					case 0:
+						cprint(LINE_CPU, 0, "VIA C7-M");
+						off = 8;
+						break;
+					case 1:
+						cprint(LINE_CPU, 0, "VIA C7");
+						off = 6;
+						break;
+					case 2:
+						if (cpu_id.step < 8) {
+							cprint(LINE_CPU, 0, "VIA C3 Samuel2");
+							off = 14;
+						} else {
+							cprint(LINE_CPU, 0, "Via C3 Eden");
+							off = 11;
+						}
+						break;
+					case 3:
+						cprint(LINE_CPU, 0, "VIA C7-D");
+						off = 8;
+						break;
+
+					}
 				}
 				break;
 			}
