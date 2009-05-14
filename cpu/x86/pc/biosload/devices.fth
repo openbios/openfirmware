@@ -82,6 +82,11 @@ device-end
 fload ${BP}/dev/pc87317.fth		\ National PC87317 superIO
 [then]
 
+[ifdef] via-demo
+fload ${BP}/cpu/x86/pc/olpc/via/smbus.fth	\ SMBUS driver
+fload ${BP}/cpu/x86/pc/olpc/via/dumpvia.fth	\ Config register dumps
+[then]
+
 [ifdef] olpc
 \ Create the top-level device node to access the entire boot FLASH device
 0 0  " fff00000"  " /" begin-package
