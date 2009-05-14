@@ -15,7 +15,7 @@
 : ext-textmode
    use-vga-dac
    h# ff h# e crt!  h# ff h# f crt!  \ Move the hardware cursor off-screen
-   h# 04 h# 33 crt!   \ Hsync adjustment
+   h# 01 h# 33 crt!   \ Hsync adjustment
    h# 10 h# 35 crt!   \ Clear extended bits that can't be on for this mode's size
    h# 00 h# 15 seq!   \ Not using graphics modes
    h# 0c h# 16 seq!   \ FIFO
