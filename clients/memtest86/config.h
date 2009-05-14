@@ -13,7 +13,7 @@
 /* SERIAL_CONSOLE_DEFAULT -  The default state of the serial console. */
 /*	This is normally off since it slows down testing.  Change to a 1 */
 /*	to enable. */
-#define SERIAL_CONSOLE_DEFAULT 0
+#define SERIAL_CONSOLE_DEFAULT 1
 
 /* SERIAL_BAUD_RATE - Baud rate for the serial console
  * If this is not defined it is assumed a previous program has set the
@@ -39,9 +39,9 @@
 /* EMULATE_EGA - Enables EGA emulation instead of writing to EGA buffer directly */
 /*      Normally not enabled */
 /*      Enabled for OLPC */
-#define EMULATE_EGA
+/* #define EMULATE_EGA */
 
 /* OLPC - uses OLPC hardware instead of BIOS */
 /*      Normally not enabled */
 /*      Enabled for OLPC */
-#define OLPC
+/* #define OLPC */

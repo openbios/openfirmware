@@ -1,8 +1,10 @@
 purpose: Driver for SMBUS controller in Via chipset
 \ See license at end of file
 
-: smb-reg@  ( reg# -- value )  smbus-io-base + pc@  ;
-: smb-reg!  ( value reg# -- )  smbus-io-base + pc!  ;
+0 value smbus-port
+
+: smb-reg@  ( reg# -- value )  smbus-port + pc@  ;
+: smb-reg!  ( value reg# -- )  smbus-port + pc!  ;
 
 0 value smbus-target
 
@@ -33,12 +35,11 @@ purpose: Driver for SMBUS controller in Via chipset
    smbus-wait             ( )
    smb-hoststat@          ( stat )
    dup h# 9c and  if      ( stat )
-      ." SMBUS error:"    ( stat )
-      dup h# 80 and  if  ."  PEC"                   then
-      dup h# 10 and  if  ."  FailedBusTransaction"  then
-      dup h# 08 and  if  ."  Collision"             then
-      dup h# 04 and  if  ."  DeviceError"           then
-      cr                  ( stat )
+      dup h# 80 and  abort" SMBUS error: PEC"                   
+      dup h# 10 and  abort" SMBUS error: FailedBusTransaction"
+      dup h# 08 and  abort" SMBUS error: Collision"
+      dup h# 04 and  abort" SMBUS error: DeviceError"
+      drop
    then                   ( stat )
    drop                   ( )
    h# 9e smb-hoststat!    ( )  \ Clear all status bits
@@ -95,6 +96,7 @@ purpose: Driver for SMBUS controller in Via chipset
    smb-hostdata0!              ( )
    h# c smbus-cmd              ( )   \ Word data command
 ;
+
 : smbus-w@  ( offset -- word )
    smbus-target 1 or smb-xmitadr!  ( offset )
    smb-hostcmd!                    ( )
@@ -107,7 +109,7 @@ purpose: Driver for SMBUS controller in Via chipset
 
 : enable-smbus  ( -- )
    h# 8894 config-b@  h# 80 invert and  h# 8894 config-b!  \ Clock from 14 MHz divider
-   smbus-io-base 1 or  h# 88d0 config-w!
+\  smbus-io-base 1 or  h# 88d0 config-w!  \ Assume already set up
    5 h# 88d2 config-b!   \ Clock source (bit meaning is unclear), enable SMBUS HC
    3 h# 8804 config-w!   \ Enable in PCI command register
    smbus-release
@@ -118,6 +120,32 @@ purpose: Driver for SMBUS controller in Via chipset
    smbus-b@
    smbus-release
 ;
+: dump-dimm  ( dimm# -- )
+   h# 80 0  do
+     i 2 u.r  ." : "
+     i 10 bounds do
+        i over get-spd-data 3 u.r
+     loop
+     cr
+   h# 10 +loop
+;
+: dump-dimms  ( -- )
+   2 0 do
+      0 i ['] get-spd-data catch  if  ( x x )
+         2drop
+      else    ( byte )
+         drop
+         ." DIMM# " i . cr
+         i dump-dimm
+      then
+   loop
+;
+
+stand-init: SMBUS
+   enable-smbus
+   h# 88d0 config-w@ h# fff0 and  to smbus-port
+;
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks

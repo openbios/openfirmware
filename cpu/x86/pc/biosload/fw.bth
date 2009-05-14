@@ -305,6 +305,10 @@ devalias net /wlan
 devalias net /wlan
 [then]
 
+[ifdef] via-demo
+fload ${BP}/cpu/x86/pc/biosload/memtest.fth
+[then]
+
 : probe-all  ( -- )
    " probe-" do-drop-in
    ." probe-pci"  cr

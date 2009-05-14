@@ -4,7 +4,7 @@ CPUDIR=../../../..
 BASEDIR := $(shell cd ${CPUDIR}/../..; pwd;)
 TAGFILES= ${CPUDIR}/build/*.tag *.tag
 CLIENTDIR=${BASEDIR}/clients
-CLIENTPROGS=${CLIENTDIR}/memtest86/memtest ${CLIENTDIR}/emacs/x86/emacs
+CLIENTPROGS=memtest ${CLIENTDIR}/emacs/x86/emacs
 
 all: olpc.rom tags
 
@@ -25,8 +25,10 @@ ${CPUDIR}/${OS}/forth:
 ${CPUDIR}/build/inflate.bin:
 	@make -C ${CPUDIR}/build inflate.bin
 
-${CLIENTDIR}/memtest86/memtest:
-	@make -C ${CLIENTDIR}/memtest86 memtest
+memtest:
+	make -C ${CLIENTDIR}/memtest86 VARIANT=OLPCVIA memtest
+	@mv ${CLIENTDIR}/memtest86/memtest .
+	@make -C ${CLIENTDIR}/memtest86 clean
 
 ${CLIENTDIR}/emacs/x86/emacs:
 	@make -C ${CLIENTDIR}/emacs/x86 emacs

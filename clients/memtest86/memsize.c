@@ -9,8 +9,8 @@
 #include "config.h"
 
 short e820_nr;
-short memsz_mode = SZ_MODE_PROBE;
 short firmware = FIRMWARE_UNKNOWN;
+short memsz_mode = SZ_MODE_EXT;
 
 static ulong alt_mem_k;
 static ulong ext_mem_k;

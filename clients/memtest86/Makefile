@@ -8,27 +8,50 @@
 #
 FDISK=/dev/fd0
 
+DEFINES =
+
+#
+# We tune the build for different platforms by passing arguments to make, e.g.
+#   make VARIANT=_VIA memtest
+# 
+ifeq ($(VARIANT), OLPCVIA)
+    DEFINES += -DOLPC
+    DEFINES += -DSZ_MODE_EXT=SZ_MODE_BIOS
+endif
+
+ifeq ($(VARIANT), OLPCGEODE)
+    DEFINES += -DOLPC
+    DEFINES += -DEMULATE_EGA
+    DEFINES += -DSZ_MODE_EXT=SZ_MODE_PROBE
+endif
+
 CC=gcc
 #
 # gcc compiler options, these settings should suffice
 #
 CCFLAGS=-Wall -march=i486 -m32 -Os -fomit-frame-pointer -fno-builtin -ffreestanding 
 CCFLAGS += -fno-stack-protector
+CCFLAGS += $(DEFINES)
+
 
 AS=as -32
 
 COMMON_OBJS= head.o reloc.o main.o test.o init.o lib.o patn.o screen_buffer.o config.o memsize.o random.o
 
-PC_OBJS= $(COMMON_OBJS) linuxbios.o pci.o controller.o extra.o spd.o
+OBJS_PC= $(COMMON_OBJS) linuxbios.o pci.o controller.o extra.o spd.o
 
-OLPC_OBJS= $(COMMON_OBJS) lfbega.o olpc.o
+OBJS_OLPCGEODE= $(COMMON_OBJS) olpc.o    lfbega.o 
+OBJS_OLPCVIA  = $(COMMON_OBJS) olpcvia.o linuxbios.o 
 
-OBJS= $(OLPC_OBJS)
+OBJS= $(OBJS_$(VARIANT))
 
 all: memtest.bin memtest
 
 olpc.o: olpc.c msr.h
 	$(CC) -c $(CCFLAGS) -fPIC olpc.c
+
+olpcvia.o: olpcvia.c
+	$(CC) -c $(CCFLAGS) -fPIC olpcvia.c
 
 reloc.o: reloc.c
 	$(CC) -c -m32 -fPIC -Wall -O -fno-strict-aliasing reloc.c
@@ -82,7 +105,7 @@ controller.s: controller.c defs.h config.h test.h pci.h controller.h
 	$(CC) -S $(CCFLAGS) -fPIC controller.c
 
 head.s: head.S
-	$(CC) -E -m32 -traditional $< -o $@
+	$(CC) $(DEFINES) -E -m32 -traditional $< -o $@
 
 head.o: head.s
 	$(AS) -o $@ $<

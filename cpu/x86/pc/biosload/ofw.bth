@@ -99,6 +99,8 @@ hex
    " ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc" " mv8686"         $add-deflated-dropin
    " sd8686_helper.bin"                         " helper_sd.bin"   $add-deflated-dropin
    " sd8686.bin"                                " sd8686.bin"      $add-deflated-dropin
+
+   " ../../olpc/via/build/memtest"              " memtest"       $add-deflated-dropin
 [else]
    " ${BP}/dev/mmc/sdhci/build/sdhci.fc"        " class080501"     $add-deflated-dropin
    " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"        " sdmmc"           $add-deflated-dropin

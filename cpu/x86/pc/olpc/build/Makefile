@@ -3,7 +3,7 @@ OS := $(shell uname)
 BASEDIR= `(cd ../../../../..; pwd;)`
 TAGFILES= ../../../build/*.tag *.tag
 CLIENTDIR=../../../../../clients
-CLIENTPROGS=${CLIENTDIR}/memtest86/memtest ${CLIENTDIR}/emacs/x86/emacs
+CLIENTPROGS=memtest ${CLIENTDIR}/emacs/x86/emacs
 
 all: olpc.rom tags
 
@@ -24,8 +24,10 @@ olpc.rom: FORCE build ../../../build/inflate.bin ${CLIENTPROGS}
 ../../../build/inflate.bin:
 	@make -C ../../../build inflate.bin
 
-${CLIENTDIR}/memtest86/memtest:
-	@make -C ${CLIENTDIR}/memtest86 memtest
+memtest:
+	make -C ${CLIENTDIR}/memtest86 VARIANT=OLPCGEODE memtest
+	@mv ${CLIENTDIR}/memtest86/memtest .
+	@make -C ${CLIENTDIR}/memtest86 clean
 
 ${CLIENTDIR}/emacs/x86/emacs:
 	@make -C ${CLIENTDIR}/emacs/x86 emacs
