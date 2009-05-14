@@ -20,6 +20,7 @@ fload ${BP}/cpu/x86/acpitimer.fth
 
 fload ${BP}/cpu/x86/pc/olpc/via/smbus.fth	\ SMBUS driver
 fload ${BP}/cpu/x86/apic.fth			\ APIC driver
+fload ${BP}/cpu/x86/pc/olpc/via/dumpvia.fth	\ Dump a bunch of registers
 
 stand-init: CPU node
    d# 1,500,000,000  " VIA,C7"
