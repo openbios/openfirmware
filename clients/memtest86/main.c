@@ -428,8 +428,6 @@ void do_test(void)
 
 void restart()
 {
-        int i, j;
-
 	/* clear variables */
 	firsttime = 0;
 	v->test = 0;
