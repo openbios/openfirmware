@@ -36,20 +36,52 @@ label hw-save-state
    b       'body save-common
 end-code
 
-: hw-install-handler  ( handler exception# -- )
-   \ Put "ldr pc,[pc,40-8]" in exception vector at 0 + (exception# * 4)
-   h# e59ff038 over /l* instruction!   ( exception# )
+defer init-vector-base
+' noop to init-vector-base
 
-   \ Put handler address in address table at 40 + (exception# * 4)
-   h# 40 swap la+ l!
+defer vector-base
+0 value fixed-vector-base
+' fixed-vector-base to vector-base
+
+: hw-install-handler ( handler exception# -- )
+   vector-base swap la+     ( handler vector-adr )
+ 
+ \ Put "ldr pc,[pc,40-8]" in exception vector at vector-base + (exception# * 4 )
+   h# e59ff038 over instruction!   ( handler vector-adr )
+
+  \ Put handler address in address table at vector-base + 40 + (exception# * 4)
+   h# 40 + l!
 ;
 : hw-catch-exception  ( exception# -- )  hw-save-state swap install-handler  ;
+
+\ Some ARM CPUs, such as CortexA8, let you move the vector base anywhere
+code vector-base@ ( -- adr )
+   psh  tos,sp
+   mrc p15,0,tos,cr12,cr0,0
+c;
+
+code vector-base! ( adr --- )
+   mcr p15,0,tos,cr12,cr0,0
+   pop  tos,sp
+c;
+
+h# 80 buffer: ram-vector-base-buf
+: move-vector-base  ( -- )  ram-vector-base-buf h# 20 round-up vector-base!  ;
+
+\ Execute this at compile time for processors that need it.
+\ Ideally we would detect the vector base register at run time
+\ but I don't know how yet.
+: use-movable-vector-base  ( -- )
+   ['] vector-base@ to vector-base
+   ['] move-vector-base to init-vector-base
+;
 
 : stand-init-io  ( -- )
    stand-init-io
    ['] (restart           is restart
    ['] hw-install-handler is install-handler
    ['] hw-catch-exception is catch-exception
+   init-vector-base
    catch-exceptions
    2 catch-exception   \ Software interrupt (we don't catch this under DEMON)
 ;
@@ -58,7 +90,7 @@ headers
 only forth also definitions
 
 \ LICENSE_BEGIN
-\ Copyright (c) 1997 FirmWorks
+\ Copyright (c) 2009 FirmWorks
 \
 \ Permission is hereby granted, free of charge, to any person obtaining
 \ a copy of this software and associated documentation files (the
