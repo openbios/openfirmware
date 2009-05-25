@@ -1,0 +1,37 @@
+purpose: Top-level build script for Intreon AVX ROM
+copyright: Copyright 2001 FirmWorks  All Rights Reserved
+
+command: &native &this
+in: resetjmp.img
+in: reset.di
+in: start.di
+in: test.di
+in: fw.img
+in: ${BP}/dev/kendin/build/ks8723.fc
+build-now
+
+\needs $add-dropin  fload ${BP}/tools/mkdropin.fth
+
+\ Always re-create the builton.fth file when we make a new rom.img
+fload ${BP}/arch/mips/builton.bth
+
+h# 6.0000 constant rom-size
+: pad-file  ( location -- )
+   ofd @ fsize 
+   2dup u< abort" The ROM image is too large"
+   2dup - ." Unused memory = " .d cr
+   ?do  h# ff ofd @ fputc  loop
+;
+
+writing romraw.img
+   " resetjmp.img"   $add-file	\ Branch past initial dropin module header
+   " reset.di"       $add-file
+   " start.di"       $add-file
+   " test.di"        $add-file
+   " fw.img"                     " firmware"  $add-deflated-dropin
+\   " fw.img"                     " firmware"  $add-dropin
+   " ${BP}/cpu/mips/inflate.img" " inflate"   $add-dropin
+   " builton.fth"                " probe-"    $add-dropin
+   " ${BP}/dev/kendin/build/ks8723.fc"      " pci13f0,201"  $add-deflated-dropin
+   rom-size 1- pad-file		\ reserve one byte as chksum byte
+ofd @ fclose

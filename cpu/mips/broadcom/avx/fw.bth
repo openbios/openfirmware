@@ -1,0 +1,278 @@
+purpose: Load file for AVX settop box
+copyright: Copyright 2000-2001 FirmWorks  All Rights Reserved
+
+dictionary: ${BP}/cpu/mips/build/basefw.dic
+command: &mipsfth &dictionary &this
+build-now
+
+create rom-based?
+\ create ram-image
+
+\ ' $report-name is include-hook
+true to stand-init-debug?
+
+" dhcp" ' ip-address   set-config-string-default
+false ' auto-boot? set-config-int-default
+true ' fcode-debug? set-config-int-default
+" com1" ' output-device set-config-string-default
+" com1" ' input-device set-config-string-default
+
+fload ${BP}/cpu/mips/ksegaddr.fth
+fload ${BP}/cpu/mips/broadcom/avx/physaddr.fth
+fload ${BP}/cpu/mips/broadcom/avx/virtaddr.fth
+
+h#   1.0000 constant initial-heap-size
+0 value myrombase
+fload ${BP}/cpu/mips/boot.fth		\ Low-level startup code
+\ fload ${BP}/cpu/mips/broadcom/avx/boot.fth	\ Testing only
+
+: rl@  l@  ;   : rl!  l!  ;
+: rw@  w@  ;   : rw!  w!  ;
+: rb@  c@  ;   : rb!  c!  ;
+
+fload ${BP}/cpu/mips/broadcom/avx/68kio.fth	\ 68K I/O space access
+fload ${BP}/cpu/mips/broadcom/avx/broadcom.fth	\ Broadcom space access
+
+[ifdef] for-bcm93730
+fload ${BP}/cpu/mips/broadcom/avx/bcuart.fth	\ BCM97370 uart
+[else]
+fload ${BP}/arch/prep/diaguart.fth	\ Diagnostic driver for serial port
+d# 14318000 to uart-clock-frequency
+h# 2000 is uart-base
+[then]
+
+fload ${BP}/os/stand/sysuart.fth	\ Plug UART routines into key and emit
+\ ' ukey is diag-key			\ Feed UART input to "dl"
+
+h# 1000 to pagesize
+d# 12   to pageshift
+
+defer pcicache-inv      ' 2drop to pcicache-inv
+defer pcicache-wbinv	' 2drop to pcicache-wbinv
+
+fload ${BP}/cpu/mips/cache.fth		\ Cache synchronization/flushing
+fload ${BP}/cpu/mips/broadcom/avx/rootnode.fth	\ Root node mapping
+dev /
+   " AVX" model
+   " AVX" encode-string  " architecture" property
+   d# 27,000,000 " clock-frequency" integer-property
+device-end
+d# 81,000,000 to cpu-clock-speed	\ CPU clock in Hz
+
+: (cpu-arch  ( -- adr len )
+   " architecture" ['] root-node  get-package-property  drop
+   get-encoded-string
+;
+' (cpu-arch to cpu-arch
+
+[ifdef] notyet
+0 config-int next-xid
+stand-init: Next xid
+   next-xid h# 10.0000 + dup to next-xid to rpc-xid
+;
+[then]
+
+\ Memory management services
+[ifdef] virtual-mode
+fload ${BP}/ofw/core/clntmem1.fth	\ client services for memory
+[else]
+fload ${BP}/ofw/core/clntphy1.fth    \ client services for memory
+[then]
+fload ${BP}/ofw/core/memlist.fth     \ Resource list common routines
+fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
+fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
+fload ${BP}/ofw/core/availpm.fth	\ Available memory list
+fload ${BP}/ofw/core/allocmor.fth 	\ S Allow alloc-mem to use more memory
+
+: (initial-heap)  ( -- adr len )  sp0 @ ps-size -  limit  tuck -  ;
+['] (initial-heap) to initial-heap
+
+\ fload ${BP}/fm/lib/dumballo.fth		\ Rudimentary memory allocator
+
+variable bank-mask
+1 bank-mask !
+fload ${BP}/cpu/mips/probemem.fth  \ Memory probing
+stand-init: Probing memory
+   " probe" memory-node @ $call-method
+;
+
+\ Load file format handlers
+
+: call32 ;  defer .subname
+fload ${BP}/ofw/core/allocsym.fth    \ Allocate memory for symbol table
+fload ${BP}/ofw/core/symcif.fth
+fload ${BP}/ofw/core/symdebug.fth
+: release-load-area  ( boundary-adr -- )  drop  ;
+fload ${BP}/ofw/elf/elf.fth
+fload ${BP}/ofw/elf/elfdebug.fth
+' 2drop is elf-map-in
+
+\ File system
+fload ${BP}/cpu/mips/zipcrc.fth		\ Assembly portion of CRC calculation
+fload ${BP}/forth/lib/crc32.fth		\ High-level portion of CRC calculation
+
+fload ${BP}/ofw/fs/fatfs/fdisk2.fth	\ Partition map administration
+
+[ifdef] resident-packages
+support-package: fat-file-system
+   fload ${BP}/ofw/fs/fatfs/loadpkg.fth	\ FAT file system reader
+end-support-package
+
+support-package: iso9660-file-system
+   fload ${BP}/ofw/fs/cdfs/loadpkg.fth	\ ISO 9660 CD-ROM file system reader
+end-support-package
+
+support-package: disk-label
+   fload ${BP}/ofw/disklabl/loadpkg.fth	\ Disk label package
+end-support-package
+
+[ifdef]  use-ufs
+support-package: ufs-file-system
+   fload ${BP}/ofw/fs/ufs/ufs.fth		\ Unix file system
+end-support-package
+[then]
+
+support-package: ext2-file-system
+   fload ${BP}/ofw/fs/ext2fs/ext2fs.fth	\ Linux file system
+end-support-package
+
+support-package: dropin-file-system
+   fload ${BP}/ofw/fs/dropinfs.fth		\ Dropin file system
+end-support-package
+
+support-package: nfs
+   fload ${BP}/ofw/fs/nfs/loadpkg.fth
+end-support-package
+[then]
+
+\ Device Tree
+fload ${BP}/cpu/mips/broadcom/avx/devices.fth
+fload ${BP}/cpu/mips/broadcom/avx/devalias.fth
+
+: stand-init-io  ( -- )
+[ifdef] stand-init-io
+   stand-init-io
+[then]
+\   install-dumb-alloc
+   install-uart-io
+;
+
+fload ${BP}/cpu/mips/broadcom/avx/excption.fth
+fload ${BP}/cpu/mips/broadcom/avx/intr.fth
+
+[ifdef] notyet
+warning @  warning off 
+: init
+\ initial-heap add-memory
+   init
+
+   standalone?  if
+      stand-init-debug?  if
+         cr ." Type 'i' to interrupt stand-init sequence" cr 
+         d# 500 ms
+         key?  if  
+            key drop  ." Interacting" cr
+            hex interact
+         then
+      then
+   then
+;
+warning !
+[then]
+
+fload ${BP}/cpu/mips/broadcom/avx/vpd.fth
+
+: (.firmware)  ( -- )
+   ." Open Firmware  "  .built  cr
+   ." Copyright 2001 FirmWorks  All Rights Reserved" cr
+;
+' (.firmware) to .firmware
+
+headerless
+6 buffer: 'system-mac-address
+headers
+: get-mac-address  ( -- )
+   (get-vpd-mac#) 0=  if
+      6 0  do  'system-mac-address i + c!  loop
+   else
+      rom-pa h# 56 + 'system-mac-address 6 move
+      'system-mac-address @ h# ffff.ffff =  if
+         'system-mac-address 0 over c!  1+ 6 over c!  1+ 7f over c!
+         1+ 0 over c! 1+ 0 over c! 1+ 0 swap c!
+      then
+   then
+;
+headerless
+: (system-mac-address)  ( -- addr len )  'system-mac-address 6  ;
+' (system-mac-address) is system-mac-address
+headers
+
+: .mac-address  ( -- )
+   mac-address 0  do
+      dup i + c@ (.2) type 
+      i 5 <>  if  ascii : emit  then
+   loop  drop
+;
+
+: probe-all  ( -- )
+   " probe-" do-drop-in
+   probe-pci
+   get-mac-address
+   set-system-id
+   " probe+" do-drop-in
+;
+
+: copy-reboot-info  ( -- )  ;
+defer user-interface  ' quit to user-interface
+
+kseg0 to vector-base
+fload ${BP}/ofw/core/startup.fth
+: avx-banner-basics
+   cr
+   ?spaces " AVX Media Center" type cr
+   ?spaces cpu-model type ." , " (.vpd-serial$) ." , "
+   .mac-address ." , " .memory cr ?spaces
+   .firmware
+;
+' avx-banner-basics to banner-basics
+
+: bye  ( -- )
+   h# 10 bcl@  h# ffff.fffb and  h# 10 bcl!
+   4 h# 10 bcl!				\ cold reset
+   begin again
+;
+' bye to reset-all
+
+defer linux-argc
+: ((linux-argc)  ( adr len -- argc )
+   0 >r  begin
+      bl left-parse-string nip 0<>  while
+      r> 1+ >r
+   repeat  2drop
+   r>
+;
+: (linux-argc)  ( adr len -- argc )  2drop 2  ;
+' (linux-argc) to linux-argc
+
+defer linux-argv
+: (linux-argv)  ( adr len -- 'argv )
+   3 /n * over + dup alloc-mem dup >r
+   swap erase
+   r@ 3 na+ r@ na1+ !
+   tuck $cstr swap 1+ r@ 3 na+ swap cmove
+   r>
+;
+' (linux-argv) to linux-argv
+
+: linux-setup  ( -- )
+   disable-interrupts
+   kseg0 0 sync-cache
+   boot-file linux-argc to $a0
+   boot-file linux-argv to $a1
+   0 to $a2
+;
+' linux-setup to go-hook
+
+install-rom-cold
+
+.( --- Saving fw.img ...)  "" fw.img save-forth cr

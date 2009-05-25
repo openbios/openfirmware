@@ -1,0 +1,253 @@
+purpose: Load file for Open Firware on Cobalt Raq2
+\ See license at end of file
+
+dictionary: ${BP}/cpu/mips/build/basefw.dic
+in: dropins.img
+command: &mipsfth &dictionary &this
+build-now
+
+\ create rom-based?
+h# 81f0.0000 constant rom-base
+create ram-image
+
+\ ' $report-name is include-hook
+\ true to stand-init-debug?
+false to stand-init-debug?
+
+true ' auto-boot? set-config-int-default
+true ' fcode-debug? set-config-int-default
+true ' local-mac-address? set-config-int-default
+
+" com1" ' output-device set-config-string-default
+" com1" ' input-device set-config-string-default
+" dhcp" ' ip-address  set-config-string-default
+" net" ' boot-device set-config-string-default
+
+fload ${BP}/cpu/mips/ksegaddr.fth
+fload ${BP}/cpu/mips/physaddr.fth
+fload ${BP}/cpu/mips/virtaddr.fth
+
+: cpu-clock-frequency  ( -- hz )  d# 200,000,000  ;
+fload ${BP}/cpu/mips/cobalt/regacc.fth
+
+0 value last-count
+0 value ticker
+: hw-get-ms  ( -- n )
+   count@  d# 400,000 u/mod  nip   ( msecs )
+   dup  last-count  <>  if         ( msecs )
+      to last-count
+      ticker 1+ to ticker
+   else
+      drop
+   then
+   ticker
+;
+' hw-get-ms is get-msecs
+
+fload ${BP}/cpu/mips/cobalt/diaguart.fth \ Diagnostic driver for serial port
+fload ${BP}/forth/lib/sysuart.fth	\ Plug UART routines into key and emit
+\ ' ukey is diag-key			\ Feed UART input to "dl"
+
+h# 1000 to pagesize
+d# 12   to pageshift
+
+fload ${BP}/cpu/mips/cache.fth		\ Cache synchronization/flushing
+
+[ifdef] 2-cell-rootnode
+: pcicache-wbinv  ( devadr len -- )  3drop  ;
+: pcicache-inv  ( devadr len -- )  3drop  ;
+[else]
+: pcicache-wbinv  ( devadr len -- )  2drop  ;
+: pcicache-inv  ( devadr len -- )  2drop  ;
+[then]
+
+fload ${BP}/cpu/mips/rootnode.fth	\ Root node mapping
+
+dev /
+extend-package
+   " /tftpboot/Cobalt-MIPS" encode-string  " architecture" property
+   " Cobalt,Raq2" encode-string  " model" property
+\   d# 33,333,333 " clock-frequency" integer-property
+finish-device
+device-end
+
+: (cpu-arch  ( -- adr len )
+   " architecture" ['] root-node  get-package-property  drop
+   get-encoded-string
+;
+' (cpu-arch to cpu-arch
+
+h#   1.0000 constant initial-heap-size
+fload ${BP}/cpu/mips/boot.fth		\ Low-level startup code
+
+\ Memory management services
+[ifdef] virtual-mode
+fload ${BP}/ofw/core/clntmem1.fth	\ client services for memory
+[else]
+fload ${BP}/ofw/core/clntphy1.fth       \ client services for memory
+[then]
+fload ${BP}/ofw/core/memlist.fth        \ Resource list common routines
+fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
+fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
+fload ${BP}/ofw/core/availpm.fth	\ Available memory list
+fload ${BP}/ofw/core/allocmor.fth 	\ S Allow alloc-mem to use more memory
+
+: (initial-heap)  ( -- adr len )  sp0 @ ps-size -  limit  tuck -  ;
+\ : (initial-heap)  ( -- adr len )
+\   h# 80000000 h# 20000
+\ \  sp0 @ ps-size - initial-heap-size -   initial-heap-size
+\ ;
+['] (initial-heap) to initial-heap
+
+\ fload ${BP}/forth/lib/dumballo.fth		\ Rudimentary memory allocator
+
+h# 1000.0000 constant /segment
+
+alias memsize-loc kseg0
+fload ${BP}/cpu/mips/cobalt/probemem.fth  \ Memory probing
+stand-init: Probing memory
+   " probe" memory-node @ $call-method
+;
+
+\ File system
+[ifdef] resident-packages
+support-package: disk-label
+   fload ${BP}/ofw/disklabl/loadpkg.fth	\ Disk label package
+end-support-package
+
+support-package: ext2-file-system
+   fload ${BP}/ofw/fs/ext2fs/ext2fs.fth	\ Linux file system
+end-support-package
+
+support-package: dropin-file-system
+   fload ${BP}/ofw/fs/dropinfs.fth		\ Dropin file system
+end-support-package
+
+support-package: nfs
+   fload ${BP}/ofw/fs/nfs/loadpkg.fth
+end-support-package
+[then]
+fload ${BP}/ofw/fs/fatfs/fdisk2.fth	\ Partition map administration
+
+\ Load file format handlers
+
+: call32 ;  defer .subname
+fload ${BP}/ofw/core/allocsym.fth    \ Allocate memory for symbol table
+fload ${BP}/ofw/core/symcif.fth
+fload ${BP}/ofw/core/symdebug.fth
+: release-load-area  ( boundary-adr -- )  drop  ;
+fload ${BP}/ofw/elf/elf.fth
+fload ${BP}/ofw/elf/elfdebug.fth
+' 2drop is elf-map-in
+true  ' client-symbols? set-config-int-default
+
+\ Device Tree
+fload ${BP}/cpu/mips/cobalt/devices.fth
+fload ${BP}/cpu/mips/cobalt/devalias.fth
+
+\ Turn on RTS and DTR for the benefit of systems that are configured
+\ for hardware handshaking
+dev com1
+: ron  inituart rts-dtr-on  ;
+patch ron inituart open
+dend
+
+
+: stand-init-io  ( -- )
+[ifdef] stand-init-io
+   stand-init-io
+[then]
+\   install-dumb-alloc
+   inituarts
+   install-uart-io
+   calibrate-ticker
+\   ." Open Firmware starting..." cr cr
+
+   ['] reset-all to bye
+;
+
+: com1  ( -- adr len )  " com1"  ;
+' com1 to fallback-device
+
+: probe-all  ( -- )
+   " probe-" do-drop-in
+[ifdef] probe-pci
+   probe-pci
+[then]
+   " probe+" do-drop-in
+;
+
+\ Perform a full system reset
+: (reset-all)  ( -- )   h# f  h# bc00.0000 rb!  ;
+' (reset-all) to reset-all
+
+fload ${BP}/cpu/mips/argv.fth
+fload ${BP}/cpu/mips/cobalt/fixexc.fth
+
+: copy-reboot-info ;
+\ fload ${BP}/cpu/mips/bcm12500/reboot.fth
+
+fload ${BP}/ofw/core/startup.fth
+: .fw  ." Open Firmware by FirmWorks " .built cr  ;
+' .fw to .firmware
+
+fload ${BP}/ofw/core/countdwn.fth	\ Auto-boot countdown
+patch 1 6 get-countdown
+
+: linux-setup  ( -- )
+   $sr 1 invert and  to $sr	\ Disable interrupts
+   kseg0 0 sync-cache
+   boot-file boot-device argv,argc  to $a0  to $a1
+   null$  " FIRMWARE=OpenFirmware" argv,argc  drop to $a2
+   memory-size 1meg * to $a0
+;
+
+: init-program  ( -- )
+   \ Turn off interrupts because some of the Linux kernel ELF files
+   \ overwrite the trap vectors.
+   init-program disable-interrupts  linux-setup
+
+   \ Kludge alert!  Linux expects the PCI Base Address Registers for the
+   \ Ethernet and IDE to be assigned the way the Cobalt firmware does it,
+   \ even though that is inconsistent between the two.  So we slam them
+   \ to the expected values before jumping to Linux.
+   h#  280.0045 h# 3804 config-l!   \ Ethernet command register
+   h#     .4000 h# 380c config-l!   \ Ethernet something
+   h# 1010.0000 h# 3810 config-l!   \ Ethernet I/O space BAR
+   h# 1200.0000 h# 3814 config-l!   \ Ethernet Memory space BAR
+   h# 2814.0104 h# 383c config-l!   \ Ethernet someting
+   h# cc00 h# 4920 config-l!        \ bmIDE BAR
+;
+
+\ Don't override user-supplied file names
+dev /obp-tftp  ' dhcp-modify-file to modify-boot-file  dend
+
+patch true diagnostic-mode? diag-type
+patch true diagnostic-mode? diag-cr
+
+install-rom-cold
+.( --- Saving fw.dic ...)  " fw.dic" $save-forth cr
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2009 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

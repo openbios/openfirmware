@@ -1,0 +1,56 @@
+purpose: Load file for ForthMon for MIPS on the Atlas board
+copyright: Copyright 2000-2001 FirmWorks  All Rights Reserved
+
+dictionary: ${BP}/cpu/mips/build/tools.dic
+command: &mipsfth &dictionary &this
+build-now
+
+\ ' $report-name is include-hook
+\ true to stand-init-debug?
+
+\ true ' fcode-debug? set-config-int-default
+\ " com1" ' output-device set-config-string-default
+\ " com1" ' input-device set-config-string-default
+
+fload ${BP}/cpu/mips/ksegaddr.fth
+fload ${BP}/cpu/mips/atlas/physaddr.fth
+fload ${BP}/cpu/mips/atlas/virtaddr.fth
+
+: rl@  l@  ;   : rl!  l!  ;
+: rw@  w@  ;   : rw!  w!  ;
+: rb@  c@  ;   : rb!  c!  ;
+
+fload ${BP}/cpu/mips/atlas/isaio.fth	\ ISA I/O space access
+fload ${BP}/dev/diag16550.fth		\ Diagnostic driver for serial port
+h# 0 is uart-base
+d# 3686400 constant uart-clock-frequency
+
+fload ${BP}/forth/lib/sysuart.fth	\ Plug UART routines into key and emit
+
+h#   1.0000 constant initial-heap-size
+fload ${BP}/cpu/mips/boot.fth		\ Low-level startup code
+
+fload ${BP}/fm/lib/dumballo.fth		\ Rudimentary memory allocator
+
+: stand-init-io  ( -- )
+[ifdef] stand-init-io
+   stand-init-io
+[then]
+   install-dumb-alloc
+   install-uart-io
+;
+: stand-init  ;
+
+: startup  ( -- )
+   hex
+   warning on
+   only forth also definitions
+;
+
+install-rom-cold
+
+.( --- Saving forthmon.dic ---)  " forthmon.dic" $save-forth  cr
+
+\ \needs to-srecs     fload ${BP}/tools/srec2.fth
+\ rom-pa rom-entry-pa to-srecs forthmon.dic forthmsr.sr
+\ rom-pa rom-entry-pa to-swapped-srecs forthmon.dic forthmsr.ssr

@@ -1,0 +1,23 @@
+purpose: Top-level build script for Intreon AVX ROM
+copyright: Copyright 2001 FirmWorks  All Rights Reserved
+
+command: &native &this
+in: romraw.img
+build-now
+
+\needs $add-dropin  fload ${BP}/tools/mkdropin.fth
+
+\ Always re-create the builton.fth file when we make a new rom.img
+fload ${BP}/arch/mips/builton.bth
+
+: compute-chksum  ( adr len -- chksum )
+   bounds 0 -rot  ?do  i c@ +  loop
+;
+
+writing rom.img
+   " romraw.img" $read-file		( adr len )
+   2dup  compute-chksum -rot		( chksum adr len )
+   2dup  ofd @ fputs  free-mem		( chksum )
+   h# ff and h# a5 swap - ofd @ fputc
+ofd @ fclose
+

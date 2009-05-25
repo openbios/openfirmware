@@ -1,0 +1,219 @@
+purpose: Low-level startup code for Bonito 
+copyright: Copyright 2001 Firmworks.  All Rights Reserved.
+
+command: &native &this
+build-now
+
+\needs start-assembling  fload ${BP}/cpu/mips/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+create debug-reset
+\ create hard-code-memory
+
+fload ${BP}/cpu/mips/ksegaddr.fth
+fload ${BP}/cpu/mips/bonito/physaddr.fth
+fload ${BP}/cpu/mips/bonito/report.fth
+
+start-assembling
+
+label my-entry
+   0 ,                          \ To be patched later
+   nop
+end-code
+
+label i2creset  ( -- )
+   ra jr  nop
+end-code
+
+label i2cread  ( a0: DIMM# a1: reg# -- v0: value )  \ Destroy t0-t3
+   smbus-base isa-io-base + t0 set
+
+   $a0 1     t1 sll
+   t1  h# a1 t1 ori		\ DIMM base address and read bit
+   t1  t0    4  sb
+   $a1 t0    3  sb		\ Command
+
+   h# 48     t1 set		\ SMB_START SMB_BDRW
+   t1  t0    2  sb
+
+   d# 10000  t3 set
+   begin
+      t0 0     t1 lbu		\ Status
+      t1 h# 1e t2 andi		\ failed, bus_err, dev_err, interrupt, ok
+      t3 -1    t3 addi
+      t2 0 <>  if
+         nop  0 t3 set
+      then      
+   t3 0 = until
+      nop
+
+   t1 t0 0 sb			\ Clear pending errors/interrupts
+   t1 h# 1c t2 andi
+   -1 v0  set
+   t2 0 =  if
+      nop
+      t0 5 v0 lbu
+   then
+
+   ra jr  nop
+end-code
+
+transient
+: nodimm  ( -- )
+   " nop" evaluate
+   " 0 v0 set" evaluate
+   " h# 40 v1 set" evaluate	\ BONITO_SDCFG_AABSENT
+   " $a0 0 <>  if  nop  v1 8 v1 sll  then  s6 jr  nop" evaluate
+;
+resident
+
+label size-dimm  ( a0: DIMM# -- v0: size v1: shape )
+   ra s6 move
+
+   0 t8 set
+   0 t9 set
+
+   2 $a1 set
+   i2cread  bal  nop	\ DIMM type
+   4 t0 set
+   v0 t0 <>  if  nodimm  then
+
+   d# 31 $a1 set
+   i2cread  bal  nop    \ size per side
+   v0 0 =  if  nodimm  then
+   v0 d# 22 t8 sll	\ multiply by 4 MB
+
+   3 $a1 set
+   i2cread  bal  nop	\ # of rows
+   v0 d# -11 v0 addi
+   v0 -4     t0 addi
+   t0 0>  if  nodimm then
+   v0 03     v0 andi	\ arowbits
+   t9 v0     t9 or
+
+   4 $a1 set
+   i2cread  bal  nop	\ # of columns
+   v0 -8     v0 addi
+   v0 -4     t0 addi
+   t0 0>  if  nodimm  then
+   v0 02     v0 sll
+   v0 h# 0c  v0 andi	\ acolbits
+   t9 v0     t9 or
+
+   d# 17 $a1 set
+   i2cread  bal  nop	\ blocks/DRAM
+   4 t0 set
+   v0 t0 =  if
+      nop
+      t9 h# 10 t9 ori	\ abankbit
+   else
+      nop
+      2 t0 set
+      v0 t0 <>  if  nodimm  then
+   then
+
+   5 $a1 set
+   i2cread  bal  nop	\ number of sides
+   2 t0 set
+   v0 t0 =  if
+      nop
+      t9 h# 20 t9 ori	\ asides
+      t8 1     t8 sll	\ memory size * 2
+   else
+      nop
+      1 t0 set
+      v0 t0 <>  if  nodimm  then
+   then
+
+   6 $a1 set
+   i2cread  bal  nop	\ width
+   v0 d# -72 t0 addi
+   t0 0>  if  nodimm  then
+   v0 d# -36 t0 addi
+   t0 0>  if
+      nop
+      t9 h# 80 t9 ori	\ awidth64
+   then
+
+   $a0 0 <>  if  nop  t9 8 t9 sll  then
+   t8 v0 move
+   t9 v1 move
+
+   s6 jr  nop
+end-code
+
+label start-memory  ( -- v0: RAM size )
+   ra s7 move
+
+   i2creset  bal  nop
+
+[ifndef] hard-code-memory
+   \ DIMM 0
+   0 $a0 set
+   size-dimm  bal  nop
+   v0 s0 move
+   v1 s1 move
+
+   \ DIMM 2
+   1 $a0 set
+   size-dimm  bal  nop
+   s0 v0 s0 add			\ s0 = size
+   s1 v1 s1 or			\ s1 = shape
+[else]
+   h# 200.0000 s0 set
+   h# 4091 s1 set
+[then]
+
+   \ Set various bonito registers
+   bonito-reg-pa  t3  set
+   s1  t3  h# 0c  sw		\ sdcfg
+
+   s0 0 =  if
+      nop
+      h# 20.0000 s0  set	\ Always assume at least 4MB
+   then
+
+   0 t1 set			\ accumulate pcimembasecfg settings
+
+   \ Set bar0 mask and translation to point to SDRAM
+   $0 s0     t0 subu
+   t0 d# 23  t0 srl
+   t0 h# 1f  t0 andi
+   t1 t0     t1 or
+   t1 h# 400 t1 ori		\ cached
+
+   \ Set bar1 to minimum size to conserve PCI space
+   -1 t0 set 
+   t0 d# 11   t0 srl
+   h# 1.f000  t2 set
+   t0 t2      t0 and
+   t1 t0      t1 or
+   h# 40.0000 t2 set
+   t1 t2      t1 or
+
+   t1 t3   h# 14 sw		\ pcimembasecfg
+
+   \ Enable configuration cycles now
+   t3  h# 00    t0 lw
+   h# 20 invert t1 set
+   t0  t1       t0 and
+   t0  t3    h# 00 sw
+
+   \ Return to reset dropin
+   kseg0   t0  set
+   s0  t0  v0  add
+
+   s7  jr
+   nop
+
+end-code
+
+also mips-assembler
+start-memory  my-entry  put-branch
+previous
+
+end-assembling
+
+writing start.di
+asm-base  here over -  0  " start" write-dropin
+ofd @ fclose

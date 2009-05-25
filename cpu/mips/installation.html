@@ -1,0 +1,117 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>MIPS Getting Started</title>
+  <meta http-equiv="content-type"
+ content="text/html; charset=ISO-8859-1">
+  <meta name="author" content="Mitch Bradley">
+</head>
+<body>
+<h2 align="center">MIPS Open Firmware</h2>
+<h2 align="center">Getting Started</h2>
+<h3>Unpacking the Files</h3>
+<ul>
+  <li>Login to the Linux MIPS machine that you will use for your Open Firmware
+compilations.<br>
+  </li>
+  <li>Create a directory on that machine for the Open Firmware build tree.
+&nbsp;It can be on either a local disk or a mounted network filesystem. A
+mounted filesystem may be better in the long run if you expect to use the
+same tree for other processor architectures later. Example: &nbsp;<b>mkdir
+/home/wmb/ofw</b></li>
+  <li>Set the BP environment variable to that directory. Example: <b>export
+BP=/home/wmb/ofw</b></li>
+  <li>Enter that directory:<b> cd $BP</b></li>
+  <li>Extract the files: <b>tar xf mips-ofw.tar.gz</b></li>
+  <li>If you use &nbsp;CVS or a similar version control system, checkin the
+tree.</li>
+</ul>
+<h3>Creating platform directories</h3>
+Builds are done in a directory named $BP/cpu/mips/<i><b>chipset/platform</b></i>/build/
+.<br>
+<br>
+<i><b>chipset </b></i>is a name that identifies the core logic chipset for
+your system. &nbsp;Source files in that directory contain code that is common
+to all systems built with that chipset. In some cases, the source distribution
+will already include a suitable <i>chipset </i>directory for your chipset,
+e.g. $BP/cpu/mips/emma2/.<br>
+<ul>
+  <li>If a suitable chipset directory does not exist, create one. Example:
+    <b>mkdir $BP/arch/mips/mychip</b></li>
+</ul>
+<i><b>platform</b></i> is a name that you choose to identify your system.
+You need a separate <i>platform</i> directory for each distinct Open Firmware
+binary image. Typically you would have a different platform directory for
+each of your different boards. Source files in that directory contain code
+that is board-specific. For example, different boards often have different
+external I/O devices, so the builder script files in the various <i>platform</i>
+directories would load different I/O drivers. &nbsp;It is possible to support
+several boards from a single Open Firmware binary image if the board differences
+can be detected at run time. There is a tradeoff between the difficulty of
+maintaining several different images versus the trouble of testing new combined
+images on all platforms.
+<ul>
+  <li>Create one or more platform directories. &nbsp;Example: <b>mkdir $BP/cpu/mips/mychip/myboard</b>
+  </li>
+</ul>
+The builder puts object files in a "build" subdirectory beneath the <i>platform</i>
+directory. &nbsp;Typically the build directory contains no source files.<br>
+<ul>
+  <li>Create a build directory below each platform directory. Example: <b>mkdir
+$BP/cpu/mips/mychip/myboard/build</b></li>
+</ul>
+<h3>Compilation tools</h3>
+The Open Firmware compilation process uses the following tools:
+<dl>
+  <dd><b>build</b> is the main command for Open Firmware compilation. It
+is a simple shell script that you install &nbsp;(per the above) in a directory
+on your search path. The script's purpose is to set some environment variable
+and then to locate and execute the appropriate executable files for the particular
+host system.</dd>
+  <dd><b>forth</b> is the executable program that <b>build </b>invokes. It
+resides in $BP/bin/<i>cpu</i>/<i>os</i>/forth, where <i>cpu </i>and <i>os</i>
+are the host instruction set (e.g. mips) and operating system (e.g. linux)
+on which it executes.</dd>
+  <dd><b>native.dic</b> is the Open Firmware compiler. It resides in $BP/bin/<i>cpu</i>/native.dic
+. native.dic is a Forth dictionary file that includes all the tools necessary
+for the compilation process, including a Forth metacompiler, a Forth incremental
+compiler, an assembler, an FCode tokenizer, an FCode detokenizer, a dependency
+manager (the "builder"), and a dropin manager (tools for creating sequences
+of &nbsp;dropin modules to form a ROM image file). &nbsp;It can also be extended
+with tools to create specific download file formats.</dd>
+</dl>
+<h3>Compiling "forth" the first time</h3>
+The <b>forth </b>executable is actually just a collection of I/O interface 
+procedures that provide the "glue" to let native.dic work on a particular 
+operating system. The forth executable is the only part of the system that 
+must be compiled with external tools. It is written in C, and may be compiled 
+by various C compilers; typically gcc on a Unix system (but it doesn't use 
+any GCC-specific extensions). After it has been compiled once, it does not 
+need to be compiled again unless you change the host operating system in a
+way that breaks older binaries or shared libraries.<br>
+<br>
+To find out if you need to recompile the "forth" executable for your system,
+do this (on the MIPS Linux development system):<br>
+<blockquote>
+  <pre>cd $BP/bin/mips/linux<br>./forth ../native.dic</pre>
+</blockquote>
+You should see a banner like this:<br>
+<blockquote>
+  <pre>Forthmacs version 4.0<br>Copyright (c) 1994 FirmWorks&nbsp; All Rights Reserved<br>ok <br></pre>
+</blockquote>
+To exit, type <b>bye</b> .<br>
+<br>
+If the above doesn't work, type:<br>
+<blockquote>
+  <pre>make forth</pre>
+</blockquote>
+and try again.
+<h3>Porting to your platform</h3>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+</body>
+</html>

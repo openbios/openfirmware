@@ -1,0 +1,199 @@
+purpose: Low-level startup code for Broadcom BCM7030RKPB1 memory controller
+copyright: Copyright 2001 Firmworks.  All Rights Reserved.
+
+command: &native &this
+build-now
+
+\needs start-assembling  fload ${BP}/cpu/mips/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+create debug-reset
+
+fload ${BP}/cpu/mips/ksegaddr.fth
+fload ${BP}/cpu/mips/broadcom/avx/physaddr.fth
+fload ${BP}/cpu/mips/broadcom/avx/report.fth
+
+: bc-cfg!  ( data idx -- )
+   pci-reg-base + " t0 set" evaluate
+   " t1 set" evaluate
+   " t1 t0 0 sw" evaluate
+;
+: bcl!  ( data idx -- )
+   bc-reg-base + " t0 set" evaluate
+   " t1 set" evaluate
+   " t1 t0 0 sw" evaluate
+;
+: bcl-and!  ( bits idx -- )
+   bc-reg-base + " t0 set" evaluate
+   " t0 0 t2 lw" evaluate
+   " t1 set" evaluate
+   " t1 t2 t1 and" evaluate
+   " t1 t0 0 sw" evaluate
+;
+: bcl-or!  ( bits idx -- )
+   bc-reg-base + " t0 set" evaluate
+   " t0 0 t2 lw" evaluate
+   " t1 set" evaluate
+   " t1 t2 t1 or" evaluate
+   " t1 t0 0 sw" evaluate
+;
+: bcl-t1!  ( t1: val idx -- )
+   bc-reg-base + " t0 set" evaluate
+   " t1 t0 0 sw" evaluate
+;
+: client!  ( val client -- )
+   h# 2014 bcl!			\ RB_TMC_CLIENT_INDEX_REG
+   h# 2018 bcl!			\ RB_TMC_INDX_DATA_WR_REG
+;
+: tvrcp!  ( val idx -- )
+   h# 20e0 bcl!			\ RB_TVRCP_INDEX_ADDRS_REG
+   h# 20e4 bcl!			\ RB_TVRCP_INDEX_DATA_REG
+   1 h# 20e8 bcl!		\ RB_TVRCP_INDEX_CNTL_REG, command write
+;
+
+: delay-ms  ( ms -- )
+   d# 100.0000 * d# 830 + d# 1660 / " t0 set" evaluate
+   " begin  t0 0 = until  t0 -1 t0 addi" evaluate
+;
+
+start-assembling
+
+label my-entry
+   0 ,                          \ To be patched later
+   nop
+end-code
+
+label start-memory  ( -- v0: RAM size )
+   ra s7 move
+
+ascii s ?report
+   h# 0000.0000 h# 2254 bcl!	\ RB_TS1_X_TX_MAX_REG, primary display feeder tile hori size reg
+   h# 0000.0000 h#   a0 bcl!	\ Clear DISP_CTRL, display control reg
+   h# 0000.0000 h#   5c bcl!	\ Clear CAP_CTRL, capture control reg
+   h# fff7.ffff h#    4 bcl-and! \ PM_CTRL, enable SDRAM clock 0, undocumented bit
+   h# 0000.0000 h#    0 bcl!	\ MEM_BASE, SDRAM base at 0
+   h# 0000.0040 h#    8 bcl!	\ MEM_CTRL, set SDRAM memory size to 64MB
+   h# 0000.0000 h#    c bcl!	\ GP_CTRL, GPIO reg
+   h# 0000.0001 h#   20 bcl-or!	\ CPU_CTRL, allow chip to ack illegal read/write
+
+ascii d ?report
+   h# 0000.efff h# 20ac bcl!	\ RB_TVRCP_SOFT_RESET_APPLY_REG1
+   h# 0000.efff h# 20b0 bcl!	\ RB_TVRCP_SOFT_RESET_WITHDRAW_REG1
+   h# 0000.001f h# 20b4 bcl!	\ RB_TVRCP_SOFT_RESET_APPLY_REG2
+   h# 0000.1000 h# 20ac bcl!	\ RB_TVRCP_SOFT_RESET_APPLY_REG1
+[ifdef] for-bcm93730
+   h# 0000.8030 h# 2004 bcl!	\ RB_TMC_MODE_CONTROL_REG, tRAS, CAS latency, burst len
+[else]
+   h# 0000.8020 h# 2004 bcl!	\ RB_TMC_MODE_CONTROL_REG, tRAS, CAS latency, burst len
+[then]
+   h# 0000.00bc h# 2024 bcl!	\ RB_TMC_DELAY_REG, memory controller timer 2 reg
+   h# 0000.1402 h# 2000 bcl!	\ RB_TMC_CNTRL_CONFIG_REG, 4x2Mx16
+   h# 0000.0000 h# 2038 bcl!	\ RB_TMC_MSA_MODE_REG
+   h# 0000.1000 h# 20b0 bcl!	\ RB_TVRCP_SOFT_RESET_WITHDRAW_REG1
+
+ascii r ?report
+   h# f020 h# 00 client!	\ CPU read, wraparound-cache-reads
+   h# f021 h# 01 client!	\ CPU write, linear writes
+   h# 08a5 h# 02 client!	\ Video win display #1, linear reads
+   h# 08a2 h# 03 client!	\ Graphics display, linear reads
+   h# fff8 h# 04 client!	\ Pirhanan 3D, linear read/writes
+   h# fff5 h# 05 client!	\ Mem-to-mem DMA, linear read/writes
+   h# fff6 h# 06 client!	\ PCI, linear read/writes
+   h# fff7 h# 07 client!	\ Local 68k bus I/O, linear read/writes
+   h# 003e h# 08 client!	\ Reserved
+   h# 003c h# 09 client!	\ DMA command, linear read/writes
+   h# 003d h# 0a client!	\ Paxel, linear read/writes
+   h# 000e h# 0b client!	\ VBI write, linear writes
+   h# 000f h# 0c client!	\ VBI read #1, linear read
+   h# 0010 h# 0d client!	\ VBI read #2, linear read
+   h# 000b h# 0e client!	\ Video win capture #1, linear writes
+   h# 0006 h# 0f client!	\ Video win display #2, linear read
+   h# 001f h# 10 client!	\ Video win capture #2, reserved
+   h# 0013 h# 11 client!	\ PCM audio, linear read
+   h# 000a h# 12 client!	\ Data transport, linear read/writes
+   h# 0011 h# 13 client!	\ Audio read #1, linear read
+   h# 0012 h# 14 client!	\ Audio read #2, linear read
+   h# 0008 h# 15 client!	\ Audio write #1, linear writes
+   h# 0009 h# 16 client!	\ Audio write #2, linear writes
+   h# 08a3 h# 17 client!	\ Video scan feeder #1, video image raster reads
+   h# 08a4 h# 18 client!	\ Video scan feeder #2, video image raster reads
+   h# 0019 h# 19 client!	\ Row engine #1, video image MB accesses
+   h# 001a h# 1a client!	\ Row engine #2, video image MB accesses
+   h# 000c h# 1b client!	\ T-proc compr write, linear writes
+   h# 0014 h# 1c client!	\ T-proc DMA, linear read/writes
+   h# 000d h# 1d client!	\ V-proc DMA, linear read/writes
+   h# 001b h# 1e client!	\ DMA soft access, linear/MPEG read-writes
+   h# 0007 h# 1f client!	\ DRAM refresh
+
+ascii a ?report
+   h# 0000.0011 h# 0600 bcl-or!	\ CPU_RAH_CTRL, enable read-ahead cache
+   h# 608 bcl-t1!		\ CPU_RAH_INV_ALL
+
+   h# 0300 h# 0044 tvrcp!	\ Init PCR clock to 27Mhz
+   h# 7fff h# 0042 tvrcp!
+   h# 3000 h# 0043 tvrcp!
+   h# 0800 h# 008c tvrcp!	\ Expand the VBV buffer
+   h# 0000 h# 008d tvrcp!
+
+   \ Setup Broadcom PCI host bridge
+   h# 1400.0000 h# 58 bc-cfg!	\ Setup PCI MEM window BARs. Use only win 0 now.
+   h# 1400.0000 h# 5c bc-cfg!
+   h# 1400.0000 h# 60 bc-cfg!
+   h# 1400.0000 h# 64 bc-cfg!
+   h# 1300.0000 h# 68 bc-cfg!	\ Setup PCI IO window BAR. Use only win 0 now.
+   h# 0000.0000 h# 10 bc-cfg!	\ Setup PCI SDRAM win 0.
+   h# 0000.0006 h# 50 bc-cfg!	\ Setup SDRAM win0 size to 64MB
+   h# 0000.0000 h# 74 bc-cfg!	\ Setup SDRAM endianness
+
+ascii m ?report
+
+   \ Rudimentary memory test
+   h# 5555.aaaa t1 set
+   h# a000.0000 t0 set
+   t1 t0 0 sw
+
+   h# a000.0000 t0 set
+   h# 10.0000 t3 set
+   /ram-bank kseg1 + h# 10.0000 -  t2 set
+   h# 3333.cccc t1 set
+
+   begin
+      t0 t3 t0 add
+      t1 t0 0  sw
+   t0 t2 =  until  nop
+
+   h# a000.0000 t0 set
+   h# 5555.aaaa t2 set
+   t0 0 t1 lw
+
+   t1 t2 =  if
+   nop
+ascii G ?report
+ascii o ?report
+ascii o ?report
+ascii d ?report
+   else
+   nop
+ascii B ?report
+ascii a ?report
+ascii d ?report
+begin again  nop
+   then
+
+   \ Return to reset dropin
+   /ram-bank kseg0 + v0  set
+
+   s7  jr
+   nop
+
+end-code
+
+also mips-assembler
+start-memory  my-entry  put-branch
+previous
+
+end-assembling
+
+writing start.di
+asm-base  here over -  0  " start" write-dropin
+ofd @ fclose

@@ -1,0 +1,4 @@
+#!/bin/sh
+build rom
+echo Converting to ELF format
+./bintoelf -a 0x80200000 -p 8 -l <rom.img >rom.elf

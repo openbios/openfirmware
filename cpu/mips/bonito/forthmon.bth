@@ -1,0 +1,99 @@
+purpose: Load file for ForthMon for MIPS
+copyright: Copyright 2000-2001 FirmWorks  All Rights Reserved
+
+dictionary: ${BP}/cpu/mips/build/basefw.dic
+command: &mipsfth &dictionary &this
+build-now
+
+\ ' $report-name is include-hook
+true to stand-init-debug?
+
+true ' fcode-debug? set-config-int-default
+" com1" ' output-device set-config-string-default
+" com1" ' input-device set-config-string-default
+
+fload ${BP}/cpu/mips/ksegaddr.fth
+fload ${BP}/cpu/mips/bonito/physaddr.fth
+fload ${BP}/cpu/mips/bonito/virtaddr.fth
+
+: rl@  l@  ;   : rl!  l!  ;
+: rw@  w@  ;   : rw!  w!  ;
+: rb@  c@  ;   : rb!  c!  ;
+
+fload ${BP}/cpu/mips/bonito/isaio.fth	\ ISA I/O space access
+fload ${BP}/dev/diag16550.fth		\ Diagnostic driver for serial port
+h# 3f8 is uart-base
+fload ${BP}/forth/lib/sysuart.fth	\ Plug UART routines into key and emit
+\ ' ukey is diag-key			\ Feed UART input to "dl"
+
+h# 1000 to pagesize
+d# 12   to pageshift
+
+fload ${BP}/cpu/mips/cache.fth		\ Cache synchronization/flushing
+fload ${BP}/cpu/mips/rootnode.fth	\ Root node mapping
+dev /
+   " Algorithmics,P-6032" model
+   " Algorithmics" encode-string  " architecture" property
+\   d# 33,333,333 " clock-frequency" integer-property
+device-end
+
+: (cpu-arch  ( -- adr len )
+   " architecture" ['] root-node  get-package-property  drop
+   get-encoded-string
+;
+' (cpu-arch to cpu-arch
+
+h#   1.0000 constant initial-heap-size
+fload ${BP}/cpu/mips/boot.fth		\ Low-level startup code
+
+\ Memory management services
+fload ${BP}/ofw/core/clntmem1.fth	\ client services for memory
+fload ${BP}/ofw/core/memlist.fth	\ Resource list common routines
+fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
+fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
+fload ${BP}/ofw/core/availpm.fth	\ Available memory list
+fload ${BP}/ofw/core/allocmor.fth 	\ S Allow alloc-mem to use more memory
+
+: (initial-heap)  ( -- adr len )  sp0 @ ps-size -  limit  tuck -  ;
+['] (initial-heap) to initial-heap
+
+\ fload ${BP}/forth/lib/dumballo.fth	\ Rudimentary memory allocator
+
+variable bank-mask
+" Set bank-mask" ?reminder
+1 bank-mask !
+fload ${BP}/cpu/mips/probemem.fth  \ Memory probing
+stand-init: Probing memory
+   " probe" memory-node @ $call-method
+;
+
+\ File system
+
+: call32 ;  defer .subname
+fload ${BP}/ofw/core/allocsym.fth    \ Allocate memory for symbol table
+fload ${BP}/ofw/core/symcif.fth
+fload ${BP}/ofw/core/symdebug.fth
+: release-load-area  ( boundary-adr -- )  drop  ;
+fload ${BP}/ofw/elf/elf.fth
+fload ${BP}/ofw/elf/elfdebug.fth
+' 2drop is elf-map-in
+
+\ Device Tree
+
+: stand-init-io  ( -- )
+[ifdef] stand-init-io
+   stand-init-io
+[then]
+\   install-dumb-alloc
+   install-uart-io
+;
+
+: startup  ( -- )
+   hex
+   warning on
+   only forth also definitions
+;
+
+install-rom-cold
+
+.( --- Saving forthmon.dic ---)  " forthmon.dic" $save-forth  cr

@@ -1,0 +1,14 @@
+The inflater is made with a GCC cross compiler.
+
+To build inflate.img, the following worked at one point (the GCC options might have changed since then):
+
+cd ${BP}/cpu/mips/Linux
+mipsel-gcc -ffreestanding -nostdlib -mips=rm52xx -mips1 -mno-abicalls -membedded-data -g0 -EL -mno-long-calls -c ${BP}/tools/inflate.c
+mipsel-ld -oformat elf32-littlemips -EL -G0 -N -Ttext=80100000 inflate.o -o inflate.elf
+mipsel-objcopy -O binary inflate.elf inflate.img
+
+The above lines make an image which should be loaded at absolute address 8010.0000.
+Should that be different, the change would have to be reflected in:
+
+   ${BP}/cpu/mips/basefw.bth
+   ${BP}/cpu/mips/bonito/reset.bth (and any other reset.bth that loads the inflater)

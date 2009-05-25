@@ -1,0 +1,34 @@
+purpose: A test program to run in memory
+copyright: Copyright 2001 Firmworks.  All Rights Reserved.
+
+command: &native &this
+build-now
+
+\needs start-assembling  fload ${BP}/cpu/mips/asmtools.fth
+\needs write-dropin      fload ${BP}/tools/mkdropin.fth
+
+create debug-reset
+
+fload ${BP}/cpu/mips/ksegaddr.fth
+fload ${BP}/cpu/mips/broadcom/avx/physaddr.fth
+fload ${BP}/cpu/mips/broadcom/avx/report.fth
+
+start-assembling
+
+label my-entry
+h# 20 pad-to
+carret ?report
+linefeed ?report
+ascii H ?report
+ascii e ?report
+ascii l ?report
+ascii l ?report
+ascii o ?report
+begin again nop
+end-code
+
+end-assembling
+
+writing test.di
+asm-base  here over -  0  " test" write-dropin
+ofd @ fclose

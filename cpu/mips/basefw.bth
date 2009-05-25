@@ -1,0 +1,143 @@
+purpose: Load file for base firmware - no platform specifics
+\ See license at end of file
+
+dictionary: ${BP}/cpu/mips/build/tools.dic
+command: &mipsfth &dictionary &this
+build-now
+
+\ ' $report-name is include-hook
+
+create resident-packages
+create include-help			\ Include help facility
+
+alias cfill fill
+fload ${BP}/ofw/core/ofwcore.fth	\ Device tree and other OBP routines
+fload ${BP}/ofw/core/ofwfw.fth		\ FirmWorks enhancements
+fload ${BP}/ofw/core/memops.fth		\ Call memory node methods
+fload ${BP}/ofw/core/mmuops.fth		\ Call MMU node methods
+
+fload ${BP}/cpu/mips/traps.fth		\ Exception handlers
+fload ${BP}/cpu/mips/r4000cp0.fth	\ Coprocessor 0 registers
+fload ${BP}/cpu/mips/getms.fth		\ Timer access
+
+fload ${BP}/cpu/mips/centry.fth		\ Low-level client entry and exit
+
+fload ${BP}/ofw/confvar/loadcv.fth	\ Configuration variables
+fload ${BP}/ofw/core/silentmd.fth	\ NVRAM variable silent-mode?
+
+fload ${BP}/ofw/termemu/loadfb.fth	\ Frame buffer support
+fload ${BP}/ofw/termemu/difont.fth	\ Get font from a dropin module
+
+fload ${BP}/ofw/termemu/fb8-ops.fth	\ 8-bit frame buffer primitives
+\ fload ${BP}/cpu/mips/fb8-ops.fth	\ 8-bit frame buffer primitives
+
+fload ${BP}/ofw/gui/alert.fth		\ Basic dialogs and alerts
+fload ${BP}/dev/stringio.fth		\ Output diversion
+
+fload ${BP}/ofw/core/loadmore.fth	\ Load additional core stuff
+
+fload ${BP}/ofw/inet/loadtftp.fth	\ Trivial File Transfer Protocol pkg.
+
+\ fload ${BP}/pkg/loadpkg.fth		\ Load support packages
+\ fload ${BP}/pkg/inet/loadtcp.fth	\ TCP extensions
+
+fload ${BP}/cpu/mips/catchexc.fth	\ Exception handler
+fload ${BP}/cpu/mips/forthint.fth	\ Alarm handler
+
+fload ${BP}/cpu/mips/regacc.fth		\ Register access words
+
+fload ${BP}/ofw/fcode/loadfcod.fth	\ S Fcode interpreter
+
+fload ${BP}/ofw/fcode/regcodes.fth	\ Register access words
+fload ${BP}/ofw/fcode/extcodes.fth	\ Firmworks extension FCodes
+
+fload ${BP}/ofw/core/initprog.fth	\ FCode and Forth source load formats 
+
+fload ${BP}/ofw/core/infltdi.fth	\ Support for compressed dropin drivers
+
+h# 8010.0000 constant inflater-base
+0 0 2value old-inflater
+: mips-get-inflater  ( -- )
+   (get-inflater)
+   inflater to old-inflater
+   inflater inflater-base swap 2dup to inflater  move
+   inflater sync-cache
+;
+' mips-get-inflater to get-inflater
+
+: mips-release-inflater  ( -- )
+   old-inflater free-mem
+;
+' mips-release-inflater to release-inflater
+
+fload ${BP}/cpu/mips/initpgm.fth	\ Basic boot handler
+
+[ifdef] resident-packages
+support-package: fat-file-system
+   fload ${BP}/ofw/fs/fatfs/loadpkg.fth	\ FAT file system reader
+end-support-package
+
+support-package: iso9660-file-system
+   fload ${BP}/ofw/fs/cdfs/loadpkg.fth	\ ISO 9660 CD-ROM file system reader
+end-support-package
+
+support-package: disk-label
+   fload ${BP}/ofw/disklabel/loadpkg.fth	\ Disk label package
+end-support-package
+[then]
+
+[ifdef] resident-packages
+fload ${BP}/ofw/fs/fatfs/fdisk2.fth	\ Partition map administration
+[else]
+autoload: fdisk2.fth
+defines: $.partitions
+defines: .partitions
+\ defines: init-nt-disk
+defines: $partition
+[then]
+
+fload ${BP}/fm/lib/pattern.fth		\ Text string pattern matching
+fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
+
+: ldump  (s adr len -- )
+   base @ >r  hex
+   bounds  ?do
+      i 8 u.r  ." : "  i  h# 10  bounds  do
+         i l@ 8 u.r space space
+      /l +loop
+      i  h# 10  bounds  do
+         i c@  dup  bl h# 80 within  if  emit  else  drop ." ."  then
+      loop
+      cr
+      exit? (?leave)
+   h# 10 +loop
+   r> base !
+;
+
+[ifndef] no-heads
+.( --- Saving basefw.dic --- )  cr "" basefw.dic save-forth
+[then]
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2009 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

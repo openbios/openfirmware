@@ -1,0 +1,31 @@
+purpose: Top-level build script for Bonito ROM
+copyright: Copyright 2001 FirmWorks  All Rights Reserved
+
+command: &native &this
+in: resetjmp.img
+in: reset.di
+in: start.di
+in: fw.img
+in: ${BP}/dev/dec21140/build/comet.fc
+in: ${BP}/dev/dec21140/build/netgear.fc
+in: ${BP}/dev/kendin/build/ks8723.fc
+in: ${BP}/dev/usb/ohci/build/ohci.fc
+build-now
+
+\needs $add-dropin  fload ${BP}/tools/mkdropin.fth
+
+\ Always re-create the builton.fth file when we make a new rom.img
+fload ${BP}/arch/mips/builton.bth
+
+writing rom.img
+   " resetjmp.img"   $add-file	\ Branch past initial dropin module header
+   " reset.di"       $add-file
+   " start.di"       $add-file
+   " fw.img"                     " firmware"  $add-deflated-dropin
+   " ${BP}/cpu/mips/inflate.img" " inflate"   $add-dropin
+   " builton.fth"                " probe-"    $add-dropin
+   " ${BP}/dev/dec21140/build/comet.fc"     " pci1317,985"   $add-deflated-dropin
+   " ${BP}/dev/dec21140/build/netgear.fc"   " pci11ad,2"     $add-deflated-dropin
+   " ${BP}/dev/kendin/build/ks8723.fc"      " pci1186,1002"  $add-deflated-dropin
+   " ${BP}/dev/usb/ohci/build/ohci.fc"      " pci1045,c861"  $add-deflated-dropin
+ofd @ fclose

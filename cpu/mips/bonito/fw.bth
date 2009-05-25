@@ -1,0 +1,210 @@
+purpose: Load file for Bonito 
+copyright: Copyright 2000-2001 FirmWorks  All Rights Reserved
+
+dictionary: ${BP}/fm/cwrapper/mips/build/basefw.dic
+command: &mipsfth &dictionary &this
+build-now
+
+create rom-based?
+\ create ram-image
+
+\ ' $report-name is include-hook
+true to stand-init-debug?
+
+false ' auto-boot? set-config-int-default
+true ' fcode-debug? set-config-int-default
+true ' local-mac-address? set-config-int-default
+" com1" ' output-device set-config-string-default
+" com1" ' input-device set-config-string-default
+
+fload ${BP}/cpu/mips/ksegaddr.fth
+fload ${BP}/cpu/mips/bonito/physaddr.fth
+fload ${BP}/cpu/mips/bonito/virtaddr.fth
+
+: rl@  l@  ;   : rl!  l!  ;
+: rw@  w@  ;   : rw!  w!  ;
+: rb@  c@  ;   : rb!  c!  ;
+
+fload ${BP}/cpu/mips/bonito/isaio.fth	\ ISA I/O space access
+fload ${BP}/dev/diag16550.fth		\ Diagnostic driver for serial port
+h# 3f8 is uart-base
+fload ${BP}/os/stand/sysuart.fth	\ Plug UART routines into key and emit
+\ ' ukey is diag-key			\ Feed UART input to "dl"
+
+h# 1000 to pagesize
+d# 12   to pageshift
+
+fload ${BP}/cpu/mips/cache.fth		\ Cache synchronization/flushing
+fload ${BP}/cpu/mips/bonito/bonito.fth	\ IOBC synchronization/flushing
+fload ${BP}/cpu/mips/bonito/rootnode.fth	\ Root node mapping
+dev /
+   " Algorithmics,P-6032" model
+   " Algorithmics" encode-string  " architecture" property
+\   d# 33,333,333 " clock-frequency" integer-property
+device-end
+
+: (cpu-arch  ( -- adr len )
+   " architecture" ['] root-node  get-package-property  drop
+   get-encoded-string
+;
+' (cpu-arch to cpu-arch
+
+h#   1.0000 constant initial-heap-size
+fload ${BP}/cpu/mips/boot.fth		\ Low-level startup code
+
+[ifdef] notyet
+0 config-int next-xid
+stand-init: Next xid
+   next-xid h# 10.0000 + dup to next-xid to rpc-xid
+;
+[then]
+
+\ Memory management services
+[ifdef] virtual-mode
+fload ${BP}/ofw/core/clntmem1.fth	\ client services for memory
+[else]
+fload ${BP}/ofw/core/clntphy1.fth    \ client services for memory
+[then]
+fload ${BP}/ofw/core/memlist.fth     \ Resource list common routines
+fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
+fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
+fload ${BP}/ofw/core/availpm.fth	\ Available memory list
+fload ${BP}/ofw/core/allocmor.fth 	\ S Allow alloc-mem to use more memory
+
+: (initial-heap)  ( -- adr len )  sp0 @ ps-size -  limit  tuck -  ;
+['] (initial-heap) to initial-heap
+
+\ fload ${BP}/fm/lib/dumballo.fth		\ Rudimentary memory allocator
+
+variable bank-mask
+" Set bank-mask" ?reminder
+1 bank-mask !
+fload ${BP}/cpu/mips/probemem.fth  \ Memory probing
+stand-init: Probing memory
+   " probe" memory-node @ $call-method
+;
+
+\ Load file format handlers
+
+: call32 ;  defer .subname
+fload ${BP}/ofw/core/allocsym.fth    \ Allocate memory for symbol table
+fload ${BP}/ofw/core/symcif.fth
+fload ${BP}/ofw/core/symdebug.fth
+: release-load-area  ( boundary-adr -- )  drop  ;
+fload ${BP}/ofw/elf/elf.fth
+fload ${BP}/ofw/elf/elfdebug.fth
+' 2drop is elf-map-in
+
+\ File system
+fload ${BP}/cpu/mips/zipcrc.fth		\ Assembly portion of CRC calculation
+fload ${BP}/forth/lib/crc32.fth		\ High-level portion of CRC calculation
+
+fload ${BP}/pkg/fatfs/fdisk2.fth	\ Partition map administration
+
+[ifdef] resident-packages
+support-package: fat-file-system
+   fload ${BP}/ofw/fs/fatfs/loadpkg.fth	\ FAT file system reader
+end-support-package
+
+support-package: iso9660-file-system
+   fload ${BP}/ofw/fs/cdfs/loadpkg.fth	\ ISO 9660 CD-ROM file system reader
+end-support-package
+
+support-package: disk-label
+   fload ${BP}/ofw/disklabel/loadpkg.fth \ Disk label package
+end-support-package
+
+[ifdef]  use-ufs
+support-package: ufs-file-system
+   fload ${BP}/ofw/fs/ufs/ufs.fth	\ Unix file system
+end-support-package
+[then]
+
+support-package: ext2-file-system
+   fload ${BP}/ofw/fs/ext2fs/ext2fs.fth	\ Linux file system
+end-support-package
+
+support-package: dropin-file-system
+   fload ${BP}/ofw/fs/dropinfs.fth	\ Dropin file system
+end-support-package
+
+support-package: nfs
+   fload ${BP}/ofw/fs/nfs/loadpkg.fth
+end-support-package
+[then]
+
+\ Device Tree
+fload ${BP}/cpu/mips/bonito/devices.fth
+fload ${BP}/cpu/mips/bonito/devalias.fth
+
+: stand-init-io  ( -- )
+[ifdef] stand-init-io
+   stand-init-io
+[then]
+\   install-dumb-alloc
+   install-uart-io
+;
+
+fload ${BP}/cpu/mips/bonito/excption.fth
+fload ${BP}/cpu/mips/bonito/intr.fth
+
+: probe-all  ( -- )
+   " probe-" do-drop-in
+   probe-pci
+   " probe+" do-drop-in
+;
+
+: startup  ( -- )
+   hex
+   warning on
+   only forth also definitions
+   kseg0 to vector-base
+   " probe-all"       ?type  probe-all
+   " install-alarm"   ?type  install-alarm
+   " install-console" ?type  install-console
+;
+
+: hello  " net:192.168.1.9,|tftpboot|hello,192.168.1.22" boot-load  ;
+: (linux)  " net:192.168.1.9,|tftpboot|vmlinux,192.168.1.22" boot-load  ;
+: linux  (linux) go  ;
+
+: bye  ( -- )
+   h# 23.0000 intpol l!
+   bongencfg l@ 4 or bongencfg l! bongencfg l@ drop
+   begin  again
+;
+' bye to reset-all
+
+defer linux-argc
+: ((linux-argc)  ( adr len -- argc )
+   0 >r  begin
+      bl left-parse-string nip 0<>  while
+      r> 1+ >r
+   repeat  2drop
+   r>
+;
+: (linux-argc)  ( adr len -- argc )  2drop 2  ;
+' (linux-argc) to linux-argc
+
+defer linux-argv
+: (linux-argv)  ( adr len -- 'argv )
+   3 /n * over + dup alloc-mem dup >r
+   swap erase
+   r@ 3 na+ r@ na1+ !
+   tuck $cstr swap 1+ r@ 3 na+ swap cmove
+   r>
+;
+' (linux-argv) to linux-argv
+
+: linux-setup  ( -- )
+   disable-interrupts
+   kseg0 0 sync-cache
+   boot-file linux-argc to $a0
+   boot-file linux-argv to $a1
+   0 to $a2
+;
+' linux-setup to go-hook
+
+install-rom-cold
+
+.( --- Saving fw.img ...)  "" fw.img save-forth cr

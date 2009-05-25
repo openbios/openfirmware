@@ -1,0 +1,490 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>Open Firmware Startup on MIPS Processors</title>
+</head>
+ <body>
+ 
+<h1>Open Firmware Startup on MIPS Processors</h1>
+ This document describes the startup process for Open Firmware on MIPS processors.
+ It summarizes the requirements for MIPS startup and tells how Open Firmware
+code modules can be structured to accomplish the system initialization necessary
+for running the main Open Firmware Forth code. 
+<h2>Overview of Open Firmware Structure</h2>
+ The sizes listed below are for the code when it is resident in RAM. When
+in ROM, the code is typically compressed (as with gzip) to about one half
+its uncompressed size. 
+<p> The Open Firmware ROM image consists of a sequence of modules in "dropin
+format".  Each "dropin module" consists of a 32-byte header and some code
+or data of varying length.  The details of dropin module format are described
+in a later section.  The various dropin modules are concatenated to form
+the overall ROM image. </p>
+<p> The critical dropin modules are: </p>
+<ul>
+ <li>resetjmp - about 1K </li>
+  <li>reset - about 3K </li>
+  <li>start - variable; perhaps 3K to 25K </li>
+  <li>firmware - about 400K </li>
+</ul>
+ 
+<h3>The "resetjmp" code</h3>
+ On MIPS processors, the first instruction that is executed after the CPU
+comes out of reset is at the beginning of the ROM, so the first thing in
+the ROM cannot be a dropin module with a proper dropin header.  The first
+true dropin module (with a header) is after the code that occupies the exception
+vectors defined by the MIPS hardware specification. The code at the reset
+vector jumps directly to the beginning of first true dropin module, named
+"reset".<br>
+<br>
+The source file that defines this code is "arch/mips/<i>platform</i>/resetjmp.bth".
+&nbsp;It may also contain entry code for the other ROM exception vectors.
+  
+<h3>The "reset" module</h3>
+ The "reset" module is a relatively small (typically about 3K) amount of
+machine code that sequences the execution of other dropin modules to accomplish
+the early startup process.  In principle, the "reset" module ought to be
+generic so that the same code could run on any MIPS system, but in practice 
+it is somewhat platform specific for two reasons: 
+<ol>
+ <li>The reset code must flush the cache, and cache-flushing code varies
+somewhat across different MIPS processors </li>
+  <li>It's useful to include in the reset code some rudimentary debug facilities
+like LED blinking or serial line output; such code is inherently platform-specific. 
+  </li>
+</ol>
+Possibly after initializing a diagnostic output device, the reset module
+locates the start module (by searching through the ROM to find a dropin module
+with the named "start" in its header) and calls it (at its beginning address)
+as a subroutine.<br>
+<br>
+The source file that defines this module is "arch/mips/<i>platform</i>/reset.bth".<br>
+ 
+<h3>The "start" module</h3>
+ The purpose of the start module is to initialize the core logic, memory
+system, and just enough of the I/O system to get a diagnostic serial port
+working.  The start module is entirely dependent on the design of the core
+logic hardware, so it must be rewritten for each chip family. Writing and
+debugging the start module is the crucial step in bringing up Open Firmware
+on a new MIPS chipset. A later section of of this document tells how to create
+a start module for a new chipset.  In preparation for initializing the memory
+and a serial port, the start module often has to initialize other parts of 
+the core logic such as caches, first-level host bridges, etc.  In general,
+however, the "start" module initializes just enough to get a memory and serial
+port working.  Initialization of secondary devices like interrupt and DMA
+controllers, timers, and most I/O devices is usually left to later code in
+the "firmware" module.<br>
+<br>
+The source file that defines this module is "arch/mips/<i>platform</i>/start.bth".
+If the process of initializing the memory system is relatively simple, the
+entire "start" code might be in that one file. Otherwise, "start.bth" might
+sequence the compilation process of several other files that together implement
+the core logic and memory system startup sequence.<br>
+ 
+<h3>Loading the "firmware" module</h3>
+ The start modules returns (as from a normal subroutine) to the reset module
+that called it.  Subsequent code can then use the RAM memory that the start
+module initialized.  The reset module's final task is to locate the "firmware"
+module (by searching ROM for a dropin module named "firmware"), move it into
+RAM, and jump to it.  However, there are some complications: 
+<ul>
+ <li>The "firmware" module is usually stored in ROM in compressed (gzip) form.
+ If that is the case, the "reset" module must unzip the "firmware" module
+into RAM instead of simply copying it.  To do so, the "reset" module locates
+the "inflate" module, copies it into RAM (for faster execution), and calls
+it with the ROM address of the compressed "firmware" module and the RAM address
+where the uncompressed version should be placed. </li>
+  <li>After the "firmware" module has been copied or uncompressed into RAM,
+it is usually necessary to flush the data cache and invalidate the instruction
+cache so the CPU can execute the firmware code. </li>
+</ul>
+ Even if the system has enough ROM to store the "firmware" module in ROM
+uncompressed, there is an advantage to compressing it. The compressed image
+contains a CRC and a redundant length; taken together they constitute a quick
+and effective test of the integrity of ROM and RAM.  ROM problems corrupt
+the compressed code stream, which makes the inflater get "out of sync" and
+misread the final length field.  RAM problems show up as a CRC mismatch when
+the inflater computes the CRC of the RAM image after uncompressing it. 
+<p> It's possible to do more extensive memory tests at this point, but it's
+better to defer them until later, when the full Open Firmware I/O system
+can be used to report the results. </p>
+<h3>The "firmware" module</h3>
+ The firmware module contains the vast majority of the functionality of Open
+Firmware.  It is mostly written in Forth, on top of a relatively small assembly
+language kernel that implements the Forth virtual machine. Its basic internal
+structure is that of a Forth "dictionary", which is a set of linked lists.
+ Each such list is called a "vocabulary".  The list elements are called "words".
+Each word has a name, an associated action, and optionally some data.  A
+particular word's action can be implemented by either a sequence of machine
+code or a sequence of other words.  Typically, only the most basic primitive
+operations (add, subtract, branch, copy, etc.) are implemented as machine
+code words. 
+<p> The Forth dictionary is incrementally compiled in a layered fashion. Each
+layer is internally complete and self-consistent as far as it goes. </p>
+<h4>The C Wrapper</h4>
+ The same Forth dictionary image can run either as a standalone program on 
+the target machine (when it is fulfilling the functions of Open Firmware) 
+or as a user program under Linux or another operating system.  In this latter
+mode, it requires help from an external program that is called the "C wrapper".
+ The "C wrapper" is an executable program that is compiled from C source
+code.  Its job is to provide basic system services like I/O and memory allocation,
+isolating the system-independent Forth dictionary from operating-system-specific
+details such as the system's executable file format. 
+<p> The compilation process for the Forth dictionary depends on this technique 
+of running Forth as a user process.  A basic Forth system runs under Linux 
+with the help of the C wrapper program, extends itself by compiling source
+code from files, and saves the extended Forth dictionary into another file.
+ The process can be repeated as necessary, until the resulting file contains
+all the features that are needed for the Open Firmware system that is to
+run on the target system.  It can then be embedded within the "firmware"
+dropin module. </p>
+<h4>The Forth Kernel - kernel.dic</h4>
+ The innermost layer is the Forth language kernel.  It is a fully-functional 
+implementation of the core ANS Forth language.  It contains an interactive 
+interpreter and an incremental compiler, so it is capable of extending itself
+by compiling new words into its dictionary. 
+<p> The Forth kernel implementation contains MIPS machine code sequences,
+so its binary image is specific to the MIPS-32 instruction set architecture. 
+The kernel does not contain any code that is specific to particular MIPS processor
+variants or to particular system architectures.  It uses only user-level
+MIPs instructions. </p>
+<p> The Forth kernel source code is very stable and almost never needs to
+be changed in order to port Open Firmware to a new platform.  The only time 
+the kernel source needs to change is to port Open Firmware to a new instruction
+set architecture, and even then most of the kernel files remain unchanged. 
+</p>
+<p> The compilation directory for the Forth kernel is fm/cwrapper/mips/build. 
+The command for compiling it is </p>
+<pre>    build kernel<br></pre>
+ In most cases, you won't need to execute this command explicitly, because 
+higher-level builder scripts will do it automatically if necessary.  The name
+of the kernel image file is "kernel.dic".  The builder script for compiling
+it is "fm/cwrapper/mips/kernel.bth" . 
+<h4>(The Metacompiler)</h4>
+ The kernel is compiled from source code that is written in a combination 
+of high-level Forth and assembly language.  The assembly language code uses
+a simplified postfix syntax that is very easy to parse, so the assembler
+is very simple and small.  The program that compiles the Forth kernel is
+called a "metacompiler".  It processes source code that is very similar to
+the source code accepted by an ordinary Forth incremental compiler, but the
+metacompiler can do some extra things: 
+<ul>
+ <li>It can create a new self-contained Forth system that is separate from
+itself, rather than just being able to add on to an existing Forth dictionary. 
+  </li>
+  <li>It can cross-compile a Forth kernel for an instruction set other than
+the instruction set on which the metacompiler is running. </li>
+  <li>It can handle forward references transparently. </li>
+</ul>
+ However, the metacompiler does have one important limitation - it cannot
+handle arbitrary data constructs defined by means of CREATE and DOES&gt;
+(these are advanced Forth features).  This limitation makes it difficult
+to metacompile the entire Open Firmware system as one monolithic unit. 
+<p> The metacompiler and the simple assembler are both included in the "builder"
+program that is described later. </p>
+<h4>Extended Forth - tools.dic</h4>
+ The layer above the kernel is called "tools.dic", named for the file that
+contains it.  Tools.dic is an extended Forth programming environment that
+contains a number of useful tools such as an incremental assembler, a source-level
+debugger, a callfinder, a wordfinder, a line editor with history and command
+completion, and numerous other extensions that go beyond the basic words
+defined by ANS Forth. 
+<p> Tools.dic does not include any Open Firmware abstractions such as device
+tree, packages, or FCode.  Those are in the next layer up. Tools.dic serves
+as a common Forth language base for both the remainder of the Open Firmware
+build process and also the builder program. </p>
+<p> The compilation directory for tools.dic is fm/cwrapper/mips/build. The
+command for compiling it is </p>
+<pre>    build tools<br></pre>
+ In most cases, you won't need to execute this command explicitly, because 
+higher-level builder scripts will do it automatically if necessary.  The name
+of the image file is "tools.dic".  The builder script for compiling it is
+"fm/cwrapper/mips/tools.bth" . 
+<h4>Base Firmware - basefw.dic</h4>
+ The layer above tools.dic in the path to Open Firmware is "basefw.dic". Base
+firmware contains the platform-independent parts of the features defined
+by the Open Firmware standard, including the device tree, client interface,
+FCode evaluator, and support packages.  It also includes numerous FirmWorks
+extensions such as TCP and filesystem support. 
+<p> basefw.dic does not contain any code that is specific to the board-level 
+architecture or the devices that may be present on a particular platform. 
+Thus the same basefw.dic binary image file can often be used unchanged as 
+the basis for building platform-specific Open Firmware implementations for
+multiple platforms that use the same CPU instruction set architecture (i.e.
+MIPS in this case).  Porting to a new MIPS platform usually does not require
+modifications to basefw.dic </p>
+<p> Some code modules that are not platform-specific, and thus could be included 
+in basefw.dic, are not included because the features that they implement are
+optional.  The code itself is platform-independent, but the choice of whether
+or not to include it is platform-specific. </p>
+<p> The compilation directory for basefw.dic is fm/cwrapper/mips/build. The
+command for compiling it is </p>
+<pre>    build basefw<br></pre>
+ In most cases, you won't need to execute this command explicitly, because 
+higher-level builder scripts will do it automatically if necessary.  The name
+of the image file is "basefw.dic".  The builder script for compiling it is
+"fm/cwrapper/mips/basefw.bth" . 
+<h4>The complete Open Firmware dictionary - fw.dic</h4>
+ The final layer is "fw.dic".  It extends basefw.dic to include support for
+a specific target hardware platform.  It includes device drivers for core 
+devices like timers, interrupt controllers, bus bridges, diagnostic UARTs, 
+FLASH chips, and NVRAM devices.  It also includes information describing the
+physical address map and other system characteristics.  It may include diagnostics
+for manufacturing, field service, and initial system checkout. Optional features
+like support for specific program image formats (e.g. ELF) and file system
+layouts (e.g. Linux ext2) are added at this level. Customer-specific code,
+such as new user interface commands for special system maintenance requirements,
+can be added as well. 
+<p> "fw.dic", usually in compressed form, is the body of the "firmware" dropin 
+module. </p>
+<p> Drivers for PCI bus devices like mass-storage or network interfaces can
+either be "hard-compiled" into fw.dic or attached externally as separate
+dropin modules in FCode format.  The latter is often more convenient for
+devices that are not needed during the early phases of platform initialization. 
+</p>
+<p> Most of the porting work for a new platform, apart from the very low
+level code in the "start" module as described above, is done at the fw.dic
+level. </p>
+<p> Even though it contains a great deal of code that is specific to the
+target hardware, it is still possible to run "fw.dic" under the compilation 
+operating system via the C wrapper.  "fw.dic" contains separate entry points
+and initialization sequences for the two environments (standalone execution
+on the target system and OS-hosted execution on the compilation system).
+The code that accesses target-specific devices is executed only if "fw.dic"
+is entered via its standalone entry point. </p>
+<p> This ability to run "fw.dic" in the OS environment can be quite convenient 
+for debugging purposes, because you can use the built-in debugging facilities
+to inspect the code that has actually been compiled.  It eliminates the need
+for listings of the compiled code or "dump" files. </p>
+<p> The compilation directory for basefw.dic is arch/mips/<i>platform</i>/build, 
+where <i>platform</i> is the name of a directory for a specific target hardware
+platform.  The command for compiling it is </p>
+<pre>    build fw<br></pre>
+ In most cases, you won't need to execute this command explicitly, because 
+the top-level builder script will do it automatically if necessary.  The name
+of the image file is "fw.dic".  The builder script for compiling it is "arch/mips/<i>platform</i>/fw.bth"
+. 
+<h4>The top-level builder script - rom.bth</h4>
+ The file that contains the overall image of the entire contents of ROM (i.e.
+FLASH) is "rom.img".  "rom.img" contains a sequence of dropin modules, including
+"resetjmp", "reset", "start", "inflate", "firmware", and usually several
+other modules containing things like FCode drivers for PCI devices. 
+<p> The compilation directory for rom.img is arch/mips/<i>platform</i>/build, 
+where <i>platform</i> is the name of a directory for a specific target hardware
+platform.  The command for compiling it is </p>
+<pre>    build rom<br></pre>
+ <b><i>This is the top-level command that you use to recompile Open Firmware.</i></b> 
+The name of the image file is "rom.img".  The builder script for compiling
+it is "arch/mips/<i>platform</i>/rom.bth" . 
+<h3>How MIPS Processors Come Out of Reset</h3>
+ After reset, MIPS processors begin execution at the beginning of ROM at
+virtual address 0xbfc00000. That virtual address corresponds to the physical
+address 0x1fc00000.  The virtual-to-physical translation results from the
+"kseg1" translation region, which maps virtual addresses 0xa0000000-0xbfffffff
+to physical addresses 0x0000000-0x1fffffff in uncached mode.  Within that
+physical address range, the first half (0x00000000-0x0fffffff) is usually
+for RAM while the second half (0x10000000-0x1fffffff) is for I/O devices. 
+<p> Early startup code typically runs from this uncached virtual address range
+until the caches and the memory have been initialized. Thereafter, for faster
+execution, code can be copied into memory where it can execute from the cached
+"kseg0" translation region, which maps the same physical address range to
+the virtual address range from 0x80000000-0x9fffffff.  When running from
+kseg0, I/O accesses are still done through the kseg1 addresses, as it is
+rarely correct to cache I/O registers.  (In some systems, the hardware permits
+the execution of ROM code in cached mode; on those systems, you can run from
+the kseg0 region before initializing memory.) </p>
+<p> The code at the reset vector must jump to some other location within a
+few instructions, because the other exception vectors are located at nearby
+addresses.  The details vary somewhat across different MIPS processors, but
+as a general rule the first 32 instruction locations are always available
+for the reset code.  The top end of the ROM exception vector area is typically
+at offset 0x3ff from the beginning of ROM, so the code in the first 32 instructions
+typically jumps to other code at offset 0x400 or above. </p>
+<h3>The Builder</h3>
+ The FirmWorks "builder" program is an integrated tool for managing the Open
+Firmware compilation process.  It has these features: 
+<ul>
+ <li>Dependency manager (similar in spirit to Unix "make") that 
+    <ul>
+ <li>Recompiles only those layers whose source has changed </li>
+      <li>Automatically generates dependency lists during compilation </li>
+      <li>Tracks the files used to help with release engineering tasks </li>
+    </ul>
+ </li>
+  <li>Native and/or cross assemblers </li>
+  <li>Metacompiler for cross-compiling Forth kernels </li>
+  <li>Dropin module creation and inspection tools </li>
+  <li>FCode tokenizer </li>
+  <li>FCode detokenizer </li>
+  <li>General-purpose Forth interpreter/compiler/environment </li>
+</ul>
+ 
+<h4>Builder scripts - .bth files</h4>
+ Builder scripts look very similar to Forth source code, because the builder
+is just a Forth compiler with the extensions listed above. It is possible
+to convert an ordinary Forth source file into a builder script simply by
+adding two lines near the beginning of the file. 
+<p> Builder scripts have the filename extension ".bth", which makes it possible
+for the builder to locate them automatically.  Ordinary Forth source code
+files have the extension ".fth".  The wildcard pattern "*th" matches both
+Forth source files and builder scripts, which is often convenient when using
+"grep" to search for a particular string. </p>
+<p> Each ".bth" file pertains to a single object file (in contrast to a Makefile,
+which can list numerous "targets" in a single file). There can be (and usually
+are) several ".bth" files in one directory, each pertaining to one target
+object.  The base name of the ".bth" file is the same as the base name of
+the target object; for example, if the target image filename is "rom.img",
+the builder script filename is "rom.bth". </p>
+<p> The ".bth" file need not be in the directory where the target will be
+built; when the builder needs to recompile a target object, it will search
+upward from the build directory until it finds an appropriately-named ".bth"
+file.  The main purpose of this is to segregate source files and object files
+in different directories. The "keep searching upwards" rule can be used to
+good effect by having a generic ".bth" file in a higher level directory (e.g.
+at the "/mips" level, but specific platforms that need something other than 
+the default can override it by making their own version at a lower directory
+level.</p>
+<h4>Builder dependency lines</h4>
+<h4> </h4>
+<p> The only structural difference between a builder script and an ordinary 
+Forth source code file is the addition of a few dependency lines near the
+beginning of the file.  Those dependency lines give the builder information
+like: </p>
+<ul>
+ <li>Which Forth dictionary file serves as the base for the next phase of
+compilation. </li>
+  <li>Which instruction set architecture is required for compilation </li>
+  <li>Which input files, other than Forth source code files, the script depends
+on. (The builder can automatically determine dependencies on Forth source
+code files.) </li>
+</ul>
+ For example, here are the dependency lines at the beginning of fw.bth. 
+<pre>dictionary: ${BP}/cpu/mips/build/basefw.dic<br>command: &amp;mipsfth &amp;dictionary &amp;this<br>build-now<br></pre>
+ The "dictionary:" line says an up-to-date version of the  dictionary file
+"${BP}/fm/cwrapper/mips/build/basefw.dic" is needed in order to perform the
+compilation that is defined by the rest of this builder script.  If that
+dictionary file is missing or out-of-date with respect to a files it depends
+on, the builder will automatically build it first.  "${BP}" is a C wrapper
+macro that expands to the base directory of the firmware source tree.  The
+C wrapper automatically locates that base directory by searching up the tree 
+from the current build directory. 
+<p> The "command:" line tells which operating system command to use to recompile
+the object that this builder script pertains to.  In general, it can be any
+shell command, but it is often of the form shown. "&amp;mipsfth" is a builder
+macro that expands to the name of the C wrapper program that is appropriate
+for compiling MIPS code.  "&amp;dictionary" expands to the file named on
+the preceding "dictionary:" line, and "&amp;this" expands to the name fo
+the current builder script file.  If the object to be compiled is out of
+date with respect to a dependency, that command line (after macro expansion)
+is executed.  In this case, the MIPS C wrapper executable program would be
+run, passing to it as command line arguments the name of the base dictionary
+file and the name of the builder script file. </p>
+<p> "build-now" tells the builder that there are no more dependency lines; 
+it causes the builder to proceed to check the dependencies and to perform
+any necessary recompillatin. </p>
+<p> The normal Forth compiler treats builder dependency lines as comments. 
+The rest of a builder script after the builder lines file contains the Forth
+source code to be compiled.  Often that source code consists primarily of
+"fload <i>filename</i>" commands, so the script mostly sequences the compilation
+of other (ordinary) Forth srouce code files. However, that is just a weak
+convention; builder scripts can and do contain arbitrary Forth code after
+the builder command lines. </p>
+<p> The only other type of dependency line that is typically used is "in:
+<i>filename</i>".  That line, of which there can be many instances, tells
+the builder that the object to be compiled has a dependency on the indicated
+file.  "in:" lines are only necessary for files that are not Forth source
+files.  Typically they are used for binary images like pretokenized FCode
+binary files, prebuilt dropin modules, or object files compiled by other
+language processors. </p>
+<h4>Builder .log files</h4>
+ When the Forth compiler writes out a file (typically a ".dic" dictionary
+file), it also writes out a ".log" file with the same base name.  That ".log"
+file lists the names and timestamps of all the files that were opened during
+the compilation. (This logging functionality is actually implemented by the
+C wrapper program.)  The builder uses the .log files to check dependencies. 
+This is how the dependencies are maintained automatically. 
+<p> The log files can be deleted at any time without losing any critical
+information.  If a log file is missing, the builder won't try to avoid an
+unnecessary recompilation by checking direct dependencies; it will just recompile
+the target anyway.  It will, however, first recursively check dependencies
+listed on "dictionary:" and "in:" lines, recompiling them first if necessary. 
+</p>
+<h4>The "build" command</h4>
+ The "build" command invokes the builder.  "build" itself is a shell script
+whose main function is to locate the correct C wrapper file and builder dictionary
+("native.dic") for the OS and instruction set of the compilation host machine.
+ The builder dictionary files are located in "bin/<i>CPU</i>/native.dic",
+where <i>CPU</i> is the name of the instruction set that the builder dictionary 
+runs on.  The C wrapper executable files are in "bin/<i>CPU</i>/<i>os</i>/forth",
+where <i>os</i> is an operating system name like "linux".  The "build" shell
+script works out the correct values for <i>CPU</i> and <i>os</i> and sets
+the HOSTDIR environment variable to <i>path</i>/bin/<i>CPU</i>/<i>os</i>,
+where <i>path</i> is the path to the root of the Open Firmware source tree.
+ Then it runs the appropriate C wrapper ("forth") with the appropriate build
+dictionary file ("native.dic"), like this: 
+<pre>   ${HOSTDIR}/forth ${HOSTDIR}/../native.dic <i>arg</i>
+</pre>
+ <i>arg</i> is the argument that was on the "build" command line. It is the
+name of the top-level target object that is to be compiled. The extension
+can be present or absent; "build rom" and "build rom.img" are equivalent. 
+<p> If <i>arg</i> is omitted, the builder will run in interactive mode, giving
+you an "ok" prompt from which you can issue Forth commands to invoke any
+of the other builder features.  Or you can just use it as a Forth interpreter. 
+</p>
+<h3>Language Alternatives for the Start Module</h3>
+  Since its job is to configure and initialize the memory controller, the
+"start" module can be written in any language that can generate code that
+doesn't need RAM memory.  The pros and cons of several language choices are
+given below. 
+<h4>Forth</h4>
+ Forth code requires a stack to operate, so it's not a viable candidate for
+coding the "start" module. 
+<h4>C</h4>
+ With a lot of care, it's possible to write C code that doesn't need memory.
+ You have to use exactly the right compiler flags, limit the number of variables
+and the nesting depth of subroutine calls, and make sure the variables are
+allocated to registers. Even then you often have to edit the assembly language
+output to remove the stack preamble code at the top level. If you switch
+to a new version of the compiler toolchain, you often have to go back and
+change something to keep a memory dependency from creeping in.&nbsp; 
+<p> Another technique is to use the cache, without memory backing, as variable
+storage and stack for the C code.  That, too, requires some trickery, mastery
+of the compiler switches, and usually some in-line assembly code.  But it
+can be worthwhile if the memory controller is so complicated that programming
+it in assembly language is just too difficult. </p>
+<h4>Forth Assembler</h4>
+ The FirmWorks builder program includes a
+<a href=assembler.html>MIPS assembler</a>.
+The syntax is unconventional
+(it is postfix, so the operands are mentioned before the operands),
+but the assembler is small and predictable. You can easily make macros
+so you don't have to write out canned sequences explicitly every time.
+The assembler also has built-in structured conditional macros that mimic
+Forth control flow constructs ( e.g. ... IF ... ELSE ... THEN), so you
+don't have explictly write branch instructions and keep track of labels.
+<p> The Forth assembler is missing some of the more esoteric new MIPS
+instructions, but it's relatively easy to extend it, or you can just insert
+the opcode in the code as a hex number.
+The assembler won't reorder code, so you have to be careful
+with MIPS delayed branches. </p>
+<p> The assembler is well integrated with the builder facilities for
+creating dropin modules, so it's easy to package the resulting binary code
+in the dropin module format. </p>
+<h4>GNU Assembler</h4>
+ The GNU assembler can generate arbitrary machine code sequences as needed.
+ You can assemble the code into an ELF file, extract just the code into an
+raw image file, then use the builder to encapsulate that raw image into a
+dropin module.  The disadvantage of this approach is the need to maintain
+an installation of the GNU toolchain in conjunction with the Open Firmware
+build environment (many organizations will be using the GNU toolchain anyway,
+so this may not be a severe disadvantage). One advantage is that many people
+are already familiar with the GNU assembler. 
+<h3>Examples</h3>
+ 
+<h3>Sample fw.bth</h3>
+ 
+<h3>Dropin Module Format</h3>
+ 
+<h3>Nanoforth</h3>
+ 
+</body>
+</html>

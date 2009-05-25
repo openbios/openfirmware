@@ -1,0 +1,92 @@
+purpose: Reset vector handler
+copyright: Copyright 2000-2001 Firmworks  All Rights Reserved
+
+command: &native &this
+build-now
+
+\needs start-assembling  fload ${BP}/cpu/mips/asmtools.fth
+
+\ The size of this module affects the constant /resetjmp in
+\ physaddr.fth.
+
+create debug-reset
+
+fload ${BP}/cpu/mips/ksegaddr.fth
+fload ${BP}/cpu/mips/bonito/physaddr.fth
+fload ${BP}/cpu/mips/bonito/report.fth
+
+start-assembling
+
+hex
+
+label resetvec
+   \ **** This is the initial entry point (reset vector) for the ROM.
+   \ It just branches past the following copyright string and past the
+   \ dropin module header for the "resetvec" dropin module, landing at
+   \ the entry point for that module.  The "resetvec" dropin module
+   \ must appear in the ROM image right after the image that this file
+   \ creates.
+   here /resetjmp + h# 20 + $0 $0 beq
+   nop
+
+end-code
+	
+   \ This copyright string will appear in the ROM right after the branch
+   \ instruction.
+   " Copyright 2001 FirmWorks  All Rights Reserved" c$,
+
+   \ Locations 56-5b are reserved for a MAC address, for systems
+   \ that wish to store the MAC address in the boot ROM instead of
+   \ in a UID EEPROM.
+   h# 56 pad-to
+   h# ff c,  h# ff c,  h# ff c,  h# ff c,  h# ff c,  h# ff c,
+
+   \ We reserve ROM locations 5c-5f for the PROMICE AI port and place
+   \ a distinct signature there.  If the AI port is present and enabled
+   \ at those locations, it will overlay the ROM contents, thus allowing
+   \ the software to determine whether or not the AI port is present.
+
+   \ The signature should be tested at offset 5c+3 (5f), which is the
+   \ AI port status register.  The value d4 is present at both 5c+0
+   \ and 5c+3, in case we ever have to handle big-endian systems that
+   \ byte-swap the ROM in some modes.
+
+   h# 5c pad-to		\ Pad to the location reserved for the AI port
+   h# d4 c,  h# 5a c,  h# 5b c,  h# d4 c,  \ Signature distinct from AI port
+
+   h# 200 pad-to
+label tlbrefill
+   ascii T ?report ascii L ?report ascii B ?report
+   begin again
+   nop
+end-code
+
+   h# 280 pad-to
+label xtlbrefill
+   ascii X ?report ascii T ?report ascii L ?report ascii B ?report
+   begin again
+   nop
+end-code
+
+   h# 300 pad-to
+label cacheerr
+   ascii C ?report ascii E ?report ascii r ?report ascii r ?report
+   begin again
+   nop
+end-code
+
+   h# 380 pad-to
+label generalexc
+   ascii G ?report ascii e ?report ascii n ?report
+   begin again
+   nop
+end-code
+
+   /resetjmp pad-to
+   \ This module must have a fixed size of /resetjmp
+
+end-assembling
+
+writing resetjmp.img
+asm-base  here over -  ofd @ fputs
+ofd @ fclose

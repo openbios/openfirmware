@@ -1,0 +1,895 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <title>MIPS Assembler</title>
+      
+  <meta http-equiv="content-type"
+ content="text/html; charset=ISO-8859-1">
+   
+  <meta name="author" content="Mitch Bradley">
+</head>
+  <body>
+ 
+<h2>MIPS Assembler</h2>
+<br>
+<a href="#Introduction">Introduction</a><br>
+<a href="#Entering_Assembler_Mode">Entering Assembler Mode</a><br>
+<a href="#Basic_Syntax">Basic Syntax</a><br>
+<a href="#Register_names">Register Names</a><br>
+<a href="#Opcodes">Opcodes</a><br>
+<a href="#Structured_Conditionals">Structured Conditionals</a><br>
+<a href="#Local_Labels">Local Labels</a><br>
+<a href="#Directives">Directives</a> 
+<h3><a name="Introduction"></a>Introduction</h3>
+Open Firmware includes an assembler for the MIPS instruction set. &nbsp;The 
+same assembler is present in both the development compiler (builder) and
+the target system.<br>
+ <br>
+ The Open Firmware assembler is quite different from conventional MIPS assemblers.<br>
+ 
+<ul>
+   <li>Its syntax is postfix - the operands are specified before the opcode, 
+which makes it much easier to support assembler macros</li>
+   <li>It supports the opcodes that are actually present in the MIPS hardware 
+instruction set, plus a select few pseudo-ops that generate multiple instructions, 
+instead of synthesizing a whole suite of "instructions" that are not really 
+in the instruction set.</li>
+   <li>It supports structured conditional directives like <b>if .. else .. 
+then</b> and <b>begin .. until</b> so you rarely need to invent labels for 
+simple conditionals and loops.</li>
+   <li>It does not reorder the instruction stream to fill delay slots, nor 
+does it attempt to optimize the instruction stream for any particular MIPS 
+implementation's pipeline characteristics. What you write is what you get.</li>
+   <li>It does not generate or process standard object file formats containing 
+linkage information. Instead, it is intended to be used either for incremental 
+compilation of short "code words" that operate within the framework of Open 
+Firmware's Forth interpreter or for self-contained "dropin modules" that execute
+during the Open Firmware early startup sequence (typically to do things like
+configuring the memory controller).</li>
+  <li>It has only limited support for the floating point (coprocessor) instruction
+set. The basic floating point instructions are supported, but many of the
+elaborations are not.<br>
+  </li>
+ 
+</ul>
+ The net result is that the Open Firmware MIPS assembler is much smaller
+that conventional assemblers. The binary code is approximately 12K bytes,
+compared to over 2Mbytes for some versions of gas . It is small enough to
+leave the assembler resident in the target system, thus making it possible
+to create short assembly language test sequences at any time, without needing
+access to a development host. 
+<h3><a name="Entering_Assembler_Mode"></a>Entering Assembler Mode</h3>
+There are several different ways to enter assembler mode, depending on how
+the assembled code will be used.<br>
+<table cellpadding="2" cellspacing="2" border="1">
+  <tbody>
+    <tr>
+      <td valign="top"><b>code</b> <i>newname</i><br>
+&nbsp; <i>&nbsp;assembly code<br>
+      </i><i>&nbsp; &nbsp;...</i><br>
+      <b>c;</b><br>
+      </td>
+      <td valign="top"><b>code</b> creates (i.e. incrementally adds to the
+resident Forth dictionary) a new Forth word named <i>newname</i> and enters
+assembler mode so you can implement the new word in assembly language. <b>c;</b>
+assembles the appropriate instruction sequence to return control to the Forth
+execution engine and exits from assembler mode. You can then execute the
+new word by typing its name, as with any other Forth word. <br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>label</b> <i>newname</i><br>
+&nbsp; &nbsp;<i>assembly code</i><br>
+&nbsp; &nbsp;...<br>
+      <b>end-code</b><br>
+      </td>
+      <td valign="top"><b>label</b> creates a new Forth word named <i>newname</i>
+and enters assembler mode so you can assemble some machine instructions that
+will be used within the context of the current Forth dictionary, but that
+will not be called directly as a Forth word. <b>end-code</b> exits from assembler
+mode. Later execution of <i>newname</i> pushes on the Forth stack the beginning
+address of that sequence of machine instructions. <b>label</b> is typically
+used to create instruction sequences, for example interrupt handlers, that
+will be executed in a context other than from the Forth virtual machine.<br>
+      <br>
+It is also possible to mix the constructs: &nbsp;<b>code</b> <i>newname</i>
+... <b>end-code</b> creates a Forth word that can be executed by typing its
+name, but that will not return to Forth. &nbsp;<b>label</b> <i>newname</i>
+... <b>c;</b> creates a code sequence that could be entered from elsewhere
+(e.g. from an exception hander), but which would enter Forth when it was
+done.<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>start-assembling</b><br>
+&nbsp; &nbsp;<i>assembly code</i><br>
+&nbsp; &nbsp;...<br>
+      <b>end-assembling</b><br>
+      </td>
+      <td valign="top"><b>start-assembling .. end-assembling</b> &nbsp;is
+uses to create a block of code that will later be written out to a file (often
+in the form of a "dropin module") for use in a target system environment.
+See <a href="#Directives">Directives.</a><br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+<h3><a name="Basic_Syntax"></a>Basic Syntax</h3>
+The assembler is really just a Forth vocabulary containing Forth words that
+put MIPS machine instructions in memory when they are executed.<br>
+The basic syntax of the Open Firmware MIPS assembler is postfix, just like
+ordinary Forth code. &nbsp;You first execute Forth words to push items on
+the stack - those items typically identify registers, numbers, or addresses, 
+i.e. the operands. Then you execute a word that names the opcode, which assembles 
+the machine instruction corresponding to that opcode with those operands.<br>
+ <br>
+ The order of the operands is generally source first, then destination.<br>
+ <br>
+ Example:<br>
+ <br>
+ &nbsp; v0 20 &nbsp; t3 &nbsp; ld<br>
+ <br>
+ This is equivalent to "ld &nbsp; $t3,20($v0)" &nbsp;in conventional syntax.<br>
+<br>
+When the assembler is active, the vocabulary containing the MIPS opcode and
+operand words is first in the search order, but the "forth" vocabulary containing
+all the other Forth tools is also in the search order, so you can execute
+ordinary Forth commands while assembling MIPS code. This is useful for things
+like including other files (by using the "fload" command) and calculating
+the values of numeric constants.<br>
+ 
+<h3><a name="Register_names"></a>Register names</h3>
+ Executing the name of a MIPS register pushes on the stack a number that
+identifies that register. The register names are:<br>
+ <br>
+<b> $0</b> .. <b>$31</b> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; Basic
+names for the 32 integer registers<br>
+<b> $f0</b> .. <b>$f31</b> &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;Basic names
+for the 32 floating point registers<br>
+ <br>
+<b> v0</b> .. <b>v1</b><br>
+<b> k0</b> .. <b>k1</b><br>
+<b> t0</b> .. <b>t9</b><br>
+<b> s0</b> .. <b>s8</b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;  <br>
+<b> $a0</b> .. <b>$a3</b><br>
+<b> $sp&nbsp; $gp &nbsp;ra &nbsp;$at</b><br>
+<b> $kt0</b> .. <b>$kt1</b><br>
+<blockquote>Aliases for certain integer registers, reflecting their conventional
+use by MIPS compilers.<br>
+</blockquote>
+ <b>sp rp up ip np base tos w</b><br>
+<blockquote>Aliases for certain integer registers, reflecting their use within
+the Forth virtual machine.<br>
+sp = $sp , rp=s6 , up=s3 , ip=s5, np=s1 , base=s2, tos=s4, w=t0<br>
+</blockquote>
+The inconsistent naming (some alias names begin with $ and some don't) is
+historical accident - in part it is due to the fact that the names a0, a1,
+a2, and a3 conflict with hex numbers.<br>
+ 
+<h3><a name="Opcodes"></a>Opcodes</h3>
+ rs - A register (in load and store instructions, this register is the one 
+that <br>
+ rt -&nbsp; A register (in load and store instructions, this register is
+the one that receives or supplies the data)<br>
+ imm - immediate operand<br>
+ <br>
+ 
+<table cellpadding="2" cellspacing="2" border="1">
+   <tbody>
+     <tr>
+       <th valign="top">Opcodes<br>
+       </th>
+       <th valign="top" nowrap="true">Stack Operands<br>
+       </th>
+       <th valign="top">Comments<br>
+       </th>
+     </tr>
+     <tr>
+       <td valign="top">ldl, ldr, lb, lh, lwl, lw, lbu, lhu, lwr, lwu, cache, 
+ll, lwc1, lwc2, pref, lld, ldc1, ldc2, ld<br>
+       </td>
+       <td valign="top" nowrap="true">( rs imm rt -- )<br>
+       </td>
+       <td valign="top">Load instructions - rt receives the data<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">sb, sh, swl, sw, sdl, sdr, swr, sc, swc1, swc2, scd, 
+sdc1, sdc2, sd<br>
+       </td>
+       <td valign="top" nowrap="true">( rt rs imm -- )<br>
+       </td>
+       <td valign="top">Store instructions - rt supplies the data<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">add, addu, sub, subu, and, or, xor, nor, slt, sltu, 
+dadd, daddu, dsub, dsubu<br>
+       </td>
+       <td valign="top" nowrap="true">( rs rt rd -- )<br>
+       </td>
+       <td valign="top">Two-operand instructions - &nbsp;rs OP rd -&gt; rd<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">lui<br>
+       </td>
+       <td valign="top" nowrap="true">( imm rt -- )<br>
+       </td>
+       <td valign="top">Load upper immediate - (imm &lt;&lt; 16) -&gt; rt<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">sethi<br>
+       </td>
+       <td valign="top" nowrap="true">( imm1 rt -- )<br>
+       </td>
+       <td valign="top">Alternative form of lui - you specify the actual
+immediate value that you want to appear in the register. E.g. h# 0f450000
+$a2 sethi<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">addi, addiu, slti, sltiu, daddi, daddiu, andi, ori, 
+xori<br>
+       </td>
+       <td valign="top" nowrap="true">( rs imm rt -- )<br>
+       </td>
+       <td valign="top">Two-operand immediate instructions - rs OP imm -&gt; 
+rt<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">j, jal<br>
+       </td>
+       <td valign="top" nowrap="true">( adr -- )<br>
+       </td>
+       <td valign="top">Jump/Jump and link to target address adr<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">sll, srl, sra, dsll, dsrl, dsra, dsll32, dsrl32,
+dsra32<br>
+       </td>
+       <td valign="top" nowrap="true">( rt imm rd -- )<br>
+       </td>
+       <td valign="top">Shift instructions - rt SHIFT imm -&gt; rd<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">sllv, srlv, srav, dsllv, dsrlv, dsrav<br>
+       </td>
+       <td valign="top" nowrap="true">( rt rs rd -- )<br>
+       </td>
+       <td valign="top">Variable shift instructions - rt SHIFT rs -&gt; rd<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">mult, multu, div, divu, dmult, dmultu, ddiv, ddivu, 
+tge, tgeu, tlt, tltu, teq, tne<br>
+       </td>
+       <td valign="top" nowrap="true">( rs rt -- )<br>
+       </td>
+       <td valign="top">Two-operand instructions with implicit destination 
+register<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">mfhi, mthi, mflo, mtlo<br>
+       </td>
+       <td valign="top" nowrap="true">( rd -- )<br>
+       </td>
+       <td valign="top">Access to HI and LO registers. &nbsp;rd is the source 
+of destination as appropriate.<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">beq, bne, beql, bnel<br>
+       </td>
+       <td valign="top" nowrap="true">( adr rs rt -- )<br>
+       </td>
+       <td valign="top">Two-operand conditional branches - branch to address 
+'adr' if rs COND rt<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">blez, bgtz, blezl, bgtzl, bltz, bgez, bltzl, bgezl, 
+bltzal, bgezal, bltzall, bgezall<br>
+       </td>
+       <td valign="top">( adr rs -- )<br>
+       </td>
+       <td valign="top">One operand conditional branches - branch to address 
+'adr' if COND(rs)<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">bra, bal</td>
+       <td valign="top">( adr -- )<br>
+       </td>
+       <td valign="top">Branch, branch and link (the former is a special
+case of a conditional branch)<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">bc0f, bc0fl, bc0t, bc0tl, bc1f, bc1fl, bc1t, bc1tl<br>
+       </td>
+       <td valign="top">( adr -- )<br>
+       </td>
+       <td valign="top">Coprocessor branches<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">tgei, tgeiu, tlti, tltiu, teqi, tnei<br>
+       </td>
+       <td valign="top">( rs imm -- )<br>
+       </td>
+       <td valign="top">Trap immediate - trap if rs COND imm<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">syscall, break, sync, dbreak<br>
+       </td>
+       <td valign="top">( -- )<br>
+       </td>
+       <td valign="top">Zero-operand instructions<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">mtdr, mfdr<br>
+       </td>
+       <td valign="top">( dbreg rt -)<br>
+       </td>
+       <td valign="top">Access to debug registers<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">single, double, float<br>
+       </td>
+       <td valign="top">( -- )<br>
+       </td>
+       <td valign="top">Set the mode for subsequent floating point instructions<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">addf, subf, mulf, divf<br>
+       </td>
+       <td valign="top">( fs ft fd -- )<br>
+       </td>
+       <td valign="top">Two-operand floating point instructions - fs OP ft 
+-&gt; fd<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">sqrt, abs, movf, negf, round.w, trunc.w, ceil.w,
+floor.w, cvt.s, cvt.d, cvt.w, cxx<br>
+       </td>
+       <td valign="top">( fs fd -- )<br>
+       </td>
+       <td valign="top">One-operand floating point instructions - OP(fs)
+-&gt; fd<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">mfc1, cfc1, mtc1, ctc1<br>
+       </td>
+       <td valign="top">( fs rt -- )<br>
+       </td>
+       <td valign="top">Floating-point coprocessor-register to integer-register 
+instructions<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">mfc0, mtc0, dmfc0, dmtc0<br>
+       </td>
+       <td valign="top">( cpreg rt -- )<br>
+       </td>
+       <td valign="top">System coprocessor-register to integer-register instructions<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">tlbp, tlbr, tlbwi, tlbwr,eret<br>
+       </td>
+       <td valign="top">( -- )<br>
+       </td>
+       <td valign="top">TLB and exception instructions<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">.s, .d, .w<br>
+       </td>
+       <td valign="top">( -- )<br>
+       </td>
+       <td valign="top">Floating point formats<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">dset<br>
+       </td>
+       <td valign="top" nowrap="true">( low high reg -- )<br>
+       </td>
+       <td valign="top">Assemble code to put the 64-bit number low, high
+into the register<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">li, set<br>
+       </td>
+       <td valign="top" nowrap="true">( n reg -- )<br>
+       </td>
+       <td valign="top">Assemble code to put the 32-bit number n into the 
+register (li and set are equivalent)<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">la<br>
+       </td>
+       <td valign="top">( adr dst -- )<br>
+       </td>
+       <td valign="top">Like li but sets a relocation bit for the Forth dictionary 
+file.<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">brif<br>
+       </td>
+       <td valign="top">( adr cond -- )<br>
+       </td>
+       <td valign="top">Assemble a branch from a conditional constructor
+(see below)<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">=, &lt;&gt;<br>
+       </td>
+       <td valign="top">( rs rt -- cond )<br>
+       </td>
+       <td valign="top">Constructor for two-operand structured conditionals 
+- rs COND rt<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top">0&lt;=, 0&gt;, 0&lt;, 0&gt;=<br>
+       </td>
+       <td valign="top">( rs -- cond )<br>
+       </td>
+       <td valign="top">Constructor for one-operand structured conditionals 
+- COND(rs)<br>
+       </td>
+     </tr>
+   
+  </tbody> 
+</table>
+ 
+<h3><a name="Structured_Conditionals"></a>Structured Conditionals</h3>
+The MIPS assembler includes macros for constructing common flow control structures
+without having to make up label names. The structures shown below can be
+nested to arbitrary depth.<br>
+The easiest way to deal with branch delay slots is just to fill them with
+nop's.<br>
+In the following examples, the delay-slot instructions are indented the same
+as the code <i>preceding</i> their branch instruction, to emphasize that
+the delay instruction is logically a part of the preceding code flow. <br>
+<br>
+ 
+<table cellpadding="2" cellspacing="2" border="1">
+   <tbody>
+     <tr>
+       <th valign="top" nowrap="true">Usage Form<br>
+       </th>
+       <th valign="top" nowrap="true">Example<br>
+       </th>
+       <th valign="top" nowrap="true">Equivalent Code<br>
+(in noreorder mode) &nbsp; <br>
+       </th>
+      <th valign="top">Comments<br>
+      </th>
+     </tr>
+     <tr>
+       <td valign="top" nowrap="true"><i>cond</i> if &nbsp;.. &nbsp;then<br>
+       </td>
+       <td valign="top" nowrap="true"><tt>t3 t4 &lt;&gt; if<br>
+nop &nbsp; &nbsp; &nbsp; &nbsp;\ Delay<br>
+&nbsp; &nbsp;t3 1 &nbsp;t3 &nbsp;addiu<br>
+then</tt><br>
+       </td>
+       <td valign="top" nowrap="true"><tt>&nbsp; &nbsp;beq &nbsp; &nbsp;t3,t4,1f<br>
+&nbsp; &nbsp;nop<br>
+&nbsp; &nbsp;addiu &nbsp;t3,1,t3<br>
+1:</tt><br>
+       </td>
+      <td valign="top">1) The conditional in this case is "t3 t4 &lt;&gt;",
+i.e not equal, which takes two register operands.<br>
+2) Note the &nbsp;branch delay slot after the "if"<br>
+3) There is no delay slot after "then" because it just marks the target of
+a forward branch.<br>
+      </td>
+     </tr>
+     <tr>
+       <td valign="top" nowrap="true"><i>cond</i> &nbsp;if &nbsp;.. &nbsp;else
+&nbsp;.. then<br>
+       </td>
+       <td valign="top" nowrap="true"><tt>t2 0&gt; &nbsp;if<br>
+$7 0 &nbsp; $4 &nbsp; lw &nbsp;\ Delay<br>
+&nbsp; &nbsp;sp -4 &nbsp;sp &nbsp; addiu<br>
+&nbsp; &nbsp;$a1 &nbsp; &nbsp;$a3 &nbsp;mult<br>
+else<br>
+&nbsp; &nbsp;$3 $4 &nbsp;$5 &nbsp; add \ Delay<br>
+      <br>
+&nbsp; &nbsp;$7 4 &nbsp; $4 &nbsp; lw<br>
+then<br>
+&nbsp; </tt><br>
+       </td>
+       <td valign="top" nowrap="true"><tt>&nbsp;&nbsp; blez &nbsp; t2,1f<br>
+&nbsp;&nbsp; lw &nbsp; &nbsp; $4,0($7)<br>
+&nbsp; &nbsp;addiu &nbsp;$sp,$sp,4<br>
+&nbsp; &nbsp;mult &nbsp; $a1,$a3<br>
+&nbsp;&nbsp; b &nbsp; &nbsp;&nbsp; 2f<br>
+&nbsp;&nbsp; add &nbsp;&nbsp; $3,$4,$5<br>
+1:<br>
+&nbsp;&nbsp; lw &nbsp; &nbsp; $4,4($7)<br>
+2:</tt><br>
+       </td>
+      <td valign="top">1) The conditional in this case is "t2 0&gt;", i.e.
+t2 greater than zero.<br>
+2) Note the branch delay slots after "if" and "else", because of the implicit
+branch around the else clause.<br>
+      </td>
+     </tr>
+     <tr>
+       <td valign="top" nowrap="true">begin .. again<br>
+       </td>
+       <td valign="top" nowrap="true"><tt>begin<br>
+again<br>
+&nbsp; &nbsp;t3 0 t4 lw &nbsp;\ Delay</tt>&nbsp;<br>
+       </td>
+       <td valign="top" nowrap="true"><tt>1:<br>
+&nbsp; &nbsp;beq &nbsp;&nbsp; $0,$0,1b<br>
+&nbsp; &nbsp;lw &nbsp; &nbsp; $t4,0($t4)</tt><br>
+       </td>
+      <td valign="top">1) In this infinite-loop example, there are no other
+instructions between "begin" and "again". The important work is done in the
+delay slot after the unconditional branch that "again" generates. It is of
+course possible to put instructions between "begin" and "again"<br>
+2) Note that there is no delay slot after "begin", because "begin" does not
+generate a branch instruction; it marks the target of a backward branch.<br>
+      </td>
+     </tr>
+     <tr>
+       <td valign="top" nowrap="true">begin .. <i>cond</i> until<br>
+       </td>
+       <td valign="top" nowrap="true"><tt>begin<br>
+&nbsp; &nbsp;s0 &nbsp;s1 &nbsp;s1 &nbsp; add<br>
+&nbsp; &nbsp;t3 &nbsp;t4 &nbsp;t5 &nbsp; add<br>
+t5 t6 = &nbsp;until<br>
+&nbsp; &nbsp;nop &nbsp;\ Delay</tt><br>
+       </td>
+       <td valign="top" nowrap="true"><tt>1:<br>
+&nbsp;&nbsp; add &nbsp;$s1,$s0,$s1<br>
+&nbsp;&nbsp; add &nbsp;$t5,$t3,$t4<br>
+&nbsp;&nbsp; bne &nbsp;$t5,$t6,1b<br>
+&nbsp;&nbsp; nop</tt><br>
+       </td>
+      <td valign="top">1) "until" generates a conditional backward branch,
+so it has a delay slot<br>
+2) "\ Delay" is just a comment to remind you what is happening. It does not
+affect the code that is generated.<br>
+      </td>
+     </tr>
+     <tr>
+       <td valign="top" nowrap="true">begin ..<br>
+      <i>cond</i> while ...<br>
+repeat<br>
+       </td>
+       <td valign="top" nowrap="true"><tt>begin<br>
+&nbsp; &nbsp;$a0 8 &nbsp;$a1 &nbsp;lw<br>
+$a1 $0 &lt;&gt; while<br>
+&nbsp; &nbsp;nop &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; \ Delay<br>
+&nbsp; &nbsp;$a0 4 &nbsp;$a0 &nbsp;lw<br>
+repeat &nbsp;nop &nbsp; &nbsp; &nbsp; &nbsp;\ Delay<br>
+&nbsp;</tt> <br>
+       </td>
+       <td valign="top" nowrap="true"><tt>1:<br>
+&nbsp; &nbsp;lw &nbsp; $a1,8($a0)<br>
+&nbsp;&nbsp; beq &nbsp;$a1,$0, 2f<br>
+&nbsp; &nbsp;nop<br>
+&nbsp; &nbsp;lw &nbsp; $a0,4($a0)<br>
+&nbsp; &nbsp;beq &nbsp;$0,$0,1b<br>
+&nbsp; &nbsp;nop<br>
+2:</tt><br>
+       </td>
+      <td valign="top">1) "while" generates a conditional forward branch
+past the <br>
+"repeat", so it has a delay slot<br>
+2) "repeat" generates a conditional backward branch to <br>
+"begin", so it has a delay slot<br>
+3) Note that the delay instruction can be on the same line as the "repeat"
+if you wish. This is generally true; since the assembler syntax is postfix
+without any need for "lookahead", line boundaries are irrelevant. You can
+put multiple opcodes on one line if you wish.<br>
+      </td>
+     </tr>
+     <tr>
+      <td valign="top">ahead .. then<br>
+      </td>
+      <td valign="top"><tt>ahead<br>
+nop &nbsp;\ Delay<br>
+&nbsp;&nbsp; 12345 ,<br>
+&nbsp;&nbsp; 6789 ,<br>
+&nbsp;&nbsp; 3 , <br>
+then</tt><br>
+      </td>
+      <td valign="top"><tt>&nbsp; &nbsp;beq &nbsp;$0,$0, 1f<br>
+&nbsp; &nbsp;nop<br>
+&nbsp; &nbsp;.word &nbsp;12345<br>
+&nbsp; &nbsp;.word &nbsp;6786<br>
+&nbsp; &nbsp;.word &nbsp;3<br>
+1:</tt><br>
+      </td>
+      <td valign="top">1) "ahead" generates an unconditional forward branch
+to "then". It has a delay slot.<br>
+2) In this example we are using it to skip some data that we have placed
+in-line.<br>
+3) The most common use of unconditional forward branches is subsumed by the
+"if .. else .. then" construct, so "ahead" is rarely used.<br>
+      </td>
+    </tr>
+    <tr>
+       <td valign="top" nowrap="true">ahead .. but then<br>
+       </td>
+       <td valign="top" nowrap="true"><tt>ahead<br>
+t0 0 &nbsp; t1 &nbsp;lw &nbsp;\ Delay<br>
+begin<br>
+&nbsp; &nbsp;t0 4 &nbsp; t2 &nbsp;lw<br>
+&nbsp; &nbsp;t2 t3 &nbsp;t3 &nbsp;add<br>
+but then<br>
+t1 $0 = &nbsp;until<br>
+&nbsp; &nbsp;t1 -1 &nbsp;t1 &nbsp;addiu \ Delay<br>
+      <br>
+&nbsp; &nbsp; </tt><br>
+       </td>
+       <td valign="top" nowrap="true"><tt>&nbsp;&nbsp; beq &nbsp;$0,$0,1f<br>
+&nbsp;&nbsp; lw &nbsp;&nbsp; $t1,0($t0)<br>
+2:<br>
+&nbsp;&nbsp; lw &nbsp; &nbsp;$t2,4($t0)<br>
+&nbsp;&nbsp; add &nbsp; $t3,$t2,$t3<br>
+1:<br>
+&nbsp;&nbsp; bne &nbsp; $t1,$0,2b<br>
+&nbsp;&nbsp; addiu $t1,$t1,-1</tt><br>
+       </td>
+      <td valign="top">This is an advanced usage in which two conditional
+constructs ("begin .. until" and&nbsp; "ahead .. then") are not properly
+nested. The intention here is to start the loop execution at the test condition
+at the end. "ahead .. then" is used to branch forward to the test condition.
+The "but" rearranges the assembler's control flow stack so that "then" can
+resolve "ahead" without being confused by the intervening "begin".<br>
+      </td>
+     </tr>
+     <tr>
+       <td valign="top" nowrap="true">begin ..<br>
+&nbsp; &nbsp; <i>cond</i> if .. then<br>
+      <i>cond</i> until<br>
+       </td>
+       <td valign="top" nowrap="true"><tt>begin<br>
+&nbsp; &nbsp;t0 8 &nbsp; t1 &nbsp;lw<br>
+&nbsp; &nbsp;t1 t2 &lt;&gt; &nbsp;if<br>
+&nbsp; &nbsp;nop &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; \ Delay<br>
+&nbsp; &nbsp; &nbsp; t1 t3 &nbsp;t3 &nbsp;add<br>
+&nbsp; &nbsp;then<br>
+&nbsp; &nbsp;t1 -5 &nbsp;t1 &nbsp;addiu<br>
+t1 0&lt; until<br>
+&nbsp; &nbsp;nop &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; \ Delay&nbsp; &nbsp;</tt>
+      <br>
+       </td>
+       <td valign="top" nowrap="true"><tt>1:<br>
+&nbsp; &nbsp;lw &nbsp; &nbsp;$t1,8($t0)<br>
+&nbsp; &nbsp;beq &nbsp; $t1,$t2,2f<br>
+&nbsp; &nbsp;nop<br>
+&nbsp; &nbsp;add &nbsp; $t3,$t1,$t3<br>
+2:<br>
+&nbsp; &nbsp;addiu $t1,$t1,-5<br>
+&nbsp; &nbsp;bgez &nbsp;t1,1b<br>
+&nbsp; &nbsp;nop</tt><br>
+       </td>
+      <td valign="top">This is a straightforward example of well-nested control
+structures.<br>
+      <br>
+Note the use of indentation to show the scope of the control flow. Especially
+note how the delay slots are indented the same as the code <i>preceding</i>
+the branch.<br>
+      </td>
+     </tr>
+        
+  </tbody> 
+</table>
+  
+<h3><a name="Local_Labels"></a>Local Labels</h3>
+ Local (numbered) labels can be used in conjunction with branch instructions 
+to create control flows that can't easily be represented with the structured 
+conditionals. These are rarely needed, since the structured conditionals
+cover the most common cases, and your code will be easier to understand if
+you can express it in terms of those structures.<br>
+ <br>
+ 
+<table cellpadding="2" cellspacing="2" border="1">
+   <tbody>
+     <tr>
+       <th valign="top">Command<br>
+       </th>
+       <th valign="top">Stack Effect<br>
+       </th>
+       <th valign="top">Description<br>
+       </th>
+     </tr>
+     <tr>
+       <td valign="top"><b>l:</b><br>
+       </td>
+       <td valign="top">( label# -- )<br>
+       </td>
+       <td valign="top">(ell-colon) Create a local label with the given number<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top"><b>f:</b><br>
+       </td>
+       <td valign="top">( label# -- adr )<br>
+       </td>
+       <td valign="top">Return the address of the next occurrence of the
+given local label in the forward direction<br>
+       </td>
+     </tr>
+     <tr>
+       <td valign="top"><b>b:</b><br>
+       </td>
+       <td valign="top">( label# -- adr )<br>
+       </td>
+       <td valign="top">Return the address of the next occurrence of the
+given local label in the backward direction<br>
+       </td>
+     </tr>
+   
+  </tbody> 
+</table>
+ 
+<h3><a name="Directives"></a>Directives</h3>
+These assembler directives are primarily used to create assembly-language
+"dropin modules" that execute on target machines before the Forth execution
+environment has been set up.<br>
+<br>
+<table cellpadding="2" cellspacing="2" border="1">
+  <tbody>
+    <tr>
+      <th valign="top">Directive<br>
+      </th>
+      <th valign="top" nowrap="true">Stack</th>
+      <th valign="top">Description<br>
+      </th>
+    </tr>
+    <tr>
+      <td valign="top"><b> start-assembling</b><br>
+      </td>
+      <td valign="top" nowrap="true">( -- )<br>
+      </td>
+      <td valign="top">Set <b>asm-base</b> to the current address within
+Forth data space, thus marking that address as the start of memory that will
+later be written to a file.&nbsp; Set <b>asm-origin</b> to 0. Arrange for
+the names of any subsequent labels to be stored in a separate memory space.
+      <br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b> end-assembling</b><br>
+      </td>
+      <td valign="top" nowrap="true">( -- )<br>
+      </td>
+      <td valign="top">Restore labels to their default behavior (i.e. label
+names will subsequently be stored in-line in Forth data space rather than
+in a separate area).<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b> label</b> <i>newname</i><br>
+      </td>
+      <td valign="top" nowrap="true">( -- )<br>
+      </td>
+      <td valign="top">Mark the current location in Forth data space so that
+later execution of <i>newname</i> will return that address. When executed
+within the context of <b>start-assembling .. end-assembling</b> , the label
+name will be stored in a separate memory area outside of the Forth data space
+(normally, in a Forth dictionary context, the Forth data space consists of
+interspersed names and data).<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>asm-origin</b><b> </b><br>
+      </td>
+      <td valign="top" nowrap="true">( -- <i>adr</i> )<br>
+      </td>
+      <td valign="top">A Forth <b>value </b>that contains the address within
+the target machine's address space that corresponds to the beginning of the
+memory marked by <b>start-assembling</b> .The default value, set by <b>start-assembling</b>,
+is 0, but it can be changed to an arbitrary value <i>n</i> by executing "<i>n</i>
+      <b>&nbsp;to &nbsp;asm-origin</b>" . <br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b>asm-base</b><b> </b><br>
+      </td>
+      <td valign="top" nowrap="true">( -- adr )<br>
+      </td>
+      <td valign="top">A Forth value that contains the start address within
+the host machines address space of the beginning of the memory marked by
+      <b>start-assembling</b> .<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"> <b>pad-to</b><br>
+      </td>
+      <td valign="top" nowrap="true">( <i>adr</i> -- )<br>
+      </td>
+      <td valign="top">Add 0x0 bytes to memory until the current address
+within the target machine's address space is <i>adr</i>. Specifically, (
+      <b>here</b> - <b>asm-origin</b> ) = ( <b>adr</b> - <b>asm-origin</b>
+) when pad-to completes. Aborts if the current address is already above <i>adr</i>
+. <br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"> <b>align-to</b><br>
+      </td>
+      <td valign="top" nowrap="true">( <i>n</i> -- )<br>
+      </td>
+      <td valign="top">Add 0x0 bytes to memory until the current address
+within the target machine's address space is a multiple of <i>n</i> <br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"> <b>assemble-little-endian</b><br>
+      </td>
+      <td valign="top" nowrap="true">( -- )<br>
+      </td>
+      <td valign="top">Configure the MIPS assembler to generate code in little-endian
+byte order. &nbsp;The default is the byte order of the host system.<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"> <b>assemble-big-endian</b><br>
+      </td>
+      <td valign="top" nowrap="true">( -- )<br>
+      </td>
+      <td valign="top">Configure the MIPS assembler to generate code in little-endian
+byte order. &nbsp;The default is the byte order of the host system.<br>
+      </td>
+    </tr>
+    <tr>
+      <td valign="top"><b> c$,</b><br>
+      </td>
+      <td valign="top" nowrap="true">( adr len -- )<br>
+      </td>
+      <td valign="top">Place the bytes from the range <i>adr len</i> into
+memory, followed by a null terminator byte (which need not be present in
+the source range) and sufficient padding for four-byte alignment. This is
+primarily used within the "reset" module to place the names of other dropin
+modules in-line within the code.<br>
+      </td>
+    </tr>
+  </tbody>
+</table>
+.<br>
+ <br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+<br>
+ <br>
+ <br>
+ <br>
+ <br>
+</body>
+</html>

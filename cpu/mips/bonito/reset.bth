@@ -1,0 +1,448 @@
+purpose: Low-level startup code for MIPS
+copyright: Copyright 1998-2001 Firmworks  All Rights Reserved
+
+command: &native &this
+build-now
+
+create debug-reset \ Comment out in order to single step under PMON
+\ create ram-image   \ Comment out to build rom image
+
+\needs start-assembling  fload ${BP}/cpu/mips/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+hex
+
+fload ${BP}/cpu/mips/ksegaddr.fth
+fload ${BP}/cpu/mips/bonito/physaddr.fth
+fload ${BP}/cpu/mips/bonito/report.fth
+
+h# 10.0000 constant /fw-memory
+
+[ifdef] ram-image
+rom-base kseg0 + constant bootrom-pa
+[else]
+rom-pa  constant bootrom-pa
+[then]
+
+also forth definitions
+: c$,  ( adr len -- )
+   1+  here swap note-string dup allot move 4 (align)
+;
+previous definitions
+
+also mips-assembler definitions
+: $find-dropin,  ( adr len -- )
+[ifdef] notdef
+   tuck 2>r			( len )
+   here +  9 +				   \ 9 = null(1) + call+delay slot(8)
+   4 round-up			   	   \ pad string end adr to next instr-+
+   ( adr-of-find-di )  asm( $0 bgezal )asm \ jump to find-dropin call below   |
+   asm( ra  $a0   move )asm		   \ set string arg for find-dropin   |
+   2r> c$,                                 \ place string	              |
+   " find-dropin   bal"  evaluate	   \ and call find routine       <----+
+   asm( nop )asm
+[else]
+   " find-dropin bal nop" evaluate	\ call find routine
+   c$,					\ place string after delay slot
+[then]
+;
+previous definitions
+
+h# 800e.0000 constant stack-offset
+h# 800f.0000 constant workspace-offset
+h# 8010.0000 constant inflate-offset
+
+start-assembling
+
+/resetjmp h# 20 + to asm-origin	\ Skip resetjmp wad and dropin header
+
+label my-entry
+\ **** This is the primary entry point; it will contain a branch instruction
+\ that skips a few subroutines and lands at the startup sequence.  That
+\ branch instruction is patched in below.  The entry point for this module
+\ is in turn reached from a branch instruction at the beginning of the ROM,
+\ which is created by the file arch/dna/resetvec.bth
+   0 ,				\ To be patched later
+   nop
+end-code
+
+\ This subroutine is used by the startup code.
+\ It compares two null-terminated strings, returning zero if they match.
+\ Destroys: r2, r3
+label strcmp  ( $a0: str1 $a1: str2 -- v0: 0 if match, nonzero if mismatch )
+   $a0  t0  move
+   begin
+      t0 0  $a2  lbu
+      $a1 0  $a3  lbu
+      $a2 $a3 <> if
+      t0 1  t0  addiu    \ (delay)
+         ra         jr
+         $a3 $a2  v0  sub  \ (delay)
+      then
+   $a2 0 = until
+      $a1 1  $a1  addiu    \ (delay)
+
+   ra      jr
+   0  v0   set             \ (delay)
+end-code
+
+\ This subroutine is used by the startup code.
+\ It searches the ROM for a dropin module whose name field matches the
+\ null-terminated string that is at the return address.
+\ Destroys: $a0-$a3, t4-t7
+label find-dropin  ( -- v0: adr | 0 )
+   ra               $a0    move	\ address of string
+   begin
+      ra 0   $a1  lbu		\ Get string byte
+   $a1 0 =  until		\ Look for null terminator
+      ra 1   ra  addiu		\ (delay) Advance to next character
+
+   \ ra now points to the byte after the null character
+   ra 3      ra  addiu		\ Round up to longword boundard
+   3 invert  $at set
+   ra $at    t7  and		\ and round
+
+\   h# 4f424d44      t4    set	\ "OBMD"
+   h# 444d424f      t4    set	\ "OBMD" little-endian
+   bootrom-pa /resetjmp + t5    set	\ ROM base + (resetjmp wad)
+   begin
+      t5 0          t6    lw
+   t4 t6 =  while nop
+
+      strcmp              bal   \ $a1 = test$, $a0 = sought$
+      t5 h# 10       $a1  addiu	\ (delay)point to dropin name in header
+      v0 0 =  if  nop
+         t7               jr	\ return
+         t5          v0   move	\ (delay) return value is adr of "OBMD"
+      then
+
+      t5 4           t3   addiu	\ offset to size of dropin
+      t3 1           t0   lwr	\ get size of dropin (big-endian)
+      t3 3           t0   lwr	\ get least significant half word
+      h# ffff        t1   set
+      t0      t1     t6   and
+     
+      t3 2           t0   lwl	\ get most significant half word
+      t3 0           t0   lwl
+      h# ffff.0000   t1   set
+      t0      t1     t0   and
+      t0      t6     t6   or
+
+      t6 h# 23	     t6   addiu	\ add size + header(20) + roundup(3) to
+      t5 t6          t5   addu	\ locate next dropin
+      3 invert       $at  set
+   repeat
+      t5 $at         t5   and	\ (delay) round up
+
+      0              v0   set	\ return value is 0 (failure)
+      t7                  jr	\ No more dropins; return
+      nop
+end-code
+
+\ This subroutine is used by the startup code.
+\ It copies n (a2) bytes of memory from src (a1) to dst (a0)
+\ Destroys: a0-a3
+label memcpy  ( a0: dst a1: src a2: n -- )
+   $a0 $a2  $a2  addu		\ Ending address
+
+   $a0 $a2  <> if  nop
+      begin
+         $a1 0  $a3    lbu
+         $a1 1  $a1    addiu
+         $a3    $a0 0  sb
+      $a0 $a2  = until
+         $a0 1  $a0    addiu   \ (delay)
+   then
+
+   ra   jr  nop
+end-code
+here memcpy -  constant /memcpy
+
+\ Flush the VR4300 Data cache for the first time
+label init-cache  ( -- )  \ Destroys: $a0, $a1
+
+   \ Temporarily disable parity and CE
+   d# 12 v0 mfc0
+
+   h# 2.0000 invert t0 set
+   t0 v0 t0 and
+   h# 1.0000 t1 set
+   t0 t1 t0 or
+   d# 12 t0 mtc0
+
+   \ Disable secondary cache
+   d# 16 t0 mfc0
+   h# 103f invert t1 set
+   t0 t1 t0 and
+   d# 16 t0 mtc0
+   t0 h# 33 t0 ori		\ CONFIG, k0=write back
+   d# 16 t0 mtc0
+   nop nop nop nop
+
+   \ load valid virtual addresses into the cache tags
+   d# 28            $0   mtc0	\ Set CP0 TAGLO register
+   d# 29            $0   mtc0	\ Set CP0 TAGHI register
+
+   h# 8000.0000     $a0  set
+   d# 1024 d# 32 *  $a1  set
+   $a0 $a1          $a1  addu	\ Add cache size to give end address
+
+   \ Init Icache
+   begin
+      $a0 0  h# 8  cache	\ Index store tag primary icache
+      nop
+      $a0 0  h# 14 cache	\ Fill Icache
+      nop
+      $a0 0  h# 8  cache	\ Index store tag primary icache
+      nop
+   $a1 $a0 =  until
+      $a0 d# 32  $a0 addiu	\ Icache line size
+
+   \ Init Dcache
+   h# 8000.0000     $a0  set
+   d# 1024 d# 32 *  $a1  set
+   $a0 $a1          $a1  addu	\ Add cache size to give end address
+   begin
+      $a0 0  h# 9  cache	\ Index store tag primary dcache
+   $a1 $a0 =  until
+      $a0 d# 32  $a0 addiu	\ Dcache line size
+
+   h# 8000.0000     $a0  set
+   d# 1024 d# 32 *  $a1  set
+   $a0 $a1          $a1  addu	\ Add cache size to give end address
+   begin
+      $0 $a0 0 sw		\ Zero cache
+   $a1 $a0 =  until
+      $a0 d# 32  $a0 addiu	\ Dcache line size
+
+   h# 8000.0000     $a0  set
+   d# 1024 d# 32 *  $a1  set
+   $a0 $a1          $a1  addu	\ Add cache size to give end address
+   begin
+      $a0 0  h# 9  cache	\ Index store tag primary dcache
+   $a1 $a0 =  until
+      $a0 d# 32  $a0 addiu	\ Dcache line size
+
+   \ Restore status register
+   d# 12 v0 mtc0
+
+   ra jr  nop
+end-code
+
+\ Write-back and invalidate the VR4300 data cache.
+label flush-dcache  ( -- )   \ Destroys: $a0, $a1
+   h# 8000.0000     $a1  set
+   d# 1024 d# 32 *  $a0  set
+   $a1   $a0        $a0 addu	\ Add cache size to give end address
+
+   begin
+\      d# 28     $0  mtc0	\ Set CP0 TAGLO register
+      nop
+      $a1 0   h# 1  cache	\ op 0/1(1): index wb&invalidate primary dcache
+      nop
+   $a0  $a1  = until
+      $a1 d# 32  $a1  addiu	\ Dcache line size
+
+   ra jr  nop
+end-code
+
+\ Invalidate the VR4300 instruction cache.
+label invalidate-icache  ( -- )   \ Destroys: $a0, $a1
+   h# 8000.0000     $a1  set
+   d# 1024 d# 32 *  $a0  set
+   $a1  $a0         $a0  addu	\ Add cache size to give end address
+
+   begin
+\      d# 28          $0   mtc0	\ Set CP0 TAGLO register
+      nop
+      $a1 0  h# 0  cache	\ op 0/0(0): index invalidate primary icache
+      nop
+   $a0  $a1 =  until
+      $a1 d# 32  $a1  addiu	\ Dcache line size
+
+   ra jr  nop
+end-code
+
+label sync-cache  ( -- )   \ Destroys: $a0, $a1, $a3
+   ra $a3 move
+
+   flush-dcache      bal  nop
+   invalidate-icache bal  nop
+
+   $a3 jr  nop
+end-code
+
+[ifndef] ram-image
+fload ${BP}/cpu/mips/bonito/initbon.fth
+fload ${BP}/cpu/mips/bonito/initsb.fth
+fload ${BP}/cpu/mips/bonito/initsio.fth
+fload ${BP}/cpu/mips/bonito/initcom1.fth
+[then]
+
+\ This is the main entry point for this dropin module
+label start
+
+[ifndef] ram-image
+   \ Jump up to KSEG1
+   start asm-base - asm-origin +  bootrom-pa +  h# 10 +   k0  la
+   k0   jr  nop
+
+   \ Initialize CP0 registers
+   d# 12         v1  mfc0
+   h# 2041.0000  v0  li		\ SR_BEV, disable parity
+   v0 v1         v0  or
+   d# 12         v0  mtc0	\ Set CP0 status register
+   d# 13         $0  mtc0	\ Set CP0 cause register
+   d# 18         $0  mtc0	\ Set CP0 WATCHLO register
+   d# 19         $0  mtc0	\ Set CP0 WATCHHI register
+
+   \ Initialize hardware
+   init-bonito      bal  nop
+   init-southbridge bal  nop
+   init-sio         bal  nop
+   init-com1        bal  nop
+[then]
+
+carret  ?report
+linefeed ?report
+
+ascii A ?report
+	" start" $find-dropin,   \ Assemble call to find-dropin w/literal arg
+        v0 0 =  if
+           nop
+ascii Y ?report
+           begin again nop
+        then
+
+        v0 h# 20 v0 addi
+        v0       ra jalr
+        nop
+
+        v0 s2 move			\ Save RAM top
+        /fw-memory h# 20 +   s0  set	\ Compute firmware RAM base address
+        v0 s0 s0  sub
+
+        init-cache bal  nop nop nop nop
+
+ascii B ?report
+	" firmware" $find-dropin,   \ Assemble call to find-dropin w/literal arg
+
+        v0 0 =  if
+           nop
+ascii Z ?report
+           begin again nop
+        then
+
+ascii C ?report
+
+        v0            s1      move      \ Save address of firmware dropin
+        v0 h# c       t0      lw        \ see if compressed
+        t0 0 <> if
+           nop
+           \ The firmware dropin is compressed, so we load the inflater into RAM
+           \ and use it to inflate the firmware into RAM
+
+           " inflate" $find-dropin,
+
+ascii i ?report
+
+           v0  4          t3   addiu    \ offset to length of inflater
+           t3 1           t0   lwr	\ get size of dropin (big-endian)
+           t3 3           t0   lwr	\ get least significant half word
+           h# ffff        t1   set
+           t0      t1     $a2  and
+     
+           t3 2           t0   lwl	\ get most significant half word
+           t3 0           t0   lwl
+           h# ffff.0000   t1   set
+           t0      t1     t0   and
+           t0      $a2    $a2  or
+
+           v0 h# 20       $a1  addi     \ src: Base addr of inflater code in ROM
+           inflate-offset $a0  set      \ dst: Base address of inflater
+           memcpy         bal		\ Copy the inflater
+           nop
+
+           sync-cache     bal
+	   nop
+
+ascii n ?report
+
+           stack-offset   sp     set    \ stack for inflater
+           s0             $a1    move   \ Firmware RAM address
+           workspace-offset  $a2 set    \ Scratch RAM for inflater
+           inflate-offset t9     set    \ RAM address of inflater
+           s1 h# 20       $a0    addi   \ Adr of comp'd bits of firmware dropin
+           t9             ra     jalr   \ inflate the firmware
+           nop
+
+ascii f ?report begin again
+
+        else
+           nop
+
+ascii c ?report
+           \ The firmware dropin isn't compressed, so we just copy it to RAM
+ascii o ?report
+
+           s1  4          t3   addiu    \ offset to length of firmware
+           t3 1           t0   lwr	\ get size of dropin (big-endian)
+           t3 3           t0   lwr	\ get least significant half word
+           h# ffff        t1   set
+           t0      t1     $a2  and
+     
+           t3 2           t0   lwl	\ get most significant half word
+           t3 0           t0   lwl
+           h# ffff.0000   t1   set
+           t0      t1     t0   and
+           t0      $a2    $a2  or
+
+           s1 h# 20       $a1  addi     \ src: Skip dropin header
+           s0             $a0  move     \ dst: Firmware RAM address
+
+           memcpy         bal		\ Copy the firmware
+           nop
+
+ascii p ?report
+ascii y ?report
+
+        then
+
+        sync-cache bal  nop
+
+        \ Jump to Forth (prom-cold-code)
+        s0  h# 20  s0   addiu
+        s0  $a0         move            \ fw-RAM-base
+        s2  $a1         move            \ fw-RAM-size
+        s0  0      t0   lw		\ Read offset of prom-cold-code
+        s0  t0     s0   addu
+
+        d# 12      t0   mfc0		\ Status
+        t0  4      t0   andi		\ ERL=1 if reset exception
+        t0 0 =  if
+           nop
+           s0  jr
+           nop
+        else
+           nop
+           d# 30 s0  mtc0  nop nop nop nop nop
+           d# 14 s0  mtc0  nop nop nop nop nop
+           eret
+           nop
+        then
+
+        \ Not reached, in theory
+        begin again
+        nop
+
+end-code
+
+also mips-assembler
+start  my-entry  put-branch
+previous
+
+end-assembling
+
+writing reset.di
+asm-base  here over -  0  " reset" write-dropin
+ofd @ fclose

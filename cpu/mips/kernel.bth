@@ -1,0 +1,127 @@
+purpose: Load file for MIPS Forth kernel
+\ See license at end of file
+
+command: &builder &this
+build-now
+
+create little-endian-t
+
+ ' $report-name is include-hook
+\  ' noop is include-hook
+\ ' noop is include-exit-hook
+
+\ Don't accept ',' as numeric punctuation because doing so makes
+\ the forward referencing mechanism think that "c," is a number!
+ascii . ascii , npatch numdelim?
+
+warning off	\ Turn OFF the warning messages
+
+[ifdef] maketags
+fload ${BP}/forth/lib/tags.fth
+' ("header) is "header
+defer "header-t-hook ' (tags-header) is "header-t-hook
+"" loadkern.fth last-filename "copy
+[then]
+
+alias constant-h constant
+
+fload ${BP}/forth/kernel/conft32.fth
+fload ${BP}/forth/kernel/meta1.fth
+
+only forth also meta also definitions
+\needs mips-assembler fload ${BP}/cpu/mips/assem.fth
+
+only forth also meta definitions
+: assembler  ( -- )  mips-assembler  ;
+
+only forth also meta also assembler definitions
+\needs L: fload ${BP}/forth/lib/loclabel.fth
+init-labels
+
+only forth also definitions
+\needs bitset  fload ${BP}/forth/lib/bitops.fth
+
+fload ${BP}/forth/kernel/swapmap.fth
+\ : : : lastacf .name cr ;
+fload ${BP}/cpu/mips/target.fth
+fload ${BP}/forth/kernel/forward.fth
+fload ${BP}/cpu/mips/fixvoc.fth
+fload ${BP}/forth/kernel/metacompile.fth
+
+warning on
+fload ${BP}/cpu/mips/metainit.fth
+
+\ fload ${BP}/cpu/mips/metarel.fth
+
+" kernel.tag" r/w create-file drop  meta-tag-file !
+
+always-headers
+
+\ Comment out the following line(s) when debugging
+-1  threshold  !	\ Turn OFF ALL debugging messages
+warning-t  off  	\ Turn OFF target warning messages
+
+\ Uncomment the following line(s) for more debug output
+\ show? on  1 granularity !  1 threshold !
+\ warning-t on
+
+fload ${BP}/cpu/mips/kerncode.fth
+
+fload ${BP}/forth/kernel/uservars.fth
+fload ${BP}/forth/kernel/double.fth
+fload ${BP}/forth/kernel/scan.fth
+
+fload ${BP}/forth/lib/bitops.fth
+fload ${BP}/cpu/ppc/kernrel.fth
+\ fload ${BP}/forth/kernel/swapmap.fth
+
+fload ${BP}/forth/lib/struct.fth
+
+fload ${BP}/cpu/mips/unalign.fth
+
+fload ${BP}/forth/kernel/kernel.fth
+
+fload ${BP}/forth/kernel/sysio.fth
+fload ${BP}/forth/lib/dumballo.fth
+
+fload ${BP}/cpu/mips/filecode.fth
+
+fload ${BP}/cpu/mips/sys.fth
+
+fload ${BP}/cpu/mips/kernboot.fth
+
+\ fload ${BP}/cpu/mips/boot.fth
+fload ${BP}/forth/kernel/init.fth
+fload ${BP}/cpu/mips/finish.fth
+
+meta-tag-file @ fclose  meta-tag-file off
+
+fload ${BP}/cpu/mips/savemeta.fth
+
+.( Saving as kernel.dic ...)  " kernel.dic" $save-meta
+cr
+
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2009 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
