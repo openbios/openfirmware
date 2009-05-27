@@ -27,7 +27,7 @@ d# 500 constant intr-in-timeout
    intr-in-data!
 ;
 
-: process-intr-args  ( buf len pipe timeout -- )  process-bulk-args  ;
+: process-intr-args  ( buf len pipe -- )  process-bulk-args  ;
 : alloc-intr-qhqtds  ( -- qh qtd )  alloc-bulk-qhqtds  ;
 : fill-intr-io-qtds  ( dir qtd -- )
    my-#qtds 0  do				( dir qtd )
@@ -51,8 +51,9 @@ external
 
    to intr-in-interval
    dup to intr-in-pipe
-   intr-in-timeout process-intr-args
+   process-intr-args
    alloc-intr-qhqtds  to intr-in-qtd  to intr-in-qh
+   intr-in-timeout intr-in-qh >qh-timeout l!
 
    \ IN qTDs
    TD_PID_IN intr-in-qtd fill-intr-io-qtds
@@ -101,6 +102,7 @@ external
    intr-in-qtd restart-intr-in-qtd
 
    \ Setup QH again
+   intr-in-timeout intr-in-qh >qh-timeout l!
    intr-in-qh >hcqh-endp-char dup le-l@ QH_TD_TOGGLE invert and swap le-l!
    intr-in-qtd >qtd-phys l@ intr-in-qh >hcqh-overlay >hcqtd-next le-l!
    intr-in-qh sync-qhqtds
