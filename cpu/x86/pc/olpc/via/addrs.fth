@@ -8,7 +8,8 @@ h#    8.0000   constant /rom		\ Size of boot ROM
 \ h# fffe.0000   constant rom-pa	\ Physical address of boot ROM
 \ h#    2.0000   constant /rom		\ Size of boot ROM
 rom-pa         constant dropin-base
-[else]
+[then]
+[ifdef] xo-board
 h# fff0.0000   constant rom-pa		\ Physical address of boot ROM
 h#   10.0000   constant /rom		\ Size of boot ROM
 rom-pa  h# 1.0000 +  constant dropin-base
@@ -18,7 +19,8 @@ h#    8.0000   constant dropin-size
 
 dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
 
-h# 1bc0.0000 value    fw-pa     \ Changed in probemem.fth
+\ h# 1bc0.0000 value    fw-pa     \ Changed in probemem.fth
+h#  bc0.0000 value    fw-pa     \ Changed in probemem.fth
 h#   20.0000 constant /fw-ram
 [then]
 

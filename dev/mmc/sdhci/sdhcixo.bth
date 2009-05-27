@@ -1,0 +1,29 @@
+purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing sdhcixo.fc
+
+FCode-version2
+fload ${BP}/dev/mmc/sdhci/sdhci.fth
+
+init
+
+new-device
+   2 encode-int " reg" property
+   " sdmmc" " $load-driver" eval drop
+finish-device
+
+new-device
+   1 encode-int " reg" property
+   " mv8686" " $load-driver" eval drop
+finish-device
+
+
+fload ${BP}/dev/mmc/sdhci/selftest.fth
+end0
+
+end-tokenizing

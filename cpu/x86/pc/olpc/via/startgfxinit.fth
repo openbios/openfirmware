@@ -1,7 +1,7 @@
 \ UMARamSetting.c
 \  SetUMARam
    0 3 devfunc
-   99 ff 73 mreg \ 61 res be like Phx
+ \ 99 ff 73 mreg \ 61 res be like Phx
    a1 00 80 mreg \ Enable internal GFX
    a2 ff ee mreg \ Set GFX timers
    a4 ff 01 mreg \ GFX Data Delay to Sync with Clock

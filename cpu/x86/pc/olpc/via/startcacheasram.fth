@@ -14,6 +14,10 @@
    /dcached negate h# 800 +  f  201 set-msr   \ Dcache size
    dropin-base 6 +           0  202 set-msr   \ ROM base address
    /icached negate h# 800 +  f  203 set-msr   \ Icache size
+   \ This region is for CForth
+   h# ffff.0000 6 +          0  204 set-msr   \ ROM base address
+   /icached negate h# 800 +  f  205 set-msr   \ Icache size
+
 
    00000000.00000800.           2ff set-msr   \ Enable variable MTRRs in DefType   
 
@@ -22,7 +26,7 @@
 
    cld
 
-   \ Access ROM to load it into the dcache
+   \ Access ROM to load it into the icache
    dropin-base #  esi  mov
    /icached 4 / #  ecx  mov
    rep  eax lods

@@ -69,11 +69,13 @@
    8f 09 01 mreg  \ Falling edge trigger on slot 3 output clock under high speed
 [ifdef] demo-board
    99 ff f9 mreg  \ Two slots
-[else]
+[then]
+[ifdef] xo-board
    99 ff fa mreg  \ Three slots
 [then]
    end-table
 
+0 [if]
    d# 15 0 devfunc  \ EIDE tuning
    40 02 02 mreg  \ Enable primary channel
    4a ff 5e mreg  \ Drive1 timing
@@ -86,6 +88,7 @@
 \  d4 ac 24 mreg  \ Config 3
    d4 bc 34 mreg  \ Config 3 - 10 res be like Phx
    end-table
+[then]
 
    \ USB Tuning
    d# 16 0 devfunc  \ UHCI Ports 0,1
@@ -128,6 +131,9 @@
 
    d# 17 0 devfunc  \ Bus control and power management
    40 44 44 mreg  \ Enable I/O Recovery time (40), Enable ports 4d0/4d1 for edge/level setting (04)
+[ifdef] xo-board
+   41 40 40 mreg  \ Enable fff0.0000-fff7.ffff ROM on LPC bus
+[then]
    42 fc f0 mreg  \ Various setting related to DMA line  buffers
    43 0f 0b mreg  \ Enable PCI delayed transactions (08), Write transaction timer (02), Read transaction timer (01)
 \  4d 01 01 mreg  \ Enable LPC TPM
@@ -135,6 +141,9 @@
    4e 18 18 mreg  \ Enable ports 74/75 for CMOS RAM access  - 10 res be like Phx
 \  50 40 40 mreg  \ Disable USB device mode
    50 c0 c0 mreg  \ Disable USB device mode - 80 res be like Phx
+[ifdef] xo-board
+   51 9f 88 mreg  \ Enable SDIO and internal RTC, disable card reader, int mouse & kbd
+[then]
    52 1b 19 mreg  \ No wait state between SIRQ transactions (10), Enable SIRQ (08), SIRQ frame is 6 clocks (3>1)
    53 80 80 mreg  \ Enable PC/PCI DMA
    55 ff a0 mreg  \ INTA and External General interrupt routing - INTA:IRQ10
@@ -160,16 +169,28 @@
    8a 9f 1f mreg  \ C-state auto switching with normal latencies
 [ifdef] demo-board
    8d 18 18 mreg  \ fast clock as throttle timer tick, hold SMI# low until event status cleared (FIXME for OLPC)
-[else]
+[then]
+[ifdef] xo-board
    8d 18 10 mreg  \ fast clock as throttle timer tick, do not hold SMI# low
 [then]
    
    94 ff 68 mreg  \ be like Phx
    95 ff c1 mreg  \ be like Phx
+[ifdef] demo-board
    97 ff 80 mreg  \ be like Phx 
+[then]
+[ifdef] xo-board
+   97 ff 81 mreg  \ GPIO4/5 not KBDT/KBCK
+[then]
 
    9b ff 88 mreg  \ 80 res be like Phx
+
+[ifdef] xo-board
+   9f ff 08 mreg  \ Slot 3 is SDIO, no pullup on KB/MS, fastest SD
+[then]
+[ifdef] demo-board
    9f ff ad mreg  \ be like Phx (slot 3 is Card Reader not SDIO)
+[then]
 
    b4 80 00 mreg  \ No positive decoding for UART1 ???
    b7 40 40 mreg  \ 40 res be like Phx
@@ -183,7 +204,12 @@
    d1 ff 05 mreg  \ SMBUS IO Base Address high
    d2 0f 01 mreg  \ Enable SMBUS and set other characteristics
    e2 80 80 mreg  \ Inhibit C4 during USB isochronous transaction
+[ifdef] demo-board
    e4 ff a0 mreg  \ Enable short C3/C4 (80), select various multi-function pins
+[then]
+[ifdef] xo-board
+   e4 ff c0 mreg  \ Enable short C3/C4 (80), select GPO10 (10) (USB_PWR_EN)
+[then]
    e5 60 60 mreg  \ Enable NM bus master as source of bus master status, enable NB int to wakeup from Cx
    e6 20 20 mreg  \ Enable USB Device Mode Bus Master as Break Event
    e7 80 80 mreg  \ Enable APIC Cycle Reflect to ALL Bus Master Activity Effective Signal

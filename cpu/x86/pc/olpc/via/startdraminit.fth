@@ -23,10 +23,29 @@ label DDRinit
    loopa
    
    13 36b config-wb  \ SDRAM MRS Enable
-   101258 #) ax mov  \ Depends on Twr, CL, and Burst Length
+\  101258 #) ax mov  \ Depends on Twr, CL, and Burst Length
+   1021d8 #) ax mov  \ Depends on Twr, CL, and Burst Length
+
+0 [if]
+2024b
+011 BL 8
+1 BT interleave
+100 CL 4  Anck
+0 TM normal
+0 DLL rst no
+001 WR 2  write recov for autoprecharge
+      2 and 3 are possible for 400
+0 PD fast exit from active power down
+000 ???
+
+      12
+10 0000
+10 BA1,0 EMR2
+[then]
 
    21e00 #) ax mov   \ For 150 ohm; 75 ohm is 21c20
    20200 #) ax mov   \ For 150 ohm; 75 ohm is 21c20
+
 
    10 36b config-wb  \ SDRAM Normal
 

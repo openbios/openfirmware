@@ -17,6 +17,8 @@
    0 2 devfunc  \ HOST CPU CTL
    50 1f 08 mreg  \ Request phase ctrl: Dynamic Defer Snoop Stall Count = 8
    51 ff 78 mreg  \ CPU I/F Ctrl-1: Disable Fast DRDY and RAW (coreboot uses 7c)
+\ Try the following value !!
+\  51 ff f8 mreg  \ CPU I/F Ctrl-1: Enable Fast DRDY and RAW (coreboot uses 7c) 
    52 cb cb mreg  \ CPU I/F Ctrl-2: Enable all for performance
    53 ff 44 mreg  \ Arbitration: Host/Master Occupancy timer = 4*4 HCLK
    54 1e 1c mreg  \ Misc Ctrl: Enable 8QW burst Mem Access
@@ -27,6 +29,9 @@
    5e ff 88 mreg  \ Bandwidth Timer
    5f 46 46 mreg  \ CPU Misc Ctrl
 
+[ifdef] xo-board
+   90 03 03 mreg  \ 5T faster Host to DRAM cycles
+[then]
    96 0b 0a mreg  \ Write Policy
    98 c1 41 mreg  \ Bandwidth Timer
    99 0e 06 mreg  \ CPU Misc Ctrl

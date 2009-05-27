@@ -110,8 +110,10 @@ ascii h report
       inflate-base #  ax  mov	\ Base address of inflater
       ax call			\ Inflate the firmware
    else
+      ax push
       h# 26 # al mov  al h# 80 # out
       ascii h report
+      ax pop
 
       \ The firmware dropin isn't compressed, so we just copy it to RAM
       4 [ax]          cx  mov	\ Length of firmware (byte-swapped)
@@ -119,8 +121,8 @@ ascii h report
 
       d# 32 [ax]      si  lea	\ si: Base address of firmware code in dropin
       fw-virt-base #  di  mov	\ Firmware RAM address (destination)
-      cld  rep byte movs	\ Copy the firmware
 
+      cx 2 # shr  cld  rep movs \ Copy the firmware
       ascii m report
    then
    long-offsets off

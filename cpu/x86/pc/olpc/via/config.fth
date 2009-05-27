@@ -3,7 +3,9 @@ purpose: Establish configuration definitions
 
 create olpc             \ OLPC-specific build
 
-create demo-board
+create compute-timings
+\ create demo-board
+create xo-board
 
 \ --- The environment that "boots" us ---
 \ - Image Format - Example Media - previous stage bootloader
@@ -11,9 +13,9 @@ create demo-board
 \ - OBMD format - ROM - direct boot from ROM
 create rom-loaded
 
-create coreboot-loaded
+\ create coreboot-loaded
 
-create virtual-mode
+\ create virtual-mode
 create addresses-assigned  \ Define if base addresses are already assigned
 \ create serial-console      \ Define to default to serial port for console
 create pc

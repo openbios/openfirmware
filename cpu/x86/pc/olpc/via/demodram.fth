@@ -14,8 +14,13 @@
    \ Must use "CPU delay" to make sure VLINK is dis-connect
    0 7 devfunc  47 00 04 mreg  end-table  d# 20 wait-us
    0 3 devfunc  90 07 07 mreg  end-table  d# 20 wait-us  \ First set DRAM Freq to invalid
-\  0 3 devfunc  90 07 03 mreg  end-table  d# 20 wait-us  \ 200 MHz ATEST
+[ifdef] demo-board
    0 3 devfunc  90 07 04 mreg  end-table  d# 20 wait-us  \ 266 MHz !ATEST
+[then]
+[ifdef] xo-board
+\  0 3 devfunc  90 07 03 mreg  end-table  d# 20 wait-us  \ 200 MHz ATEST
+   0 3 devfunc  90 e7 03 mreg  end-table  d# 20 wait-us  \ 200 MHz ATEST
+[then]
    0 3 devfunc  6b d0 c0 mreg  end-table  d# 20 wait-us  \ PLL Off
    0 3 devfunc  6b 00 10 mreg  end-table  d# 20 wait-us  \ PLL On
    0 3 devfunc  6b c0 00 mreg  end-table  \ Adjustments off
@@ -49,17 +54,22 @@
 
    62 07  TCL  2 -              mreg   \ CL 3
    62 08  08                    mreg   \ 8-bank timing constraint
+\ !!!
    62 f0  Tras ns>tck 5 - 4 <<  mreg   \ Tras: ceil( 40.00/5) = 8     - 5 = 0x03
 
 \  62 ff 3a mreg  \ CL, 8-bank constraint, Tras  Tras = 8T (3+5=8)
 
    63 e0  Twr  ns>tck 2 - 5 <<  mreg   \ Twr:  ceil( 15.00/5) = 3     - 2 = 0x01
-   63 08  Trtp ns>tck 2 - 3 <<  mreg   \ Trtp: ceil(  7.00/5) = 2     - 2 = 0x00
+\ !!!
+   63 08  Trtp ns>tck 2 - 3 <<  mreg   \ Trtp: ceil(  7.50/5) = 2     - 2 = 0x00
+\ !!!
    63 03  Twtr ns>tck 2 -       mreg   \ Twtr: ceil( 10.00/5) = 2     - 2 = 0x00
 
 \  63 ff 20 mreg  \ Twr, Twtr, Trtp  Twr=3T (15ns/5), Twtr=2T (10/5)  Trtp=2T ceil(7.5/5)
 
+\ !!!
    64 0e  Trp  ns>tck 2 - 1 <<  mreg   \ Trp:  ceil( 15.00/5) = 3     - 2 = 0x01
+\ !!!
    64 e0  Trcd ns>tck 2 - 5 <<  mreg   \ Trcd: ceil( 15.00/5) = 3     - 2 = 0x01
 
 \  64 ff 22 mreg  \ Trp 3, Trcd 3
@@ -69,6 +79,7 @@
 \ DRDR_BL.c
 \  DRAMDRDYsetting
    0 2 devfunc
+[ifdef] demo-board
    60 ff aa mreg  \ DRDY Timing Control 1 for Read Line
    61 ff 0a mreg  \ DRDY Timing Control 2 for Read Line
    62 ff 00 mreg  \ Reserved, probably channel B
@@ -79,11 +90,25 @@
    67 ff 00 mreg  \ Reserved, probably channel B
    54 0a 08 mreg  \ Misc ctl 1 - special mode for DRAM cycles
    51 80 80 mreg  \ Last step - enable DRDY timing
+[then]
+[ifdef] xo-board
+   60 ff 2a mreg  \ DRDY Timing Control 1 for Read Line
+   61 ff 00 mreg  \ DRDY Timing Control 2 for Read Line
+   62 ff 00 mreg  \ Reserved, probably channel B
+   63 ff 15 mreg  \ DRDY Timing Control 1 for Read QW
+   64 ff 00 mreg  \ DRDY Timing Control 2 for Read QW
+   65 ff 00 mreg  \ Reserved, probably channel B
+   66 ff 00 mreg  \ Burst DRDR Timing Control for Second cycle in burst
+   67 ff 00 mreg  \ Reserved, probably channel B
+   54 1e 1c mreg  \ Misc ctl 1 - special mode for DRAM cycles
+   51 ff f8 mreg  \ Last step - enable DRDY timing
+[then]
    end-table
 
 \  DRAMBurstLength
    0 3 devfunc
    6c 08 08 mreg  \ Burst length 8
+[ifdef] demo-board
 \ DrivingSetting.c
 \  DrivingODT
    d0 ff 88 mreg    \ Pull up/down Termination strength
@@ -120,6 +145,8 @@
 
 \  DRAMClkCtrl
 \   WrtDataPhsCtrl
+   70 ff 00 mreg \ Output delay
+   71 ff 04 mreg
    74 07 00 mreg \ DQS Phase Offset
    75 07 00 mreg \ DQ Phase Offset
    76 ef 07 mreg \ Write data Phase control
@@ -141,9 +168,87 @@
    78 3f 03 mreg \ DQS Input Capture Range Control A
    7a 0f 00 mreg \ Reserved
    7b 7f 20 mreg \ Read Data Phase Control
+[then]
 
-\   DCLKPhsCtrl
-   99 1e 12 mreg \ MCLKOA[4,3,0] outputs
+[ifdef] xo-board  \ DDR400
+\ DrivingSetting.c
+\  DrivingODT
+   d0 ff 88 mreg    \ Pull up/down Termination strength
+   d6 fc fc mreg    \ DCLK/SCMD/CS drive strength
+   d3 03 01 mreg    \ Compensation control - enable DDR Compensation
+   9f f3 00 mreg    \ 533,667,800: 11 SDRAM ODT Control 2 - Late extension values
+   d5 f0 00 mreg    \ DQ/DQS Burst and ODT Range Select - disable bursts for channel A
+   d7 c0 00 mreg    \ SCMD/MA Burst - Disable SDMD/MAA burst
+   d5 0f 05 mreg    \ Enable DRAM MD Pad ODT of Channel  A High 32 bits
+
+   9c ff e4 mreg    \ ODT Lookup table - XO uses ODT0 only
+   d4 3f 30 mreg    \ ChannelA MD ODT dynamic-on
+   9e ff 81 mreg    \ 533: 91 667: a1 800: a1 Enable Channel A differential DQS Input
+
+\  DrivingDQS,DQ,CS,MA,DCLK
+   e0 ff ee mreg \ DQS A
+   e2 ff ac mreg \ DQ A
+   e4 ff 44 mreg \ CS A
+   e8 ff 86 mreg \ MA A
+   e6 ff ff mreg \ MCLK A
+\  e1 ff ee mreg \ DQS B
+\  e3 ff ca mreg \ DQ B
+\  e5 ff 44 mreg \ CS B
+\  e9 ff 86 mreg \ MA B
+\  e7 ff ff mreg \ MCKL B
+
+\ ClkCtrl.c  (register tables in mainboard/via/6413e/DrivingClkPhaseData.c)
+\  DutyCycleCtrl
+   ec ff 30 mreg \ DQS/DQ Output duty control
+   ed ff 88 mreg \ 533: 84 667: 88 800: 88
+   ee ff 00 mreg \ 533: 00 667: 40 800: 40  DCLK Output duty control
+   ef 33 00 mreg \ DQ CKG Input Delay
+
+\  DRAMClkCtrl
+\   WrtDataPhsCtrl
+   70 ff 00 mreg \ Output delay
+   71 ff 05 mreg \ 533: 4 667: 6 800: 5
+   74 07 07 mreg \ DQS Phase Offset 533: 0 667: 0 800: 1
+   75 07 07 mreg \ DQ Phase Offset 533: 0 667: 0 800: 1
+   76 ef 06 mreg \ Write data Phase control  533: 7 667: 87 800: 80
+   8c 03 03 mreg \ DQS Output Control
+
+\   ClkPhsCtrlFBMDDR2
+   91 07 07 mreg \ DCLK Phase  533: 0 667: 1 800: 2
+   92 07 02 mreg \ CS/CKE Phase  533: 3 667: 3 800: 4
+   93 07 03 mreg \ SCMD/MA Phase  533: 4 667: 5 800: 6
+\ Channel B fields
+\  91 70 70 mreg \ DCLK Phase  533: 0 667: 10 800: 20
+\  92 70 20 mreg \ CS/CKE Phase  533: 30 667: 30 800: 40
+\  93 70 30 mreg \ SCMD/MA Phase  533: 40 667: 50 800: 60
+
+\   DQDQSOutputDlyCtrl
+   f0 77 00 mreg \ Group A0/1
+   f1 77 00 mreg \ Group A2/3
+   f2 77 00 mreg \ Group A4/5
+   f3 77 00 mreg \ Group A6/7
+
+   f4 77 00 mreg \ ?
+   f5 77 00 mreg \ ?
+   f6 77 00 mreg \ ?
+   f7 77 00 mreg \ ?
+
+\   DQSInputCaptureCtrl
+   77 bf 9b mreg \ DQS Input Delay - Manual, value from VIA's BIOS
+   78 3f 01 mreg \ 533: 3 667: 7 800: d  DQS Input Capture Range Control A
+   79 ff 83 mreg \ 533: 87 667: 89 800: 89
+   7a ff 00 mreg \ Reserved
+   7b ff 10 mreg \ 533: 20 667: 34 800: 34  Read Data Phase Control
+   8b ff 10 mreg \ 533: 20 667: 34 800: 34
+[then]
+
+\   DCLKPhsCtrl - depends on which clock outputs are used
+[ifdef] demo-board
+   99 1e 12 mreg \ MCLKOA[3,2,1,0] outputs
+[then]
+[ifdef] xo-board
+   99 1e 1e mreg \ MCLKOA[1,0] outputs
+[then]
    end-table
 
 \ DevInit.c
@@ -158,7 +263,7 @@
    54 ff 00 mreg \ default PR0=VR0; PR1=VR1
    55 ff 00 mreg \ default PR2=VR2; PR3=VR3
    56 ff 00 mreg \ default PR4=VR4; PR5=VR5
-   57 ff 00 mreg \ default PR4=VR4; PR5=VR5
+   57 ff 00 mreg \ default PR6=VR6; PR7=VR7
 
    60 ff 00 mreg \ disable fast turn-around
    65 ff d1 mreg \ AGP timer = D; Host timer = 1; (coreboot uses 9 for host timer)
@@ -166,7 +271,7 @@
    68 ff 0C mreg
    69 0F 04 mreg \ set RX69[3:0]=0000b
    6A ff 00 mreg \ refresh counter
-   6E 07 80 mreg \ must set 6E[7],or else DDR2  probe test will fail
+   6E 87 80 mreg \ must set 6E[7],or else DDR2  probe test will fail
    85 ff 00 mreg
    40 ff 00 mreg
    end-table
@@ -201,7 +306,13 @@ forth  #ranks 2 >=  assembler  [if]
    end-table
 
    DDRinit #) call
+[else]
+   0 3 devfunc   
+   55 ff 00 mreg \ Disable ranks 2 and 3 and leave them off
+   end-table
 [then]
+
+   h# 12 port80
 
 forth  #ranks 3 >=  assembler  [if]
    0 3 devfunc
@@ -224,6 +335,8 @@ forth  #ranks 3 >=  assembler  [if]
    end-table
 [then]
 
+   h# 13 port80
+
 forth  #ranks 4 >=  assembler  [if]
    0 3 devfunc
    54 ff 00 mreg \ Disable ranks 0,1
@@ -239,9 +352,15 @@ forth  #ranks 4 >=  assembler  [if]
    end-table
 [then]
 
+   h# 14 port80
+
    0 3 devfunc
-   69 03 03 mreg \ Reinstate page optimizations (03) - FF #ranks !ATEST
-\  69 c3 c3 mreg \ Reinstate page optimizations (03) - FF #ranks  ATEST 8-bank interleave
+forth #banks 8 = assembler [if]
+   69 c3 c3 mreg \ Reinstate page optimizations (03) 8-bank interleave (c0)
+[else]
+   69 c3 83 mreg \ Reinstate page optimizations (03) 4-bank interleave (80)
+[then]
+
 
 \ RankMap.c
 \  DRAMBankInterleave
@@ -249,86 +368,131 @@ forth  #ranks 4 >=  assembler  [if]
    87 ff 00 mreg \ Channel B #banks or some such - FF BA  
 \ SizingMATypeM
 
+
+[ifdef] compute-timings
+   50 ff  ma-type 5 <<  mreg
+[else]
    50 ff 20 mreg \ MA Map type - ranks 0/1 type 1 - 2 bank bits, 10 column bits !ATEST
+\ Check 1T command rate.  What controls it?
 \  50 ff a1 mreg \ 1T Command Rate, RMA Map type - ranks 0/1 type 5 - 3 bank bits, 14 row bits, 10 col bits ATEST
+[then]
+
    51 ff 60 mreg \ "Reserved"
    52 ff 33 mreg \ Bank interleave on A17, A18, and
-   53 ff 3f mreg \ A19 (but BA2 off because 4 banks), Rank interleave on A20 and A21  !ATEST
-\  53 ff bf mreg \ BA2 on (80), A19, Rank interleave on A20 and A21   ATEST
+
+forth #banks 8 =  [if]
+   53 ff bf mreg \ BA2 on (80), A19, Rank interleave on A20 and A21
+[else]
+   53 ff 3f mreg \ A19 (but BA2 off because 4 banks), Rank interleave on A20 and A21
+[then]
                  \ Different interleave bits might improve performance on some workloads
 
-   54 ff 89 mreg \ Rank map A 0/1   !ATEST
-\  54 ff 80 mreg \ Rank map A 0/1    ATEST  Rank 0 only
-   55 ff 00 mreg \ Rank map A 2/3
+forth #ranks 1 > assembler  [if]
+   54 ff 89 mreg \ Rank map A 0/1   Ranks 0 and 1
+[else]
+   54 ff 80 mreg \ Rank map A 0/1   Rank 0 only
+[then]
+
+forth #ranks 3 < assembler  [if]
+   55 ff 00 mreg \ Rank map A 2/3 2 & 3 off
+[then]
+forth #ranks 3 = assembler  [if]
+   55 ff a0 mreg \ Rank map A 2/3 2 on 3 off
+[else]
+   55 ff ab mreg \ Rank map A 2/3 2 & 3 on
+[then]
+
    56 ff 00 mreg \ Rank map B ?
    57 ff 00 mreg \ Rank map B ?
 
-   40 ff 04 mreg \ Rank top 0 !ATEST
-\  40 ff 10 mreg \ Rank top 0  ATEST  1 GiB
-   41 ff 08 mreg \ Rank top 1 !ATEST
-\  41 ff 00 mreg \ Rank top 1  ATEST
+   40 ff rank-top0 mreg \ Rank top 0  (register value in units of 64MB)
+   41 ff rank-top1 mreg \ Rank top 1
+   42 ff rank-top2 mreg \ Rank top 2
+   43 ff rank-top3 mreg \ Rank top 3
 
-   42 ff 00 mreg \ Rank top 2
-   43 ff 00 mreg \ Rank top 3
-
-   48 ff 00 mreg \ Rank base 0
-   49 ff 04 mreg \ Rank base 1 !ATEST
-\  49 ff 00 mreg \ Rank base 1  ATEST
-   4a ff 00 mreg \ Rank base 2
-   4b ff 00 mreg \ Rank base 3
+   48 ff rank-base0 mreg \ Rank base 0
+   49 ff rank-base1 mreg \ Rank base 1
+   4a ff rank-base2 mreg \ Rank base 2
+   4b ff rank-base3 mreg \ Rank base 3
    end-table
 
-   20 8f60 config-wb                    \ DRAM Bank 7 ending address - controls DMA upstream !ATEST
-\  40 8f60 config-wb                    \ DRAM Bank 7 ending address - controls DMA upstream  ATEST
+   h# 15 port80
+
+   total-size  8f60 config-wb  \ DRAM Bank 7 ending address - controls DMA upstream
    0388 config-rb  ax bx mov  0385 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to reg 85
    0388 config-rb  ax bx mov  8fe5 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to SB Low Top e5
-
-0 [if]  \ Very simple memtest
-ax ax xor
-h# 12345678 #  bx mov
-bx 0 [ax] mov
-h# 5555aaaa #  4 [ax] mov
-0 [ax] dx  mov
-dx bx cmp  =  if
-   ascii G report  ascii 2 report  h# 20 report
-else
-   dx ax mov  dot #) call
-   ascii B report  ascii 2 report  h# 20 report
-   hlt
-then
-[then]
 
 \   d# 17 7 devfunc
 \   e6 ff 07 mreg \ Enable Top, High, and Compatible SMM
 \   end-table
 
+1 [if]  \ Very simple memtest
+long-offsets on
+ax ax xor
+h# 12345678 #  bx mov      \ Data value to write to address 0
+bx 0 [ax] mov              \ Write to address 0
+h# 5555aaaa #  h# 40 [ax] mov  \ Write 5555aaaa to address 0x40
+0 [ax] dx  mov             \ Read from address 0 into register EDX
+dx bx cmp  =  if           \ Compare expected value (EBX) with read value (EDX)
+   \ Compare succeeded
+\   ascii G report  ascii 2 report  h# 20 report  \ Display "G2 " - Good
+else
+   \ Compare failed
+   dx ax mov  dot #) call  \ Display read value
+   ascii B report  ascii 2 report  h# 20 report  \ Display "B2 " - Bad
+
+   h# ffff.0000 # ax mov   ax call  \ C Forth
+
+   hlt
+then
+[then]
+
+   h# 16 port80
+
 \ DQSSearch.c
 \  DRAMDQSOutputSearch
    0 3 devfunc
-   70 ff 00 mreg \ Output delay
-   71 ff 04 mreg
 
 \  DRAMDQSInputSearch
-   77 ff 00 mreg \ Input delay auto
+\  Leave the following set to the manual value.
+\  Eventually we should implement an auto-search
+\  77 ff 00 mreg \ Input delay auto
 
 \ FinalSetting.c
 \  RefreshCounter
+[ifdef] demo-board
    6a ff 86 mreg \ Refresh interval - FF frequency !ATEST
-\  6a ff ca mreg \ Refresh interval - FF frequency  ATEST
+[then]
+[ifdef] xo-board
+   6a ff 65 mreg \ Refresh interval - FF frequency  ATEST
+[then]
 
 \  DRAMRegFinalValue
     60 00 d0 mreg \ Fast turn-around
     66 30 80 mreg \ DRAMC queue = 4 (already set to 88 up above), park at last owner
     69 00 07 mreg \ Enable multiple page
+[ifdef] demo-board
     95 ff 0d mreg \ Self-refresh controls
-    96 f0 a0 mreg \ Auto self-refresh stuff
+[then]
+[ifdef] xo-board
+    95 ff 03 mreg \ Self-refresh controls, depends on #ranks
+[then]
+    96 f0 a0 mreg \ Enable pairwise by-rank self refresh, after 2 auto-refreshes
     fb ff 3e mreg \ Dynamic clocks
     fd ff a9 mreg \ Dynamic clocks
     fe ff 0f mreg \ Chips select power saving for self-refresh
     ff ff 3d mreg \ DSQB input delay, SCMD enabled
+[ifdef] demo-board
     96 0f 03 mreg \ Enable self-refresh for ranks 0 and 1
+[then]
+[ifdef] xo-board
+    96 0f 01 mreg \ Enable self-refresh for rank 0
+[then]
+
     end-table
     
+   h# 17 port80
+
 1 [if]
 ax ax xor
 h# 12345678 #  bx mov
@@ -337,5 +501,3 @@ h# 5555aaaa #  4 [ax] mov
 0 [ax] dx  mov
 dx bx cmp  <>  if  ascii B report  ascii A report  ascii D report  begin again  then
 [then]
-
-\ fload ${BP}/cpu/x86/pc/ramtest.fth

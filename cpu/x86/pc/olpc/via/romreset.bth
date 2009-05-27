@@ -52,7 +52,7 @@ h# 8000 constant /icached  \ Size of VIA ICache
 dropin-base /dcached - constant dcached-base
 
 h#   10.0000 constant ramtest-start
-h#   20.0000 constant ramtest-end
+h#  100.0000 constant ramtest-end
 
 fload ${BP}/cpu/x86/pc/olpc/via/startmacros.fth  \ Via-oriented startup macros
 
@@ -68,12 +68,16 @@ end-code
 
 fload ${BP}/cpu/x86/pc/romfind.fth	           \ find-dropin subroutine
 
+[ifdef] debug-startup
+fload ${BP}/cpu/x86/pc/dot.fth			   \ Numeric output subroutine
+fload ${BP}/cpu/x86/pc/olpc/via/startinteract.fth  \ emitpause subroutine
+[then]
+
 fload ${BP}/cpu/x86/pc/olpc/via/startusdelay.fth   \ microsecond delay subroutine
 fload ${BP}/cpu/x86/pc/olpc/via/startcfgio.fth     \ masked config write subroutine
 fload ${BP}/cpu/x86/pc/olpc/via/startdraminit.fth  \ DDRinit subroutine
 
 [ifdef] debug-startup
-fload ${BP}/cpu/x86/pc/dot.fth			   \ Numeric output subroutine
 fload ${BP}/cpu/x86/pc/olpc/via/startcominit.fth   \ cominit subroutine
 [then]
 
@@ -92,6 +96,10 @@ label startup
    01 004f config-wb   \ Enable device 0 multiple functions
 
    00 8898 config-wb   \ Disable BIOS init timer GP3
+
+   08  00c config-wb   \ Cache line size D0F0
+   20  00d config-wb   \ PCI master latency timer D0F0
+   08  20c config-wb   \ Cache line size D0F2
 
 [ifdef] debug-startup
    cominit #) call
@@ -120,14 +128,43 @@ label startup
    fload ${BP}/cpu/x86/pc/olpc/via/starthostctl.fth
    fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
 
-   char o report
-   h# 1e port80
+   fload ${BP}/cpu/x86/pc/olpc/via/startgfxinit.fth
+
+0 [if]  \ Fire up C Forth
+   dcached-base 6 +          0  206 set-msr   \ Dcache base address, write back
+   /dcached negate h# 800 +  f  207 set-msr   \ Dcache size
+   \ This region is for CForth
+   h# ffff.0000 6 +          0  208 set-msr   \ ROM base address
+   /icached negate h# 800 +  f  209 set-msr   \ Icache size
+
+   \ Access ROM to load it into the icache
+   h# ffff.0000 #  esi  mov
+   /icached 4 / #  ecx  mov
+   rep  eax lods
+
+   \ Access "RAM" area to load it into the dcache
+   dcached-base #  esi  mov
+   /dcached 4 / #  ecx  mov
+   rep  eax lods
+
+   \ Put the stack pointer at the top of the dcached area
+   dcached-base /dcached + 4 - #  esp  mov
+   ds ax mov  ax ss mov
+
+   h# ffff.0000 # ax mov  ax jmp
+[then]
+
+\  fload ${BP}/cpu/x86/pc/ramtest.fth
 
    fload ${BP}/cpu/x86/pc/olpc/via/startmtrrinit.fth
    \ Cache is now setup normally, backed by memory
-   'ebda # sp mov  \ Move stack to real memory
 
-   fload ${BP}/cpu/x86/pc/olpc/via/startgfxinit.fth
+   char o report
+   h# 1e port80
+
+\   fload ${BP}/cpu/x86/pc/olpc/via/startgtlinit.fth
+
+.( Not doing io init)
    fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
 
 \ Enable the keyboard controller
@@ -137,6 +174,7 @@ label startup
 \   e2 2e port-wb   7 2f port-wb
 
    fload ${BP}/cpu/x86/pc/olpc/via/startmemtop.fth
+
    fload ${BP}/cpu/x86/pc/olpc/via/startcpuspeed.fth
 
    h# 1f port80

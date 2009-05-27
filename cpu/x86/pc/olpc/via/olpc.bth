@@ -9,6 +9,7 @@ in: ${BP}/cpu/x86/pc/olpc/via/build/rmstart.img
 in: ${BP}/cpu/x86/pc/olpc/via/build/paging.di
 in: ${BP}/cpu/x86/pc/olpc/via/build/fw.dic
 in: ${BP}/dev/mmc/sdhci/build/sdhci2.fc
+in: ${BP}/dev/mmc/sdhci/build/sdhcixo.fc
 in: ${BP}/dev/mmc/sdhci/build/sdmmc.fc
 in: ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc
 in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
@@ -58,7 +59,7 @@ hex
 " ${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
 2dup type cr  ( adr len )
 $new-file
-[ifdef] Later
+[ifdef] xo-board
    " ec.img"                $add-file
 [then]
 
@@ -78,7 +79,8 @@ $new-file
 
    " paging.di"             $add-file
    " ${BP}/cpu/x86/build/inflate.bin"        " inflate"         $add-dropin
-   " fw.img"   " firmware"  $add-deflated-dropin
+\   " fw.img"   " firmware"  $add-deflated-dropin
+   " fw.img"   " firmware"  $add-dropin
 
    " ${BP}/dev/usb2/hcd/ohci/build/ohci.fc"	" class0c0310"      $add-deflated-dropin
    " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"      $add-deflated-dropin
@@ -93,7 +95,12 @@ $new-file
    " ${BP}/dev/pci/build/pcibridg.fc"            " class060400"   $add-deflated-dropin
 \   " ${BP}/dev/ide/build/leghier.fc"             " class01018a"   $add-deflated-dropin
    " ${BP}/dev/ide/build/idehier.fc"             " class01018a"   $add-deflated-dropin
+[ifdef] xo-board
+   " ${BP}/dev/mmc/sdhci/build/sdhcixo.fc"       " class080501"   $add-deflated-dropin
+[then]
+[ifdef] demo-board
    " ${BP}/dev/mmc/sdhci/build/sdhci2.fc"        " class080501"   $add-deflated-dropin
+[then]
    " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"         " sdmmc"         $add-deflated-dropin
    " ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc" " mv8686"        $add-deflated-dropin
    " sd8686_helper.bin"                          " helper_sd.bin" $add-deflated-dropin
@@ -101,9 +108,9 @@ $new-file
 
    " builton.fth"                       " probe-"          $add-dropin
 
-   " ${BP}/clients/emacs/x86/emacs"             " emacs"         $add-deflated-dropin
-   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
-   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
+\   " ${BP}/clients/emacs/x86/emacs"             " emacs"         $add-deflated-dropin
+\   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
+\   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
 
    " ${BP}/ofw/fcode/memtest.fth"  " memtest.fth"          $add-deflated-dropin
 
@@ -164,6 +171,9 @@ $new-file
    /rom h# 10000 - pad-file	\ coreboot init image must be in last FLASH block
    " coreboot.img"   $add-file
 [else]
+   /rom h# 10000 - pad-file	\ coreboot init image must be in last FLASH block
+   " cforth.img"     $add-file  \ Small Forth that runs from cache
+
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
    " rmstart.img"    $add-file
 
