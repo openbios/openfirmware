@@ -697,6 +697,12 @@ fload ${BP}/ofw/core/dualconsole.fth
 \   " flash http:\\18.85.46.172\new.rom" eval
 ;
 
+: sci-wakeup ( -- ) ;
+: acpi-l@  ( index -- l )  drop 0  ;
+: acpi-l!  ( l index -- )  2drop  ;
+: s3  ( -- )  ;
+
+
 [ifdef] use-ec
 \ Fancy battery charge logger.
 fload ${BP}/cpu/x86/pc/olpc/charge.fth

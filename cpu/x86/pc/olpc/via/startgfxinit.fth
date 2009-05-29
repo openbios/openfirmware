@@ -51,7 +51,12 @@
    5a 3c4 port-wb  00 3c5 port-wb  \ Point back to primary registers
 
    6d 3c4 port-wb  e0 3c5 port-wb  \ Base address [28:21] of SL in System Memory - base is 1c00.0000 - fbsize, memsize
+[ifdef] demo-board
    6e 3c4 port-wb  00 3c5 port-wb  \ Base address [36:29] of SL in System Memory
+[then]
+[ifdef] xo-board
+   6e 3c4 port-wb  01 3c5 port-wb  \ Base address [36:29] of SL in System Memory
+[then]
    6f 3c4 port-wb  00 3c5 port-wb  \ Base address [47:37] of SL in System Memory
 
    36 3c4 port-wb  11 3c5 port-wb  \ Subsystem Vendor ID 1

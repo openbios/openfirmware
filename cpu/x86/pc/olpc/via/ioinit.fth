@@ -103,11 +103,13 @@
    c1 20 00 mreg  \ Disable USB PIRQ
    end-table
 
+[ifndef] xo-board
    d# 16 2 devfunc  \ UHCI Ports 4,5
    4a 02 02 mreg  \ Enable Stop Bus Master Cycle if HALT Bit is Asserted
    4b 60 60 mreg  \ Enable New UHCI Dynamic Scheme - 66MHz (40) & 33MHz (20)
    c1 20 00 mreg  \ Disable USB PIRQ
    end-table
+[then]
 
    d# 16 4 devfunc  \ EHCI
    42 40 40 mreg  \ Enable Check PRESOF of ITDOUT Transaction during Fetching Data from DRAM
@@ -139,17 +141,27 @@
 \  4d 01 01 mreg  \ Enable LPC TPM
 \  4e 08 08 mreg  \ Enable ports 74/75 for CMOS RAM access
    4e 18 18 mreg  \ Enable ports 74/75 for CMOS RAM access  - 10 res be like Phx
-\  50 40 40 mreg  \ Disable USB device mode
-   50 c0 c0 mreg  \ Disable USB device mode - 80 res be like Phx
+
+[ifdef] demo-board
+   50 40 40 mreg  \ Disable USB device mode
+[then]
 [ifdef] xo-board
+   50 40 40 mreg  \ Disable USB device mode
    51 9f 88 mreg  \ Enable SDIO and internal RTC, disable card reader, int mouse & kbd
 [then]
+
    52 1b 19 mreg  \ No wait state between SIRQ transactions (10), Enable SIRQ (08), SIRQ frame is 6 clocks (3>1)
+.( Check PC/PCI DMA necessity) cr
    53 80 80 mreg  \ Enable PC/PCI DMA
+.( Check interrupt routing) cr
    55 ff a0 mreg  \ INTA and External General interrupt routing - INTA:IRQ10
    56 ff b9 mreg  \ INTB,C routing - INTC:IRQ11, INTB:IRQ9
    57 f0 a0 mreg  \ INTD routing - INTD:IRQ10
+.( Check RTC century byte mapping to cmos 32 - see d17f0 rx58) cr
    58 40 40 mreg  \ Enable Internal APIC
+[ifdef] xo-board
+   59 ff 18 mreg  \ Keyboard (ports 60,64) and ports 62,66 on LPC bus (EC)
+[then]
 \  5b 10 10 mreg  \ Enable APIC Clock Gating
    5b 53 53 mreg  \ Enable APIC Clock Gating - 43 res be like Phx
    68 80 80 mreg  \ Enable HPETs
@@ -179,12 +191,14 @@
 [ifdef] demo-board
    97 ff 80 mreg  \ be like Phx 
 [then]
-[ifdef] xo-board
-   97 ff 81 mreg  \ GPIO4/5 not KBDT/KBCK
-[then]
 
-   9b ff 88 mreg  \ 80 res be like Phx
+\ NO! This doesn't work.  If these lines are set as GPIOs, the system
+\ will crash when you disable the internal KBC.
+\ [ifdef] xo-board
+\   97 ff 81 mreg  \ GPIO4/5 not KBDT/KBCK
+\ [then]
 
+   9b ff 88 mreg  \ 80 undoc but is LVDS power.  0 forces LVDS power off, 1 lets 3d5.D2[7,6,3] control it
 [ifdef] xo-board
    9f ff 08 mreg  \ Slot 3 is SDIO, no pullup on KB/MS, fastest SD
 [then]

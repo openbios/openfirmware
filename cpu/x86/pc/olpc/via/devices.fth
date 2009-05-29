@@ -260,9 +260,11 @@ warning !
 
 fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
 
+.( Implement ignore-power-button) cr
+: ignore-power-button ( -- ) ;
 fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
 
-fload ${BP}/cpu/x86/pc/olpc/boardrev.fth   \ Board revision decoding
+fload ${BP}/cpu/x86/pc/olpc/via/boardrev.fth   \ Board revision decoding
 [then]
 
 : cpu-mhz  ( -- n )
@@ -305,7 +307,7 @@ stand-init: PCI properties
 [ifdef] use-ec
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
-fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
+\ fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
 

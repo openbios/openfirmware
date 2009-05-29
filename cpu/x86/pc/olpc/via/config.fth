@@ -6,6 +6,9 @@ create olpc             \ OLPC-specific build
 create compute-timings
 \ create demo-board
 create xo-board
+[ifdef] xo-board
+\ create use-ec
+[then]
 
 \ --- The environment that "boots" us ---
 \ - Image Format - Example Media - previous stage bootloader

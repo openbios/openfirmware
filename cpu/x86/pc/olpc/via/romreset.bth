@@ -164,7 +164,6 @@ label startup
 
 \   fload ${BP}/cpu/x86/pc/olpc/via/startgtlinit.fth
 
-.( Not doing io init)
    fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
 
 \ Enable the keyboard controller
