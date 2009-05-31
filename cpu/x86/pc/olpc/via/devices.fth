@@ -273,11 +273,6 @@ fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
 : ignore-power-button ( -- ) ;
 fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
 
-.( XXX Fix ec cmd66) cr
-patch drop ec-cmd66 kbc-off
-[then]
-
-[ifdef] use-ec-Later
 fload ${BP}/cpu/x86/pc/olpc/via/boardrev.fth   \ Board revision decoding
 [then]
 

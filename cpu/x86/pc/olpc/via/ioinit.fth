@@ -169,7 +169,12 @@
    58 40 40 mreg  \ Enable Internal APIC
 [then]
 [ifdef] xo-board
-   59 ff 18 mreg  \ Keyboard (ports 60,64) and ports 62,66 on LPC bus (EC)
+   59 ff 1c mreg  \ Keyboard (ports 60,64) and ports 62,66 on LPC bus (EC)
+   5c ff 68 mreg  \ High byte (68) of PCS0
+   5d ff 00 mreg  \ High byte (00) of PCS0
+   64 0f 07 mreg  \ PCS0 size is 8 bytes - to include 68 and 6c
+   66 01 01 mreg  \ PCS0 Enable
+   67 10 10 mreg  \ PCS0 to LPC Bus
 [then]
 [ifdef] use-apic
 \  5b 10 10 mreg  \ Enable APIC Clock Gating
