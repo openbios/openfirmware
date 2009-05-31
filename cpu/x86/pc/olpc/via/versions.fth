@@ -2,7 +2,7 @@
 
 \ The overall firmware revision
 macro: FW_MAJOR A
-macro: FW_MINOR 03g
+macro: FW_MINOR 03h
 
 \ The EC microcode
 macro: EC_VERSION a00
@@ -10,9 +10,7 @@ macro: EC_VERSION a00
 \ Alternate command for getting EC microcode, for testing new versions.
 \ Temporarily uncomment the line and modify the path as necessary
 \ macro: GET_EC cp pq3a00.img ec.img
-\ macro: GET_EC cp "/c/Documents and Settings/Mitch Bradley/My Documents/OLPC/VIA/ecimage.bin" ec.img
-\ macro: GET_EC cp /via/ecimage.bin ec.img
-macro: GET_EC cp ecimagep.bin ec.img
+macro: GET_EC wget -q http://dev.laptop.org/pub/ec/ec_via_test.img -O ec.img
 
 macro: KEYS mpkeys
 \ macro: KEYS testkeys
@@ -22,7 +20,7 @@ macro: WLAN_VERSION 9.70.7.p0
 
 \ Alternate command for getting WLAN firmware, for testing new versions.
 \ Temporarily uncomment the line and modify the path as necessary
-macro: GET_WLAN cp "/c/Documents and Settings/Mitch Bradley/My Documents/OLPC/DiskImages/sd8686-9.70.7.p0.bin" sd8686.bin; cp "/c/Documents and Settings/Mitch Bradley/My Documents/OLPC/DiskImages/sd8686_helper.bin" sd8686_helper.bin
+\ macro: GET_WLAN cp "/c/Documents and Settings/Mitch Bradley/My Documents/OLPC/DiskImages/sd8686-9.70.7.p0.bin" sd8686.bin; cp "/c/Documents and Settings/Mitch Bradley/My Documents/OLPC/DiskImages/sd8686_helper.bin" sd8686_helper.bin
 
 \ The bios_verify image
 macro: CRYPTO_VERSION 0.2
