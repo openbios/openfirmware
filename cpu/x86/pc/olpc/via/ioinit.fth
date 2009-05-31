@@ -25,7 +25,9 @@
    end-table
 
    0 3 devfunc
+[ifdef] use-apic
    86 38 38 mreg  \ SMM and APIC Decoding: enable APIC lowest int arb, IOAPIC split decode, MSI (SMM later)
+[then]
    end-table
 
    \ Additional Power Management Setup not in coreboot
@@ -75,7 +77,7 @@
 [then]
    end-table
 
-0 [if]
+1 [if]
    d# 15 0 devfunc  \ EIDE tuning
    40 02 02 mreg  \ Enable primary channel
    4a ff 5e mreg  \ Drive1 timing
@@ -156,14 +158,23 @@
 .( Check interrupt routing) cr
    55 ff a0 mreg  \ INTA and External General interrupt routing - INTA:IRQ10
    56 ff b9 mreg  \ INTB,C routing - INTC:IRQ11, INTB:IRQ9
+[ifdef] demo-board
    57 f0 a0 mreg  \ INTD routing - INTD:IRQ10
+[then]
+[ifdef] xo-board
+   57 f0 a0 mreg  \ INTD routing - INTD:IRQ10 (leave IRQ12 for PS2 mouse)
+[then]
 .( Check RTC century byte mapping to cmos 32 - see d17f0 rx58) cr
+[ifdef] use-apic
    58 40 40 mreg  \ Enable Internal APIC
+[then]
 [ifdef] xo-board
    59 ff 18 mreg  \ Keyboard (ports 60,64) and ports 62,66 on LPC bus (EC)
 [then]
+[ifdef] use-apic
 \  5b 10 10 mreg  \ Enable APIC Clock Gating
    5b 53 53 mreg  \ Enable APIC Clock Gating - 43 res be like Phx
+[then]
    68 80 80 mreg  \ Enable HPETs
    69 ff 00 mreg  \ HPET base low
    6a ff d0 mreg  \ HPET base mid
@@ -198,11 +209,12 @@
 \   97 ff 81 mreg  \ GPIO4/5 not KBDT/KBCK
 \ [then]
 
-   9b ff 88 mreg  \ 80 undoc but is LVDS power.  0 forces LVDS power off, 1 lets 3d5.D2[7,6,3] control it
 [ifdef] xo-board
+   9b ff 89 mreg  \ 80 undoc but is LVDS power.  00 forces LVDS power off, 80 lets 3d5.D2[7,6,3] control it; 1 selects GPO11/12 instead of CR_PWSEL/CR_PWOFF (DCONLOAD)
    9f ff 08 mreg  \ Slot 3 is SDIO, no pullup on KB/MS, fastest SD
 [then]
 [ifdef] demo-board
+   9b ff 88 mreg  \ 80 undoc but is LVDS power.  0 forces LVDS power off, 1 lets 3d5.D2[7,6,3] control it
    9f ff ad mreg  \ be like Phx (slot 3 is Card Reader not SDIO)
 [then]
 
@@ -222,11 +234,14 @@
    e4 ff a0 mreg  \ Enable short C3/C4 (80), select various multi-function pins
 [then]
 [ifdef] xo-board
-   e4 ff c0 mreg  \ Enable short C3/C4 (80), select GPO10 (10) (USB_PWR_EN)
+   e3 04 04 mreg  \ Select GPIO8 (DCONBLNK) instead of SSPICLK
+   e4 ff c8 mreg  \ Enable short C3/C4 (80), select GPO10 (10) (USB_PWR_EN), GPO10/11 (08)
 [then]
    e5 60 60 mreg  \ Enable NM bus master as source of bus master status, enable NB int to wakeup from Cx
    e6 20 20 mreg  \ Enable USB Device Mode Bus Master as Break Event
+[ifdef] use-apic
    e7 80 80 mreg  \ Enable APIC Cycle Reflect to ALL Bus Master Activity Effective Signal
+[then]
    fc 06 04 mreg  \ DPSLP# to SLP# Latency Adjustment - 22.5 us
    end-table
 
@@ -266,16 +281,18 @@
    41 01 01 mreg  \ Dynamic clock for HDAC
    end-table
 
+[ifdef] use-apic
    \ APIC setup
    0 2 devfunc
    59 01 01 mreg  \ MSI Flat model support
    5c 10 10 mreg  \ Data bit 11 mask for MSI
    97 01 01 mreg  \ Redirect lowest priority MSI requests to APIC 00
    end-table
+[then]
 
-   0 3 devfunc
-   86 38 38 mreg  \ SMM and APIC Decoding: enable APIC lowest int arb, IOAPIC split decode, MSI (SMM later)
-   end-table
+\   0 3 devfunc
+\   86 38 38 mreg  \ SMM and APIC Decoding: enable APIC lowest int arb, IOAPIC split decode, MSI (SMM later)
+\   end-table
 
    \ Low 2 bits of 86:
    \ x1 to write to SMM shadow memory behind VGA

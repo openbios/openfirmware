@@ -158,6 +158,7 @@ label startup
 
    fload ${BP}/cpu/x86/pc/olpc/via/startmtrrinit.fth
    \ Cache is now setup normally, backed by memory
+   h# 20.0000 # esp mov
 
    char o report
    h# 1e port80

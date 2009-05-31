@@ -52,9 +52,14 @@ create black-bits
    3drop
 ;
 
-cursor-w cursor-h *  constant /rect
-/rect  buffer: old-rect
-/rect  buffer: new-rect
+0 value /rect
+0 value old-rect
+0 value new-rect
+: alloc-mouse-cursor  ( -- )
+   cursor-w cursor-h *  bytes/pixel *  to /rect
+   cursor-w cursor-h *  alloc-pixels to old-rect
+   cursor-w cursor-h *  alloc-pixels to new-rect
+;
 
 : merge-cursor  ( -- )
    0f white-bits new-rect merge-rect

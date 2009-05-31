@@ -95,24 +95,36 @@ h# 0000.8000 to first-io		\ Avoid mappings established by BIOS
    endcase
 ;
 
+: set-level-trigger  ( irq# -- irq# )
+   dup 8 /mod    ( irq# low high )
+   h# 4d0 +      ( irq# low reg# )
+   1 rot lshift  ( irq# reg# bitmask )
+   over pc@  or  ( irq# reg# newvalue )
+   swap pc!
+;
+
 \ Determine the parent interrupt information (the "interrupt line" in PCI
 \ parlance) from the child's "interrupt pin" and the child's address,
 \ returning "int-line true" if the child's interrupt line register should
 \ be set or "false" otherwise.
+.( XXX make assign-int-line depend on PIC vs. APIC mode) cr
 : assign-int-line  ( phys.hi.func INTx -- irq true )
-   \ Reiterate the value that is already in the int line register,
-   \ which was placed there by lower level init code
+   \ Get the value from the platform-specific mapping registers
+   \ XXX PIC version is below - need APIC version too
    drop case
-      h# 5800 of  1 pirq@ true exit  endof  \ USB device - PIRQB
-      h# 6000 of  0 pirq@ true exit  endof  \ SDIO - PIRQA
-      h# 6800 of  0 pirq@ true exit  endof  \ SDC - PIRQA
-      h# 7800 of  1 pirq@ true exit  endof  \ EIDE - PIRQB
-      h# 8000 of  0 pirq@ true exit  endof  \ UHCI01 - PIRQ A
-      h# 8100 of  1 pirq@ true exit  endof  \ UHCI23 - PIRQ B
-      h# 8200 of  2 pirq@ true exit  endof  \ UHCI45 - PIRQ C
-      h# 8400 of  3 pirq@ true exit  endof  \ EHCI - PIRQ D
-      h# a000 of  1 pirq@ true exit  endof  \ HDAudio - PIRQ B
-      ( default )  dup h# 3c + config-b@ true  rot    \ Reiterate previous setting
+      \ Wouldn't it be nice if you could get the argument to pirq@ from
+      \ the interrupt pin register (offset 3d)?  But that doesn't work,
+      \ because some devices say pin A but use PIRQB.
+      h# 5800 of  1 pirq@ set-level-trigger  true exit  endof  \ USB device - PIRQB
+      h# 6000 of  0 pirq@ set-level-trigger  true exit  endof  \ SDIO - PIRQA
+      h# 6800 of  0 pirq@ set-level-trigger  true exit  endof  \ SDC - PIRQA
+      h# 7800 of  1 pirq@ set-level-trigger  true exit  endof  \ EIDE - PIRQB
+      h# 8000 of  0 pirq@ set-level-trigger  true exit  endof  \ UHCI01 - PIRQ A
+      h# 8100 of  1 pirq@ set-level-trigger  true exit  endof  \ UHCI23 - PIRQ B
+      h# 8200 of  2 pirq@ set-level-trigger  true exit  endof  \ UHCI45 - PIRQ C
+      h# 8400 of  3 pirq@ set-level-trigger  true exit  endof  \ EHCI - PIRQ D
+      h# a000 of  1 pirq@ set-level-trigger  true exit  endof  \ HDAudio - PIRQ B
+      ( default )  dup h# 3c + config-b@  dup  if  set-level-trigger  then  true  rot    \ Reiterate previous setting
    endcase
 ;
 

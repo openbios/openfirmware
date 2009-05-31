@@ -40,12 +40,12 @@ black      constant alert-text-color
 2variable back-wh
 : save-rectangle  ( x y w h -- )
    back-wh 2!   back-xy 2!
-   back-wh 2@ * alloc-mem to backing-adr
+   back-wh 2@ * alloc-pixels to backing-adr
    backing-adr back-xy 2@ back-wh 2@  read-rectangle
 ;
 : restore-rectangle  ( -- )
    backing-adr  back-xy 2@ back-wh 2@  draw-rectangle
-   backing-adr  back-wh 2@ * free-mem
+   backing-adr  back-wh 2@ * free-pixels
    set-description-region
 ;
 

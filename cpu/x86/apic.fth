@@ -157,10 +157,12 @@ end-package
 
 0 value apic-ih
 0 value io-apic-ih
-stand-init: APIC
+
+: init-apic  ( -- )
    " /apic" open-dev to apic-ih
    " /io-apic" open-dev to io-apic-ih   
 ;
+
 
 0 [if]
 \ For tdcr (3e0):

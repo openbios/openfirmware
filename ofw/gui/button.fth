@@ -67,10 +67,10 @@ black      constant button-border
 : lowlight-button   ( x y -- )  background -rot  def-button-wh  1  box  ;
 : (down-button)  ( x y w h -- )
    button-wh 2!  button-xy 2!
-   button-wh 2@  -8 -8 xy+  * dup >r  alloc-mem >r
+   button-wh 2@  -8 -8 xy+  * dup >r  alloc-pixels >r
    r@  button-xy 2@  4 4 xy+  button-wh 2@  -8 -8 xy+  read-rectangle
    r@  button-xy 2@  5 5 xy+  button-wh 2@  -8 -8 xy+  draw-rectangle
-   r> r> free-mem
+   r> r> free-pixels
 
    button-color   interior-xy  button-wh 2@ -4 -4 xy+  2  box
    button-shadow  interior-xy  button-width   4 - hline
@@ -79,10 +79,10 @@ black      constant button-border
 : (up-button)  ( x y w h -- )
    button-wh 2!  button-xy 2!
 
-   button-wh 2@  -8 -8 xy+  * dup >r  alloc-mem >r
+   button-wh 2@  -8 -8 xy+  * dup >r  alloc-pixels >r
    r@  button-xy 2@  5 5 xy+  button-wh 2@  -8 -8 xy+  read-rectangle
    r@  button-xy 2@  4 4 xy+  button-wh 2@  -8 -8 xy+  draw-rectangle
-   r> r> free-mem
+   r> r> free-pixels
 
    button-color   interior-xy  button-wh 2@ -4 -4 xy+  2  box
    button-shadow  interior-xy  button-width   4 - hline

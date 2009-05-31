@@ -20,6 +20,15 @@ fload ${BP}/cpu/x86/acpitimer.fth
 
 fload ${BP}/cpu/x86/pc/olpc/via/smbus.fth	\ SMBUS driver
 fload ${BP}/cpu/x86/apic.fth			\ APIC driver
+
+stand-init: APIC
+[ifdef] use-apic
+   init-apic
+[else]
+   0. 1b msr!
+[then]
+;
+
 fload ${BP}/cpu/x86/pc/olpc/via/dumpvia.fth	\ Dump a bunch of registers
 
 stand-init: CPU node
@@ -260,10 +269,15 @@ warning !
 
 fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
 
-.( Implement ignore-power-button) cr
+.( XXX Implement ignore-power-button) cr
 : ignore-power-button ( -- ) ;
 fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
 
+.( XXX Fix ec cmd66) cr
+patch drop ec-cmd66 kbc-off
+[then]
+
+[ifdef] use-ec-Later
 fload ${BP}/cpu/x86/pc/olpc/via/boardrev.fth   \ Board revision decoding
 [then]
 
@@ -273,7 +287,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/boardrev.fth   \ Board revision decoding
    decode-int nip nip  d# 1000000 /  
 ;
 
-[ifdef] use-ec
+[ifdef] use-ec-Later
 stand-init: Date to EC
    time&date d# 2000 -  ['] ec-date! catch  if  3drop  then
    3drop
@@ -290,7 +304,7 @@ stand-init: Wireless reset
 ;
 [then]
 
-[ifdef] use-ec
+[ifdef] use-ec-Later
 stand-init: PCI properties
    " /pci" find-device
       board-revision  h# b18  <  if
@@ -307,13 +321,19 @@ stand-init: PCI properties
 [ifdef] use-ec
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
+.( XXX Reinstate kbdtype.fth) cr
 \ fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 
+[ifdef] use-ec-Later
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
-
+[else]
+: ?enough-power ;
+[then]
+   
 fload ${BP}/dev/olpc/spiflash/spiflash.fth   \ SPI FLASH programming
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
-fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
+h# 2c to crc-offset
+\ fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
 
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
 ' ofw-fw-filename$ to fw-filename$
@@ -327,9 +347,9 @@ fload ${BP}/cpu/x86/pc/olpc/via/chipinit.fth
 [then]
 
 0 0  " 1,0"  " /pci" begin-package
-\   fload ${BP}/dev/olpc/dcon/dconsmb.fth         \ SMB access to DCON chip
-\   fload ${BP}/dev/olpc/dcon/dcon.fth            \ DCON control
    fload ${BP}/dev/via/unichrome/loadpkg.fth     \ Geode display
+   fload ${BP}/dev/via/unichrome/dconsmb.fth     \ SMB access to DCON chip
+   fload ${BP}/dev/olpc/dcon/viadcon.fth         \ DCON control
 
    0 0 encode-bytes
    h# 8200.0810 +i  0+i fb-pci-base   +i  0+i h# d000.0000 +i  \ Frame buffer
@@ -342,7 +362,7 @@ also hidden  d# 34 to display-height  previous  \ For editing
 
 fload ${BP}/cpu/x86/adpcm.fth            \ ADPCM decoding
 
-[ifdef] use-ec
+[ifdef] use-ec-Later
 warning @ warning off
 : stand-init
    stand-init

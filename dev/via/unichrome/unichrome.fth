@@ -73,6 +73,7 @@ create res-table
   640 w,  480 w,  800 w,  656 w,  752 w,  525 w,  489 w,  523 w,  hex  8d 10 05 cf pll,  decimal
   800 w,  600 w, 1056 w,  840 w,  968 w,  628 w,  600 w,  619 w,  hex  70 0c 05 0f pll,  decimal
  1024 w,  768 w, 1344 w, 1048 w, 1184 w,  806 w,  770 w,  776 w,  hex  b6 0c 05 cf pll,  decimal
+ 1200 w,  900 w, 1240 w, 1208 w, 1216 w,  912 w,  905 w,  907 w,  hex  9d 8c 85 cf pll,  decimal
  1280 w,  768 w, 1664 w, 1344 w, 1472 w,  798 w,  770 w,  777 w,  hex  6f 08 05 4f pll,  decimal
  1280 w,  800 w, 1680 w, 1352 w, 1480 w,  831 w,  802 w,  808 w,  hex  46 88 83 4f pll,  decimal
  1280 w, 1024 w, 1688 w, 1328 w, 1440 w, 1066 w, 1024 w, 1027 w,  hex  97 08 05 0f pll,  decimal
@@ -496,6 +497,17 @@ hex
    dotclock set-secondary-dotclock
    use-ext-clock   
    80 17 crt-set  \ Release reset
+;
+[then]
+
+[ifdef] xo-board
+: setup-lcd  ( -- )
+   h# 80 h# f3 crt-set  \ 18-bit TTL LCD mode
+   h# 10 h# 30 h# 1e crt-mask  \ DVP pads controlled by other control
+\  h# 30 h# 30 h# 1e crt-mask  \ DVP pads controlled by PMS
+\  h# 0f h# 0f h# 65 crt-mask  \ High drive for DVP
+
+\  h# 80 h# 9b crt!  \ DVP mode - alpha:80, VSYNC:40, HSYNC:20, secondary:10, clk polarity:8, clk adjust:7
 ;
 [then]
 

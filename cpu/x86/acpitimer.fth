@@ -1,9 +1,16 @@
 \ See license at end of file
 purpose: Timing functions using the ACPI timer
 
+: acpi-b@  ( reg# -- b )  acpi-io-base + pc@  ;
+: acpi-b!  ( b reg# -- )  acpi-io-base + pc!  ;
+: acpi-w@  ( reg# -- w )  acpi-io-base + pw@  ;
+: acpi-w!  ( w reg# -- )  acpi-io-base + pw!  ;
+: acpi-l@  ( reg# -- l )  acpi-io-base + pl@  ;
+: acpi-l!  ( l reg# -- )  acpi-io-base + pl!  ;
+
 \ The ACPI timer counts at 3.579545 MHz.
 \ 3.579545 * 1024 is 3665
-: acpi-timer@  ( -- counts )  acpi-io-base 8 + pl@  ;
+: acpi-timer@  ( -- counts )  8 acpi-l@  ;
 : acpi-us  ( us -- )
    d# 3664 * d# 10 rshift  acpi-timer@ +  ( end )
    begin   dup acpi-timer@ -  0< until    ( end )

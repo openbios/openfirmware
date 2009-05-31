@@ -79,8 +79,8 @@ $new-file
 
    " paging.di"             $add-file
    " ${BP}/cpu/x86/build/inflate.bin"        " inflate"         $add-dropin
-\   " fw.img"   " firmware"  $add-deflated-dropin
-   " fw.img"   " firmware"  $add-dropin
+   " fw.img"   " firmware"  $add-deflated-dropin
+\   " fw.img"   " firmware"  $add-dropin
 
    " ${BP}/dev/usb2/hcd/ohci/build/ohci.fc"	" class0c0310"      $add-deflated-dropin
    " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"      $add-deflated-dropin
@@ -195,14 +195,6 @@ here sipbuf - constant /sipbuf
 
 /l buffer: crcbuf
 /rom buffer: filebuf
-0 ofd @ fseek
-
-\ Read the entire image, compute the CRC, and store it h# 30 from the end
-filebuf /rom ofd @ fgets /rom <> abort" Can't read back image"
-0 crctab  filebuf /rom  ($crc)  crcbuf !
-
-/rom h# 2c - ofd @ fseek
-crcbuf /l ofd @ fputs
 
 \ Via SIP ROM pointer
 \ The address "-30" is fixed by the VX855 hardware.
@@ -213,6 +205,14 @@ crcbuf /l ofd @ fputs
 
 /rom h# 80 - ofd @ fseek
 sipbuf /sipbuf ofd @ fputs
+
+\ Read the entire image, compute the CRC, and store it h# 30 from the end
+0 ofd @ fseek
+filebuf /rom ofd @ fgets /rom <> abort" Can't read back image"
+0 crctab  filebuf /rom  ($crc)  crcbuf !
+
+/rom h# 2c - ofd @ fseek
+crcbuf /l ofd @ fputs
 [then]
 
 ofd @ fclose

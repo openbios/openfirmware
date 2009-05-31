@@ -19,8 +19,10 @@ h#    8.0000   constant dropin-size
 
 dropin-base h# 20 +  constant ResetBase	\ Location of "reset" dropin in ROM
 
+h# 3b00.0000 value    fw-pa     \ Changed in probemem.fth
+\ h# 3bc0.0000 value    fw-pa     \ Changed in probemem.fth
 \ h# 1bc0.0000 value    fw-pa     \ Changed in probemem.fth
-h#  bc0.0000 value    fw-pa     \ Changed in probemem.fth
+\ h#  bc0.0000 value    fw-pa     \ Changed in probemem.fth
 h#   20.0000 constant /fw-ram
 [then]
 

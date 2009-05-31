@@ -7,7 +7,7 @@ create compute-timings
 \ create demo-board
 create xo-board
 [ifdef] xo-board
-\ create use-ec
+create use-ec
 [then]
 
 \ --- The environment that "boots" us ---

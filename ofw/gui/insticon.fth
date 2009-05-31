@@ -4,8 +4,10 @@ purpose: Icon menu screen layout for Power Firmware demonstration version
 \ fload ${BP}/ofw/gui/macosi.fth	\ Boot/install MacOS items
 \ fload ${BP}/ofw/gui/nti.fth		\ Boot/install NT items
 \ fload ${BP}/ofw/gui/aixi.fth		\ Boot AIX item
+
+: boot-configure ;
 fload ${BP}/ofw/gui/linuxi.fth		\ Boot Linux item
-fload ${BP}/ofw/gui/osi.fth		\ Install OS items
+\ fload ${BP}/ofw/gui/osi.fth		\ Install OS items
 
 fload ${BP}/ofw/gui/demoi.fth		\ Demo license items and background
 \ fload ${BP}/ofw/gui/confvari.fth	\ Configuration variables item
@@ -24,7 +26,7 @@ headerless
 
    about-item     2  0  selected  install-icon
    license-item   2  1            install-icon
-\  help-item      2  2            install-icon	\ Requires EMACS client
+   help-item      2  2            install-icon	\ Requires EMACS client
 
    restart-item   2  3            install-icon
    forth-item     2  cols 1-      install-icon
@@ -37,8 +39,8 @@ headerless
 \   os-items					\ In row 0
    linux-item     0  0            install-icon	\ In row 0
 
-   " Menu: Install Operating Systems "
-   ['] installation-menu  install.icon  0 3 install-icon
+\   " Menu: Install Operating Systems "
+\   ['] installation-menu  install.icon  0 3 install-icon
 ;
 
 ' demo-menu to root-menu

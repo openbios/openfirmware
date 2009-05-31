@@ -300,7 +300,6 @@ fload ${BP}/ofw/gui/bmptools.fth
 fload ${BP}/dev/null.fth
 fload ${BP}/ofw/core/bailout.fth
 
-[ifdef] Later
 \ GUI
 false value gui-safeboot?
 
@@ -313,8 +312,9 @@ true value user-mode?
 fload ${BP}/cpu/x86/pc/olpc/banner.fth
 
 fload ${BP}/ofw/gui/loadmenu.fth
+fload ${BP}/ofw/gui/insticon.fth
+[ifdef] Later
 fload ${BP}/cpu/x86/pc/olpc/disptest.fth
-\ fload ${BP}/ofw/gui/insticon.fth
 
 : setup-for-linux  ( -- )
    [ ' linux-hook behavior compile, ]    \ Chain to old behavior
@@ -379,7 +379,7 @@ fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 [then]
 [then]
 
-" /xp disk:\boot\olpc.fth sd:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
+" /xp u:\boot\olpc.fth sd:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
    ' boot-device  set-config-string-default
 
 \needs ramdisk  " " d# 128 config-string ramdisk
@@ -394,6 +394,15 @@ fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
    " c:\initrd.gz" to ramdisk
    " console=ttyS0,115200 ide=nodma pmedia=ataflash nosmp noacpi" to boot-file
    " c:\vmlinuz" to boot-device
+;
+: okern
+\  " c:\initrd.gz" to ramdisk
+[ifdef] use-apic
+   " root=/dev/sda1 console=ttyS0,115200 acpi=off rootwait" to boot-file
+[else]
+   " root=/dev/sda1 console=ttyS0,115200 acpi=off rootwait noapic nolapic" to boot-file
+[then]
+   " u:\vmlinuz" to boot-device
 ;
 
 [ifdef] Later
@@ -703,7 +712,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 : s3  ( -- )  ;
 
 
-[ifdef] use-ec
+[ifdef] use-ec-Later
 \ Fancy battery charge logger.
 fload ${BP}/cpu/x86/pc/olpc/charge.fth
 [then]

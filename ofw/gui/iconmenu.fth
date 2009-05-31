@@ -328,6 +328,7 @@ headerless
       mouse-ih  0=  if
          " /mouse" open-dev to mouse-ih
       then
+      alloc-mouse-cursor
    then
 ;
 

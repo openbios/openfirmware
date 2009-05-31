@@ -83,9 +83,9 @@ ascii t report
       \ and use it to inflate the firmware into RAM
       ax  push			\ Save address of firmware dropin
 
-ascii h report
+\ ascii h report
 
-      h# 23 # al mov  al h# 80 # out
+ \   h# 23 # al mov  al h# 80 # out
       " inflate" $find-dropin,  \ Assemble call to find-dropin with literal arg
 
       4 [ax]          cx  mov	\ Length of inflater (byte-swapped)
@@ -95,7 +95,7 @@ ascii h report
 
       cld  rep byte movs	\ Copy the inflater
 
-      h# 24 # al mov  al h# 80 # out
+\     h# 24 # al mov  al h# 80 # out
       ax pop  			\ Recover base address of firmware dropin
 
       d# 32 #  ax     add	\ Skip dropin header
@@ -105,10 +105,13 @@ ascii h report
       0 #             push      \ No-header flag - 0 means expect a header
       workspace    #  push	\ Scratch RAM for inflater
 
-      h# 25 # al mov  al h# 80 # out
-      ascii m report
+\      h# 25 # al mov  al h# 80 # out
+\      ascii m report
       inflate-base #  ax  mov	\ Base address of inflater
       ax call			\ Inflate the firmware
+
+      h# 25 # al mov  al h# 80 # out
+      ascii m report
    else
       ax push
       h# 26 # al mov  al h# 80 # out

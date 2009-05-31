@@ -67,6 +67,10 @@ defer inset-xy		' (inset-xy) to inset-xy
    " set-colors" $call-screen
 ;
 
+: bytes/pixel  ( -- n )  " depth" $call-screen 8 /  ;
+: alloc-pixels  ( #pixels -- adr )  bytes/pixel *  alloc-mem  ;
+: free-pixels  ( adr #pixels -- )  bytes/pixel *  free-mem  ;
+
 : fill-rectangle  ( color x y w h - )
    ?inset " fill-rectangle" $call-screen
 ;
@@ -79,7 +83,7 @@ headers
 : draw-rectangle  ( address x y w h - )
    ?inset " draw-rectangle" $call-screen
 ;
-headerless
+
 : read-rectangle  ( address x y w h - )
    ?inset " read-rectangle" $call-screen
 ;

@@ -2,7 +2,7 @@
 
 \ The overall firmware revision
 macro: FW_MAJOR A
-macro: FW_MINOR 03e
+macro: FW_MINOR 03g
 
 \ The EC microcode
 macro: EC_VERSION a00
@@ -11,7 +11,8 @@ macro: EC_VERSION a00
 \ Temporarily uncomment the line and modify the path as necessary
 \ macro: GET_EC cp pq3a00.img ec.img
 \ macro: GET_EC cp "/c/Documents and Settings/Mitch Bradley/My Documents/OLPC/VIA/ecimage.bin" ec.img
-macro: GET_EC cp /via/ecimage.bin ec.img
+\ macro: GET_EC cp /via/ecimage.bin ec.img
+macro: GET_EC cp ecimagep.bin ec.img
 
 macro: KEYS mpkeys
 \ macro: KEYS testkeys

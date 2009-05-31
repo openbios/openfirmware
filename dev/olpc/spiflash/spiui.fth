@@ -66,7 +66,7 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
 [then]
 0 value file-loaded?
 
-h# 30 constant crc-offset   \ From end
+h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
 
 : crc  ( adr len -- crc )  0 crctab  2swap ($crc)  ;
 
