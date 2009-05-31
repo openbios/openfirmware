@@ -79,6 +79,7 @@
 
 1 [if]
    d# 15 0 devfunc  \ EIDE tuning
+   09 05 05 mreg  \ Set EIDE to native mode so prober will see config reg 3d set
    40 02 02 mreg  \ Enable primary channel
    4a ff 5e mreg  \ Drive1 timing
    4b ff 20 mreg  \ Drive0 timing
