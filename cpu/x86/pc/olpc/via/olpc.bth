@@ -94,7 +94,7 @@ $new-file
 
    " ${BP}/dev/pci/build/pcibridg.fc"            " class060400"   $add-deflated-dropin
 \   " ${BP}/dev/ide/build/leghier.fc"             " class01018a"   $add-deflated-dropin
-   " ${BP}/dev/ide/build/idehier.fc"             " class01018a"   $add-deflated-dropin
+   " ${BP}/dev/ide/build/idehier.fc"             " class01018f"   $add-deflated-dropin
 [ifdef] xo-board
    " ${BP}/dev/mmc/sdhci/build/sdhcixo.fc"       " class080501"   $add-deflated-dropin
 [then]
@@ -172,7 +172,7 @@ $new-file
    " coreboot.img"   $add-file
 [else]
    /rom h# 10000 - pad-file	\ coreboot init image must be in last FLASH block
-   " cforth.img"     $add-file  \ Small Forth that runs from cache
+\  " cforth.img"     $add-file  \ Small Forth that runs from cache
 
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
    " rmstart.img"    $add-file
