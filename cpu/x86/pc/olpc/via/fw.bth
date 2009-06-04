@@ -330,15 +330,17 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 fload ${BP}/cpu/x86/pc/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/suspend.fth      \ Suspend/resume setup
+[then]
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
+[ifdef] Later
 fload ${BP}/cpu/x86/pc/olpc/copynand.fth
 \ fload ${BP}/cpu/x86/pc/olpc/carousel.fth     \ Carouseled NAND writing
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
 fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
 
-fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 [then]
+fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 
 : emacs  ( -- )
    false to already-go?

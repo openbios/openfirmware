@@ -73,8 +73,8 @@ also forth definitions
 
 previous definitions
 
-h# b000.0000 to first-mem
-h# c000.0000 to mem-space-top
+h# 8000.0000 to first-mem
+h# 9000.0000 to mem-space-top
 h# 0000.8000 to first-io		\ Avoid mappings established by BIOS
 
 0 [if]

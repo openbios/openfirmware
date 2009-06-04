@@ -12,7 +12,7 @@ in: ${BP}/dev/mmc/sdhci/build/sdhci2.fc
 in: ${BP}/dev/mmc/sdhci/build/sdhcixo.fc
 in: ${BP}/dev/mmc/sdhci/build/sdmmc.fc
 in: ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc
-in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
+in: ${BP}/dev/usb2/hcd/uhci/build/uhci.fc
 in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
 in: ${BP}/dev/usb2/device/hub/build/hub.fc
 in: ${BP}/dev/usb2/device/generic/build/generic.fc
@@ -82,7 +82,7 @@ $new-file
    " fw.img"   " firmware"  $add-deflated-dropin
 \   " fw.img"   " firmware"  $add-dropin
 
-   " ${BP}/dev/usb2/hcd/ohci/build/ohci.fc"	" class0c0310"      $add-deflated-dropin
+   " ${BP}/dev/usb2/hcd/uhci/build/uhci.fc"	" class0c0300"      $add-deflated-dropin
    " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"      $add-deflated-dropin
    " ${BP}/dev/usb2/device/hub/build/hub.fc"     " usb,class9"      $add-dropin
    " ${BP}/dev/usb2/device/generic/build/generic.fc"  " usbdevice"  $add-deflated-dropin

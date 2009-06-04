@@ -83,7 +83,7 @@ ascii t report
       \ and use it to inflate the firmware into RAM
       ax  push			\ Save address of firmware dropin
 
-\ ascii h report
+ascii h report
 
  \   h# 23 # al mov  al h# 80 # out
       " inflate" $find-dropin,  \ Assemble call to find-dropin with literal arg

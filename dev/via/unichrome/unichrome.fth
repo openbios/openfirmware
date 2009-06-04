@@ -73,7 +73,10 @@ create res-table
   640 w,  480 w,  800 w,  656 w,  752 w,  525 w,  489 w,  523 w,  hex  8d 10 05 cf pll,  decimal
   800 w,  600 w, 1056 w,  840 w,  968 w,  628 w,  600 w,  619 w,  hex  70 0c 05 0f pll,  decimal
  1024 w,  768 w, 1344 w, 1048 w, 1184 w,  806 w,  770 w,  776 w,  hex  b6 0c 05 cf pll,  decimal
- 1200 w,  900 w, 1240 w, 1208 w, 1216 w,  912 w,  905 w,  907 w,  hex  9d 8c 85 cf pll,  decimal
+\ This clock value doesn't work very well with iga1, but it is good with iga2/lcd
+1200 w,  900 w, 1264 w, 1210 w, 1242 w,  912 w,  900 w,  910 w,  hex  05 0c a0 cf pll,  decimal
+\ 1200 w,  900 w, 1264 w, 1210 w, 1242 w,  912 w,  900 w,  910 w,  hex  9d 8c 85 cf pll,  decimal
+\ 1200 w,  900 w, 1240 w, 1208 w, 1216 w,  912 w,  905 w,  907 w,  hex  9d 8c 85 cf pll,  decimal
  1280 w,  768 w, 1664 w, 1344 w, 1472 w,  798 w,  770 w,  777 w,  hex  6f 08 05 4f pll,  decimal
  1280 w,  800 w, 1680 w, 1352 w, 1480 w,  831 w,  802 w,  808 w,  hex  46 88 83 4f pll,  decimal
  1280 w, 1024 w, 1688 w, 1328 w, 1440 w, 1066 w, 1024 w, 1027 w,  hex  97 08 05 0f pll,  decimal
@@ -227,8 +230,8 @@ hex
 
 : lower-power  ( -- )
    7f 19 seq!  \ clock gating
-   30 1b seq!  \ clock gating
-   f3 2d seq!  \ Power control enables
+   f0 1b seq!  \ clock gating
+   ff 2d seq!  \ Power control enables
    ff 2e seq!  \ clock gating
    ff 3f seq!  \ clock gating
    5f 4f seq!  \ clock gating threshold
@@ -449,7 +452,6 @@ hex
    false          \ No error
 ;
 
-0 [if]
 : set-secondary-dotclock  ( clock -- )
    lbsplit drop  h# 4a seq!  h# 4b seq!  h# 4c seq!
 
@@ -463,6 +465,8 @@ hex
       d# 32 of  80  endof
    endcase
    c0 67 crt-mask
+
+   00 20 67 crt-mask  \ Turn off interlace bit
 
    htotal    1-  dup 50 crt!      8 >> 0f 55 crt-mask
    hdisplay  1-  dup 51 crt!      4 >> 70 55 crt-mask
@@ -480,25 +484,45 @@ hex
    vblankend 1-  dup 5b crt!      5 >> 38 5c crt-mask
 
    vsync         dup 5e crt!      3 >> e0 5f crt-mask
-   vsyncend          5f 1f crt-mask
+   vsyncend                            1f 5f crt-mask
 
    \ Offset
-   width pixels>bytes bytes>chunks  dup 66 crt!  8 >> 03 67 crt-mask
+   width pixels>bytes bytes>chunks  dup 66 crt!  dup 8 >> 03 67 crt-mask  6 >> 80 71 crt-mask
 
    \ fetch count
-   hdisplay pixels>bytes bytes>chunks 8 +  dup 1 >>  65 crt!  7 >>  0c  67 crt-mask
+   hdisplay pixels>bytes bytes>chunks ( 8 + ) dup 1 >>  65 crt!  7 >>  0c  67 crt-mask
 ;
 
-: set-secondary-mode  ( -- )
+: random-stuff  ( -- )
+   00 62 crt!  00 63 crt!  00 64 crt!  \ Second display starting address
+
+   f0 f0 68 crt-mask
+
+   c8 c8 6a crt-mask  \ 2nd display not reset, first hw power sequence
+   00 0e 6b crt-mask
+   60 60 88 crt-mask  \ LVDS sequential
+   01 01 8a crt-mask  \ LCD adjust LP
+   08 7f 94 crt-mask  \ Expire number
+   11 f7 95 crt-mask  \ extension bits
+   10 10 97 crt-mask  \ LVDS channel 2 - secondary display
+   1b ff 9b crt-mask  \ DVP mode - alpha:80, VSYNC:40, HSYNC:20, secondary:10, clk polarity:8, clk adjust:7
+   8b ff a7 crt-mask  \ expected vertical display low
+   01 07 a8 crt-mask  \ expected vertical display high
+;
+
+: set-secondary-mode  ( width height depth -- )
+   to depth  to height  to width
+   width height depth find-timing-table  ?dup  if  exit  then
+
    80 17 crt-clr  \ Assert reset - Turn off screen
    set-secondary-vga-mode
+   random-stuff
    \ Turn on power here?
    1e 6c crt-clr
-   dotclock set-secondary-dotclock
+   pll set-secondary-dotclock
    use-ext-clock   
    80 17 crt-set  \ Release reset
 ;
-[then]
 
 [ifdef] xo-board
 : setup-lcd  ( -- )
@@ -560,12 +584,16 @@ defer init-hook  ' noop is init-hook
 : display-remove  ( -- )
 ;
 
-: display-install  ( -- )
-   init-all
-   default-font set-font
+: set-fb
    width  height                           ( width height )
    over char-width / over char-height /    ( width height rows cols )
    /scanline depth fb-install ( gp-install )  ( )
+;
+
+: display-install  ( -- )
+   init-all
+   default-font set-font
+   set-fb
    init-hook
 ;
 

@@ -192,30 +192,79 @@ d# 440 8 /  constant dcon-flag
 
    d# 1200 d# 900 d# 16 set-primary-mode
 
-   00 07 h# 79 crt-mask  \ Disable scaling
-   8 8 h# 6a crt-mask
+   60 60 9b crt-mask  \ Sync polarity - negative
 
+   00 07 h# 79 crt-mask  \ Disable scaling
+
+   30 30 h# 1e seq-mask  \ Power up DVP1 pads
+
+   0c 0c h# 2a seq-mask  \ Power up LVDS pads
+   80 80 h# f3 crt-mask  \ 18-bit TTL mode
    \ 1 01 h# 88 crt-mask  Something to do with LVDS; check
    \ set vclk
    \ VIASetOutputPath
-   00 08 h# 6b crt-mask
+   00 08 h# 6b crt-mask  \ Not simultaneous mode
 \   DisableSecondDisplayChannel  XXX check me out
-   08 08 h# 6a crt-mask
 
 \ VIALCDPatchSkew
 \ VIASetDisplayChannel  Seems to be lvds-specific
 
-   40 40 h# 16 seq!  \ Check what is VIASR - is it really seq! ?
+   40 40 h# 16 seq!  \ Check what is VIASR - is it really seq! ? - reserved bits, apparently control something about using crt and lcd at the same time
 
 \ VIALoadLCDPatchRegs
 
    dcon-load
    dcon-enable  ( maybe-set-cmos )
    \ dcon-enable leaves mode set to 69 - 40:antialias, 20:swizzle, 8:backlight on, 1:passthru off
-   2 bright! \ lower brightness for testing
-
+   set-fb
 ;
 
+: panel2
+   smb-init
+   0 dcon@ .
+
+   0 9 cr   0 h# 70 h# 11 crt-mask
+   0 h# 80 h# 17 crt-mask
+
+   f0 f0 h# 1b seq-mask  \ Secondary display clock on
+
+   d# 1200 d# 900 d# 16 set-secondary-mode
+
+\   60 60 9b crt-mask  \ Sync polarity - negative
+
+   00 07 h# 79 crt-mask  \ Disable scaling
+   00 37 h# a3 crt-mask  \ iga2 from S.L., start addr
+
+   30 30 h# 1e seq-mask  \ Power up DVP1 pads
+
+   0c 0c h# 2a seq-mask  \ Power up LVDS pads
+   2b fb h# d2 crt-mask
+   c0 c0 h# d4 crt-mask
+   00 40 h# e8 crt-mask
+   80 80 h# f3 crt-mask  \ 18-bit TTL mode
+   0a h# f9 crt!
+   0d h# fb crt!
+   \ 1 01 h# 88 crt-mask  Something to do with LVDS; check
+   \ set vclk
+   \ VIASetOutputPath
+   00 08 h# 6b crt-mask  \ Not simultaneous mode
+\   DisableSecondDisplayChannel  XXX check me out
+
+\ VIALCDPatchSkew
+\ VIASetDisplayChannel  Seems to be lvds-specific
+
+   40 40 h# 16 seq!  \ Check what is VIASR - is it really seq! ? - reserved bits, apparently control something about using crt and lcd at the same time
+
+\ VIALoadLCDPatchRegs
+
+   dcon-load
+   dcon-enable  ( maybe-set-cmos )
+   \ dcon-enable leaves mode set to 69 - 40:antialias, 20:swizzle, 8:backlight on, 1:passthru off
+   d# 1200 depth 8 / * to /scanline
+   set-fb
+;
+
+' panel2 is init-hook
 
 
 \ LICENSE_BEGIN
