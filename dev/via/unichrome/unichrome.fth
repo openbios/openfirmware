@@ -10,8 +10,12 @@ headers
 \ with re-running the open method.
 d# 1280 ( instance ) value width	\ Frame buffer line width
 d# 1024 ( instance ) value height	\ Screen height
-d#   16 instance value depth		\ Bits per pixel
+d#   16 ( instance ) value depth	\ Bits per pixel
 d# 1024 instance value /scanline	\ Frame buffer line width
+
+: set-resolution  ( width height depth -- )
+   to depth  to height  to width
+;
 
 : declare-props  ( -- )		\ Instantiate screen properties
    " width" get-my-property  if  
@@ -91,30 +95,30 @@ here res-table - constant /res-table
 : /res-entry  ( -- n )  8 /w* la1+  ;
 
 \ width  height  htotal  hsync hsyncend  vtotal  vsync vsyncend        --pll-- misc
-create mode3-table
+create mode3-entry
 \  640 w,  400 w,  800 w,  680 w,  776 w,  449 w,  412 w,  430 w,  hex  35 04 05 67 pll,  decimal
   640 w,  400 w,  800 w,  680 w,  776 w,  449 w,  412 w,  430 w,  hex  54 90 03 67 pll,  decimal
 
 \ width  height  htotal  hsync hsyncend  vtotal  vsync vsyncend        --pll-- misc
-create mode12-table
+create mode12-entry
   640 w,  480 w,  800 w,  672 w,  768 w,  525 w,  490 w,  492 w,  hex  35 04 05 e3 pll,  decimal
 
 0 value res-entry
 
-: mode-3?   ( -- flag )  res-entry mode3-table  =  ;
-: mode-12?  ( -- flag )  res-entry mode12-table =  ;
+: mode-3?   ( -- flag )  res-entry mode3-entry  =  ;
+: mode-12?  ( -- flag )  res-entry mode12-entry =  ;
 
-: find-timing-table  ( width height depth  -- error? )
+: find-timing-table  ( width height -- error? )
    \ Mode12 check
-   4 =  if  2drop mode12-table to res-entry  false exit  then   ( width height )
+   depth 4 =  if  2drop mode12-entry to res-entry  false exit  then   ( width height )
 
    \ Text mode 3 check
-   dup d# 400 =  if  2drop mode3-table to res-entry  false exit  then  ( width height )
+   dup d# 400 =  if  2drop mode3-entry to res-entry  false exit  then  ( width height )
 
    res-table /res-table bounds  ?do  ( width height )
       over i w@ =  if                ( width height )
          dup i wa1+ w@ =  if         ( width height )
-            i to res-entry           ( width height )
+            i to res-entry           ( )
             2drop false              ( false )
             unloop exit
          then                        ( width height )
@@ -126,6 +130,7 @@ create mode12-table
 hex
 
 \ Stored values from table
+: hdisplay ( -- n )  res-entry 0 wa+ w@  ;
 : htotal   ( -- n )  res-entry 2 wa+ w@  ;
 : hsync    ( -- n )  res-entry 3 wa+ w@  ;
 : hsyncend ( -- n )  res-entry 4 wa+ w@  ;
@@ -136,9 +141,8 @@ hex
 : miscval  ( -- b )  pll lbsplit nip nip nip  ;
 
 \ Derived values
-: hdisplay ( -- n )  width  ;
 : hblank   ( -- n )
-   width
+   hdisplay
    mode-3?   if  8 +  then
    mode-12?  if  8 +  then
 ;
@@ -418,9 +422,10 @@ hex
 
 \ XXX unichrome has duplicate setting of regs CR32 and CR33 near end of ViaModePrimaryVGA
 
-: set-primary-mode  ( width height depth -- error? )
-   to depth  to height  to width
-   width height depth find-timing-table  ?dup  if  exit  then
+\ Width and height here are the native (unscaled) resolution of the device,
+\ as opposed to the viewport resolution
+: set-primary-mode  ( device-width device-height -- )
+   find-timing-table  if  exit  then
 
    80 17 crt-clr  \ Assert reset
 
@@ -449,7 +454,6 @@ hex
 \  01 6b crt-clr  \ Appears to be reserved RO bit
 
    80 17 crt-set  \ Release reset
-   false          \ No error
 ;
 
 : set-secondary-dotclock  ( clock -- )
@@ -487,7 +491,9 @@ hex
    vsyncend                            1f 5f crt-mask
 
    \ Offset
-   width pixels>bytes bytes>chunks  dup 66 crt!  dup 8 >> 03 67 crt-mask  6 >> 80 71 crt-mask
+   width pixels>bytes to /scanline
+
+   /scanline bytes>chunks  dup 66 crt!  dup 8 >> 03 67 crt-mask  6 >> 80 71 crt-mask
 
    \ fetch count
    hdisplay pixels>bytes bytes>chunks ( 8 + ) dup 1 >>  65 crt!  7 >>  0c  67 crt-mask
@@ -510,9 +516,8 @@ hex
    01 07 a8 crt-mask  \ expected vertical display high
 ;
 
-: set-secondary-mode  ( width height depth -- )
-   to depth  to height  to width
-   width height depth find-timing-table  ?dup  if  exit  then
+: set-secondary-mode  ( device-width device-height -- )
+   find-timing-table  if  exit  then
 
    80 17 crt-clr  \ Assert reset - Turn off screen
    set-secondary-vga-mode
@@ -524,16 +529,33 @@ hex
    80 17 crt-set  \ Release reset
 ;
 
-[ifdef] xo-board
-: setup-lcd  ( -- )
-   h# 80 h# f3 crt-set  \ 18-bit TTL LCD mode
-   h# 10 h# 30 h# 1e crt-mask  \ DVP pads controlled by other control
-\  h# 30 h# 30 h# 1e crt-mask  \ DVP pads controlled by PMS
-\  h# 0f h# 0f h# 65 crt-mask  \ High drive for DVP
+: olpc-lcd-mode  ( -- )
+   c0 c0 1b seq-mask  \ Secondary display clock on
 
-\  h# 80 h# 9b crt!  \ DVP mode - alpha:80, VSYNC:40, HSYNC:20, secondary:10, clk polarity:8, clk adjust:7
+   d# 1200 d# 900 set-secondary-mode
+
+\   60 60 9b crt-mask  \ Sync polarity - negative
+
+   00 07 79 crt-mask  \ Disable scaling
+   00 37 a3 crt-mask  \ iga2 from S.L., start addr
+
+   30 30 1e seq-mask  \ Power up DVP1 pads
+
+   0c 0c 2a seq-mask  \ Power up LVDS pads
+\   2b fb h# d2 crt-mask
+\   c0 c0 h# d4 crt-mask
+\   00 40 h# e8 crt-mask
+   80 80 f3 crt-mask  \ 18-bit TTL mode
+   0a f9 crt!
+   0d fb crt!
+\   00 08 h# 6b crt-mask  \ Not simultaneous mode
+
+   40 40 16 seq!  \ Check what is VIASR - is it really seq! ? - reserved bits, apparently control something about using crt and lcd at the same time
 ;
-[then]
+: olpc-crt-off  ( -- )
+   00 30 1b seq-mask  \ IGA1 engine clock off
+   30 30 36 crt-mask  \ DAC off
+;
 
 hex
 0 [if]
@@ -562,39 +584,45 @@ hex
 : bios-table-adr  ( -- adr )  h# c001b w@  h# c0000 +  ;
 [then]
 
-defer init-hook  ' noop is init-hook
+: init-primary-display  ( -- )
+   width height find-timing-table  if  exit  then
+   set-primary-mode
+;
 
-: init-all  ( -- )		\ Initializes the controller
+defer init-display  ' init-primary-display is init-display
+
+: init-frame-buffer  ( -- )		\ Initializes the controller
 \  smb-init
-   map-io-regs			\ Enable IO registers
-   width height depth set-primary-mode drop
-   declare-props		\ Setup properites
 \   set-dac-colors		\ Set up initial color map
 \   video-on			\ Turn on video
 
    map-frame-buffer
+   frame-buffer-adr /fb    ( adr len )
    depth case
-      8      of  frame-buffer-adr /fb h#        0f  fill  endof
-      d# 16  of  frame-buffer-adr /fb background-rgb  rgb>565  wfill  endof
-      d# 32  of  frame-buffer-adr /fb h# ffff.ffff lfill  endof
+      8      of  h# 0f                     fill  endof
+      d# 16  of  background-rgb  rgb>565  wfill  endof
+      d# 32  of  h# ffff.ffff             lfill  endof
+      ( default )  nip nip
    endcase
    h# f to background-color
+;
+
+: set-fb  ( -- )
+   width  height                              ( width height )
+   over char-width / over char-height /       ( width height rows cols )
+   /scanline depth fb-install ( gp-install )  ( )
 ;
 
 : display-remove  ( -- )
 ;
 
-: set-fb
-   width  height                           ( width height )
-   over char-width / over char-height /    ( width height rows cols )
-   /scanline depth fb-install ( gp-install )  ( )
-;
-
 : display-install  ( -- )
-   init-all
+   map-io-regs			\ Enable IO registers
+   init-display
+   init-frame-buffer
+   declare-props		\ Setup properites
    default-font set-font
    set-fb
-   init-hook
 ;
 
 : display-selftest  ( -- failed? )  false  ;
