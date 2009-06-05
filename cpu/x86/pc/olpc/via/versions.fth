@@ -10,7 +10,8 @@ macro: EC_VERSION a00
 \ Alternate command for getting EC microcode, for testing new versions.
 \ Temporarily uncomment the line and modify the path as necessary
 \ macro: GET_EC cp pq3a00.img ec.img
-macro: GET_EC wget -q http://dev.laptop.org/pub/ec/ec_via_test.img -O ec.img
+\ macro: GET_EC wget -q http://dev.laptop.org/pub/ec/ec_via_test.img -O ec.img
+macro: GET_EC wget -q http://dev.laptop.org/pub/ec/cl1b-1_9_0rc2.img -O ec.img
 
 macro: KEYS mpkeys
 \ macro: KEYS testkeys
