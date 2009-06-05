@@ -340,7 +340,7 @@ create days/month
 : fsfread   ( adr len 'fh -- #read )
    \ fh is implicit (it is in our instance context) and len will be /zone
    2drop                                                ( adr )
-   file-size  lblk# /zone *  -   if  drop 0 exit  then	( adr )
+   file-size  lblk# /zone *  u<  if  drop 0 exit  then	( adr )
    next-zone# read-zone abort" fsfread failed"          ( )
    file-size  lblk# /zone *  -  dup  0<  if             ( shortfall )
       /zone +                                           ( #read )
