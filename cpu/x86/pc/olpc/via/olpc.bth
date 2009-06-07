@@ -71,9 +71,7 @@ $new-file
    " romreset.di"           $add-file
 [then]
 
-[ifdef] Later
    " resume.di"             $add-file
-[then]
 
 \ Loads the set of drivers that is common to different output formats
 

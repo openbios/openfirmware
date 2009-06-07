@@ -1,0 +1,405 @@
+\ See license at end of file
+purpose: Low-level code to handle suspend/resume from RAM
+
+command: &builder &this
+build-now
+
+\needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+\ create debug-startup
+
+hex
+
+\ fload ${BP}/cpu/x86/pc/report.fth		\ Startup reports for debugging
+
+fload ${BP}/cpu/x86/pc/olpc/via/config.fth		\ Configuration defines
+
+fload ${BP}/cpu/x86/startmacros.fth
+fload ${BP}/cpu/x86/pc/port80.fth
+
+\ This code will be copied to RAM at suspend-base
+
+\ create measure-suspend
+\ create save-display
+\ create reset-smbus
+\ create reset-smbus-bitbang
+\ create restore-usb-power
+\ create checksum-test
+
+: resume-progress  ( byte -- )
+   " h# 34 # al mov   al h# 70 # out  ( byte ) # al mov  al h# 71 # out" eval
+;
+
+start-assembling                                \ Turn on the target assembler
+protected-mode
+
+\ Suspend code - called as a subroutine, with return address on the stack
+\ This assumes that the following code is in an area that is mapped virtual=physical
+\ The assumption is embodied by the fact that paging is turned off on the way
+\ down, while continuing to execute straight-line code.  Also, the BP register
+\ is used as a memory pointer before and after the paging turn-off.
+
+label suspend-entry   \ h# f.0000 - entry point at fixed location, called by OS
+   here h# 10 + #)  jmp   \ Jump to offset 10
+   8 pad-to
+
+label resume-entry    \ h# f.0008 - entry point at fixed location, called by resume
+   e9 c,  0 ,         \ To be patched later
+   nop                \ Aligns to even, for the benefit of the disassembler
+   h# 10 pad-to
+
+label suspend-save    \ h# f.0010  (Page directory VA in ax)
+   pusha
+   pushf  cli
+   ds push
+   es push
+   fs push
+   gs push
+   ss push dx pop                 \ SS in dx
+
+   here 5 + dup #) call  di pop   \ Virtual address of EIP in DI
+   ( here ) asm-base - #  di  sub \ Virtual address of suspend-base in DI
+
+   \ Page directory VA in AX
+   ax      si  mov                \ Save PDIR VA
+   0 [si]  cx  mov  forget-msr    \ Save old PDIR entry 0
+   h# 83 # 0 [ax] mov             \ Punch a 4M mapping 0->0 into the page directory
+   cr3 ax mov  ax cr3 mov         \ Invalide the TLB to activate the mapping
+   h# f0060 # ax mov  ax jmp      \ Jump to suspend-physical, disabling paging
+   h# 60 pad-to
+
+   \ We have to be running from a virtual=physical mapping here, otherwise we
+   \ die on the instruction after paging is turned off.
+   cr0 ax mov  ax bx mov          \ CR0 saved in BX
+   h# 80000000 invert #  ax  and  \ Knock off the Paging enable (PG) bit
+   ax cr0 mov                     \ Now paging is off
+
+   \ Physical addresses from now on
+
+\ suspend-physical
+\ here suspend-entry put-branch
+   resume-data #  bp  mov
+
+\   here 5 + dup #) call  bp pop    \ EIP (virtual) in AX
+\   ( here ) asm-base - suspend-base + #  bp  sub
+\   resume-data # bp add
+
+   sp      0 [bp]  mov     \ SP part of SP:SS full pointer
+   op: dx  4 [bp]  mov     \ SS part of SP:SS full pointer
+
+   h#  6 [bp]  str         \ Task register
+   h#  8 [bp]  sldt        \ Local descriptor table register
+   h#  a [bp]  sidt        \ Interrupt descriptor table register
+   h# 10 [bp]  sgdt        \ Global descriptor table register
+
+               bx  h# 18 [bp]  mov
+   cr3 ax mov  ax  h# 1c [bp]  mov
+   cr4 ax mov  ax  h# 20 [bp]  mov
+               cx  h# 24 [bp]  mov  \ PDIR entry 0
+               si  h# 28 [bp]  mov  \ PDIR VA
+               di  h# 2c [bp]  mov  \ Address offset
+
+   cld
+   h# 38 [bp]  di  lea    \ Save area
+
+[ifdef] measure-suspend
+   rdtsc  eax h# 10 #) mov  edx h# 14 #) mov
+[then]
+
+\ This is where Geode saves msrs
+\ This is where Geode handles the DCON
+\ This is where Geode saves the GPIO setup
+\ This is where Geode saves the display state
+\ This is where Geode saves the PIC state (remember the edge/level registers)
+\ This is where Geode saves the PIT state
+\ This is where Geode saves the SMBUS controller state
+\ This is where Geode saves the MFGPT state
+\ This is where Geode saves the CaFe configuration
+
+   \ Other state we might want to save:
+   \ ISA DMA Controller
+   \ AC97
+   \ Codec
+   \ USB
+
+\ This is where Geode stops the video refresh
+
+[ifdef] checksum-test
+   \ Checksum memory from 1M to top (excluding framebuffer)
+   h# 0010.0000 #  si  mov
+   h# 4d534b43 # ax mov  ax stos    \ Marker 'CKSM'
+   di resume-data h# 10 - #)  mov   \ Save checksum base address
+   begin
+      bx bx xor
+      h# 10.0000 2 rshift #  cx  mov  \ Word count for 1MB
+      begin  ax lods  ax bx add  loopa
+      ax stos
+      h# ec0.0000 # si cmp
+   = until
+[then]
+
+[ifdef] measure-suspend
+   di 0 #) mov
+   rdtsc ax h# 18 #) mov  dx h# 1c #) mov
+[then]
+
+   \ This is where the Geode sets up the sleep/wakeup sequence timing
+
+   \ Clear existing wakeup status
+   h# 400 port-rw  ax dx out
+
+   \ The caller chooses the wakeup conditions, so we don't do it here
+   h# ffff h# 420 port-wl   \ Clear all status bits
+
+   h# fe resume-progress
+
+   wbinvd                                 \ Flush the cache
+
+   \ Setup the register values in advance so the active instruction sequence
+   \ is as short as possible, thus keeping all the activity in one cache line.
+   h# 0400 h# 404 port-ww               \ Setup sleep type
+
+   \ Align to a cache line boundary
+   also forth
+   begin  here asm-base - h# 1f and  while  h# 90 c,  repeat  \ Align with NOPs
+   previous
+
+   h# 2400 h# 404 port-ww               \ Go to sleep
+
+   h# fff # cx mov  begin  nop  loopa   \ Spin in this cache line while going down
+
+   \ If the processor didn't really go down, perhaps because a wakeup event was
+   \ already pending, proceed as with a wakeup
+
+   \ Increment the CMOS byte at offset 3f
+   h# 3f # al mov   al h# 70 # out  h# 71 # al in  al inc  al h# 71 # out
+
+\ Resume code
+here resume-entry put-branch
+
+\ Assumptions:
+\   Processor is in protected mode
+\   Running from a 32-bit identity-mapped code segment
+\   Using physical addresses
+
+\ char < 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+
+   resume-data #  bp  mov
+
+   cld
+
+   h# 20 resume-progress
+
+[ifdef] measure-suspend
+   rdtsc  eax h# 20 #) mov  edx h# 24 #) mov
+[then]
+
+   h# 21 resume-progress
+
+[ifdef] checksum-test
+   \ Checksum memory from 1M to top (excluding framebuffer)
+   h# 0010.0000 #  si  mov
+   resume-data h# 10 - #)  di  mov   \ Save checksum base address
+   begin
+      bx bx xor
+      h# 10.0000 2 rshift #  cx  mov \ Word count for 1MB
+      begin  ax lods  ax bx add  loopa
+      ax  0 [di]  cmp
+      <>  if
+         char C 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+         ret
+      then   
+      4 [di]  di  lea
+      h# ec0.0000 # si cmp
+   = until
+[then]
+
+   h# 38 [bp]  si  lea    \ Save area
+
+   h# 22 resume-progress
+
+[ifdef] reset-smbus-bitbang
+   \ GPIO15 is SMB_DATA
+   \ GPIO14 is SMB_CLOCK
+   h# 5140.000c rmsr  ax bx  mov
+   h#     c000 # ax mov         \ Mask to set SMB_DATA and SMB_CLOCK
+   h# 00 [bx] dx lea  ax dx out  \ Set output values to high
+   h# 04 [bx] dx lea  ax dx out  \ Set pins to output
+   h# c0000000 # ax mov         \ Mask to clear SMB_DATA and SMB_CLOCK
+   h# 10 [bx] dx lea  ax dx out  \ Deselect OUT AUX1
+   h# 14 [bx] dx lea  ax dx out  \ Deselect OUT AUX2
+   h# 34 [bx] dx lea  ax dx out  \ Deselect IN AUX1
+
+   d# 16 # cx mov  forget-msr  \ Generate 8 low pulses on SMB_CLOCK
+   begin
+      \ 5 uS delay (slightly longer for GX)
+      rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
+      begin  rdtsc  bx ax sub  0>= until
+
+      cx bx mov                          \ Save cx for use by rmsr
+      h# 5140.000c rmsr  ax dx  mov      \ GPIO output register
+      h# 40000000 # ax mov  ax dx out    \ Clear SMB_CLOCK
+      bx cx mov  forget-ms               \ Restore cx
+
+      \ 5 uS delay (slightly longer for GX)
+      rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
+      begin  rdtsc  bx ax sub  0>= until
+
+      cx bx mov                          \ Save cx for use by rmsr
+      h# 5140.000c rmsr  ax dx  mov      \ GPIO output register
+      h#     4000 # ax mov  ax dx out    \ Set SMB_CLOCK
+      bx cx mov  forget-msr              \ Restore cx
+   loopa
+
+   \ 5 uS delay (slightly longer for GX)
+   rdtsc  ax bx mov  d# 5 d# 500 * #  bx  add
+   begin  rdtsc  bx ax sub  0>= until
+[then]
+
+   h# 23 resume-progress
+
+\ GPIO restore
+
+   h# 24 resume-progress
+
+\ Display restore
+
+\ Flat panel turn-on
+
+   h# 25 resume-progress
+
+\ PIC restore
+
+   h# 26 resume-progress
+
+\ PIT restore
+  
+   h# 27 resume-progress
+
+\ SMBUS controller restore
+
+[ifdef] reset-smbus
+   \ This little dance resets the DCON's SMbus interface
+   \ We start with dx pointing to SMBUS reg 5
+   dx dec  dx dec    \ Point back to smbus reg3 (control 1)
+   h# 1 #  al mov    \ START
+   al dx out         \ Initiate an SMBUS cycle to the DCON
+
+   \ We could split here and move the following down, so as to overlap
+   \ the delay time with other work, but it doesn't matter because the
+   \ later CaFe chip setup will stall anyway.
+
+   d#   32 # cx mov  forget-msr \ Loop count (usually ready in 20 uS)
+   dx dec  dx dec    \ SMBUS reg1 (status)
+   begin
+      dx al in
+      h# 40 # al test
+   loope             \ Wait for ready to accept byte or timeout
+
+   h#   1a # al mov  \ Address byte
+   dx dec            \ SMBUS reg0 (data)
+   al dx out         \ Initiate address out cycle
+
+   \ Another possible split point, in case we should need to overlap
+   d#  256 # cx mov  forget-msr  \ Loop count (usually ready in 172 uS)
+   dx inc            \ SMBUS reg1 (status)
+   begin
+      dx al in
+      h# 50 # al test
+   loope             \ Wait for done or error or timeout
+
+   h#    2 # al mov  \ Stop
+   dx inc  dx inc    \ SMBUS reg3 (control 1)
+   al dx out         \ Initiate STOP
+
+   h#   10 # al mov  \ Ack NEGACK
+   dx dec  dx dec    \ SMBUS reg1 (status)
+   al dx out         \ While acking the NEGACK
+   \ End of DCON SMbus reset dance
+[then]
+
+   h# 28 resume-progress
+
+\ MFGPTs restore
+
+   h# 29 resume-progress
+
+   \ AC97
+   \ Codec
+
+   \ h# 8000 h# 4000.0000 or h# 1440 pl!  \ Fail-safe delay
+
+\ Turn on USB power
+
+   h# 2a resume-progress
+
+\ Restore CaFe configuration
+
+   h# 2b resume-progress
+
+\ Display base addresses
+
+   \ There is a lot of other stuff that must be done to turn on the
+   \ video - but we will let the gx driver take care of that.
+
+   \ XXX keyboard init
+   \ DCON fiddling
+   \ USB
+
+[ifdef] measure-suspend
+   rdtsc  eax h# 28 #) mov  edx h# 2c #) mov
+   si 4 #) mov
+[then]
+
+   h# 2c resume-progress
+
+   h# 2c [bp]  di mov               \ VA of suspend-base in di
+   h# 28 [bp]  si mov               \ PDIR VA
+   h# 24 [bp]  cx mov forget-msr    \ PDIR entry 0
+   h# 20 [bp]  ax mov  ax cr4 mov  
+   h# 1c [bp]  ax mov  ax cr3 mov  
+   h# 18 [bp]  ax mov
+
+   h# 10 [bp]  lgdt        \ Global descriptor table register
+   h#  a [bp]  lidt        \ Interrupt descriptor table register
+   h#  8 [bp]  lldt        \ Local descriptor table register
+   op:  h# ffff #  h# 6 [bp]  test  0<>  if
+\     h#  6 [bp]  ltr      \ Task register
+   then
+
+   ax cr0 mov              \ Paging is back on now (if it ever was on)
+
+   \ Force the paging enable to take place
+   h# eb asm8,  0 asm8,    \ jmp to next location to enable paging
+
+   h# 2d resume-progress
+
+   \ Now jump back to the virtual execution address
+   here asm-base - 8 + # di add  \ The add instruction is 6 bytes, the jmp is 2
+   di jmp
+
+   \ Identity mapping of low memory is still in effect
+   0 [bp]  sp  lss
+
+   cx  0 [si]  mov         \ Restore PDIR entry 0
+   cr3 ax mov  ax cr3 mov  \ Flush TLB
+
+   \ Identity mapping of low memory might not exist now
+
+\  char > 3f8 port-wb  begin  3fd port-rb 20 bitand  0<> until
+
+   gs pop
+
+   fs pop
+   es pop
+   ds pop
+   popf
+   popa
+   ret
+end-code
+
+
+writing resume.di
+suspend-entry here over -  0  " resume"  write-dropin
+ofd @ fclose

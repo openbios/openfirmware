@@ -329,8 +329,8 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 
 fload ${BP}/cpu/x86/pc/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
-fload ${BP}/cpu/x86/pc/olpc/suspend.fth      \ Suspend/resume setup
 [then]
+fload ${BP}/cpu/x86/pc/olpc/via/suspend.fth  \ Suspend/resume setup
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
 [ifdef] Later
@@ -709,8 +709,8 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 
 : sci-wakeup ( -- ) ;
-: acpi-l@  ( index -- l )  drop 0  ;
-: acpi-l!  ( l index -- )  2drop  ;
+\ : acpi-l@  ( index -- l )  drop 0  ;
+\ : acpi-l!  ( l index -- )  2drop  ;
 : s3  ( -- )  ;
 
 

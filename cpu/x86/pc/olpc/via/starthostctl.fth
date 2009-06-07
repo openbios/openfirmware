@@ -37,3 +37,32 @@
    99 0e 06 mreg  \ CPU Misc Ctrl
    97 ff 00 mreg  \ APIC Related Control
    end-table
+
+\ DRDR_BL.c
+\  DRAMDRDYsetting
+   0 2 devfunc
+[ifdef] demo-board
+   60 ff aa mreg  \ DRDY Timing Control 1 for Read Line
+   61 ff 0a mreg  \ DRDY Timing Control 2 for Read Line
+   62 ff 00 mreg  \ Reserved, probably channel B
+   63 ff aa mreg  \ DRDY Timing Control 1 for Read QW
+   64 ff 0a mreg  \ DRDY Timing Control 2 for Read QW
+   65 ff 00 mreg  \ Reserved, probably channel B
+   66 ff 00 mreg  \ Burst DRDR Timing Control for Second cycle in burst
+   67 ff 00 mreg  \ Reserved, probably channel B
+   54 0a 08 mreg  \ Misc ctl 1 - special mode for DRAM cycles
+   51 80 80 mreg  \ Last step - enable DRDY timing
+[then]
+[ifdef] xo-board
+   60 ff 2a mreg  \ DRDY Timing Control 1 for Read Line
+   61 ff 00 mreg  \ DRDY Timing Control 2 for Read Line
+   62 ff 00 mreg  \ Reserved, probably channel B
+   63 ff 15 mreg  \ DRDY Timing Control 1 for Read QW
+   64 ff 00 mreg  \ DRDY Timing Control 2 for Read QW
+   65 ff 00 mreg  \ Reserved, probably channel B
+   66 ff 00 mreg  \ Burst DRDR Timing Control for Second cycle in burst
+   67 ff 00 mreg  \ Reserved, probably channel B
+   54 1e 1c mreg  \ Misc ctl 1 - special mode for DRAM cycles
+   51 ff f8 mreg  \ Last step - enable DRDY timing
+[then]
+   end-table
