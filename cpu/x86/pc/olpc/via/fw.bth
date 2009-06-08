@@ -686,9 +686,7 @@ fload ${BP}/ofw/core/dualconsole.fth
    install-console
    install-dual-console
    banner
-[ifdef] Later
    auto-boot
-[then]
 
 [ifdef] Later
    frozen?            ( frozen? )
