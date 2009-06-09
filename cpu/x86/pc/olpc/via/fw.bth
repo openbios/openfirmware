@@ -381,7 +381,7 @@ fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 [then]
 [then]
 
-" /xp u:\boot\olpc.fth sd:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
+" /xp u:\boot\olpc.fth sd:\boot\olpc.fth c:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
    ' boot-device  set-config-string-default
 
 \needs ramdisk  " " d# 128 config-string ramdisk
