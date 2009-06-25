@@ -77,11 +77,18 @@ create res-table
   640 w,  480 w,  800 w,  656 w,  752 w,  525 w,  489 w,  523 w,  hex  8d 10 05 cf pll,  decimal
   800 w,  600 w, 1056 w,  840 w,  968 w,  628 w,  600 w,  619 w,  hex  70 0c 05 0f pll,  decimal
  1024 w,  768 w, 1344 w, 1048 w, 1184 w,  806 w,  770 w,  776 w,  hex  b6 0c 05 cf pll,  decimal
-\ This clock value doesn't work very well with iga1, but it is good with iga2/lcd
-\ 1200 w,  900 w, 1264 w, 1210 w, 1242 w,  912 w,  900 w,  910 w,  hex  05 0c a0 cf pll,  decimabl
+
+\ This clock value doesn't work very well with iga1, but it is good with iga2/lcd - 57.273 MHz
+\ 1200 w,  900 w, 1264 w, 1210 w, 1242 w,  912 w,  900 w,  910 w,  hex  05 0c a0 cf pll,  decimal
+
+\ This supposedly matches the Geode setup - 56.199 MHz (Geode is 56.229)
+ 1200 w,  900 w, 1240 w, 1208 w, 1216 w, 912 w,  905 w,  910 w,  hex  05 0c 9d cf pll,  decimal
+
 \ 1200 w,  900 w, 1264 w, 1210 w, 1242 w,  912 w,  900 w,  910 w,  hex  9d 8c 85 cf pll,  decimal
 \ 1200 w,  900 w, 1240 w, 1208 w, 1216 w,  912 w,  905 w,  907 w,  hex  9d 8c 85 cf pll,  decimal
- 1200 w,  900 w, 1240 w, 1206 w, 1214 w,  912 w,  905 w,  907 w,  hex  05 0c 9f cf pll,  decimal
+
+\ VIA's latest recommendation - 56.916 MHz
+\ 1200 w,  900 w, 1240 w, 1206 w, 1214 w,  912 w,  905 w,  907 w,  hex  05 0c 9f cf pll,  decimal
  1280 w,  768 w, 1664 w, 1344 w, 1472 w,  798 w,  770 w,  777 w,  hex  6f 08 05 4f pll,  decimal
  1280 w,  800 w, 1680 w, 1352 w, 1480 w,  831 w,  802 w,  808 w,  hex  46 88 83 4f pll,  decimal
  1280 w, 1024 w, 1688 w, 1328 w, 1440 w, 1066 w, 1024 w, 1027 w,  hex  97 08 05 0f pll,  decimal
@@ -536,6 +543,7 @@ hex
    d# 1200 d# 900 set-secondary-mode
 
 \   60 60 9b crt-mask  \ Sync polarity - negative
+   60 60 78 seq-mask  \ Sync polarity - negative
 
    00 07 79 crt-mask  \ Disable scaling
    00 37 a3 crt-mask  \ iga2 from S.L., start addr
@@ -551,11 +559,14 @@ hex
    0d fb crt!
 \   00 08 h# 6b crt-mask  \ Not simultaneous mode
 
-   40 40 16 seq!  \ Check what is VIASR - is it really seq! ? - reserved bits, apparently control something about using crt and lcd at the same time
+   40 40 16 seq-mask  \ reserved bits, apparently control something about using crt and lcd at the same time
 ;
 : olpc-crt-off  ( -- )
    00 30 1b seq-mask  \ IGA1 engine clock off
    30 30 36 crt-mask  \ DAC off
+;
+: olpc-lcd-off  ( -- )
+   00 c0 1b seq-mask  \ IGA2 engine clock off
 ;
 
 hex

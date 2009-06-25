@@ -120,15 +120,10 @@ label startup
    acpi-io-base 1 + 8888 config-ww   \ Set ACPI base address
    8c 8881 config-wb   \ Enable ACPI regs, 32-bit PM timer, guard RTC against power glitches
    acpi-io-base 4 + port-rw           \ Get APCI Status register
-   d# 10 # ax shr  7 # ax and  1 # ax cmp  =  if   \ Wakeup from S3
-      char r report
-      resume-data  # sp mov
-      resume-entry # ax mov  ax call   \ This might return if checksumming fails
-      char x report
-   else                                            \ Not a wakeup from S3
+   d# 10 # ax shr  7 # ax and  1 # ax cmp  <>  if   \ Wakeup from S3
       \ This turns an OS reboot into a real cold start - from coreboot
-      380 config-rb  ax ax or  0<>  if             \ C-page shadowing not on yet
-         6 cf9 port-wb                             \ Force a full system reset
+      h# 380 config-rb  ax ax or  0<>  if          \ C-page shadowing not on yet
+         6 h# cf9 port-wb                          \ Force a full system reset
          char X report      
          begin  hlt  again
       then
@@ -165,6 +160,22 @@ label startup
 \  fload ${BP}/cpu/x86/pc/ramtest.fth
 
    fload ${BP}/cpu/x86/pc/olpc/via/startmtrrinit.fth
+
+   fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
+
+   acpi-io-base 4 + port-rw           \ Get APCI Status register
+   ax bx mov
+   d# 10 # ax shr  7 # ax and  1 # ax cmp  =  if   \ Wakeup from S3
+      \ Set sleep type field to 0 to prevent looping here if resume fails
+      bx ax mov  h# 1c00 invert # ax and  acpi-io-base 4 + # dx mov  op: ax dx out
+      char r report
+
+      resume-data  # sp mov
+      resume-entry # ax mov  ax call   \ This might return if checksumming fails
+      char x report
+   then                                            \ Not a wakeup from S3
+
+
    \ Cache is now setup normally, backed by memory
    h# 20.0000 # esp mov
 
@@ -172,8 +183,6 @@ label startup
    h# 1e port80
 
 \   fload ${BP}/cpu/x86/pc/olpc/via/startgtlinit.fth
-
-   fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
 
 \ Enable the keyboard controller
    

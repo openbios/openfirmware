@@ -255,11 +255,9 @@ hex
    false
 ;
 
-[ifdef] Later
 false value secure?
 
 : protect-fw  ( -- )  secure?  if  ec-indexed-io-off  then  ;
-[then]
 
 \ stand-init-debug?  [if]
 warning @  warning off 
@@ -271,9 +269,7 @@ warning @  warning off
       disable-interrupts
       d# 1000
       i-key-wait  if
-  [ifdef] Later
          protect-fw
-  [then]
          ." Interacting" cr  hex interact
       then
 
@@ -313,19 +309,20 @@ fload ${BP}/cpu/x86/pc/olpc/banner.fth
 
 fload ${BP}/ofw/gui/loadmenu.fth
 fload ${BP}/ofw/gui/insticon.fth
-[ifdef] Later
-fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 
-: setup-for-linux  ( -- )
-   [ ' linux-hook behavior compile, ]    \ Chain to old behavior
-   vpci-devices-on   \ Do this after quieting USB
-;
-' setup-for-linux to linux-hook
 : screen-#lines  ( -- n )
    screen-ih 0=  if  default-#lines exit  then
    screen-ih  package( #lines )package
 ;
 ' screen-#lines to lines/page
+
+[ifdef] Later
+fload ${BP}/cpu/x86/pc/olpc/disptest.fth
+: setup-for-linux  ( -- )
+   [ ' linux-hook behavior compile, ]    \ Chain to old behavior
+   \ whatever
+;
+' setup-for-linux to linux-hook
 
 fload ${BP}/cpu/x86/pc/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
@@ -347,10 +344,11 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
    boot-getline to boot-file   " rom:emacs" $boot
 ;
 
+fload ${BP}/cpu/x86/pc/olpc/via/acpi.fth
+
 [ifdef] Later
 fload ${BP}/cpu/x86/pc/rmtools.fth
 fload ${BP}/dev/geode/smi.fth
-fload ${BP}/cpu/x86/pc/olpc/acpi.fth
 fload ${BP}/cpu/x86/pc/olpc/smbios.fth
 \ fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
 fload ${BP}/cpu/x86/pc/biosints.fth
@@ -364,10 +362,11 @@ fload ${BP}/cpu/x86/pc/olpc/sound.fth
 [ifdef] wlan-wackup
 fload ${BP}/cpu/x86/pc/olpc/wlantest.fth
 
-fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 ' gx-power-off to power-off
 [then]
 [then]
+
+fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 
 [ifdef] Later
 [ifdef] use-ega
@@ -407,10 +406,8 @@ fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
    " u:\vmlinuz" to boot-device
 ;
 
-[ifdef] Later
 : dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
 : brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;
-[then]
 
 [ifdef] Later
 dev /8042/keyboard
@@ -457,6 +454,9 @@ patch drop ms install-console
 
    ec-reboot   \ Tell the EC to reboot us, so the EC can reset too
 [then]
+   \ Prevent "resume from S3" on restart
+   4 acpi-w@  h# 1c00 invert and  4 acpi-w!
+
    6 h# cf9 pc!  \ In case the EC doesn't do it
    begin  halt  again
 ;
@@ -577,9 +577,9 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 [then]
 
-[ifdef] Later
 : console-start  ( -- )
    " screen" open-dev  ?dup  if
+      dup to screen-ih
       set-stdout
 \       logo-banner drop
 \       close-dev
@@ -592,7 +592,6 @@ fload ${BP}/ofw/core/dualconsole.fth
 \   ." nvramrc" cr
 \   use-nvramrc?  if  nvramrc safe-evaluate  then
 ;
-[then]
 
 : debug-interact  ( -- )
    early-interact?  if
@@ -646,6 +645,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 
    ?factory-mode
    ?factory-boot-sequence
+[then]
 
    console-start
 
@@ -656,8 +656,10 @@ fload ${BP}/ofw/core/dualconsole.fth
    then
 
    read-game-keys
-[then]
+
+[ifdef] Later
    stdout off  \ 
+[then]
 
    " probe-" do-drop-in
 
@@ -683,8 +685,8 @@ fload ${BP}/ofw/core/dualconsole.fth
 [then]
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
    ?usb-keyboard
-   install-console
-   install-dual-console
+\   install-console
+\   install-dual-console
    banner
    auto-boot
 
@@ -705,12 +707,7 @@ fload ${BP}/ofw/core/dualconsole.fth
 \   " wifi media lab 802.11" eval
 \   " flash http:\\18.85.46.172\new.rom" eval
 ;
-
-: sci-wakeup ( -- ) ;
-\ : acpi-l@  ( index -- l )  drop 0  ;
-\ : acpi-l!  ( l index -- )  2drop  ;
-: s3  ( -- )  ;
-
+: urom  " flash! u:\new.rom" eval  ;
 
 [ifdef] use-ec-Later
 \ Fancy battery charge logger.

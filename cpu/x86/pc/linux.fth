@@ -146,7 +146,7 @@ d# 20 constant /root-dev-buf
 ;
 
 \ If we are running in physical address mode, make a page directory
-\ that will map up when the kernel turns on paging.
+\ that will map us when the kernel turns on paging.
 [ifdef] fw-map-limit
 : v=p-pde  ( adr -- )
    dup h# 83 or  cr3@  rot d# 22 rshift la+  l!

@@ -28,8 +28,13 @@
 \ h# 4000 constant DM_DEBUG
 \ h# 8000 constant DM_SELFTEST
 
-: dcon-load  ( -- )  h# 4c acpi-b@  h# 04 or  h# 4c acpi-b!  ;
-: dcon-unload  ( -- )  h# 4c acpi-b@  h# 04 invert and  h# 4c acpi-b!  ;
+\ Enable SMBALRT# IRQ as DCON IRQ
+: dcon-enable-irq  ( -- )  8 8 smb-reg!  ;
+\ Disable SMBALRT# IRQ as DCON IRQ; leaving it enabled causes spurious S3 wakeups
+: dcon-disable-irq  ( -- )  0 8 smb-reg!  ;
+
+: dcon-load  ( -- )  h# 4f acpi-b@  h# 04 or  h# 4f acpi-b!  ;
+: dcon-unload  ( -- )  h# 4f acpi-b@  h# 04 invert and  h# 4f acpi-b!  ;
 : dcon-blnk?  ( -- flag )  h# 4a acpi-b@ 4 and 0<>  ;
 : dcon-stat@  ( -- n )  h# 4b acpi-b@ 3 and  ;
 : dcon-irq?  ( -- flag )  1 smb-reg@ h# 20 and 0<>  ;
@@ -54,9 +59,11 @@ d# 905 value resumeline  \ Configurable; should be set from args
 ;
 
 : wait-dcon-mode  ( -- )
+   dcon-enable-irq
    d# 100 ms-factor *  tsc@ drop +  ( end-time )
    begin                            ( end-time )
       dcon-irq?  if
+         dcon-disable-irq
          dcon-stat@  dcon-clr-irq  2 =  if  \ DCONSTAT=10
             drop exit   
          then            
@@ -64,6 +71,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
       dup tsc@ drop - 0<            ( end-time reached? )
    until                            ( end-time )
    drop
+   dcon-disable-irq
    ." Timeout entering DCON mode" cr
 ;
 
@@ -121,7 +129,26 @@ d# 905 value resumeline  \ Configurable; should be set from args
    h# dc02 =
 ;
 
+: dcon-gpio-init  ( -- )
+   \ Redundant with code in cpu/x86/pc/olpc/via/ioinit.fth
+   h# 88e3 config-b@ 4 or h# 88e3 config-b!
+   h# 88e4 config-b@  h# 48 or  h# 88e4 config-b!
+;
+
 : dcon-setup  ( -- )
+   dcon-gpio-init
+
+   0 dcon@ drop  0 dcon@ drop
+
+[ifdef] notdef
+   d# 1200 2 dcon!  \ HResolution
+   d# 1240 3 dcon!  \ HTotal
+   h# 0608 4 dcon!  \ HSyncstart (6+900=906), HSyncwidth (8)
+   d#  900 5 dcon!  \ VResolution
+   d#  912 6 dcon!  \ VTotal
+   h# 0502 7 dcon!  \ VSyncstart (5+900=905), VSyncwidth (2)
+[then]
+   
    \ Switch to OLPC mode
    h# c040  h# 3a dcon!   \ SDRAM Setup/Hold time.  Default of e040 fails
    h# 0000  h# 41 dcon!   \ Himax suggested this sequence (0 then 0101)
@@ -135,6 +162,18 @@ d# 905 value resumeline  \ Configurable; should be set from args
    dcon-setup
    true set-color
    h# f bright!
+;
+
+: video-save
+   0 set-source  \ Freeze image
+   olpc-lcd-off
+;
+
+: video-restore
+   smb-init
+   dcon-gpio-init
+   olpc-lcd-mode
+   1 set-source  \ Unfreeze image
 ;
 
 0 [if]

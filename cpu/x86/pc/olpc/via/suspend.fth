@@ -25,7 +25,8 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
    \ any status bits in the low half of the register.
    0 acpi-l@ h# 100.0000 or  0 acpi-l!
 
-   h# ffff h# 20 acpi-w!  \ Clear PME status bits
+\ Unnecessary, as asm code does it
+\   h# ffff h# 20 acpi-w!  \ Clear PME status bits
 \ XXX may need to clear other status bits elsewhere as well
 
 \  sum-forth
@@ -44,9 +45,9 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
    again   
 ;
 : suspend
-\  " video-save" screen-ih $call-method  \ Freeze display
-  s3
-\   " video-restore" screen-ih $call-method  \ Unfreeze display
+   " video-save" screen-ih $call-method  \ Freeze display
+   s3
+   " video-restore" screen-ih $call-method  \ Unfreeze display
 \   " /usb@f,5" open-dev  ?dup  if  " do-resume" 2 pick $call-method  close-dev  then
 ;
 alias s suspend

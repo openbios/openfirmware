@@ -65,7 +65,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    ax      si  mov                \ Save PDIR VA
    0 [si]  cx  mov  forget-msr    \ Save old PDIR entry 0
    h# 83 # 0 [ax] mov             \ Punch a 4M mapping 0->0 into the page directory
-   cr3 ax mov  ax cr3 mov         \ Invalide the TLB to activate the mapping
+   cr3 ax mov  ax cr3 mov         \ Invalidate the TLB to activate the mapping
    h# f0060 # ax mov  ax jmp      \ Jump to suspend-physical, disabling paging
    h# 60 pad-to
 
@@ -146,28 +146,34 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
 
    \ This is where the Geode sets up the sleep/wakeup sequence timing
 
+[ifdef] notdef
    \ Clear existing wakeup status
-   h# 400 port-rw  ax dx out
+   h# 400 port-rw  op: ax dx out
+[then] \ notdef
 
    \ The caller chooses the wakeup conditions, so we don't do it here
-   h# ffff h# 420 port-wl   \ Clear all status bits
+   h# ffff h# 420 port-ww   \ Clear all status bits
 
    h# fe resume-progress
 
    wbinvd                                 \ Flush the cache
 
+[ifdef] delete-me
    \ Setup the register values in advance so the active instruction sequence
    \ is as short as possible, thus keeping all the activity in one cache line.
-   h# 0400 h# 404 port-ww               \ Setup sleep type
+\   h# 0400 h# 404 port-ww               \ Setup sleep type
+[then]
 
+[ifdef] notdef
    \ Align to a cache line boundary
    also forth
    begin  here asm-base - h# 1f and  while  h# 90 c,  repeat  \ Align with NOPs
    previous
+[then]
 
    h# 2400 h# 404 port-ww               \ Go to sleep
 
-   h# fff # cx mov  begin  nop  loopa   \ Spin in this cache line while going down
+   h# 1000000 # cx mov  begin  nop  loopa   \ Spin in this cache line while going down
 
    \ If the processor didn't really go down, perhaps because a wakeup event was
    \ already pending, proceed as with a wakeup

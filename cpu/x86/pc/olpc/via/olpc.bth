@@ -27,9 +27,9 @@ in: ${BP}/dev/pci/build/pcibridg.fc
 in: ${BP}/dev/ide/build/idehier.fc
 \ in: ${BP}/dev/ide/build/leghier.fc
 \ in: ${BP}/cpu/x86/pc/olpc/via/build/camera.fc
-\ in: ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml
+in: ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml
 \ in: ${BP}/cpu/x86/pc/olpc/via/build/mcastnand.bin
-\ in: ${BP}/dev/hdaudio/build/hdaudio.fc
+in: ${BP}/dev/hdaudio/build/hdaudio.fc
 in: sd8686.bin
 
 
@@ -112,8 +112,8 @@ $new-file
 
    " ${BP}/ofw/fcode/memtest.fth"  " memtest.fth"          $add-deflated-dropin
 
-[ifdef] Later
    " ${BP}/dev/hdaudio/build/hdaudio.fc"         " class040300"   $add-deflated-dropin
+[ifdef] Later
 
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
 
@@ -154,13 +154,15 @@ $new-file
    " fs.public"                                 " fspubkey"      $add-dropin \ Incompressible
    " lease.public"                              " leasepubkey"   $add-dropin \ Incompressible
    " developer.public"                          " develpubkey"   $add-dropin \ Incompressible
-
+[then]
    " sourceurl"   " sourceurl"                    $add-dropin
 
    " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
+
    " ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml"      " dsdt"            $add-deflated-dropin
 \  " ${BP}/cpu/x86/pc/olpc/via/build/ssdt.aml"      " ssdt"            $add-deflated-dropin
 
+[ifdef] Later
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_rx.bin" " nb_rx"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_tx.bin" " nb_tx"      $add-deflated-dropin
 [then]

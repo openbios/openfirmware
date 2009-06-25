@@ -50,24 +50,27 @@ h# ffc0.0000 constant fw-map-limit
 
 h# d000.0000 constant fb-pci-base
 h# f000.0000 constant gfx-pci-base
-h# fe01.a000 constant ohci-pci-base
-h# fe01.b000 constant ehci-pci-base
-h# fe02.4000 constant sd-pci-base
-h# fe02.8000 constant camera-pci-base
-h# fec0.0000 constant io-apic-mmio-base
+\ h# fe01.a000 constant ohci-pci-base
+\ h# fe01.b000 constant ehci-pci-base
+\ h# fe02.4000 constant sd-pci-base
+\ h# fe02.8000 constant camera-pci-base
 h# fed0.0000 constant hpet-mmio-base
 h# fed3.0000 constant spi-mmio-base
-h# fed4.0000 constant wdt-mmio-base
+\ h# fed4.0000 constant wdt-mmio-base
+h# fec0.0000 constant io-apic-mmio-base
 h# fee0.0000 constant apic-mmio-base
 
 h#   400 constant acpi-io-base
 h#   500 constant smbus-io-base
+h#  4080 constant uart-dma-io-base
 
 h# e0000 constant rsdp-adr
 h# e0040 constant rsdt-adr
 h# e0080 constant fadt-adr
 h# e0180 constant facs-adr
 h# e01c0 constant dbgp-adr
+h# e0200 constant madt-adr  \ MADT is 5a byts long
+h# e0280 constant hpet-adr
 h# fc000 constant dsdt-adr
 h# fd000 constant ssdt-adr
 

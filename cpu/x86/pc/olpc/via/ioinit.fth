@@ -182,9 +182,12 @@
    5b 53 53 mreg  \ Enable APIC Clock Gating - 43 res be like Phx
 [then]
    68 80 80 mreg  \ Enable HPETs
-   69 ff 00 mreg  \ HPET base low
-   6a ff d0 mreg  \ HPET base mid
-   6b ff fe mreg  \ HPET base high
+
+hpet-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
+   69 ff rot mreg  \ HPET base low
+   6a ff rot mreg  \ HPET base mid
+   6b ff rot mreg  \ HPET base high
+
    6e ff 18 mreg  \ COMB not pos decoded but otherwise set to 2f8, COMA pos decoded at 3f8
    70 ff 06 mreg  \ SVID backdoor
    71 ff 11 mreg  \ SVID backdoor
@@ -193,6 +196,7 @@
    80 20 20 mreg  \ Debounce power button
    81 08 08 mreg  \ 32-bit ACPI timer
 \  81 08 00 mreg  \ 24-bit ACPI timer - why?
+   82 0f 0a mreg  \ Direct SCI to IRQ 10 (0xa)
    84 ff da mreg  \ IRQs 7,6,4,3,1 are primary wakeups
    85 ff 40 mreg  \ IRQ 14 is primary wakeup
    8a 9f 1f mreg  \ C-state auto switching with normal latencies
@@ -226,14 +230,19 @@
 
    b4 80 00 mreg  \ No positive decoding for UART1 ???
    b7 40 40 mreg  \ 40 res be like Phx
-   b8 fc 80 mreg  \ UART DMA Control Registers Base low (port is 4080)
-   b9 ff 40 mreg  \ UART DMA Control Registers Base high
+uart-dma-io-base wbsplit swap  ( bits15:8 bits7:0 )
+   b8 fc rot mreg  \ UART DMA Control Registers Base low (port is 4080)
+   b9 ff rot mreg  \ UART DMA Control Registers Base high
    ba 77 44 mreg  \ COM1 DMA Channel Selects - DMA0 for both Transmit and Receive
-   bc ff 00 mreg  \ SPI MMIO Base Address 15:8  (address is fed30000)
-   bd ff d3 mreg  \ SPI MMIO Base Address 23:16
-   be ff fe mreg  \ SPI MMIO Base Address 31:24
-   d0 f0 00 mreg  \ SMBUS IO Base Address low (port is 0500)
-   d1 ff 05 mreg  \ SMBUS IO Base Address high
+
+spi-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
+   bc ff rot mreg  \ SPI MMIO Base Address 15:8  (address is fed30000)
+   bd ff rot mreg  \ SPI MMIO Base Address 23:16
+   be ff rot mreg  \ SPI MMIO Base Address 31:24
+
+smbus-io-base wbsplit swap  ( bits15:8 bits7:0 )
+   d0 f0 rot mreg  \ SMBUS IO Base Address low (port is 0500)
+   d1 ff rot mreg  \ SMBUS IO Base Address high
    d2 0f 01 mreg  \ Enable SMBUS and set other characteristics
    e2 80 80 mreg  \ Inhibit C4 during USB isochronous transaction
 [ifdef] demo-board
@@ -241,7 +250,7 @@
 [then]
 [ifdef] xo-board
    e3 04 04 mreg  \ Select GPIO8 (DCONBLNK) instead of SSPICLK
-   e4 ff c8 mreg  \ Enable short C3/C4 (80), select GPO10 (10) (USB_PWR_EN), GPO10/11 (08)
+   e4 ff c8 mreg  \ Enable short C3/C4 (80), select GPO10 (40) (USB_PWR_EN), GPI10/11 (08)
 [then]
    e5 60 60 mreg  \ Enable NM bus master as source of bus master status, enable NB int to wakeup from Cx
    e6 20 20 mreg  \ Enable USB Device Mode Bus Master as Break Event
@@ -258,9 +267,11 @@
 0 [if]
    61 ff 2a mreg  \ Page C ROM shadow - C0000-CBFFF RO, CC000-CFFFF off
    62 ff 00 mreg  \ Page D ROM shadow - D0000-DFFFF off
-   63 f3 a0 mreg  \ Page E/F ROM shadow - E0000-EFFFF RO, F0000-FFFFF RO, no memory hole
-   64 ff aa mreg  \ Page E ROM shadow - E0000-EFFFF RO
+\   63 f3 a0 mreg  \ Page E/F ROM shadow - E0000-EFFFF RO, F0000-FFFFF RO, no memory hole
+\   64 ff aa mreg  \ Page E ROM shadow - E0000-EFFFF RW
 [then]
+   63 fc f0 mreg  \ Page E/F ROM shadow - E0000-EFFFF RW, F0000-FFFFF RW, no memory hole
+   64 ff ff mreg  \ Page E ROM shadow - E0000-EFFFF RW
    70 fb 82 mreg  \ CPU to PCI flow control - CPU to PCI posted write, Enable Delay Transaction
    72 af ee mreg  \ Read caching and prefix - various knobs (40 bit is reserved)
    73 79 01 mreg  \ Enable PCI broken master timer & various knobs
@@ -304,3 +315,5 @@
    \ x1 to write to SMM shadow memory behind VGA
    \ 00 to run - Axxxxx hits VGA in normal mode, hits shadow DRAM in SMM
    \ 01 to access VGA when in SMM (data cycles only)
+
+acpi-io-base h# 4c + port-rl  h# 400 bitset  ax dx out  \ Set USB power high
