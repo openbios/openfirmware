@@ -383,7 +383,7 @@ Device(PCI0)
 		CreateDWordField(BUF0,MEM3._MIN, PMRN)
 		CreateDWordField(BUF0,MEM3._MAX, PMRM)
 		CreateDWordField(BUF0,MEM3._LEN, PMRL)
-		\\ XXX top of PCI memory space
+		// XXX top of PCI memory space
 		Store(0xFFE80000, PMRM)
 		Store(\_SB.PCI0.MEMC.LTMA, Local0)
 		ShiftLeft(Local0, 16, PMRN)
