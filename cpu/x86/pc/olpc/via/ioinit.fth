@@ -167,7 +167,7 @@
 [then]
 .( Check RTC century byte mapping to cmos 32 - see d17f0 rx58) cr
 [ifdef] use-apic
-   58 40 40 mreg  \ Enable Internal APIC
+   58 40 40 mreg  \ Enable Internal IO-APIC
 [then]
 [ifdef] xo-board
    59 ff 1c mreg  \ Keyboard (ports 60,64) and ports 62,66 on LPC bus (EC)
@@ -257,6 +257,9 @@ smbus-io-base wbsplit swap  ( bits15:8 bits7:0 )
 [ifdef] use-apic
    e7 80 80 mreg  \ Enable APIC Cycle Reflect to ALL Bus Master Activity Effective Signal
 [then]
+[ifdef] xo-board
+   ec 04 00 mreg  \ C3 state setting
+[then]
    fc 06 04 mreg  \ DPSLP# to SLP# Latency Adjustment - 22.5 us
    end-table
 
@@ -278,7 +281,7 @@ smbus-io-base wbsplit swap  ( bits15:8 bits7:0 )
 \  74 d8 08 mreg  \ Lock Cycle Issued by CPU Blocks P2C Cycles (04 bit is reserved)
    74 dc 0c mreg  \ Lock Cycle Issued by CPU Blocks P2C Cycles - 04 res be like Phx
    75 ff 0f mreg  \ Use New grant mechanism for PCI arbitration, PCI Master Bus Timeout is 7x16 PCI clock
-   76 fd 50 mreg  \ Enable PCI parking, Grant to CPU after 2 PC master grants
+   76 fd d0 mreg  \ Enable PCI parking, Grant to CPU after 2 PC master grants, support IO address 22 for C3
    77 58 48 mreg  \ PCI1 FIFO empty blocks CPU to PCI read, Read FIFO times out after 1 ms
    80 07 07 mreg  \ PCI1 and HDAC upstream read does not pass write, APCI blocks upstream write
 \  82 3e 20 mreg  \ Monitor CCA and SDIO2
@@ -316,4 +319,6 @@ smbus-io-base wbsplit swap  ( bits15:8 bits7:0 )
    \ 00 to run - Axxxxx hits VGA in normal mode, hits shadow DRAM in SMM
    \ 01 to access VGA when in SMM (data cycles only)
 
+\ acpi-io-base h# 26 + port-rb  h#  07 bitset  al dx out  \ Settings to support C4 state
+acpi-io-base h# 26 + port-rb  h#  06 bitset  al dx out  \ Settings to support C3 state
 acpi-io-base h# 4c + port-rl  h# 400 bitset  ax dx out  \ Set USB power high

@@ -76,9 +76,11 @@ create default-netmasks d# 255 c, d# 255 c, d# 255 c,  0 c,  0 c,  0 c,
    then                                                ( 'netmask-c )
 ;
 
-\ either h# ffffffff or h# 0 is broadcast ip addr
+\ Matches either h# ffffffff or h# 0 or subnet-specific broadcast addr
 : broadcast-ip-addr?   ( adr-buf -- flag )  
-   dup broadcast-ip-addr ip=  swap unknown-ip-addr? or   
+   dup  broadcast-ip-addr ip=
+   swap def-broadcast-ip  ip= or
+   over unknown-ip-addr?  or
 ;
 
 : netmask  ( -- 'ip )

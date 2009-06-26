@@ -123,10 +123,10 @@ c;
 
 20 0
 30 50014
-80 f0
+80 f0 (00)
 d0 0
 e0 ffffffff
-f0 10f
+f0 10f (1ff)  Spurious vector number
 320 10000 Timer Masked off
 340 10000 PCINT Masked off
 350 700  LINT0 vector 0  mode ExtINT (111)  Edge Trigger  Active High
@@ -164,7 +164,7 @@ io apic regs: fec0.0000
 indirect io apic regs
 00 1000000 IOAPIC ID is 1
 01 178003  (RO)  version
-02 1000000 Arb ID is 1
+02 1000000 (RO)  Arb ID is 1
 03 1  Front side bus message delivery
 10,11  0100.0000  . 0001.0000  DD00  . 0000 . 000 ooom . tips MVV
 ..

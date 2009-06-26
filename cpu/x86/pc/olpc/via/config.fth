@@ -9,6 +9,7 @@ create xo-board
 [ifdef] xo-board
 create use-ec
 [then]
+create use-apic
 
 \ --- The environment that "boots" us ---
 \ - Image Format - Example Media - previous stage bootloader

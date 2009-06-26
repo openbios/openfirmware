@@ -74,6 +74,8 @@ h# e0280 constant hpet-adr
 h# fc000 constant dsdt-adr
 h# fd000 constant ssdt-adr
 
+h# ffc00 constant smbios-adr
+
 h#  3e.0000 constant inflate-base
 h#  30.0000 constant workspace
 

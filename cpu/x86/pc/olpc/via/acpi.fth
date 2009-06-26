@@ -2,9 +2,13 @@
 
 h# 0. 2constant xsdt-adr
 
+: set-acpi-table-length  ( table-adr -- )
+   here over -  swap la1+ l!
+;
+
 create fadt
 ( 000 4 )  " FACP"     $, \ Signature
-( 004 4 )  h#   84     l, \ Table Length
+( 004 4 )  h#   84     l, \ Length
 ( 008 1 )  h#   02     c, \ Revision (supports reset adr)
 ( 009 1 )  h#   00     c, \ Checksum
 ( 00A 6 )  " OLPC  "   $, \ Oem ID
@@ -27,24 +31,22 @@ create fadt
 ( 037 1 )  h#   00 c,     \ P-State Control
 ( 038 4 )  h#  400 l,     \ PM1A Event Block Address
 ( 03C 4 )  h#    0 l,     \ PM1B Event Block Address
-\ ( 040 4 )  h# 9c28 l,     \ PM1A Control Block Address
 ( 040 4 )  h#  404 l,     \ PM1A Control Block Address
 ( 044 4 )  h#    0 l,     \ PM1B Control Block Address
-( 048 4 )  h#    0 l,     \ PM2 Control Block Address (don't support)
-\ ( 04C 4 )  h# 9c10 l,     \ PM Timer Block Address
+( 048 4 )  h#   22 l,     \ PM2 Control Block Address
 ( 04C 4 )  h#  408 l,     \ PM Timer Block Address
 ( 050 4 )  h#  420 l,     \ GPE0 Block Address
 ( 054 4 )  h#    0 l,     \ GPE1 Block Address
 ( 058 1 )  h#    4 c,     \ PM1 Event Block Length
 ( 059 1 )  h#    2 c,     \ PM1 Control Block Length
-( 05A 1 )  h#    0 c,     \ PM2 Control Block Length
+( 05A 1 )  h#    1 c,     \ PM2 Control Block Length
 ( 05B 1 )  h#    4 c,     \ PM Timer Block Length
 ( 05C 1 )  h#    4 c,     \ GPE0 Block Length
 ( 05D 1 )  h#    0 c,     \ GPE1 Block Length
 ( 05E 1 )  h#   10 c,     \ GPE1 Base Offset
 ( 05F 1 )  h#   85 c,     \ _CST Support
-( 060 2 )  h#    1 w,     \ C2 Latency
-( 062 2 )  h#    1 w,     \ C3 Latency
+( 060 2 )  d#   10 w,     \ C2 Latency (guess)
+( 062 2 )  d#  100 w,     \ C3 Latency (guess)
 ( 064 2 )  h#    0 w,     \ CPU Cache Size
 ( 066 2 )  h#    0 w,     \ Cache Flush Stride
 ( 068 1 )  h#    0 c,     \ Duty Cycle Offset
@@ -59,37 +61,24 @@ create fadt
 
 ( 080 1 )  h#    1 c,     \ Reset value
 ( 081 3 )  0 c, 0 c, 0 c, \ Reserved
-here fadt - constant /fadt
+fadt set-acpi-table-length
 
 \ FADT Flags:
 \      WBINVD is operational : 1
 \ WBINVD does not invalidate : 0
 \        All CPUs support C1 : 1
 \      C2 works on MP system : 0
-\    Power button is generic : 0
-\    Sleep button is generic : 1
+\    Power button is generic : 0 ??
+\    Sleep button is generic : 1 ??
 \       RTC wakeup not fixed : 0
 \ RTC wakeup/S4 not possible : 1
 \            32-bit PM Timer : 1
 \          Docking Supported : 0
 \    Reset Register Supported: 1
 
-create rsdp
-( 00 8 )  " RSD PTR " $,  \ Signature
-( 08 1 )       00     c,  \ Checksum
-( 09 6 )  " OLPC  "   $,  \ Oem Id
-( 0f 1 )        2     c,  \ ACPI revision (3.0b)
-( 10 4 )  rsdt-adr    l,  \ RSDT Address
-
-( 14 4 )    d# 36     l,  \ Length for extended version
-( 18 8 )  xsdt-adr    d,  \ XSDT Address
-( 20 1 )        0     c,  \ extended checksum
-( 21 3 )  0 c, 0 c, 0 c,  \ reserved
-here rsdp - constant /rsdp
-
 create madt  \ Multiple APIC Descriptor Table
 ( 000 4 )  " APIC"     $, \ Signature
-( 004 4 )  h#   5a     l, \ Table Length
+( 004 4 )  h#   5a     l, \ Length
 ( 008 1 )  h#   01     c, \ Revision
 ( 009 1 )  h#   00     c, \ Checksum
 ( 00A 6 )  " OLPC  "   $, \ Oem ID
@@ -105,7 +94,6 @@ create madt  \ Multiple APIC Descriptor Table
 ( 02e 1 )  0           c, \ processor ID
 ( 02f 1 )  0           c, \ ACPI ID
 ( 030 4 )  1           l, \ Flags - 1 means this processor is usable
-
 
 ( 034 1 )  1           c, \ I/O APIC
 ( 035 1 )  d# 12       c, \ length
@@ -133,11 +121,11 @@ create madt  \ Multiple APIC Descriptor Table
 ( 053 1 )  9           c, \ Bus-relative IRQ
 ( 054 4 )  9           l, \ Interrupt # that this source will trigger
 ( 058 2 )  h# f        w, \ Flags - active low, level triggered
-here madt - constant /madt
+madt set-acpi-table-length
 
 create hpet  \ High Precision Event Timer table
 ( 000 4 )  " HPET"     $, \ Signature
-( 004 4 )  h#   38     l, \ Table Length
+( 004 4 )  h#   38     l, \ Length
 ( 008 1 )  h#   01     c, \ Revision
 ( 009 1 )  h#   00     c, \ Checksum
 ( 00A 6 )  " OLPC  "   $, \ Oem ID
@@ -155,13 +143,11 @@ create hpet  \ High Precision Event Timer table
 ( 034 1 )  0           c, \ Sequence
 ( 035 2 )  0           w, \ Min tick
 ( 037 1 )  0           c, \ flags
-here hpet - constant /hpet
+hpet set-acpi-table-length
 
 create rsdt
 ( 00 4 )  " RSDT"     $,  \ Signature
 ( 04 4 )  h#   34     l,  \ Length
-\ ( 04 4 )  h#   30     l,  \ Length
-\ ( 04 4 )  h#   2c     l,  \ Length
 ( 08 1 )        1     c,  \ Revision
 ( 09 1 )       00     c,  \ Checksum
 ( 0a 6 )  " OLPC  "   $,  \ Oem Id
@@ -176,7 +162,7 @@ create rsdt
 \ ( 2c 4 )  dbgp-adr    l,  \ DBGP Address
 \ ( 30 4 )  ssdt-adr    l,  \ SSDT Address
 \ ( 30 4 )  prtn-adr    l,  \ PRTN Address
-here rsdt - constant /rsdt
+rsdt set-acpi-table-length
 
 0 [if]
 create dbgp
@@ -192,7 +178,7 @@ create dbgp
 ( 24 1 )       0      c,  \ Full 16550 interface
 ( 25 3 )  0 c, 0 c, 0 c,  \ reserved
 ( 28 c )  1 c, 8 c, 0 c, 1 c,  h# 3f8 l, 0 l,   \ Port base address (generic register descriptor)
-here dbgp - constant /dbgp
+dbgp set-acpi-table-length
 [then]
 
 create facs
@@ -205,7 +191,20 @@ create facs
 ( 18 8 )        0.    d,  \ 64-bit waking vector
 ( 20 1 )        1     c,  \ Version
 ( 21 1f )  here  d# 31 dup allot  erase
-here facs - constant /facs
+facs set-acpi-table-length
+
+create rsdp
+( 00 8 )  " RSD PTR " $,  \ Signature
+( 08 1 )       00     c,  \ Checksum
+( 09 6 )  " OLPC  "   $,  \ Oem Id
+( 0f 1 )        2     c,  \ ACPI revision (3.0b)
+( 10 4 )  rsdt-adr    l,  \ RSDT Address
+
+( 14 4 )    d# 36     l,  \ Length for extended version
+( 18 8 )  xsdt-adr    d,  \ XSDT Address
+( 20 1 )        0     c,  \ extended checksum
+( 21 3 )  0 c, 0 c, 0 c,  \ reserved
+here rsdp - constant /rsdp
 
 : fix-checksum  ( table /table checksum-offset -- )
    >r over >r      ( table /table r: cksum-offset table )
@@ -227,6 +226,12 @@ here facs - constant /facs
    h# 1000 -   \ Safety page
 ;
 
+: >acpi-table-len  ( adr -- len )  la1+ l@  ;
+: copy-acpi-table  ( src dst -- )
+   tuck  over >acpi-table-len   move  ( dst )
+   dup >acpi-table-len  9  fix-checksum
+;
+
 : setup-acpi  ( -- )
 [ifdef] notdef
    \ This has to agree with the _SB's _INI method, which gets the memory size
@@ -234,14 +239,14 @@ here facs - constant /facs
    memory-limit d# 10 rshift  'ebda h# 180 + l!
 [then]
 
-   \ Copy rsdt and fadt to low memory
+   \ Copy tables to low memory
+   fadt  fadt-adr  copy-acpi-table
+   madt  madt-adr  copy-acpi-table
+   hpet  hpet-adr  copy-acpi-table
+\  dbgp  dbgp-adr  copy-acpi-table
+   facs  facs-adr  facs >acpi-table-len  move
+   rsdt  rsdt-adr  copy-acpi-table
    rsdp  rsdp-adr  /rsdp move  rsdp-adr h# 14 8 fix-checksum   rsdp-adr /rsdp h# 20 fix-checksum  
-   rsdt  rsdt-adr  /rsdt move  rsdt-adr /rsdt 9 fix-checksum
-   fadt  fadt-adr  /fadt move  fadt-adr /fadt 9 fix-checksum
-   madt  madt-adr  /madt move  madt-adr /madt 9 fix-checksum
-   hpet  hpet-adr  /hpet move  hpet-adr /hpet 9 fix-checksum
-\  dbgp  dbgp-adr  /dbgp move  dbgp-adr /dbgp 9 fix-checksum
-   facs  facs-adr  /facs move
 
    \ Copy in the DSDT
    \ I suppose we could point to it in FLASH - if so don't compress it,
@@ -261,10 +266,8 @@ here facs - constant /facs
    h# ffffffff  h# 20 acpi-l!  \ Ack all leftover events
 ;
 
-.( Not setting up ACPI automatically) cr
 stand-init: ACPI tables
-." Not setting up ACPI automatically" cr
-\   setup-acpi
+   setup-acpi
 ;
 
 \ Geode h# 6000 constant xp-smbus-base

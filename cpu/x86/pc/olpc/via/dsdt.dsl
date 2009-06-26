@@ -18,10 +18,12 @@ Method (CMSW, 2)
     Store (Arg1, CMSD)
 }
     //  Processor Objects
-    Scope(\_PR) {
-        Processor(\_PR.CPU0,0x00,0x00000410,0x06){}
-        }
-    
+Scope(\_PR)
+{
+    Processor(\_PR.CPU0,0x00,0x00000410,0x06)
+    {
+    }
+}    
     // System Sleep States
     Name(\_S0,Package(){0,0,0,0})
     Name(\_S1,Package(){4,4,4,4})
@@ -888,13 +890,13 @@ Device(USB3){
         ECDX, 2				//USB3 PM capability status register
     }
 
-        Method(_STA,0) {			//Status of the USB3 Device
-            If(LEqual(\_SB.PCI0.USB3.CMDR, 0x00)) {
-                Return(0x0D)
-            } Else {
-                Return(0x0F)
-            }
+    Method(_STA,0) {			//Status of the USB3 Device
+        If(LEqual(\_SB.PCI0.USB3.CMDR, 0x00)) {
+            Return(0x0D)
+        } Else {
+            Return(0x0F)
         }
+    }
 }
 
 
@@ -904,7 +906,7 @@ Device(EHCI)	{
     Name(_PRW, Package(2){0x0E,3})
     
     Name(_S3D, 3)
-    
+
     OperationRegion(U2F4,PCI_Config,0x00,0xC2)
     Field(U2F4,ByteAcc,NoLock,Preserve){
         Offset(0x00),

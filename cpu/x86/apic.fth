@@ -44,9 +44,9 @@ c;
 : id!  ( id -- )  d# 24 lshift  d# 20 apic!  ;
 : id@  ( -- id )  d# 20 apic@  d# 24 rshift  ;
 : lvt0@  ( -- n )  h# 350 apic@  ;
-: lvt0!  ( n -- )  h# 350 apic@  ;
+: lvt0!  ( n -- )  h# 350 apic!  ;
 : lvt1@  ( -- n )  h# 360 apic@  ;
-: lvt1!  ( n -- )  h# 360 apic@  ;
+: lvt1!  ( n -- )  h# 360 apic!  ;
 
 : lvt0-disable-irq  ( -- )  h# 10000 h# 350 apic-set  ;  \ Disable LINT0
 : lvt0-enable-irq   ( -- )  h# 10000 h# 350 apic-clr  ;  \ Enable LINT0
@@ -148,6 +148,8 @@ end-package
 : open  ( -- okay? )
    io-apic-base  0=  if
       io-apic-mmio-base h# 80 " map-in" $call-parent to io-apic-base
+      1 d# 24 lshift  0 io-apic!  \ I/O APIC ID
+      1               3 io-apic!  \ Front side bus message delivery
    then
    true
 ;
