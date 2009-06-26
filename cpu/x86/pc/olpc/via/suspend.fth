@@ -12,13 +12,10 @@ stand-init:  Suspend/resume
 
 code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
 
-.( XXX Implement lid-wakeup) cr
-: lid-wakeup
-;
-
-.( XXX Implement sci-wakeup) cr
-: sci-wakeup
-;
+: batlow-wakeup  ( -- )  h# 22 acpi-w@  h# 1000 or  h# 22 acpi-w!  ;
+: ebook-wakeup   ( -- )  h# 22 acpi-w@  h# 0100 or  h# 22 acpi-w!  ;
+: lid-wakeup     ( -- )  h# 22 acpi-w@  h# 0800 or  h# 22 acpi-w!  ;
+: sci-wakeup     ( -- )  h# 22 acpi-w@  h# 0002 or  h# 22 acpi-w!  ;
 
 : s3
    \ Enable wakeup from power button, also clearing
