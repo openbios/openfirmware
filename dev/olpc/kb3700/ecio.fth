@@ -20,10 +20,6 @@ h# 380 constant iobase
    iobase 3 + pc!
 ;
 
-: autowak!        ( value -- )   f64f ec! ;
-: autowak-on      ( -- )         1 autowak! ;
-: autowak-off     ( -- )         0 autowak! ;
-: autowak-delay   ( delay -- )   wbsplit f650 ec! f651 ec! ;
 : kbc-debug-on    ( -- )         1 fbfe ec! ;
 : kbc-debug-off   ( -- )         0 fbfe ec! ;
 
@@ -66,8 +62,10 @@ h# 380 constant iobase
 
 : ec-rw    ( -- w )  ec-rb ec-rb swap bwjoin  ;
 : ec-ww    ( -- w )  wbsplit ec-wb ec-wb  ;
+: ec-wl    ( -- l )  lbsplit ec-wb ec-wb ec-wb ec-wb ;
 
 : (ec-cmd-b!)  ( b cmd -- )  ec-cmd-out  ec-wb  ;
+: (ec-cmd-l!)  ( l cmd -- )  ec-cmd-out  ec-wl  ;
 : (ec-cmd-b@)  ( cmd -- b )  ec-cmd-out  ec-rb  ;
 : (ec-cmd-w@)  ( cmd -- w )  ec-cmd-out  ec-rw  ;
 
@@ -94,6 +92,17 @@ d# 10 constant #ec-retries
    loop                                    ( b cmd )
    too-many-retries
 ;
+
+: ec-cmd-l!  ( l cmd -- )
+   #ec-retries  0  do                      ( b cmd )
+      2dup  ['] (ec-cmd-l!) catch  0=  if  ( b cmd )
+         2drop unloop exit
+      then                                 ( b cmd x x )
+      2drop                                ( b cmd )
+   loop                                    ( b cmd )
+   too-many-retries
+;
+
 : ec-cmd-b@  ( cmd -- b )
    #ec-retries  0  do                      ( cmd )
       dup  ['] (ec-cmd-b@) catch  0=  if   ( cmd b )
@@ -157,7 +166,7 @@ d# 10 constant #ec-retries
    too-many-retries
 ;
 
-: ec-wakeup!   ( wakeup -- ) lbsplit h# 36 ec-cmd-out ec-wb ec-wb ec-wb ec-wb ;
+: ec-wackup   ( ms -- ) lbsplit h# 36 ec-cmd-out ec-wb ec-wb ec-wb ec-wb ;
 
 : ec-abnormal@   ( -- b )  h# 1f ec-cmd-b@  ;
 
@@ -181,7 +190,10 @@ d# 10 constant #ec-retries
 : sci-inhibit      ( -- )  h# 32 ec-cmd  ;
 : sci-uninhibit    ( -- )  h# 34 ec-cmd  ;
 
-: sci-inhibit-delay  ( delay -- )   wbsplit f64d ec! f64e ec! ;
+: autowack-on      ( -- )         1 33 ec-cmd-b! ;
+: autowack-off     ( -- )         0 33 ec-cmd-b! ;
+: autowack-delay   ( delay -- )   wbsplit f650 ec! f651 ec! ;
+
 : ec-indexed-io-off  ( -- )  h# fe95 ec@  h# 40 invert and  h# fe95 ec!  ;
 
 0 [if]

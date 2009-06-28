@@ -134,10 +134,11 @@ h# FA00 constant ec-rambase
 
 : see-bstate
         0 begin
-            next-bstate dup .
-                dup 4 = if
+            next-bstate
+            dup 0 = if
                   cr
-            then key?
+            then 
+            dup . key?
         until
 ;
 
@@ -165,6 +166,13 @@ h# FA00 constant ec-rambase
 
 \ Turn off the trickle charger
 : bat-disable-trickle ( -- ) fc23 ec@ 1 invert and fc23 ec! ;
+
+\ Turn on the EC lifepo4 dump
+: bat-enable-ec-life-dump ( -- ) f915 ec@ 8 or f915 ec! ;
+
+\ Turn on the EC lifepo4 dump
+: bat-disable-ec-life-dump ( -- ) f915 ec@ 8 invert and f915 ec! ;
+
 
 \ Access the 1-wire data line via the EC GPIO ports
 
