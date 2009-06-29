@@ -479,7 +479,3 @@ c;
    smbios-adr          h# 1f  4  fix-checksum  \ Overall checksum
    smbios-adr h# 10 +  h# 0f  5  fix-checksum  \ Intermediate checksum
 ;
-
-stand-init: SMBIOS tables
-   setup-smbios
-;

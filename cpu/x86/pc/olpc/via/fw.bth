@@ -675,6 +675,7 @@ fload ${BP}/ofw/core/dualconsole.fth
    ['] false to interrupt-auto-boot?
    probe-usb
    " probe+" do-drop-in
+   setup-smbios  \ Must be done after build-date is defined via do-drop-in
 
    interpreter-init
 [ifdef] Later
