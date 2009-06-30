@@ -69,12 +69,13 @@ h# e0040 constant rsdt-adr
 h# e0080 constant fadt-adr
 h# e0180 constant facs-adr
 h# e01c0 constant dbgp-adr
-h# e0200 constant madt-adr  \ MADT is 5a byts long
+h# e0200 constant madt-adr  \ MADT is 5a bytes long
 h# e0280 constant hpet-adr
 h# fc000 constant dsdt-adr
 h# fd000 constant ssdt-adr
 
 h# ffc00 constant smbios-adr
+h# fff00 constant wake-adr
 
 h#  3e.0000 constant inflate-base
 h#  30.0000 constant workspace

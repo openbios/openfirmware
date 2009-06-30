@@ -232,6 +232,44 @@ here rsdp - constant /rsdp
    dup >acpi-table-len  9  fix-checksum
 ;
 
+h# 28 constant rm-ds     \ Must agree with GDT in rmstart.fth
+
+label do-acpi-wake
+   \ This code must be copied to low memory
+   \ Jump to this code (in low memory) with the linear target address in EAX
+   \ Interrupts must be off.  We don't have a stack.
+   \ We got here via a far jmp to a 16-bit code segment, so we are
+   \ using the 16-bit instruction set, but we're not yet in real mode
+
+   16-bit
+
+   ahead
+      0 w, 0 w,   \ Room for the segment:offset pointer
+   then
+
+   op: ax bx mov
+   h# 0f # ax and
+   op: 4 # bx shr
+
+   cs: ax  wake-adr la1+ #)  mov  \ Offset
+   cs: bx  wake-adr wa1+ #)  mov  \ Segment
+
+   \ The following might be unnecessary
+   ax ax xor  rm-ds #  al  mov  \ 16-bit data segment
+   ax ds mov  ax es mov  ax ss mov
+
+   cr0 ax mov   h# fe # al and   ax cr0 mov   \ Enter real mode
+
+   here 5 +  do-acpi-wake -  wake-adr  + >seg:off #)  far jmp  \ Jump to set cs
+
+   \ The following might be unnecessary
+   \ Now we are running in real mode; fix segments again
+   cs ax mov   ax ds mov  ax es mov
+
+   cs:  wake-adr wa1+  s#)  far jmp
+end-code
+here do-acpi-wake - constant /do-acpi-wake
+
 : setup-acpi  ( -- )
 [ifdef] notdef
    \ This has to agree with the _SB's _INI method, which gets the memory size
@@ -253,6 +291,8 @@ here rsdp - constant /rsdp
    \ and fixup the address in the fadt and rechecksum the fadt
    " dsdt" find-drop-in  0= abort" No DSDT "  ( adr len )
    2dup dsdt-adr swap  move  free-mem
+
+   do-acpi-wake wake-adr 4 +   /do-acpi-wake  move
 
 [ifdef] notdef
    \ Copy in the SSDT

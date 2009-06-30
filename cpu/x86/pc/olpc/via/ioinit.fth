@@ -199,7 +199,8 @@ hpet-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
    82 0f 0a mreg  \ Direct SCI to IRQ 10 (0xa)
    84 ff da mreg  \ IRQs 7,6,4,3,1 are primary wakeups
    85 ff 40 mreg  \ IRQ 14 is primary wakeup
-   8a 9f 1f mreg  \ C-state auto switching with normal latencies
+\  8a 9f 1f mreg  \ C-state auto switching with normal latencies
+   8a 9f 9f mreg  \ C-state auto switching with slow C4 recovery mode - for C4 support
 [ifdef] demo-board
    8d 18 18 mreg  \ fast clock as throttle timer tick, hold SMI# low until event status cleared (FIXME for OLPC)
 [then]

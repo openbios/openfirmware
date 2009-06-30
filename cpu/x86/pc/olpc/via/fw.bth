@@ -344,12 +344,12 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
    boot-getline to boot-file   " rom:emacs" $boot
 ;
 
+fload ${BP}/cpu/x86/pc/rmtools.fth
 fload ${BP}/cpu/x86/pc/olpc/via/acpi.fth
 
 fload ${BP}/cpu/x86/pc/olpc/via/smbios.fth
 
 [ifdef] Later
-fload ${BP}/cpu/x86/pc/rmtools.fth
 fload ${BP}/dev/geode/smi.fth
 \ fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
 fload ${BP}/cpu/x86/pc/biosints.fth

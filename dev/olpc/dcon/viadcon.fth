@@ -83,7 +83,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
       d# 50 ms
       wait-output
       dcon-load  \ Put the DCON in VGA-refreshed mode
-      d# 25 us
+      d# 25 ms   \ Ensure that that DCON sees the DCONLOAD high
 \      display-on
    else
       dcon-unload  \ Put the DCON in self-refresh mode

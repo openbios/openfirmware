@@ -11,6 +11,9 @@ fload ${BP}/cpu/x86/pc/olpc/via/config.fth	\ Address configuration
 
 \needs start-assembling  fload ${BP}/cpu/x86/asmtools.fth
 \needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+\needs >seg:off          fload ${BP}/cpu/x86/pc/rmtools.fth
+
+h# 20 constant rm-cs     \ Must agree with GDT in rmstart.fth
 
 fload ${BP}/cpu/x86/mmuparam.fth
 
@@ -170,11 +173,20 @@ label startup
       bx ax mov  h# 1c00 invert # ax and  acpi-io-base 4 + # dx mov  op: ax dx out
       char r report
 
-      resume-data  # sp mov
-      resume-entry # ax mov  ax call   \ This might return if checksumming fails
+      cli
+
+      facs-adr h# c + #) ax mov  ax ax or  0<>  if
+         \ Resume in real mode for ACPI operating systems
+         \ Linear wakeup address is in EAX
+         sp sp xor  \ Possibly unnecessary
+         wake-adr >seg:off drop  rm-cs #) far jmp
+      else
+         \ Resume in 32-bit protected mode for OFW
+         resume-data  # sp mov
+         resume-entry # ax mov  ax call   \ This might return if checksumming fails
+      then
       char x report
    then                                            \ Not a wakeup from S3
-
 
    \ Cache is now setup normally, backed by memory
    h# 20.0000 # esp mov

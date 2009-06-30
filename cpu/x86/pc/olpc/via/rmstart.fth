@@ -39,9 +39,8 @@ hex
 \ Addresses where the following items will be located in the processor's
 \ physical address space:
 
-\ ffff.fc00:  GDT  ( 3 entries ) + padding
-\ ffff.fc20:  GDT address + size ( 6 bytes ) plus padding
-\ ffff.fc28:  Startup code plus padding
+\ ffff.fc00:  GDT  ( 4 active entries ) + padding
+\ ffff.fc30:  Startup code plus padding
 \ ffff.fff0:  Reset entry point - jump to startup code plus padding to end
 
 \ Assembler macros for startup diagnostics
@@ -88,10 +87,12 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
    0    w,  0         l,	 0      w,  \ * Null descriptor
    ffff w,  9b.000000 l,  00.c.f w,  \ 10 Code, linear=physical, full 4Gbytes
    ffff w,  93.000000 l,  00.c.f w,  \ 18 Data, linear=physical, full 4Gbytes
+   ffff w,  9b.0f0000 l,  00.0.0 w,  \ 20 Code16, base f.0000, 64K
+   ffff w,  93.0f0000 l,  00.0.0 w,  \ 28 Data16, base f.0000, 64K
 
    \ ------->>>>> Startup code, reached by branch from main entry point below
    \
-   \ ffff.fc20
+   \ ffff.fc30
 
    here		\ Mark the beginning of this code so its size may be determined
 		\ and so that a jump to it may be assembled later.
@@ -170,8 +171,8 @@ ascii h report
 
    here over -   ( adr , size-of-preceding-code )
 
-   \ ffff.fc20 is the location of the code that follows the GDT
-   ffff.fff0 ffff.fc20 - swap - ( address #bytes-to-pad )
+   \ ffff.fc30 is the location of the code that follows the GDT
+   ffff.fff0 ffff.fc30 - swap - ( address #bytes-to-pad )
 
    \ The code mustn't extend past ffff.ffc0, because that is where PC
    \ manufacturers put the 0x10-byte BIOS version string.
@@ -187,7 +188,7 @@ ascii h report
 
    16-bit
    cli cld		\ Turn off interrupts (does not affect NMI)
-   #) jmp		\ Relative jump back to ffff.fc20
+   #) jmp		\ Relative jump back to ffff.fc30
    0 w, 0 c,		\ align "pad" to end of ROM
    loader-version# l,	\ version#
    loader-format#  w,	\ "format" (>1 when crc present)
