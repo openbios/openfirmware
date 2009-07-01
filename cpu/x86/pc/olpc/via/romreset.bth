@@ -179,7 +179,7 @@ label startup
          \ Resume in real mode for ACPI operating systems
          \ Linear wakeup address is in EAX
          sp sp xor  \ Possibly unnecessary
-         wake-adr >seg:off drop  rm-cs #) far jmp
+         wake-adr lwsplit drop  rm-cs #) far jmp
       else
          \ Resume in 32-bit protected mode for OFW
          resume-data  # sp mov

@@ -83,7 +83,7 @@ label rm-startup	\ Executes in real mode with 16-bit operand forms
 
    \ ffff.fc00	GDT
 
-   1f   w,  ffff.fc00 l,	 0      w,  \ 0 Pointer to GDT in first slot
+   2f   w,  ffff.fc00 l,	 0      w,  \ 0 Pointer to GDT in first slot
    0    w,  0         l,	 0      w,  \ * Null descriptor
    ffff w,  9b.000000 l,  00.c.f w,  \ 10 Code, linear=physical, full 4Gbytes
    ffff w,  93.000000 l,  00.c.f w,  \ 18 Data, linear=physical, full 4Gbytes

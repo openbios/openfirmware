@@ -248,25 +248,25 @@ label do-acpi-wake
    then
 
    op: ax bx mov
-   h# 0f # ax and
+   h# 0f # ax and  ax cx mov
    op: 4 # bx shr
-
-   cs: ax  wake-adr la1+ #)  mov  \ Offset
-   cs: bx  wake-adr wa1+ #)  mov  \ Segment
 
    \ The following might be unnecessary
    ax ax xor  rm-ds #  al  mov  \ 16-bit data segment
    ax ds mov  ax es mov  ax ss mov
 
-   cr0 ax mov   h# fe # al and   ax cr0 mov   \ Enter real mode
+   cx  wake-adr la1+ #)  mov  \ Offset
+   bx  wake-adr wa1+ #)  mov  \ Segment
 
-   here 5 +  do-acpi-wake -  wake-adr  + >seg:off #)  far jmp  \ Jump to set cs
+   op: cr0 ax mov   h# fe # al and   op: ax cr0 mov   \ Enter real mode
+
+   here 5 +  do-acpi-wake -  wake-adr  + lwsplit #)  far jmp  \ Jump to set cs
 
    \ The following might be unnecessary
    \ Now we are running in real mode; fix segments again
    cs ax mov   ax ds mov  ax es mov
 
-   cs:  wake-adr wa1+  s#)  far jmp
+   wake-adr wa1+  s#)  far jmp
 end-code
 here do-acpi-wake - constant /do-acpi-wake
 
@@ -292,7 +292,7 @@ here do-acpi-wake - constant /do-acpi-wake
    " dsdt" find-drop-in  0= abort" No DSDT "  ( adr len )
    2dup dsdt-adr swap  move  free-mem
 
-   do-acpi-wake wake-adr 4 +   /do-acpi-wake  move
+   do-acpi-wake wake-adr  /do-acpi-wake  move
 
 [ifdef] notdef
    \ Copy in the SSDT
