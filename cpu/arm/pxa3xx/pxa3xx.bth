@@ -1,0 +1,91 @@
+purpose: Load file for OFW on ARM beagleboard
+\ See license at end of file
+
+dictionary: ${BP}/cpu/arm/build/basefw.dic
+command: &armforth &dictionary &this
+build-now
+
+" beagle.tag" r/w create-file drop  tag-file !
+
+\ ' $report-name is include-hook
+
+use-movable-vector-base  \ CortexA8 CPU core has a movable vector base
+
+h# 8.0000 constant initial-heap-size
+
+: (initial-heap)  ( -- adr len )   limit  initial-heap-size  ;
+' (initial-heap) to initial-heap
+
+
+fload ${BP}/dev/omap/diaguart.fth	\ OMAP UART
+h# 40100000 to uart-base		\ UART# base address on PXA3xx
+d# 14745600 to uart-clock-frequency	\ Normal mode UART clock
+\ d# 59429000 to uart-clock-frequency	\ High speed mode UART clock
+
+fload ${BP}/forth/lib/sysuart.fth	\ Set console I/O vectors to UART
+
+
+\ Install the simple UART driver from the standalone I/O init chain
+: stand-init-io  ( -- )
+   stand-init-io
+   inituarts  install-uart-io
+;
+
+0 [if]  \ This turns off an LED; it's useful for startup debugging
+code usr1-off
+   begin
+      set r1,0x49056090
+      set r2,0x00400000
+      str r2,[r1]
+   again
+c;
+[then]
+
+\ This is some glue code to convert the machine setup that QEMU gives us
+\ to the setup that start-forth (see arm/boot.fth) wants.
+\ We get here via a call instruction at origin+8, which is inserted below
+
+code stand-cold-code    ( r0: 0  r1: board-id  r2: &kernel-args  lr: &aif_header+8c )
+   here  origin 8 +  put-call  \ Insert call instruction
+
+   \ Put the arguments in safe registers
+   sub   r6,lr,#0x8c        \ r6 points to header (lr set by code at origin)
+   mov   r7,#0              \ r7: functions
+   add   r8,r6,0x200000     \ r8: memtop - 2MiB above load address
+                            \ r9 is up
+   mov   r10,#0             \ r10: argc
+   mov   r11,r2             \ r11: argv (kernel args)
+   mov   r12,`initial-heap-size`  \ r12: initial-heap-size
+
+   b     'code start-forth  \ Branch to the generic startup code
+end-code
+
+tag-file @ fclose  tag-file off
+
+fload ${BP}/cpu/arm/saverom.fth  \ Save the dictionary for standalone startup
+
+.( --- Saving pxa3xx.rom --- )  cr " pxa3xx.rom" $save-rom
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2009 FirmWorks
+\
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
