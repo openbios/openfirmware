@@ -69,6 +69,18 @@ d# 1 constant rtc-alarm-delay
    key drop
 ;
 
+: autowack-test ( ms -- )
+   autowack-delay
+   autowack-on
+   0 begin
+      s 
+      dup space .d (cr 1+ key?
+   until
+   ." Keypress Exit key= " 
+   key . drop
+   autowack-off
+;
+
 \ for testing wakeups from the EC
 : wackup-test-ec  ( ms -- )
    d# 3000 autowack-delay     \ At small ms delays the host can miss the SCI so this
@@ -80,7 +92,8 @@ d# 1 constant rtc-alarm-delay
       swap dup                ( ms count count )
       space .d (cr 1+ key?     ( ms count+1 )
    until
-   key drop 2drop
+   ." Keypress Exit key= " 
+   key . 2drop
    autowack-off
 ;
 

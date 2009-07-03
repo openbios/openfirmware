@@ -319,7 +319,7 @@ fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
 .( XXX Reinstate kbdtype.fth) cr
 \ fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 
-[ifdef] use-ec-Later
+[ifdef] use-ec
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
 [else]
 : ?enough-power ;
