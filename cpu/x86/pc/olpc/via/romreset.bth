@@ -13,7 +13,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/config.fth	\ Address configuration
 \needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
 \needs >seg:off          fload ${BP}/cpu/x86/pc/rmtools.fth
 
-h# 20 constant rm-cs     \ Must agree with GDT in rmstart.fth
+h# 20 constant cs16     \ Must agree with GDT in rmstart.fth
 
 fload ${BP}/cpu/x86/mmuparam.fth
 
@@ -178,8 +178,7 @@ label startup
       facs-adr h# c + #) ax mov  ax ax or  0<>  if
          \ Resume in real mode for ACPI operating systems
          \ Linear wakeup address is in EAX
-         sp sp xor  \ Possibly unnecessary
-         wake-adr lwsplit drop  rm-cs #) far jmp
+         wake-adr lwsplit drop  cs16 #) far jmp
       else
          \ Resume in 32-bit protected mode for OFW
          resume-data  # sp mov

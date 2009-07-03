@@ -232,7 +232,9 @@ here rsdp - constant /rsdp
    dup >acpi-table-len  9  fix-checksum
 ;
 
-h# 28 constant rm-ds     \ Must agree with GDT in rmstart.fth
+h# 18 constant ds32     \ Must agree with GDT in rmstart.fth
+h# 20 constant cs16     \ Must agree with GDT in rmstart.fth
+h# 28 constant ds16     \ Must agree with GDT in rmstart.fth
 
 label do-acpi-wake
    \ This code must be copied to low memory
@@ -251,22 +253,16 @@ label do-acpi-wake
    h# 0f # ax and  ax cx mov
    op: 4 # bx shr
 
-   \ The following might be unnecessary
-   ax ax xor  rm-ds #  al  mov  \ 16-bit data segment
-   ax ds mov  ax es mov  ax ss mov
+   \ Set data segment for storing offset and segment below
+   ax ax xor  ds16 #  al  mov  ax ds mov   \ 16-bit data segment
+   cx  wake-adr wa1+ #)  mov  \ Offset
+   bx  wake-adr la1+ #)  mov  \ Segment
 
-   cx  wake-adr la1+ #)  mov  \ Offset
-   bx  wake-adr wa1+ #)  mov  \ Segment
+   cr0 ax mov   h# fe # al and   ax cr0 mov   \ Enter real mode
 
-   op: cr0 ax mov   h# fe # al and   op: ax cr0 mov   \ Enter real mode
+   here 5 +  do-acpi-wake -  wake-adr  + lwsplit d# 12 lshift  #)  far jmp  \ Jump to set cs
 
-   here 5 +  do-acpi-wake -  wake-adr  + lwsplit #)  far jmp  \ Jump to set cs
-
-   \ The following might be unnecessary
-   \ Now we are running in real mode; fix segments again
-   cs ax mov   ax ds mov  ax es mov
-
-   wake-adr wa1+  s#)  far jmp
+   cs: wake-adr wa1+  lwsplit drop  s#)  far jmp
 end-code
 here do-acpi-wake - constant /do-acpi-wake
 
