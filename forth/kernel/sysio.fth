@@ -1,6 +1,9 @@
 \ See license at end of file
 purpose: System I/O interfaces
 
+[ifdef] omit-files
+: install-disk-io ;
+[else]
 \ From sysdisk.fth
 
 \ File I/O interface using the C wrapper program
@@ -111,6 +114,7 @@ headers
 create lf-pstr    1 c, linefeed c,               \ Unix
 create cr-pstr    1 c, carret   c,               \ Macintosh, OS-9
 create crlf-pstr  2 c, carret   c,  linefeed c,  \ DOS
+[then]
 
 \ From syskey.fth
 

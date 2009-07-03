@@ -29,10 +29,14 @@ only forth also meta definitions
 \t16-t /w-t constant /link-t
 \t32-t /l-t constant /link-t
 /token-t constant /defer-t
+[ifdef] omit-files
+/n-t th 100 * constant user-size-t
+[else]
 [ifdef] big-endian-t	\ reloc code uses 300 in both cases. should we?????
 /n-t th 600 * constant user-size-t
 [else]
 /n-t th c00 * constant user-size-t
+[then]
 [then]
 /n-t th 100 * constant ps-size-t
 /n-t th 100 * constant rs-size-t

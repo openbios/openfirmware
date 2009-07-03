@@ -38,10 +38,17 @@ extend-meta-assembler
 
 :-h /n* /n * ;-h
 
+[ifdef] omit-files
+\ assembler macro to assemble next
+:-h next
+   meta-asm[  ax lods  0 [ax] jmp  ]meta-asm
+;-h
+[else]
 \ assembler macro to assemble next
 :-h next
    meta-asm[  up jmp  ]meta-asm
 ;-h
+[then]
 
 :-h c;    next end-code  ;-h
 

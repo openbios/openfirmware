@@ -171,16 +171,19 @@ nuser errno	\ The last system error code
 \ systems (e.g. CP/M) require this; others which don't require it
 \ usually run faster with alignment than without.
 
+[ifndef] omit-files
 hex
 \ Aligns to a 512-byte boundary; this is okay for most systems.
 : _falign  ( l.byte# fd -- l.aligned )  drop  1ff invert and  ;
 : _dfalign  ( d.byte# fd -- d.aligned )  drop  swap 1ff invert and swap	;
+[then]
 
 : sys-init-io  ( -- )
    init-relocation 		\ must be first, for [is] to work
    install-wrapper-io
 
    install-disk-io
+
    \ Don't poll the keyboard under an OS; block waiting for a key
    ['] (key              ['] key            (is
 ;

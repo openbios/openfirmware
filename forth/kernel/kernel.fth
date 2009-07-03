@@ -1365,6 +1365,9 @@ headerless
 nuser tag-file
 
 decimal
+[ifdef] omit-files
+: $tagout 2drop ;
+[else]
 : $tag-field  ( $ -- )  tag-file @ fputs  ;
 : tag-char  ( char -- )  tag-file @ fputc  ;
 : $tagout  ( name$ -- )
@@ -1375,6 +1378,7 @@ decimal
    base @ decimal  source-id file-line (.) $tag-field  base !
    newline-string $tag-field
 ;
+[then]
 
 : $make-header  ( adr len voc-acf -- )
    -rot                        ( voc-acf adr,len )
@@ -1938,6 +1942,10 @@ headers
 
 [then]
 
+\ A place to put the last word returned by blword
+0 value 'word
+
+[ifndef] omit-files
 \ From filecomm.fth
 
 decimal
@@ -2167,9 +2175,6 @@ headers
 ;
 : close-file  ( fd -- ior )  fclose 0  ;
 
-\ A place to put the last word returned by blword
-0 value 'word
-
 headerless
 \ File descriptor allocation
 
@@ -2237,6 +2242,7 @@ headers
 
    file @  false
 ;
+[then]
 
 headerless
 \ A version that knows about multi-segment dictionaries can be installed
@@ -2247,9 +2253,7 @@ defer in-dictionary? ' (in-dictionary? is in-dictionary?
 
 defer .error#
 : (.error#)  ( error# -- )
-   dup d# -38  =  if
-      ." The file '"  opened-filename 2@ type  ." ' cannot be opened."
-   else  ." Error " .  then
+   dup d# -38  =  if  .file-open-error  else  ." Error " .  then
 ;
 
 : .abort  ( -- )
@@ -2328,6 +2332,10 @@ headers
 : warm   (s -- )  single  sp0 @ sp!  quit  ;
 [then]
 
+[ifdef] omit-files
+: read-line  ( adr len fd -- actual not-eof? error? )  3drop 0 true  ;
+: .file-open-error  ( -- )  ;
+[else]
 \ From disk.fth
 
 \ High level interface to disk files.
@@ -2560,6 +2568,10 @@ headerless
 2 /n-t * ualloc-t user opened-filename
 headers
 
+: .file-open-error  ( -- )
+   ." The file '"  opened-filename 2@ type  ." ' cannot be opened."
+;
+
 : open-file  ( adr len mode -- fd ior )
    file @ >r		\ Guard against re-entrancy
 
@@ -2722,6 +2734,7 @@ headers
    then                                                ( ior )
 ;
 \ Missing: file-status, create-file, delete-file, resize-file, rename-file
+[then]
 
 \ From cstrings.fth
 
@@ -2929,6 +2942,13 @@ nuser #source
    throw
 ;
 
+defer prompt  ( -- )   ' (prompt) is prompt
+
+defer quit  ' (quit) is quit
+
+[ifdef] omit-files
+: process-command-line  ( -- )  ;
+[else]
 : include-file  ( fid -- )
    /tib 4 + allocate throw	( fid adr )
    save-input 2>r 2>r 2>r       ( fid adr )
@@ -3004,10 +3024,6 @@ defer environment?
 : null-environment?  ( c-addr u -- false | i*x true )  2drop false  ;
 ' null-environment? is environment?
 
-defer prompt  ( -- )   ' (prompt) is prompt
-
-defer quit  ' (quit) is quit
-
 : fload fl ;
 
 : $report-name  ( name$ -- name$ )
@@ -3072,6 +3088,8 @@ variable arg#
    repeat
    bye
 ;
+[then]
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
