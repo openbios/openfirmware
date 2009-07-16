@@ -65,4 +65,4 @@ warning @ warning off
 : text-mode3  ( -- )
    text-mode3
 ;
-warning on
+warning !

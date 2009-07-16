@@ -239,9 +239,11 @@ variable parent-dir
    symlink?  if                                                 ( )
       linkpath dup cstrlen 2dup >OFW-path ascii \  split-after  ( file$ path\$ )
       dup  if                                                   ( file$ path\$ )
+         \ Path component is present
          parent-dir @ init-dir  if  4drop true exit  then       ( file$ path\$ )
          $chdir  if  2drop true exit  then                      ( file$ )
       else                                                      ( file$ path\$ )
+         \ Path component is absent
          2drop current-dir @ init-dir  if  2drop true exit  then ( file$ )
       then                                                       ( file$ )
       dup 0=  if  2drop false exit  then                         ( file$ )

@@ -8,8 +8,6 @@ decimal
 1024    constant /super-block
 h# ef53 constant fs-magic
 
-0 instance partition-offset
-
 0 instance value super-block
 0 instance value gds
 
@@ -61,8 +59,7 @@ defer int!    ( l adr -- )  ' be-l! to int!
 : do-free   ( adr len -- )  " dma-free" $call-parent  ;
 
 : init-io  ( -- )
-   " offset-low" $call-parent  " offset-high" $call-parent
-   ublock um/mod nip  to partition-offset
+   \ Used to set partition-offset but now unnecessary as parent handles it
 ;
 
 : write-ublocks  ( adr len dev-block# -- error? )
