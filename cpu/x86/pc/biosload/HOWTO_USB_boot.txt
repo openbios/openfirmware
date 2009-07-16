@@ -29,11 +29,11 @@ The output file is ofw.c32 .  It is in "COM32" format, as used by SYSLINUX.
 
 * Unmount any filesystems that are currently mounted on the USB drive
 
-* Find the USB drive's device name.  It will probably be something like /dev/sda .  You want the name of the whole drive (just sda), NOT a subordinate partition (NOT sda1).
+* Find the device name for the partition containing the filesystem on the USB drive.  It will probably be something like /dev/sda1 .  If the device is partitioned, you want the name of the partition (e.g. /dev/sda1).  If the device is not partitioned, you want the name of the whole drive (e.g. /dev/sda).
 
-* Run this command, replacing "/dev/sda" with the appropriate device name for your USB drive:
+* Run this command, replacing "/dev/sda1" with the appropriate device name for your USB drive:
 
-   $ syslinux /dev/sda
+   $ syslinux /dev/sda1
 
 
 ==== ... On Windows ====
