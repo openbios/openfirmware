@@ -6,6 +6,55 @@ DefinitionBlock ("dsdt.aml",      // AML file name
                  0x00000001)      // OEM Revision
 {
 
+OperationRegion (UART, SystemIO, 0x03f8, 0x07)
+
+// set to 1 to enable debug output
+Name (UDBG, 0)
+
+Field (UART, ByteAcc, NoLock, Preserve)
+{
+    UDAT,   8, 
+    UAR1,   8, 
+    UAR2,   8,
+    UAR3,   8,
+    UAR4,   8,
+    USTA,   8,
+    UAR5,   8
+}
+Method (UPUT, 1, NotSerialized)
+{
+    If (UDBG) {
+	While( LEqual (And (USTA, 0x20), Zero) ) {
+	    Stall (99)
+	}
+	Store (Arg0, UDAT)
+    }
+}
+
+Method (UDOT, 1, NotSerialized)
+{
+    
+    If (UDBG) {
+	And (ShiftRight (Arg0, 4), 0xF, Local0)
+	If (LLess (Local0, 10)) {
+	    Add (Local0, 0x30, Local0)  // '0'
+	} Else {
+	    Add (Local0, 0x57, Local0)  // 'a' - 10
+	}
+	UPUT (Local0)
+	
+	And (Arg0, 0xF, Local0)
+	If (LLess (Local0, 10)) {
+	    Add (Local0, 0x30, Local0)  // '0'
+	} Else {
+	    Add (Local0, 0x57, Local0)  // 'a' - 10
+	}
+	UPUT (Local0)
+
+	UPUT (0x20)
+    }
+}
+
 OperationRegion(CMS1, SystemIO, 0x74, 0x2)			
 Field(CMS1, ByteAcc, NoLock, Preserve) {
     CMSI, 8,
@@ -124,10 +173,10 @@ Scope(\_PR)
             Notify(\_SB.PCI0,0x2)
         }
 
-        Method(_L08) {
-            Notify(\_SB.PCI0.VT86.EUR1, 0x2)
-            Notify(\_SB.PCI0.VT86.EUR2, 0x2)            
-        }
+//        Method(_L08) {
+//            Notify(\_SB.PCI0.VT86.EUR1, 0x2)
+//            Notify(\_SB.PCI0.VT86.EUR2, 0x2)            
+//        }
                        
         Method(_L09) {
             Notify(\_SB.PCI0.VT86.PS2M, 0x02)	//Internal Mouse Controller PME Status
@@ -1297,13 +1346,18 @@ Name(PRSA, ResourceTemplate()
     IRQ(Level, ActiveLow, Shared)
     {3, 4, 5, 6, 7, 10, 11, 12, 14, 15}
 })
-Alias(PRSA, PRSB)
-Alias(PRSA, PRSC)
-Alias(PRSA, PRSD)
-Alias(PRSA, PRSE)
-Alias(PRSA, PRSF)
-Alias(PRSA, PRSG)
-Alias(PRSA, PRSH)
+
+// iasl balks at this construct.  -pgf
+// references cause:
+//    Error    4064 - Object not found or not accessible from scope (PRSB)
+// so PRSA substituted directly.
+//Alias(PRSA, PRSB)
+//Alias(PRSA, PRSC)
+//Alias(PRSA, PRSD)
+//Alias(PRSA, PRSE)
+//Alias(PRSA, PRSF)
+//Alias(PRSA, PRSG)
+//Alias(PRSA, PRSH)
 
 Device(LNKA)	{
     Name(_HID, EISAID("PNP0C0F")) 	// PCI interrupt link
@@ -1360,7 +1414,8 @@ Device(LNKB)	{
     
     Method(_PRS) 
     {
-        Return(PRSB)
+//      Return(PRSB)
+        Return(PRSA)
     }
     
     Method(_DIS) 
@@ -1400,7 +1455,8 @@ Device(LNKC)	{
     
     Method(_PRS) 
     {
-        Return(PRSC)
+//      Return(PRSC)
+        Return(PRSA)
     }
     
     Method(_DIS) 
@@ -1439,7 +1495,8 @@ Device(LNKD)	{
     
     Method(_PRS) 
     {
-        Return(PRSD)
+//      Return(PRSD)
+        Return(PRSA)
     }
     
     Method(_DIS) 
@@ -1477,7 +1534,8 @@ Device(LNKE)	{
     
     Method(_PRS) 
     {
-        Return(PRSE)
+//      Return(PRSE)
+        Return(PRSA)
     }
     
     Method(_DIS) 
@@ -1517,7 +1575,8 @@ Device(LNKF)	{
     
     Method(_PRS) 
     {
-        Return(PRSF)
+//      Return(PRSF)
+        Return(PRSA)
     }
     
     Method(_DIS) 
@@ -1557,7 +1616,8 @@ Device(LNK0)	{
     
     Method(_PRS) 
     {
-        Return(PRSG)
+//      Return(PRSG)
+        Return(PRSA)
     }
     
     Method(_DIS) 
@@ -1598,7 +1658,8 @@ Device(LNK1)
     
     Method(_PRS) 
     {
-        Return(PRSH)
+//      Return(PRSH)
+        Return(PRSA)
     }
     
     Method(_DIS) 
@@ -1624,435 +1685,455 @@ Device(LNK1)
     }
 }
 
+// UNUSED:  indexed-i/o unavailable on locked machines
+//      OperationRegion (ECIX, SystemIO, 0x0381, 0x03)
 //
-// Embedded UART1
+//      Field (ECIX, ByteAcc, NoLock, Preserve)
+//      {
+//          EIXH,   8, 
+//          EIXL,   8, 
+//          EDAT,   8
+//      }
 //
-Device(EUR1)								// Communication Device (Modem Port)
-{			
-	Name(_HID, EISAID("PNP0501"))			// PnP Device ID 16550 Type
-	Name(_UID, 0x1) 			   
-	
-	Name(_PRW, Package(){8, 4})
+//      Method (ECRD, 1, NotSerialized)
+//      {
+//  //      Acquire (ECMX, 5000)
+//          Store (ShiftRight (Arg0, 0x08), EIXH)
+//          Store (And (Arg0, 0xFF), EIXL)
+//  //      Sleep (15)
+//          Stall(255)
+//          Store (EDAT, Local0)
+//  //      UDOT (Local0)
+//          Stall(255)
+//  //      Sleep (15)
+//  //      Release (ECMX)
+//          Return (Local0)
+//      }
 
-	Method(_PSW, 1) 
+    Mutex (MUEC, 0x00)
+    OperationRegion (ECCP, SystemIO, 0x068, 0x05)
+
+    // NB -- the EC routines all return 0 for failure
+
+    Field (ECCP, ByteAcc, NoLock, Preserve)
+    {
+        ECDA,   8,   // 0x68
+            ,   8,
+            ,   8,
+            ,   8,
+        ECCM,   8,   // 0x6c
+    }
+
+    // force clear OBF by reading/discarding 0x68
+    Method (OBFZ, 0, Serialized)
+    {
+        Store (100, Local0)
+	While (LAnd (Decrement (Local0), And (ECCM, 1)))
+        {
+           Store (ECDA, Local1)
+           Sleep(1)
+        }
+
+	Return (LNotEqual (Local0, Zero))
+    }
+
+    // wait for IBF == 0
+    Method (IBFZ, 0, Serialized)
+    {
+        Store (100, Local0)
+	While (LAnd (Decrement (Local0), And (ECCM, 2)))
+        {
+           Sleep(1)
+        }
+	Return (LNotEqual (Local0, Zero))
+    }
+
+    // wait for IBF == 1
+    Method (IBFN, 0, Serialized)
+    {
+        Store (100, Local0)
+	While (LAnd (Decrement (Local0), LNot (And (ECCM, 2))))
+        {
+           Sleep(1)
+        }
+	Return (LNotEqual (Local0, Zero))
+    }
+
+    // wait for OBF == 1
+    Method (OBFN, 0, Serialized)
+    {
+        Store (100, Local0)
+	While (LAnd (Decrement (Local0), LNot (And (ECCM, 1))))
+        {
+	   // UPUT (0x38)
+	   // UDOT (ECCM)
+           Sleep(1)
+        }
+	Return (LNotEqual (Local0, Zero))
+    }
+
+    // EC read byte helper
+    Method (ECRB, 0, NotSerialized)
+    {
+	if (OBFN ()) { Return(ECDA) }
+        Return (Ones)
+    }
+
+    // EC command helper
+    Method (ECWC, 1, NotSerialized)
+    {
+	UPUT (0x21)  // !
+	UDOT (Arg0)
+	if (OBFZ ()) {
+	    // UPUT (0x35)
+	    if (IBFZ ()) {
+		// UPUT (0x36)
+        	Store (Arg0, ECCM)	    // write the command to 0x6c
+		if (IBFZ ()) {
+		    // UPUT (0x37)
+        	    Return (One)
+		}
+	    }
+	}
+	Return(Zero)
+    }
+
+    // EC command (zero args)
+    Method (ECW0, 2, NotSerialized)
+    {
+	If (Acquire (MUEC, 0xFFFF)) { Return (One) }
+
+	if (ECWC (Arg0)) {
+	    Release(MUEC)
+	    Return(One)
+	}
+	UPUT (0x2a)  // *
+	Release(MUEC)
+        Return (Zero)
+    }
+
+    // EC command - 1 arg
+    Method (ECW1, 2, NotSerialized)
+    {
+	If (Acquire (MUEC, 0xFFFF)) { Return (One) }
+
+	if (ECWC (Arg0)) {
+	    if (IBFZ ()) {
+		UPUT (0x2b)  // +
+		UDOT (Arg1)
+        	Store (Arg1, ECDA)	    // write the data to 0x68
+		Release(MUEC)
+		Return(One)
+	    }
+	}
+	UPUT (0x2a)  // *
+	Release(MUEC)
+        Return (Zero)
+    }
+
+    // EC command - 2 args
+    Method (ECW2, 3, NotSerialized)
+    {
+	If (Acquire (MUEC, 0xFFFF)) { Return (One) }
+
+	if (ECWC (Arg0)) {
+	    if (IBFZ ()) {
+		UPUT (0x2b)  // +
+		UDOT (Arg1)
+		Store (Arg1, ECDA)	    // write the data to 0x68
+		if (IBFZ ()) {
+		    UPUT (0x2b)  // +
+		    UDOT (Arg2)
+		    Store (Arg2, ECDA)	    // write the next data to 0x68
+		    Release(MUEC)
+		    Return(One)
+		}
+	    }
+	}
+	UPUT (0x2a)  // *
+	Release(MUEC)
+        Return (Zero)
+    }
+
+    // EC command - no arg, 1 return byte
+    Method (ECR1, 1, NotSerialized)
+    {
+
+	If (Acquire (MUEC, 0xFFFF)) { Return (One) }
+	// UPUT (0x4c) // L
+
+	If (ECWC (Arg0)) {
+	    // UPUT (0x31)
+            Store (10, Local0)                     // Ten retries
+            While (Decrement(Local0)) {
+		// UPUT (0x32)
+		Store (ECRB (), Local1)
+		If (LNotEqual (Local1, Ones))
+		{
+		    UPUT (0x3d)  // =
+		    UDOT (Local1)
+		    Release(MUEC)
+		    Return (Local1)                 // Success
+		}
+		UPUT (0x2c)  // ,
+	    }
+        }
+	UPUT (0x2a)  // *
+	Release(MUEC)
+        Return (Ones)
+    }
+
+    // EC command - one arg, one return byte
+    Method (ECWR, 2, NotSerialized)
+    {
+        Store (10, Local0)                     // Ten retries
+
+	If (Acquire (MUEC, 0xFFFF)) { Return (One) }
+
+	If (ECWC (Arg0)) {
+	    if (IBFZ ()) {
+		UPUT (0x2b)  // +
+		UDOT (Arg1)
+		Store (Arg1, ECDA)	    // write the data to 0x68
+		While (Decrement(Local0)) {
+		    Store (ECRB (), Local1)
+		    If (LNotEqual (Local1, Ones))
+		    {
+			UPUT (0x3d)  // =
+			UDOT (Local1)
+			Release(MUEC)
+			Return (Local1)                 // Success
+		    }
+		    UPUT (0x2c)  // ,
+		}
+	    }
+        }
+	UPUT (0x2a)  // *
+	Release(MUEC)
+        Return (Ones)
+    }
+
+    Mutex (ACMX, 0x00)
+    Device (AC) {  /* AC adapter */
+	Name (_HID, "ACPI0003")
+	Name (_PCL, Package (0x01) { _SB })  // Power consumer list - points to main system bus
+
+	Method (_PSR, 0, NotSerialized)
 	{
-		Store(0x20, PADS)		// clear _STS first //PMIO Rx30[5]
-		And(IRQR,0xFE,IRQR) 	// don not issue SMI //PMIO Rx2A[0]
-				
-		If (Arg0) 
-		{
-			Store(One, CMAE)
-		} 
-		Else 
-		{
-			Store(Zero, CMAE)
-		}
+	    If (LNot (Acquire (ACMX, 5000)))
+	    {
+		UPUT (0x70)  // p
+		// Store (ECRD (0xFA40), Local0)
+		Store (ECR1 (0x15), Local0) // CMD_READ_BATTERY_STATUS
+		Release (ACMX)
+	    }
+
+	    // If (And (Local0, One))
+	    If (And (Local0, 0x10))
+	    {
+		Return (One)
+	    }
+	    Else
+	    {
+		Return (Zero)
+	    }
 	}
 
-	Method(_STA)					// Status of the COM device
-	{				
-		Store(0x00, Local0)
+	Name (_STA, 0x0F)
+    }
 
-		If(LNotEqual(\_SB.PCI0.VT86.ECOM, Zero))
-		{
-			If(\_SB.PCI0.VT86.EU1E)
-			{
-				Store(0x0F, Local0) 
-			}
-			Else
-			{							// if base address is not equal to zero.		
-				If(LNotEqual(\_SB.PCI0.VT86.U1BA, Zero))	  
-				{ 
-					Store(0x0D, Local0) 
-				}
-			}	 
-		}
-		Return(Local0)
-	}
+    // DDD geoderom has no battery stuff
+    Name (BIFP, Package (0x0D)  // Battery info (static)  p 342
+    {
+	One,           // Power units - 1 : mAh / mA
+	0x0ED8,        // Design capacity
+	0x0BB8,        // Last Full Charge capacity
+	One,           // rechargable
+	0x1770,        // Full voltage in mV
+	0x01C2,        // warning capacity
+	0x0F,          // low capacity
+	0x01B3,        // granularity between low and warning
+	0x09F6,        // granularity between warning and full
+	"NiMH (GP) ",  // Model number
+	"",            // serial number
+	"NiMH",        // type
+	"OLPC "        // OEM info
+    })
+    Name (BSTP, Package (0x04)  // Battery status (dynamic) p 343
+    {
+	Zero,          // state - bitmask 1: discharging 2: charging 4: critical
+	760,           // current flow
+	2910,          // remaining capacity
+	23306          // voltage in mV
+    })
 
-	Method(_DIS,0)								
-	{ 
-	  Store(Zero, \_SB.PCI0.VT86.EU1E)		// disable embedded COM A.
-	} 
-
-	Name(RSRC,ResourceTemplate (){
-		IO(Decode16,0x0,0x0,0x08,0x08)
-		IRQNoFlags() {}
+    Device (BATT)
+    {
+	Name (_HID, EisaId ("PNP0C0A"))
+	Name (_UID, One)
+	Name (_PCL, Package (0x01)
+	{
+	    _SB
 	})
-
-	Method(_CRS, 0) 					   
-	{		
-		And(_STA(), 0x04, Local0)			// If the device is disabled, return the blank template.
-		If(LEqual(Local0,Zero)) 			//
-		{									//	  
-			Return(RSRC)					//
-		}									//
-												
-		Name(BUF1,ResourceTemplate() {		// This is the buffer prepared for OS.
-			IO(Decode16,0x3F8,0x3F8,0x08,0x08)
-			IO(Decode16,0x4080,0x4080,0x02,0x02)			
-			IRQNoFlags(){4}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x00}	// DMA 0 
-		})
-		
-		CreateByteField(BUF1, 0x02, IOLO)	// IO Port MIN Low
-		CreateByteField(BUF1, 0x03, IOHI)	// IO Port MIN High
-		CreateByteField(BUF1, 0x04, IORL)	// IO Port MAX Low
-		CreateByteField(BUF1, 0x05, IORH)	// IO Port MAX High
-
-		if(LNotEqual(\_SB.PCI0.VT86.UDFE, 0x00))  // if enable DMA
-		{
-			CreateByteField(BUF1, 0x0A, DILO)	// DMA IO Port MIN Low
-			CreateByteField(BUF1, 0x0B, DIHI)	// DMA IO Port MIN High		
-			CreateByteField(BUF1, 0x0C, DIRL)	// DMA IO Port MAX Low
-			CreateByteField(BUF1, 0x0D, DIRH)	// DMA IO Port MAX High	
-		}
-
-		CreateWordField(BUF1, 0x11, IRQV)	// IRQ mask
-		
-		ShiftLeft(\_SB.PCI0.VT86.U1BA, 0x03, local0)	// IO low.	AD7~AD0 														
-		ShiftRight(\_SB.PCI0.VT86.U1BA, 0x05, local1)	// IO high. AD9~AD8 	 
-		
-		Store(local0, IOLO)
-		Store(local1, IOHI)
-		Store(local0, IORL)
-		Store(local1, IORH)
-		
-		Store(0x00, IRQV)					 // reset IRQ resource.
-		If(LNotEqual(\_SB.PCI0.VT86.UIQ1, 0x00))   
-		{									 // put assigned IRQ to return buffer if there is any.						 
-			ShiftLeft(One, \_SB.PCI0.VT86.UIQ1, IRQV)
-		}											
-
-		if(LNotEqual(\_SB.PCI0.VT86.UDFE, 0x00))  // if enable DMA
-		{
-			ShiftLeft(\_SB.PCI0.VT86.DIBA, 0x02, local0)	// IO low.	AD7~AD0 
-			ShiftRight(\_SB.PCI0.VT86.DIBA, 0x06, local1)	// IO high. AD16~AD8 	 
-		
-			Store(local0, DILO)
-			Store(local1, DIHI)
-			Store(local0, DIRL)
-			Store(local1, DIRH)
-		}
-		Return(BUF1)				
-		
-	} // _CRS
-
-	Name(_PRS,ResourceTemplate() 
+	Method (_STA, 0, NotSerialized)   // Battery Status
 	{
-		StartDependentFn(0,0)
-		{
-			IO(Decode16,0x3F8,0x3F8,0x1,0x8)
-			IO(Decode16,0x4080,0x4080,0x02,0x02)							
-			IRQ(Edge,ActiveHigh,Exclusive) {0x4}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x00}	// DMA 0 			
-		}
-		StartDependentFnNoPri()
-		{
-			IO(Decode16,0x2F8,0x2F8,0x1,0x8)
-			IO(Decode16,0x4080,0x4080,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x3}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x00}	// DMA 0 			
-		}
-		StartDependentFnNoPri()
-		{
-			IO(Decode16,0x3E8,0x3E8,0x1,0x8)
-			IO(Decode16,0x4080,0x4080,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x4}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x00}	// DMA 0 			
-		}
-		StartDependentFnNoPri()
-		{
-			IO(Decode16,0x2E8,0x2E8,0x1,0x8)
-			IO(Decode16,0x4080,0x4080,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x3}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x00}	// DMA 0 			
-		}
-		StartDependentFn(2,2)
-		{
-			IO(Decode16,0x3F8,0x3F8,0x1,0x8)
-			IO(Decode16,0x4080,0x4080,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x3}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x00}	// DMA 0 			
-		}
-		StartDependentFn(2,2)
-		{
-			IO(Decode16,0x2F8,0x2F8,0x1,0x8)
-			IO(Decode16,0x4080,0x4080,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x4}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x00}	// DMA 0 			
-		}
-		StartDependentFn(2,2)
-		{
-			IO(Decode16,0x3E8,0x3E8,0x1,0x8)
-			IO(Decode16,0x4080,0x4080,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x3}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x00}	// DMA 0 			
-		}
-		StartDependentFn(2,2)
-		{
-			IO(Decode16,0x2E8,0x2E8,0x1,0x8)
-			IO(Decode16,0x4080,0x4080,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x4}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x00}	// DMA 0 			
-		}
-		EndDependentFn()
-	})// _PRS
+// UDOT(ECR1(0x15)) // battery status
+// Store (256, Local0)
+// While (Decrement(Local0)) {
+//     ECW1(0x1b, Local0)  // write sci mask
+//     UDOT(Local0)
+//     UPUT (0x2e)  // .
+//     UDOT(ECR1(0x1c))  // read sci mask
+//     UPUT (0x26)  // &
+// }
+//pgffix	If (LEqual (SLPS, 0x03))
+//pgffix	{
+//pgffix	    Return (0x0F)
+//pgffix	}
 
-	Method(_SRS, 1) 
-	{				
-		//
-		// The Arg0 format is the same as _PRS, and _CRS.
-		//												  
-		CreateByteField (Arg0, 0x02, IOLO)		// IO Port Low
-		CreateByteField (Arg0, 0x03, IOHI)		// IO Port High
-		if(LNotEqual(\_SB.PCI0.VT86.UDFE, 0x00))  // if enable DMA
-		{
-			CreateByteField (Arg0, 0x0A, DILO)		// DMA IO Port Low
-			CreateByteField (Arg0, 0x0B, DIHI)		// DMA IO Port High		
-		}
-		CreateWordField (Arg0, 0x11, IRQW)		// IRQ
+	    If (LNot (Acquire (ACMX, 5000)))
+	    {
+		UPUT (0x73)  // s
+		// Store (ECRD (0xFAA4), Local0)
+		Store (ECR1 (0x15), Local0) // CMD_READ_BATTERY_STATUS
+		Release (ACMX)
+	    }
 
-		Store(One, \_SB.PCI0.VT86.EU1E) 		// enable embedded COM A.
-
-		ShiftRight(IOLO, 0x03, local0)			// set embedded COM A IO base.
-		ShiftLeft(IOHI, 0x05, local1)			//
-		Or(local0, local1, \_SB.PCI0.VT86.U1BA)//
-
-		if(LNotEqual(\_SB.PCI0.VT86.UDFE, 0x00))  // if enable DMA
-		{
-			ShiftRight(DILO, 0x02, local0)			// set embedded COM A DMA IO base.
-			ShiftLeft(DIHI, 0x06, local1)			//
-			Or(local0, local1, \_SB.PCI0.VT86.DIBA) //
-		}
-		
-		FindSetLeftBit(IRQW, Local0)			// set embedded COM A IRQ.
-		If(LNotEqual(Local0, Zero)) 			//
-		{										//		  
-			Subtract(Local0, 0x01, Local0)		// IRQ is in a bit-mask fashion.	
-		}										//	  
-												//		   
-		Store(Local0, \_SB.PCI0.VT86.UIQ1)
-
-	}// _SRS
-
-}// embedded UART1.
-
-//
-// Embedded UART2
-//
-Device(EUR2)								// Communication Device (Modem Port)
-{			
-	Name(_HID, EISAID("PNP0501"))			// PnP Device ID 16550 Type
-	Name(_UID, 0x2) 			   
-	
-	Name(_PRW, Package(){8, 4})
-
-	Method(_PSW, 1) 
-	{
-		Store(0x40, PADS)		// clear _STS first //PMIO Rx30[6]
-		And(IRQR,0xFE,IRQR) 	// don not issue SMI //PMIO Rx2A[0]I 
-		
-		If (Arg0) 
-		{
-			Store(One, CMBE)
-		} 
-		Else 
-		{
-			Store(Zero, CMBE)
-		}
+	    If (And (Local0, One))  // ECRD(0xfaa4) & 0x01 => Battery inserted
+	    {
+		Return (0x1F)
+	    }
+	    Else
+	    {
+		Return (0x0F)
+	    }
 	}
 
-	//
-	// An empty resource.
-	//
-	Name(RSRC,ResourceTemplate (){
-		IO(Decode16,0x0,0x0,0x08,0x08)
-		IRQNoFlags() {}
-	})
-
-	Method(_STA)							// Status of the COM device
-	{				
-		Store(0x00, Local0)
-
-		If(LNotEqual(\_SB.PCI0.VT86.ECOM, Zero))
+	Method (_BIF, 0, NotSerialized)         // Battery Info
+	{
+	    If (LNot (Acquire (ACMX, 5000)))
+	    {
+		UPUT (0x69)  // i
+		// Store (ECRD (0xFB5F), Local0)
+		Store (ECR1 (0x2c), Local0)   // CMD_READ_BATTERY_TYPE
+		// Store (ECRD (0xF929), Local1) // FIXME -- BAT_SOC_WARNNING
+		Store (15, Local1) // EC hard-codes this (BAT_SOC_WARNNING)
+		Switch (Local0)
 		{
-			If(\_SB.PCI0.VT86.EU2E)
-			{
-				Store(0x0F, Local0) 
-			}
-			Else
-			{									// if base address is not equal to zero.		
-				If(LNotEqual(\_SB.PCI0.VT86.U2BA, Zero))	  
-				{ 
-					Store(0x0D, Local0) 
-				}			
-			}	 
-		}	
-		Return(Local0)
+		    Case (0x11)
+		    {
+			UPUT (0x42)  // B
+			Store (3800, Index (BIFP, One))
+			Store (3000, Index (BIFP, 2))
+			Store (6000, Index (BIFP, 0x04))
+			Multiply (Local1, 30, Local1)
+			Store (Local1, Index (BIFP, 5))
+			Store (15, Index (BIFP, 6))
+			Store (Subtract (Local1, 15), Index (BIFP, 7))
+			Store (Subtract (3000, Local1), Index (BIFP, 8))
+			Store ("NiMH (GP) ", Index (BIFP, 9))
+			Store ("", Index (BIFP, 10))
+			Store ("NiMH", Index (BIFP, 11))
+			Store ("GoldPeak ", Index (BIFP, 0x0C))
+			UPUT (0x62)  // b
+		    }
+		    Case (0x12)
+		    {
+			UPUT (0x44)  // D
+			Store (3000, Index (BIFP, One))
+			Store (2800, Index (BIFP, 2))
+			Store (6000, Index (BIFP, 4))
+			Multiply (Local1, 28, Local1)
+			Store (Local1, Index (BIFP, 5))
+			Store (14, Index (BIFP, 6))
+			Store (Subtract (Local1, 14), Index (BIFP, 7))
+			Store (Subtract (2800, Local1), Index (BIFP, 8))
+			Store ("LiFePO4 (GP) ", Index (BIFP, 9))
+			Store ("", Index (BIFP, 10))
+			Store ("LiFePO4", Index (BIFP, 11))
+			Store ("GoldPeak ", Index (BIFP, 0x0C))
+			UPUT (0x64)  // d
+		    }
+		    Case (0x22)
+		    {
+			UPUT (0x43)  // C
+			Store (3550, Index (BIFP, One))
+			Store (3100, Index (BIFP, 2))
+			Store (6500, Index (BIFP, 4))
+			Multiply (Local1, 31, Local1)
+			Store (Local1, Index (BIFP, 5))
+			Store (15, Index (BIFP, 6))
+			Store (Subtract (Local1, 15), Index (BIFP, 7))
+			Store (Subtract (3100, Local1), Index (BIFP, 8))
+			Store ("LiFePO4 (BYD) ", Index (BIFP, 9))
+			Store ("", Index (BIFP, 10))
+			Store ("LiFePO4", Index (BIFP, 11))
+			Store ("BYD ", Index (BIFP, 0x0C))
+			UPUT (0x63)  // c
+		    }
+		}
+	        UPUT (0x49)  // I
+
+		Release (ACMX)
+	    }
+
+	    Return (BIFP)
 	}
 
-	Method(_DIS,0)								
-	{ 
-	  Store(Zero, \_SB.PCI0.VT86.EU2E)		// disable embedded COM B.
-	} 
-
-	Method(_CRS, 0) 					   
-	{		
-		And(_STA(), 0x04, Local0)			// If the device is disabled, return the blank template.
-		If(LEqual(Local0,Zero)) 			//
-		{									//	  
-			Return(RSRC)					//
-		}									//
-												
-		Name(BUF1,ResourceTemplate() {		// This is the buffer prepared for OS.
-			IO(Decode16,0x2F8,0x2F8,0x08,0x08)
-			IO(Decode16,0x4082,0x4082,0x02,0x02)											
-			IRQNoFlags(){3}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x03}	//			
-		})
-		
-		CreateByteField(BUF1, 0x02, IOLO)	// IO Port MIN Low
-		CreateByteField(BUF1, 0x03, IOHI)	// IO Port MIN High
-		CreateByteField(BUF1, 0x04, IORL)	// IO Port MAX Low
-		CreateByteField(BUF1, 0x05, IORH)	// IO Port MAX High
-
-		if(LNotEqual(\_SB.PCI0.VT86.UDFE, 0x00))  // if enable DMA
-		{
-			CreateByteField(BUF1, 0x0A, DILO)	// DMA IO Port MIN Low
-			CreateByteField(BUF1, 0x0B, DIHI)	// DMA IO Port MIN High		
-			CreateByteField(BUF1, 0x0C, DIRL)	// DMA IO Port MAX Low
-			CreateByteField(BUF1, 0x0D, DIRH)	// DMA IO Port MAX High	
-		}
-		CreateWordField(BUF1, 0x11, IRQV)	// IRQ mask			
-											 	   
-		ShiftLeft(\_SB.PCI0.VT86.U2BA, 0x03, local0)	// IO low.	AD7~AD0												
-		ShiftRight(\_SB.PCI0.VT86.U2BA, 0x05, local1)	// IO high. AD9~AD8 	 
-		
-		Store(local0, IOLO)
-		Store(local1, IOHI)
-		Store(local0, IORL)
-		Store(local1, IORH)
-		
-		Store(0x00, IRQV)					 // reset IRQ resource.
-		If(LNotEqual(\_SB.PCI0.VT86.UIQ2, 0x00))   
-		{									 // put assigned IRQ to return buffer if there is any.						 
-			ShiftLeft(One, \_SB.PCI0.VT86.UIQ2, IRQV)
-		}											
-
-		if(LNotEqual(\_SB.PCI0.VT86.UDFE, 0x00))  // if enable DMA
-		{
-			ShiftLeft(\_SB.PCI0.VT86.DIBA, 0x02, local0)	// IO low.	AD7~AD0 
-			ShiftRight(\_SB.PCI0.VT86.DIBA, 0x06, local1)	// IO high. AD16~AD8 	 
-		
-			Store(local0, DILO)
-			Store(local1, DIHI)
-			Store(local0, DIRL)
-			Store(local1, DIRH)
-		}
-		Return(BUF1)				
-		
-	} // _CRS
-
-	Name(_PRS,ResourceTemplate() 
+	Method (_BST, 0, NotSerialized)
 	{
-		StartDependentFn(0,0)
+	    If (LNot (Acquire (ACMX, 5000)))
+	    {
+		UPUT (0x74)  // t
+		// If (And (ECRD (0xFAA5), One))
+		Store (ECR1(0x15), Local0)  // CMD_READ_BATTERY_STATUS
+		If (And (Local0, 0x20))
 		{
-			IO(Decode16,0x3F8,0x3F8,0x1,0x8)
-			IO(Decode16,0x4082,0x4082,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x4}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x03}	//			
+		    Store (0x02, Local1)  // charging
 		}
-		StartDependentFnNoPri()
+		ElseIf (And (Local0, 0x40)) // 
 		{
-			IO(Decode16,0x2F8,0x2F8,0x1,0x8)
-			IO(Decode16,0x4082,0x4082,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x3}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x03}	//			
+		    Store (One, Local1)  // discharging
 		}
-		StartDependentFnNoPri()
-		{
-			IO(Decode16,0x3E8,0x3E8,0x1,0x8)
-			IO(Decode16,0x4082,0x4082,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x4}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x03}	//		
-		}
-		StartDependentFnNoPri()
-		{
-			IO(Decode16,0x2E8,0x2E8,0x1,0x8)
-			IO(Decode16,0x4082,0x4082,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x3}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x03}	//		
-		}
-		StartDependentFn(2,2)
-		{
-			IO(Decode16,0x3F8,0x3F8,0x1,0x8)
-			IO(Decode16,0x4082,0x4082,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x3}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x03}	//			
-		}
-		StartDependentFn(2,2)
-		{
-			IO(Decode16,0x2F8,0x2F8,0x1,0x8)
-			IO(Decode16,0x4082,0x4082,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x4}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x03}	//
-		}
-		StartDependentFn(2,2)
-		{
-			IO(Decode16,0x3E8,0x3E8,0x1,0x8)
-			IO(Decode16,0x4082,0x4082,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x3}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x03}	//			
-		}
-		StartDependentFn(2,2)
-		{
-			IO(Decode16,0x2E8,0x2E8,0x1,0x8)
-			IO(Decode16,0x4082,0x4082,0x02,0x02)											
-			IRQ(Edge,ActiveHigh,Exclusive) {0x4}
-			DMA(Compatibility, NotBusMaster, Transfer8, ) {0x03}	//		
-		}
-		EndDependentFn()
-	})// _PRS
 
-	Method(_SRS, 1) 
-	{				
-		//
-		// The Arg0 format is the same as _PRS, and _CRS.
-		//												  
-		CreateByteField (Arg0, 0x02, IOLO)		// IO Port Low
-		CreateByteField (Arg0, 0x03, IOHI)		// IO Port High
-		if(LNotEqual(\_SB.PCI0.VT86.UDFE, 0x00))  // if enable DMA
+		Sleep (15)
+		// Store (ECRD (0xF910), Local0)
+		Store (ECR1 (0x16), Local0)  // CMD_READ_SOC
+		If (LLess (Local0, 15))
 		{
-			CreateByteField (Arg0, 0x0A, DILO)		// DMA IO Port Low
-			CreateByteField (Arg0, 0x0B, DIHI)		// DMA IO Port High		
+		    Or (Local1, 4, Local1)  // critical
 		}
-		CreateWordField (Arg0, 0x11, IRQW)		// IRQ
 
-		Store(One, \_SB.PCI0.VT86.EU2E) 		// enable embedded COM A.
+		Store (Local1, Index (BSTP, Zero))
+		Sleep (15)
 
-		ShiftRight(IOLO, 0x03, local0)			// set embedded COM A IO base.
-		ShiftLeft(IOHI, 0x05, local1)			//
-		Or(local0, local1, \_SB.PCI0.VT86.U2BA) //
-
-		if(LNotEqual(\_SB.PCI0.VT86.UDFE, 0x00))  // if enable DMA
-		{	
-			ShiftRight(DILO, 0x02, local0)			// set embedded COM A DMA IO base.
-			ShiftLeft(DIHI, 0x06, local1)			//
-			Or(local0, local1, \_SB.PCI0.VT86.DIBA) //
+		// Switch (ECRD (0xFB5F))
+		Switch (ECR1 (0x2c))   // CMD_READ_BATTERY_TYPE
+		{
+		    Case (0x11)
+		    {
+			Store (760, Index (BSTP, One))
+			Multiply (Local0, 30, Local2)
+		    }
+		    Case (0x22)
+		    {
+			Store (1500, Index (BSTP, One))
+			Multiply (Local0, 31, Local2)
+		    }
+		    Case (0x12)
+		    {
+			Store (1500, Index (BSTP, One))
+			Multiply (Local0, 28, Local2)
+		    }
 		}
-		FindSetLeftBit(IRQW, Local0)			// set embedded COM A IRQ.
-		If(LNotEqual(Local0, Zero)) 			//
-		{										//		  
-			Subtract(Local0, 0x01, Local0)		// IRQ is in a bit-mask fashion.	
-		}										//	  
-												//		   
-		Store(Local0, \_SB.PCI0.VT86.UIQ2)		  
 
-	}// _SRS
+		Store (Local2, Index (BSTP, 2))
+		Release (ACMX)
+	    }
 
-}// embedded UART2.
-
+	    Return (BSTP)
+	}
+    }
 
 
 	
