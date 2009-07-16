@@ -139,7 +139,7 @@ create hpet  \ High Precision Event Timer table
 ( 029 1 )  0           c, \ Bit width
 ( 02a 1 )  0           c, \ Bit offset
 ( 02b 1 )  0           c, \ Access width
-( 02c 8 )  hpet-mmio-base d, \ HPET base address
+( 02c 8 )  hpet-mmio-base 0 d, \ HPET base address
 ( 034 1 )  0           c, \ Sequence
 ( 035 2 )  0           w, \ Min tick
 ( 037 1 )  0           c, \ flags
