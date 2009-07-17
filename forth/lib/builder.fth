@@ -402,7 +402,7 @@ defer intermediate-action  ( name$ -- )
 
    $handle-file
 ;
-: tag  ( "filename" -- )  safe-parse-word $tag  ;
+: tag  ( "filename" -- )  parse-filename $tag  ;
 
 : $build  ( filename$ -- )
 
@@ -415,9 +415,22 @@ defer intermediate-action  ( name$ -- )
    $handle-file
 ;
 : build  ( "filename" -- )
-   safe-parse-word ['] $build  catch  if
+   parse-filename ['] $build  catch  if
       ." Build aborted" cr  error-exit
    then
+;
+
+\ Open and close the file so it gets logged as a dependency
+\ This is useful for build scripts that invoke external compilers,
+\ which can't automatically log dependencies.
+: depends-on:  ( "filename" -- )
+   parse-filename
+   2dup r/o open-file  if   ( filename$ )
+      drop ." Can't log " type ."  because it is inaccessible" cr
+   else                     ( filename$ fd )
+      close-file drop       ( filename$ )
+      2drop                 ( )
+   then                     ( )
 ;
 
 also extensions definitions
@@ -436,6 +449,7 @@ also extensions definitions
 : sr   ( adr len -- )  intermediate-file  ;
 : out  ( adr len -- )  intermediate-file  ;
 : aml  ( adr len -- )  intermediate-file  ;
+: dsl  ( adr len -- )  source-file  ;
 
 previous definitions
 
