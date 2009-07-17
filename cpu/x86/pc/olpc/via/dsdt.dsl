@@ -132,13 +132,14 @@ Field(\GPST, ByteAcc, NoLock, Preserve) {
     GS08,1,
     GS09,1,
     GS10,1,
-    GS11,1,
+    GS11,1,     // lid
     GS12,1,
     GS13,1,
     GS14,1,
     GS15,1,
 }   
 
+// PMIO_RX24/5
 OperationRegion(\GPSE, SystemIO, 0x0424, 0x2)   // Genernal Purpose SMI Enable
 Field(\GPSE, ByteAcc, NoLock, Preserve) {
     GPS0,   1,                                  // GPI0 SMI Enable
@@ -149,11 +150,14 @@ Field(\GPSE, ByteAcc, NoLock, Preserve) {
     PME,    1,                                  // PCI PME Enable
         ,   2,
     RING,   1,                                  // Ring Wakeup
-        ,   5,
+        ,   2,
+    LID,    1,                                  // Lid Wakeup
+        ,   2,
     USBE,   1,                                  // USB Resume
         ,   1,
 } 
       
+// PMIO_RX28/9
 OperationRegion(\Glos, SystemIO, 0x0428, 0x2)   // Global Status
 Field(\Glos, ByteAcc, NoLock, Preserve) {
         , 6,                                    //
@@ -168,6 +172,19 @@ Field(\Glos, ByteAcc, NoLock, Preserve) {
 OperationRegion(\WIRQ, SystemIO, 0x042a, 0x1)   // IRQ Resume Reg
 Field(\WIRQ, ByteAcc, NoLock, Preserve) {
     IRQR, 8,
+}
+
+// from BIOS porting guide, section 13.2.2
+OperationRegion(\EDGE, SystemIO, 0x042c, 0x1)   // SMI enable, lid edge polarity
+Field(\EDGE, ByteAcc, NoLock, Preserve) {
+        , 1,                                    // SMI enable (1 == enable)
+        , 1,                                    //
+        , 1,                                    // power button polarity (1 == falling)
+        , 1,                                    //
+        , 1,                                    //
+        , 1,                                    // battery low enable (0 == enable)
+        , 1,                                    // therm polarity (1 == falling)
+    LPOL, 1,                                    // lid polarity (1 == falling)
 }
     
 OperationRegion(\Stus, SystemIO, 0x0430, 0x1)   // Global Status
@@ -199,13 +216,13 @@ Scope(\_GPE)
         Notify(\_SB.PCI0,0x2)
     }
 
-//  Method(_L08) {
-//      Notify(\_SB.PCI0.VT86.EUR1, 0x2)
-//      Notify(\_SB.PCI0.VT86.EUR2, 0x2)            
-//  }
-                       
     Method(_L09) {
         Notify(\_SB.PCI0.VT86.PS2M, 0x02)       //Internal Mouse Controller PME Status
+    }
+
+    Method(_L0B) {          // LID event
+        Not(LPOL, LPOL)     // Flip the lid polarity bit
+        Notify(\_SB.PCI0.LID, 0x80)
     }
 
     Method(_L0D) {
@@ -2239,6 +2256,22 @@ Scope(\_SB)
             }
         }   // Device(P2PB)
         
+        Device (LID) {
+            Name (_HID, EisaId ("PNP0C0D"))
+            Name (_PRW, Package (0x02) {  0x0B, 0x04 })     // Event 0B, wakes from S4
+
+            Method(_LID) {
+                If (LPOL) {                   // Lid is open
+                    UPUT (0x6c)                   // l
+                } Else {
+                    UPUT (0x4c)                   // L
+                }
+                Store (Zero, GS11)            // Clear lid
+                Return(LPOL)
+            }
+
+        }  // Device(LID)
+
         Device(HDAC)
         {
             Name(_ADR, 0x00140000)
