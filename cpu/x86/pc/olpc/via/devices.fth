@@ -56,19 +56,9 @@ end-package
 \ devalias screen /ega-text
 [then]
 
-[ifdef] use-root-isa
-0 0  " "  " /" begin-package
-   fload ${BP}/cpu/x86/pc/isabus.fth	\ ISA Bus Bridge under root node
-end-package
-[then]
-
-[ifdef] use-pci-isa
-
 [ifdef] addresses-assigned
-[ifdef] use-pci-isa
 \ This must precede isamisc.fth in the load file, to execute it first
 fload ${BP}/cpu/x86/pc/moveisa.fth
-[then]
 [then]
 
 0 0  " 0"  " /pci" begin-package
@@ -76,11 +66,8 @@ fload ${BP}/cpu/x86/pc/moveisa.fth
    fload ${BP}/dev/pci/isamisc.fth
 end-package
 
-[then]
-
 fload ${BP}/cpu/x86/pc/olpc/timertest.fth  \ Selftest for PIT timer
 
-1 [if]
 warning @ warning off
 : probe-pci  ( -- )
    probe-pci
@@ -258,7 +245,6 @@ fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 
 \needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
 
-[ifdef] use-ec
 fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
 
 warning @ warning off
@@ -272,7 +258,6 @@ fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
 fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
 
 fload ${BP}/cpu/x86/pc/olpc/via/boardrev.fth   \ Board revision decoding
-[then]
 
 : cpu-mhz  ( -- n )
    " /cpu@0" find-package drop	( phandle )
@@ -280,12 +265,10 @@ fload ${BP}/cpu/x86/pc/olpc/via/boardrev.fth   \ Board revision decoding
    decode-int nip nip  d# 1000000 /  
 ;
 
-[ifdef] use-ec-Later
 stand-init: Date to EC
    time&date d# 2000 -  ['] ec-date! catch  if  3drop  then
    3drop
 ;
-[then]
 
 [ifdef] use-wlan
 stand-init: Wireless reset
@@ -297,31 +280,12 @@ stand-init: Wireless reset
 ;
 [then]
 
-[ifdef] use-ec-Later
-stand-init: PCI properties
-   " /pci" find-device
-      board-revision  h# b18  <  if
-         d# 33,333,333
-      else
-         \ We switched to 66 MHz at B2
-         d# 66,666,667
-      then
-      " clock-frequency" integer-property
-   dend
-;
-[then]
-
-[ifdef] use-ec
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
 .( XXX Reinstate kbdtype.fth) cr
 \ fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 
-[ifdef] use-ec
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
-[else]
-: ?enough-power ;
-[then]
    
 fload ${BP}/dev/olpc/spiflash/spiflash.fth   \ SPI FLASH programming
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
@@ -330,14 +294,8 @@ h# 2c to crc-offset
 
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
 ' ofw-fw-filename$ to fw-filename$
-[then]
 
 : +i encode-int encode+  ;  : 0+i  0 +i  ;
-
-[ifdef] Later
-fload ${BP}/cpu/x86/pc/olpc/via/gpioinit.fth
-fload ${BP}/cpu/x86/pc/olpc/via/chipinit.fth
-[then]
 
 0 0  " 1,0"  " /pci" begin-package
    fload ${BP}/dev/via/unichrome/loadpkg.fth     \ Geode display
@@ -355,7 +313,6 @@ also hidden  d# 34 to display-height  previous  \ For editing
 
 fload ${BP}/cpu/x86/adpcm.fth            \ ADPCM decoding
 
-[ifdef] use-ec-Later
 warning @ warning off
 : stand-init
    stand-init
@@ -386,10 +343,9 @@ warning @ warning off
    dend
 ;
 warning !
-[then]
 
 [ifdef] Later
-fload ${BP}/cpu/x86/pc/olpc/micin.fth   \ Microphone input AC/DC coupling
+\ Add support for DC-couple microphone input
 [then]
 
 \ LICENSE_BEGIN

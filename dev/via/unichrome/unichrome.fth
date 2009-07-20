@@ -602,6 +602,8 @@ hex
 
 defer init-display  ' init-primary-display is init-display
 
+0 instance value graphmem
+
 : init-frame-buffer  ( -- )		\ Initializes the controller
 \  smb-init
 \   set-dac-colors		\ Set up initial color map
@@ -616,6 +618,8 @@ defer init-display  ' init-primary-display is init-display
       ( default )  nip nip
    endcase
    h# f to background-color
+
+   frame-buffer-adr /fb +  to graphmem
 ;
 
 : set-fb  ( -- )

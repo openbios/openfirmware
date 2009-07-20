@@ -113,7 +113,6 @@ $new-file
    " ${BP}/ofw/fcode/memtest.fth"  " memtest.fth"          $add-deflated-dropin
 
    " ${BP}/dev/hdaudio/build/hdaudio.fc"         " class040300"   $add-deflated-dropin
-[ifdef] Later
 
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
 
@@ -138,7 +137,6 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wlan.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/xo.565"       " xo.565"        $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " sd.565"        $add-deflated-dropin
-[then]
 
    " ${BP}/ofw/termemu/15x30pc.psf"             " font"          $add-deflated-dropin
 [ifdef] use-ega

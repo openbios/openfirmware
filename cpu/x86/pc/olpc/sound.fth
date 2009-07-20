@@ -37,7 +37,9 @@ h# -9 constant default-volume
    r> to load-started
    r> to playback-volume
 ;
-
+: sound-end  ( -- )
+   " wait-sound" ['] $call-audio catch  if  2drop  then
+;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

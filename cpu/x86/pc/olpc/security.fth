@@ -287,7 +287,7 @@ d# 256 constant /sig
 \ string is shorter than n, head$ is the input string and tail$ is
 \ the null string.
 
-: break$  ( $ n -- tail$ head$ )
+: cut$  ( $ n -- tail$ head$ )
    2dup <  if  drop null$ 2swap exit  then
    dup >r  /string   ( tail$ )
    over r@ -  r>     ( tail$ head$ )
@@ -307,7 +307,7 @@ d# 256 constant /sig
 : key-in-list?  ( key$ -- flag )  \ Sets thiskey$ as an important side effect
    2>r                                   ( r: key$ )
    pubkey$  begin  dup  while            ( rem$  r: key$ )
-      pubkeylen break$                   ( rem$' thiskey$  r: key$ )
+      pubkeylen cut$                     ( rem$' thiskey$  r: key$ )
       2r@ 2over tail$=  if               ( rem$ thiskey$  r: key$ )
          to thiskey$                     ( rem$  r: key$ )
          2r> 4drop  true                 ( true )
@@ -373,7 +373,7 @@ d# 256 constant /sig
 \ numfield is a factor used for parsing 2-digit fields from date/time strings.
 : numfield  ( exp$ min max -- exp$' )
    >r >r                      ( exp$ r: max min )
-   2 break$ $number  throw    ( exp$' num  r: max min )
+   2 cut$ $number  throw      ( exp$' num  r: max min )
    dup r> < throw             ( exp$  num  r: max )
    dup r> > throw             ( exp$  num  )
 ;
@@ -383,10 +383,10 @@ d# 256 constant /sig
 \ according to the simplified calculation described above for "get-date"
 
 : (expiration-to-seconds)  ( expiration$ -- d.seconds )
-   4 break$ $number throw >r     ( exp$' r: y )
+   4 cut$ $number throw >r       ( exp$' r: y )
    1 d# 12 numfield >r           ( exp$' r: y m )
    1 d# 31 numfield >r           ( exp$' r: y m d )
-   1 break$ " T" $=  0=  throw   ( exp$' r: y m d )
+   1 cut$ " T" $=  0=  throw     ( exp$' r: y m d )
    0 d# 23 numfield >r           ( exp$' r: y m d h )
    0 d# 59 numfield >r           ( exp$' r: y m d h m )
    0 d# 59 numfield >r           ( exp$' r: y m d h m s )
@@ -906,7 +906,7 @@ warning !
 : secure-startup  ( -- )
    in-factory?  if
       button-check button-x or  button-o or  button-square or  button-rotate or  ( mask )
-      game-key-mask =  if  exit  then
+      game-key-mask =  if  sound-end exit  then
    then
 
    ['] noop to ?show-device
@@ -923,11 +923,14 @@ warning !
    else
       freeze  dcon-freeze
 
+[ifdef] jffs2-support
       \ The following is a hack to let the user unfreeze the screen during
       \ the several-second period while JFFS2 is scanning the NAND
       " dev /jffs2-file-system ' ?unfreeze to scan-callout  dend" eval
+[then]
    then
 
+   sound-end
    \ The screen may be frozen when we exit, because we want pretty
    \ boot even when not secure.
 

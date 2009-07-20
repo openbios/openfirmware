@@ -69,12 +69,12 @@ defer .firmware  ' noop to .firmware
    " size" memory-node @ $call-method 1meg um/mod nip
 ;
 : .memory  ( -- )
-   memory-size dup d# 1024 / ?dup  if ( mb gb )
-      nip "  GiB" rot                 ( gb$ gb )
-   else                               ( mb )
-      " MiB " rot                     ( mb$ mb )
-   then                               ( m$ m )
-   .d  type ." memory installed"      (  )
+   memory-size dup d# 1024 / ?dup  if  ( mb gb )
+      nip " GiB" rot                   ( gb$ gb )
+   else                                ( mb )
+      " MiB" rot                       ( mb$ mb )
+   then                                ( m$ m )
+   .d  type ."  memory installed"      ( )
 ;
 : .serial  ( -- )
    push-decimal  ." Serial #"  serial# (.) type

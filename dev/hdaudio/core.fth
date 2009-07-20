@@ -232,10 +232,10 @@ d# 48.000 value sample-rate
 : low-rate?  ( Hz )  dup d# 48.000 <  swap d# 44.100 <>  and  ;
 
 : set-sample-rate  ( Hz -- )
-   to sample-rate
-   dup low-rate? if
+   dup to sample-rate  ( Hz )
+   dup low-rate? if    ( Hz )
       48kHz  d# 48.000 swap / to scale-factor
-   else
+   else                ( Hz )
       1 to scale-factor
       d# 48.000 / case \ find nearest supported rate
          0   of  44.1kHz  endof
@@ -413,10 +413,6 @@ d# 256 /bd * value /bdl
    /sound-buffer         ( actual )
 ;
 
-: write  ( adr len -- actual )
-   open-out  audio-out
-;
-
 : release-sound-buffer  ( -- )
    sound-buffer sound-buffer-phys /sound-buffer dma-map-out
    upsampling? if  sound-buffer /sound-buffer dma-free  then
@@ -428,6 +424,14 @@ d# 256 /bd * value /bdl
    free-bdl
    release-sound-buffer
 ;
+
+: write  ( adr len -- actual )
+   open-out  audio-out
+;
+
+\ XXX remove when write is fixed to set up a completion handler
+: wait-sound  ( -- )  write-done  ;
+    
 
 : set-volume  ( dB -- )  dac to node  step# output-gain  ;
 

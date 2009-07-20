@@ -98,10 +98,6 @@ device-end
 
 fload ${BP}/cpu/x86/pc/olpc/port80.fth	\ Port 80 debug messages
 
-[ifdef] Later
-fload ${BP}/dev/geode/gpio.fth		\ Rudimentary GPIO driver
-[then]
-
 fload ${BP}/cpu/x86/pc/isaio.fth
 fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
 
@@ -259,7 +255,6 @@ false value secure?
 
 : protect-fw  ( -- )  secure?  if  ec-indexed-io-off  then  ;
 
-\ stand-init-debug?  [if]
 warning @  warning off 
 : init
 \ initial-heap add-memory
@@ -272,14 +267,9 @@ warning @  warning off
          protect-fw
          ." Interacting" cr  hex interact
       then
-
-  [ifdef] Later
-      setup
-  [then]
    then
 ;
 warning !
-[then]
 
 : (.firmware)  ( -- )
    ." Open Firmware  "  .built  cr
@@ -316,7 +306,6 @@ fload ${BP}/ofw/gui/insticon.fth
 ;
 ' screen-#lines to lines/page
 
-[ifdef] Later
 fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 : setup-for-linux  ( -- )
    [ ' linux-hook behavior compile, ]    \ Chain to old behavior
@@ -326,17 +315,17 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 
 fload ${BP}/cpu/x86/pc/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
-[then]
 fload ${BP}/cpu/x86/pc/olpc/via/suspend.fth  \ Suspend/resume setup
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
+fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 [ifdef] Later
 fload ${BP}/cpu/x86/pc/olpc/copynand.fth
+[then]
 \ fload ${BP}/cpu/x86/pc/olpc/carousel.fth     \ Carouseled NAND writing
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
 fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
 
-[then]
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 
 : emacs  ( -- )
@@ -354,22 +343,21 @@ fload ${BP}/dev/geode/smi.fth
 \ fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
 fload ${BP}/cpu/x86/pc/biosints.fth
 fload ${BP}/cpu/x86/pc/olpc/biosresume.fth
+[then]
 
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
+fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 fload ${BP}/ofw/gui/ofpong.fth
 fload ${BP}/cpu/x86/pc/olpc/life.fth
-fload ${BP}/cpu/x86/pc/olpc/sound.fth
 [ifdef] wlan-wackup
 fload ${BP}/cpu/x86/pc/olpc/wlantest.fth
 
 ' gx-power-off to power-off
 [then]
-[then]
 
 fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 
-[ifdef] Later
 [ifdef] use-ega
 : ega-output  ( -- )
    \ This only works if stdout is currently /display
@@ -378,7 +366,6 @@ fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
    then
    " /ega-text" output
 ;
-[then]
 [then]
 
 " /xp u:\boot\olpc.fth sd:\boot\olpc.fth c:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
@@ -410,7 +397,6 @@ fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 : dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
 : brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;
 
-[ifdef] Later
 dev /8042/keyboard
 0 value waiting-up?
 : olpc-check-abort  ( scan-code -- abort? )  \ Square pressed?
@@ -440,7 +426,6 @@ patch olpc-check-abort check-abort get-scan
 ;
 ' handle-volume?  to scan-handled?
 dend
-[then]
 
 \ Eliminate 4 second delay in install console for the case where
 \ there is no keyboard.  The delay is unnecessary because the screen
@@ -448,13 +433,12 @@ dend
 patch drop ms install-console
 
 : via-reset-all  ( -- )
-[ifdef] Later
    " screen"  " dcon-off" ['] execute-device-method  catch  if
       2drop 2drop
    then
 
    ec-reboot   \ Tell the EC to reboot us, so the EC can reset too
-[then]
+
    \ Prevent "resume from S3" on restart
    4 acpi-w@  h# 1c00 invert and  4 acpi-w!
 
@@ -532,7 +516,6 @@ true                               ' client-symbols?  set-config-int-default
 \ fload ${BP}/cpu/x86/pc/report.fth
 fload ${BP}/ofw/core/dualconsole.fth
 
-[ifdef] Later
 : fast-boot?  ( -- flag )
 [ifdef] rom-loaded
    button-x game-key?  0=
@@ -540,7 +523,6 @@ fload ${BP}/ofw/core/dualconsole.fth
    false
 [then]
 ;
-[then]
 
 : set-mc  ( 19-val 1a-val -- )
    lbsplit  h# 66  h# 69  do  i cmos!  -1 +loop
@@ -561,7 +543,6 @@ fload ${BP}/ofw/core/dualconsole.fth
 \   .built cr
 ;
 
-[ifdef] Later
 : ?factory-boot-sequence  ( -- flag )
    \ TS is the "test station" tag.  Its value is set to "DL" at the
    \ end of manufacturing test.
@@ -569,14 +550,17 @@ fload ${BP}/ofw/core/dualconsole.fth
       ?-null  " DL" $=  0=  ( in-factory? )
    else                     ( )
       \ Missing TS tag is treated as in factory
+[ifdef] Later
       true                  ( in-factory? )
+[else]
+      false
+[then]
    then                     ( in-factory? )
    if                       ( )
       " /prober /usb/ethernet disk:\boot\olpc.fth nand:\boot\olpc.fth /xp sd:\boot\olpc.fth /usb/wlan"
       to boot-device
    then                     ( )
 ;
-[then]
 
 : console-start  ( -- )
    " screen" open-dev  ?dup  if
@@ -603,7 +587,6 @@ fload ${BP}/ofw/core/dualconsole.fth
    then
 ;
 
-[ifdef] Later
 : ?games  ( -- )
    rocker-right game-key?  if
       protect-fw
@@ -623,6 +606,7 @@ fload ${BP}/ofw/core/dualconsole.fth
    then
 ;
 
+[ifdef] Later
 : ?scan-nand  ( -- )
    rocker-up game-key?  if
       protect-fw  text-on  ['] scan-nand guarded
@@ -633,6 +617,7 @@ fload ${BP}/ofw/core/dualconsole.fth
    game-key-mask =  if  protect-fw try-fs-update  then
 ;
 [then]
+
 : open-keyboard  ( -- )
    " keyboard" open-dev  ?dup  if  set-stdin  then
 ;
@@ -640,13 +625,11 @@ fload ${BP}/ofw/core/dualconsole.fth
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
-[ifdef] Later
    block-exceptions
    no-page
 
    ?factory-mode
    ?factory-boot-sequence
-[then]
 
    console-start
 
@@ -658,33 +641,29 @@ fload ${BP}/ofw/core/dualconsole.fth
 
    read-game-keys
 
-[ifdef] Later
    stdout off  \ 
-[then]
 
    " probe-" do-drop-in
 
    probe-pci
-[ifdef] Later
    sound
-[then]
    open-keyboard
-[ifdef] Later
    ?games
-[then]
    ['] false to interrupt-auto-boot?
    probe-usb
    " probe+" do-drop-in
+
    setup-smbios  \ Must be done after build-date is defined via do-drop-in
 
    interpreter-init
+
+   ?diags
 [ifdef] Later
    ?scan-nand
-   ?diags
    ?fs-update
+[then]
    secure-startup
    unblock-exceptions
-[then]
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
    ?usb-keyboard
 \   install-console
@@ -692,14 +671,12 @@ fload ${BP}/ofw/core/dualconsole.fth
    banner
    auto-boot
 
-[ifdef] Later
    frozen?            ( frozen? )
    unfreeze visible   ( frozen? )
    if  banner  then  \ Reissue banner if it was suppressed
 
    blue-letters ." Type 'help' for more information." black-letters
    cr cr
-[then]
 
    quit
 ;
@@ -711,10 +688,8 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 : urom  " flash! u:\new.rom" eval  ;
 
-[ifdef] use-ec-Later
 \ Fancy battery charge logger.
 fload ${BP}/cpu/x86/pc/olpc/charge.fth
-[then]
 
 \ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
 also hidden also keys-forth definitions

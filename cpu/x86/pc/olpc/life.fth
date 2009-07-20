@@ -13,12 +13,12 @@ lf_width lf_height * constant /board
 /board buffer: lf_board_work  
 
 \ some macros to get a linear address o a cell of board or working area
-: >offset ( i j -- lin_addr ) swap lf_width *  + ;
+: ij>offset ( i j -- lin_addr ) swap lf_width *  + ;
 : >cell  ( i j -- adr )  swap lf_width *  + lf_board +  ;
 : >work  ( i j -- adr )  swap lf_width *  + lf_board_work +  ;
 
 : show-cell  ( state y x -- )
-   >offset swap  if  lf_fg  else  lf_bg  then  show-state
+   ij>offset swap  if  lf_fg  else  lf_bg  then  show-state
 ;
 
 \ display the board of life
@@ -33,7 +33,7 @@ lf_width lf_height * constant /board
 \ working variable
 variable cell-sum
 
-: xy+  ( x1 y1 x2 y2 -- x3 y3 )  rot +  -rot +  swap ;
+\needs xy+ : xy+  ( x1 y1 x2 y2 -- x3 y3 )  rot +  -rot +  swap ;
 
 code sumcell  ( adr -- sum )
    bx pop
@@ -69,7 +69,7 @@ c;
     1  1 +sum        ( i j )
    2drop cell-sum @  ( sum )
 [else]
-    >offset lf_board + sumcell
+    ij>offset lf_board + sumcell
 [then]
 ;
 

@@ -31,15 +31,12 @@ create use-elf
 
 create resident-packages
 \ create use-watch-all
-\ create use-root-isa   \ If defined, isa node is in the devtree root, not under /pci
 create no-floppy-node
 create no-com2-node
 create no-lpt-node
-create use-pci-isa
-create basic-isa
+create basic-isa       \ Disables some CHRP stuff in the ISA legacy nodes
 create isa-dma-only
 create use-ega
-create save-msrs
 
 create use-null-nvram  \ Don't store configuration variables
 \ create use-flash-nvram  \ Store configuration variables in firmware FLASH
