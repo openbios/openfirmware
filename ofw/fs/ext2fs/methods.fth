@@ -23,9 +23,9 @@ external
    block bsize erase update	\  flush
    wd-inum >r
    inode# first-dirent  if  r> drop  true exit  then
-   " ."   d# 12		 inode#	set-dirent
+   " ."   d# 12	dir-type inode#	set-dirent
    d# 12 diroff !
-   " .."  bsize d# 12 -	 r> set-dirent
+   " .."  bsize d# 12 -	dir-type r> set-dirent
    false				( error? )
    diroff off
 ;

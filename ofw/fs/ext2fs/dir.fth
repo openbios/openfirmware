@@ -135,12 +135,12 @@ variable totoff
    (last-dirent) drop
    dirent-len@  dirent-reclen  -
 ;
-: set-dirent   ( name$ rec-len inode# -- )
+: set-dirent   ( name$ type rec-len file-type inode# -- )
    dirent int!						( name$ rec-len )
+   \ XXX this should be contingent upon EXT2_FEATURE_INCOMPAT_FILETYPE
+   dirent-type!						( name$ )
    dirent-len!						( name$ )
    dup dirent-namelen!					( name$ )
-   \ XXX set actual file type here if EXT2_FEATURE_INCOMPAT_FILETYPE
-   0 dirent-type!					( name$ )
    dirent-nameadr swap move				( )
    update
 ;
@@ -173,6 +173,10 @@ variable totoff
    false
 ;
 
+1 constant regular-type
+2 constant dir-type
+7 constant symlink-type
+
 : ($create)   ( name$ mode -- error? )
    >r							( name$ )
    \ check for room in the directory, and expand it if necessary
@@ -184,7 +188,7 @@ variable totoff
    then							( name$ rec-len )
 
    \ At this point dirent points to the place for the new dirent
-   alloc-inode set-dirent false				( error? )
+   regular-type alloc-inode set-dirent false		( error? )
    r> dirent-inode@ init-inode
 ;
 
@@ -198,10 +202,6 @@ variable totoff
 ;
 
 \ --
-
-1 constant regular-type
-2 constant dir-type
-7 constant symlink-type
 
 \ Information that we need about the working file/directory
 \ The working file changes at each level of a path search
