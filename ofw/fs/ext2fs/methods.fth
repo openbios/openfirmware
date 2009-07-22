@@ -13,7 +13,7 @@ external
    o# 100666 ($create)
 ;
 \ XXX note: increment link count in parent
-: $mkdir   ( name$ -- )
+: $mkdir   ( name$ -- error? )
    o# 40777 ($create) if  true exit  then
    
    file-handle to inode#
@@ -21,17 +21,17 @@ external
    file-size h# 400 + file-size!
    dup direct0 int! update		( block# )
    block bsize erase update	\  flush
-   current-dir @ >r
-   inode# init-dir
+   wd-inum >r
+   inode# first-dirent  if  r> drop  true exit  then
    " ."   d# 12		 inode#	set-dirent
    d# 12 diroff !
-   " .."  bsize d# 12 -	 r>	set-dirent
+   " .."  bsize d# 12 -	 r> set-dirent
    false				( error? )
    diroff off
 ;
 
 : $delete   ( name$ -- error? )
-   lookup  if  true exit  then		( )
+   $find-file  if  true exit  then		( )
    
    (delete-file)
 ;
@@ -39,10 +39,11 @@ external
 
 \ XXX note: decrement link count in parent
 : $rmdir   ( name$ -- error? )	\ XXX UNTESTED
-   lookup  if  true exit  then		( )
+   $find-file  if  true exit  then		( )
+   wf-type dir-type <>  if  true exit  then     ( )
    
    inode# >r					\ save parent directory
-   file-handle select-file if  r> drop true exit  then
+   file-handle set-inode  if  r> drop true exit  then
    dir? 0= if  r> drop true exit  then
    
    (delete-files)   file-handle if  r> drop true exit  then	\ still some left
@@ -102,16 +103,17 @@ headers
    then							( actual addr )
    lblk# write-file-block				( actual )
    
-   \ XXX I am sceptical about this line.
+   \ XXX I am skeptical about this line.
    dup  0>  if  lblk#++  then				( actual )
    true to modified?
 \   flush					\ XXX kludge for tests
 ;
 
 : $ext2fsopen  ( adr len mode -- false | fid fmode size align close seek write read true )
-   -rot lookup  if  drop false exit  then	( mode adr len )
+   -rot $find-file  if  drop false exit  then	        ( mode )
+   wf-type regular-type <>  if  drop false exit  then   ( mode )
 
-   file-handle select-file  if  drop false exit  then	( mode )
+   file-handle set-inode                                ( mode )
    false to modified?
    
    >r
@@ -134,7 +136,7 @@ external
    my-args " <NoFile>"  $=  if  true exit  then
 
    \ Start out in the root directory
-   root-dir# init-dir  if  release-buffers false exit  then
+   set-root
 
    my-args  ascii \ split-after                 ( file$ path$ )
    $chdir  if  2drop release-buffers false  exit  then  ( file$ )

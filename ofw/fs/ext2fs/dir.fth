@@ -8,7 +8,6 @@ decimal
 
 variable diroff
 variable totoff
-variable current-dir
 
 : get-dirblk  ( -- end? )
    lblk# bsize * file-size >=  if  true exit  then
@@ -39,6 +38,14 @@ variable current-dir
 : dirent-reclen    ( -- n )  dirent-namelen@ >reclen  ;
 
 : lblk#++  ( -- )   lblk# 1+ to lblk#  ;
+
+: dirent-vars  ( -- diroff totoff lblk# inode# )
+   diroff @  totoff @  lblk#  inode#
+;
+: restore-dirent  ( diroff totoff lblk# inode# -- )
+   to inode#  to lblk#  totoff !  diroff !
+   get-dirblk drop
+;
 
 \ **** Select the next directory entry
 : next-dirent  ( -- end? )
@@ -80,7 +87,6 @@ variable current-dir
 ;
 
 \ On entry:
-\   current-dir @  is the inode of the directory file
 \   dir-block# is the physical block number of the first directory block
 \   diroff @ is 0
 \ On successful exit:
@@ -162,7 +168,6 @@ variable current-dir
    else
       \ First dirent in block; zap its inode
       0 dirent-inode!
-      
    then      
    update
    false
@@ -183,46 +188,6 @@ variable current-dir
    r> dirent-inode@ init-inode
 ;
 
-\ On entry:
-\   current-dir @  is the inode of the directory file
-\   dir-block# is the physical block number of the first directory block
-\   diroff @ and totoff @ are 0
-\ On successful exit:
-\   dir-block# is the physical block number of the current directory block
-\   diroff @ is the within-block offset of the directory entry that matches name$
-\   totoff @ is the overall offset of the directory entry that matches name$
-: lookup  ( name$ -- not-found? )
-   begin
-      dirent-inode@  if   \ inode=0 for a deleted dirent at the beginning of a block
-         2dup file-name  $=  if  2drop false exit  then
-      then
-      next-dirent
-   until
-   2drop true
-;
-
-defer init-dir
-
-: $chdir  ( path$ -- error? )
-   begin  dup  while		( path$ )
-      [char] \ left-parse-string  ( tail$ head$ )
-      dup  0=  if               ( tail$ head$ )  \ Begins with \
-         2drop			( tail$ )
-         root-dir# init-dir  if  2drop  true exit  then
-      else		        ( tail$ head$ )
-         lookup  if  2drop true exit  then
-         dir? 0=  if  2drop true exit  then
-         file-handle init-dir  if  2drop true exit  then
-      then			( tail$ )
-   repeat			( path$ )
-   2drop false
-;
-
-\ replace / with \ in a string
-: >OFW-path  ( adr len -- )
-   bounds do i c@ ascii / =  if  ascii \ i c!  then loop
-;
-
 : linkpath   ( -- a )
    file-acl  if  bsize 9 rshift  else  0  then     ( #acl-blocks )
    #blks-held  <>  if	\ long symbolic link path
@@ -232,41 +197,155 @@ defer init-dir
    then
 ;
 
-variable parent-dir
+\ --
 
-: select-file  ( i# -- error? )
-   to inode#
-   symlink?  if                                                 ( )
-      linkpath dup cstrlen 2dup >OFW-path ascii \  split-after  ( file$ path\$ )
-      dup  if                                                   ( file$ path\$ )
-         \ Path component is present
-         parent-dir @ init-dir  if  4drop true exit  then       ( file$ path\$ )
-         $chdir  if  2drop true exit  then                      ( file$ )
-      else                                                      ( file$ path\$ )
-         \ Path component is absent
-         2drop current-dir @ init-dir  if  2drop true exit  then ( file$ )
-      then                                                       ( file$ )
-      dup 0=  if  2drop false exit  then                         ( file$ )
-      lookup  if  true exit  then                                ( )
-      
-      file-handle recurse
-   else                                                         ( )
-      0 to lblk#  false                                         ( )
-   then                                                         ( )
+1 constant regular-type
+2 constant dir-type
+7 constant symlink-type
+
+\ Information that we need about the working file/directory
+\ The working file changes at each level of a path search
+
+0 instance value wd-inum  \ Inumber of directory to search
+0 instance value wf-inum  \ Inumber of file or directory found
+0 instance value wf-type  \ Type - 4 for directory, d# 10 for symlink, etc
+
+char \ instance value delimiter
+
+defer $resolve-path
+d# 1024 constant /symlink   \ Max length of a symbolic link
+
+: set-root  ( -- )
+   root-dir# to wd-inum  root-dir# to wf-inum  dir-type to wf-type
 ;
 
-\ **** Select the directory file
-: (init-dir)  ( i# -- error? )
-   \ Save the current directory because we will need to return to it
-   \ in case we encounter a relative symlink.
-   current-dir @ parent-dir !           ( i# )
-   dup current-dir !                    ( i# )
-   select-file  if  true exit  then     ( )
-   get-dirblk   if  true exit  then     ( )
+: strip\  ( name$ -- name$' )
+   dup  0<>  if                      ( name$ )
+      over c@  delimiter  =  if      ( name$ )
+         1 /string                   ( name$ )
+         set-root                    ( name$ )
+      then                           ( name$ )
+   then                              ( name$ )
+;
+
+: set-inode  ( inode# -- )
+   to inode#
+   0 to lblk#
+;
+
+: first-dirent  ( dir-inode# -- end? )  \ Adapted from (init-dir)
+   set-inode
+   get-dirblk  if  true exit  then
    0 diroff !  0 totoff !               ( )
    false                                ( )
+;   
+
+\ On entry:
+\   inode# is the inode of the directory file
+\   dir-block# is the physical block number of the first directory block
+\   diroff @ and totoff @ are 0
+\ On successful exit:
+\   dir-block# is the physical block number of the current directory block
+\   diroff @ is the within-block offset of the directory entry that matches name$
+\   totoff @ is the overall offset of the directory entry that matches name$
+
+: $find-name  ( name$ dir-inum -- error? )
+   first-dirent                            ( end? )
+   begin  0=  while                        ( name$ )
+      \ dirent-inode@ = 0 means a deleted dirent at the beginning
+      \ of a block; skip those
+      dirent-inode@  if                    ( name$ )
+         2dup  file-name                   ( name$ name$ this-name$ )
+         $=  if
+            dirent-inode@ to wf-inum       ( name$ )
+            dirent-type@  to wf-type       ( name$ )
+            2drop false exit
+         then                              ( name$ )
+      then
+      next-dirent                          ( name$ end? )
+   repeat                                  ( name$ )
+
+   2drop                                   ( )
+   true
 ;
-' (init-dir) to init-dir
+
+: symlink-resolution$  ( inum -- data$ )
+   to inode#
+   linkpath dup cstrlen
+;
+
+\ The work file is a symlink.  Resolve it to a new dirent
+: dir-link  ( -- error? )
+   delimiter >r  [char] / to delimiter     ( r: delim )
+
+   \ Allocate temporary space for the symlink value (new name)
+   /symlink alloc-mem >r                   ( r: delim dst )
+
+   \ Copy the symlink resolution to the temporary buffer
+   wf-inum symlink-resolution$    ( src len  r: delim dst )
+   tuck  r@ swap move             ( len      r: delim dst )
+
+   r@ swap $resolve-path          ( error?   r: delim dst )
+
+   r> /symlink free-mem           ( error?   r: delim )
+   r> to delimiter                ( error? )
+;
+
+\ On successful exit, wf-inum is the inode# of the last path component,
+\ wf-type is its type, and wd-inum is inode# of the last directory encountered
+
+: ($resolve-path)  ( path$ -- error? )
+   dir-type to wf-type
+   \ strip\ sets wd-inum if the path begins with the delimiter
+   begin  strip\  dup  while                       ( path$  )
+      wf-type  case                                ( path$  c: type )
+         dir-type  of                              ( path$ )
+            delimiter left-parse-string            ( rem$' head$ )
+            \ $find-name sets wf-inum and wf-type to the pathname component
+            wd-inum  $find-name  if  2drop true exit  then  ( rem$ )
+            wf-type dir-type =  if                 ( rem$ )
+               wf-inum to wd-inum                  ( rem$ )
+            then                                   ( rem$ )
+         endof                                     ( rem$ )
+
+         symlink-type  of                          ( rem$ )
+            \ dir-link recursively calls $resolve-path, setting
+            \ wf-inum and wf-type to the symlink's last component
+            dir-link  if  2drop true exit  then    ( rem$ )
+         endof                                     ( rem$ )
+         ( default )                               ( rem$  c: type )
+
+         \ The parent is an ordinary file or something else that
+         \ can't be treated as a directory
+         3drop true exit
+      endcase                           ( rem$ )
+   repeat                               ( rem$ )
+   2drop false                          ( false )
+;
+
+' ($resolve-path) to $resolve-path
+
+: $find-file  ( name$ -- error? )
+   $resolve-path  if  true exit  then  ( )
+
+   begin
+      \ We now have the dirent for the file at the end of the string
+      wf-type  case
+         dir-type      of  wf-inum to wd-inum   false exit  endof  \ Directory
+         regular-type  of                       false exit  endof  \ Regular file
+         symlink-type  of  dir-link  if  true exit  then  endof    \ Link
+         ( default )   \ Anything else (special file) is error
+            drop true exit
+      endcase
+   again
+;
+\ --
+
+: $chdir  ( path$ -- error? )
+   $find-file  if  true exit  then
+   wf-type dir-type <>  if  true exit  then
+   wd-inum first-dirent
+;
 
 \ Delete a file, given its inode. Does not affect the directory entry, if any.
 : idelete   ( inode# -- )
@@ -286,7 +365,7 @@ variable parent-dir
    file-handle 0= if  true exit  then
    
    inode# >r
-   file-handle select-file if  r> drop true exit  then
+   file-handle set-inode  if  r> drop true exit  then
    file? 0= if  r> drop true exit  then		\ XXX handle symlinks
    
    \ is this the only link?
@@ -296,7 +375,6 @@ variable parent-dir
    else
       1- link-count!
    then
-   
    
    r> to inode#
    \ delete directory entry
@@ -331,11 +409,12 @@ external
 ;
 
 : $readlink   ( name$ -- true | link$ false )
-   lookup if  true exit  then
-   
-   inode# >r   file-handle to inode#
-   linkpath dup cstrlen false
-   r> to inode#
+   dirent-vars 2>r 2>r
+   $resolve-path  if  2r> 2r> restore-dirent  true exit  then
+   wf-type symlink-type <>  if  2r> 2r> restore-dirent  true exit  then
+ 
+   wf-inum symlink-resolution$ false
+   2r> 2r> restore-dirent
 ;
 
 headers
