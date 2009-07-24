@@ -323,3 +323,5 @@ smbus-io-base wbsplit swap  ( bits15:8 bits7:0 )
 \ acpi-io-base h# 26 + port-rb  h#  07 bitset  al dx out  \ Settings to support C4 state
 acpi-io-base h# 26 + port-rb  h#  06 bitset  al dx out  \ Settings to support C3 state
 acpi-io-base h# 4c + port-rl  h# 400 bitset  ax dx out  \ Set USB power high
+
+3 # io-apic-mmio-base #) byte mov    1 # io-apic-mmio-base h# 10 + #) mov  \ IO-APIC FSB delivery type
