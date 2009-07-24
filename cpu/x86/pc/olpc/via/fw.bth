@@ -347,6 +347,7 @@ fload ${BP}/cpu/x86/pc/olpc/biosresume.fth
 
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
+fload ${BP}/cpu/x86/pc/olpc/via/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 fload ${BP}/ofw/gui/ofpong.fth
 fload ${BP}/cpu/x86/pc/olpc/life.fth

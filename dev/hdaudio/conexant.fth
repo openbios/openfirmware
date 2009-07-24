@@ -20,17 +20,6 @@ hex
    h# 10 to node  h# 3a03e cmd  h# 3903e cmd
 ;
 
-: cx2058x-open  ( -- )
-   h# 10 to dac
-   h# 14 to adc
-   power-on-all
-   volume-on-all
-;
-
-: cx2058x-close  ( -- )
-   1 to node ( function group) power-off
-;
-
 h# 1a value mic-in   \ Port B
 h# 1b value mic      \ Port C
 h# 17 value mux      \ mux between the two
@@ -54,13 +43,109 @@ h# 17 value mux      \ mux between the two
 ;
 : cx2058x-disable-playback  ( -- )  ;
 
-: cx2058x-init ( -- )
+: 1/8"        ( u -- u )  h#    10000 or  ;
+: green       ( u -- u )  h#     4000 or  ;
+: pink        ( u -- u )  h#     9000 or  ;
+: hp-out      ( u -- u )  h#   200000 or  ;
+: spdiff-out  ( u -- u )  h#   400000 or  ;
+: mic-in      ( u -- u )  h#   a00000 or  ;
+: line-in     ( u -- u )  h#   800000 or  ;
+: line-out    ( u -- u )                  ;
+: speaker     ( u -- u )  h#   100000 or  ;
+: left        ( u -- u )  h#  3000000 or  ;
+: front       ( u -- u )  h#  2000000 or  ;
+: internal    ( u -- u )  h# 10000000 or  ;
+: jack        ( u -- u )  h# 00000000 or  ;
+: unused      ( u -- u )  h# 40000000 or  ;
+: builtin     ( u -- u )  h# 80000000 or  ;
+
+: config(   ( node -- null-config-default )  to node  0  ;
+
+: )config  ( config-default -- )
+   \ set the high 24 bits of the config-default value
+   \ the low 8 bits (default association, sequence) are preserved
+   8 rshift  dup h# ff and  71d00 or  cmd
+   8 rshift  dup h# ff and  71e00 or  cmd
+   8 rshift      h# ff and  71f00 or  cmd
+;
+
+: port-a  ( -- u )  19 config(  1/8" green left hp-out jack     )config  ;
+: port-b  ( -- u )  1a config(  1/8" pink left mic-in jack      )config  ;
+: port-c  ( -- u )  1b config(  builtin front mic-in            )config  ;
+: port-d  ( -- u )  1c config(  unused line-out                 )config  ;
+: port-e  ( -- u )  1d config(  unused line-out                 )config  ;
+: port-f  ( -- u )  1e config(  1/8" pink left line-in jack     )config  ;
+: port-g  ( -- u )  1f config(  builtin front speaker           )config  ;
+: port-h  ( -- u )  20 config(  unused spdiff-out               )config  ;
+: port-i  ( -- u )  22 config(  unused spdiff-out               )config  ;
+: port-j  ( -- u )  23 config(  unused mic-in                   )config  ;
+
+: config-default  ( -- u )  f1c00 cmd?  ;
+
+: setup-config-default  ( -- )
+   port-a port-b port-c port-d port-e port-f port-g port-h port-i port-j
+;
+
+: vendor-settings  ( -- )
+   h# 25 to node
+   h# 290a8 cmd \ high-pass filter, semi-manual mode, 600Hz cutoff
+   h# 34001 cmd \ speaker power 1 dB gain
+   h# 38001 cmd \ over-current / short-circuit protection, 2.6A threshold
+   h# 39019 cmd \ temperature protection at 130C
+   h# 42011 cmd \ over-temperature shutdown of class-D
+;
+
+\ check (expect) that cmd yields value
+: check-cmd  ( value cmd -- )
+   dup . ." cmd? => "
+   cmd?                                        ( value actual )
+   push-hex  dup 0 <# # # # #> type pop-base   ( value actual )
+   over = if                                   ( value )
+      ."  (ok)" drop
+   else
+      ."  but expected " .
+   then
+   cr
+;
+
+: over-temperature?  ( -- ? )  h# c3000 cmd? 4 and 0<>  ;
+
+\ Test word to make sure the right settings are configured
+: .vendor-settings  ( -- )
+   h# 25 to node
+   h# 0a8 h# a9000 check-cmd
+   h# 001 h# b4000 check-cmd
+   h# 001 h# b8000 check-cmd
+   h# 019 h# b9000 check-cmd
+   h# 011 h# c2000 check-cmd
+   over-temperature? if
+      ." over temperature!"
+   else
+      ." temperature is within bounds
+   then
+;
+
+: cx2058x-open  ( -- )
+   h# 10 to dac
+   h# 14 to adc
+   power-on-all
+   volume-on-all
+   vendor-settings
+   setup-config-default
+;
+
+: cx2058x-close  ( -- )
+   1 to node ( function group) power-off
+;
+
+: cx2058x-init  ( -- )
    ['] cx2058x-open  to open-codec
    ['] cx2058x-close to close-codec
    ['] cx2058x-enable-recording  to enable-codec-recording
    ['] cx2058x-disable-recording to disable-codec-recording
    ['] cx2058x-enable-playback   to enable-codec-playback
    ['] cx2058x-enable-playback   to disable-codec-playback
+\   setup-config-default
 ;
 
 \ LICENSE_BEGIN

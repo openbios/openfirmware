@@ -108,7 +108,7 @@ my-address my-space encode-phys
 
 \ Stream descriptor register interface.
 \ There are multiple stream descriptors, each with their own register set.
-0 constant sd#
+0 instance value sd#
 : sd+  ( offset -- adr )  sd# h# 20 * + au +  ;
 
 : sdctl    h# 80 sd+  ;
@@ -214,8 +214,16 @@ d# 256 2* cells constant /rirb
 : deassert-stream-reset  ( -- )  0 sdctl rb!  begin  sdctl rb@ 1 and 0 =  until  ;
 
 : reset-stream  ( -- )  assert-stream-reset deassert-stream-reset  ;
-: stop-stream   ( -- )  0 sdctl rb! begin  sdctl rb@ 2 and  0=  until  ;
 : start-stream  ( -- )  2 sdctl rb! begin  sdctl rb@ 2 and  0<> until  ;
+: stop-stream   ( -- )
+   0 sdctl rb! begin  sdctl rb@ 2 and  0=  until
+   4 sdsts rb! \ clear completion flag
+;
+
+defer playback-alarm
+
+: install-playback-alarm     ( -- )  ['] playback-alarm d# 20 alarm  ;
+: uninstall-playback-alarm   ( -- )  ['] playback-alarm d#  0 alarm  ;
 
 \ \ Device open and close
 
@@ -225,7 +233,7 @@ d# 256 2* cells constant /rirb
 : close-controller    ( -- )  reset  unmap-regs  ;
 
 : open   ( -- flag )  init-controller  init-codec  true  ;
-: close  ( -- )       close-codec  close-controller  ;
+: close  ( -- )       uninstall-playback-alarm  close-codec  close-controller  ;
 
 d# 48.000 value sample-rate
 
@@ -233,7 +241,7 @@ d# 48.000 value sample-rate
 
 : set-sample-rate  ( Hz -- )
    dup to sample-rate  ( Hz )
-   dup low-rate? if    ( Hz )
+   dup low-rate?  if   ( Hz )
       48kHz  d# 48.000 swap / to scale-factor
    else                ( Hz )
       1 to scale-factor
@@ -267,7 +275,7 @@ d# 48.000 value sample-rate
 
 0 value pad-buffer
 0 value pad-buffer-phys
-d# 2048 value /pad-buffer
+d# 8092 value /pad-buffer
 
 : alloc-pad-buffer  ( -- )
    /pad-buffer dma-alloc to pad-buffer
@@ -329,7 +337,7 @@ d# 256 /bd * value /bdl
    /sound-buffer /pad-buffer + sdcbl rl! \ bytes of stream data
    h# 440000 sdctl rl!            \ stream 4
    1 sdlvi rw!                    \ two buffers
-   1c sdsts c!                    \ clear status flags
+   1c sdsts rb!                   \ clear status flags
    bdl-phys sdbdpl rl!
    0        sdbdpu rl!
    stream-format sdfmt rw!
@@ -401,7 +409,7 @@ d# 256 /bd * value /bdl
 : open-out  ( -- )
    4 to sd#
    48kHz
-   upsampling? if  scale-factor upsample  then  ( adr len )
+   upsampling?  if  scale-factor upsample  then  ( adr len )
 ;
 
 : audio-out  ( adr len -- actual ) 
@@ -415,7 +423,7 @@ d# 256 /bd * value /bdl
 
 : release-sound-buffer  ( -- )
    sound-buffer sound-buffer-phys /sound-buffer dma-map-out
-   upsampling? if  sound-buffer /sound-buffer dma-free  then
+   upsampling?  if  sound-buffer /sound-buffer dma-free  then
 ;
 
 : write-done  ( -- )
@@ -426,12 +434,20 @@ d# 256 /bd * value /bdl
 ;
 
 : write  ( adr len -- actual )
-   open-out  audio-out
+   open-out  audio-out  install-playback-alarm
 ;
 
-\ XXX remove when write is fixed to set up a completion handler
-: wait-sound  ( -- )  write-done  ;
-    
+\ Alarm handle to stop the stream when the content has been played.
+: playback-completed-alarm  ( -- )
+   sd#                                 ( sd# )
+   4 to sd#                            ( sd# )
+   stream-done?  if  write-done  then  ( sd# )
+   to sd#                              ( )
+;
+
+' playback-completed-alarm is playback-alarm
+
+: wait-sound  ( -- )  ; \ sound stops with asynchronous alarm handler
 
 : set-volume  ( dB -- )  dac to node  step# output-gain  ;
 
@@ -483,6 +499,7 @@ d# 65535 value /recbuf
 : in-amp-caps  ( -- u )  h# f000d cmd?  ;
 : in-gain-steps  ( -- n )  in-amp-caps  8 rshift h# 7f and  1+  ;
 : set-record-gain  ( dB -- )  drop ( hardcoded for now ) adc to node  h# 40 input-gain  ;
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 Luke Gorrie <luke@bup.co.nz>
