@@ -1808,7 +1808,6 @@ Scope(\_SB)
                 Name (_STA, 0x0F)
             }
     
-            // DDD geoderom has no battery stuff
             Name (BIFP, Package (0x0D)  // Battery info (static)  p 342
             {
                 One,           // Power units - 1 : mAh / mA
