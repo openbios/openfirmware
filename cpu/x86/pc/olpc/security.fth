@@ -282,7 +282,7 @@ d# 256 constant /sig
    then
 ;
 
-\ break$ splits a string into an initial substring of length n
+\ cut$ splits a string into an initial substring of length n
 \ (head$) and the residual substring (tail$).  If the input
 \ string is shorter than n, head$ is the input string and tail$ is
 \ the null string.

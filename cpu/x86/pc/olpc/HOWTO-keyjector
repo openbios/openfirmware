@@ -1,6 +1,6 @@
 A keyjector is an intermediate firmware release that installs
 additional customer-specific security keys in manufacturing data.
-OLPC signs is so it can be auto-reflashed.  When it starts, it inserts
+OLPC signs it so it can be auto-reflashed.  When it starts, it inserts
 the new keys, then replaces itself with a higher-rev firmware version
 so it doesn't run again.
 
