@@ -78,12 +78,11 @@ my-address my-space encode-phys
 
 \ \\ Stream Descriptors
 \ Default: 48kHz 16bit stereo
-1 value scale-factor
-0 value sample-base
-0 value sample-mul
-0 value sample-div
-1 value sample-format
-2 value #channels
+0 instance value sample-base
+0 instance value sample-mul
+0 instance value sample-div
+1 instance value sample-format
+2 instance value #channels
 
 : stream-format  ( -- u )
    sample-base    d# 14 lshift      ( acc )
@@ -221,9 +220,17 @@ d# 256 2* cells constant /rirb
 ;
 
 defer playback-alarm
+0 value alarmed?
 
-: install-playback-alarm     ( -- )  ['] playback-alarm d# 20 alarm  ;
-: uninstall-playback-alarm   ( -- )  ['] playback-alarm d#  0 alarm  ;
+: install-playback-alarm     ( -- )
+   true to alarmed?  ['] playback-alarm d# 20 alarm
+;
+: uninstall-playback-alarm   ( -- )
+   alarmed?  if
+      ['] playback-alarm d#  0 alarm
+      false to alarmed?
+   then
+;
 
 \ \ Device open and close
 
@@ -232,10 +239,8 @@ defer playback-alarm
 : init-codec          ( -- )  detect-codec  open-codec  ;
 : close-controller    ( -- )  reset  unmap-regs  ;
 
-: open   ( -- flag )  init-controller  init-codec  true  ;
-: close  ( -- )       uninstall-playback-alarm  close-codec  close-controller  ;
-
-d# 48.000 value sample-rate
+d# 48.000 instance value sample-rate
+1 instance value scale-factor
 
 : low-rate?  ( Hz )  dup d# 48.000 <  swap d# 44.100 <>  and  ;
 
@@ -253,6 +258,20 @@ d# 48.000 value sample-rate
          dup of   192kHz  endof
       endcase
    then
+;
+
+0 value open-count
+: open   ( -- flag )
+   open-count 0=  if  init-controller  then
+   init-codec
+   open-count 1+ to open-count
+   true
+;
+: close  ( -- )
+   open-count 1 =  if
+      uninstall-playback-alarm  close-codec  close-controller
+   then
+   open-count 1- 0 max to open-count
 ;
 
 \ \ Streams
@@ -400,7 +419,7 @@ d# 256 /bd * value /bdl
 
 : steps/dB  ( -- #steps )     step-size 4 *  ;
 : dB>steps  ( dB -- #steps )  -4 *  step-size /  ;
-: step#     ( dB -- step )    dB>steps 0dB-step +  ;
+: dB>step#  ( dB -- step )    dB>steps 0dB-step +  ;
 
 \ \\ Playback
 
@@ -409,16 +428,17 @@ d# 256 /bd * value /bdl
 : open-out  ( -- )
    4 to sd#
    48kHz
-   upsampling?  if  scale-factor upsample  then  ( adr len )
 ;
 
 : audio-out  ( adr len -- actual ) 
+   dup >r
+   upsampling?  if  scale-factor upsample  then  ( adr len )
    install-sound-buffer  ( )
    setup-bdl
    setup-stream
    enable-codec-playback
    start-stream
-   /sound-buffer         ( actual )
+   r>                    ( actual )
 ;
 
 : release-sound-buffer  ( -- )
@@ -449,7 +469,7 @@ d# 256 /bd * value /bdl
 
 : wait-sound  ( -- )  ; \ sound stops with asynchronous alarm handler
 
-: set-volume  ( dB -- )  dac to node  step# output-gain  ;
+: set-volume  ( dB -- )  dac to node  dB>step# output-gain  ;
 
 \ \\ Recording
 
