@@ -415,7 +415,7 @@ c;
       get-uuid  r> 8 +  swap move    ( adr )   
       +OLPC
       " XO" +smbios$
-      " 1" +smbios$    \ Version
+      " 1.5" +smbios$    \ Version
       " SN" get-tag$ +smbios$
    end-smbios-table
 
