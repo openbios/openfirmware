@@ -631,6 +631,8 @@ fload ${BP}/ofw/core/dualconsole.fth
    probe-usb
    " probe+" do-drop-in
 
+   setup-smbios  \ Must be done after build-date is defined via do-drop-in
+
    interpreter-init
    ?scan-nand
    ?diags
