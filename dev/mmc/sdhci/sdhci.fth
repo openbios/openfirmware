@@ -756,8 +756,12 @@ external
 ;
 
 : detach-card  ( -- )
+   intstat-on
+   wait-write-done
+   intstat-off
    card-clock-off
    card-power-off
+   unmap-regs
 ;
 
 : attach-sdio-card  ( -- okay? )
@@ -841,11 +845,8 @@ external
 
 : close  ( -- )
    open-count  1 =  if
-      intstat-on
-      wait-write-done
       scratch-buf d# 64 " dma-free" $call-parent
    then
-   unmap-regs
    open-count 1- 0 max  to open-count
 ;
 

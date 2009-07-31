@@ -57,9 +57,10 @@ external
 ;
 
 : close  ( -- )
-   " detach-card" $call-parent
    label-package close-package
    deblocker close-package
+   \ Close packages first in case of delayed write flush
+   " detach-card" $call-parent
 ;
 
 : block-size  ( -- n )  h# 200  ;
