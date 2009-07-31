@@ -2120,7 +2120,7 @@ headerless
    \ Advance the file pointer to the new buffer starting position
    bufaddr> fstart 2!                   ( end curr aln-len )
 
-   bfbase @ + bflimit @ umin  bfend !   ( end curr )  \ Room for new bytes
+   bfbase @ + bflimit @ min  bfend !    ( end curr )  \ Room for new bytes
    bfbase @  dup bftop !  bfcurrent !   ( end curr )  \ No valid bytes yet
    false
 ;
