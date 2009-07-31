@@ -419,7 +419,7 @@ d# 256 /bd * value /bdl
 
 : steps/dB  ( -- #steps )     step-size 4 *  ;
 : dB>steps  ( dB -- #steps )  -4 *  step-size /  ;
-: dB>step#  ( dB -- step )    dB>steps 0dB-step +  ;
+: dB>step#  ( dB -- step )    dB>steps 0dB-step swap -  ;
 
 \ \\ Playback
 
