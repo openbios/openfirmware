@@ -145,8 +145,8 @@ $new-file
 
    " memtest"                                   " memtest"       $add-deflated-dropin
 
-[ifdef] Later
    " verify.img"                                " verify"        $add-deflated-dropin
+[ifdef] Later
    " os.public"                                 " ospubkey"      $add-dropin \ Incompressible
    " fw.public"                                 " fwpubkey"      $add-dropin \ Incompressible
    " fs.public"                                 " fspubkey"      $add-dropin \ Incompressible

@@ -164,9 +164,6 @@ fload ${BP}/cpu/x86/pc/olpc/via/cmos.fth  \ CMOS RAM indices are 1f..ff , above 
 .( XXX Not clearing CMOS) cr
 patch noop init-bios-cmos stand-init
 
-devalias nand /nandflash
-devalias mtd  /nandflash
-
 [ifdef] use-null-nvram
 \ For not storing configuration variable changes across reboots ...
 \ This is useful for "turnkey" systems where configurability would

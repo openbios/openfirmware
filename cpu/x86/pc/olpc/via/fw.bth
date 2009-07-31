@@ -319,9 +319,8 @@ fload ${BP}/cpu/x86/pc/olpc/via/suspend.fth  \ Suspend/resume setup
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
-[ifdef] Later
-fload ${BP}/cpu/x86/pc/olpc/copynand.fth
-[then]
+fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
+
 \ fload ${BP}/cpu/x86/pc/olpc/carousel.fth     \ Carouseled NAND writing
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
 fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
@@ -480,8 +479,9 @@ end-support-package
 [ifdef] Later
 fload ${BP}/cpu/x86/pc/olpc/nandcastui.fth
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
-fload ${BP}/cpu/x86/pc/olpc/fsupdate.fth
 [then]
+fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
+devalias fsdisk /ide@0/disk:0
 
 fload ${BP}/ofw/inet/sntp.fth
 : olpc-ntp-servers  ( -- )
