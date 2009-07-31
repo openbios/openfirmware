@@ -177,7 +177,8 @@ defer rblocks
    chip-base io-blk-w!  false
    pio-end-hack
 ;
-: wblocks  ( addr #blks -- actual# | error )
+
+: pio-wblocks  ( addr #blks -- actual# | error )
    over >r                                      ( addr #blks ) ( R: addr )
    h# 30 r-csr!
 
@@ -194,6 +195,8 @@ defer rblocks
    until
    r> - /block@ /
 ;
+defer wblocks
+' pio-wblocks to wblocks
 
 \ Read or write "#blks" blocks starting at "block#" into memory at "addr"
 \ Input? is true for reading or false for writing.

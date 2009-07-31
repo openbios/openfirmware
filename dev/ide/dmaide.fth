@@ -38,7 +38,7 @@ ca constant dma-write-cmd
 ;
 
 : dma-wait  ( -- )
-   begin  dma-stat@  dup 1 and 0=  swap 2 and  or  until
+   begin  1 ms  dma-stat@  dup 1 and 0=  swap 2 and  or  until
 ;
 
 \ Sense and clear errors.  The bit masked by 04 is read-clear and means
@@ -49,30 +49,36 @@ ca constant dma-write-cmd
 
 : dma-interrupt?  ( -- flag )  dma-stat@ 4 and ;
 
-: dma-rblock  ( dma-adr #blks -- error? )
-   /block@ *
-   set-dma		( )
-   dma-cmd@ 1 or dma-cmd!   dma-wait  dma-cmd@ 1 invert and dma-cmd!
-   dma-interrupt?  if
-      r-csr@ drop			\ Clear interrupt in drive
-      dma-stat@ h# f0 and 4 or dma-stat!
-   then
-   dma-error?
+: dma-begin  ( dma-adr #blks direction -- dma-adr phys #blks )
+   dma-cmd!                             ( dma-adr #blks )
+   2dup /block@ * true " dma-map-in" $call-parent swap  ( adr phys #blks )
+   2dup /block@ *  set-dma		( adr phys #blks )
+   dma-cmd@ 1 or dma-cmd!               ( adr phys #blks )
 ;
+: dma-end  ( adr phys #blks -- actual# )
+   dma-wait  0 dma-cmd!                        ( adr phys #blks )
+   dma-interrupt?  if                          ( adr phys #blks )
+      r-csr@ drop			\ Clear interrupt in drive
+      dma-stat@ h# f0 and 4 or dma-stat!       ( adr phys #blks )
+   then                                        ( adr phys #blks )
 
-: (drblocks)  ( adr #blks -- actual# )
-   tuck dma-rblock  if  drop  0  then
+   dma-error?  if  0  else  dup  then  >r      ( adr phys #blks r: actual )
+
+   /block@ * " dma-map-out" $call-parent       ( r: actual )
+
+   r>                                          ( actual# )
 ;
 
 : dma-rblocks  ( adr #blks -- actual#blks )
-   2dup /block@ * true " dma-map-in" $call-parent swap  ( adr phys #blks )
+   8 dma-begin             ( adr phys #blks )
+   dma-read-cmd r-csr!     ( adr phys #blks )
+   dma-end                 ( actual#blks )
+;
 
-   dma-read-cmd r-csr!
-   8 dma-cmd!  \ DMA direction for disk read (0 is write)
-   ['] rblock behavior >r  ['] dma-rblock to rblock
-   2dup (drblocks)                           ( adr phys #blks actual#blks )
-   r> to rblock
-   >r  /block@ * " dma-map-out" $call-parent  r>   ( actual#blks )
+: dma-wblocks  ( adr #blks -- actual#blks )
+   0 dma-begin             ( adr phys #blks )
+   dma-write-cmd r-csr!    ( adr phys #blks )
+   dma-end                 ( actual#blks )
 ;
 
 : vendor-id  ( -- w )  my-space " config-w@" $call-parent  ;
@@ -172,11 +178,13 @@ h# 10b9 constant acer1
    4 my-w@  4 or  4 my-w!
 
    ['] dma-rblocks to rblocks
+   ['] dma-wblocks to wblocks
 ;
 ' (open-dma) to open-dma
 
 : (close-dma) ( -- )
    ['] pio-rblocks to rblocks
+   ['] pio-wblocks to wblocks
 
    \ Disable bus mastering
    4 my-w@  4 invert and  4 my-w!
