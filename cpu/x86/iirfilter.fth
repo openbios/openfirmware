@@ -51,6 +51,7 @@ code iir-cascade-z2 ( sample weights z #sections -- out )
    si pop     \ Restore SI
    ax push    \ Return value
 c;
+[then]
 
 \ iir-cascade-z1 is the same basic structure as iir-cascade-z2,
 \ but the Z^-2 delays have been replaced by Z^-1.  It is used
@@ -210,7 +211,7 @@ create coefh1   mul: -.267949192
 buflen0 buffer: z0  \ First upsampler even path delay buffer
 buflen0 buffer: z1  \ First upsampler odd path delay buffer
 
-1 1+ 2* /n* constant buflen0  \ 1 stage of Z^-2 plus final feedback
+1 1+ 2* /n* constant buflen1  \ 1 stage of Z^-2 plus final feedback
 
 buflen1 buffer: z2  \ 3x upsampler even path G0 delay buffer
 buflen1 buffer: z3  \ 3x upsampler odd path G1 delay buffer
@@ -264,16 +265,16 @@ buflen1 buffer: z4  \ 3x upsampler odd path H1 delay buffer
    interp3 >r  0 interp3 >r  0 interp3  r> r>
 ;
 
-d# sample-stride
+0 value sample-stride
 variable sample-outp
 : out,  ( value -- )
-   sample-outp @ w!  sample-stride  sample-out +!
+   sample-outp @ w!  sample-stride  sample-outp +!
 ;
 
 \ Stride is 2 for mono, 4 for stereo
 \ For stereo you must call it twice with an offset of 2 for
 \ inbuf and outbuf on the second call
-: 8khz>48khz  ( inbuf #samples stride outbuf -- )
+: 8khz>48khz  ( inbuf #samples outbuf stride -- )
    to sample-stride         ( inbuf #samples outbuf )
    sample-outp !            ( inbuf #samples )
    init-upsample            ( inbuf #samples )
@@ -287,7 +288,7 @@ variable sample-outp
    drop
 ;
 
-: 16khz>48khz  ( inbuf #samples stride outbuf -- )
+: 16khz>48khz  ( inbuf #samples outbuf stride -- )
    to sample-stride         ( inbuf #samples outbuf )
    sample-outp !            ( inbuf #samples )
    init-upsample            ( inbuf #samples )
