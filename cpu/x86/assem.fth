@@ -538,6 +538,14 @@ variable long-offsets  long-offsets off
 \ LSS, LFS, LGS 
 : 16MI  CREATE  C,  DOES>  C@  prefix-0f  ASM8,  MEM,  normal  ;
 
+\ SHLD, SHRD
+: 17MI  \ name ( [ cl | imm ] reg r/m -- )
+   CREATE  C,  DOES>  C@  prefix-0f  here >r  ASM8,  ( [ cl | imm ] reg r/m r: opadr )
+   dup reg?  if  swap  else  rot  then               ( [ cl | imm ] r/m reg r: opadr )
+   r/m,                                              ( [ cl | imm ] r: opadr )
+   # =  if  ASM8, r> drop  else  r@ c@ 1+ r> c!  then
+;
+
 \ TEST  bits in dest
 : TEST   (S source dest -- )
    DUP REG?  IF
@@ -692,6 +700,8 @@ HEX
  FB  1MI STI     0AA  6MI STOS    28 13MI SUB           ( TEST )
  9B  1MI WAIT           ( XCHG )  D7  1MI XLAT    30 13MI XOR
  C2 14MI +RET
+
+0AC 17MI SHRD    0A4 17MI SHLD
 
 : invd    ( -- )  prefix-0f  h# 08 asm8,  ;
 : wbinvd  ( -- )  prefix-0f  h# 09 asm8,  ;
