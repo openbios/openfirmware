@@ -274,30 +274,26 @@ variable sample-outp
 \ Stride is 2 for mono, 4 for stereo
 \ For stereo you must call it twice with an offset of 2 for
 \ inbuf and outbuf on the second call
-: 8khz>48khz  ( inbuf #samples outbuf stride -- )
-   to sample-stride         ( inbuf #samples outbuf )
-   sample-outp !            ( inbuf #samples )
-   init-upsample            ( inbuf #samples )
-   0  ?do                   ( inbuf )
-      dup sample-stride +   ( inbuf inbuf' )
-      swap <w@              ( inbuf' sample )
-      up2                   ( inbuf s1 s0 )
-      up3 out, out, out,    ( inbuf s1 )
-      up3 out, out, out,    ( inbuf )
-   loop                     ( inbuf )
-   drop
+: 8khz>48khz  ( inbuf /inbuf outbuf stride -- )
+   to sample-stride         ( inbuf /inbuf outbuf )
+   sample-outp !            ( inbuf /inbuf )
+   init-upsample            ( inbuf /inbuf )
+   bounds  ?do              ( )
+      i <w@                 ( sample )
+      up2                   ( s1 s0 )
+      up3 out, out, out,    ( s1 )
+      up3 out, out, out,    ( )
+   sample-stride +loop      ( )
 ;
 
-: 16khz>48khz  ( inbuf #samples outbuf stride -- )
-   to sample-stride         ( inbuf #samples outbuf )
-   sample-outp !            ( inbuf #samples )
-   init-upsample            ( inbuf #samples )
-   0  ?do                   ( inbuf )
-      dup sample-stride +   ( inbuf inbuf' )
-      swap <w@              ( inbuf' sample )
-      up3 out, out, out,    ( inbuf s1 )
-   loop                     ( inbuf )
-   drop
+: 16khz>48khz  ( inbuf /inbuf outbuf stride -- )
+   to sample-stride         ( inbuf /inbuf outbuf )
+   sample-outp !            ( inbuf /inbuf )
+   init-upsample            ( inbuf /inbuf )
+   bounds  ?do              ( )
+      i <w@                 ( sample )
+      up3 out, out, out,    ( )
+   sample-stride +loop      ( )
 ;
 
 0 [if]
