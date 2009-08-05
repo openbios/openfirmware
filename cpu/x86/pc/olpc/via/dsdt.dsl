@@ -121,42 +121,44 @@ Field(\DEBG, ByteAcc, NoLock, Preserve) {
 
 OperationRegion(\GPST, SystemIO, 0x0420, 0x2)
 Field(\GPST, ByteAcc, NoLock, Preserve) {
-    GS00,1,
-    GS01,1,
-    GS02,1,
-    GS03,1,
-    GS04,1,
-    GS05,1,
-    GS06,1,
-    GS07,1,
-    GS08,1,
-    GS09,1,
-    GS10,1,
-    GS11,1,     // lid
-    GS12,1,
-    GS13,1,
-    GS14,1,
-    GS15,1,
+    GS00,1,     // GPI0
+    GS01,1,     // GPI1 (GPWAKE)
+    GS02,1,     // internal KBC PME
+    GS03,1,     // V1 Interrupt
+    GS04,1,     // EXTSMI#
+    GS05,1,     // PME#
+    GS06,1,     // INTRUDER#
+    GS07,1,     // GP3 timer timeout
+    GS08,1,     // ring
+    GS09,1,     // mouse controller PME
+    GS10,1,     // thermal detect (ebook)
+    GS11,1,     // LID#
+    GS12,1,     // battery low
+    GS13,1,     // HDAC wakeup
+    GS14,1,     // USB wakeup
+    GS15,1,     // north module SERR#
 }   
 
-// PMIO_RX24/5
-OperationRegion(\GPSE, SystemIO, 0x0424, 0x2)   // Genernal Purpose SMI Enable
+// PMIO_RX22/3
+OperationRegion(\GPSE, SystemIO, 0x0422, 0x2)   // Genernal Purpose SCI Enable
 Field(\GPSE, ByteAcc, NoLock, Preserve) {
-    GPS0,   1,                                  // GPI0 SMI Enable
-    GPS1,   1,                                  // GPI1 SMI Enable
+    GPS0,   1,                                  // GPI0 SCI Enable
+    GPWK,   1,                                  // GPI1 SCI Enable
     KBCE,   1,                                  // PS2 KB PME Enable
-        ,   1,                                  
-    EXTE,   1,                                  // EXT SMI Enable
+        ,   1,
+    EXTE,   1,                                  // EXTSMI# Enable
     PME,    1,                                  // PCI PME Enable
         ,   2,
     RING,   1,                                  // Ring Wakeup
-        ,   2,
-    LID,    1,                                  // Lid Wakeup
-        ,   2,
-    USBE,   1,                                  // USB Resume
         ,   1,
+    THRM,   1,                                  // Ebook/Thermal detect
+    LID,    1,                                  // Lid Wakeup
+        ,   1,                                  // BATLOW Enable
+    HDA,    1,                                  // HDA Enable
+    USBE,   1,                                  // USB Resume
+        ,   1,                                  // NB SERR Detect
 } 
-      
+
 // PMIO_RX28/9
 OperationRegion(\Glos, SystemIO, 0x0428, 0x2)   // Global Status
 Field(\Glos, ByteAcc, NoLock, Preserve) {
@@ -183,8 +185,17 @@ Field(\EDGE, ByteAcc, NoLock, Preserve) {
         , 1,                                    //
         , 1,                                    //
         , 1,                                    // battery low enable (0 == enable)
-        , 1,                                    // therm polarity (1 == falling)
+    TPOL, 1,                                    // therm polarity (1 == falling)
     LPOL, 1,                                    // lid polarity (1 == falling)
+}
+    
+// from BIOS porting guide, section 13.2.2.4
+OperationRegion(\ENB, SystemIO, 0x048c, 0x1)   // SMI enable, lid edge polarity
+Field(\ENB, ByteAcc, NoLock, Preserve) {
+        , 3,
+    TENB, 1,                                    // therm enable (1 == enabled)
+        , 4,
+
 }
     
 OperationRegion(\Stus, SystemIO, 0x0430, 0x1)   // Global Status
@@ -204,23 +215,44 @@ Field(\Prie, ByteAcc, NoLock, Preserve) {
 //
 Scope(\_GPE)
 {
+    Method(_L01) {
+        UPUT (0x31)         // 1
+        Notify(\_SB.PCI0.EC, 0x80)    // GPWAKE, from the EC
+    }
+        
     Method(_L02) {
+        UPUT (0x33)         // 3
         Notify(\_SB.PCI0.VT86.PS2K, 0x02)       //Internal Keyboard PME Status
     }
         
     Method(_L04) {
+        UPUT (0x34)         // 4
         Notify(\_SB.SLPB, 0x80)
     }
         
     Method(_L05) {
+        UPUT (0x35)         // 5
         Notify(\_SB.PCI0,0x2)
     }
 
+    Method(_L08) {          // A-series EBOOK event (RING)  (will go away)
+        UPUT (0x64)         // d
+        Notify(\_SB.PCI0.EBKA, 0x80)
+    }
+
     Method(_L09) {
+        UPUT (0x39)         // 9
         Notify(\_SB.PCI0.VT86.PS2M, 0x02)       //Internal Mouse Controller PME Status
     }
 
+    Method(_L0A) {          // EBOOK event (THRM#)
+        UPUT (0x65)         // e
+        Not(TPOL, TPOL)     // Flip the therm polarity bit
+        Notify(\_SB.PCI0.EBK, 0x80)
+    }
+
     Method(_L0B) {          // LID event
+        UPUT (0x66)         // f
         Not(LPOL, LPOL)     // Flip the lid polarity bit
         Notify(\_SB.PCI0.LID, 0x80)
     }
@@ -320,27 +352,27 @@ Method (_PTS, 1, NotSerialized)
     Return (0x00)
 }
 
-Method(STRC, 2) {   // Compare two String
-    If(LNotEqual(Sizeof(Arg0), Sizeof(Arg1))) {
-        Return(1)
-    }
-        
-    Add(Sizeof(Arg0), 1, Local0)
-        
-    Name(BUF0, Buffer(Local0) {})
-    Name(BUF1, Buffer(Local0) {})
-        
-    Store(Arg0, BUF0)
-    Store(Arg1, BUF1)
-        
-    While(Local0) {
-        Decrement(Local0)
-        If(LNotEqual(Derefof(Index(BUF0, Local0)), Derefof(Index(BUF1, Local0)))) {
-            Return(1)
-        }
-    }
-    Return(0)           // Str1 & Str2 are match
-}
+//  Method(STRC, 2) {   // Compare two String
+//      If(LNotEqual(Sizeof(Arg0), Sizeof(Arg1))) {
+//          Return(1)
+//      }
+//          
+//      Add(Sizeof(Arg0), 1, Local0)
+//          
+//      Name(BUF0, Buffer(Local0) {})
+//      Name(BUF1, Buffer(Local0) {})
+//          
+//      Store(Arg0, BUF0)
+//      Store(Arg1, BUF1)
+//          
+//      While(Local0) {
+//          Decrement(Local0)
+//          If(LNotEqual(Derefof(Index(BUF0, Local0)), Derefof(Index(BUF1, Local0)))) {
+//              Return(1)
+//          }
+//      }
+//      Return(0)           // Str1 & Str2 are match
+//  }
 
 //
 //  System Bus
@@ -352,10 +384,8 @@ Scope(\_SB)
     Device (SLPB)
     {
         Name (_HID, EISAID("PNP0C0E"))  // Hardware Device ID SLEEPBTN
-        Method(_STA, 0) {
-            Return(0x0B)        // non-present, enabled, functioning
-        }
-
+        Name (_STA, 0)                  // not present on XO.  note that there are still
+                                        // Notify() calls to SLPB -- not sure what that will do.
         Name(_PRW, Package(2){0x04,5})  //Internal Keyboard Controller PME Status; S5
     }
     
@@ -370,6 +400,7 @@ Scope(\_SB)
         
         Method(_INI, 0)
         {
+            UPUT (0x4a)  // J
         }
         
         Name (_S3D, 3)
@@ -1160,7 +1191,7 @@ Scope(\_SB)
             Device(PS2M)                            //PS2 Mouse
             {
                 Name(_HID,EISAID("PNP0F13"))
-                Name(_STA, 0x0F)
+                Name(_STA, 0x0)  // not present:  not used on XO
                 Name(_CRS, ResourceTemplate () { IRQNoFlags () {12} })
                 Name(_PRW, Package() {0x09, 0x04})
             }
@@ -1170,7 +1201,7 @@ Scope(\_SB)
                     Name(_HID,EISAID("PNP0303"))
                     Name(_CID,EISAID("PNP030B"))    // Microsoft reserved PNP ID
                     
-                    Name(_STA,0x0F)
+                    Name(_STA,0x0)  // not present:  not used on XO
                     
                     Name (_CRS, ResourceTemplate ()
                     {
@@ -1864,7 +1895,6 @@ Scope(\_SB)
                 {
                     If (LNot (Acquire (ACMX, 5000)))
                     {
-                        UPUT (0x69)  // i
                         // Store (ECRD (0xFB5F), Local0)
                         Store (ECR1 (0x2c), Local0)   // CMD_READ_BATTERY_TYPE
                         // Store (ECRD (0xF929), Local1) // FIXME -- BAT_SOC_WARNNING
@@ -2255,6 +2285,57 @@ Scope(\_SB)
             }
         }   // Device(P2PB)
         
+        Device (EBK) {
+            Name (_PRW, Package (0x02) {  0x0A, 0x04 })     // Event 0A, wakes from S4
+
+            Method(_INI, 0)
+            {
+                UPUT (0x6b)  // k
+                Store (One, TENB)            // Enable ebook (THERM#)
+                Store (One, THRM)
+            }
+
+            Method(EBK) {
+                If (TPOL) {                   // ebook is "open"
+                    UPUT (0x65)                   // e
+                } Else {
+                    UPUT (0x45)                   // E
+                }
+                Return(TPOL)
+            }
+        }  // Device(EBK)
+
+        // RING-based ebook support, on A-series boards
+        Device (EBKA) {
+            Name (_PRW, Package (0x02) {  0x08, 0x04 })     // Event 08, wakes from S4
+
+            Method(_INI, 0)
+            {
+                UPUT (0x69)  // i
+                Store (One, RING)
+            }
+
+            Method(EBK) {
+                If (TPOL) {                   // ebook is "open"
+                    UPUT (0x65)                   // e
+                } Else {
+                    UPUT (0x45)                   // E
+                }
+                Return(TPOL)
+            }
+        }  // Device(EBKA)
+
+        Device (EC) {
+            Name (_PRW, Package (0x02) {  0x01, 0x04 })     // Event 01, wakes from S4
+
+            Method(_INI, 0)
+            {
+                UPUT (0x49)  // I
+                Store (One, GPWK)            // Enable gpwake
+            }
+
+        }  // Device(EC)
+
         Device (LID) {
             Name (_HID, EisaId ("PNP0C0D"))
             Name (_PRW, Package (0x02) {  0x0B, 0x04 })     // Event 0B, wakes from S4
@@ -2265,8 +2346,7 @@ Scope(\_SB)
                 } Else {
                     UPUT (0x4c)                   // L
                 }
-                Store (Zero, GS11)            // Clear lid
-                Return(LPOL)
+                Return(LNot(LPOL))   // pgf is unclear on why this polarity is correct
             }
 
         }  // Device(LID)
