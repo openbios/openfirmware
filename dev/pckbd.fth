@@ -110,13 +110,48 @@ false value alt-gr?		\ True if the AltGr key is down
    true
 ;
 
-: ?ack  ( response -- )
-   begin  h# fa <>  while		  \ Consume stuff while waiting for ack
-      d# 10 timed-read  if  exit then
-   repeat
+0 value kbd-debug?
+
+\ This is fairly complicated to handle several possibilities.
+\ In the usual case, where the response is ACK (fa), we return true on the top
+\ Another case is a RETRY (fe) response - then we return "false false" so the
+\ caller will continue to retry as long as we keep seeing RETRY.
+\ Bytes that are neither fa nor fe are silently discarded.
+\ If we timeout without seeing either fa or fe, we return "true false" so the
+\ caller will retry a limited number of times before giving up.
+
+: got-ack?  ( -- true | timeout? false )
+   begin
+      \ No response - retry once
+      d# 10 timed-read  if  true false exit  then  ( data )
+      case
+         h# fa of        true  exit  endof  \ ACK - exit without retry
+         h# fe of  false false exit  endof  \ RETRY - retry as long as we keep getting fe
+         \ discard other characters
+      endcase
+   again
 ;
 
-: cmd  ( cmd -- )  put-get-data ?ack  ;
+: cmd  ( cmd -- )
+   1  begin                                 ( cmd #retries )
+      over  " put-data" $call-parent        ( cmd #retries )
+      got-ack?  if  2drop exit  then        ( cmd #retries timeout? )
+
+      \ Decrease the retry count if got-ack? timed out
+      \ Otherwise got-ack? saw a RETRY response, in which case
+      \ we retry without decrementing the count
+      if  1-  then                          ( cmd #retries )
+
+   dup 0<  until                            ( cmd #retries )
+
+   drop                                     ( cmd )
+   kbd-debug?  if                           ( cmd )
+      ." Keyboard cmd " . ." failed" cr     ( )
+   else                                     ( cmd )
+      drop                                  ( )
+   then                                     ( )
+;
+
 headers
 
 \ Despite the manual's claim that this command can be executed at any time,
