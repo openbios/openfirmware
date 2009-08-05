@@ -31,6 +31,16 @@ external
    false  " r/w-blocks" $call-parent
 ;
 
+\ Asynchronous write. Completes on the next call to
+\ write-blocks-start, write-blocks-finish, or close.
+\ (Don't do other read/write operations in between.)
+: write-blocks-start ( adr block# #blocks -- )
+   false  " r/w-blocks-start" $call-parent
+;
+: write-blocks-finish ( -- #written )
+   false  " r/w-blocks-finish" $call-parent
+;
+
 : dma-alloc   ( size -- vadr )  " dma-alloc"  $call-parent  ;
 : dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;
 

@@ -798,7 +798,24 @@ external
 : dma-alloc   ( size -- vadr )  " dma-alloc"  $call-parent  ;
 : dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;
 
-: r/w-blocks  ( addr block# #blocks in? -- actual )
+0 instance value dma?
+
+: wait-dma-done  ( -- )
+   dma?  if
+      2 wait
+      dma-release
+      intstat-off
+      false to dma?
+   then
+;
+
+: r/w-blocks-finish  ( -- actual )
+   wait-dma-done
+   dma-len /block /
+;
+
+: r/w-blocks-start  ( addr block# #blocks in? -- )
+   wait-dma-done
    over 0=  if  2drop 2drop  0  exit   then  \ Prevents hangs
    intstat-on
    >r               ( addr block# #blocks r: in? )
@@ -807,12 +824,12 @@ external
    address-shift lshift  r>  if
       read-multiple
    else
-      write-multiple  true to writing?
+      write-multiple  true to writing?  true to dma?
    then
-   2 wait
-   dma-release
-   dma-len /block /
-   intstat-off
+;
+
+: r/w-blocks  ( addr block# #blocks in? -- actual )
+   r/w-blocks-start  r/w-blocks-finish
 ;
 
 : r/w-ioblocks  ( reg# function# inc? addr len blksz in? -- actual )
@@ -844,6 +861,7 @@ external
 ;
 
 : close  ( -- )
+   wait-dma-done
    open-count  1 =  if
       scratch-buf d# 64 " dma-free" $call-parent
    then

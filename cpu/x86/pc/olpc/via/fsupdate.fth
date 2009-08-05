@@ -103,7 +103,11 @@ also nand-commands definitions
    get-inflater
 ;
 
-: zblocks-end:  ( -- )  #image-eblocks  erase-gap  ;
+: zblocks-end:  ( -- )
+\ Asynchronous writes
+\   " write-blocks-finish" $call-nand  drop
+   #image-eblocks erase-gap
+;
 
 : data:  ( "filename" -- )
    safe-parse-word fn-buf place
@@ -117,12 +121,20 @@ also nand-commands definitions
    #image-eblocks show-writing
 ;
 
+\ We simultaneously DMA one data buffer onto NAND while unpacking the
+\ next block of data into another. The buffers exchange roles after
+\ each block.
+load-base                   value dma-buffer
+load-base /nand-block 4 * + value data-buffer
+
+: swap-buffers  ( -- )  data-buffer dma-buffer  to data-buffer to dma-buffer  ;
+
 : get-zdata  ( comprlen -- )
    secure-fsupdate?  if
-      load-base /spec-maxline  fileih read-line           ( len end? error? )
+      data-buffer /spec-maxline  fileih read-line         ( len end? error? )
       " Spec line read error" ?nand-abort                 ( len end? )
       0= " Spec line too long" ?nand-abort                ( len )
-      load-base swap                                      ( adr len )
+      data-buffer swap                                    ( adr len )
       source $= 0=  " Spec line mismatch" ?nand-abort     ( )
 
       fileih                                              ( ih )
@@ -130,15 +142,29 @@ also nand-commands definitions
       source-id                                           ( ih )
    then                                                   ( ih )
 
-   >r  load-base /nand-block +  over  r@  fgets           ( comprlen #read r: ih )
+   >r  data-buffer /nand-block +  over  r@  fgets         ( comprlen #read r: ih )
    <>  " Short read of zdata file" ?nand-abort            ( r: ih )
 
    r> fgetc newline <>                                    ( error? )
    " Missing newline after zdata" ?nand-abort             ( )
 
    \ The "2+" skips the Zlib header
-   load-base /nand-block + 2+  load-base true  (inflate)      ( len )
+   data-buffer /nand-block + 2+  data-buffer true  (inflate)  ( len )
    /nand-block <>  " Wrong expanded data length" ?nand-abort  ( )
+;
+
+false value check-hash?
+
+: check-hash  ( -- )
+   2>r                                ( eblock# hashname$ r: hash$ )
+   data-buffer /nand-block 2swap      ( eblock# data$ hashname$ r: hash$ )
+   hash                               ( eblock# calc-hash$ r: hash$ )
+   2r>  $=  0=  if                    ( eblock# )
+      ." Bad hash for eblock# " .x cr cr
+      ." Your USB key may be bad.  Please try a different one." cr
+      ." See http://wiki.laptop.org/go/Bad_hash" cr cr
+      abort
+   then                               ( eblock# )
 ;
 
 : zblock: ( "eblock#" "comprlen" "hashname" "hash-of-128KiB" -- )
@@ -150,25 +176,17 @@ also nand-commands definitions
                                         
    r> get-zdata                          ( eblock# hashname$ hash$ )
 
-   2>r                                   ( eblock# hashname$ r: hash$ )
-   load-base /nand-block 2swap           ( eblock# data$ hashname$ r: hash$ )
-   hash                                  ( eblock# calc-hash$ r: hash$ )
-
-   2r>  $=  0=  if                       ( eblock# )
-      ." Bad hash for eblock# " .x cr cr
-      ." Your USB key may be bad.  Please try a different one." cr
-      ." See http://wiki.laptop.org/go/Bad_hash" cr cr
-      abort
-   then                                        ( eblock# )
-
-   dup erase-gap                               ( eblock# )
+   check-hash?  if
+      check-hash                         ( eblock# )
+   else
+      2drop 2drop                        ( eblock# )
+   then
    
-   dup /nand-block um* " seek" $call-nand      ( eblock# error )
-   " Bad seek" ?nand-abort                     ( eblock# )
-
-   load-base /nand-block " write" $call-nand   ( eblock# #written )
-   /nand-block <>                              ( eblock# error? )
-   " Error writing to NAND FLASH" ?nand-abort  ( eblock# )
+   ( eblock# )
+\ Asynchronous writes
+\   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks-start" $call-nand
+   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks" $call-nand
+   swap-buffers
 
    dup to last-eblock#                         ( eblock# )
    show-written                                ( )
