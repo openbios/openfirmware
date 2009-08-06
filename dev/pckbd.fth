@@ -123,7 +123,7 @@ false value alt-gr?		\ True if the AltGr key is down
 : got-ack?  ( -- true | timeout? false )
    begin
       \ No response - retry once
-      d# 10 timed-read  if  true false exit  then  ( data )
+      d# 50 timed-read  if  true false exit  then  ( data )
       case
          h# fa of        true  exit  endof  \ ACK - exit without retry
          h# fe of  false false exit  endof  \ RETRY - retry as long as we keep getting fe
@@ -259,7 +259,7 @@ previous definitions
 [ifndef] demo-board
 : ?olpc-keyboard  ( -- )
     " enable-intf" $call-parent
-    begin  5 timed-read 0=  while
+    begin  d# 50 timed-read 0=  while
        drop
        true to keyboard-present?
     repeat
@@ -274,11 +274,11 @@ previous definitions
    h# f2 cmd
 
    \ Keyboards return the ID sequence  ab XX
-   2 timed-read  if  exit  then  ( id1 )
+   d# 50 timed-read  if  exit  then  ( id1 )
    h# ab <>  if  exit  then
 
    \ The ENE keyboard controller return  ab 41
-   2 timed-read  if  exit  then  ( id2 )
+   d# 50 timed-read  if  exit  then  ( id2 )
    h# 41 <>  if  exit  then
    
    \ This looks like an ENE controller, so flip the mapping table
