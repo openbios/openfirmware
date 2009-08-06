@@ -391,9 +391,11 @@ d# 256 /bd * value /bdl
 ;
 
 : upsample-channel  ( -- )
-   /src 4 /  1 do
-      i copy-sample
-   loop
+   upsample-factor 6 =  if
+      src /src dst 4 " 8khz>48khz" evaluate
+   else
+      /src 4 /  1 do  i copy-sample  loop
+   then
 ;
 
 : upsample  ( adr len factor -- adr len )

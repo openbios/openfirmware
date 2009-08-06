@@ -46,7 +46,8 @@ code fir-upsample  ( outptr stride inptr weights taps/phase #phases -- outptr' s
 
       d# 24 [sp]   di  mov   \ Output pointer
       op:          ax  stos  \ Store output value
-      di   d# 24 [sp]  mov   \ Update output pointer
+      d# 20 [sp]   ax  mov   \ Stride
+      ax   d# 24 [sp]  add   \ Update output pointer
 
    d# 04 [sp] dec            \ Phase counter
    0= until
