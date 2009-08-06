@@ -105,7 +105,7 @@ also nand-commands definitions
 
 : zblocks-end:  ( -- )
 \ Asynchronous writes
-\   " write-blocks-finish" $call-nand  drop
+   " write-blocks-finish" $call-nand  drop
    #image-eblocks erase-gap
 ;
 
@@ -176,20 +176,20 @@ false value check-hash?
                                         
    r> get-zdata                          ( eblock# hashname$ hash$ )
 
-   check-hash?  if
+   check-hash?  if                       ( eblock# hashname$ hash$ )
       check-hash                         ( eblock# )
-   else
+   else                                  ( eblock# hashname$ hash$ )
       2drop 2drop                        ( eblock# )
    then
    
    ( eblock# )
 \ Asynchronous writes
-\   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks-start" $call-nand
-   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks" $call-nand
-   swap-buffers
+   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks-start" $call-nand  ( eblock# )
+\   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks" $call-nand drop  ( eblock# )
+   swap-buffers                          ( eblock# )
 
-   dup to last-eblock#                         ( eblock# )
-   show-written                                ( )
+   dup to last-eblock#                   ( eblock# )
+   show-written                          ( )
 ;
 
 previous definitions
@@ -205,7 +205,7 @@ previous definitions
    over file !  linefeed line-delimiter c!  ( fd fd' )
    file !                              ( fd )
 
-
+   t(
    also nand-commands   
    ['] include-file catch  dup  if
       nip .error
@@ -213,6 +213,7 @@ previous definitions
    previous
    show-done
    close-nand-ihs
+   )t-hms
 ;
 
 : do-fs-update  ( img$ -- )

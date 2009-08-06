@@ -824,8 +824,9 @@ external
    address-shift lshift  r>  if
       read-multiple
    else
-      write-multiple  true to writing?  true to dma?
+      write-multiple  true to writing?
    then
+   true to dma?
 ;
 
 : r/w-blocks  ( addr block# #blocks in? -- actual )

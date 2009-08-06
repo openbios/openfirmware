@@ -63,6 +63,14 @@ external
 : read-blocks   ( addr block# #blocks -- #read )  " read-blocks" $call-parent  ;
 : write-blocks  ( addr block# #blocks -- #written )  " write-blocks" $call-parent  ;
 
+\ Stub implementation of asynchronous write interface
+0 instance value #written
+: write-blocks-start  ( addr block# #blocks -- )
+   " write-blocks" $call-parent to #written
+;
+: write-blocks-finish  ( -- #written )  #written  ;
+
+
 \ Methods used by external clients
 
 : open  ( -- flag )
