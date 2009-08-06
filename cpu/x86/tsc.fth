@@ -41,11 +41,28 @@ d# 262 value us-factor
 \ Timing tools
 2variable timestamp
 : t(  ( -- )  tsc@ timestamp 2! ;
+: ))t  ( -- d.ticks )  tsc@  timestamp 2@  d-  ;
 : )t  ( -- )
-   tsc@  timestamp 2@  d-  us-factor um/mod nip  ( microseconds )
+   ))t us-factor um/mod nip  ( microseconds )
    push-decimal
    <#  u# u# u#  [char] , hold  u# u#s u#>  type  ."  uS "
    pop-base
+;
+: )t-sec  ( -- )
+   ))t  us-factor d# 1,000,000 *  um/mod nip  ( seconds )
+   push-decimal
+   <# u# u#s u#>  type  ." S "
+   pop-base
+;
+: .hms  ( seconds -- )
+   d# 60 /mod   d# 60 /mod    ( sec min hrs )
+   push-decimal
+   <# u# u#s u#> type ." :" <# u# u# u#> type ." :" <# u# u# u#>  type
+   pop-base
+;
+: )t-hms
+   ))t  us-factor d# 1,000,000 *  um/mod nip  ( seconds )
+   .hms
 ;
 
 \ LICENSE_BEGIN
