@@ -482,7 +482,7 @@ fload ${BP}/cpu/x86/pc/olpc/nandcastui.fth
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
 [then]
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
-devalias fsdisk /ide@0/disk:0
+devalias fsdisk /sd/disk:0
 
 fload ${BP}/ofw/inet/sntp.fth
 : olpc-ntp-servers  ( -- )
