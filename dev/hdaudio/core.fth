@@ -262,8 +262,7 @@ d# 48.000 instance value sample-rate
 
 0 value open-count
 : open   ( -- flag )
-   open-count 0=  if  init-controller  then
-   init-codec
+   open-count 0=  if  init-controller  init-codec  then
    open-count 1+ to open-count
    true
 ;
@@ -429,7 +428,7 @@ d# 256 /bd * value /bdl
 
 : open-out  ( -- )
    4 to sd#
-   48kHz
+   d# 48.000 set-sample-rate
 ;
 
 : audio-out  ( adr len -- actual ) 
@@ -456,7 +455,7 @@ d# 256 /bd * value /bdl
 ;
 
 : write  ( adr len -- actual )
-   open-out  audio-out  install-playback-alarm
+   4 to sd#  audio-out  install-playback-alarm
 ;
 
 \ Alarm handle to stop the stream when the content has been played.
@@ -479,7 +478,7 @@ d# 256 /bd * value /bdl
 0 value recbuf-phys
 d# 65535 value /recbuf 
 
-: open-in  ( -- )  48kHz  ;
+: open-in  ( -- )  d# 48.000 set-sample-rate  ;
 
 : record-stream  ( -- )
    0 to sd#

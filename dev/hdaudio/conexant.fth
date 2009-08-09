@@ -27,6 +27,7 @@ h# 17 value mux      \ mux between the two
 : pin-sense?       ( -- ? )  h# f0900 cmd? h# 8000.0000 and 0<>  ;
 : set-connection   ( n -- )  h# 70100 or cmd   ;
 : enable-hp-input  ( -- )    h# 70721 cmd  ;
+: disable-hp-input ( -- )    h# 70700 cmd  ;
 
 : cx2058x-enable-recording  ( -- )
    mic-in to node  pin-sense?  if
@@ -36,7 +37,10 @@ h# 17 value mux      \ mux between the two
    then
 ;
 
-: cx2058x-disable-recording  ( -- )  ;
+: cx2058x-disable-recording  ( -- )
+   mic-in to node  disable-hp-input
+   mic    to node  disable-hp-input
+;
 
 : cx2058x-enable-playback   ( -- )
    h# 10 to node  h# 70640 cmd   h# 20000 stream-format or cmd
