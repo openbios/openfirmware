@@ -306,7 +306,8 @@ h# 2c to crc-offset
 end-package
 devalias screen /display
 also hidden  d# 34 to display-height  previous  \ For editing
-[then]
+
+fload ${BP}/dev/olpc/viacamera/loadpkg.fth   \ Camera driver
 
 fload ${BP}/cpu/x86/adpcm.fth            \ ADPCM decoding
 
