@@ -65,6 +65,10 @@ external
 ;
 
 : copy-packet  ( adr len -- len' )
+   dup outbuf le-w!  tuck outbuf 2 + swap move  2 +
+;
+
+: copy-packet  ( adr len -- len' )
    dup multi-packet?  if  4 +  then   ( adr len len' )
    /outbuf >  if  ." USB Ethernet write packet too long" cr  stop-nic abort  then  ( adr len )
 
@@ -74,9 +78,15 @@ external
       dup outbuf c!     invert outbuf 2 + c!  ( adr len )
       tuck  outbuf 4 + swap  move             ( len )
       4 +                                     ( len' )
-   else                          ( adr len )
-      tuck outbuf swap move      ( len )
-   then                          ( len )
+   else
+      length-header?  if           ( adr len )
+         dup outbuf le-w!          ( adr len )
+         tuck outbuf 2 + swap move ( len )
+         2 +                       ( len )
+      else
+         tuck outbuf swap move      ( len )
+      then                          ( len )
+   then
 ;
 
 : write  ( adr len -- actual )

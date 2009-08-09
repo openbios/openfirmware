@@ -19,10 +19,20 @@ create net-ax8817x-list  here
         05ac w, 1402 w,		\ Apple
 here swap - constant /net-ax8817x-list
 
+create net-pegasus-list  here
+        050d w, 0121 w,         \ Belkin F5D5050
+        07a6 w, 8515 w,         \ ADMtek 8515
+here swap - constant /net-pegasus-list
+
 : net-ax8817x?  ( vid pid -- flag )
    net-ax8817x-list /net-ax8817x-list  find-vendor-product?
 ;
 
+: pegasus? ( vid pid -- flag )
+   net-pegasus-list /net-pegasus-list  find-vendor-product?
+;
+
 : usb-net?  ( vid pid -- flag )
-   net-ax8817x?
+   2dup net-ax8817x?  ( vid pid flag )
+   -rot pegasus?  or  ( flag )
 ;

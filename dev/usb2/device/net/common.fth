@@ -30,6 +30,8 @@ headers
 
 0 value multi-packet?   \ True if a single USB transaction can
                         \ transfer multiple network packets, e.g. ax88772
+0 value length-header?  \ True if 16-bit little-endian length header is
+                        \ prefixed to outgoing frames (pegasus)
 
 0 value residue         \ Remaining bytes in the packet buffer
 0 value pkt-adr         \ Offset into the packet buffer

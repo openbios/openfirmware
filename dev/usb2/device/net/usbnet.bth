@@ -15,6 +15,7 @@ fload ${BP}/dev/usb2/vendor.fth			\ Vendor/product id table search routines
 fload ${BP}/dev/usb2/device/net/vendor.fth	\ Ethernet vendor/product id table
 fload ${BP}/dev/usb2/device/net/common.fth	\ Ethernet common variables and routines
 fload ${BP}/dev/usb2/device/net/ax8817x.fth	\ AX8817X device routines
+fload ${BP}/dev/usb2/device/net/pegasus.fth	\ PegasusII device routines
 fload ${BP}/dev/usb2/device/net/ethernet.fth	\ USB ethernet driver
 
 end0
