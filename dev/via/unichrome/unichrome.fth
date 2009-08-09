@@ -4,14 +4,18 @@ purpose: Driver for Via Unichrome Pro, model VX855
 hex
 headers
 
+\ These are non-instance values because we don't want to change
+\ their values on a nested open as happens with selftest and
+\ the camera sub-node's selftest.
 
-\ width and height are global instead of instance values because
-\ the seltest method needs to get their values in a fresh instance
-\ with re-running the open method.
-d# 1280 ( instance ) value width	\ Frame buffer line width
-d# 1024 ( instance ) value height	\ Screen height
-d#   16 ( instance ) value depth	\ Bits per pixel
-d# 1024 instance value /scanline	\ Frame buffer line width
+0 value fb-va
+0 value graphmem
+0 value mmio-base
+
+d# 1280 value width	\ Frame buffer line width
+d# 1024 value height	\ Screen height
+d#   16 value depth	\ Bits per pixel
+d# 1024 value /scanline	\ Frame buffer line width
 
 : set-resolution  ( width height depth -- )
    to depth  to height  to width
@@ -30,8 +34,6 @@ d# 1024 instance value /scanline	\ Frame buffer line width
 
 : /fb  ( -- )  /scanline height *  ;	\ Size of framebuffer
 
-0 instance value mmio-base
-
 : map-io-regs  ( -- )
    mmio-base  if  exit  then
    (map-io-regs)  to mmio-base
@@ -40,8 +42,8 @@ d# 1024 instance value /scanline	\ Frame buffer line width
 ;
 
 : map-frame-buffer  ( -- )
-   (map-frame-buffer)  to frame-buffer-adr
-   frame-buffer-adr encode-int " address" property
+   (map-frame-buffer)  to fb-va
+   fb-va encode-int " address" property
 ;
 
 
@@ -602,15 +604,13 @@ hex
 
 defer init-display  ' init-primary-display is init-display
 
-0 instance value graphmem
-
 : init-frame-buffer  ( -- )		\ Initializes the controller
 \  smb-init
 \   set-dac-colors		\ Set up initial color map
 \   video-on			\ Turn on video
 
    map-frame-buffer
-   frame-buffer-adr /fb    ( adr len )
+   fb-va /fb    ( adr len )
    depth case
       8      of  h# 0f                     fill  endof
       d# 16  of  background-rgb  rgb>565  wfill  endof
@@ -619,7 +619,7 @@ defer init-display  ' init-primary-display is init-display
    endcase
    h# f to background-color
 
-   frame-buffer-adr /fb +  to graphmem
+   fb-va /fb +  to graphmem
 ;
 
 : set-fb  ( -- )
@@ -628,16 +628,25 @@ defer init-display  ' init-primary-display is init-display
    /scanline depth fb-install ( gp-install )  ( )
 ;
 
+0 value open-count
+
 : display-remove  ( -- )
+   open-count 1 =  if
+   then
+   open-count 1- 0 max to open-count
 ;
 
 : display-install  ( -- )
-   map-io-regs			\ Enable IO registers
-   init-display
-   init-frame-buffer
-   declare-props		\ Setup properites
+   open-count 0=  if
+      map-io-regs		\ Enable IO registers
+      init-display
+      init-frame-buffer
+      declare-props		\ Setup properites
+   then
    default-font set-font
    set-fb
+   fb-va to frame-buffer-adr
+   open-count 1+ to open-count
 ;
 
 : display-selftest  ( -- failed? )  false  ;
