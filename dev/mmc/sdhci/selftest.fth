@@ -3,6 +3,8 @@ purpose: Driver for SDHCI (Secure Digital Host Controller)
 
 headers
 
+: /block  ( -- u )  " /block" $call-parent  ;
+
 0 instance value sbuf
 0 instance value ibuf
 0 instance value obuf
@@ -18,8 +20,8 @@ headers
    obuf /block dma-free  0 to obuf
    sbuf /block dma-free  0 to sbuf
 ;
-: read-block  ( adr block# -- error? )  1 true  r/w-blocks 1 <>  ;
-: write-block ( adr block# -- error? )  1 false r/w-blocks 1 <>  ;
+: read-block  ( adr block# -- error? )  1  read-blocks 1 <>  ;
+: write-block ( adr block# -- error? )  1 write-blocks 1 <>  ;
 : test-block  ( block# pattern -- error? )
    obuf /block 2 pick     fill  obuf 2 pick write-block  if  true exit  then
    ibuf /block rot invert fill  ibuf swap   read-block   if  true exit  then
@@ -34,9 +36,7 @@ headers
 ;
 external
 : selftest  ( -- error? )
-   open 0=  if  ." Open /sd failed" cr true exit  then
-   0 1 set-address
-   attach-card 0=  if  ." No card inserted" cr close false exit  then
+   open 0=  if  ." Open sdmmc failed" cr true exit  then
    alloc-test-bufs
    ['] (selftest) catch  if  true  then
    free-test-bufs

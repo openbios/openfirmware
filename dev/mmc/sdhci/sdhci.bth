@@ -17,7 +17,6 @@ new-device
 finish-device
 
 
-fload ${BP}/dev/mmc/sdhci/selftest.fth
 end0
 
 end-tokenizing
