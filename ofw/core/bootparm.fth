@@ -62,11 +62,11 @@ variable file-size
 headerless
 : !load-size  ( len -- )  file-size !  ;
 
-d# 256 buffer: path-buf
+d# 1024 buffer: path-buf
 headers
 ' path-buf  " bootpath" chosen-string
 headerless
-d# 256 buffer: args-buf
+d# 1024 buffer: args-buf
 headers
 ' args-buf  " bootargs" chosen-string
 
@@ -88,6 +88,12 @@ headerless
       drop d# 255
    then
 ;
+: limit-1023  ( adr len -- adr len )
+   dup d# 1023 >  if
+      ." Warning: limiting string length to 1023 characters" cr
+      drop d# 1023
+   then
+;
 
 : (boot-read)  ( adr len -- )
    opened-ih  if                        ( adr len )
@@ -99,7 +105,7 @@ headerless
       ( print-probe-list )
       true abort" "r"nCan't open boot device"r"n"
    then                                         ( fileid )
-   dup ihandle>devname limit-255 load-path place-cstr drop ( fileid )
+   dup ihandle>devname limit-1023 load-path place-cstr drop ( fileid )
    >r                                           ( )
    load-started
    0 !load-size  load-base                      ( load-adr )
@@ -203,7 +209,7 @@ headers
    ."   Arguments: "  2over type              ( file-str device-str )
    )collect ?show-message                     ( file-str device-str )
 
-   2swap limit-255 args-buf  place-cstr drop  ( device-str )
+   2swap limit-1023 args-buf  place-cstr drop  ( device-str )
 
    boot-read                                  ( )
 ;

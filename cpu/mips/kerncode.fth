@@ -970,9 +970,30 @@ code (")  (s -- adr len)
    ip  $at          ip  and
 c;
 
+code (n")  (s -- adr len)
+   sp -8  sp    addiu
+   tos    sp 4  sw
+   ip  0  tos   lw	\ Get length word in tos
+   ip  4  ip    addiu	\ Address of data bytes
+   ip     sp 0  sw	\ Put adr on stack
+
+   \ Now we have to skip the string
+   ip  tos          ip  addu	\ ip now points past the last data byte
+   ip  #talign      ip  addiu	\ Round up to a token boundary, plus null byte
+   $0  #talign negate   $at addiu
+   ip  $at          ip  and
+c;
+
 code count  (s adr -- adr+1 len )
    tos 1   tos	addiu
    tos -1  t0	lbu
+   tos     sp	push
+   t0      tos	move
+c;
+
+code ncount  (s adr -- adr+4 len )
+   tos 4   tos	addiu
+   tos -4  t0	lw
    tos     sp	push
    t0      tos	move
 c;

@@ -137,22 +137,35 @@ action: ( apf -- n )  la1+ @  ;
 : config-int  ( "name" default-value -- )  config-create use-actions   ,  ;
 : nodefault-int  ( "name" -- )  0 config-int nodefault  ;
 
+: ,cstr  ( $ -- adr )
+   here  over 1+ taligned note-string  allot  ( $ new-adr )
+   place-cstr                                 ( adr )
+;
+
+: rel!  ( adr1 adr2 -- )  tuck - swap !  ;
+: rel@  ( adr2 -- adr1 )  dup @ +  ;
+
 6 actions
 action: ( apf -- adr len )  cv-string@  ;
 action: ( adr len apf -- )  cv-string!  ;
 action: ( apf -- adr )  cv-adr drop ;
 action: ( adr len apf -- adr len )  drop $cstr cscount 1+  ;
 action: ( adr len apf -- adr len )  drop -null  ;
-action: ( apf -- adr len )  la1+ count  ;
+action: ( apf -- adr len )  la1+ rel@ cscount  ;
 
+\ This implementation of config-string ignores maxlen, using data representations
+\ that do not require specifying a maximum length.
 : config-string  ( "name" default-value$ maxlen -- )
-   config-create use-actions  drop ",
+   config-create use-actions  ( default-value$ maxlen )
+   drop                       ( default-value$ )
+   here >r  /n allot          ( default-value$ r: where )  \ Place location of def$
+   ,cstr r> rel!              ( )
 ;
 : nodefault-string  ( "name" maxlen -- )  0 0  swap config-string nodefault  ;
 
 : set-config-string-default  ( new-default$ xt -- )
-   >body la1+ 2dup c@ > abort" cannot increase size of default string"
-   place   
+   >body la1+ >r             ( new-default$ r: ptr-adr )
+   ,cstr r> rel!             ( )
 ;
 
 6 actions

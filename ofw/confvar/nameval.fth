@@ -385,7 +385,7 @@ h# ffe constant /pack-buf
    then                                 ( )
 ;
 
-: (cv-string@)  ( apf -- adr len )  cv-adr  if  >cv$ unpack-env  else  count  then  ;
+: (cv-string@)  ( apf -- adr len )  cv-adr  if  >cv$ unpack-env  else  rel@ cscount  then  ;
 : (cv-string!)  ( adr len apf -- )  (cv-bytes!)  ;
 
 ' (cv-flag@)   to cv-flag@

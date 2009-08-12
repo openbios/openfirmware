@@ -1014,6 +1014,14 @@ code (")  ( -- adr len)
    inc     ip,#4
    bic     ip,ip,#3
 c;
+code (n")  ( -- adr len)
+   psh     tos,sp
+   ldr     tos,[ip],#4
+   psh     ip,sp
+   add     ip,ip,tos
+   inc     ip,#4
+   bic     ip,ip,#3
+c;
 code traverse   ( adr direction -- adr' )
    mov     r0,tos         \ direction r0
    pop     tos,sp         \ adr -> tos
@@ -1028,6 +1036,11 @@ c;
 code count      ( adr -- adr1 cnt )
    mov     r0,tos
    ldrb    tos,[r0],#1
+   psh     r0,sp
+c;
+code ncount      ( adr -- adr1 cnt )
+   mov     r0,tos
+   ldr     tos,[r0],#4
    psh     r0,sp
 c;
 

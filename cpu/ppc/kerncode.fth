@@ -878,9 +878,30 @@ code (")  (s -- adr len)
    rlwinm ip,ip,0,0,29
 c;
 
+code (")  (s -- adr len)
+   push-tos
+   lwzu  tos,/token(ip)	\ Get length byte in tos
+   addi  ip,ip,1cell	\ Address of data bytes
+   stwu  ip,-1cell(sp)	\ Push adr
+
+   \ Now we have to skip the string
+   add   ip,ip,tos	\ ip now points past the last data byte
+
+\ ! We don't want to add 4 because IP is pre-incremented inside NEXT
+\  addi  ip,ip,4	\ Round up to a token boundary, plus null byte (#talign
+
+   rlwinm ip,ip,0,0,29
+c;
+
 code count  (s adr -- adr+1 len )
    addi  tos,tos,1
    lbz   t0,-1(tos)
+   push-tos
+   mr    tos,t0
+c;
+code ncount  (s adr -- adr+1cell len )
+   addi  tos,tos,1cell
+   lwz   t0,-1cell(tos)
    push-tos
    mr    tos,t0
 c;

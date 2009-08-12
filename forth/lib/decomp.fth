@@ -295,6 +295,7 @@ variable extent  extent off
 : .compile      ( ip -- ip' )  ." compile " ta1+ .word   ;
 : skip-compile  ( ip -- ip' )  ta1+ ta1+  ;
 : skip-string   ( ip -- ip' )  ta1+ +str  ;
+: skip-nstring  ( ip -- ip' )  ta1+ +nstr  ;
 : .(')          ( ip -- ip' )  ta1+  .." ['] " dup token@ .name  ta1+ ;
 headers
 : skip-(')      ( ip -- ip' )  ta1+ ta1+  ;
@@ -303,6 +304,7 @@ headerless
 : .string-tail  ( ip -- ip' )  dup count type  +str  ;
 : .string       ( ip -- ip' )  .cword .string-tail  put"  ;
 : .pstring      ( ip -- ip' )  ?cr  ." p"  put"  ta1+ .string-tail  put"  ;
+: .nstring      ( ip -- ip' )  ?cr         put"  ta1+  dup ncount type  +nstr  put"  ;
 
 \ Use this version of .branch if the structured conditional code is not used
 \ : .branch     ( ip -- ip' )  .word   dup <w@ .   /branch +   ;
@@ -335,7 +337,7 @@ d# 30 constant #decomp-classes
    ( 18 ) [compile]  (endof)         ( 19 ) [compile]  (endcase)
    ( 20 ) [compile]  ("s)	     ( 21 ) [compile]  (is)
    ( 22 ) [compile]  (dlit)          ( 23 ) [compile]  (llit)
-   ( 24 ) [compile]  dummy           ( 25 ) [compile]  dummy
+   ( 24 ) [compile]  (n")            ( 25 ) [compile]  dummy
    ( 26 ) [compile]  dummy           ( 27 ) [compile]  dummy
    ( 28 ) [compile]  dummy           ( 29 ) [compile]  dummy
 
@@ -353,7 +355,7 @@ d# 30 constant #decomp-classes
    ( 18 )     .endof                 ( 19 )     .endcase
    ( 20 )     .pstring               ( 21 )     .is
    ( 22 )     .dlit                  ( 23 )     .llit
-   ( 24 )     dummy                  ( 25 )     dummy
+   ( 24 )     .nstring               ( 25 )     dummy
    ( 26 )     dummy                  ( 27 )     dummy
    ( 28 )     dummy                  ( 29 )     dummy
    ( default ) .word
@@ -374,7 +376,7 @@ d# 30 constant #decomp-classes
    ( 18 )     skip-branch            ( 19 )     skip-word
    ( 20 )     skip-string            ( 21 )     skip-word
    ( 22 )     skip-dlit              ( 23 )     skip-llit
-   ( 24 )     dummy                  ( 25 )     dummy
+   ( 24 )     skip-nstring           ( 25 )     dummy
    ( 26 )     dummy                  ( 27 )     dummy
    ( 28 )     dummy                  ( 29 )     dummy
   ( default ) skip-word

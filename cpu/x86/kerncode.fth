@@ -708,7 +708,7 @@ code skipstr (s -- addr len)
    ax 0 [rp] mov       \ Put the modified ip back
 c;
 code (")  (s -- addr len)
-   ax ax sub	       \ Clear high bytes
+   ax ax xor	       \ Clear high bytes
    al lodsb            \ Get length byte in al
    ip push             \ Push address of data bytes
    ax push             \ Push length
@@ -717,7 +717,18 @@ code (")  (s -- addr len)
    #talign-t negate #  ip and	\ Align
 c;
 code count  (s addr -- addr+1 len )
-   bx pop   ax ax sub   0 [bx] al mov   bx inc   bx push  1push
+   bx pop   ax ax xor   0 [bx] al mov   bx inc   bx push  1push
+c;
+code (n")  (s -- addr len)
+   ax lods             \ Get length in ax
+   ip push             \ Push address of data bytes
+   ax push             \ Push length
+   ax ip add           \ Skip the string
+   #talign-t #  ip add   \ Round up to token boundary + null byte
+   #talign-t negate #  ip and	\ Align
+c;
+code ncount  (s addr -- addr+/n len )
+   bx pop   0 [bx] ax mov   /n [bx] bx lea   bx push  1push
 c;
 
 \ code origin  (s -- addr )   ax ax sub   1push c;

@@ -225,7 +225,7 @@ headers
 [ifndef] run-time
 0 value "temp
 headerless
-d# 258 constant /stringbuf
+d# 1024 1+ /n-t +  constant /stringbuf  \ 1024 bytes + /n for length + 1 for null
 0 value stringbuf
 0 value $buf
 : init  ( -- )
@@ -238,6 +238,24 @@ headers
 : switch-string  ( -- )
    stringbuf  dup "temp =  if  /stringbuf +  then  is "temp
 ;
+
+: npack  (s str-addr len to -- to )
+   tuck !                  ( str-adr to )
+   tuck ncount move        ( to )
+   0  over ncount +  c!    ( to )
+;
+
+: $nsave  ( adr1 len1 adr2 -- adr2 len1 )  npack ncount  ;
+
+: $ncat  ( adr len  npstr -- )  \ Append adr len to the end of npstr
+   >r  r@ ncount +     ( adr len end-adr )  ( r: npstr )
+   swap dup >r         ( adr endadr len )  ( r: npstr len )
+   cmove  r> r>        ( len npstr )
+   dup @ rot + over !  ( npstr )
+   ncount +  0 swap c! \ Null-terminate the end for later convenience
+;
+
+
 : $save  ( adr1 len1 adr2 -- adr2 len1 )  pack count  ;
 
 : $cat  ( adr len  pstr -- )  \ Append adr len to the end of pstr
@@ -249,7 +267,7 @@ headers
 ;
 
 headerless
-: add-char  ( char -- )  $buf count + c!  $buf c@ 1+ $buf c!  ;
+: add-char  ( char -- )  $buf ncount + c!  $buf @ 1+ $buf !  ;
 
 : nextchar  ( adr len -- false | adr' len' char true )
    dup  0=  if  nip exit  then   ( adr len )
@@ -284,11 +302,11 @@ headerless
 ;
 
 headers
-: get-string  ( -- adr len )
-   0 $buf c!
+: get-escaped-string  ( -- adr len )
+   0 $buf !
    begin
-      ascii " parse   $buf $cat
-      get-char  dup bl <=  if  drop $buf count exit  then  ( char )
+      ascii " parse   $buf $ncat
+      get-char  dup bl <=  if  drop $buf ncount exit  then  ( char )
       case
          ascii n of  newline            add-char  endof
          ascii r of  carret             add-char  endof
@@ -317,9 +335,13 @@ headers
    dup 2+ taligned  here swap  note-string  allot  place
 ;
 
+: n",    (s adr len -- )
+   dup 1+ na1+ taligned  here swap  note-string  allot  nplace
+;
+
 [ifndef] run-time
 : ,"  \ string"  (s -- )
-   get-string  ",
+   get-escaped-string  ",
 ;
 
 : ."  \ string"  (s -- )
@@ -328,9 +350,13 @@ headers
 
 : compile-string  ( adr len -- )
    state @  if
-      compile (") ",
+      dup  d# 255 >  if
+         compile (n") n",
+      else
+         compile (") ",
+      then
    else
-      switch-string "temp $save
+      switch-string "temp $nsave
    then
 ;
 : s"  \ string   (s -- adr len )
@@ -338,7 +364,7 @@ headers
 ; immediate
 
 : "   \ string"  (s -- adr len )
-   get-string compile-string
+   get-escaped-string compile-string
 ; immediate
 
 : [""]  \ word  (s Compile-time: -- )
@@ -359,7 +385,7 @@ headers
    state @  if
       compile ("s) ",
    else
-      switch-string "temp pack
+      switch-string "temp npack
    then
 ;
 : ""   \ name  ( -- pstr )
@@ -367,7 +393,7 @@ headers
 ; immediate
 
 : p"   \ string"  ( -- pstr )
-   get-string  compile-pstring
+   get-escaped-string  compile-pstring
 ; immediate
 
 : c"   \ string"  ( -- pstr )
@@ -380,6 +406,7 @@ create nullstring 0 c, 0 c,
 \ Words for copying strings
 \ Places a series of bytes in memory at to as a packed string
 : place     (s adr len to-adr -- )  pack drop  ;
+: nplace    (s adr len to-adr -- )  npack drop  ;
 
 : place-cstr  ( adr len cstr-adr -- cstr-adr )
    >r  tuck r@ swap cmove  ( len ) r@ +  0 swap c!  r>
@@ -389,6 +416,8 @@ create nullstring 0 c, 0 c,
 
 \ Nullfix
 : +str  (s pstr -- adr )     count + 1+ taligned ;
+
+: +nstr  (s pstr -- adr )     ncount + 1+ taligned ;
 
 \ Copy a packed string from "from-pstr" to "to-pstr"
 : "copy (s from-pstr to-pstr -- )      >r count r> place ;
@@ -3076,7 +3105,7 @@ variable arg#
       interact
    else                      ( adr len )
       included
-\     "temp pack  "load      ( ?? )
+\     "temp npack  "load      ( ?? )
    then then
 ;
 
