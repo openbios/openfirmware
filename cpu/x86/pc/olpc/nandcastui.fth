@@ -26,7 +26,7 @@ purpose: User interface for NAND multicast updater
 ;
 
 : secure$  ( -- adr len )
-   secure?  if  " secure"  else  null$  then
+   secure? security-off? 0= and  if  " secure"  else  null$  then
 ;
 
 d# 20 value redundancy
