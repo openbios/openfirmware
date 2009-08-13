@@ -182,7 +182,7 @@ h# 382 constant lowadr
 0 value high
 0 value low
 false value 1w-initialized
-0 value fileih
+0 value bat-fileih
 
 : disable-ec-charging
    1 h# fa07 ec!
@@ -367,15 +367,15 @@ h# 20 buffer: ds-bank-buf
 : bat-save  ( -- )
    " disk:\battery.dmp"
    2dup ['] $delete  catch  if  2drop  then  ( name$ )
-   $create-file to fileih
+   $create-file to bat-fileih
 
    1w-init
    h# 80 0  do
       ds-bank$ i 1w-read
-      ds-bank$ " write" fileih $call-method
+      ds-bank$ " write" bat-fileih $call-method
    /ds-bank +loop
 
-   fileih close-dev
+   bat-fileih close-dev
 ;
 
 \ bg-* words access the gauge directly via 1w rather than

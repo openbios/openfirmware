@@ -197,7 +197,7 @@ gshow
 \ 6 - erased           : show-erased
 \ 7 - primary   bad-block-table  : show-bbt-block
 \ 8 - secondary bad-block-table  : show-bbt-block
-: show-status  ( status eblock# -- )
+: show-block-type  ( status eblock# -- )
    swap case
       0  of  show-bad        endof
       1  of  show-bad        endof
@@ -262,12 +262,12 @@ end-string-array
    3dup  0 1 xy+  1 grid-h do-fill            ( color x y )
    1 grid-h xy+  grid-w 1  do-fill
 ;
-: lowlight  ( block# -- )  background-rgb rgb>565 cell-border  ;
-: highlight  ( block# -- )  0 cell-border  ;
+: lowlight-block  ( block# -- )  background-rgb rgb>565 cell-border  ;
+: highlight-block  ( block# -- )  0 cell-border  ;
 : point-block  ( block# -- )
-   current-block lowlight
+   current-block lowlight-block
    to current-block
-   current-block highlight
+   current-block highlight-block
 ;
 
 0 value nand-block-limit
@@ -296,10 +296,10 @@ end-string-array
    0 status-line 1- at-xy  red-letters ." Arrows, fn Arrows to move, Esc to exit" black-letters cr
    #nand-pages nand-pages/block /  to nand-block-limit
    0 to current-block
-   current-block highlight
+   current-block highlight-block
    false to examine-done?
    begin key  process-key  examine-done? until
-   current-block lowlight
+   current-block lowlight-block
 ;
 
 : (scan-nand)  ( -- )
@@ -314,7 +314,7 @@ end-string-array
       i classify-block       ( status )
       i nand-pages/block /   ( status eblock# )
       2dup nand-map + c!     ( status eblock# )
-      show-status
+      show-block-type        ( )
    nand-pages/block +loop  ( )
 
    show-done
@@ -325,225 +325,8 @@ end-string-array
    examine-nand
 ;
 
-
-: >eblock#  ( page# -- eblock# )  nand-pages/block /  ;
-
-: copy-nand  ( "devspec" -- )
-   open-nand
-   get-img-filename
-   open-img
-
-   ['] noop to show-progress
-
-   #nand-pages >eblock#  dup  show-init  ( #eblocks )
-
-   show-erasing                                    ( )
-
-   #image-eblocks show-writing
-
-   #image-eblocks  0  ?do
-      read-image-block
-      i check-mem-hash
-      load-base " copy-block" $call-nand          ( page# error? )
-      " Error writing to NAND FLASH" ?nand-abort  ( page# )
-      >eblock# show-written             ( )
-   loop
-
-   show-done
-
-   close-nand-ihs
-;
-
-: verify-nand  ( "devspec" -- )
-   open-nand
-   get-img-filename
-   open-img
-   ['] noop to show-progress
-
-   ." Verifing " #image-eblocks . ." blocks" cr
-
-   #image-eblocks  0  ?do
-      (cr i .
-      read-image-block
-
-      i /nand-block um* " seek" $call-nand drop
-      load-base /nand-block " read" $call-nand                         ( len )
-      /nand-block <>  " Disk read error" ?nand-abort                   ( )
-
-      load-base  load-base /nand-block +  /nand-block  comp  if        ( )
-         cr  ." Miscompare in block starting at page# "                ( )
-         ?key-stop
-      then                                                             ( )
-   loop                                                                ( )
-   close-nand-ihs
-;
-
-: verify-img  ( "img-devspec" -- )
-   hex
-   open-nand  close-nand-ihs   \ To set sizes
-   get-img-filename
-   open-img
-
-   ['] noop to show-progress
-
-   ." Verifying " #image-eblocks . ." blocks" cr
-
-   #image-eblocks  0  ?do
-      (cr i .  
-      read-image-block
-      i check-mem-hash
-   loop
-   close-nand-ihs
-;
-
-: check-hash  ( adr len -- )
-   2drop  \ XXX
-;
-
-: verify-nand  ( "crc-devspec" -- )
-   hex
-   open-nand
-   safe-parse-word  open-img
-   ['] noop to show-progress
-
-   ." Verifying " #image-eblocks . ." blocks" cr
-
-   #image-eblocks  0  ?do
-      (cr i .
-
-      i /nand-block um* " seek" $call-nand drop
-      load-base /nand-block " read" $call-nand             ( len )
-      /nand-block <>  " Disk read failure" ?nand-abort     ( )
-
-      load-base /nand-block  check-hash  if                ( )
-         cr ." Hash mismatch at eblock " i . cr            ( )
-         ?key-stop
-      else                                                 ( actual-crc expected-crc )
-         2drop                                             ( )
-      then                                                 ( )
-   loop                                                    ( )
-   close-nand-ihs
-;
-
-: make-new-file  ( devspec$ -- fileih )
-   2dup ['] $delete  catch  if  2drop  then  ( name$ )
-   2dup ['] $create-file  catch  if          ( name$ x x )
-      2drop                                  ( name$ )
-      " Can't open a file.  Try using the raw disk?" confirm  if  ( name$ )
-         open-dev                            ( ih )
-      else                                   ( name$ )
-         2drop 0                             ( ih=0 )
-      then                                   ( ih )
-   else                                      ( name$ ih )
-      nip nip                                ( ih )
-   then                                      ( ih )
-;
-
-: open-dump-file  ( devspec$ -- )
-   cr ." Dumping to " 2dup type  cr
-
-   make-new-file  to fileih
-
-   fileih 0=  " Can't open output"  ?nand-abort
-;
-
-: dump-eblock?  ( block# -- flag )
-   \ Dump JFFS2 w/summary (2), JFFS2 w/o summary (3), non JFFS2 data (5)
-   nand-map + c@  dup 2 =  over 3 = or  swap 5 = or
-;
-
-0 [if]
-: eblock>file  ( -- )
-   load-base /nand-block  " write" fileih $call-method
-   /nand-block  <>  " Write to dump file failed" ?nand-abort
-   load-base /nand-block $crc #image-eblocks >crc l!
-   #image-eblocks 1+ to #image-eblocks
-;
-
-: fastdump-nand  ( -- )
-   \ The stack is empty at the end of each line unless otherwise noted
-   (scan-nand)
-
-   cursor-off
-   d# 20 status-line at-xy   ."          "
-
-   " usable-page-limit" $call-nand  >eblock#  0  do
-      i dump-eblock?  if
-         i point-block
-         i show-eblock#
-         load-base  i nand-pages/block *  nand-pages/block  " read-pages" $call-nand  ( #read )
-         nand-pages/block <>  " Read failed" ?nand-abort
-         eblock>file
-      then
-   loop
-   show-done
-;
-
-: slowdump-nand  ( -- )
-   \ The stack is empty at the end of each line unless otherwise noted
-   #nand-pages  0  ?do
-      (cr i >eblock# .
-      load-base  i  nand-pages/block  " read-pages" $call-nand  ( #read )
-      nand-pages/block =  if
-         load-base /nand-block  written?  if
-            ." w"
-            eblock>file
-            i  nand-pages/block  bounds  ?do
-               i pad !  pad 4 " write" fileih $call-method
-               4 <>  " Write of eblock number failed" ?nand-abort
-            loop
-         else
-            ." s"
-         then
-      then
-   nand-pages/block +loop
-;
-
-: (dump-nand)  ( "devspec" -- )
-   open-nand
-   get-img-filename
-
-   alloc-crc-buf
-   image-name$ open-dump-file
-
-   0 to #image-eblocks
-
-   fastdump-nand
-   cr  ." Done" cr
-
-   close-image-file
-
-   close-nand-ihs
-;
-: save-nand  ( "devspec" -- )  (dump-nand)  ;
-
-: fastcopy-nand  ( "devspec" -- )
-   open-nand
-
-   safe-parse-word  open-dev  to fileih
-   fileih 0= " Can't open NAND fastboot image file"  ?nand-abort
-
-   " size" fileih $call-method  drop                      ( len )
-   " start-fastcopy" $call-nand                           ( error? )
-   " Not enough spare NAND space for fast copy" ?nand-abort
-
-   begin                                                  ( )
-      load-base /nand-block  " read" fileih $call-method  ( len )
-   dup 0> while                                           ( len )
-      \ If the read didn't fill a complete block, zero the rest
-      load-base /nand-block  rot /string  erase
-
-      load-base " next-fastcopy" $call-nand               ( )
-   repeat                                                 ( len )
-   drop                                                   ( )
-   " end-fastcopy" $call-nand                             ( )
-
-   close-nand-ihs
-;
-[then]
-
 \ LICENSE_BEGIN
-\ Copyright (c) 2006 FirmWorks
+\ Copyright (c) 2009 FirmWorks
 \ 
 \ Permission is hereby granted, free of charge, to any person obtaining
 \ a copy of this software and associated documentation files (the

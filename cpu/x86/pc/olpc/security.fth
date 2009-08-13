@@ -20,8 +20,6 @@ true value debug-security?
    debug-security?  if  red-letters type black-letters cr  else  2drop  then
 ;
 
-code halt  hlt  c;  \ To save power
-
 : fail-load  ( -- )
    show-sad
    text-on
@@ -256,12 +254,12 @@ d# 256 constant /sig
 \ hashname remembers the most recently used hashname to guard against
 \ attacks based on reuse of the same (presumably compromized) hash.
 
-\ invalid? checks the validity of data$ against the ASCII signature
+\ signature-invalid? checks the validity of data$ against the ASCII signature
 \ record sig01$, using the public key that thiskey$ points to.
 \ It also verifies that the hashname contained in sig01$ is the
 \ expected one.
 
-: invalid?  ( data$ sig01$ exp-hashname$ -- error? )
+: signature-invalid?  ( data$ sig01$ exp-hashname$ -- error? )
    2>r
    parse-sig  if
       ." Bad signature format"  cr
@@ -355,7 +353,7 @@ d# 256 constant /sig
 \ Find a sig01: line and check its sha256/rsa signature
 : sha-valid?  ( data$ sig01$ -- okay? )
    next-sig01-in-list$  if  2drop false exit  then  ( data$ rem$ sig01$ )
-   2nip  " sha256" invalid? 0=
+   2nip  " sha256" signature-invalid? 0=
 ;
 
 \ Find two sig01: lines, the first with sha256 and the second with rmd160,
@@ -367,7 +365,7 @@ d# 256 constant /sig
       2r> 4drop false exit
    then                                         ( rmd-sig$ r: data$ )
    next-sig01$  if  2r> 2drop false exit  then  ( rem$ sig01$ )
-   2nip  2r> 2swap " rmd160" invalid? 0=
+   2nip  2r> 2swap " rmd160" signature-invalid? 0=
 ;
 
 \ numfield is a factor used for parsing 2-digit fields from date/time strings.
@@ -503,13 +501,13 @@ d# 67 buffer: machine-id-buf
 \ doesn't match our pubkey.
 
 : check-machine-signature  ( sig$ expiration$ -- -1|1 )
-   2over  in-pubkey-list?   if                          ( sig$ exp$ )
-      machine-id-buf d# 51 +  swap  move                ( sig$ )
-      machine-id-buf d# 67  2swap                       ( id$ sig$ )
-      " sha256" invalid?  if  -1  else  1  then         ( -1|1 )
-   else                                                 ( sig$ exp$ )
-      4drop 0                                           ( 0 )
-   then                                                 ( -1|0|1 )
+   2over  in-pubkey-list?   if                            ( sig$ exp$ )
+      machine-id-buf d# 51 +  swap  move                  ( sig$ )
+      machine-id-buf d# 67  2swap                         ( id$ sig$ )
+      " sha256" signature-invalid?  if  -1  else  1  then ( -1|1 )
+   else                                                   ( sig$ exp$ )
+      4drop 0                                             ( 0 )
+   then                                                   ( -1|0|1 )
 ;
 
 : set-disposition  ( adr -- )  c@  machine-id-buf d# 49 + c!  ;

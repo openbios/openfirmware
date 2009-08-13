@@ -32,7 +32,7 @@ h# 9c000 constant verify-stack
 
 variable hashlen
 d# 128 buffer: hashbuf
-: hash  ( data$ hashname$ -- result$ )
+: crypto-hash  ( data$ hashname$ -- result$ )
    2>r  hashbuf d# 128  hashlen 0  2r>   ( data$ sig$ key$ hashname$ )
    signature-bad?  abort" Hash failed"   ( )
    hashbuf hashlen @

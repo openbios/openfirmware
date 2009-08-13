@@ -158,7 +158,7 @@ false value check-hash?
 : check-hash  ( -- )
    2>r                                ( eblock# hashname$ r: hash$ )
    data-buffer /nand-block 2swap      ( eblock# data$ hashname$ r: hash$ )
-   hash                               ( eblock# calc-hash$ r: hash$ )
+   crypto-hash                        ( eblock# calc-hash$ r: hash$ )
    2r>  $=  0=  if                    ( eblock# )
       ." Bad hash for eblock# " .x cr cr
       ." Your USB key may be bad.  Please try a different one." cr

@@ -212,7 +212,7 @@ here rsdp - constant /rsdp
    negate h# ff and  r> r> + c!
 ;
 
-: memory-limit  ( -- limit )
+: acpi-memory-limit  ( -- limit )
    " /memory" find-package 0= abort" No /memory node"  ( phandle )
    " available" rot get-package-property abort" No available property"  ( $ )
    -1 >r                              ( $ )  ( r: limit )
@@ -270,7 +270,7 @@ here do-acpi-wake - constant /do-acpi-wake
 [ifdef] notdef
    \ This has to agree with the _SB's _INI method, which gets the memory size
    \ from offset h# 180 in the EBDA
-   memory-limit d# 10 rshift  'ebda h# 180 + l!
+   acpi-memory-limit d# 10 rshift  'ebda h# 180 + l!
 [then]
 
    \ Copy tables to low memory

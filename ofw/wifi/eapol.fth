@@ -624,7 +624,7 @@ false value group-rekey?
    endcase
 ;
 
-: set-bss-type  ( bss-type -- )  dup to bss-type  set-bss-type  ;
+: remember-bss-type  ( bss-type -- )  dup to bss-type  set-bss-type  ;
 
 : do-set-country-info  ( adr len -- )
    country-ie-len  if  2drop country-ie-buf country-ie-len  then  \ Override the country IE
@@ -699,7 +699,7 @@ h# 0050.f201 constant wpa-tag
    dup 8 + c@ rssi-ok? 0=  if  ." Signal too weak" cr drop false exit  then
    dup d# 19 + le-w@ 				\ Capabilities
    dup h# 10 and  if  kt-wep ktype!  then	\ Privacy
-   dup  3 and  set-bss-type			\ BSS type: managed/adhoc
+   dup  3 and  remember-bss-type		\ BSS type: managed/adhoc
    dup 20 and  if  2 set-preamble  then		\ Short preamble
    h# 433 and set-cap				\ Set our own capabilities
    dup 1 find-ie  if  add-common-rates  then	\ Supported rates

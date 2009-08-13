@@ -91,7 +91,7 @@ also nand-commands definitions
    get-hex#                                    ( eblock# )
    read-image-block
    load-base /nand-block    safe-parse-word    ( eblock# data$ hashname$ )
-   hash                                        ( eblock# result$ )
+   crypto-hash                                 ( eblock# result$ )
    safe-parse-word hex-decode  " Malformed hash string" ?nand-abort
    $=  if                                      ( eblock# )
       drop 

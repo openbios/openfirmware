@@ -41,13 +41,13 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
       s3
    again   
 ;
-: suspend
+: s3-suspend
    " video-save" screen-ih $call-method  \ Freeze display
    s3
    " video-restore" screen-ih $call-method  \ Unfreeze display
 \   " /usb@f,5" open-dev  ?dup  if  " do-resume" 2 pick $call-method  close-dev  then
 ;
-alias s suspend
+alias s s3-suspend
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks
