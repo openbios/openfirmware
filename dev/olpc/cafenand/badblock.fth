@@ -396,12 +396,20 @@ external
 \ Clear the device but honor the existing bad block table
 : wipe  ( -- )  ['] drop  ['] .bn  ['] drop  (wipe)  ;
 
+0 instance value #bad
 : show-bbt  ( -- )
+   0 to #bad
    total-pages  0  ?do
-      i block-bad?    if  ." Bad block" i .page-byte cr  then
+      i block-bad?  if
+         ." Bad block" i .page-byte cr
+         #bad 1+ to #bad
+      then
    pages/eblock +loop
    bbt1  if  ." BBTable 1" bbt1 .page-byte  cr  then
    bbt0  if  ." BBTable 0" bbt0 .page-byte  cr  then
+
+   cr
+   ." Total # of bad blocks: " #bad .d cr
 ;
 
 headers
