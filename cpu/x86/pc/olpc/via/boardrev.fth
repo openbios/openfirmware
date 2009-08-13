@@ -3,6 +3,8 @@ purpose: Determine the board revision based on hardware and EC info
 
 0 value board-revision
 
+: atest?  ( -- flag )  board-revision h# d10 <  ;
+
 \ Constructs a string like "B4" or "preB4" or "postB4"
 : model-name$  ( -- model$ )
    board-revision  h# 10 /mod               ( minor major )
@@ -23,6 +25,10 @@ stand-init: board revision
       ( board-id )  dup h# 10 * 8 +  swap  \ E.g. b3 -> b38
    endcase
    to board-revision
+
+   \ Cache the board revision in CMOS RAM so the early startup code
+   \ can get it without having to wait for the EC.
+   board-revision dup h# 82 cmos!  invert h# 83 cmos!
 ;
 
 \ LICENSE_BEGIN

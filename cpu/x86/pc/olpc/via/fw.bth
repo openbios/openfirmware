@@ -240,7 +240,11 @@ false to stand-init-debug?
 \ true to stand-init-debug?
 
 hex
+: serial-enabled?  ( -- flag )  h# 48 acpi-b@ h# 10 and 0=  ;
+
 : i-key-wait  ( ms -- pressed? )
+   serial-enabled?  0=  if  drop false exit  then
+
    cr ." Type 'i' to interrupt stand-init sequence" cr 
    0  do
       ukey?  if

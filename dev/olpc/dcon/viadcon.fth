@@ -33,7 +33,13 @@
 \ Disable SMBALRT# IRQ as DCON IRQ; leaving it enabled causes spurious S3 wakeups
 : dcon-disable-irq  ( -- )  0 8 smb-reg!  ;
 
-: dcon-load  ( -- )  h# 4f acpi-b@  h# 04 or  h# 4f acpi-b!  ;
+: dcon-load  ( -- )
+   atest?  if
+      h# 4f acpi-b@  h# 04 or  h# 4f acpi-b!  \ GPO12
+   else
+      h# 4d acpi-b@  h# 10 or  h# 4d acpi-b!  \ GPIO1
+   then
+;
 : dcon-unload  ( -- )  h# 4f acpi-b@  h# 04 invert and  h# 4f acpi-b!  ;
 : dcon-blnk?  ( -- flag )  h# 4a acpi-b@ 4 and 0<>  ;
 : dcon-stat@  ( -- n )  h# 4b acpi-b@ 3 and  ;

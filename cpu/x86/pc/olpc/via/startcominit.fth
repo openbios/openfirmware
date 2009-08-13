@@ -21,12 +21,21 @@ label cominit
    h# 80 # al or  al bl mov                  \ Set south module pad share enable
    78 3c4 port-wb   3c5 # dx mov  bl al mov  al dx out
 
-   d# 17 0 devfunc
-   \ The following is for UART on VCP port
-   46 c0 40 mreg
-   \ The following is for UART on DVP port
-   \ 46 c0 c0 mreg
+   \ If the SERIAL_EN jumper is installed, routing the external pin to
+   \ the UART; otherwise leave it connected to the VCP port.
 
+   acpi-io-base 48 +  port-rb  h# 10 # al test  0=  if
+
+      d# 17 0 devfunc
+      \ The following is for UART on VCP port
+      46 c0 40 mreg
+      \ The following is for UART on DVP port
+      \ 46 c0 c0 mreg
+      end-table
+
+   then
+   
+   d# 17 0 devfunc
    \ Standard COM2 and COM1 IRQ routing
    b2 ff 34 mreg
 

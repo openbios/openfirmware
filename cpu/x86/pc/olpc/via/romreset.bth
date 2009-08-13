@@ -104,6 +104,12 @@ label startup
    20  00d config-wb   \ PCI master latency timer D0F0
    08  20c config-wb   \ Cache line size D0F2
 
+   \ This needs to be done early so we can test various GPIO bits,
+   \ including SERIAL_EN
+
+   acpi-io-base 1 + 8888 config-ww   \ Set ACPI base address
+   8c 8881 config-wb   \ Enable ACPI regs, 32-bit PM timer, guard RTC against power glitches
+
 [ifdef] debug-startup
    cominit #) call
 [then]
@@ -120,8 +126,6 @@ label startup
 
    long-offsets on
 
-   acpi-io-base 1 + 8888 config-ww   \ Set ACPI base address
-   8c 8881 config-wb   \ Enable ACPI regs, 32-bit PM timer, guard RTC against power glitches
    acpi-io-base 4 + port-rw           \ Get APCI Status register
    d# 10 # ax shr  7 # ax and  1 # ax cmp  <>  if   \ Wakeup from S3
       \ This turns an OS reboot into a real cold start - from coreboot
