@@ -19,7 +19,9 @@ purpose: Determine the board revision based on hardware and EC info
    2dup + 2-  2  upper                      ( model$ )  \ Upper case for base model
 ;
 
-stand-init: board revision
+\ stand-init: board revision
+: stand-init-io
+   stand-init-io
    ['] board-id@ catch  if  0  then   case
       0      of  0       endof  \ EC broken
       ( board-id )  dup h# 10 * 8 +  swap  \ E.g. b3 -> b38
@@ -29,6 +31,11 @@ stand-init: board revision
    \ Cache the board revision in CMOS RAM so the early startup code
    \ can get it without having to wait for the EC.
    board-revision dup h# 82 cmos!  invert h# 83 cmos!
+
+   \ Force the serial port back on for A-test, even when SERIAL_EN is
+   \ not asserted, because many developers use serial on A-test systems
+   \ and it is not easy to jumper SERIAL_EN on A-test.
+   atest?  if  h# 40 h# 8846 config-b!  then
 ;
 
 \ LICENSE_BEGIN
