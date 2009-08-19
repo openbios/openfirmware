@@ -40,7 +40,13 @@
       h# 4d acpi-b@  h# 10 or  h# 4d acpi-b!  \ GPIO1
    then
 ;
-: dcon-unload  ( -- )  h# 4f acpi-b@  h# 04 invert and  h# 4f acpi-b!  ;
+: dcon-unload  ( -- )
+   atest?  if
+      h# 4f acpi-b@  h# 04 invert and  h# 4f acpi-b!  \ GPO12
+   else
+      h# 4d acpi-b@  h# 10 invert and  h# 4d acpi-b!  \ GPIO1
+   then
+;
 : dcon-blnk?  ( -- flag )  h# 4a acpi-b@ 4 and 0<>  ;
 : dcon-stat@  ( -- n )  h# 4b acpi-b@ 3 and  ;
 : dcon-irq?  ( -- flag )  1 smb-reg@ h# 20 and 0<>  ;

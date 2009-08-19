@@ -209,7 +209,7 @@ hpet-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
 [then]
    
    94 ff 68 mreg  \ be like Phx
-   95 ff c9 mreg  \ 8 bit enables GPIO0,1
+   95 ff cd mreg  \ 0x0c enables GPIO0,1 (per datasheet; programmer's manual is vague)
 [ifdef] demo-board
    97 ff 80 mreg  \ be like Phx 
 [then]
