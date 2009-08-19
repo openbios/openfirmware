@@ -69,20 +69,31 @@ d# 1 constant rtc-alarm-delay
    key drop
 ;
 
+\ Check if the 'x' was pressed 
+: test-exit?
+   key? if
+      ." Key:  "                  
+      key dup h# 78 = if -1 else 0 then
+      swap .x cr
+   else 0 
+   then                      
+;
+
 : autowack-test ( ms -- )
    autowack-delay
    autowack-on
    0 begin
       s 
-      dup space .d (cr 1+ key?
+      dup space .d (cr 1+ 
+      test-exit?
    until
-   ." Keypress Exit key= " 
-   key . drop
+   drop
    autowack-off
 ;
 
 \ for testing wakeups from the EC
 : wackup-test-ec  ( ms -- )
+   ." Press x to exit" cr
    d# 3000 autowack-delay     \ At small ms delays the host can miss the SCI so this
                               \ is the back up.
    0 begin                    ( ms count )
@@ -90,10 +101,10 @@ d# 1 constant rtc-alarm-delay
       ec-wackup               ( count ms  )
       s
       swap dup                ( ms count count )
-      space .d (cr 1+ key?     ( ms count+1 )
-   until
-   ." Keypress Exit key= " 
-   key . 2drop
+      space .d (cr 1+ 
+      test-exit?              ( ms count+1 )
+   until                      ( ms count+1 )
+   2drop
    autowack-off
 ;
 
