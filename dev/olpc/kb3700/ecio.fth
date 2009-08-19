@@ -304,11 +304,13 @@ d# 10 constant #ec-retries
 ;
 
 : io-spi-start  ( -- )
-   ['] io-spi@  to spi@
-   ['] io-spi!  to spi!
+   ['] io-spi@    to spi@
+   ['] io-spi!    to spi!
    ['] io-spi-out to spi-out
+   use-ec-spi     \ spi-in, spi-cs-on, spi-cs-off via EC commands
+
    ['] io-spi-reprogrammed to spi-reprogrammed
-   h# fff0.0000 to flash-base
+   use-mem-flash-read
 
    7 to spi-us   \ Measured time for "1 fea9 ec!" is 7.9 uS
 

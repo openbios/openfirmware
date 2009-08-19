@@ -7,15 +7,8 @@
 \ The implementations of these access methods are defined in other files
 \ because they depend on details of the host system.
 
--1 value flash-base            \ If not -1, memory mapped FLASH address
-defer spi-start ( -- )         \ Init routine for the access path to the EC
 defer spi@      ( reg# -- b )  \ Read an EC SPI register
 defer spi!      ( b reg# -- )  \ Write an EC SPI register
-defer spi-out   ( b -- )       \ Write SPI command and wait if necessary
-1 value spi-us  ( -- n )       \ Approximate time in uS to do spi!
-                               \ Used to optimize some routines
-defer spi-reprogrammed  ( -- ) \ What to do when done reprogramming
-' noop to spi-reprogrammed
 
 \ Symbolic names for the registers that control SPI access from the EC
 
@@ -38,22 +31,6 @@ defer spi-reprogrammed  ( -- ) \ What to do when done reprogramming
 : enable-flash  ( -- )  spicfg@  8 or  spicfg!  ;  \ SPICMDWE
 [then]
 
-\ I'm not sure this delay is necessary, but the EnE code did it, so
-\ I'm being safe.  The EnE code did 4 PCI reads of the base address
-\ which should be around 800nS.  2 uS should cover it in case I'm wrong
-: short-delay  ( -- )  2 us  ;
-
-\ Some chips (e.g. Spansion) don't work in hardware mode, so we do
-\ everything in "firmware mode", where we have control over the SPI bus.
-\ Every spicmd! clocks out 8 bits.  To read, you have to do a dummy
-\ write of the value 0, then you can read the data from the spidata register.
-
-\ Turning on the firmware mode bit asserts SPICS#
-\ Turning off the firmware mode bit deasserts SPICS#
-
-: spi-cs-on   ( -- )  h# 18 spicfg!  short-delay  ;  \ 10 is the firmware mode bit
-: spi-cs-off  ( -- )  h# 08 spicfg!  ;
-
 \ Poll the spicfg register waiting for the busy bit to go away
 \ This tells you when the hardware has finished sending the byte
 \ out serially over the SPI lines.
@@ -68,12 +45,31 @@ defer spi-reprogrammed  ( -- ) \ What to do when done reprogramming
    again
 ;
 
+\ Some chips (e.g. Spansion) don't work in hardware mode, so we do
+\ everything in "firmware mode", where we have control over the SPI bus.
+\ Every spicmd! clocks out 8 bits.  To read, you have to do a dummy
+\ write of the value 0, then you can read the data from the spidata register.
+
+\ Turning on the firmware mode bit asserts SPICS#
+\ Turning off the firmware mode bit deasserts SPICS#
+
+: ec-spi-cs-on   ( -- )  h# 18 spicfg!  short-delay  ;  \ 10 is the firmware mode bit
+: ec-spi-cs-off  ( -- )  h# 08 spicfg!  ;
+
 \ To read a byte from SPI, the EC has to pulse the clock while the
 \ SPI flash device drives DO.  The "0 spi-out" is a "dummy write"
 \ that pulses the clock 8 times.  The data can then be read from the
 \ spidata register.
 
-: spi-in  ( -- b )  0 spi-out  spidata@  ;
+: ec-spi-in  ( -- b )  0 spi-out  spidata@  ;
+
+: use-ec-spi  ( -- )
+   ['] ec-spi-in     to spi-in
+   ['] ec-spi-cs-on  to spi-cs-on
+   ['] ec-spi-cs-off to spi-cs-off
+;
+use-ec-spi
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

@@ -56,7 +56,8 @@ h# f000.0000 constant gfx-pci-base
 \ h# fe02.8000 constant camera-pci-base
 h# fed0.0000 constant hpet-mmio-base
 h# fed3.0000 constant spi-mmio-base
-\ h# fed4.0000 constant wdt-mmio-base
+h# fed4.0000 constant spi0-mmio-base
+h# fed5.0000 constant wdt-mmio-base
 h# fec0.0000 constant io-apic-mmio-base
 h# fee0.0000 constant apic-mmio-base
 

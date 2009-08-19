@@ -248,14 +248,18 @@ fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 
 fload ${BP}/dev/geode/acpi.fth           \ Power management
 
-fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
+fload ${BP}/dev/olpc/spiflash/flashif.fth  \ Generic FLASH interface
+fload ${BP}/dev/olpc/spiflash/memflash.fth \ Memory-mapped FLASH access
 
 warning @ warning off
 : stand-init-io  stand-init-io  h# fff0.0000 to flash-base  ;
 warning !
 
-fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
+fload ${BP}/dev/olpc/spiflash/spiif.fth    \ Generic low-level SPI bus access
+fload ${BP}/dev/olpc/spiflash/spiflash.fth \ SPI FLASH programming
 
+fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
+fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
 fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
 
 fload ${BP}/cpu/x86/pc/olpc/boardrev.fth   \ Board revision decoding
@@ -297,7 +301,6 @@ fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
 
-fload ${BP}/dev/olpc/spiflash/spiflash.fth   \ SPI FLASH programming
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
 fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;

@@ -48,6 +48,11 @@ h#   100 constant /spi-page     \ Largest write for page-oriented chips
 
 : spi-read-status  ( -- b )  5 spi-cmd  spi-in  spi-cs-off  ; \ READSTATUS
 
+\ I'm not sure this delay is necessary, but the EnE code did it, so
+\ I'm being safe.  The EnE code did 4 PCI reads of the base address
+\ which should be around 800nS.  2 uS should cover it in case I'm wrong
+: short-delay  ( -- )  2 us  ;
+
 \ You have to write-enable before any command that modifes stuff
 \ inside the part - writes, erases, status register writes
 \ The write-enabled mode is mostly self-clearing; the exception
@@ -212,52 +217,31 @@ h#   100 constant /spi-page     \ Largest write for page-oriented chips
    spi-write-disable
 ;
 
+defer spi-reprogrammed  ( -- ) \ What to do when done reprogramming
+' noop to spi-reprogrammed
+
 defer write-spi-flash  ( adr len offset -- )
-
-\ Common start sequence for read and verify
-
-: setup-spi-read  ( offset -- )
-   \ Fast read command - no point since host access is the bottleneck
-   \ h# b spi-cmd spi-adr  0 spi-out    ( adr len )
-
-   3 spi-cmd  spi-adr
-;
 
 \ Read len bytes of data from the SPI FLASH beginning at offset
 \ into the memory buffer at adr
 
 : read-spi-flash  ( adr len offset -- )
-   flash-base -1 <>  if               ( adr len offset )
-      flash-base + -rot move          ( )
-   else                               ( adr len offset )
-      setup-spi-read                  ( adr len )
-      bounds  ?do  spi-in i c!  loop  ( )
-      spi-cs-off                      ( )
-   then                               ( )
-;
-
-\ Implementation factor for verify.  Throws an error on mismatch.
-
-: (verify-spi-flash)  ( adr len -- )
-   bounds  ?do  spi-in  i c@  <>  throw  loop  ( )
+   \ Fast read command - no point since host access is the bottleneck
+   \ h# b spi-cmd spi-adr  0 spi-out    ( adr len )
+   3 spi-cmd  spi-adr              ( adr len )
+   bounds  ?do  spi-in i c!  loop  ( )
+   spi-cs-off                      ( )
 ;
 
 \ Verify the contents of SPI FLASH starting at offset against
 \ the memory range adr,len .  Aborts with a message on mismatch.
 
-: verify-spi-flash  ( adr len offset -- )
-   flash-base -1 <>  if               ( adr len offset )
-      \ If the FLASH is memory mapped we can just read it directly
-      flash-base + swap comp          ( mismatch? )
-   else                               ( adr len offset )
-      setup-spi-read
-      ['] (verify-spi-flash)  catch   ( error? )
-
-      \ Be sure to turn off the chip select even on a mismatch
-      spi-cs-off                      ( error? )
-   then                               ( error? )
-
-   abort" Verify failed"
+: verify-spi-flash  ( adr len offset -- mismatch? )
+   over alloc-mem >r                  ( adr len offset r: temp-adr )
+   r@  2 pick  rot                    ( adr len temp-adr len offset r: temp-adr )
+   flash-read                         ( adr len r: temp-adr )
+   tuck  r@ swap comp                 ( len mismatch? r: temp-adr )
+   r> rot free-mem                    ( mismatch? )
 ;
 
 : jedec-id  ( -- b3b2b1)
@@ -312,26 +296,16 @@ defer write-spi-flash  ( adr len offset -- )
 
 : spi-flash-write-enable  ( -- )  spi-start spi-identify  .spi-id cr  ;
 
-\ Create defer words for generic FLASH writing routines if necessary
-[ifndef] flash-write-enable
-defer flash-write-enable   ( -- )
-defer flash-write-disable  ( -- )
-defer flash-write          ( adr len offset -- )
-defer flash-read           ( adr len offset -- )
-defer flash-verify         ( adr len offset -- )
-defer flash-erase-block    ( offset -- )
-h# 10.0000 value /flash-block
-h# 10000 value /flash-block
-[then]
+: use-spi-flash-read  ( -- )  ['] read-spi-flash to flash-read  ;
 
 \ Install the SPI FLASH versions as their implementations.
 : use-spi-flash  ( -- )
    ['] spi-flash-write-enable  to flash-write-enable
    ['] spi-reprogrammed        to flash-write-disable
    ['] write-spi-flash         to flash-write
-   ['] read-spi-flash          to flash-read
    ['] verify-spi-flash        to flash-verify
    ['] erase-spi-block         to flash-erase-block
+   use-spi-flash-read          \ Might be overridden
    h# 10.0000  to /flash
    /spi-eblock to /flash-block
 ;

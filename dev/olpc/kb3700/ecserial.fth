@@ -12,6 +12,7 @@
    ['] serial-spi@  to spi@
    ['] serial-spi!  to spi!
    ['] spicmd!      to spi-out
+   use-ec-spi       \ spi-in, spi-cs-on, spi-cs-off via EC commands
 
    d# 200 to spi-us  \ Approximate time to do serial-spi!
    ['] noop to spi-reprogrammed
@@ -32,11 +33,10 @@
    d# 115200 baud
 
    d# 50 ms         \ Settling time
-
-   -1 to flash-base
 ;
 : use-serial-ec  ( -- )  ['] serial-spi-start to spi-start  ;
 use-serial-ec  \ Install this as the start-spi implementation
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

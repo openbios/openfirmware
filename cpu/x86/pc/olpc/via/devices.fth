@@ -45,7 +45,7 @@ warning @ warning off
 : stand-init-io  ( -- )
    stand-init-io
    acpi-calibrate-tsc
-   d# 800 to us-factor  d# 800000 to ms-factor
+   d# 1000 to us-factor  d# 1000000 to ms-factor
 ;
 warning !
 
@@ -242,17 +242,20 @@ fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 
 \needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
 
-fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
+fload ${BP}/dev/olpc/spiflash/flashif.fth   \ Generic FLASH interface
+fload ${BP}/dev/olpc/spiflash/memflash.fth  \ Memory-mapped FLASH read access
 
 warning @ warning off
 : stand-init-io  stand-init-io  h# fff0.0000 to flash-base  ;
 warning !
 
-fload ${BP}/dev/olpc/kb3700/ecserial.fth   \ Serial access to EC chip
-
-.( XXX Implement ignore-power-button) cr
-: ignore-power-button ( -- ) ;
-fload ${BP}/dev/olpc/kb3700/ecio.fth       \ I/O space access to EC chip
+fload ${BP}/dev/olpc/spiflash/spiif.fth     \ Generic low-level SPI bus access
+fload ${BP}/dev/olpc/spiflash/spiflash.fth  \ SPI FLASH programming
+fload ${BP}/dev/olpc/kb3700/ecspi.fth       \ EC chip SPI FLASH access
+.( XXX Implement ignore-power-button) cr  : ignore-power-button ( -- ) ;
+fload ${BP}/dev/olpc/kb3700/ecio.fth        \ I/O space access to EC chip
+fload ${BP}/dev/via/spi/spi.fth             \ Driver for Via SPI controller
+fload ${BP}/dev/via/spi/bbspi.fth           \ Tethered SPI FLASH programming
 
 fload ${BP}/cpu/x86/pc/olpc/via/boardrev.fth   \ Board revision decoding
 
@@ -279,15 +282,13 @@ stand-init: Wireless reset
 
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
-.( XXX Reinstate kbdtype.fth) cr
-\ fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
+fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
    
-fload ${BP}/dev/olpc/spiflash/spiflash.fth   \ SPI FLASH programming
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
 h# 2c to crc-offset
-\ fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
+fload ${BP}/cpu/x86/pc/olpc/via/recover.fth  \ XO-to-XO SPI FLASH recovery
 
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
 ' ofw-fw-filename$ to fw-filename$

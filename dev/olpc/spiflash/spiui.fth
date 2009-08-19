@@ -1,5 +1,5 @@
 \ See license at end of file
-\ User interface for reflashing SPI FLASH parts
+purpose: User interface for reflashing SPI FLASH parts
 
 \ This code is concerned with the user interface for getting
 \ a new firmware image into memory and using it to program
@@ -20,14 +20,14 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
    ?do                ( adr )
       \ Save time - don't write if the data is the same
       i .x (cr                              ( adr )
-      flash-base -1 =  if                   ( adr )
+      spi-us d# 20 >=  if                   ( adr )
+         \ Just write if reading is slow
          true                               ( adr must-write? )
       else                                  ( adr )
-         dup  flash-base i +  /flash-block comp   ( adr must-write? )
+         dup  /flash-block  i  flash-verify   ( adr must-write? )
       then                                  ( adr must-write? )
 
       if
-\         i /flash-block mod 0=  if  i flash-erase-block  then
          i flash-erase-block
          dup  /flash-block  i  flash-write  ( adr )
       then
@@ -40,7 +40,7 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
    ." Verifying" cr
    ?do                ( adr )
       i .x (cr
-      dup   /flash-block  i  flash-verify
+      dup   /flash-block  i  flash-verify   abort" Verify failed"
       /flash-block +  ( adr' )
    /flash-block +loop ( adr )
    cr  drop           ( )
@@ -186,7 +186,7 @@ h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
 : ?move-mfg-data  ( -- )
    ." Merging existing manufacturing data" cr
 
-   flash-base -1 =  if
+   tethered?  if
       \ Read the manufacturing data from the other FLASH
       \ First try the new location in the e.0000 block
       flash-buf mfg-data-offset +  /flash-block  mfg-data-offset  flash-read
@@ -338,7 +338,7 @@ device-end
    /flash-block  /string      ( adr+ len- )   \ Remove EC ucode from the beginning
    ." Erasing ..." cr erase-spi-firmware  ( adr len )
    ." Programming..."  2dup /flash-block  flash-write  cr    ( adr len )
-   ." Verifying..."  /flash-block flash-verify  cr  ( )
+   ." Verifying..."  /flash-block flash-verify  abort" Verify failed"  cr  ( )
 ;
 
 : flash-bios  ( -- )
