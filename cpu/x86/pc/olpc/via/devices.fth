@@ -75,6 +75,8 @@ warning @ warning off
 ;
 warning !
 
+fload ${BP}/dev/olpc/spiflash/flashif.fth   \ Generic FLASH interface
+
 \ Create the top-level device node to access the entire boot FLASH device
 0 0  " fff00000"  " /" begin-package
    " flash" device-name
@@ -242,7 +244,6 @@ fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 
 \needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
 
-fload ${BP}/dev/olpc/spiflash/flashif.fth   \ Generic FLASH interface
 fload ${BP}/dev/olpc/spiflash/memflash.fth  \ Memory-mapped FLASH read access
 
 warning @ warning off
