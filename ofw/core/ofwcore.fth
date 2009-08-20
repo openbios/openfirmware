@@ -2946,6 +2946,8 @@ headerless
 nuser pending-char
 nuser char-pending?
 
+defer stdin-idle  ' noop is stdin-idle  \ Hook for power savings
+
 : "read"   ( -- adr len )  " read"   ;	\ Space savings
 : "write"  ( -- adr len )  " write"  ;	\ Space savings
 : stdin-getchar  ( -- okay? )
@@ -2962,7 +2964,10 @@ nuser char-pending?
    char-pending? @  if
       pending-char c@  char-pending? off
    else
-      begin  stdin-getchar  until
+      begin
+         stdin-getchar
+         dup 0=  if  stdin-idle  then
+      until
       pending-char c@
    then
 ;
