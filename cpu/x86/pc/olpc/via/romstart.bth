@@ -40,6 +40,7 @@ fload ${BP}/cpu/x86/pc/romfind.fth	\ find-dropin
 
 hex
 
+fload ${BP}/cpu/x86/pc/olpc/via/startusdelay.fth   \ microsecond delay subroutine
 fload ${BP}/cpu/x86/pc/olpc/via/startcfgio.fth   \ masked config write subroutine
 
 [ifdef] debug-startup
