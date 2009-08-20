@@ -37,8 +37,14 @@ ca constant dma-write-cmd
    dma-stat@ dma-stat!   \ Clear old errors
 ;
 
-: dma-wait  ( -- )
-   begin  1 ms  dma-stat@  dup 1 and 0=  swap 2 and  or  until
+: dma-wait  ( ms -- timeout? )
+   0  do
+      1 ms
+      dma-stat@  dup 1 and 0=  swap 2 and  or  if
+         false unloop exit
+      then
+   loop
+   true
 ;
 
 \ Sense and clear errors.  The bit masked by 04 is read-clear and means
@@ -56,7 +62,10 @@ ca constant dma-write-cmd
    dma-cmd@ 1 or dma-cmd!               ( adr phys #blks )
 ;
 : dma-end  ( adr phys #blks -- actual# )
-   dma-wait  0 dma-cmd!                        ( adr phys #blks )
+   d# 500 dma-wait  if                         ( adr phys #blks )
+      3drop 0 exit
+   then                                        ( adr phys #blks )
+   0 dma-cmd!                                  ( adr phys #blks )
    dma-interrupt?  if                          ( adr phys #blks )
       r-csr@ drop			\ Clear interrupt in drive
       dma-stat@ h# f0 and 4 or dma-stat!       ( adr phys #blks )
