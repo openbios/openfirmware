@@ -37,13 +37,13 @@ d# 0  d# 0  2value first-icon-xy
    if  2drop true  else  false  then     ( true | bmp-adr,len false )
 ;
 : $show  ( filename$ -- )
-   not-screen?  if  2drop exit  then
+   screen-ih 0=  if  2drop exit  then
    0 to image-width   \ In case $show fails
    $get-image  if  exit  then
    prep-565  " draw-transparent-rectangle" $call-screen
 ;
 : $show-opaque  ( filename$ -- )
-   not-screen?  if  2drop exit  then
+   screen-ih 0=  if  2drop exit  then
    $get-image  if  exit  then
    prep-565  " draw-rectangle" $call-screen
 ;
@@ -279,7 +279,7 @@ false value error-shown?
 ;
 : visual-error  ( error# -- )
    ['] (.error) is .error
-   not-screen?  if  (.error) exit  then   
+   screen-ih 0=  if  (.error) exit  then   
    restore-output
    error-banner
    0 'source-id !  0 error-source-id !  \ Suppress <buffer@NNNN>: prefix
@@ -301,8 +301,6 @@ false value error-shown?
 
 \ Do this later...
 \   diagnostic-mode?  0=  if  ['] visual-error to .error  then
-
-   stdout @ to screen-ih
 
    text-area?  if
       d# 146 to text-y
@@ -336,7 +334,7 @@ dev /obp-tftp
 : (configured)  ( -- )  " rom:netconfigured.565" $show  ;
 : show-timeout  ( adr len -- )
    2dup (.dhcp-msg)                 ( adr len )
-   " Timeout" $=  not-screen? 0=  and  if
+   " Timeout" $=  screen-ih 0<>  and  if
       " rom:nettimeout.565" $show
       .sysinfo
    then
@@ -351,8 +349,7 @@ device-end
 : show-xo   ( -- )   " rom:xo.565"          $show&advance  ;
 
 : simple-load-started  ( -- )
-   not-screen?  if  exit  then
-   ['] show-xo to load-done
+   screen-ih  if  ['] show-xo to load-done  then
 ;
 ['] simple-load-started to load-started
 
@@ -386,7 +383,7 @@ h# 32 buffer: icon-name
     drop
 ;
 : (?show-device)  ( adr len -- adr len )
-   not-screen? 0=  if  2dup ?show-package-icon  then
+   screen-ih  if  2dup ?show-package-icon  then
 ;
 ' (?show-device) to ?show-device
 
@@ -395,8 +392,6 @@ h# 32 buffer: icon-name
 : dcon-unfreeze  ( -- )  1 " set-source" $call-screen d# 30 ms  ;
 
 \ === Stuff moved from security.fth ===
-
-: text-on  screen-ih stdout !  ;
 
 : visible  dcon-unfreeze text-on   ;
 
