@@ -19,13 +19,26 @@ purpose: Determine the board revision based on hardware and EC info
    2dup + 2-  2  upper                      ( model$ )  \ Upper case for base model
 ;
 
-\ stand-init: board revision
+: enable-uart  ( -- )  h# 40 h# 8846 config-b!  ;
+
+warning @ warning off
+\ Do this in stand-init-io so the serial port is enabled prior
+\ to the early interact point
 : stand-init-io
    stand-init-io
+
+[ifndef] notdef
    ['] board-id@ catch  if  0  then   case
       0      of  0       endof  \ EC broken
       ( board-id )  dup h# 10 * 8 +  swap  \ E.g. b3 -> b38
    endcase
+[else]
+   \ wait-ib-empty
+   \ autowack-off
+   0 h# 68 pc!
+   h# d08
+[then]
+
    to board-revision
 
    \ Cache the board revision in CMOS RAM so the early startup code
@@ -35,8 +48,9 @@ purpose: Determine the board revision based on hardware and EC info
    \ Force the serial port back on for A-test, even when SERIAL_EN is
    \ not asserted, because many developers use serial on A-test systems
    \ and it is not easy to jumper SERIAL_EN on A-test.
-   atest?  if  h# 40 h# 8846 config-b!  then
+   atest?  if  enable-uart  then
 ;
+warning !
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

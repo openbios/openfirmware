@@ -18,13 +18,11 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
 : sci-wakeup     ( -- )  h# 22 acpi-w@  h# 0002 or  h# 22 acpi-w!  ;
 
 : s3
+   ['] noop to stdin-idle  \ Until we work out how to restore interrupt delivery
+
    \ Enable wakeup from power button, also clearing
    \ any status bits in the low half of the register.
    0 acpi-l@ h# 100.0000 or  0 acpi-l!
-
-\ Unnecessary, as asm code does it
-\   h# ffff h# 20 acpi-w!  \ Clear PME status bits
-\ XXX may need to clear other status bits elsewhere as well
 
 \  sum-forth
 [ifdef] virtual-mode
@@ -33,6 +31,8 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
    sp@ 4 -  h# f0000 ax-call  \ sp@ 4 - is a dummy pdir-va location
 [then]
 \  sum-forth
+
+   atest?  if  enable-uart  then  ukey?  if  ukey drop  then
 ;
 : kb-suspend  ( -- )
    sci-wakeup
