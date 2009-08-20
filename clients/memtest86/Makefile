@@ -104,11 +104,8 @@ random.o: random.c
 controller.s: controller.c defs.h config.h test.h pci.h controller.h
 	$(CC) -S $(CCFLAGS) -fPIC controller.c
 
-head.s: head.S
-	$(CC) $(DEFINES) -E -m32 -traditional $< -o $@
-
-head.o: head.s
-	$(AS) -o $@ $<
+head.o: head.S
+	$(CC) $(DEFINES) -c -m32 -traditional $< -o $@
 
 makedefs: makedefs.c defs.h
 	 $(CC) $(CCFLAGS) makedefs.c -o $@
