@@ -8,7 +8,7 @@ purpose: Discard console output
 
 headers
 : null-output  ( -- )
-   " "  " null-io"  $open-package  to null-ih
+   " //null"  open-dev  to null-ih
    null-ih  if
       stdout @  to old-stdout-ih
       null-ih stdout !

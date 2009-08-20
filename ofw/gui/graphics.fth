@@ -166,9 +166,6 @@ d# 16  constant text-height
    " "(9b)1;1H"(9b)2JK"(9b)2;1H" screen-write
 ;
 
-: not-screen?  ( -- flag )
-   screen-ih stdout @ <>   null-ih stdout @ <>  and
-;
 headers
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

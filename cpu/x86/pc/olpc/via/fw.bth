@@ -233,15 +233,18 @@ devalias nfs net//obp-tftp:last//nfs
 fload ${BP}/cpu/x86/pc/boot.fth
 fload ${BP}/cpu/x86/pc/linux.fth
 
+0 value screen-ih
+
+fload ${BP}/ofw/core/muxdev.fth          \ I/O collection/distribution device
 
 fload ${BP}/cpu/x86/pc/olpc/via/usb.fth
 
 false to stand-init-debug?
 \ true to stand-init-debug?
 
-hex
 : serial-enabled?  ( -- flag )  h# 8846 config-b@ h# 40 and 0<>  ;
 
+hex
 : i-key-wait  ( ms -- pressed? )
    serial-enabled?  0=  if  drop false exit  then  ( ms )
 
@@ -317,6 +320,20 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 ;
 ' setup-for-linux to linux-hook
 
+true value text-on?
+: text-off  ( -- )
+   text-on?  if
+      screen-ih remove-mux
+      false to text-on?
+   then
+;
+: text-on   ( -- )
+   text-on? 0=  if
+      screen-ih add-mux
+      true to text-on?
+   then
+;
+
 fload ${BP}/cpu/x86/pc/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/via/suspend.fth  \ Suspend/resume setup
@@ -363,41 +380,11 @@ fload ${BP}/cpu/x86/pc/olpc/wlantest.fth
 
 fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 
-[ifdef] use-ega
-: ega-output  ( -- )
-   \ This only works if stdout is currently /display
-   stdout @  if
-      " text-mode3" screen-ih $call-method
-   then
-   " /ega-text" output
-;
-[then]
-
 " /xp u:\boot\olpc.fth sd:\boot\olpc.fth c:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
    ' boot-device  set-config-string-default
 
 \needs ramdisk  " " d# 128 config-string ramdisk
 " "   ' boot-file      set-config-string-default   \ Let the boot script set the cmdline
-
-: upup
-   " u:\irdpup.gz" to ramdisk
-   " console=ttyS0,115200 ide=nodma pmedia=ataflash nosmp noacpi" to boot-file
-   " u:\vmlpup" to boot-device
-;
-: cpup
-   " c:\initrd.gz" to ramdisk
-   " console=ttyS0,115200 ide=nodma pmedia=ataflash nosmp noacpi" to boot-file
-   " c:\vmlinuz" to boot-device
-;
-: okern
-\  " c:\initrd.gz" to ramdisk
-[ifdef] use-apic
-   " root=/dev/sda1 console=ttyS0,115200 acpi=off rootwait" to boot-file
-[else]
-   " root=/dev/sda1 console=ttyS0,115200 acpi=off rootwait noapic nolapic" to boot-file
-[then]
-   " u:\vmlinuz" to boot-device
-;
 
 : dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
 : brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;
@@ -446,6 +433,8 @@ patch drop ms install-console
 
    \ Prevent "resume from S3" on restart
    4 acpi-w@  h# 1c00 invert and  4 acpi-w!
+
+   h# 3000 ms    \ Give the EC time to do its thing
 
    6 h# cf9 pc!  \ In case the EC doesn't do it
    begin  halt  again
@@ -519,8 +508,8 @@ true                               ' client-symbols?  set-config-int-default
 
 " dhcp" ' ip-address  set-config-string-default
 
-\ fload ${BP}/cpu/x86/pc/report.fth
-fload ${BP}/ofw/core/dualconsole.fth
+: c1-idle  ( -- )  interrupts-enabled?  if  halt  then  ;
+' c1-idle to stdin-idle
 
 : fast-boot?  ( -- flag )
 [ifdef] rom-loaded
@@ -534,6 +523,21 @@ fload ${BP}/ofw/core/dualconsole.fth
    lbsplit  h# 66  h# 69  do  i cmos!  -1 +loop
    lbsplit  h# 62  h# 65  do  i cmos!  -1 +loop
    1 h# 61 cmos!   1 h# 60 cmos!
+;
+
+: console-start  ( -- )
+   serial-enabled? 0=  if
+      ['] null$ to fallback-device
+   then
+
+   install-mux-io
+   true to text-on?
+
+   " //null" open-dev to null-ih  \ For text-off state
+
+   ?gui-banner
+\   ." nvramrc" cr
+\   use-nvramrc?  if  nvramrc safe-evaluate  then
 ;
 
 : interpreter-init  ( -- )
@@ -566,22 +570,6 @@ fload ${BP}/ofw/core/dualconsole.fth
       " /prober /usb/ethernet disk:\boot\olpc.fth nand:\boot\olpc.fth /xp sd:\boot\olpc.fth /usb/wlan"
       to boot-device
    then                     ( )
-;
-
-: console-start  ( -- )
-   " screen" open-dev  ?dup  if
-      dup to screen-ih
-      set-stdout
-\       logo-banner drop
-\       close-dev
-\       0 stdout !
-   then
-
-   install-dual-console
-
-   ?gui-banner
-\   ." nvramrc" cr
-\   use-nvramrc?  if  nvramrc safe-evaluate  then
 ;
 
 : debug-interact  ( -- )
@@ -624,10 +612,6 @@ fload ${BP}/ofw/core/dualconsole.fth
 ;
 [then]
 
-: open-keyboard  ( -- )
-   " keyboard" open-dev  ?dup  if  set-stdin  then
-;
-
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
@@ -647,13 +631,12 @@ fload ${BP}/ofw/core/dualconsole.fth
 
    read-game-keys
 
-   stdout off  \ 
+   text-off
 
    " probe-" do-drop-in
 
    probe-pci
    sound
-   open-keyboard
    ?games
    ['] false to interrupt-auto-boot?
    probe-usb
@@ -672,13 +655,12 @@ fload ${BP}/ofw/core/dualconsole.fth
    unblock-exceptions
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
    ?usb-keyboard
-\   install-console
-\   install-dual-console
-   banner
+   auto-banner?  if  banner  then
+
    auto-boot
 
-   frozen?            ( frozen? )
-   unfreeze visible   ( frozen? )
+   frozen? text-on? 0=  and  ( no-banner? )
+   unfreeze visible          ( no-banner? )
    if  banner  then  \ Reissue banner if it was suppressed
 
    blue-letters ." Type 'help' for more information." black-letters

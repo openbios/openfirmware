@@ -56,13 +56,13 @@ alias p2 probe-usb
    " keyboard" expand-alias  if   ( devspec$ )
       drop " /usb"  comp  0=  if  ( )
          red-letters  ." Using USB keyboard." cr  black-letters
-         " keyboard" input
+         " keyboard" open-dev add-mux
          exit
       then
    then
    " /usb/serial" open-dev  ?dup  if
       red-letters  ." Using USB serial console." cr  black-letters
-      dup set-stdin set-stdout
+      add-mux
    then
 ;
 

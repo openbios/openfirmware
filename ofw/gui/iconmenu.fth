@@ -420,13 +420,7 @@ defer root-menu  ' noop to root-menu
 
 \ headerless
 : menu-or-quit  ( -- )
-   menu?  if
-      " device_type"  stdout @ ihandle>phandle get-package-property  0=  if
-         get-encoded-string  " display" $=  if
-            menu  exit
-         then
-      then
-   then
+   menu?  if  screen-ih  if  menu exit  then  then
    quit
 ;
 \ Install menu-or-quit in the "user-interface" defer word later,

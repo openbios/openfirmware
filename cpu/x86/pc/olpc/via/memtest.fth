@@ -47,8 +47,10 @@ variable #lb-entries
       h# 810 config-l@ dup 100.0000 -1 mmu-map
 [then]
 [else]
-      " text-mode3" stdout @ $call-method  \ XXX should be screen-ih
-      stdout off
+      screen-ih  if
+         " text-mode3" screen-ih $call-method
+      then
+      text-off
       make-lb-table
 [then]
 [ifdef] unfreeze unfreeze  [then]
