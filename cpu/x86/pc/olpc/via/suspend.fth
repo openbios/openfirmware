@@ -31,8 +31,6 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
    sp@ 4 -  h# f0000 ax-call  \ sp@ 4 - is a dummy pdir-va location
 [then]
 \  sum-forth
-
-   atest?  if  enable-uart  then  ukey?  if  ukey drop  then
 ;
 : kb-suspend  ( -- )
    sci-wakeup
