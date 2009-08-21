@@ -73,23 +73,29 @@ c;
    spiv!
 ;
 
+: setup-apic  ( -- )
+   apic-on
+   taskpri@ h# ff invert and  taskpri!  \ "Accept All"
+   soft-on
+   \ Virtual wire mode
+   \ REMOTE_IRR (4000), SEND_PENDING (1000), DELIVERY_MODE_EXTINT (700)
+   lvt0@  h# 1ff00 invert and  h# 5700 or  lvt0!
+   \ REMOTE_IRR (4000), SEND_PENDING (1000), DELIVERY_MODE_NMI (400)
+   lvt1@  h# 1ff00 invert and  h# 5400 or  lvt1!
+;   
 
 : open  ( -- okay? )
    apic-base  0=  if
       apic-mmio-base h# 400 " map-in" $call-parent to apic-base
-      apic-on
-      taskpri@ h# ff invert and  taskpri!  \ "Accept All"
-      soft-on
-      \ Virtual wire mode
-      \ REMOTE_IRR (4000), SEND_PENDING (1000), DELIVERY_MODE_EXTINT (700)
-      lvt0@  h# 1ff00 invert and  h# 5700 or  lvt0!
-      \ REMOTE_IRR (4000), SEND_PENDING (1000), DELIVERY_MODE_NMI (400)
-      lvt1@  h# 1ff00 invert and  h# 5400 or  lvt1!
+      setup-apic
    then
 
    true
 ;
 : close  ( -- )  ;
+
+: save  ( -- )  ;
+: restore  ( -- )  setup-apic  ;
 
 end-package
 
@@ -145,15 +151,22 @@ end-package
 : trigger-irq  ( irq# -- )  io-apic-base h# 20 + c!  ;
 : eoi  ( vector -- )  io-apic-base h# 40 + c!  ;
 
+: setup-io-apic  ( -- )
+   1 d# 24 lshift  0 io-apic!  \ I/O APIC ID
+   1               3 io-apic!  \ Front side bus message delivery
+;
+
 : open  ( -- okay? )
    io-apic-base  0=  if
       io-apic-mmio-base h# 80 " map-in" $call-parent to io-apic-base
-      1 d# 24 lshift  0 io-apic!  \ I/O APIC ID
-      1               3 io-apic!  \ Front side bus message delivery
+      setup-io-apic
    then
    true
 ;
 : close  ( -- )  ;
+
+: save  ( -- )  ;
+: restore  ( -- )  setup-io-apic  ;
 
 end-package
 
