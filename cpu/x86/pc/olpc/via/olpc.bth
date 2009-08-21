@@ -106,9 +106,9 @@ $new-file
 
    " builton.fth"                       " probe-"          $add-dropin
 
-\   " ${BP}/clients/emacs/x86/emacs"             " emacs"         $add-deflated-dropin
-\   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
-\   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
+   " ${BP}/clients/emacs/x86/emacs"             " emacs"         $add-deflated-dropin
+   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
+   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
 
    " ${BP}/ofw/fcode/memtest.fth"  " memtest.fth"          $add-deflated-dropin
 
