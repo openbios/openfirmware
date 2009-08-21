@@ -156,7 +156,7 @@ device-end
 
    keyboard open-dev add-mux
 
-   mux-ih stdin !  mux-ih stdout !
+   mux-ih set-stdin  mux-ih set-stdout
 
    console-io
 ;
