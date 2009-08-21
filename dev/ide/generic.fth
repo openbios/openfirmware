@@ -78,23 +78,19 @@ create '/lba        0 , 0 , 0 , 0 ,
 : r-dor!    ( val   -- )  dor-magic or dor rb!  ;
 
 \ Spin until BSY == 0, RDY == 1, indicating registers can be touched
-: wait-while-busy  ( -- )
-   get-msecs                            ( start-time )
+: wait-while-busy  ( -- timeout? )
+   get-msecs  d# 5000 +                 ( end-time )
    begin
-      r-csr@                            ( start-time csr )
-      dup 0<>                           ( start-time csr flag )
-      over h# ff <>             and     ( start-time csr flag )
-      swap h# c0 and  h# 40 <>  and     ( start-time csr=0|ff|4x? )
-   while				( start-time )
-      get-msecs over -                  ( start-time delta )
-      d# 5000 <                         ( start-time timeout? )
-   while				( start-time )
-   repeat
-   then				        ( start-time )
-   drop					( )
+      r-csr@  dup 0=                    ( end-time csr flag )
+      over h# ff =              or      ( end-time csr flag )
+      swap h# c0 and  h# 40 =   or      ( end-time csr=0|ff|4x? )  \ !BSY (80), DRDY (40)
+      if  drop false exit  then         ( end-time )
+      dup get-msecs -                   ( end-time remaining-time )
+   0<= until				( end-time )
+   drop	 true				( true )
 ;
 
-: reg!  ( data reg#  --  )  wait-while-busy  chip-base + rb!  ;
+: reg!  ( data reg#  --  )  wait-while-busy drop  chip-base + rb!  ;
 
 : r-data!   ( data  -- )  chip-base w!  ;
 : r-features!  ( data -- )  1 reg!  ;
@@ -131,14 +127,42 @@ defer io-blk-w!  defer io-blk-w@
 \ 91 constant set-drive-parms-cmd
 \ ec constant identify-cmd
 
-: wait-until-drq  ( -- )
-   begin
-      r-csr@
-      dup 1 and  if  ." IDE data error: " r-error@ . cr abort  then
-      h# c8 and h# 48 =
-   until
+: wait-until-drq  ( -- error? )
+   get-msecs  d# 5000 +          ( end-time )
+   begin                         ( end-time )
+      r-csr@                     ( end-time csr )
+
+      dup h# c8 and h# 48 =  if  ( end-time csr )  \ !BSY (80), DRDY (40), DRQ (8)
+         2drop false exit
+      then                       ( end-time csr )
+
+      h# 21 and  if              ( end-time )  \ DF (20; fault), ERR (1)
+         ." IDE data error: " r-error@ . cr
+         drop true exit
+      then                       ( end-time )
+      dup get-msecs -            ( end-time remaining-time )
+   until                         ( end-time )
+   drop true                     ( true )
 ;
-: wait-until-ready  ( -- )  begin  r-csr@ h# 50 =  until  ;
+
+: wait-until-ready  ( -- error? )
+   get-msecs d# 10000 +   ( end-time )
+   begin                  ( end-time )
+      r-csr@              ( end-time csr )
+
+      dup h# 50 =  if     ( end-time csr )  \ DRDY (40), DSC (10; seek complete)
+         2drop false exit
+      then                ( end-time )
+
+      h# 21 and  if       ( end-time )      \ DF (20; fault), ERR (1)
+         ." IDE Drive Error" cr
+         drop true exit
+      then                ( end-time )
+
+      dup get-msecs -     ( end-time remaining-time )
+   0<= until              ( end-time )
+   drop true
+;
 
 : lblk>cyl-head-sect  ( block# -- cyl# head# sect# )
    /secs /mod                                 ( sect# residue )
@@ -149,7 +173,7 @@ defer rblock  ( adr len -- error? )
 defer pio-end-hack  ' noop to pio-end-hack
 defer pio-start-hack  ' noop to pio-start-hack
 : pio-rblock  ( adr len -- error? )
-   wait-until-drq
+   wait-until-drq  if  2drop true exit  then
    pio-start-hack
    chip-base io-blk-w@  false
    pio-end-hack
@@ -172,28 +196,24 @@ defer rblocks
 ' pio-rblocks to rblocks
 
 : pio-wblock  ( adr len -- error? )
-   wait-until-drq
+   wait-until-drq  if  2drop true exit  then
    pio-start-hack
-   chip-base io-blk-w!  false
+   chip-base io-blk-w!
    pio-end-hack
+   false
 ;
 
-: pio-wblocks  ( addr #blks -- actual# | error )
-   over >r                                      ( addr #blks ) ( R: addr )
-   h# 30 r-csr!
+: pio-wblocks  ( addr #blks -- actual# | 0 )
+   h# 30 r-csr!                                     ( addr #blks )
+   
+   tuck  0  ?do                                     ( #blks addr )
+      dup  /block@  pio-wblock  if                  ( #blks addr )
+         2drop  i  unloop exit
+      then                                          ( #blks addr )
 
-   begin
-      wait-until-drq
-      swap                                      ( #blks addr ) ( R: addr )
-
-      pio-start-hack
-      dup /block@ chip-base io-blk-w!
-      pio-end-hack
-
-      /block@ +                                 ( #blks addr' ) ( R: addr )
-      swap 1- ?dup 0=
-   until
-   r> - /block@ /
+      /block@ +                                     ( #blks addr' )
+   loop                                             ( #blks addr )
+   drop                                             ( actual# )
 ;
 defer wblocks
 ' pio-wblocks to wblocks
@@ -217,7 +237,7 @@ defer wblocks
    then
    r>  r>  if  rblocks  else  wblocks  then               ( actual# | error )
 
-   dup 0=  if
+   dup 0<=  if
       ." Failed to transfer any blocks" cr
       \ XXX trouble
    then                                           ( actual# )
@@ -235,20 +255,20 @@ fload ${BP}/dev/ide/atapi.fth
 
 : le-w@  ( adr -- w )  dup c@ swap ca1+ c@ bwjoin  ;
 
-: ide-get-drive-parms  ( -- )
+: ide-get-drive-parms  ( -- found? )
    d# 512 /block!
 
    false  atapi-drive?!
    0      drive-type!
 
-   wait-while-busy
+   wait-while-busy  if  false exit  then
    2 r-dor!             \ Turn off IRQ14
 
    0 drive r-head!
 
    h# ec r-csr!		\ Identify command
 
-   scratchbuf d# 512 pio-rblock drop
+   scratchbuf d# 512 pio-rblock  if  false exit  then
 
    scratchbuf 1 wa+ le-w@ /cyls!
    scratchbuf 3 wa+ le-w@ /heads!
@@ -260,15 +280,17 @@ fload ${BP}/dev/ide/atapi.fth
       scratchbuf d# 61 wa+ le-w@
       wljoin /lba!
    then
+
+   true
 ;
 
-: get-drive-parms  ( -- )
+: get-drive-parms  ( -- found? )
    \ Reset this string (primary or secondary) on the first time through,
    \ in order to clear any errors that might be hanging around from uses
    \ of the drive by previous software.
    drive 0=  if  4 r-dor!  0 r-dor!  then
 
-   wait-while-busy
+   wait-while-busy  if  false exit  then
    0 drive r-head!		\ select drive
    0 r-dor!			\ flush ISA bus
    6 reg@ h# a0 drive 4 lshift or  = if
@@ -277,13 +299,21 @@ fload ${BP}/dev/ide/atapi.fth
 	 \ Unfortunately, the vl-reset on the Shark does not seem to fully
 	 \ reset the ATAPI drive, therefore, we are doing it here.
          atapi-reset		\ atapi soft reset
-         atapi-get-drive-parms
+         atapi-get-drive-parms     ( found? )
       else
          r-csr@ 0<>  r-csr@ h# ff <>  and  if
-            drive 0=  if  wait-until-ready  then	\ wait until spin-up
-            r-csr@ h# f0 and h# 50 =  if  ide-get-drive-parms  then
+            drive 0=  if
+               wait-until-ready  if  false exit  then
+            then	\ wait until spin-up
+            r-csr@ h# f0 and h# 50 =  if
+               ide-get-drive-parms                 ( found? )
+            else
+               false                               ( found? )
+            then
          then
       then
+   else
+      false                                        ( found? )
    then
 ;
 
@@ -361,7 +391,7 @@ defer set-drive-cfg  ' noop to set-drive-cfg
 
    first-open?  if
       max#drives 0  do
-         0 i  set-address  get-drive-parms  set-drive-cfg  loop
+         0 i  set-address  get-drive-parms  if  set-drive-cfg  then  loop
       false to first-open?
    then
 

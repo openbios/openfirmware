@@ -81,6 +81,8 @@ external
 
    block-size ?dup 0=  if  false exit  then  to /block
 
+   #blocks  0=  if  false exit  then
+
    init-deblocker  0=  if  false exit  then
 
    init-label-package  0=  if

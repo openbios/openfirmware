@@ -13,16 +13,16 @@ headers
    loop
 ;
 
-: atapi-get-drive-parms  ( -- )
+: atapi-get-drive-parms  ( -- found? )
    h# a1 r-csr!         \ send identify command
 
    waitonbusy	\ The busy bit can be set even if there's no slave drive
 
-   r-csr@  dup 0=  swap h# ff =  or  if  exit  then
+   r-csr@  dup 0=  swap h# ff =  or  if  false exit  then
 
    true    atapi-drive?!
 
-   scratchbuf d# 512 pio-rblock drop
+   scratchbuf d# 512 pio-rblock  if  false exit  then
 
    scratchbuf 1+ c@  h# 1f and  dup  drive-type!   ( type )
    5 =  if  d# 2048  else  d# 512  then  /block!
@@ -35,6 +35,7 @@ headers
    \ 2Vi, which do not have the drive-type in the right byte.
    5 drive-type!
 [then]
+   true
 ;
 
 : waitfordrq  ( -- timeout? )
