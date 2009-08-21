@@ -19,7 +19,7 @@ defer video-on
 
 fload ${BP}/dev/video/controlr/vga.fth           \ Standard VGA interfaces
 fload ${BP}/dev/via/unichrome/unichrome.fth      \ Controller code
-\ fload ${BP}/dev/via/unichrome/accel2d.fth      \ Accelerator
+fload ${BP}/dev/via/unichrome/accel2d.fth        \ Accelerator
 fload ${BP}/dev/via/unichrome/vgamodes.fth       \ Text mode support
 fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
 fload ${BP}/cpu/x86/pc/olpc/expand16.fth         \ Expand image by 2x

@@ -622,10 +622,12 @@ defer init-display  ' init-primary-display is init-display
    fb-va /fb +  to graphmem
 ;
 
+defer gp-install  ' noop to gp-install
+
 : set-fb  ( -- )
    width  height                              ( width height )
    over char-width / over char-height /       ( width height rows cols )
-   /scanline depth fb-install ( gp-install )  ( )
+   /scanline depth fb-install gp-install      ( )
 ;
 
 0 value open-count
