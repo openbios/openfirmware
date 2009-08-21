@@ -53,10 +53,10 @@ devalias u    /usb/disk
 alias p2 probe-usb
 
 : ?usb-keyboard  ( -- )
-   " keyboard" expand-alias  if   ( devspec$ )
-      drop " /usb"  comp  0=  if  ( )
+   " usb-keyboard" expand-alias  if   ( devspec$ )
+      drop " /usb"  comp  0=  if      ( )
          red-letters  ." Using USB keyboard." cr  black-letters
-         " keyboard" open-dev add-mux
+         " usb-keyboard" open-dev add-mux
          exit
       then
    then

@@ -330,6 +330,7 @@ true value text-on?
 : text-on   ( -- )
    text-on? 0=  if
       screen-ih add-mux
+      cursor-on
       true to text-on?
    then
 ;
@@ -380,7 +381,7 @@ fload ${BP}/cpu/x86/pc/olpc/wlantest.fth
 
 fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 
-" /xp u:\boot\olpc.fth sd:\boot\olpc.fth c:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
+" /xp u:\boot\olpc.fth ext:\boot\olpc.fth int:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
    ' boot-device  set-config-string-default
 
 \needs ramdisk  " " d# 128 config-string ramdisk
@@ -531,7 +532,9 @@ true                               ' client-symbols?  set-config-int-default
    then
 
    install-mux-io
+   cursor-off
    true to text-on?
+
 
    " //null" open-dev to null-ih  \ For text-off state
 
@@ -567,7 +570,7 @@ true                               ' client-symbols?  set-config-int-default
 [then]
    then                     ( in-factory? )
    if                       ( )
-      " /prober /usb/ethernet disk:\boot\olpc.fth nand:\boot\olpc.fth /xp sd:\boot\olpc.fth /usb/wlan"
+      " /prober /usb/ethernet disk:\boot\olpc.fth int:\boot\olpc.fth /xp ext:\boot\olpc.fth /usb/wlan"
       to boot-device
    then                     ( )
 ;
@@ -636,11 +639,16 @@ true                               ' client-symbols?  set-config-int-default
    " probe-" do-drop-in
 
    probe-pci
+   show-child
    sound
    ?games
+   \ XXX we should put up the splash screen here
+   
    ['] false to interrupt-auto-boot?
    probe-usb
    " probe+" do-drop-in
+   report-disk
+   report-keyboard
 
    setup-smbios  \ Must be done after build-date is defined via do-drop-in
 

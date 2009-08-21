@@ -124,12 +124,6 @@ fload ${BP}/dev/pci/isaall.fth
 \ We don't need a serial selftest because the serial port is internal only
 \ and the selftest turns off the diag device
 dev /serial  warning @ warning off  : selftest false ;  warning !  device-end
-devalias com1 /isa/serial@i3f8:115200
-devalias mouse /isa/8042/mouse
-devalias d disk
-devalias n nand
-devalias sd /sd/disk
-devalias c /ide@0/disk
 
 [ifndef] demo-board
 .( Removing ctlr-selftest from 8042 open !!!) cr
@@ -195,40 +189,6 @@ stand-init: NVRAM
    ['] init-config-vars catch drop
 ;
 [then]
-
-\ Create the alias unless it already exists
-: $?devalias  ( alias$ value$ -- )
-   2over  not-alias?  if  $devalias exit  then  ( alias$ value$ alias$ )
-   2drop 4drop
-;
-
-: report-disk  ( -- )
-   " /usb/disk" locate-device  0=  if
-      drop
-      " disk"  " /usb/disk"   $devalias
-      exit
-   then
-   " /usb@f,4/disk" locate-device  0=  if
-      ." Found USB 1.1 disk!" cr
-      drop
-      " disk"  " /usb@f,4/disk" $devalias
-      exit
-   then
-;
-
-: report-keyboard  ( -- )
-   " /usb@f,4/keyboard" locate-device  0=  if
-      drop
-      " keyboard"  " /usb@f,4/keyboard"  $devalias
-      exit
-   then
-
-   \ In case the keyboard is behind a USB 2 hub
-   " /usb@f,5/keyboard" locate-device  0=  if
-      drop
-      " keyboard"  " /usb@f,5/keyboard"  $devalias
-   then
-;
 
 fload ${BP}/cpu/x86/inoutstr.fth	\ Multiple I/O port read/write
 fload ${BP}/dev/isa/diaguart.fth	\ ISA COM port driver
@@ -343,6 +303,51 @@ warning @ warning off
    dend
 ;
 warning !
+
+devalias com1 /isa/serial@i3f8:115200
+devalias mouse /isa/8042/mouse
+devalias c int
+devalias d disk
+devalias n int
+devalias ide /ide@0/disk
+devalias sd  /sd/disk@2
+devalias ext /sd/disk@2
+
+\ The "int" devalias is defined in report-disk at runtime, since it
+\ varies between A-test and later boards.
+
+\ Create the alias unless it already exists
+: $?devalias  ( alias$ value$ -- )
+   2over  not-alias?  if  $devalias exit  then  ( alias$ value$ alias$ )
+   2drop 4drop
+;
+
+: ?report-device  ( alias$ pathname$ -- )
+   2dup  locate-device  0=  if  ( alias$ pathname$ phandle )
+      drop                      ( alias$ pathname$ )
+      2over 2over $?devalias    ( alias$ pathname$ )
+   then                         ( alias$ pathname$ )
+   4drop                        ( )
+;
+
+: report-disk  ( -- )
+   " disk"  " /usb/@10,4/disk" ?report-device  \ USB 2
+   " disk"  " /usb/@10,2/disk" ?report-device  \ USB 1.1
+   " disk"  " /usb/@10,1/disk" ?report-device  \ USB 1.1
+   " disk"  " /usb/@10,0/disk" ?report-device  \ USB 1.1
+
+   " int"
+   atest?  if  " /ide@0/disk"  else  " /sd/disk@1"  then
+   $devalias
+;
+
+: report-keyboard  ( -- )
+   \ Prefer direct-attached
+   " usb-keyboard"  " /usb@10,2/keyboard" ?report-device  \ USB 1.1
+   " usb-keyboard"  " /usb@10,1/keyboard" ?report-device  \ USB 1.1
+   " usb-keyboard"  " /usb@10,0/keyboard" ?report-device  \ USB 1.1
+   " usb-keyboard"  " /usb@10,4/keyboard" ?report-device  \ USB 2   (keyboard behind a hub)
+;
 
 [ifdef] Later
 \ Add support for DC-couple microphone input

@@ -914,7 +914,7 @@ warning !
    set-alternate
 
 \    button-rotate game-key?  if  show-warnings  then
-   show-child
+\   show-child
 
    button-check game-key?  if
       unfreeze  visible  banner
