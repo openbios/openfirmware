@@ -95,6 +95,13 @@ headerless
    then
 ;
 
+: make-last-alias  ( adr len -- )
+   [char] \ left-parse-string 2nip          ( dev$ )
+   dup 0=  if   2drop exit  then            ( dev$ )
+   2dup + 1- c@  [char] : =  if  1-  then   ( dev$' )
+   " last" 2swap $devalias                  ( )
+;
+
 : (boot-read)  ( adr len -- )
    opened-ih  if                        ( adr len )
       2drop  opened-ih  0 to opened-ih  ( ihandle )
@@ -105,7 +112,9 @@ headerless
       ( print-probe-list )
       true abort" "r"nCan't open boot device"r"n"
    then                                         ( fileid )
-   dup ihandle>devname limit-1023 load-path place-cstr drop ( fileid )
+   dup ihandle>devname                          ( fileid path$ )
+   2dup make-last-alias                         ( fileid path$ )
+   limit-1023 load-path place-cstr drop         ( fileid )
    >r                                           ( )
    load-started
    0 !load-size  load-base                      ( load-adr )
