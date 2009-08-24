@@ -233,6 +233,7 @@ devalias nfs net//obp-tftp:last//nfs
 fload ${BP}/cpu/x86/pc/boot.fth
 fload ${BP}/cpu/x86/pc/linux.fth
 
+0 value keyboard-ih
 0 value screen-ih
 
 fload ${BP}/ofw/core/muxdev.fth          \ I/O collection/distribution device
@@ -306,6 +307,7 @@ fload ${BP}/cpu/x86/pc/olpc/banner.fth
 
 fload ${BP}/ofw/gui/loadmenu.fth
 fload ${BP}/ofw/gui/insticon.fth
+\ fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
 
 : screen-#lines  ( -- n )
    screen-ih 0=  if  default-#lines exit  then
@@ -375,8 +377,6 @@ fload ${BP}/ofw/gui/ofpong.fth
 fload ${BP}/cpu/x86/pc/olpc/life.fth
 [ifdef] wlan-wackup
 fload ${BP}/cpu/x86/pc/olpc/wlantest.fth
-
-' gx-power-off to power-off
 [then]
 
 fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
@@ -548,8 +548,6 @@ true                               ' client-symbols?  set-config-int-default
    warning on
    only forth also definitions
 
-   install-alarm
-
    page-mode
    #line off
 
@@ -640,6 +638,7 @@ true                               ' client-symbols?  set-config-int-default
 
    probe-pci
    show-child
+   install-alarm
    sound
    ?games
    \ XXX we should put up the splash screen here
