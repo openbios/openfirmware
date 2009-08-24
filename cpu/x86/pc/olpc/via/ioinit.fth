@@ -214,11 +214,12 @@ hpet-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
    97 ff 80 mreg  \ be like Phx 
 [then]
 
+[ifdef] xo-board
+   97 ff 80 mreg   \ Wait for power to go down before coming back up - needed for power-off
 \ NO! This doesn't work.  If these lines are set as GPIOs, the system
 \ will crash when you disable the internal KBC.
-\ [ifdef] xo-board
 \   97 ff 81 mreg  \ GPIO4/5 not KBDT/KBCK
-\ [then]
+[then]
 
 [ifdef] xo-board
    9b ff 89 mreg  \ 80 undoc but is LVDS power.  00 forces LVDS power off, 80 lets 3d5.D2[7,6,3] control it; 1 selects GPO11/12 instead of CR_PWSEL/CR_PWOFF (DCONLOAD)

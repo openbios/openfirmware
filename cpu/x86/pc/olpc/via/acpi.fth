@@ -302,6 +302,11 @@ here do-acpi-wake - constant /do-acpi-wake
    h# ffffffff  h# 20 acpi-l!  \ Ack all leftover events
 ;
 
+: acpi-power-off  ( -- )
+   4 acpi-w@  h# c3ff and  h# 2800 or  4 acpi-w!  \ SLP_TYPx = 2 - S4 and S5
+;
+' acpi-power-off to power-off
+
 stand-init: ACPI tables
    setup-acpi
 ;
