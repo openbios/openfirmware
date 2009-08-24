@@ -154,7 +154,8 @@ device-end
    screen open-dev to screen-ih
    screen-ih add-mux
 
-   keyboard open-dev add-mux
+   keyboard open-dev to keyboard-ih
+   keyboard-ih add-mux
 
    mux-ih set-stdin  mux-ih set-stdout
 

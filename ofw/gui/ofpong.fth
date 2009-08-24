@@ -269,10 +269,15 @@ ballsize pscale * value reflect_left_x
 [ifdef] olpc
 \ This works with the FirmWorks pckbd driver.  The key map below
 \ is good for the OLPC keyboard.
+[ifdef] keyboard-ih
+alias pong-ih keyboard-ih
+[else]
+: pong-ih stdin @ ;
+[then]   
+
 : initkeys
    ." Shift, Hand, Esc, Square" cr
    d# 3000 ms
-   " stdin @ iselect  ' get-scan 0  alarm  iunselect" eval
    false to key_left_up
    false to key_left_down
    false to key_right_up
@@ -281,11 +286,10 @@ ballsize pscale * value reflect_left_x
    false to key_off
 ;
 : restorekeys
-   " stdin @ iselect  ' get-scan d# 10  alarm  iunselect" eval
 ;
 0 value e0-seen?
 : scankeys
-   begin  " get-data?" stdin @ $call-method  while   ( scancode )
+   begin  0 " get-scancode" pong-ih $call-method  while   ( scancode )
       dup h# e0 =  if
          drop  true to e0-seen?
       else
