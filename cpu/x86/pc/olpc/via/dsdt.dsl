@@ -98,11 +98,10 @@ Scope(\_PR)
     {
        Name(_CST, Package()
        {
-           4,
+           3,
            Package(){ResourceTemplate(){Register(SystemIO, 8, 0, 0x414)}, 2,   2, 750},
            Package(){ResourceTemplate(){Register(SystemIO, 8, 0, 0x415)}, 3,  65, 500},
-           Package(){ResourceTemplate(){Register(SystemIO, 8, 0, 0x416)}, 4, 100, 300},
-           Package(){ResourceTemplate(){Register(SystemIO, 8, 0, 0x417)}, 5, 200, 200}
+           Package(){ResourceTemplate(){Register(SystemIO, 8, 0, 0x416)}, 3, 100, 300},
        })
     }
 }
