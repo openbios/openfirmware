@@ -59,6 +59,15 @@ external
 ;
 : dimensions  ( -- width height )  width height  ;
 
+: replace-color16  ( old new -- )
+   frame-buffer-adr  width height * 2* bounds do
+      over i w@ = if
+         dup i w!
+      then
+   2 +loop
+   2drop
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

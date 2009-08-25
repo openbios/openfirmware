@@ -78,8 +78,8 @@ ifd @ ftell . ofd @ ftell . cr
 ;
 : raw565bmp24  ( -- )
    reading writing
-   d# 640 to image-width
-   d# 480 to image-height
+   d# 1200 to image-width
+   d# 900 to image-height
 
    565>rects
    ifd @ fclose  ofd @ fclose

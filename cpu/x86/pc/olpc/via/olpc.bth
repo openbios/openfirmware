@@ -31,7 +31,7 @@ in: ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml
 \ in: ${BP}/cpu/x86/pc/olpc/via/build/mcastnand.bin
 in: ${BP}/dev/hdaudio/build/hdaudio.fc
 in: sd8686.bin
-
+in: testicons.bin
 
 build-now
 
@@ -159,6 +159,24 @@ $new-file
 
    " ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml"      " dsdt"            $add-deflated-dropin
 \  " ${BP}/cpu/x86/pc/olpc/via/build/ssdt.aml"      " ssdt"            $add-deflated-dropin
+
+   \ icons for mfg test gui
+   " testicons/play.565"        " play.565"     $add-deflated-dropin
+   " testicons/quit.565"        " quit.565"     $add-deflated-dropin
+   " testicons/cpu.565"         " cpu.565"      $add-deflated-dropin
+   " testicons/spi.565"         " spi.565"      $add-deflated-dropin
+   " testicons/ram.565"         " ram.565"      $add-deflated-dropin
+   " testicons/sdcard.565"      " sdcard.565"   $add-deflated-dropin
+   " testicons/keyboard.565"    " keyboard.565" $add-deflated-dropin
+   " testicons/display.565"     " display.565"  $add-deflated-dropin
+   " testicons/touchpad.565"    " touchpad.565" $add-deflated-dropin
+   " testicons/audio.565"       " audio.565"    $add-deflated-dropin
+   " testicons/usb.565"         " usb.565"      $add-deflated-dropin
+   " testicons/battery.565"     " battery.565"  $add-deflated-dropin
+   " testicons/camera.565"      " camera.565"   $add-deflated-dropin
+   " testicons/wifi.565"        " wifi.565"     $add-deflated-dropin
+   " testicons/clock.565"       " clock.565"    $add-deflated-dropin
+   " testicons/timer.565"       " timer.565"    $add-deflated-dropin
 
 [ifdef] Later
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_rx.bin" " nb_rx"      $add-deflated-dropin

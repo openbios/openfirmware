@@ -12,9 +12,9 @@ headerless
 \ user can select an icon, and execute its function
 
 \ notes
-\ screen is max-x >= 640 by max-y >= 480 (can assume 640x480 for now)
+\ screen is max-x >= 1200 by max-y >= 900 (can assume 1200x900 for now)
 \ 0,0 is left,top; 12 boxes 128x128 begin at 48,48
-\ each may contain a 64x64 icon, centered, and a string below
+\ each may contain a 128x128 icon, centered, and a string below
 \ mouse or keyboard can select, and run associated function
 \ moving mouse cursor into occupied square changes selection
 \ keyboard input removes mouse cursor and moves mouse to selected square
@@ -25,7 +25,7 @@ headerless
 
 \ have:
 \ fill-rectangle ( color x y w h - )	color is 0..255
-\ draw-rectangle ( address x y w h - )  address of 64x64 pixmap
+\ draw-rectangle ( address x y w h - )  address of 128x128 pixmap
 \ read-rectangle ( address x y w h - )
 \ move-mouse-cursor ( x y - )
 \ remove-mouse-cursor ( - )
@@ -38,13 +38,14 @@ hex
 
 headers
 d# 32 			value    version-height
-3 constant rows
+4 constant rows
 5 constant cols
 headerless
 rows cols *		constant squares
-d# 100			constant sq-size
-d# 64			constant icon-size
-d# 100			constant title-area
+d# 180			value sq-size
+d# 128                  value image-size \ on file
+d# 128			value icon-size  \ on screen
+d# 100			value title-area
 
 : sq-max-y  ( -- pixels )  sq-size rows *   ;
 
@@ -88,16 +89,20 @@ d# 100			constant title-area
 
 struct
   /n   field >icon
+  /n   field >pixels
   /n   field >function
+  /n   field >border
 2 /n * field >help	\ Brief description
 \ 32 field >label	\ later...
 dup constant /entry
 squares * buffer: squarebuf
-
+icon-size dup * 2 * constant /icon
+image-size dup * 2 * 8 + constant /image
+   
 : sq  ( sq - a )  sq?	/entry * squarebuf +  ;
 
 : set-sq  ( help$ 'function 'icon sq - )
-   sq tuck >icon !  tuck >function !  ( help$ 'entry )
+   sq background over >border !  tuck >icon !  tuck >function !  ( help$ 'entry )
    >r
    ?save-string  r> >help 2!
 ;
@@ -129,16 +134,18 @@ headerless
 
 d# 10 constant thickness
 
-: hilite   ( color - )
-   current-sq sq>xy  ( color left top )
-   sq-size icon-size - 2/ thickness -  tuck + -rot + swap 
-   icon-size thickness 2* +  dup  thickness  box
+: draw-border  ( color sq - )
+   sq>xy  ( color left top )
+   sq-size icon-size -  thickness 3 * -  2/  tuck + -rot + swap 
+   icon-size thickness 3 * +  dup  thickness 2/  box
 ;
+
+: hilite   ( color - )  current-sq draw-border  ;
 
 headers
 : emphasize  ( - )  ready-color hilite  ;
 : highlight  ( - )  selected-color hilite  ;
-: lowlight   ( - )  background hilite  ;
+: lowlight   ( - )  current-sq sq >border @ hilite  ;
 
 headerless
 : ?lowlight  ( -- )  current-sq valid? if  lowlight  then  ;
@@ -147,14 +154,102 @@ headerless
 : describe  ( -- )
    current-sq sq >help 2@ show-description
 ;
-: draw-sq  ( sq - )
+
+code expand-rect  ( src dst w h --- )
+   dx  pop              \ Height of source image in pixels
+   4 [sp] edi xchg
+   8 [sp] esi xchg
+   begin
+      0 [sp]  cx mov    \ Width of source image in pixels
+      begin
+         op: ax lods                \ Get a pixel
+         op: ax d# 256 [edi] mov    \ Write to next line
+         op: ax stos                \ Write to this line + increment
+         op: ax d# 256 [edi] mov    \ Write to next line
+         op: ax stos                \ Write to this line + increment
+      loopa
+      d# 256 # edi add              \ Skip the next output line - already written
+      edx dec
+   0= until
+   eax pop   \ Discard source width
+   edi pop   \ Restore EDI
+   esi pop   \ Restore ESI
+c;
+
+: expand-icon  ( adr - eadr )
+   /icon alloc-mem tuck  ( eadr adr eadr )
+   dup /icon 0 fill \ temp - clear old data
+   icon-size 2/ icon-size 2/ expand-rect  ( eadr )
+;
+
+alias /pix* /w*
+
+0 value src-w
+0 value src-h
+
+: center-icon  ( hdr-adr -- eadr )
+   /icon alloc-mem >r                     ( hdr-adr r: eadr )
+   r@ /icon  2 pick 8 + le-w@  wfill      ( hdr-adr )
+   dup 4 + le-w@ to src-w                 ( hdr-adr )
+   dup 6 + le-w@ to src-h                 ( hdr-adr )
+   8 +                                    ( src-adr )
+   
+   \ Calculate offset in dest array for centering
+   icon-size src-h -  2/  icon-size *     ( src-adr line-offset )
+   icon-size src-w -  2/  +  /pix*        ( src-adr byte-offset )
+   r@ +                                   ( src-adr dst-adr )
+
+   \ Copy rectangle from source to destination
+   swap src-h src-w * /pix*  bounds  ?do  ( dst-adr )
+      i over  src-w /pix*  move           ( dst-adr )
+      icon-size /pix* +                   ( dst-adr' )
+   src-w /pix* +loop                      ( dst-adr )
+   drop                                   ( )
+   r>                                     ( eadr )
+;
+
+: load-pixels ( device$ -- pix-adr )
+   r/o open-file  abort" error opening icon file"
+   >r                                        (          r: fileid )
+   r@ fsize dup alloc-mem  swap              ( adr len  r: fileid )
+   2dup  r@ fgets                            ( adr len  actual  r: fileid )
+   over <>  abort" error reading icon data"  ( adr len )
+   r> fclose                                 ( adr len )
+
+   over 4 + le-l@  h# 0040.0040 =  if        ( hdr-adr len )
+      over 8 + expand-icon                   ( hdr-adr len pix-adr )
+      -rot  free-mem                         ( pix-adr )
+   else                                      ( hdr-adr len )
+      over 4 + le-l@  h# 0080.0080 =  if     ( hdr-adr len )
+         drop  8 +                           ( pix-adr )
+      else                                   ( hdr-adr len )
+         over center-icon                    ( hdr-adr len pix-adr )
+         -rot free-mem                       ( pix-adr )
+      then
+   then
+;
+
+: load-icon  ( sq -- )
+   sq dup >pixels @ 0= if            ( sq-adr )
+      dup >icon @ count  load-pixels ( sq-adr pix-adr )
+      swap >pixels !                 ( )
+   else
+      drop                           ( )
+   then
+;
+
+: draw-sq  ( sq -- )
    dup -1 = if exit then
    background over sq>xy sq-size dup fill-rectangle
-   dup sq >icon @ dup  if
+   dup sq >border @  over draw-border
+   dup sq >icon @ if
+      dup load-icon
+      dup sq >pixels @
       swap sq>xy sq-size icon-size - 2/ tuck + -rot + swap
       icon-size dup  draw-rectangle
+      lowlight \ draw border
    else
-      2drop
+      drop
    then
 ;
 

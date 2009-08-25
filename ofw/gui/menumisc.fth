@@ -51,8 +51,8 @@ headers
 ;
 
 \ Defining word for icon images
-: icon:  ( "name" "filename" -- ) ( child: -- adr )
-   create  parse-word $file,
+: icon:  ( "name" "devicename" -- ) ( child: -- adr )
+   create  parse-word ",
 ;
 
 icon: exit.icon            ${BP}/ofw/gui/exeunt.icx

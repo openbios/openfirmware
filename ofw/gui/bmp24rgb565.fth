@@ -1,6 +1,7 @@
 \ See license at end of file
 purpose: Conversion from RGB888 BMP to RGB565 raw formats
 
+0 value pixels-offset
 0 value image-width
 0 value image-height
 0 value #planes
@@ -22,7 +23,7 @@ h# 36 constant /bmp-hdr
 : get-planes  ( -- )
    #planes 0  ?do    
       image-height 0   do
-         image-height i 1+ -  line-bytes *  /bmp-hdr +  ifd @ fseek
+         image-height i 1+ -  line-bytes *  pixels-offset +  ifd @ fseek
          image-width copy-scan-line
       loop
    loop
@@ -31,6 +32,7 @@ h# 36 constant /bmp-hdr
 : putw  ( w -- )  wbsplit  swap  ofd @ fputc  ofd @ fputc  ;
 
 : bmp>rects  ( -- )
+   bmp-hdr h# 0a + le-l@  to pixels-offset
    bmp-hdr h# 12 + le-l@  to image-width
    bmp-hdr h# 16 + le-l@  to image-height
    bmp-hdr h# 1a + le-w@  to #planes

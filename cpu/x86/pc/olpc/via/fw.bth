@@ -307,7 +307,7 @@ fload ${BP}/cpu/x86/pc/olpc/banner.fth
 
 fload ${BP}/ofw/gui/loadmenu.fth
 fload ${BP}/ofw/gui/insticon.fth
-\ fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
+fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
 
 : screen-#lines  ( -- n )
    screen-ih 0=  if  default-#lines exit  then

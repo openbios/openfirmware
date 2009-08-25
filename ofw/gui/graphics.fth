@@ -12,9 +12,10 @@ headerless
 7 constant gray
 h# f constant white
 
-h# 13 constant background
-gray  constant selected-color
-blue  constant ready-color
+h# ff h# ff h# ff rgb>565 value background
+\ h# 0010 value selected-color
+    0     0 h# 80 rgb>565 value selected-color
+h# ff h# ff h# ff rgb>565 value ready-color
 
 \ \\\\\\\\\\\\\\\\
 \ Device Support \
@@ -23,7 +24,7 @@ blue  constant ready-color
 \needs screen-ih 0 value screen-ih
 0 value mouse-ih
 
-d# 640 d# 480 2value max-xy
+d# 1200 d# 900 2value max-xy
 : max-x  ( -- n )  max-xy drop  ;
 : max-y  ( -- n )  max-xy nip   ;
 
