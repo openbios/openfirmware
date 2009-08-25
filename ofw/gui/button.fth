@@ -218,7 +218,7 @@ headerless
    def-alert-col-row alert-text-box  center-text  key drop  restore-rectangle
 ;
 : setup  ( -- )
-   screen-ih 0= if  open-devices set-menu-colors  then
+   ?open-screen  set-menu-colors  ?open-mouse
    clear-menu install-menu cursor-off  refresh
 ;
 [then]

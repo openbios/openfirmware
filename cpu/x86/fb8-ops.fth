@@ -406,6 +406,64 @@ code fb32-paint
    8 /n* #  sp  add
 c;
 
+code fb8-merge  ( color bits dst-adr width -- )
+   cx pop     \ CX: width
+   dx pop     \ DX: adr
+   bx pop     \ BX: bits
+   ax pop     \ AX: color
+   di push    \ Save DI
+   dx di mov  \ DI: adr
+   ax dx mov  \ DX: color
+   begin
+      bx bx add  \ Shift out high bit
+      carry?  if
+         al stos
+      else
+         di inc
+      then
+   loopa   
+   di pop     \ Restore DI
+c;
+
+code fb16-merge  ( color bits dst-adr width -- )
+   cx pop     \ CX: width
+   dx pop     \ DX: adr
+   bx pop     \ BX: bits
+   ax pop     \ AX: color
+   di push    \ Save DI
+   dx di mov  \ DI: adr
+   ax dx mov  \ DX: color
+   begin
+      bx bx add  \ Shift out high bit
+      carry?  if
+         op: ax stos
+      else
+         2 [di] di lea
+      then
+   loopa   
+   di pop     \ Restore DI
+c;
+
+code fb32-merge  ( color bits dst-adr width -- )
+   cx pop     \ CX: width
+   dx pop     \ DX: adr
+   bx pop     \ BX: bits
+   ax pop     \ AX: color
+   di push    \ Save DI
+   dx di mov  \ DI: adr
+   ax dx mov  \ DX: color
+   begin
+      bx bx add  \ Shift out high bit
+      carry?  if
+         ax stos
+      else
+         4 [di] di lea
+      then
+   loopa   
+   di pop     \ Restore DI
+c;
+
+
 headers
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

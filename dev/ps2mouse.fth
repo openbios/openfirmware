@@ -313,9 +313,15 @@ headerless
    dup  if  clear-out-buf  then           ( error? )
 ;
 
+0 value open-count
+
 headers
 : open  ( -- flag )
    1 set-port
+
+   open-count  1+ to open-count
+
+   open-count 1 <>  if  true exit  then
 
    \ The "force" argument causes the open to succeed even if no mouse
    \ is present
@@ -331,7 +337,10 @@ headers
    remote-mode
    true
 ;
-: close  ( -- )  stream-off  ;
+: close  ( -- )
+   open-count 1 =  if  stream-off  then
+   open-count 1- 0 max  to open-count
+;
 
 headerless
 \ Filter out large negative motions; they're probably spurious

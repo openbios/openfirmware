@@ -76,6 +76,7 @@ termemu-defer fb-invert
 termemu-defer fb-fill
 termemu-defer fb-paint
 termemu-defer fb-16map
+termemu-defer fb-merge
 
 termemu-defer draw-character
 termemu-defer insert-characters

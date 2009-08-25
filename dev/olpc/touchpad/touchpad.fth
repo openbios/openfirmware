@@ -55,12 +55,6 @@ h# 4 value y-offset
 \ get-data        waits for and reads a data byte
 
 
-\ The normal mouse driver uses remote mode, but this device
-\ doesn't support remote mode, so patch the mouse driver
-\ "open" routine to substitute "noop" for "remote-mode".
-
-patch noop remote-mode open
-
 variable ptr
 0 value show-raw?
 
@@ -116,6 +110,13 @@ variable mode  \ 0 - unknown  1 - GS  2 - PT  3 - mouse
       remote-mode  3 mode !
    then
 ;
+
+\ The normal mouse driver uses remote mode, but this device
+\ doesn't support remote mode, so patch the mouse driver
+\ "open" routine to substitute "noop" for "remote-mode".
+
+patch start remote-mode open
+
 
 \ I have been unable to get this to work.  The response is always
 \ 64 0 <something>, which doesn't agree with the spec.

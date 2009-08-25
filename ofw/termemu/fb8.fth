@@ -240,6 +240,48 @@ headerless
         bytes/line +                        ( #bytes adr' )
     loop  2drop                             ( )
 ;
+
+[ifndef] fb8-merge
+: fb8-merge  ( color bits dst-adr width -- )
+   bounds  ?do                   ( color mask )
+      dup h# 80000000 and  if    ( color mask )
+         over i c!               ( color mask )
+      then                       ( color mask )
+      2*                         ( color mask' )
+   loop                          ( color mask )
+   2drop                         ( )
+;
+: fb16-merge  ( color bits dst-adr width -- )
+   cursor-w /w*  bounds  ?do     ( color mask )
+      dup h# 80000000 and  if    ( color mask )
+         over i w!               ( color mask )
+      then                       ( color mask )
+      2*                         ( color mask' )
+   /w +loop                      ( color mask )
+   2drop                         ( )
+;
+: fb32-merge  ( color bits dst-adr width -- )
+   cursor-w /l*  bounds  ?do     ( color mask )
+      dup h# 80000000 and  if    ( color mask )
+         over i l!               ( color mask )
+      then                       ( color mask )
+      2*                         ( color mask' )
+   /l +loop                      ( color mask )
+   2drop                         ( )
+;
+[then]
+
+\ This is used for cursor painting.  Call it via screen-execute
+
+: merge-rect  ( color mask-adr dst-adr width height -- )
+   0  ?do                        ( color mask-adr rect-adr width )
+      2over @  2over  fb-merge   ( color mask-adr rect-adr width )
+      rot na1+ -rot              ( color mask-adr' rect-adr width )
+      tuck pix* +  swap          ( color mask-adr rect-adr' width )
+   loop
+   4drop
+;
+
 headers
 : fb8-insert-characters  ( #chars -- )
     #columns column# - min  dup
@@ -251,6 +293,7 @@ headers
     column# +  column#           ( #chars' cursor+count-col#  cursor-col# )
     move-chars  ( #chars' )  #columns over -  erase-chars
 ;
+
 headerless
 
 : center-display  ( -- )
@@ -266,6 +309,7 @@ headers
          ['] fb8-invert to fb-invert
          ['] fill       to fb-fill
          ['] fb8-paint  to fb-paint
+         ['] fb8-merge  to fb-merge
          ['] colors-8bpp  to fb-16map
       endof
 
@@ -274,6 +318,7 @@ headers
          ['] fb16-invert to fb-invert
          ['] wfill       to fb-fill
          ['] fb16-paint  to fb-paint
+         ['] fb16-merge  to fb-merge
          ['] colors-565  to fb-16map
       endof
 
@@ -282,6 +327,7 @@ headers
          ['] fb32-invert to fb-invert
          ['] lfill       to fb-fill
          ['] fb32-paint  to fb-paint
+         ['] fb32-merge  to fb-merge
          ['] colors-32bpp to fb-16map
       endof
    endcase

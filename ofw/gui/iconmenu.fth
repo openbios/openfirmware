@@ -416,17 +416,21 @@ headerless
    bb bb bb  15 set-color  \ Bright gray for CD-ROM icon
 ;
 
-: open-devices  ( -- )
-   " screen" open-dev is screen-ih
+: ?open-screen  ( -- )
+   screen-ih  0=  if
+      " screen" open-dev is screen-ih
+   then
+;
+: ?open-mouse  ( -- )
    mouse-ih  0=  if
-      " mouse"  open-dev to mouse-ih    \ Try alias first
+      " mouse" open-dev is mouse-ih
       mouse-ih  0=  if
          " /mouse" open-dev to mouse-ih
       then
-      alloc-mouse-cursor
+      mouse-ih  if  alloc-mouse-cursor  then
    then
 ;
-
+ 
 true config-flag menu?
 0 value default-selection
 
@@ -468,7 +472,7 @@ headerless
 ;
 
 : setup-graphics  ( -- )
-   screen-ih  0=  if  open-devices set-menu-colors  then
+   ?open-screen  set-menu-colors  ?open-mouse
 ;
 : setup-menu  ( -- )
    setup-graphics

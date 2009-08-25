@@ -40,6 +40,7 @@ d# 1200 d# 900 2value max-xy
 ;
 
 : $call-screen  ( ??? adr len -- ??? )  screen-ih $call-method  ;
+: screen-execute  ( ?? xt -- ?? )  screen-ih package( execute )package  ;
 
 \ : screen-wh  ( -- x y )
 \    screen-ih package( screen-width screen-height )package
@@ -68,9 +69,8 @@ defer inset-xy		' (inset-xy) to inset-xy
    " set-colors" $call-screen
 ;
 
-: bytes/pixel  ( -- n )  " depth" $call-screen 8 /  ;
-: alloc-pixels  ( #pixels -- adr )  bytes/pixel *  alloc-mem  ;
-: free-pixels  ( adr #pixels -- )  bytes/pixel *  free-mem  ;
+: alloc-pixels  ( #pixels -- adr )  ['] pix* screen-execute  alloc-mem  ;
+: free-pixels   ( adr #pixels -- )  ['] pix* screen-execute  free-mem   ;
 
 : fill-rectangle  ( color x y w h - )
    ?inset " fill-rectangle" $call-screen
