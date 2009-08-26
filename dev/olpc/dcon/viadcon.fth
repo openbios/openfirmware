@@ -185,6 +185,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
    smb-init
    dcon-gpio-init
    olpc-lcd-mode
+   gp-setup
    1 set-source  \ Unfreeze image
 ;
 
