@@ -12,6 +12,7 @@ struct
    /n field >ihandle
    /n field >read
    /n field >write
+   /n field >bell
 constant /list-node
 
 : read  ( adr len -- actual )
@@ -40,6 +41,17 @@ constant /list-node
    repeat                   ( adr len listnode )
    drop nip
 ;
+: ring-bell  ( -- )
+   first-device @
+   begin  dup  while        ( listnode )
+      >r                               ( )
+      r@ >bell @  ?dup  if             ( xt )
+         r@ >ihandle @  call-package   ( )
+      then                             ( )
+      r> >link @            ( listnode' )
+   repeat                   ( listnode )
+   drop                
+;
 
 : show-devices  ( -- )
    first-device @
@@ -61,13 +73,16 @@ constant /list-node
 
    ihandle>phandle                               ( phandle r: listnode )
 
-   " read"  2 pick find-method  0=  if  0  then  ( phandle xt r: listnode )
+   " read"  third find-method  0=  if  0  then   ( phandle xt r: listnode )
    r@ >read !
 
-   " write" 2 pick find-method  0=  if  0  then  ( phandle xt r: listnode )
+   " write" third find-method  0=  if  0  then   ( phandle xt r: listnode )
    r@ >write !                                   ( phandle r: listnode )
    
-   " install-abort" 2 pick find-method  if       ( phandle xt r: listnode )
+   " ring-bell" third find-method  0=  if  0  then  ( phandle xt r: listnode )
+   r@ >bell !                                    ( phandle r: listnode )
+   
+   " install-abort" third find-method  if        ( phandle xt r: listnode )
       r@ >ihandle @ call-package                 ( phandle r: listnode )
    then                                          ( phandle r: listnode )
    
