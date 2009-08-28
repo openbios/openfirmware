@@ -59,6 +59,8 @@ alias p2 probe-usb
          " usb-keyboard" open-dev add-mux
          exit
       then
+   else                               ( devspec$ )
+      2drop
    then
    " /usb/serial" open-dev  ?dup  if
       red-letters  ." Using USB serial console." cr  black-letters
