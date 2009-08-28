@@ -311,7 +311,7 @@ gshow
 \ 6 - erased           : show-erased
 \ 7 - primary   bad-block-table  : show-bbt-block
 \ 8 - secondary bad-block-table  : show-bbt-block
-: show-status  ( status eblock# -- )
+: show-block-type  ( status eblock# -- )
    swap case
       0  of  show-bad        endof
       1  of  show-bad        endof
@@ -391,11 +391,6 @@ string-array status-descriptions
    ," Secondary Bad Block Table"      \ 8
 end-string-array
 
-: show-block-status  ( block# -- )
-   dup show-eblock#
-   nand-map + c@  status-descriptions count type  kill-line
-;
-
 : cell-border  ( block# color -- )
    swap >loc      ( color x y )
    -1 -1 xy+
@@ -404,19 +399,20 @@ end-string-array
    3dup  0 1 xy+  1 grid-h do-fill            ( color x y )
    1 grid-h xy+  grid-w 1  do-fill
 ;
-: lowlight  ( block# -- )  background-rgb rgb>565 cell-border  ;
-: highlight  ( block# -- )  0 cell-border  ;
+: lowlight-block  ( block# -- )  background-rgb rgb>565 cell-border  ;
+: highlight-block  ( block# -- )  0 cell-border  ;
 : point-block  ( block# -- )
-   current-block lowlight
+   current-block lowlight-block
    to current-block
-   current-block highlight
+   current-block highlight-block
 ;
 
 0 value nand-block-limit
 : +block  ( offset -- )
-   current-block +   nand-block-limit mod  ( new-block )
-   point-block
-   current-block  show-block-status
+   current-block +   nand-block-limit mod  ( new-block# )
+   dup point-block                         ( new-block# )
+   dup show-eblock#                        ( new-block# )
+   nand-map + c@  status-descriptions count type  kill-line
 ;
 
 : process-key  ( char -- )
@@ -438,10 +434,10 @@ end-string-array
    0 status-line 1- at-xy  red-letters ." Arrows, fn Arrows to move, Esc to exit" black-letters cr
    #nand-pages nand-pages/block /  to nand-block-limit
    0 to current-block
-   current-block highlight
+   current-block highlight-block
    false to examine-done?
    begin key  process-key  examine-done? until
-   current-block lowlight
+   current-block lowlight-block
 ;
 
 : (scan-nand)  ( -- )
@@ -459,7 +455,7 @@ end-string-array
       i classify-block       ( status )
       i nand-pages/block /   ( status eblock# )
       2dup nand-map + c!     ( status eblock# )
-      show-status
+      show-block-type
    nand-pages/block +loop  ( )
 
    show-done

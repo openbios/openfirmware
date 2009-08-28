@@ -3,8 +3,6 @@ purpose: Graphical status display of NAND FLASH updates
 
 d# 24 d# 24 2value ulhc
 
-d# 22 constant status-line
-
 8 constant glyph-w
 8 constant glyph-h
 
@@ -14,8 +12,6 @@ d# 22 constant status-line
 d# 128 value #cols
 : xy+  ( x1 y1 x2 y2 -- x3 y3 )  rot + -rot  + swap  ;
 : xy*  ( x y w h -- x*w y*h )  rot *  >r  * r>  ;
-
-0 value nand-block-limit
 
 : do-fill  ( color x y w h -- )  " fill-rectangle" $call-screen  ;
 
@@ -35,6 +31,9 @@ h# ff h# ff     0  rgb>565 constant pending-color  \ yellow
     0 h# ff     0  rgb>565 constant written-color  \ green
     0 h# ff h# ff  rgb>565 constant strange-color  \ cyan
 h# ff h# ff h# ff  rgb>565 constant starting-color \ white
+
+0 value nand-block-limit
+d# 22 constant status-line
 
 : gshow-init  ( #eblocks -- )
    #nand-pages nand-pages/block /  to nand-block-limit
@@ -108,7 +107,7 @@ gshow
 \ 6 - erased           : show-erased
 \ 7 - primary   bad-block-table  : show-bbt-block
 \ 8 - secondary bad-block-table  : show-bbt-block
-: show-status  ( status eblock# -- )
+: show-block-status  ( status eblock# -- )
    swap case
       0  of  show-bad        endof
       1  of  show-bad        endof
@@ -197,16 +196,16 @@ end-string-array
    3dup  0 1 xy+  1 grid-h do-fill            ( color x y )
    1 grid-h xy+  grid-w 1  do-fill
 ;
-: lowlight  ( block# -- )  background-rgb rgb>565 cell-border  ;
-: highlight  ( block# -- )  0 cell-border  ;
-: highlight-block  ( block# -- )
-   current-block lowlight
+: lowlight-block  ( block# -- )  background-rgb rgb>565 cell-border  ;
+: highlight-block  ( block# -- )  0 cell-border  ;
+: point-block  ( block# -- )
+   current-block lowlight-block
    to current-block
-   current-block highlight
+   current-block highlight-block
 ;
 : +block  ( offset -- )
    current-block +  nand-block-limit mod  ( new-block )
-   highlight-block
+   point-block
    current-block  show-block-status
 ;
 
@@ -228,10 +227,10 @@ end-string-array
 : examine-nand  ( -- )
    0 status-line 1- at-xy  red-letters ." Arrows, fn Arrows to move, Esc to exit" black-letters cr
    0 to current-block
-   current-block highlight
+   current-block highlight-block
    false to examine-done?
    begin key  process-key  examine-done? until
-   current-block lowlight
+   current-block lowlight-block
 ;
 
 : (scan-nand)  ( -- )
@@ -253,7 +252,7 @@ end-string-array
       i classify-block       ( status )
       i nand-pages/block /   ( status eblock# )
       2dup nand-map + c!     ( status eblock# )
-      show-status
+      show-block-status
    nand-pages/block +loop  ( )
 
    show-done

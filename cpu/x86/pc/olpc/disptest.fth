@@ -68,6 +68,7 @@ d# 60,000 constant burnin-time		\ 1 minute
    drop
 ;
 
+warning @ warning off
 : selftest  ( -- error? )
    depth d# 16 <>  if  false exit  then
    .horizontal-bars16
@@ -79,6 +80,7 @@ d# 60,000 constant burnin-time		\ 1 minute
    random-selftest
    false
 ;
+warning !
 
 device-end
 

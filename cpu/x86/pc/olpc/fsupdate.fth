@@ -11,13 +11,13 @@ purpose: Secure NAND updater
 0 value partition-map-offset
 0 value next-partition-start
 
-0 value partition#
+0 value fs-partition#
 d# 256 constant /partition-entry
-: partition-adr  ( -- adr )  partition# /partition-entry *  load-base +  ;
+: partition-adr  ( -- adr )  fs-partition# /partition-entry *  load-base +  ;
 : max-nand-offset  ( -- n )  " usable-page-limit" $call-nand /nand-page *  ;
 
 : add-partition  ( name$ #eblocks -- )
-   partition# " max#partitions" $call-nand >=  abort" Partition map overflow"
+   fs-partition# " max#partitions" $call-nand >=  abort" Partition map overflow"
 
    -rot                                                ( #eblocks name$ )
    partition-adr /partition-entry erase                ( #eblocks name$ )
@@ -36,11 +36,11 @@ d# 256 constant /partition-entry
    next-partition-start + to next-partition-start      ( )
    next-partition-start max-nand-offset > abort" NAND size overflow"
 
-   partition# 1+ to partition#
+   fs-partition# 1+ to fs-partition#
 ;
 : start-partition-map  ( -- )
    load-base /nand-block h# ff fill
-   0 to partition#
+   0 to fs-partition#
 \   0 to next-partition-start
    " partition-map-page#" $call-nand  /nand-page *  to partition-map-offset
 

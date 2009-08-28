@@ -1084,6 +1084,7 @@ here bounce-timer - constant /bounce-timer
    mbr-boot? 0=  if  2drop false exit  then
    + 2 - le-w@  h# aa55 = 
 ;
+warning @ warning off
 : init-program  ( -- )
    loaded is-mbr?  if
       prep-rm
@@ -1095,7 +1096,6 @@ here bounce-timer - constant /bounce-timer
    then
    init-program
 ;
-
 \ " rm-go"  ' boot-command  set-config-string-default
 : execute-buffer  ( adr len -- )
    rm-prepped?  if      ( adr len )
@@ -1106,6 +1106,7 @@ here bounce-timer - constant /bounce-timer
    then
    execute-buffer
 ;
+warning !
 
 0 value boot-sector#
 1 value boot-#sectors

@@ -147,7 +147,7 @@ here facs - constant /facs
    negate h# ff and  r> r> + c!
 ;
 
-: memory-limit  ( -- limit )
+: acpi-memory-limit  ( -- limit )
    " /memory" find-package 0= abort" No /memory node"  ( phandle )
    " available" rot get-package-property abort" No available property"  ( $ )
    -1 >r                              ( $ )  ( r: limit )
@@ -164,7 +164,7 @@ here facs - constant /facs
 : setup-acpi  ( -- )
    \ This has to agree with the _SB's _INI method, which gets the memory size
    \ from offset h# 180 in the EBDA
-   memory-limit d# 10 rshift  'ebda h# 180 + l!
+   acpi-memory-limit d# 10 rshift  'ebda h# 180 + l!
 
    \ Copy rsdt and fadt to low memory
    rsdp  rsdp-adr  /rsdp move  rsdp-adr h# 14 8 fix-checksum   rsdp-adr /rsdp h# 20 fix-checksum  

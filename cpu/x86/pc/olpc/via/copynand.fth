@@ -249,11 +249,6 @@ string-array status-descriptions
    ," Secondary Bad Block Table"      \ 8
 end-string-array
 
-: show-block-status  ( block# -- )
-   dup show-eblock#
-   nand-map + c@  status-descriptions count type  kill-line
-;
-
 : cell-border  ( block# color -- )
    swap >loc      ( color x y )
    -1 -1 xy+
@@ -272,9 +267,10 @@ end-string-array
 
 0 value nand-block-limit
 : +block  ( offset -- )
-   current-block +   nand-block-limit mod  ( new-block )
-   point-block
-   current-block  show-block-status
+   current-block +   nand-block-limit mod  ( new-block# )
+   dup point-block                         ( new-block# )
+   dup show-eblock#                        ( new-block# )
+   nand-map + c@  status-descriptions count type  kill-line
 ;
 
 : process-key  ( char -- )

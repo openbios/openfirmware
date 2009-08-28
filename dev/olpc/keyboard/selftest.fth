@@ -417,6 +417,7 @@ false value verbose?
 
 : toss-keys  ( -- )  begin  key?  while  key drop  repeat  ;
 
+warning @ warning off
 : selftest  ( -- error? )
    open  0=  if  true exit  then
    make-keys
@@ -430,6 +431,7 @@ false value verbose?
    close
    false
 ;
+warning !
 
 device-end
 
