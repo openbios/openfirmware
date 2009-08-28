@@ -10,21 +10,26 @@ purpose: Common code for several versions of reset.bth
    \ the pointer since 0 is an invalid descriptor number anyway.
    gdt-pa # ax mov
    0 [ax] sgdt				\ Read GDT
-   2 [ax] si mov			\ GDT base
+   2 [ax] bx mov			\ GDT base
    0 [ax] cx mov			\ GDT limit
    ffff # cx and
    cx inc
 
+   gdt-size # cx cmp  u>  if
+      gdt-size # cx mov
+   then
+
+   bx si mov                            \ Source address for copy - old GDT
    gdt-pa # di mov			\ New GDT base
-   rep movsb				\ Copy ROM GDT to RAM
+   rep movsb				\ Copy old GDT to new GDT
 
    \ Move the code and data descriptors to 60,68
    gdt-pa h# 60 + #   di  mov		\ Destination - New descriptor 0x60
 
-   cs si mov  2 [ax]  si add		\ Source - Current code descriptor
+   cs si mov  bx si add			\ Source - Current code descriptor
    movs movs                            \ 2 longwords (1 descriptor) -> 60
 
-   ds si mov  2 [ax]  si add		\ Source - Current data descriptor
+   ds si mov  bx si add			\ Source - Current data descriptor
    movs movs                            \ 2 longwords (1 descriptor) -> 68
 
    op: gdt-size 1- #   0 [ax]  mov      \ New GDT size
