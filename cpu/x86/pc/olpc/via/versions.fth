@@ -2,7 +2,7 @@
 
 \ The overall firmware revision
 macro: FW_MAJOR A
-macro: FW_MINOR 10
+macro: FW_MINOR 10a
 
 \ The EC microcode
 macro: EC_VERSION 1_9_9
@@ -23,7 +23,7 @@ macro: WLAN_VERSION 9.70.7.p0
 \ macro: GET_WLAN cp "/c/Documents and Settings/Mitch Bradley/My Documents/OLPC/DiskImages/sd8686-9.70.7.p0.bin" sd8686.bin; cp "/c/Documents and Settings/Mitch Bradley/My Documents/OLPC/DiskImages/sd8686_helper.bin" sd8686_helper.bin
 
 \ The bios_verify image
-macro: CRYPTO_VERSION 0.2
+macro: CRYPTO_VERSION 0.4
 
 \ The multicast NAND updater code version
 \ Use a specific git commit ID for a formal release or "test" for development.

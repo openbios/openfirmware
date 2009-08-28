@@ -19,8 +19,10 @@ h# 9c000 constant verify-stack
 
 : signature-bad?  ( data$ sig$ key$ hashname$ -- mismatch? )
    $cstr
-   verify-bss /verify-bss erase    ( data$ sig$ key$ 'hashname )
-   verify-base  verify-stack  sp-call  >r  3drop 4drop  r>  ( result )
+   verify-bss /verify-bss erase    ( 0 data$ sig$ key$ 'hashname )
+   verify-base  verify-stack  sp-call  >r  ( 0 data$ sig$ key$ 'hashname )
+   3drop 4drop  begin 0= until             ( )
+   r>  ( result )
 ;
 
 \ This is a hack that saves a lot of memory.  The crypto verifier
@@ -33,7 +35,7 @@ h# 9c000 constant verify-stack
 variable hashlen
 d# 128 buffer: hashbuf
 : crypto-hash  ( data$ hashname$ -- result$ )
-   2>r  hashbuf d# 128  hashlen 0  2r>   ( data$ sig$ key$ hashname$ )
+   2>r  0 -rot  hashbuf d# 128  hashlen 0  2r>   ( 0 data$ sig$ key$ hashname$ )
    signature-bad?  abort" Hash failed"   ( )
    hashbuf hashlen @
 ;

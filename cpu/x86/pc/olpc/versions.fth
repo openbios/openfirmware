@@ -19,7 +19,7 @@ macro: WLAN_RPM ${WLAN_VERSION}.olpc1
 macro: WLAN_VERSION 5.110.22.p23
 
 \ The bios_verify image
-macro: CRYPTO_VERSION 0.2
+macro: CRYPTO_VERSION 0.4
 
 \ The multicast NAND updater code version
 \ Use a specific git commit ID for a formal release or "test" for development.

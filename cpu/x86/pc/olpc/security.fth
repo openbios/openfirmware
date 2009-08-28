@@ -196,6 +196,201 @@ d# 256 constant /sig
    sig-buf tuck -   false       ( sig$ false )
 ;
 
+\ cut$ splits a string into an initial substring of length n
+\ (head$) and the residual substring (tail$).  If the input
+\ string is shorter than n, head$ is the input string and tail$ is
+\ the null string.
+
+: cut$  ( $ n -- tail$ head$ )
+   2dup <  if  drop null$ 2swap exit  then
+   dup >r  /string   ( tail$ )
+   over r@ -  r>     ( tail$ head$ )
+;
+
+: sig$>key$  ( sig0N$ -- true | binary-key$ false )
+   bl left-parse-string                ( rem$ signame$ )
+   2dup " sig01:" $=  if               ( rem$ signame$ )
+      2drop                            ( rem$ )
+   else                                ( rem$ signame$ )
+      " sig02:" $=  0=  if             ( rem$ )
+         2drop true                    ( true )
+         exit
+      then                             ( rem$ )
+   then                                ( rem$ )
+   bl left-parse-string 2drop          ( rem$ )  \ Discard hash name
+   bl left-parse-string 2nip           ( key$ )  \ Get key signature
+   /sig 2* min  hex-decode  if         ( key$ )
+      2drop true                       ( true )
+      exit
+   then                                ( binary-key$ )
+   false                               ( binary-key$ false )
+;
+
+\ True if short$ matches the end of long$ 
+: tail$=  ( short$ long$ -- flag )  2 pick  - +  swap comp 0=  ;
+
+: key-in-list?  ( key$ -- flag )  \ Sets thiskey$ as an important side effect
+   2>r                                   ( r: key$ )
+   pubkey$  begin  dup  while            ( rem$  r: key$ )
+      pubkeylen cut$                     ( rem$' thiskey$  r: key$ )
+      2r@ 2over tail$=  if               ( rem$ thiskey$  r: key$ )
+         to thiskey$                     ( rem$  r: key$ )
+         2r> 4drop  true                 ( true )
+         exit
+      then                               ( rem$' thiskey$  r: key$ )
+      2drop                              ( rem$'  r: key$ )
+   repeat                                ( rem$'  r: key$ )
+   2r> 4drop false
+;
+
+: in-pubkey-list?  ( sig0N$ -- flag )
+   sig$>key$  if  false exit  then    ( key$ )
+   key-in-list?                       ( flag )
+;
+
+\ Look for a line that starts with "sig0N: " whose key signature
+\ matches the trailing bytes of a public key in our current list.
+: next-sig-in-list$  ( sig$ -- true | rem$ sig0N$ false )
+   begin  dup  while                               ( rem$ )
+      newline left-parse-string                    ( rem$' line$ )
+      2dup in-pubkey-list?  if  false exit  then   ( rem$  line$ )
+      2drop                                        ( rem$ )
+   repeat                                          ( rem$ )
+   " No signature for our key list" ?lease-error-cr
+   2drop true
+;
+
+\ Look for a line that starts with "sig0N: " whose key signature
+\ matches the trailing bytes of our currently-selected public key.
+\ This differs from next-sig-in-list$ in that next-sig-in-list$
+\ looks for a signature that matches any public key in our list,
+\ whereas this looks for a second signature that matches the public
+\ key that next-sig-in-list$ already found.
+: next-sig$  ( sig$ -- true | rem$ sig0N$ false )
+   begin  dup  while                ( rem$ )
+      newline left-parse-string     ( rem$' line$ )
+      2dup sig$>key$  0=  if        ( rem$  line$ binary-key$ )
+         thiskey$ tail$=  if        ( rem$  line$ )
+            false                   ( rem$  sig0N$ false )
+            exit
+         then                       ( rem$  line$ )
+      then                          ( rem$  line$ )
+      2drop                         ( rem$ )
+   repeat                           ( rem$ )
+   " No signature for our key" ?lease-error-cr
+   2drop true
+;
+
+\ numfield is a factor used for parsing 2-digit fields from date/time strings.
+: numfield  ( exp$ min max -- exp$' )
+   >r >r                      ( exp$ r: max min )
+   2 cut$ $number  throw      ( exp$' num  r: max min )
+   dup r> < throw             ( exp$  num  r: max )
+   dup r> > throw             ( exp$  num  )
+;
+
+\ expiration-to-seconds parses an expiration date string like
+\ "20070820T130401Z", converting it to (double precision) seconds
+\ according to the simplified calculation described above for "get-date"
+
+: (expiration-to-seconds)  ( expiration$ -- d.seconds )
+   4 cut$ $number throw >r       ( exp$' r: y )
+   1 d# 12 numfield >r           ( exp$' r: y m )
+   1 d# 31 numfield >r           ( exp$' r: y m d )
+   1 cut$ " T" $=  0=  throw     ( exp$' r: y m d )
+   0 d# 23 numfield >r           ( exp$' r: y m d h )
+   0 d# 59 numfield >r           ( exp$' r: y m d h m )
+   0 d# 59 numfield >r           ( exp$' r: y m d h m s )
+   " Z" $= 0= throw              ( r: y m d h m s )
+   r> r> r> r> r> r>             ( s m h m d y )
+   >unix-seconds
+;
+
+: expiration-to-seconds  ( expiration$ -- true | seconds false )
+   push-decimal
+   ['] (expiration-to-seconds)  catch  ( x x true  |  seconds false )
+   pop-base
+   dup  if  nip nip  then
+;
+
+0 value current-seconds
+
+: date-bad?  ( -- flag )
+   current-seconds  0=  if
+      time&date >unix-seconds to current-seconds
+   then
+
+   \ earliest is the earliest acceptable date value (in seconds).
+   \ It is the date that the first test version of this code was
+   \ deployed.  If a laptop has any earlier date, the
+   \ date is presumed bogus.
+
+   current-seconds  [ " 20070101T000000Z" expiration-to-seconds drop ] literal - 0<
+;
+
+
+\ expired? determines whether or not the expiration time string is
+\ earlier than this machine's current time (from the real time clock).
+
+: expired?  ( expiration$ -- bad? )
+   \ Check for non-expiring case
+   2dup " 00000000T000000Z" $=  if  2drop false exit  then
+
+   expiration-to-seconds  if  true exit  then  ( seconds )
+
+   \ If the date is bad, leases are deemed to have expired
+   date-bad?  if  drop true exit  then         ( seconds )
+
+   current-seconds -  0<
+;
+
+\ machine-id-buf is a buffer into which the machine signature string,
+\ including serial number, UUID, and expiration time, is place.
+\ That string is the signed object for lease and developer key verification.
+
+d# 67 buffer: machine-id-buf
+
+\ get-my-sn get the machine identification info including serial number
+\ and UUID from the manufacturing data, placing it into machine-id-buf
+\ for later use.  The expiration time is added later.
+
+: get-my-sn  ( -- error? )
+
+   " SN" find-tag  0=  if
+      " No serial number in mfg data" ?lease-error-cr
+      true exit
+   then                                             ( adr len )
+   ?-null  dup d# 11 <>  if
+      " Invalid serial number" ?lease-error-cr
+      2drop true exit
+   then                                             ( adr len )
+   machine-id-buf  swap  move
+
+   [char] : machine-id-buf d# 11 + c!
+
+   " U#" find-tag  0=  if
+      " No UUID in mfg data" ?lease-error-cr
+      true exit
+   then                                             ( adr len )
+   ?-null  dup d# 36 <>  if
+      " Invalid UUID" ?lease-error-cr
+      2drop true exit
+   then                                             ( adr len )
+   machine-id-buf d# 12 +  swap  move
+
+   [char] : machine-id-buf d# 48 + c!
+
+   [char] : machine-id-buf d# 50 + c!
+
+   false
+;
+
+\ my-sn$ returns the serial number portion of the machine identification.
+\ get-my-sn must be called before my-sn$ will be valid.
+
+: my-sn$  ( -- adr len )  machine-id-buf d# 11  ;
+
+
 \ parse-sig parses a "sig01:" format signature string, returning its
 \ hashname and signature substrings.  It converts the signature
 \ substring from ASCII hex to binary bytes.
@@ -254,12 +449,13 @@ d# 256 constant /sig
 \ hashname remembers the most recently used hashname to guard against
 \ attacks based on reuse of the same (presumably compromized) hash.
 
+0 [if]
 \ signature-invalid? checks the validity of data$ against the ASCII signature
-\ record sig01$, using the public key that thiskey$ points to.
+\ record sig0N$, using the public key that thiskey$ points to.
 \ It also verifies that the hashname contained in sig01$ is the
 \ expected one.
 
-: signature-invalid?  ( data$ sig01$ exp-hashname$ -- error? )
+: signature-invalid?  ( data$ sig0N$ exp-hashname$ -- error? )
    2>r
    parse-sig  if
       ." Bad signature format"  cr
@@ -272,216 +468,182 @@ d# 256 constant /sig
       4drop 2drop true exit
    then                                     ( data$ sig$ hashname$ )
 
-   thiskey$  2swap  signature-bad?  ( error? )
+   2>r 2>r 2>r 0 2r> 2r> 2r>                ( 0 data$ sig$ hashname$ )
+   pubkey$  2swap  signature-bad?  ( error? )
    dup  if
       "   Signature invalid" ?lease-error-cr
    else
       "   Signature valid" ?lease-debug-cr
    then
 ;
+[then]
 
-\ cut$ splits a string into an initial substring of length n
-\ (head$) and the residual substring (tail$).  If the input
-\ string is shorter than n, head$ is the input string and tail$ is
-\ the null string.
+0 0 2value exp-hashname$
+0 0 2value signed-data$
 
-: cut$  ( $ n -- tail$ head$ )
-   2dup <  if  drop null$ 2swap exit  then
-   dup >r  /string   ( tail$ )
-   over r@ -  r>     ( tail$ head$ )
+\ sig01: hashname keyid signature
+: sig01-good?  ( line$ -- good? )
+   \ Check that the hashname is as expected
+   bl left-parse-string              ( line$ this-hashname$ )
+   exp-hashname$  $=  0=  if         ( line$ )
+      2drop false  exit
+   then                              ( line$' )
+
+   \ Check that the keyid matches our pubkey
+   bl left-parse-string              ( line$' keyid$ )
+   /sig 2* min  hex-decode  if       ( line$ )
+      2drop false  exit              
+   then                              ( line$ binary-key$ )
+
+   key-in-list?  0=  if              ( line$ )
+      2drop false  exit
+   then                              ( line$ )
+
+   \ Check that the signature occupies the rest of the line
+   bl left-parse-string              ( line$' sig$ )
+   2swap nip 0<>  if                 ( sig$ )
+      \ Trailing junk at the end
+      2drop false  exit
+   then                              ( sig$ )
+
+   dup /sig 2* <>  if                ( sig$ )
+      2drop false exit
+   then                              ( sig$ )
+
+   hex-decode  if                    ( )
+      false exit
+   then                              ( binary-sig$ )
+
+   \ Cryptographically verify the data against the signature
+   2>r  0 signed-data$  2r>  thiskey$  exp-hashname$  signature-bad? 0=
 ;
 
-: sig01$>key$  ( sig01$ -- true | binary-key$ false )
-   bl left-parse-string  " sig01:" $=  0=  if  2drop true exit  then  ( rem$ )
-   bl left-parse-string 2drop    \ Discard hash name            ( rem$ )
-   bl left-parse-string 2nip     \ Get key signature            ( key$ )
-   /sig 2* min  hex-decode  if  2drop true exit  then           ( binary-key$ )
-   false
+h# 10e constant /key
+/key buffer: keybuf
+
+0 0 2value sig02-key$
+
+0 0 2value expiry$
+
+: sig02-good?  ( line$ -- good? )
+   d# 100 0  do
+      \ Check that the hashname is as expected
+      bl left-parse-string              ( line$' this-hashname$ )
+      exp-hashname$  $=  0=  if         ( line$ )
+         2drop false  unloop exit
+      then                              ( line$' )
+
+      \ Check that the keyid matches our pubkey, but only if it's
+      \ the first one
+      bl left-parse-string              ( line$' pubkey$ )
+      hex-decode  if                    ( line$ )
+         2drop false unloop exit
+      then                              ( line$ binary-key$ )
+
+      i  if                             ( line$ binary-key$ )
+         dup /key <>  if                ( line$ binary-key$ )
+            4drop false unloop exit
+         then                           ( line$ binary-key$ )
+         tuck  keybuf  swap move        ( line$ binary-keylen )
+         keybuf swap                    ( line$ binary-key$' )
+      else                              ( line$ binary-keyid$ )
+         key-in-list? 0=  if            ( line$ )
+            2drop false unloop exit
+         then                           ( line$ )
+         thiskey$                       ( line$ key$ )
+      then                              ( line$ key$ )
+      to sig02-key$                     ( line$ )
+
+      \ Check the expiration date
+      bl left-parse-string  to expiry$  ( line$' )
+      expiry$ expired?  if              ( line$ )
+         2drop false unloop exit
+      then                              ( line$ )
+
+      \ Get the signature
+      bl left-parse-string              ( line$ sig$)
+
+      dup /sig 2* <>  if                ( line$ sig$ )
+         4drop false unloop exit
+      then                              ( line sig$ )
+
+      hex-decode  if                    ( line$ )
+         2drop false unloop exit
+      then                              ( line$ binary-sig$ )
+
+      2>r                               ( line$' r: binary-sig$ )
+
+      \ If it's the final signature, check the signed data
+      dup 0=  if                        ( line$ r: sig$ )
+         2drop                          ( r: sig$ )
+         0 signed-data$ " :" expiry$ " :" my-sn$  2r>  ( 0 data$ .. sig$ )
+         sig02-key$  exp-hashname$  signature-bad? 0=  ( good? )
+         unloop exit
+      then                              ( line$ r: sig$ )
+
+      \ Otherwise check the next key in the list
+      2dup bl left-parse-string 2drop   ( line$ line$' r: sig$ )    \ Discard the hashname
+      bl left-parse-string  2nip  2>r   ( line$ r: sig$ key$ )
+
+      0  " "n"  2r>  " :key01: "  expiry$  " :"  my-sn$  2r>  ( 0 data$ .. sig$ )
+      sig02-key$  exp-hashname$  signature-bad?  if  ( line$ )
+         2drop false unloop exit
+      then                              ( line$ )
+   loop
+   true abort" Delegation too long"
 ;
 
-\ True if short$ matches the end of long$ 
-: tail$=  ( short$ long$ -- flag )  2 pick  - +  swap comp 0=  ;
-
-: key-in-list?  ( key$ -- flag )  \ Sets thiskey$ as an important side effect
-   2>r                                   ( r: key$ )
-   pubkey$  begin  dup  while            ( rem$  r: key$ )
-      pubkeylen cut$                     ( rem$' thiskey$  r: key$ )
-      2r@ 2over tail$=  if               ( rem$ thiskey$  r: key$ )
-         to thiskey$                     ( rem$  r: key$ )
-         2r> 4drop  true                 ( true )
-         exit
-      then                               ( rem$' thiskey$  r: key$ )
-      2drop                              ( rem$'  r: key$ )
-   repeat                                ( rem$'  r: key$ )
-   2r> 4drop false
+: this-sig-line-good?  ( line$ -- good? )
+   bl left-parse-string              ( line$' tag$ )
+   2dup  " sig01:" $=  if            ( line$' tag$ )
+      2drop sig01-good?              ( good? )
+      exit
+   then                              ( line$' )
+   2dup  " sig02:" $=  if            ( line$' tag$ )
+      2drop sig02-good?              ( good? )
+      exit
+   then                              ( line$' tag$ )
+   4drop false                       ( good? )
 ;
 
-: in-pubkey-list?  ( sig01$ -- flag )
-   sig01$>key$  if  false exit  then     ( key$ )
-   key-in-list?                          ( flag )
+: signature-good?  ( data$ sig$ hashname$ -- good? )
+   to exp-hashname$                  ( data$ sig$ )
+   2swap to signed-data$             ( sig$ )
+   begin  dup  while                 ( rem$ )
+      newline left-parse-string      ( rem$' line$ )
+
+      this-sig-line-good?  if        ( rem$ )
+         2drop  true exit
+      then                           ( rem$ )
+
+   repeat                            ( rem$ )
+   2drop  false                      ( good? )
 ;
 
-: our-pubkey?  ( sig01$ -- flag )
-   sig01$>key$  if  false exit  then    ( key$ )
-   thiskey$  tail$=                     ( flag )
-;
-
-\ Look for a line that starts with "sig01: " whose key signature
-\ matches the trailing bytes of a public key in our current list.
-: next-sig01-in-list$  ( sig$ -- true | rem$ sig01$ false )
-   begin  dup  while                               ( rem$ )
-      newline left-parse-string                    ( rem$' line$ )
-      2dup in-pubkey-list?  if  false exit  then   ( rem$  line$ )
-      2drop                                        ( rem$ )
-   repeat                                          ( rem$ )
-   " No signature for our key list" ?lease-error-cr
-   2drop true
-;
-
-\ Look for a line that starts with "sig01: " whose key signature
-\ matches the trailing bytes of our currently-selected public key.
-: next-sig01$  ( sig$ -- true | rem$ sig01$ false )
-   begin  dup  while                               ( rem$ )
-      newline left-parse-string                    ( rem$' line$ )
-      2dup our-pubkey?  if  false exit  then       ( rem$  line$ )
-      2drop                                        ( rem$ )
-   repeat                                          ( rem$ )
-   " No signature for our key" ?lease-error-cr
-   2drop true
-;
-
-\ Find a sig01: line and check its sha256/rsa signature
+\ Find a sig0N: line and check its sha256/rsa signature
 : sha-valid?  ( data$ sig01$ -- okay? )
-   next-sig01-in-list$  if  2drop false exit  then  ( data$ rem$ sig01$ )
-   2nip  " sha256" signature-invalid? 0=
+   next-sig-in-list$  if  2drop false exit  then  ( data$ rem$ sig01$ )
+   \   2nip  " sha256" signature-invalid? 0=
+   2nip  " sha256" signature-good?
 ;
 
-\ Find two sig01: lines, the first with sha256 and the second with rmd160,
+\ Find two sig0N: lines, the first with sha256 and the second with rmd160,
 \ and check their signatures
 : fw-valid?  ( data$ sig$ -- okay? )
    2swap 2>r                                    ( sig$ r: data$ )
-   next-sig01-in-list$  if  2r> 2drop false exit  then  ( rem$ sig01$ )
+   next-sig-in-list$  if  2r> 2drop false exit  then  ( rem$ sig01$ )
    2r@ 2swap sha-valid?  0=  if                 ( rem$ r: data$ )
       2r> 4drop false exit
    then                                         ( rmd-sig$ r: data$ )
-   next-sig01$  if  2r> 2drop false exit  then  ( rem$ sig01$ )
-   2nip  2r> 2swap " rmd160" signature-invalid? 0=
-;
-
-\ numfield is a factor used for parsing 2-digit fields from date/time strings.
-: numfield  ( exp$ min max -- exp$' )
-   >r >r                      ( exp$ r: max min )
-   2 cut$ $number  throw      ( exp$' num  r: max min )
-   dup r> < throw             ( exp$  num  r: max )
-   dup r> > throw             ( exp$  num  )
-;
-
-\ expiration-to-seconds parses an expiration date string like
-\ "20070820T130401Z", converting it to (double precision) seconds
-\ according to the simplified calculation described above for "get-date"
-
-: (expiration-to-seconds)  ( expiration$ -- d.seconds )
-   4 cut$ $number throw >r       ( exp$' r: y )
-   1 d# 12 numfield >r           ( exp$' r: y m )
-   1 d# 31 numfield >r           ( exp$' r: y m d )
-   1 cut$ " T" $=  0=  throw     ( exp$' r: y m d )
-   0 d# 23 numfield >r           ( exp$' r: y m d h )
-   0 d# 59 numfield >r           ( exp$' r: y m d h m )
-   0 d# 59 numfield >r           ( exp$' r: y m d h m s )
-   " Z" $= 0= throw              ( r: y m d h m s )
-   r> r> r> r> r> r>             ( s m h m d y )
-   >unix-seconds
-;
-
-: expiration-to-seconds  ( expiration$ -- true | seconds false )
-   push-decimal
-   ['] (expiration-to-seconds)  catch  ( x x true  |  seconds false )
-   pop-base
-   dup  if  nip nip  then
-;
-
-0 value current-seconds
-
-: date-bad?  ( -- flag )
-   current-seconds  0=  if
-      time&date >unix-seconds to current-seconds
-   then
-
-   \ earliest is the earliest acceptable date value (in seconds).
-   \ It is the date that the first test version of this code was
-   \ deployed.  If a laptop has any earlier date that than, that
-   \ date is presumed bogus.
-
-   current-seconds  [ " 20070101T000000Z" expiration-to-seconds drop ] literal - 0<
-;
-
-
-\ expired? determines whether or not the expiration time string is
-\ earlier than this machine's current time (from the real time clock).
-
-: expired?  ( expiration$ -- bad? )
-   expiration-to-seconds  if  true exit  then  ( seconds )
-
-   \ If the date is bad, leases are deemed to have expired
-   date-bad?  if  drop true exit  then         ( seconds )
-
-   current-seconds -  0<
+   next-sig$  if  2r> 2drop false exit  then    ( rem$ sig01$ )
+\  2nip  2r> 2swap " rmd160" signature-invalid? 0=
+   2nip  2r> 2swap " rmd160" signature-good?
 ;
 
 d# 1024 constant /sec-line-max
 /sec-line-max buffer: sec-line-buf
 
-\ machine-id-buf is a buffer into which the machine signature string,
-\ including serial number, UUID, and expiration time, is place.
-\ That string is the signed object for lease and developer key verification.
-
-d# 67 buffer: machine-id-buf
-
-\ get-my-sn get the machine identification info including serial number
-\ and UUID from the manufacturing data, placing it into machine-id-buf
-\ for later use.  The expiration time is added later.
-
-: get-my-sn  ( -- error? )
-
-   " SN" find-tag  0=  if
-      " No serial number in mfg data" ?lease-error-cr
-      true exit
-   then                                             ( adr len )
-   ?-null  dup d# 11 <>  if
-      " Invalid serial number" ?lease-error-cr
-      2drop true exit
-   then                                             ( adr len )
-   machine-id-buf  swap  move
-
-   [char] : machine-id-buf d# 11 + c!
-
-   " U#" find-tag  0=  if
-      " No UUID in mfg data" ?lease-error-cr
-      true exit
-   then                                             ( adr len )
-   ?-null  dup d# 36 <>  if
-      " Invalid UUID" ?lease-error-cr
-      2drop true exit
-   then                                             ( adr len )
-   machine-id-buf d# 12 +  swap  move
-
-   [char] : machine-id-buf d# 48 + c!
-
-   [char] : machine-id-buf d# 50 + c!
-
-   false
-;
-
-\ my-sn$ returns the serial number portion of the machine identification.
-\ get-my-sn must be called before my-sn$ will be valid.
-
-: my-sn$  ( -- adr len )  machine-id-buf d# 11  ;
-
-
 : check-expiry  ( exp$ -- exp$ -1|0 )
-   \ Check for non-expiring case
-   2dup " 00000000T000000Z" $=  if  0 exit  then
-
    dup d# 16 <>  if                        ( expiration$ )
       " has bad expiration format" ?lease-error-cr
       -1 exit
@@ -504,7 +666,8 @@ d# 67 buffer: machine-id-buf
    2over  in-pubkey-list?   if                            ( sig$ exp$ )
       machine-id-buf d# 51 +  swap  move                  ( sig$ )
       machine-id-buf d# 67  2swap                         ( id$ sig$ )
-      " sha256" signature-invalid?  if  -1  else  1  then ( -1|1 )
+      \     " sha256" signature-invalid?  if  -1  else  1  then ( -1|1 )
+      " sha256" signature-good?  if  1  else  -1  then    ( -1|1 )
    else                                                   ( sig$ exp$ )
       4drop 0                                             ( 0 )
    then                                                   ( -1|0|1 )
