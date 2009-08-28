@@ -213,7 +213,17 @@ warning !
 fload ${BP}/dev/olpc/spiflash/spiif.fth     \ Generic low-level SPI bus access
 fload ${BP}/dev/olpc/spiflash/spiflash.fth  \ SPI FLASH programming
 fload ${BP}/dev/olpc/kb3700/ecspi.fth       \ EC chip SPI FLASH access
-.( XXX Implement ignore-power-button) cr  : ignore-power-button ( -- ) ;
+
+\ ignore-power-button is unnecessary on XO-1.5 because the PWR_BUT_OUT# signal
+\ is driven by the EC.  If the EC is turned off for SPI FLASH writing, it won't
+\ assert PWR_BUT_OUT# .  When the EC is on, it will "pull the plug" on the CPU
+\ after the power button has been held down for several seconds, regardless of
+\ what the CPU is doing.  So the following implementation of ignore-power-button
+\ is mostly pointless in the system context.  It does prevent the CPU from
+\ shutting down of its own accord, but the EC override pretty much masks that.
+
+: ignore-power-button  ( -- )  h# 889b config-b@ 2 or  h# 889b config-b!  ;
+
 fload ${BP}/dev/olpc/kb3700/ecio.fth        \ I/O space access to EC chip
 fload ${BP}/dev/via/spi/spi.fth             \ Driver for Via SPI controller
 fload ${BP}/dev/via/spi/bbspi.fth           \ Tethered SPI FLASH programming
