@@ -17,8 +17,10 @@
 \    ok recover disk:\file.rom  \ Copies a ROM file to the dead one
 
 : (serial-flash)  ( -- )
-   stdin @ 0=  stdout @ 0=  or  abort" Can't use a serial console for this"
-   console-io
+   \ Disconnect serial port from console multiplexor
+   ." Disconnecting serial port from OFW console" cr
+   fallback-in-ih  remove-input
+   fallback-out-ih remove-output
 
    ." Connecting to dead machine.  (Merging will take about 25 seconds.)" cr
    use-serial-ec

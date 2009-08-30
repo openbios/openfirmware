@@ -51,14 +51,14 @@ h# 4000.0000 constant lid-pme  \ PME mapper 6
 [then]
 
 : suspend-ps2  ( -- )
-   " default-disable-kbd" kbd-ih $call-method   \ Stop keyboard
-   1 " set-port" kbd-ih $call-method    \ Select mouse (touchpad) port
-   " default-disable-kbd" kbd-ih $call-method   \ Stop mouse
+   " default-disable-kbd" $call-keyboard   \ Stop keyboard
+   1 " set-port" $call-keyboard    \ Select mouse (touchpad) port
+   " default-disable-kbd" $call-keyboard   \ Stop mouse
 ;
 : resume-ps2  ( -- )
-   " enable-scan" kbd-ih $call-method   \ Restart mouse
-   0 " set-port" kbd-ih $call-method    \ Select keyboard port
-   " enable-scan" kbd-ih $call-method   \ Restart keyboard
+   " enable-scan" $call-keyboard   \ Restart mouse
+   0 " set-port" $call-keyboard    \ Select keyboard port
+   " enable-scan" $call-keyboard   \ Restart keyboard
 ;
 
 : enable-uoc  ( -- )

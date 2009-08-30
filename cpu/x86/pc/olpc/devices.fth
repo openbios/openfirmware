@@ -241,6 +241,11 @@ fload ${BP}/dev/isa/diaguart.fth	\ ISA COM port driver
 h# 3f8 is uart-base
 fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 
+0 value keyboard-ih
+0 value screen-ih
+
+fload ${BP}/ofw/core/muxdev.fth          \ I/O collection/distribution device
+
 [ifndef] save-flash
 : save-flash ;
 : restore-flash ;

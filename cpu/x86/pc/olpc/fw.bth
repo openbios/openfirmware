@@ -222,11 +222,6 @@ devalias nfs net//obp-tftp:last//nfs
 fload ${BP}/cpu/x86/pc/boot.fth
 fload ${BP}/cpu/x86/pc/linux.fth
 
-0 value keyboard-ih
-0 value screen-ih
-
-fload ${BP}/ofw/core/muxdev.fth          \ I/O collection/distribution device
-
 : usb-port-power-map  ( -- n )
    board-revision  h# b10  h# b2f between  if  \ B1 and B2
       h# 3ab   \ USB4:PWR1  USB3:PWR1  USB2:PWR1  USB1:PWR2
@@ -325,13 +320,13 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 true value text-on?
 : text-off  ( -- )
    text-on?  if
-      screen-ih remove-mux
+      screen-ih remove-output
       false to text-on?
    then
 ;
 : text-on   ( -- )
    text-on? 0=  if
-      screen-ih add-mux
+      screen-ih add-output
       cursor-on
       true to text-on?
    then
@@ -375,11 +370,11 @@ fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 
 [ifdef] use-ega
 : ega-output  ( -- )
-   \ This only works if stdout is currently /display
-   stdout @  if
-      " text-mode3" screen-ih $call-method
+   screen-ih  if
+      screen-ih remove-output
+      " text-mode3" screen-ih ['] $call-method catch  if  3drop  then
    then
-   " /ega-text" output
+   " /ega-text" open-dev add-output
 ;
 [then]
 

@@ -233,11 +233,6 @@ devalias nfs net//obp-tftp:last//nfs
 fload ${BP}/cpu/x86/pc/boot.fth
 fload ${BP}/cpu/x86/pc/linux.fth
 
-0 value keyboard-ih
-0 value screen-ih
-
-fload ${BP}/ofw/core/muxdev.fth          \ I/O collection/distribution device
-
 fload ${BP}/cpu/x86/pc/olpc/via/usb.fth
 
 false to stand-init-debug?
@@ -325,13 +320,13 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 true value text-on?
 : text-off  ( -- )
    text-on?  if
-      screen-ih remove-mux
+      screen-ih out-mux-ih remove-mux
       false to text-on?
    then
 ;
 : text-on   ( -- )
    text-on? 0=  if
-      screen-ih add-mux
+      screen-ih out-mux-ih add-mux
       cursor-on
       true to text-on?
    then

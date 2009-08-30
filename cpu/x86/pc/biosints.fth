@@ -126,7 +126,7 @@ variable save-eax
 ;
 
 : set-mode3  ( -- )
-   stdout off  \ Stop using OFW driver
+   text-off  \ Stop using OFW screen output
    " text-mode3" screen-ih $call-method
 ;
 \ VBE status: AL = 4f -> function supported  else not supported
@@ -419,7 +419,7 @@ h# 1ff and  case
 
 : set-mode12  ( -- )
    " graphics-mode12" " screen-ih" eval $call-method
-   stdout off
+   text-off  \ Stop using OFW output to screen
 ;
 : set-video-mode  ( mode -- )
    case
@@ -846,17 +846,17 @@ noop
 ;
 
 0 value the-key
-0 value kbd-ih
 
+: $call-keyboard  ( ?? method-name$ -- ?? )  keyboard-ih $call-method  ;
 : poll-key  ( -- false | scan,ascii true )
    the-key  ?dup  if  true exit  then
    d# 50 ms   \ I don't know why this is necessary, but without it, you don't see the key
-   0 " get-scancode" kbd-ih $call-method  if    ( scancode )
+   0 " get-scancode" $call-keyboard  if         ( scancode )
       dup h# 80 and  if                         ( scancode )
          \ Discard release events and escapes (e0)
          drop false                             ( false )
       else
-         dup " scancode->char" kbd-ih $call-method  0=  if  0  then  ( scancode ascii )
+         dup " scancode->char" $call-keyboard  0=  if  0  then  ( scancode ascii )
          dup h# 80 and  if  drop 0  then        \ Don't return e.g. 9B for arrows
          swap bwjoin to the-key
          the-key true
@@ -1000,7 +1000,7 @@ h# 7c00 constant mbr-base
 : #hard-drives  ( -- n )  1  ;
 
 : make-bda  ( -- )
-   h# 400 h# 200 erase
+   h# 400 h# 101 erase
    'ebda h# 400 erase
    h# 3f8 h# 400 w!
    'ebda 4 rshift h# 40e w!
@@ -1058,9 +1058,6 @@ here bounce-timer - constant /bounce-timer
 
    'ebda 4 rshift  h# 40e w!   \ Extended BIOS data area segment address
 
-   \ The USB keyboard is unsuitable for this purpose, as USB is
-   \ turned off when control is transferred to the Windows booter.
-   " /isa/keyboard"   open-dev to kbd-ih
    populate-memory-map
    rm-platform-fixup
 ;

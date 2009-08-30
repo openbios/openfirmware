@@ -297,7 +297,7 @@ false value error-shown?
 ;
 
 : logo-banner  ( -- error? )
-   display?  0=  if  true exit  then
+   screen-ih  0=  if  true exit  then
 
 \ Do this later...
 \   diagnostic-mode?  0=  if  ['] visual-error to .error  then

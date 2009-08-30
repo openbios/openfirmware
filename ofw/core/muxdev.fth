@@ -137,42 +137,53 @@ constant /list-node
 finish-device
 device-end
 
-0 value mux-ih
+0 value in-mux-ih
+0 value out-mux-ih
 
-: open-mux  ( -- )
-   mux-ih 0=  if
-      " "  " mux" $open-package
-      dup 0= abort" Can't open mux package"
-      to mux-ih
-   then
+: new-mux  ( -- ih )
+   " "  " mux" $open-package
+   dup 0= abort" Can't open mux package"
 ;
 
-: add-mux   ( ih -- )
-   ?dup  if  " add-device" mux-ih  $call-method  then
+: add-mux   ( ih mux-ih -- )
+   over  if  >r " add-device" r>  $call-method  else  2drop  then
 ;
 
-: remove-mux  ( ih -- )  " remove-device" mux-ih $call-method  ;
+: remove-mux  ( ih mux-ih -- )  >r " remove-device" r> $call-method  ;
+
+: add-output  ( ih -- )  out-mux-ih add-mux  ;
+: remove-output  ( ih -- )  out-mux-ih remove-mux  ;
+: add-input  ( ih -- )  in-mux-ih add-mux  ;
+: remove-input  ( ih -- )  in-mux-ih remove-mux  ;
 
 : .mux  ( -- )
-   mux-ih  if
-      " show-devices" mux-ih $call-method
-   else
-      ." Mux isn't open" cr
+   in-mux-ih  if
+      ." Input mux:" cr
+      " show-devices" in-mux-ih $call-method
+   then
+   out-mux-ih  if
+      ." Output mux:" cr
+      " show-devices" out-mux-ih $call-method
    then
 ;
 
-: install-mux-io  ( -- )
-   open-mux
+0 value fallback-in-ih
+0 value fallback-out-ih
 
-   fallback-device open-dev add-mux
+: install-mux-io  ( -- )
+   new-mux to in-mux-ih
+   new-mux to out-mux-ih
+
+   fallback-device open-dev  dup to fallback-in-ih   add-input
+   fallback-device open-dev  dup to fallback-out-ih  add-output
 
    screen open-dev to screen-ih
-   screen-ih add-mux
+   screen-ih add-output
 
    keyboard open-dev to keyboard-ih
-   keyboard-ih add-mux
+   keyboard-ih add-input
 
-   mux-ih set-stdin  mux-ih set-stdout
+   in-mux-ih set-stdin  out-mux-ih set-stdout
 
    console-io
 ;
