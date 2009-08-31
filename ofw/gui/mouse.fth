@@ -72,7 +72,7 @@ binary
    00000000011000001100000000000000 ,
    00000000011000000110000000000000 ,
    00000000001100011000000000000000 ,
-   00000000000111110000000000000000 ,   
+   00000000000111110000000000000000 ,
    00000000000111110000000000000000 ,
 
 create black-bits
@@ -148,7 +148,7 @@ hex
 : update-position  ( x y -- )
    2dup or 0=  if  2drop exit  then  \ Avoid flicker if there is no movement
 
-   \ Minimize the time the cursor is down by doing computa1000000000000000000 ,tion in advance
+   \ Minimize the time the cursor is down by doing computation in advance
    \ Considering the amount of code that is executed to put up the cursor,
    \ this optimization is probable unnoticeable, but it doesn't cost much.
    negate  ypos +  0  max-y cursor-h -  clamp      ( x y' )
