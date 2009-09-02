@@ -141,7 +141,7 @@ defer io-blk-w!  defer io-blk-w@
          drop true exit
       then                       ( end-time )
       dup get-msecs -            ( end-time remaining-time )
-   until                         ( end-time )
+   0<= until                     ( end-time )
    drop true                     ( true )
 ;
 
