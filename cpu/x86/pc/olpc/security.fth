@@ -390,22 +390,6 @@ d# 67 buffer: machine-id-buf
 
 : my-sn$  ( -- adr len )  machine-id-buf d# 11  ;
 
-
-\ parse-sig parses a "sig01:" format signature string, returning its
-\ hashname and signature substrings.  It converts the signature
-\ substring from ASCII hex to binary bytes.
-
-: parse-sig  ( sig01$ -- true | hashname$ sig$ false )
-   dup d# 89 <  if  2drop true exit  then
-   bl left-parse-string  " sig01:" $=  0=  if  2drop true exit  then    ( rem$ )
-   bl left-parse-string  dup d#  6 <>  if  4drop true exit  then  2swap ( hash$ rem$ )
-   bl left-parse-string  nip d# 64 <>  if  4drop true exit  then        ( hash$ rem$ )
-   newline left-parse-string  2swap nip  0<>  if  4drop true exit  then ( hash$ data$ )
-   dup /sig 2* <>  if  ( ." Bad signature length" cr  )  2drop true  exit  then ( hash$ data$ )
-
-   hex-decode  if  2drop true  else  false  then
-;
-
 \ zip-extent looks inside a memory-resident ZIP archive and returns
 \ the address,length of a given component of that archive.  This
 \ assumes that the components are "stored", not "deflated".  It
@@ -446,10 +430,22 @@ d# 67 buffer: machine-id-buf
    true
 ;
 
-\ hashname remembers the most recently used hashname to guard against
-\ attacks based on reuse of the same (presumably compromized) hash.
-
 0 [if]
+\ parse-sig parses a "sig01:" format signature string, returning its
+\ hashname and signature substrings.  It converts the signature
+\ substring from ASCII hex to binary bytes.
+
+: parse-sig  ( sig01$ -- true | hashname$ sig$ false )
+   dup d# 89 <  if  2drop true exit  then
+   bl left-parse-string  " sig01:" $=  0=  if  2drop true exit  then    ( rem$ )
+   bl left-parse-string  dup d#  6 <>  if  4drop true exit  then  2swap ( hash$ rem$ )
+   bl left-parse-string  nip d# 64 <>  if  4drop true exit  then        ( hash$ rem$ )
+   newline left-parse-string  2swap nip  0<>  if  4drop true exit  then ( hash$ data$ )
+   dup /sig 2* <>  if  ( ." Bad signature length" cr  )  2drop true  exit  then ( hash$ data$ )
+
+   hex-decode  if  2drop true  else  false  then
+;
+
 \ signature-invalid? checks the validity of data$ against the ASCII signature
 \ record sig0N$, using the public key that thiskey$ points to.
 \ It also verifies that the hashname contained in sig01$ is the
@@ -477,6 +473,9 @@ d# 67 buffer: machine-id-buf
    then
 ;
 [then]
+
+\ exp-hashname$ remembers the most recently used hashname to guard against
+\ attacks based on reuse of the same (presumably compromized) hash.
 
 0 0 2value exp-hashname$
 0 0 2value signed-data$
@@ -621,9 +620,8 @@ h# 10e constant /key
 ;
 
 \ Find a sig0N: line and check its sha256/rsa signature
-: sha-valid?  ( data$ sig01$ -- okay? )
-   next-sig-in-list$  if  2drop false exit  then  ( data$ rem$ sig01$ )
-   \   2nip  " sha256" signature-invalid? 0=
+: sha-valid?  ( data$ sig$ -- okay? )
+   next-sig-in-list$  if  2drop false exit  then  ( data$ rem$ sig$ )
    2nip  " sha256" signature-good?
 ;
 
@@ -631,12 +629,11 @@ h# 10e constant /key
 \ and check their signatures
 : fw-valid?  ( data$ sig$ -- okay? )
    2swap 2>r                                    ( sig$ r: data$ )
-   next-sig-in-list$  if  2r> 2drop false exit  then  ( rem$ sig01$ )
+   next-sig-in-list$  if  2r> 2drop false exit  then  ( rem$ sig$ )
    2r@ 2swap sha-valid?  0=  if                 ( rem$ r: data$ )
       2r> 4drop false exit
    then                                         ( rmd-sig$ r: data$ )
-   next-sig$  if  2r> 2drop false exit  then    ( rem$ sig01$ )
-\  2nip  2r> 2swap " rmd160" signature-invalid? 0=
+   next-sig$  if  2r> 2drop false exit  then    ( rem$ sig$ )
    2nip  2r> 2swap " rmd160" signature-good?
 ;
 
