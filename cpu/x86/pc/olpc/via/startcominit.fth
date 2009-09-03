@@ -24,64 +24,64 @@ label cominit
    \ If the SERIAL_EN jumper is installed, or if the machine is an A-test,
    \ route the external pin to the UART; otherwise leave it connected to the VCP port.
 
-   acpi-io-base 48 +  port-rb  h# 10 # al test  0=  if
-      \ SERIAL_EN is installed, so put the A-test ID in AL so we can check
-      \ a single condition at the end of the logic.
-      h# d0 # al mov
-   else
-      \ SERIAL_EN is not installed.  Determine the board ID.
+   \ SERIAL_EN is not installed.  Determine the board ID.
 
-      \ First we check for a cached board ID in CMOS RAM, to avoid the
-      \ possibly time-consuming operation of asking the EC.
+   \ First we check for a cached board ID in CMOS RAM, to avoid the
+   \ possibly time-consuming operation of asking the EC.
 
-      \ To read the high half of CMOS RAM we must enable it
-      d# 17 0 devfunc
-      4e 18 18 mreg  \ Enable ports 74/75 for CMOS RAM access  - 10 res be like Phx
-      end-table
+   \ To read the high half of CMOS RAM we must enable it
+   d# 17 0 devfunc
+   4e 18 18 mreg  \ Enable ports 74/75 for CMOS RAM access  - 10 res be like Phx
+   end-table
 
-      h# 83 # al mov  al h# 74 # out  h# 75 # al in    \ check byte - should be ~board-id
-      al ah mov   ah not                               \ ~check byte in AH
-      h# 82 # al mov  al h# 74 # out  h# 75 # al in    \ board-id in AL
+   h# 83 # al mov  al h# 74 # out  h# 75 # al in    \ check byte - should be ~board-id
+   al ah mov   ah not                               \ ~check byte in AH
+   h# 82 # al mov  al h# 74 # out  h# 75 # al in    \ board-id in AL
 
-      al ah cmp  0<>  if  \ If the check byte matches, fall through with the ID in AL
+   al ah cmp  0<>  if  \ If the check byte matches, fall through with the ID in AL
 
-         \ If check byte is wrong, we have to ask the EC
+      \ If check byte is wrong, we have to ask the EC
    
-         h# 6c # al in   \ EC status register
-         2 # al and      \ input buffer full bit
-         0<>  if         \ If the bit is nonzero, we can't send a command yet
-            \ We don't wait for the EC; if it is busy we assume B-test
-            \ It shouldn't be busy at this point because we haven't tried to talk to it yet
-            h# d1 # al mov     \ EC busy - report B-test
+      h# 6c # al in   \ EC status register
+      2 # al and      \ input buffer full bit
+      0<>  if         \ If the bit is nonzero, we can't send a command yet
+         \ We don't wait for the EC; if it is busy we assume B-test
+         \ It shouldn't be busy at this point because we haven't tried to talk to it yet
+         h# d1 # al mov     \ EC busy - report B-test
+      else
+         h# 19 # al mov  al h# 6c # out   \ Send board ID command to EC
+         d# 200 # cx mov    \ Wait up to 200 mS for the EC to respond
+         begin
+            d# 1000 wait-us \ 1 mS delay so we don't pound on the EC
+            h# 6c # al in   \ Get status register
+            3 # al and      \ Check for output buffer full
+            1 # al cmp
+         loopne
+         <> if    \ Not equal means timeout
+            h# d1 # al mov  \ EC timeout - report B-test
          else
-            h# 19 # al mov  al h# 6c # out   \ Send board ID command to EC
-            d# 200 # cx mov    \ Wait up to 200 mS for the EC to respond
-            begin
-               d# 1000 wait-us \ 1 mS delay so we don't pound on the EC
-               h# 6c # al in   \ Get status register
-               3 # al and      \ Check for output buffer full
-               1 # al cmp
-            loopne
-            <> if    \ Not equal means timeout
-               h# d1 # al mov  \ EC timeout - report B-test
-            else
-               h# 68 # al in   \ Get board ID byte from EC
-            then
+            h# 68 # al in   \ Get board ID byte from EC
          then
       then
    then
 
-   \ Now AL contains the board ID or a surrogate that will cause the
-   \ desired result for the test below.
+   \ Now AL contains the board ID
    h# d1 # al cmp  u<  if
+      \ A-test
       d# 17 0 devfunc
-      \ The following is for UART on VCP port
-      46 c0 40 mreg
-      \ The following is for UART on DVP port
-      \ 46 c0 c0 mreg
+      9b 01 01 mreg  \ 1 selects GPO11/12 instead of CR_PWSEL/CR_PWOFF (DCONLOAD)
+      46 c0 40 mreg  \ Enable UART on VCP port
       end-table
+   else
+      \ B-test or later
+      \ For B-test and later, we only enable serial if the jumper is present
+      acpi-io-base 48 +  port-rb  h# 10 # al test  0=  if
+         d# 17 0 devfunc
+         46 c0 40 mreg  \ Enable UART on VCP port
+         end-table
+      then
    then
-   
+
    d# 17 0 devfunc
    \ Standard COM2 and COM1 IRQ routing
    b2 ff 34 mreg
