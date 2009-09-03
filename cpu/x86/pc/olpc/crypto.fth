@@ -36,7 +36,7 @@ variable hashlen
 d# 128 buffer: hashbuf
 : crypto-hash  ( data$ hashname$ -- result$ )
    2>r  0 -rot  hashbuf d# 128  hashlen 0  2r>   ( 0 data$ sig$ key$ hashname$ )
-   signature-bad?  abort" Hash failed"   ( )
+   signature-bad?  h# fffff and  abort" Hash failed"   ( )
    hashbuf hashlen @
 ;
 
