@@ -580,11 +580,20 @@ true value got-indicator?
 \ MAC address
 \ =========================================================================
 
-: marvel-get-mac-address  ( -- )
+\ This command has an annoying tendency to fail to sometimes - wait-cmd-resp
+\ times out.  Retrying usually fixes it.
+: (marvel-get-mac-address)  ( -- error? )
    8 h# 4d ( CMD_802_11_MAC_ADDRESS ) prepare-cmd
    ACTION_GET +xw
-   outbuf-wait  if  ." marvel-get-mac-address failed" cr exit  then
+   outbuf-wait  if  true exit  then
    respbuf >fw-data 2 + mac-adr$ move
+   false
+;
+: marvel-get-mac-address  ( -- )
+   4 0 do
+      (marvel-get-mac-address) 0=  if  unloop exit  then
+   loop  
+   ." marvel-get-mac-address failed" cr
 ;
 
 : marvel-set-mac-address  ( -- )
@@ -1516,6 +1525,7 @@ headers
 : ?make-mac-address-property  ( -- )
    driver-state ds-ready <  if  exit  then
    " mac-address"  get-my-property  if
+      marvel-get-mac-address
       mac-adr$ encode-bytes  " local-mac-address" property
       mac-address encode-bytes " mac-address" property
    else
@@ -1531,7 +1541,6 @@ headers
 ;
 
 : init-net  ( -- )
-   marvel-get-mac-address
    ?make-mac-address-property
 ;
 
@@ -1576,7 +1585,9 @@ false instance value force-open?
       my-args " supplicant" $open-package to supplicant-ih
       supplicant-ih 0=  if  release-bus-resources free-buf false exit  then
       nonce-cmd
-      force-open?  0=  if
+      force-open?  if
+         ds-disconnected reset-driver-state
+      else
          link-up? 0=  if
             ['] 2drop to ?process-eapol
             do-associate 0=  if  free-buf false exit  then
