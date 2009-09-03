@@ -2,7 +2,7 @@
 
 \ The overall firmware revision
 macro: FW_MAJOR E
-macro: FW_MINOR 41c
+macro: FW_MINOR 41d
 
 \ The EC microcode
 macro: EC_VERSION e34
@@ -11,8 +11,8 @@ macro: EC_VERSION e34
 \ Temporarily uncomment the line and modify the path as necessary
 \ macro: GET_EC cp pq2e18c.img ec.img
 
-macro: KEYS mpkeys
-\ macro: KEYS testkeys
+\ macro: KEYS mpkeys
+macro: KEYS testkeys
 
 \ The wireless LAN module firmware
 macro: WLAN_RPM ${WLAN_VERSION}.olpc1
@@ -26,6 +26,6 @@ macro: CRYPTO_VERSION 0.4
 \ With a specific ID, mcastnand.bth will download a tarball without .git stuff.
 \ With "test", mcastnand.bth will clone the git head if build/multicast-nand/
 \ is not already present, then you can modify the git subtree as needed.
-macro: MCNAND_VERSION b9a9d22b6037c3891f9cf8eabeaf7cd9efbd5241
+macro: MCNAND_VERSION 74bf48045bca9d4919728a7bbd7a0acb96c0d8ef
 \ macro: MCNAND_VERSION test
 \ macro: MCNAND_VERSION HEAD
