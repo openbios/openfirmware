@@ -67,13 +67,18 @@ label cominit
 
    \ Now AL contains the board ID
    h# d1 # al cmp  u<  if
+      acpi-io-base h# 4c + port-rl  h# 200000 bitclr  ax dx out  \ Turn off WLAN activity LED (GPIO10)
+
       \ A-test
       d# 17 0 devfunc
       9b 01 01 mreg  \ 1 selects GPO11/12 instead of CR_PWSEL/CR_PWOFF (DCONLOAD)
       46 c0 40 mreg  \ Enable UART on VCP port
       end-table
+
    else
       \ B-test or later
+      acpi-io-base h# 4c + port-rl  h# 20000 bitset  ax dx out  \ Turn off WLAN activity LED (GPIO10)
+
       \ For B-test and later, we only enable serial if the jumper is present
       acpi-io-base 48 +  port-rb  h# 10 # al test  0=  if
          d# 17 0 devfunc
