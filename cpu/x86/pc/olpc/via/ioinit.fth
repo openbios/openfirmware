@@ -43,6 +43,7 @@
    89 ff f8 mreg  \ Dynamic clocks
    8b ff bf mreg  \ Dynamic clocks
    8d ff 30 mreg  \ Self-refresh in C3 and C4
+   8e ff 20 mreg  \ Leave PLL on in suspend state - necessary for reliable S3
    90 ff ff mreg  \ Gate clocks
    91 ff ff mreg  \ Gate clocks
    92 cc cc mreg  \ Dynamic buffer control, power down comparators
@@ -222,7 +223,7 @@ hpet-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
 [then]
 
 [ifdef] xo-board
-   9b ff 88 mreg  \ 80 undoc but is LVDS power.  00 forces LVDS power off, 80 lets 3d5.D2[7,6,3] control it; 1 selects GPO11/12 instead of CR_PWSEL/CR_PWOFF (DCONLOAD)
+   9b fe 88 mreg  \ 80 undoc but is LVDS power.  00 forces LVDS power off, 80 lets 3d5.D2[7,6,3] control it; 1 selects GPO11/12 instead of CR_PWSEL/CR_PWOFF (DCONLOAD)
    9f ff 08 mreg  \ Slot 3 is SDIO, no pullup on KB/MS, fastest SD
 [then]
 [ifdef] demo-board
