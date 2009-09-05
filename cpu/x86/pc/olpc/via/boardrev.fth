@@ -27,23 +27,13 @@ warning @ warning off
 : stand-init-io
    stand-init-io
 
-[ifndef] notdef
-   ['] board-id@ catch  if  0  then   case
-      0      of  0       endof  \ EC broken
-      ( board-id )  dup h# 10 * 8 +  swap  \ E.g. b3 -> b38
-   endcase
-[else]
-   \ wait-ib-empty
-   \ autowack-off
-   0 h# 68 pc!
-   h# d08
-[then]
-
-   to board-revision
+   ['] board-id@ catch  if  0  then
 
    \ Cache the board revision in CMOS RAM so the early startup code
    \ can get it without having to wait for the EC.
-   board-revision dup h# 82 cmos!  invert h# 83 cmos!
+   dup   dup h# 82 cmos!  invert h# 83 cmos!       ( id )
+
+   dup  if  h# 10 * 8 +  then   to board-revision
 ;
 warning !
 
