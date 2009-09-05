@@ -26,16 +26,6 @@
 
    cld
 
-   \ Access ROM to load it into the icache
-   dropin-base #  esi  mov
-   /icached 4 / #  ecx  mov
-   rep  eax lods
-
-   \ Access "RAM" area to load it into the dcache
-   dcached-base #  esi  mov
-   /dcached 4 / #  ecx  mov
-   rep  eax lods
-
    \ Put the stack pointer at the top of the dcached area
    dcached-base /dcached + 4 - #  esp  mov
    ds ax mov  ax ss mov

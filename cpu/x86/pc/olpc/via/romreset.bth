@@ -92,7 +92,7 @@ label startup
 
    fload ${BP}/cpu/x86/pc/olpc/via/startcacheasram.fth
 
-   \ We are now running from cache and can use the stack
+   d# 40000 wait-us \ This delay is empirically necessary - minimum is 36000 - about 50 ms
 
 \ cache_as_ram_auto.c: amd64_main() 
 
@@ -131,7 +131,7 @@ label startup
       \ This turns an OS reboot into a real cold start - from coreboot
       h# 380 config-rb  ax ax or  0<>  if          \ C-page shadowing not on yet
          6 h# cf9 port-wb                          \ Force a full system reset
-         char X report      
+         char X report
          begin  hlt  again
       then
       char F report
@@ -169,6 +169,7 @@ label startup
    fload ${BP}/cpu/x86/pc/olpc/via/startmtrrinit.fth
 
    fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
+\ XXX need to move startcpuspeed to here
 
    acpi-io-base 4 + port-rw           \ Get APCI Status register
    ax bx mov
