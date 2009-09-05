@@ -299,7 +299,7 @@ here do-acpi-wake - constant /do-acpi-wake
 [then]
 
    4 acpi-w@  1 or  4 acpi-w!  \ Set SCI_EN bit
-   h# ffffffff  h# 20 acpi-l!  \ Ack all leftover events
+   h# ffffffff  h# 20 acpi-w!  \ Ack all leftover events
 ;
 
 : acpi-power-off  ( -- )
