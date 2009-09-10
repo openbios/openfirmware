@@ -38,17 +38,15 @@ d# 20 constant apex-timeout
 
 0 instance variable #retries
 : cmd?  ( cmd -- error? )
-   #retries off
    dup put-get-data                   ( cmd response )
    begin                              ( cmd response )
       case                            ( cmd response )
          h# fa of  drop false exit   endof   \ ACK
          h# fe of                     ( cmd )  \ RESEND - try again
-            1 #retries +!             ( cmd )
-            #retries @ d# 300 >  if   ( cmd )
+            -1 #retries +!            ( cmd )
+            #retries @ 0<  if         ( cmd )
                drop true exit
             then                      ( cmd )
-            1 ms                      ( cmd )
             dup put-get-data          ( cmd response )
          endof
          ( cmd response )
@@ -59,7 +57,7 @@ d# 20 constant apex-timeout
       endcase                         ( cmd new-response )
    again
 ;
-: cmd  ( cmd -- )  cmd? drop  ;
+: cmd  ( cmd -- )  d# 20 #retries !  cmd? drop  ;
 
 \ : cmd  ( cmd -- )  " put-get-data" $call-parent ?ack  ;
 
@@ -292,6 +290,7 @@ headerless
 
 : identify  ( -- true | char false )
 \   h# f2  ['] read1  catch  dup  if  nip  then
+   3 #retries !
    h# f2  cmd?  if  true exit  then
    apex-timeout timed-read
 ;
@@ -328,22 +327,21 @@ headers
 : open  ( -- flag )
    1 set-port
 
-   open-count  1+ to open-count
-
-   open-count 1 <>  if  true exit  then
+   open-count 0<>  if  true exit  then
 
    \ The "force" argument causes the open to succeed even if no mouse
    \ is present
-   my-args  [char] , left-parse-string  2swap 2drop  " force"  $=  if
-      true exit
+   my-args  [char] , left-parse-string  2swap 2drop  " force"  $=  0=  if
+
+      find-mouse  if  false exit  then
+
+      \ Reset the mouse and check the response codes
+      h# ff read2  0<>  swap h# aa <>  or  if  false exit  then
+
+      remote-mode
    then
 
-   find-mouse  if  false exit  then
-
-   \ Reset the mouse and check the response codes
-   h# ff read2  0<>  swap h# aa <>  or  if  false exit  then
-
-   remote-mode
+   open-count  1+ to open-count
    true
 ;
 : close  ( -- )
