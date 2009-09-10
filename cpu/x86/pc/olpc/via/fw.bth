@@ -470,7 +470,7 @@ fload ${BP}/cpu/x86/pc/olpc/nandcastui.fth
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
 [then]
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
-devalias fsdisk /sd/disk:0
+devalias fsdisk int:0
 
 fload ${BP}/ofw/inet/sntp.fth
 : olpc-ntp-servers  ( -- )
@@ -641,8 +641,6 @@ true                               ' client-symbols?  set-config-int-default
    ['] false to interrupt-auto-boot?
    probe-usb
    " probe+" do-drop-in
-   report-disk
-   report-keyboard
 
    setup-smbios  \ Must be done after build-date is defined via do-drop-in
 

@@ -364,6 +364,18 @@ devalias ext /sd/disk@2
    " usb-keyboard"  " /usb@10,4/keyboard" ?report-device  \ USB 2   (keyboard behind a hub)
 ;
 
+\ If there is a USB ethernet adapter, use it as the default net device.
+\ We can't use ?report-device here because we already have net aliased
+\ to /usb/wlan, and ?report-device won't override an existing alias.
+: report-net  ( -- )
+   " /usb/ethernet" 2dup locate-device  0=  if  ( name$ phandle )
+      drop                                      ( name$ )
+     " net" 2swap $devalias                     ( )
+   else                                         ( name$ )
+      2drop                                     ( )
+   then
+;
+
 [ifdef] Later
 \ Add support for DC-couple microphone input
 [then]
