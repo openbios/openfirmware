@@ -41,6 +41,8 @@ devalias u    /usb/disk
       pwd$ $nopage-show-devs
    then
 ;
+devalias net  /usb/wlan
+
 : probe-usb  ( -- )
    ." USB2 devices:" cr
    " /" ['] (probe-usb2) scan-subtree
@@ -49,6 +51,10 @@ devalias u    /usb/disk
    ." USB1 devices:" cr
    " /" ['] (probe-usb1) scan-subtree
    " /" ['] (show-usb1) scan-subtree
+
+   report-disk
+   report-net
+   report-keyboard
 ;
 alias p2 probe-usb
 
@@ -90,8 +96,10 @@ alias p2 probe-usb
 
 : usb-quiet  ( -- )
    [ ' go-hook behavior compile, ]    \ Chain to old behavior
-   " usb1" " reset-usb" execute-device-method drop
-   " usb2" " reset-usb" execute-device-method drop
+   " /usb@10,0" " reset-usb" execute-device-method drop
+   " /usb@10,1" " reset-usb" execute-device-method drop
+   " /usb@10,2" " reset-usb" execute-device-method drop
+   " /usb@10,4" " reset-usb" execute-device-method drop
 ;
 ' usb-quiet to go-hook
 
