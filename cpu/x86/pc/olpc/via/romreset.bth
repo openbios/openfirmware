@@ -92,8 +92,6 @@ label startup
 
    fload ${BP}/cpu/x86/pc/olpc/via/startcacheasram.fth
 
-   d# 40000 wait-us \ This delay is empirically necessary - minimum is 36000 - about 50 ms
-
 \ cache_as_ram_auto.c: amd64_main() 
 
    01 004f config-wb   \ Enable device 0 multiple functions
@@ -114,8 +112,6 @@ label startup
    cominit #) call
 [then]
 
-   carret report
-   linefeed report
    char + report
    h# 1d port80
 
@@ -127,16 +123,23 @@ label startup
    long-offsets on
 
    acpi-io-base 4 + port-rw           \ Get APCI Status register
-   d# 10 # ax shr  7 # ax and  1 # ax cmp  <>  if   \ Wakeup from S3
+   d# 10 # ax shr  7 # ax and  1 # ax cmp  <>  if  \ Type 1 is wakeup from S3
+      \ Not wakeup from S3
       \ This turns an OS reboot into a real cold start - from coreboot
       h# 380 config-rb  ax ax or  0<>  if          \ C-page shadowing not on yet
          6 h# cf9 port-wb                          \ Force a full system reset
          char X report
          begin  hlt  again
       then
+      carret report   linefeed report
       char F report
       fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
    then
+
+   \ This must be done in both the power-up and resume-from-S3 cases,
+   \ since the registers in D17F7 lose state during S3.
+   total-size  8f60 config-wb  \ DRAM Bank 7 ending address - controls DMA upstream
+   0388 config-rb  ax bx mov  8fe5 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to SB Low Top e5
 
    fload ${BP}/cpu/x86/pc/olpc/via/startgfxinit.fth
 
@@ -171,6 +174,10 @@ label startup
    fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
 \ XXX need to move startcpuspeed to here
 
+   \ Cache is now setup normally, backed by memory
+   \ Setup a small stack for subroutine calls
+   h# 10.0000 # esp mov
+
    acpi-io-base 4 + port-rw           \ Get APCI Status register
    ax bx mov
    d# 10 # ax shr  7 # ax and  1 # ax cmp  =  if   \ Wakeup from S3
@@ -191,9 +198,6 @@ label startup
       then
       char x report
    then                                            \ Not a wakeup from S3
-
-   \ Cache is now setup normally, backed by memory
-   h# 20.0000 # esp mov
 
    char o report
    h# 1e port80

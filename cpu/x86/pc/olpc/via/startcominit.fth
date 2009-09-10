@@ -34,6 +34,24 @@ label cominit
    4e 18 18 mreg  \ Enable ports 74/75 for CMOS RAM access  - 10 res be like Phx
    end-table
 
+   \ Configure the I/O decoding to enable access to the EC
+   \ Do this outside the if..then so the setup is consistent in all cases
+   d# 17 0 devfunc
+   59 ff 1c mreg  \ Keyboard (ports 60,64) and ports 62,66 on LPC bus (EC)
+   5c ff 68 mreg  \ High byte (68) of PCS0
+   5d ff 00 mreg  \ High byte (00) of PCS0
+   64 0f 07 mreg  \ PCS0 size is 8 bytes - to include 68 and 6c
+   66 01 01 mreg  \ PCS0 Enable
+   67 10 10 mreg  \ PCS0 to LPC Bus
+   end-table
+
+   \ This delay is empirically necessary before reading CMOS - minimum is 36000 - about 50 ms
+   \ Before the delay has elapsed, the CMOS RAM returns 0 instead of the stored value.
+   d# 40000 wait-us
+
+   \ As an optimization to avoid long waits for the EC to respond, read the board ID
+   \ that is cached in CMOS RAM.  This might not in fact be an optimization in light
+   \ of the above delay ...
    h# 83 # al mov  al h# 74 # out  h# 75 # al in    \ check byte - should be ~board-id
    al ah mov   ah not                               \ ~check byte in AH
    h# 82 # al mov  al h# 74 # out  h# 75 # al in    \ board-id in AL
