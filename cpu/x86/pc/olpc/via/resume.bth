@@ -107,6 +107,66 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    rdtsc  eax h# 10 #) mov  edx h# 14 #) mov
 [then]
 
+   \ D12F0 SDIO
+   h# 6010 config-rl  ax stos  \ BAR0
+   h# 6014 config-rl  ax stos  \ BAR1
+   h# 6018 config-rl  ax stos  \ BAR2
+   h# 603c config-rb  al stos  \ IRQ
+   h# 6004 config-rw  op: ax stos  \ Enables
+   h# 0000 h# 6004 config-ww       \ Disable
+
+   \ D15F0 EIDE
+   h# 7810 config-rl  ax stos  \ BAR0
+   h# 7814 config-rl  ax stos  \ BAR1
+   h# 7818 config-rl  ax stos  \ BAR2
+   h# 781c config-rl  ax stos  \ BAR3
+   h# 7820 config-rl  ax stos  \ BAR4
+   h# 783c config-rb  al stos  \ IRQ
+   h# 780d config-rb  al stos  \ Latency timer
+   h# 7804 config-rw  op: ax stos  \ Enables
+   h# 0000 h# 7804 config-ww       \ Disable
+
+   \ D16F0 UHCI 0,1
+   h# 8020 config-rl  ax stos  \ IO Base
+   h# 803c config-rb  al stos  \ IRQ
+   h# 800d config-rb  al stos  \ Latency timer
+   h# 8004 config-rw  op: ax stos  \ Enables
+   h# 0000 h# 8004 config-ww       \ Disable
+
+   \ D16F1 UHCI 2,3
+   h# 8120 config-rl  ax stos  \ IO Base
+   h# 813c config-rb  al stos  \ IRQ
+   h# 810d config-rb  al stos  \ Latency timer
+   h# 8104 config-rw  op: ax stos  \ Enables
+   h# 0000 h# 8104 config-ww       \ Disable
+
+   \ D16F2 UHCI 4,5
+   h# 8220 config-rl  ax stos  \ IO Base
+   h# 823c config-rb  al stos  \ IRQ
+   h# 820d config-rb  al stos  \ Latency timer
+   h# 8204 config-rw  op: ax stos  \ Enables
+   h# 0000 h# 8204 config-ww       \ Disable
+
+   \ D16F4 EHCI
+   h# 8410 config-rl  ax stos  \ BAR
+   h# 843c config-rb  al stos  \ IRQ
+   h# 840d config-rb  al stos  \ Latency timer
+   h# 8404 config-rw  op: ax stos  \ Enables
+   h# 0000 h# 8404 config-ww       \ Disable
+
+   \ D17F0 Bus Control and Power Management
+   h# 88d2 config-rb  al stos  \ SMBUS clock divisor
+
+   \ D17F7 South-North Module Interface Control
+   h# 8f0d config-rb  al stos  \ Latency timer
+
+   \ D20F0 HD Audio
+   h# a010 config-rl  ax stos  \ BAR
+   h# a03c config-rb  al stos  \ IRQ
+   h# a00d config-rb  al stos  \ Latency timer
+   h# a004 config-rw  op: ax stos  \ Enables
+   h# 0000 h# a004 config-ww       \ Disable
+
 \ This is where Geode saves msrs
 \ This is where Geode handles the DCON
 \ This is where Geode saves the GPIO setup
@@ -331,8 +391,59 @@ here resume-entry put-branch
 
    h# 29 resume-progress
 
-   \ AC97
-   \ Codec
+   \ D12F0 SDIO
+   h# 6010 config-setup  ax lods  ax dx out  \ BAR0
+   h# 6014 config-setup  ax lods  ax dx out  \ BAR1
+   h# 6018 config-setup  ax lods  ax dx out  \ BAR2
+   h# 603c config-setup  al lods  al dx out  \ IRQ
+   h# 6004 config-setup  op: ax lods  op: ax dx out  \ Enables
+
+   \ D15F0 EIDE
+   h# 7810 config-setup  ax lods  ax dx out  \ BAR0
+   h# 7814 config-setup  ax lods  ax dx out  \ BAR1
+   h# 7818 config-setup  ax lods  ax dx out  \ BAR2
+   h# 781c config-setup  ax lods  ax dx out  \ BAR3
+   h# 7820 config-setup  ax lods  ax dx out  \ BAR4
+   h# 783c config-setup  al lods  al dx out  \ IRQ
+   h# 780d config-setup  al lods  al dx out  \ Latency timer
+   h# 7804 config-setup  op: ax lods  op: ax dx out  \ Enables
+   h# 0000 h# 7804 config-ww       \ Disable
+
+   \ D16F0 UHCI 0,1
+   h# 8020 config-setup  ax lods  ax dx out  \ IO Base
+   h# 803c config-setup  al lods  al dx out  \ IRQ
+   h# 800d config-setup  al lods  al dx out  \ Latency timer
+   h# 8004 config-setup  op: ax lods  op: ax dx out  \ Enables
+
+   \ D16F1 UHCI 2,3
+   h# 8120 config-setup  ax lods  ax dx out  \ IO Base
+   h# 813c config-setup  al lods  al dx out  \ IRQ
+   h# 810d config-setup  al lods  al dx out  \ Latency timer
+   h# 8104 config-setup  op: ax lods  op: ax dx out  \ Enables
+
+   \ D16F2 UHCI 4,5
+   h# 8220 config-setup  ax lods  ax dx out  \ IO Base
+   h# 823c config-setup  al lods  al dx out  \ IRQ
+   h# 820d config-setup  al lods  al dx out  \ Latency timer
+   h# 8204 config-setup  op: ax lods  op: ax dx out  \ Enables
+
+   \ D16F4 EHCI
+   h# 8410 config-setup  ax lods  ax dx out  \ BAR
+   h# 843c config-setup  al lods  al dx out  \ IRQ
+   h# 840d config-setup  al lods  al dx out  \ Latency timer
+   h# 8404 config-setup  op: ax lods  op: ax dx out  \ Enables
+
+   \ D17F0 Bus Control and Power Management
+   h# 88d2 config-setup  al lods  al dx out  \ SMBUS clock divisor
+
+   \ D17F7 South-North Module Interface Control
+   h# 8f0d config-setup  al lods  al dx out  \ Latency timer
+
+   \ D20F0 HD Audio
+   h# a010 config-setup  ax lods  ax dx out  \ BAR
+   h# a03c config-setup  al lods  al dx out  \ IRQ
+   h# a00d config-setup  al lods  al dx out  \ Latency timer
+   h# a004 config-setup  op: ax lods  op: ax dx out  \ Enables
 
    \ h# 8000 h# 4000.0000 or h# 1440 pl!  \ Fail-safe delay
 
