@@ -106,7 +106,7 @@ external
    r@ c@     r@ 1+  c@ bwjoin   ( data-adr length )
    r@ 2+ c@  r> 3 + c@ bwjoin   ( data-adr length ~length )
    over + h# ffff <>  if        ( data-adr length )
-      ." Bad length in USB Ethernet" cr
+      \ ." Bad length in USB Ethernet" cr
       \ We got out of sync so we must discard the entire buffer
       \ Return  data-adr 0
       drop 0
