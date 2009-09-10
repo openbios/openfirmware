@@ -36,15 +36,24 @@ d# 20 constant apex-timeout
 : put-get-data  ( cmd -- data )  " put-get-data" $call-parent  ;
 : send-cmd  ( cmd -- )  " put-data" $call-parent  ;
 
+0 instance variable #retries
 : cmd?  ( cmd -- error? )
+   #retries off
    dup put-get-data                   ( cmd response )
    begin                              ( cmd response )
       case                            ( cmd response )
          h# fa of  drop false exit   endof   \ ACK
-         h# fe of  dup put-get-data  endof   \ RESEND - try again
+         h# fe of                     ( cmd )  \ RESEND - try again
+            1 #retries +!             ( cmd )
+            #retries @ d# 300 >  if   ( cmd )
+               drop true exit
+            then                      ( cmd )
+            1 ms                      ( cmd )
+            dup put-get-data          ( cmd response )
+         endof
          ( cmd response )
             d# 10 timed-read  if      ( cmd response )
-              2drop true exit
+               2drop true exit
             then                      ( cmd response new-response )
             swap                      ( cmd new-response response )
       endcase                         ( cmd new-response )
