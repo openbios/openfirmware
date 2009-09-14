@@ -521,6 +521,33 @@ false value group-rekey?
    loop  drop				( )
 ;
 
+: .ie-short  ( adr -- )
+   dup c@    ( adr ie )
+   case 
+      0  of  ." SSID: " dup 2 + swap 1+ c@ type  2 spaces  endof
+      3  of  ." Channel: " 2 + c@ .d   endof
+      ( default )  nip
+   endcase
+;
+
+: .ap-ssid  ( adr -- )
+   ." RSSI: " dup 8 + c@ .d 
+   dup le-w@ swap 2 + swap d# 19 /string	( adr' len' )
+   begin  dup 0>  while			( adr len )
+      over .ie-short			( adr len )
+      over 1+ c@ 2 + /string		( adr' len' )
+   repeat  2drop			( )
+;
+
+: .ssids  ( adr -- )
+   dup 3 +				( 'ap )
+   swap 2 + c@				( 'ap #ap )
+   0  ?do				( 'ap )
+      dup .ap-ssid  cr			( 'ap )
+      dup le-w@ + 2 +			( 'ap' )
+   loop  drop				( )
+;   
+
 \ =======================================================================
 \ Associate
 

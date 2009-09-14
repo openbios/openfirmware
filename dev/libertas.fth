@@ -19,6 +19,7 @@ hex
 : do-associate   ( -- flag )  " do-associate" $call-supplicant  ;
 : process-eapol  ( adr len -- )  " process-eapol" $call-supplicant  ;
 : .scan  ( adr -- )  " .scan" $call-supplicant  ;
+: .ssids  ( adr -- )  " .ssids" $call-supplicant  ;
 
 defer load-all-fw  ( -- error? )   ' false to load-all-fw
 defer ?process-eapol		['] 2drop to ?process-eapol
@@ -557,7 +558,7 @@ true value got-indicator?
 \ Reset
 \ =========================================================================
 
-: reset-wlan  ( -- )  " wlan-reset" evaluate  ;
+: reset-wlan  ( -- )  " wlan-reset" evaluate  ds-not-ready set-driver-state  ;
 
 : marvel-get-hw-spec  ( -- true | adr false )
    d# 38 h# 03 ( CMD_GET_HW_SPEC ) prepare-cmd
@@ -1578,6 +1579,7 @@ false instance value force-open?
 : open  ( -- ok? )
    my-args parse-args
    set-parent-channel
+   " " set-ssid  \ Instance buffers aren't necessarily initially 0
    opencount @ 0=  if
       init-buf
       /inbuf /outbuf setup-bus-io  if  free-buf false exit  then
@@ -1693,7 +1695,8 @@ false instance value force-open?
    (scan)  if
       ." Failed to scan" true cr
    else    ( adr len )
-      drop .scan false
+\     drop .scan false
+      drop .ssids false
    then
 
    close

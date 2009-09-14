@@ -234,6 +234,14 @@ fload ${BP}/dev/via/spi/spi.fth             \ Driver for Via SPI controller
 fload ${BP}/dev/via/spi/bbspi.fth           \ Tethered SPI FLASH programming
 
 fload ${BP}/cpu/x86/pc/olpc/via/boardrev.fth   \ Board revision decoding
+warning @ warning off
+: wlan-reset  ( -- )
+   h# 4c acpi-l@                         ( old )
+   dup h# 800 invert and  h# 4c acpi-l!  ( old )
+   d# 10 ms                              ( old )
+   h# 800 or h# 4c acpi-l!               ( )
+;
+warning !
 
 : cpu-mhz  ( -- n )
    " /cpu@0" find-package drop	( phandle )
@@ -246,7 +254,6 @@ stand-init: Date to EC
    3drop
 ;
 
-[ifdef] use-wlan
 stand-init: Wireless reset
    \ Hit the reset on the Marvell wireless.  It sometimes (infrequently)
    \ fails to enumerate after a power-cycle, and reset seems to fix it.
@@ -254,7 +261,6 @@ stand-init: Wireless reset
    \ takes about 200 mS, so we are okay.
    atest? 0=  if  wlan-reset  then
 ;
-[then]
 
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
