@@ -194,7 +194,9 @@ hpet-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
    71 ff 11 mreg  \ SVID backdoor
    72 ff 37 mreg  \ SVID backdoor
    73 ff 33 mreg  \ SVID backdoor
+[ifdef] demo-board   \ No need to debounce on XO as the signal comes from the EC
    80 20 20 mreg  \ Debounce power button
+[then]
    81 08 08 mreg  \ 32-bit ACPI timer
 \  81 08 00 mreg  \ 24-bit ACPI timer - why?
    82 0f 0a mreg  \ Direct SCI to IRQ 10 (0xa)
