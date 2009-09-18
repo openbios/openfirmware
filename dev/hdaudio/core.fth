@@ -424,6 +424,8 @@ d# 256 /bd * value /bdl
 
 \ \\ Playback
 
+false value playing?
+
 : upsampling?  ( -- ? )  scale-factor 1 <>  ;
 
 : open-out  ( -- )
@@ -455,22 +457,30 @@ d# 256 /bd * value /bdl
 ;
 
 : write  ( adr len -- actual )
-   4 to sd#  audio-out  install-playback-alarm
+   4 to sd#  audio-out  install-playback-alarm  true to playing?
 ;
 
 \ Alarm handle to stop the stream when the content has been played.
 : playback-completed-alarm  ( -- )
-   sd#                                 ( sd# )
-   4 to sd#                            ( sd# )
-   stream-done?  if  write-done  then  ( sd# )
-   to sd#                              ( )
+   sd#                                                    ( sd# )
+   4 to sd#                                               ( sd# )
+   stream-done?  if  write-done  false to playing?  then  ( sd# )
+   to sd#                                                 ( )
 ;
 
 ' playback-completed-alarm is playback-alarm
 
-: wait-sound  ( -- )  ; \ sound stops with asynchronous alarm handler
+: wait-sound  ( -- )  begin  playing?  0= until  ;
 
-: set-volume  ( dB -- )  dac to node  dB>step# output-gain  ;
+false value left-mute?
+false value right-mute?
+
+: set-volume  ( dB -- )
+   dac to node
+   dB>step#
+   dup  left-mute?  if  h# 80 or  then  h# 3a000 or cmd  \ left gain
+        right-mute? if  h# 80 or  then  h# 39000 or cmd  \ right gain
+;
 
 \ \\ Recording
 

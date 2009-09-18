@@ -466,7 +466,7 @@ d# 600 d# 512 2value last-rel
    close
    cursor-on
    page
-   0
+   confirm-selftest?
 ;
 
 

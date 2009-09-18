@@ -595,10 +595,96 @@ dev /
 new-device
 " battery" device-name
 0 0 reg  \ Needed so test-all will run the selftest
-: selftest  ( -- error? )
-   .bat
+
+\ Test that the battery is inserted and not broken.
+: test-battery  ( -- error? )
+   bat-status@ h# 01 and  0= if
+      ." Insert battery to continue.. "
+      begin  d# 100 ms  bat-status@ h# 01 and  until
+      cr
+   then
+   ." Testing battery status.. "
+   bat-status@ h# 04 and  if
+      ." error: battery broken" cr
+      true
+   else
+      ." ok: " cr .bat cr
+      false
+   then
+;
+
+: wait-no-ac  ( -- error? )
+   ." Disconnect AC power to continue.. "
+   d# 200 0  do
+      d# 100 ms
+      bat-status@ h# 10 and  0=  if
+         false unloop cr exit
+      then
+   loop
+   cr
+   ." ERROR: AC not disconnected" cr
+   true
+;
+
+\ Test that we can run without AC power.
+: test-discharging  ( -- error? )
+   bat-status@ h# 10 and  0<> if
+      wait-no-ac  if  true exit  then
+   then
+   ." Test running from battery.. "
+   d# 2000 ms
+   bat-status@ h# 40 and  if
+      ." ok: battery discharging" cr
+      false
+   else
+      ." ERROR: battery not discharging" cr
+      true
+   then
+;
+
+: wait-ac  ( -- error? )
+   ." Connect AC power to continue.. "
+   d# 200 0  do
+      d# 100 ms
+      bat-status@ h# 10 and  if
+         false unloop cr exit
+      then
+   loop
+   cr
+   ." ERROR: AC not connected" cr
+   true
+;
+
+: test-charging  ( -- error? )
+   bat-status@ h# 10 and  0= if
+      wait-ac  if  true exit  then
+   then
+   ." Test running from AC.. "
+   d# 2000 ms
+   bat-status@ h# 40 and  0= if
+      ." ok: battery is not discharging" cr
+      false
+   else
+      ." ERROR: battery is discharging" cr
+      true
+   then
+;
+
+: interactive-test  ( -- error? )
+   test-battery      if  true exit  then
+   test-discharging  if  true exit  then
+   test-charging     if  true exit  then
    false
 ;
+
+: selftest  ( -- error? )
+   diagnostic-mode?  if
+      interactive-test
+   else
+      .bat false
+   then
+;
+
 finish-device
 device-end
 

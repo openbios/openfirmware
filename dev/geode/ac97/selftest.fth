@@ -131,7 +131,8 @@ d# 500 value tone-freq
    sweep-test
    mic-test
    record-base record-len la1+  " dma-free" $call-parent
-   close false
+   close
+   false
 ;
 
 \ LICENSE_BEGIN

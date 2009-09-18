@@ -429,7 +429,7 @@ warning @ warning off
    screen-ih iselect  erase-screen  iunselect
    page
    close
-   false
+   confirm-selftest?
 ;
 warning !
 

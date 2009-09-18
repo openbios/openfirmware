@@ -119,6 +119,7 @@ support-package: 16550
 fload ${BP}/dev/16550pkg/16550.fth  \ Serial port support package
 end-support-package
 [then]
+: serial-enabled?  ( -- flag )  h# 8846 config-b@ h# 40 and 0<>  ;
 
 fload ${BP}/dev/pci/isaall.fth
 \ We don't need a serial selftest because the serial port is internal only
@@ -262,6 +263,7 @@ stand-init: Wireless reset
    atest? 0=  if  wlan-reset  then
 ;
 
+fload ${BP}/dev/olpc/confirm.fth             \ Selftest interaction modalities
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
 fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type

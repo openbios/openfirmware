@@ -14,6 +14,7 @@ fload ${BP}/dev/hdaudio/audio.fth
 fload ${BP}/dev/hdaudio/extra.fth
 fload ${BP}/forth/lib/isin.fth
 fload ${BP}/dev/geode/ac97/selftest.fth
+fload ${BP}/dev/hdaudio/test.fth
 end0
 
 end-tokenizing

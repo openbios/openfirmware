@@ -110,6 +110,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
    ['] dcon!  catch  if  2drop  smb-stop 1 ms  smb-off  1 ms  smb-on  then
 ;
 
+: mode@    ( -- mode )    1 dcon@  ;
 : mode!    ( mode -- )    1 dcon!  ;
 : hres!    ( hres -- )    2 dcon!  ;  \ def: h#  458 d# 1200
 : htotal!  ( htotal -- )  3 dcon!  ;  \ def: h#  4e8 d# 1256
@@ -123,6 +124,9 @@ d# 905 value resumeline  \ Configurable; should be set from args
 : bright@  ( -- level ) d# 10 dcon@ ;
 : brighter  ( -- )  bright@ 1+  h# f min  bright!  ;
 : dimmer    ( -- )  bright@ 1-  0 max  bright!  ;
+
+: backlight-off  ( -- )  mode@  8 invert and  mode!  ;
+: backlight-on   ( -- )  mode@  8 or  mode!  ;
 
 \ Color swizzle, AA, no passthrough, backlight
 : set-color ( color? -- )

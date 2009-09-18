@@ -1696,7 +1696,16 @@ false instance value force-open?
       ." Failed to scan" true cr
    else    ( adr len )
 \     drop .scan false
-      drop .ssids false
+      diagnostic-mode?  if  ( adr len )
+         drop 2+ c@  if     ( )
+            false
+         else
+            ." ERROR: No access points seen" cr
+            true
+         then
+      else                  ( adr len )
+         drop .ssids false
+      then
    then
 
    close

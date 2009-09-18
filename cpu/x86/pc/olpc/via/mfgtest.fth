@@ -104,8 +104,8 @@ d# 14 value #mfgtests
 : camera-item   ( -- )  " /camera"    mfg-test-dev  ;
 : wlan-item     ( -- )  " /wlan"      mfg-test-dev  ;
 : timer-item    ( -- )  " /timer"     mfg-test-dev  ;
-: touchpad-item ( -- )  " /mouse"     mfg-test-dev  ;
-: keyboard-item ( -- )  " /keyboard"  mfg-test-dev  ;
+: touchpad-item ( -- )  " /8042/mouse"     mfg-test-dev  ;
+: keyboard-item ( -- )  " /8042/keyboard"  mfg-test-dev  ;
 
 : mfgtest-menu  ( -- )
    clear-menu
@@ -125,11 +125,11 @@ d# 14 value #mfgtests
    " RAM chips"
    ['] memory-item   ram.icon      1 2 install-icon
 
-   " SD card controllers - internal and external mass storage"
+   " Internal mass storage"
    ['] sd-item       sdcard.icon   1 3 install-icon
 
-   " USB ports"
-   ['] usb-item      usb.icon      1 4 install-icon
+   " Plug-in SD card"
+   ['] sd-item       sdcard.icon   1 4 install-icon
 
    " Battery"
    ['] battery-item  battery.icon  2 0 install-icon
@@ -149,8 +149,8 @@ d# 14 value #mfgtests
    " RTC (Real-Time Clock)"
    ['] rtc-item      clock.icon    3 0 install-icon
 
-   " ISA Timer"
-   ['] timer-item    timer.icon    3 1 install-icon
+   " USB ports"
+   ['] usb-item      usb.icon      3 1 install-icon
 
    \ These are last because they require user participation.
    \ The earlier tests are all included in automatic batch-mode.
@@ -160,7 +160,6 @@ d# 14 value #mfgtests
 
    " Touchpad"
    ['] touchpad-item touchpad.icon 3 3 install-icon
-
 ;
 
 ' mfgtest-menu to root-menu

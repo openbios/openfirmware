@@ -505,12 +505,17 @@ d# 10,000 constant movie-time
 : unmirrored  ( -- )  h# 1e ov@  h# 20 invert and  h# 1e ov!  ;
 
 : selftest  ( -- error? )
+   serial-enabled?  if
+      ." The serial port is in use so the camera cannot be used" cr
+      true exit
+   then
    camera-open 0=  if  true exit  then
    d# 300 ms
    unmirrored  shoot-still  ?dup  if  camera-close exit  then	( error? )
    d# 1,000 ms
    mirrored   shoot-movie  full-brightness		( error? )
    camera-close						( error? )
+   ?dup  0=  if  confirm-selftest?  then		( error? )
 ;
 
 : dump-regs  ( run# -- )
