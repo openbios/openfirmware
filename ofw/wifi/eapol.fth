@@ -548,6 +548,8 @@ false value group-rekey?
    loop  drop				( )
 ;   
 
+: #ssids  ( adr -- n )  2 + c@	;
+
 \ =======================================================================
 \ Associate
 
