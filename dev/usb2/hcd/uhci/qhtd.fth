@@ -332,7 +332,8 @@ defer process-hc-status
 : get-actual  ( td #td -- actual )
    0 -rot 0  ?do				( actual td )
       dup >hctd-stat le-l@ dup TD_STAT_ACTIVE and 0=  if
-         TD_ACTUAL_MASK and 1+
+         TD_ACTUAL_MASK and                     ( actual td size-code )
+         dup TD_NULL_DATA_SIZE =  if  drop 0  else  1+  then  ( actual td this-size )
          rot + swap				( actual' td )
       else  drop  then
       >td-next l@				( actual td' )
