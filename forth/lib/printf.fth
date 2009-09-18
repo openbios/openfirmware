@@ -25,10 +25,11 @@ d# 1024 buffer: spbuf
 : replace%  ( ... tail$ -- ... tail$' )  \ Handle % escapes
    1/string              ( ... tail$ char )
    case
-      [char] d  of   push-decimal rot <# u#s u#> +spbuf  pop-base  endof
-      [char] x  of   push-hex     rot <# u#s u#> +spbuf  pop-base  endof
+      [char] u  of   push-decimal rot (u.) +spbuf  pop-base  endof
+      [char] d  of   push-decimal rot (.)  +spbuf  pop-base  endof
+      [char] x  of   push-hex     rot (u.) +spbuf  pop-base  endof
       [char] s  of   2swap +spbuf  endof
-      [char] o  of   push-octal   rot <# u#s u#> +spbuf  pop-base  endof
+      [char] o  of   push-octal   rot (u.) +spbuf  pop-base  endof
       -1        of   endof
       ( default )  dup +spchar
    endcase
