@@ -35,9 +35,11 @@ true value debug-security?
 
    button-check game-key?  if
       ." Use power button to power off" cr
+      sound-end
       begin halt again
    else
       ." Powering off in 30 seconds" cr
+      sound-end
       d# 30000 ms  power-off
    then
 ;
@@ -1044,6 +1046,7 @@ warning !
             " init-program" $find  if
                set-cmdline
                execute
+               sound-end
                go
             then
             show-x
@@ -1088,7 +1091,6 @@ warning !
 [then]
    then
 
-   sound-end
    \ The screen may be frozen when we exit, because we want pretty
    \ boot even when not secure.
 
