@@ -118,6 +118,12 @@ Field(\DEBG, ByteAcc, NoLock, Preserve) {
     DBG1, 8,
 }
 
+// PMIO_RX04
+OperationRegion(\SCIE, SystemIO, 0x0404, 0x2)   // Genernal Purpose SCI Enable
+Field(\SCIE, ByteAcc, NoLock, Preserve) {
+    SCIZ,   1,                                  // SCI / SMI enable
+}
+
 OperationRegion(\GPST, SystemIO, 0x0420, 0x2)
 Field(\GPST, ByteAcc, NoLock, Preserve) {
     GS00,1,     // GPI0
@@ -136,6 +142,15 @@ Field(\GPST, ByteAcc, NoLock, Preserve) {
     GS13,1,     // HDAC wakeup
     GS14,1,     // USB wakeup
     GS15,1,     // north module SERR#
+}   
+
+OperationRegion(GPIO, SystemIO, 0x0448, 0x4)
+Field(GPIO, ByteAcc, NoLock, Preserve) {
+        ,7,
+    GPI7,1,
+        ,1,
+    GPI9,1,
+        ,22,
 }   
 
 // PMIO_RX22/3
@@ -176,31 +191,22 @@ Field(\WIRQ, ByteAcc, NoLock, Preserve) {
 }
 
 // from BIOS porting guide, section 13.2.2
-OperationRegion(\EDGE, SystemIO, 0x042c, 0x1)   // SMI enable, lid edge polarity
+OperationRegion(\EDGE, SystemIO, 0x042c, 1)   // SMI enable, lid edge polarity
 Field(\EDGE, ByteAcc, NoLock, Preserve) {
         , 1,                                    // SMI enable (1 == enable)
         , 1,                                    //
-        , 1,                                    // power button polarity (1 == falling)
+    PPOL, 1,                                    // power button polarity (1 == falling)
         , 1,                                    //
         , 1,                                    //
         , 1,                                    // battery low enable (0 == enable)
     TPOL, 1,                                    // therm polarity (1 == falling)
     LPOL, 1,                                    // lid polarity (1 == falling)
 }
-    
-// from BIOS porting guide, section 13.2.2.4
-OperationRegion(\ENB, SystemIO, 0x048c, 0x1)   // SMI enable, lid edge polarity
-Field(\ENB, ByteAcc, NoLock, Preserve) {
-        , 3,
-    TENB, 1,                                    // therm enable (1 == enabled)
-        , 4,
 
-}
-    
 OperationRegion(\Stus, SystemIO, 0x0430, 0x1)   // Global Status
 Field(\Stus, ByteAcc, NoLock, Preserve) {
     PADS, 8,
- } 
+} 
 
 OperationRegion(\Prie, SystemIO, 0x0434, 0x1)
 Field(\Prie, ByteAcc, NoLock, Preserve) {
@@ -234,11 +240,6 @@ Scope(\_GPE)
         Notify(\_SB.PCI0,0x2)
     }
 
-    Method(_L08) {          // A-series EBOOK event (RING)  (will go away)
-        UPUT (0x64)         // d
-        Notify(\_SB.PCI0.EBKA, 0x80)
-    }
-
     Method(_L09) {
         UPUT (0x39)         // 9
         Notify(\_SB.PCI0.VT86.PS2M, 0x02)       //Internal Mouse Controller PME Status
@@ -247,6 +248,7 @@ Scope(\_GPE)
     Method(_L0A) {          // EBOOK event (THRM#)
         UPUT (0x65)         // e
         Not(TPOL, TPOL)     // Flip the therm polarity bit
+        Store (One, GS10)   // clear interrupt caused by polarity flip
         Notify(\_SB.PCI0.EBK, 0x80)
     }
 
@@ -283,6 +285,8 @@ Method(_WAK, 1, Serialized)
     Notify(\_SB.PCI0.USB3, 0x00)
     Notify(\_SB.PCI0.EHCI, 0x00)
     
+    Store(One, SCIZ)
+
     If (LEqual (Arg0, 1))       //S1
     {
         Notify (\_SB.SLPB, 0x02)
@@ -379,7 +383,11 @@ Method (_PTS, 1, NotSerialized)
 Scope(\_SB)
 {
 
-    // define Sleeping button as mentioned in ACPI spec 2.0
+    Method(_INI, 0)
+    {
+        Store(One, SCIZ)
+    }
+
     Device (SLPB)
     {
         Name (_HID, EISAID("PNP0C0E"))  // Hardware Device ID SLEEPBTN
@@ -2284,46 +2292,6 @@ Scope(\_SB)
             }
         }   // Device(P2PB)
         
-        Device (EBK) {
-            Name (_PRW, Package (0x02) {  0x0A, 0x04 })     // Event 0A, wakes from S4
-
-            Method(_INI, 0)
-            {
-                UPUT (0x6b)  // k
-                Store (One, TENB)            // Enable ebook (THERM#)
-                Store (One, THRM)
-            }
-
-            Method(EBK) {
-                If (TPOL) {                   // ebook is "open"
-                    UPUT (0x65)                   // e
-                } Else {
-                    UPUT (0x45)                   // E
-                }
-                Return(TPOL)
-            }
-        }  // Device(EBK)
-
-        // RING-based ebook support, on A-series boards
-        Device (EBKA) {
-            Name (_PRW, Package (0x02) {  0x08, 0x04 })     // Event 08, wakes from S4
-
-            Method(_INI, 0)
-            {
-                UPUT (0x69)  // i
-                Store (One, RING)
-            }
-
-            Method(EBK) {
-                If (TPOL) {                   // ebook is "open"
-                    UPUT (0x65)                   // e
-                } Else {
-                    UPUT (0x45)                   // E
-                }
-                Return(TPOL)
-            }
-        }  // Device(EBKA)
-
         Device (EC) {
             Name (_PRW, Package (0x02) {  0x01, 0x04 })     // Event 01, wakes from S4
 
@@ -2335,17 +2303,45 @@ Scope(\_SB)
 
         }  // Device(EC)
 
+        Device (EBK) {
+            Name (_HID, "XO15EBK")
+            Name (_PRW, Package (0x02) {  0x0A, 0x04 })     // Event 0A, wakes from S4
+
+            Method(_INI, 0)
+            {
+                Store (One, THRM)
+                Store (GPI9, TPOL)  // init edge detect from current state
+            }
+
+            Method(EBK) {
+                If (TPOL) {
+                    // non-zero means waiting for fall, so switch is open
+                    UPUT (0x65)                   // e
+                } Else {
+                    UPUT (0x45)                   // E
+                }
+                Return(TPOL)
+            }
+        }  // Device(EBK)
+
         Device (LID) {
             Name (_HID, EisaId ("PNP0C0D"))
             Name (_PRW, Package (0x02) {  0x0B, 0x04 })     // Event 0B, wakes from S4
 
+            Method(_INI, 0)
+            {
+                Store (GPI7, LPOL)  // init edge detect from current state
+            }
+
+
             Method(_LID) {
-                If (LPOL) {                   // Lid is open
+                If (LPOL) {
+                    // non-zero means waiting for fall, so switch is open
                     UPUT (0x6c)                   // l
                 } Else {
                     UPUT (0x4c)                   // L
                 }
-                Return(LNot(LPOL))   // pgf is unclear on why this polarity is correct
+                Return(LPOL)
             }
 
         }  // Device(LID)
