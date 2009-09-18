@@ -8,14 +8,30 @@ d# 24 d# 24 2value ulhc
 9 constant grid-h
 
 d# 128 value #cols
+d# 94 value #rows
+: max-grid  ( -- n )  #rows #cols *  ;
+
 \needs xy+ : xy+  ( x1 y1 x2 y2 -- x3 y3 )  rot + -rot  + swap  ;
 \needs xy* : xy*  ( x y w h -- x*w y*h )  rot *  >r  * r>  ;
 
 : do-fill  ( color x y w h -- )  " fill-rectangle" $call-screen  ;
 
+1 value scale-factor
+: scale-block#  ( eblock# -- )  scale-factor /  ;
+: set-grid-scale  ( #eblocks -- )
+   d# 1000 1  do     ( #eblocks )
+      dup i /  max-grid <=  if   ( #eblocks )
+         drop                    ( )
+         i to scale-factor       ( )
+         unloop exit
+      then                       ( #eblocks )
+   loop
+   true abort" Grid map scale factor too large"
+;
+
 \ States:  0:erased  1:bad  2:waiting for write  3:written
 
-: >loc  ( eblock# -- x y )  #cols /mod  grid-w grid-h xy*  ulhc xy+  ;
+: >loc  ( eblock# -- x y )  scale-block# #cols /mod  grid-w grid-h xy*  ulhc xy+  ;
 
 : show-state  ( eblock# state -- )  swap >loc  glyph-w glyph-h  do-fill  ;
 

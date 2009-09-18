@@ -129,17 +129,19 @@ h# ff     0 h# ff  rgb>565 constant partial-color  \ magenta
 h# ff h# ff     0  rgb>565 constant pending-color  \ yellow
     0 h# ff     0  rgb>565 constant written-color  \ green
     0 h# ff h# ff  rgb>565 constant strange-color  \ cyan
-h# ff h# ff h# ff  rgb>565 constant starting-color \ white
+h# e8 h# e8 h# e8  rgb>565 constant starting-color \ very light gray
 
-d# 22 constant status-line
+d# 28 constant status-line
 
 : gshow-init  ( #eblocks -- )
+   dup set-grid-scale
    cursor-off  " erase-screen" $call-screen
 
    starting-color   ( #eblocks color )
-   swap 0  ?do  i over show-state  loop
-   drop
-   0 status-line at-xy  
+   over 0  ?do  i over show-state  loop  ( #eblocks color )
+   drop                                  ( #eblocks )
+   1 status-line at-xy  
+   ." Blocks/square: " scale-factor .d  ." Total blocks: " .d
 ;
 
 : gshow-erasing ( #eblocks -- )   drop  ." Erasing  "  ;
@@ -150,7 +152,7 @@ d# 22 constant status-line
 : gshow-clean     ( eblock# -- )  clean-color   show-state  ;
 : gshow-strange   ( eblock# -- )  strange-color show-state  ;
 
-: gshow-cleaning ( -- )  d# 26 status-line at-xy  ." Cleanmarkers"  cr  ;
+: gshow-cleaning ( -- )  7 status-line at-xy  ." Cleanmarkers"  cr  ;
 : gshow-done  ( -- )  cursor-on  ;
 
 : gshow-pending  ( eblock# -- )  pending-color  show-state  ;
@@ -165,7 +167,7 @@ d# 22 constant status-line
    drop
 ;
 
-: show-eblock#  ( eblock# -- )  d# 20 status-line at-xy .x  ;
+: show-eblock#  ( eblock# -- )  d# 40 status-line at-xy .d  ;
 : gshow-written  ( eblock# -- )
    dup  written-color  show-state
    show-eblock#
