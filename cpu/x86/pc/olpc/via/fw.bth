@@ -238,8 +238,6 @@ fload ${BP}/cpu/x86/pc/olpc/via/usb.fth
 false to stand-init-debug?
 \ true to stand-init-debug?
 
-: serial-enabled?  ( -- flag )  h# 8846 config-b@ h# 40 and 0<>  ;
-
 hex
 : i-key-wait  ( ms -- pressed? )
    serial-enabled?  0=  if  drop false exit  then  ( ms )
@@ -320,13 +318,13 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 true value text-on?
 : text-off  ( -- )
    text-on?  if
-      screen-ih out-mux-ih remove-mux
+      screen-ih remove-output
       false to text-on?
    then
 ;
 : text-on   ( -- )
    text-on? 0=  if
-      screen-ih out-mux-ih add-mux
+      screen-ih add-output
       cursor-on
       true to text-on?
    then
