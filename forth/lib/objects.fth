@@ -202,7 +202,9 @@ alias to is
 action: >user 2@ ;
 action: >user 2! ;
 action: >user    ;
-: 2value  ( n1 n2 "name" -- )  create  2 /n* user#,  2!  use-actions  ;
+: 2value-cf  create-cf use-actions  ;
+: 2value  ( n1 n2 "name" -- )  header 2value-cf  2 /n* user#,  2!  ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
