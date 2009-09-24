@@ -451,6 +451,13 @@ support-package: http
    fload ${BP}/ofw/inet/http.fth	\ HTTP client
 end-support-package
 
+support-package: cifs
+   fload ${BP}/ofw/fs/cifs/loadpkg.fth
+end-support-package
+devalias smb tcp//cifs
+devalias cifs tcp//cifs
+: op  " select smb:\\test:testxxx@10.20.0.14\XTest\hello.txt" eval ;
+
 fload ${BP}/cpu/x86/pc/olpc/via/memtest.fth
 
 fload ${BP}/ofw/wifi/wifi-cfg.fth

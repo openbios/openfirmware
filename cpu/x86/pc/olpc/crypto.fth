@@ -40,6 +40,18 @@ d# 128 buffer: hashbuf
    hashbuf hashlen @
 ;
 
+\ Another hack - if the hashname is "des", the arguments to signature-bad?
+\ are  ( 0 plain$ cipher$ key$ hashname$="des" -- error? )
+\ plain$, cipher$, and key$ are all 8-byte arrays - ciper$ is output
+: des  ( data$ key$ -- result$ )
+   2>r  0 -rot  hashbuf 8  2r>  " des"   ( 0 data$ ciper$ key$ hashname$ )
+   signature-bad?  h# fffff and  abort" DES failed"   ( )
+   hashbuf 8
+;
+
+
+
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks
 \ 
