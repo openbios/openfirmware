@@ -811,6 +811,21 @@ transient
 ;
 resident
 
+headerless
+: 2value  \ name  ( d.initial-value -- )
+   header noop   \  Will patch with (2value)
+;
+
+3 actions
+action:  >instance-data 2@  ;
+action:  >instance-data 2!  ;
+action:  >instance-data     ;
+
+: instance-2value  ( d.initial-value -- )
+   create-cf use-actions  /n 2* value#,  2!
+;
+
+
 headers
 : buffer:  \ name  ( size -- )
    header noop  \ Will patch with (buffer:)
@@ -950,6 +965,24 @@ action:  >initial-value    ;
    then
 ;
 patch (value) noop value
+
+3 actions
+action:  >initial-value 2@  ;
+action:  >initial-value 2!  ;
+action:  >initial-value     ;
+
+: package-2value  ( initial-value -- )
+   create-cf use-actions  2 /n* value#,  2!
+;
+
+: (2value)  ( initial-value -- )
+   instance?  if
+      instance-2value
+   else
+     package?  if  package-2value  else  2value-cf  2 /n* user#, 2!  then
+   then
+;
+patch (2value) noop 2value
 
 headers
 : my-args  ( -- adr len )  my-args-adr my-args-len  ;
