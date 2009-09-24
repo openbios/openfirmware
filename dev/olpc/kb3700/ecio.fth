@@ -311,6 +311,7 @@ d# 10 constant #ec-retries
 
    ['] io-spi-reprogrammed to spi-reprogrammed
    use-mem-flash-read
+   [ifdef] uncache-flash  uncache-flash  [then]
 
    7 to spi-us   \ Measured time for "1 fea9 ec!" is 7.9 uS
 
