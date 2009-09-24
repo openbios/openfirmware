@@ -17,6 +17,8 @@ headerless
          stdin @  if
             console-key?  if
                console-key  h# 1b =  if
+                  \ consume extra escapes in case the user typed several
+                  begin console-key? while console-key drop repeat
                   true unloop unloop exit
                then
             then
