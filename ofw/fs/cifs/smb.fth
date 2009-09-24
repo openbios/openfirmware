@@ -1,8 +1,22 @@
+\ See license at end of file
+purpose: Server Message Block layer of CIFS file system code
+
+\ This lets you access Windows shares from OFW
+
+\ TODO:
+\ fix opening dir when \ missing from end of URL
+\ next-file-info needs to merge pathname$ into search string
+\ test with other servers
+\ get password and username from config variables if they exist and not specified in URL
+
+
 char \ constant delim
 
 0. instance 2value share$
 0. instance 2value server$
 0. instance 2value password$
+0. instance 2value pathname$
+0. instance 2value tail$
 
 0. instance 2value account$
 
@@ -46,68 +60,21 @@ char \ constant delim
          over c@  delim =  if       ( filename$ tail$ )
             \ We found a \\         ( filename$ tail$ )
             2swap  2 pick - 1-      ( rem$ filename$' ) \ Remove tail
+            to pathname$            ( rem$ )
             exit
          then                       ( filename$ tail$ )
       then                          ( filename$ tail$ )
    repeat                           ( filename$ tail$ )
-   2swap                            ( null-rem$ filename$ )
+   2swap to pathname$               ( null-rem$ )
 ;
 
 : parse-share  ( share+path$ -- /path$ )
    delim split-string  2swap to share$  ( /path$ )
 ;
 
-\ If the filename itself contains "//", split it around that, returning
-\ filename$' as the portion preceding the "//" and "rem$" as the trailing
-\ portion beginning with the second "/" of the pair.
-\ For example, "/foo/bar//oof/rab" parses to "/oof/rab" "/foo/bar"
-: parse-filename  ( filename$ -- rem$ filename$' )
-   2dup                             ( filename$ test$ )
-   begin  dup  while                ( filename$ test$ )
-      delim split-string            ( filename$ head$ tail$ )
-      2swap 2drop                   ( filename$ tail$ )
-      dup  if  1 /string  then      ( filename$ tail$' )  \ Remove first "/"
-      dup  if                       ( filename$ tail$ )
-         over c@  delim =  if       ( filename$ tail$ )
-            \ We found a //         ( filename$ tail$ )
-            2swap  2 pick - 1-      ( rem$ filename$' ) \ Remove tail
-            exit
-         then                       ( filename$ tail$ )
-      then                          ( filename$ tail$ )
-   repeat                           ( filename$ tail$ )
-   2swap                            ( null-rem$ filename$ )
-;
-
 headers
 : set-server  ( server$ -- )
    dup  if  " $set-host" $call-parent  else  2drop  then
-;
-: old-parse-server  ( server+share$ -- server$ )
-   \ If the string is shorter than 2 characters, the server portion is null
-   dup 2 <  if  " " exit  then             ( ss$ )
-
-   \ If the string doesn't start with \\, the server portion is null
-   over  " \\" comp  if  " " exit  then    ( ss$ )
-
-   2 /string                               ( server\share$ )
-   delim split-string                      ( server$ share$ )
-   2drop                                   ( server$ )
-;
-
-: old-parse-share  ( url$ -- rem$ server+share$ )
-   \ If the string is shorter than 2 characters, the server portion is null
-   dup 2 <  if  " " exit  then             ( url$ )
-
-   \ If the string doesn't start with \\, the server portion is null
-   over  " \\" comp  if  " " exit  then    ( url$ )
-
-   2dup 2 /string                          ( url$ $1 )  \ $1 omits the leading \\
-   delim left-parse-string                 ( url$ share+path$ server$ )
-   2drop                                   ( url$ share+path$ )
-   delim split-string                      ( url$ share$ path$ )
-   2nip                                    ( url$ path$ )
-   2swap                                   ( path$ url$ )
-   third -                                 ( path$ server+share$ )
 ;
 
 8 instance buffer: signature
@@ -117,6 +84,7 @@ h# c05c constant my-capabilities \ LargeRd, LargeWr, NTStat, NT SMBs, Large file
 0 instance value tid
 0 instance value uid
 0 instance value mid
+0 instance value sid  \ Search ID
 0 instance value msg#
 
 0 instance value last-command
@@ -488,6 +456,13 @@ d# 24 buffer: p24-buf
    }smb  empty-response       ( error? )
 ;
 
+: $getattr  ( path$ -- true | attr false )
+   8 smb{ +path}smb  if  true exit  then
+   d# 10 expect-wcnt    ( rem$' )
+   -xw                  ( rem$' attr )
+   nip nip  false
+;
+
 : flush  ( -- error? )
    5 smb{  fid +xw  --bytes--  }smb  empty-response
 ;
@@ -580,6 +555,194 @@ d# 24 buffer: p24-buf
    2drop
 ;
 
+\ template
+0 [if]
+: transact  ( timeout oneway #setup #retdata #retparm #data #param -- )
+   h# 32 smb{
+   #param     +xw
+   #data      +xw
+   #retparm   +xw
+   #retdata   +xw
+   #setupdata +xb
+   0 +xb  \ Reserved
+   oneway     +xw
+   timeout    +xl
+   0 +xw  \ Reserved
+   parmcnt    +xw
+   parmoffset +xw
+   datacnt    +xw
+   dataoffset +xw
+   setupcnt   +xb
+   0 +xb  \ Reserved
+   [ setupcnt * +xw ]
+   --bytes--
+   " " +unicode$  \ Name (NULL for TRANSACTION2)
+   pad +xb    \ Pad to short or long
+   [ parmcnt * +xb ]
+   pad +xb    \ Pad to short or long
+   [ datacnt * +xb ]
+   }smb
+;
+
+[then]
+
+: continue-search  ( resumekey -- true | rem$ false )
+   1-            ( resumekey' )  \ We bias it by 1 because 0 is special to OFW
+   h# 32 smb{
+   d# 14    +xw  \ #param
+   0        +xw  \ #data
+   d# 10    +xw  \ #retparm
+   max-data +xw  \ #retdata
+   0        +xb  \ #setupdata
+   0        +xb  \ Reserved
+   0        +xw  \ flags - two way, no disconnect
+   0        +xl  \ timeout - return immediately
+   0        +xw  \ Reserved
+   d# 14    +xw  \ parmcnt
+   d# 66    +xw  \ parmoffset
+   0        +xw  \ datacnt
+   0        +xw  \ dataoffset
+   1        +xb  \ setupcnt
+   0        +xb  \ Reserved
+
+   2        +xw  \ Setup[0] = Subcommand FIND_NEXT2
+   --bytes--
+   0        +xb  \ Pad to align
+   sid      +xw  \ Search ID
+   d# 1     +xw  \ Search count
+   \  h# 101   +xw  \ This value returns a 64-bit date in 100 nS unit since the Gregorian epoch
+   h# 001   +xw  \ Get info in DOS format for now, so we can decode the time
+   ( resumekey )
+            +xl
+   h# e     +xw  \ Search flags - pick up where left off 8, return resume keys 4, close on end 2
+   " "      +unicode$  \ Search pattern
+   }smb
+;
+
+: start-search  ( -- true | rem$ false )
+   h# 32 smb{
+   d# 18    +xw  \ #param
+   0        +xw  \ #data
+   d# 10    +xw  \ #retparm
+   max-data +xw  \ #retdata
+   0        +xb  \ #setupdata
+   0        +xb  \ Reserved
+   0        +xw  \ flags - two way, no disconnect
+   0        +xl  \ timeout - return immediately
+   0        +xw  \ Reserved
+   d# 18    +xw  \ parmcnt    \ Actually d# 12 plus pattern length (unicode, null terminated)
+   d# 66    +xw  \ parmoffset
+   0        +xw  \ datacnt
+   0        +xw  \ dataoffset
+   1        +xb  \ setupcnt
+   0        +xb  \ Reserved
+
+   1        +xw  \ Setup[0] = Subcommand FIND_FIRST2
+   --bytes--
+   0        +xb  \ Pad to align
+   h# 17    +xw  \ Search attributes - include dir 10, system 4, hidden 2, RO 1
+   d# 1     +xw  \ Search count
+   6        +xw  \ Search flags - return resume keys 4, close on end 2
+   \  h# 101   +xw  \ This value returns a 64-bit date in 100 nS unit since the Gregorian epoch
+   h# 001   +xw  \ Get info in DOS format for now, so we can decode the time
+   0        +xl  \ Storage type
+   " \*"    +unicode$  \ Search pattern
+   }smb
+;
+
+: >hms  ( dos-packed-time -- secs mins hours )
+   dup h#   1f and      2*   swap  ( secs packed )
+   dup h# 07e0 and      5 >> swap  ( secs mins packed )
+       h# f800 and  d# 11 >>       ( secs mins hours )
+;  
+: >dmy  ( dos-packed-date -- day month year )
+   dup h#   1f and          swap   ( day packed )
+   dup h# 01e0 and  5 >>    swap   ( day month packed )
+       h# fe00 and  9 >> d# 1980 + ( day month year )
+;  
+\ Convert DOS file attributes to the firmware encoding
+\ see showdir.fth for a description of the firmware encoding
+: >canonical-attrs  ( dos-attrs -- canon-attrs )
+   >r
+   \ Access permissions
+   r@     1 and  if  o# 666  else  o# 777  then \ rwxrwxrwx
+
+   \ Bits that are independent of one another
+   r@     2 and  if  h# 10000 or  then		\ hidden
+   r@     4 and  if  h# 20000 or  then		\ system
+   r@ h# 20 and  if  h# 40000 or  then		\ archive
+
+   \ Mutually-exclusive file types
+   r@     8 and  if  h#  3000 or  then		\ Volume label
+   r> h# 10 and  if  h#  4000 or  then		\ Subdirectory
+   dup h# f000 and  0=  if  h# 8000 or  then	\ Ordinary file	
+;
+
+: unicode>ascii  ( adr -- adr len )
+   dup dup                        ( adr aadr uadr )
+   begin                          ( adr aadr uadr )
+      dup le-w@                   ( adr aadr uadr uchar )
+      rot 2dup c!                 ( adr uadr uchar aadr )
+      ca1+ -rot                   ( adr aadr uadr uchar )
+      swap wa1+ swap              ( adr aadr uadr uchar )
+  0= until                        ( adr aadr uadr )
+  drop                            ( adr aadr )
+  over - 1-                       ( adr len )
+;
+
+0 instance value parm-cnt
+0 instance value smb-base
+0 instance value parm-base
+0 instance value data-base
+: parse-search  ( rem$ -- false | file info .. true )
+   over d# 32 - to smb-base
+   d# 10 expect-wcnt
+   drop-w  \ Total parameter count
+   drop-w  \ Total data count
+   drop-w  \ reserved
+   -xw to parm-cnt
+   -xw smb-base + to parm-base
+   drop-w  \ Parameter displacement
+   drop-w  \ # of data bytes
+   -xw smb-base + to data-base
+   2drop
+   \ At this point we stop deserializing and just go straight to the info
+   \ id s m h d m y len attr name$ true 
+   parm-cnt d# 10 =  if
+      parm-base le-w@ to sid
+      2   ( search-count-offset )
+   else   ( )
+      0   ( search-count-offset )
+   then   ( search-count-offset )
+   parm-base + le-w@  0=  if  false  exit  then
+
+   data-base le-l@ 1+                        ( id' )
+   data-base d# 14 + le-w@ >hms              ( id s m h )
+   data-base d# 12 + le-w@ >dmy              ( id s m h d m y )
+   data-base d# 16 + le-l@                   ( id s m h d m y len )
+   data-base d# 24 + le-w@ >canonical-attrs  ( id s m h d m y len attr )
+   data-base d# 28 + unicode>ascii           ( id s m h d m y len attr name$ )
+   true
+;
+
+: next-file-info  ( id -- false | id' s m h d m y len attributes name$ true )
+   dup -1 =  if  drop false  exit  then                 ( id )
+   ?dup  if  continue-search  else  start-search  then  ( true | adr len false )
+   if  false  exit  then                                ( rem$ )
+   parse-search
+;
+
+: free-bytes  ( -- d.#bytes )
+   h# 80 smb{ --bytes-- }smb  if  0. exit  then
+   -wcnt                   ( rem$ )
+   drop-w                  ( rem$ )
+   -xw >r   \ Blocks/unit  ( rem$ )
+   -xw >r   \ bytes/block  ( rem$ )
+   -xw >r   \ free-unit    ( rem$ )
+   2drop                   ( )
+   r> r> u*  r> um*        ( d.#bytes )
+;
+
 0 [if]
 : send-create-andx  ( path$ access flags -- )
    h# a2 smb{
@@ -615,30 +778,49 @@ d# 24 buffer: p24-buf
    my-args dup 0=  if  2drop true exit  then       ( arg$ )
    allocate-buffers                                ( arg$ )
 
-   parse-server parse-share                        ( rem$ )
-   server$ set-server                              ( rem$ )
-   d# 139 " connect" $call-parent  0=  if  2drop false exit  then
-   " OFW" " *SMBSERVER " start-session if  2drop false exit  then
-   negotiate      if  free-buffers  4drop false exit  then   ( rem$ )
-   password$ set-password  compute-password                  ( rem$ )
-   session-setup  if  free-buffers  4drop false exit  then   ( rem$ )
-   share$ server$  " \\\\%s\\%s" sprintf                     ( rem$ server+share$ )
-   tree-connect   if  free-buffers  2drop false exit  then   ( rem$ )
+   parse-server parse-share parse-pathname to tail$
+   server$ set-server
+   d# 139 " connect" $call-parent  0=  if  false exit  then
+   " OFW " " *SMBSERVER " start-session if  false exit  then
+   negotiate      if  free-buffers  false exit  then   ( )
+   password$ set-password  compute-password            ( )
+   session-setup  if  free-buffers  false exit  then   ( )
+   share$ server$  " \\\\%s\\%s" sprintf               ( server+share$ )
+   tree-connect   if  free-buffers  false exit  then   ( )
 
-   parse-filename  2 open-file  if                 ( rem$ )
-      free-buffers  2drop false exit
-   then                                            ( rem$ )
+   \ If we just opened the share without a path, return success now
+   pathname$ nip  0=  if             ( )
+      " \" to pathname$              ( )
+      true exit
+   then                              ( )
+
+   \ Otherwise determine if the path refers to a directory or a file
+   pathname$ $getattr  if            ( )
+      ." Bad CIFS pathname" cr       ( )
+      free-buffers  false exit
+   then                              ( attr )
+
+   \ If the 10 bit is set it's a directory, so we just return success
+   h# 10 and  if  true exit  then    ( )
+
+   \ It's a file, so open it - first try to open read/write.
+   pathname$ 2 open-file  if         ( )
+      \ Failing that, try to open read-only            
+      pathname$ 0 open-file  if      ( )
+         free-buffers  false exit
+      then                           ( )
+   then                              ( )
 
    \ If any arguments remain, assume we are dealing with a ZIP
    \ archive and interpose the ZIP handler 
-   dup  if                                         ( rem$ )
-      " zip-file-system" $interpose                ( okay? )
-   else                                            ( rem$ )
-      2drop true                                   ( okay? )
-   then                                            ( okay? )
+   tail$  dup if                     ( tail$ )
+      " zip-file-system" $interpose  ( okay? )
+   else                              ( tail$ )
+      2drop true                     ( okay? )
+   then                              ( okay? )
 ;
 : close  ( -- )
-   close-file drop
+   fid  if  close-file drop  then
    tree-disconnect drop
    free-buffers
 ;
@@ -647,3 +829,27 @@ d# 24 buffer: p24-buf
 : dma-free  ( adr #bytes -- )  free-mem  ;
 
 : load  ( adr -- len )  size drop  read  ;
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2009 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
