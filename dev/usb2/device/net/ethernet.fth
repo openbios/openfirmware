@@ -27,42 +27,20 @@ headers
    then
 ;
 
-: init-net  ( -- )
-   init-nic
-   mac-adr$ encode-bytes  " local-mac-address" property  ( )
+: stop-net  ( -- )
+   stop-nic
+   end-bulk-in
+   free-buf
+;
+
+: loopback{  ( -- )
+   mii{  0 mii@  h# 4000 or  0 mii!  }mii
+;
+: }loopback  ( -- )
+   mii{  0 mii@  h# 4000 invert and  0 mii!  }mii
 ;
 
 external
-
-: close  ( -- )
-   opencount @ 1-  0 max  opencount !
-   opencount @ 0=  if
-      end-bulk-in
-      stop-nic
-      free-buf
-   then
-;
-
-: open  ( -- ok? )
-   my-args  " debug" $=  if  debug-on  then
-   device set-target
-   opencount @ 0=  if
-      first-open?  if
-         init-net
-         false to first-open?
-         ?make-mac-address-property
-      then
-      link-up? 0=  if
-         ." Network not connected." cr
-         false exit
-      then
-      init-buf
-      start-nic
-      inbuf /inbuf bulk-in-pipe begin-bulk-in
-   then
-   opencount @ 1+ opencount !
-   true
-;
 
 : copy-packet  ( adr len -- len' )
    dup outbuf le-w!  tuck outbuf 2 + swap move  2 +
@@ -172,6 +150,80 @@ external
 ;
 
 : reset  ( -- flag )  reset-nic  ;
+
+headers
+
+\ This loopback test is a reliability improvement.  The AX88772,
+\ and perhaps other chips, sometimes loses the first received
+\ packet.  That's annoying, as the first packet is often a
+\ reply that we care about, thus causing a timeout and retry.
+\ We work around that by sending ourselves a few loopback packets
+\ until we receive one.  In most cases, the first loopback packet
+\ is received correctly, and if not, the second one is okay.
+\ We try 5 times just to be safe, exiting as soon as we "win".
+
+0 value scratch-buf
+: clear-rx  ( -- )
+   d# 200  0  do
+      scratch-buf d# 2000 read  -2 =  ?leave
+   loop
+;   
+
+create test-packet
+   h# ff c, h# ff c, h# ff c, h# ff c, h# ff c, h# ff c,  \ Dst - broadcast
+   h# 01 c, h# 02 c, h# 03 c, h# 04 c, h# 05 c, h# 06 c,  \ Src - junk
+   h# 00 c, h# 00 c,                                      \ Type - junk
+   here  h# 40 dup allot erase  \ Junk data
+here test-packet - constant /tp
+
+: try-loopback?  ( -- okay? )
+   test-packet /tp  write  /tp <>  if  false exit  then
+   2 ms
+   scratch-buf d# 2000 read  /tp =
+;
+: loopback-test  ( -- )
+   d# 2000 alloc-mem to scratch-buf
+   loopback{
+      clear-rx
+      5 0  do  try-loopback?  ?leave  loop
+   }loopback
+   scratch-buf d# 2000 free-mem
+;
+
+external
+
+: close  ( -- )
+   opencount @ 1-  0 max  opencount !
+   opencount @ 0=  if  stop-net  then
+;
+
+: open  ( -- ok? )
+   my-args  " debug" $=  if  debug-on  then
+   device set-target
+   opencount @ 0=  if
+      init-buf
+      inbuf /inbuf bulk-in-pipe begin-bulk-in
+
+      first-open?  if
+         false to first-open?
+         init-nic
+         mac-adr$ encode-bytes  " local-mac-address" property  ( )
+         ?make-mac-address-property
+      else
+         start-nic
+      then
+
+      link-up? 0=  if
+         ." Network not connected." cr
+         stop-net
+         false exit
+      then
+
+      loopback-test
+   then
+   opencount @ 1+ opencount !
+   true
+;
 
 headers
 

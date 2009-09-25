@@ -115,7 +115,7 @@ h# f1 constant SET_REG
 
 : pg-sync-link-status  ( -- )
    \ Delayed loop until link-up is detected.
-   5 0 do  pg-link-up? if  unloop exit  then  d# 1000 ms  loop
+   d# 500 0 do  pg-link-up? if  unloop exit  then  d# 10 ms  loop
 ;
 
 : pg-init-nic ( -- )
@@ -129,6 +129,7 @@ h# f1 constant SET_REG
 ;
 
 : pg-start-nic ( -- )
+   pg-sync-link-status
    \ force 100Mbps full-duplex
    h# 0130c9 ec0 3 pg-write-reg
 ;
@@ -151,6 +152,8 @@ h# f1 constant SET_REG
    ['] pg-stop-nic  to stop-nic
    ['] pg-get-mac-address to get-mac-address
    ['] pg-unwrap-msg to unwrap-msg
+   ['] pg-mii@ to mii@
+   ['] pg-mii! to mii!
 ;
 
 : init  ( -- )  init  vid pid pegasus?  if  init-pegasus  then  ;

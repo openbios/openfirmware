@@ -161,7 +161,9 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
    \ But, I've seen loop count as high as d# 1020.
    \ I increase the loop count in case the partner is slow in negotiating.
    \ And if there's no connection at all, let's not wait too long.
-   d# 2000 0  do  ax-link-up? ?leave  1 ms  loop
+   ax-mii-sw
+   d# 2000 0  do  1 ax-mii@ 4 and  ?leave  1 ms  loop
+   ax-mii-hw
 ;
 
 : select-phy  ( -- )
@@ -204,6 +206,7 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
 
 : rx-ctl!  ( n -- )  h# 10 control!  ;    \ AX_CMD_WRITE_RX_CTL
 : ax-start-nic  ( -- )
+   ax-auto-neg-wait
    h# 8c  my-args  " promiscuous" $=  if  1 or  then  rx-ctl!
 ;
 : ax-stop-nic  ( -- )  0 rx-ctl!  ;
@@ -219,7 +222,6 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
    ax-get-mac-address  2drop
    ax-set-ipg
    ax-init-mii
-   ax-auto-neg-wait
    ax-start-nic
 ;
 
@@ -229,6 +231,10 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
    ['] ax-start-nic to start-nic
    ['] ax-stop-nic  to stop-nic
    ['] ax-get-mac-address to get-mac-address
+   ['] ax-mii@ to mii@
+   ['] ax-mii! to mii!
+   ['] ax-mii-sw to mii{
+   ['] ax-mii-hw to }mii
    vid h# 2001 =  pid h# 1a00 = and  if  h# 009f.9d9f to ax-gpio  then
    vid h# 07b8 =  pid h# 420a = and  if  h# 001f.1d1f to ax-gpio  then
    d# 2048 to /inbuf

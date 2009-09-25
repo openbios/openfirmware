@@ -21,6 +21,10 @@ defer link-up?	       ( -- up? )		' true to link-up?
 defer reset-nic        ( -- )			' noop to reset-nic
 defer start-nic        ( -- )			' noop to start-nic
 defer stop-nic         ( -- )			' noop to stop-nic
+defer mii{             ( -- )                   ' noop to mii{  \ Acquire
+defer }mii             ( -- )                   ' noop to }mii  \ Release
+defer mii@             ( reg -- val )           ' noop to mii@
+defer mii!             ( val reg -- )           ' drop to mii@
 
 external
 defer get-mac-address  ( -- adr len )		' mac-adr$ to get-mac-address
