@@ -16,3 +16,4 @@ fload ${BP}/ofw/inet/netload.fth    \ Network boot loading package
 fload ${BP}/ofw/inet/attr-ip.fth    \ Save IP info in /chosen
 fload ${BP}/ofw/inet/encdec.fth     \ Packet encoding/decoding primitives
 fload ${BP}/ofw/inet/dns.fth	    \ Domain name resolver (RFC1034/5)
+fload ${BP}/ofw/inet/capture.fth    \ Packet capture to PCAP files

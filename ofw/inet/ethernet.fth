@@ -10,6 +10,9 @@ d# 1514 constant ethernet-max		\ Header (14) + data (1500)
 0 instance value (link-mtu)	\ max packet size
 0 instance value packet-buffer
 
+defer send-ethernet-packet-hook      ' noop is send-ethernet-packet-hook
+defer receive-ethernet-packet-hook   ' noop is receive-ethernet-packet-hook
+
 \ Determine the Ethernet address for his-ip-addr
 instance defer resolve-en-addr  ( 'dest-adr type -- 'en-adr type )
 \ will be set later
@@ -115,6 +118,8 @@ hex
       pause
       packet-buffer link-mtu  " read" $call-parent      ( type length|-error )
       dup  0>  if                                       ( type length )
+         packet-buffer swap                             ( type packet length )
+         receive-ethernet-packet-hook  nip              ( type length )
          select-ethernet-header                         ( type length )
          over  en-type xw@ =  if                        ( type length )
             nip  /ether-header payload false  exit      ( adr len false )
@@ -146,7 +151,9 @@ hex
    en-type xw!                                  ( data-len )
    my-en-addr   en-source-addr  copy-en-addr    ( data-len )
 
-   the-struct  swap /ether-header +  tuck  " write" $call-parent  ( len actual )
+   the-struct  swap /ether-header +             ( data-adr data-len )
+   send-ethernet-packet-hook                    ( data-adr data-len )
+   tuck  " write" $call-parent  ( len actual )
    <>  if  ." Network transmit error" cr  then
 ;
 
