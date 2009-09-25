@@ -457,6 +457,7 @@ end-support-package
 devalias smb tcp//cifs
 devalias cifs tcp//cifs
 : op  " select smb:\\test:testxxx@10.20.0.14\XTest\hello.txt" eval ;
+: dsmb  " dir smb:\\test:testxxx@10.20.0.14\XTest\" eval ;
 
 fload ${BP}/cpu/x86/pc/olpc/via/memtest.fth
 
@@ -474,6 +475,7 @@ end-support-package
 fload ${BP}/cpu/x86/pc/olpc/nandcastui.fth
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
 [then]
+fload ${BP}/cpu/x86/pc/olpc/via/padlock.fth   \ Via security engine
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 devalias fsdisk int:0
 
