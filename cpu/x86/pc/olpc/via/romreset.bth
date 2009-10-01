@@ -172,7 +172,9 @@ label startup
    fload ${BP}/cpu/x86/pc/olpc/via/startmtrrinit.fth
 
    fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
-\ XXX need to move startcpuspeed to here
+
+   fload ${BP}/cpu/x86/pc/olpc/via/starttherm.fth     \ Enables thermal monitor
+   fload ${BP}/cpu/x86/pc/olpc/via/startcpuspeed.fth  \ Turns up clock rate
 
    \ Cache is now setup normally, backed by memory
    \ Setup a small stack for subroutine calls
@@ -211,8 +213,6 @@ label startup
 \   e2 2e port-wb   7 2f port-wb
 
    fload ${BP}/cpu/x86/pc/olpc/via/startmemtop.fth
-
-   fload ${BP}/cpu/x86/pc/olpc/via/startcpuspeed.fth
 
    h# 1f port80
    char r report

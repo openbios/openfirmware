@@ -34,15 +34,17 @@ also 386-assembler definitions
    dup last-cx =  if
       drop
    else
+      \ This optimization is dangerous in the face of conditionals
       dup to last-cx
+      forget-msr
       [ previous ] # cx mov  [ also forth ]
    then
    [ previous ]
 ;
 
 \ Read/write an MSR to/from %edx,%eax
-: rmsr  ( reg# -- )  set-cx   h# 0f c,  h# 32 c,  ;
-: wmsr  ( reg# -- )  set-cx   h# 0f c,  h# 30 c,  ;
+: rmsr  ( reg# -- )  set-cx   rdmsr  ;
+: wmsr  ( reg# -- )  set-cx   wrmsr  ;
 
 \ These bit operations can be used between "rmsr" and "wmsr"
 
@@ -60,8 +62,8 @@ also 386-assembler definitions
 : set-msr    ( d.val reg# -- )   -rot # dx mov  # ax mov  wmsr  ;
 
 \ Set or clear bits in an MSR (read-modify-write the register)
-: bitset-msr ( mask reg# -- )  tuck rmsr  bitset  wmsr  ;
-: bitclr-msr ( mask reg# -- )  tuck rmsr  bitclr  wmsr  ;
+: bitset-msr ( mask reg# -- )  rmsr  bitset  wrmsr  ;
+: bitclr-msr ( mask reg# -- )  rmsr  bitclr  wrmsr  ;
 
 \ Some I/O port operations
 \ These could be optimized to generate the immediate forms of in and out
