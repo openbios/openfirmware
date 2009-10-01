@@ -29,11 +29,12 @@ d# 15 value wake-delay
       0 logstr c!
       time&date >unix-seconds >sd, logstr $cat
       soc >sd, logstr $cat
-      uvolt@ >sd, logstr $cat
-      cur@ >sd, logstr $cat
-      bat-temp >sd, logstr $cat
-      bat-acr@ s16>s32 dup >sd, logstr $cat
-      start-acr - bg-acr>mAh >sd.dd logstr $cat
+      uvolt@ dup >sd, logstr $cat 100 /         ( V__.1mV ) 
+      cur@ dup >sd, logstr $cat   100 /         ( V_.1mV I__.1mA )
+       * drop                            ( W_mW ) 
+      bat-temp >sd, logstr $cat                 
+      bat-acr@ s16>s32 dup >sd, logstr $cat     
+      start-acr - bg-acr>mAh >sd.dd, logstr $cat
       r> base !
 ;
 

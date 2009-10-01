@@ -123,7 +123,18 @@ end-string-array
 \ (stdout off) this will miss some state changes.
 \
 
-h# FA00 constant ec-rambase
+h# FA00  constant ec-rambase
+h# 20    constant ec-platformID
+
+h# FC00  constant ec-gpiobase
+h# 00    constant ec-gpiofs00 
+h# 12    constant ec-gpio-0A
+
+h# FE00  constant ec-pwmbase
+h# 08    constant ec-pwmhigh2
+h# 09    constant ec-pwmhigh3 
+h# 0A    constant ec-pwmhigh4
+
 : ec-ram@ ec-rambase + ec@ ;
 
 : next-bstate
@@ -134,11 +145,10 @@ h# FA00 constant ec-rambase
 
 : see-bstate
         0 begin
-            next-bstate
-            dup 0 = if
-                  cr
-            then 
-            dup . key?
+         next-bstate dup . 
+         dup 4 = if
+            cr
+         then key? 
         until
 ;
 
@@ -155,11 +165,32 @@ h# FA00 constant ec-rambase
         until
 ;
 
+\ Get platformID so we can decide if this is a gen 1 or gen 1.5
+: bat-pid@ ( -- id ) ec-platformID ec-ram@ ;
+
+\ Gen 1.5 Leds are PWM. In the interest of simplicity this just
+\ adjusts the pwm value rather than fully turning the led off because
+\ for off you have to disable the pwm and then set it to IO low.
+\ pwm value of 0x00 is the same as full scale.
+: bat-red-led-pwm-on ( -- ) h# ff ec-pwmbase ec-pwmhigh4 + ec! ;
+: bat-green-led-pwm-on ( -- ) h# ff ec-pwmbase ec-pwmhigh2 + ec! ;
+: bat-yellow-led-pwm-on ( -- ) bat-red-led-pwm-on bat-green-led-pwm-on ;
+: bat-red-led-pwm-off ( -- ) h# 01 ec-pwmbase ec-pwmhigh4 + ec! ;
+: bat-green-led-pwm-off ( -- ) h# 01 ec-pwmbase ec-pwmhigh2 + ec! ;
+: bat-yellow-led-pwm-off ( -- ) bat-red-led-pwm-off bat-green-led-pwm-off ;
+
+\ On XO 1 we just clear the IO on Gen 1.5 its bit more complex
+: bat-chg-led-off 
+   bat-pid@ h# cf > if bat-yellow-led-pwm-off else 
+      fc24 ec@ 03 or fc24 ec!
+   then  
+;
+
 \ Turn on the charging mosfet
 : bat-enable-charge ( -- ) fc21 ec@ 40 or fc21 ec! ;
 
 \ Turn off the charging mosfet
-: bat-disable-charge ( -- ) fc21 ec@ 40 invert and fc21 ec! 03 fc24 ec! ;
+: bat-disable-charge ( -- ) fc21 ec@ 40 invert and fc21 ec! bat-chg-led-off ;
 
 \ Turn on the trickle charge with max system voltage
 : bat-enable-trickle ( -- ) fc23 ec@ 1 or fc23 ec! 01 fc24 ec! ;
@@ -470,40 +501,45 @@ h# 20 buffer: ds-bank-buf
    r> base !
 ;
 
+\ Retrieve the key battery stats in bulk and put it on the stack
+\ sign extending the values that are 2's complement.
+: bg-charge-info@
+   ds-bank-buf 6 h# 0c 1w-read         ( )
+   ds-bank-buf c@ 8 <<              ( voltage_msb )
+   ds-bank-buf 1 + c@ or s16>s32    ( voltage )
+   ds-bank-buf 2 + c@ 8 <<          ( voltage current_msb )
+   ds-bank-buf 3 + c@ or s16>s32    ( voltage current )
+   ds-bank-buf 4 + c@ 8 <<          ( voltage current ACR_msb )
+   ds-bank-buf 5 + c@ or s16>s32    ( voltage current ACR )
+;
+
 : >sd.ddd  ( n -- formatted )
    base @ >r  decimal
-   dup abs <# u# u# u# [char] . hold u#s rot sign u#>
+   dup abs <# u# u# u# [char] . hold u# u#s swap sign u#>
    r> base !
 ;
 
 : >sd.dd  ( n -- formatted )
    base @ >r  decimal
-   dup abs <# u# u# [char] . hold u#s rot sign u#>
+   dup abs <# u# u# [char] . hold u# u#s swap sign u#>
    r> base !
 ;
 
 : bg-acr>mAh ( raw-value -- acr_in_mAh )
-   abs
    d# 625 ( mV ) * d# 15 ( mOhm ) /
-   over 0<  if  negate  then
 ;
 
 : bg-V>V ( raw-value - Volts )
-   abs
    d# 488 ( mV ) * 2* d# 100 / 5 >>
-   over 0<  if  negate  then
 ;
 
 : bg-I>mA ( raw-value -- I_in_mA )
-   abs 3 >>
+   3 >>a
    d# 15625 ( nV ) * d# 15 ( mOhm ) / d# 10 /
-   over 0< if  negate  then
 ;
 
 : bg-temp>degc ( raw-value -- temp_in_degc )
-   abs
    d# 125 * d# 10 / 5 >>
-   over 0<  if  negate  then
 ;
 
 h# 90 buffer: logstr
@@ -514,6 +550,11 @@ h# 90 buffer: logstr
 : >sdx
    <# "  " hold$ u#s " 0x" hold$ u#>
 ;
+
+\ Read values directly rather than using the ec-cmd
+
+: bat-I@ ( -- rawI ) h# 02 bat-b@ 8 << h# 03 bat-b@ or s16>s32 ;
+: bat-V@ ( -- rawV ) h# 00 bat-b@ 8 << h# 01 bat-b@ or s16>s32 ;
 
 : bat-lfp-dataf@
       base @ >r 
@@ -545,14 +586,15 @@ h# 90 buffer: logstr
       >sdx logstr $cat
 
       decimal
+      bat-V@ bg-V>V >sd.ddd logstr $cat "  " logstr $cat \ V
+      bat-I@ bg-I>mA >sd.dd logstr $cat "  " logstr $cat \ I
+
       h# 54 bat-b@ 8 << h# 55 bat-b@ or s16>s32    \ ACR
       bg-acr>mAh >sd.dd logstr $cat "  " logstr $cat
-      h# 00 bat-b@ 8 << h# 01 bat-b@ or s16>s32    \ V
-      bg-V>V >sd.ddd logstr $cat "  " logstr $cat
-      h# 02 bat-b@ 8 << h# 03 bat-b@ or s16>s32    \ I
-      bg-I>mA >sd.dd logstr $cat "  " logstr $cat
+
       h# 06 bat-b@ 8 << h# 07 bat-b@ or            \ Temp
       bg-temp>degc >sd.dd logstr $cat "  " logstr $cat
+
 \      h# 17 bat-b@ 8 << h# 18 bat-b@ or            \ NiMh Chargetime
 \      >sd logstr $cat
 
@@ -567,6 +609,18 @@ h# 90 buffer: logstr
       >sdx logstr $cat
 
       r> base !
+;
+
+: .bg-acr ( raw_acr_in_s32 -- )
+   bg-acr>mAh >sd.dd type
+;
+
+: .bg-current ( raw_I_in_s32 -- )
+   bg-I>mA >sd.dd type
+;
+
+: .bg-volt ( raw_V_in_s32 -- )
+   bg-V>V >sd.ddd type
 ;
 
 : bat-debug
@@ -589,6 +643,27 @@ h# 90 buffer: logstr
       200 ms key?
    until key drop 
    ofd @ fclose
+;
+
+
+0 value bg-last-acr
+0 value bg-v_avg
+
+: bat-charge ( -- )
+   batman-init?
+   bat-enable-charge
+   bg-acr@
+   begin
+      bg-charge-info@
+      dup to bg-last-acr
+      ." ACR:" .bg-acr ."  I:" .bg-current ."  V:"  .bg-volt
+      dup bg-last-acr swap - ."  Chg:" .bg-acr
+      cr
+      500 ms
+      key?
+   until
+   drop
+   bat-disable-charge
 ;
 
 dev /
