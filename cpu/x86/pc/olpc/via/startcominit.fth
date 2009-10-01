@@ -37,6 +37,8 @@ label cominit
    \ Configure the I/O decoding to enable access to the EC
    \ Do this outside the if..then so the setup is consistent in all cases
    d# 17 0 devfunc
+   40 44 44 mreg  \ Enable I/O Recovery time (40), Enable ports 4d0/4d1 for edge/level setting (04)
+   4c c0 40 mreg  \ Set I/O recovery time to 2 bus clocks
    59 ff 1c mreg  \ Keyboard (ports 60,64) and ports 62,66 on LPC bus (EC)
    5c ff 68 mreg  \ High byte (68) of PCS0
    5d ff 00 mreg  \ High byte (00) of PCS0
