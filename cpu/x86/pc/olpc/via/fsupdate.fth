@@ -3,6 +3,9 @@ purpose: Secure NAND updater
 
 \ Depends on words from security.fth and copynand.fth
 
+: cpu-temperature  ( -- degrees-C )  h# 1169 msr@ drop  ;
+: show-temperature  ( -- )  space cpu-temperature .d  ;
+
 : get-hex#  ( -- n )
    safe-parse-word
    push-hex $number pop-base  " Bad number" ?nand-abort
@@ -63,7 +66,18 @@ d# 256 constant /partition-entry
 
 0 value last-eblock#
 : erase-eblock  ( eblock# -- )
-   drop \ XXX
+   \ XXX
+   to last-eblock#
+;
+
+: ?all-written  ( -- )
+   last-eblock# 1+ #image-eblocks <>  if
+      cr
+      red-letters
+      ." WARNING: The file specified " #image-eblocks .d
+      ." chunks but wrote only " last-eblock# 1+ .d ." chunks" cr
+      black-letters
+   then
 ;
 
 0 value secure-fsupdate?
@@ -76,6 +90,15 @@ d# 128 constant /spec-maxline
       drop
    then
 ;
+
+\ We simultaneously DMA one data buffer onto NAND while unpacking the
+\ next block of data into another. The buffers exchange roles after
+\ each block.
+
+0 value dma-buffer
+0 value data-buffer
+
+: swap-buffers  ( -- )  data-buffer dma-buffer  to data-buffer to dma-buffer  ;
 
 vocabulary nand-commands
 also nand-commands definitions
@@ -101,6 +124,9 @@ also nand-commands definitions
    open-nand
    #image-eblocks  show-init
    get-inflater
+   load-base to dma-buffer
+   load-base /nand-block + to data-buffer
+   /nand-block /nand-page / to nand-pages/block
 ;
 
 : zblocks-end:  ( -- )
@@ -120,14 +146,6 @@ also nand-commands definitions
    #image-eblocks  0  ?do  i erase-eblock  loop
    #image-eblocks show-writing
 ;
-
-\ We simultaneously DMA one data buffer onto NAND while unpacking the
-\ next block of data into another. The buffers exchange roles after
-\ each block.
-load-base                   value dma-buffer
-load-base /nand-block 4 * + value data-buffer
-
-: swap-buffers  ( -- )  data-buffer dma-buffer  to data-buffer to dma-buffer  ;
 
 : get-zdata  ( comprlen -- )
    secure-fsupdate?  if
@@ -153,12 +171,16 @@ load-base /nand-block 4 * + value data-buffer
    /nand-block <>  " Wrong expanded data length" ?nand-abort  ( )
 ;
 
-false value check-hash?
+true value check-hash?
 
 : check-hash  ( -- )
    2>r                                ( eblock# hashname$ r: hash$ )
    data-buffer /nand-block 2swap      ( eblock# data$ hashname$ r: hash$ )
-   crypto-hash                        ( eblock# calc-hash$ r: hash$ )
+   2dup " sha256" $=  if              ( eblock# hashname$ r: hash$ )
+      2drop sha-256                   ( eblock# calc-hash$ r: hash$ )
+   else
+      crypto-hash                     ( eblock# calc-hash$ r: hash$ )
+   then
    2r>  $=  0=  if                    ( eblock# )
       ." Bad hash for eblock# " .x cr cr
       ." Your USB key may be bad.  Please try a different one." cr
@@ -167,14 +189,37 @@ false value check-hash?
    then                               ( eblock# )
 ;
 
+0 value have-crc?
+0 value my-crc
+
+: ?get-crc  ( -- )
+   parse-word  dup  if                   ( eblock# hashname$ crc$ r: comprlen )
+      push-hex $number pop-base  if      ( eblock# hashname$ crc$ r: comprlen )
+         false to have-crc?              ( eblock# hashname$ r: comprlen )
+      else                               ( eblock# hashname$ crc r: comprlen )
+         to my-crc                       ( eblock# hashname$ r: comprlen )
+         true to have-crc?               ( eblock# hashname$ r: comprlen )
+      then                               ( eblock# hashname$ r: comprlen )
+   else                                  ( eblock# hashname$ empty$ r: comprlen )
+      2drop                              ( eblock# hashname$ r: comprlen )
+      false to have-crc?                 ( eblock# hashname$ r: comprlen )
+   then                                  ( eblock# hashname$ r: comprlen )
+;
+: ?check-crc  ( -- )
+   have-crc?  if
+   then
+;
+
 : zblock: ( "eblock#" "comprlen" "hashname" "hash-of-128KiB" -- )
    get-hex#                              ( eblock# )
    get-hex# >r                           ( eblock# r: comprlen )
    safe-parse-word                       ( eblock# hashname$ r: comprlen )
    safe-parse-word hex-decode            ( eblock# hashname$ [ hash$ ] err? r: comprlen )
    " Malformed hash string" ?nand-abort  ( eblock# hashname$ hash$ r: comprlen )
-                                        
+
+   ?get-crc                              ( eblock# hashname$ hash$ r: comprlen )
    r> get-zdata                          ( eblock# hashname$ hash$ )
+   ?check-crc                            ( eblock# hashname$ hash$ )
 
    check-hash?  if                       ( eblock# hashname$ hash$ )
       check-hash                         ( eblock# )
@@ -190,6 +235,7 @@ false value check-hash?
 
    dup to last-eblock#                   ( eblock# )
    show-written                          ( )
+   show-temperature
 ;
 
 previous definitions
@@ -205,13 +251,14 @@ previous definitions
    over file !  linefeed line-delimiter c!  ( fd fd' )
    file !                              ( fd )
 
-   t(
-   also nand-commands   
-   ['] include-file catch  dup  if
+   t(                                  ( fd )
+   also nand-commands                  ( fd )
+   ['] include-file catch  ?dup  if    ( x error )
       nip .error
-   then
+   then                                ( )
    previous
    show-done
+   ?all-written
    close-nand-ihs
    )t-hms
 ;

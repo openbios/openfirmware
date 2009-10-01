@@ -716,6 +716,21 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 
 external
 
+
+: dma-alloc   ( size -- vadr )  " dma-alloc"  $call-parent  ;
+: dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;
+
+0 instance value dma?
+
+: wait-dma-done  ( -- )
+   dma?  if
+      2 wait
+      dma-release
+      intstat-off
+      false to dma?
+   then
+;
+
 : attach-card  ( -- okay? )
    setup-host
    power-up-card  if         ( retry? )
@@ -756,9 +771,8 @@ external
 ;
 
 : detach-card  ( -- )
-   intstat-on
-   wait-write-done
-   intstat-off
+   wait-dma-done
+   intstat-on  wait-write-done  intstat-off
    card-clock-off
    card-power-off
    unmap-regs
@@ -793,20 +807,6 @@ external
 ;
 
 : detach-sdio-card  ( -- )
-;
-
-: dma-alloc   ( size -- vadr )  " dma-alloc"  $call-parent  ;
-: dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;
-
-0 instance value dma?
-
-: wait-dma-done  ( -- )
-   dma?  if
-      2 wait
-      dma-release
-      intstat-off
-      false to dma?
-   then
 ;
 
 : r/w-blocks-finish  ( -- actual )
@@ -862,7 +862,6 @@ external
 ;
 
 : close  ( -- )
-   wait-dma-done
    open-count  1 =  if
       scratch-buf d# 64 " dma-free" $call-parent
    then

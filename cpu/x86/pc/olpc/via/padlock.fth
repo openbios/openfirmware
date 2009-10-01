@@ -51,7 +51,7 @@ c;
    enable-padlock
    init-sha
    sha-buf do-sha
-   sha-buf h# 20
+   sha-buf h# 20  2dup lbflips
 ;
 
 \ LICENSE_BEGIN
