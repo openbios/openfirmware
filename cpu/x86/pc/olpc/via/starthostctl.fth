@@ -66,3 +66,17 @@
    51 ff f8 mreg  \ Last step - enable DRDY timing
 [then]
    end-table
+
+   acpi-io-base 48 + port-rl  h# 1000.0000 # ax and  0<>  if  \ Memory ID1 bit
+      0 2 devfunc
+      55 02 02 mreg  \ Host controller to DRAM read cycle control II - 1 means 2T slower
+
+      60 ff ff mreg  \ DRDY Timing Control 1 for Read Line
+      61 ff ff mreg  \ DRDY Timing Control 2 for Read Line
+      63 ff ff mreg  \ DRDY Timing Control 1 for Read QW
+      64 ff ff mreg  \ DRDY Timing Control 2 for Read QW
+      66 ff ff mreg  \ Burst DRDR Timing Control for Second cycle in burst
+
+      90 03 00 mreg  \ Host controller to DRAM read cycle control III - 00 means 2T faster
+      end-table
+   then

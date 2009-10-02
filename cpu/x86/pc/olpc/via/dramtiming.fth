@@ -85,3 +85,12 @@ rank-top0 constant rank-base1  rank-base0 rank-size + constant rank-top1
 
 rank-size #ranks * constant total-size
 [then]
+
+h# 400.0000 constant /fbmem
+: >fbmem-base  ( size/64M -- low high )
+   d# 26 lshift           ( memsize-in-bytes )
+   /fbmem -               ( memsize-less-framebuf-size )
+   d# 21 rshift wbsplit   ( low high )
+;
+
+: dblfudge32  2/  ;

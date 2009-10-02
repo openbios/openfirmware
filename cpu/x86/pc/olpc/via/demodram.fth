@@ -375,7 +375,9 @@ forth #ranks 3 = assembler  [if]
 
    56 ff 00 mreg \ Rank map B ?
    57 ff 00 mreg \ Rank map B ?
+   end-table
 
+   0 3 devfunc
    40 ff rank-top0 mreg \ Rank top 0  (register value in units of 64MB)
    41 ff rank-top1 mreg \ Rank top 1
    42 ff rank-top2 mreg \ Rank top 2
@@ -387,17 +389,20 @@ forth #ranks 3 = assembler  [if]
    4b ff rank-base3 mreg \ Rank base 3
    end-table
 
+   acpi-io-base 48 + port-rl  h# 1000.0000 # ax and  0<>  if  \ Memory ID1 bit
+      0 3 devfunc
+      6c 20 20 mreg    \ Enable 32-bit memory width mode - channel A
+      d4 30 10 mreg    \ ODT off for low 32 bits
+      end-table
+
+      0388 config-rb  ax bx mov  1 # bx shr  0385 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to reg 85
+   else
+      0388 config-rb  ax bx mov  0385 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to reg 85
+   then
+
    h# 15 port80
 
-   total-size  8f60 config-wb  \ DRAM Bank 7 ending address - controls DMA upstream
-   0388 config-rb  ax bx mov  0385 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to reg 85
-   0388 config-rb  ax bx mov  8fe5 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to SB Low Top e5
-
-\   d# 17 7 devfunc
-\   e6 ff 07 mreg \ Enable Top, High, and Compatible SMM
-\   end-table
-
-1 [if]  \ Very simple memtest
+0 [if]  \ Very simple memtest
 long-offsets on
 ax ax xor
 h# 12345678 #  bx mov      \ Data value to write to address 0
@@ -464,7 +469,7 @@ then
     
    h# 17 port80
 
-1 [if]
+0 [if]
 ax ax xor
 h# 12345678 #  bx mov
 bx 0 [ax] mov

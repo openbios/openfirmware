@@ -5,29 +5,12 @@ purpose: Create memory node properties and lists
 0 value total-ram-cached
 : total-ram  ( -- ramsize )
    total-ram-cached ?dup  if  exit  then
-   \ Search for the last "top of rank" value
-   h# 340  h# 343  do
-      i config-b@ ?dup  if    ( chunks )  \ Each chunk is 64 MiB
-         d# 26 lshift         ( bytes )
-         dup to total-ram-cached
-         unloop exit
-      then
-   -1 +loop
-   ." Can't get total RAM size!" cr
-   h# 1000.0000
+   h# 385 config-b@ d# 24 lshift
    dup to total-ram-cached
 ;
 
-\ Offset of frame buffer/display memory within the memory array
-: fb-offset  ( -- offset )  mem-info-pa 4 + l@  ;
-
-\ Excludes RAM assigned to the frame buffer
-: system-ram  ( -- extant avail )
-   fb-offset
-;
-
-\ This may require adjustment if we steal additional SMI memory
-: fbsize  ( -- )  total-ram fb-offset -  ;
+\ Excludes RAM assigned to the frame buffer and used by OFW page tables
+: system-ram  ( -- offset )  mem-info-pa 4 + l@  ;
 
 dev /memory
 
