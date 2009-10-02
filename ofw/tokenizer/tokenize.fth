@@ -736,7 +736,7 @@ tokens definitions
 
 \ (Implementation word, will not be supported)
 : ,"  \ name"  ( -- )
-   [ tokenizer ]  get-string ( ascii " parse ) [ tokens ] ",
+   [ tokenizer ]  get-escaped-string ( ascii " parse ) [ tokens ] ",
 ;
 
 : "  \ text"  ( -- )  \ Compiling ( -- adr len )  \ Executing
