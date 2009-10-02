@@ -38,6 +38,7 @@ label cominit
    \ Do this outside the if..then so the setup is consistent in all cases
    d# 17 0 devfunc
    40 44 44 mreg  \ Enable I/O Recovery time (40), Enable ports 4d0/4d1 for edge/level setting (04)
+   43 0f 0b mreg  \ Enable PCI delayed transactions (08), Write transaction timer (02), Read transaction timer (01)
    4c c0 40 mreg  \ Set I/O recovery time to 2 bus clocks
    59 ff 1c mreg  \ Keyboard (ports 60,64) and ports 62,66 on LPC bus (EC)
    5c ff 68 mreg  \ High byte (68) of PCS0
@@ -47,9 +48,18 @@ label cominit
    67 10 10 mreg  \ PCS0 to LPC Bus
    end-table
 
+   d# 17 0 devfunc
+   70 fb 82 mreg  \ CPU to PCI flow control - CPU to PCI posted write, Enable Delay Transaction
+   end-table
+
+h# 83 # al mov  al h# 74 # out  h# 75 # al in    \ check byte - should be ~board-id
+ax bx mov
+
    \ This delay is empirically necessary before reading CMOS - minimum is 36000 - about 50 ms
    \ Before the delay has elapsed, the CMOS RAM returns 0 instead of the stored value.
    d# 40000 wait-us
+
+h# 88 # al mov  al h# 74 # out  bx ax mov  al h# 75 # out    \ Test for CMOS read timing
 
    \ As an optimization to avoid long waits for the EC to respond, read the board ID
    \ that is cached in CMOS RAM.  This might not in fact be an optimization in light
