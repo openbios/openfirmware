@@ -112,6 +112,29 @@ ascii h report
 
 \      h# 25 # al mov  al h# 80 # out
 \      ascii m report
+
+0 [if]  \ Dump page directory
+   mmxcr
+   cr3 ax mov  ax mmxdot
+   mmxcr
+   cr3 ax mov  ax h# 1000 mmxdump
+[then]
+0 [if]  \ Dump page tables
+   mmxcr
+   cr3 ax mov  h# ffc [ax] ax mov  h# fffff000 # ax and  ax mmxdot
+   mmxcr
+   cr3 ax mov  h# ffc [ax] ax mov  h# fffff000 # ax and  ax h# 1000 mmxdump
+   mmxcr
+   cr3 ax mov  h# ff8 [ax] ax mov  h# fffff000 # ax and  ax mmxdot
+   mmxcr
+   cr3 ax mov  h# ff8 [ax] ax mov  h# fffff000 # ax and  ax h# 1000 mmxdump
+[then]
+0 [if]
+   fw-virt-base to ramtest-start
+   fw-virt-base /fw-ram + to ramtest-end
+   fload ${BP}/cpu/x86/pc/ramtest.fth
+[then]
+
       inflate-base #  ax  mov	\ Base address of inflater
       ax call			\ Inflate the firmware
 
