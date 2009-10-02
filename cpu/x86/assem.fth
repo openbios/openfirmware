@@ -99,34 +99,39 @@ octal
 
 \ REG  creates a word which is a calculated constant.
 \ REGS creates batches of words. It just puts REG in a DO LOOP.
-: reg    ( group mode  -- )   11 *  swap 1000 * or   constant  ;
-: regs   ( modes group -- )   swap 0 ?do   dup i reg   loop drop  ;
+: reg    ( mode reg#  -- )   d# 9 *  swap o# 1000 * or   constant  ;
+: regs   ( #regs mode -- )   swap 0 ?do   dup i reg   loop drop  ;
 
-: pmreg  ( group mode -- )   reg   does> @  protected-only  ;
-: pmregs ( mode group -- )   swap 0 do  dup i pmreg  loop  drop ;
+: pmreg  ( mode reg# -- )   reg   does> @  protected-only  ;
+: pmregs ( #regs mode -- )   swap 0 do  dup i pmreg  loop  drop ;
 
-: rmreg  ( group mode -- )   reg   does> @  real-only  ;
-: rmregs ( mode group -- )   swap 0 do  dup i rmreg  loop  drop ;
+: rmreg  ( mode reg# -- )   reg   does> @  real-only  ;
+: rmregs ( #regs mode -- )   swap 0 do  dup i rmreg  loop  drop ;
 
-: 32reg  ( group mode -- )   reg   does> @  32-only  ;
-: 32regs ( mode group -- )   swap 0 do  dup i 32reg  loop  drop ;
+: 32reg  ( mode reg# -- )   reg   does> @  32-only  ;
+: 32regs ( #regs mode -- )   swap 0 do  dup i 32reg  loop  drop ;
 
-: 16reg  ( group mode -- )   reg   does> @  16-only  ;
-: 16regs ( mode group -- )   swap 0 do  dup i 16reg  loop  drop ;
+: 16reg  ( mode reg# -- )   reg   does> @  16-only  ;
+: 16regs ( #regs mode -- )   swap 0 do  dup i 16reg  loop  drop ;
 
-10 0 REGS        AL      CL      DL      BL     AH    CH    DH    BH
-10 1 REGS        AX      CX      DX      BX     SP    BP    SI    DI
+: mmxreg ( mode reg# -- )   reg   does> @  ;
+: mmxregs ( #regs mode -- )   swap 0 do  dup i mmxreg  loop  drop ;
 
-10 2 16REGS  [bx+si] [bx+di] [bp+si] [bp+di]   [si]  [di]  [bp]  [bx]
+  8 0 REGS        AL      CL      DL      BL     AH    CH    DH    BH
+  8 1 REGS        AX      CX      DX      BX     SP    BP    SI    DI
 
-10 1 pmREGS     EAX     ECX     EDX     EBX    ESP     EBP   ESI   EDI
-10 2 32REGS    [EAX]   [ECX]   [EDX]   [EBX]  [ESP]   [EBP] [ESI] [EDI]
- 3 2 pmREGS     [AX]    [CX]    [DX]
+  8 5 REGS       MM0     MM1     MM2     MM3    MM4   MM5   MM6   MM7
 
- 2 4 32reg      [SP] 
+  8 2 16REGS  [bx+si] [bx+di] [bp+si] [bp+di]   [si]  [di]  [bp]  [bx]
 
- 6 3   REGS      ES      CS      SS      DS     FS      GS
- 3 4   REGS       #      #)     S#)
+  8 1 pmREGS     EAX     ECX     EDX     EBX    ESP     EBP   ESI   EDI
+  8 2 32REGS    [EAX]   [ECX]   [EDX]   [EBX]  [ESP]   [EBP] [ESI] [EDI]
+  3 2 pmREGS     [AX]    [CX]    [DX]
+
+  2 4 32reg      [SP]  \ Mode 2 register 4, alias for [ESP]
+
+  6 3   REGS      ES      CS      SS      DS     FS      GS
+  3 4   REGS       #      #)     S#)
 
 \ notice that some words are defining words which create other words,
 \ or in other words, some words make other words...
@@ -193,8 +198,8 @@ octal
 \ MD  defines words which test for various addressing modes.
 : MD   CREATE  1000 * ,  DOES>  @ SWAP 7000 AND =  ;
 
-\ R8? R16? MEM? SEG? #?  test for mode equal to 0 thru 4.
-0 MD R8?   1 MD R16?   2 MD MEM?   3 MD SEG?   4 MD #?
+\ R8? R16? MEM? SEG? #? MM?  test for mode equal to 0 thru 5
+0 MD R8?   1 MD R16?   2 MD MEM?   3 MD SEG?   4 MD #?   5 MD MM?
 \ 5 for   i MD   next    R8? R16? MEM? SEG? #?
 \ or: " R8? R16? MEM? SEG? #?" " 5 for   i MD   next" eval-from
 
@@ -546,6 +551,17 @@ variable long-offsets  long-offsets off
    # =  if  ASM8, r> drop  else  r@ c@ 1+ r> c!  then
 ;
 
+\ 18MI  define branch instructions that can only have one byte of offset.
+\ namely LOOPx instructions
+: 18MI	\ conditional branches
+   ( op -- )	create  c,  
+   ( dest -- )	does>   c@		( dest op )
+      swap here 2+ - 			( op disp )
+      dup big? abort" branch offset is too large for LOOPx instruction"
+      swap asm8, asm8,
+      normal
+;
+
 \ TEST  bits in dest
 : TEST   (S source dest -- )
    DUP REG?  IF
@@ -654,6 +670,29 @@ HEX
 : movsx  ( r/m r -- )  prefix-0f  h# be size,  r/m,  ;
 : movzx  ( r/m r -- )  prefix-0f  h# b6 size,  r/m,  ;
 
+: emms  ( -- )  prefix-0f  h# 77 asm8,  ;
+: movd  ( s d -- )
+   prefix-0f      
+   dup mm?  if     ( s-r/m mmxreg )   \ Destination is an MMX register
+      over # = abort" Source operand of MOVD cannot be immediate"
+      h# 6e asm8, r/m,
+   else            ( mmxreg d-r/m )
+      dup reg?  if  swap  else  rot  then
+      h# 7e asm8, r/m,
+   then
+;
+: movq  ( -- )
+   prefix-0f      
+   dup mm?  if   ( s-mmxreg d-mmxreg )   \ Destination is an MMX register
+      over # = abort" Source operand of MOVQ cannot be immediate"
+      over reg? abort" Source operand of MOVQ cannot be a general register"
+      h# 6f asm8,  over mm?  if  rr,  else  mem,  then
+   else          ( s-mmxreg d-mem )
+      dup reg? abort" Destination of MOVQ cannot be a general register"
+      h# 7f asm8, rot mem,
+   then
+;
+
 \ Most instructions are defined here. Those mnemonics in
 \ parenthetic comments are defined earlier or not at all.
 
@@ -683,8 +722,8 @@ HEX
  
  9F  1MI LAHF
  C5  4MI LDS     8D  4MI LEA     C4  4MI LES     B4 16MI LFS
- B5 16MI LGS     F0  1MI LOCK   0AC  6MI LODS    E2  3MI LOOPA
- E1  3MI LOOPE   E0  3MI LOOPNE  B2 16MI LSS 
+ B5 16MI LGS     F0  1MI LOCK   0AC  6MI LODS    E2 18MI LOOPA
+ E1 18MI LOOPE   E0 18MI LOOPNE  B2 16MI LSS 
 
        ( MOV )   0A4  5MI MOVS    20  7MI MUL     18  7MI NEG
  90  1MI NOP      10  7MI NOT     08 13MI OR      ( OUT )

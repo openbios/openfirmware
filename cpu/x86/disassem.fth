@@ -206,6 +206,9 @@ end-string-array
 : get-ea  ( -- )  get-op  midbits  is reg-field  ;
 
 : sreg  ( -- )  reg-field  >segment ".  ;
+: .mm   ( reg# -- )  ." mm" (.) type  ;
+: mreg  ( -- )  reg-field  .mm  ;
+: .mea  ( -- )  hibits 3 =  if  lowbits .mm  else  .ea  then  ;
 
 : gb/v  ( -- )  reg-field  >greg type  ;
 : ib    ( -- )  op8@ bext  (.) type  ;
@@ -357,10 +360,20 @@ end-string-array
          then
    endcase
 ;
+: 2b6op  ( -- )
+   low4bits  case
+      e of  ." movd"  op-col get-ea  1 is wbit  mreg ., .ea  endof
+      f of  ." movq"  op-col get-ea  1 is wbit  mreg ., .mea endof
+      .unimp
+   endcase
+;
 : 2b7op  ( -- )
    low4bits  case
+      7 of  ." emms"  endof
       8 of  ." svdc"  op-col get-ea  1 is wbit  .ea  ., sreg endof
       9 of  ." rsdc"  op-col get-ea  1 is wbit  sreg ., .ea  endof
+      e of  ." movd"  op-col get-ea  1 is wbit  .ea  ., mreg endof
+      f of  ." movq"  op-col get-ea  1 is wbit  .mea ., mreg endof
       .unimp
    endcase
 ;
@@ -379,6 +392,7 @@ end-string-array
       0 of  2b0op  endof
       2 of  movspec  endof
       3 of  msrop    endof
+      6 of  2b6op    endof
       7 of  2b7op    endof
       8 of  ." j"   low4bits >cond ".  op-col  jv  endof
       9 of  ." set" low4bits >cond ".  op-col  0 is wbit  get-ea  .ea  endof
