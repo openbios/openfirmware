@@ -40,16 +40,25 @@ d# 14 constant /ether-header
 
 : ip-header  ( -- adr )  packet ip-offset +  ;
 
-: ip?  ( -- flag )  ip-header c@  4 rshift  4 =  ;
+: ip?  ( -- flag )
+   ip-header c@  h# 45 =  if
+      ip-header 
+   then
+
+   false
+;
+
 : link-level-ok?  ( -- flag )
-   packet c@  1 and  if
+   packet c@  h# 45 =  if
+      \ This clause handles the case where the network device is feeding us
+      \ unencapsulated IP packets.  45 is the length/version byte for IPv4.
+      \ If the first byte of an ethernet header is 45 is a v
       0 to ip-offset
-      \ It's either a multicast Ethernet packet or a direct IP packet
-      ip?  if  true exit  then
+      true exit
    else
       packet d# 12 + be-w@  h# 800 =  if
          /ether-header to ip-offset
-         ip?  if  true exit  then
+         true exit
       then
    then
    false
@@ -64,7 +73,10 @@ d# 14 constant /ether-header
 ;
 : icmp?  ( -- flag )  ip-header 9 +  c@  1 =  ;
 : echo?  ( -- flag )  ip-payload drop c@ 8 =  ;
-: -exit  ( flag -- )  0=  if  r> drop  then  ;
+: icmp-echo?  ( -- flag )
+   ip? if  icmp? if  echo? if  true exit  then then then
+   false
+;
 : .ipb  ( adr -- adr' )  dup 1+ swap c@  (.) type   ;
 : .ipaddr  ( addr-buff -- )
    push-decimal
@@ -76,13 +88,12 @@ d# 14 constant /ether-header
    ip-header d# 16 +  .ipaddr
 ;
 : ping?  ( -- flag )
-   false
-   ip?      -exit
-   first?  if  .ip  false to first?  then
+   \ First test the packet assuming that no Ethernet header is present
+   icmp-echo? if  true exit  then
 
-   icmp?    -exit
-   echo?    -exit
-   0=
+   \ Failing that, check for and skip the link level header
+   link-level-ok? if  icmp-echo? if  true exit  then  then
+   false
 ;
 
 : exchange-byte  ( adr1 adr2 -- )
@@ -149,13 +160,18 @@ constant /icmp-header
    recompute-icmp-checksum
    send-packet
 ;
-: ?echo-packet  ( -- )  ping?  if  echo-packet  then  ;
+: ?echo-packet  ( -- )
+   ping?  if
+      first?  if  .ip  false to first?  then
+      echo-packet
+   then
+;
 : handle-requests  ( -- )
    ." Type any key to quit" cr
    begin
-      key?  if  key drop exit  then
       get-packet?  if  ?echo-packet  then
-   again
+   key? until
+   key drop
 ;
 
 : $pingd  ( pathname$ -- )
