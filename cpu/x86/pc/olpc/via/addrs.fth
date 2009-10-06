@@ -43,7 +43,6 @@ h# 40.0000 constant /dma-extra          \ In case the firmware region isn't enou
 0 value dma-base                        \ Set in probemem.fth
 
 h# f.0000 constant suspend-base      \ In the DOS hole
-h# f.0008 constant resume-entry
 h# f.1000 constant resume-data
 
 \ If you change these, also change {g/l}xmsrs.fth and {g/l}xearly.fth

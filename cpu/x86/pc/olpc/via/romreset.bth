@@ -227,15 +227,16 @@ long-offsets off
 
       cli
 
+      facs-adr h# 18 + #) ax mov  ax ax or  0<>  if  \ X_Firmware_Waking_Vector
+         ax jmp         \ Jump in 32-bit protected mode
+      then
+
       facs-adr h# c + #) ax mov  ax ax or  0<>  if
          \ Resume in real mode for ACPI operating systems
          \ Linear wakeup address is in EAX
          wake-adr lwsplit drop  cs16 #) far jmp
-      else
-         \ Resume in 32-bit protected mode for OFW
-         resume-data  # sp mov
-         resume-entry # ax mov  ax call   \ This might return if checksumming fails
       then
+
       char x report
    then                                            \ Not a wakeup from S3
 

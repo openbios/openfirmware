@@ -249,20 +249,20 @@ label do-acpi-wake
       0 w, 0 w,   \ Room for the segment:offset pointer
    then
 
-   op: ax bx mov
-   h# 0f # ax and  ax cx mov
-   op: 4 # bx shr
+   op: ax bx mov              \ Get linear address to jump to - must be < 1M
+   h# 0f # ax and  ax cx mov  \ CX: low 4 bits for offset of seg:off address
+   op: 4 # bx shr             \ BX: high 16 bits for segment of seg:off
 
    \ Set data segment for storing offset and segment below
    ax ax xor  ds16 #  al  mov  ax ds mov   \ 16-bit data segment
-   cx  wake-adr wa1+ #)  mov  \ Offset
-   bx  wake-adr la1+ #)  mov  \ Segment
+   cx  wake-adr wa1+ #)  mov  \ Put offset at wake-adr+2
+   bx  wake-adr la1+ #)  mov  \ Put segment at wake-adr+4
 
    cr0 ax mov   h# fe # al and   ax cr0 mov   \ Enter real mode
 
    here 5 +  do-acpi-wake -  wake-adr  + lwsplit d# 12 lshift  #)  far jmp  \ Jump to set cs
 
-   cs: wake-adr wa1+  lwsplit drop  s#)  far jmp
+   cs: wake-adr wa1+  lwsplit drop  s#)  far jmp  \ Jump to seg:off address stored at wake-adr+2
 end-code
 here do-acpi-wake - constant /do-acpi-wake
 

@@ -32,6 +32,7 @@ fload ${BP}/cpu/x86/pc/port80.fth
 ;
 
 start-assembling                                \ Turn on the target assembler
+suspend-base to asm-origin   \ This code will be copied to a fixed location
 protected-mode
 
 \ Suspend code - called as a subroutine, with return address on the stack
@@ -41,15 +42,6 @@ protected-mode
 \ is used as a memory pointer before and after the paging turn-off.
 
 label suspend-entry   \ h# f.0000 - entry point at fixed location, called by OS
-   here h# 10 + #)  jmp   \ Jump to offset 10
-   8 pad-to
-
-label resume-entry    \ h# f.0008 - entry point at fixed location, called by resume
-   e9 c,  0 ,         \ To be patched later
-   nop                \ Aligns to even, for the benefit of the disassembler
-   h# 10 pad-to
-
-label suspend-save    \ h# f.0010  (Page directory VA in ax)
    pusha
    pushf  cli
    ds push
@@ -66,8 +58,9 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    0 [si]  cx  mov  forget-msr    \ Save old PDIR entry 0
    h# 83 # 0 [ax] mov             \ Punch a 4M mapping 0->0 into the page directory
    cr3 ax mov  ax cr3 mov         \ Invalidate the TLB to activate the mapping
-   h# f0060 # ax mov  ax jmp      \ Jump to suspend-physical, disabling paging
-   h# 60 pad-to
+
+   \ Jump to the physical address of the next instruction, disabling paging
+   here 7 + asm-base - asm-origin + # ax mov  ax jmp
 
    \ We have to be running from a virtual=physical mapping here, otherwise we
    \ die on the instruction after paging is turned off.
@@ -93,9 +86,9 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    h#  a [bp]  sidt        \ Interrupt descriptor table register
    h# 10 [bp]  sgdt        \ Global descriptor table register
 
-               bx  h# 18 [bp]  mov
-   cr3 ax mov  ax  h# 1c [bp]  mov
-   cr4 ax mov  ax  h# 20 [bp]  mov
+               bx  h# 18 [bp]  mov  \ CR0
+   cr3 ax mov  ax  h# 1c [bp]  mov  \ CR3
+   cr4 ax mov  ax  h# 20 [bp]  mov  \ CR4
                cx  h# 24 [bp]  mov  \ PDIR entry 0
                si  h# 28 [bp]  mov  \ PDIR VA
                di  h# 2c [bp]  mov  \ Address offset
@@ -216,6 +209,10 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
 
    h# fe resume-progress
 
+   \ Set the resume address
+label resume-adr-loc
+   h# 0 #  facs-adr h# 18 + #)  mov         \ Value will be patched below
+
    wbinvd                                 \ Flush the cache
 
 [ifdef] delete-me
@@ -242,7 +239,7 @@ label suspend-save    \ h# f.0010  (Page directory VA in ax)
    h# 3f # al mov   al h# 70 # out  h# 71 # al in  al inc  al h# 71 # out
 
 \ Resume code
-here resume-entry put-branch
+here asm-base - asm-origin +  resume-adr-loc 6 + !
 
 \ Assumptions:
 \   Processor is in protected mode
@@ -474,9 +471,9 @@ here resume-entry put-branch
    h# 2c [bp]  di mov               \ VA of suspend-base in di
    h# 28 [bp]  si mov               \ PDIR VA
    h# 24 [bp]  cx mov forget-msr    \ PDIR entry 0
-   h# 20 [bp]  ax mov  ax cr4 mov  
-   h# 1c [bp]  ax mov  ax cr3 mov  
-   h# 18 [bp]  ax mov
+   h# 20 [bp]  ax mov  ax cr4 mov   \ Restore CR4
+   h# 1c [bp]  ax mov  ax cr3 mov   \ Restore CR3
+   h# 18 [bp]  ax mov               \ Get CR0 for a few lines later
 
    h# 10 [bp]  lgdt        \ Global descriptor table register
    h#  a [bp]  lidt        \ Interrupt descriptor table register
