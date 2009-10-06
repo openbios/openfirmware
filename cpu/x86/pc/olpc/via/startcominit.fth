@@ -29,9 +29,6 @@ label cominit
    \ First we check for a cached board ID in CMOS RAM, to avoid the
    \ possibly time-consuming operation of asking the EC.
 
-   d# 17 0 devfunc
-   end-table
-
    \ Configure the I/O decoding to enable access to the EC
    \ Do this outside the if..then so the setup is consistent in all cases
    d# 17 0 devfunc
@@ -55,13 +52,10 @@ label cominit
    70 fb 82 mreg  \ CPU to PCI flow control - CPU to PCI posted write, Enable Delay Transaction
    end-table
 
-   acpi-io-base 4 + port-rw           \ Get APCI Status register
-   d# 10 # ax shr  7 # ax and  1 # ax cmp  <>  if  \ Type 1 is wakeup from S3
-      \ The following applies only to power-up; no delay is needed for wakeup from S3
-      \ This delay is empirically necessary before reading CMOS - minimum is 36000 - about 50 ms
-      \ Before the delay has elapsed, the CMOS RAM returns 0 instead of the stored value.
-      d# 40000 wait-us
-   then
+   \ Wait until RTC PSON Gating is complete.  See PG_VX855_VX875_092 page 139 (pdf page 160)
+   \ This takes about 48 mS in the power-on case, and is almost instantaneous in the
+   \ resume-from-S3 case due to the clearing of D17F0 Rx81[2] above.
+   begin  8882 config-rb  h# 40 # al and  0<> until
 
    \ As an optimization to avoid long waits for the EC to respond, read the board ID
    \ that is cached in CMOS RAM.
