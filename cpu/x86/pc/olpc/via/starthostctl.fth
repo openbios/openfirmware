@@ -67,7 +67,7 @@
 [then]
    end-table
 
-   acpi-io-base 48 + port-rl  h# 1000.0000 # ax and  0<>  if  \ Memory ID1 bit
+   acpi-io-base 48 + port-rl  h# 1000.0000 # ax and  0<>  if  \ Memory ID1 bit - set for 32bit memory width
       0 2 devfunc
       55 02 02 mreg  \ Host controller to DRAM read cycle control II - 1 means 2T slower
 

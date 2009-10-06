@@ -59,7 +59,12 @@
    6f 3c4 port-wb  00 3c5 port-wb  \ Base address [47:37] of SL in System Memory
 [then]
 [ifdef] xo-board
-   385 config-rb   \ AX: totalsize/16M
+   385 config-rb  ax bx mov \ BX: totalsize/16M
+   acpi-io-base 48 + port-rl  h# 1000.0000 # ax and  0<>  if  \ Memory ID1 bit - set for 32bit memory width
+      1 # bx shr            \ Divide size by 2 for 32-bit DRAM width
+   then
+   bx ax mov                \ AX: totalsize/16M_adjusted
+
    d# 24 # ax shl  \ AX: totalsize
    /fbmem # ax sub \ AX: totalsize-fbmemsize = fbbase
    d# 21 # ax shr  \ AX: fbbase/2M

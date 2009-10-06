@@ -389,16 +389,14 @@ forth #ranks 3 = assembler  [if]
    4b ff rank-base3 mreg \ Rank base 3
    end-table
 
-   acpi-io-base 48 + port-rl  h# 1000.0000 # ax and  0<>  if  \ Memory ID1 bit
+   acpi-io-base 48 + port-rl  h# 1000.0000 # ax and  0<>  if  \ Memory ID1 bit - set for 32bit memory width
       0 3 devfunc
       6c 20 20 mreg    \ Enable 32-bit memory width mode - channel A
       d4 30 10 mreg    \ ODT off for low 32 bits
       end-table
-
-      0388 config-rb  ax bx mov  1 # bx shr  0385 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to reg 85
-   else
-      0388 config-rb  ax bx mov  0385 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to reg 85
    then
+
+   0388 config-rb  ax bx mov  0385 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to reg 85
 
    h# 15 port80
 
