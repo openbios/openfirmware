@@ -300,6 +300,9 @@ fload ${BP}/cpu/x86/pc/olpc/banner.fth
 
 fload ${BP}/ofw/gui/loadmenu.fth
 fload ${BP}/ofw/gui/insticon.fth
+\ Uninstall the diag menu from the general user interface vector
+\ so exiting from emacs doesn't invoke the diag menu.
+' quit to user-interface
 fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
 
 : screen-#lines  ( -- n )

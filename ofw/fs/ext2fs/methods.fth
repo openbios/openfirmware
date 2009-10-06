@@ -43,7 +43,7 @@ external
    wf-type dir-type <>  if  true exit  then     ( )
    
    inode# >r					\ save parent directory
-   file-handle set-inode  if  r> drop true exit  then
+   file-handle set-inode
    dir? 0= if  r> drop true exit  then
    
    (delete-files)   file-handle if  r> drop true exit  then	\ still some left

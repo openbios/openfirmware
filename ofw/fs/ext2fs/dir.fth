@@ -365,7 +365,7 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    file-handle 0= if  true exit  then
    
    inode# >r
-   file-handle set-inode  if  r> drop true exit  then
+   file-handle set-inode
    file? 0= if  r> drop true exit  then		\ XXX handle symlinks
    
    \ is this the only link?
