@@ -29,9 +29,7 @@ label cominit
    \ First we check for a cached board ID in CMOS RAM, to avoid the
    \ possibly time-consuming operation of asking the EC.
 
-   \ To read the high half of CMOS RAM we must enable it
    d# 17 0 devfunc
-   4e 18 18 mreg  \ Enable ports 74/75 for CMOS RAM access  - 10 res be like Phx
    end-table
 
    \ Configure the I/O decoding to enable access to the EC
@@ -46,24 +44,27 @@ label cominit
    64 0f 07 mreg  \ PCS0 size is 8 bytes - to include 68 and 6c
    66 01 01 mreg  \ PCS0 Enable
    67 10 10 mreg  \ PCS0 to LPC Bus
+   \ When the RTC is guarded against power glitches, there is a 50 mS delay before
+   \ reads return the correct data upon wakeup from S3.  On power-up, the delay is
+   \ present even with the RTC unguarded.  Unguarding it here speeds up S3 startup.
+   81 ff 88 mreg  \ Enable ACPI regs, 32-bit PM timer, disable RTC power glitch guard
+   4e 08 08 mreg  \ Enable ports 74/75 for high-bank CMOS RAM access
    end-table
 
-   d# 17 0 devfunc
+   d# 17 7 devfunc
    70 fb 82 mreg  \ CPU to PCI flow control - CPU to PCI posted write, Enable Delay Transaction
    end-table
 
-h# 83 # al mov  al h# 74 # out  h# 75 # al in    \ check byte - should be ~board-id
-ax bx mov
-
-   \ This delay is empirically necessary before reading CMOS - minimum is 36000 - about 50 ms
-   \ Before the delay has elapsed, the CMOS RAM returns 0 instead of the stored value.
-   d# 40000 wait-us
-
-h# 88 # al mov  al h# 74 # out  bx ax mov  al h# 75 # out    \ Test for CMOS read timing
+   acpi-io-base 4 + port-rw           \ Get APCI Status register
+   d# 10 # ax shr  7 # ax and  1 # ax cmp  <>  if  \ Type 1 is wakeup from S3
+      \ The following applies only to power-up; no delay is needed for wakeup from S3
+      \ This delay is empirically necessary before reading CMOS - minimum is 36000 - about 50 ms
+      \ Before the delay has elapsed, the CMOS RAM returns 0 instead of the stored value.
+      d# 40000 wait-us
+   then
 
    \ As an optimization to avoid long waits for the EC to respond, read the board ID
-   \ that is cached in CMOS RAM.  This might not in fact be an optimization in light
-   \ of the above delay ...
+   \ that is cached in CMOS RAM.
    h# 83 # al mov  al h# 74 # out  h# 75 # al in    \ check byte - should be ~board-id
    al ah mov   ah not                               \ ~check byte in AH
    h# 82 # al mov  al h# 74 # out  h# 75 # al in    \ board-id in AL

@@ -93,10 +93,6 @@ label startup
    2 92 port-wb  \ Enable A20
    \ External A20GATE is disabled automatically because the internal KBC is on by default (cfg reg 8851 bit 0)
 
-   acpi-io-base 1 + 8888 config-ww   \ Set ACPI base address
-\   88 8881 config-wb   \ Enable ACPI regs, 32-bit PM timer, guard RTC against power glitches
-   8c 8881 config-wb   \ Enable ACPI regs, 32-bit PM timer, guard RTC against power glitches
-
    fload ${BP}/cpu/x86/pc/olpc/via/startcacheasram.fth
 
 \ cache_as_ram_auto.c: amd64_main() 
@@ -122,9 +118,13 @@ label startup
 
    fload ${BP}/cpu/x86/pc/olpc/via/starthostctl.fth
 
+   acpi-io-base 1 + 8888 config-ww   \ Set ACPI base address
+
 [ifdef] debug-startup
    cominit #) call
 [then]
+
+   8c 8881 config-wb   \ Enable ACPI regs, 32-bit PM timer, guard RTC against power glitches
 
    char + report
    long-offsets on
@@ -138,8 +138,7 @@ label startup
          char X report
          begin  hlt  again
       then
-      carret report   linefeed report
-      char F report
+      carret report   linefeed report   char F report
       fload ${BP}/cpu/x86/pc/olpc/via/demodram.fth
    then
 
@@ -182,7 +181,7 @@ label startup
 
 0 [if]
 long-offsets on
-acpi-io-base 48 + port-rl  h# 1000.0000 # ax and  0<>  if  \ Memory ID1 bit
+acpi-io-base 48 + port-rl  h# 1000.0000 # ax and  0<>  if  \ Memory ID1 bit - set for 32bit memory width
 
    mmxcr
    39 3c4 port-wb  ax ax xor  3c5 port-rb  ax mmxdot  
