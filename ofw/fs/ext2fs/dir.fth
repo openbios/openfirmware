@@ -3,8 +3,9 @@ purpose: Linux ext2fs file system directories
 
 decimal
 
-2       constant root-dir#
+2 constant root-dir#
 0 instance value dir-block#
+0 instance value lblk#
 
 variable diroff
 variable totoff
@@ -74,16 +75,16 @@ variable totoff
 \       After this point, the code should be independent of the disk format!
 
 : init-inode    ( mode inode# -- )
-   inode >r			( mode )
-   r@ /inode erase		( mode )
-   r@ short!			( )
-   time&date >unix-seconds	( time )
-   dup r@ 2 la+ int!		( time )	\ set access time
-   dup r@ 3 la+ int!		( time )	\ set creation time
-       r@ 4 la+ int!		( )		\ set modification time
-   1 r@ d# 13 wa+ short!			\ set links_count to 1
-   update
-   r> drop
+   inode >r			( mode r: inode-adr )
+   r@ /inode erase		( mode r: inode-adr )
+   r@ short!			( r: inode-adr )
+   time&date >unix-seconds	( time r: inode-adr )
+   dup r@ 2 la+ int!		( time r: inode-adr ) \ set access time
+   dup r@ 3 la+ int!		( time r: inode-adr ) \ set creation time
+       r@ 4 la+ int!		( r: inode-adr )      \ set modification time
+   1 r@ d# 13 wa+ short!	( r: inode-adr )      \ set links_count to 1
+   update			( r: inode-adr )
+   r> drop			( )
 ;
 
 \ On entry:
@@ -147,7 +148,7 @@ variable totoff
 
 : to-previous-dirent  ( -- )
    diroff @  					( this )
-   0 diroff !					( this )
+   diroff off					( this )
    begin					( this )
       dup  diroff @ dirent-len@ +  <>		( this not-found? )
    while					( this )
@@ -178,17 +179,19 @@ variable totoff
 7 constant symlink-type
 
 : ($create)   ( name$ mode -- error? )
-   >r							( name$ )
+   >r							( name$ r: mode )
    \ check for room in the directory, and expand it if necessary
-   dup >reclen  no-dir-space?   if			( name$ new-reclen )
+   dup >reclen  no-dir-space?   if			( name$ new-reclen r: mode )
       \ doesn't fit, allocate more room
-      bsize						( name$ bsize )
+      bsize						( name$ bsize r: mode )
       append-block
       lblk#++ get-dirblk drop
-   then							( name$ rec-len )
+   then							( name$ rec-len r: mode )
 
    \ At this point dirent points to the place for the new dirent
-   regular-type alloc-inode set-dirent false		( error? )
+   \ XXX handle symlinks!
+   r@ h# f000 and h# 4000 =  if  dir-type  else  regular-type  then  ( name$ rec-len type r: mode )
+   alloc-inode set-dirent false		( error? r: mode )
    r> dirent-inode@ init-inode
 ;
 
@@ -236,7 +239,7 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
 : first-dirent  ( dir-inode# -- end? )  \ Adapted from (init-dir)
    set-inode
    get-dirblk  if  true exit  then
-   0 diroff !  0 totoff !               ( )
+   diroff off  totoff off               ( )
    false                                ( )
 ;   
 
@@ -347,6 +350,16 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    wd-inum first-dirent
 ;
 
+\ Returns true if inode# refers to a directory that is empty
+\ Side effect - changes dirent context
+: empty-dir?  ( -- empty-dir? )
+   dir? 0= if  false exit  then
+
+   file-handle first-dirent  if  false exit  then   \ Should be pointing to "." entry
+   next-dirent  if  false exit  then   \ Should be point to ".." entry
+   next-dirent  ( end? )               \ The rest should be empty
+;
+
 \ Delete a file, given its inode. Does not affect the directory entry, if any.
 : idelete   ( inode# -- )
    to inode#
@@ -366,7 +379,7 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    
    inode# >r
    file-handle set-inode
-   file? 0= if  r> drop true exit  then		\ XXX handle symlinks
+   file? 0= if  r> drop true exit  then	\ XXX handle symlinks
    
    \ is this the only link?
    link-count  dup 2 u< if

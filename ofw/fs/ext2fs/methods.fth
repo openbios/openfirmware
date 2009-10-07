@@ -12,11 +12,14 @@ external
 : $create   ( name$ -- error? )
    o# 100666 ($create)
 ;
-\ XXX note: increment link count in parent
+
 : $mkdir   ( name$ -- error? )
    o# 40777 ($create) if  true exit  then
-   
+   link-count 1+ link-count!    \ The ".." entry is another link to parent
+
    file-handle to inode#
+   link-count 1+ link-count!    \ The "." entry is another link to the new directory
+
    add-block				( block# )
    file-size h# 400 + file-size!
    dup direct0 int! update		( block# )
@@ -37,27 +40,26 @@ external
 ;
 : $delete!  $delete ;			\ XXX should these be different?
 
-\ XXX note: decrement link count in parent
-: $rmdir   ( name$ -- error? )	\ XXX UNTESTED
+: $rmdir   ( name$ -- error? )
    $find-file  if  true exit  then		( )
    wf-type dir-type <>  if  true exit  then     ( )
+   \ Now the dirent is the one for the directory to delete and the
+   \ inode is for the parent directory
    
-   inode# >r					\ save parent directory
-   file-handle set-inode
-   dir? 0= if  r> drop true exit  then
-   
-   (delete-files)   file-handle if  r> drop true exit  then	\ still some left
-   
-   \ now empty, remove it.
-   delete-blocks
+   dirent-vars 2>r 2>r	        \ save lookup state in parent directory
+   file-handle set-inode        \ Switch the inode to the directory to delete
 
-   \ delete inode. clear or mark it?
-   file-handle free-inode
+   empty-dir?  0=  if  2r> 2r> 4drop true exit  then
+
+   \ The directory is empty so it's okay to remove it
+   delete-blocks                \ Release the data blocks used for dirent storage
+   inode# free-inode            \ Release the inode number
    
-   r> to inode#					\ restore parent directory
+   2r> 2r> restore-dirent	\ restore lookup state in parent directory
    
-   \ delete directory entry
-   del-dirent			( error? )
+   del-dirent  if  true exit  then  \ Remove the dirent from the parent directory
+   link-count 1- link-count!        \ Decrement parent link count
+   false
 ;
 
 headers

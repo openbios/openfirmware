@@ -7,7 +7,6 @@
 0 instance value #ind-blocks1
 0 instance value #ind-blocks2
 0 instance value #ind-blocks3
-0 instance value lblk#
 
 \ first	number
 \ 0	12		direct
