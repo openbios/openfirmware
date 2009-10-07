@@ -337,6 +337,7 @@ devalias n int
 devalias ide /ide@0/disk
 devalias sd  /sd/disk@2
 devalias ext /sd/disk@2
+devalias net /wlan
 
 \ The "int" devalias is defined in report-disk at runtime, since it
 \ varies between A-test and later boards.
@@ -376,7 +377,7 @@ devalias ext /sd/disk@2
 
 \ If there is a USB ethernet adapter, use it as the default net device.
 \ We can't use ?report-device here because we already have net aliased
-\ to /usb/wlan, and ?report-device won't override an existing alias.
+\ to /wlan, and ?report-device won't override an existing alias.
 : report-net  ( -- )
    " /usb/ethernet" 2dup locate-device  0=  if  ( name$ phandle )
       drop                                      ( name$ )

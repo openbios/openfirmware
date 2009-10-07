@@ -41,7 +41,6 @@ devalias u    /usb/disk
       pwd$ $nopage-show-devs
    then
 ;
-devalias net  /usb/wlan
 
 : probe-usb  ( -- )
    ." USB2 devices:" cr
