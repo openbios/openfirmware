@@ -107,6 +107,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
    ['] dcon!  catch  if  2drop  smb-stop 1 ms  smb-off  1 ms  smb-on  then
 ;
 
+: mode@    ( -- mode )    1 dcon@  ;
 : mode!    ( mode -- )    1 dcon!  ;
 : hres!    ( hres -- )    2 dcon!  ;  \ def: h#  458 d# 1200
 : htotal!  ( htotal -- )  3 dcon!  ;  \ def: h#  4e8 d# 1256
