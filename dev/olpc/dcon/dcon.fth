@@ -121,6 +121,9 @@ d# 905 value resumeline  \ Configurable; should be set from args
 : brighter  ( -- )  bright@ 1+  h# f min  bright!  ;
 : dimmer    ( -- )  bright@ 1-  0 max  bright!  ;
 
+: backlight-off  ( -- )  mode@  8 invert and  mode!  ;
+: backlight-on   ( -- )  mode@  8 or  mode!  ;
+
 \ Colour swizzle, AA, no passthrough, backlight
 : set-color ( color? -- )
    dup to color?
