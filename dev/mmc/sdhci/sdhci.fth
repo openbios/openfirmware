@@ -674,14 +674,21 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 : wait-write-done  ( -- )
    writing? 0=  if  exit  then                     ( limit )
 
-   get-msecs d# 1000 +                              ( limit )
-   begin  get-status 9 rshift h# f and  7 =  while  ( limit )
+   get-msecs d# 1000 +                             ( limit )
+   begin  get-status dup  9 rshift h# f and  7 =  while  ( limit status )
+      drop                                         ( limit )
       dup get-msecs - 0<  if
          ." SDHCI: wait-write-done timeout" cr
          abort
       then
-   repeat                                           ( limit )
-   drop                                             ( )
+   repeat                                           ( limit status )
+   nip                                              ( status )
+   dup h# fff9.8008 and  if                         ( status )
+      cr ." SD Error - status = " . cr
+      noop
+   else
+      drop
+   then
 
    false to writing?
 ;

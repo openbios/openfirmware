@@ -124,8 +124,11 @@ also nand-commands definitions
    open-nand
    #image-eblocks  show-init
    get-inflater
+   \ Separate the two buffers by enough space for both the compressed
+   \ and uncompressed copies of the data.  4x is overkill, but there
+   \ is plenty of space at load-base
    load-base to dma-buffer
-   load-base /nand-block + to data-buffer
+   load-base /nand-block 4 * + to data-buffer
    /nand-block /nand-page / to nand-pages/block
 ;
 
@@ -230,7 +233,8 @@ true value check-hash?
    ( eblock# )
 \ Asynchronous writes
    data-buffer over nand-pages/block *  nand-pages/block  " write-blocks-start" $call-nand  ( eblock# )
-\   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks" $call-nand drop  ( eblock# )
+\   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks" $call-nand  ( eblock# #written )
+\   nand-pages/block  <>  " Write error" ?nand-abort   ( eblock# )
    swap-buffers                          ( eblock# )
 
    dup to last-eblock#                   ( eblock# )
@@ -256,7 +260,7 @@ previous definitions
    ['] include-file catch  ?dup  if    ( x error )
       nip .error
    then                                ( )
-   previous
+   previous definitions
    show-done
    ?all-written
    close-nand-ihs
