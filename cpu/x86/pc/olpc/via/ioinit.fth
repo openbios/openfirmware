@@ -116,6 +116,7 @@
 [then]
 
    d# 16 4 devfunc  \ EHCI
+   41 20 20 mreg  \ Evaluate PERIODIC Enable bit only at beginning of micro-frame 0 (undocumented)
    42 40 40 mreg  \ Enable Check PRESOF of ITDOUT Transaction during Fetching Data from DRAM
    43 c0 c0 mreg  \ Enable Dynamic Clock Scheme - 66MHz (80) & 33MHz (40)
    48 20 00 mreg  \ Disable DMA bursts
@@ -233,6 +234,7 @@ hpet-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
    9f ff ad mreg  \ be like Phx (slot 3 is Card Reader not SDIO)
 [then]
 
+   b0 08 00 mreg  \ The BIOS Porting Note says to clear this bit.  Phoenix and coreboot agree.
    b4 80 00 mreg  \ No positive decoding for UART1 ???
    b7 40 40 mreg  \ 40 res be like Phx
 uart-dma-io-base wbsplit swap  ( bits15:8 bits7:0 )
