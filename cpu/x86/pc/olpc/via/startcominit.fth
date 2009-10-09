@@ -55,7 +55,13 @@ label cominit
    \ Wait until RTC PSON Gating is complete.  See PG_VX855_VX875_092 page 139 (pdf page 160)
    \ This takes about 48 mS in the power-on case, and is almost instantaneous in the
    \ resume-from-S3 case due to the clearing of D17F0 Rx81[2] above.
-   begin  8882 config-rb  h# 40 # al and  0<> until
+   cx cx xor
+   begin  cx inc  8882 config-rb  h# 40 # al and  0<> until
+   cl al mov
+   h# 88 # al mov  al h# 74 # out  cl al mov  al h# 75 # out
+   h# 89 # al mov  al h# 74 # out  ch al mov  al h# 75 # out
+   d# 16 # cx shr
+   h# 8a # al mov  al h# 74 # out  cl al mov  al h# 75 # out
 
    \ As an optimization to avoid long waits for the EC to respond, read the board ID
    \ that is cached in CMOS RAM.
