@@ -451,6 +451,8 @@ fload ${BP}/cpu/x86/pc/saveabs.fth
 
 fload ${BP}/forth/lib/selstr.fth
 
+fload ${BP}/cpu/x86/pc/olpc/via/padlock.fth   \ Via security engine
+
 fload ${BP}/ofw/inet/loadtcp.fth
 
 support-package: http
@@ -481,7 +483,6 @@ end-support-package
 fload ${BP}/cpu/x86/pc/olpc/nandcastui.fth
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
 [then]
-fload ${BP}/cpu/x86/pc/olpc/via/padlock.fth   \ Via security engine
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
 devalias fsdisk int:0

@@ -2,7 +2,7 @@ purpose: Interface to Via "Padlock" hardare random number generator
 
 : enable-padlock  ( -- )  cr4@ h# 200 or cr4!  ;  \ SSE enable
 
-code random-bytes  ( adr len -- )
+code random-bytes  ( adr len -- )  \ The buffer at adr must be at least 8 bytes long
    cr4 ebx mov  ebx eax mov  h# 200 # eax or  eax cr4 mov
    cx pop
    0 [sp] di xchg
@@ -12,6 +12,7 @@ code random-bytes  ( adr len -- )
       ax cx sub
    0= until
    0 [sp] di xchg
+   ax pop
    ebx cr4 mov
 c;
 code random-byte  ( -- n )
@@ -27,6 +28,7 @@ code random-byte  ( -- n )
    cx di mov
    ebx cr4 mov
 c;
+: random-long  ( -- l )  0 0 sp@ 4 random-bytes  nip  ;
 
 create sha256-constants
 h# 6A09E667 , h# BB67AE85 , h# 3C6EF372 , h# A54FF53A ,

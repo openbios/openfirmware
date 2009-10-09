@@ -1390,8 +1390,12 @@ d# 32 buffer: opt
 ;
 
 : next-iss  ( -- )
+[ifdef] random-long
+   random-long to iss
+[else]
    tcp_iss to iss
    issincr 2/  tcp_iss +  to tcp_iss
+[then]
 ;
 
 : do-syn-sent?  ( -- done? )
