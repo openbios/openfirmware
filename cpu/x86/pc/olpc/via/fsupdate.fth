@@ -3,9 +3,6 @@ purpose: Secure NAND updater
 
 \ Depends on words from security.fth and copynand.fth
 
-: cpu-temperature  ( -- degrees-C )  h# 1169 msr@ drop  ;
-: show-temperature  ( -- )  space cpu-temperature .d  ;
-
 : get-hex#  ( -- n )
    safe-parse-word
    push-hex $number pop-base  " Bad number" ?nand-abort

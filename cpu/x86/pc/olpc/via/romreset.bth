@@ -119,6 +119,7 @@ label startup
    fload ${BP}/cpu/x86/pc/olpc/via/starthostctl.fth
 
    acpi-io-base 1 + 8888 config-ww   \ Set ACPI base address
+   acpi-io-base wbsplit 0292 config-wb  0293 config-wb  \ ACPI base address for C-states, big-endian
 
 [ifdef] debug-startup
    cominit #) call

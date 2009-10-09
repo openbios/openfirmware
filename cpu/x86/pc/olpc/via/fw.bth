@@ -300,6 +300,9 @@ fload ${BP}/cpu/x86/pc/olpc/banner.fth
 
 fload ${BP}/ofw/gui/loadmenu.fth
 fload ${BP}/ofw/gui/insticon.fth
+
+fload ${BP}/cpu/x86/pc/olpc/via/cstate.fth   \ C-state tests
+
 \ Uninstall the diag menu from the general user interface vector
 \ so exiting from emacs doesn't invoke the diag menu.
 ' quit to user-interface
@@ -513,9 +516,6 @@ true                               ' client-symbols?  set-config-int-default
 [then]
 
 " dhcp" ' ip-address  set-config-string-default
-
-: c1-idle  ( -- )  interrupts-enabled?  if  halt  then  ;
-' c1-idle to stdin-idle
 
 : fast-boot?  ( -- flag )
 [ifdef] rom-loaded
