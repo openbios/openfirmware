@@ -55,16 +55,20 @@ alias default-idle-state c2-idle
 ;
 : idling  ( xt -- )
    to do-idle
-   cursor-off
+
    sleep-time off
    acpi-time@ start-time !
+
+   cursor-off
    begin
      green-letters (cr show-temperature  d# 1024 idle-ms
      black-letters (cr show-temperature  d# 1024 idle-ms
    key?  until
-   acpi-time@  start-time @ -
    cursor-on
-   ." Slept " sleep-time @ .d ." of " .d ." ticks" cr
+
+   sleep-time @  d# 1000  acpi-time@ start-time @ -  */  ( %*10 )
+   cr  ." Slept "  push-decimal  <# u# [char] . hold u#s u#> pop-base  type  ." % of the time"  cr
+
    ['] default-idle-state to do-idle
 ;
 : .idling  ( $ -- )
