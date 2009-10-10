@@ -144,8 +144,7 @@
    42 fc f0 mreg  \ Various setting related to DMA line  buffers
    43 0f 0b mreg  \ Enable PCI delayed transactions (08), Write transaction timer (02), Read transaction timer (01)
 \  4d 01 01 mreg  \ Enable LPC TPM
-\  4e 08 08 mreg  \ Enable ports 74/75 for CMOS RAM access
-   4e 18 18 mreg  \ Enable ports 74/75 for CMOS RAM access  - 10 res be like Phx
+   4e 08 08 mreg  \ Enable ports 74/75 for CMOS RAM access
 
 [ifdef] demo-board
    50 40 40 mreg  \ Disable USB device mode
