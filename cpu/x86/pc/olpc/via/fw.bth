@@ -379,7 +379,7 @@ fload ${BP}/cpu/x86/pc/olpc/wlantest.fth
 [then]
 fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 
-" /xp u:\boot\olpc.fth ext:\boot\olpc.fth int:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
+" /xp u:\boot\olpc.fth ext:\boot\olpc.fth int:\boot\olpc.fth /prober /usb/ethernet /wlan"
    ' boot-device  set-config-string-default
 
 \needs ramdisk  " " d# 128 config-string ramdisk
@@ -576,7 +576,7 @@ true                               ' client-symbols?  set-config-int-default
 [then]
    then                     ( in-factory? )
    if                       ( )
-      " /prober /usb/ethernet disk:\boot\olpc.fth int:\boot\olpc.fth /xp ext:\boot\olpc.fth /usb/wlan"
+      " /prober /usb/ethernet disk:\boot\olpc.fth int:\boot\olpc.fth /xp ext:\boot\olpc.fth /wlan"
       to boot-device
    then                     ( )
 ;
