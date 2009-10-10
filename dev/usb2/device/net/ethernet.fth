@@ -141,8 +141,9 @@ external
 					( adr ihandle )
 
    >r
-   " load" r@ $call-method		( len )
+   " load" r@ ['] $call-method	catch   ( len false | x x x true )
    r> close-package
+   throw
 ;
 
 : selftest  ( -- flag )

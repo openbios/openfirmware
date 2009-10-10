@@ -1680,8 +1680,9 @@ false instance value force-open?
 					( adr ihandle )
 
    >r
-   " load" r@ $call-method		( len )
+   " load" r@ ['] $call-method	catch   ( len false | x x x true )
    r> close-package
+   throw
 ;
 
 : reset  ( -- flag )  reset-nic  ;
