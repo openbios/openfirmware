@@ -44,6 +44,7 @@ label cominit
    \ When the RTC is guarded against power glitches, there is a 50 mS delay before
    \ reads return the correct data upon wakeup from S3.  On power-up, the delay is
    \ present even with the RTC unguarded.  Unguarding it here speeds up S3 startup.
+   \ !! Not only does it affect the RTC, empirically it affects D17F0 Rx9Bh too!
    81 ff 88 mreg  \ Enable ACPI regs, 32-bit PM timer, disable RTC power glitch guard
    4e 08 08 mreg  \ Enable ports 74/75 for high-bank CMOS RAM access
    end-table
@@ -52,49 +53,16 @@ label cominit
    70 fb 82 mreg  \ CPU to PCI flow control - CPU to PCI posted write, Enable Delay Transaction
    end-table
 
-   \ Wait until RTC PSON Gating is complete.  See PG_VX855_VX875_092 page 139 (pdf page 160)
-   \ This takes about 48 mS in the power-on case, and is almost instantaneous in the
-   \ resume-from-S3 case due to the clearing of D17F0 Rx81[2] above.
-   cx cx xor
-   begin  cx inc  8882 config-rb  h# 40 # al and  0<> until
-   cl al mov
-   h# 88 # al mov  al h# 74 # out  cl al mov  al h# 75 # out
-   h# 89 # al mov  al h# 74 # out  ch al mov  al h# 75 # out
-   d# 16 # cx shr
-   h# 8a # al mov  al h# 74 # out  cl al mov  al h# 75 # out
+\  rdtsc ax bx mov     \ Mark time
 
-   \ As an optimization to avoid long waits for the EC to respond, read the board ID
-   \ that is cached in CMOS RAM.
-   h# 83 # al mov  al h# 74 # out  h# 75 # al in    \ check byte - should be ~board-id
-   al ah mov   ah not                               \ ~check byte in AH
-   h# 82 # al mov  al h# 74 # out  h# 75 # al in    \ board-id in AL
+   \ Read board ID from the EC
+   h# 62 # al in   \ Read output register to ensure that OBF is clear
+   begin  h# 66 # al in  2 # al test  0= until   \ Wait IBF empty
+   h# d4 # al mov   al h# 66 # out               \ Write command 0xd4
+   begin  h# 66 # al in  1 # al test  0<> until  \ Wait OBF full
+   h# 62 # al in                                 \ Get the board ID
 
-   al ah cmp  0<>  if  \ If the check byte matches, fall through with the ID in AL
-
-      \ If check byte is wrong, we have to ask the EC
-   
-      h# 6c # al in   \ EC status register
-      2 # al and      \ input buffer full bit
-      0<>  if         \ If the bit is nonzero, we can't send a command yet
-         \ We don't wait for the EC; if it is busy we assume B-test
-         \ It shouldn't be busy at this point because we haven't tried to talk to it yet
-         h# d1 # al mov     \ EC busy - report B-test
-      else
-         h# 19 # al mov  al h# 6c # out   \ Send board ID command to EC
-         d# 200 # cx mov    \ Wait up to 200 mS for the EC to respond
-         begin
-            d# 1000 wait-us \ 1 mS delay so we don't pound on the EC
-            h# 6c # al in   \ Get status register
-            3 # al and      \ Check for output buffer full
-            1 # al cmp
-         loopne
-         <> if    \ Not equal means timeout
-            h# d1 # al mov  \ EC timeout - report B-test
-         else
-            h# 68 # al in   \ Get board ID byte from EC
-         then
-      then
-   then
+\  rdtsc bx ax sub  ax bx mov  h# 4d0 config-setup  bx ax mov  ax dx out  \ Elapsed time in BIOS scratch register
 
    \ Now AL contains the board ID
    h# d1 # al cmp  u<  if
