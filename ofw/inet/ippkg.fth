@@ -32,9 +32,6 @@ headers
 
    " net//obp-tftp:last" open-dev  to my-parent    ( )
 
-   \ XXX probably should catch this
-   " configure" $call-parent                       ( )
-
    true to we-opened?
    true
 ;
