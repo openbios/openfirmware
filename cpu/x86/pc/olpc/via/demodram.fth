@@ -228,6 +228,8 @@
    0 3 devfunc
    50 ee ee mreg \ DDR default MA7 for DRAM init
    51 ee 60 mreg \ DDR default MA3 for CHB init
+   \ Via says 11, 1F gives slightly better performance in their environment,
+   \ but that setting doesn't work for us - it crashes with Forth+X+
    52 ff 33 mreg \ DDR use BA0=M17, BA1=M18,
    53 ff 3F mreg \ DDR	  BA2=M19
 
@@ -240,7 +242,7 @@
    65 ff d1 mreg \ AGP timer = D; Host timer = 1; (coreboot uses 9 for host timer)
    66 ff 88 mreg \ DRAMC Queue Size = 4; park at the last bus owner,Priority promotion timer = 8
    68 ff 0C mreg
-   69 0F 04 mreg \ set RX69[3:0]=0000b
+   69 0F 04 mreg \ Disable multiple page and page active for now, enable refresh priority
    6A ff 00 mreg \ refresh counter
    6E 87 80 mreg \ must set 6E[7],or else DDR2  probe test will fail
    85 ff 00 mreg
@@ -327,9 +329,9 @@ forth  #ranks 4 >=  assembler  [if]
 
    0 3 devfunc
 forth #banks 8 = assembler [if]
-   69 c3 c3 mreg \ Reinstate page optimizations (03) 8-bank interleave (c0)
+   69 c3 c3 mreg \ Enable page optimizations (03) 8-bank interleave (c0)
 [else]
-   69 c3 83 mreg \ Reinstate page optimizations (03) 4-bank interleave (80)
+   69 c3 83 mreg \ Enable page optimizations (03) 4-bank interleave (80)
 [then]
 
 

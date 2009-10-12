@@ -43,6 +43,11 @@
    89 ff f8 mreg  \ Dynamic clocks
    8b ff bf mreg  \ Dynamic clocks
    8d ff 30 mreg  \ Self-refresh in C3 and C4
+   \ LuckeLin at Via says: If D0F4 Rx8e[5] was set to 0, we could turn-off PLL in S1 state.
+   \ If your machine does not support S1, it was fine to set it to 1 at all time.
+   \ (wmb adds - D0F4 Rx8e[5] needs to be set to 1 before entering S3, even if set to 0 for S1)
+   \ LuckeLin also says: [Phoenix] Set(s) Rx8e[4] to 1 to fix another S3 issue. Chip internal control
+   \ signal was hard-wired to 1 in new chip. It does not control anything. Please just keep it to be default setting.
    8e ff 20 mreg  \ Leave PLL on in suspend state - necessary for reliable S3
    90 ff ff mreg  \ Gate clocks
    91 ff ff mreg  \ Gate clocks

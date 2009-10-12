@@ -25,6 +25,7 @@
 
    55 06 04 mreg  \ Miscellaneous Control 2
    56 f7 63 mreg  \ Write Policy 1
+   57 01 01 mreg  \ Enable fast TRDY by detecting HREQa[5]# de-assertion
    5d ff a2 mreg  \ Write Policy
    5e ff 88 mreg  \ Bandwidth Timer
    5f 46 46 mreg  \ CPU Misc Ctrl
