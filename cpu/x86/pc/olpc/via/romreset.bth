@@ -125,8 +125,6 @@ label startup
    cominit #) call
 [then]
 
-   8c 8881 config-wb   \ Enable ACPI regs, 32-bit PM timer, guard RTC against power glitches
-
    char + report
    long-offsets on
 
@@ -214,6 +212,9 @@ long-offsets off
 
    fload ${BP}/cpu/x86/pc/olpc/via/starttherm.fth     \ Enables thermal monitor
    fload ${BP}/cpu/x86/pc/olpc/via/startcpuspeed.fth  \ Turns up clock rate
+
+   \ Do this as late as possible so power well registers aren't locked out by the glitch suppressor
+   8c 8881 config-wb   \ Enable ACPI regs, 32-bit PM timer, guard RTC against power glitches
 
    \ Cache is now setup normally, backed by memory
    \ Setup a small stack for subroutine calls
