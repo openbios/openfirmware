@@ -25,7 +25,7 @@ purpose: Create memory node properties and lists
 ;
 
 \ This may require adjustment if we steal additional SMI memory
-: fbsize  ( -- )  total-ram system-ram -  ;
+: fbsize  ( -- n )  total-ram system-ram -  ;
 
 dev /memory
 
