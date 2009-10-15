@@ -360,10 +360,10 @@ fload ${BP}/cpu/x86/pc/olpc/via/acpi.fth
 
 fload ${BP}/cpu/x86/pc/olpc/via/smbios.fth
 
-[ifdef] Later
-fload ${BP}/dev/geode/smi.fth
+fload ${BP}/dev/via/smi.fth
 \ fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
 fload ${BP}/cpu/x86/pc/biosints.fth
+[ifdef] Later
 fload ${BP}/cpu/x86/pc/olpc/biosresume.fth
 [then]
 

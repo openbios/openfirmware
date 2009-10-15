@@ -77,7 +77,8 @@ h# fc000 constant dsdt-adr
 h# fd000 constant ssdt-adr
 
 h# ffc00 constant smbios-adr
-h# fff00 constant wake-adr
+h# fff00 constant wake-adr   \ Needs to be at least h# 32 bytes - used in acpi.fth
+h# fff40 constant rm-buf     \ 8-byte buffer used by BIOS INT 15 AH=C0 for returning config info
 
 h#  3e.0000 constant inflate-base
 h#  30.0000 constant workspace

@@ -12,6 +12,14 @@ purpose: Create memory node properties and lists
 \ Excludes RAM assigned to the frame buffer and used by OFW page tables
 : system-ram  ( -- offset )  mem-info-pa 4 + l@  ;
 
+: fbphys  ( -- adr )
+   h# 6d h# 3c4 pc! h# 3c5 pc@   ( low )
+   h# 6e h# 3c4 pc! h# 3c5 pc@   ( low high )
+   bwjoin d# 21 lshift
+;
+
+: fbsize  ( -- n )  total-ram fbphys -  ;
+
 dev /memory
 
 \ Excludes RAM already used for page tables

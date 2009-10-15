@@ -481,15 +481,7 @@ false value show-reads?
    show-reads?  if  dup .  cr  then
 ;
 
-0 value entry-count
-: ?hack
-   entry-count dup 1+ to entry-count  1 =  if
-      hack-fix-mode
-   then
-;
-
 : bios-write-sectors  ( adr sector# #sectors -- #read )
-\   ?hack
    noshow
 
 \ ." Write " 2 pick . over . dup .  ." -- "
