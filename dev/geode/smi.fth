@@ -1303,8 +1303,20 @@ PCI BARs:
    loop
 ;
 
-
-\ : caller-regs  ( -- adr )  smm-sregs  ;
-\ : rm-buf  ( -- adr )  smm-rmbuf  ;
-
-\ : doit  setup-smi disk-name open-dev is disk-ih get-mbr usb-quiet  ff 21 pc! h# 380f  h# 7c18 w!  smi ;
+\ Layout of saved registers
+struct
+  2 field >rm-gs
+  2 field >rm-fs
+  2 field >rm-es
+  2 field >rm-ds
+  4 field >rm-edi
+  4 field >rm-esi
+  4 field >rm-ebp
+  4 field >rm-exx
+  4 field >rm-ebx
+  4 field >rm-edx
+  4 field >rm-ecx
+  4 field >rm-eax
+  4 field >rm-retaddr
+  2 field >rm-flags
+drop

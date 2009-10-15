@@ -4,23 +4,6 @@ purpose: Emulate legacy PC BIOS real-mode INTs
 8 /l* buffer: init-regs
 h# 80 value bios-boot-dev#
 
-struct
-  2 field >rm-gs
-  2 field >rm-fs
-  2 field >rm-es
-  2 field >rm-ds
-  4 field >rm-edi
-  4 field >rm-esi
-  4 field >rm-ebp
-  4 field >rm-exx
-  4 field >rm-ebx
-  4 field >rm-edx
-  4 field >rm-ecx
-  4 field >rm-eax
-  4 field >rm-retaddr
-  2 field >rm-flags
-drop
-
 : rm-es@  caller-regs >rm-es w@  ;
 : rm-es!  caller-regs >rm-es w!  ;
 
