@@ -136,6 +136,8 @@ devalias mouse /isa/8042/mouse
 devalias d disk
 devalias n nand
 devalias sd /sd/disk
+devalias int nand
+devalias ext sd
 
 dev /8042
    patch false ctlr-selftest open

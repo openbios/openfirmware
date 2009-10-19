@@ -1062,7 +1062,7 @@ warning !
   " dk" find-tag  dup  if  nip nip  then
 ;
 
-: all-devices$  ( -- list$ )  " disk: sd: nand:"  ;
+: all-devices$  ( -- list$ )  " disk: ext: int:"  ;
 
 : secure-startup  ( -- )
    in-factory?  if

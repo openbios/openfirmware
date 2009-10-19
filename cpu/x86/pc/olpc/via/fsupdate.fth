@@ -309,10 +309,10 @@ previous definitions
    repeat                             ( rem$ )
    2drop
 ;
-: update-devices  " disk: sd: http:\\172.18.0.1"  ;
+: update-devices  " disk: ext: http:\\172.18.0.1"  ;
 : try-fs-update  ( -- )
    ." Searching for a NAND file system update image." cr
-   " disk: sd:" fs-update-from-list
+   " disk: ext:" fs-update-from-list
 [ifdef] Later
    ." Trying NANDblaster" cr
    ['] nandblaster catch  0=  if  exit  then
