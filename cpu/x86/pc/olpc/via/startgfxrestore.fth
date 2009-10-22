@@ -42,16 +42,16 @@ crtc-table
    24 54 ireg   \ Hblank, Hblankend overflow
    44 55 ireg   \ Htotal and hdisplay overflow
    \   b7 56 ireg   \ Hsync low
-   b8 56 ireg   \ Hsync low
-   c0 57 ireg   \ Hsyncend low
+   b5 56 ireg   \ Hsync low
+   bd 57 ireg   \ Hsyncend low
    8f 58 ireg   \ Vtotal low
    83 59 ireg   \ Vdisplay low
    83 5a ireg   \ Vblank low
    8f 5b ireg   \ Vblankend low
    9b 5c ireg   \ Hsync,Hsyncend,Vblank,Vblankend overflow
    1b 5d ireg   \ Hblankend, Hsync, Vtotal, Vdisplay overflow
-   89 5e ireg   \ Vsync low
-   6e 5f ireg   \ Vsyncend all and Vsync overflow
+   88 5e ireg   \ Vsync low
+   6a 5f ireg   \ Vsyncend all and Vsync overflow
       
    00 62 ireg   \ Starting address
    00 63 ireg   \ Starting address
@@ -66,7 +66,7 @@ crtc-table
 
    00 6c ireg   \ VCK source from PLL output clock, LCKCK PLL source from X1 pin
 
-   7f 71 ireg   \ Offset overflow
+   00 71 ireg   \ Offset overflow
    00 79 ireg   \ LCD scaling off
   
    60 88 ireg   \ LVDS sequential
@@ -85,7 +85,7 @@ crtc-table
 end-table
 
 seq-table
-   9d 4a ireg   \ 2nd PLL value 0
+   9f 4a ireg   \ 2nd PLL value 0
    0c 4b ireg   \ 2nd PLL value 1
    05 4c ireg   \ 2nd PLL value 2
    04 40 ireg   \ Pulse LCDCK PLL reset
@@ -99,7 +99,6 @@ end-table
 60 78 seq-set   \ Inverse HSYNC and VSYNC on IGA2 for LVDS
 30 1e seq-set   \ Power up DVP1 pads
 0c 2a seq-set   \ Power up LVDS pads
-40 16 seq-set   \ Undocumented bits, something to do with simultaneous CRT and LCD operation
 30 1b seq-set   \ Turn off primary engine clock to save power
    
 d# 32000 wait-us
