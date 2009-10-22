@@ -78,4 +78,21 @@ label masked-config-writes   \ return address points to the table
    esi push
    ret
 end-code
-   
+
+label indexed-writes   \ return address points to the table, index port in dx
+   esi pop
+   cld
+   begin
+      al lods                    \ al: register index
+   al al or  0<> while
+      al bl mov                  \ bl: register index
+
+      al dx out
+      al lods                 \ Get final value (== OR mask)
+      dx inc
+      al dx out
+      dx dec
+   repeat
+   esi push
+   ret
+end-code
