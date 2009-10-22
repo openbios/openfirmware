@@ -13,6 +13,9 @@ headers
 0 0 h# 0200.0014  my-space +  phys+   0 i+  h# 0100.0000 i+   \ MMIO stuff
 " reg" property
 
+\ Enough for a 1600x1200x4 frame buffer plus an equivalent scratch area
+h# 0100.0000 constant /fb-map
+
 : map-membar  ( bar size -- adr )
    >r
    my-space +  h# 0200.0000 or 0 0  rot  ( phys )
@@ -20,11 +23,11 @@ headers
 ;
 : unmap  ( adr size -- )  " map-out" $call-parent  ;
 : (map-io-regs)  ( -- mmio-base )
-   h# 14 h# 0080.0000 map-membar   ( mmio-base )
+   h# 14 h# 100.0000 map-membar   ( mmio-base )
 ;
 : (map-frame-buffer)  ( -- adr )
    \ Not the whole thing, but enough for our needs
-   h# 10  h# 0080.0000  map-membar
+   h# 10 /fb-map map-membar
 ;
 
 \ This is called during probing by make-function-node

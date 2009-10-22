@@ -189,6 +189,8 @@ d# 905 value resumeline  \ Configurable; should be set from args
    smb-init
    dcon-gpio-init
    olpc-lcd-mode
+   olpc-crt-off
+
    gp-setup
    1 set-source  \ Unfreeze image
 ;
@@ -253,7 +255,6 @@ d# 440 8 /  constant dcon-flag
 ;
 
 ' init-xo-display to init-display
-
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

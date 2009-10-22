@@ -21,9 +21,14 @@
    h# 0c h# 16 seq!   \ FIFO
    h# 1f h# 17 seq!   \ FIFO
    h# 4e h# 18 seq!   \ FIFO
-   h# 20 h# 1a seq!   \ Extended mode memory access disable
+\  h# 21 h# 1a seq!   \ Extended mode memory access disable, palette registers access secondary display
+\  h# 01 h# 1a seq!   \ Extended mode memory access disable, palette registers access secondary display
+   h# 00 h# 1a seq!   \ Palette registers access primary display
    h# 54 h# 1c seq!   \ Hdisp fetch count low
    h# 00 h# 1d seq!   \ Hdisp fetch count high
+   h# 14 h# 22 seq!   \ FIFO
+   h# 40 h# 41 seq!   \ arbiter
+   h# 30 h# 42 seq!   \ arbiter
    h# 00 h# 51 seq!   \ FIFO
    h# 06 h# 58 seq!   \ FIFO
    h# 00 h# 71 seq!   \ FIFO
@@ -61,8 +66,24 @@ fload ${BP}/dev/video/common/textmode.fth
 ;
 ' (pc-font) to pc-font
 
+: duplicate-settings  ( -- )
+   \ For mode 3
+   d# 1280 hfetch1!
+   d#  320 hoffset1!
+   d# 2592 hfetch2!  \ Apparently every pixel is 4 bytes (80 * 8 * 40 = 2560), plus 32 bytes extra
+                     \ The 4 bytes could be for the interleaved VGA planes.  Or maybe not.
+   d#  808 hoffset2!
+
+\   h# 06 h# 06 h# 78 seq-mask  \ Clock source selection 14.318 MHz/1024
+\   h# 40 h# 16 seq-set  \ This bit is undocumented but other drivers set it
+;
+
 warning @ warning off
-: text-mode3  ( -- )
-   text-mode3
+: text-mode3
+   olpc-crt-on  \ Restore power to IGA1, as we need it for VGA modes
+   text-mode3   \ The base VGA version; sets up the font and stuff
+   d# 640 d# 400 8 set-resolution
+   set-primary-mode
+   expanded
 ;
 warning !
