@@ -130,7 +130,7 @@ nuser hld          \ points to last character held in #-buf
 : (.)   (s n -- a len )   dup abs  <# u#s   swap sign   u#>   ;
 : s.    (s n -- )       (.)   type space   ;
 : .r    (s n l -- )     >r   (.)   r> over - spaces   type   ;
-: 0.r   (s n l -- )     >r (u.) r> over - 0  ?do  ascii 0 emit  loop  type ;
+: 0.r   (s n l -- )     0 max  >r (u.) r> over - 0  ?do  ascii 0 emit  loop  type ;
 
 : (.2)  (s u -- a len )  <# u# u# u#>   ;
 : (.4)  (s u -- a len )  <# u# u# u# u# u#>   ;
