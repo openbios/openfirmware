@@ -8,7 +8,6 @@ headers
 : d0<   ( d -- flag )  nip 0<  ;
 : d=    ( d1 d2 -- flag )  d- d0=  ;
 : d<>   ( d1 d2 -- flag )  d=  0=  ;
-: d<    (  d1  d2 -- flag )  2 pick over  2dup =  if  drop nip u<  else  nip < nip  then  ;
 : du<   ( ud1 ud2 -- flag )  rot  swap  2dup <>  if  2swap  then  2drop u<  ;
 : d<    ( d1 d2 -- flag )  2 pick over = if drop nip u< else nip < nip then  ;
 : dnegate  ( d -- -d )  0 0  2swap  d-  ;
