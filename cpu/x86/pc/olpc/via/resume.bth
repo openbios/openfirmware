@@ -144,6 +144,7 @@ label suspend-entry   \ h# f.0000 - entry point at fixed location, called by OS
 
    \ D17F0 Bus Control and Power Management
    h# 88d2 config-rb  al stos  \ SMBUS clock divisor
+   h# 8897 config-rb  al stos  \ GPIO2/3 rather than MSDT/MSCK 
 
    \ D17F7 South-North Module Interface Control
    h# 8f0d config-rb  al stos  \ Latency timer
@@ -264,6 +265,7 @@ here asm-base - asm-origin +  resume-adr-loc 6 + !
 
    \ D17F0 Bus Control and Power Management
    h# 88d2 config-setup  al lods  al dx out  \ SMBUS clock divisor
+   h# 8897 config-setup  al lods  al dx out  \ GPIO2/3 rather than MSDT/MSCK 
 
    \ D17F7 South-North Module Interface Control
    h# 8f0d config-setup  al lods  al dx out  \ Latency timer
