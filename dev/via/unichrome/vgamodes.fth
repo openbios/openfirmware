@@ -86,4 +86,11 @@ warning @ warning off
    set-primary-mode
    expanded
 ;
+: graphics-mode12
+   olpc-crt-on  \ Restore power to IGA1, as we need it for VGA modes
+   graphics-mode12   \ The base VGA version; sets up the font and stuff
+   d# 640 d# 480 4 set-resolution
+   set-primary-mode
+   expanded
+;
 warning !

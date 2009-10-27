@@ -132,7 +132,7 @@ create mode3-entry
 \ width  height  htotal  hsync hsyncend  vtotal  vsync vsyncend        --pll-- misc      --vckpll---
 create mode12-entry
 \  640 w,  480 w,  800 w,  672 w,  768 w,  525 w,  490 w,  492 w,  hex  05 04 35 e3 pll,  00 00 00 00 pll,  decimal
-   640 w,  480 w,  800 w,  656 w,  752 w,  525 w,  490 w,  492 w,  hex  03 90 54 e3 pll,  04 10 97 00 pll,  decimal
+   640 w,  480 w,  800 w,  672 w,  768 w,  525 w,  490 w,  492 w,  hex  03 90 54 e3 pll,  04 10 97 00 pll,  decimal
 
 \ Standard timings according to http://www.epanorama.net/documents/pc/vga_timing.html:
 \ 640(width)+8(border)=648(hblank)  648(hblank)+8(frontporch)=656(hsync)
@@ -146,7 +146,7 @@ create mode12-entry
 
 : find-timing-table  ( width height -- error? )
    \ Mode12 check
-   depth 4 =  if  2drop mode12-entry to res-entry  false exit  then   ( width height )
+   over d# 640 =  depth 4 =  and  if  2drop mode12-entry to res-entry  false exit  then   ( width height )
 
    \ Text mode 3 check
    dup d# 400 =  if  2drop mode3-entry to res-entry  false exit  then  ( width height )
@@ -271,6 +271,7 @@ hex
 : bytes>chars   ( bytes -- chars )  3 >>  ;
 : chars>bytes   3 <<  ;
 : pixels>bytes  ( pixels -- bytes )
+   depth 4 = if  2/ exit  then
    depth d# 24 =  if  d# 32   else  depth  then  *  ( bits )  3 >>  ( bytes )
 ;
 
@@ -297,33 +298,29 @@ hex
 
 : legacy-settings  ( -- )
    \ Some EGA legacy mode settings
-   03 00 seq!  \ Release reset bits
-   mode-3?  if  00  else  01  then
-      01 seq!  \ 8/9 timing (0 for mode 3)
-   mode-3?  if  03  else  0f  then
-      02 seq!  \ Enable map planes 0 and 1 (3 for mode 3)
+   00 00 seq!  \ Reset sequencer
+   mode-3?  if  00  else  01  then   01 seq!  \ 8/9 timing (0 for mode 3)
+   mode-3?  if  03  else  0f  then   02 seq!  \ Enable map planes 0 and 1 (3 for mode 3)
    00 03 seq!  \ Character map select
-   mode-3?  if  02  else  0e  then
-      04 seq!  \ Extended memory present (2 for mode 3)
-   0d 0a crt!  \ Cursor start (text mode)
-   0e 0b crt!  \ Cursor end (text mode)
+   mode-3?  if  02  else  06  then   04 seq!  \ Extended memory present (2 for mode 3)
+   03 00 seq!  \ Release reset bits
+
+   mode-3?  if  0d  else  00  then   0a crt!  \ Cursor start (text mode)
+   mode-3?  if  0e  else  00  then   0b crt!  \ Cursor end (text mode)
    00 0e crt!  \ Cursor loc (text mode)
    00 0f crt!  \ Cursor loc (text mode)
-   mode-3?  if  60  else  mode-12?  if  70  else  10  then  then
-      11 crt!  \ Refreshes per line, disable vertical interrupt (60 in mode 3, 70 in mode 12)
-   mode-12?  if  63  else  23  then
-      17 crt!  \ address wrap, sequential access, not CGA compat mode (63 in mode 12)
+   mode-3? mode-12? or  if  60  else  00  then  f0 11 crt-mask  \ Refreshes per line, disable vert intr
+   mode-12?  if  63  else  23  then  17 crt!  \ address wrap, sequential access, not CGA compat mode
 
-
-   04 0e crt!  \ Make the register dump match the snapshots
-   60 0f crt!
-   01 49 crt!
+\   04 0e crt!  \ Make the register dump match the snapshots
+\   60 0f crt!
+\   01 49 crt!
 ;
 
 : general-init  ( -- )
    1e seq@ 1 or 1e seq!  \ ROC ECK
    00 20 seq!  \ max queuing number (but manual recommends 4)
-   10 22 seq!  \ (display queue request expire number)
+   14 22 seq!  \ (display queue request expire number)
    40 34 seq!  \ not documented
    01 3b seq!  \ not documented
    38 40 seq!  \ ECK freq
@@ -340,17 +337,15 @@ hex
 \ SRs set in romreset: 35-38,39,4c,68,6d-6f,78,f3
 
 : tune-fifos  ( -- )
-   mode-3? mode-12? or  if  0c  else  20  then
-      3f 16 seq-mask  \ FIFO threshold (VX855 value) (value is c in modes 3 and 12)
-   mode-3? mode-12? or  if  1f  else  7f  then
-      ff 17 seq-mask  \ FIFO depth (VX855 value)  (value is 1f in modes 3 and 12)
-   60 ff 18 seq-mask  \ Display Arbiter (VX855 value)
+   mode-3? mode-12? or  if  0c  else  20  then  3f 16 seq-mask  \ FIFO threshold (VX855 value)
+   1f 17 seq!  \ FIFO depth (VX855 value)
+   4e 18 seq!  \ Display Arbiter (VX855 value)
 
    18 21 seq!  \ (typical request track FIFO number channel 0
    1f 50 seq!  \ FIFO
-   81 51 seq!  \ FIFO
+   81 51 seq!  \ FIFO - 81 enable Northbridge FIFO
    00 57 seq!  \ FIFO
-   08 58 seq!  \ FIFO
+   08 58 seq!  \ Display FIFO low threshold select
    20 66 seq!  \ request kill
    20 67 seq!  \ request kill
    20 69 seq!  \ request kill
@@ -389,8 +384,8 @@ hex
 \ Starting address
 : start1!  ( offset -- )  lbsplit 3 and 3 48 crt-mask  34 crt!  0d crt!  0c crt!  ;
 
-: vsync1!     1-    dup 10 crt!  dup 6 >> 04 07 crt-mask  dup 2 >> 80 07 crt-mask  9 >> 02 35 crt-mask  ;
-: vsyncend1!  1-    0f 11 crt-mask  ;
+: vsync1!           dup 10 crt!  dup 6 >> 04 07 crt-mask  dup 2 >> 80 07 crt-mask  9 >> 02 35 crt-mask  ;
+: vsyncend1!        0f 11 crt-mask  ;
 
 : vblank1!    1-  dup 15 crt!  dup 5 >> 08 07 crt-mask  dup 4 >> 20 09 crt-mask  7 >> 08 35 crt-mask  ;
 : vblankend1! 1-      16 crt!  ;
@@ -450,8 +445,8 @@ hex
 
 : vtotal1@     06 crt@  07 crt@ 1 and 8 << or  07 crt@ 20 and 4 << or  35 crt@ 1 and d# 10 << or  2+  ;
 : vdisplay1@   12 crt@  07 crt@ 2 and 7 << or  07 crt@ 40 and 3 << or  35 crt@ 4 and 8 << or  1+  ;
-: vsync1@      10 crt@  07 crt@ 4 and 6 << or  07 crt@ 80 and 2 << or  35 crt@ 2 and 9 << or  1+  ;
-: vsyncend1@   11 crt@  0f and  vsync1@ 1- 0f after-start   1+  ;
+: vsync1@      10 crt@  07 crt@ 4 and 6 << or  07 crt@ 80 and 2 << or  35 crt@ 2 and 9 << or    ;
+: vsyncend1@   11 crt@  0f and  vsync1@ 0f after-start    ;
 : vblank1@     15 crt@  07 crt@ 8 and 5 << or  09 crt@ 20 and 4 << or  35 crt@ 8 and 7 << or  1+  ;
 : vblankend1@  16 crt@  vblank1@ 1- ff after-start 1+  ;
 
@@ -462,6 +457,7 @@ hex
 
 : bpp1@  ( -- depth )
    15 seq@ fe and  case
+       0  of  4  endof
       22  of  8  endof
       b6  of  d# 16  endof
       ae  of  d# 32  endof
@@ -476,6 +472,7 @@ hex
 
 : bpp2!  ( depth -- )
    case
+       4  of  00  endof
        8  of  00  endof
    d# 16  of  40  endof
    d# 32  of  c0  endof
@@ -504,15 +501,13 @@ hex
    0 20 grf!  0 21 grf!  0 22 grf!
 ;
 : init-attr-regs  ( -- )
-   \ AT6 is 6 not 14, AT8-f is 8-f, not 38-3f (different intensities)
-   10 0  do  i i attr!  loop
-   mode-3?  if  0c  else  01  then
-      10 attr! \ mode control (0c for text mode 3)
-   00 11 attr! \ overscan color
-   0f 12 attr! \ color plane enable
-   mode-3?  if  08  else  00  then
-      13 attr! \ horizontal pixel pan - (08 for text mode 3)
-   00 14 attr! \ high bits of color palette index
+   " "(00 01 02 03 04 05 14 07 38 39 3a 3b 3c 3d 3e 3f 01 00 0f 00 00)"
+   0  do  ( adr )  dup c@  i attr!  1+  loop  drop
+
+   mode-3?  if
+      0c 10 attr! \ mode control
+      08 13 attr! \ horizontal pixel pan
+   then
 
    palette-on
 ;
@@ -529,8 +524,9 @@ hex
 \   01 df 01 seq-mask
 \   00       03 seq!
 
-   mode-3?  if  02  else  a2  then  e2 15 seq-mask   \ (22 for mode 3, for 6-bit LUT)
+   mode-3? mode-12? or  if  00  else  a2  then  e2 15 seq-mask
    depth case
+          4 of  00  endof
           8 of  00  endof
       d# 16 of  14  endof
       d# 24 of  0c  endof
@@ -572,7 +568,7 @@ hex
 
    \ Max scan line value 0
    mode-3?  if  0f  else  00  then  1f 9 crt-mask
-   1f 14 crt!  \ Underline location
+   mode-3?  if  1f  else  00  then  14 crt!  \ Underline location
  
    vblank    vblank1!
    vblankend vblankend1!
@@ -581,18 +577,18 @@ hex
 \  00 32 crt!     \ HSYNC delay, SYNC drive, gamma, end blanking, etc  Already set
    c8 33 crt-clr  \ Gamma, interlace, prefetch, HSYNC shift
 
+   width pixels>bytes to /scanline
    \ Offset
-   mode-3?  if
+   mode-3? mode-12? or  if
 \      d# 512
       d# 320
    else
-      width pixels>bytes to /scanline
       /scanline 
    then
    hoffset1!
 
    \ fetch count
-   hdisplay pixels>bytes   mode-3?  if  2*  then  hfetch1!
+   hdisplay  mode-3? mode-12? or  if  2*  else  pixels>bytes  then  hfetch1!
 ;
 
 : set-primary-mode  ( -- )
@@ -610,10 +606,10 @@ hex
 
 \   08 33 crt-set  \ Enable CRT prefetch (VESA BIOS doesn't set this)
 
-   depth 8 <> set-gamma   \ No gamma for 8bpp palette mode
+   depth 8 > set-gamma   \ No gamma for 4bpp mode or 8bpp palette mode
 
-   mode-3?  if  vpll  else  pll  then  set-vclk  use-ext-clock
-   mode-3?  if  02 47 crt-set  then  \ LCD simultaneous mode backdoor register for 8/9 Dot Clocks
+   mode-3? mode-12? or  if  vpll  else  pll  then  set-vclk  use-ext-clock
+   mode-3? mode-12? or  if  02 47 crt-set  then  \ LCD simultaneous mode backdoor register for 8/9 Dot Clocks
 
 \  01 6b crt-clr  \ Appears to be reserved RO bit
 
@@ -638,8 +634,8 @@ hex
 : hblankend2! 1-  dup 53 crt!  dup 5 >> 38 54 crt-mask      5 >> 40 5d crt-mask ;
 
 \ unichrome omits bit 11, which goes in CR5D[7]
-: hsync2!     1-  dup 56 crt!  dup 2 >> c0 54 crt-mask  dup 3 >> 80 5c crt-mask  4 >> 80 5d crt-mask ;
-: hsyncend2!  1-  dup 57 crt!      2 >> 40 5c crt-mask ;
+: hsync2!         dup 56 crt!  dup 2 >> c0 54 crt-mask  dup 3 >> 80 5c crt-mask  4 >> 80 5d crt-mask ;
+: hsyncend2!      dup 57 crt!      2 >> 40 5c crt-mask ;
 
 : vtotal2!    1-  dup 58 crt!      8 >> 07 5d crt-mask ;
 : vdisplay2!  1-  dup 59 crt!      5 >> 38 5d crt-mask ;
@@ -660,8 +656,8 @@ hex
 : hdisplay2@   51 crt@  55 crt@ 4 >> 7 and 8 << or  1+  ;
 : hblank2@     52 crt@  54 crt@      7 and 8 << or  1+  ;
 : hblankend2@  53 crt@  54 crt@ 3 >> 7 and 8 << or  5d crt@ 6 >> 1 and d# 11 << or  1+  ;
-: hsync2@      56 crt@  54 crt@ 6 >> 3 and 8 << or  5c crt@ 7 >> 1 and d# 10 << or  5d crt@ 7 >> 1 and d# 11 << or  1+ ;
-: hsyncend2@   57 crt@  5c crt@ 6 >> 1 and 8 << or  hsync2@ 1ff invert and  or  dup hsync2@ <  if  200 +  then  1+  ;
+: hsync2@      56 crt@  54 crt@ 6 >> 3 and 8 << or  5c crt@ 7 >> 1 and d# 10 << or  5d crt@ 7 >> 1 and d# 11 << or  ;
+: hsyncend2@   57 crt@  5c crt@ 6 >> 1 and 8 << or  hsync2@ 1ff after-start  ;
 
 : vtotal2@     58 crt@  5d crt@      7 and 8 << or  1+  ;
 : vdisplay2@   59 crt@  5d crt@ 3 >> 7 and 8 << or  1+  ;
@@ -677,22 +673,22 @@ hex
 : qdepth@     ( -- depth )  68 crt@ f0 and  4 >>  ;  \ Unused bits in regs 94 and 95 too
 
 : simultaneous-mode-3?  ( -- flag )  height d# 400 =  ;
+: simultaneous-mode-12?  ( -- flag )  depth 4 =  ;
 : set-pitch2  ( -- )
    \ Offset - distance from one scanline to the next in the memory array
    width pixels>bytes to /scanline
 
    \ I'm unsure how the 808 is calculated for simultaneous mode 3, but the
    \ value is what BIOS uses.  It might not matter.
-   simultaneous-mode-3?  if  d# 808  else  /scanline  then   hoffset2!
+   simultaneous-mode-3?  simultaneous-mode-12? or  if  d# 808  else  /scanline  then  hoffset2!
 
    \ fetch count - number of bytes to fetch from memory for each scanline
    \ If this smaller than hdisplay, the last data replicates horizontally to the right
-   width
-   simultaneous-mode-3?  if  8 + 4 *  then
-   pixels>bytes hfetch2!
+   width  simultaneous-mode-3?  simultaneous-mode-12? or  if  8 + 4 *  else  pixels>bytes  then  hfetch2!
 ;
 : set-secondary-vga-mode  ( mode -- )
    depth case
+          4 of  00  endof
           8 of  00  endof
       d# 16 of  40  endof
       d# 24 of  80  endof
@@ -971,7 +967,7 @@ alias iga1+2>lvds0+1 iga1+2>lvds0
 
 0 value bias
 : timing-scale  ( value -- value' )
-   simultaneous-mode-3?  if  \ Can't use mode-3? here because res-entry isn't pointing to mode3-entry
+   simultaneous-mode-3? simultaneous-mode-12? or  if  \ Can't use mode-3? here because res-entry isn't pointing to mode3-entry
       \ Ratio of VCK to LCDCK, from known settings for those clocks
       d# 338 d# 569
    else
@@ -979,7 +975,7 @@ alias iga1+2>lvds0+1 iga1+2>lvds0
    then
    */
 ;
-\ For 640x400 (text mode 3) and 640x480x4 (graphics mode 3) where you need IGA1 for its VGA-ness
+\ For 640x400 (text mode 3) and 640x480x4 (graphics mode 12) where you need IGA1 for its VGA-ness
 : expanded  ( -- )
    set-mode-timing
    set-panel-timing
@@ -1017,10 +1013,9 @@ alias iga1+2>lvds0+1 iga1+2>lvds0
 
    scale-lcd
 
-   d# 808  hoffset2!   \ For mode 3; not sure how it's calculated
+\   d# 808  hoffset2!   \ For mode 3; not sure how it's calculated (scale-lcd sets it via set-pitch2)
 \   width pixels>bytes  hoffset2!  \ This is better for testing as it preserves the pitch the text renderer uses
 \    mode hdisplay  pixels>bytes  d# 400 +  hoffset2!  \ Panel-specific fudge factor - study !!!
-
 
    mode  vpll set-vclk
    panel  pll set-lcdck
@@ -1332,9 +1327,9 @@ ok .dpy
 ATR   0  1  2  3  4  5 14  7 38 39 3a 3b 3c 3d 3e 3f  c  0  f  8  0
 SEQ   3  0  3  0  2
 GRF   0  0  0  0  0 10  e  0 ff
-      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
-C00  5f 4f 50 82 55 81 bf 1f  0 4f  d  e  0  0  1 40  htotal1:800 hdisplay1:640 hblank1:648 hblend1:280?? hsync:680
-C10  9c 6e 8f 28 1f 96 b9 a3 ff   hfetch1:  hoffset1: 28=>320 vsync: 19c = 412 (not subtracted)
+      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  vtotal1:449 vdisplay1:400 vblank1:407 vblankend1:442
+C00  5f 4f 50 82 55 81 bf 1f  0 4f  d  e  0  0  1 40  htotal1:800 hdisplay1:640 hblank1:648 hblend1:280?? hsync:680,776
+C10  9c 6e 8f 28 1f 96 b9 a3 ff   hfetch1:  hoffset1: 28=>320 vsync: 19c = 413 vsyncend1: 415
 C30   8  0 11  0  0  0  1 34 d3 19 e7  2  8 64 20  b
 C40   0  0  0 90  0  0  0  2  0
 C50  d7 af af d7 24 c4 b6 be 8f 83 83 8f 9b 1b 84 6e  htotal2: 1240
@@ -1350,7 +1345,7 @@ CD0   0  0 2b  0 c0  0  0  0  0  0  0  0  0  0  0  0
 CE0   0  0  0  0  0  0  0  0  0  0  0  0  0  0  0  0
                                        d
 CF0   0  0  0 92  0  0  0 c0  0  a  0  0  0
-S10   1 78  8  0  0  0 4c 1f 4e 7f  0 f0 54  0 31    hfetch1: 54 => 1360 ??  secondary_dpy_clk is on (rx1b) 
+S10   1 78  8  0  0  0 4c 1f 4e 7f  0 f0 54  0 31    hfetch1: 54 => 1280  secondary_dpy_clk is on (rx1b) 
 S20   0 18 14 3d  c  0  0 ff ff
 S30   0  6 11 1d  c 20 ff
 
@@ -1364,6 +1359,99 @@ S60   0  0  0 40 20  d 20 20 80 20  0  0  0 80  1  0
 S70  20  0  f  0 1f 1f  0  0 86  8 10  0 c8  0  0  0
 SA8   0  0 80 80  0  0  0  0
 G20   0  0  0
+
+ok 12 set-vesa-mode  mode 12 640x480x4
+ok .dpy
+ATR   0  1  2  3  4  5 14  7 38 39 3a 3b 3c 3d 3e 3f  1  0  f  0  0
+SEQ   3  1  f  0  6
+GRF   0  0  0  0  0  0  5  f ff
+      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f  vtotal:525 vdisplay1:480 vblank1:488 vblankend:517
+C00  5f 4f 50 82 54 80  b 3e  0 40  0  0  0  0  0  0  htotal1:800 hdisplay1:640 hblank1:648 hblend:280?? hsync:672,768
+C10  ea 6c df 28  0 e7  4 e3 ff  hfetch1:  hoffset1: 28=>320 vsync1: 1ea = 491 vsyncend1: 493
+C30   8  0 11  0  0  0  1 34 d3 3c e6  2  8 64 20  b
+C40   0  0  0 90  0  0  0  2  0
+C50  d7 af af d7 24 c4 b6 be 8f 83 83 8f 9b 1b 84 6e  htotal2: 1240
+   hfetch2: 836  hoffset2: 808  htotals: 57=>736 - this matches the vck/lcdck ratio WRT htotal2 of 1240
+C60  5c 72  0  0  0 a2 65  0 f0  0 48  e  0 57 5b 8e   !! CR6b[3] simultaneous mode, [2] IGA2 off  secondary_dpy_off
+                                                         (6a:80)  hblankends: 5b=>736
+C70  83 33 83 8f 33 85 3f 22 22 ab  1  2  3  4  7  a  hscale: 0t2184 (639*4096/1199) 
+C80   d 13 16 19 1c 1d 1e 1f e1  0  1 5d 2b  0 b5  1
+C90  10 1f  0  0  8 11  0 10  0  0  0 1b  0  0  0  0
+CA0   0  0 c8  0  8 c3 f9 8b  1  0  0  0  0  0  0  0
+CD0   0  0 2b  0 c0  0  0  0  0  0  0  0  0  0  0  0
+CE0   0  0  0  0  0  0  0  0 40  0  0  0  0  0  0  0
+CF0   0  0  0 92  0  0  0 c0  0  a  0  0  0
+S10   1 78  c  0  0  0 4c 1f 4e 7f  0 f0 54  0 31    hfetch1: 54 => 1280
+S20   0 18 14 3d  c  0  0 ff ff
+S30   0  6 11 1d  4 20 ff
+S40  38 40 30 ff 97 10  4 69 84  3 9f 8c  5 30  0 5f
+S50  1f  0  0 ff  0  0 ff  0  6 df  0 51 21 f0  0  0
+S60   0  0  0 40 20  d 20 20 80 20  0  0  0 80  1  0
+S70  20  0  f  0 1f 1f  0  0 86  8 10  0 c8  0  0  0
+SA8   0  0 80 80  0  0  0  0
+G20   0  0  0
+ok
+
+--- Attempted mode 12 --------
+ATR   0  1  2  3  4  5 14  7 38 39 3a 3b 3c 3d 3e 3f  1  0  f  0  0
+SEQ   3  1  f  0  6
+GRF   0  0  0  0  0  0  5  f ff
+      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+C00  5f 4f 50 82 54 80  b 3e  0 40  0  0  0  0  0  0
+C10  ea 6c df 28  0 e7  4 e3 ff
+C30   8  0 11 20  0 10  1 34 fd 96 ff  1  8 74  0  0
+C40   0  0  0 80  0  0  0  2  0
+C50  d7 af af d7 24 44 b5 bd 8f 83 83 8f 9b 1b 88 6a
+C60  34 51  0  0  0 a2 65 50 f0  0 48  8  0 57 5b 8e
+C70  83 33 83 8f bb 89 3b 21 21 af  1  2  3  4  7  a
+C80   d 13 16 19 1c 1d 1e 1f 60  0  1 ca ca ca ca 11
+C90  11  0  0  0  8 11  0 10  0  0  0 1b  0  0  0  2
+CA0   0  0 c8  0  3  0  0 8b  1  0  0  0  0  0  0  0
+CD0   0  0 c8  0  0  0  0  0  0  0  0  0  0  0  0  0
+CE0   0  0  0  0  0  0  0  0 40  0  0  0  0  0  0  0
+CF0   0  0  0 80  0  0  0 c0  0  a  0  d  0
+S10   1 78  0  0  0  0 4c 1f 4e 7f 38 f0 54  0 31
+S20   0 18 14 3d  c  0  0 ff ff
+S30   c  6 11 1d  4 20 ff
+S40  38 b0 10 ff 97 10  4 79 88  4 9f  c  5 30  0 5f
+S50  1f 81  0 ff  0  0 ff  0  8 df  0 51 21  0  0  0
+S60   0  0  0  0 20  0 20 20 e0 20  0  0  0 e0  1  0
+S70  20  4  f 33 1f 1f  0  0 e0  8 10  0 c8  0  0  0
+SA8   0  0 80 80  0  0  0  0
+G20   0  0  0
+----------------
+
+Mode 112 - 640x480x8
+ok 112 set-linear-mode
+ok .dpy
+ATR   0  1  2  3  4  5 14  7 38 39 3a 3b 3c 3d 3e 3f  1  0  f  0  0
+SEQ   3  1  f  0  e
+GRF   0  0  0  0  0  0  5  f ff
+      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+C00  5f 4f 4f 83 52 9e  b 3e  0 40  0  0  0  0  0  0
+C10  e9 1b df 50  0 df  c e3 ff
+C30   8  0 11 26  0 10  1 34 d3 3c e6  2  8 64 20  b
+C40   0  0  0 90  0  0  0  0  0
+C50  d7 af af d7 24 c4 b6 be 8f 83 83 8f 9b 1b 84 6e
+C60  69 72  0  0  0 a0 40 c1 f0  0 c8  0  0 57 5b 8e
+C70  83 33 83 8f 33 85 3f 22 22 ab  1  2  3  4  7  a
+C80   d 13 16 19 1c 1d 1e 1f e1  0  1 5d 2b  0 b5  1
+C90  10 1f  0  0  8 11  0 10  0  0  0 1b  0  0  0  0
+CA0   0  0 c8  0  8 c3 f9 8b  1  0  0  0  0  0  0  0
+CD0   0  0 2b  0 c0  0  0  0  0  0  0  0  0  0  0  0
+CE0   0  0  0  0  0  0  0  0 40  0  0  0  0  0  0  0
+CF0   0  0  0 92  0  0  0 c0  0  a  0  d  0
+S10   1 78  c  0  0 22 4c 1f 4e 7f  8 f0 2c  0 31
+S20   0 18 14 3d  c  0  0 ff ff
+S30   0  6 11 1d  c 20 ff
+S40  38 40 30 ff 8d 10  5 69 84  3 9f 8c  5 30  0 5f
+S50  1f  0  0 ff  0  0 ff  0  8 5f  0 51 21 f0  0  0
+S60   0  0  0 40 20  d 20 20 80 20  0  0  0 80  1  0
+S70  20  0  f  0 1f 1f  0  0 86  8 10  0 c8  0  0  0
+SA8   0  0 80 80  0  0  0  0
+G20   0  0  0
+ok
+     
 
 Mode 115 - 800x600x32
 ok .dpy
@@ -1900,4 +1988,5 @@ Problems:
 
 9d8c85 => 56.199
 a79084 => 37.362  ratio .6648
+
 [then]
