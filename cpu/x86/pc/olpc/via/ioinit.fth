@@ -1,5 +1,15 @@
 \ Also from FinalSetting.c
 
+\ Subsystem IDs
+0833152d 002c config-wl
+0833152d 012c config-wl
+0833152d 022c config-wl
+0833152d 032c config-wl
+0833152d 042c config-wl
+0833152d 052c config-wl
+0833152d 062c config-wl
+0833152d 072c config-wl
+
    0 4 devfunc  \ PM_table
    a0 80 80 mreg \ Enable dynamic power management (coreboot for vx800 uses f0; 70 bits are reserved on vx855)
    a1 e0 e0 mreg \ Dynamic power management for DRAM
@@ -69,8 +79,24 @@
    a3 01 01 mreg  \ 01 res be like Phx
    end-table
 
+0 [if]
+   d# 11 0 devfunc  \ USB device
+   41 18 18 mreg  \ Enable backdoor
+   62 ff 2d mreg  \ Subsystem ID backdoor
+   63 ff 15 mreg  \ Subsystem ID backdoor
+   60 ff 33 mreg  \ Subsystem ID backdoor
+   61 ff 08 mreg  \ Subsystem ID backdoor
+   41 08 08 mreg  \ Disable backdoor, enable use of backdoored Subsystem ID
+   end-table
+[then]
+
    d# 12 0 devfunc  \ SDIO tuning
    44 01 01 mreg  \ Enable backdoor
+   2c ff 2d mreg  \ Subsystem ID backdoor
+   2d ff 15 mreg  \ Subsystem ID backdoor
+   2e ff 33 mreg  \ Subsystem ID backdoor
+   2f ff 08 mreg  \ Subsystem ID backdoor
+   44 01 00 mreg  \ Disable backdoor
 \   8b 05 01 mreg  \ Do not report 1.8V support
    8c c3 03 mreg  \ Falling edge trigger for Slots 1 and 2 data in high speed
    8e ff 7e mreg  \ Delay host clock for Slots 1, 2, 3 by 4.8 nS
@@ -82,6 +108,17 @@
    99 ff fa mreg  \ Three slots
 [then]
    end-table
+
+0 [if]
+   d# 13 0 devfunc  \ Card reader
+   fc 0c 0c mreg  \ Enable backdoor
+   2c ff 2d mreg  \ Subsystem ID backdoor
+   2d ff 15 mreg  \ Subsystem ID backdoor
+   2e ff 33 mreg  \ Subsystem ID backdoor
+   2f ff 08 mreg  \ Subsystem ID backdoor
+   fc 0c 00 mreg  \ Disable backdoor
+   end-table
+[then]
 
 1 [if]
    d# 15 0 devfunc  \ EIDE tuning
@@ -96,9 +133,14 @@
    c4 1d 18 mreg  \ Config 1
 \  d4 ac 24 mreg  \ Config 3
    d4 bc 34 mreg  \ Config 3 - 10 res be like Phx
+   bc ff 2d mreg  \ Subsystem ID backdoor
+   bd ff 15 mreg  \ Subsystem ID backdoor
+   be ff 33 mreg  \ Subsystem ID backdoor
+   bf ff 08 mreg  \ Subsystem ID backdoor
    end-table
 [then]
 
+   0833152d 802c config-wl
    \ USB Tuning
    d# 16 0 devfunc  \ UHCI Ports 0,1
    4a 02 02 mreg  \ Enable Stop Bus Master Cycle if HALT Bit is Asserted
@@ -106,6 +148,7 @@
    c1 20 00 mreg  \ Disable USB PIRQ
    end-table
 
+   0833152d 812c config-wl
    d# 16 1 devfunc  \ UHCI Ports 2,3
    4a 02 02 mreg  \ Enable Stop Bus Master Cycle if HALT Bit is Asserted
    4b 60 60 mreg  \ Enable New UHCI Dynamic Scheme - 66MHz (40) & 33MHz (20)
@@ -113,6 +156,7 @@
    end-table
 
 [ifndef] xo-board
+   0833152d 822c config-wl
    d# 16 2 devfunc  \ UHCI Ports 4,5
    4a 02 02 mreg  \ Enable Stop Bus Master Cycle if HALT Bit is Asserted
    4b 60 60 mreg  \ Enable New UHCI Dynamic Scheme - 66MHz (40) & 33MHz (20)
@@ -120,6 +164,7 @@
    end-table
 [then]
 
+   0833152d 842c config-wl
    d# 16 4 devfunc  \ EHCI
    41 20 20 mreg  \ Evaluate PERIODIC Enable bit only at beginning of micro-frame 0 (undocumented)
    42 40 40 mreg  \ Enable Check PRESOF of ITDOUT Transaction during Fetching Data from DRAM
@@ -195,10 +240,10 @@ hpet-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
    6b ff rot mreg  \ HPET base high
 
    6e ff 18 mreg  \ COMB not pos decoded but otherwise set to 2f8, COMA pos decoded at 3f8
-   70 ff 06 mreg  \ SVID backdoor
-   71 ff 11 mreg  \ SVID backdoor
-   72 ff 37 mreg  \ SVID backdoor
-   73 ff 33 mreg  \ SVID backdoor
+   70 ff 2d mreg  \ Subsystem ID backdoor
+   71 ff 15 mreg  \ Subsystem ID backdoor
+   72 ff 33 mreg  \ Subsystem ID backdoor
+   73 ff 08 mreg  \ Subsystem ID backdoor
 [ifdef] demo-board   \ No need to debounce on XO as the signal comes from the EC
    80 20 20 mreg  \ Debounce power button
 [then]
@@ -310,6 +355,12 @@ smbus-io-base wbsplit swap  ( bits15:8 bits7:0 )
 
    d# 20 0 devfunc
    41 01 01 mreg  \ Dynamic clock for HDAC
+   40 01 01 mreg  \ Enable backdoor
+   2c ff 2d mreg  \ Subsystem ID backdoor
+   2d ff 15 mreg  \ Subsystem ID backdoor
+   2e ff 33 mreg  \ Subsystem ID backdoor
+   2f ff 08 mreg  \ Subsystem ID backdoor
+   40 01 00 mreg  \ Disable backdoor
    end-table
 
 [ifdef] use-apic

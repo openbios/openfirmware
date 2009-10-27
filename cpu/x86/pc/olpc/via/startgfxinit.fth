@@ -75,10 +75,10 @@
    6f 3c4 port-wb  d# 16 # bx shr  bl al mov  3c5 # dx mov  al dx out  \ Base address [47:37] of SL in System Memory
 [then]
 
-   36 3c4 port-wb  11 3c5 port-wb  \ Subsystem Vendor ID 1
-   35 3c4 port-wb  06 3c5 port-wb  \ Subsystem Vendor ID 0
-   38 3c4 port-wb  51 3c5 port-wb  \ Subsystem ID 1
-   37 3c4 port-wb  22 3c5 port-wb  \ Subsystem ID 0
+   35 3c4 port-wb  2d 3c5 port-wb  \ Subsystem Vendor ID 0
+   36 3c4 port-wb  15 3c5 port-wb  \ Subsystem Vendor ID 1
+   37 3c4 port-wb  33 3c5 port-wb  \ Subsystem ID 0
+   38 3c4 port-wb  08 3c5 port-wb  \ Subsystem ID 1
 
    f3 3c4 port-wb  00 3c5 port-wb  \ 1a for snapshot mode
    f3 3d4 port-wb  12 3c5 port-wb  \ Snapshot mode control - 1a for snapshot mode
