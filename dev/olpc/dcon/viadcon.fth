@@ -243,6 +243,7 @@ d# 440 8 /  constant dcon-flag
 
 : init-xo-display  ( -- )
    smb-init
+   note-native-mode
 
    olpc-lcd-mode
    olpc-crt-off

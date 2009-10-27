@@ -73,6 +73,7 @@ warning @ warning off
    d# 640 d# 400 8 set-resolution
    set-primary-mode
    expanded
+   3 note-mode
 ;
 : graphics-mode12  ( -- )
    olpc-crt-on  \ Restore power to IGA1, as we need it for VGA modes
@@ -80,11 +81,12 @@ warning @ warning off
    d# 640 d# 480 4 set-resolution
    set-primary-mode
    expanded
+   h# 12 note-mode
 ;
 warning !
 
-: 640x480x32   ( -- )  olpc-lcd-mode  d# 640 d# 480 d# 32 change-resolution  ;  \ VESA mode 112
-: 800x600x32   ( -- )  olpc-lcd-mode  d# 800 d# 600 d# 32 change-resolution  ;  \ VESA mode 115
-: 1024x768x32  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 32 change-resolution  ;  \ VESA mode 118
-: 1200x900x16  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 16 change-resolution  ;
-: 1200x900x32  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 32 change-resolution  ;
+: 640x480x32   ( -- )  olpc-lcd-mode  d# 640 d# 480 d# 32 change-resolution  h# 112 note-mode  ;  \ VESA mode 112
+: 800x600x32   ( -- )  olpc-lcd-mode  d# 800 d# 600 d# 32 change-resolution  h# 115 note-mode  ;  \ VESA mode 115
+: 1024x768x32  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 32 change-resolution  h# 118 note-mode  ;  \ VESA mode 118
+: 1200x900x16  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 16 change-resolution  note-native-mode  ;
+: 1200x900x32  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 32 change-resolution  native-mode# 1- note-mode  ;

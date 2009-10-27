@@ -26,6 +26,9 @@ d# 17 0 devfunc
    e4 48 48 mreg \ Use multifunction pins as GPO10 and GPI10/11
 end-table
 
+long-offsets @ long-offsets on
+native-mode# #  video-mode-adr #)  cmp  =  if
+
 \ olpc-lcd-mode
 
 c0 1b seq-set   \ Secondary engine clock (LCK) can be gated on or off
@@ -116,3 +119,6 @@ begin
 ff acpi-io-base 4d + port-wb  \ B1 and B2 - DCON LOAD is the 0x04 bit (bit number 2) of PMIO+4d
 ff acpi-io-base 4f + port-wb  \ A1 and A2 - DCON LOAD is the 0x10 bit (bit number 4) of PMIO+4f
 d# 19000 wait-us
+
+then
+long-offsets !
