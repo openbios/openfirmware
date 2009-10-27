@@ -66,27 +66,15 @@ fload ${BP}/dev/video/common/textmode.fth
 ;
 ' (pc-font) to pc-font
 
-: duplicate-settings  ( -- )
-   \ For mode 3
-   d# 1280 hfetch1!
-   d#  320 hoffset1!
-   d# 2592 hfetch2!  \ Apparently every pixel is 4 bytes (80 * 8 * 40 = 2560), plus 32 bytes extra
-                     \ The 4 bytes could be for the interleaved VGA planes.  Or maybe not.
-   d#  808 hoffset2!
-
-\   h# 06 h# 06 h# 78 seq-mask  \ Clock source selection 14.318 MHz/1024
-\   h# 40 h# 16 seq-set  \ This bit is undocumented but other drivers set it
-;
-
 warning @ warning off
-: text-mode3
+: text-mode3  ( -- )
    olpc-crt-on  \ Restore power to IGA1, as we need it for VGA modes
    text-mode3   \ The base VGA version; sets up the font and stuff
    d# 640 d# 400 8 set-resolution
    set-primary-mode
    expanded
 ;
-: graphics-mode12
+: graphics-mode12  ( -- )
    olpc-crt-on  \ Restore power to IGA1, as we need it for VGA modes
    graphics-mode12   \ The base VGA version; sets up the font and stuff
    d# 640 d# 480 4 set-resolution
@@ -94,3 +82,9 @@ warning @ warning off
    expanded
 ;
 warning !
+
+: 640x480x32   ( -- )  olpc-lcd-mode  d# 640 d# 480 d# 32 change-resolution  ;  \ VESA mode 112
+: 800x600x32   ( -- )  olpc-lcd-mode  d# 800 d# 600 d# 32 change-resolution  ;  \ VESA mode 115
+: 1024x768x32  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 32 change-resolution  ;  \ VESA mode 118
+: 1200x900x16  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 16 change-resolution  ;
+: 1200x900x32  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 32 change-resolution  ;

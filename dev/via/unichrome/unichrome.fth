@@ -395,7 +395,8 @@ hex
 
 : bpp1!  ( depth -- )
    case
-       8  of  22  endof
+       4  of  00  endof
+       8  of  mode-3?  if  00  else  22  then  endof
    d# 16  of  b6  endof
    d# 32  of  ae  endof
    ( default )  ae swap
@@ -457,8 +458,8 @@ hex
 
 : bpp1@  ( -- depth )
    15 seq@ fe and  case
-       0  of  4  endof
-      22  of  8  endof
+       0  of      4  endof
+      22  of      8  endof
       b6  of  d# 16  endof
       ae  of  d# 32  endof
       ( default )  8  swap
@@ -475,10 +476,12 @@ hex
        4  of  00  endof
        8  of  00  endof
    d# 16  of  40  endof
+   d# 24  of  c0  endof
+   d# 30  of  80  endof
    d# 32  of  c0  endof
    ( default ) c0 swap
    endcase
-   c0 67 seq-mask
+   c0 67 crt-mask
 ;
 : fifo-depth2!      ( n -- )  3 >>  1-  dup 4 << f0 68 crt-mask  dup 3 << 80 94 crt-mask  2 << 80 95 crt-mask  ;
 : fifo-threshold2!  ( n -- )  2 >>  dup 0f 68 crt-mask  70 95 crt-mask  ;
@@ -524,15 +527,7 @@ hex
 \   01 df 01 seq-mask
 \   00       03 seq!
 
-   mode-3? mode-12? or  if  00  else  a2  then  e2 15 seq-mask
-   depth case
-          4 of  00  endof
-          8 of  00  endof
-      d# 16 of  14  endof
-      d# 24 of  0c  endof
-      d# 32 of  0c  endof
-   endcase
-   1c 15 seq-mask  
+   depth bpp1!
 
    28 fd 1a seq-mask  \ Extended mode memory access (value is 20 in modes 3 and 12)
    
@@ -579,13 +574,7 @@ hex
 
    width pixels>bytes to /scanline
    \ Offset
-   mode-3? mode-12? or  if
-\      d# 512
-      d# 320
-   else
-      /scanline 
-   then
-   hoffset1!
+   mode-3? mode-12? or  if  d# 320  else  /scanline  then  hoffset1!
 
    \ fetch count
    hdisplay  mode-3? mode-12? or  if  2*  else  pixels>bytes  then  hfetch1!
@@ -672,9 +661,22 @@ hex
 : start2@     ( -- offset )  62 crt@ fe and  63 crt@  64 crt@  0  bljoin  2 <<  ;
 : qdepth@     ( -- depth )  68 crt@ f0 and  4 >>  ;  \ Unused bits in regs 94 and 95 too
 
+: bpp2@  ( -- depth )
+   67 crt@ c0 and  case
+       0  of      8  endof
+      40  of  d# 16  endof
+      80  of  d# 30  endof
+      c0  of  d# 32  endof
+   endcase
+;
+
 : simultaneous-mode-3?  ( -- flag )  height d# 400 =  ;
 : simultaneous-mode-12?  ( -- flag )  depth 4 =  ;
+
 : set-pitch2  ( -- )
+   depth bpp2!
+   20 67 crt-clr  \ Turn off interlace bit
+
    \ Offset - distance from one scanline to the next in the memory array
    width pixels>bytes to /scanline
 
@@ -686,18 +688,7 @@ hex
    \ If this smaller than hdisplay, the last data replicates horizontally to the right
    width  simultaneous-mode-3?  simultaneous-mode-12? or  if  8 + 4 *  else  pixels>bytes  then  hfetch2!
 ;
-: set-secondary-vga-mode  ( mode -- )
-   depth case
-          4 of  00  endof
-          8 of  00  endof
-      d# 16 of  40  endof
-      d# 24 of  80  endof
-      d# 32 of  80  endof
-   endcase
-   c0 67 crt-mask
-
-   00 20 67 crt-mask  \ Turn off interlace bit
-
+: set-secondary-timings  ( -- )
    htotal    htotal2!
    hdisplay  hdisplay2!
    hblank    hblank2!
@@ -747,24 +738,6 @@ hex
 : vsyncs@      75 crt@  76 crt@ 70 and 4 << or   ;
 : vsyncends@   76 crt@  0f and  vsyncs@ 0f invert and  or  dup  vsyncs@ <  if  10 +  then  ;
 
-: set-shadow-vga-mode  ( -- )
-   panel-resolution  find-timing-table  if  exit  then
-
-   htotal    htotals!
-   hblankend hblankends!
-
-   vtotal    vtotals!
-   vdisplay  vdisplays!
-   
-   vblank    vblanks!
-   vblankend vblankends!
-
-   vsync     vsyncs!
-   vsyncend  vsyncends!
-
-   set-pitch2
-;
-
 : random-stuff  ( -- )
    0 start2!          \ Second display starting address
 
@@ -789,7 +762,7 @@ hex
    find-timing-table  if  exit  then
 
    80 17 crt-clr  \ Assert reset - Turn off screen
-   set-secondary-vga-mode
+   set-secondary-timings
    random-stuff
    lower-power
    \ Turn on power here?
@@ -799,43 +772,45 @@ hex
    80 17 crt-set  \ Release reset
 ;
 
-: scaling-on  ( -- )  07 07 79 crt-mask  ;
-: scaling-off ( -- )  00 07 79 crt-mask  ;
+: scaling-on  ( -- )  07 79 crt-set  ;
+: scaling-off ( -- )  07 79 crt-clr  ;
 
 : olpc-lcd-mode  ( -- )
-   c0 c0 1b seq-mask  \ Secondary display clock on
+   panel-resolution d# 16 set-resolution
+
+   c0 1b seq-set  \ Secondary display clock on
 
    panel-resolution set-secondary-mode
 
-\   60 60 9b crt-mask  \ Sync polarity - negative
-   60 60 78 seq-mask  \ Sync polarity - negative
+\  60 9b crt-set  \ Sync polarity - negative
+   60 78 seq-set  \ Sync polarity - negative
 
-   scaling-off        \ Disable scaling
-   00 37 a3 crt-mask  \ iga2 from S.L., start addr
+   scaling-off    \ Disable scaling
+   37 a3 crt-clr  \ iga2 from S.L., start addr
 
-   30 30 1e seq-mask  \ Power up DVP1 pads
+   30 1e seq-set  \ Power up DVP1 pads
 
-   0c 0c 2a seq-mask  \ Power up LVDS pads
-\   2b fb h# d2 crt-mask
-\   c0 c0 h# d4 crt-mask
-\   00 40 h# e8 crt-mask
-   80 80 f3 crt-mask  \ 18-bit TTL mode
-   0a f9 crt!         \ V1 Mode Exit-to-Ready Time Control (?)
-   0d fb crt!         \ IGA2 Interlace VSYNC Timing Register
+   0c 2a seq-set  \ Power up LVDS pads
+\  2b fb h# d2 crt-mask
+\  c0 h# d4 crt-set
+\  40 h# e8 crt-clr
+   80 f3 crt-set  \ 18-bit TTL mode
+   0a f9 crt!     \ V1 Mode Exit-to-Ready Time Control (?)
+   0d fb crt!     \ IGA2 Interlace VSYNC Timing Register
 \   00 08 h# 6b crt-mask  \ Not simultaneous mode
 
-   40 40 16 seq-mask  \ manual says the bit is reserved, but the viafb driver says "CRT path set to IGA2"
+   40 16 seq-set  \ manual says the bit is reserved, but the viafb driver says "CRT path set to IGA2"
 ;
 : olpc-crt-off  ( -- )
-   00 30 1b seq-mask  \ IGA1 engine clock off
-   30 30 36 crt-mask  \ DAC off
+   30 1b seq-clr  \ IGA1 engine clock off
+   30 36 crt-set  \ DAC off
 ;
 : olpc-crt-on  ( -- )
-   30 30 1b seq-mask  \ IGA1 engine clock on
-   00 30 36 crt-mask  \ DAC on
+   30 1b seq-set  \ IGA1 engine clock on
+   30 36 crt-clr  \ DAC on
 ;
 : olpc-lcd-off  ( -- )
-   00 c0 1b seq-mask  \ IGA2 engine clock off
+   c0 1b seq-clr  \ IGA2 engine clock off
 ;
 
 \ The table of scaling params below appears to be half of a Gaussian function,
@@ -858,8 +833,8 @@ hex
    h# 77 crt@ 2 lshift or
    h# 79 crt@ 4 rshift 3 and  d# 10 lshift or
 ;
-: hscale-on   ( -- )  c0 c0 a2 crt-mask  ;
-: hscale-off  ( -- )  00 c0 a2 crt-mask  ;
+: hscale-on   ( -- )  c0 a2 crt-set  ;
+: hscale-off  ( -- )  c0 a2 crt-clr  ;
 : vscale!  ( vscale -- )
    \ Distribute the V scale factor among various register bit fields
    dup 3 lshift 8 h# 79 crt-mask               ( vscale )
@@ -871,10 +846,9 @@ hex
    h# 78 crt@ 1 lshift  or
    h# 79 crt@ 6 rshift 3 and 9 lshift  or
 ;
-: vscale-on  ( -- )  08 08 a2 crt-mask  ;
-: vscale-off ( -- )  00 08 a2 crt-mask  ;
+: vscale-on  ( -- )  08 a2 crt-set  ;
+: vscale-off ( -- )  08 a2 crt-clr  ;
 
-\ This configures a 
 : scale-lcd  ( -- )
    scaling-on
    set-scaling-params \ Interpolation coefficients  ( )
@@ -967,7 +941,7 @@ alias iga1+2>lvds0+1 iga1+2>lvds0
 
 0 value bias
 : timing-scale  ( value -- value' )
-   simultaneous-mode-3? simultaneous-mode-12? or  if  \ Can't use mode-3? here because res-entry isn't pointing to mode3-entry
+   mode simultaneous-mode-3? simultaneous-mode-12? or  if  \ Can't use mode-3? here because res-entry isn't pointing to mode3-entry
       \ Ratio of VCK to LCDCK, from known settings for those clocks
       d# 338 d# 569
    else
@@ -1012,10 +986,6 @@ alias iga1+2>lvds0+1 iga1+2>lvds0
    panel vsyncend   dup vsyncend2!   vsyncends!
 
    scale-lcd
-
-\   d# 808  hoffset2!   \ For mode 3; not sure how it's calculated (scale-lcd sets it via set-pitch2)
-\   width pixels>bytes  hoffset2!  \ This is better for testing as it preserves the pitch the text renderer uses
-\    mode hdisplay  pixels>bytes  d# 400 +  hoffset2!  \ Panel-specific fudge factor - study !!!
 
    mode  vpll set-vclk
    panel  pll set-lcdck
@@ -1081,8 +1051,6 @@ alias iga1+2>lvds0+1 iga1+2>lvds0
    mode hdisplay  pixels>bytes  hoffset1!  \ Added; not in LCD Tuning.doc
 
    \ XXX turn off scaling
-
-\   width pixels>bytes  hoffset2!  was here
 
    \ The shadow uses the panel size for horizontal
    panel htotal  htotals!
@@ -1223,11 +1191,11 @@ hex
    d# 22 spaces
    vdisplays@ .5 vblanks@ .5 vsyncs@ .5 vsyncends@ .5 vtotals@ .5 vblankends@ .5
    cr
-   ." fetch1: " hfetch1@ . ." offset1: " hoffset1@ . ." fetch2: "  hfetch2@ . ." offset2: " hoffset2@ .
+   ." fetch1: " hfetch1@ . ." offset1: " hoffset1@ . ." bpp1: " bpp1@ .  cr
+   ." fetch2: " hfetch2@ . ." offset2: " hoffset2@ . ." bpp2: " bpp2@ .  cr
    hex
-   ." bpp: " bpp1@ .  cr
-   ." VCK: " h# 44 seq@ .3 h# 45 seq@ .3 h# 46 seq@ .3 cr
-   ." ECK: " h# 47 seq@ .3 h# 48 seq@ .3 h# 49 seq@ .3 cr
+   ." VCK: " h# 44 seq@ .3 h# 45 seq@ .3 h# 46 seq@ .3 3 spaces
+   ." ECK: " h# 47 seq@ .3 h# 48 seq@ .3 h# 49 seq@ .3 3 spaces
    ." LCK: " h# 4a seq@ .3 h# 4b seq@ .3 h# 4c seq@ .3 cr
    ." MISC " misc@ .x
    .scale-factors
@@ -1253,17 +1221,17 @@ defer init-display  ' init-primary-display is init-display
 
 defer gp-install  ' noop to gp-install
 
-: set-fb  ( -- )
+: set-terminal  ( -- )
    width  height                              ( width height )
    over char-width / over char-height /       ( width height rows cols )
    /scanline depth fb-install gp-install      ( )
 ;
 
-: set-scaled-resolution  ( new-width new-height -- )
-   depth set-resolution  ( )
+: change-resolution  ( new-width new-height new-depth -- )
+   set-resolution  ( )
    scale-lcd
-   set-fb
-   " page" evaluate
+   set-terminal
+\   " page" evaluate
 \   erase-frame-buffer
 ;
 
@@ -1283,7 +1251,7 @@ defer gp-install  ' noop to gp-install
       declare-props		\ Setup properites
    then
    default-font set-font
-   set-fb
+   set-terminal
    fb-va to frame-buffer-adr
    open-count 1+ to open-count
 ;
@@ -1401,8 +1369,11 @@ C00  5f 4f 50 82 54 80  b 3e  0 40  0  0  0  0  0  0
 C10  ea 6c df 28  0 e7  4 e3 ff
 C30   8  0 11 20  0 10  1 34 fd 96 ff  1  8 74  0  0
 C40   0  0  0 80  0  0  0  2  0
+              cf                      87
 C50  d7 af af d7 24 44 b5 bd 8f 83 83 8f 9b 1b 88 6a
+                          10
 C60  34 51  0  0  0 a2 65 50 f0  0 48  8  0 57 5b 8e
+              87
 C70  83 33 83 8f bb 89 3b 21 21 af  1  2  3  4  7  a
 C80   d 13 16 19 1c 1d 1e 1f 60  0  1 ca ca ca ca 11
 C90  11  0  0  0  8 11  0 10  0  0  0 1b  0  0  0  2
@@ -1413,12 +1384,42 @@ CF0   0  0  0 80  0  0  0 c0  0  a  0  d  0
 S10   1 78  0  0  0  0 4c 1f 4e 7f 38 f0 54  0 31
 S20   0 18 14 3d  c  0  0 ff ff
 S30   c  6 11 1d  4 20 ff
+        40 30
 S40  38 b0 10 ff 97 10  4 79 88  4 9f  c  5 30  0 5f
 S50  1f 81  0 ff  0  0 ff  0  8 df  0 51 21  0  0  0
 S60   0  0  0  0 20  0 20 20 e0 20  0  0  0 e0  1  0
+         0     0
 S70  20  4  f 33 1f 1f  0  0 e0  8 10  0 c8  0  0  0
 SA8   0  0 80 80  0  0  0  0
 G20   0  0  0
+--- botched mode 12 ---
+ATR   0  1  2  3  4  5 14  7 38 39 3a 3b 3c 3d 3e 3f  1  0  f  0  0
+SEQ   3  1  f  0  6
+GRF   0  0  0  0  0  0  5  f ff
+      0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f
+C00  5f 4f 50 82 54 80  b 3e  0 40  0  0  0  0  0  0
+C10  ea 6c df 28  0 e7  4 e3 ff
+C30   8  0 11 20  0 10  1 34 7d 96 ef  1  8 74  0  0
+C40   0  0  0 80  0  0  0  2  0
+C50  d7 af af cf 24 c4 b6 be 8f 83 83 87 9b 1b 88 6a
+C60  a9 51  0  0  0 a2 65 10 f0  0 48  8  0 57 5b 8e
+C70  83 33 83 87 b3 89 3b 21 21 af  1  2  3  4  7  a
+C80   d 13 16 19 1c 1d 1e 1f 60  0  1 ca ca ca ca 11
+C90  11  0  0  0  8 11  0 10  0  0  0 1b  0  0  0  2
+CA0   0  0 c8  0  3  0  0 8b  1  0  0  0  0  0  0  0
+CD0   0  0 c8  0  0  0  0  0  0  0  0  0  0  0  0  0
+CE0   0  0  0  0  0  0  0  0 40  0  0  0  0  0  0  0
+CF0   0  0  0 80  0  0  0 c0  0  a  0  d  0
+S10   1 78  0  0  0  0 4c 1f 4e 7f  8 f0 54  0 31
+S20   0 18 14 3d  c  0  0 ff ff
+S30   c  6 11 1d  4 20 ff
+S40  38 40 30 ff 97 10  4 79 88  4 9f  c  5 30  0 5f
+S50  1f 81  0 ff  0  0 ff  0  8 df  0 51 21  0  0  0
+S60   0  0  0  0 20  0 20 20 e0 20  0  0  0 e0  1  0
+S70  20  0  f  0 1f 1f  0  0 e0  8 10  0 c8  0  0  0
+SA8   0  0 80 80  0  0  0  0
+G20   0  0  0
+
 ----------------
 
 Mode 112 - 640x480x8

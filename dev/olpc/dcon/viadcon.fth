@@ -241,9 +241,7 @@ d# 440 8 /  constant dcon-flag
 
 : maybe-set-cmos  ( -- )  1  dcon-flag cmos!  ;
 
-: init-xo-display
-   d# 1200  d# 900  d# 16  set-resolution
-
+: init-xo-display  ( -- )
    smb-init
 
    olpc-lcd-mode
