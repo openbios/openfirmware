@@ -223,8 +223,7 @@ hpet-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
 [then]
 
 [ifdef] xo-board
-   97 ff c0 mreg   \ Wait for power to go down before coming back up - needed for power-off
-                   \ Enable MSDT/MSCK as GPIO2/GPIO3.  GPIO2 is used for WLAN_EN
+   97 ff 80 mreg   \ Wait for power to go down before coming back up - needed for power-off
 \ NO! This doesn't work.  If these lines are set as GPIOs, the system
 \ will crash when you disable the internal KBC.
 \   97 ff 81 mreg  \ GPIO4/5 not KBDT/KBCK
