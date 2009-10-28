@@ -207,6 +207,15 @@
    64 05 05 mreg  \ Bump NULL-SOF valid time to 8 micro frames (04), Inhibit C4 state on USB 1.1 ISO activity (01)
    end-table
 
+[ifdef] xo-board
+   \ On a boot we turn off USB power to ensure that USB devices are reset
+   \ properly after a reboot.  A "stand-init" routine in via/usb.fth turns
+   \ it back on, after the implicit delay of uncompressing OFW and other
+   \ startup activities.  We must do this before selecting GPO10 below, else
+   \ the enable will start to float high before we can turn it off.
+   acpi-io-base h# 4c + port-rl  h# 400 bitclr  ax dx out  \ Turn off USB power
+[then]
+
    d# 17 0 devfunc  \ Bus control and power management
    40 44 44 mreg  \ Enable I/O Recovery time (40), Enable ports 4d0/4d1 for edge/level setting (04)
 [ifdef] xo-board
@@ -404,6 +413,5 @@ smbus-io-base wbsplit swap  ( bits15:8 bits7:0 )
 
 \ acpi-io-base h# 26 + port-rb  h#  07 bitset  al dx out  \ Settings to support C4 state
 acpi-io-base h# 26 + port-rb  h#  06 bitset  al dx out  \ Settings to support C3 state
-acpi-io-base h# 4c + port-rl  h# 400 bitset  ax dx out  \ Set USB power high
 
 3 # io-apic-mmio-base #) byte mov    1 # io-apic-mmio-base h# 10 + #) mov  \ IO-APIC FSB delivery type

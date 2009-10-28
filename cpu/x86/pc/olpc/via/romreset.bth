@@ -230,6 +230,8 @@ long-offsets off
 
       fload ${BP}/cpu/x86/pc/olpc/via/startgfxrestore.fth  \ Display restoration
 
+      acpi-io-base h# 4c + port-rl  h# 400 bitset  ax dx out  \ Set USB power high
+
       cli
 
       facs-adr h# 18 + #) ax mov  ax ax or  0<>  if  \ X_Firmware_Waking_Vector

@@ -100,6 +100,11 @@ alias p2 probe-usb
 ;
 ' usb-quiet to go-hook
 
+\ Turn on USB power after a delay, to ensure that USB devices are reset correctly on boot
+: usb-power-off  ( -- )  h# 4c acpi-l@  h# 400 invert and  h# 4c acpi-l!  ;
+: usb-power-on   ( -- )  h# 4c acpi-l@  h# 400 or          h# 4c acpi-l!  ;
+: usb-power-cycle  ( -- )  usb-power-off d# 1000 ms usb-power-on  ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks
 \ 

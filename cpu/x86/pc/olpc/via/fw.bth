@@ -268,6 +268,13 @@ warning @  warning off
          protect-fw
          ." Interacting" cr  hex interact
       then
+      \ This is a good place to turn on USB power.  It is about 2 seconds after
+      \ early startup, giving the USB power rail time to discharge and stay
+      \ off long enough to reset attached devices.  The total "off" time is
+      \ about 2.6 seconds - part of that is EC time - but the rail droops
+      \ slowly depending on what is plugged in.  It droops hardly at all
+      \ with nothing plugged in.
+      usb-power-on
    then
 ;
 warning !
