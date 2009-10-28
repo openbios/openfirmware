@@ -120,7 +120,7 @@
    end-table
 [then]
 
-1 [if]
+0 [if]
    d# 15 0 devfunc  \ EIDE tuning
    09 05 05 mreg  \ Set EIDE to native mode so prober will see config reg 3d set
    40 02 02 mreg  \ Enable primary channel
@@ -221,7 +221,7 @@
    50 40 40 mreg  \ Disable USB device mode
 [then]
 [ifdef] xo-board
-   50 48 48 mreg  \ Disable USB device mode and unused USB 1.1 ports 4,5
+   50 4c 4c mreg  \ Disable USB device mode, unused USB 1.1 ports 4,5, and EIDE device
    51 9f 88 mreg  \ Enable SDIO and internal RTC, disable card reader, int mouse & kbd
 [then]
 

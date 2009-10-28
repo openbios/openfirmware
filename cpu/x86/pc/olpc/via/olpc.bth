@@ -90,9 +90,11 @@ $new-file
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
 \  " mrv8686.bin" " mrv8686.bin"                                    $add-deflated-dropin
 
+[ifdef] notdef
    " ${BP}/dev/pci/build/pcibridg.fc"            " class060400"   $add-deflated-dropin
-\   " ${BP}/dev/ide/build/leghier.fc"             " class01018a"   $add-deflated-dropin
+\  " ${BP}/dev/ide/build/leghier.fc"             " class01018a"   $add-deflated-dropin
    " ${BP}/dev/ide/build/idehier.fc"             " class01018f"   $add-deflated-dropin
+[then]
 [ifdef] xo-board
    " ${BP}/dev/mmc/sdhci/build/sdhcixo.fc"       " class080501"   $add-deflated-dropin
 [then]
