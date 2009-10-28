@@ -44,8 +44,9 @@ external
 : dma-alloc   ( size -- vadr )  " dma-alloc"  $call-parent  ;
 : dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;
 
+: set-unit  ( -- )  0 my-unit " set-address" $call-parent  ;
 : open  ( -- )
-   0 my-unit " set-address" $call-parent
+   set-unit
    " attach-card" $call-parent  0=  if  false exit  then
 
    " "  " deblocker"  $open-package  ?dup  if

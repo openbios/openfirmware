@@ -36,6 +36,15 @@ headers
 ;
 external
 : selftest  ( -- error? )
+   set-unit
+   " card-inserted?" $call-parent  0=  if
+      ." No card in "
+      " slot-name" get-my-property  0=  if
+         decode-string type space
+      then
+      ." SD slot" cr
+      true exit
+   then
    open 0=  if  ." Open sdmmc failed" cr true exit  then
    alloc-test-bufs
    ['] (selftest) catch  if  true  then

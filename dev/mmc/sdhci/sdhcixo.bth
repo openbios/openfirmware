@@ -27,11 +27,13 @@ init
       new-device
          1 encode-int " reg" property
          " sdmmc" " $load-driver" eval drop
+         " internal" " slot-name" string-property
       finish-device
 
       new-device
          2 encode-int " reg" property
          " sdmmc" " $load-driver" eval drop
+         " external" " slot-name" string-property
       finish-device
 
       new-device
