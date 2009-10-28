@@ -140,32 +140,53 @@
    end-table
 [then]
 
-   0833152d 802c config-wl
    \ USB Tuning
    d# 16 0 devfunc  \ UHCI Ports 0,1
+   42 10 10 mreg  \ Enable backdoor
+   2c ff 2d mreg  \ Subsystem ID backdoor
+   2d ff 15 mreg  \ Subsystem ID backdoor
+   2e ff 33 mreg  \ Subsystem ID backdoor
+   2f ff 08 mreg  \ Subsystem ID backdoor
+   42 10 00 mreg  \ Disable backdoor
    4a 02 02 mreg  \ Enable Stop Bus Master Cycle if HALT Bit is Asserted
    4b 60 60 mreg  \ Enable New UHCI Dynamic Scheme - 66MHz (40) & 33MHz (20)
    c1 20 00 mreg  \ Disable USB PIRQ
    end-table
 
-   0833152d 812c config-wl
    d# 16 1 devfunc  \ UHCI Ports 2,3
+   42 10 10 mreg  \ Enable backdoor
+   2c ff 2d mreg  \ Subsystem ID backdoor
+   2d ff 15 mreg  \ Subsystem ID backdoor
+   2e ff 33 mreg  \ Subsystem ID backdoor
+   2f ff 08 mreg  \ Subsystem ID backdoor
+   42 10 00 mreg  \ Disable backdoor
    4a 02 02 mreg  \ Enable Stop Bus Master Cycle if HALT Bit is Asserted
    4b 60 60 mreg  \ Enable New UHCI Dynamic Scheme - 66MHz (40) & 33MHz (20)
    c1 20 00 mreg  \ Disable USB PIRQ
    end-table
 
 [ifndef] xo-board
-   0833152d 822c config-wl
    d# 16 2 devfunc  \ UHCI Ports 4,5
+   42 10 10 mreg  \ Enable backdoor
+   2c ff 2d mreg  \ Subsystem ID backdoor
+   2d ff 15 mreg  \ Subsystem ID backdoor
+   2e ff 33 mreg  \ Subsystem ID backdoor
+   2f ff 08 mreg  \ Subsystem ID backdoor
+   42 10 00 mreg  \ Disable backdoor
    4a 02 02 mreg  \ Enable Stop Bus Master Cycle if HALT Bit is Asserted
    4b 60 60 mreg  \ Enable New UHCI Dynamic Scheme - 66MHz (40) & 33MHz (20)
    c1 20 00 mreg  \ Disable USB PIRQ
    end-table
 [then]
 
-   0833152d 842c config-wl
+   
    d# 16 4 devfunc  \ EHCI
+   42 10 10 mreg  \ Enable backdoor
+   2c ff 2d mreg  \ Subsystem ID backdoor
+   2d ff 15 mreg  \ Subsystem ID backdoor
+   2e ff 33 mreg  \ Subsystem ID backdoor
+   2f ff 08 mreg  \ Subsystem ID backdoor
+   42 10 00 mreg  \ Disable backdoor
    41 20 20 mreg  \ Evaluate PERIODIC Enable bit only at beginning of micro-frame 0 (undocumented)
    42 40 40 mreg  \ Enable Check PRESOF of ITDOUT Transaction during Fetching Data from DRAM
    43 c0 c0 mreg  \ Enable Dynamic Clock Scheme - 66MHz (80) & 33MHz (40)
@@ -200,7 +221,7 @@
    50 40 40 mreg  \ Disable USB device mode
 [then]
 [ifdef] xo-board
-   50 40 40 mreg  \ Disable USB device mode
+   50 48 48 mreg  \ Disable USB device mode and unused USB 1.1 ports 4,5
    51 9f 88 mreg  \ Enable SDIO and internal RTC, disable card reader, int mouse & kbd
 [then]
 
