@@ -62,3 +62,15 @@ h# 100 constant button-x
 ' (hold-message) to hold-message
 
 : bypass-bios-boot?  ( -- flag )  button-square game-key?  ;
+
+: check-keys
+   clear-screen
+   ." Press a key to exit"
+   cursor-off
+   begin
+      0 to game-key-mask  
+      d# 100 ms key? game-key@ update-game-keys       ( key? ) 
+   until
+   0 7 at-xy
+   cursor-on
+;
