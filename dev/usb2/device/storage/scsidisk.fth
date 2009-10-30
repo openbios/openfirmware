@@ -213,6 +213,8 @@ external
    read-block-extent  if  false exit  then  ( block-size #blocks )
    to #blocks  to block-size
 
+   d# 2000 set-timeout
+
    init-deblocker  0=  if  false exit  then
 
    init-label-package  0=  if

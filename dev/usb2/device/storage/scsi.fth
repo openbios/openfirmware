@@ -104,12 +104,14 @@ h# 53425355 constant csw-signature	\ little-endian
    r> /cbw				( cbw-adr,len )
 ;
 
-: (get-csw)  ( -- len usberr )  csw /csw bulk-in-pipe bulk-in  ;
+: (get-csw)  ( -- len usberr )  csw /csw erase  csw /csw bulk-in-pipe bulk-in  ;
 : get-csw  ( -- len usberr )
    (get-csw) dup  if  2drop (get-csw)  then
 ;
 
-d# 15,000 constant bulk-timeout
+\ This used to be 15 seconds but I shortened it so timeouts can be
+\ retried without having to wait too long.
+d# 2,000 constant bulk-timeout
 
 : (execute-command)  ( data-adr,len dir cbw-adr,len -- actual-len cswStatus  )
    debug?  if
@@ -136,7 +138,13 @@ d# 15,000 constant bulk-timeout
 
    rot  drop				( actual csw-len csw-usberror )
 
-   ?dup  if  nip exit  then		( actual csw-len csw-usberror )
+   ?dup  if                             ( actual csw-len csw-usberror )
+      nip                               ( actual csw-usberror )
+      dup h# 10000000 =  if             ( actual csw-usberror )
+         2drop 0 2                      ( 0 2 )  \ Convert timeout error to a retry
+      then				( actual usberror )
+      exit
+   then					( actual csw-len csw-usberror )
    drop                                 ( actual )
 
    debug?  if
