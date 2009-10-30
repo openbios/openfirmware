@@ -66,12 +66,11 @@ external
 : intr-in?  ( -- actual usberr )
    intr-in-qh 0=  if  0 USB_ERR_INV_OP exit  then
    clear-usb-error
-   process-hc-status
-   intr-in-qh dup sync-qhqtds
-   qh-done?  if
+   intr-in-qh qh-done?  if
       intr-in-qh error?  if
          0
       else
+         intr-in-qh dup sync-qhqtds
          intr-in-qtd  dup intr-in-qh >qh-#qtds l@ get-actual
          over >qtd-buf rot >qtd-pbuf l@ 2 pick dma-sync
       then

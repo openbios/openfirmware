@@ -153,6 +153,18 @@ defer set-my-dev		' set-normal-dev to set-my-dev
    usb-error					( actual usberr )
 ;
 
+: run-control  ( -- usberr )
+   \ Start control transaction
+   my-qh pt-ctrl fill-qh
+   my-qh insert-qh
+
+   \ Process results
+   my-qh done? 0=  if  my-qh error? drop  then
+
+   my-qh dup remove-qh  free-qhqtds
+   usb-error
+;
+
 : (control-set)  ( sbuf sphy slen buf phy len -- usberr )
    process-control-args				( sbuf sphy slen )
    2 alloc-control-qhqtds			( sbuf sphy slen )
@@ -167,15 +179,7 @@ defer set-my-dev		' set-normal-dev to set-my-dev
    TD_TOGGLE_DATA1 TD_C_ERR3 or TD_PID_IN or TD_STAT_ACTIVE or
    swap >hcqtd-token le-l!			( )
 
-   \ Start control transaction
-   my-qh pt-ctrl fill-qh
-   my-qh insert-qh
-
-   \ Process results
-   my-qh done? 0=  if  my-qh error? drop  then
-
-   my-qh dup remove-qh  free-qhqtds
-   usb-error
+   run-control
 ;
 
 : (control-set-nostat)  ( sbuf sphy slen buf phy len -- usberr )
@@ -188,15 +192,7 @@ defer set-my-dev		' set-normal-dev to set-my-dev
    \ OUT TD
    TD_PID_OUT fill-control-io-qtds drop		( )
 
-   \ Start control transaction
-   my-qh pt-ctrl fill-qh
-   my-qh insert-qh
-
-   \ Process results
-   my-qh done? 0=  if  my-qh error? drop  then
-
-   my-qh dup remove-qh  free-qhqtds
-   usb-error
+   run-control                                  ( usberr )
 ;
 
 headers
