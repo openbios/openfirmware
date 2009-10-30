@@ -382,7 +382,7 @@ bptr-ofs-mask invert constant bptr-mask		\ Buffer Pointer mask
       qh-ptr >qh-next l@ r@ >qh-next l!
       qh-ptr >hcqh-next le-l@ r@ >hcqh-next le-l!
       r@ qh-ptr >qh-next l!
-      r@ >qh-phys l@ qh-ptr >hcqh-next le-l!
+      r@ >qh-phys l@ TYP_QH or qh-ptr >hcqh-next le-l!
 
       r> sync-qhqtds
       qh-ptr sync-qh
@@ -538,22 +538,25 @@ d# 32 constant intr-interval		\ 4 ms poll interval
    or					( done?' )
 ;
 
-: qh-done?  ( qh -- done? )  >hcqh-overlay qtd-done?  ;
+: qh-done?  ( qh -- done? )
+   process-hc-status          ( qh )
+   dup sync-qh                ( qh )
+   >hcqh-overlay qtd-done?    ( done? )
+;
 
 : done?  ( qh -- usberr )
    begin
-      process-hc-status		( qh )
-      dup sync-qh		( qh )
       dup qh-done? ?dup 0=  if  ( qh )
          1 ms
          dup >qh-timeout	( qh timeout-adr )
          dup l@ 1-		( qh timeout-adr timeout' )
          dup rot l!		( qh timeout' )
-         0=
-      then
-   until
+         0=                     ( qh timed-out? )
+         dup  if  " Timeout" USB_ERR_TIMEOUT set-usb-error  noop  then  ( qh timed-out? )
+      then                      ( qh exit-loop? )
+   until                        ( qh )
+   drop                         ( )
 
-   ( qh ) qh-done? 0=  if  " Timeout" USB_ERR_TIMEOUT set-usb-error  then
    usb-error
 ;
 
