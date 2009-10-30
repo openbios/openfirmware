@@ -288,6 +288,8 @@ d# 10 constant #ec-retries
    true to kbc-off?
 ;
 
+: no-kbc-reboot  ( -- )  7 h# ff01 ec!  ;
+
 : io-spi@  ( reg# -- b )  h# fea8 +  ec@  ;
 : io-spi!  ( b reg# -- )  h# fea8 +  ec!  ;
 
