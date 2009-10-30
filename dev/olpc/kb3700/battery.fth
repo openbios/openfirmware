@@ -31,19 +31,30 @@ purpose: Sniff the battery state from EC internal variables
 string-array bat-causes
 ( 00) ," "
 ( 01) ," Bus Stuck at Zero"
-( 02) ," > 32 errors"
-( 03) ," (unknown)"
-( 04) ," LiFe OverVoltage"
-( 05) ," LiFe OverTemp"
-( 06) ," Same voltage for 4 minutes during a charge"
-( 07) ," Sensor error"
-( 08) ," Voltage is <=5V and charging_time is >= 20 secs while the V85_DETECT bit is off"
-( 09) ," Unable to get battery ID and Battery Temp is > 52 degrees C"
+( 02) ," Pack info"
+( 03) ," NiMH Temp"
+( 04) ," NiMH Over Voltage"
+( 05) ," NiMH Over Current"
+( 06) ," NiMH No voltage change during use"
+( 07) ," "
+( 08) ," NiMH Pre-charge fail"
+( 09) ," No Battery ID"
+( 0a) ," LiFe Over Voltage"
+( 0b) ," LiFe Over Temp"
+( 0c) ," LiFe No voltage change during use"
+( 0d) ," "
+( 0e) ," "
+( 0f) ," "
+( 10) ," ACR error"
+( 11) ," NIMH 0xFF count"
+( 12) ," FF count"
 end-string-array
 
 : .bat-cause  ( -- )
    bat-cause@ bat-causes count type cr
 ;
+
+: .bat-error .bat-cause ;
 
 string-array bat-states
   ," no-battery        "
@@ -84,7 +95,9 @@ end-string-array
 : .bat  ( -- )
    bat-status@  ( stat )
    ." AC:"  dup h# 10 and  if  ." on  "  else  ." off "  then  ( stat )
-   ." PCB: "  pcb-temp 2.d ." C "
+
+\ PCB temp was nver really valid and was removed in Gen 1.5
+\   ." PCB: "  pcb-temp 2.d ." C "
 
    dup h# 81 and  if
       ." Battery: "
@@ -115,6 +128,7 @@ end-string-array
 : watch-battery  ( -- )
    begin  (cr .bat kill-line  d# 1000 ms  key?  until
    key drop
+   bat-status@ 8 and if cr .bat-error then
 ;
 
 \ A few commands for looking at what the EC is doing in
@@ -529,7 +543,7 @@ h# 20 buffer: ds-bank-buf
    d# 625 ( mV ) * d# 15 ( mOhm ) /
 ;
 
-: bg-V>V ( raw-value - Volts )
+: bg-V>V ( raw-value - V_in_mV )
    d# 488 ( mV ) * 2* d# 100 / 5 >>
 ;
 
