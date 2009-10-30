@@ -92,13 +92,13 @@ alias p2 probe-usb
 ;
 
 : usb-quiet  ( -- )
-   [ ' go-hook behavior compile, ]    \ Chain to old behavior
+   [ ' linux-hook behavior compile, ]    \ Chain to old behavior
    " /usb@10,0" " reset-usb" execute-device-method drop
    " /usb@10,1" " reset-usb" execute-device-method drop
    " /usb@10,2" " reset-usb" execute-device-method drop
    " /usb@10,4" " reset-usb" execute-device-method drop
 ;
-' usb-quiet to go-hook
+' usb-quiet to linux-hook
 
 \ Turn on USB power after a delay, to ensure that USB devices are reset correctly on boot
 : usb-power-off  ( -- )  h# 4c acpi-l@  h# 400 invert and  h# 4c acpi-l!  ;
