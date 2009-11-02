@@ -4,7 +4,7 @@ dev screen
 
 : alloc-capture-buffer  ( len -- vadr padr )
    drop                                        ( )
-   " graphmem" $call-parent                    ( vadr )
+   graphmem                                    ( vadr )
    dup >physical                               ( vadr padr )
 ;
 
