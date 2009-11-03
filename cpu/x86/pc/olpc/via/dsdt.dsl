@@ -8,10 +8,10 @@
 // distribute, sublicense, and/or sell copies of the Software, and to
 // permit persons to whom the Software is furnished to do so, subject to
 // the following conditions:
-// 
+//
 // The above copyright notice and this permission notice shall be
 // included in all copies or substantial portions of the Software.
-// 
+//
 // THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 // EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 // MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -40,8 +40,8 @@ Name (LIDX, 0)
 
 Field (UART, ByteAcc, NoLock, Preserve)
 {
-    UDAT,   8, 
-    UAR1,   8, 
+    UDAT,   8,
+    UAR1,   8,
     UAR2,   8,
     UAR3,   8,
     UAR4,   8,
@@ -69,7 +69,7 @@ Method (UDOT, 1, NotSerialized)
             Add (Local0, 0x57, Local0)  // 'a' - 10
         }
         UPUT (Local0)
-        
+
         And (Arg0, 0xF, Local0)
         If (LLess (Local0, 10)) {
             Add (Local0, 0x30, Local0)  // '0'
@@ -145,7 +145,7 @@ Field(\GPST, ByteAcc, NoLock, Preserve) {
     GS13,1,     // HDAC wakeup
     GS14,1,     // USB wakeup
     GS15,1,     // north module SERR#
-}   
+}
 
 OperationRegion(GPIO, SystemIO, 0x0448, 0x4)
 Field(GPIO, ByteAcc, NoLock, Preserve) {
@@ -154,7 +154,7 @@ Field(GPIO, ByteAcc, NoLock, Preserve) {
         ,1,
     GPI9,1,     // ebook
         ,22,
-}   
+}
 
 // PMIO_RX22/3
 OperationRegion(\GPSE, SystemIO, 0x0422, 0x2)   // Genernal Purpose SCI Enable
@@ -174,7 +174,7 @@ Field(\GPSE, ByteAcc, NoLock, Preserve) {
     HDA,    1,                                  // HDA Enable
     USBE,   1,                                  // USB Resume
         ,   1,                                  // NB SERR Detect
-} 
+}
 
 // PMIO_RX28/9
 OperationRegion(\Glos, SystemIO, 0x0428, 0x2)   // Global Status
@@ -187,7 +187,7 @@ Field(\Glos, ByteAcc, NoLock, Preserve) {
     SIRS, 1,                                    // serirq status
         , 4,
 }
-        
+
 OperationRegion(\WIRQ, SystemIO, 0x042a, 0x1)   // IRQ Resume Reg
 Field(\WIRQ, ByteAcc, NoLock, Preserve) {
     IRQR, 8,
@@ -209,7 +209,7 @@ Field(\EDGE, ByteAcc, NoLock, Preserve) {
 OperationRegion(\Stus, SystemIO, 0x0430, 0x1)   // Global Status
 Field(\Stus, ByteAcc, NoLock, Preserve) {
     PADS, 8,
-} 
+}
 
 OperationRegion(\Prie, SystemIO, 0x0434, 0x1)
 Field(\Prie, ByteAcc, NoLock, Preserve) {
@@ -227,17 +227,17 @@ Scope(\_GPE)
         UPUT (0x31)         // 1
         Notify(\_SB.PCI0.EC, 0x80)    // GPWAKE, from the EC
     }
-        
+
     Method(_L02) {
         UPUT (0x33)         // 3
         Notify(\_SB.PCI0.VT86.PS2K, 0x02)       //Internal Keyboard PME Status
     }
-        
+
     Method(_L04) {
         UPUT (0x34)         // 4
         Notify(\_SB.SLPB, 0x80)
     }
-        
+
     Method(_L05) {
         UPUT (0x35)         // 5
         Notify(\_SB.PCI0,0x2)
@@ -287,7 +287,7 @@ Method(_WAK, 1, Serialized)
     Notify(\_SB.PCI0.USB2, 0x00)
     Notify(\_SB.PCI0.USB3, 0x00)
     Notify(\_SB.PCI0.EHCI, 0x00)
-    
+
     Store(One, SCIZ)
 
     If (LEqual (Arg0, 1))       //S1
@@ -353,7 +353,7 @@ Method (_PTS, 1, NotSerialized)
 
     IF (LEqual(Arg0, 0x03)) {       // S3
         Store(0x0,\_SB.PCI0.MEMC.FSEG)     // Disable F Segment Read/Write
-    } 
+    }
 
     IF (LEqual(Arg0, 0x04)) {       //S4
     }
@@ -369,15 +369,15 @@ Method (_PTS, 1, NotSerialized)
 //      If(LNotEqual(Sizeof(Arg0), Sizeof(Arg1))) {
 //          Return(1)
 //      }
-//          
+//
 //      Add(Sizeof(Arg0), 1, Local0)
-//          
+//
 //      Name(BUF0, Buffer(Local0) {})
 //      Name(BUF1, Buffer(Local0) {})
-//          
+//
 //      Store(Arg0, BUF0)
 //      Store(Arg1, BUF1)
-//          
+//
 //      While(Local0) {
 //          Decrement(Local0)
 //          If(LNotEqual(Derefof(Index(BUF0, Local0)), Derefof(Index(BUF1, Local0)))) {
@@ -405,29 +405,29 @@ Scope(\_SB)
                                         // Notify() calls to SLPB -- not sure what that will do.
         Name(_PRW, Package(2){0x04,5})  //Internal Keyboard Controller PME Status; S5
     }
-    
+
     Device(PCI0)
     {
         Name(_HID,EISAID ("PNP0A08"))    // Indicates PCI Express host bridge hierarchy
         Name(_CID,EISAID ("PNP0A03"))    // For legacy OS that doesn't understand the new HID
-        
+
         Name(_ADR,0x00000000)            // Device (HI WORD)=0, Func (LO WORD)=0
-        
+
         Name (_BBN,0)
-        
+
         Method(_INI, 0)
         {
             UPUT (0x4a)  // J
         }
-        
+
         Name (_S3D, 3)
-        
+
         Method(_STA, 0) {
             Return(0x0F)        // present, enabled, functioning
         }
-        
+
         Name(_PRW, Package(2){0x5,0x4})     // PME#
-        
+
         Method(_CRS,0) {
             Name(BUF0,ResourceTemplate() {
                 WORDBusNumber(          // Bus 0
@@ -441,7 +441,7 @@ Scope(\_SB)
                     0x0000,
                     0x0100
                 )
-        
+
                 IO(             // IO Resource for PCI Bus
                     Decode16,
                     0x0CF8,
@@ -449,7 +449,7 @@ Scope(\_SB)
                     1,
                     8
                 )
-        
+
                 WORDIO(         // IO from 0x0000 - 0x0cf7
                     ResourceProducer,
                     MinFixed,
@@ -462,7 +462,7 @@ Scope(\_SB)
                     0x0000,
                     0x0CF8
                 )
-        
+
                 WORDIO(         // IO from 0x0d00 - 0xffff
                     ResourceProducer,
                     MinFixed,
@@ -475,7 +475,7 @@ Scope(\_SB)
                     0x0000,
                     0xF300
                 )
-        
+
                 DWORDMemory(
                     ResourceProducer,
                     PosDecode,
@@ -489,7 +489,7 @@ Scope(\_SB)
                     0x00000000,
                     0x00020000
                 )
-        
+
                 DWORDMemory(
                     ResourceProducer,
                     PosDecode,
@@ -505,12 +505,12 @@ Scope(\_SB)
                 )
     // XXX I don't know what this is
                DWordMemory (ResourceProducer, PosDecode, MinFixed, MaxFixed, Cacheable, ReadWrite,
-                        0x00000000,         
-                        0xFED40000,         
-                        0xFED44FFF,         
-                        0x00000000,         
-                        0x00005000,         
-                        )   
+                        0x00000000,
+                        0xFED40000,
+                        0xFED44FFF,
+                        0x00000000,
+                        0x00005000,
+                        )
                 DWORDMemory(                // Consumed-and-produced resource(all of memory space)
                     ResourceProducer,       // bit 0 of general flags is 0
                     PosDecode,              // positive Decode
@@ -528,7 +528,7 @@ Scope(\_SB)
                     MEM3                    // Name declaration for this descriptor
                     )
             }) // end of BUF0
-        
+
             CreateDWordField(BUF0,MEM3._MIN, PMRN)
             CreateDWordField(BUF0,MEM3._MAX, PMRM)
             CreateDWordField(BUF0,MEM3._LEN, PMRL)
@@ -537,17 +537,17 @@ Scope(\_SB)
             Store(\_SB.PCI0.MEMC.LTMA, Local0)
             ShiftLeft(Local0, 16, PMRN)
             Subtract (PMRM, PMRN, PMRL)
-        
+
             Return(BUF0)
         } // end of CRS
-        
+
         Device(MEMC) {
             Name(_ADR, 0x00000003)
-        
+
             Method(_STA, 0) {
                     Return(0x0F)        // present, enabled, functioning
             }
-    
+
             OperationRegion(MCPS,PCI_Config,0x00,0x100)
             Field(MCPS,ByteAcc,NoLock,Preserve)
             {
@@ -567,25 +567,25 @@ Scope(\_SB)
 
                 Offset(0xA1),
                     , 4,
-                FBSZ, 3,            // Frame Buffer Size 
+                FBSZ, 3,            // Frame Buffer Size
                 ENIG, 1,            // Enable Internal Graphic
             }
         }
-        
+
         // USBD Controller
         Device (USBD)
         {
             Name(_ADR, 0x000B0000)
-            
+
             OperationRegion(RUDC,PCI_Config,0x00,0x100)
             Field(RUDC,ByteAcc,NoLock,Preserve){
-                Offset(0x00),   
-                VID, 16,      
-                Offset(0x04),   
+                Offset(0x00),
+                VID, 16,
+                Offset(0x04),
                 CMDR, 3,
             }
-        
-            Method(_STA, 0) 
+
+            Method(_STA, 0)
             {
                 If(LNotEqual(\_SB.PCI0.USBD.VID, 0x1106)) {
                     Return(0x00)
@@ -598,21 +598,21 @@ Scope(\_SB)
                 }
             }
         }//Device(USBD)
-       
+
         // SDIO Controller
         Device (SDIO)
         {
             Name(_ADR, 0x000C0000)
-            
+
             OperationRegion(RSDC,PCI_Config,0x00,0x100)
             Field(RSDC,ByteAcc,NoLock,Preserve){
-                Offset(0x00),   
-                VID, 16,      
-                Offset(0x04),   
+                Offset(0x00),
+                VID, 16,
+                Offset(0x04),
                 CMDR, 3,
             }
-        
-            Method(_STA, 0) 
+
+            Method(_STA, 0)
             {
                 If(LNotEqual(\_SB.PCI0.SDIO.VID, 0x1106)) {
                     Return(0x00)
@@ -625,21 +625,21 @@ Scope(\_SB)
                 }
             }
         }//Device(SDIO)
-        
+
         // SD $ MS Controller
         Device (SDMS)
         {
             Name(_ADR, 0x000D0000)
-            
+
             OperationRegion(RSDM,PCI_Config,0x00,0x100)
             Field(RSDM,ByteAcc,NoLock,Preserve){
-                Offset(0x00),   
-                VID, 16,      
-                Offset(0x04),   
+                Offset(0x00),
+                VID, 16,
+                Offset(0x04),
                 CMDR, 3,
             }
-        
-            Method(_STA, 0) 
+
+            Method(_STA, 0)
             {
                 If(LNotEqual(\_SB.PCI0.SDMS.VID, 0x1106)) {
                     Return(0x00)
@@ -652,21 +652,21 @@ Scope(\_SB)
                 }
             }
         }//Device(SDMS)
-        
+
         // CE-ATA $ NF Controller(Card Boot)
         Device(CENF)
         {
             Name(_ADR, 0x000E0000)
-            
+
             OperationRegion(RENF,PCI_Config,0x00,0x100)
             Field(RENF,ByteAcc,NoLock,Preserve){
-                Offset(0x00),   
-                VID, 16,      
-                Offset(0x04),   
+                Offset(0x00),
+                VID, 16,
+                Offset(0x04),
                 CMDR, 3,
             }
-        
-            Method(_STA, 0) 
+
+            Method(_STA, 0)
             {
                 If(LNotEqual(\_SB.PCI0.CENF.VID, 0x1106)) {
                     Return(0x00)
@@ -679,12 +679,12 @@ Scope(\_SB)
                 }
             }
         }
-    
+
         Device(IDEC)
         {
-            
+
             Name(_ADR, 0x000F0000)  //D15F0: a Pata device
-            
+
             Method(_STA,0,NotSerialized)    //Status of the Pata Device
             {
                 If(LNot(LEqual(\_SB.PCI0.IDEC.VID,0x1106)))
@@ -711,19 +711,19 @@ Scope(\_SB)
                 CMDR,3,
                 Offset(0x40),
                         , 1,
-                EPCH, 1,                    // Enable Primary channel.        
+                EPCH, 1,                    // Enable Primary channel.
                 Offset(0x4A),
                 PSPT, 8,                    // IDE Timings, Primary Slave
-                PMPT, 8,                    // IDE Timings, Primary Master         
+                PMPT, 8,                    // IDE Timings, Primary Master
                 Offset(0x52),
                 PSUT, 4,                    // Primary Slave UDMA Timing
                 PSCT, 1,                    // Primary Drive Slave Cabal Type
                 PSUE, 3,                    // Primary Slave UDMA Enable
                 PMUT, 4,                    // Primary Master UDMA Timing
                 PMCT, 1,                    // Primary Drive Master Cabal Type
-                PMUE, 3,                    // Primary Master UDMA Enable        
+                PMUE, 3,                    // Primary Master UDMA Enable
             }
-            
+
             Name(REGF,0x01)         //accessible OpRegion default
             Method(_REG,2,NotSerialized)    // is PCI Config space accessible as OpRegion?
             {
@@ -740,42 +740,42 @@ Scope(\_SB)
                 Package(){0x06,0x05,0x04,0x04,0x03,0x03,0x02,0x02,0x01,0x01,0x01,0x01,0x01,0x01,0x00}
             })
         */
-            Name(TIM0, Package() 
+            Name(TIM0, Package()
             {                               // Primary / Secondary channels timings
                 Package(){120, 180, 240, 383, 600},         // Timings in ns - Mode 4,3,2,1,0 defined from ATA spec.
                 Package(){0x20, 0x22, 0x33, 0x47, 0x5D },   // PIO Timing - Mode 4,3,2,1,0
                 Package(){4, 3, 2, 1, 0},                           // PIO mode (TIM0,0)
                 Package(){2, 1, 0, 0},                              // Multi-word DMA mode
                 Package(){120, 80, 60, 45, 30, 20, 15},         // Min UDMA Timings in ns
-                Package(){6,5,4,4,3,3,2,2,1,1,1,1,1,1,0},   // UDMA mode    
-                Package(){0x0E, 8, 6, 4, 2, 1, 0},          // UDMA timing   
-            })    
-            
+                Package(){6,5,4,4,3,3,2,2,1,1,1,1,1,1,0},   // UDMA mode
+                Package(){0x0E, 8, 6, 4, 2, 1, 0},          // UDMA timing
+            })
+
             Name(TMD0,Buffer(0x14){})
             CreateDwordField(TMD0,0x00,PIO0)
             CreateDwordField(TMD0,0x04,DMA0)
             CreateDwordField(TMD0,0x08,PIO1)
             CreateDwordField(TMD0,0x0C,DMA1)
             CreateDwordField(TMD0,0x10,CHNF)
-            
+
             Name(GMPT, 0)           // Master PIO Timings
             Name(GMUE, 0)           // Master UDMA enable
             Name(GMUT, 0)           // Master UDMA Timings
             Name(GSPT, 0)           // Slave PIO Timings
             Name(GSUE, 0)           // Slave UDMA enable
             Name(GSUT, 0)           // Slave UDMA Timings
-               
+
             Device(CHN0)    //Primary Channel: Pata device
             {
                 Name(_ADR,0x00)
-                
+
                 Method(_STA,0,NotSerialized)
                 {
-                    If(LNotEqual(\_SB.PCI0.IDEC.EPCH, 0x1)) 
+                    If(LNotEqual(\_SB.PCI0.IDEC.EPCH, 0x1))
                     {
                         Return(0x00)        //channel disable
-                    }                         
-                    Else 
+                    }
+                    Else
                     {
                         Return(0x0F)        //channel enable
                     }
@@ -785,7 +785,7 @@ Scope(\_SB)
                     Return(GTM(PMPT,PMUE,PMUT,PSPT,PSUE,PSUT))
                 }
                 Method(_STM, 3)                     // Set Timing PIO/DMA Mode
-                {                   
+                {
                    Store(Arg0, TMD0)        // Copy Arg0 into TMD0 buffer
                    Store(PMPT, GMPT)        // Master PIO Timings
                    Store(PMUE, GMUE)        // Master UDMA enable
@@ -801,7 +801,7 @@ Scope(\_SB)
                    Store(GSUE, PSUE)        // Slave UDMA enable
                    Store(GSUT, PSUT)        // Slave UDMA Timings
                 }                           // end Method _STM
-    
+
                 Device(DRV0)        //Master Device
                 {
                     Name(_ADR,0x00) //0 indicates master drive
@@ -819,7 +819,7 @@ Scope(\_SB)
                     }
                 }
             }
-        
+
             Method(GTM,6,Serialized)
             {
                 Store(Ones,PIO0)    //default value: all bits set to 1
@@ -839,11 +839,11 @@ Scope(\_SB)
                 {
                     Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x00)),Local6)),Local7)
                     Store(Local7,DMA0)
-                    Store(Local7,PIO0)              
+                    Store(Local7,PIO0)
                 }
                 Store(Match(DeRefOf(Index(TIM0,0x01)),MEQ,Arg3,MTR,0x00,0x00),Local6)
                 If(LLess(Local6,Ones))
-                {        
+                {
                     Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x00)),Local6)),Local7)
                     Store(Local7,DMA1)
                     Store(Local7,PIO1)
@@ -862,18 +862,18 @@ Scope(\_SB)
                 }
                 Return(TMD0)        //return timing mode
             }
-            
+
             Method(STM, 0, Serialized)
             {
-                    
+
                 If(REGF){}                  // PCI space not accessible
                 Else        {  Return(TMD0)  }
-                                       
-                Store(0x00, GMUE)           // Master UDMA Disable  
-                Store(0x00, GSUE)           // Slave UDMA Disable  
-                Store(0x07, GMUT)           // Master UDMA Mode 0 
-                Store(0x07, GSUT)           // Slave UDMA Mode 0 
-                            
+
+                Store(0x00, GMUE)           // Master UDMA Disable
+                Store(0x00, GSUE)           // Slave UDMA Disable
+                Store(0x07, GMUT)           // Master UDMA Mode 0
+                Store(0x07, GSUT)           // Slave UDMA Mode 0
+
                 If(And(CHNF, 0x1))
                 {
                     Store(Match(DeRefOf(Index(TIM0, 4)), MLE, DMA0, MTR,0,0), Local0)    // Get DMA mode
@@ -883,20 +883,20 @@ Scope(\_SB)
                 Else        // non - UDMA mode. Possible Multi word DMA
                 {
                     If(Or(LEqual(PIO0,Ones), LEqual(PIO0,0)))
-                    {       
+                    {
                         If(And(LLess(DMA0,Ones), LGreater(DMA0,0)))
                         {
                             Store(DMA0, PIO0)       // Make PIO0=DMA0
-                        }           
+                        }
                     }
                 }
-                   
+
                 If(And(CHNF, 0x4))
                 {
                     Store(Match(DeRefOf(Index(TIM0, 4)), MLE, DMA1, MTR,0,0), Local0)
                     Store(DeRefOf(Index(DeReFof(Index(TIM0, 6)), Local0)), GSUT) // Timing bit mask 66Mhz
                     Or(GSUE, 0x07, GSUE)    // Enable UltraDMA for Device 0
-                } 
+                }
                 Else        // non - UDMA mode. Possible Multi word DMA
                 {
                     If(Or(LEqual(PIO1, Ones), LEqual(PIO1,0)))
@@ -907,17 +907,17 @@ Scope(\_SB)
                         }
                     }
                 }
-                                                    
+
                 And(Match(DeRefOf(Index(TIM0, 0)), MGE, PIO0, MTR,0,0), 0x3, Local0)
                 Store(DeRefOf(Index(DeReFof(Index(TIM0, 1)), Local0)), Local1)
                 Store(Local1, GMPT)
-                                              
+
                 And(Match(DeRefOf(Index(TIM0, 0)), MGE, PIO1, MTR,0,0), 0x3, Local0)
                 Store(DeRefOf(Index(DeReFof(Index(TIM0, 1)), Local0)), Local1)
                 Store(Local1, GSPT)
                 Return(TMD0)
             } // end Method STM
-            
+
             Method(GTF , 4 , Serialized)
             {
                 Store(Buffer(7){0x03, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xEF}, Local1)
@@ -927,39 +927,39 @@ Scope(\_SB)
                 CreateByteField(Local1, 5, PCHA)            // master or slave
                 CreateByteField(Local2, 5, UCHA)            // master or slave
                 And(Arg0,0x03,Local3)
-            
-                If(Lequal(And(Local3,0x01),0x01)) 
+
+                If(Lequal(And(Local3,0x01),0x01))
                 {
                     Store(0xB0,PCHA)        // drive 1
                     Store(0xB0,UCHA)        // drive 1
                 }
-            
+
                 If(Arg1)
                 {
-                    Store(DeRefOf(Index(DeReFof(Index(TIM0, 5)), Arg2)), UMOD)     //Programming DMA Mode   
-                    Or( UMOD, 0x40, UMOD) 
+                    Store(DeRefOf(Index(DeReFof(Index(TIM0, 5)), Arg2)), UMOD)     //Programming DMA Mode
+                    Or( UMOD, 0x40, UMOD)
                 }
-                Else 
+                Else
                 {   // non-UltraDMA
                     Store(Match(DeRefOf(Index(TIM0, 1)), MEQ, Arg3, MTR,0,0), Local0)
                     Or(0x20, DeRefOf(Index(DeReFof(Index(TIM0, 3)), Local0)), UMOD)
                 }
-            
+
                 Store(Match(DeRefOf(Index(TIM0, 1)), MEQ, Arg3, MTR,0,0), Local0)
                 Or(0x08, DeRefOf(Index(DeReFof(Index(TIM0, 2)), Local0)), Mode)
                 Concatenate(Local1, Local2, Local6)
                 Return(Local6)
-                                                                                                                        
+
             } // end of GTF
         }
 
         Device(USB1)        {
             Name(_ADR,0x00100000)   //Address+function.
-            
+
             Name(_PRW, Package(2){0x0E,3})
-            
+
             Name(_S3D, 3)
-            
+
             OperationRegion(U2F0,PCI_Config,0x00,0xC2)
             Field(U2F0,ByteAcc,NoLock,Preserve){
                     Offset(0x00),
@@ -971,7 +971,7 @@ Scope(\_SB)
                     Offset(0x84),
                     ECDX, 2                         //USB1 PM capability status register
             }
-            
+
             Method(_STA,0) {                        //Status of the USB1 Device
                 If(LEqual(\_SB.PCI0.USB1.CMDR, 0x00)) {
                     Return(0x0D)
@@ -980,14 +980,14 @@ Scope(\_SB)
                 }
             }
         }
-            
+
         Device(USB2)        {
             Name(_ADR,0x00100001)   //Address+function.
-            
+
             Name(_PRW, Package(2){0x0E,3})
-            
+
             Name(_S3D, 3)
-            
+
             OperationRegion(U2F1,PCI_Config,0x00,0xC2)
             Field(U2F1,ByteAcc,NoLock,Preserve){
                     Offset(0x00),
@@ -999,7 +999,7 @@ Scope(\_SB)
                     Offset(0x84),
                     ECDX, 2                         //USB2 PM capability status register
             }
-            
+
             Method(_STA,0) {                        //Status of the USB2 Device
                 If(LEqual(\_SB.PCI0.USB2.CMDR, 0x00)) {
                     Return(0x0D)
@@ -1008,14 +1008,14 @@ Scope(\_SB)
                 }
             }
         }
-            
+
         Device(USB3) {
             Name(_ADR,0x00100002)   //Address+function.
-            
+
             Name(_PRW, Package(2){0x0E,3})
-            
+
             Name(_S3D, 3)
-            
+
             OperationRegion(U2F2,PCI_Config,0x00,0xC2)
             Field(U2F2,ByteAcc,NoLock,Preserve){
                 Offset(0x00),
@@ -1027,7 +1027,7 @@ Scope(\_SB)
                 Offset(0x84),
                 ECDX, 2                             //USB3 PM capability status register
             }
-            
+
             Method(_STA,0) {                        //Status of the USB3 Device
                 If(LEqual(\_SB.PCI0.USB3.CMDR, 0x00)) {
                     Return(0x0D)
@@ -1036,14 +1036,14 @@ Scope(\_SB)
                 }
             }
         }
-            
+
         Device(EHCI)  {
             Name(_ADR,0x00100004)   //Address+function.
-            
+
             Name(_PRW, Package(2){0x0E,3})
-            
+
             Name(_S3D, 3)
-            
+
             OperationRegion(U2F4,PCI_Config,0x00,0xC2)
             Field(U2F4,ByteAcc,NoLock,Preserve){
                 Offset(0x00),
@@ -1055,16 +1055,16 @@ Scope(\_SB)
                 Offset(0x84),
                 ECDX, 2                             //EHCI1 PM capability status register
             }
-            
+
             Method(_STA,0) {                        //Status of the EHCI1 Device
                 If(LEqual(\_SB.PCI0.EHCI.CMDR, 0x00)) {
                     Return(0x0D)
                 } Else {
                     Return(0x0F)
-                } 
+                }
             }
         }
-            
+
         Device (PEXX)
         {
             Name (_HID, EISAID ("PNP0C01"))
@@ -1076,51 +1076,51 @@ Scope(\_SB)
                 }
             )
         }
-        
+
         Device(VT86)
         {
             Name(_ADR,0x00110000)   //Address+function.
-            
+
             OperationRegion(VTSB, PCI_Config, 0x00, 0x100)
             Field(\_SB.PCI0.VT86.VTSB,ByteAcc,NoLock,Preserve) {
                 Offset(0x2),
                 DEID, 16,   // Device ID
-         
+
                 Offset(0x2C),
                 ID2C,8,             // RX2C
                 ID2D,8,             // RX2D
                 ID2E,8,             // RX2E
                 ID2F,8,             // RX2F
-         
+
                 Offset(0x44),
                 PIRE, 4,
                 PIRF, 4,
-                PIRG, 4,            
+                PIRG, 4,
                 PIRH, 4,    // PIRQH# Routing
-         
+
                 Offset(0x46),
                 POLE, 1,        // INTE polarity
                 POLF, 1,        // INTF polarity
-                POLG, 1,        // INTG polarity            
+                POLG, 1,        // INTG polarity
                 POLH, 1,        // INTH polarity
                 ENR8, 1,        // enable INTE~H routing by Rx44~Rx45.
                     , 1,
                 ECOM, 1,
-         
+
                 Offset(0x4E),
                     , 3,
                 EP74, 1,        // Enable 74/75 Access CMOS
                     , 4,
-         
+
                 Offset(0x50),
                     , 1,
                 ESB3, 1,    // RX5001 EHCI1
-                ESB2, 1,    // RX5002 USB3                                  
-                EIDE, 1,    // RX5003 EIDE  
-                EUSB, 1,    // RX5004 USB1  
+                ESB2, 1,    // RX5002 USB3
+                EIDE, 1,    // RX5003 EIDE
+                EUSB, 1,    // RX5004 USB1
                 ESB1, 1,    // RX5005 USB2
                 USBD, 1,    // RX5006 USB Device Mode controller
-            
+
                 Offset(0x51),
                 EKBC, 1,    // RX5100 Internal Keyboard controller
                 KBCC, 1,    // RX5101 Internal KBC Configuration
@@ -1128,7 +1128,7 @@ Scope(\_SB)
                 ERTC, 1,    // RX5103 Internal RTC
                 SDIO, 1,    // RX5104 enable SDIO controller
                     , 2,
-            
+
                 Offset(0x55),
                     , 4,
                 PIRA, 4,    // PCI IRQA
@@ -1136,75 +1136,75 @@ Scope(\_SB)
                 PIRC, 4,    // PCI IRQC
                     , 4,
                 PIRD, 4,    // PCI IRQD
-                
+
                 Offset(0x58),
                     , 6,
                 ESIA, 1,    // Enable Source Bridge IO APIC
                     , 1,
-            
+
                 Offset(0x81),   // Enable ACPI I/O
                     , 7,
                 ENIO, 1,
-            
-                Offset(0x88),   
+
+                Offset(0x88),
                     , 7,
                 IOBA, 9,        // Power Management I/O Base
-            
+
                 Offset(0x94),
                     , 5,
-                PLLD, 1,    // RX9405 Internal PLL Reset During Suspend 0:Enable,1:Disable    
-            
-                Offset(0xB0),       
+                PLLD, 1,    // RX9405 Internal PLL Reset During Suspend 0:Enable,1:Disable
+
+                Offset(0xB0),
                     , 4,
                 EU1E, 1,    // Embedded COM1
                 EU2E, 1,    // Embedded COM2
                     , 2,
-            
-                Offset(0xB2),                       
+
+                Offset(0xB2),
                 UIQ1, 4,    // UART1 IRQ
-                UIQ2, 4,    // UART2 IRQ            
-            
-                Offset(0xB4),                                               
-                U1BA, 7,    // UART1 I/O base address.      
+                UIQ2, 4,    // UART2 IRQ
+
+                Offset(0xB4),
+                U1BA, 7,    // UART1 I/O base address.
                     , 1,
-                U2BA, 7,    // UART2 I/O base address.      
+                U2BA, 7,    // UART2 I/O base address.
                     , 1,
-            
-                Offset(0xB7),                                       
+
+                Offset(0xB7),
                     , 3,
                 UDFE, 1,    // UART DMA Funtion Enable
-            
+
                 Offset(0xB8),
                     , 2,
                 DIBA, 14,   // UART DMA I/O Base Address
-            
+
                 Offset(0xBC),
-                SPIB, 24,           
-            
+                SPIB, 24,
+
                 Offset(0xD0),
                     , 4,
                 SMBA, 12,   // SMBus I/O Base (16-byte I/O space)
-            
+
                 Offset(0xD2),
-                ENSM, 1,    // Enable SMBus IO 
+                ENSM, 1,    // Enable SMBus IO
                     , 7,
-            
+
                 Offset(0xF6),
                 REBD,   8,  //Internal Revision ID
             }
-            
+
             Device(APCM)    // APIC MMIO
             {
                 Name(_HID, EISAID("PNP0C02"))       // Hardware Device ID, Motherboard Resources
                 Name(_UID, 0x1100)
-                
+
                 Name(_CRS, ResourceTemplate()
                 {
                     Memory32Fixed(ReadWrite, 0xFEE00000, 0x00001000)  // Local APIC
                     Memory32Fixed(ReadWrite, 0xFEC00000, 0x00001000)  // IO APIC
                 })
             }
-            
+
             Device(PS2M)                            //PS2 Mouse
             {
                 Name(_HID,EISAID("PNP0F13"))
@@ -1212,14 +1212,14 @@ Scope(\_SB)
                 Name(_CRS, ResourceTemplate () { IRQNoFlags () {12} })
                 Name(_PRW, Package() {0x09, 0x04})
             }
-                
+
             Device(PS2K)                             // PS2 Keyboard
-            {                               
+            {
                     Name(_HID,EISAID("PNP0303"))
                     Name(_CID,EISAID("PNP030B"))    // Microsoft reserved PNP ID
-                    
+
                     Name(_STA,0x0)  // not present:  not used on XO
-                    
+
                     Name (_CRS, ResourceTemplate ()
                     {
                         IO (Decode16, 0x0060, 0x0060, 0x01, 0x01, )
@@ -1227,12 +1227,12 @@ Scope(\_SB)
                         IRQNoFlags () {1}
                     })
                     Name(_PRW, Package() {0x02, 0x04})
-            }   
-                
+            }
+
             Device(DMAC)
             {
-                Name(_HID, EISAID("PNP0200")) 
-                
+                Name(_HID, EISAID("PNP0200"))
+
                 Name(_CRS,ResourceTemplate() {
                    IO(Decode16, 0x00, 0x00, 0, 0x10)     // Master DMA Controller
                    IO(Decode16, 0x81, 0x81, 0, 0x03)     // DMA Page Registers
@@ -1243,11 +1243,11 @@ Scope(\_SB)
                    DMA(Compatibility,NotBusMaster,Transfer8) {4}   // Cascade channel
                 })
             }
-                
+
             Device(RTC)
             {
                 Name(_HID,EISAID("PNP0B00"))
-                
+
                 Name(_CRS,ResourceTemplate()
                 {
                   IO(Decode16, 0x70, 0x70, 0x00, 0x02)
@@ -1255,7 +1255,7 @@ Scope(\_SB)
                   IRQNoFlags() {8}
                 })
             }
-                
+
             Device(PIC)
             {
                 Name(_HID,EISAID("PNP0000"))
@@ -1264,7 +1264,7 @@ Scope(\_SB)
                     IO(Decode16,0xA0,0xA0,0x00,0x02)
                 })
             }
-                
+
             Device(FPU)
             {
                 Name(_HID,EISAID("PNP0C04"))
@@ -1273,18 +1273,18 @@ Scope(\_SB)
                     IRQNoFlags(){13}
                 })
             }
-                
+
             Device(TMR)
             {
                 Name(_HID,EISAID("PNP0100"))
-                
+
                 Name(_CRS, ResourceTemplate()
                 {
                     IO(Decode16,0x40,0x40,0x00,0x04)
                     IRQNoFlags() {0}
                 })
             }
-                
+
             Device(SPKR)    // System Speaker
             {
                 Name(_HID,EISAID("PNP0800"))
@@ -1292,50 +1292,50 @@ Scope(\_SB)
                     IO(Decode16,0x61,0x61,0x01,0x01)
                 })
             }
-            
+
             Name (ICRS, ResourceTemplate ()
             {
                 IRQ (Level, ActiveLow, Shared) // The flags is the value of Byte 3 of IRQ Description Definition
                     { }                        // The value decides the value of Byte 1 and byte 2 of IRQ Description Definition
             })
-                
+
             Name(PRSA, ResourceTemplate()
             {
                 IRQ(Level, ActiveLow, Shared)
                 {3, 4, 5, 6, 7, 10, 11, 12, 14, 15}
             })
-            
+
             Device(LNKA)    {
                 Name(_HID, EISAID("PNP0C0F"))       // PCI interrupt link
                 Name(_UID, 1)
                 Method(_STA, 0)
                 {
-                    If(LEqual(\_SB.PCI0.VT86.PIRA, 0x00)) 
+                    If(LEqual(\_SB.PCI0.VT86.PIRA, 0x00))
                     {
                         Return(0x09)        // disabled
                     } Else {
                         Return(0x0B)        // enabled, but no UI
                     }
                 }
-                
-                Method(_PRS) 
+
+                Method(_PRS)
                 {
                     Return(PRSA)
                 }
-                
-                Method(_DIS) 
+
+                Method(_DIS)
                 {
                     Store(0x0, \_SB.PCI0.VT86.PIRA)
                 }
-                
-                Method(_CRS) 
+
+                Method(_CRS)
                 {
                     CreateWordField (ICRS, 1, IRA0)
                     Store (1, Local1)
                     ShiftLeft (Local1, \_SB.PCI0.VT86.PIRA, IRA0)
                     Return (ICRS)
                 }
-                
+
                 Method(_SRS, 1) {
                     CreateWordField (Arg0, 1, IRA)  // Byte 1 and Byte 2 in the IRQ Descriptor Definition
                     FindSetRightBit (IRA, Local0)
@@ -1343,38 +1343,38 @@ Scope(\_SB)
                     Store (Local0, \_SB.PCI0.VT86.PIRA)
                 }
             }
-                
+
             Device(LNKB)    {
                 Name(_HID, EISAID("PNP0C0F"))       // PCI interrupt link
                 Name(_UID, 2)
                 Method(_STA, 0)
                 {
-                    If(LEqual(\_SB.PCI0.VT86.PIRB, 0x00)) 
+                    If(LEqual(\_SB.PCI0.VT86.PIRB, 0x00))
                     {
                         Return(0x09)        // disabled
                     } Else {
                         Return(0x0B)        // enabled, but no UI
                     }
                 }
-                
-                Method(_PRS) 
+
+                Method(_PRS)
                 {
                     Return(PRSA)
                 }
-                
-                Method(_DIS) 
+
+                Method(_DIS)
                 {
                     Store(0x0, \_SB.PCI0.VT86.PIRB)
                 }
-                
-                Method(_CRS) 
+
+                Method(_CRS)
                 {
                     CreateWordField (ICRS, 1, IRA0)
                     Store (1, Local1)
                     ShiftLeft (Local1, \_SB.PCI0.VT86.PIRB, IRA0)
                     Return (ICRS)
                 }
-                
+
                 Method(_SRS, 1) {
                     CreateWordField (Arg0, 1, IRA)  // Byte 1 and Byte 2 in the IRQ Descriptor Definition
                     FindSetRightBit (IRA, Local0)
@@ -1382,39 +1382,39 @@ Scope(\_SB)
                     Store (Local0, \_SB.PCI0.VT86.PIRB)
                 }
             }
-                
-                
+
+
             Device(LNKC)    {
                 Name(_HID, EISAID("PNP0C0F"))       // PCI interrupt link
                 Name(_UID, 3)
                 Method(_STA, 0)
                 {
-                    If(LEqual(\_SB.PCI0.VT86.PIRC, 0x00)) 
+                    If(LEqual(\_SB.PCI0.VT86.PIRC, 0x00))
                     {
                         Return(0x09)        // disabled
                     } Else {
                         Return(0x0B)        // enabled, but no UI
                     }
                 }
-                
-                Method(_PRS) 
+
+                Method(_PRS)
                 {
                     Return(PRSA)
                 }
-                
-                Method(_DIS) 
+
+                Method(_DIS)
                 {
                     Store(0x0, \_SB.PCI0.VT86.PIRC)
                 }
-                
-                Method(_CRS) 
+
+                Method(_CRS)
                 {
                     CreateWordField (ICRS, 1, IRA0)
                     Store (1, Local1)
                     ShiftLeft (Local1, \_SB.PCI0.VT86.PIRC, IRA0)
                     Return (ICRS)
                 }
-                
+
                 Method(_SRS, 1) {
                     CreateWordField (Arg0, 1, IRA)  //Byte 1 and Byte 2 in the IRQ Descriptor Definition
                     FindSetRightBit (IRA, Local0)
@@ -1422,38 +1422,38 @@ Scope(\_SB)
                     Store (Local0, \_SB.PCI0.VT86.PIRC)
                 }
             }
-                
+
             Device(LNKD)    {
                 Name(_HID, EISAID("PNP0C0F"))       // PCI interrupt link
                 Name(_UID, 4)
                 Method(_STA, 0)
                 {
-                    If(LEqual(\_SB.PCI0.VT86.PIRD, 0x00)) 
+                    If(LEqual(\_SB.PCI0.VT86.PIRD, 0x00))
                     {
                         Return(0x09)        // disabled
                     } Else {
                         Return(0x0B)        // enabled, but no UI
                     }
                 }
-                
-                Method(_PRS) 
+
+                Method(_PRS)
                 {
                     Return(PRSA)
                 }
-                
-                Method(_DIS) 
+
+                Method(_DIS)
                 {
                     Store(0x0, \_SB.PCI0.VT86.PIRD)
                 }
-                
-                Method(_CRS) 
+
+                Method(_CRS)
                 {
                     CreateWordField (ICRS, 1, IRA0)
                     Store (1, Local1)
                     ShiftLeft (Local1, \_SB.PCI0.VT86.PIRD, IRA0)
                     Return (ICRS)
                 }
-                
+
                 Method(_SRS, 1) {
                     CreateWordField (Arg0, 1, IRA)  //Byte 1 and Byte 2 in the IRQ Descriptor Definition
                     FindSetRightBit (IRA, Local0)
@@ -1461,176 +1461,176 @@ Scope(\_SB)
                     Store (Local0, \_SB.PCI0.VT86.PIRD)
                 }
             }
-            
+
             Device(LNKE)    {
                 Name(_HID, EISAID("PNP0C0F"))       // PCI interrupt link
                 Name(_UID, 5)
                 Method(_STA, 0)
                 {
-                    If(LEqual(\_SB.PCI0.VT86.PIRE, 0x00)) 
+                    If(LEqual(\_SB.PCI0.VT86.PIRE, 0x00))
                     {
                         Return(0x09)        // disabled
                     } Else {
                         Return(0x0B)        // enabled, but no UI
                     }
                 }
-                
-                Method(_PRS) 
+
+                Method(_PRS)
                 {
                     Return(PRSA)
                 }
-                
-                Method(_DIS) 
+
+                Method(_DIS)
                 {
                     Store(0x0, \_SB.PCI0.VT86.PIRE)
                 }
-                
-                Method(_CRS) 
+
+                Method(_CRS)
                 {
                     CreateWordField (ICRS, 1, IRA0)
                     Store (1, Local1)
                     ShiftLeft (Local1, \_SB.PCI0.VT86.PIRE, IRA0)
                     Return (ICRS)
                 }
-                
+
                 Method(_SRS, 1) {
                     CreateWordField (Arg0, 1, IRA)  //Byte 1 and Byte 2 in the IRQ Descriptor Definition
                     FindSetRightBit (IRA, Local0)
                     Decrement (Local0)
                     Store (Local0, \_SB.PCI0.VT86.PIRE)
                     Store(One,ENR8)
-                    Store(Zero,POLE)            
+                    Store(Zero,POLE)
                 }
             }
-            
+
             Device(LNKF)    {
                 Name(_HID, EISAID("PNP0C0F"))       // PCI interrupt link
                 Name(_UID, 6)
                 Method(_STA, 0)
                 {
-                    If(LEqual(\_SB.PCI0.VT86.PIRF, 0x00)) 
+                    If(LEqual(\_SB.PCI0.VT86.PIRF, 0x00))
                     {
                         Return(0x09)        // disabled
                     } Else {
                         Return(0x0B)        // enabled, but no UI
                     }
                 }
-                
-                Method(_PRS) 
+
+                Method(_PRS)
                 {
                     Return(PRSA)
                 }
-                
-                Method(_DIS) 
+
+                Method(_DIS)
                 {
                     Store(0x0, \_SB.PCI0.VT86.PIRF)
                 }
-                
-                Method(_CRS) 
+
+                Method(_CRS)
                 {
                     CreateWordField (ICRS, 1, IRA0)
                     Store (1, Local1)
                     ShiftLeft (Local1, \_SB.PCI0.VT86.PIRF, IRA0)
                     Return (ICRS)
                 }
-                
+
                 Method(_SRS, 1) {
                     CreateWordField (Arg0, 1, IRA)  //Byte 1 and Byte 2 in the IRQ Descriptor Definition
                     FindSetRightBit (IRA, Local0)
                     Decrement (Local0)
                     Store (Local0, \_SB.PCI0.VT86.PIRF)
                     Store(One,ENR8)
-                    Store(Zero,POLF)            
+                    Store(Zero,POLF)
                 }
             }
-            
+
             Device(LNK0)    {
                 Name(_HID, EISAID("PNP0C0F"))       // PCI interrupt link
                 Name(_UID, 7)
                 Method(_STA, 0)
                 {
-                    If(LEqual(\_SB.PCI0.VT86.PIRG, 0x00)) 
+                    If(LEqual(\_SB.PCI0.VT86.PIRG, 0x00))
                     {
                         Return(0x09)        // disabled
                     } Else {
                         Return(0x0B)        // enabled, but no UI
                     }
                 }
-                
-                Method(_PRS) 
+
+                Method(_PRS)
                 {
                     Return(PRSA)
                 }
-                
-                Method(_DIS) 
+
+                Method(_DIS)
                 {
                     Store(0x0, \_SB.PCI0.VT86.PIRG)
                 }
-                
-                Method(_CRS) 
+
+                Method(_CRS)
                 {
                     CreateWordField (ICRS, 1, IRA0)
                     Store (1, Local1)
                     ShiftLeft (Local1, \_SB.PCI0.VT86.PIRG, IRA0)
                     Return (ICRS)
                 }
-                
+
                 Method(_SRS, 1) {
                     CreateWordField (Arg0, 1, IRA)  //Byte 1 and Byte 2 in the IRQ Descriptor Definition
                     FindSetRightBit (IRA, Local0)
                     Decrement (Local0)
                     Store (Local0, \_SB.PCI0.VT86.PIRG)
                     Store(One,ENR8)
-                    Store(Zero,POLG)         
+                    Store(Zero,POLG)
                 }
             }
-        
+
             Device(LNK1) {
                 Name(_HID, EISAID("PNP0C0F"))       // PCI interrupt link
                 Name(_UID, 8)
                 Method(_STA, 0)
                 {
-                    If(LEqual(\_SB.PCI0.VT86.PIRH, 0x00)) 
+                    If(LEqual(\_SB.PCI0.VT86.PIRH, 0x00))
                     {
                         Return(0x09)        // disabled
                     } Else {
                         Return(0x0B)        // enabled, but no UI
                     }
                 }
-                
-                Method(_PRS) 
+
+                Method(_PRS)
                 {
                     Return(PRSA)
                 }
-                
-                Method(_DIS) 
+
+                Method(_DIS)
                 {
                     Store(0x0, \_SB.PCI0.VT86.PIRH)
                 }
-                
-                Method(_CRS) 
+
+                Method(_CRS)
                 {
                     CreateWordField (ICRS, 1, IRA0)
                     Store (1, Local1)
                     ShiftLeft (Local1, \_SB.PCI0.VT86.PIRH, IRA0)
                     Return (ICRS)
                 }
-                
+
                 Method(_SRS, 1) {
                     CreateWordField (Arg0, 1, IRA)  //Byte 1 and Byte 2 in the IRQ Descriptor Definition
                     FindSetRightBit (IRA, Local0)
                     Decrement (Local0)
                     Store (Local0, \_SB.PCI0.VT86.PIRH)
                     Store(One,ENR8)
-                    Store(Zero,POLH)         
+                    Store(Zero,POLH)
                 }
             }
-        
+
             Mutex (MUEC, 0x00)
             OperationRegion (ECCP, SystemIO, 0x068, 0x05)
-            
+
             // NB -- the EC routines all return 0 for failure
-            
+
             Field (ECCP, ByteAcc, NoLock, Preserve)
             {
                 ECDA,   8,   // 0x68
@@ -1639,7 +1639,7 @@ Scope(\_SB)
                     ,   8,
                 ECCM,   8,   // 0x6c
             }
-            
+
             // force clear OBF by reading/discarding 0x68
             Method (OBFZ, 0, Serialized)
             {
@@ -1651,7 +1651,7 @@ Scope(\_SB)
                 }
                 Return (LNotEqual (Local0, Zero))
             }
-            
+
             // wait for IBF == 0
             Method (IBFZ, 0, Serialized)
             {
@@ -1662,7 +1662,7 @@ Scope(\_SB)
                 }
                 Return (LNotEqual (Local0, Zero))
             }
-            
+
             // wait for IBF == 1
             Method (IBFN, 0, Serialized)
             {
@@ -1673,7 +1673,7 @@ Scope(\_SB)
                 }
                 Return (LNotEqual (Local0, Zero))
             }
-            
+
             // wait for OBF == 1
             Method (OBFN, 0, Serialized)
             {
@@ -1686,14 +1686,14 @@ Scope(\_SB)
                 }
                 Return (LNotEqual (Local0, Zero))
             }
-            
+
             // EC read byte helper
             Method (ECRB, 0, NotSerialized)
             {
                 if (OBFN ()) { Return(ECDA) }
                 Return (Ones)
             }
-            
+
             // EC command helper
             Method (ECWC, 1, NotSerialized)
             {
@@ -1712,12 +1712,12 @@ Scope(\_SB)
                 }
                 Return(Zero)
             }
-            
+
             // EC command (zero args)
             Method (ECW0, 2, NotSerialized)
             {
                 If (Acquire (MUEC, 0xFFFF)) { Return (One) }
-            
+
                 if (ECWC (Arg0)) {
                     Release(MUEC)
                     Return(One)
@@ -1726,12 +1726,12 @@ Scope(\_SB)
                 Release(MUEC)
                 Return (Zero)
             }
-            
+
             // EC command - 1 arg
             Method (ECW1, 2, NotSerialized)
             {
                 If (Acquire (MUEC, 0xFFFF)) { Return (One) }
-            
+
                 if (ECWC (Arg0)) {
                     if (IBFZ ()) {
                         UPUT (0x2b)  // +
@@ -1745,12 +1745,12 @@ Scope(\_SB)
                 Release(MUEC)
                 Return (Zero)
             }
-            
+
             // EC command - 2 args
             Method (ECW2, 3, NotSerialized)
             {
                 If (Acquire (MUEC, 0xFFFF)) { Return (One) }
-            
+
                 if (ECWC (Arg0)) {
                     if (IBFZ ()) {
                         UPUT (0x2b)  // +
@@ -1769,14 +1769,14 @@ Scope(\_SB)
                 Release(MUEC)
                 Return (Zero)
             }
-        
+
             // EC command - no arg, 1 return byte
             Method (ECR1, 1, NotSerialized)
                 {
-        
+
                 If (Acquire (MUEC, 0xFFFF)) { Return (One) }
                 // UPUT (0x4c) // L
-        
+
                 If (ECWC (Arg0)) {
                     // UPUT (0x31)
                         Store (10, Local0)                     // Ten retries
@@ -1797,14 +1797,14 @@ Scope(\_SB)
                 Release(MUEC)
                 Return (Ones)
             }
-            
+
             // EC command - one arg, one return byte
             Method (ECWR, 2, NotSerialized)
             {
                 Store (10, Local0)                     // Ten retries
-    
+
                 If (Acquire (MUEC, 0xFFFF)) { Return (One) }
-    
+
                 If (ECWC (Arg0)) {
                     if (IBFZ ()) {
                         UPUT (0x2b)  // +
@@ -1833,7 +1833,7 @@ Scope(\_SB)
             Device (AC) {  /* AC adapter */
                 Name (_HID, "ACPI0003")
                 Name (_PCL, Package (0x01) { _SB })  // Power consumer list - points to main system bus
-    
+
                 Method (_PSR, 0, NotSerialized)
                 {
                     If (LNot (Acquire (ACMX, 5000)))
@@ -1843,7 +1843,7 @@ Scope(\_SB)
                        Store (ECR1 (0x15), Local0) // CMD_READ_BATTERY_STATUS
                        Release (ACMX)
                     }
-    
+
                     // If (And (Local0, One))
                     If (And (Local0, 0x10))
                     {
@@ -1852,10 +1852,10 @@ Scope(\_SB)
                         Return (Zero)
                     }
                 }
-    
+
                 Name (_STA, 0x0F)
             }
-    
+
             Name (BIFP, Package (0x0D)  // Battery info (static)  p 342
             {
                 One,           // Power units - 1 : mAh / mA
@@ -1880,7 +1880,7 @@ Scope(\_SB)
                 2910,          // remaining capacity
                 23306          // voltage in mV
             })
-    
+
             Device (BATT) {
                 Name (_HID, EisaId ("PNP0C0A"))
                 Name (_UID, One)
@@ -1891,7 +1891,7 @@ Scope(\_SB)
 
                 Method (_STA, 0, NotSerialized)   // Battery Status
                 {
-   
+
                     If (LNot (Acquire (ACMX, 5000)))
                     {
                         UPUT (0x73)  // s
@@ -1899,7 +1899,7 @@ Scope(\_SB)
                         Store (ECR1 (0x15), Local0) // CMD_READ_BATTERY_STATUS
                         Release (ACMX)
                     }
-    
+
                     If (And (Local0, One))  // ECRD(0xfaa4) & 0x01 => Battery inserted
                     {
                         Return (0x1F)
@@ -1971,13 +1971,13 @@ Scope(\_SB)
                             }
                         }
                         UPUT (0x49)  // I
-                
+
                         Release (ACMX)
                     }
-                
+
                     Return (BIFP)
                 }
-    
+
                 Method (_BST, 0, NotSerialized)
                 {
                     If (LNot (Acquire (ACMX, 5000)))
@@ -1989,11 +1989,11 @@ Scope(\_SB)
                         {
                             Store (0x02, Local1)  // charging
                         }
-                        ElseIf (And (Local0, 0x40)) // 
+                        ElseIf (And (Local0, 0x40)) //
                         {
                             Store (One, Local1)  // discharging
                         }
-                
+
                         Sleep (15)
                         // Store (ECRD (0xF910), Local0)
                         Store (ECR1 (0x16), Local0)  // CMD_READ_SOC
@@ -2001,10 +2001,10 @@ Scope(\_SB)
                         {
                             Or (Local1, 4, Local1)  // critical
                         }
-                
+
                         Store (Local1, Index (BSTP, Zero))
                         Sleep (15)
-                
+
                         // Switch (ECRD (0xFB5F))
                         Switch (ECR1 (0x2c))   // CMD_READ_BATTERY_TYPE
                         {
@@ -2024,21 +2024,21 @@ Scope(\_SB)
                                 Multiply (Local0, 28, Local2)
                             }
                         }
-                
+
                         Store (Local2, Index (BSTP, 2))
                         Release (ACMX)
                     }
-                
+
                     Return (BSTP)
                 }
             }
-    
+
             Device(RMSC) {   // all "PNP0C02" devices- pieces that don't fit anywhere else
                 Name(_HID,EISAID("PNP0C02"))        // Generic motherboard devices
                 Name (_UID, 0x13)
-            
+
                 Name(CRS,ResourceTemplate(){
-            
+
                     IO(Decode16,0x10,0x10,0x00,0x10)
                     IO(Decode16,0x22,0x22,0x00,0x1E)
                     IO(Decode16,0x44,0x44,0x00,0x1C)
@@ -2056,7 +2056,7 @@ Scope(\_SB)
                     IO(Decode16,0xA2,0xA2,0x00,0x1E)
                     IO(Decode16,0xE0,0xE0,0x00,0x10)
                     IO(Decode16,0x3E0,0x3E0,0x00,0x8)
-        
+
                     // Reserve  4D0 and 4D1 for IRQ edge/level control port
                     IO(Decode16, 0x4D0,0x4D0,0x00,0x2)
                     // ACPI IO base address allocation
@@ -2064,9 +2064,9 @@ Scope(\_SB)
                     // SMBus I/O space if applicable
                     IO(Decode16, 0, 0, 0, 0, IO1)
                     // SPI Memory Map IO Base
-                    Memory32Fixed(ReadWrite, 0x00000000, 0x00000000, MEM0)    
+                    Memory32Fixed(ReadWrite, 0x00000000, 0x00000000, MEM0)
                 })
-                
+
                 Method(_CRS, 0)
                 {
                     If(LEqual(\_SB.PCI0.VT86.ENIO, 0x01))   // If we should privide the DSDT, ACPI IO must be enabled.
@@ -2080,7 +2080,7 @@ Scope(\_SB)
                         Store(Local0, MAX0)
                         Store(0x80, LEN0)
                     }
-        
+
                     If(LEqual(\_SB.PCI0.VT86.ENSM, 0x01))
                     {
                         CreateWordField(CRS, ^IO1._MIN, MIN1)
@@ -2092,7 +2092,7 @@ Scope(\_SB)
                         Store(Local0, MAX1)
                         Store(0x10, LEN1)   // Length: 16 Byte
                     }
-                    
+
                     If(LNotEqual(\_SB.PCI0.VT86.SPIB, 0x00))
                     {
                         CreateDWordField(CRS, ^MEM0._BAS, BAS2)
@@ -2102,47 +2102,47 @@ Scope(\_SB)
                         Store(Local0, BAS2)
                         Store(0x100, LEN2)
                     }
-                    
+
                     Return(CRS)
                 }
             }
-       
+
         } // End of (VT86)
-    
-        Name(PICM, Package(){           
+
+        Name(PICM, Package(){
             // VIA VGA Device(Integrated Graphics Device)
             Package(){0x0001ffff, 0, \_SB.PCI0.VT86.LNKA, 0},   // VGA, INTA
-             
+
             //PCI Slot 1
             Package(){0x0008ffff, 0, \_SB.PCI0.VT86.LNKA, 0},   // Slot 1, INTA
             Package(){0x0008ffff, 1, \_SB.PCI0.VT86.LNKA, 0},   // Slot 1, INTB
             Package(){0x0008ffff, 2, \_SB.PCI0.VT86.LNKA, 0},   // Slot 1, INTC
             Package(){0x0008ffff, 3, \_SB.PCI0.VT86.LNKA, 0},   // Slot 1, INTD
-            
+
             //PCI Slot 2
             Package(){0x0009ffff, 0, \_SB.PCI0.VT86.LNKA, 0},   // Slot 2, INTA
             Package(){0x0009ffff, 1, \_SB.PCI0.VT86.LNKA, 0},   // Slot 2, INTB
             Package(){0x0009ffff, 2, \_SB.PCI0.VT86.LNKA, 0},   // Slot 2, INTC
             Package(){0x0009ffff, 3, \_SB.PCI0.VT86.LNKA, 0},   // Slot 2, INTD
-            
+
             //PCI Slot 3
             Package(){0x000Affff, 0, \_SB.PCI0.VT86.LNKA, 0},   // Slot 3, INTA
             Package(){0x000Affff, 1, \_SB.PCI0.VT86.LNKA, 0},   // Slot 3, INTB
             Package(){0x000Affff, 2, \_SB.PCI0.VT86.LNKA, 0},   // Slot 3, INTC
             Package(){0x000Affff, 3, \_SB.PCI0.VT86.LNKA, 0},   // Slot 3, INTD
-            
+
             // USB Device Controller
             Package(){0x000Bffff, 0, \_SB.PCI0.VT86.LNKA, 0},
-            
+
             // SDIO Controller
             Package(){0x000cffff, 0, \_SB.PCI0.VT86.LNKA, 0},
             // SD $ MS Controller
             Package(){0x000dffff, 0, \_SB.PCI0.VT86.LNKB, 0},
             // CE-ATA $ NF Controller(Card Boot)
             Package(){0x000effff, 0, \_SB.PCI0.VT86.LNKC, 0},
-            // VIA VX800 IDE                                    
+            // VIA VX800 IDE
             Package(){0x000fffff, 0, \_SB.PCI0.VT86.LNKB, 0},
-            
+
             // VIA UHCI USB1 Device
             Package(){0x0010ffff, 0, \_SB.PCI0.VT86.LNKA, 0},
             // VIA UHCI USB2 Device
@@ -2151,45 +2151,45 @@ Scope(\_SB)
             Package(){0x0010ffff, 2, \_SB.PCI0.VT86.LNKC, 0},
             // VIA EHCI USB 2.0 Device
             Package(){0x0010ffff, 3, \_SB.PCI0.VT86.LNKD, 0},
-              
-            // SB HDAC(Azalia) Audio                                    
+
+            // SB HDAC(Azalia) Audio
             Package(){0x0014ffff, 0, \_SB.PCI0.VT86.LNKA, 0},   // HD Audio, INTA
         })
-    
+
         Name(APIC, Package(){
             // VIA VGA Device(Integrated Graphics Device)
             Package(){0x0001ffff, 0, 0, 0x10},
-            
+
             //PCI Slot 1
             Package(){0x0008ffff, 0, 0, 0x10},
             Package(){0x0008ffff, 1, 0, 0x10},
             Package(){0x0008ffff, 2, 0, 0x10},
             Package(){0x0008ffff, 3, 0, 0x10},
-            
+
             //PCI Slot 2
             Package(){0x0009ffff, 0, 0, 0x10},
             Package(){0x0009ffff, 1, 0, 0x10},
             Package(){0x0009ffff, 2, 0, 0x10},
             Package(){0x0009ffff, 3, 0, 0x10},
-            
+
             //PCI Slot 3
             Package(){0x000Affff, 0, 0, 0x10},
             Package(){0x000Affff, 1, 0, 0x10},
             Package(){0x000Affff, 2, 0, 0x10},
             Package(){0x000Affff, 3, 0, 0x10},
-                
+
             // USB Device Controller
             Package(){0x000Bffff, 0, 0, 0x13},  // USBD, INTA
-            
+
             // SDIO Controller
             Package(){0x000cffff, 0, 0, 0x16},  // SDIO, INTA
             // SD $ MS Controller
             Package(){0x000dffff, 0, 0, 0x17},  // Card Reader, INTA
             // CE-ATA $ NF Controller(Card Boot)
             Package(){0x000effff, 0, 0, 0x14},  // Card Boot(NAND Flash), INTA
-            // VIA VX800 IDE   
+            // VIA VX800 IDE
             Package(){0x000fffff, 0, 0, 0x15},  //IDE, INTA
-            
+
             // VIA UHCI USB1 Device
             Package(){0x0010ffff, 0, 0, 0x14},
             // VIA UHCI USB2 Device
@@ -2198,44 +2198,44 @@ Scope(\_SB)
             Package(){0x0010ffff, 2, 0, 0x15},
             // VIA EHCI USB 2.0 Device
             Package(){0x0010ffff, 3, 0, 0x17},
-               
+
             // SB HDAC(Azalia) Audio
             Package(){0x0014ffff, 0, 0, 0x11},  //HD Audio , INTA
-            
+
         }) // end of APIX
-            
+
         Method(_PRT, 0, NotSerialized)
         {
             If(LNot(PICF))
             {
                 //PIC
-                Return(PICM) 
+                Return(PICM)
             } Else {
                 //APIC
-                Return(APIC) 
+                Return(APIC)
             }
         }
 
         Device(P2PB)
         {
-            Name (_ADR, 0x00130000) 
-        
+            Name (_ADR, 0x00130000)
+
             OperationRegion(RP2P,PCI_Config,0x00,0x100)
             Field(RP2P,ByteAcc,NoLock,Preserve){
-                Offset(0x00),   
-                VID,   16,      
-                Offset(0x04),   
+                Offset(0x00),
+                VID,   16,
+                Offset(0x04),
                 CMDR, 3,
                 Offset(0x19),
                 BUS1, 8,
             }
-        
-            Method(_BBN,0) 
+
+            Method(_BBN,0)
             {
                 Return(BUS1)
             }
-        
-            Method(_STA, 0) 
+
+            Method(_STA, 0)
             {
                 If(LNotEqual(\_SB.PCI0.P2PB.VID, 0x1106)) {
                     Return(0x00)
@@ -2247,61 +2247,61 @@ Scope(\_SB)
                     }
                 }
             }
-        
+
             Name(PIC4, Package(){
                 Package(){0x0003ffff, 0,\_SB.PCI0.VT86.LNKA , 0},
                 Package(){0x0003ffff, 1,\_SB.PCI0.VT86.LNKA , 0},
                 Package(){0x0003ffff, 2,\_SB.PCI0.VT86.LNKA , 0},
                 Package(){0x0003ffff, 3,\_SB.PCI0.VT86.LNKA , 0},
-        
+
                 Package(){0x0004ffff, 0,\_SB.PCI0.VT86.LNKA , 0},
                 Package(){0x0004ffff, 1,\_SB.PCI0.VT86.LNKA , 0},
                 Package(){0x0004ffff, 2,\_SB.PCI0.VT86.LNKA , 0},
                 Package(){0x0004ffff, 3,\_SB.PCI0.VT86.LNKA , 0},
-        
+
                 Package(){0x0005ffff, 0,\_SB.PCI0.VT86.LNKA , 0},
                 Package(){0x0005ffff, 1,\_SB.PCI0.VT86.LNKA , 0},
                 Package(){0x0005ffff, 2,\_SB.PCI0.VT86.LNKA , 0},
-                Package(){0x0005ffff, 3,\_SB.PCI0.VT86.LNKA , 0},          
+                Package(){0x0005ffff, 3,\_SB.PCI0.VT86.LNKA , 0},
             })
-            
+
             Name(API4, Package(){
                 Package(){0x0003ffff, 0, 0, 0x10},
                 Package(){0x0003ffff, 1, 0, 0x10},
                 Package(){0x0003ffff, 2, 0, 0x10},
                 Package(){0x0003ffff, 3, 0, 0x10},
-        
+
                 Package(){0x0004ffff, 0, 0, 0x10},
                 Package(){0x0004ffff, 1, 0, 0x10},
                 Package(){0x0004ffff, 2, 0, 0x10},
                 Package(){0x0004ffff, 3, 0, 0x10},
-        
+
                 Package(){0x0005ffff, 0, 0, 0x10},
                 Package(){0x0005ffff, 1, 0, 0x10},
                 Package(){0x0005ffff, 2, 0, 0x10},
                 Package(){0x0005ffff, 3, 0, 0x10},
             })
-            
+
             Method(_PRT, 0x0, NotSerialized)
             {
                 If(LNot(PICF))
-                {  
-                    Return(PIC4) 
+                {
+                    Return(PIC4)
                 } Else {
                     Return(API4)
                 }
             }
-        
+
             Method(_PRW, 0x00, NotSerialized)
             {
                 Return(Package(){0x05,4})   //PME#
-            }        
+            }
             Device(P4D3)
             {
                 Name(_ADR, 0x00030000)
             }
         }   // Device(P2PB)
-        
+
         Device (EC) {
             Name (_PRW, Package (0x02) {  0x01, 0x04 })     // Event 01, wakes from S4
 
@@ -2330,7 +2330,7 @@ Scope(\_SB)
                     UPUT (0x45)                   // E
                 }
                 If (LNotEqual(GPI9, TPOL)) {
-                    Store (GPI9, TPOL)  // (re)init edge detect 
+                    Store (GPI9, TPOL)  // (re)init edge detect
                 }
                 Return(GPI9)
             }
@@ -2354,7 +2354,7 @@ Scope(\_SB)
                 }
 
                 If (LNotEqual(GPI7, LPOL)) {
-                    Store (GPI7, LPOL)  // (re)init edge detect 
+                    Store (GPI7, LPOL)  // (re)init edge detect
                 }
 
                 Return(GPI7)
@@ -2365,16 +2365,16 @@ Scope(\_SB)
         Device(HDAC)
         {
             Name(_ADR, 0x00140000)
-            
+
             OperationRegion(RHDA,PCI_Config,0x00,0x100)
             Field(RHDA,ByteAcc,NoLock,Preserve){
-                Offset(0x00),   
-                VID,   16,      
-                Offset(0x04),   
+                Offset(0x00),
+                VID,   16,
+                Offset(0x04),
                 CMDR, 3,
             }
-        
-            Method(_STA, 0) 
+
+            Method(_STA, 0)
             {
                 If(LNotEqual(\_SB.PCI0.HDAC.VID, 0x1106)) {
                     Return(0x00)
@@ -2386,22 +2386,22 @@ Scope(\_SB)
                     }
                 }
             }
-            
+
             Method(_PRW)
             {
                 Return (Package(){0xD, 4})
             }
         }//Device(HDAC)
-        
+
     } // Device(PCI0)
-            
+
     //-----------------------------------------------------------------------
     // System board extension Device node for ACPI BIOS
     //-----------------------------------------------------------------------
     /*
-        
+
     Procedure:      RMEM
-        
+
     Description:    System board extension Device node for ACPI BIOS
     Place the device under \_SB scope, As per Msft the MEM
     Device is used to reserve Resources that are decoded out of PCI Bus
@@ -2418,13 +2418,13 @@ Scope(\_SB)
     by the device; Win2000 never use such ROM regions for its devices. Therefore there can be different
     approach used for different OSes in reservation unclaimed memory in "SYSM" Device node.
     is forwarded to PCI Bus
-        
+
     Input: Nothing
-        
+
     Output: _CRS buffer
-        
+
     **************************************************************************/
-        
+
     Device(RMEM) {
         Name(_HID, EISAID("PNP0C01"))       // Hardware Device ID, System Board
         Name(_UID, 1)
@@ -2439,7 +2439,7 @@ Scope(\_SB)
             // Base Address 1M - Top of system present memory
             Memory32Fixed(ReadWrite,0x100000,0x00000, RAM3) //Writeable
         })
-        
+
         Method (_CRS, 0)
         {
             CreateDWordField(CRS, ^RAM1._BAS, BAS1)
@@ -2447,7 +2447,7 @@ Scope(\_SB)
             CreateDWordField(CRS, ^RAM2._BAS, BAS2)
             CreateDWordField(CRS, ^RAM2._LEN, LEN2)
             CreateDWordField(CRS, ^RAM3._LEN, LEN3)
-        
+
             //RAM3
             Store(\_SB.PCI0.MEMC.LTMA, Local0)
             ShiftLeft(Local0, 0x10, Local2)
@@ -2467,10 +2467,10 @@ Scope(\_SB)
                 Subtract(Local2, Local5, Local2)    // Subtract Top SM RAM Size
             }
             Subtract(Local2, 0x100000, LEN3)
-        
+
             Return(CRS)
         }
     }
-        
+
 }//Scope(\_SB)
 }
