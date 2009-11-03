@@ -173,9 +173,12 @@ false value already-go?	\ sun4/reenter.fth
 \ From reenter.fth
 headerless
 nuser aborted?      aborted? off
+1 value allow-user-aborts?  \ Must be 0/1 instead of false/true because of the incrementing in the low-level handler
+: enable-user-aborts  ( -- )  1 to allow-user-aborts?  ;
+: disable-user-aborts  ( -- )  0 to allow-user-aborts?  ;
 
 headers
-: user-abort  ( -- )  1 aborted? ! ;
+: user-abort  ( -- )  allow-user-aborts? aborted? ! ;
 headerless
 
 \ System and version identification

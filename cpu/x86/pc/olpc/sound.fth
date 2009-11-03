@@ -40,6 +40,9 @@ h# -9 constant default-volume
 : sound-end  ( -- )
    " wait-sound" ['] $call-audio catch  if  2drop  then
 ;
+: stop-sound  ( -- )
+   " stop-sound" ['] $call-audio catch  if  2drop  then
+;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

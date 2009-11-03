@@ -550,7 +550,6 @@ true                               ' client-symbols?  set-config-int-default
    cursor-off
    true to text-on?
 
-
    " //null" open-dev to null-ih  \ For text-off state
 
    ?gui-banner
@@ -639,6 +638,7 @@ true                               ' client-symbols?  set-config-int-default
    ?factory-mode
    ?factory-boot-sequence
 
+   disable-user-aborts
    console-start
 
    board-revision 0=  if
@@ -687,6 +687,8 @@ true                               ' client-symbols?  set-config-int-default
    blue-letters ." Type 'help' for more information." black-letters
    cr cr
 
+   enable-user-aborts
+   stop-sound   
    quit
 ;
 

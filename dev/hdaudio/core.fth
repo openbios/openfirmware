@@ -450,7 +450,6 @@ false value playing?
 ;
 
 : write-done  ( -- )
-   wait-stream-done
    stop-stream
    free-bdl
    release-sound-buffer
@@ -460,12 +459,21 @@ false value playing?
    4 to sd#  audio-out  install-playback-alarm  true to playing?
 ;
 
+false value stop-lock
+: stop-sound  ( -- )
+   true to stop-lock
+   playing?  if  write-done  false to playing?  then
+   false to stop-lock
+;
+
 \ Alarm handle to stop the stream when the content has been played.
 : playback-completed-alarm  ( -- )
-   sd#                                                    ( sd# )
-   4 to sd#                                               ( sd# )
-   stream-done?  if  write-done  false to playing?  then  ( sd# )
-   to sd#                                                 ( )
+   stop-lock  if  exit  then
+   playing?  if
+      sd#  4 to sd#                                          ( sd# )
+      stream-done?  if  write-done  false to playing?  then  ( sd# )
+      to sd#                                                 ( )
+   then
 ;
 
 ' playback-completed-alarm is playback-alarm
