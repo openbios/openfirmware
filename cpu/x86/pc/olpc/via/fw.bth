@@ -109,6 +109,8 @@ stand-init: MMU
 ;
 [then]
 
+fload ${BP}/cpu/x86/acpiio.fth          \ ACPI register access
+
 fload ${BP}/cpu/x86/pc/olpc/via/probemem.fth	\ Memory probing
 
 [ifdef] virtual-mode

@@ -1,16 +1,10 @@
 \ See license at end of file
 purpose: Timing functions using the ACPI timer
 
-: acpi-b@  ( reg# -- b )  acpi-io-base + pc@  ;
-: acpi-b!  ( b reg# -- )  acpi-io-base + pc!  ;
-: acpi-w@  ( reg# -- w )  acpi-io-base + pw@  ;
-: acpi-w!  ( w reg# -- )  acpi-io-base + pw!  ;
-: acpi-l@  ( reg# -- l )  acpi-io-base + pl@  ;
-: acpi-l!  ( l reg# -- )  acpi-io-base + pl!  ;
-
 \ The ACPI timer counts at 3.579545 MHz.
 \ 3.579545 * 1024 is 3665
 : acpi-timer@  ( -- counts )  8 acpi-l@  ;
+
 : acpi-us  ( us -- )
    d# 3664 * d# 10 rshift  acpi-timer@ +  ( end )
    begin   dup acpi-timer@ -  0< until    ( end )
@@ -22,26 +16,44 @@ purpose: Timing functions using the ACPI timer
    drop
 ;
 
-[ifdef] tsc@
 : acpi-calibrate-tsc  ( -- )
    tsc@  d# 100 acpi-ms  tsc@           ( d.start d.end )
    2swap d-                             ( d.delta )
    2dup d# 100 um/mod nip to ms-factor  ( d.delta ms )
    d# 100,000  um/mod nip to us-factor  ( )
 ;
-[else]
+
+[ifdef] use-acpi-timing
 : us  ( us -- )  acpi-us  ;
 ' acpi-ms to ms
+
 \ Timing tools
 variable timestamp1
 : t(  ( -- )  acpi-timer@ timestamp1 ! ;
+: ))t1  ( -- ticks )  acpi-timer@  timestamp1 @  -  ;
 : )t  ( -- )
-   acpi-timer@  timestamp1 @  -  d# 1000 d# 3580 */  ( microseconds )
+   ))t1  d# 1000 d# 3580 */  ( microseconds )
    push-decimal
    <#  u# u# u#  [char] , hold  u# u#s u#>  type  ."  uS "
    pop-base
 ;
-
+: ))t-sec  ( -- sec )    ))t1  d# 3,580,000 /  ;
+: )t-sec  ( -- )
+   ))t-sec  ( seconds )
+   push-decimal
+   <# u# u#s u#>  type  ." S "
+   pop-base
+;
+: .hms  ( seconds -- )
+   d# 60 /mod   d# 60 /mod    ( sec min hrs )
+   push-decimal
+   <# u# u#s u#> type ." :" <# u# u# u#> type ." :" <# u# u# u#>  type
+   pop-base
+;
+: )t-hms
+   ))t-sec  d# 3,580,000 /  ( seconds )
+   .hms
+;
 [then]
 
 \ LICENSE_BEGIN

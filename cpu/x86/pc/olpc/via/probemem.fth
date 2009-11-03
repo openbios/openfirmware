@@ -6,6 +6,7 @@ purpose: Create memory node properties and lists
 : total-ram  ( -- ramsize )
    total-ram-cached ?dup  if  exit  then
    h# 385 config-b@ d# 24 lshift
+   h# 48 acpi-l@ h# 1000.0000 and  if  2/  then  \ Account for possible 32-bit width
    dup to total-ram-cached
 ;
 

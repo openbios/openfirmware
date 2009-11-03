@@ -38,6 +38,7 @@ d# 262 value us-factor
 : (ms)  ( #ms -- )  0  ?do  1ms  loop  ;
 ' (ms) to ms
 
+[ifdef] use-tsc-timing   \ These are precise but inaccurate, as the TSC varies with clock throttling
 \ Timing tools
 2variable timestamp
 : t(  ( -- )  tsc@ timestamp 2! ;
@@ -64,6 +65,7 @@ d# 262 value us-factor
    ))t  us-factor d# 1,000,000 *  um/mod nip  ( seconds )
    .hms
 ;
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

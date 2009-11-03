@@ -12,8 +12,7 @@ stand-init: PCI host bridge
 
 fload ${BP}/dev/pciprobe.fth		\ Generic PCI probing
 
-\ Use the CPU chip's Time Stamp Counter for timing; it does just what we want
-fload ${BP}/cpu/x86/tsc.fth
+fload ${BP}/cpu/x86/tsc.fth             \ Timestamp counter access words
 
 \ Calibrate the Time Stamp Counter using the ACPI timer
 fload ${BP}/cpu/x86/acpitimer.fth

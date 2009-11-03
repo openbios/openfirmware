@@ -28,6 +28,7 @@ create use-elf
 
 \ create use-timestamp-counter \ Use CPU's timestamp counter for timing ...
 			\ ... this is worthwhile if your CPU has one.
+create use-acpi-timing
 
 create resident-packages
 \ create use-watch-all
