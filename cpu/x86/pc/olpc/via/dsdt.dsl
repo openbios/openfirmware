@@ -35,6 +35,9 @@ OperationRegion (UART, SystemIO, 0x03f8, 0x07)
 // set to 1 to enable debug output
 Name (UDBG, 0)
 
+// set to 1 to enable LID wakeups on both open/close
+Name (LIDX, 0)
+
 Field (UART, ByteAcc, NoLock, Preserve)
 {
     UDAT,   8, 
@@ -147,9 +150,9 @@ Field(\GPST, ByteAcc, NoLock, Preserve) {
 OperationRegion(GPIO, SystemIO, 0x0448, 0x4)
 Field(GPIO, ByteAcc, NoLock, Preserve) {
         ,7,
-    GPI7,1,
+    GPI7,1,     // lid
         ,1,
-    GPI9,1,
+    GPI9,1,     // ebook
         ,22,
 }   
 
@@ -254,7 +257,7 @@ Scope(\_GPE)
 
     Method(_L0B) {          // LID event
         UPUT (0x66)         // f
-        Not(LPOL, LPOL)     // Flip the lid polarity bit
+        Store (GPI7, LPOL)  // set edge detect from current lid state
         Notify(\_SB.PCI0.LID, 0x80)
     }
 
@@ -316,6 +319,10 @@ Method(_WAK, 1, Serialized)
 
     Or (Arg0, 0xB0,  Local0)
     Store (Local0, DBG1)    //80 Port: B1, B2, B3....
+
+    // always want to hear both lid events when awake
+    Store (GPI7, LPOL)  // watch either edge
+
     Return (0)
 }
 
@@ -326,6 +333,9 @@ Method (_PTS, 1, NotSerialized)
 {
     Or (Arg0, 0xF0,  Local0)
     Store (Local0, DBG1)    //80 Port: F1, F2, F3....
+
+    // if (LIDX == 0), wake on rising edge only, else watch either
+    Store (And(LIDX, GPI7), LPOL)
 
     IF (LEqual(Arg0, 0x01))       // S1
     {
@@ -2314,13 +2324,15 @@ Scope(\_SB)
             }
 
             Method(EBK) {
-                If (TPOL) {
-                    // non-zero means waiting for fall, so switch is open
+                If (GPI9) { // non-zero --> switch is open
                     UPUT (0x65)                   // e
                 } Else {
                     UPUT (0x45)                   // E
                 }
-                Return(TPOL)
+                If (LNotEqual(GPI9, TPOL)) {
+                    Store (GPI9, TPOL)  // (re)init edge detect 
+                }
+                Return(GPI9)
             }
         }  // Device(EBK)
 
@@ -2335,13 +2347,17 @@ Scope(\_SB)
 
 
             Method(_LID) {
-                If (LPOL) {
-                    // non-zero means waiting for fall, so switch is open
+                If (GPI7) { // non-zero --> switch (and lid) is open
                     UPUT (0x6c)                   // l
                 } Else {
                     UPUT (0x4c)                   // L
                 }
-                Return(LPOL)
+
+                If (LNotEqual(GPI7, LPOL)) {
+                    Store (GPI7, LPOL)  // (re)init edge detect 
+                }
+
+                Return(GPI7)
             }
 
         }  // Device(LID)
