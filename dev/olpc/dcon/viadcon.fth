@@ -28,10 +28,12 @@
 \ h# 4000 constant DM_DEBUG
 \ h# 8000 constant DM_SELFTEST
 
+: b3+?  ( -- flag )  board-revision h# d28 >=  ;
+
 \ Enable SMBALRT# IRQ as DCON IRQ
-: dcon-enable-irq  ( -- )  8 8 smb-reg!  ;
+: dcon-enable-irq  ( -- )  b3+?  if  exit  then  8 8 smb-reg!  ;
 \ Disable SMBALRT# IRQ as DCON IRQ; leaving it enabled causes spurious S3 wakeups
-: dcon-disable-irq  ( -- )  0 8 smb-reg!  ;
+: dcon-disable-irq  ( -- )  b3+?  if exit  then  0 8 smb-reg!  ;
 
 : dcon-load  ( -- )
    atest?  if
@@ -49,8 +51,8 @@
 ;
 : dcon-blnk?  ( -- flag )  h# 4a acpi-b@ 4 and 0<>  ;
 : dcon-stat@  ( -- n )  h# 4b acpi-b@ 3 and  ;
-: dcon-irq?  ( -- flag )  1 smb-reg@ h# 20 and 0<>  ;
-: dcon-clr-irq  ( -- )  h# 20 1 smb-reg!  ;
+: dcon-irq?  ( -- flag )  b3+?  if  4a acpi-b@ h# 40  else  1 smb-reg@ h# 20  then  and 0<>  ;
+: dcon-clr-irq  ( -- )  b3+?  if  exit  then  h# 20 1 smb-reg!  ;
 
 \ DCONSTAT values:  0 SCANINT  1 SCANINT_DCON  2 DISPLAYLOAD  3 MISSED
 
@@ -72,15 +74,16 @@ d# 905 value resumeline  \ Configurable; should be set from args
 
 : wait-dcon-mode  ( -- )
    dcon-enable-irq
-   d# 100 ms-factor *  tsc@ drop +  ( end-time )
+   8 acpi-l@  d# 357,955 +   ( end-time )  \ 100 ms timeout
    begin                            ( end-time )
       dcon-irq?  if
          dcon-disable-irq
          dcon-stat@  dcon-clr-irq  2 =  if  \ DCONSTAT=10
             drop exit   
          then            
+         dcon-enable-irq
       then
-      dup tsc@ drop - 0<            ( end-time reached? )
+      dup 8 acpi-l@ - 0<            ( end-time reached? )
    until                            ( end-time )
    drop
    dcon-disable-irq
@@ -194,46 +197,6 @@ d# 905 value resumeline  \ Configurable; should be set from args
    gp-setup
    1 set-source  \ Unfreeze image
 ;
-
-0 [if]
-dconstat dconblnk or dconirq or  constant in-gpios  
-dconload constant out-gpios
-
-: dcon-gpio-init  ( -- )
-   out-gpios in-gpios wljoin  OUT_EN gpio!
-   in-gpios out-gpios wljoin  IN_EN  gpio!
-
-   dconirq     >set  INV_EN gpio!
-
-   dconirq dconblnk or             ( events )
-
-\ Linux doesn't want me to turn these on
-\   dup >set  EVNT_EN     gpio!
-\   dup >set  IN_FLTR_EN  gpio!   \ Enable counter for GPIO7 (DCONIRQ)
-\   dup >clr  EVNTCNT_EN  gpio!
-\    d# 12     gpio-base h# f7 + rb!     \ GPIO_FE7_SEL
-\    dup >clr  h# 44             gpio!   \ NEGEDGE_EN
-
-\    0  gpio-base h# d8 +        rw!     \ GPIO_FLTR7_AMNT
-
-   h# e0 gpio@  h# 0fff.ffff and  h# 2000.0000 or  h# e0 gpio!  \ p512 Map X
-   h# e4 gpio@  h# fff0.ffff and  h# 0000.0000 or  h# e4 gpio!  \ p511 Map Y
-
-[ifdef] dcon-interrupts
-   h# 5140.0023 rdmsr  ( lo hi )  drop  ( lo )
-   h# ff0f.fffff and  h# 0050.0000 or  0 wrmsrl  \ p 381 unrestricted Z
-   0  h# 4d0  pc!  \ IRQs 0-7 edge sensitive
-[then]
-
-   ( events )
-   dup >set  IN_EN  gpio!
-   >set h# 4c gpio!   \ GPIOL_NEGEDGE_STS - clear detected edges
-
-   dcon-load
-
-   \ ['] dcon-interrupt 5 request_irq
-;
-[then]
 
 0 value dcon-found?
 
