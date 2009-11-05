@@ -20,6 +20,9 @@ d# 500 constant bulk-out-timeout
 0 instance value bulk-out-qh		\ For begin-bulk-out-ring ...
 0 instance value bulk-out-qtd		\ For begin-bulk-out-ring ...
 
+0 instance value my-bulk-qh             \ Cannot use my-qh because unstall-pipe kills it
+0 instance value my-bulk-qtd
+
 : bulk-in-data@         ( -- n )  bulk-in-pipe  target di-in-data@   di-data>td-data  ;
 : bulk-out-data@        ( -- n )  bulk-out-pipe target di-out-data@  di-data>td-data  ;
 : bulk-in-data!         ( n -- )  td-data>di-data bulk-in-pipe  target di-in-data!   ;
@@ -443,43 +446,43 @@ external
    debug?  if  ." bulk-in" cr  then
    dup to bulk-in-pipe
    process-bulk-args
-   ?alloc-bulk-qhqtds  to my-qtd  to  my-qh
-   bulk-in-timeout my-qh >qh-timeout l!
+   ?alloc-bulk-qhqtds  to my-bulk-qtd  to  my-bulk-qh
+   bulk-in-timeout my-bulk-qh >qh-timeout l!
 
    \ IN qTDs
-   TD_PID_IN my-qtd fill-bulk-io-qtds
+   TD_PID_IN my-bulk-qtd fill-bulk-io-qtds
 
    \ Start bulk in transaction
-   my-qh pt-bulk fill-qh
-   my-qh insert-qh
+   my-bulk-qh pt-bulk fill-qh
+   my-bulk-qh insert-qh
 
    \ Process results
-   my-qh done?  if
+   my-bulk-qh done?  if				( )
       0						( actual )	\ System error, timeout
-   else
-      my-qh error?  if
+   else						( )
+      my-bulk-qh error?  if			( )
          0					( actual )	\ USB error
-      else
-         my-qtd dup my-#qtds get-actual				( qtd actual )
+      else					( )
+         my-bulk-qtd dup my-#qtds get-actual	( qtd actual )
          over >qtd-buf l@ rot >qtd-pbuf l@ 2 pick dma-sync	( actual )
-      then
-   then
+      then					( actual )
+   then						( actual )
 
    usb-error					( actual usberr )
-   my-qtd map-out-bptrs
-   my-qh dup fixup-bulk-in-data
-   remove-qh
+   my-bulk-qtd map-out-bptrs			( actual usberr )
+   my-bulk-qh dup fixup-bulk-in-data		( actual usberr )
+   remove-qh					( actual usberr )
 ;
 
 0 instance value bulk-out-busy?
 : done-bulk-out  ( -- error? )
    \ Process results
-   my-qh done? 0=  if  my-qh error? drop  then
+   my-bulk-qh done? 0=  if  my-bulk-qh error? drop  then
 
    usb-error				( usberr )
-   my-qtd map-out-bptrs			( usberr )
-   my-qh fixup-bulk-out-data		( usberr )
-   my-qh remove-qh			( usberr )
+   my-bulk-qtd map-out-bptrs		( usberr )
+   my-bulk-qh fixup-bulk-out-data	( usberr )
+   my-bulk-qh remove-qh			( usberr )
    false to bulk-out-busy?		( usberr )
 ;
 : start-bulk-out  ( buf len pipe -- usberr )
@@ -490,16 +493,16 @@ external
    debug?  if  ." bulk-out" cr  then
    dup to bulk-out-pipe			( buf len pipe )
    process-bulk-args			( )
-   ?alloc-bulk-qhqtds  to my-qtd  to my-qh	( )
-   bulk-out-timeout my-qh >qh-timeout l!	( )
-   my-qh >hcqh-overlay >hcqtd-token dup le-l@ TD_STAT_PING or swap le-l!
+   ?alloc-bulk-qhqtds  to my-bulk-qtd  to my-bulk-qh	( )
+   bulk-out-timeout my-bulk-qh >qh-timeout l!		( )
+   my-bulk-qh >hcqh-overlay >hcqtd-token dup le-l@ TD_STAT_PING or swap le-l!
 
    \ OUT qTDs
-   TD_PID_OUT my-qtd fill-bulk-io-qtds	( )
+   TD_PID_OUT my-bulk-qtd fill-bulk-io-qtds		( )
 
    \ Start bulk out transaction
-   my-qh pt-bulk fill-qh		( )
-   my-qh insert-qh			( )
+   my-bulk-qh pt-bulk fill-qh		( )
+   my-bulk-qh insert-qh			( )
    true to bulk-out-busy?		( )
    0					( usberr )
 ;
