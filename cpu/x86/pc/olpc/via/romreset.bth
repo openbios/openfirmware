@@ -116,16 +116,21 @@ label startup
 \ This is a device ID backdoor to fake out the ID so Ubuntu will install
 \   8879 config-rb  h# 40 # al or  al dx out  \ I don't know what this is, but coreboot does it
 
-   fload ${BP}/cpu/x86/pc/olpc/via/starthostctl.fth
-
    acpi-io-base 1 + 8888 config-ww   \ Set ACPI base address
    acpi-io-base wbsplit 0292 config-wb  0293 config-wb  \ ACPI base address for C-states, big-endian
 
 [ifdef] debug-startup
    cominit #) call
 [then]
-
    char + report
+
+   fload ${BP}/cpu/x86/pc/olpc/via/starthostctl.fth
+
+[ifdef] debug-startup
+\   cominit #) call
+[then]
+
+\   char + report
    long-offsets on
 
    acpi-io-base 4 + port-rw           \ Get APCI Status register
@@ -144,8 +149,10 @@ label startup
    \ This must be done in both the power-up and resume-from-S3 cases,
    \ since the registers in D17F7 lose state during S3.
 
-   0385 config-rb  ax bx mov  8fe5 config-setup  bx ax mov  al dx out  \ Copy Low Top from reg 85 to SB Low Top e5
-   0385 config-rb  ax bx mov  8f60 config-setup  bx ax mov  al dx out  \ Copy Low Top from reg 85 to SB Bank 7 end 60
+    80 8fe5 config-wb  \ Phoenix value
+    80 8f60 config-wb  \ Phoenix value
+\   0385 config-rb  ax bx mov  8fe5 config-setup  bx ax mov  al dx out  \ Copy Low Top from reg 85 to SB Low Top e5
+\   0385 config-rb  ax bx mov  8f60 config-setup  bx ax mov  al dx out  \ Copy Low Top from reg 85 to SB Bank 7 end 60
       
 \   d# 17 7 devfunc
 \   e6 ff 07 mreg \ Enable Top, High, and Compatible SMM
@@ -251,7 +258,7 @@ long-offsets off
    char o report
    h# 1e port80
 
-\   fload ${BP}/cpu/x86/pc/olpc/via/startgtlinit.fth
+   fload ${BP}/cpu/x86/pc/olpc/via/startgtlinit.fth
 
 \ Enable the keyboard controller
    

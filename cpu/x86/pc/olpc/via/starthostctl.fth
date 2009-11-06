@@ -1,7 +1,7 @@
  \ enable_mainboard_devices()
 \  41 8f4f config-wb   \ Enable P2P Bridge Header for External PCI Bus (coreboot value)
-\  43 8f4f config-wb   \ As above, plus support extended PCIe config space
-    1 8f4f config-wb   \ Disable P2P bridge
+   43 8f4f config-wb   \ As above, plus support extended PCIe config space
+\   1 8f4f config-wb   \ Disable P2P bridge
 
 \  4f6 config-rb   \ Get Northbridge revision ... don't need it because the
                    \ init table contains no revision-specific entries
@@ -11,7 +11,8 @@
    \ Enable extended config space for PCIe
    0 5 devfunc  \ NB_APIC
    61 ff 0e mreg  \ Set Exxxxxxx as PCIe MMIO config range
-   60 f4 13 mreg  \ Support extended cfg address of PCIe (preserve 28 bits) (coreboot used vx800 bit resv in vx855)
+\   60 f4 13 mreg  \ Support extended cfg address of PCIe (preserve 28 bits) (coreboot used vx800 bit resv in vx855)
+   60 fc 13 mreg  \ Support extended cfg address of PCIe (preserve 28 bits) (coreboot used vx800 bit resv in vx855), Phoenix value
    end-table
 
    0 2 devfunc  \ HOST CPU CTL
@@ -23,7 +24,7 @@
    53 ff 44 mreg  \ Arbitration: Host/Master Occupancy timer = 4*4 HCLK
    54 1e 1c mreg  \ Misc Ctrl: Enable 8QW burst Mem Access
 
-   55 06 04 mreg  \ Miscellaneous Control 2
+   55 06 04 mreg  \ Miscellaneous Control 2 - Several T faster read cycle
    56 f7 63 mreg  \ Write Policy 1
    57 01 01 mreg  \ Enable fast TRDY by detecting HREQa[5]# de-assertion
    5d ff a2 mreg  \ Write Policy
@@ -55,6 +56,7 @@
    51 80 80 mreg  \ Last step - enable DRDY timing
 [then]
 [ifdef] xo-board
+.( HELLO) cr
    60 ff 2a mreg  \ DRDY Timing Control 1 for Read Line
    61 ff 00 mreg  \ DRDY Timing Control 2 for Read Line
    62 ff 00 mreg  \ Reserved, probably channel B

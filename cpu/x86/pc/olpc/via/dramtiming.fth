@@ -32,7 +32,8 @@ d#   5.00 value Tck
 \ DDR-400 timings for HY5PS1G4831C
 d#   5.00 to Tck
 
-d# 127.50 constant Trfc
+\ d# 127.50 constant Trfc
+d# 125.00 constant Trfc  \ Fudged to get same setting as Phoenix
 d#   7.50 constant Trrd
 \ d#  10.00 constant Trrd
 d#      3 constant TCL
@@ -86,7 +87,8 @@ rank-top0 constant rank-base1  rank-base0 rank-size + constant rank-top1
 rank-size #ranks * constant total-size
 [then]
 
-h# 400.0000 constant /fbmem
+\ h# 400.0000 constant /fbmem
+h# 1000.0000 constant /fbmem
 : >fbmem-base  ( size/64M -- low high )
    d# 26 lshift           ( memsize-in-bytes )
    /fbmem -               ( memsize-less-framebuf-size )

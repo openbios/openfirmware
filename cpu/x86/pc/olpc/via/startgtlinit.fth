@@ -1,5 +1,9 @@
 \ After-the-fact tweaks to ROMSIP values
 0 2 devfunc
+   c0 ff 75 mreg
+   c5 ff 20 mreg
+   c8 ff 04 mreg
+0 [if]
    70 ff 55 mreg
    71 ff aa mreg
    72 ff 66 mreg
@@ -56,4 +60,5 @@
    c9 00 00 mreg
    ca b7 10 mreg
    cb b7 04 mreg
+[then]
 end-table

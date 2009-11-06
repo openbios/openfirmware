@@ -33,7 +33,8 @@
    end-table
 
    1 0 devfunc
-   b0 07 03 mreg \ VGA memory selection (coreboot uses 03, Phoenix 01.  I think 03 is correct)
+\   b0 07 03 mreg \ VGA memory selection (coreboot uses 03, Phoenix 01.  I think 03 is correct)
+   b0 07 01 mreg \ VGA memory selection (coreboot uses 03, Phoenix 01.  I think 03 is correct)
    end-table
 
    01 3c3 port-wb                  \ Graphics chip IO port access on
@@ -44,8 +45,13 @@
    68 3c4 port-wb  ( size ) 3c5 port-wb  \ Size of System Local Frame Buffer - Value depends on frame buffer size
                                    \ 00:512MB 80:256MB c0:128MB e0:64MB f0:32MB f8:16MB fc:8MB fe:4MB ff:2MB
 
-   \ These 2 are scratch registers that communicate with the VGA BIOS
-   3d 3d4 port-wb  74 3d5 port-wb  \ Value depends on DIMM frequency - used by VGA BIOS
+   \ These are scratch registers that communicate from the VGA BIOS to the OS driver
+   3b 3d4 port-wb  02 3d5 port-wb  \ TV standard
+   3c 3d4 port-wb  08 3d5 port-wb  \ Don't know what this is
+   3d 3d4 port-wb  64 3d5 port-wb  \ Value depends on DIMM frequency - 6 in high nibble is DDR-400
+   3e 3d4 port-wb  20 3d5 port-wb  \ Active device
+   3f 3d4 port-wb  0b 3d5 port-wb  \ Panel size
+
    39 3c4 port-wb  /fbmem d# 22 rshift  3c5 port-wb  \ BIOS Reserved Register 0 - FBsize_MiB/4 - VGA BIOS
 
    5a 3c4 port-wb  01 3c5 port-wb  \ Point to secondary registers

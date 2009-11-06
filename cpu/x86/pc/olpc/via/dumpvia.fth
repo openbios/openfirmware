@@ -12,41 +12,47 @@ hex
 : seq@  ( index -- value )  h# 3c4 pc!  h# 3c5 pc@  ;
 : grf@  ( index -- value )  h# 3ce pc!  h# 3cf pc@  ;
 : crt@  ( index -- value )  h# 3d4 pc!  h# 3d5 pc@  ;
-: seq.  ( adr len -- )  bounds  ?do  i c@ seq@ 3 u.r  loop  ;
+: .byte  ( n -- )  push-hex 2 0.r space  pop-base  ;
+: seq.  ( adr len -- )  bounds  ?do  i c@ seq@ .byte  loop  ;
 : .regular
-   ." ATR " h# 15 0 do i attr@ 3 u.r loop  cr
+   ." == VGA Registers - A=Attribute G=Graphics C=CRT S=Sequencer" cr
+   ."       0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f" cr
+   ." MSC: " h# 3cc pc@ .byte cr
+   ." A00: " h# 10     0 do i attr@ .byte loop cr
+   ." A10: " h# 15 h# 10 do i attr@ .byte loop cr
    h# 20 video-mode!
-   ." SEQ " 5 0 do i seq@ 3 u.r loop  cr
-   ." GRF " 9 0 do i grf@ 3 u.r loop  cr
-."       0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f" cr
-   ." C00 " h# 10     0 do i crt@ 3 u.r loop  cr
-   ." C10 " h# 19 h# 10 do i crt@ 3 u.r loop  cr
+   ." G00: "     9     0 do i grf@ .byte loop cr
+   ." G20: " h# 23 h# 20 do i grf@ .byte loop cr
 ;
-: .sextended
-   ." S10 " h# 1f h# 10 do i seq@ 3 u.r loop cr
-   ." S20 " " "(20 21 22 26 2a 2b 2c 2d 2e)" seq. cr
-   ." S30 " " "(31 35 36 3c 3d 3e 3f)" seq. cr
-   ." S40 " h# 50 h# 40 do i seq@ 3 u.r loop cr
-   ." S50 " h# 60 h# 50 do i seq@ 3 u.r loop cr
-   ." S60 " h# 70 h# 60 do i seq@ 3 u.r loop cr
-   ." S70 " h# 80 h# 70 do i seq@ 3 u.r loop cr
-   ." SA8 " h# b0 h# a8 do i seq@ 3 u.r loop cr
-   ." G20 " h# 23 h# 20 do i grf@ 3 u.r loop cr
+: .seq
+   ." S00: " h# 10     0 do i seq@ .byte loop cr
+   ." S10: " h# 20 h# 10 do i seq@ .byte loop cr
+\   ." S20 " " "(20 21 22 26 2a 2b 2c 2d 2e)" seq. cr
+\   ." S30 " " "(31 35 36 3c 3d 3e 3f)" seq. cr
+   ." S20: " h# 30 h# 20 do i seq@ .byte loop cr
+   ." S30: " h# 40 h# 30 do i seq@ .byte loop cr
+   ." S40: " h# 50 h# 40 do i seq@ .byte loop cr
+   ." S50: " h# 60 h# 50 do i seq@ .byte loop cr
+   ." S60: " h# 70 h# 60 do i seq@ .byte loop cr
+   ." S70: " h# 80 h# 70 do i seq@ .byte loop cr
+   ." SA0: " h# b0 h# a0 do i seq@ .byte loop cr
 ;
-: .cextended
-   ." C30 " h# 40 h# 30 do i crt@ 3 u.r loop cr
-   ." C40 " h# 49 h# 40 do i crt@ 3 u.r loop cr
-   ." C50 " h# 60 h# 50 do i crt@ 3 u.r loop cr
-   ." C60 " h# 70 h# 60 do i crt@ 3 u.r loop cr
-   ." C70 " h# 80 h# 70 do i crt@ 3 u.r loop cr
-   ." C80 " h# 90 h# 80 do i crt@ 3 u.r loop cr
-   ." C90 " h# a0 h# 90 do i crt@ 3 u.r loop cr
-   ." CA0 " h# b0 h# a0 do i crt@ 3 u.r loop cr
-   ." CD0 " h# e0 h# d0 do i crt@ 3 u.r loop cr
-   ." CE0 " h# f0 h# e0 do i crt@ 3 u.r loop cr
-   ." CF0 " h# fd h# f0 do i crt@ 3 u.r loop cr
+: .crt
+   ." C00: " h# 10     0 do i crt@ .byte loop cr
+   ." C10: " h# 20 h# 10 do i crt@ .byte loop cr
+   ." C30: " h# 40 h# 30 do i crt@ .byte loop cr
+   ." C40: " h# 50 h# 40 do i crt@ .byte loop cr
+   ." C50: " h# 60 h# 50 do i crt@ .byte loop cr
+   ." C60: " h# 70 h# 60 do i crt@ .byte loop cr
+   ." C70: " h# 80 h# 70 do i crt@ .byte loop cr
+   ." C80: " h# 90 h# 80 do i crt@ .byte loop cr
+   ." C90: " h# a0 h# 90 do i crt@ .byte loop cr
+   ." CA0: " h# b0 h# a0 do i crt@ .byte loop cr
+   ." CD0: " h# e0 h# d0 do i crt@ .byte loop cr
+   ." CE0: " h# f0 h# e0 do i crt@ .byte loop cr
+   ." CF0: " h# fd h# f0 do i crt@ .byte loop cr
 ;
-: .dpy  .regular .cextended .sextended  ;
+: .dpy  .regular .crt .seq  ;
 
 \ b0 8b0 config-b@ -> 1   ( VGA in S.L.)
 \ b2 8b2 config-b@ -> 40  ( 256 MB memory base 0)
@@ -58,6 +64,49 @@ hex
 : cw.  dup (.2) type ." : " config-base + config-w@ (.4) type  cr ;
 : cb.  dup (.2) type ." : " config-base + config-b@ (.2) type cr ;
 : ch.  config-base h# 40 bounds do i config-l@ u. 4 +loop cr ;
+: .devfunc  ( device function -- )
+   ." == Device " swap .x  ." Function "  .x  cr
+;
+: disabled?  ( device function -- true | cfgaddr false )
+   2dup .devfunc   ( device function )
+   h# 100 *  swap h# 800 * +   ( base )
+   dup config-l@ h# ffffffff =  if  ." Disabled" cr  drop true exit  then  ( cfgaddr )
+   false
+;
+defer dump-devfunc  ( device function -- )
+: 0.r.upc
+   >r (u.) r> over - 0 max 0 ?do
+      30 emit
+   loop  2dup upper  type
+;
+
+: dump-devfunc-via  ( device function -- )
+   disabled?  if  exit  then  ( cfgaddr )
+   h# 100 0  do
+      i 8 bounds do
+         i 2 0.r.upc ." =" dup i + config-b@ 2 0.r.upc
+         i h# f and  h# f <>  if  space  then
+      loop
+      cr
+   h# 8 +loop
+   drop
+;
+: dump-devfunc-lspci  ( device function -- )
+   disabled?  if  exit  then  ( cfgaddr )
+   h# 100 0  do
+      i 2 0.r ." : " 
+      i h# 10 bounds do
+         dup i + config-b@ 2 0.r
+         i h# f and  h# f <>  if  space  then
+      loop
+      cr
+   h# 10 +loop
+   drop
+;
+: via-dump-mode  ['] dump-devfunc-via to dump-devfunc  ;
+: lspci-dump-mode  ['] dump-devfunc-lspci to dump-devfunc  ;
+via-dump-mode
+
 : dump-d0f0
    0 to config-base
    ." == D0F0 Host Control ==" cr
@@ -706,7 +755,7 @@ D0F2
    cr
 ;
 
-: dump-config-regs
+: dump-config-regs-old
    dump-d0f0
    dump-d0f1
    dump-d0f2
@@ -724,6 +773,21 @@ D0F2
    dump-d17f7
    dump-d19f0
    dump-d20f0
+;
+
+: dump-config-regs  ( -- )
+   8 0 do  0 i dump-devfunc  cr  loop
+   d#  1 d# 0 dump-devfunc cr
+   d# 12 d# 0 dump-devfunc cr
+   d# 15 d# 0 dump-devfunc cr
+   d# 16 d# 0 dump-devfunc cr
+   d# 16 d# 1 dump-devfunc cr
+   d# 16 d# 2 dump-devfunc cr
+   d# 16 d# 4 dump-devfunc cr
+   d# 17 d# 0 dump-devfunc cr
+   d# 17 d# 7 dump-devfunc cr
+   d# 19 d# 0 dump-devfunc cr
+   d# 20 d# 0 dump-devfunc cr
 ;
 
 [ifdef] apic-ih
@@ -791,4 +855,5 @@ D0F2
    dump-apic
    dump-io-apic
 [then]
+   .dpy
 ;

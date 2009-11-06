@@ -19,7 +19,8 @@
 [then]
 [ifdef] xo-board
 \  0 3 devfunc  90 07 03 mreg  end-table  d# 20 wait-us  \ 200 MHz ATEST
-   0 3 devfunc  90 e7 03 mreg  end-table  d# 20 wait-us  \ 200 MHz ATEST
+\  0 3 devfunc  90 e7 03 mreg  end-table  d# 20 wait-us  \ 200 MHz ATEST
+   0 3 devfunc  90 ff c3 mreg  end-table  d# 20 wait-us  \ 200 MHz ATEST
 [then]
    0 3 devfunc  6b d0 c0 mreg  end-table  d# 20 wait-us  \ PLL Off
    0 3 devfunc  6b 00 10 mreg  end-table  d# 20 wait-us  \ PLL On
@@ -207,10 +208,12 @@
 \   DQSInputCaptureCtrl
    77 bf 9b mreg \ DQS Input Delay - Manual, value from VIA's BIOS
    78 3f 01 mreg \ 533: 3 667: 7 800: d  DQS Input Capture Range Control A
-   79 ff 83 mreg \ 533: 87 667: 89 800: 89
+\  79 ff 83 mreg \ 533: 87 667: 89 800: 89
+   79 ff 80 mreg \ Reserved, perhaps for the snapshot RAM ?  Phoenix value
    7a ff 00 mreg \ Reserved
    7b ff 10 mreg \ 533: 20 667: 34 800: 34  Read Data Phase Control
-   8b ff 10 mreg \ 533: 20 667: 34 800: 34
+\  8b ff 10 mreg \ 533: 20 667: 34 800: 34
+   8b ff 02 mreg \ Phoenix value
 [then]
 
 \   DCLKPhsCtrl - depends on which clock outputs are used
@@ -218,7 +221,7 @@
    99 1e 12 mreg \ MCLKOA[3,2,1,0] outputs
 [then]
 [ifdef] xo-board
-   99 1e 1e mreg \ MCLKOA[1,0] outputs
+   99 1e 06 mreg \ MCLKOA[1,0] outputs
 [then]
    end-table
 
@@ -368,11 +371,12 @@ forth #ranks 1 > assembler  [if]
 
 forth #ranks 3 < assembler  [if]
    55 ff 00 mreg \ Rank map A 2/3 2 & 3 off
-[then]
-forth #ranks 3 = assembler  [if]
-   55 ff a0 mreg \ Rank map A 2/3 2 on 3 off
 [else]
+ forth #ranks 3 = assembler  [if]
+   55 ff a0 mreg \ Rank map A 2/3 2 on 3 off
+ [else]
    55 ff ab mreg \ Rank map A 2/3 2 & 3 on
+ [then]
 [then]
 
    56 ff 00 mreg \ Rank map B ?
@@ -401,6 +405,12 @@ forth #ranks 3 = assembler  [if]
    0388 config-rb  ax bx mov  0385 config-setup  bx ax mov  al dx out  \ Copy Low Top from RO reg 88 to reg 85
 
    h# 15 port80
+
+   0 3 devfunc
+   52 77 11 mreg  \ BA1 is A14, BA0 is A13
+   53 30 10 mreg  \ BA2 is A15
+   69 20 20 mreg  \ Bank address scramble
+   end-table
 
 0 [if]  \ Very simple memtest
 long-offsets on
@@ -463,6 +473,7 @@ then
 [then]
 [ifdef] xo-board
     96 0f 01 mreg \ Enable self-refresh for rank 0
+    b1 ff aa mreg \ Reserved - Phoenix value
 [then]
 
     end-table

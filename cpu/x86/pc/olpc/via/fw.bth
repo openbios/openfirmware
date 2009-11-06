@@ -629,6 +629,11 @@ true                               ' client-symbols?  set-config-int-default
 ;
 [then]
 
+: pci-fixup  ( -- )
+   h#   43 h# 8804 config-b!  \ Enable parity checking on D17F0
+   h# 0800 h# 8f0c config-w!  \ Override pcibus.fth latency timer setting for North/South Module
+;
+
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
@@ -654,6 +659,8 @@ true                               ' client-symbols?  set-config-int-default
    " probe-" do-drop-in
 
    probe-pci
+   pci-fixup
+
    show-child
    install-alarm
    sound

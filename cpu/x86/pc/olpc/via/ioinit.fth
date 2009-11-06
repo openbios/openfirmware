@@ -10,6 +10,24 @@
 0833152d 062c config-wl
 0833152d 072c config-wl
 
+\ Cache line size (low byte) / latency timer (high byte) registers
+2008 000c config-ww 
+0008 010c config-ww 
+0008 020c config-ww
+0008 040c config-ww
+0008 050c config-ww 
+0008 060c config-ww 
+0008 070c config-ww 
+2000 080c config-ww
+2000 780c config-ww
+2008 800c config-ww
+2008 810c config-ww
+2008 820c config-ww
+2008 830c config-ww
+2010 840c config-ww
+0800 8f0c config-ww
+0008 a00c config-ww
+
    0 4 devfunc  \ PM_table
    a0 80 80 mreg \ Enable dynamic power management (coreboot for vx800 uses f0; 70 bits are reserved on vx855)
    a1 e0 e0 mreg \ Dynamic power management for DRAM
@@ -62,7 +80,19 @@
    90 ff ff mreg  \ Gate clocks
    91 ff ff mreg  \ Gate clocks
    92 cc cc mreg  \ Dynamic buffer control, power down comparators
+   95 ff 01 mreg  \ Reserved - Phoenix value
+   a5 ff 00 mreg  \ Reserved - Phoenix value
    a8 20 20 mreg  \ Central traffic controller dynamic clock stop
+   d1 ff 01 mreg  \ BIOS scratch - Phoenix value
+   d2 ff 02 mreg  \ BIOS scratch - Phoenix value
+   d3 ff 03 mreg  \ BIOS scratch - Phoenix value
+   d4 ff 10 mreg  \ BIOS scratch - Phoenix value
+   d8 ff 10 mreg  \ BIOS scratch - Phoenix value
+   e4 ff 2a mreg  \ BIOS scratch - Phoenix value
+   e8 ff 10 mreg  \ BIOS scratch - Phoenix value
+   e9 ff fa mreg  \ BIOS scratch - Phoenix value
+   eb ff 01 mreg  \ BIOS scratch - Phoenix value
+   f6 ff 01 mreg  \ Reserved - Phoenix value
    end-table
     
    \ Bus tuning
@@ -72,11 +102,18 @@
    59 0f 02 mreg  \ IGFX Promote Timer value 2
    5f 0f 06 mreg  \ IPI Promote Timer value 6
    64 20 00 mreg  \ Upstream MSI doesn't flush queued P2C Write Data
+   72 ff 09 mreg  \ Reserved - Phoenix value
    80 0b 08 mreg  \ Upstream Request 1T earlier
+   81 ff 9a mreg  \ Reserved - Phoenix value
    83 ff 81 mreg  \ P2PW down arb timer timer 8, P2PR down arb timer timer 1
    84 7f 28 mreg  \ Downstream arbitration Timeout timer for C2P
    85 c0 c0 mreg  \ Abort P2P cycle to PCI1, CPU to PCI1 cycle blocks next C2P cycle
    a3 01 01 mreg  \ 01 res be like Phx
+   end-table
+
+   0 7 devfunc
+   e5 ff 40 mreg  \ Reserved - Phoenix value
+   e6 ff 29 mreg  \ Reserved - Phoenix value
    end-table
 
 0 [if]
@@ -91,6 +128,7 @@
 [then]
 
    d# 12 0 devfunc  \ SDIO tuning
+   04 10 10 mreg  \ Enable Memory Write and Invalidate
    44 01 01 mreg  \ Enable backdoor
    2c ff 2d mreg  \ Subsystem ID backdoor
    2d ff 15 mreg  \ Subsystem ID backdoor
@@ -105,6 +143,7 @@
    99 ff f9 mreg  \ Two slots
 [then]
 [ifdef] xo-board
+\  98 ff 20 mreg  \ Set Reserved bit - Phoenix value - No, SD fails to start the clock if this bit is set
    99 ff fa mreg  \ Three slots
 [then]
    end-table
@@ -142,6 +181,7 @@
 
    \ USB Tuning
    d# 16 0 devfunc  \ UHCI Ports 0,1
+   04 10 10 mreg  \ Enable Memory Write and Invalidate
    42 10 10 mreg  \ Enable backdoor
    2c ff 2d mreg  \ Subsystem ID backdoor
    2d ff 15 mreg  \ Subsystem ID backdoor
@@ -154,6 +194,7 @@
    end-table
 
    d# 16 1 devfunc  \ UHCI Ports 2,3
+   04 10 10 mreg  \ Enable Memory Write and Invalidate
    42 10 10 mreg  \ Enable backdoor
    2c ff 2d mreg  \ Subsystem ID backdoor
    2d ff 15 mreg  \ Subsystem ID backdoor
@@ -167,6 +208,7 @@
 
 [ifndef] xo-board
    d# 16 2 devfunc  \ UHCI Ports 4,5
+   04 10 10 mreg  \ Enable Memory Write and Invalidate
    42 10 10 mreg  \ Enable backdoor
    2c ff 2d mreg  \ Subsystem ID backdoor
    2d ff 15 mreg  \ Subsystem ID backdoor
@@ -181,6 +223,7 @@
 
    
    d# 16 4 devfunc  \ EHCI
+   04 10 10 mreg  \ Enable Memory Write and Invalidate
    42 10 10 mreg  \ Enable backdoor
    2c ff 2d mreg  \ Subsystem ID backdoor
    2d ff 15 mreg  \ Subsystem ID backdoor
@@ -191,20 +234,22 @@
    42 40 40 mreg  \ Enable Check PRESOF of ITDOUT Transaction during Fetching Data from DRAM
    43 c0 c0 mreg  \ Enable Dynamic Clock Scheme - 66MHz (80) & 33MHz (40)
    48 20 00 mreg  \ Disable DMA bursts
+   4b 60 60 mreg  \ EHCI sleep timeout to match Via settings
+\   4b 60 00 mreg  \ Via setting of 60 doesn't work with USB LAN device
    4c 03 03 mreg  \ Squelch detector fine tune - 01 is 112.5 mV
    4d 10 10 mreg  \ 10 res be like Phx
    4e 03 03 mreg  \ reserved bit - setting is appropriate for vx800 03 res be like Phx
    4f 10 10 mreg  \ Enable Clear RUN Bit when EHCI_IDLE
    50 80 80 mreg  \ Fetch one more QH before de-asserting Doorbell
    52 ff 11 mreg  \ be like Phx
-   53 ff 3f mreg  \ be like Phx
+   53 ff bf mreg  \ Via settings, different from old Phx
    55 ff ff mreg  \ Disconnect level fine tune - 575 mV for ports 0-3
    56 0f 0f mreg  \ Disconnect level fine tune - 575 mV for ports 4-5
    5a ff cc mreg  \ HS termination resistor fine tune - 45 ohm, 48 ohm for ports 0,1
    5b ff cc mreg  \ HS termination resistor fine tune - 45 ohm, 48 ohm for ports 2,3
    5c 0f 00 mreg  \ DPLL Track Speed 2, DPLL Lock Speed 2
    5d ff cc mreg  \ HS termination resistor fine tune - 45 ohm, 48 ohm for ports 4,5
-   64 05 05 mreg  \ Bump NULL-SOF valid time to 8 micro frames (04), Inhibit C4 state on USB 1.1 ISO activity (01)
+   64 07 03 mreg  \ High bit of NULL-SOF valid time (04=00), HS ISO actitivy (02) and USB 1.1 ISO activity (01) inhibit C4 
    end-table
 
 [ifdef] xo-board
@@ -217,6 +262,7 @@
 [then]
 
    d# 17 0 devfunc  \ Bus control and power management
+   04 40 40 mreg  \ Check parity
    40 44 44 mreg  \ Enable I/O Recovery time (40), Enable ports 4d0/4d1 for edge/level setting (04)
 [ifdef] xo-board
    41 40 40 mreg  \ Enable fff0.0000-fff7.ffff ROM on LPC bus
@@ -230,7 +276,8 @@
    50 40 40 mreg  \ Disable USB device mode
 [then]
 [ifdef] xo-board
-   50 4c 4c mreg  \ Disable USB device mode, unused USB 1.1 ports 4,5, and EIDE device
+\  50 4c 4c mreg  \ Disable USB device mode, unused USB 1.1 ports 4,5, and EIDE device
+   50 cc cc mreg  \ Disable USB device mode, unused USB 1.1 ports 4,5, and EIDE device (set rsvd 80 bit to Phoenix value)
    51 9f 88 mreg  \ Enable SDIO and internal RTC, disable card reader, int mouse & kbd
 [then]
 
@@ -315,7 +362,7 @@ hpet-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
 
    b0 08 00 mreg  \ The BIOS Porting Note says to clear this bit.  Phoenix and coreboot agree.
    b4 80 00 mreg  \ No positive decoding for UART1 ???
-   b7 40 40 mreg  \ 40 res be like Phx
+\  b7 40 40 mreg  \ 40 res be like Phx (Phoenix now uses 00)
 uart-dma-io-base wbsplit swap  ( bits15:8 bits7:0 )
    b8 fc rot mreg  \ UART DMA Control Registers Base low (port is 4080)
    b9 ff rot mreg  \ UART DMA Control Registers Base high
@@ -330,7 +377,8 @@ smbus-io-base wbsplit swap  ( bits15:8 bits7:0 )
    d0 f0 rot mreg  \ SMBUS IO Base Address low (port is 0500)
    d1 ff rot mreg  \ SMBUS IO Base Address high
    d2 0f 01 mreg  \ Enable SMBUS and set other characteristics
-   e2 80 80 mreg  \ Inhibit C4 during USB isochronous transaction
+\  e2 80 80 mreg  \ Inhibit C4 during USB isochronous transaction
+   e2 ff e9 mreg  \ Inhibit C4 during USB isochronous transaction, other bits reserved - Phoenix value
 [ifdef] demo-board
    e4 ff a0 mreg  \ Enable short C3/C4 (80), select various multi-function pins
 [then]
@@ -350,6 +398,7 @@ smbus-io-base wbsplit swap  ( bits15:8 bits7:0 )
    end-table
 
    d# 17 7 devfunc  \ South-North Module Interface Control
+   4e ff 80 mreg  \ Reserved - Phoenix value
    50 df 08 mreg  \ SM priorities - HDAC high priority, others low
    51 80 80 mreg  \ Enable subtractive decode for P2P cycle
    54 7b 02 mreg  \ CCA REQ timing - synchronize USB REQ but not others
@@ -372,15 +421,25 @@ smbus-io-base wbsplit swap  ( bits15:8 bits7:0 )
    80 07 07 mreg  \ PCI1 and HDAC upstream read does not pass write, APCI blocks upstream write
 \  82 3e 20 mreg  \ Monitor CCA and SDIO2
    82 3f 21 mreg  \ Monitor CCA and SDIO2 - 01 res be like Phx
+   88 ff 02 mreg  \ Reserved - Phoenix value
 \  e0 e0 80 mreg  \ Dynamic CCA clock
    e0 f3 93 mreg  \ Dynamic CCA clock - 13 res be like Phx
+   e1 ff 08 mreg  \ Reserved - Phoenix value
 \  e2 1e 00 mreg  \ Use dynamic clocks for Downstream Interface, PCI1, Downstream HDAC, Downstream SM Internal PCI device
    e2 1f 00 mreg  \ Use dynamic clocks for Downstream Interface, PCI1, Downstream HDAC, Downstream SM Internal PCI device 01 res be like Phx
    e3 ff 5e mreg  \ PCI1 dynamic clock, PCI clock on when GRANT# asserted, Enable P2CR data timeout at 7*8 PCI clocks
 \  e6 1f 1f mreg  \ Split APIC decoding, Snoop FEEx.xxxx, Enable top SMM, High SMM, Compat SMM (20 bit is reserved)
-   e6 1f 19 mreg  \ Split APIC decoding, Snoop FEEx.xxxx, Enable top SMM, High SMM, Compat SMM (20 bit is reserved)
+   e6 3f 39 mreg  \ Split APIC decoding, Snoop FEEx.xxxx, Enable top SMM, High SMM, Compat SMM (20 bit is reserved)
 \  fc 40 40 mreg  \ Enable CCA Read Clock When MTXCTL state machine is not idle
    fc 48 48 mreg  \ Enable CCA Read Clock When MTXCTL state machine is not idle - 08 res be like Phx
+   end-table
+
+   d# 19 0 devfunc  \ P2P Bridge
+   04 ff 07 mreg    \ Mem, IO, Bus Master Enable
+   05 ff 01 mreg    \ SERR# enable
+   19 ff 01 mreg    \ Secondary bus number
+   1a ff 01 mreg    \ Subordinate bus number
+   3e ff 04 mreg    \ ISA Enable
    end-table
 
    d# 20 0 devfunc

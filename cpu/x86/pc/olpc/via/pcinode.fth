@@ -1,6 +1,8 @@
 \ See license at end of file
 purpose: PCI bus package
 
+d# 33,333,333 " clock-frequency" integer-property
+
 : preassigned-pci-slot?  ( my-space -- flag )
    h# f.f800 and
    dup h# 800 =  if  drop true exit  then
@@ -115,6 +117,7 @@ h# 0000.8000 to first-io		\ Avoid mappings established by BIOS
       \ Wouldn't it be nice if you could get the argument to pirq@ from
       \ the interrupt pin register (offset 3d)?  But that doesn't work,
       \ because some devices say pin A but use PIRQB.
+      h# 0800 of  d# 10   set-level-trigger  true exit  endof  \ Display
       h# 5800 of  1 pirq@ set-level-trigger  true exit  endof  \ USB device - PIRQB
       h# 6000 of  0 pirq@ set-level-trigger  true exit  endof  \ SDIO - PIRQA
       h# 6800 of  0 pirq@ set-level-trigger  true exit  endof  \ SDC - PIRQA
