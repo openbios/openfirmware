@@ -22,7 +22,7 @@ true value first-open?
 0 value ohci-reg
 
 : map-regs  ( -- )
-   4 my-w@  6 or  4 my-w!
+   4 my-w@  h# 16 or  4 my-w!
    0 0 my-space h# 0200.0010 + 1000  map-in to ohci-reg
 ;
 

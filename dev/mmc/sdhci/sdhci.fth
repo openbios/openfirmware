@@ -57,7 +57,7 @@ h# 200 constant /block  \ 512 bytes
    chip  if  exit  then
    0 0 h# 0200.0010 slot 1- 4 * + my-space +  /regs " map-in" $call-parent
    to chip
-   6 4 my-w!
+   h# 16 4 my-w!  \ Memory write and invalidate, bus mastering, memory
 ;
 : unmap-regs  ( -- )
    chip  0=  if  exit  then

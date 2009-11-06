@@ -23,7 +23,7 @@ my-address my-space          encode-phys
 " reg" property
 
 : map-regs  ( -- )
-   4 my-w@  6 or  4 my-w!
+   4 my-w@  h# 16 or  4 my-w!  \ memory write and invalidate, bus master, mem
    0 0 my-space h# 0200.0010 + /regs  map-in to ehci-reg
 ;
 : unmap-regs  ( -- )

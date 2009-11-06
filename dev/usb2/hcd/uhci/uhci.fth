@@ -21,7 +21,7 @@ my-address my-space          encode-phys
 " reg" property
 
 : map-regs  ( -- )
-   4 my-w@  7 or  4 my-w!
+   4 my-w@  h# 17 or  4 my-w!
    0 0 my-space h# 0100.0020 + /regs  map-in to uhci-reg
 ;
 
