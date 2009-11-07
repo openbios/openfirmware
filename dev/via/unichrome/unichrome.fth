@@ -732,7 +732,7 @@ hex
    80 17 crt-clr  \ Assert reset - Turn off screen
    set-secondary-timings
    random-stuff
-   lower-power
+   mode-independent-init
    \ Turn on power here?
    1e 6c crt-clr  \ 10=>0: VCK source is VCK PLL  0e=>0: LCDCK PLL RefClk from X1 Pin
    pll set-lcdck
@@ -768,12 +768,15 @@ hex
 \   00 08 h# 6b crt-mask  \ Not simultaneous mode
 
    40 16 seq-set  \ manual says the bit is reserved, but the viafb driver says "CRT path set to IGA2"
+   80 59 seq-clr  \ Turn off IGA1 in power control register
 ;
 : olpc-crt-off  ( -- )
+   80 59 seq-clr  \ Turn off IGA1 in power control register
    30 1b seq-clr  \ IGA1 engine clock off
    30 36 crt-set  \ DAC off
 ;
 : olpc-crt-on  ( -- )
+   80 59 seq-set  \ Turn on IGA1 in power control register
    30 1b seq-set  \ IGA1 engine clock on
    30 36 crt-clr  \ DAC on
 ;
