@@ -20,7 +20,7 @@
 [ifdef] xo-board
 \  0 3 devfunc  90 07 03 mreg  end-table  d# 20 wait-us  \ 200 MHz ATEST
 \  0 3 devfunc  90 e7 03 mreg  end-table  d# 20 wait-us  \ 200 MHz ATEST
-   0 3 devfunc  90 ff c3 mreg  end-table  d# 20 wait-us  \ 200 MHz ATEST
+   0 3 devfunc  90 ff 43 mreg  end-table  d# 20 wait-us  \ 200 MHz ATEST
 [then]
    0 3 devfunc  6b d0 c0 mreg  end-table  d# 20 wait-us  \ PLL Off
    0 3 devfunc  6b 00 10 mreg  end-table  d# 20 wait-us  \ PLL On

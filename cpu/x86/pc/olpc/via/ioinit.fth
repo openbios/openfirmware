@@ -108,10 +108,11 @@
    83 ff 81 mreg  \ P2PW down arb timer timer 8, P2PR down arb timer timer 1
    84 7f 28 mreg  \ Downstream arbitration Timeout timer for C2P
    85 c0 c0 mreg  \ Abort P2P cycle to PCI1, CPU to PCI1 cycle blocks next C2P cycle
-   a3 01 01 mreg  \ 01 res be like Phx
+   a3 01 00 mreg  \ Via suggests 0 here
    end-table
 
    0 7 devfunc
+   76 ff d0 mreg  \ Via says this should be the same value as D17F7 Rx76
    e5 ff 40 mreg  \ Reserved - Phoenix value
    e6 ff 29 mreg  \ Reserved - Phoenix value
    end-table
@@ -335,7 +336,7 @@ hpet-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
    8d 18 18 mreg  \ fast clock as throttle timer tick, hold SMI# low until event status cleared (FIXME for OLPC)
 [then]
 [ifdef] xo-board
-   8d 18 10 mreg  \ fast clock as throttle timer tick, do not hold SMI# low
+   8d 18 18 mreg  \ fast clock as throttle timer tick, hold SMI# low until event status cleared
 [then]
    
    94 ff 68 mreg  \ be like Phx
