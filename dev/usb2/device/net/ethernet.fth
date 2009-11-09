@@ -33,13 +33,6 @@ headers
    free-buf
 ;
 
-: loopback{  ( -- )
-   mii{  0 mii@  h# 4000 or  0 mii!  }mii
-;
-: }loopback  ( -- )
-   mii{  0 mii@  h# 4000 invert and  0 mii!  }mii
-;
-
 external
 
 : copy-packet  ( adr len -- len' )
@@ -191,6 +184,23 @@ here test-packet - constant /tp
    scratch-buf d# 2000 free-mem
 ;
 
+: do-start?  ( -- error? )
+   start-nic
+
+   link-up? 0=  if
+      ." Network not connected." cr
+      stop-nic
+      true exit
+   then
+
+   init-buf
+   inbuf /inbuf bulk-in-pipe begin-bulk-in
+
+   loopback-test
+
+   false
+;
+
 external
 
 : close  ( -- )
@@ -202,25 +212,14 @@ external
    my-args  " debug" $=  if  debug-on  then
    device set-target
    opencount @ 0=  if
-      init-buf
-      inbuf /inbuf bulk-in-pipe begin-bulk-in
-
       first-open?  if
          false to first-open?
          init-nic
          mac-adr$ encode-bytes  " local-mac-address" property  ( )
          ?make-mac-address-property
-      else
-         start-nic
       then
 
-      link-up? 0=  if
-         ." Network not connected." cr
-         stop-net
-         false exit
-      then
-
-      loopback-test
+      do-start?  if  false exit  then
    then
    opencount @ 1+ opencount !
    true

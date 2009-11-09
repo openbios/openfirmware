@@ -55,6 +55,9 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
 : ax-control-get  ( adr len idx value cmd -- )
    DR_IN DR_VENDOR or DR_DEVICE or swap control-get  2drop
 ;
+: control@  ( cmd -- value )  \ For the common case of reading 2 bytes
+   >r  ax-buf 2  0 0  r>  ax-control-get  ax-buf le-w@
+;
 
 \ This isn't really necessary because all the important information in the
 \ EEPROM (node id, phyid, descriptors) can be accessed via other commands
@@ -98,7 +101,10 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
 : ax-set-ipg  ( -- )
    ax-buf 3  0 0  h# 11  ax-control-get  \ AX_CMD_READ_IPG012
    ax88772?  if
-      ax-buf     3 0 0 h# 12 ax-control-set  \ AX_CMD_WRITE_IPG0
+      ax-buf 0                         ( adr len )
+      ax-buf 2+ c@ 0 bwjoin            ( adr len idx )
+      ax-buf c@  ax-buf 1+ c@ bwjoin   ( adr len idx value )
+      h# 12 ax-control-set  \ AX_CMD_WRITE_IPG0
    else
       ax-buf     1 0 0 h# 12 ax-control-set   \ AX_CMD_WRITE_IPG0
       ax-buf 1+  1 0 0 h# 13 ax-control-set   \ AX_CMD_WRITE_IPG1
@@ -205,13 +211,30 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
 ;
 
 : rx-ctl!  ( n -- )  h# 10 control!  ;    \ AX_CMD_WRITE_RX_CTL
+: rx-ctl@  ( -- n )  h# 0f control@  ;    \ AX_CMD_READ_RX_CTL
+
+0 value has-internal-loopback?
+
+h# 88 constant def-rx-ctl   \ SO (MAC ON) and AB (accept broadcast)
+
 : ax-start-nic  ( -- )
    ax-auto-neg-wait
-   h# 8c  my-args  " promiscuous" $=  if  1 or  then  rx-ctl!
+   def-rx-ctl  my-args  " promiscuous" $=  if  1 or  then  rx-ctl!
 ;
 : ax-stop-nic  ( -- )  0 rx-ctl!  ;
 
 : ax-init-nic  ( -- )		\ Per ax8817x_bind
+   bulk-out-pipe 3 >  if
+      \ Some versions of the AX88772A have 4 bulk endpoints, instead of the 2
+      \ that are usually present.  The additional ones support a command-wrapper
+      \ interface to a serial block for talking to an external PHY.  The common
+      \ code that autodetects the bulk-in and bulk-out pipes from descriptor
+      \ information tends to lock onto the high-numbered pipes instead of the
+      \ low-numbered ones that are used for Ethernet data.
+      2 to bulk-in-pipe
+      3 to bulk-out-pipe
+   then
+
    ax88772?  if  true to multi-packet?  then
 
    ax-toggle-gpio
@@ -222,7 +245,20 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
    ax-get-mac-address  2drop
    ax-set-ipg
    ax-init-mii
-   ax-start-nic
+;
+
+: ax-loopback{  ( -- )
+   def-rx-ctl h# 1000 or  rx-ctl!
+   rx-ctl@ h# 1000 and  if
+      true to has-internal-loopback?
+      \ This delay is empirically necessary and must not be present in the else clause.
+      d# 100 ms
+   else
+      phy-loopback{
+   then
+;
+: ax-}loopback  ( -- )
+   has-internal-loopback?  if  def-rx-ctl rx-ctl!  else  phy-}loopback  then
 ;
 
 : init-ax  ( -- )
@@ -235,6 +271,9 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
    ['] ax-mii! to mii!
    ['] ax-mii-sw to mii{
    ['] ax-mii-hw to }mii
+   ['] ax-loopback{  to loopback{
+   ['] ax-}loopback  to }loopback
+
    vid h# 2001 =  pid h# 1a00 = and  if  h# 009f.9d9f to ax-gpio  then
    vid h# 07b8 =  pid h# 420a = and  if  h# 001f.1d1f to ax-gpio  then
    d# 2048 to /inbuf

@@ -26,6 +26,16 @@ defer }mii             ( -- )                   ' noop to }mii  \ Release
 defer mii@             ( reg -- val )           ' noop to mii@
 defer mii!             ( val reg -- )           ' drop to mii@
 
+: phy-loopback{  ( -- )
+   mii{  0 mii@  h# 4000 or  0 mii!  }mii
+;
+defer loopback{  ' phy-loopback{  to loopback{
+
+: phy-}loopback  ( -- )
+   mii{  0 mii@  h# 4000 invert and  0 mii!  }mii
+;
+defer }loopback  ' phy-}loopback  to }loopback
+
 external
 defer get-mac-address  ( -- adr len )		' mac-adr$ to get-mac-address
 headers
