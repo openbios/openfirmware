@@ -263,7 +263,7 @@
 [then]
 
    d# 17 0 devfunc  \ Bus control and power management
-   04 40 40 mreg  \ Check parity
+   04 43 43 mreg  \ Check parity, enable I/O and memory access
    40 44 44 mreg  \ Enable I/O Recovery time (40), Enable ports 4d0/4d1 for edge/level setting (04)
 [ifdef] xo-board
    41 40 40 mreg  \ Enable fff0.0000-fff7.ffff ROM on LPC bus
@@ -339,7 +339,7 @@ hpet-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
    8d 18 18 mreg  \ fast clock as throttle timer tick, hold SMI# low until event status cleared
 [then]
    
-   94 ff 68 mreg  \ be like Phx
+   94 ff 68 mreg  \ be like Phx - importantly, clear the 80 bit so the SMBus clock comes from the 14 MHz divider
    95 ff cd mreg  \ 0x0c enables GPIO0,1 (per datasheet; programmer's manual is vague)
 [ifdef] demo-board
    97 ff 80 mreg  \ be like Phx 
@@ -377,7 +377,7 @@ spi-mmio-base lbsplit swap 2swap swap  drop  ( bits31:24 bits23:16 bits15:8 )
 smbus-io-base wbsplit swap  ( bits15:8 bits7:0 )
    d0 f0 rot mreg  \ SMBUS IO Base Address low (port is 0500)
    d1 ff rot mreg  \ SMBUS IO Base Address high
-   d2 0f 01 mreg  \ Enable SMBUS and set other characteristics
+   d2 0f 05 mreg  \ Enable SMBUS and set divider
 \  e2 80 80 mreg  \ Inhibit C4 during USB isochronous transaction
    e2 ff e9 mreg  \ Inhibit C4 during USB isochronous transaction, other bits reserved - Phoenix value
 [ifdef] demo-board

@@ -23,13 +23,10 @@ d# 32 buffer: clkgen-buf  \ Extra large in case the clock generator changes
    smbus-release                    ( )
 ;
 
+\ We don't need to call disable-unused-clocks in stand-init because
+\ it is done in early-startup so it will affect resume-from-S3 too.
 : disable-unused-clocks  ( -- )   h# 02 5 clkgen-b!  ;
 : enable-unused-clocks   ( -- )   h# de 5 clkgen-b!  ;
-
-stand-init: Clock generator
-   disable-unused-clocks
-;
-
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks

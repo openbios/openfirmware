@@ -216,7 +216,7 @@ long-offsets off
    fload ${BP}/cpu/x86/pc/olpc/via/startmtrrinit.fth
 
    fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
-
+   fload ${BP}/cpu/x86/pc/olpc/via/startclkgen.fth    \ Turn off unused clock generator outputs
    fload ${BP}/cpu/x86/pc/olpc/via/starttherm.fth     \ Enables thermal monitor
    fload ${BP}/cpu/x86/pc/olpc/via/startcpuspeed.fth  \ Turns up clock rate
 
