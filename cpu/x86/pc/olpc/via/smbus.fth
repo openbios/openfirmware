@@ -34,6 +34,7 @@ purpose: Driver for SMBUS controller in Via chipset
    h# 40 or smb-hostctl!  ( )  \ 40 is go bit
    smbus-wait             ( )
    smb-hoststat@          ( stat )
+   h# 9e smb-hoststat!    ( )  \ Clear all status bits
    dup h# 9c and  if      ( stat )
       dup h# 80 and  abort" SMBUS error: PEC"                   
       dup h# 10 and  abort" SMBUS error: FailedBusTransaction"
@@ -42,7 +43,6 @@ purpose: Driver for SMBUS controller in Via chipset
       drop
    then                   ( stat )
    drop                   ( )
-   h# 9e smb-hoststat!    ( )  \ Clear all status bits
 ;
 
 \ Bracket groups of SMBUS usage with  smbus-acquire ... smbus-release
@@ -57,20 +57,37 @@ purpose: Driver for SMBUS controller in Via chipset
 \ Release semaphore so it will read back as 0 the next time someone looks
 : smbus-release  ( -- )  h# 40 smb-hoststat!  ;
 
-: smbus-write  ( adr len offset -- )  \ Up to 32 bytes
+: i2c-write  ( adr len offset -- )  \ Up to 32 bytes
    smbus-target smb-xmitadr!      ( adr len offset )
    smb-hostcmd!                   ( adr len )      \ Starting offset
    dup smb-hostdata0!             ( adr len )      \ Length
-   smb-hoststat@ drop             ( adr len )      \ Reset block transfer counter
+   smb-hostcmd@ drop              ( adr len )      \ Reset block transfer counter
    bounds  ?do  i c@ smb-blockdata!  loop  ( )     \ Copy data to chip
    h# 34 smbus-cmd                ( )              \ I2C block command
 ;
-: smbus-read  ( adr maxlen offset -- actlen )  \ Up to 32 bytes
+: i2c-read  ( adr maxlen offset -- actlen )  \ Up to 32 bytes
    smbus-target 1 or smb-xmitadr! ( adr maxlen offset )
    smb-hostcmd!                   ( adr maxlen )   \ Starting offset
    h# 34 smbus-cmd                ( adr maxlen )   \ I2C block command
    smb-hostdata0@ min             ( adr actlen )   \ Number of bytes returned
-   smb-hoststat@ drop             ( adr actlen )   \ Reset block transfer counter
+   smb-hostcmd@ drop              ( adr actlen )   \ Reset block transfer counter
+   tuck  bounds  ?do  smb-blockdata@  i c!   loop  ( actlen )  \ Copy data from chip
+;
+
+: smbus-write  ( adr len offset -- )  \ Up to 32 bytes
+   smbus-target smb-xmitadr!      ( adr len offset )
+   smb-hostcmd!                   ( adr len )      \ Starting offset
+   dup smb-hostdata0!             ( adr len )      \ Length
+   smb-hostcmd@ drop              ( adr len )      \ Reset block transfer counter
+   bounds  ?do  i c@ smb-blockdata!  loop  ( )     \ Copy data to chip
+   h# 14 smbus-cmd                ( )              \ SMBus block command
+;
+: smbus-read  ( adr maxlen offset -- actlen )  \ Up to 32 bytes
+   smbus-target 1 or smb-xmitadr! ( adr maxlen offset )
+   smb-hostcmd!                   ( adr maxlen )   \ Starting offset
+   h# 14 smbus-cmd                ( adr maxlen )   \ SMBus block command
+   smb-hostdata0@ min             ( adr actlen )   \ Number of bytes returned
+   smb-hostcmd@ drop              ( adr actlen )   \ Reset block transfer counter
    tuck  bounds  ?do  smb-blockdata@  i c!   loop  ( actlen )  \ Copy data from chip
 ;
 

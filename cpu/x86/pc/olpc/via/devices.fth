@@ -18,6 +18,7 @@ fload ${BP}/cpu/x86/tsc.fth             \ Timestamp counter access words
 fload ${BP}/cpu/x86/acpitimer.fth
 
 fload ${BP}/cpu/x86/pc/olpc/via/smbus.fth	\ SMBUS driver
+fload ${BP}/cpu/x86/pc/olpc/via/clkgen.fth	\ SMBus-connected clock generator driver
 fload ${BP}/cpu/x86/apic.fth			\ APIC driver
 
 stand-init: APIC
