@@ -1,0 +1,14 @@
+purpose: Load file for Poulsbo Frame Buffer FCode driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing poulsbo.fc
+
+FCode-version2
+fload ${BP}/dev/intel/graphics/poulsbo.fth
+end0
+
+end-tokenizing
