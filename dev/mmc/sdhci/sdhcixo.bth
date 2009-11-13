@@ -48,6 +48,7 @@ init
          " sdmmc" " $load-driver" eval drop
          " internal" " slot-name" string-property
       finish-device
+      exit
    then
 
    \ B1,B2
