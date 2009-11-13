@@ -60,14 +60,14 @@ h# 20 constant smm-d32
 : pm-data  ( offset "name" -- offset' )  +smm constant  ;
 
 \ Layout of SMM memory area:
-h# 8000 smm-data smm-gdt         \ Entry/exit handler code at the entry offset
+\ h# 8000 smm-data smm-gdt         \ Entry/exit handler code at the entry offset
                                  \ The GDT is embedded in the code wad
                                  \ The handler code takes about h# 160 bytes
 
-h# f400 pm-data smm-sp0          \ SMM Forth data   stack - h# 400 bytes
-h# f800 pm-data smm-rp0          \ SMM Forth return stack - h# 400 bytes
+\ h# f400 pm-data smm-sp0          \ SMM Forth data   stack - h# 400 bytes
+\ h# f800 pm-data smm-rp0          \ SMM Forth return stack - h# 400 bytes
 
-h# fc00  pm-data 'int10-dispatch \ Array of instruction sequences for bouncing INTs through SMI
+\ h# fc00  pm-data 'int10-dispatch \ Array of instruction sequences for bouncing INTs through SMI
 
 \ fcxx - fcff available
 
@@ -123,8 +123,11 @@ h# ff6c smm-data smm-gs-limit
 h# ff70 smm-data smm-gs-base
 h# ff74 smm-data smm-gs-access
 
-h# ff84 smm-data smm-gdtr-limit
+h# ff78 smm-data smm-ldtr-limit
+h# ff7c smm-data smm-ldtr-base
+h# ff80 smm-data smm-ldtr-access
 
+h# ff84 smm-data smm-gdtr-limit
 h# ff88 smm-data smm-gdtr-base
 h# ff8c smm-data smm-gdtr-access
 
@@ -159,15 +162,53 @@ h# fff4 smm-data smm-eflags
 h# fff8 smm-data smm-cr3
 h# fffc smm-data smm-cr0
 
+\ Layout of saved registers, used by biosints.fth
+
+: caller-regs  ( -- adr )  smm-es +smm  ;
+
+0 value rm-regs
+
+struct
+  4 field >rm-es
+  4 field >rm-cs
+  4 field >rm-ss
+  4 field >rm-ds
+  4 field >rm-fs
+  4 field >rm-gs
+  d# 16 +  \ LDTR, TR, DR7, DR6
+  4 field >rm-eax
+  4 field >rm-ecx
+  4 field >rm-edx
+  4 field >rm-ebx
+  4 field >rm-esp
+  4 field >rm-ebp
+  4 field >rm-esi
+  4 field >rm-edi
+  4 field >rm-eip
+  4 field >rm-eflags
+constant /rm-regs
+
 \ The basic SMI gateway.  This code lives at (is copied to) smm-base + h# 8000.
 \ It executes when the processor enters System Management Mode (SMM)
 \ for whatever reason.  It saves a bunch of state, sets up the world
 \ so Forth code can run (in 32-bit protected mode), and runs the Forth
 \ handler - typically "smi-dispatch" (via smm-exec and handle-smi).
 
+create smm-gdt-template
+   /smm-gdt 1- w,   smm-gdt l,       \ GDT pointer - limit.w base.l
+   0 w,
+
+   smm-base smm-size 1- code16 format-descriptor  swap l, l,  \  8 - smm-c16
+   smm-base smm-size 1- data16 format-descriptor  swap l, l,  \ 10 - smm-d16
+   0                 -1 code32 format-descriptor  swap l, l,  \ 18 - smm-c32
+   0                 -1 data32 format-descriptor  swap l, l,  \ 20 - smm-d32
+   \ End of GDT
+
+
 label smi-handler
    16-bit
-  
+
+0 [if]
    \ GDT (with jump tucked in at the beginning)
    \ We put the GDT right at the beginning and use the first entry (which
    \ cannot be used as a selector) for a 2-byte jmp and the 6-byte GDT pointer
@@ -180,14 +221,19 @@ label smi-handler
    0                 -1 code32 format-descriptor  swap l, l,  \ 18 - smm-c32
    0                 -1 data32 format-descriptor  swap l, l,  \ 20 - smm-d32
    \ End of GDT
+[then]
 
    cs ax mov  ax ds mov
 
 wbinvd
 
+0 [if]
 \ Get into protected mode using the same segments 
 \ Don't bother with the IDT; we won't enable interrupts
    op: smm-gdt 2+ #) lgdt
+[else]
+   ad: op: smm-gdt smm-base - #) lgdt
+[then]
 
 \ ascii a report
 
@@ -262,6 +308,7 @@ end-code
 here smi-handler - constant /smi-handler
 
 : smm@  ( offset -- n )  +smm @  ;
+: smm!  ( n offset -- )  +smm !  ;
 
 \ Address of segment registers
 : 'smm-eax  ( -- adr )  smm-eax +smm  ;
@@ -272,19 +319,43 @@ here smi-handler - constant /smi-handler
    rshift  h# ffc and + l@
    dup h# fff invert and  swap 1 and 0=
 ;
+\ Finds a page table or page directory entry
+\ Implementation factor of (smm>physical)
+: >ptable64  ( table vadr shift -- table' unmapped? )
+   rshift  h# ff8 and + l@               \ Ignore high word for now
+   dup h# fff invert and  swap 1 and 0=
+;
 
 \ Converts a virtual address to a physical address via the page tables
 \ This is used by debugging tools, so that we can look at OS resources
 \ via their virtual addresses while we are running with paging disabled.
 \ XXX need to handle mapped-at-pde-level
 defer smm>physical
-: (smm>physical)  ( vadr -- padr )
-\   smm-cr0 smm@  h# 8000.0000 and  0=  if  exit  then
-   cr3@                                  ( vadr pdir )
-   over d# 20 >ptable  abort" Unmapped"  ( vadr ptab )
-   over d# 10 >ptable  abort" Unmapped"  ( vadr pframe )
-   swap h# fff and +
+: ?unmapped  ( unmapped? -- )
+\  abort" Unmapped"  
+   if   ." Unmapped " debug-me  then  
 ;
+: vadr>pframe64  ( vadr pdpt -- padr )
+   over d# 27 >ptable64  ?unmapped  ( vadr pdir )
+   over d# 18 >ptable64  ?unmapped  ( vadr ptab )
+   over d#  9 >ptable64  ?unmapped  ( vadr pframe )
+;
+: vadr>pframe32  ( vadr pdir -- vadr pframe )
+   over d# 20 >ptable  ?unmapped  ( vadr ptab )
+   over d# 10 >ptable  ?unmapped  ( vadr pframe )
+;
+
+: (smm>physical)  ( vadr -- padr )
+   smm-cr3 smm@                          ( vadr pdir )
+   smm-cr4 smm@ h# 20 and  if  \ Physical Address Extension enabled
+      vadr>pframe64
+   else
+      vadr>pframe32
+   then
+   swap h# fff and +
+
+;
+
 ' (smm>physical) to smm>physical
 
 : smm-map?  ( vadr -- )  smm>physical  .  ;
@@ -335,18 +406,25 @@ defer handle-bios-call
 \ bios-int-smi is for accesses to the 0x30..0x3f I/O port bank that we "steal" for
 \ bouncing BIOS INTs into SMM.
 
+: caller-32bit?  ( -- flag )  smm-cs-access smm@ h# 4000 and  ;
+
+: caller-sp  ( -- laddr )
+   caller-32bit?  if  smm-esp smm@  else  rm-sp  then
+;
+
 : bios-int-smi  ( -- )
+   caller-32bit?  if  noop exit  then
    \ Handle BIOS INTs that were bounced into SMM by accessing
    \ I/O ports 0x30..0x3f
    h# 58 acpi-w@  dup h# fff0 and  h# 30  =  if   \ Via
       h# 20 -  to rm-int@
-      rm-sp la1+ >caller-physical w@  smm-eflags +smm w!
+      caller-sp la1+ >caller-physical w@  smm-eflags +smm w!
       \ Bias by -2 to point to INT instruction
 [ifdef] notyet
-      rm-sp >caller-physical l@ 2-  smm-retaddr l!
+      rm-sp >caller-physical l@ 2-  smm-eip l!
 [then]
       handle-bios-call
-      smm-eflags +smm w@  rm-sp la1+ >caller-physical w!
+      smm-eflags +smm w@  caller-sp la1+ >caller-physical w!
       exit
    else
       drop
@@ -363,12 +441,9 @@ defer quiesce-devices  ' noop to quiesce-devices
 \ It's used to implement the ACPI "resume from S3" semantics that
 \ require jumping to a given address in real mode.
 
--1 value rm-entry-adr
-0 value rm-regs
-
 : #smint  ( n -- )  h# 2f acpi-b!  ;  \ Via
 
-: rm-run  ( 'gregs eip -- )  to rm-entry-adr  to rm-regs  h# f0 #smint  ;
+: rm-run  ( 'gregs eip -- )  swap to rm-regs  rm-regs >rm-eip !  h# f0 #smint  ;
 
 defer suspend-devices  ' noop to suspend-devices
 defer resume-devices   ' noop to resume-devices
@@ -454,50 +529,60 @@ defer sbp-hook
 : l!++  ( adr l -- adr' )  over l!  la1+  ;
 : w!++  ( adr w -- adr' )  over w!  wa1+  ;
 
-[ifdef] notyet
-code rm-lidt  ( -- )  smm-rmidt #) lidt  c;
-[then]
-
 \ rm-setup fudges the saved SMM state so that, instead of returning
 \ to the context that invoked the SMI, the next exit from SMM returns
 \ to the address "eip" in real mode.  This is an implementation
 \ factor of the "rm-run" mechanism.
 
+: set-segment  ( base limit access 'seg-save -- )
+   >r               ( base limit access )
+   r@ 8 + smm!      ( base limit )  \ Set access rights field
+   r@ smm!          ( base )        \ Set limit field
+   r> 4 + smm!      ( )       \ Set base field
+;
+: set-data-segment  ( base 'seg-save -- )
+   \   >r  h# ffff  h# 4093  r> set-segment
+   >r  h# ffffffff  h# 0092  r> set-segment
+;
+
 : rm-setup  ( -- )
-[ifdef] notyet
-   rm-entry-adr >seg:off 2>r    ( off seg )
+   rm-regs >rm-eip @  >seg:off  ( off seg )
+   swap smm-eip smm!            ( seg )
+   dup smm-cs smm!              ( seg )
+   4 lshift h# ffff  h# 009a  smm-cs-limit set-segment
 
-   smm-header h# 30 - ( adr )
-   h#      38  l!++ ( adr' ) \ SMM_CTL
-   0           l!++ ( adr' ) \ I/O DATA
-   0           l!++ ( adr' ) \ I/O ADDRESS, I/O SIZE
-   h#  938009  l!++ ( adr' ) \ SS_FLAGS, SMM Flags
-   h#    ffff  l!++ ( adr' ) \ CS_LIMIT
-   r@ 4 lshift l!++ ( adr' ) \ CS_BASE
+   rm-regs >rm-ds w@  dup smm-ds-limit set-data-segment   smm-ds smm!
+   rm-regs >rm-es w@  dup smm-es-limit set-data-segment   smm-es smm!
+   rm-regs >rm-fs w@  dup smm-fs-limit set-data-segment   smm-fs smm!
+   rm-regs >rm-gs w@  dup smm-gs-limit set-data-segment   smm-gs smm!
+   rm-regs >rm-ss w@  dup smm-ss-limit set-data-segment   smm-ss smm!
 
-   r> h# 9a wljoin l!++ ( adr' ) \ CS_FLAGS.CS_INDEX
-   r>          l!++ ( adr' ) \ NEXT_IP
-   0           l!++ ( adr' ) \ CURRENT_IP
-   h# 10       l!++ ( adr' ) \ CR0
-   h# 2        l!++ ( adr' ) \ EFLAGS
-   h# 400      l!++ ( adr' ) \ DR7
-   drop
+   0 h#  3ff h# 82  smm-idtr-limit  set-segment
+   0 h# ffff h# 83  smm-tr-limit    set-segment     0 smm-tr   smm!
+   0       0 h# 82  smm-ldtr-limit  set-segment     0 smm-ldtr smm!   
 
-   0 smm-esp +smm  l!
+   \ gdtr - leave alone, GDT shouldn't matter in real mode
+   \ cr3  - leave alone, PDE base shouldn't matter with paging disabled
 
-   smm-save-seg +smm
-   h# ffff l!++  h# 9300 l!++  0 w!++  \ DS
-   h# ffff l!++  h# 9300 l!++  0 w!++  \ ES
-   h# ffff l!++  h# 9300 l!++  0 w!++  \ FS
-   h# ffff l!++  h# 9300 l!++  0 w!++  \ GS
-   h# ffff l!++  h# 9300 l!++  0 w!++  \ SS
-   drop
+   h#       10  smm-cr0    smm!  \ Paging and Protected Mode off
+   h#       10  smm-cr4    smm!  \ Page size extension on
+   h# ffff0ff0  smm-dr6    smm!  \ Value after init (status register)
+   h#      400  smm-dr7    smm!  \ Value after init - no breakpoints set
 
-   h# ffff smm-rmidt w!  0 smm-rmidt wa1+ l!  \ Limit and base
+   0 smm-tr smm!
 
-   \ Interrupts are off because we are in SMM
-   rm-lidt
-[then]
+   0 smm-io-restart smm!  \ Clear IO-restart and HLT-restart
+
+   rm-regs >rm-eflags @  2 or  smm-eflags smm!  \ 2 bit is "Must Be One"
+
+   rm-regs >rm-esp @  smm-esp smm!
+   rm-regs >rm-eax @  smm-eax smm!
+   rm-regs >rm-ebx @  smm-ebx smm!
+   rm-regs >rm-ecx @  smm-ecx smm!
+   rm-regs >rm-edx @  smm-edx smm!
+   rm-regs >rm-ebp @  smm-ebp smm!
+   rm-regs >rm-esi @  smm-esi smm!
+   rm-regs >rm-edi @  smm-edi smm!
 ;
 \ : rm-init-program   ( eip -- )  rm-init-program  rm-return  ;
 
@@ -509,12 +594,11 @@ code rm-lidt  ( -- )  smm-rmidt #) lidt  c;
    smi-debug?  if  ." SOFT" cr  then
    h# 2f acpi-b@ h# f0 =  if
       rm-setup
-      -1 to rm-entry-adr
       exit
    then
 
 [ifdef] notyet
-   smm-pc smm-retaddr l!   \ So .caller-regs will work
+   smm-pc smm-eip l!   \ So .caller-regs will work
    sbpadr @  if
       sbpadr @ smm>physical  smm-pc smm>physical <>  if
          ." Not at SMI breakpoint!" cr
@@ -633,6 +717,12 @@ here move-smbase - constant /move-smbase
    0 #smint                                   \ Trigger SMI
 ;
 
+: smi-access-fb  ( -- )
+   h#  383 config-b@ 2 or h#  383 config-b!   \ Direct SMM mode data accesses to A/Bxxxx range to frame buffer
+;
+: smi-unaccess-fb  ( -- )
+   h#  383 config-b@ 2 invert and h#  383 config-b!   \ Restore SMM mode data accesses to A/Bxxxx range to memory
+;
 \ Call this to enable SMI support
 : setup-smi  ( -- )
    h#  383 config-b@ 1 or h#  383 config-b!   \ Enable A/Bxxxx range as memory instead of frame buffer
@@ -650,6 +740,7 @@ here move-smbase - constant /move-smbase
    smm-sp0 smm-save-sp0 !
    smm-rp0 smm-save-rp0 !
 
+   smm-gdt-template  smm-gdt  /smm-gdt  move
    smi-handler  smm-base +smm-offset  /smi-handler  move
 
    \ Relocate the code field of the code word that is embedded in the sequence
@@ -667,27 +758,3 @@ here move-smbase - constant /move-smbase
    4 4 acpi-w!                                \ Trigger BIOS Release
 ;
 [then]
-
-\ Layout of saved registers, used by biosints.fth
-
-: caller-regs  ( -- adr )  smm-es +smm  ;
-
-struct
-  4 field >rm-es
-  4 field >rm-cs
-  4 field >rm-ss
-  4 field >rm-ds
-  4 field >rm-fs
-  4 field >rm-gs
-  d# 16 +  \ LDTR, TR, DR7, DR6
-  4 field >rm-eax
-  4 field >rm-edx
-  4 field >rm-ecx
-  4 field >rm-ebx
-  4 field >rm-exx
-  4 field >rm-ebp
-  4 field >rm-esi
-  4 field >rm-edi
-  4 field >rm-retaddr  \ EIP
-  4 field >rm-flags
-drop

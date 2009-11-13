@@ -1,7 +1,7 @@
 purpose: Emulate legacy PC BIOS real-mode INTs
 \ See license at end of file
 
-8 /l* buffer: init-regs
+/rm-regs buffer: init-regs
 h# 80 value bios-boot-dev#
 
 : rm-es@  caller-regs >rm-es w@  ;
@@ -60,10 +60,24 @@ h# 80 value bios-boot-dev#
 
 : rm-si@  caller-regs >rm-esi w@  ;
 
+[ifdef] >rm-retaddr
 : rm-retaddr@  caller-regs >rm-retaddr seg:off@  ;
+[then]
+[ifdef] >rm-eip
+\ : rm-retaddr@  caller-regs >rm-eip @  ;
+: rm-caller-sp  caller-regs >rm-esp @  caller-regs >rm-ss w@  seg:off>  ;
+: rm-retaddr@  rm-caller-sp seg:off@  ;
+: .rm-stack  rm-caller-sp h# 40 wdump  ;
+[then]
 
+[ifdef] >rm-flags
 : rm-flags@  caller-regs >rm-flags w@  ;
 : rm-flags!  caller-regs >rm-flags w!  ;
+[then]
+[ifdef] >rm-eflags
+: rm-flags@  caller-regs >rm-eflags @  ;
+: rm-flags!  caller-regs >rm-eflags !  ;
+[then]
 
 : rm-set-cf  rm-flags@  1 or  rm-flags!  ;
 : rm-clr-cf  rm-flags@  1 invert and  rm-flags!  ;
@@ -110,7 +124,9 @@ variable save-eax
 
 : set-mode3  ( -- )
    text-off  \ Stop using OFW screen output
+[ifdef] smi-access-fb  smi-access-fb  [then]
    " text-mode3" screen-ih $call-method
+[ifdef] smi-unaccess-fb  smi-unaccess-fb  [then]
 ;
 \ VBE status: AL = 4f -> function supported  else not supported
 \ AH = 0: success  1: fail  2: not supported in this config  3: invalid in this mode
@@ -401,8 +417,10 @@ h# 1ff and  case
 ;
 
 : set-mode12  ( -- )
-   " graphics-mode12" " screen-ih" eval $call-method
    text-off  \ Stop using OFW output to screen
+[ifdef] smi-access-fb  smi-access-fb  [then]
+   " graphics-mode12" " screen-ih" eval $call-method
+[ifdef] smi-unaccess-fb  smi-unaccess-fb  [then]
 ;
 : set-video-mode  ( mode -- )
    case
@@ -781,7 +799,7 @@ create sysconf
 
 : get-conf  ( -- )
    sysconf rm-buf 8 move
-   rm-buf >seg:off  0 rm-es!  rm-bx! 
+   rm-buf >seg:off  rm-es!  rm-bx! 
    0 rm-ax!
 ;
 
@@ -792,10 +810,19 @@ create sysconf
    endcase
 ;
 
+: gate-a20  ( -- )
+   rm-al@ case
+      h# 00 of  rm-set-cf          endof  \ Disable - We don't support disabling A20
+      h# 01 of  0 rm-ah!           endof  \ Enable  - We always leave it enabled, so return OK (00) status
+      h# 02 of  1 rm-ax!           endof  \ Status  - Enabled (01) in AL , OK (00) in AH
+      h# 03 of  1 rm-bx! 0 rm-ah!  endof  \ Which   - Port92 (01) in BX, OK (00) in AH
+   endcase
+;
 : system-int  ( -- )  \ INT 15 handler
    noshow
    rm-clr-cf
    rm-ah@ case
+      h# 24 of  gate-a20   endof
       h# 91 of  noshow 0 rm-ah!  endof   \ "pause" while waiting for I/O
 noop
       h# 53 of  apm  endof
@@ -1061,17 +1088,18 @@ warning @ warning off
    loaded is-mbr?  if
       prep-rm
       loaded mbr-base swap move
-\      init-regs /sregs+gregs erase
-      \ XXX
+      init-regs /rm-regs erase
       bios-boot-dev#  init-regs >rm-edx c!   \ DL
       exit
    then
    init-program
 ;
+defer rm-go-hook ' noop to rm-go-hook
 \ " rm-go"  ' boot-command  set-config-string-default
 : execute-buffer  ( adr len -- )
    rm-prepped?  if      ( adr len )
       2drop             ( )
+      rm-go-hook
 \     usb-quiet         ( )
       init-regs mbr-base rm-run   ( )
       exit  \ Precautionary; rm-run shouldn't return
@@ -1141,8 +1169,10 @@ warning !
    " xp" device-name
    : open
       bypass-bios-boot?  if  false exit  then
-      " sd:1" ntfs?  if
-         " sd:0" set-hd-boot
+      " ext:1" ntfs?  if
+         " ext:0" set-hd-boot
+     " sound-end" evaluate
+
          true exit
       then
       false
@@ -1185,10 +1215,13 @@ end-package
 
 label xx  h# 99 # al mov  al h# 80 # out  begin again  end-code
 here xx - constant /xx
+: @.w  ( -- )  w@ 5 u.r  ;
+: @.l  ( -- )  @ 9 u.r  ;
 : put-xx  ( adr -- )  xx swap /xx move  ;
 : .lreg  ( adr -- adr' )  4 -  dup l@ 9 u.r   ;
 : .wreg  ( adr -- adr' )  2 -  dup w@ 5 u.r   ;
 : .caller-regs  ( -- )
+[ifdef] >rm-retaddr
    ."        AX       CX       DX       BX       SP       BP       SI       DI" cr
    caller-regs >rm-eax 4 +  8 0 do  .lreg  loop  cr
    cr
@@ -1197,6 +1230,27 @@ here xx - constant /xx
    drop
    rm-retaddr@ 9 u.r  2 spaces
    rm-flags@ 5 u.r cr
+[else]
+   ."        AX       BX       CX       DX       BP       SI       DI       SP" cr
+   caller-regs >rm-eax @.l
+   caller-regs >rm-ebx @.l
+   caller-regs >rm-ecx @.l
+   caller-regs >rm-edx @.l
+   caller-regs >rm-ebp @.l
+   caller-regs >rm-esi @.l
+   caller-regs >rm-edi @.l
+   caller-regs >rm-esp @.l
+   cr cr
+   ."    CS   DS   ES   FS   GS   SS       PC  FLAGS" cr
+   caller-regs >rm-cs @.w
+   caller-regs >rm-ds @.w
+   caller-regs >rm-es @.w
+   caller-regs >rm-fs @.w
+   caller-regs >rm-gs @.w
+   caller-regs >rm-ss @.w
+   rm-retaddr@ 9 u.r  2 spaces
+   rm-flags@ 5 u.r cr
+[then]
 ;
 
 : egadump  ( -- )

@@ -73,6 +73,11 @@ h# e0180 constant facs-adr
 h# e01c0 constant dbgp-adr
 h# e0200 constant madt-adr  \ MADT is 5a bytes long
 h# e0280 constant hpet-adr
+
+h# e1000 constant smm-sp0
+h# e1400 constant smm-rp0
+h# e1800 constant smm-gdt
+
 h# fc000 constant dsdt-adr
 h# fd000 constant ssdt-adr
 
@@ -81,6 +86,8 @@ h# fff00 constant wake-adr   \ Needs to be at least h# 32 bytes - used in acpi.f
 h# fff40 constant rm-buf     \ 8-byte buffer used by BIOS INT 15 AH=C0 for returning config info
 h# fff48 constant video-mode-adr  \ Saves display mode for resume code
 \ h# fff4c constant next-adr
+
+h# fff80 constant 'int10-dispatch
 
 h#  4fff constant native-mode#
 

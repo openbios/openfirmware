@@ -1319,4 +1319,4 @@ struct
   4 field >rm-eax
   4 field >rm-retaddr
   2 field >rm-flags
-drop
+constant /rm-regs

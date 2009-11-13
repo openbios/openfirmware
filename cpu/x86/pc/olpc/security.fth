@@ -3,6 +3,15 @@ purpose: OLPC secure boot
 
 \ Specs at http://wiki.laptop.org/go/Firmware_Security
 
+patch noop suspend-interact suspend
+
+: rm-chain-visible  ( -- )
+   [ ' rm-go-hook behavior compile, ]  \ Chain to old behavior
+   visible
+;
+' rm-chain-visible to rm-go-hook
+
+
 : ?unfreeze  ( -- )
    game-key@ button-check and  if
      frozen?  if  unfreeze  visible banner  then
