@@ -36,8 +36,6 @@ c0 1b seq-set  \ Secondary engine clock (LCK) can be gated on or off
 80 17 crt-clr  \ Assert reset while programming geometry
 
 crtc-table
-   30 36 ireg  \ Turn off primary DAC to save power
-
    d7 50 ireg  \ Htotal low
    af 51 ireg  \ Hdisplay low
    af 52 ireg  \ Hblank low
@@ -45,8 +43,8 @@ crtc-table
    24 54 ireg  \ Hblank, Hblankend overflow
    44 55 ireg  \ Htotal and hdisplay overflow
    \   b7 56 ireg  \ Hsync low
-   b5 56 ireg  \ Hsync low
-   bd 57 ireg  \ Hsyncend low
+   b6 56 ireg  \ Hsync low
+   be 57 ireg  \ Hsyncend low
    8f 58 ireg  \ Vtotal low
    83 59 ireg  \ Vdisplay low
    83 5a ireg  \ Vblank low
@@ -54,24 +52,50 @@ crtc-table
    9b 5c ireg  \ Hsync,Hsyncend,Vblank,Vblankend overflow
    1b 5d ireg  \ Hblankend, Hsync, Vtotal, Vdisplay overflow
    88 5e ireg  \ Vsync low
-   6a 5f ireg  \ Vsyncend all and Vsync overflow
+   6e 5f ireg  \ Vsyncend all and Vsync overflow
       
    00 62 ireg  \ Starting address
    00 63 ireg  \ Starting address
    00 64 ireg  \ Starting address
 
-   96 65 ireg  \ Fetch count (67 overflow already set above)
-   2c 66 ireg  \ Offset (frame buffer pitch) low (67 overflow already set above)
-   51 67 ireg  \ Color depth - 16bpp ([7:6] = 10) - no interlace ([5] = 0), various overflow bits
+   2c 65 ireg  \ Fetch count (67 overflow already set above)
+   58 66 ireg  \ Offset (frame buffer pitch) low (67 overflow already set above)
+   d6 67 ireg  \ Color depth - 32bpp ([7:6] = 11) - no interlace ([5] = 0), various overflow bits
    f0 68 ireg  \ Display queue depth
    c8 6a ireg  \ Enable secondary display
    00 6b ireg  \ Disable simultaneous display, IGA2 on, IGA2 screen enable not slaved to IGA1
 
    00 6c ireg  \ VCK source from PLL output clock, LCKCK PLL source from X1 pin
 
-   00 71 ireg  \ Offset overflow
-   00 79 ireg  \ LCD scaling off
-  
+   ff 6d ireg
+   77 6e ireg
+   ef 6f ireg
+   7f 70 ireg
+
+   7f 71 ireg  \ Offset overflow
+   2f 72 ireg
+   ef 73 ireg
+   e7 74 ireg
+   ee 75 ireg
+   77 76 ireg
+   00 77 ireg
+   6f 78 ireg
+   68 79 ireg  \ LCD scaling off
+   01 7a ireg  \ LCD Scaling Parameter 1
+   02 7b ireg  \ LCD Scaling Parameter 2
+   03 7c ireg  \ LCD Scaling Parameter 3
+   04 7d ireg  \ LCD Scaling Parameter 4
+   07 7e ireg  \ LCD Scaling Parameter 5
+   0A 7f ireg  \ LCD Scaling Parameter 6
+   0D 80 ireg  \ LCD Scaling Parameter 7
+   13 81 ireg  \ LCD Scaling Parameter 8
+   16 82 ireg  \ LCD Scaling Parameter 9
+   19 83 ireg  \ LCD Scaling Parameter 10
+   1C 84 ireg  \ LCD Scaling Parameter 11
+   1D 85 ireg  \ LCD Scaling Parameter 12
+   1E 86 ireg  \ LCD Scaling Parameter 13
+   1F 87 ireg  \ LCD Scaling Parameter 14
+
    60 88 ireg  \ LVDS sequential
    01 8a ireg  \ LCD adjust LP
    08 94 ireg  \ Expire number
@@ -108,12 +132,12 @@ end-table
 
 \ legacy-settings
 seq-table
-   00 00 ireg  \ Reset sequencer
+\   00 00 ireg  \ Reset sequencer - don't touch this register, it makes the system reset in this context
    01 01 ireg  \ 8/9 timing
    0f 02 ireg  \ Enable map planes
    00 03 ireg  \ Character map select
    06 04 ireg  \ Extended memory present
-   03 00 ireg  \ Release reset bits
+\   03 00 ireg  \ Release reset bits - don't touch this register, it makes the system reset in this context
    00 0a ireg  \ Cursor start
    00 0b ireg  \ Cursor end
    00 0e ireg  \ Cursor loc
@@ -166,7 +190,7 @@ seq-table
 end-table
 
 crtc-table
-   01 36 ireg  \ Enable PCI power management control
+   31 36 ireg  \ Enable PCI power management control, primary DAC off
    34 37 ireg  \ DAC power savings
 end-table
 
