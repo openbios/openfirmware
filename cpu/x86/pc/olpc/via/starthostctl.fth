@@ -56,7 +56,6 @@
    51 80 80 mreg  \ Last step - enable DRDY timing
 [then]
 [ifdef] xo-board
-.( HELLO) cr
    60 ff 2a mreg  \ DRDY Timing Control 1 for Read Line
    61 ff 00 mreg  \ DRDY Timing Control 2 for Read Line
    62 ff 00 mreg  \ Reserved, probably channel B
