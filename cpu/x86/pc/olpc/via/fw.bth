@@ -308,6 +308,8 @@ true value user-mode?
 fload ${BP}/cpu/x86/pc/olpc/banner.fth
 
 fload ${BP}/ofw/gui/loadmenu.fth
+patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
+patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
 fload ${BP}/ofw/gui/insticon.fth
 
 fload ${BP}/cpu/x86/pc/olpc/via/cstate.fth   \ C-state tests
