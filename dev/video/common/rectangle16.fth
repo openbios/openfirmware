@@ -3,13 +3,73 @@ purpose: Drawing functions for 16-bit graphics extension
 
 external
 
+code 565>argb-pixel  ( 565 -- argb )
+   ax pop
+   ax bx mov  d# 11 # bx shr  d# 19 # bx shl  \ Red
+   ax dx mov  d# 27 # dx shl  d# 24 # dx shr  dx bx or  \ Blue
+   d# 21 # ax shl  d# 26 # ax shr  d# 10 # ax shl  bx ax or
+   h# ff070307 # ax or
+   ax push
+c;
+code 565>argb  ( src dst #pixels -- )
+   cx pop
+   di  0 [sp]  xchg
+   si  4 [sp]  xchg
+
+   begin
+      ax ax xor
+      op: ax lods
+      ax bx mov  d# 11 # bx shr  d# 19 # bx shl  \ Red
+      ax dx mov  d# 27 # dx shl  d# 24 # dx shr  dx bx or  \ Blue
+      d# 21 # ax shl  d# 26 # ax shr  d# 10 # ax shl  bx ax or
+      h# ff070307 # ax or
+      ax stos
+   loopa
+
+   di pop
+   si pop
+c;
+code argb>565-pixel  ( argb -- 565 )
+   ax pop
+   ax bx mov  d# 19 # bx shr  d# 11 # bx shl  \ Red
+   ax dx mov  d# 24 # dx shl  d# 27 # dx shr  dx bx or  \ Blue
+   d# 16 # ax shl  d# 26 # ax shr  d# 5 # ax shl  bx ax or  \ Green
+   ax push
+c;
+
+code argb>565  ( src dst #pixels -- )
+   cx pop
+   di  0 [sp]  xchg
+   si  4 [sp]  xchg
+
+   begin
+      ax lods
+      ax bx mov  d# 19 # bx shr  d# 11 # bx shl  \ Red
+      ax dx mov  d# 24 # dx shl  d# 27 # dx shr  dx bx or  \ Blue
+      d# 16 # ax shl  d# 26 # ax shr  d# 5 # ax shl  bx ax or  \ Green
+      op: ax stos
+   loopa
+
+   di pop
+   si pop
+c;
+
 : rectangle-setup  ( x y w h -- wb fbadr h )
    swap depth * 3 rshift swap              ( x y wbytes h )
    2swap  /scanline * frame-buffer-adr +   ( wbytes h x line-adr )
    swap depth * 3 rshift +                 ( wbytes h fbadr )
    swap                                    ( wbytes fbadr h )
 ;
+: 565-rectangle-setup  ( x y w h -- w fbadr h )
+   2swap  /scanline * frame-buffer-adr +   ( w h x line-adr )
+   swap depth * 3 rshift +                 ( w h fbadr )
+   swap                                    ( w fbadr h )
+;
 : fill-rectangle  ( color x y w h -- )
+   depth d# 32 =  if                            ( color x y w h )
+      2>r 2>r  565>argb-pixel  2r> 2r>          ( color' x y w h )
+   then                                         ( color x y w h )
+
    rot /scanline *  frame-buffer-adr +          ( color x w h fbadr )
    -rot >r                                      ( color x fbadr w  r: h )
    \ The loop is inside the case for speed
@@ -24,37 +84,65 @@ external
 ;
 
 : draw-rectangle  ( adr x y w h -- )
-   rectangle-setup  0  ?do                 ( adr wbytes fbadr )
-      3dup swap move                       ( adr wbytes fbadr )
-      >r  tuck + swap  r>                  ( adr' wbytes fbadr )
-      /scanline +                          ( adr' wbytes fbadr' )
-   loop                                    ( adr' wbytes fbadr' )
+   565-rectangle-setup  0  ?do             ( adr w fbadr )
+      3dup swap                            ( adr w fbadr  adr fbadr w )
+      depth d# 32 =  if                    ( adr w fbadr  adr fbadr w )
+         565>argb                          ( adr w fbadr )
+      else                                 ( adr w fbadr  adr fbadr w )
+         /w* move                          ( adr w fbadr )
+      then                                 ( adr w fbadr )
+      >r  tuck wa+ swap  r>                ( adr' w fbadr )
+      /scanline +                          ( adr' w fbadr' )
+   loop                                    ( adr' w fbadr' )
    3drop
 ;
+
+defer pixel!  ( color fbadr i -- )
+: 565-pixel!   ( color fbadr i -- )  wa+ w!  ;
+: argb-pixel!  ( color fbadr i -- )  rot 565>argb-pixel -rot  la+ l!  ;
 
 : draw-transparent-rectangle  ( adr x y w h -- )
-   rectangle-setup                         ( adr wbytes fbadr h )
-   >r  rot  r>                             ( wbytes fbadr adr h )
-   0  ?do                                  ( wbytes fbadr adr )
-      2 pick 0  ?do                        ( wbytes fbadr adr )
-         dup w@ >r  wa1+ r>                ( wbytes fbadr adr' color )
-         dup h# ffff =  if                 ( wbytes fbadr adr color )
-            drop                           ( wbytes fbadr adr )
-         else                              ( wbytes fbadr adr color )
-            2 pick i + w!                  ( wbytes fbadr adr )
-         then                              ( wbytes fbadr adr )
-      /w +loop                             ( wbytes fbadr adr )
-      swap /scanline +   swap              ( wbytes fbadr' adr )
-   loop                                    ( wbytes fbadr' adr' )
+   depth d# 32 =  if
+      ['] argb-pixel! to pixel!
+   else
+      ['] 565-pixel! to pixel!
+   then
+   565-rectangle-setup                  ( adr w fbadr h )
+   >r  rot  r>                          ( w fbadr adr h )
+   0  ?do                               ( w fbadr adr )
+      2 pick 0  ?do                     ( w fbadr adr )
+         dup i wa+ w@                   ( w fbadr adr color )
+         dup h# ffff =  if              ( w fbadr adr color )
+            drop                        ( w fbadr adr )
+         else                           ( w fbadr adr color )
+            2 pick i pixel!             ( w fbadr adr )
+         then                           ( w fbadr adr )
+      loop                              ( w fbadr adr )
+      swap /scanline +   swap           ( w fbadr' adr )
+      third wa+                         ( w fbadr adr' )
+   loop                                 ( w fbadr' adr' )
    3drop
 ;
 
-: read-rectangle  ( adr x y w h -- )
+: native-read-rectangle  ( adr x y w h -- )
    rectangle-setup 0  ?do                  ( adr wbytes fbadr )
       3dup -rot move                       ( adr wbytes fbadr )
       >r  tuck + swap  r>                  ( adr' wbytes fbadr )
       /scanline +                          ( adr' wbytes fbadr' )
    loop                                    ( adr' wbytes fbadr' )
+   3drop
+;
+: read-rectangle  ( adr x y w h -- )
+   565-rectangle-setup 0  ?do              ( adr w fbadr )
+      3dup -rot                            ( adr w fbadr  fbadr adr w )
+      depth d# 32 =  if                    ( adr w fbadr  fbadr adr w )
+         argb>565                          ( adr w fbadr )
+      else                                 ( adr w fbadr  fbadr adr w )
+         /w* move                          ( adr w fbadr )
+      then                                 ( adr w fbadr )
+      >r  tuck wa+ swap  r>                ( adr' w fbadr )
+      /scanline +                          ( adr' w fbadr' )
+   loop                                    ( adr' w fbadr' )
    3drop
 ;
 : dimensions  ( -- width height )  width height  ;

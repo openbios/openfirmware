@@ -281,6 +281,14 @@ headerless
    loop
    4drop
 ;
+: merge-rect-565  ( color mask-adr dst-adr width height -- )
+   0  ?do                          ( color mask-adr rect-adr width )
+      2over @  2over  fb16-merge   ( color mask-adr rect-adr width )
+      rot na1+ -rot                ( color mask-adr' rect-adr width )
+      tuck wa+  swap               ( color mask-adr rect-adr' width )
+   loop
+   4drop
+;
 
 headers
 : fb8-insert-characters  ( #chars -- )

@@ -1,8 +1,6 @@
 \ See license at end of file
 purpose: Via Unichrome graphics acceleration
 
-alias depth+ wa+
-
 : mmio@  ( offset -- l )  mmio-base + rl@  ;
 : mmio!  ( l offset -- )  mmio-base + rl!  ;
 
@@ -11,7 +9,7 @@ alias depth+ wa+
    0 h# 14 mmio!  \ Destination map base - beginning of frame buffer
    0 h# 1c mmio!  \ Source map base - beginning of frame buffer
    bytes/line 3 rshift  dup wljoin  8 mmio!  \ Dest and src pitch
-   depth  case
+   effective-depth  case
       8      of      0 endof  \  8-bpp 3:3:2
       d# 16  of h# 100 endof  \ 16-bpp 5:6:5
       d# 32  of h# 300 endof  \ 32-bpp 8:8:8:8

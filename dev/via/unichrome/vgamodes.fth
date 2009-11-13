@@ -88,5 +88,6 @@ warning !
 : 640x480x32   ( -- )  olpc-lcd-mode  d# 640 d# 480 d# 32 change-resolution  h# 112 note-mode  ;  \ VESA mode 112
 : 800x600x32   ( -- )  olpc-lcd-mode  d# 800 d# 600 d# 32 change-resolution  h# 115 note-mode  ;  \ VESA mode 115
 : 1024x768x32  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 32 change-resolution  h# 118 note-mode  ;  \ VESA mode 118
-: 1200x900x16  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 16 change-resolution  note-native-mode  ;
-: 1200x900x32  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 32 change-resolution  native-mode# 1- note-mode  ;
+: 1200x900x16  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 16 change-resolution  native-mode# 1- note-mode  ;
+: 1200x900x24  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 32 change-resolution  note-native-mode  ;
+: 1200x900x32  ( -- )  olpc-lcd-mode d# 1024 d# 768 d# 32 change-resolution  note-native-mode  ;
