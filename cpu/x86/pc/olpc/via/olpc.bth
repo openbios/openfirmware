@@ -140,6 +140,8 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/xo.565"       " xo.565"        $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " sd.565"        $add-deflated-dropin
 
+   " ${BP}/cpu/x86/pc/olpc/DisplayEDID.raw"     " edid"          $add-deflated-dropin
+
    " ${BP}/ofw/termemu/15x30pc.psf"             " font"          $add-deflated-dropin
 [ifdef] use-ega
    " ${BP}/ofw/termemu/cp881-16.obf"            " pcfont"        $add-deflated-dropin

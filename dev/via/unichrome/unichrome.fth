@@ -23,12 +23,23 @@ d# 1024 value /scanline	\ Frame buffer line width
 
 : set-resolution  ( width height depth -- )  to depth  to height  to width  ;
 
+: create-edid-property  ( -- )
+   " edid" get-my-property  if  ( )
+      " edid" find-drop-in  if  ( adr len )
+         2dup encode-bytes  " edid" property  free-mem
+      then     ( )
+   else        ( adr len )
+      2drop    ( )
+   then        ( )
+;
+
 : declare-props  ( -- )		\ Instantiate screen properties
    " width" get-my-property  if  
       width  encode-int " width"     property
       height encode-int " height"    property
       depth  encode-int " depth"     property
       /scanline  encode-int " linebytes" property
+      create-edid-property
    else
       2drop
    then
@@ -247,12 +258,14 @@ hex
 \ : crt-clr  ( mask reg# -- )  tuck crt@ swap invert and swap crt!  ;
 : crt-clr  crt-clear  ;
 
-
+: effective-depth  ( depth -- depth' )
+   depth d# 24 =  if  d# 32   else  depth  then   
+;
 : bytes>chars   ( bytes -- chars )  3 >>  ;
 : chars>bytes   3 <<  ;
 : pixels>bytes  ( pixels -- bytes )
    depth 4 = if  2/ exit  then
-   depth d# 24 =  if  d# 32   else  depth  then  *  ( bits )  3 >>  ( bytes )
+   effective-depth  *  ( bits )  3 >>  ( bytes )
 ;
 
 : lower-power  ( -- )
@@ -744,7 +757,7 @@ hex
 : scaling-off ( -- )  07 79 crt-clr  ;
 
 : olpc-lcd-mode  ( -- )
-   panel-resolution d# 16 set-resolution
+   panel-resolution d# 32 set-resolution
 
    c0 1b seq-set  \ Secondary display clock on
 
@@ -1195,7 +1208,7 @@ defer gp-install  ' noop to gp-install
 : set-terminal  ( -- )
    width  height                              ( width height )
    over char-width / over char-height /       ( width height rows cols )
-   /scanline depth fb-install gp-install      ( )
+   /scanline effective-depth fb-install gp-install   ( )
 ;
 
 : change-resolution  ( new-width new-height new-depth -- )
