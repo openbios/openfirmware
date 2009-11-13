@@ -2303,6 +2303,7 @@ Scope(\_SB)
         }   // Device(P2PB)
 
         Device (EC) {
+            Name(_HID,EISAID("PNP0C09"))                    // Embedded controller ID
             Name (_PRW, Package (0x02) {  0x01, 0x04 })     // Event 01, wakes from S4
 
             Method(_INI, 0)
