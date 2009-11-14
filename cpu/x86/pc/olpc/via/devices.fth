@@ -336,7 +336,6 @@ devalias d disk
 devalias n int
 devalias ide /ide@0/disk
 devalias sd  /sd/disk@2
-devalias ext /sd/disk@2
 devalias net /wlan
 
 \ The "int" devalias is defined in report-disk at runtime, since it
@@ -362,9 +361,18 @@ devalias net /wlan
    " disk"  " /usb/@10,1/disk" ?report-device  \ USB 1.1
    " disk"  " /usb/@10,0/disk" ?report-device  \ USB 1.1
 
-   " int"
-   atest?  if  " /ide@0/disk"  else  " /sd/disk@1"  then
-   $devalias
+   atest?  if
+      " int" " /ide@0/disk" $devalias
+      " ext" " /sd/disk@2"  $devalias
+   else
+      board-revision h# d28 <  if  \ B2 and earlier
+         " int" " /sd/disk@1"  $devalias
+         " ext" " /sd/disk@2"  $devalias
+      else
+         " ext" " /sd/disk@1"  $devalias
+         " int" " /sd/disk@3"  $devalias
+      then
+   then
 ;
 
 : report-keyboard  ( -- )
