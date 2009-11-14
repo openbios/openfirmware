@@ -141,6 +141,15 @@ d# 2,000 constant bulk-timeout
    ?dup  if                             ( actual csw-len csw-usberror )
       nip                               ( actual csw-usberror )
       dup h# 10000000 =  if             ( actual csw-usberror )
+[ifdef] notdef
+\ This is for testing the problem described in OLPC trac #9423
+\ The problem has been worked around so users no longer see it,
+\ apart from a short delay when it happens, but for testing you
+\ can enable this code to report the problem and count occurrences.
+cr 7 emit ." TIMEOUT " 7 emit
+" h# 72 cmos@ 1+ dup .d h# 72 cmos!" evaluate
+cr
+[then]
          2drop 0 2                      ( 0 2 )  \ Convert timeout error to a retry
       then				( actual usberror )
       exit
