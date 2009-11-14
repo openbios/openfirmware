@@ -538,6 +538,7 @@ d# 32 constant intr-interval		\ 4 ms poll interval
    or					( done?' )
 ;
 
+: poll-delay  ( -- )  d# 50 " us" evaluate  ;
 : qh-done?  ( qh -- done? )
    process-hc-status          ( qh )
    dup sync-qh                ( qh )
@@ -545,19 +546,22 @@ d# 32 constant intr-interval		\ 4 ms poll interval
 ;
 
 : done?  ( qh -- usberr )
-   begin
-      dup qh-done? ?dup 0=  if  ( qh )
-         1 ms
-         dup >qh-timeout	( qh timeout-adr )
-         dup l@ 1-		( qh timeout-adr timeout' )
-         dup rot l!		( qh timeout' )
-         0=                     ( qh timed-out? )
-         dup  if  " Timeout" USB_ERR_TIMEOUT set-usb-error  noop  then  ( qh timed-out? )
-      then                      ( qh exit-loop? )
-   until                        ( qh )
-   drop                         ( )
+   poll-delay  \ This may be a VIA quirk - if we poll too soon, we never see the done bit
+   begin  dup qh-done?  0=  while   ( qh )
+      1 ms
+      dup >qh-timeout	( qh timeout-adr )
+      dup l@ 1-		( qh timeout-adr timeout' )
+      dup rot l!	( qh timeout' )
+      0=  if            ( qh )
+         " Timeout" USB_ERR_TIMEOUT set-usb-error ( qh )
+         drop           ( )
+         usb-error      ( usberr )
+         exit
+      then
+   repeat               ( qh )
+   drop                 ( )
 
-   usb-error
+   usb-error		( usberr )
 ;
 
 : qtd-error?  ( qtd qh -- usberr )
