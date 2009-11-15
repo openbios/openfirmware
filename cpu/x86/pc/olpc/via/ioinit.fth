@@ -278,7 +278,7 @@
 [then]
 [ifdef] xo-board
 \  50 4c 4c mreg  \ Disable USB device mode, unused USB 1.1 ports 4,5, and EIDE device
-   50 cc cc mreg  \ Disable USB device mode, unused USB 1.1 ports 4,5, and EIDE device (set rsvd 80 bit to Phoenix value)
+   50 cc c8 mreg  \ Disable USB device mode and EIDE device (set rsvd 80 bit to Phoenix value)
    51 9f 88 mreg  \ Enable SDIO and internal RTC, disable card reader, int mouse & kbd
 [then]
 
