@@ -22,6 +22,7 @@ here swap - constant /net-ax8817x-list
 create net-pegasus-list  here
         050d w, 0121 w,         \ Belkin F5D5050
         07a6 w, 8515 w,         \ ADMtek 8515
+        0846 w, 1020 w,		\ Netgear FA101
 here swap - constant /net-pegasus-list
 
 : net-ax8817x?  ( vid pid -- flag )
