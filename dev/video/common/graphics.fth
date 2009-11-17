@@ -70,6 +70,7 @@ external
    else
       ?do  i c@  plt!  loop
    then
+   h# ff rmr!
 ;
 
 : set-colors  ( adr index #indices -- )

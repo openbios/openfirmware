@@ -607,6 +607,7 @@ defer rmr@  defer rmr!
 : (set-colors)  ( adr index #indices -- )
    swap windex!
    3 *  bounds  ?do  i c@  plt!  loop
+   h# ff rmr!
 ;
 
 fload ${BP}/dev/video/controlr/vga.fth
