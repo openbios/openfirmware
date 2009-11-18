@@ -408,8 +408,10 @@ Scope(\_SB)
 
     Device(PCI0)
     {
-        Name(_HID,EISAID ("PNP0A08"))    // Indicates PCI Express host bridge hierarchy
-        Name(_CID,EISAID ("PNP0A03"))    // For legacy OS that doesn't understand the new HID
+// Our WindowsXP SD build doesn't handle PCIe, so we have to claim basic PCI
+//      Name(_HID,EISAID ("PNP0A08"))    // Indicates PCI Express host bridge hierarchy
+//      Name(_CID,EISAID ("PNP0A03"))    // For legacy OS that doesn't understand the new HID
+        Name(_HID,EISAID ("PNP0A03"))    // For legacy OS that doesn't understand the new HID
 
         Name(_ADR,0x00000000)            // Device (HI WORD)=0, Func (LO WORD)=0
 
@@ -1208,7 +1210,7 @@ Scope(\_SB)
             Device(PS2M)                            //PS2 Mouse
             {
                 Name(_HID,EISAID("PNP0F13"))
-                Name(_STA, 0x0)  // not present:  not used on XO
+                Name(_STA, 0xF)  // not present:  not used on XO
                 Name(_CRS, ResourceTemplate () { IRQNoFlags () {12} })
                 Name(_PRW, Package() {0x09, 0x04})
             }
@@ -1218,7 +1220,7 @@ Scope(\_SB)
                     Name(_HID,EISAID("PNP0303"))
                     Name(_CID,EISAID("PNP030B"))    // Microsoft reserved PNP ID
 
-                    Name(_STA,0x0)  // not present:  not used on XO
+                    Name(_STA,0xF)  // not present:  not used on XO
 
                     Name (_CRS, ResourceTemplate ()
                     {
