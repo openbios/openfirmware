@@ -310,7 +310,7 @@ create end-array
 
 
 : test-name$  ( -- $ )  "  IE8y2D ScD%g4r2bAIFA."  ;
-: test-version$  ( -- $ )  " OLPC Ver 1.50.01"  ;
+: test-version$  ( -- $ )  " OLPC Ver 1.00.15"  ;
 : fw-version$  ( -- $ )
    " /openprom" find-package if
       " model" rot get-package-property  0=  if
