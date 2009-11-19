@@ -23,9 +23,12 @@ purpose: Timing functions using the ACPI timer
    d# 100,000  um/mod nip to us-factor  ( )
 ;
 
-[ifdef] use-acpi-timing
+[ifdef] use-acpi-delays
 : us  ( us -- )  acpi-us  ;
 ' acpi-ms to ms
+[then]
+
+[ifdef] use-acpi-timing
 
 \ Timing tools
 variable timestamp1

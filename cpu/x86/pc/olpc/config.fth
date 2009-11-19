@@ -17,8 +17,10 @@ create linux-support
 create jffs2-support
 create use-elf
 
-\ create use-timestamp-counter \ Use CPU's timestamp counter for timing ...
-			\ ... this is worthwhile if your CPU has one.
+\ The disadvantage of the timestamp counter is that it changes speed with
+\ CPU throttling.  The advantage is that it is 64 bits, so no rollover.
+create use-timestamp-counter \ Use CPU's timestamp counter for "ms"
+create use-tsc-timing        \ Use timestamp counter for t( .. )t
 
 create resident-packages
 \ create use-watch-all

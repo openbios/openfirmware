@@ -35,8 +35,10 @@ d# 262 value us-factor
 : 1ms  ( -- )  ms-factor spins  ;
 : us  ( #microseconds -- )  us-factor * spins  ;
 
+[ifdef] use-timestamp-counter
 : (ms)  ( #ms -- )  0  ?do  1ms  loop  ;
 ' (ms) to ms
+[then]
 
 [ifdef] use-tsc-timing   \ These are precise but inaccurate, as the TSC varies with clock throttling
 \ Timing tools
