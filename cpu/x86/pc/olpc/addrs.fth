@@ -66,6 +66,11 @@ h# e01c0 constant dbgp-adr
 h# fc000 constant dsdt-adr
 h# fd000 constant ssdt-adr
 
+\ Must agree with lxmsrs.fth
+h# 3d constant cmos-alarm-day	\ Offset of day alarm in CMOS
+h# 3e constant cmos-alarm-month	\ Offset of month alarm in CMOS
+h# 32 constant cmos-century	\ Offset of century byte in CMOS
+
 fload ${BP}/cpu/x86/pc/virtaddr.fth
 [ifndef] virtual-mode
 h# ff80.0000 to fw-virt-base  \ Override the usual setting; we use an MSR to double-map some memory up high

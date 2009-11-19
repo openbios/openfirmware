@@ -1,10 +1,6 @@
 purpose: Suspend/resume test with RTC wakeup
 \ See license at end of file
 
-h# 7d constant cmos-alarm-day	\ Offset of day alarm in CMOS
-h# 7e constant cmos-alarm-month	\ Offset of month alarm in CMOS
-h# 7f constant cmos-century	\ Offset of century byte in CMOS
-
 dev /rtc
 
 cmos-alarm-day    " alarm_day"   integer-property

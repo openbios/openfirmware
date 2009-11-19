@@ -1,11 +1,6 @@
 purpose: Suspend/resume test with RTC wakeup
 \ See license at end of file
 
-\ Must agree with lxmsrs.fth
-h# 3d constant cmos-alarm-day	\ Offset of day alarm in CMOS
-h# 3e constant cmos-alarm-month	\ Offset of month alarm in CMOS
-h# 32 constant cmos-century	\ Offset of century byte in CMOS
-
 dev /rtc
 
 cmos-alarm-day    " alarm_day"   integer-property

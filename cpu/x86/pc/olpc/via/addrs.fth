@@ -94,6 +94,10 @@ h#  4fff constant native-mode#
 h#  3e.0000 constant inflate-base
 h#  30.0000 constant workspace
 
+h# 7d constant cmos-alarm-day	\ Offset of day alarm in CMOS
+h# 7e constant cmos-alarm-month	\ Offset of month alarm in CMOS
+h# 7f constant cmos-century	\ Offset of century byte in CMOS
+
 fload ${BP}/cpu/x86/pc/virtaddr.fth
 
 
