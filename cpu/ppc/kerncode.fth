@@ -878,7 +878,7 @@ code (")  (s -- adr len)
    rlwinm ip,ip,0,0,29
 c;
 
-code (")  (s -- adr len)
+code (n")  (s -- addr len )
    push-tos
    lwzu  tos,/token(ip)	\ Get length byte in tos
    addi  ip,ip,1cell	\ Address of data bytes
