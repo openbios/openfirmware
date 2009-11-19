@@ -51,7 +51,7 @@
 ;
 : dcon-blnk?  ( -- flag )  h# 4a acpi-b@ 4 and 0<>  ;
 : dcon-stat@  ( -- n )  h# 4b acpi-b@ 3 and  ;
-: dcon-irq?  ( -- flag )  b3+?  if  4a acpi-b@ h# 40  else  1 smb-reg@ h# 20  then  and 0<>  ;
+: dcon-irq?  ( -- flag )  b3+?  if  4a acpi-b@ h# 40 and 0=  else  1 smb-reg@ h# 20 and 0<>  then  ;
 : dcon-clr-irq  ( -- )  b3+?  if  exit  then  h# 20 1 smb-reg!  ;
 
 \ DCONSTAT values:  0 SCANINT  1 SCANINT_DCON  2 DISPLAYLOAD  3 MISSED
