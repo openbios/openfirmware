@@ -695,6 +695,39 @@ code fill (s start-adr count char -- )
 
    pop2
 c;
+code wfill (s start-adr count w -- )
+			\ 16-bit data in tos
+   second-to-t0	\ count in t0
+   third-to-t1	\ dst in t1
+    
+   addi  t1,t1,-2		\ Account for pre-increment
+   rlwinm  t0,t0,31,1,31	\ Divide count by 2
+   mfspr t2,ctr			\ Save CTR
+   mtspr ctr,t0
+   begin
+      sthu tos,2(t1)
+   countdown
+   mtspr ctr,t2
+
+   pop2
+c;
+
+code lfill (s start-adr count long -- )
+			\ 32-bit data in tos
+   second-to-t0	\ count in t0
+   third-to-t1	\ dst in t1
+    
+   addi  t1,t1,-1cell		\ Account for pre-increment
+   rlwinm  t0,t0,30,2,31	\ Divide count by 4
+   mfspr t2,ctr			\ Save CTR
+   mtspr ctr,t0
+   begin
+      stwu tos,1cell(t1)
+   countdown
+   mtspr ctr,t2
+
+   pop2
+c;
 
 code noop (s -- )  c;
 

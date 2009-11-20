@@ -241,6 +241,7 @@ headerless
     loop  2drop                             ( )
 ;
 
+[ifdef] cursor-w
 [ifndef] fb8-merge
 : fb8-merge  ( color bits dst-adr width -- )
    bounds  ?do                   ( color mask )
@@ -289,6 +290,7 @@ headerless
    loop
    4drop
 ;
+[then]
 
 headers
 : fb8-insert-characters  ( #chars -- )
@@ -317,7 +319,9 @@ headers
          ['] fb8-invert to fb-invert
          ['] fill       to fb-fill
          ['] fb8-paint  to fb-paint
+[ifdef] fb8-merge
          ['] fb8-merge  to fb-merge
+[then]
          ['] colors-8bpp  to fb-16map
       endof
 
@@ -326,7 +330,9 @@ headers
          ['] fb16-invert to fb-invert
          ['] wfill       to fb-fill
          ['] fb16-paint  to fb-paint
+[ifdef] fb16-merge
          ['] fb16-merge  to fb-merge
+[then]
          ['] colors-565  to fb-16map
       endof
 
@@ -335,7 +341,9 @@ headers
          ['] fb32-invert to fb-invert
          ['] lfill       to fb-fill
          ['] fb32-paint  to fb-paint
+[ifdef] fb32-merge
          ['] fb32-merge  to fb-merge
+[then]
          ['] colors-32bpp to fb-16map
       endof
    endcase

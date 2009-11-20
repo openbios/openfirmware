@@ -43,6 +43,84 @@ code fb8-invert  ( adr width height bytes/line fg-color bg-color -- )
     addi	sp,sp,1cell
 c;
 
+\ Invert foreground and background colors within a rectangular region
+code fb16-invert  ( adr width height bytes/line fg-color bg-color -- )
+				\ bg-color in tos
+    lwz		t4,0(sp)	\ fg-color in t4
+    lwzu	t0,1cell(sp)	\ bytes/line in scr
+    lwzu	t2,1cell(sp)	\ height in t1 (outer loop index, >0)
+    lwzu	t1,1cell(sp)	\ width in t2 (inner loop index, >0)
+    lwzu	t3,1cell(sp)	\ adr in sc3 (starting address)
+
+    mfspr	t6,ctr		\ Save counter
+    
+    subf	t0,t1,t0	\ Account for inner loop incrementing
+    addi	t3,t3,-2	\ Account for inner loop incrementing
+
+    begin 			\ Outer loop
+        mtspr	ctr,t1		\ Starting width value
+	begin			\ Inner loop
+	    lhzu  t5,2(t3)	\ read halfword
+	    cmp   0,0,t5,tos	\ Background?
+	    =  if
+		mr  t5,t4	\ Set to foreground
+	    else
+		cmp  0,0,t5,t4	\ Foreground?
+		= if
+		    mr  t5,tos	\ Set to background
+		then
+	    then
+	    sth	  t5,0(t3)	\ store halfword
+	countdown		\ End inner loop when width=0
+
+	addic.	t2,t2,-1	\ decrement height until =0
+	add	t3,t3,t0	\ increment adr to next line
+    = until			\ End outer loop when height=0
+
+    mtspr	ctr,t6		\ Restore counter
+    lwzu	tos,1cell(sp)	\ Clean up stack
+    addi	sp,sp,1cell
+c;
+
+\ Invert foreground and background colors within a rectangular region
+code fb32-invert  ( adr width height bytes/line fg-color bg-color -- )
+				\ bg-color in tos
+    lwz		t4,0(sp)	\ fg-color in t4
+    lwzu	t0,1cell(sp)	\ bytes/line in scr
+    lwzu	t2,1cell(sp)	\ height in t1 (outer loop index, >0)
+    lwzu	t1,1cell(sp)	\ width in t2 (inner loop index, >0)
+    lwzu	t3,1cell(sp)	\ adr in sc3 (starting address)
+
+    mfspr	t6,ctr		\ Save counter
+    
+    subf	t0,t1,t0	\ Account for inner loop incrementing
+    addi	t3,t3,-4	\ Account for inner loop incrementing
+
+    begin 			\ Outer loop
+        mtspr	ctr,t1		\ Starting width value
+	begin			\ Inner loop
+	    lwzu  t5,4(t3)	\ read word
+	    cmp   0,0,t5,tos	\ Background?
+	    =  if
+		mr  t5,t4	\ Set to foreground
+	    else
+		cmp  0,0,t5,t4	\ Foreground?
+		= if
+		    mr  t5,tos	\ Set to background
+		then
+	    then
+	    stw	  t5,0(t3)	\ store word
+	countdown		\ End inner loop when width=0
+
+	addic.	t2,t2,-1	\ decrement height until =0
+	add	t3,t3,t0	\ increment adr to next line
+    = until			\ End outer loop when height=0
+
+    mtspr	ctr,t6		\ Restore counter
+    lwzu	tos,1cell(sp)	\ Clean up stack
+    addi	sp,sp,1cell
+c;
+
 \ Draws a character from a 1-bit-deep font into an 8-bit-deep frame buffer
 \ Assumptions: 	Fontbytes is 2; 0 < width <= 16
 \		Fontadr is divisible by 2
@@ -106,6 +184,132 @@ code fb8-paint
     addi	sp,sp,4
 c;
 
+\ Draws a character from a 1-bit-deep font into a 16-bit-deep frame buffer
+\ Assumptions: 	Fontbytes is 2; 0 < width <= 16
+\		Fontadr is divisible by 2
+code fb16-paint
+( fontadr fontbytes width height screenadr bytes/line fg-color bg-color -- )
+    \ tos already there		\ bg-color in tos
+    lwz		t9,0(sp)	\ fg-color in t9
+    lwzu	t2,1cell(sp)	\ Bytes/line - bytes per scan line
+    lwzu	t3,1cell(sp)	\ Screenadr - start address in frame buffer
+    lwzu	t4,1cell(sp)	\ Height - character height in pixels
+    lwzu	t5,1cell(sp)	\ Width - character width in pixels (bytes)
+    lwzu	t6,1cell(sp)	\ Fontbytes - bytes per font line
+    lwzu	t7,1cell(sp)	\ Fontadr - start adr of this char in font table
+ 
+    addi	t3,t3,-2	\ Account for pre-incrementing
+    subf	t2,t5,t2	\ Account for inner loop incrementing
+    mfspr	t8,ctr		\ Save counter
+
+    addi	r0,r0,8		\ Constant 8 (pixels/font-byte), needed below
+
+
+    begin			\ Outer loop - for all scan lines in char
+	lbz	t0,0(t7)	\ Up to 8 font bits into scr  
+	rlwinm	t0,t0,23,1,8	\ Align almost to high part of word so that
+				\ one more shift will affect the sign bit
+
+	mr	t1,t5		\ Reset width counter for the new scan line
+
+	ahead			\ Branch down to end of loop
+	begin
+
+	    cmpi  0,0,t1,8
+	    <  if
+	        mtspr  ctr,t1	\ Set count
+	        subf   t1,t1,t1	\ Width is exhausted
+	    else
+		mtspr  ctr,r0	\ Max inner loop count is 8
+		addi   t1,t1,-8	\ Reduce width by 8
+	    then
+
+	    begin		\ Inner loop - for each pixel in a font byte
+		add.  t0,t0,t0		\ Shift next pixel bit to top position
+		0<  if
+		    sthu  t9,2(t3)	\ Write foreground color to framebuffer
+		else
+		    sthu  tos,2(t3)	\ Write background color to framebuffer
+		then	    	    
+	    countdown               \ Repeat until width count = 0
+
+        but then
+	    cmpi  0,0,t1,0
+        = until
+
+	add	t7,t7,t6	\ Next scan line in font table
+	addic.	t4,t4,-1	\ Decrement height counter
+	add	t3,t3,t2	\ Increment frame buffer addr to next line
+    = until                	\ Repeat until height count = 0
+
+    mtspr	ctr,t8		\ Restore counter
+    lwzu	tos,4(sp)	\ Clean up stack
+    addi	sp,sp,4
+c;
+
+\ Draws a character from a 1-bit-deep font into a 32-bit-deep frame buffer
+\ Assumptions: 	Fontbytes is 2; 0 < width <= 16
+\		Fontadr is divisible by 2
+code fb32-paint
+( fontadr fontbytes width height screenadr bytes/line fg-color bg-color -- )
+    \ tos already there		\ bg-color in tos
+    lwz		t9,0(sp)	\ fg-color in t9
+    lwzu	t2,1cell(sp)	\ Bytes/line - bytes per scan line
+    lwzu	t3,1cell(sp)	\ Screenadr - start address in frame buffer
+    lwzu	t4,1cell(sp)	\ Height - character height in pixels
+    lwzu	t5,1cell(sp)	\ Width - character width in pixels (bytes)
+    lwzu	t6,1cell(sp)	\ Fontbytes - bytes per font line
+    lwzu	t7,1cell(sp)	\ Fontadr - start adr of this char in font table
+ 
+    addi	t3,t3,-4	\ Account for pre-incrementing
+    subf	t2,t5,t2	\ Account for inner loop incrementing
+    mfspr	t8,ctr		\ Save counter
+
+    addi	r0,r0,8		\ Constant 8 (pixels/font-byte), needed below
+
+
+    begin			\ Outer loop - for all scan lines in char
+	lbz	t0,0(t7)	\ Up to 8 font bits into scr  
+	rlwinm	t0,t0,23,1,8	\ Align almost to high part of word so that
+				\ one more shift will affect the sign bit
+
+	mr	t1,t5		\ Reset width counter for the new scan line
+
+	ahead			\ Branch down to end of loop
+	begin
+
+	    cmpi  0,0,t1,8
+	    <  if
+	        mtspr  ctr,t1	\ Set count
+	        subf   t1,t1,t1	\ Width is exhausted
+	    else
+		mtspr  ctr,r0	\ Max inner loop count is 8
+		addi   t1,t1,-8	\ Reduce width by 8
+	    then
+
+	    begin		\ Inner loop - for each pixel in a font byte
+		add.  t0,t0,t0		\ Shift next pixel bit to top position
+		0<  if
+		    stwu  t9,4(t3)	\ Write foreground color to framebuffer
+		else
+		    stwu  tos,4(t3)	\ Write background color to framebuffer
+		then	    	    
+	    countdown               \ Repeat until width count = 0
+
+        but then
+	    cmpi  0,0,t1,0
+        = until
+
+	add	t7,t7,t6	\ Next scan line in font table
+	addic.	t4,t4,-1	\ Decrement height counter
+	add	t3,t3,t2	\ Increment frame buffer addr to next line
+    = until                	\ Repeat until height count = 0
+
+    mtspr	ctr,t8		\ Restore counter
+    lwzu	tos,4(sp)	\ Clean up stack
+    addi	sp,sp,4
+c;
+
 \ Very fast window move, for scrolling
 \ Similar to 'move', but only moves #move/line out of every 'bytes/line' bytes
 \ Assumes bytes/line is divisible by 8 (for double-long load/stores)
@@ -123,7 +327,7 @@ c;
    4 constant fbalign
 [then]
 
-code fb8-window-move  ( src-start dst-start size bytes/line #move/line -- )
+code fb-window-move  ( src-start dst-start size bytes/line #move/line -- )
     				\ tos=#move/line
     lwz		t0,0(sp)	\ t0=bytes/line
     lwzu	t1,1cell(sp)	\ t1=size
