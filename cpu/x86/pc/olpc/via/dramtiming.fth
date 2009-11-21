@@ -36,7 +36,9 @@ d#   5.00 to Tck
 d# 125.00 constant Trfc  \ Fudged to get same setting as Phoenix
 d#   7.50 constant Trrd
 \ d#  10.00 constant Trrd
-d#      3 constant TCL
+\ TCL depends on the type of RAM chip, so it is set dynamically
+\ d#      3 constant TCL \ Normal value
+\ d#      4 constant TCL \ For new RAM chips
 \ d#  40.00 constant Tras
  d#  45.00 constant Tras
 d#  15.00 constant Twr
@@ -95,3 +97,15 @@ h# 400.0000 constant /fbmem
 ;
 
 : dblfudge32  2/  ;
+
+0 [if]
+: mrs-value  ( -- n )
+   3               \ code for burst length 8; use 2 for burst length 4
+   1    3 lshift or   \ Interleaved bursts
+   TCL  4 lshift or   \ CAS Latency
+   0    7 lshift or   \ Normal mode, not test mode
+   0    8 lshift or   \ Not DLL reset
+   Twr Tck / 1-  scramble-mrs  or   \ Twr cycles minus 1
+   3 lshift
+;
+[then]

@@ -24,7 +24,12 @@ label DDRinit
    
    13 36b config-wb  \ SDRAM MRS Enable
 \  101258 #) ax mov  \ Depends on Twr, CL, and Burst Length
-   1021d8 #) ax mov  \ Depends on Twr, CL, and Burst Length
+
+   acpi-io-base 48 + port-rl  h# 0008.0000 # ax and  0<>  if  \ Memory ID0 bit - set for CL4 SDRAM
+      102258 #) ax mov  \ Depends on Twr, CL, and Burst Length - CL4
+   else
+      1021d8 #) ax mov  \ Depends on Twr, CL, and Burst Length - CL3
+   then
 
 0 [if]
 2024b

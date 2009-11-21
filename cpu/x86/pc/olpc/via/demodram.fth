@@ -53,7 +53,6 @@
 
 \  61 ff 12 mreg  \ Trfc, Trrd  Trfc = 0x39+8 = 65  Trrd=4T ceil(7.5ns/5ns)
 
-   62 07  TCL  2 -              mreg   \ CL 3
    62 08  08                    mreg   \ 8-bank timing constraint
 \ !!!
    62 f0  Tras ns>tck 5 - 4 <<  mreg   \ Tras: ceil( 40.00/5) = 8     - 5 = 0x03
@@ -76,6 +75,17 @@
 \  64 ff 22 mreg  \ Trp 3, Trcd 3
 [then]
    end-table
+
+   acpi-io-base 48 + port-rl  h# 0008.0000 # ax and  0<>  if  \ Memory ID0 bit - set for CL4 SDRAM
+      0 3 devfunc
+      62 07  4    2 -              mreg   \ CL 4
+      end-table
+   else
+      0 3 devfunc
+      62 07  3    2 -              mreg   \ CL 3
+      end-table
+   then
+
 
 \  DRAMBurstLength
    0 3 devfunc
