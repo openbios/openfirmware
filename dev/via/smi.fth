@@ -299,7 +299,7 @@ code (smi-return)   \ This code field must be relocated after copying to SMM mem
    smm-d16 # ax mov  ax ss mov  ax ds mov      \ Reload data and stack segments
 
    cr0 ax mov  1 invert # al and  ax cr0 mov   \ Exit protected mode
-   here 7 +  smi-handler - +smm-offset  smm-base 4 rshift #)  far jmp    \ Set CS for real mode
+   here 5 +  smi-handler - +smm-offset  smm-base 4 rshift #)  far jmp    \ Set CS for real mode
 
    wbinvd
 
@@ -359,6 +359,10 @@ defer smm>physical
 ' (smm>physical) to smm>physical
 
 : smm-map?  ( vadr -- )  smm>physical  .  ;
+
+\ Linear address of the EIP, accounting for the code segment value
+\ This is the return address in the SMM handler's 0-based memory map.
+: smm-eip-la  ( -- adr )  smm-eip smm@  smm-cs-base smm@ +  ;
 
 \ Programs that write to the caller's data space should use this,
 \ as it works when called from paged V86 mode.
