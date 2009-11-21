@@ -241,7 +241,6 @@ headerless
     loop  2drop                             ( )
 ;
 
-[ifdef] cursor-w
 [ifndef] fb8-merge
 : fb8-merge  ( color bits dst-adr width -- )
    bounds  ?do                   ( color mask )
@@ -253,7 +252,7 @@ headerless
    2drop                         ( )
 ;
 : fb16-merge  ( color bits dst-adr width -- )
-   cursor-w /w*  bounds  ?do     ( color mask )
+   /w*  bounds  ?do              ( color mask )
       dup h# 80000000 and  if    ( color mask )
          over i w!               ( color mask )
       then                       ( color mask )
@@ -262,7 +261,7 @@ headerless
    2drop                         ( )
 ;
 : fb32-merge  ( color bits dst-adr width -- )
-   cursor-w /l*  bounds  ?do     ( color mask )
+   /l*  bounds  ?do              ( color mask )
       dup h# 80000000 and  if    ( color mask )
          over i l!               ( color mask )
       then                       ( color mask )
@@ -273,7 +272,6 @@ headerless
 [then]
 
 \ This is used for cursor painting.  Call it via screen-execute
-
 : merge-rect  ( color mask-adr dst-adr width height -- )
    0  ?do                        ( color mask-adr rect-adr width )
       2over @  2over  fb-merge   ( color mask-adr rect-adr width )
@@ -290,7 +288,6 @@ headerless
    loop
    4drop
 ;
-[then]
 
 headers
 : fb8-insert-characters  ( #chars -- )
@@ -319,9 +316,7 @@ headers
          ['] fb8-invert to fb-invert
          ['] fill       to fb-fill
          ['] fb8-paint  to fb-paint
-[ifdef] fb8-merge
          ['] fb8-merge  to fb-merge
-[then]
          ['] colors-8bpp  to fb-16map
       endof
 
@@ -330,9 +325,7 @@ headers
          ['] fb16-invert to fb-invert
          ['] wfill       to fb-fill
          ['] fb16-paint  to fb-paint
-[ifdef] fb16-merge
          ['] fb16-merge  to fb-merge
-[then]
          ['] colors-565  to fb-16map
       endof
 
@@ -341,9 +334,7 @@ headers
          ['] fb32-invert to fb-invert
          ['] lfill       to fb-fill
          ['] fb32-paint  to fb-paint
-[ifdef] fb32-merge
          ['] fb32-merge  to fb-merge
-[then]
          ['] colors-32bpp to fb-16map
       endof
    endcase
