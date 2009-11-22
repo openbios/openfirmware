@@ -369,3 +369,5 @@ v3    03f 2 byte-code: set-args            ( arg-str unit-str -- )
 
 \ --- parsing argument strings
 v2    040 2 byte-code: left-parse-string ( adr len char -- adrR lenR adrL lenL )
+
+v3    041 2 byte-code: debug-me
