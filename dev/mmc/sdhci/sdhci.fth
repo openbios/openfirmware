@@ -321,13 +321,22 @@ headers
 : wait  ( mask -- )
    h# 8000 or                                     ( mask' )
    begin                                          ( mask )
-      isr@  dup isr!                              ( mask isr )
-   2dup and  0= while                             ( mask isr )
+      isr@  2dup and                              ( mask isr mask&isr )
+   0= while                                       ( mask isr )
 \     key?  if  key drop  debug-me  then          ( mask isr )
       \ DMA interrupt - the transfer crossed an address boundary
-      8 and  if  0 cl@ 0 cl!  then                ( mask )
+      8 and  if  0 cl@ 0 cl!  8 isr!  then        ( mask )
    repeat                                         ( mask isr )
-   nip                                            ( isr )
+
+   \ Only clear the bits we will handle this time.
+   \ If additional ISR bits are set, leave them set because
+   \ later code will be waiting for them.  In practice, the
+   \ only such additional bit is the "data transfer complete"
+   \ bit - mask 2 - which "2 wait" will handle.
+   \ But we do go ahead and clear card removal/insertion
+   \ events, because we don't handle them elsewhere.
+   swap  h# c0 or  over and  isr!                 ( isr )
+
    dup h# 8000 and  if   .sderror  else  drop  then   ( )
 ;
 
@@ -419,7 +428,14 @@ headers
 ;
 
 : deselect-card  ( -- )   0   h# 0700 0 cmd  ;  \ CMD7 - with null RCA
-: select-card    ( -- )   rca h# 071b 0 cmd  ;  \ CMD7 R1b
+: select-card    ( -- )    \ CMD7 R1b
+   rca h# 071b 0 cmd
+   \ In principle this shouldn't be necessary, but the Via VX855's SD
+   \ host controller incorrectly sets the "data transfer complete" bit
+   \ during CMD7 with nonzero RCA, and if you don't clear it, subsequent
+   \ commands sometimes fail with either Command Timeout or CRC error.
+   isr@ isr!
+;
 
 : send-if-cond  ( -- )  h# 1aa h# 081a 0 cmd  ( response h# 1aa <>  if  ." Error"  then )   ;  \ CMD8 R7 (SD)
 
