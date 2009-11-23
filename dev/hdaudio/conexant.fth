@@ -43,6 +43,11 @@ h# 17 value mux      \ mux between the two
 ;
 
 : cx2058x-enable-playback   ( -- )
+   h# 19 to node  pin-sense?  if  \ headphones attached
+      h# 1f to node  power-off    \ turn off speaker
+   else                           \ no headphones
+      h# 1f to node  power-on     \ turn on speaker 
+   then 
    h# 10 to node  h# 70640 cmd   h# 20000 stream-format or cmd
 ;
 : cx2058x-disable-playback  ( -- )  ;
