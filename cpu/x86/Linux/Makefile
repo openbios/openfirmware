@@ -3,7 +3,8 @@
 BP=../../..
 
 CFLAGS	= -O -g -m32 -DTARGET_X86
-# CFLAGS += -DUSE_XCB
+CFLAGS += -DUSE_XCB
+LIBS += -lxcb
 
 WRTAIL = forth/wrapper
 WRDIR = ${BP}/${WRTAIL}
@@ -12,7 +13,7 @@ ZIPDIR = ${BP}/${ZIPTAIL}
 
 ZIPOBJS = zipmem.o deflate.o trees.o bits.o util.o inflate.o
 
-OBJS = wrapper.o logger.o ${ZIPOBJS}
+OBJS = wrapper.o logger.o ${ZIPOBJS} xcbifce.o
 
 all: forth x86forth ../build/inflate.bin
 
@@ -21,7 +22,7 @@ all: forth x86forth ../build/inflate.bin
 # Use x86forth when you need to compile new dictionaries that will
 # run on x86 systems.
 forth: ${OBJS}
-	${CC} -m32 -o $@ ${OBJS}
+	${CC} -m32 -o $@ ${OBJS} ${LIBS}
 	@ln -sf forth x86forth
 
 # Compile with -O0 because with GCC4, higher optimization levels cause the

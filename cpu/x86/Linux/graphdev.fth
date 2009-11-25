@@ -1,8 +1,16 @@
 purpose: Simulation of OFW graphics using X
 
+[ifndef] screen-ih
+dev / : open true ; : close ;  dend
+0 value screen-ih
+: $call-screen screen-ih $call-method ;
+[then]
+[ifndef] show-state  : show-state 2drop ;  [then]
+
 dev /  new-device
   " xgraphics" device-name
   : open  ( -- okay? )  d# 1200 d# 900  d# 392 syscall  2drop retval  0=  ;
+debug open
   : close ( -- )   d# 396 syscall  ;
 
   : fill-rectangle  ( color565 x y w h -- )  d# 404 syscall  4drop drop  ;
