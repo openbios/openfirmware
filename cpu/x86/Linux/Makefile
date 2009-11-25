@@ -3,8 +3,13 @@
 BP=../../..
 
 CFLAGS	= -O -g -m32 -DTARGET_X86
-CFLAGS += -DUSE_XCB
-LIBS += -lxcb
+
+# Uncomment these lines to include X windows support to the wrapper
+# via libxcb.  The libxcb development package (headers, etc) must be
+# present on your compilation machine for this to work.
+# CFLAGS += -DUSE_XCB
+# LIBS += -lxcb
+# OBJS += xcbifce.o
 
 WRTAIL = forth/wrapper
 WRDIR = ${BP}/${WRTAIL}
@@ -13,7 +18,7 @@ ZIPDIR = ${BP}/${ZIPTAIL}
 
 ZIPOBJS = zipmem.o deflate.o trees.o bits.o util.o inflate.o
 
-OBJS = wrapper.o logger.o ${ZIPOBJS} xcbifce.o
+OBJS += wrapper.o logger.o ${ZIPOBJS}
 
 all: forth x86forth ../build/inflate.bin
 
