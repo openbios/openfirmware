@@ -31,16 +31,53 @@ purpose: Timing functions using the ACPI timer
 [ifdef] use-acpi-timing
 
 \ Timing tools
-variable timestamp1
-: t(  ( -- )  acpi-timer@ timestamp1 ! ;
-: ))t1  ( -- ticks )  acpi-timer@  timestamp1 @  -  ;
+2variable timestamp
+0 value timer-high
+: get-timer  ( -- d )
+   \ First handle the case where we have aleady rolled over
+   0 acpi-w@ 1 and  if           \ Rollover bit changed
+      1 0 acpi-w!                \ Clear indication
+      acpi-timer@  timer-high    ( timer.low timer.high )
+      over  0>=  if              ( timer.low timer.high )
+         1+ dup  to timer-high   ( timer.low timer.high' )
+      then                       ( timer.low timer.high )
+      exit
+   then                          ( )
+
+   acpi-timer@ timer-high        ( timer.low timer.high )
+   0 acpi-w@ 1 and  0=  if  exit  then   \ We are done if rollover bit didn't change
+   1 0 acpi-w!                   ( timer.low timer.high )
+   \ Otherwise we must start over, to ensure that low and high are consistent
+
+   2drop                         ( )
+   acpi-timer@  timer-high       ( timer.low timer.high )
+   over  0>=  if                 ( timer.low timer.high )
+      1+ dup  to timer-high      ( timer.low timer.high' )
+   then                          ( timer.low timer.high )
+;
+: du*  ( ud.lo ud.hi u -- res.lo res.mid res.hi )  \ Ignores overflow to third cell
+   tuck  um*  2>r           ( ud.lo u      r: res.mid0 res.hi0 )
+   um*                      ( res.lo res.mid1  r: res.mid0 res.hi0 )
+   0  2r> d+                ( res.lo res.mid res.hi )
+;
+: acpi-ticks>usecs  ( d.ticks -- usec )
+   d# 50 du* drop      ( d.product )  \ The scale factor is 1000/3580 == 50/179
+   d# 179 um/mod nip   ( usecs )
+;
+
+\ If you are doing a long timing, call this periodically to handle rollover
+: t-update  ( -- )  0 acpi-w@ 1 and  if  timer-high 1+ to timer-high  then  ;
+: t(  ( -- )  get-timer timestamp 2!  ;
+\ Subtracting 10 accounts for the time it takes to read the ACPI timer,
+\ which is an I/O port and therefore slow to read
+: ))t1  ( -- d.ticks )  get-timer  timestamp 2@  d-  d# 10. d-  0. dmax  ;
 : )t  ( -- )
-   ))t1  d# 1000 d# 3580 */  ( microseconds )
+   ))t1  acpi-ticks>usecs   ( microseconds )
    push-decimal
    <#  u# u# u#  [char] , hold  u# u#s u#>  type  ."  uS "
    pop-base
 ;
-: ))t-sec  ( -- sec )    ))t1  d# 3,580,000 /  ;
+: ))t-sec  ( -- sec )  ))t1  d# 3,580,000 um/mod nip  ;
 : )t-sec  ( -- )
    ))t-sec  ( seconds )
    push-decimal
@@ -53,10 +90,7 @@ variable timestamp1
    <# u# u#s u#> type ." :" <# u# u# u#> type ." :" <# u# u# u#>  type
    pop-base
 ;
-: )t-hms
-   ))t-sec  d# 3,580,000 /  ( seconds )
-   .hms
-;
+: )t-hms  ( -- )  ))t-sec  .hms  ;
 [then]
 
 \ LICENSE_BEGIN

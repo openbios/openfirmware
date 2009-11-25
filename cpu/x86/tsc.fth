@@ -43,6 +43,7 @@ d# 262 value us-factor
 [ifdef] use-tsc-timing   \ These are precise but inaccurate, as the TSC varies with clock throttling
 \ Timing tools
 2variable timestamp
+: t-update ;
 : t(  ( -- )  tsc@ timestamp 2! ;
 : ))t  ( -- d.ticks )  tsc@  timestamp 2@  d-  ;
 : )t  ( -- )
