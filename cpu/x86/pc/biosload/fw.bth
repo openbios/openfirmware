@@ -298,8 +298,10 @@ previous previous definitions
 ;
 
 [ifdef] olpc
+[ifdef] geode
 fload  ${BP}/cpu/x86/pc/olpc/usbpwr.fth
 devalias net /wlan
+[then]
 [then]
 [ifdef] via-demo
 devalias net /wlan
@@ -318,7 +320,9 @@ fload ${BP}/cpu/x86/pc/biosload/memtest.fth
    probe-isa-modem
 [then]
 [ifdef] olpc
+[ifdef] geode
    power-cycle-usb
+[then]
    probe-usb
 [else]
    probe-usb
@@ -337,8 +341,8 @@ fload ${BP}/cpu/x86/pc/biosload/memtest.fth
 
 : startup  ( -- )
    standalone?  0=  if  exit  then
-\   ." calibrate-ms"  cr
-\   calibrate-ms
+   ." calibrate-ms"  cr
+   calibrate-ms
 
     ." nvramrc" cr
     use-nvramrc?  if  nvramrc safe-evaluate  then

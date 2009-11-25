@@ -335,7 +335,9 @@ fload ${BP}/cpu/x86/pc/reset.fth		\ reset-all
 [ifdef] olpc
 \ true constant lx?			\ 
 h# fff0.0000   constant rom-pa		\ Physical address of boot ROM
+[ifdef] geode
 fload ${BP}/dev/geode/acpi.fth           \ Power management
+[then]
 fload ${BP}/dev/olpc/kb3700/ecspi.fth      \ EC chip SPI FLASH access
 
 warning @ warning off
