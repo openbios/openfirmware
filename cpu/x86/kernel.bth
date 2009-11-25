@@ -15,10 +15,16 @@ build-now
 \ [then]
 \ [then]
 
+\ create omit-files
+
+[ifdef] omit-files
+create dic-file-name  ," kernelnofiles.dic"
+[else]
 [ifdef] big-endian-t
 create dic-file-name  ," kernelbe.dic"
 [else]
 create dic-file-name  ," kernel.dic"
+[then]
 [then]
 
 : \Tags  [compile] \ ; immediate
@@ -92,15 +98,34 @@ fload ${BP}/forth/kernel/double.fth
 \ fload ${BP}/forth/kernel/dmuldiv.fth
 
 fload ${BP}/forth/lib/bitops.fth
+[ifdef] omit-files
+defer set-relocation-bit
+defer clear-relocation-bits
+' noop is set-relocation-bit
+' 2drop is clear-relocation-bits
+[else]
 fload ${BP}/cpu/x86/kernrel.fth
+[then]
 
 fload ${BP}/forth/lib/struct.fth
 
 fload ${BP}/forth/kernel/kernel.fth
 
+[ifdef] omit-files
+fload ${BP}/forth/lib/dumballo.fth
+false value flat?
+: uart-init-io  ( -- )
+   install-uart-io
+;
+' uart-init-io is init-io
+' noop is init-environment
+: stand-init ;
+
+[else]
 fload ${BP}/forth/kernel/sysio.fth
 fload ${BP}/forth/lib/dumballo.fth
 fload ${BP}/cpu/x86/syscall.fth
+[then]
 
 fload ${BP}/forth/kernel/nswapmap.fth
 
@@ -113,16 +138,26 @@ fload ${BP}/cpu/x86/finish.fth
 
 meta-tag-file @ fclose  meta-tag-file off
 
+[ifdef] omit-files
+: crcgen drop ;
+: patchboot ;
+fload ${BP}/cpu/x86/pc/saveabs.fth
+[else]
 fload ${BP}/cpu/x86/saveexp.fth
 fload ${BP}/cpu/x86/savemeta.fth
+[then]
 
 warning on	\ Turn ON the warning messages
 
 hex
 
+[ifdef] omit-files
+dic-file-name count  h# ffff.0000 save-abs-rom cr
+[else]
 \Tags close-tag-file
 \NotTags .( --- Saving )  dic-file-name ". .(  ---)
 dic-file-name count $save-meta cr
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
