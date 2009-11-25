@@ -30,7 +30,7 @@ d# 500 constant bulk-out-timeout
 : toggle-bulk-in-data   ( -- )    bulk-in-pipe  target di-in-data-toggle   ;
 : toggle-bulk-out-data  ( -- )    bulk-out-pipe target di-out-data-toggle  ;
 
-: qtd-fixup-bulk-in-data  ( qtd -- data )
+: qtd-fixup-bulk-in-data  ( qtd -- )
    usb-error USB_ERR_STALL and  if
       drop bulk-in-pipe h# 80 or unstall-pipe 
       TD_TOGGLE_DATA0
@@ -39,9 +39,9 @@ d# 500 constant bulk-out-timeout
    then
    bulk-in-data!
 ;
-: fixup-bulk-in-data    ( qh -- data )  >hcqh-overlay qtd-fixup-bulk-in-data  ;
+: fixup-bulk-in-data    ( qh -- )  >hcqh-overlay qtd-fixup-bulk-in-data  ;
 
-: fixup-bulk-out-data   ( qh -- data )
+: fixup-bulk-out-data   ( qh -- )
    usb-error USB_ERR_STALL and  if
       drop bulk-out-pipe unstall-pipe
       TD_TOGGLE_DATA0
@@ -470,7 +470,7 @@ external
 
    usb-error					( actual usberr )
    my-bulk-qtd map-out-bptrs			( actual usberr )
-   my-bulk-qh dup fixup-bulk-in-data		( actual usberr )
+   my-bulk-qh dup fixup-bulk-in-data		( actual usberr qh )
    remove-qh					( actual usberr )
 ;
 
