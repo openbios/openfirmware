@@ -29,12 +29,12 @@ create use-elf
 \ The disadvantage of the timestamp counter is that it changes speed with
 \ CPU throttling.  The advantage is that it is 64 bits, so no rollover.
 create use-timestamp-counter \ Use CPU's timestamp counter for "ms"
-create use-tsc-timing        \ Use timestamp counter for t( .. )t
+\ create use-tsc-timing        \ Use timestamp counter for t( .. )t
 
 \ The advantage of the ACPI counter is that its speed is independent of
 \ CPU throttling.  The disadvantage is that it is 32 bits, so it rolls
 \ over every 20 minutes or so, unless you extend it with an SMI handler.
-\ create use-acpi-timing
+create use-acpi-timing
 \ create use-acpi-delays
 
 create resident-packages

@@ -127,6 +127,7 @@ also nand-commands definitions
    load-base to dma-buffer
    load-base /nand-block 4 * + to data-buffer
    /nand-block /nand-page / to nand-pages/block
+   t-update  \ Handle possible timer rollover
 ;
 
 : zblocks-end:  ( -- )

@@ -12,7 +12,7 @@ purpose: Driver for SMBUS controller in Via chipset
 : smb-hoststat@   ( -- byte )  0 smb-reg@  ; \ Various status bits - busy bit is bit 0
 : smb-hoststat!   ( byte -- )  0 smb-reg!  ; \ Lots of Write 1 to Clear bits herein
 : smb-hostctl!    ( byte -- )  2 smb-reg!  ; \ Write this register to start the transaction
-: smb-hostcmd@    ( -- byte )  2 smb-reg@  ; \ Reads reset the block data counter
+: smb-hostctl@    ( -- byte )  2 smb-reg@  ; \ Reads reset the block data counter
 : smb-hostcmd!    ( byte -- )  3 smb-reg!  ; \ Send in protocol Command Field
 : smb-xmitadr!    ( byte -- )  4 smb-reg!  ; \ Target address
 : smb-hostdata0!  ( byte -- )  5 smb-reg!  ; \ Data0 out
@@ -61,7 +61,7 @@ purpose: Driver for SMBUS controller in Via chipset
    smbus-target smb-xmitadr!      ( adr len offset )
    smb-hostcmd!                   ( adr len )      \ Starting offset
    dup smb-hostdata0!             ( adr len )      \ Length
-   smb-hostcmd@ drop              ( adr len )      \ Reset block transfer counter
+   smb-hostctl@ drop              ( adr len )      \ Reset block transfer counter
    bounds  ?do  i c@ smb-blockdata!  loop  ( )     \ Copy data to chip
    h# 34 smbus-cmd                ( )              \ I2C block command
 ;
@@ -70,7 +70,7 @@ purpose: Driver for SMBUS controller in Via chipset
    smb-hostcmd!                   ( adr maxlen )   \ Starting offset
    h# 34 smbus-cmd                ( adr maxlen )   \ I2C block command
    smb-hostdata0@ min             ( adr actlen )   \ Number of bytes returned
-   smb-hostcmd@ drop              ( adr actlen )   \ Reset block transfer counter
+   smb-hostctl@ drop              ( adr actlen )   \ Reset block transfer counter
    tuck  bounds  ?do  smb-blockdata@  i c!   loop  ( actlen )  \ Copy data from chip
 ;
 
@@ -78,7 +78,7 @@ purpose: Driver for SMBUS controller in Via chipset
    smbus-target smb-xmitadr!      ( adr len offset )
    smb-hostcmd!                   ( adr len )      \ Starting offset
    dup smb-hostdata0!             ( adr len )      \ Length
-   smb-hostcmd@ drop              ( adr len )      \ Reset block transfer counter
+   smb-hostctl@ drop              ( adr len )      \ Reset block transfer counter
    bounds  ?do  i c@ smb-blockdata!  loop  ( )     \ Copy data to chip
    h# 14 smbus-cmd                ( )              \ SMBus block command
 ;
@@ -87,7 +87,7 @@ purpose: Driver for SMBUS controller in Via chipset
    smb-hostcmd!                   ( adr maxlen )   \ Starting offset
    h# 14 smbus-cmd                ( adr maxlen )   \ SMBus block command
    smb-hostdata0@ min             ( adr actlen )   \ Number of bytes returned
-   smb-hostcmd@ drop              ( adr actlen )   \ Reset block transfer counter
+   smb-hostctl@ drop              ( adr actlen )   \ Reset block transfer counter
    tuck  bounds  ?do  smb-blockdata@  i c!   loop  ( actlen )  \ Copy data from chip
 ;
 

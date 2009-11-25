@@ -76,7 +76,6 @@ fload ${BP}/cpu/x86/pc/romfind.fth	           \ find-dropin subroutine
 [ifdef] debug-startup
 fload ${BP}/cpu/x86/pc/mmxdotcode.fth              \ Memoryless numeric output
 fload ${BP}/cpu/x86/pc/dot.fth			   \ Numeric output subroutine
-\ fload ${BP}/cpu/x86/pc/olpc/via/startinteract.fth  \ emitpause subroutine
 [then]
 
 fload ${BP}/cpu/x86/pc/olpc/via/startusdelay.fth   \ microsecond delay subroutine
