@@ -238,6 +238,8 @@ h# c000.0000 constant QH_MULT3
    \ We start with OUT instead of PING here because some broken USB keys don't
    \ support PING.  In bulk.fth, we add back the PING flag for bulk-out
    \ operations, where ping transactions can help significantly.
+   \ (I'm not sure this matters, as the overlay will overwrite it).
+
    TD_TOGGLE_DATA1 TD_STAT_OUT or swap >hcqtd-token le-l!	( )
 ;
 
@@ -532,21 +534,21 @@ d# 32 constant intr-interval		\ 4 ms poll interval
 ;
 
 : qtd-done?  ( qtd -- done? )
-   >hcqtd-token le-l@			( token )
-   dup TD_STAT_HALTED and		( token halted? )
-   swap TD_STAT_ACTIVE and 0=		( halted? inactive? )
-   or					( done?' )
+   >hcqtd-token le-l@		( token )
+
+   dup TD_STAT_HALTED and  if	( token )
+      drop true exit
+   then				( token )
+   TD_STAT_ACTIVE and 0=	( done? )
 ;
 
-: poll-delay  ( -- )  d# 50 " us" evaluate  ;
 : qh-done?  ( qh -- done? )
    process-hc-status          ( qh )
    dup sync-qh                ( qh )
-   >hcqh-overlay qtd-done?    ( done? )
+   >hcqh-cur-pqtd le-l@  dup  if  qtd-done?  then  ( done? )
 ;
 
 : done?  ( qh -- usberr )
-   poll-delay  \ This may be a VIA quirk - if we poll too soon, we never see the done bit
    begin  dup qh-done?  0=  while   ( qh )
       1 ms
       dup >qh-timeout	( qh timeout-adr )
