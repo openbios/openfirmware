@@ -1,0 +1,17 @@
+PNG  := $(wildcard *.png)
+C565 := $(patsubst %.png,%.565,$(PNG))
+
+all: $(C565)
+
+%.565: %.bmp
+	forth ../../bmp24rgb565.fth -s "bmp24rgb565  $<  $@"
+
+%.bmp: %.png
+	convert -background white -layers flatten $< tmp.png
+	convert -type truecolor tmp.png $@
+	rm tmp.png
+
+clean:
+	-rm *.565 *.log tmp.png
+
+#.TEMPORARY: tmp.png
