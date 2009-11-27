@@ -35,9 +35,6 @@ OperationRegion (UART, SystemIO, 0x03f8, 0x07)
 // set to 1 to enable debug output
 Name (UDBG, 0)
 
-// set to 1 to enable LID wakeups on both open/close
-Name (LIDX, 0)
-
 Field (UART, ByteAcc, NoLock, Preserve)
 {
     UDAT,   8,
@@ -334,8 +331,8 @@ Method (_PTS, 1, NotSerialized)
     Or (Arg0, 0xF0,  Local0)
     Store (Local0, DBG1)    //80 Port: F1, F2, F3....
 
-    // if (LIDX == 0), wake on rising edge only, else watch either
-    Store (And(LIDX, GPI7), LPOL)
+    // if (LIDX == 0), wake on rising edge only, else wake on either
+    Store (And(\_SB.PCI0.LID.LIDX, GPI7), LPOL)
 
     IF (LEqual(Arg0, 0x01))       // S1
     {
@@ -2305,13 +2302,13 @@ Scope(\_SB)
         }   // Device(P2PB)
 
         Device (EC) {
-            Name(_HID,EISAID("PNP0C09"))                    // Embedded controller ID
+            Name (_HID, "XO15EC")
             Name (_PRW, Package (0x02) {  0x01, 0x04 })     // Event 01, wakes from S4
+            Name (_GPE, 0x01)
 
             Method(_INI, 0)
             {
                 UPUT (0x49)  // I
-                Store (One, GPWK)            // Enable gpwake
             }
 
         }  // Device(EC)
@@ -2343,11 +2340,13 @@ Scope(\_SB)
             Name (_HID, EisaId ("PNP0C0D"))
             Name (_PRW, Package (0x02) {  0x0B, 0x04 })     // Event 0B, wakes from S4
 
+            // set to 1 to enable LID wakeups on both open/close
+            Name (LIDX, 0)
+
             Method(_INI, 0)
             {
                 Store (GPI7, LPOL)  // init edge detect from current state
             }
-
 
             Method(_LID) {
                 If (GPI7) { // non-zero --> switch (and lid) is open
@@ -2361,6 +2360,11 @@ Scope(\_SB)
                 }
 
                 Return(GPI7)
+            }
+
+            Method (LIDW, 1)
+            {
+                Store (Arg0, LIDX)
             }
 
         }  // Device(LID)
