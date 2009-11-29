@@ -3,6 +3,7 @@ purpose: Reflash OLPC Open Firmware using XMODEM serial download for the image
 
 \ Interface definitions to splice xmodem into Open Firmware
 
+\ 0 value streaming?  \ Works poorly, perhaps due to character loss
 true value serial-on?
 : serial-off  ( -- )
    serial-on?  if
@@ -19,7 +20,7 @@ true value serial-on?
    then
 ;
 
-\ alias m-key? ukey?
+alias m-key? ukey?
 alias m-key  ukey
 alias m-emit uemit
 
