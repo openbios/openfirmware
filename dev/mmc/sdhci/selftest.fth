@@ -40,7 +40,7 @@ external
    " card-inserted?" $call-parent  0=  if
       ." No card in "
       " slot-name" get-my-property  0=  if
-         decode-string type space
+         decode-string type space  2drop
       then
       ." SD slot" cr
       true exit
