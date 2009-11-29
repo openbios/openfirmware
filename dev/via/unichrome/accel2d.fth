@@ -43,6 +43,17 @@ purpose: Via Unichrome graphics acceleration
    wait-done
 ;
 
+: copy16>32  ( src-base src-pitch src-x,y dst-x,y w,h -- )
+   wh!  dst!  src!                                 ( src-base src-pitch )
+   h# 30 mmio@ >r  8 mmio@ >r  h# 1c mmio@ >r      ( src-base src-pitch )
+   3 rshift  bytes/line 3 rshift  wljoin  8 mmio!  ( src-base )
+   fb-va -  3 rshift  h# 1c mmio!                  ( )
+   h# 8000.0041 h# 30 mmio!                        ( )  \ Expand RGB565 to ARGB8888
+   h# cc.00.00.01 0 mmio!                          ( )  \ Perform BLT Output = source
+   wait-done
+   r> h# 1c mmio!  r> 8 mmio!  r> h# 30 mmio!
+;
+
 \ some tests
 1 [if]
 : gp-fill-screen  ( color -- )

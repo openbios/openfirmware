@@ -345,7 +345,6 @@ h# 200.0000 constant capture-base
       i 'dma-buf-phys  340 i 4 * + cl!	\ Capture frame buffers
    loop
 ;
-
 [then]
 
 
@@ -378,7 +377,7 @@ h# 200.0000 constant capture-base
    0         300 cl!		\ Mask all interrupts
    8850.2114 310 cl!		\ Enable CLK, FIFO threshold, UYVY, 8-bit CCIR656,
 				\ Capture odd/even in interlace, triple buffers
-   500       350 cl!		\ Disable coring and 640*2 stride
+   VGA_WIDTH 2*  350 cl!	\ Disable coring and 640*2 stride
 ;
 
 : power-up  ( -- )
@@ -422,6 +421,18 @@ h# 200.0000 constant capture-base
    then
 ;
 
+: snap  ( timeout -- true | adr false )
+   0  do
+      buf-done?  if
+         next-buf 'dma-buf  false
+         300 cl@ 83 or 300 cl!		\ Clear interrupts
+         unloop exit
+      then
+      1 ms
+   loop
+   true
+;
+
 : (read)  ( adr len -- actual )
    next-buf 'dma-buf -rot /dma-buf min dup >r move r>	( actual )
    300 cl@ 83 or 300 cl!		\ Clear interrupts
@@ -429,11 +440,11 @@ h# 200.0000 constant capture-base
 
 external
 
-: camera-read   ( adr len -- actual )
+: read   ( adr len -- actual )
    buf-done?  if  (read)  else  2drop 0  then
 ;
 
-: camera-open  ( -- flag )
+: open  ( -- flag )
    init
    ov7670-detected? 0=  if  false exit  then
    alloc-dma-bufs
@@ -441,7 +452,7 @@ external
    true
 ;
 
-: camera-close  ( -- )
+: close  ( -- )
    ctlr-stop
    power-off
    free-dma-bufs
@@ -463,42 +474,31 @@ d# 10,000 constant movie-time
 : full-brightness  ( -- )  h# f " bright!" $call-parent  ;
 
 : display-frame  ( adr -- )
-\   test-x test-y VGA_WIDTH VGA_HEIGHT draw-rectangle
-   " expand-to-screen" $call-parent
+   VGA_WIDTH 2*    ( src-adr src-pitch )
+   0 0  d# 280 d# 210  VGA_WIDTH VGA_HEIGHT  " copy16>32" $call-parent
    autobright
 ;
 
 : timeout-read  ( adr len timeout -- actual )
    >r 0 -rot r>  0  ?do			( actual adr len )
-      2dup camera-read ?dup  if  3 roll drop -rot leave  then
+      2dup read ?dup  if  3 roll drop -rot leave  then
       1 ms
-
    loop  2drop
 ;
 
-: shoot-movie  ( -- error? )
-   /dma-buf #dma-bufs * dup dma-alloc swap	( adr len )
-   get-msecs movie-time + -rot			( timeout adr len )
-   begin
-      2dup camera-read ?dup 0>  if		( timeout adr len actual )
-         VGA_WIDTH VGA_HEIGHT * 2* / 0  ?do  over display-frame  loop
-      else
-         1 ms
-      then					( timeout adr len )
-      get-msecs 3 pick u>
-   until					( timeout adr len )
-   dma-free drop false				( error? )
+: shoot-still  ( -- error? )
+   d# 1000 snap  if  true exit  then   ( adr )
+   display-frame
+   false
 ;
 
-: shoot-still  ( -- error? )
-   /dma-buf dup dma-alloc tuck			( adr len adr )
-   /dma-buf d# 1,000 timeout-read 0>  if	( adr len )
-      over display-frame
-      false
-   else
-      true
-   then						( adr len error? )
-   -rot dma-free				( error? )
+: shoot-movie  ( -- error? )
+   get-msecs movie-time +			( timeout )
+   begin                 			( timeout )
+      shoot-still  if  drop true exit  then 	( timeout )
+      dup get-msecs - 0<=                       ( timeout reached )
+   until					( timeout )
+   false
 ;
 
 : mirrored  ( -- )  h# 1e ov@  h# 20 or  h# 1e ov!  ;
@@ -509,12 +509,12 @@ d# 10,000 constant movie-time
       ." The serial port is in use so the camera cannot be used" cr
       true exit
    then
-   camera-open 0=  if  true exit  then
+   open 0=  if  true exit  then
    d# 300 ms
-   unmirrored  shoot-still  ?dup  if  camera-close exit  then	( error? )
+   unmirrored  shoot-still  ?dup  if  close exit  then	( error? )
    d# 1,000 ms
    mirrored   shoot-movie  full-brightness		( error? )
-   camera-close						( error? )
+   close						( error? )
    ?dup  0=  if  confirm-selftest?  then		( error? )
 ;
 
@@ -535,12 +535,12 @@ d# 10,000 constant movie-time
 ;
 
 : xselftest  ( -- error? )
-   camera-open 0=  if  true exit  then
+   open 0=  if  true exit  then
    h# 10 0 do
       shoot-still  drop  d# 500 ms  camera-config  config-check
       i dump-regs
    loop
-   0 camera-close					( error? )
+   0 close					( error? )
 ;
 
 
