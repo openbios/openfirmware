@@ -103,12 +103,14 @@ constant /local-header
 \ ID of the header that's currently in the buffer
 -1 instance value header-id
 
+external
 : load  ( adr -- len )
    0. seek drop
    dup image-size read    ( adr len )
    tuck  ?crc             ( len )
 ;
 
+headers
 : read-magic  ( id -- adr )
    -1 to header-id                     ( id )
    u>d seek drop                       ( id )
@@ -177,14 +179,6 @@ constant /local-header
    4 +  /end-header +               ( id' )
    eh-comlen le-w@ +                ( id' )  \ Skip comment
 ;
-: dirent?  ( id -- id flag )
-   dup  header-id =  if  false exit  then  ( id )
-   dup read-magic                       ( id )
-   zip-buffer  " PK"(01 02)" comp   if  ( id )
-      false exit
-   then
-   zip-buffer /central read drop        ( id )
-;
 
 : first-dir-header  ( -- false | id true )
    first-file-header  0=  if  false exit  then
@@ -231,12 +225,6 @@ headerless
    dup h# 01e0 and  5 >> swap   ( day month packed )
        h# fe00 and  9 >> d# 1980 + ( day month year )
 ;  
-
-: next-header-ok?  ( id -- flag )
-   +file u>d seek drop  zip-magic  2 read        ( len )
-   zip-magic swap  " PK" $=
-;
-
 
 : set-prefix  ( adr len -- )
    to prefix-len
@@ -312,6 +300,9 @@ headerless
    find-file  0=  if  true exit  then
    link-target
 ;
+
+\ Find the link target for the current directory entry and
+\ if it is relative, prefix it with the current entry's path
 : chase-link  ( -- true | name$ false )
    zip-name$  [char] / right-split-string  set-prefix
    link-target  if  true exit  then   ( link$ )
@@ -336,8 +327,6 @@ headerless
    repeat                                 ( )
    false                                  ( false )
 ;
-
-
 : final-component  ( -- flag )
    dir?  if                                ( )
       zip-name$ set-prefix  true           ( true )
@@ -352,6 +341,17 @@ headerless
       false                                ( false )
    then                                    ( flag )
 ;
+\ Determine if the current path name matches the path prefix
+: in-directory?  ( -- flag )
+   prefix-len 0=  if  true exit  then  \ No prefix - return true
+
+   \ If the path name is shorter than the prefix, it doesn't match
+   \ The = in <= filters out the name of the directory itself
+   name-len prefix-len <=  if  false exit  then
+
+   zip-name prefix$ comp 0=
+;
+
 external
 : open  ( -- flag )
    -1 to image-size  0 to offset
@@ -366,17 +366,6 @@ external
    2drop false                                   ( false )
 ;
 : close  ( -- )  ;
-
-\ Determine if the current path name matches the path prefix
-: in-directory?  ( -- flag )
-   prefix-len 0=  if  true exit  then  \ No prefix - return true
-
-   \ If the path name is shorter than the prefix, it doesn't match
-   \ The = in <= filters out the name of the directory itself
-   name-len prefix-len <=  if  false exit  then
-
-   zip-name prefix$ comp 0=
-;
 
 : next-file-info  ( id -- false | id' s m h d m y len attributes name$ true )
    begin  another-file?  while             ( id' )
