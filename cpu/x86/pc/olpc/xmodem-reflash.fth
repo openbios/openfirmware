@@ -53,9 +53,9 @@ alias m-emit uemit
 " "rR " panel-msg: r1-msg    \ Start of packet big
 " "     panel-msg: r2-msg    \ Inside try-receive
 
-" Error"  panel-msg: giveup-msg   \ Err
-" Loading diags    " panel-msg: upld-msg    \ UPLd
-" OF"   panel-msg: of-msg         \ OF
+" Error"      panel-msg: giveup-msg   \ Err
+" Uploading " panel-msg: upld-msg  \ UPLd
+" Done"       panel-msg: of-msg         \ OF
 
 : bogus-char  ( c -- )  ." Bogus: " .x  ;
 : ignore-char  ( c -- )  ." Ignoring: " .x  ;
@@ -71,7 +71,6 @@ variable timer-init
    dup get-msecs - 0<  until
    drop true
 ;
-
 
 \ ---
 
