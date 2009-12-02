@@ -155,7 +155,7 @@ headers
 : read-end-header  ( -- )   zip-buffer  /end-header  read drop  ;
 
 : first-file-header  ( -- false | id true )
-   d# 2000  4  do
+   d# 2000  0  do
       i get-file-header?  if  true unloop exit  else  drop  then  ( )
    loop
    0
