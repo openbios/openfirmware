@@ -2,15 +2,15 @@
 
 \ The overall firmware revision
 macro: FW_MAJOR A
-macro: FW_MINOR 16f
+macro: FW_MINOR 17
 
 \ The EC microcode
-macro: EC_VERSION 1_9_14
+macro: EC_VERSION 1_9_15
 
 \ Alternate command for getting EC microcode, for testing new versions.
 \ Temporarily uncomment the line and modify the path as necessary
 \ macro: GET_EC cp ~rsmith/olpc/ec/ec-code15/image/ecimage.bin ec.img
-\ macro: GET_EC wget -q http://dev.laptop.org/pub/ec/ec_test.img -O ec.img
+macro: GET_EC wget -q http://dev.laptop.org/pub/ec/ec_test.img -O ec.img
 
 macro: KEYS mpkeys
 \ macro: KEYS testkeys
