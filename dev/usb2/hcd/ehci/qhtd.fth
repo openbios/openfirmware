@@ -548,13 +548,17 @@ d# 32 constant intr-interval		\ 4 ms poll interval
    >hcqh-cur-pqtd le-l@  dup  if  qtd-done?  then  ( done? )
 ;
 
+true value delay?
+: poll-delay  ( -- )  d# 100 " us" evaluate  ;
 : done?  ( qh -- usberr )
+   delay?  if  poll-delay  then
    begin  dup qh-done?  0=  while   ( qh )
       1 ms
       dup >qh-timeout	( qh timeout-adr )
       dup l@ 1-		( qh timeout-adr timeout' )
       dup rot l!	( qh timeout' )
       0=  if            ( qh )
+delay? 0=  if  cr  7 emit  7 emit  ." TIMEOUT" cr  debug-me  then
          " Timeout" USB_ERR_TIMEOUT set-usb-error ( qh )
          drop           ( )
          usb-error      ( usberr )

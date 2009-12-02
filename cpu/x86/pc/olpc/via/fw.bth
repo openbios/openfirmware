@@ -578,12 +578,8 @@ true                               ' client-symbols?  set-config-int-default
    " TS" find-tag  if       ( adr len )
       ?-null  " DL" $=  0=  ( in-factory? )
    else                     ( )
-      \ Missing TS tag is treated as in factory
-[ifdef] Later
-      true                  ( in-factory? )
-[else]
+      \ Missing TS tag is treated as not factory mode
       false
-[then]
    then                     ( in-factory? )
    if                       ( )
       " /prober /usb/ethernet disk:\boot\olpc.fth int:\boot\olpc.fth /xp ext:\boot\olpc.fth /wlan"
@@ -707,6 +703,11 @@ true                               ' client-symbols?  set-config-int-default
 \   " flash http:\\18.85.46.172\new.rom" eval
 ;
 : urom  " flash! u:\new.rom" eval  ;
+: no-usb-delay  " dev /usb  false to delay?  dend"  evaluate  ;
+: null-fsdisk
+   " dev /null : write-blocks-start 3drop ; : write-blocks-finish ; dend" evaluate
+   " devalias fsdisk //null" evaluate
+;
 
 \ Fancy battery charge logger.
 fload ${BP}/cpu/x86/pc/olpc/charge.fth
