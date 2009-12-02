@@ -449,11 +449,12 @@ false value playing?
    upsampling?  if  sound-buffer /sound-buffer dma-free  then
 ;
 
-: write-done  ( -- )
+: (write-done)  ( -- )
    stop-stream
    free-bdl
    release-sound-buffer
 ;
+: write-done  ( -- )  wait-stream-done  (write-done)  ;
 
 : write  ( adr len -- actual )
    4 to sd#  audio-out  install-playback-alarm  true to playing?
@@ -462,7 +463,7 @@ false value playing?
 false value stop-lock
 : stop-sound  ( -- )
    true to stop-lock
-   playing?  if  write-done  false to playing?  then
+   playing?  if  (write-done)  false to playing?  then
    false to stop-lock
 ;
 
@@ -471,7 +472,7 @@ false value stop-lock
    stop-lock  if  exit  then
    playing?  if
       sd#  4 to sd#                                          ( sd# )
-      stream-done?  if  write-done  false to playing?  then  ( sd# )
+      stream-done?  if  (write-done)  false to playing?  then  ( sd# )
       to sd#                                                 ( )
    then
 ;
