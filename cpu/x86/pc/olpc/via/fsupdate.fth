@@ -8,59 +8,6 @@ purpose: Secure NAND updater
    push-hex $number pop-base  " Bad number" ?nand-abort
 ;
 
-0 [if]
-0 value partition-map-offset
-0 value next-partition-start
-
-0 value partition#
-d# 256 constant /partition-entry
-: partition-adr  ( -- adr )  partition# /partition-entry *  load-base +  ;
-: max-nand-offset  ( -- n )  " usable-page-limit" $call-nand /nand-page *  ;
-
-: add-partition  ( name$ #eblocks -- )
-   partition# " max#partitions" $call-nand >=  abort" Partition map overflow"
-
-   -rot                                                ( #eblocks name$ )
-   partition-adr /partition-entry erase                ( #eblocks name$ )
-   d# 15 min  partition-adr swap move                  ( #eblocks )
-   next-partition-start  partition-adr d# 16 + l!      ( #eblocks )
-
-   dup -1 =  if                                        ( #eblocks )
-      drop  max-nand-offset                            ( last-offset )
-      next-partition-start -                           ( #bytes )
-   else
-      /nand-block *                                    ( #bytes )
-   then                                                ( #bytes )
-
-   dup partition-adr d# 24 +  l!             \ size    ( #bytes )
-
-   next-partition-start + to next-partition-start      ( )
-   next-partition-start max-nand-offset > abort" NAND size overflow"
-
-   partition# 1+ to partition#
-;
-: start-partition-map  ( -- )
-   load-base /nand-block h# ff fill
-   0 to partition#
-\   0 to next-partition-start
-   " partition-map-page#" $call-nand  /nand-page *  to partition-map-offset
-
-   partition-map-offset to next-partition-start
-   " FIS directory" 1 add-partition   
-;
-: write-partition-map  ( -- )
-   partition-map-offset /nand-page /  dup " erase-block" $call-nand
-   load-base  swap  nand-pages/block  " write-pages" $call-nand
-   nand-pages/block <> abort" Can't write partition map"
-   " read-partmap" $call-nand
-;
-
-0 value partition-page-offset
-: map-eblock# ( block# -- block#' )  partition-page-offset +  ;
-
-\ XXX need to check for overwriting existing partition map
-[then]
-
 0 value last-eblock#
 : erase-eblock  ( eblock# -- )
    \ XXX
@@ -99,21 +46,6 @@ d# 128 constant /spec-maxline
 
 vocabulary nand-commands
 also nand-commands definitions
-
-0 [if]
-: set-partition:  ( "partitionid" -- )  \ partitionid is number or name
-   safe-parse-word " $set-partition" $call-nand abort" Nonexistent partition#" 
-;
-
-: partitions:  ( "name" "#eblocks" ... -- )
-   start-partition-map
-   begin  parse-word  dup  while   ( name$ )
-      get-hex#  add-partition      ( )
-   repeat                          ( null$ )
-   2drop
-   write-partition-map
-;
-[then]
 
 : zblocks:  ( "eblock-size" "#eblocks" ... -- )
    get-hex# to /nand-block
