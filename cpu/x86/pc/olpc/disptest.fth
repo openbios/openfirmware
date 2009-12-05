@@ -162,7 +162,7 @@ h# ff h# ff h# ff rgb>565 constant white-color
 
 warning @ warning off
 : selftest  ( -- error? )
-   depth d# 16 <>  if  false exit  then
+   depth d# 16 <  if  false exit  then
    .horizontal-bars16   wait
    .vertical-bars16     wait
    gvsr                 wait

@@ -32,6 +32,10 @@ in: ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml
 in: ${BP}/dev/hdaudio/build/hdaudio.fc
 in: sd8686.bin
 in: testicons.bin
+in: ${BP}/cpu/x86/pc/olpc/images/bigx.di
+in: ${BP}/cpu/x86/pc/olpc/images/bigcheck.di
+in: ${BP}/cpu/x86/pc/olpc/images/leds.di
+in: ${BP}/cpu/x86/pc/olpc/images/ebook.di
 
 build-now
 
@@ -179,11 +183,17 @@ $new-file
    " testicons/wifi.565"        " wifi.565"     $add-deflated-dropin
    " testicons/clock.565"       " clock.565"    $add-deflated-dropin
    " testicons/timer.565"       " timer.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/bigx.di"      $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/bigcheck.di"  $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
 
 [ifdef] Later
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_rx.bin" " nb_rx"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_tx.bin" " nb_tx"      $add-deflated-dropin
 [then]
+
+.( Dropin top is )  ofd @ fsize  .x cr
 
 [ifdef] coreboot-loaded
    /rom h# 10000 - pad-file	\ coreboot init image must be in last FLASH block

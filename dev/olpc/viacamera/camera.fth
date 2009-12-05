@@ -476,7 +476,7 @@ d# 10,000 constant movie-time
 : display-frame  ( adr -- )
    VGA_WIDTH 2*    ( src-adr src-pitch )
    0 0  d# 280 d# 210  VGA_WIDTH VGA_HEIGHT  " copy16>32" $call-parent
-   autobright
+   diagnostic-mode?  if  full-brightness  else  autobright  then
 ;
 
 : timeout-read  ( adr len timeout -- actual )

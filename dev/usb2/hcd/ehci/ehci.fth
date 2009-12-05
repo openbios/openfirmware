@@ -200,11 +200,22 @@ external
 
 : selftest  ( -- error? )
    ehci-reg dup 0=  if  map-regs  then
-   hcsparams@ h# f and 0  ?do
+
+   " usb-max-test-port" get-inherited-property  if
+      h# 7fffffff
+   else    ( adr len )
+      decode-int  nip nip
+   then
+      
+   hcsparams@ h# f and  min  0  ?do
       i portsc@ h# 2001 and  if		\ Port owned by usb 1.1 controller or device
 					\ is present.
          ." USB 2.0 port " i u. ."  in use" cr
       else
+         diagnostic-mode?  if
+            ." Nothing connected to USB port " i u. " !" cr
+            true unloop exit
+         then
          ." Fisheye pattern out to USB 2.0 port " i u. cr
          i test-port-begin
          d# 2,000 ms

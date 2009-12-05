@@ -147,13 +147,19 @@ defer pixel!  ( color fbadr i -- )
 ;
 : dimensions  ( -- width height )  width height  ;
 
-: replace-color16  ( old new -- )
-   frame-buffer-adr  width height * 2* bounds do
-      over i w@ = if
-         dup i w!
-      then
-   2 +loop
-   2drop
+: replace-color  ( old new -- )
+   depth d# 32 =  if
+      swap 565>argb-pixel swap 565>argb-pixel  ( old' new' )
+      frame-buffer-adr  width height * /l* bounds do
+         over i l@ xor h# ffffff and 0=  if  dup i l!  then
+      /l +loop
+      2drop
+   else
+      frame-buffer-adr  width height * /w* bounds do
+         over i w@ = if  dup i w!  then
+      /w +loop
+      2drop
+   then
 ;
 
 \ LICENSE_BEGIN

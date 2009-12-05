@@ -45,6 +45,9 @@ h# 100 constant button-x
 : game-key?  ( mask -- flag )  game-key-mask and 0<>  ;
 
 : (hold-message)  ( ms -- )
+[ifdef] test-station
+   test-station  if  drop exit  then
+[then]
    d# 100 /            ( decisecs )
    begin  dup  while   ( decisecs )
       dup d# 10 /mod  swap  if  drop  else  (cr .d  then   ( decisecs )

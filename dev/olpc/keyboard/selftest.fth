@@ -27,7 +27,8 @@ constant /key
 
 d#  10 constant key-gap
 d#  12 constant row-gap
-d#  40 constant smulti-key-w
+d#   0 constant hidden-key-w
+d#  70 constant smulti-key-w
 d#  70 constant single-key-w
 d#  70 constant single-key-h
 d# 105 constant shift-key-w
@@ -53,7 +54,13 @@ d#  40 constant button-h
 : make-key  ( w -- )  dup key-x key-y rot single-key-h (make-key) ++key-x  ;
 : make-key&gap  ( w -- )  make-key add-key-gap  ;
 : make-single-key  ( -- )  single-key-w make-key&gap  ;
-: make-smulti-key  ( -- )  smulti-key-w make-key  ;
+: make-smulti-key  ( i -- )
+   1 and  if
+      hidden-key-w make-key
+   else
+      smulti-key-w make-key
+   then
+;
 : make-double-key  ( -- )  single-key-w 2* make-key&gap  ;
 : make-shift-key   ( -- )  shift-key-w make-key&gap  ;
 : make-space-key   ( -- )  space-key-w make-key&gap  ;
@@ -68,9 +75,10 @@ d#  40 constant button-h
    0 to #keys
    top-key-row
    2 0  do  make-single-key  loop
-   7 0  do  make-smulti-key  loop  add-key-gap
-   7 0  do  make-smulti-key  loop  add-key-gap
-   7 0  do  make-smulti-key  loop  add-key-gap
+   7 0  do  i make-smulti-key  loop  add-key-gap
+   7 0  do  i make-smulti-key  loop  add-key-gap
+   7 0  do  i make-smulti-key  loop  add-key-gap
+
    2 0  do  make-single-key  loop
    next-key-row
    d# 13 0  do  make-single-key  loop
@@ -142,6 +150,33 @@ h# 80 buffer: sc1
    8 +loop
 ;
 [then]
+
+d# 128 8 / constant #key-bytes
+#key-bytes buffer: key-bitmap
+: set-key-bit  ( key# -- )
+   8 /mod           ( bit# byte# )
+   key-bitmap +     ( bit# adr )
+   tuck c@          ( adr bit# old-byte )
+   1 rot lshift or  ( adr byte )
+   swap c!
+;
+-1 value last-1
+-1 value last-2
+: clear-key-bitmap  ( -- )
+   key-bitmap #key-bytes erase
+   -1 to last-1   -1 to last-2
+;
+
+h# ffd5ab57 constant funny-map
+create all-keys-bitmap
+57 c, ab c, d5 c, ff c, ff c, ff c, ff c, ff c,  \ Omits the intermediate slider keys
+\ ff c, ff c, ff c, ff c, ff c, ff c, ff c, ff c,
+ff c, ff c, ff c, ff c, 03 c, 00 c, 00 c, 00 c,
+
+: all-keys-tested?  ( -- flag )
+   key-bitmap @ funny-map and key-bitmap !
+   key-bitmap  all-keys-bitmap  #key-bytes comp 0=
+;
 
 \ This table is indexed by the (unescaped) scanset1 code, giving
 \ an IBM physical key number.
@@ -362,9 +397,13 @@ h# ffff constant kbd-bc
 
 : draw-key  ( key# color -- )
    swap
-   key-adr >r
-   r@ >key-x @  r@ >key-y @  r@ >key-w @  r> >key-h @
-   " fill-rectangle" $call-screen
+   key-adr >r          ( color# r: key-adr )
+   r@ >key-w @  hidden-key-w  =  if
+      r> 2drop
+   else
+      r@ >key-x @  r@ >key-y @  r@ >key-w @  r> >key-h @
+      " fill-rectangle" $call-screen
+   then
 ;
 : key-down  ( key# -- )  pressed-key-color draw-key  ;
 : key-up    ( key# -- )  idle-key-color    draw-key  ;
@@ -389,10 +428,22 @@ false value verbose?
       dup h# 7f and scan1->key#  if          ( scan )
          drop                                ( )
       else                                   ( scan key# )
-         swap h# 80 and  if                  ( key# )
-            dup key-up                       ( key# )
-            0=  if  true exit  then          ( )
+         swap h# 80 and  if   \ Up           ( key# )
+            final-test?  if                  ( key# )
+               dup 0=  last-1 0= and  last-2 0=  and  if   ( key# )
+                  drop true                  ( exit? )
+               else                          ( key# )
+                  last-1 to last-2  to last-1  ( )
+                  all-keys-tested?           ( exit? )
+               then
+            else                             ( key# )
+               dup key-up                    ( key# )
+               \ 0 is the ESC key
+               0=                            ( exit? )
+            then                             ( exit? )
+            if  true exit  then              ( )
          else                                ( key# )
+            dup set-key-bit                  ( key# )
             key-down                         ( )
          then                                ( )
       then                                   ( )
@@ -404,15 +455,21 @@ false value verbose?
 0 value last-timestamp
 : selftest-keys  ( -- )
    false to esc?
+   clear-key-bitmap
    get-msecs to last-timestamp
    begin
       get-data?  if
          process-raw
          get-msecs to last-timestamp
       else
-         get-msecs last-timestamp -  d# 20,000 >=
+         final-test?  if
+            false   \ Final test exit inside process-raw
+         else
+            get-msecs last-timestamp -  d# 10,000 >=
+         then
       then             ( exit? )
    until
+   begin  get-data?  while  drop  repeat
 ;
 
 : toss-keys  ( -- )  begin  key?  while  key drop  repeat  ;
@@ -420,6 +477,10 @@ false value verbose?
 warning @ warning off
 : selftest  ( -- error? )
    open  0=  if  true exit  then
+
+   \ Being able to open the keyboard is good enough in SMT mode
+   smt-test?  if  close false exit  then
+
    make-keys
    cursor-off draw-keyboard
    true to locked?   \ Disable the keyboard alarm handler; it steals our scancodes
@@ -429,7 +490,13 @@ warning @ warning off
    screen-ih iselect  erase-screen  iunselect
    page
    close
-   confirm-selftest?
+
+   final-test?  if
+      all-keys-tested?  0=
+      dup  if  ." Some keys were not pressed" cr  then
+   else
+      confirm-selftest?
+   then
 ;
 warning !
 

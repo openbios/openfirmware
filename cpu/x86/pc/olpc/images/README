@@ -40,3 +40,14 @@ Each line is width pixels.
 ofw/gui/bmp24rgb565.fth is a program to convert 24-bit RGB .bmp files to this format.
 
    forth ofw/gui/bmp24rgb565.fth -s "bmp24rgb565  foo.bmp  foo.565"
+
+Some of the files are checked in ".di" format, thus saving space in both the
+repository and the source tree, and reducing download time.
+
+The recipe for creating a ".di" file is, for example:
+
+  % build
+  ok writing big-x.di
+  ok " big-x.565" " big-x.565" $add-deflated-dropin
+  ok ofd @ fclose
+  ok bye

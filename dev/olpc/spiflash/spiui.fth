@@ -306,10 +306,10 @@ defer fw-filename$  ' null$ to fw-filename$
 [ifdef] dev
 dev /flash
 : selftest  ( -- error? )
-   .mfg-data
+   .mfg-data cr
 
+   ." Checking SPI FLASH CRC ..."
    slow-flash-read
-
    \ Replace the manufacturing data block with all FF
    flash-buf mfg-data-offset +  /flash-block  h# ff fill
 
@@ -318,6 +318,7 @@ dev /flash
    -1 swap l!
 
    flash-buf /flash crc  <>
+   dup  if  ." FAILED"  else  ." passed"  then  cr
 ;
 device-end
 [then]

@@ -749,7 +749,7 @@ new-device
       wait-ac  if  true exit  then
    then
    ." Test running from AC.. "
-   d# 2000 ms
+   d# 4000 ms
    bat-status@ h# 40 and  0= if
       ." ok: battery is not discharging" cr
       false

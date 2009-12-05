@@ -8,8 +8,8 @@ h# 07e0 constant color-green
 
 : sq-border!  ( bg -- )  current-sq sq >border !  ;
 
-: red-screen    ( -- )  h# ffff color-red   " replace-color16" $call-screen  ;
-: green-screen  ( -- )  h# ffff color-green " replace-color16" $call-screen  ;
+: red-screen    ( -- )  h# ffff color-red   " replace-color" $call-screen  ;
+: green-screen  ( -- )  h# ffff color-green " replace-color" $call-screen  ;
 
 0 value pass?
 

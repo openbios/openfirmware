@@ -390,6 +390,7 @@ d# 24 buffer: p24-buf
 
 0 instance value fid
 0 instance value attributes  \ 01:RO  02:Hidden  04:System  08:Volume  10:Directory  20:Archive
+0. instance 2value position
 
 : $create  ( path$ -- error? )
    h# 03 smb{                       ( path$ )
@@ -398,6 +399,7 @@ d# 24 buffer: p24-buf
    +path}smb  if  true exit  then   ( rem$ )
    1 expect-wcnt                    ( rem$ )
    -xw to fid                       ( rem$' )
+   0. to position
    \ The byte array is supposed to be empty
    2drop false
 ;
@@ -420,6 +422,7 @@ d# 24 buffer: p24-buf
    drop-l  \ Last write time         ( rem$' )
    -xl u>d  to size                  ( rem$' )
    drop-w  \ Granted access          ( rem$' )
+   0. to position
    \ The byte array is supposed to be empty
    2drop false
 ;
@@ -467,7 +470,6 @@ d# 24 buffer: p24-buf
    5 smb{  fid +xw  --bytes--  }smb  empty-response
 ;
 
-0. instance 2value position
 : seek  ( d.offset -- error? )
    size  2over  d<  if  2drop true exit  then
    to position
@@ -780,8 +782,12 @@ d# 24 buffer: p24-buf
 
    parse-server parse-share parse-pathname to tail$
    server$ set-server
-   d# 139 " connect" $call-parent  0=  if  false exit  then
-   " OFW " " *SMBSERVER " start-session if  false exit  then
+   \ First try the direct TCP connection method
+   d# 445 " connect" $call-parent  0=  if
+      \ Failing that, try the NetBIOS session over TCP method
+      d# 139 " connect" $call-parent  0=  if  false exit  then
+      " OFW " " *SMBSERVER " start-session if  false exit  then
+   then
    negotiate      if  free-buffers  false exit  then   ( )
    password$ set-password  compute-password            ( )
    session-setup  if  free-buffers  false exit  then   ( )

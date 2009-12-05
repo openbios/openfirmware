@@ -27,8 +27,10 @@ d# 0  d# 0  2value first-icon-xy
 ;
 
 : image-base  ( -- adr )  " graphmem" $call-screen  ;
+: $image-name  ( basename$ -- fullname$ )  " rom:%s.565" sprintf  ;
 
 : $get-image  ( filename$ -- true | adr,len false )
+   $image-name                           ( fullname$ )
    r/o open-file  if  drop true  exit  then   >r    ( r: fd )
    
    image-base  r@ fsize                  ( bmp-adr,len  r: fd )
@@ -36,11 +38,24 @@ d# 0  d# 0  2value first-icon-xy
    r> fclose                             ( bmp-adr,len )
    if  2drop true  else  false  then     ( true | bmp-adr,len false )
 ;
+: $prep&draw  ( image-adr,len -- )
+   prep-565  " draw-transparent-rectangle" $call-screen
+;
 : $show  ( filename$ -- )
    screen-ih 0=  if  2drop exit  then
    0 to image-width   \ In case $show fails
    $get-image  if  exit  then
-   prep-565  " draw-transparent-rectangle" $call-screen
+   $prep&draw
+;
+: $show-centered  ( filename$ -- )
+   screen-ih 0=  if  2drop exit  then
+   0 to image-width   \ In case $show fails
+   $get-image  if  exit  then
+   prep-565                      ( bits-adr x y w h )
+   2nip                          ( bits-adr w h )
+   screen-wh 2over xy-           ( bits-adr w h excess-x,y )
+   swap 2/ swap 2/  2swap        ( bits-adr x y w h )
+   " draw-transparent-rectangle" $call-screen
 ;
 : $show-opaque  ( filename$ -- )
    screen-ih 0=  if  2drop exit  then
@@ -273,7 +288,7 @@ false value error-shown?
 : error-banner  ( -- )
    error-shown?  if  exit  then   true to error-shown?
 
-   " rom:error.565" $show&advance
+   " error" $show&advance
 
    .sysinfo
 ;
@@ -317,7 +332,7 @@ false value error-shown?
 \ The graphical boot sequence display at the top of the screen
 \ has been superseded by the new secure pretty-boot scheme .
   avoid-logo
-  " rom:olpc.565" $show&advance
+  " olpc" $show&advance
 [then]
 
    icon-xy to first-icon-xy
@@ -331,11 +346,11 @@ false value error-shown?
 
 [ifdef] resident-packages
 dev /obp-tftp
-: (configured)  ( -- )  " rom:netconfigured.565" $show  ;
+: (configured)  ( -- )  " netconfigured" $show  ;
 : show-timeout  ( adr len -- )
    2dup (.dhcp-msg)                 ( adr len )
    " Timeout" $=  screen-ih 0<>  and  if
-      " rom:nettimeout.565" $show
+      " nettimeout" $show
       .sysinfo
    then
 ;
@@ -344,9 +359,9 @@ dev /obp-tftp
 device-end
 [then]
 
-: show-nand  ( -- )  " rom:nandflash.565"   $show&advance  ;
-: show-disk  ( -- )  " rom:disk.565"        $show&advance  ;
-: show-xo   ( -- )   " rom:xo.565"          $show&advance  ;
+: show-nand  ( -- )  " nandflash"   $show&advance  ;
+: show-disk  ( -- )  " disk"        $show&advance  ;
+: show-xo   ( -- )   " xo"          $show&advance  ;
 
 : simple-load-started  ( -- )
    screen-ih  if  ['] show-xo to load-done  then
@@ -356,17 +371,15 @@ device-end
 h# 32 buffer: icon-name
 
 : show-icon  ( basename$ -- )
-   [char] : left-parse-string  2nip              ( basename$' )
-   " rom:" icon-name pack  $cat                  ( )
-   " .565" icon-name $cat                        ( )
-   icon-name count  $show                        ( )
+   [char] : left-parse-string  2nip     ( basename$' )
+   $show                                ( )
 ;
 
 : ?show-package-icon  ( adr len -- )
    locate-device  if  exit  then                    ( phandle )
 
    " icon" 2 pick  get-package-property  0=  if     ( phandle prop$ )
-      $show&advance                                 ( phandle )
+      $prep&draw advance                            ( phandle )
       drop exit
    then                                             ( phandle )
 
@@ -416,14 +429,14 @@ d# 463 d# 540 2constant progress-xy
 : show-minus   ( -- )  " minus" show-icon  ;
 : show-child  ( -- )
    " erase-screen" $call-screen
-   d# 552 d# 384 to icon-xy  " rom:xogray.565" $show-opaque
+   d# 552 d# 384 to icon-xy  " xogray" $show-opaque
    progress-xy to next-icon-xy  \ For boot progress reports
 ;
 
 0 [if]
 : show-warnings  ( -- )
    " erase-screen" $call-screen
-   d# 48 d# 32 to icon-xy  " rom:warnings.565" $show-opaque
+   d# 48 d# 32 to icon-xy  " warnings" $show-opaque
    dcon-freeze
 ;
 [then]
@@ -440,6 +453,15 @@ d# 463 d# 540 2constant progress-xy
    d# 5 d# 77 d+  to next-dot-xy              ( devname$ )
    show-icon                                  ( )
    next-icon-xy image-width 0 d+  to next-icon-xy  ( devname$ x y )
+;
+
+: show-pass  ( -- )
+   background  0 0 screen-wh fill-rectangle
+   " bigcheck" $show-centered
+;
+: show-fail  ( -- )
+   color-red  0 0 screen-wh fill-rectangle
+   " bigx" $show-centered
 ;
 
 : linux-hook-unfreeze

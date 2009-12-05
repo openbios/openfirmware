@@ -327,18 +327,18 @@ headers
 : open  ( -- flag )
    1 set-port
 
-   open-count 0<>  if  true exit  then
+   open-count 0=  if
+      \ The "force" argument causes the open to succeed even if no mouse
+      \ is present
+      my-args  [char] , left-parse-string  2swap 2drop  " force"  $=  0=  if
 
-   \ The "force" argument causes the open to succeed even if no mouse
-   \ is present
-   my-args  [char] , left-parse-string  2swap 2drop  " force"  $=  0=  if
+         find-mouse  if  false exit  then
 
-      find-mouse  if  false exit  then
+         \ Reset the mouse and check the response codes
+         h# ff read2  0<>  swap h# aa <>  or  if  false exit  then
 
-      \ Reset the mouse and check the response codes
-      h# ff read2  0<>  swap h# aa <>  or  if  false exit  then
-
-      remote-mode
+         remote-mode
+      then
    then
 
    open-count  1+ to open-count

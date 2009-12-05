@@ -83,6 +83,7 @@ fload ${BP}/ofw/inet/loadtftp.fth	\ Trivial File Transfer Protocol pkg.
 fload ${BP}/cpu/x86/regacc.fth		\ Register access words
 
 \ [ifndef] no-tools
+fload ${BP}/cpu/x86/memtest.fth		\ Memory-test-suite optimizations
 fload ${BP}/ofw/fcode/loadfcod.fth	\ S Fcode interpreter
 
 fload ${BP}/ofw/fcode/regcodes.fth	\ Register access words

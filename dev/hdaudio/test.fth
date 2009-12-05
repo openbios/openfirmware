@@ -10,7 +10,17 @@ purpose: Manufacturing testing
 
 : jingle  ( -- )  " play-wav rom:splash" evaluate  wait-sound  ;
 
+: ?key-abort  ( -- )
+   key?  if
+      key h# 1b =  abort" Aborting"
+   then
+;
 : speaker-test  ( -- )
+   h# 19 to node
+   pin-sense?  if
+      ." Disconnect headphones to continue.. "
+      begin  ?key-abort  pin-sense? 0=  until  cr
+   then
    ." Playing jingle on the left speaker.. "
    true to right-mute?
    jingle  cr
@@ -25,7 +35,7 @@ purpose: Manufacturing testing
    h# 19 to node
    pin-sense? 0= if
       ." Connect headphones to continue.. "
-      begin  pin-sense?  until  cr
+      begin  ?key-abort  pin-sense?  until  cr
    then
    ." Press a key to play sound.. "  key drop  cr
    h# 1f to node  power-off  \ turn off speaker
@@ -34,6 +44,11 @@ purpose: Manufacturing testing
 ;
 
 : builtin-mic-test  ( -- )
+   h# 1a to node
+   pin-sense?  if
+      ." Disconnect microphone to continue.. "
+      begin  ?key-abort  pin-sense? 0=  until  cr
+   then
    ." Press a key to test recording / playback on the built-in microphone.. "
    key drop cr
    mic-test
@@ -43,24 +58,34 @@ purpose: Manufacturing testing
    h# 1a to node
    pin-sense? 0= if
       ." Connect microphone to continue.. "
-      begin  pin-sense?  until  cr
+      begin  ?key-abort pin-sense?  until  cr
    then
    ." Press a key to test recording / playback on the external microphone.. "
    key drop cr
    mic-test
 ;
 
+0 value saved-volume
 : interactive-test  ( -- error? )
    alloc-buffer
-   speaker-test
    headphones-test
-   builtin-mic-test
    external-mic-test
+   speaker-test
+   builtin-mic-test
    dealloc-buffer
    " confirm-selftest?" eval
 ;
 : selftest  ( -- )
-   diagnostic-mode?  if  interactive-test  else  selftest  then
+   diagnostic-mode?  if
+      open 0=  if  ." Failed to open /audio" cr true exit  then
+      " playback-volume" evaluate to saved-volume
+      0 " to playback-volume" evaluate
+      ['] interactive-test catch  if  true  then
+      saved-volume " to playback-volume" evaluate
+      close
+   else
+      selftest
+   then
 ;
 
 \ LICENSE_BEGIN

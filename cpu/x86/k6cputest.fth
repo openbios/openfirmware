@@ -21,7 +21,7 @@ previous definitions
 
 dev /cpu
 
-d# 60 constant default#passes
+d# 10 constant default#passes
 d# 10,000,000 constant spins/pass
 0         value #cnt
 7fff.ffff value #half

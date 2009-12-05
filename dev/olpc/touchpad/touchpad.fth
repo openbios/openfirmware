@@ -19,21 +19,20 @@ variable 'get-data? 'get-data? off
 ;
 
 
-h# f800.f800 constant red
-h# 07e0.07e0 constant green
-h# 001f.001f constant blue
-h# ffe0.ffe0 constant yellow
-h# f81f.f81f constant magenta
-h# 07ff.07ff constant cyan
-h# ffff.ffff constant white
-h# 0000.0000 constant black
+h# f800 constant red
+h# 07e0 constant green
+h# 001f constant blue
+h# ffe0 constant yellow
+h# f81f constant magenta
+h# 07ff constant cyan
+h# ffff constant white
+h# 0000 constant black
 
 variable pixcolor
 
 h# 4 value y-offset
-0 value fbadr
-0 value maxx
-0 value maxy
+0 value screen-w
+0 value screen-h
 0 value /line
 2 value /pixel
 
@@ -289,8 +288,10 @@ variable miss?
 variable mouse-x
 variable mouse-y
 
-: clipx  ( delta -- x )  mouse-x @ +  0 max  maxx min  dup mouse-x !  ;
-: clipy  ( delta -- y )  mouse-y @ +  0 max  maxy min  dup mouse-y !  ;
+: mouse-xy  ( -- x y )  mouse-x @  mouse-y @  ;
+
+: clipx  ( delta -- x )  mouse-x @ +  0 max  screen-w 1- min  dup mouse-x !  ;
+: clipy  ( delta -- y )  mouse-y @ +  0 max  screen-h 1- min  dup mouse-y !  ;
 
 \ Try to receive a GS-format packet.  If one arrives within
 \ 20 milliseconds, return true and the decoded information.
@@ -346,18 +347,65 @@ variable mouse-y
 ;
 
 : button  ( color x -- )
-   maxy d# 50 -  d# 200  d# 30  " fill-rectangle" $call-screen
+   screen-h d# 50 -  d# 200  d# 30  fill-rectangle-noff
 ;
-: background  ( -- )
-   fbadr  maxy 2+  /line *  erase
-   0 d# 27 at-xy  ." Touchpad test.  Both buttons clears screen.  Type a key to exit" cr
-   mode @ 3 <>  if  0 d# 20 at-xy  ." Pressure: "  then
+d# 300 d# 300 2constant target-wh
+: left-target   ( -- x y w h )  0 0  target-wh  ;
+: right-target  ( -- x y w h )  screen-w screen-h  target-wh  xy-  target-wh  ;
+false value left-hit?
+false value right-hit?
+: inside?  ( mouse-x,y  x y w h -- flag )
+   >r >r         ( mouse-x mouse-y  x y  r: h w )
+   xy-           ( dx dy )
+   swap r> u<    ( dy x-inside? )
+   swap r> u<    ( x-inside? y-inside? )
+   and           ( flag )
 ;
+
+: draw-left-target  ( -- )  green  left-target   fill-rectangle-noff  ;
+: draw-right-target ( -- )  red    right-target  fill-rectangle-noff  ;
+: ?hit-target  ( but -- but )
+   dup 1 and  if  \ Left                          ( but )
+      mouse-xy  left-target  inside?  if          ( but )
+         yellow left-target  fill-rectangle-noff  ( but )
+         true to left-hit?                        ( but )
+         exit
+      then                                        ( but )
+   then                                           ( but )
+   dup 2 and  if  \ Right                         ( but )
+      mouse-xy  right-target  inside?  if         ( but )
+         yellow right-target  fill-rectangle-noff ( but )
+         true to right-hit?                       ( but )
+         exit
+      then                                        ( but )
+   then                                           ( but )
+;
+
 : track-init  ( -- )
-   screen-ih package(
-      frame-buffer-adr  screen-width  screen-height  bytes/line
-   )package  to /line  2- to maxy  2- to maxx  to fbadr
+   " dimensions" $call-screen  to screen-h  to screen-w
+   screen-w 2/ mouse-x !  screen-h 2/ mouse-y !
+   screen-ih package( bytes/line )package  to /line
    load-base ptr !
+;
+
+: dot  ( x y -- )
+   swap screen-w 3 - min  swap y-offset + screen-h 3 - min  ( x' y' )
+   pixcolor @  -rot   3 3                   ( color x y w h )
+   fill-rectangle-noff                      ( )
+;
+
+: background  ( -- )
+   black  0 0  screen-w screen-h  fill-rectangle-noff
+   final-test?  if
+      false to left-hit?
+      false to right-hit?
+      draw-left-target
+      draw-right-target
+   else
+      0 d# 27 at-xy  ." Touchpad test.  Both buttons clears screen.  Type a key to exit" cr
+      mode @ 3 <>  if  0 d# 20 at-xy  ." Pressure: "  then
+   then
+   mouse-xy dot
 ;
 
 : show-up  ( x y z -- )  3drop  d# 10 d# 20 at-xy  ." UP "  ;
@@ -370,20 +418,12 @@ variable mouse-y
    then
 ;
 
-: dot  ( x y -- )
-   y-offset +  maxy min  /line *          ( x line-adr )
-   swap                                   ( line-adr x )
-   maxx min  /pixel *  +                  ( pixel-offset )
-   fbadr +                                ( pixel-adr )
-   pixcolor @ swap  2dup  l!              ( pixcolor pixel-adr )
-   /line + l!
-;
-
 false value relative?
 true value up?
 d# 600 d# 512 2value last-rel
-0 0 2value last-abs
+d# 600 d# 512 2value last-abs
 
+\ This is only for the ALPS touchpad
 : abs>rel  ( x y -- x' y' )
    up?  if                                ( x y )
       \ This is a touch
@@ -393,8 +433,8 @@ d# 600 d# 512 2value last-rel
    last-abs                               ( x y x0 y0 )
    2over to last-abs                      ( x y x0 y0 )
    xy-  last-rel xy+                      ( x' y' )
-   swap 0 max  maxx min
-   swap 0 max  maxy min                   ( x' y' )
+   swap 0 max  screen-w 1- min
+   swap 0 max  screen-h 1- min            ( x' y' )
    2dup to last-rel                       ( x y )
 ;
 
@@ -402,8 +442,12 @@ d# 600 d# 512 2value last-rel
    packet-type 2 =  if  yellow  else  cyan  then  pixcolor !  ( x y z but )
 
    dup 3 and 3 =  if  background  load-base ptr !  then
-   dup  1 and  if  green  else  black  then  d# 100 button
-   dup  2 and  if  red    else  black  then  d# 350 button  ( x y z but )
+   final-test?  if                ( x y z but )
+      ?hit-target                 ( x y z but )
+   else                           ( x y z but )
+      dup  1 and  if  green  else  black  then  d# 100 button
+      dup  2 and  if  red    else  black  then  d# 350 button  ( x y z but )
+   then                           ( x y z but )
 
    \ Filter out events where the pen or finger in the current mode is not down
    8 and  0=  if  show-up  true to up?  exit  then   ( x y z )
@@ -431,8 +475,50 @@ d# 600 d# 512 2value last-rel
    dot
 ;
 
+: handle-key  ( -- exit? )
+   key upc  case
+      [char] P  of
+         cursor-on
+         cr last-10
+         key drop
+         background
+         false
+      endof
+
+      [char] S  of  suspend stream-on false  endof
+
+      ( key )  true swap
+   endcase
+;
+
+false value selftest-failed?  \ Success/failure flag for final test mode
+: exit-test?  ( -- flag )
+   final-test?  if                    ( )
+      \ If the targets have been hit, we exit with successa
+      left-hit? right-hit? and  if    ( )
+         false to selftest-failed?    ( )
+         true                         ( flag )
+         exit
+      then                            ( )
+
+      \ Otherwise we give the tester a chance to bail out by typing a key,
+      \ thus indicating failure
+      key?  0=  if  false exit  then  ( )
+      key drop                        ( )
+      true to selftest-failed?        ( )
+      true                            ( flag )
+      exit
+   then                               ( )
+
+   \ If not final test mode, we only exit via a key - no targets
+   key?  if  handle-key  else  false  then  ( exit ? )
+;
 : selftest  ( -- error? )
-   open  0=  if  ." PS/2 Mouse (trackpad) open failed"  1 exit  then
+   open  0=  if  ." PS/2 Mouse (trackpad) open failed"  true exit  then
+
+   \ Being able to open the touchpad is good enough in SMT mode
+   smt-test?  if  close false exit  then
+
    my-args  " relative" $=  to relative?
 
    cursor-off  track-init  start
@@ -443,32 +529,15 @@ d# 600 d# 512 2value last-rel
    background
    gs-only
    begin
-      begin
-         ['] pad? catch  ?dup  if  .error  close true exit  then
-         if  track  then
-      key? until
-
-      key upc  case
-         [char] P  of
-            cursor-on
-            cr last-10
-            key drop
-            background
-            false
-         endof
-
-         [char] S  of  suspend stream-on false  endof
-
-         ( key )  true swap
-      endcase
-   until
+      ['] pad? catch  ?dup  if  .error  close true exit  then
+      if  track  then
+   exit-test?  until
 
    close
    cursor-on
    page
-   confirm-selftest?
+   final-test?  if  selftest-failed?  else  false  then
 ;
-
 
 \ We are finished adding code to the mouse driver.
 \ Go back to the main forth context

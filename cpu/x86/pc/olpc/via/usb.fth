@@ -12,6 +12,9 @@ devalias u    /usb/disk
    r> to exit?
 ;
 
+\ Restrict selftest to external USB ports 1,2,3
+dev /  2 " usb-max-test-port" integer-property  dend
+
 : (probe-usb2)  ( -- )
    " device_type" get-property  if  exit  then
 [ifdef] use-usb-debug-port
