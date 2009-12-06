@@ -1,23 +1,29 @@
 \ See license at end of file
 purpose: Block-method additions to subrange.fth device to make a RAMdisk device
 
-0 0  " b000000"  " /" begin-package
-   " ramdisk" device-name
-   h# 3800000 constant /device
+\ Define ramdisk-base before loading this file
+
+0 0  ramdisk-base (u.)  " /" begin-package
+
+" ramdisk" device-name
+0 value /device  \ Range size, set later with set-size
 
 external
-\ /device must be defined externally as the length of the subrange
-\ my-space is the base of the subrange
 my-address my-space /device reg
 
 0 value offset			\ seek pointer
 
+\ Reduce adr,len as necessary to fit within the actual device size
 : clip-size  ( adr len -- adr actual )
    offset +   /device min  offset -     ( adr actual )
 ;
+
+\ Update the seek pointer to reflect the result of the previous read or write
 : update-ptr  ( actual -- actual )  dup offset +  to offset  ;
 
 external
+
+\ Standard interface methods for a byte-granularity device
 : open  ( -- flag )  0 to offset  true  ;
 : close  ( -- )  ;
 
@@ -36,9 +42,12 @@ external
    tuck  offset my-space +  swap  move          ( actual )
    update-ptr
 ;
-: size  ( -- d )  /device 0  ;
+: size  ( -- d )  /device u>d  ;
 
+\ Device-specific method to set the device size when it is known
+: set-size  ( d -- )  drop to /device  ;
 
+\ Standard interface methods for block-granularity access
 h# 200 value block-size
 : #blocks  ( -- n )  /device block-size /  ;
 : read-blocks  ( adr block# #blocks -- actual-#blocks )
