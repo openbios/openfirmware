@@ -459,6 +459,7 @@ d# 463 d# 540 2constant progress-xy
    background  0 0 screen-wh fill-rectangle
    " bigcheck" $show-centered
 ;
+\needs color-reg h# f800 constant color-red
 : show-fail  ( -- )
    color-red  0 0 screen-wh fill-rectangle
    " bigx" $show-centered

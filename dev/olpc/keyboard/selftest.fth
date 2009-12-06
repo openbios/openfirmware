@@ -1,6 +1,9 @@
 purpose: Interactive keyboard test shows which keys are pressed
 \ See license at end of file
 
+\needs final-test?  0 value final-test?
+\needs smt-test?    0 value smt-test?
+
 dev /8042/keyboard
 hex
 
