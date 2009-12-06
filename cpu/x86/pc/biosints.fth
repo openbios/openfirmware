@@ -1171,7 +1171,7 @@ warning !
       bypass-bios-boot?  if  false exit  then
       " ext:1" ntfs?  if
          " ext:0" set-hd-boot
-     " sound-end" evaluate
+         " sound-end" evaluate
 
          true exit
       then

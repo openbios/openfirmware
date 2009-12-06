@@ -1,18 +1,20 @@
 \ See license at end of file
 purpose: Subrange device to access Secure Boot Area between boot record and first partition
 
+support-package: secure-boot-area
+
 d# 512 constant /sector
 /sector instance buffer: sector-buf
 
-0 instance 2value image-size
-0 instance 2value seek-ptr
+0. instance 2value image-size
+0. instance 2value seek-ptr
 external
 \ Expose for the OLPC security scheme
-0 instance 2value offset
+0. instance 2value offset
 
 : clip-size  ( adr len -- adr len' )
    u>d seek-ptr d+                 ( adr d.endptr )
-   2dup image-size d>  if          ( adr d.endptr )
+   image-size 2over d<  if         ( adr d.endptr )
       2drop image-size             ( adr d.endlimit )
    then                            ( adr d.endlimit )
    seek-ptr d- drop                ( adr len' )
@@ -22,17 +24,18 @@ external
 : ptable-adr  ( -- start )  sector-buf  h# 1be +  ;
 
 : open  ( -- flag )
+   0. " seek" $call-parent  if  false exit  then
    sector-buf /sector " read" $call-parent  /sector <>  if  false exit  then
    sector-buf h# 1fe + le-w@  h# aa55  <>  if  false exit  then      \ FDisk?
-   ptable-adr 4 + c@  7 <>  if  false exit  then   \ NTFS?
-   ptable-adr 8 + le-l@  /sector um* to image-size
-   h# 10 /sector um* to offset
+   ptable-adr 4 + c@  7 <>  if  false exit  then                     \ NTFS?
+   ptable-adr 8 + le-l@  1-  /sector um* to image-size  \ The 1- skips sector 0
+   /sector u>d to offset   \ The SBA starts just after the Master Boot Record sector
    true
 ;
 
 external
 : seek  ( d.offset -- status )
-   2dup image-size d>  if  2drop true  exit  then  \ Seek offset too big
+   image-size 2over d<  if  2drop true  exit  then  \ Seek offset too big
    to seek-ptr
    seek-ptr offset d+  " seek" $call-parent
 ;
@@ -42,7 +45,7 @@ external
    " read" $call-parent          ( len' )
    update-ptr                    ( len' )
 ;
-
+end-support-package
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks

@@ -191,7 +191,8 @@ d# 256 buffer: ramdisk-buf
 ' ramdisk-buf  " ramdisk" chosen-string
 
 defer load-ramdisk
-: place-ramdisk  ( adr len -- )
+defer place-ramdisk
+: linux-place-ramdisk  ( adr len -- )
    to /ramdisk                                    ( adr )
 
    \ Move ramdisk to top of memory for new kernels.  In principle,
@@ -290,6 +291,7 @@ warning @ warning off
    false to linux-loaded?
    init-program
    linux-loaded?  if
+      ['] linux-place-ramdisk to place-ramdisk
       claim-params
       memory-limit to linux-memtop  \ load-ramdisk may change this
       ['] load-ramdisk guarded
