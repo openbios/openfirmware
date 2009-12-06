@@ -45,6 +45,8 @@ d# 512 instance buffer: zip-name
 0 instance value name-len
 : zip-name$  ( -- adr len )  zip-name name-len  ;
 
+d# 512 instance buffer: saved-name
+
 d# 512 instance buffer: path-prefix
 0 instance value prefix-len
 : prefix$  ( -- adr len )  path-prefix prefix-len  ;
@@ -376,7 +378,7 @@ external
    \     di-expansion be-l@                ( id s m h d m y size )
    \     ?dup 0=  if  di-size be-l@  then  ( id s m h d m y size )
          zip-attrs                         ( id s m h d m y size attributes )
-         zip-name$                         ( id s m h d m y size attr name$ )
+         zip-name$ saved-name $save        ( id s m h d m y size attr name$ )
          prefix-len /string                ( id s m h d m y size attr name$' )
          true                              ( id s m h d m y size attr name$ true )
          exit
