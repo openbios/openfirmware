@@ -297,6 +297,8 @@ headerless
       use-router?  if
          indent indent  ." BOOTP relay agent: " router-ip-addr .ipaddr cr
       then
+   else
+      ." got " my-ip-addr .ipaddr cr
    then
 ;
 
@@ -366,6 +368,8 @@ defer wanted?  ( -- flag )  ' true to wanted?
    bootnet-debug  if
       indent  ." DHCP Discover: requesting an IP address for "
       my-en-addr .enaddr cr
+   else
+      ." DHCP "
    then
 
    init-backoff
@@ -374,7 +378,7 @@ defer wanted?  ( -- flag )  ' true to wanted?
       \ Enter SELECTING state
       choose-response                  ( timeout? )
    while                               ( )
-      " Timeout" .dhcp-msg
+      bootnet-debug  if  " Timeout" .dhcp-msg  else  ." Retry "  then
 
       \ If too many retries, go to INIT state
       too-many?  if  true exit  then
