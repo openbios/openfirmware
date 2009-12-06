@@ -5,7 +5,8 @@ dev /packages
 new-device
 " mux" device-name
 
-0 instance variable first-device
+instance variable first-device
+0 first-device !
 
 struct
    /n field >link

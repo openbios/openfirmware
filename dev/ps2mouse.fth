@@ -36,7 +36,7 @@ d# 20 constant apex-timeout
 : put-get-data  ( cmd -- data )  " put-get-data" $call-parent  ;
 : send-cmd  ( cmd -- )  " put-data" $call-parent  ;
 
-0 instance variable #retries
+instance variable #retries
 : cmd?  ( cmd -- error? )
    dup put-get-data                   ( cmd response )
    begin                              ( cmd response )
