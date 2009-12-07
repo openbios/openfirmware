@@ -20,8 +20,44 @@ h# 380 constant iobase
    iobase 3 + pc!
 ;
 
+\ Read a word from an EC index
+: ecw@ ( index -- data )
+   dup ec@ 8 << swap             ( msb index )
+   1+ ec@ or                     ( data )
+;
+
 : kbc-debug-on    ( -- )         1 fbfe ec! ;
 : kbc-debug-off   ( -- )         0 fbfe ec! ;
+
+: kbc-regs
+   ." KBCCB: "
+   fc80 ec@ dup . cr
+   dup 20 and ."   Aux " if ." Dis" else ." Enb" then cr
+       10 and ."   Kbc " if ." Dis" else ." Enb" then cr
+   ." KBCIF: " 
+   fc82 ec@ dup . cr
+   dup 2 and if ."   OBF" cr then 
+       1 and if ."   IBF" cr then 
+   ." KBSTS: " 
+   fc86 ec@ dup . cr
+   dup 2 and if ."   IBF" cr then 
+       1 and if ."   OBF" cr then 
+   ." PS2PF: "
+   fee1 ec@ dup . cr
+   dup 8 and if ."   Perr" cr then 
+   dup 4 and if ."   TxOut" cr then 
+   dup 2 and if ."   TxD" cr then 
+       1 and if ."   RxD" cr then 
+   fee2 ec@
+   ." PS2CTRL: " . cr
+   f501 ec@
+   ." SrvPS2: " . cr
+   64 pc@ 
+   ."     p64: " . cr
+   60 pc@ 
+   ."     p60: " . cr
+  
+;
 
 : ec-dump  ( offset len -- )
    ." Addr   0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f" cr  cr

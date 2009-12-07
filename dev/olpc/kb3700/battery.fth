@@ -6,10 +6,30 @@ purpose: Sniff the battery state from EC internal variables
 : ec! wbsplit h#  381 pc! h# 382 pc! h# 383 pc! ;
 [then]
 
+\ Names try to match the variable names in EC code
+h# FA00  constant ec-rambase
+h# 01    constant ec-pwr_limit
+h# 09    constant ec-va2
+h# 20    constant ec-platformID
+
+h# FC00  constant ec-gpiobase
+h# 00    constant ec-gpiofs00 
+h# 12    constant ec-gpio-0A
+
+h# FE00  constant ec-pwmbase
+h# 08    constant ec-pwmhigh2
+h# 09    constant ec-pwmhigh3 
+h# 0A    constant ec-pwmhigh4
+
+h# F900  constant ec-batrambase
+h# 15    constant ec-debugflag4
+
+: ec-ram@ ec-rambase + ec@ ;
 : wextend  ( w -- n )  dup h# 8000 and  if  h# ffff.0000 or  then  ;
 : rr ec@ . ;
 : ww ec! ;
-: bat-b@ h# f900 + ec@  ;
+: bat-b@ ec-batrambase + ec@  ;
+: bat-b! ec-batrambase + ec!  ;
 : bat-w@ dup 1+ bat-b@ swap bat-b@ bwjoin ;
 : eram-w@  h# f400 + dup 1+ ec@ swap ec@ bwjoin ;
 \ Base unit for temperature is 1/256 degrees C
@@ -137,19 +157,16 @@ end-string-array
 \ (stdout off) this will miss some state changes.
 \
 
-h# FA00  constant ec-rambase
-h# 20    constant ec-platformID
+: .mppt 
+   ec-pwr_limit ec-ram@       ( pwr_limit )
+   ec-rambase ec-va2 + ecw@     ( pwr_limit VA2 )
+    ." VA2: " .d ." PWM: " . 
+;
 
-h# FC00  constant ec-gpiobase
-h# 00    constant ec-gpiofs00 
-h# 12    constant ec-gpio-0A
-
-h# FE00  constant ec-pwmbase
-h# 08    constant ec-pwmhigh2
-h# 09    constant ec-pwmhigh3 
-h# 0A    constant ec-pwmhigh4
-
-: ec-ram@ ec-rambase + ec@ ;
+: watch-mppt ( -- )
+   begin  (cr .mppt kill-line  d# 500 ms  key?  until
+   key drop
+;
 
 : next-bstate
         begin
@@ -356,20 +373,36 @@ false value 1w-initialized
 \ buffer for reading bank data
 h# 20 constant /ds-bank     \ Bytes per bank in the battery sensor chip
 h# 60 constant /ds-eeprom   \ Bytes in the eeprom
+
 h# 01 constant ni-mh
 h# 02 constant li-fe
 h# 00 constant ds-regs
 h# 10 constant ds-acr
+
 h# 20 constant ds-bank0
 h# 25 constant ds-bat-misc-flag
 h# 2d constant ds-last-dis-soc
 h# 2e constant ds-last-dis-acr-msb
 h# 2f constant ds-last-dis-acr-lsb
+h# 31 constant ds-default-status
+
 h# 40 constant ds-bank1
-h# 60 constant ds-bank2
-h# 68 constant ds-remain-acr-msb
-h# 69 constant ds-remain-acr-lsb
 h# 5f constant ds-batid
+
+h# 60 constant ds-bank2
+h# 60 constant ds_bat_serial_num_1 
+h# 61 constant ds_bat_serial_num_2
+h# 62 constant ds_bat_serial_num_3
+h# 63 constant ds_bat_serial_num_4
+h# 64 constant ds_bat_serial_num_5
+h# 68 constant ds-remain-acr-msb
+h# 69 constant ds-remain-acr-lsb 
+h# 6a constant ds_bat_charge_msb
+h# 6b constant ds_bat_charge_lsb
+h# 6c constant ds_bat_charge_soc  
+h# 6d constant ds_bat_discharge_msb 
+h# 6e constant ds_bat_discharge_lsb 
+h# 6f constant ds_bat_discharge_soc
 
 h# 01 constant ds-bat-low-volt
 h# 20 constant ds-bat-full
@@ -515,6 +548,31 @@ h# 20 buffer: ds-bank-buf
    r> base !
 ;
 
+: bat-set-default-status ( val -- )
+   ds-bank0 1w-recall
+   ds-default-status 1w-write-start
+   1w-write-byte
+   ds-bank0 1w-copy
+   1w-reset
+;
+
+: bat-get-default-status ( -- val )
+   ds-bank0 1w-recall
+   ds-bank-buf 1 ds-default-status 1w-read    
+   ds-bank-buf c@                               ( pack info ) 
+;
+
+: bat-fix-error-2
+   batman-init?
+   bat-get-default-status
+   dup h# 6a = 
+   if ." Pack info is already correct" drop
+   else 
+      ." Fixing bad pack info: " . 
+      h# 6a bat-set-default-status
+   then 
+;
+
 \ Retrieve the key battery stats in bulk and put it on the stack
 \ sign extending the values that are 2's complement.
 : bg-charge-info@
@@ -637,6 +695,23 @@ h# 90 buffer: logstr
    bg-V>V >sd.ddd type
 ;
 
+0 value bg-last-acr
+0 value bg-v_avg
+
+: bg-watch ( -- )
+   bg-acr@
+   begin
+      bg-charge-info@
+      dup to bg-last-acr
+      ." ACR:" .bg-acr ."  I:" .bg-current ."  V:"  .bg-volt
+      dup bg-last-acr swap - ."  Chg:" .bg-acr
+      cr
+      500 ms
+      key?
+   until
+   drop
+;
+
 : bat-debug
    begin
       bat-lfp-dataf@
@@ -660,9 +735,6 @@ h# 90 buffer: logstr
 ;
 
 
-0 value bg-last-acr
-0 value bg-v_avg
-
 : bat-charge ( -- )
    batman-init?
    bat-enable-charge
@@ -678,6 +750,26 @@ h# 90 buffer: logstr
    until
    drop
    bat-disable-charge
+;
+
+: bat-enable-ecdbg
+   ec-debugflag4 bat-b@ 
+   h# 8 dup rot and or ec-debugflag4 bat-b!
+;
+
+: bat-enable-ecdbg-short
+   ec-debugflag4 bat-b@ 
+   h# 18 or ec-debugflag4 bat-b!
+;
+
+: bat-disable-ecdbg
+   ec-debugflag4 bat-b@ 
+   h# 18 invert and ec-debugflag4 bat-b!
+;
+
+: bat-disable-ecdbg-short
+   ec-debugflag4 bat-b@ 
+   h# 10 invert and ec-debugflag4 bat-b!
 ;
 
 dev /
