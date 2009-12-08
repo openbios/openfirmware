@@ -153,7 +153,10 @@ headers
 \ The debouncer takes about 300 ms to stabilize.
 
 : card-inserted?  ( -- flag )
-   present-state@ h# 40000 and  h# 40000 =
+   present-state@ h# 30000 and  h# 30000 =
+;
+: write-protected?  ( -- flag )
+   present-state@ h# 80000 and  0=
 ;
 
 : ?via-quirk  ( -- )
@@ -314,8 +317,10 @@ headers
 
    ." SDHCI: Error: ISR = " swap u.
    ." ESR = " dup u.  decode-esr
+\  debug-me
+   card-clock-off
+   card-power-off
    ." Stopping" cr abort
-   \      debug-me
 ;
 
 : wait  ( mask -- )
@@ -724,10 +729,10 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 \ -1 means error, 1 means retry
 : power-up-sdio-card  ( -- false | retry? true )
    intstat-on
-   card-power-off d# 20 ms
-   card-power-on  d# 40 ms  \ This delay is just a guess (20 was barely too slow for a Via board)
+   card-power-off d# 50 ms
+   card-power-on  d# 50 ms  \ This delay is just a guess (20 was barely too slow for a Via board)
    card-inserted?  0=  if  card-power-off  intstat-off  false true exit  then   
-   card-clock-slow  d# 10 ms  \ This delay is just a guess
+   card-clock-slow  d# 50 ms  \ This delay is just a guess
    reset-card     \ Cmd 0
    false
 ;
@@ -756,9 +761,15 @@ external
 
 : attach-card  ( -- okay? )
    setup-host
-   power-up-card  if         ( retry? )
+   ['] power-up-card catch  if  true true  then   if         ( retry? )
       \ The first try at powering up failed.
       if                     ( )
+         ." Trying to reset data lines" cr
+         card-clock-off
+         card-power-off
+         d# 500 ms
+         setup-host
+
          \ The card was detected, but didn't go to "powered up" state.
          \ Sometimes that can be fixed by power cycling, so we retry
          power-up-card  if   ( retry? )
@@ -798,7 +809,7 @@ external
    intstat-on  wait-write-done  intstat-off
    card-clock-off
    card-power-off
-   unmap-regs
+\  unmap-regs
 ;
 
 : attach-sdio-card  ( -- okay? )

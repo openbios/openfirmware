@@ -28,28 +28,85 @@ headers
    ibuf obuf /block comp
 ;
 
+: write-protected?  ( -- )  " write-protected?" $call-parent  ;
+
 : (selftest)  ( -- error? )
+   write-protected?  if  ." SD card is locked" cr  true  exit  then
+
    sbuf 0  read-block  if  true exit  then
    0 h# 5a test-block  if  true exit  then
    0 h# a5 test-block  if  true exit  then
    sbuf 0 write-block	   	        \ Restore original content
 ;
+: $=  ( $1 $2 -- flag )
+   rot tuck <>  if        ( adr1 adr2 len1 )
+      3drop false exit
+   then                   ( adr1 adr2 len1 )
+   comp 0=                ( flag )
+;
+: external?  ( -- flag )
+   " slot-name" get-my-property  if
+      false
+   else
+      decode-string " external" $=
+   then
+;
+: .slot-name  ( -- )
+   " slot-name" get-my-property  0=  if
+      decode-string type space  2drop
+   then
+   ." SD slot"
+;
+: card-present?  ( -- )  " card-inserted?" $call-parent  ;
+: test-abort?  ( -- flag )
+   key?  if  key h# 1b =  else  false  then
+;
+: wait-card?  ( -- error? )
+   card-present?  if  false exit  then
+   diagnostic-mode?  if
+      ." Please insert card in " .slot-name ."  to continue test."  cr
+      begin
+         d# 100 ms
+         test-abort?  if  ." Aborted" true exit  then
+      card-present? until
+      ." Card insertion correctly detected." cr
+      d# 200 ms  \ Settling time
+      false
+   else
+      ." No card in " .slot-name cr
+      true
+   then
+;
+
+: wait-removal?  ( -- error? )
+   diagnostic-mode?  0=  if  false exit  then
+   external?  0=  if  false exit  then
+
+   ." Please remove card from " .slot-name ."  to continue test."  cr         
+
+   begin
+      d# 100 ms
+      test-abort?  if  ." Aborted" true exit  then
+   card-present? 0= until
+   ." Card removal correctly detected." cr
+   false
+;
+
 external
 : selftest  ( -- error? )
    set-unit
-   " card-inserted?" $call-parent  0=  if
-      ." No card in "
-      " slot-name" get-my-property  0=  if
-         decode-string type space  2drop
-      then
-      ." SD slot" cr
-      true exit
-   then
-   open 0=  if  ." Open sdmmc failed" cr true exit  then
+
+   wait-card?  if  true exit  then
+
+   open 0=  if  ." Open SD card failed" cr true exit  then
    alloc-test-bufs
-   ['] (selftest) catch  if  true  then
-   free-test-bufs
-   close
+   ['] (selftest) catch  if  true  then  ( error? )
+   free-test-bufs                        ( error? )
+   close                                 ( error? )
+
+   if  true exit  then                   ( )
+
+   wait-removal?                         ( error? )
 ;
 headers
 
