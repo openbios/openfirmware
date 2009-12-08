@@ -468,7 +468,7 @@ fload ${BP}/cpu/x86/pc/olpc/fsupdate.fth
 
 fload ${BP}/ofw/inet/sntp.fth
 : olpc-ntp-servers  ( -- )
-   " time 172.18.0.1 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org"
+   " DHCP time 172.18.0.1 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org"
 ;
 ' olpc-ntp-servers to ntp-servers
 : ntp-time&date  ( -- s m h d m y )

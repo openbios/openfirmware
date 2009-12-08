@@ -66,6 +66,8 @@ icon: display.icon  rom:display.565
 icon: keyboard.icon rom:keyboard.565
 icon: timer.icon    rom:timer.565
 icon: clock.icon    rom:clock.565
+icon: ebook.icon    rom:ebook.565
+icon: leds.icon     rom:leds.565
 
 : all-tests-passed  ( -- )
    restore-scroller
@@ -97,7 +99,8 @@ d# 14 value #mfgtests
 : flash-item    ( -- )  " /flash"     mfg-test-dev  ;
 : memory-item   ( -- )  " /memory"    mfg-test-dev  ;
 : usb-item      ( -- )  " /usb"       mfg-test-dev  ;
-: sd-item       ( -- )  " /sd/disk:0" mfg-test-dev  ;
+: int-sd-item   ( -- )  " int:0"      mfg-test-dev  ;
+: ext-sd-item   ( -- )  " ext:0"      mfg-test-dev  ;
 : rtc-item      ( -- )  " /rtc"       mfg-test-dev  ;
 : display-item  ( -- )  " /display"   mfg-test-dev  ;
 : audio-item    ( -- )  " /audio"     mfg-test-dev  ;
@@ -106,6 +109,8 @@ d# 14 value #mfgtests
 : timer-item    ( -- )  " /timer"     mfg-test-dev  ;
 : touchpad-item ( -- )  " /8042/mouse"     mfg-test-dev  ;
 : keyboard-item ( -- )  " /8042/keyboard"  mfg-test-dev  ;
+: switch-item   ( -- )  " /switches"  mfg-test-dev  ;
+: leds-item     ( -- )  " /leds"      mfg-test-dev  ;
 
 : mfgtest-menu  ( -- )
    clear-menu
@@ -116,50 +121,56 @@ d# 14 value #mfgtests
    " Exit selftest mode."
    ['] quit-item     quit.icon     0 3 install-icon
 
-   " CPU"
-   ['] cpu-item      cpu.icon      1 0 install-icon
+\   " CPU"
+\   ['] cpu-item      cpu.icon      1 0 install-icon
 
    " SPI Flash: Contains EC code, firmware, manufacturing data."
-   ['] flash-item    spi.icon      1 1 install-icon
+   ['] flash-item    spi.icon      1 0 install-icon
 
    " RAM chips"
-   ['] memory-item   ram.icon      1 2 install-icon
+   ['] memory-item   ram.icon      1 1 install-icon
 
    " Internal mass storage"
-   ['] sd-item       sdcard.icon   1 3 install-icon
+   ['] int-sd-item   sdcard.icon   1 2 install-icon
 
    " Plug-in SD card"
-   ['] sd-item       sdcard.icon   1 4 install-icon
+   ['] ext-sd-item   sdcard.icon   1 3 install-icon
 
-   " Battery"
-   ['] battery-item  battery.icon  2 0 install-icon
+   " Wireless LAN"
+   ['] wlan-item     wifi.icon     1 4 install-icon
+
+   " Display"
+   ['] display-item  display.icon  2 0 install-icon
 
    " Camera"
    ['] camera-item   camera.icon   2 1 install-icon
 
-   " Wireless LAN"
-   ['] wlan-item     wifi.icon     2 2 install-icon
-
    " Audio: Speaker and microphone"
-   ['] audio-item    audio.icon    2 3 install-icon
+   ['] audio-item    audio.icon    2 2 install-icon
 
-   " Display"
-   ['] display-item  display.icon  2 4 install-icon
+   " Battery"
+   ['] battery-item  battery.icon  2 3 install-icon
 
    " RTC (Real-Time Clock)"
-   ['] rtc-item      clock.icon    3 0 install-icon
+   ['] rtc-item      clock.icon    2 4 install-icon
 
    " USB ports"
-   ['] usb-item      usb.icon      3 1 install-icon
+   ['] usb-item      usb.icon      3 0 install-icon
 
    \ These are last because they require user participation.
    \ The earlier tests are all included in automatic batch-mode.
 
    " Keyboard"
-   ['] keyboard-item keyboard.icon 3 2 install-icon
+   ['] keyboard-item keyboard.icon 3 1 install-icon
 
    " Touchpad"
-   ['] touchpad-item touchpad.icon 3 3 install-icon
+   ['] touchpad-item touchpad.icon 3 2 install-icon
+
+   " LEDs"
+   ['] leds-item     leds.icon     3 3 install-icon
+
+   " Switches"
+   ['] switch-item   ebook.icon    3 4 install-icon
 ;
 
 ' mfgtest-menu to root-menu

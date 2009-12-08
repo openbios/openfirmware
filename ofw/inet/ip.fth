@@ -42,6 +42,7 @@ d# 256 buffer: 'domain-name
 headers
 /i buffer: his-ip-addr
 /i buffer: name-server-ip
+/i buffer: ntp-server-ip
 ' 'domain-name     " domain-name"    chosen-string
 
 headerless

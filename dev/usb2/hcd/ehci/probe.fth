@@ -72,6 +72,13 @@ headers
 external
 : power-usb-ports  ( -- )  ;
 
+: ports-changed?  ( -- flag )
+   #ports 0  ?do
+      i portsc@ 2 and  if  true unloop exit  then
+   loop
+   false
+;
+
 : probe-root-hub  ( -- )
    \ Set active-package so device nodes can be added and removed
    my-self ihandle>phandle push-package

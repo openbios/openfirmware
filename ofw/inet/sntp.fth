@@ -45,14 +45,24 @@ h# 30 constant /sntp-request
    then
 
    d# 5,000 " set-timeout" $call-ip
-   " $set-host" $call-ip
+
+   2dup " DHCP" $=  if                      ( hostname$ )
+      2drop  " ntp-server-ip" $call-ip      ( 'ipaddr )
+      dup " known?" $call-ip  0=  if        ( 'ipaddr )
+         drop ip-ih close-dev  true exit
+      then                                  ( 'ipaddr )
+      " set-dest-ip" $call-ip               ( )
+   else                                     ( hostname$ )
+      " $set-host" $call-ip                 ( )
+   then                                     ( )
+
    send-sntp-request
    receive-sntp-reply
    ip-ih close-dev
 ;
 
 defer ntp-servers
-: default-ntp-servers  " 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org"  ;
+: default-ntp-servers  " DHCP 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org"  ;
 ' default-ntp-servers to ntp-servers
 
 : ntp-timestamp  ( -- true | d.timestamp false )

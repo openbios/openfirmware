@@ -23,6 +23,7 @@ d# 500 constant data-timeout
 
 0 instance value target
 false value debug?
+false instance value noprobe?
 
 \ Setup and descriptor DMA data buffers
 0 value setup-buf			\ SETUP packet buffer
@@ -128,7 +129,14 @@ headers
 ;
 
 : parse-my-args  ( -- )
-   my-args  " debug" $=  if  debug-on  then
+   my-args
+   begin  dup  while
+      ascii , left-parse-string   ( rem$' opt$ )
+      2dup " debug"   $=  if  debug-on          then
+      2dup " noprobe" $=  if  true to noprobe?  then
+      2drop               ( rem$ )
+   repeat                 ( rem$ )
+   2drop                  ( )
 ;
 
 headers

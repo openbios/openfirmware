@@ -262,6 +262,7 @@ headers
    0 file-name-buf c!
    unknown-ip-addr name-server-ip copy-ip-addr
    unknown-ip-addr dhcp-server-ip copy-ip-addr
+   unknown-ip-addr ntp-server-ip  copy-ip-addr
 ;
 
 also forth definitions
@@ -530,6 +531,7 @@ headerless
    d# 28 find-option  if  drop broadcast-ip-addr copy-ip-addr  then
    d# 15 find-option  if  'domain-name    place-cstr drop  then
    d# 12 find-option  if  'client-name    place-cstr drop  then
+   d# 42 find-option  if  drop ntp-server-ip    copy-ip-addr  then
    d# 43 find-option  if  parse-vendor  'vendor-options place-cstr drop  then
    d# 17 find-option  if  'root-path      place-cstr drop  then
 
@@ -549,6 +551,9 @@ headerless
       then
       'root-path c@  if
          indent indent ." Root path: " 'root-path cscount type cr
+      then
+      ntp-server-ip known?  if
+         indent indent ." NTP server: " ntp-server-ip .ipaddr cr
       then
       'vendor-options c@  if
          indent indent ." Vendor options: " 'vendor-options cscount type cr
