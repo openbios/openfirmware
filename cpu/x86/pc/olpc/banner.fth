@@ -10,14 +10,20 @@ headerless
    \ pop-base
    \ This is the manufacturing signature 
 [ifdef] rom-loaded
-   h# ffff.ffc0 h# 10 type cr
+   h# ffff.ffc0 h# 10 type 
 [then]
+;
+
+: .ec
+   " ec-name" ['] root-node  get-package-property  0=  if  ( adr len )
+      get-encoded-string  ." EC Firmware "  type
+   then
 ;
 
 : (xbanner-basics)  ( -- )
    ?spaces  cpu-model type  ." , "   .memory
    ." , S/N "  " SN" find-tag  if  type  else  ." Unknown"  then  cr
-   ?spaces  .rom
+   ?spaces  .rom  ."    " .ec  cr
 ;
 ' (xbanner-basics) to banner-basics
 
