@@ -1,6 +1,39 @@
-\ SMT test
+\ SMT test script $Revision$
 
 visible
+
+: wanted-fw$  ( -- $ )  " q3a20"  ;
+
+
+: nocase-$=  ( $1 $2 -- flag )
+   rot tuck <>  if       ( adr1 adr2 len2 )
+      3drop false exit   ( -- false )
+   then                  ( adr1 adr2 len2 )
+   caps-comp 0=          ( flag )
+;
+
+: find-firmware-file  ( -- name$ )
+   wanted-fw$  " u:\\boot\\%s.rom" sprintf    ( name$ )
+   ." Trying " 2dup type cr                 ( name$ )
+   2dup $file-exists?  if  exit  then       ( name$ )
+   2drop                                    ( )
+
+   wanted-fw$ factory-server$ " %s\\%s.rom" sprintf  ( name$ )
+   ." Trying " 2dup type cr                 ( name$ )
+   2dup $file-exists?  if  exit  then       ( name$ )
+   2drop
+
+   true  abort" Can't find new firmware file" 
+;
+
+: ?update-firmware  ( -- )
+   \ Exit if the existing firmware and the wanted firmware are the same
+   fw-version$  wanted-fw$  nocase-$=  if  exit  then
+   ." Updating firmware to version " fw-version$ type cr
+debug-me
+   ?enough-power
+   find-firmware-file  $get-file  reflash
+;
 
 : mfg-ntp-server  ( -- name$ )
    " NT" find-tag  if  ?-null  else  " 10.60.0.2"  then
@@ -57,7 +90,7 @@ d# 20 buffer: station#-buf
 ;
 
 d# 20 buffer: opid-buf
-: opid$  ( -- adr len )  opid-buf count  ;  \ e.g. A001
+: opid$  ( -- adr len )  opid-buf count  ;  \ e.g. 12345678
 
 \ Get and validate an operator ID
 : get-opid  ( -- )
@@ -65,12 +98,13 @@ d# 20 buffer: opid-buf
    begin
       " Please Input Operator ID ......" .instructions
       opid-buf d# 20 accept-to-buf   ( n )
+
       d# 8 <>  if
          " Wrong length (must be 8 digits), try again" .problem
       else
-         opid$  push-decimal  $number  pop-base  if  ( )
+         opid$  push-decimal  $number  pop-base  if   ( )
             " Must be a number, try again" .problem
-         else                                            ( n )
+         else                                         ( n )
             drop exit
          then
       then
@@ -81,8 +115,7 @@ d# 20 buffer: opid-buf
 d# 20 buffer: filename-buf
 : smt-filename$  ( -- )  filename-buf count  ;
 : set-filename  ( -- )
-   board#$ filename-buf place
-   " .txt" filename-buf $cat
+   board#$ " %s.txt" sprintf  filename-buf place
 ;
 
 : get-info  ( -- )
@@ -241,7 +274,7 @@ then
    show-result-screen
 
    cifs-connect
-   ." Uploading test result "  test-passed? smt-result  ." Done" cr
+   ." Sending test result "  test-passed? smt-result  ." Done" cr
    cifs-disconnect
 
    test-passed?  if
@@ -270,14 +303,16 @@ d# 15 to #mfgtests
 patch doit-once do-key menu-interact
 
 : start-smt-test  ( -- )
+   ?update-firmware
+
    wait-connections
 
    ." Setting clock "  ntp-set-clock  ." Done" cr
 
    get-info
 
-   ." Connecting "  cifs-connect ." Done" cr
-   ." Getting tags from server "  smt-request$  to response$  ." Done" cr
+   ." Connecting to shop floor server "  cifs-connect ." Done" cr
+   ." Getting tags "  smt-request$  to response$  ." Done" cr
    cifs-disconnect
 
    true to diag-switch?
