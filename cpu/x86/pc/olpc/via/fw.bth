@@ -325,7 +325,6 @@ fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
 ;
 ' screen-#lines to lines/page
 
-fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 : setup-for-linux  ( -- )
    [ ' linux-hook behavior compile, ]    \ Chain to old behavior
    \ whatever
@@ -355,6 +354,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/switches.fth       \ Lid and ebook switches
 fload ${BP}/cpu/x86/pc/olpc/via/leds.fth           \ LEDs
 fload ${BP}/cpu/x86/pc/olpc/via/factory.fth  \ Manufacturing tools
 
+fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
