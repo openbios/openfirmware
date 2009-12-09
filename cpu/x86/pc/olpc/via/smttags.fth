@@ -1,15 +1,11 @@
 \ SMT test
 
-\ visible
+visible
 
-\ This is for testing, until we get the MS tag injected into the final image
-[ifdef] factory-server$
-: set-server  ( -- )
-   factory-server$  nip  0=  if
-      " cifs:\\bekins:bekind2@10.60.0.2\nb2_fvs" to factory-server$
-   then
+: mfg-ntp-server  ( -- name$ )
+   " NT" find-tag  if  ?-null  else  " 10.60.0.2"  then
 ;
-[then]
+' mfg-ntp-server to ntp-servers
 
 : .instructions  ( adr len -- )
    cr blue-letters  type  black-letters  cr
@@ -19,7 +15,7 @@
 ;
 
 d# 20 buffer: bn-buf  \ Buffer for scanned-in board number string
-: scanned-board#$  ( -- adr len )  bn-buf count  ;
+: board#$  ( -- adr len )  bn-buf count  ;
 
 : accept-to-buf  ( buf len -- actual )
    over 1+ swap accept  ( buf actual )
@@ -34,7 +30,7 @@ d# 20 buffer: bn-buf  \ Buffer for scanned-in board number string
       " Please Input Board Number ......" .instructions
       bn-buf d# 20 accept-to-buf   ( n )
       d# 14 <>  if
-         " Wrong length, try again" .problem
+         " Wrong length (must be 14 characters), try again" .problem
       else
          bn-buf 1+ c@ [char] Q =  if  exit  then
          " Must begin with Q, try again" .problem
@@ -43,7 +39,7 @@ d# 20 buffer: bn-buf  \ Buffer for scanned-in board number string
 ;
 
 d# 20 buffer: station#-buf
-: station#$  ( -- adr len )  station#-buf count  ;  \ e.g. 01
+: station#$  ( -- adr len )  station#-buf count  ;  \ e.g. J01
 
 : get-station#  ( -- )
    ." *****"
@@ -51,14 +47,11 @@ d# 20 buffer: station#-buf
       " Please Input Station Number ......" .instructions
 
       station#-buf d# 20 accept-to-buf   ( n )
-      d# 2 <>  if
-         " Wrong length, try again" .problem
+      d# 3 <>  if
+         " Wrong length (must be like J01), try again" .problem
       else
-         station#$  push-decimal  $number  pop-base  if  ( )
-            " Must be a number, try again" .problem
-         else                                            ( n )
-            drop exit
-         then
+         station#-buf 1+ c@ [char] A [char] Z between  if  exit  then
+         " Must begin with A-Z, try again" .problem
       then
    again
 ;
@@ -70,13 +63,16 @@ d# 20 buffer: opid-buf
 : get-opid  ( -- )
    ." *****"
    begin
-      " Please Operator ID ......" .instructions
+      " Please Input Operator ID ......" .instructions
       opid-buf d# 20 accept-to-buf   ( n )
-      d# 4 <>  if
-         " Wrong length, try again" .problem
+      d# 8 <>  if
+         " Wrong length (must be 8 digits), try again" .problem
       else
-         opid-buf 1+ c@ [char] A =  if  exit  then
-         " Must begin with A, try again" .problem
+         opid$  push-decimal  $number  pop-base  if  ( )
+            " Must be a number, try again" .problem
+         else                                            ( n )
+            drop exit
+         then
       then
    again
 ;
@@ -85,7 +81,7 @@ d# 20 buffer: opid-buf
 d# 20 buffer: filename-buf
 : smt-filename$  ( -- )  filename-buf count  ;
 : set-filename  ( -- )
-   scanned-board#$ filename-buf place
+   board#$ filename-buf place
    " .txt" filename-buf $cat
 ;
 
@@ -97,21 +93,21 @@ d# 20 buffer: filename-buf
 ;
 
 \ Upload the result data 
-: smt-result  ( pass? -- adr len )
+: smt-result  ( pass? -- )
    smt-filename$  open-temp-file
    if  " PASS"  else  " FAIL"  then  " RESULT="  put-key+value
    " PROCESS=FVT" put-key-line
    " STATION="    put-key-line
    " OPID="       put-key-line
    " GUID="       put-key-line
-   scanned-board#$ " MB_NUM=" put-key+value
+   board#$  " MB_NUM=" put-key+value
    " Result" submit-file
 ;
 
 \ Send the board number as the request and return the response data
 : smt-request$  ( -- adr len )
    smt-filename$ open-temp-file
-   scanned-board#$  " MB_NUM="  put-key+value
+   board#$          " MB_NUM="  put-key+value
    opid$            " OPID="    put-key+value
    station#$        " STATION=" put-key+value
    " Request" submit-file
@@ -125,19 +121,57 @@ d# 20 buffer: filename-buf
    ($add-tag)                             ( )
 ;
 
+\ Remove possible trailing carriage return from the line
+: ?remove-cr  ( adr len -- adr len' )
+   dup  if                        ( adr len )
+      2dup + 1- c@ carret =  if   ( adr len )
+         1-
+      then
+   then
+;
+
+: put-tag  ( value$ key$ -- )
+   2swap  dup  if  add-null  then  2swap  ( value$' key$ )
+   ($add-tag)                             ( )
+;
+
+0 0 2value response$
+
+\ If the server sends us tags in the response file, we put
+\ them in the mfg data
+: write-new-tags  ( adr len -- )
+   begin  dup  while              ( adr len )
+      linefeed left-parse-string  ( rem$ line$ )
+      ?remove-cr                  ( rem$ line$ )
+      [char] = left-parse-string  ( rem$ value$ key$ )
+      dup 2 =  if                 ( rem$ value$ key$ )
+         put-tag                  ( rem$ )
+      else                        ( rem$ value$ key$ )
+         4drop                    ( rem$ )
+      then                        ( rem$ )
+   repeat                         ( adr len )
+   2drop                          ( )
+;
+
 \ Decode the server's response and insert appropriate mfg data tags
-: parse-smt-response  ( adr len -- error? )
-   drop  " Timeout" comp 0=  if  true exit  then
+: parse-smt-response  ( -- )
+   ." Server responded with:  "  cr  response$ list cr    ( )
+
+   response$ nip 0=  if  ." Null manufacturing data" cr  exit  then
+
+." Type q to skip tag write "  key dup emit  cr  [char] q =  if
+   2drop false exit
+then
 
    flash-write-enable
 
    clear-mfg-buf                          ( )
-\ XXX propagate tag values from response - code in Notes/mfgtags.fth
-   " "      " ww"  put-ascii-tag          ( )
-   " EN"    " SS"  put-ascii-tag          ( )
-   " ASSY"  " TS"  put-ascii-tag          ( )
-   " C1"    " SG"  put-ascii-tag          ( )
-   scanned-board#$  " B#"  put-ascii-tag  ( )
+   response$ write-new-tags               ( )
+\   " "      " ww"  put-ascii-tag         ( )
+\   " EN"    " SS"  put-ascii-tag         ( )
+\   " ASSY"  " TS"  put-ascii-tag         ( )
+\   " D3"    " SG"  put-ascii-tag         ( )
+\   board#$  " B#"  put-ascii-tag         ( )
    (put-mfg-data)                         ( )
 
    \ check-tags
@@ -148,114 +182,109 @@ d# 20 buffer: filename-buf
    false
 ;
 
-\ Perform the exchange with the manufacturing server
-: smt-tag-exchange  ( -- error? )
-   smt-request$                    ( adr len )
-   2>r  2r@ parse-smt-response     ( error? r: adr len )
-   2r> free-mem                    ( error? )
-;
-
-d# 15 to #mfgtests
-
-: smt-tests  ( -- pass? )
-   5 #mfgtests +  5 do
-      i set-current-sq
-      refresh
-      d# 200 0 do
-         d# 10 ms  key? if  unloop unloop exit  then
-      loop
-      doit
-      pass? 0= if  unloop false exit  then
-   loop
-   all-tests-passed
-   true
-;
-
-0 value usb-ih
-: open-usb   ( -- )
-   " /usb:noprobe" open-dev to usb-ih
-   usb-ih 0= abort" Can't open USB!"  
-;
-: close-usb  ( -- )  usb-ih close-dev  0 to usb-ih  ;
 : silent-probe-usb  ( -- )
    " /" ['] (probe-usb2) scan-subtree
    " /" ['] (probe-usb1) scan-subtree
    report-disk report-net report-keyboard
 ;
-: usb-ports-changed?  ( -- flag )
-   open-usb
-   " ports-changed?" usb-ih $call-method  ( changed? )
-   close-usb
-;
 
-: ?reprobe-usb  ( -- )  usb-ports-changed?  if  silent-probe-usb  then  ;
-: reprobe-usb  ( -- )
-   begin  d# 100 ms  usb-ports-changed?  until
-   silent-probe-usb
-;
 : scanner?  ( -- flag )
    " usb-keyboard" expand-alias  if  2drop true  else  false  then
 ;   
 : wait-scanner  ( -- )
-   begin  scanner?  0= while  ( )
+   scanner?  0=  if
       " Connect USB barcode scanner"  .instructions
-      reprobe-usb
-   repeat
+      begin  d# 1000 ms  silent-probe-usb  scanner?  until
+   then
  ;
 : wired-lan?  ( -- flag )
    " /usb/ethernet" locate-device  if  false  else  drop true  then
 ;
 : wait-lan  ( -- )
-   begin  wired-lan?  0=  while
+   wired-lan?  0=  if
       " Connect USB Ethernet Adapter" .instructions
-      reprobe-usb
-   repeat
+      begin  d# 1000 ms  silent-probe-usb  wired-lan?  until
+   then
 ;
 : usb-key?  ( -- flag )
    " /usb/disk" locate-device  if  false  else  drop true  then
 ;
 : wait-usb-key  ( -- )
-   begin  usb-key?  0=  while
+   usb-key?  0=  if
       " Connect USB memory stick" .instructions
-      reprobe-usb
-   repeat
+      begin  d# 1000 ms  silent-probe-usb  usb-key?  until
+   then
 ;
 : wait-connections  ( -- )
-   ?reprobe-usb
+   silent-probe-usb
    wait-scanner
    wait-lan
    wait-usb-key
 ;             
 
-: do-smt-test  ( -- )
+0 value test-passed?
+: show-result-screen  ( -- )
+   restore-scroller
+   clear-screen
+   test-passed?  if
+      ." Selftest passed." cr cr cr
+      d# 2000 ms
+      green-screen
+   else
+      ." Selftest failed." cr cr cr
+      d# 2000 ms
+      red-screen
+   then
+;
+
+: finish-smt-test  ( pass? -- )
+   show-result-screen
+
+   cifs-connect
+   ." Uploading test result "  test-passed? smt-result  ." Done" cr
+   cifs-disconnect
+
+   test-passed?  if
+      ." Writing tags "  parse-smt-response  ." Done" cr
+   then
+
+   ." Powering off ..." d# 2000 ms
+   power-off
+;
+
+d# 15 to #mfgtests
+
+: smt-tests  ( -- )
+   5 #mfgtests +  5 do
+      i set-current-sq
+      refresh
+      d# 1000 ms
+      doit
+      pass? 0= if  false to test-passed?  finish-smt-test  unloop exit  then
+   loop
+   true to test-passed?  finish-smt-test
+;
+
+\ This modifies the menu to be non-interactive
+: doit-once  ( -- )  do-key  smt-tests  ;
+patch doit-once do-key menu-interact
+
+: start-smt-test  ( -- )
    wait-connections
 
    ." Setting clock "  ntp-set-clock  ." Done" cr
 
    get-info
+
    ." Connecting "  cifs-connect ." Done" cr
+   ." Getting tags from server "  smt-request$  to response$  ." Done" cr
+   cifs-disconnect
 
-   ." Writing mfg data tags "  smt-tag-exchange  ." Done" cr
-
-   ['] true is (diagnostic-mode?)
+   true to diag-switch?
    " patch smt-tests play-item mfgtest-menu" evaluate
    menu
-   ['] false is (diagnostic-mode?)
-
-   ." Uploading test result "  smt-result  ." Done" cr
-
-   cifs-disconnect
+   false to diag-switch?
 ;
 
-\ patch do-smt-test play-item mfgtest-menu
-
-true value once?
-: doit-once  ( -- )
-   do-key
-   once?  if
-      false to once?
-\      doit
-      smt-tests
-   then
-;
-patch doit-once do-key menu-interact
+\ Automatically run the sequence
+start-smt-test
