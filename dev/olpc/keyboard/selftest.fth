@@ -100,7 +100,9 @@ d#  40 constant button-h
    3 0  do  make-single-key  loop
    make-space-key
    5 0  do  make-single-key  loop
-
+;
+: make-buttons
+   h# 59 to #keys
    d#   80 d#  30 make-button  \ Rocker up    65
    d#   30 d#  80 make-button  \ Rocker left  67
    d#  130 d#  80 make-button  \ Rocker right 68
@@ -173,12 +175,17 @@ d# 128 8 / constant #key-bytes
 h# ffd5ab57 constant funny-map
 create all-keys-bitmap
 57 c, ab c, d5 c, ff c, ff c, ff c, ff c, ff c,  \ Omits the intermediate slider keys
-\ ff c, ff c, ff c, ff c, ff c, ff c, ff c, ff c,
 ff c, ff c, ff c, ff c, 03 c, 00 c, 00 c, 00 c,
 
+defer all-tested?
 : all-keys-tested?  ( -- flag )
    key-bitmap @ funny-map and key-bitmap !
    key-bitmap  all-keys-bitmap  #key-bytes comp 0=
+;
+' all-keys-tested? to all-tested?
+
+: all-buttons-tested?  ( -- flag )
+   key-bitmap h# b + w@  h# 3fe and  h# 3fe =
 ;
 
 \ This table is indexed by the (unescaped) scanset1 code, giving
@@ -432,12 +439,12 @@ false value verbose?
          drop                                ( )
       else                                   ( scan key# )
          swap h# 80 and  if   \ Up           ( key# )
-            final-test?  if                  ( key# )
+            final-test?  smt-test?  or  if   ( key# )
                dup 0=  last-1 0= and  last-2 0=  and  if   ( key# )
                   drop true                  ( exit? )
                else                          ( key# )
                   last-1 to last-2  to last-1  ( )
-                  all-keys-tested?           ( exit? )
+                  all-tested?                ( exit? )
                then
             else                             ( key# )
                dup key-up                    ( key# )
@@ -465,7 +472,7 @@ false value verbose?
          process-raw
          get-msecs to last-timestamp
       else
-         final-test?  if
+         final-test?  smt-test?  or  if
             false   \ Final test exit inside process-raw
          else
             get-msecs last-timestamp -  d# 10,000 >=
@@ -482,9 +489,18 @@ warning @ warning off
    open  0=  if  true exit  then
 
    \ Being able to open the keyboard is good enough in SMT mode
-   smt-test?  if  close false exit  then
+\   smt-test?  if  close false exit  then
 
-   make-keys
+   smt-test?  if
+      ['] all-buttons-tested?
+   else
+      make-keys
+      ['] all-keys-tested?
+   then
+   to all-tested?
+      
+   make-buttons
+
    cursor-off draw-keyboard
    true to locked?   \ Disable the keyboard alarm handler; it steals our scancodes
    selftest-keys
@@ -494,8 +510,8 @@ warning @ warning off
    page
    close
 
-   final-test?  if
-      all-keys-tested?  0=
+   final-test? smt-test? or  if
+      all-tested?  0=
       dup  if  ." Some keys were not pressed" cr  then
    else
       confirm-selftest?
