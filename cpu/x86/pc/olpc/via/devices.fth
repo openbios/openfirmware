@@ -216,7 +216,7 @@ warning @ warning off
 : stand-init-io  stand-init-io  h# fff0.0000 to flash-base  ;
 warning !
 
-: uncache-flash  ( -- )  h# 202 msr@  h# ff invert and  h# 202 msr!  ;
+: uncache-flash  ( -- )  h# 202 msr@ swap h# ff invert and swap h# 202 msr!  ;
 
 fload ${BP}/dev/olpc/spiflash/spiif.fth     \ Generic low-level SPI bus access
 fload ${BP}/dev/olpc/spiflash/spiflash.fth  \ SPI FLASH programming
