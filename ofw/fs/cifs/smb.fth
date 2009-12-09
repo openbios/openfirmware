@@ -441,6 +441,7 @@ d# 24 buffer: p24-buf
    --bytes--
    }smb
    empty-response
+   0 to fid
 ;
 
 : $delete  ( path$ -- error? )
