@@ -11,8 +11,8 @@ purpose: Driver/selftest for OLPC XO-1.5 LEDs
 : hdd-led-off ( -- )  h# 400000 gpio-hi  ;
 : selftest  ( -- )
    ." Flashing LEDs" cr
-   " /wlan" test-dev
-   d# 10 0 do  hdd-led-on d# 100 ms hdd-led-off d# 100 ms  loop
+   " /wlan" test-dev  " /wlan" test-dev  \ Twice for longer flashing
+   d# 20 0 do  hdd-led-on d# 100 ms hdd-led-off d# 100 ms  loop
    confirm-selftest?
 ;
 
