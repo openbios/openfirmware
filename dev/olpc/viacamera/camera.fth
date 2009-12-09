@@ -461,7 +461,7 @@ external
 
 \ ============================= selftest operation ===========================
 
-d# 10,000 constant movie-time
+d# 5,000 constant movie-time
 0 constant test-x
 0 constant test-y
 
