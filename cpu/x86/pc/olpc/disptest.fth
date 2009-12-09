@@ -84,20 +84,21 @@ d# 5,000 constant burnin-time		\ 5 seconds
    width  hstripe d# 256 * -  to xbias
    height vstripe d# 256 * -  to ybias
 ;
+: half-bias  ( -- )  xbias 2/ to xbias  ybias 2/ to ybias  ;
 : gvsr  ( -- )
-   set-stripes  black-screen   ( )
+   set-stripes  half-bias  black-screen   ( )
    d# 256 0  do                ( )
       d# 256 0  do             ( )
          i j 0 rgb>565         ( color )
          hstripe i * xbias +   ( color x )
          vstripe j * ybias +   ( color x y )
-         hstripe vstripe       ( color x y )
+         hstripe vstripe       ( color x y w h )
          fill-rect
       loop
    loop
 ;
 : gvsb  ( -- )
-   set-stripes  black-screen   ( )
+   set-stripes  half-bias  black-screen   ( )
    d# 256 0  do                ( )
       d# 256 0  do             ( )
          0 j i rgb>565         ( color )
@@ -139,7 +140,7 @@ h# ff h# ff h# ff rgb>565 constant white-color
    height  0  do  i hline  d# 10 +loop
    width   0  do  i vline  d# 10 +loop
 ;
-: short-wait  ( -- )  d# 500 ms  ;
+: short-wait  ( -- )  smt-test?  if  d# 250 ms  else  d# 500 ms  then  ;
 : brightness-ramp  ( -- )
    0  h# 0f  do  i bright!  short-wait  -1 +loop
    backlight-off  short-wait  backlight-on
@@ -152,19 +153,24 @@ h# ff h# ff h# ff rgb>565 constant white-color
    d# 1000 ms
    load-base  whole-screen  fill-rect
 ;
+: hold-time  ( -- )
+   smt-test?  if  d# 500 ms  else  d# 1000 ms  then
+;
 : wait  ( -- )
-   d# 1000 ms
+   hold-time
    0 set-source \ Freeze image
-   d# 1000 ms
+   hold-time
    1 set-source \ Unfreeze image
-   d# 1000 ms
+   hold-time
 ;
 
 warning @ warning off
 : selftest  ( -- error? )
    depth d# 16 <  if  false exit  then
-   .horizontal-bars16   wait
-   .vertical-bars16     wait
+   smt-test? 0=  if
+      .horizontal-bars16   wait
+      .vertical-bars16     wait
+   then
    gvsr                 wait
    gvsb                 wait
    hgradient            wait
@@ -172,11 +178,14 @@ warning @ warning off
    crosshatch           wait
    brightness-ramp
 
-   burnin-time d# 5000 >  if
-      ." Press a key to stop early." cr
-      d# 1000 ms
+   smt-test?  0=  if
+      burnin-time d# 5000 >  if
+         ." Press a key to stop early." cr
+         d# 1000 ms
+      then
+      random-selftest
    then
-   random-selftest
+
    confirm-selftest?
 ;
 warning !
