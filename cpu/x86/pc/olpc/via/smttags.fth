@@ -30,7 +30,6 @@ visible
    \ Exit if the existing firmware and the wanted firmware are the same
    fw-version$  wanted-fw$  nocase-$=  if  exit  then
    ." Updating firmware to version " fw-version$ type cr
-debug-me
    ?enough-power
    find-firmware-file  $get-file  reflash
 ;
