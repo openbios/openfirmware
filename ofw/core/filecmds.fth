@@ -669,6 +669,20 @@ public
    r> close-dev                              ( len )
    load-base swap list
 ;
+
+\ Read entire file into allocated memory
+: $read-file  ( filename$ -- true | data$ false )
+   open-dev  ?dup  0=  if  true exit  then  >r  ( r: ih )
+   " size" r@ $call-method  drop   ( len r: ih )
+   dup alloc-mem  swap             ( adr len r: ih )
+   2dup " read" r@ $call-method    ( adr len actual r: ih )
+   r> close-dev                    ( adr len actual )
+   over <>  if                     ( adr len )
+      free-mem  true exit
+   then                            ( adr len )
+   false
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
