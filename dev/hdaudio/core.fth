@@ -460,6 +460,11 @@ false value playing?
    4 to sd#  audio-out  install-playback-alarm  true to playing?
 ;
 
+: ?end-sound  ( -- )
+   4 to #sd
+   stream-done?  if  (write-done)  false to playing?  then
+;
+
 false value stop-lock
 : stop-sound  ( -- )
    true to stop-lock
@@ -470,16 +475,16 @@ false value stop-lock
 \ Alarm handle to stop the stream when the content has been played.
 : playback-completed-alarm  ( -- )
    stop-lock  if  exit  then
-   playing?  if
-      sd#  4 to sd#                                          ( sd# )
-      stream-done?  if  (write-done)  false to playing?  then  ( sd# )
-      to sd#                                                 ( )
-   then
+   playing?  if  sd#  ?end-sound  to sd#  then
 ;
 
 ' playback-completed-alarm is playback-alarm
 
-: wait-sound  ( -- )  begin  playing?  0= until  ;
+: wait-sound  ( -- )
+   true to stop-lock
+   begin  playing?  while   d# 10 ms  ?end-sound  repeat
+   false to stop-lock
+;
 
 false value left-mute?
 false value right-mute?
