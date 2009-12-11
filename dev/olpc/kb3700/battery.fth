@@ -796,15 +796,20 @@ new-device
 
 : wait-no-ac  ( -- error? )
    ." Disconnect AC power to continue.. "
-   d# 200 0  do
+   begin
+      bat-status@ h# 10 and   ( ac-connected? )
+   while
       d# 100 ms
-      bat-status@ h# 10 and  0=  if
-         false unloop cr exit
+
+      key?  if
+         key  h# 1b =  if
+            ." ERROR: AC still connected" cr
+            true  exit
+         then
       then
-   loop
+   repeat
    cr
-   ." ERROR: AC not disconnected" cr
-   true
+   false
 ;
 
 \ Test that we can run without AC power.
@@ -825,15 +830,20 @@ new-device
 
 : wait-ac  ( -- error? )
    ." Connect AC power to continue.. "
-   d# 200 0  do
+   begin
+      bat-status@ h# 10 and  0=  ( ac-disconnected? )
+   while
       d# 100 ms
-      bat-status@ h# 10 and  if
-         false unloop cr exit
+      
+      key?  if
+         key  h# 1b =  if
+            ." ERROR: AC not connected" cr
+            true  exit
+         then
       then
-   loop
+   repeat
    cr
-   ." ERROR: AC not connected" cr
-   true
+   false
 ;
 
 : test-charging  ( -- error? )
@@ -853,7 +863,9 @@ new-device
 
 : interactive-test  ( -- error? )
    test-battery      if  true exit  then
-   test-discharging  if  true exit  then
+   smt-test? 0=   if   \ Skip this test in SMT
+      test-discharging  if  true exit  then
+   then
    test-charging     if  true exit  then
    false
 ;
