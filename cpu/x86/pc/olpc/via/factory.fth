@@ -25,9 +25,6 @@ purpose: Factory test mode definitions
       0                       ( station# )
    then                       ( station# )
    to test-station
-   test-station 6 <>  if
-      ['] test-station to (diagnostic-mode?)
-   then
 ;
 
 : set-boot-device  ( -- )

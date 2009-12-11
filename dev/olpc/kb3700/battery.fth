@@ -863,7 +863,8 @@ new-device
 
 : interactive-test  ( -- error? )
    test-battery      if  true exit  then
-   diagnostic-mode? 1 <>   if   \ Skip this test in SMT
+   " test-station" $find  if  execute  else  2drop 0  then  ( station# )
+   1 <>   if                                 \ Skip this test in SMT
       test-discharging  if  true exit  then
    then
    test-charging     if  true exit  then
