@@ -3,7 +3,7 @@ purpose: Factory test mode definitions
 
 0 value test-station
 : smt-test?    ( -- )  test-station 1 =  ;
-: final-test?  ( -- )  test-station 5 =  ;
+: final-test?  ( -- )  test-station 4 5 between  ;
 : decode-ts  ( adr len -- station# )
    2dup " SMT"    $=  if  2drop 1 exit  then
    2dup " ASSY"   $=  if  2drop 2 exit  then
@@ -25,6 +25,9 @@ purpose: Factory test mode definitions
       0                       ( station# )
    then                       ( station# )
    to test-station
+   test-station 6 <>  if
+      ['] test-station to (diagnostic-mode?)
+   then
 ;
 
 : set-boot-device  ( -- )
