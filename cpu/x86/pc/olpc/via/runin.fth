@@ -8,36 +8,6 @@ visible
 \ the failure log (if int:\runin\fail.log is present) or modifies the
 \ manufacturing data tags to cause the next boot to enter final test.
 
-[ifndef] $read-file
-\ Read entire file into allocated memory
-: $read-file  ( filename$ -- true | data$ false )
-   open-dev  ?dup  0=  if  true exit  then  >r  ( r: ih )
-   " size" r@ $call-method  drop   ( len r: ih )
-   dup alloc-mem  swap             ( adr len r: ih )
-   2dup " read" r@ $call-method    ( adr len actual r: ih )
-   r> close-dev                    ( adr len actual )
-   over <>  if                     ( adr len )
-      free-mem  true exit
-   then                            ( adr len )
-   false
-;
-[then]
-
-[ifndef] $(delete-tag)
-: ($delete-tag)  ( adr len -- )
-   2dup  ram-find-tag  0=  if  2drop exit  then  ( tagname$ ram-value$ )
-   2nip                         ( ram-value$ )
-
-   2dup + c@ h# 80 and          ( ram-value$ tag-style )
-   if  4  else  5  then  +  >r  ( tag-adr tag-len )
-   ram-last-mfg-data  >r        ( tag-adr r: len bot-adr ) 
-   r@  2r@ +                    ( tag-adr src-adr dst-adr r: len bot-adr )    
-   rot r@ -                     ( src-adr dst-adr copy-len r: len bot-adr ) 
-   move                         ( r: len bot-adr )
-   r> r> h# ff fill             ( )
-;
-[then]
-
 d# 20 buffer: sn-buf
 : sn$  ( -- adr len )  sn-buf count  ;
 
@@ -176,7 +146,6 @@ d# 4 constant rtc-threshold
    power-off
 ;
 
-
 d# 15 to #mfgtests
 
 : final-tests  ( -- )
@@ -200,12 +169,6 @@ dend
 \ This modifies the menu to be non-interactive
 : doit-once  ( -- )  do-key  final-tests  ;
 patch doit-once do-key menu-interact
-
-: silent-probe-usb  ( -- )
-   " /" ['] (probe-usb2) scan-subtree
-   " /" ['] (probe-usb1) scan-subtree
-   report-disk report-net report-keyboard
-;
 
 : scanner?  ( -- flag )
    " usb-keyboard" expand-alias  if  2drop true  else  false  then
@@ -254,8 +217,6 @@ patch doit-once do-key menu-interact
 \     set-tags-for-fqa
 \      " int:\runin\olpc.fth" $delete-all
 
-      5 to test-station
-      true to diag-switch?
       " patch final-tests play-item mfgtest-menu" evaluate
       menu
       \ Shouldn't get here because the menu never exits
