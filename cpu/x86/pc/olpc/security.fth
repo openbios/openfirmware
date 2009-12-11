@@ -441,50 +441,6 @@ d# 67 buffer: machine-id-buf
    true
 ;
 
-0 [if]
-\ parse-sig parses a "sig01:" format signature string, returning its
-\ hashname and signature substrings.  It converts the signature
-\ substring from ASCII hex to binary bytes.
-
-: parse-sig  ( sig01$ -- true | hashname$ sig$ false )
-   dup d# 89 <  if  2drop true exit  then
-   bl left-parse-string  " sig01:" $=  0=  if  2drop true exit  then    ( rem$ )
-   bl left-parse-string  dup d#  6 <>  if  4drop true exit  then  2swap ( hash$ rem$ )
-   bl left-parse-string  nip d# 64 <>  if  4drop true exit  then        ( hash$ rem$ )
-   newline left-parse-string  2swap nip  0<>  if  4drop true exit  then ( hash$ data$ )
-   dup /sig 2* <>  if  ( ." Bad signature length" cr  )  2drop true  exit  then ( hash$ data$ )
-
-   hex-decode  if  2drop true  else  false  then
-;
-
-\ signature-invalid? checks the validity of data$ against the ASCII signature
-\ record sig0N$, using the public key that thiskey$ points to.
-\ It also verifies that the hashname contained in sig01$ is the
-\ expected one.
-
-: signature-invalid?  ( data$ sig0N$ exp-hashname$ -- error? )
-   2>r
-   parse-sig  if
-      ." Bad signature format"  cr
-      2r> 2drop  true exit
-   then                                     ( data$ hashname$ sig$ r: exp$ )
-
-   \ Check for duplicate hashname attacks
-   2swap 2dup 2r>  $=  0=  if               ( data$ sig$ hashname$ )
-      ." Wrong hash name" cr
-      4drop 2drop true exit
-   then                                     ( data$ sig$ hashname$ )
-
-   2>r 2>r 2>r 0 2r> 2r> 2r>                ( 0 data$ sig$ hashname$ )
-   pubkey$  2swap  signature-bad?  ( error? )
-   dup  if
-      "   Signature invalid" ?lease-error-cr
-   else
-      "   Signature valid" ?lease-debug-cr
-   then
-;
-[then]
-
 \ exp-hashname$ remembers the most recently used hashname to guard against
 \ attacks based on reuse of the same (presumably compromized) hash.
 
@@ -623,10 +579,12 @@ h# 10e constant /key
       newline left-parse-string      ( rem$' line$ )
 
       this-sig-line-good?  if        ( rem$ )
+         "   Signature valid" ?lease-debug-cr
          2drop  true exit
       then                           ( rem$ )
 
    repeat                            ( rem$ )
+   "   Signature invalid" ?lease-error-cr
    2drop  false                      ( good? )
 ;
 
