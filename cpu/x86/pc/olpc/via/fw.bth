@@ -627,11 +627,12 @@ true                               ' client-symbols?  set-config-int-default
       protect-fw  text-on  ['] scan-nand guarded
    then
 ;
+[then]
+
 : ?fs-update  ( -- )
    button-check button-x or  button-o or  button-square or   ( mask )
    game-key-mask =  if  protect-fw try-fs-update  then
 ;
-[then]
 
 : pci-fixup  ( -- )
    h#   43 h# 8804 config-b!  \ Enable parity checking on D17F0
@@ -681,8 +682,8 @@ true                               ' client-symbols?  set-config-int-default
    ?diags
 [ifdef] Later
    ?scan-nand
-   ?fs-update
 [then]
+   ?fs-update
    secure-startup
    unblock-exceptions
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?

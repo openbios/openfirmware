@@ -191,6 +191,7 @@ previous definitions
       nip .error
    then                                ( )
    previous definitions
+
    show-done
    ?all-written
    close-nand-ihs
@@ -204,6 +205,7 @@ previous definitions
    ['] noop to show-progress
 
 \  clear-context  nand-commands
+   t(
    also nand-commands
    
    true to secure-fsupdate?
@@ -213,7 +215,9 @@ previous definitions
 \  only forth also definitions
 
    show-done
+   ?all-written
    close-nand-ihs
+   )t-hms
 ;
 
 : fs-update-from-list  ( devlist$ -- )
