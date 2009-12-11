@@ -182,6 +182,20 @@ alias disable-security clear-wp
    safe-parse-word  0 parse add-null  2swap $add-tag
 ;
 
+\ Deletes a tag from a RAM image of the mfg data
+: ($delete-tag)  ( adr len -- )
+   2dup  ram-find-tag  0=  if  2drop exit  then  ( tagname$ ram-value$ )
+   2nip                         ( ram-value$ )
+
+   2dup + c@ h# 80 and          ( ram-value$ tag-style )
+   if  4  else  5  then  +  >r  ( tag-adr tag-len )
+   ram-last-mfg-data  >r        ( tag-adr r: len bot-adr ) 
+   r@  2r@ +                    ( tag-adr src-adr dst-adr r: len bot-adr )    
+   rot r@ -                     ( src-adr dst-adr copy-len r: len bot-adr ) 
+   move                         ( r: len bot-adr )
+   r> r> h# ff fill             ( )
+;
+
 : $delete-tag  ( name$ -- )
    tag-setup                    ( ram-value$ )
    2dup + c@ h# 80 and          ( ram-value$ tag-style )
