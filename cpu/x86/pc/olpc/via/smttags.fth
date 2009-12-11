@@ -113,7 +113,7 @@ d# 20 buffer: opid-buf
 
 \ Construct the filename used for communicating with the server
 d# 20 buffer: filename-buf
-: smt-filename$  ( -- )  filename-buf count  ;
+: smt-filename$  ( -- adr len )  filename-buf count  ;
 : set-filename  ( -- )
    board#$ " %s.txt" sprintf  filename-buf place
 ;
@@ -170,6 +170,8 @@ d# 20 buffer: filename-buf
 
 0 0 2value response$
 
+false value any-tags?
+
 \ If the server sends us tags in the response file, we put
 \ them in the mfg data
 : write-new-tags  ( adr len -- )
@@ -178,6 +180,7 @@ d# 20 buffer: filename-buf
       ?remove-cr                  ( rem$ line$ )
       [char] = left-parse-string  ( rem$ value$ key$ )
       dup 2 =  if                 ( rem$ value$ key$ )
+         true to any-tags?        ( rem$ value$ key$ )
          put-tag                  ( rem$ )
       else                        ( rem$ value$ key$ )
          4drop                    ( rem$ )
@@ -192,10 +195,6 @@ d# 20 buffer: filename-buf
 
    response$ nip 0=  if  ." Null manufacturing data" cr  exit  then
 
-." Type q to skip tag write "  key dup emit  cr  [char] q =  if
-   2drop false exit
-then
-
    flash-write-enable
 
    clear-mfg-buf                          ( )
@@ -205,14 +204,12 @@ then
 \   " ASSY"  " TS"  put-ascii-tag         ( )
 \   " D3"    " SG"  put-ascii-tag         ( )
 \   board#$  " B#"  put-ascii-tag         ( )
-   (put-mfg-data)                         ( )
+   any-tags?  if  (put-mfg-data)  then
 
    \ check-tags
 
    no-kbc-reboot
    kbc-on
-
-   false
 ;
 
 : silent-probe-usb  ( -- )
@@ -248,7 +245,15 @@ then
       begin  d# 1000 ms  silent-probe-usb  usb-key?  until
    then
 ;
+: stall  ( -- )  begin  halt  again  ;
+: require-int-sd  ( -- )
+   " int:0" open-dev  ?dup  if  close-dev exit  then
+   " Power off and insert internal SD card" .problem
+   stall
+;
+
 : wait-connections  ( -- )
+   require-int-sd
    silent-probe-usb
    wait-scanner
    wait-lan
@@ -261,13 +266,12 @@ then
    clear-screen
    test-passed?  if
       ." Selftest passed." cr cr cr
-      d# 2000 ms
       green-screen
    else
       ." Selftest failed." cr cr cr
-      d# 2000 ms
       red-screen
    then
+   d# 2000 ms
 ;
 
 : finish-smt-test  ( pass? -- )
@@ -280,6 +284,13 @@ then
    test-passed?  if
       ." Writing tags "  parse-smt-response  ." Done" cr
    then
+
+   any-tag? 0=  if
+      cr cr cr
+      " WARNING: Invalid response from shop floor server - no tags." .problem
+      cr cr cr
+      begin  halt  again
+   then    ( )
 
    ." Powering off ..." d# 2000 ms
    power-off
@@ -320,6 +331,13 @@ patch doit-once do-key menu-interact
    menu
    false to diag-switch?
 ;
+
+dev /wlan
+: selftest  ( -- error? )
+   true to force-open?  open  false to force-open?  ( opened? )
+   if  close false  else  true  then                ( error? )
+;
+dend
 
 \ Automatically run the sequence
 start-smt-test
