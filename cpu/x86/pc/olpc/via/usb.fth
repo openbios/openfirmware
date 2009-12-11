@@ -45,18 +45,19 @@ dev /  2 " usb-max-test-port" integer-property  dend
    then
 ;
 
-: probe-usb  ( -- )
-   ." USB2 devices:" cr
+: silent-probe-usb  ( -- )
    " /" ['] (probe-usb2) scan-subtree
+   " /" ['] (probe-usb1) scan-subtree
+   report-disk report-net report-keyboard
+;
+: probe-usb  ( -- )
+   silent-probe-usb
+
+   ." USB2 devices:" cr
    " /" ['] (show-usb2) scan-subtree
 
    ." USB1 devices:" cr
-   " /" ['] (probe-usb1) scan-subtree
    " /" ['] (show-usb1) scan-subtree
-
-   report-disk
-   report-net
-   report-keyboard
 ;
 alias p2 probe-usb
 

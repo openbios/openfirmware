@@ -31,18 +31,21 @@ devalias net  /usb/wlan
    r> to exit?
 ;
 
-: probe-usb  ( -- )
-   ." USB2 devices:" cr
+: silent-probe-usb  ( -- )
    " /usb@f,5" open-dev  ?dup  if  close-dev  then
-   " /usb@f,5" $nopage-show-devs
-
-   ." USB1 devices:" cr
    " /usb@f,4" open-dev  ?dup  if  close-dev  then
-   " /usb@f,4" $nopage-show-devs
 
    report-disk
    report-net
    report-keyboard
+;
+: probe-usb  ( -- )
+   silent-probe-usb
+
+   ." USB2 devices:" cr
+   " /usb@f,5" $nopage-show-devs
+   ." USB1 devices:" cr
+   " /usb@f,4" $nopage-show-devs
 ;
 alias probe-usb2 probe-usb
 alias p2 probe-usb2
