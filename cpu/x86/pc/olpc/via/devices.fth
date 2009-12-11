@@ -356,10 +356,10 @@ devalias net /wlan
 ;
 
 : report-disk  ( -- )
-   " disk"  " /usb/@10,4/disk" ?report-device  \ USB 2
-   " disk"  " /usb/@10,2/disk" ?report-device  \ USB 1.1
-   " disk"  " /usb/@10,1/disk" ?report-device  \ USB 1.1
-   " disk"  " /usb/@10,0/disk" ?report-device  \ USB 1.1
+   " disk"  " /usb@10,4/disk" ?report-device  \ USB 2
+   " disk"  " /usb@10,2/disk" ?report-device  \ USB 1.1
+   " disk"  " /usb@10,1/disk" ?report-device  \ USB 1.1
+   " disk"  " /usb@10,0/disk" ?report-device  \ USB 1.1
 
    atest?  if
       " int" " /ide@0/disk" $devalias
