@@ -461,7 +461,7 @@ false value playing?
 ;
 
 : ?end-sound  ( -- )
-   4 to #sd
+   4 to sd#
    stream-done?  if  (write-done)  false to playing?  then
 ;
 
