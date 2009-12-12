@@ -729,7 +729,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 \ -1 means error, 1 means retry
 : power-up-sdio-card  ( -- false | retry? true )
    intstat-on
-   card-power-off d# 50 ms
+   card-power-off d# 500 ms
    card-power-on  d# 50 ms  \ This delay is just a guess (20 was barely too slow for a Via board)
    card-inserted?  0=  if  card-power-off  intstat-off  false true exit  then   
    card-clock-slow  d# 50 ms  \ This delay is just a guess
