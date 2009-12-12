@@ -40,12 +40,20 @@
    then
 ;
 
-: put-tag  ( value$ key$ -- )
+: special-tag?  ( value$ key$ -- true | value$ key$ false )
    2dup " KA" $=  if                      ( value$ key$ )
-      put-ka-tag  exit
+      put-ka-tag  true  exit
    then                                   ( value$ key$ )
+   false
+;
+
+: put-ascii-tag  ( value$ name$ -- )
    2swap  dup  if  add-null  then  2swap  ( value$' key$ )
    ($add-tag)                             ( )
+;
+: put-tag  ( value$ key$ -- )
+   special-tag?  if  exit  then           ( value$ key$ )
+   put-ascii-tag
 ;
 
 : .instructions  ( adr len -- )
@@ -192,9 +200,13 @@ d# 20 buffer: mac-buf
 
 : inject-tags  ( -- )
    flash-write-enable
-   clear-mfg-buf
+   get-mfg-data
 
-   " "          " ww"  put-tag
+   " TS"  ($delete-tag)
+   " MS"  ($delete-tag)
+   " BD"  ($delete-tag)
+   " NT"  ($delete-tag)
+
    sn$          " SN"  put-tag
    fwver$       " BV"  put-tag
    swid$        " T#"  put-tag
@@ -202,12 +214,12 @@ d# 20 buffer: mac-buf
    mac$         " WM"  put-tag
    swdl-date$   " SD"  put-tag
 
-\  " EN"        " SS"  put-tag
-\  " NA"        " FQ"  put-tag
-
    response$ parse-tags
+
+   flash-write-enable
    (put-mfg-data)
-   flash-write-disable
+   no-kbc-reboot
+   kbc-on
 ;
 
 : make-assy-request  ( -- )

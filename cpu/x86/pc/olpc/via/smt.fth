@@ -125,10 +125,12 @@ d# 20 buffer: filename-buf
    get-opid
 ;
 
+0 value test-passed?
+
 \ Upload the result data 
-: smt-result  ( pass? -- )
+: smt-result  ( -- )
    smt-filename$  open-temp-file
-   if  " PASS"  else  " FAIL"  then  " RESULT="  put-key+value
+   test-passed?  if  " PASS"  else  " FAIL"  then  " RESULT="  put-key+value
    " PROCESS=FVT" put-key-line
    " STATION="    put-key-line
    " OPID="       put-key-line
@@ -149,11 +151,6 @@ d# 20 buffer: filename-buf
 
 : clear-mfg-buf  ( -- )  mfg-data-buf  /flash-block  h# ff fill  ;
 
-: put-ascii-tag  ( value$ key$ -- )
-   2swap  dup  if  add-null  then  2swap  ( value$' key$ )
-   ($add-tag)                             ( )
-;
-
 \ Remove possible trailing carriage return from the line
 : ?remove-cr  ( adr len -- adr len' )
    dup  if                        ( adr len )
@@ -163,9 +160,27 @@ d# 20 buffer: filename-buf
    then
 ;
 
-: put-tag  ( value$ key$ -- )
+: put-ascii-tag  ( value$ key$ -- )
    2swap  dup  if  add-null  then  2swap  ( value$' key$ )
    ($add-tag)                             ( )
+;
+
+1 buffer: sg-buf
+: special-tag?  ( value$ key$ -- true | value$ key$ false )
+   2dup " SG" $=  if                            ( value$ key$ )
+      2swap                                     ( key$ value$ )
+      over " 0x" comp  0=  if  2 /string  then  ( key$ value$' )
+      push-hex $number pop-base  abort" Invalid tag value: SG tag value is not a hex number"  ( key$ n )
+      dup  h# ff u>  abort" Invalid tag value: SG tag value will not fit in one byte"         ( key$ n )
+      sg-buf c!  sg-buf 1  2swap  ($add-tag)    ( )
+      true  exit
+   then                                         ( value$ key$ )
+   false
+;
+
+: put-tag  ( value$ key$ -- )
+   special-tag?  if  exit  then
+   put-ascii-tag
 ;
 
 0 0 2value response$
@@ -195,21 +210,22 @@ false value any-tags?
 
    response$ nip 0=  if  ." Null manufacturing data" cr  exit  then
 
-   flash-write-enable
-
    clear-mfg-buf                          ( )
+   " "      " ww"  ($add-tag)             ( )
+
    response$ write-new-tags               ( )
-\   " "      " ww"  put-ascii-tag         ( )
+
+\   board#$  " B#"  put-ascii-tag         ( )
 \   " EN"    " SS"  put-ascii-tag         ( )
 \   " ASSY"  " TS"  put-ascii-tag         ( )
-\   " D3"    " SG"  put-ascii-tag         ( )
-\   board#$  " B#"  put-ascii-tag         ( )
-   any-tags?  if  (put-mfg-data)  then
+\   " "(D3)" " SG"  ($add-tag)            ( )
 
-   \ check-tags
-
-   no-kbc-reboot
-   kbc-on
+   any-tags?  if
+      flash-write-enable
+      (put-mfg-data)
+      no-kbc-reboot
+      kbc-on
+   then
 ;
 
 : silent-probe-usb  ( -- )
@@ -260,7 +276,6 @@ false value any-tags?
    wait-usb-key
 ;             
 
-0 value test-passed?
 : show-result-screen  ( -- )
    restore-scroller
    clear-screen
@@ -277,9 +292,9 @@ false value any-tags?
 : finish-smt-test  ( pass? -- )
    show-result-screen
 
-   cifs-connect
-   ." Sending test result "  test-passed? smt-result  ." Done" cr
-   cifs-disconnect
+   ." Sending test result "
+   cifs-connect  smt-result  cifs-disconnect
+   ." Done" cr
 
    test-passed?  if
       ." Writing tags "  parse-smt-response  ." Done" cr
@@ -322,9 +337,11 @@ patch doit-once do-key menu-interact
 
    get-info
 
-   ." Connecting to shop floor server "  cifs-connect ." Done" cr
-   ." Getting tags "  smt-request$  to response$  ." Done" cr
+   ." Getting SMT tags .. "
+   ." Connecting .. "  cifs-connect ." Connected .. "
+   smt-request$  to response$
    cifs-disconnect
+  ." Done" cr
 
    true to diag-switch?
    " patch smt-tests play-item mfgtest-menu" evaluate

@@ -2,6 +2,16 @@
 
 visible
 
+\ Location of the files containing KA tag data
+: ka-dir$  ( -- adr len )  " http:\\10.1.0.1\ka\"  ;
+
+: nocase-$=  ( $1 $2 -- flag )
+   rot tuck <>  if       ( adr1 adr2 len2 )
+      3drop false exit   ( -- false )
+   then                  ( adr1 adr2 len2 )
+   caps-comp 0=          ( flag )
+;
+
 \ The Linux-based runin selftests put this file at int:\runin\olpc.fth
 \ after they have finished.  On the next reboot, OFW thus boots this
 \ script instead of int:\boot\olpc.fth .  This script either displays
@@ -67,32 +77,110 @@ d# 20 buffer: sn-buf
    d# 2000 ms
 ;
 
+: put-ascii-tag  ( value$ key$ -- )
+   2swap  dup  if  add-null  then  2swap  ( value$' key$ )
+   ($add-tag)                             ( )
+;
+: put-ka-tag  ( value$ key$ -- )
+   2over  8 min  ka-dir$ " %s%s" sprintf  ( value$ key$ filename$ )
+   $read-file  if                     ( value$ key$ )
+      ." ERROR: No KA tag file for " 2swap type cr  ( key$ )
+      2drop                           ( )
+   else                               ( value$ key$ file-data$ )
+      2swap ($add-tag)                ( value$ )
+      2drop                           ( )
+   then
+;
+
+false value write-protect?
+
+: special-tag?  ( value$ key$ -- true | value$ key$ false )
+   2dup " KA" $=  if                       ( value$ key$ )
+      put-ka-tag                           ( )
+      true  exit                           ( -- true )
+   then                                    ( value$ key$ )
+   2dup " WP" nocase-$=  if                ( value$ key$ )
+      2drop " 0" $=  0= to write-protect?  ( )
+      true exit                            ( -- true )
+   then                                    ( value$ key$ )
+   2dup " ak" nocase-$=  if                ( value$ key$ )
+      2drop " 0" $=  0=  if                ( )
+         " "  " ak"  ($add-tag)            ( )
+      then                                 ( )
+      true exit                            ( -- true )
+   then                                    ( value$ key$ )
+   false                                   ( value$ key$ false )
+;
+: put-tag  ( value$ key$ -- )
+   special-tag?  if  exit  then
+   put-ascii-tag
+;
+: show-tag  ( value$ -- )
+   tag-printable?  if  ?-null type  else  wrapped-cdump  then
+;
+: handle-tag  ( value$ key$ -- )
+   2dup find-tag  if  ( value$ key$ old-value$ )       \ Tag already exists, check it
+      2over " KA" $=  0=  if  ?-null  then   ( value$ key$ old-value$' )
+      2>r 2over 2r@ $=  if                   ( value$ key$ r: old-value$' )
+         2drop 2drop r> 2drop                ( )
+      else                                   ( value$ key$ r: old-value$' )
+         type ." tag changed!" cr            ( value$ r: old-value$' )
+         ."   Old: " r> show-tag cr          ( value$ )
+         ."   New: " show-tag cr             ( )
+      then
+   else                                      ( value$ key$ )   \ New tag, add it
+      put-tag
+   then
+;
+
 : parse-tags  ( adr len -- )
    begin  dup  while              ( adr len )
       linefeed left-parse-string  ( rem$ line$ )
       ?remove-cr                  ( rem$ line$ )
       [char] : left-parse-string  ( rem$ value$ key$ )
       dup 2 =  if                 ( rem$ value$ key$ )
-         put-tag                  ( rem$ )
+         handle-tag               ( rem$ )
       else                        ( rem$ value$ key$ )
          4drop                    ( rem$ )
       then                        ( rem$ )
    repeat                         ( adr len )
    2drop                          ( )
 ;
-
+: format-date  ( s m h d m y -- adr len )
+   push-decimal
+   >r >r >r >r >r >r
+   <#
+   [char] Z hold
+   r> u# u# drop
+   r> u# u# drop
+   r> u# u# drop
+   [char] T hold
+   r> u# u# drop
+   r> u# u# drop
+   r> u# u# u# u#
+   u#>
+   pop-base
+;
+: make-md-tag  ( -- )
+   ntp>time&date  ( s m h d m y )  format-date  " MD" put-ascii-tag
+;
 : inject-tags  ( -- )
    get-mfg-data
 
    " TS" ($delete-tag)
    " MS" ($delete-tag)
    " BD" ($delete-tag)
-
+   make-md-tag
    " SHIP"  " TS" ($add-tag)
 
    response$ parse-tags
 
-   put-mfg-data
+   flash-write-enable
+   (put-mfg-data)
+   \ Change "ww" to "wp" if we want security to be enabled
+   write-protect?  if  " wp"  h# efffe  write-spi-flash  then
+   no-kbc-reboot
+   kbc-on
 ;
 
 : mfg-ntp-server  ( -- name$ )
@@ -102,6 +190,7 @@ d# 20 buffer: sn-buf
 
 d# 4 constant rtc-threshold
 : verify-rtc-date  ( -- )
+\ XXX check RTC power lost bit
    ." Getting time from NTP server "
    begin  ntp-timestamp  while  ." Retry "  repeat  ( d.timestamp )
    cr
@@ -121,6 +210,50 @@ d# 4 constant rtc-threshold
    then
 ;
 
+: put-key:value  ( value$ key$ -- )  " %s:%s" sprint put-key-line  ;
+
+: upload-tag  ( data$ tag$ -- )
+   2dup " wp" $=  if                       ( data$ tag$ )
+      4drop  " 1" " WP" put-key:value      ( )
+      exit
+   then
+   2dup " ww" $=  if                       ( data$ tag$ )
+      4drop  " 0" " WP" put-key:value      ( )
+      exit
+   then
+   2dup " ak" $=  if                       ( data$ tag$ )
+      4drop  " 1" " ak" put-key:value      ( )
+      exit
+   then
+   2dup " KA" $=  if                       ( data$ tag$ )
+      4drop                                ( )
+      exit
+   then
+   2dup " SG" $=  if                       ( data$ tag$ )
+      4drop                                ( )
+      exit
+   then                                    ( data$ tag$ )
+
+   put-key:value                           ( )
+;
+
+: upload-tags  ( -- )
+   mfg-data-top                 ( adr )
+   begin  another-tag?  while   ( adr' data$ tname-adr )
+      2 upload-tag              ( adr )
+   repeat                       ( adr )
+   drop
+;
+
+
+\ Upload the result data 
+: final-result  ( -- )
+   smt-filename$  open-temp-file
+   upload-tags
+   test-passed?  if  " PASS"  else  " FAIL"  then  " RESULT="  put-key+value
+   " Result" submit-file
+;
+
 : finish-final-test  ( -- )
    show-result-screen
 
@@ -136,11 +269,16 @@ d# 4 constant rtc-threshold
 
    verify-rtc-date
 
-   cifs-connect
-   ." Connecting to server "  final-tag-exchange  ." Done" cr
-   cifs-disconnect
+   ." Getting final tags .. "
+   cifs-connect final-tag-exchange cifs-disconnect
+   ." Done" cr
 
    inject-tags
+
+   cifs-connect final-result cifs-disconnect
+   \ " int:\runin\olpc.fth" $delete-all
+
+   " int:\runin\olpc.fth" " int:\runin\final.fth" $rename
 
    ." Powering off ..." d# 2000 ms
    power-off
@@ -206,6 +344,13 @@ patch doit-once do-key menu-interact
 
 : fail-log-file$  ( -- name$ )  " int:\runin\fail.log"   ;
 
+\ The operator can type this to reset the state to run
+\ the Linux-based runin tests again.
+: rerunin  ( -- )
+   " int:\runin\olpc.fth" $delete-all
+   " int:\runin\fail.log" $delete-all
+;
+
 : after-runin  ( -- )
    fail-log-file$ $read-file  0=  if  ( adr len )
       page
@@ -214,11 +359,13 @@ patch doit-once do-key menu-interact
       key drop  cr cr
       list
    else
+      
 \     set-tags-for-fqa
-\      " int:\runin\olpc.fth" $delete-all
 
       " patch final-tests play-item mfgtest-menu" evaluate
+      true to diag-switch?
       menu
+      false to diag-switch?
       \ Shouldn't get here because the menu never exits
    then
 
@@ -228,6 +375,8 @@ patch doit-once do-key menu-interact
 ;
 
 after-runin
+
+0 [if]
 
 SN:SHC946009D3
 B#:QTFJCA94400297
@@ -244,11 +393,11 @@ MN:XO-1
 BV:Q2E34
 U#:A4112195-98FE-419A-A77B-9F33C08FF913
 SD:241109
-IM_IP:10.1.0.2
-IM_ROOT:CL1XL00802000
-IM_NAME:CL1XL00802000
+  IM_IP:10.1.0.2
+  IM_ROOT:CL1XL00802000
+  IM_NAME:CL1XL00802000
 WP:0
-Countries:Alabama
+  Countries:Alabama
 LO:en_US.UTF-8
 KA:USInternational_Keyboard
 KM:olpc
@@ -276,29 +425,33 @@ Set TS tag to SHIP
 Send the following information to shop flow
 
 SN:
-M#:
-U#:
-P#:
 B#:
+P#:
+M#:
 LA:
 CC:
 F#:
 L#:
 S#:
 T#:
-BV:
-TS:
-SS:
-FQ:
-SD:
 WM:
 MN:
+BV:
+U#:
+SD:
+WP:
+LO:
+  KA
+KM:
 KL:
 KV:
-KM:
-LO:
-WP:
+  ak
+  sk
+  SG
+  DT
+     TS:  test station
+     SS:  smt status
+     FQ:  ??
+
 RESULT:PASS
-
- 
-
+[then]
