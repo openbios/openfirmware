@@ -35,7 +35,7 @@ d# 20 buffer: sn-buf
    d# 11 sn-buf c!
 ;
 
-: get-sn  ( -- )
+: scan-sn  ( -- )
    ." *****"
 
    begin
@@ -50,14 +50,16 @@ d# 20 buffer: sn-buf
 ;
 
 : get-info  ( -- )
-   get-sn
+   scan-sn
 ;
 
 0 0 2value response$
 
+: final-filename$  ( -- adr len )  board#$ " %s.txt"  ;
+
 \ Send the board number as the request and return the response data
 : final-tag-exchange  ( -- )
-   board#$ " %s.txt" open-temp-file
+   final-filename$ open-temp-file
    sn$              " SN:"  put-key+value
    " Request" submit-file
    " Response" get-response  to response$ 
@@ -118,6 +120,10 @@ false value write-protect?
 : show-tag  ( value$ -- )
    tag-printable?  if  ?-null type  else  wrapped-cdump  then
 ;
+: do-tag-error  ( -- )
+   \ Don't know what to do here
+   begin halt again
+;
 : handle-tag  ( value$ key$ -- )
    2dup find-tag  if  ( value$ key$ old-value$ )       \ Tag already exists, check it
       2over " KA" $=  0=  if  ?-null  then   ( value$ key$ old-value$' )
@@ -127,6 +133,7 @@ false value write-protect?
          type ." tag changed!" cr            ( value$ r: old-value$' )
          ."   Old: " r> show-tag cr          ( value$ )
          ."   New: " show-tag cr             ( )
+         do-tag-error
       then
    else                                      ( value$ key$ )   \ New tag, add it
       put-tag
@@ -248,7 +255,7 @@ d# 4 constant rtc-threshold
 
 \ Upload the result data 
 : final-result  ( -- )
-   smt-filename$  open-temp-file
+   final-filename$  open-temp-file
    upload-tags
    test-passed?  if  " PASS"  else  " FAIL"  then  " RESULT="  put-key+value
    " Result" submit-file
@@ -278,6 +285,7 @@ d# 4 constant rtc-threshold
    cifs-connect final-result cifs-disconnect
    \ " int:\runin\olpc.fth" $delete-all
 
+   \ Ultimately this should just be delete of runin\olpc.fth
    " int:\runin\olpc.fth" " int:\runin\final.fth" $rename
 
    ." Powering off ..." d# 2000 ms
