@@ -3,7 +3,7 @@
 : swid$  ( -- adr len )  " OFW ASSY test $Revision$"  ;
 
 \ Location of the files containing KA tag data
-: ka-dir$  ( -- adr len )  " http:\\10.1.0.1\ka\"  ;
+: ka-dir$  ( -- adr len )  " http:\\10.0.0.1\ka\"  ;
 
 \ Remove possible trailing carriage return from the line
 : ?remove-cr  ( adr len -- adr len' )
@@ -199,7 +199,6 @@ d# 20 buffer: mac-buf
 ;
 
 : inject-tags  ( -- )
-   flash-write-enable
    get-mfg-data
 
    " TS"  ($delete-tag)
