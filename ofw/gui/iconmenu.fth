@@ -284,7 +284,7 @@ headerless
    highlight describe
 ;
 
-: doit  ( - )
+: run-menu-item  ( - )
    current-sq dup valid?  if
       sq >function @ ?dup  if
          guarded
@@ -353,7 +353,7 @@ headerless
          [char]  q of  menu-done        endof
          control C of  menu-done        endof
          tab       of  1 go-horizontal  endof
-         carret    of  doit             endof
+         carret    of  run-menu-item    endof
          esc       of  menu-done        endof
          csi       of  ( c ) do-csi     endof
      endcase
@@ -374,7 +374,7 @@ headerless
       ready?                                      ( buttons was-ready? )
       over 0<> to ready?                          ( buttons was-ready? )
       \ Execute the square's function on the button's up transition
-      swap 0=  and  if  false to ready?  doit  then  ( )
+      swap 0=  and  if  false to ready?  run-menu-item  then  ( )
    else                                           ( buttons new-square )
       over 0<> to ready?                          ( buttons new-square )
       dup active?  if                             ( buttons new-square )
@@ -459,6 +459,7 @@ headers
 ;
 headerless
 
+defer run-menu
 : menu-interact  ( -- )
    default-selection set-current-sq
    refresh  false to ready?
@@ -470,6 +471,7 @@ headerless
  
    remove-mouse-cursor
 ;
+' menu-interact to run-menu
 
 : setup-graphics  ( -- )
    ?open-screen  set-menu-colors  ?open-mouse
@@ -490,7 +492,7 @@ defer root-menu  ' noop to root-menu
    ['] current-menu behavior  current-sq 2>r
 
 
-   set-menu  menu-interact
+   set-menu  run-menu
 
    2r> to current-sq set-menu refresh
 ;

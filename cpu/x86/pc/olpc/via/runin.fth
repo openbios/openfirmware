@@ -3,13 +3,20 @@
 visible
 
 \ Location of the files containing KA tag data
-: ka-dir$  ( -- adr len )  " http:\\10.1.0.1\ka\"  ;
+: ka-dir$  ( -- adr len )  " http:\\10.0.0.1\ka\"  ;
 
 : nocase-$=  ( $1 $2 -- flag )
    rot tuck <>  if       ( adr1 adr2 len2 )
       3drop false exit   ( -- false )
    then                  ( adr1 adr2 len2 )
    caps-comp 0=          ( flag )
+;
+
+: .instructions  ( adr len -- )
+   cr blue-letters  type  black-letters  cr
+;
+: .problem  ( adr len -- )
+   red-letters type  black-letters cr
 ;
 
 \ The Linux-based runin selftests put this file at int:\runin\olpc.fth
@@ -21,18 +28,19 @@ visible
 d# 20 buffer: sn-buf
 : sn$  ( -- adr len )  sn-buf count  ;
 
-: try-get-sn  ( -- )
+: try-scan-sn  ( -- gotit? )
    sn-buf 1+ d# 20 accept   ( n )
    d# 12 <>  if
       " Wrong length, try again" .problem
-      exit
+      false exit
    then
    sn-buf 1+ " TSHC" comp  if
       " Must begin with TSHC, try again" .problem
-      exit
+      false exit
    then
    sn-buf 2+  sn-buf 1+  d# 11 move  \ Elide the T
    d# 11 sn-buf c!
+   true
 ;
 
 : scan-sn  ( -- )
@@ -40,8 +48,8 @@ d# 20 buffer: sn-buf
 
    begin
       " Please Input Serial Number ......" .instructions
-      try-get-sn
-   sn-acquired? until
+      try-scan-sn
+   until
 ;
 
 : board#$  ( -- adr len )
@@ -65,18 +73,15 @@ d# 20 buffer: sn-buf
    " Response" get-response  to response$ 
 ;
 
-0 value test-passed?
 : show-result-screen  ( -- )
-   restore-scroller
-   clear-screen
-   test-passed?  if
-      ." Selftest passed." cr cr cr
+   pass?  if
+      clear-screen
+      ." PASS" cr cr
       green-screen
    else
-      ." Selftest failed." cr cr cr
+      ." FAIL" cr cr
       red-screen
    then
-   d# 2000 ms
 ;
 
 : put-ascii-tag  ( value$ key$ -- )
@@ -118,7 +123,7 @@ false value write-protect?
    put-ascii-tag
 ;
 : show-tag  ( value$ -- )
-   tag-printable?  if  ?-null type  else  wrapped-cdump  then
+   $tag-printable?  if  ?-null type  else  wrapped-cdump  then
 ;
 : do-tag-error  ( -- )
    \ Don't know what to do here
@@ -137,6 +142,15 @@ false value write-protect?
       then
    else                                      ( value$ key$ )   \ New tag, add it
       put-tag
+   then
+;
+
+\ Remove possible trailing carriage return from the line
+: ?remove-cr  ( adr len -- adr len' )
+   dup  if                        ( adr len )
+      2dup + 1- c@ carret =  if   ( adr len )
+         1-
+      then
    then
 ;
 
@@ -217,7 +231,7 @@ d# 4 constant rtc-threshold
    then
 ;
 
-: put-key:value  ( value$ key$ -- )  " %s:%s" sprint put-key-line  ;
+: put-key:value  ( value$ key$ -- )  " %s:%s" sprintf put-key-line  ;
 
 : upload-tag  ( data$ tag$ -- )
    2dup " wp" $=  if                       ( data$ tag$ )
@@ -257,64 +271,9 @@ d# 4 constant rtc-threshold
 : final-result  ( -- )
    final-filename$  open-temp-file
    upload-tags
-   test-passed?  if  " PASS"  else  " FAIL"  then  " RESULT="  put-key+value
+   pass?  if  " PASS"  else  " FAIL"  then  " RESULT="  put-key+value
    " Result" submit-file
 ;
-
-: finish-final-test  ( -- )
-   show-result-screen
-
-   test-passed?  0=  if
-      ." Type a key to power off "
-      key drop cr  power-off
-   then
-
-   wait-lan
-   wait-scanner
-
-   get-info
-
-   verify-rtc-date
-
-   ." Getting final tags .. "
-   cifs-connect final-tag-exchange cifs-disconnect
-   ." Done" cr
-
-   inject-tags
-
-   cifs-connect final-result cifs-disconnect
-   \ " int:\runin\olpc.fth" $delete-all
-
-   \ Ultimately this should just be delete of runin\olpc.fth
-   " int:\runin\olpc.fth" " int:\runin\final.fth" $rename
-
-   ." Powering off ..." d# 2000 ms
-   power-off
-;
-
-d# 15 to #mfgtests
-
-: final-tests  ( -- )
-   5 #mfgtests +  5 do
-      i set-current-sq
-      refresh
-      d# 1000 ms
-      doit
-      pass? 0= if  false to test-passed?  finish-final-test  unloop exit  then
-   loop
-   true to test-passed?  finish-final-test
-;
-
-\ Make the "wait for SD insertion" step highly visible 
-dev ext
-warning @  warning off
-: selftest  ( -- )  page show-pass  selftest  ;
-warning !
-dend
-
-\ This modifies the menu to be non-interactive
-: doit-once  ( -- )  do-key  final-tests  ;
-patch doit-once do-key menu-interact
 
 : scanner?  ( -- flag )
    " usb-keyboard" expand-alias  if  2drop true  else  false  then
@@ -343,12 +302,43 @@ patch doit-once do-key menu-interact
       begin  d# 1000 ms  silent-probe-usb  usb-key?  until
    then
 ;
+
 : wait-connections  ( -- )
    silent-probe-usb
    wait-scanner
    wait-lan
 \   wait-usb-key
 ;             
+
+: finish-final-test  ( -- )
+   wait-connections
+
+   get-info
+
+   verify-rtc-date
+
+   ." Getting final tags .. "
+   cifs-connect final-tag-exchange cifs-disconnect
+   ." Done" cr
+
+   inject-tags
+
+   cifs-connect final-result cifs-disconnect
+   \ " int:\runin\olpc.fth" $delete-all
+
+   \ Ultimately this should just be delete of runin\olpc.fth
+   " int:\runin\olpc.fth" " int:\runin\final.fth" $rename
+;
+
+\ Make the "wait for SD insertion" step highly visible 
+dev ext
+warning @  warning off
+: wait&clear  ( -- error? )  wait-card? page  ;
+patch wait&clear wait-card? selftest
+: selftest  ( -- )  page show-pass  selftest  ;
+warning !
+dend
+
 
 : fail-log-file$  ( -- name$ )  " int:\runin\fail.log"   ;
 
@@ -367,14 +357,9 @@ patch doit-once do-key menu-interact
       key drop  cr cr
       list
    else
-      
-\     set-tags-for-fqa
-
-      " patch final-tests play-item mfgtest-menu" evaluate
-      true to diag-switch?
-      menu
-      false to diag-switch?
-      \ Shouldn't get here because the menu never exits
+      autorun-mfg-tests
+      pass?  if  finish-final-test  then
+      show-result-screen
    then
 
    ." Type a key to power off"

@@ -237,12 +237,6 @@ d# 20 buffer: mac-buf
    " Response" get-response to response$
 ;
 
-: silent-probe-usb  ( -- )
-   " /" ['] (probe-usb2) scan-subtree
-   " /" ['] (probe-usb1) scan-subtree
-   report-disk report-net report-keyboard
-;
-
 : wired-lan?  ( -- flag )
    " /usb/ethernet" locate-device  if  false  else  drop true  then
 ;

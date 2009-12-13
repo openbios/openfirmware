@@ -13,6 +13,21 @@ h# 07e0 constant color-green
 
 0 value pass?
 
+: mfg-wait-return  ( -- )
+   ." ... Press any key to proceed ... "
+   cursor-off
+   gui-alerts
+   begin
+      key?  if  key drop  refresh exit  then
+      mouse-ih  if
+         10 get-event  if
+            \ Ignore movement, act only on a button down event
+            nip nip  if  wait-buttons-up  refresh exit  then
+         then
+      then
+   again
+;
+
 : mfg-test-dev  ( $ -- )
    restore-scroller
    find-device
@@ -25,7 +40,7 @@ h# 07e0 constant color-green
          false to pass?
          red-screen
          flush-keyboard
-         wait-return
+         mfg-wait-return
       else
          green-letters
          ." Okay" cr
@@ -40,7 +55,7 @@ h# 07e0 constant color-green
       false to pass?
       red-screen
       flush-keyboard
-      wait-return
+      mfg-wait-return
    then
    cursor-off  gui-alerts  refresh
    flush-keyboard
@@ -79,16 +94,26 @@ icon: leds.icon     rom:leds.565
    flush-keyboard
 ;
 
-d# 14 value #mfgtests
+d# 15 value #mfgtests
 
-: play-item     ( -- )
-   5 #mfgtests +  5 do
+: mfg-test-autorunner  ( -- )  \ Unattended autorun of all tests
+   5 #mfgtests +  5  ?do
+      i set-current-sq
+      refresh
+      d# 1000 ms
+      run-menu-item
+      pass? 0= ?leave
+   loop
+;
+
+: play-item     ( -- )   \ Interactive autorun of all tests
+   5 #mfgtests +  5  ?do
       i set-current-sq
       refresh
       d# 200 0 do
          d# 10 ms  key? if  unloop unloop exit  then
       loop
-      doit
+      run-menu-item
       pass? 0= if  unloop exit  then
    loop
    all-tests-passed
@@ -112,14 +137,8 @@ d# 14 value #mfgtests
 : switch-item   ( -- )  " /switches"  mfg-test-dev  ;
 : leds-item     ( -- )  " /leds"      mfg-test-dev  ;
 
-: mfgtest-menu  ( -- )
+: olpc-menu-items  ( -- )
    clear-menu
-
-   " Run all non-interactive tests. (Press a key between tests to stop.)"
-   ['] play-item     play.icon     0 1 selected install-icon
-
-   " Exit selftest mode."
-   ['] quit-item     quit.icon     0 3 install-icon
 
 \   " CPU"
 \   ['] cpu-item      cpu.icon      1 0 install-icon
@@ -173,8 +192,27 @@ d# 14 value #mfgtests
    ['] switch-item   ebook.icon    3 4 install-icon
 ;
 
-' mfgtest-menu to root-menu
+: full-menu  ( -- )
+   olpc-menu-items
+
+   " Run all non-interactive tests. (Press a key between tests to stop.)"
+   ['] play-item     play.icon     0 1 selected install-icon
+
+   " Exit selftest mode."
+   ['] quit-item     quit.icon     0 3 install-icon
+;
+
+' full-menu to root-menu
 ' noop to do-title
+
+: autorun-mfg-tests  ( -- )
+   ['] mfg-test-autorunner to run-menu   \ Run menu automatically
+   true to diag-switch?
+   ['] olpc-menu-items  ['] nest-menu catch  drop
+   false to diag-switch?
+   restore-scroller
+;
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 Luke Gorrie

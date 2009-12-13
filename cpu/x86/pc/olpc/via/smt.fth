@@ -125,12 +125,10 @@ d# 20 buffer: filename-buf
    get-opid
 ;
 
-0 value test-passed?
-
 \ Upload the result data 
 : smt-result  ( -- )
    smt-filename$  open-temp-file
-   test-passed?  if  " PASS"  else  " FAIL"  then  " RESULT="  put-key+value
+   pass?  if  " PASS"  else  " FAIL"  then  " RESULT="  put-key+value
    " PROCESS=FVT" put-key-line
    " STATION="    put-key-line
    " OPID="       put-key-line
@@ -205,7 +203,9 @@ false value any-tags?
 ;
 
 \ Decode the server's response and insert appropriate mfg data tags
-: parse-smt-response  ( -- )
+: update-tags ( -- )
+   pass?  0=  if  exit  then   \ XXX could write a failure log tag
+
    ." Server responded with:  "  cr  response$ list cr    ( )
 
    response$ nip 0=  if  ." Null manufacturing data" cr  exit  then
@@ -225,13 +225,12 @@ false value any-tags?
       (put-mfg-data)
       no-kbc-reboot
       kbc-on
+   else
+      cr cr cr
+      " WARNING: Invalid response from shop floor server - no tags." .problem
+      cr cr cr
+      begin  halt  again
    then
-;
-
-: silent-probe-usb  ( -- )
-   " /" ['] (probe-usb2) scan-subtree
-   " /" ['] (probe-usb1) scan-subtree
-   report-disk report-net report-keyboard
 ;
 
 : scanner?  ( -- flag )
@@ -277,56 +276,15 @@ false value any-tags?
 ;             
 
 : show-result-screen  ( -- )
-   restore-scroller
    clear-screen
-   test-passed?  if
-      ." Selftest passed." cr cr cr
+   pass?  if
+      ." PASS" cr cr cr
       green-screen
    else
-      ." Selftest failed." cr cr cr
+      ." FAIL" cr cr cr
       red-screen
    then
-   d# 2000 ms
 ;
-
-: finish-smt-test  ( pass? -- )
-   show-result-screen
-
-   ." Sending test result "
-   cifs-connect  smt-result  cifs-disconnect
-   ." Done" cr
-
-   test-passed?  if
-      ." Writing tags "  parse-smt-response  ." Done" cr
-   then
-
-   any-tag? 0=  if
-      cr cr cr
-      " WARNING: Invalid response from shop floor server - no tags." .problem
-      cr cr cr
-      begin  halt  again
-   then    ( )
-
-   ." Powering off ..." d# 2000 ms
-   power-off
-;
-
-d# 15 to #mfgtests
-
-: smt-tests  ( -- )
-   5 #mfgtests +  5 do
-      i set-current-sq
-      refresh
-      d# 1000 ms
-      doit
-      pass? 0= if  false to test-passed?  finish-smt-test  unloop exit  then
-   loop
-   true to test-passed?  finish-smt-test
-;
-
-\ This modifies the menu to be non-interactive
-: doit-once  ( -- )  do-key  smt-tests  ;
-patch doit-once do-key menu-interact
 
 : start-smt-test  ( -- )
    ?update-firmware
@@ -341,19 +299,30 @@ patch doit-once do-key menu-interact
    ." Connecting .. "  cifs-connect ." Connected .. "
    smt-request$  to response$
    cifs-disconnect
-  ." Done" cr
+   ." Done" cr
 
-   true to diag-switch?
-   " patch smt-tests play-item mfgtest-menu" evaluate
-   menu
-   false to diag-switch?
+   autorun-mfg-tests
+
+   ." Sending test result "
+   cifs-connect  smt-result  cifs-disconnect
+   ." Done" cr
+
+   ." Writing tags "  update-tags  ." Done" cr
+
+   show-result-screen
+
+   ." Type a key to power off"
+   key cr
+   power-off
 ;
 
 dev /wlan
+warning @ warning off
 : selftest  ( -- error? )
    true to force-open?  open  false to force-open?  ( opened? )
    if  close false  else  true  then                ( error? )
 ;
+warning !
 dend
 
 \ Automatically run the sequence
