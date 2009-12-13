@@ -1,0 +1,159 @@
+=== Manufacturing Test Sequencing ===
+
+Version as of 2009-12-11
+
+The manufacturing process is sequenced by setting the BD tag, which
+controls OFW's boot-device list.  BD has different values at different
+stages, thus controlling the way that the system boots.  For a given
+manufacturing phase, BD points to a list of boot scripts from local
+devices or network servers that are available at that station.  The
+boot script performs phase-dependent activities.
+
+The TS tag identifies the test station.  Its primary use, other than
+as a human-readable indicator of the system's progress through the
+manufacturing flow, is to fine-tune the selftest diagnostics for the
+needs of the particular test station.
+
+Test results and other information about the system are sent to a
+station-dependent server whose location and credentials are given by
+the MS tag.  That server uses a tag-exchange protocol to receive
+information about the system and to return information that is used
+to setup the machine for the next phase.  That setup typically includes
+new values for BD, TS, and MS that are suitable for the next station.
+
+The starting values for those tags are:
+
+   TS=SMT
+   MS=cifs:\\bekins:bekind2@10.60.0.2\nb2_fvs
+   BD=u:\boot\olpc.fth cifs:\\bekins:bekind2@10.60.0.2\nb2_fvs\olpc.fth
+
+They are initialized by running a script to inject those tags into the
+initially-blank manufacturing data area in the OLPC-released firmware
+image.  That creates a new master image that is used to preprogram (via
+a gang programmer) the SPI FLASH chips before they are soldered to the
+boards.
+
+=== SMT state ===
+
+Entry condition:
+
+   TS=SMT
+   MS=cifs:\\bekins:bekind2@10.60.0.2\nb2_fvs
+   BD=u:\boot\olpc.fth cifs:\\bekins:bekind2@10.60.0.2\nb2_fvs\olpc.fth
+
+The booted script performs selftest in test-station=1 mode.  Upon success,
+it performs tag exchange with the "MS" server and rewrites the tags to
+the value the server specified (examples below).
+
+=== ASSY state === 
+
+Entry condition:
+
+   TS=ASSY
+   MS=cifs:\\Administrator:qmssdl@10.0.0.2\olpc_mono1
+   BD=u:\boot\olpc.fth net
+
+The booted (from the net, using TFTP etc) script does the tag
+exchange, runs the download (with command line given by the tag
+exchange response), and rewrites the tags.  The next state is RUNIN.
+The "DL" state never shows up in the tags.
+
+The response includes one or more "Command:<Forth_commands>" lines.
+Those lines are executed to perform the download steps.
+An example value for such a line is "fs-update http:\\10.0.0.1\os41.zd".
+The Doing it this way instead of hardcoding it in the script permits
+country-specific
+images without having to edit the script.  The file could also be
+served from a Windows server if desired; it need not be http.
+
+The response tags from this stage include the ones shown in entry
+condition for the RUNIN state.
+
+The script also needs to know the URI for a directory containing
+files for KA values.  The filename is <ka-dir><filename> where
+<filename> is what the server sends after "KA:" .  For now, the
+test script hardcodes the value of <ka-dir>.
+
+
+=== RUNIN state ===
+
+   TS=RUNIN
+   BD=u:\boot\olpc.fth int:\runin\olpc.fth int:\boot\olpc.fth
+   MS=<URI for final server>
+
+Initially, the boot file is int:\boot\olpc.fth from the OS
+distribution.  The Linux-based runin tests will create
+int:\runin\fail.log when finished.  If the runin tests failed,
+they will create int:\runin\fail.log prior to creating
+int:\runin\olpc.fth.
+
+The script in int:\runin\olpc.fth does the following:
+
+# Check for the existence of int:\runin\fail.log.  If it exists,
+      display it on the screen with a red background and stop.  Later
+      rebooting will continue to show the red-screen error message
+      until the user manually deletes int:\runin\fail.log and
+      int:\runin\olpc.fth by manually executing the command "re-runin"
+      (that command is defined in \runin\olpc.fth .  It first deletes
+      \runin\olpc.fth and then \runin\fail.log ) .
+
+# Otherwise (pass case)
+       a) Starts selftest in final mode
+       b) (The test are ordered so the non-interactive ones are first)
+       c) When the sd card insertion point happens, a big check is displayed
+       d) The operator moves the unit from carousel to the final test line and inserts SD card
+       ??? Do we need to insert a USB stick too?
+       ??? Do we need to insert scanner and wlan here too to give the USB test something to work on?
+       e) final test steps continue until pass or fail
+
+# If selftest passed
+       Tell operator to move to the download station and insert USB LAN
+       wait-lan
+       wait-scanner
+       tag exchange with server 
+       barcode scan of serial number to verify that the board and case are still paired
+       ??? Is the filename the MB (B#) or the case serial number (SN) ?
+       ??? If the filename is the SN, why is the SN in the request file?
+           The server can't verify if it only has the SN and not the board#
+       delete MS and BD tags, insert tags from server
+       ??? what is the format of the WP:N and AK:N info from the server?  Is it WP:0 / WP:1, or presence/absence ?
+       TS should be SHIP at this point
+       ??? Does the server send TS:SHIP or does the script inject it verbatim?
+
+# If selftest failed, red screen and stop.  State of machine (BD tag,
+    \runin\olpc.fth) left the same as at the start of this phase so
+    the phase can be rerun.
+
+=== SHIP state ===
+
+Entry condition
+
+   TS=SHIP
+   MS (deleted)
+   BD (deleted)
+
+=== Design Features ===
+
+The above design has the following features:
+
+* Once the machine leaves the factory, it does not contain any
+  information about factory server names or their credentials.
+  (The tags containing that information are deleted for CUSTOMER
+  state, and the Linux-based runin scripts contain no hardcoded
+  factory server identification.)
+
+* The boot scripts that perform the test sequencing do not have to
+  change to accomodate server changes.  (The server information
+  is stored in mfg data tags.)
+
+* OFW contains very little "hardcoded" information about the
+  process steps - it just boots from the specified device at
+  each stage.  This minimizes the changes to the OFW startup
+  sequence - the only change is to set "boot-device" from BD
+  if it exists.  If BD doesn't exist, the normal default list
+  is used, which supports booting from USB, so you can recover
+  a system that is out of sequence.
+
+* At any step, the normal server-based process can be overridden by
+  plugging in a USB stick with a custom \boot\olpc.fth . (Each BD
+  list has "u:\boot\olpc.fth" at the beginning.)
