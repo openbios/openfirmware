@@ -91,6 +91,72 @@ d# 256 buffer: tempname-buf
    true abort" Server did not respond with 10 seconds"
 ;
 
+: .instructions  ( adr len -- )
+   cr blue-letters  type  black-letters  cr
+;
+: .problem  ( adr len -- )
+   red-letters type  black-letters cr
+;
+
+: scanner?  ( -- flag )
+   " usb-keyboard" expand-alias  if  2drop true  else  false  then
+;   
+: wait-scanner  ( -- )
+   scanner?  0=  if
+      " Connect USB barcode scanner"  .instructions
+      begin  d# 1000 ms  silent-probe-usb  scanner?  until
+   then
+ ;
+: wired-lan?  ( -- flag )
+   " /usb/ethernet" locate-device  if  false  else  drop true  then
+;
+: wait-lan  ( -- )
+   wired-lan?  0=  if
+      " Connect USB Ethernet Adapter" .instructions
+      begin  d# 1000 ms  silent-probe-usb  wired-lan?  until
+   then
+;
+: usb-key?  ( -- flag )
+   " /usb/disk" locate-device  if  false  else  drop true  then
+;
+: wait-usb-key  ( -- )
+   usb-key?  0=  if
+      " Connect USB memory stick" .instructions
+      begin  d# 1000 ms  silent-probe-usb  usb-key?  until
+   then
+;
+: stall  ( -- )  begin  halt  again  ;
+
+: accept-to-buf  ( buf len -- actual )
+   over 1+ swap accept  ( buf actual )
+   tuck swap c!         ( actual )
+;
+
+: clear-mfg-buf  ( -- )  mfg-data-buf  /flash-block  h# ff fill  ;
+
+\ Remove possible trailing carriage return from the line
+: ?remove-cr  ( adr len -- adr len' )
+   dup  if                        ( adr len )
+      2dup + 1- c@ carret =  if   ( adr len )
+         1-
+      then
+   then
+;
+
+: put-ascii-tag  ( value$ name$ -- )
+   2swap  dup  if  add-null  then  2swap  ( value$' key$ )
+   ($add-tag)                             ( )
+;
+
+: nocase-$=  ( $1 $2 -- flag )
+   rot tuck <>  if       ( adr1 adr2 len2 )
+      3drop false exit   ( -- false )
+   then                  ( adr1 adr2 len2 )
+   caps-comp 0=          ( flag )
+;
+
+
+
 stand-init:
    set-boot-device
    set-test-station

@@ -346,6 +346,8 @@ true value text-on?
    then
 ;
 
+fload ${BP}/cpu/x86/pc/olpc/setwp.fth
+
 fload ${BP}/cpu/x86/pc/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/via/suspend.fth  \ Suspend/resume setup
@@ -384,7 +386,6 @@ fload ${BP}/cpu/x86/pc/olpc/biosresume.fth
 [then]
 
 fload ${BP}/cpu/x86/firfilter.fth
-fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/via/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth

@@ -5,30 +5,6 @@
 \ Location of the files containing KA tag data
 : ka-dir$  ( -- adr len )  " http:\\10.0.0.1\ka\"  ;
 
-\ Remove possible trailing carriage return from the line
-: ?remove-cr  ( adr len -- adr len' )
-   dup  if                        ( adr len )
-      2dup + 1- c@ carret =  if   ( adr len )
-         1-
-      then
-   then
-;
-
-[ifndef] $read-file
-\ Read entire file into allocated memory
-: $read-file  ( filename$ -- true | data$ false )
-   open-dev  ?dup  0=  if  true exit  then  >r  ( r: ih )
-   " size" r@ $call-method  drop   ( len r: ih )
-   dup alloc-mem  swap             ( adr len r: ih )
-   2dup " read" r@ $call-method    ( adr len actual r: ih )
-   r> close-dev                    ( adr len actual )
-   over <>  if                     ( adr len )
-      free-mem  true exit
-   then                            ( adr len )
-   false
-;
-[then]
-
 : put-ka-tag  ( value$ key$ -- )
    2over  8 min  ka-dir$ " %s%s" sprintf  ( value$ key$ filename$ )
    $read-file  if                     ( value$ key$ )
@@ -47,20 +23,9 @@
    false
 ;
 
-: put-ascii-tag  ( value$ name$ -- )
-   2swap  dup  if  add-null  then  2swap  ( value$' key$ )
-   ($add-tag)                             ( )
-;
 : put-tag  ( value$ key$ -- )
    special-tag?  if  exit  then           ( value$ key$ )
    put-ascii-tag
-;
-
-: .instructions  ( adr len -- )
-   cr blue-letters  type  black-letters  cr
-;
-: .problem  ( adr len -- )
-   red-letters type  black-letters cr
 ;
 
 : check-smt-status  ( -- )
@@ -167,10 +132,6 @@ d# 20 buffer: mac-buf
 
 0 0 2value response$
 
-: clear-mfg-buf  ( -- )
-   mfg-data-buf  /flash-block  h# ff fill
-;
-
 : execute-downloads  ( adr len -- )
    begin  dup  while              ( adr len )
       linefeed left-parse-string  ( rem$ line$ )
@@ -235,16 +196,6 @@ d# 20 buffer: mac-buf
    make-assy-request          ( )
    " Request" submit-file     ( )
    " Response" get-response to response$
-;
-
-: wired-lan?  ( -- flag )
-   " /usb/ethernet" locate-device  if  false  else  drop true  then
-;
-: wait-lan  ( -- )
-   wired-lan?  0=  if
-      " Connect USB Ethernet Adapter" .instructions
-      begin  d# 1000 ms  silent-probe-usb  wired-lan?  until
-   then
 ;
 
 : start-assy-test  ( -- )

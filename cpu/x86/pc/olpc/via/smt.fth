@@ -2,15 +2,8 @@
 
 visible
 
-: wanted-fw$  ( -- $ )  " q3a20"  ;
+: wanted-fw$  ( -- $ )  " q3a23"  ;
 
-
-: nocase-$=  ( $1 $2 -- flag )
-   rot tuck <>  if       ( adr1 adr2 len2 )
-      3drop false exit   ( -- false )
-   then                  ( adr1 adr2 len2 )
-   caps-comp 0=          ( flag )
-;
 
 : find-firmware-file  ( -- name$ )
    wanted-fw$  " u:\\boot\\%s.rom" sprintf    ( name$ )
@@ -40,20 +33,8 @@ visible
 ;
 ' mfg-ntp-server to ntp-servers
 
-: .instructions  ( adr len -- )
-   cr blue-letters  type  black-letters  cr
-;
-: .problem  ( adr len -- )
-   red-letters type  black-letters cr
-;
-
 d# 20 buffer: bn-buf  \ Buffer for scanned-in board number string
 : board#$  ( -- adr len )  bn-buf count  ;
-
-: accept-to-buf  ( buf len -- actual )
-   over 1+ swap accept  ( buf actual )
-   tuck swap c!         ( actual )
-;
 
 \ Get a board number from the user, retrying until valid
 \ Usually the number is entered with a barcode scanner
@@ -147,22 +128,6 @@ d# 20 buffer: filename-buf
    " Response" get-response
 ;
 
-: clear-mfg-buf  ( -- )  mfg-data-buf  /flash-block  h# ff fill  ;
-
-\ Remove possible trailing carriage return from the line
-: ?remove-cr  ( adr len -- adr len' )
-   dup  if                        ( adr len )
-      2dup + 1- c@ carret =  if   ( adr len )
-         1-
-      then
-   then
-;
-
-: put-ascii-tag  ( value$ key$ -- )
-   2swap  dup  if  add-null  then  2swap  ( value$' key$ )
-   ($add-tag)                             ( )
-;
-
 1 buffer: sg-buf
 : special-tag?  ( value$ key$ -- true | value$ key$ false )
    2dup " SG" $=  if                            ( value$ key$ )
@@ -233,34 +198,6 @@ false value any-tags?
    then
 ;
 
-: scanner?  ( -- flag )
-   " usb-keyboard" expand-alias  if  2drop true  else  false  then
-;   
-: wait-scanner  ( -- )
-   scanner?  0=  if
-      " Connect USB barcode scanner"  .instructions
-      begin  d# 1000 ms  silent-probe-usb  scanner?  until
-   then
- ;
-: wired-lan?  ( -- flag )
-   " /usb/ethernet" locate-device  if  false  else  drop true  then
-;
-: wait-lan  ( -- )
-   wired-lan?  0=  if
-      " Connect USB Ethernet Adapter" .instructions
-      begin  d# 1000 ms  silent-probe-usb  wired-lan?  until
-   then
-;
-: usb-key?  ( -- flag )
-   " /usb/disk" locate-device  if  false  else  drop true  then
-;
-: wait-usb-key  ( -- )
-   usb-key?  0=  if
-      " Connect USB memory stick" .instructions
-      begin  d# 1000 ms  silent-probe-usb  usb-key?  until
-   then
-;
-: stall  ( -- )  begin  halt  again  ;
 : require-int-sd  ( -- )
    " int:0" open-dev  ?dup  if  close-dev exit  then
    " Power off and insert internal SD card" .problem
