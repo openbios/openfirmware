@@ -1,5 +1,7 @@
 \ Manufacturing test boot script for ASSY state
 
+visible
+
 : swid$  ( -- adr len )  " OFW ASSY test $Revision$"  ;
 
 \ Location of the files containing KA tag data
@@ -31,7 +33,7 @@
 : check-smt-status  ( -- )
    " SS" find-tag  0= abort" Board failed SMT !!!"   ( adr len )
    -null                                             ( adr len' )
-   " EN" $= 0=  abort" Board failed SMT !!!"         ( )
+   " EN" $= 0=  abort" Board failed SMT !!!!"        ( )
 ;
 
 : fwver$  ( -- adr len )  h# ffff.ffc6 6  ;
@@ -207,7 +209,7 @@ d# 20 buffer: mac-buf
    cifs-connect  assy-tag-exchange  cifs-disconnect
    ." Done" cr
 
-   execute-downloads
+   response$ execute-downloads
    inject-tags
 
    ." Powering off ..." d# 2000 ms
