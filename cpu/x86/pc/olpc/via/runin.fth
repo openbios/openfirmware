@@ -3,7 +3,12 @@
 visible
 
 \ Location of the files containing KA tag data
-: ka-dir$  ( -- adr len )  " http:\\10.0.0.1\ka\"  ;
+: ka-dir$  ( -- adr len )  " http:\\10.1.0.1\ka\"  ;
+
+: mfg-ntp-server  ( -- name$ )
+   " NT" find-tag  if  ?-null  else  " 10.1.0.1"  then
+;
+' mfg-ntp-server to ntp-servers
 
 \ The Linux-based runin selftests put this file at int:\runin\olpc.fth
 \ after they have finished.  On the next reboot, OFW thus boots this
@@ -177,31 +182,33 @@ false value write-protect?
    kbc-on
 ;
 
-: mfg-ntp-server  ( -- name$ )
-   " NT" find-tag  if  ?-null  else  " 10.60.0.2"  then
-;
-' mfg-ntp-server to ntp-servers
-
 d# 4 constant rtc-threshold
+: .clocks  ( -- )
+   ntp>time&date  time&date
+   ." RTC: " .clock  ." NTP: " .clock
+;
 : verify-rtc-date  ( -- )
 \ XXX check RTC power lost bit
-   ." Getting time from NTP server "
+   ." Getting time from NTP server .. "
    begin  ntp-timestamp  while  ." Retry "  repeat  ( d.timestamp )
-   cr
-   ntp>time&date unix-seconds>  ( ntp-seconds )
-   today unix-seconds>          ( ntp-seconds rtc-seconds )
-   -                            ( difference )
-   dup rtc-threshold >  if      ( difference )
-      page show-fail
-      ." Clock lost " .d ." seconds since SMT"  cr
-      begin  halt  again
-   else
-      abs rtc-threshold >  if
-         page show-fail
-         ." Clock gained " .d ." seconds since SMT"  cr
-         begin  halt  again
-      then
+
+   ntp>time&date >unix-seconds     ( ntp-seconds )
+   time&date >unix-seconds         ( ntp-seconds rtc-seconds )
+   -                               ( lost-seconds )
+   dup rtc-threshold >  if         ( lost-seconds )
+      page show-fail               ( lost-seconds )
+      ." Clock lost " .d ." seconds since SMT"  cr  ( )
+      .clocks
+      stall
+   then                            ( lost-seconds )
+
+   abs dup rtc-threshold >  if     ( gained-seconds )
+      page show-fail               ( gained-seconds )
+      ." Clock gained " .d ." seconds since SMT"  cr  ( )
+      .clocks
+      stall
    then
+   ." NTP and RTC clocks agree." cr
 ;
 
 : put-key:value  ( value$ key$ -- )  " %s:%s" sprintf put-key-line  ;
