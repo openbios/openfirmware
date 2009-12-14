@@ -8,11 +8,9 @@ purpose: Manufacturing testing
    record-base record-len la1+  " dma-free" $call-parent
 ;
 
-: jingle  ( -- )  " play-wav rom:splash" evaluate  wait-sound  ;
-
 : ?key-abort  ( -- )
    key?  if
-      key h# 1b =  abort" Aborting"
+      key h# 1b =  if  ." Aborting" abort  then
    then
 ;
 : speaker-test  ( -- )
@@ -21,14 +19,8 @@ purpose: Manufacturing testing
       ." Disconnect headphones to continue.. "
       begin  ?key-abort  pin-sense? 0=  until  cr
    then
-   ." Playing jingle on the left speaker.. "
-   true to right-mute?
-   jingle  cr
-   false to right-mute?
-   true to left-mute?
-   ." Playing jingle on the right speaker.. "
-   jingle  cr
-   false to left-mute?
+   ." Playing left to right sweep "
+   make-sweep  0 set-volume  play  cr
 ;
 
 : headphones-test  ( -- )
@@ -37,9 +29,8 @@ purpose: Manufacturing testing
       ." Connect headphones to continue.. "
       begin  ?key-abort  pin-sense?  until  cr
    then
-   ." Press a key to play sound.. "  key drop  cr
    h# 1f to node  power-off  \ turn off speaker
-   jingle
+   make-sweep  -9 set-volume  play
    h# 1f to node  power-on   \ turn speaker back on
 ;
 

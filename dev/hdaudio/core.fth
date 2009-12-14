@@ -78,11 +78,11 @@ my-address my-space encode-phys
 
 \ \\ Stream Descriptors
 \ Default: 48kHz 16bit stereo
-0 instance value sample-base
-0 instance value sample-mul
-0 instance value sample-div
-1 instance value sample-format
-2 instance value #channels
+0 value sample-base
+0 value sample-mul
+0 value sample-div
+1 value sample-format
+2 value #channels
 
 : stream-format  ( -- u )
    sample-base    d# 14 lshift      ( acc )
@@ -107,7 +107,7 @@ my-address my-space encode-phys
 
 \ Stream descriptor register interface.
 \ There are multiple stream descriptors, each with their own register set.
-0 instance value sd#
+0 value sd#
 : sd+  ( offset -- adr )  sd# h# 20 * + au +  ;
 
 : sdctl    h# 80 sd+  ;
@@ -239,8 +239,8 @@ defer playback-alarm
 : init-codec          ( -- )  detect-codec  open-codec  ;
 : close-controller    ( -- )  reset  unmap-regs  ;
 
-d# 48.000 instance value sample-rate
-1 instance value scale-factor
+d# 48.000 value sample-rate
+1 value scale-factor
 
 : low-rate?  ( Hz )  dup d# 48.000 <  swap d# 44.100 <>  and  ;
 
@@ -404,7 +404,8 @@ d# 256 /bd * value /bdl
    upsample-channel \ left
    src 2+ to src  dst 2+ to dst
    upsample-channel \ right
-   dst 2 -  /dst             ( dst dst-len )
+   dst 2- to dst             ( )
+   dst /dst                  ( dst dst-len )
 ;
 
 \ \\ Amplifier control
@@ -453,11 +454,12 @@ false value playing?
    stop-stream
    free-bdl
    release-sound-buffer
+   uninstall-playback-alarm
 ;
 : write-done  ( -- )  wait-stream-done  (write-done)  ;
 
 : write  ( adr len -- actual )
-   4 to sd#  audio-out  install-playback-alarm  true to playing?
+   4 to sd#  audio-out  true to playing?  install-playback-alarm
 ;
 
 : ?end-sound  ( -- )
@@ -475,10 +477,24 @@ false value stop-lock
 \ Alarm handle to stop the stream when the content has been played.
 : playback-completed-alarm  ( -- )
    stop-lock  if  exit  then
-   playing?  if  sd#  ?end-sound  to sd#  then
+   playing?  if
+      sd#  ?end-sound  to sd#
+   else
+      \ If playback has already stopped as a result of
+      \ someone else having waited for completion, we
+      \ just uninstall ourself.
+      uninstall-playback-alarm
+   then
 ;
 
 ' playback-completed-alarm is playback-alarm
+
+: still-playing?  ( -- flag )
+   playing?  0=  if  false exit  then
+   stop-lock  if  true exit  then
+   sd#  ?end-sound  to sd#
+   playing?
+;
 
 : wait-sound  ( -- )
    true to stop-lock
