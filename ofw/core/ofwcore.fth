@@ -3898,18 +3898,29 @@ headerless
 \ then check to see if the time is expired (time-remain = 0).
 \ If time is not expired, decrement the time-remain.
 
-: time-expired? 	( node -- flag )
+: run-alarm 	( node -- )
    dup  >time-remain @  1- dup 0<=  if  ( node time-remain )
       drop  dup >time-out @  over       ( node time-out node )
       dup >acf @  swap >ihandle @       ( node time-out acf ihandle )
       ['] call-package  catch  if       ( node time-out acf ihandle )
 	 2drop                          ( node time-out )
       then                              ( node time-out )
-   then  swap >time-remain ! false      ( false )
+   then  swap >time-remain !            ( )
 ;
 
 headers
-: check-alarm  ( -- )  alarm-list ['] time-expired? find-node  2drop  ;
+\ We do this manually instead of using find-node because we need
+\ to do >next-node before calling time-expired? in case the alarm
+\ routine uninstalls itself, which could cause a crash if the
+\ pointer to the next node were overwritten while being freed.
+: check-alarm  ( -- )
+   alarm-list  >next-node      ( node )
+   begin  ?dup  while          ( node )
+      dup >next-node  swap     ( next node )
+      run-alarm                ( next )
+   repeat                      ( )
+;
+
 : alarm 	( acf n -- )
    my-self -rot                 ( ihandle acf n )
    ?dup if  set-alarm-node  else  turn-off-alarm  then
