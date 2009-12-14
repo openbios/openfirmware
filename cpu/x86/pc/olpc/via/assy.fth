@@ -5,7 +5,7 @@ visible
 : swid$  ( -- adr len )  " OFW ASSY test $Revision$"  ;
 
 \ Location of the files containing KA tag data
-: ka-dir$  ( -- adr len )  " http:\\10.0.0.1\ka\"  ;
+: ka-dir$  ( -- adr len )  " http:\\10.1.0.1\ka\"  ;
 
 : put-ka-tag  ( value$ key$ -- )
    2over  8 min  ka-dir$ " %s%s" sprintf  ( value$ key$ filename$ )
