@@ -54,11 +54,9 @@ d# 20 buffer: sn-buf
 
 0 0 2value response$
 
-: final-filename$  ( -- adr len )  board#$ " %s.txt"  ;
-
 \ Send the board number as the request and return the response data
 : final-tag-exchange  ( -- )
-   final-filename$ open-temp-file
+   board#$ " %s.txt" sprintf open-temp-file
    sn$              " SN:"  put-key+value
    " Request" submit-file
    " Response" get-response  to response$ 
@@ -257,6 +255,7 @@ d# 4 constant rtc-threshold
 : wait-connections  ( -- )
    silent-probe-usb
    wait-scanner
+   ?usb-keyboard
    wait-lan
 \   wait-usb-key
 ;             
