@@ -38,8 +38,8 @@ only forth also meta definitions
 /n-t th c00 * constant user-size-t
 [then]
 [then]
-/n-t th 100 * constant ps-size-t
-/n-t th 100 * constant rs-size-t
+/n-t th 200 * constant ps-size-t
+/n-t th 200 * constant rs-size-t
 \t16-t /w-t constant /user#-t
 \t32-t /l-t constant /user#-t
 
