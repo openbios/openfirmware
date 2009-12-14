@@ -452,7 +452,7 @@ false value playing?
 
 : (write-done)  ( -- )
    stop-stream
-   free-bdl
+   teardown-bdl
    release-sound-buffer
    uninstall-playback-alarm
 ;
@@ -545,7 +545,7 @@ d# 65535 value /recbuf
    wait-stream-done
    stop-stream
    release-sound-buffer
-   free-pad-buffer
+   teardown-bdl
    /recbuf
 ;
 
