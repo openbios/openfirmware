@@ -105,8 +105,9 @@ d# 256 buffer: tempname-buf
    scanner?  0=  if
       " Connect USB barcode scanner"  .instructions
       begin  d# 1000 ms  silent-probe-usb  scanner?  until
+      ?usb-keyboard
    then
- ;
+;
 : wired-lan?  ( -- flag )
    " /usb/ethernet" locate-device  if  false  else  drop true  then
 ;
