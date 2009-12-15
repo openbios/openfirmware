@@ -161,7 +161,7 @@ false value write-protect?
    pop-base
 ;
 : make-md-tag  ( -- )
-   ntp>time&date  ( s m h d m y )  format-date  " MD" put-ascii-tag
+   time&date  ( s m h d m y )  format-date  " MD" put-ascii-tag
 ;
 : inject-tags  ( -- )
    get-mfg-data
