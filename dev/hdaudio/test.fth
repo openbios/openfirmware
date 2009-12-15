@@ -15,6 +15,7 @@ purpose: Manufacturing testing
 ;
 : speaker-test  ( -- )
    h# 19 to node
+   2 to #channels
    pin-sense?  if
       ." Disconnect headphones to continue.. "
       begin  ?key-abort  pin-sense? 0=  until  cr
@@ -25,6 +26,7 @@ purpose: Manufacturing testing
 
 : headphones-test  ( -- )
    h# 19 to node
+   2 to #channels
    pin-sense? 0= if
       ." Connect headphones to continue.. "
       begin  ?key-abort  pin-sense?  until  cr
@@ -32,6 +34,13 @@ purpose: Manufacturing testing
    h# 1f to node  power-off  \ turn off speaker
    make-sweep  -9 set-volume  play
    h# 1f to node  power-on   \ turn speaker back on
+;
+
+: louder-mic-test  ( -- )
+   ." Recording ..." cr
+   record
+   ." Playing ..." cr
+   d# 0 set-volume  play
 ;
 
 : builtin-mic-test  ( -- )
@@ -42,7 +51,7 @@ purpose: Manufacturing testing
    then
    ." Press a key to test recording / playback on the built-in microphone.. "
    key drop cr
-   mic-test
+   louder-mic-test
 ;
 
 : external-mic-test  ( -- )
