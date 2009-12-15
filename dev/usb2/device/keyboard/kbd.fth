@@ -379,9 +379,11 @@ variable test-char
    null-entry /qe erase
    key-state /key-state erase
    device set-target
-   configuration set-config  if  ." Failed to set keyboard configuration" cr  then
-   set-boot-protocol         if  ." Failed to set boot protocol" cr  then
-   idle-rate set-idle        if  ." Failed to set idle" cr  then
+   configuration set-config  if  ." Failed to set USB keyboard configuration" cr  then
+   set-boot-protocol         if  ." Failed to set USB keyboard boot protocol" cr  then
+   \ Some USB keyboards don't implement set-idle properly, and it's not critical,
+   \ so we suppress the message to avoid confusing the user
+   idle-rate set-idle   drop  \  if  ." Failed to set USB keyboard idle" cr  then
    0 set-leds
    free-kbd-buf
 ;
