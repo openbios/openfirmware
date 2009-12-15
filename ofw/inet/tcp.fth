@@ -231,12 +231,13 @@ d# 1024 d# 16 * constant /wbuf
    then
 ;
 
-h# 555 value next-tcp-local-port
+h# c999 value next-tcp-local-port
 
-: alloc-next-tcp-local-port  ( -- port )
-   next-tcp-local-port 1+                ( port )
-   h# ffff and  h# 555 max               ( port )
-   dup to next-tcp-local-port            ( port )
+: alloc-tcp-port  ( -- port )
+   next-tcp-local-port 1+                   ( port )
+   \ Stay within the IANA-recommended dynamic port range
+   dup h# 10000 =  if  drop h# c000  then   ( port' )
+   dup to next-tcp-local-port               ( port )
 ;
 
 \ send sequence variables
@@ -2342,7 +2343,7 @@ false instance value do-delack?
    first-time?  if
       false to first-time?
       [ifdef] random-long
-         random-long h# f000 mod h# 555 + to next-tcp-local-port
+         random-long h# 3fff and h# c000 + to next-tcp-local-port
       [then]
 
       " next-xid" $call-parent to tcp_iss
@@ -2355,7 +2356,7 @@ false instance value do-delack?
 
    ['] protocol-tick  d# 500  alarm
 
-   alloc-next-tcp-local-port to my-tcp-port
+   alloc-tcp-port to my-tcp-port
    true to alive?
 
    true

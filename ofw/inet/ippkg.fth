@@ -62,6 +62,7 @@ call-tftp: $set-host ( hostname$ -- )
 call-tftp: oc-checksum     ( n adr len -- n' )
 call-tftp: link-mtu        ( -- n )
 call-tftp: max-ip-payload  ( -- n )
+call-tftp: alloc-udp-port  ( -- port# )
 
 finish-device
 device-end

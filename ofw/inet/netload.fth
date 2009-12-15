@@ -374,7 +374,24 @@ d# 255 instance buffer: pathbuf
    use-nfs?  if  nfs-read  else  tftpread  then
 ;
 
+h# c123 value next-udp-local-port
+true value first-time?
+: ?init-udp-local-port  ( -- )
+   first-time?  if
+[ifdef] random-long
+      random-long h# 3fff and h# c000 + to next-udp-local-port
+[then]
+      false to first-time?
+   then
+;
+
 headers
+: alloc-udp-port  ( -- port )
+   next-udp-local-port 1+                  ( port )
+   \ Stay within the IANA-recommended dynamic port range
+   dup h# 10000 =  if  drop h# c000  then  ( port' )
+   dup to next-udp-local-port              ( port )
+;
 : next-xid  ( -- id )  rpc-xid 1+ dup to rpc-xid  ;
 : allocate-packet  ( len -- adr )  allocate-udp  ;
 : free-packet  ( len -- adr )  free-udp  ;
@@ -477,6 +494,7 @@ defer configured  ' noop to configured
    configure
    s-all 
    my-self to obp-tftp-ih   \ Publish so IP redirector can attach to us
+   ?init-udp-local-port
    true
 ;
 
