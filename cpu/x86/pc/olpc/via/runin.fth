@@ -183,7 +183,7 @@ false value write-protect?
 d# 4 constant rtc-threshold
 : .clocks  ( -- )
    ntp>time&date  time&date
-   ." RTC: " .clock  ." NTP: " .clock
+   ." RTC: " .date space .time cr  ." NTP: " .date space .time cr
 ;
 : verify-rtc-date  ( -- )
 \ XXX check RTC power lost bit
@@ -265,7 +265,7 @@ d# 4 constant rtc-threshold
 
    get-info
 
-   verify-rtc-date
+\   verify-rtc-date
 
    ." Getting final tags .. "
    cifs-connect final-tag-exchange cifs-disconnect
@@ -329,9 +329,8 @@ warning @ warning off
 
    confirm-selftest?
 ;
-
-device-end
-
 warning !
  
+device-end
+
 after-runin
