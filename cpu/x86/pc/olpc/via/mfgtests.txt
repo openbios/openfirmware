@@ -54,17 +54,16 @@ Entry condition:
    BD=u:\boot\olpc.fth net
 
 The booted (from the net, using TFTP etc) script does the tag
-exchange, runs the download (with command line given by the tag
-exchange response), and rewrites the tags.  The next state is RUNIN.
-The "DL" state never shows up in the tags.
+exchange, runs any "Command:" pseudo-tags, and rewrites the tags. 
+The next state is RUNIN.
 
 The response includes one or more "Command:<Forth_commands>" lines.
-Those lines are executed to perform the download steps.
+Those lines are executed, in order, to perform the download steps.
 An example value for such a line is "fs-update http:\\10.0.0.1\os41.zd".
-The Doing it this way instead of hardcoding it in the script permits
-country-specific
-images without having to edit the script.  The file could also be
-served from a Windows server if desired; it need not be http.
+Doing it this way instead of hardcoding it in the script permits
+country-specific images without having to edit the script.  The
+file could also be served from a Windows server if desired; it
+need not be http.
 
 The response tags from this stage include the ones shown in entry
 condition for the RUNIN state.
