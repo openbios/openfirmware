@@ -1,7 +1,7 @@
 \ See license at end of file
 purpose: Copy a file onto the NAND FLASH
 
-0 value fileih
+0 value filefd
 0 value nandih
 
 h# 20000 value /nand-block
@@ -14,7 +14,7 @@ h#   200 value /nand-page
 : $call-nand  ( ?? method$ -- ?? )  nandih $call-method  ;
 
 : close-image-file  ( -- )
-   fileih  ?dup  if  0 to fileih  close-dev  then
+   filefd  ?dup  if  0 to filefd  close-file drop  then
 ;
 : close-nand  ( -- )
    nandih  ?dup  if  0 to nandih  close-dev  then
@@ -32,11 +32,6 @@ h#   200 value /nand-page
    then
 ;
 
-: ?key-stop  ( -- )
-    key?  dup  if  key drop  then           ( stop? )
-    " Stopped by keystroke"   ?nand-abort
-;
-
 : set-nand-vars  ( -- )
    " size" $call-nand  /nand-page  um/mod nip to #nand-pages
 ;
@@ -48,35 +43,6 @@ h#   200 value /nand-page
 
 h# 100 buffer: image-name-buf
 : image-name$  ( -- adr len )  image-name-buf count  ;
-
-: get-img-filename  ( -- )  safe-parse-word  image-name-buf place  ;
-
-: open-img  ( "devspec" -- )
-   image-name$  open-dev  to fileih
-   fileih 0= " Can't open NAND image file"  ?nand-abort
-   " size" fileih $call-method               ( d.size )
-
-   2dup  h# 20000 um/mod  swap  if  1+  then   ( d.size #eblocks )
-   nip nip                                     ( #eblocks )
-
-   to #image-eblocks
-
-   #image-eblocks 0= " Image file is empty" ?nand-abort
-;
-
-: read-image-block  ( -- )
-   load-base /nand-block " read" fileih $call-method   ( len )
-   dup /nand-block <>  if                               ( len )
-      load-base over +   /nand-page rot -  h# ff fill
-   else
-      drop
-   then
-;
-
-: check-mem-hash  ( record# -- )
-   drop  \ XXX
-;
-
 
 defer show-init  ( #eblocks -- )
 ' drop to show-init

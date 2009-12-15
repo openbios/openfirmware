@@ -44,6 +44,13 @@ d# 128 constant /spec-maxline
 
 : swap-buffers  ( -- )  data-buffer dma-buffer  to data-buffer to dma-buffer  ;
 
+: force-line-delimiter  ( delimiter fd -- )
+   file @                      ( delim fd fd' )
+   swap file !                 ( delim fd' )
+   swap line-delimiter c!      ( fd' )
+   file !                      ( )
+;
+
 vocabulary nand-commands
 also nand-commands definitions
 
@@ -71,7 +78,16 @@ also nand-commands definitions
 : data:  ( "filename" -- )
    safe-parse-word fn-buf place
    " ${DN}${PN}\${CN}${FN}" expand$  image-name-buf place
-   open-img
+   image-name$ r/o open-file  if
+      drop ." Can't open " image-name$ type cr
+      true " " ?nand-abort
+   then  to filefd
+   linefeed filefd force-line-delimiter
+   \ Eat the initial "zblocks:" line
+   load-base /spec-maxline  filefd read-line     ( len not-eof? error? )  
+   " Read error on .zd file" ?nand-abort         ( len not-eof? )
+   0= " Premature EOF on .zd file" ?nand-abort   ( len )
+   drop                                          ( )
    true to secure-fsupdate?
 ;
 
@@ -82,13 +98,13 @@ also nand-commands definitions
 
 : get-zdata  ( comprlen -- )
    secure-fsupdate?  if
-      data-buffer /spec-maxline  fileih read-line         ( len end? error? )
+      data-buffer /spec-maxline  filefd read-line         ( len end? error? )
       " Spec line read error" ?nand-abort                 ( len end? )
       0= " Spec line too long" ?nand-abort                ( len )
       data-buffer swap                                    ( adr len )
       source $= 0=  " Spec line mismatch" ?nand-abort     ( )
 
-      fileih                                              ( ih )
+      filefd                                              ( ih )
    else                                                   ( )
       source-id                                           ( ih )
    then                                                   ( ih )
@@ -181,9 +197,7 @@ previous definitions
    safe-parse-word r/o open-file       ( fd )
    abort" Can't open file"             ( fd )
 
-   file @                              ( fd fd' )
-   over file !  linefeed line-delimiter c!  ( fd fd' )
-   file !                              ( fd )
+   linefeed over force-line-delimiter  ( fd )
 
    t(                                  ( fd )
    also nand-commands                  ( fd )
@@ -217,7 +231,7 @@ previous definitions
    show-done
    ?all-written
    close-nand-ihs
-   )t-hms
+   )t-hms cr
 ;
 
 : fs-update-from-list  ( devlist$ -- )
