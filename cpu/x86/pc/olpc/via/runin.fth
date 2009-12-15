@@ -183,18 +183,20 @@ false value write-protect?
 ;
 
 d# 4 constant rtc-threshold
+0 value ntp-seconds
+0 value rtc-seconds
 : .clocks  ( -- )
-   ntp>time&date  time&date
-   ." RTC: " .date space .time cr  ." NTP: " .date space .time cr
+   ." RTC: " rtc-seconds unix-seconds> .date space .time ."  UTC" cr
+   ." NTP: " ntp-seconds unix-seconds> .date space .time ."  UTC" cr
 ;
 : verify-rtc-date  ( -- )
 \ XXX check RTC power lost bit
    ." Getting time from NTP server .. "
    begin  ntp-timestamp  while  ." Retry "  repeat  ( d.timestamp )
 
-   ntp>time&date >unix-seconds     ( ntp-seconds )
-   time&date >unix-seconds         ( ntp-seconds rtc-seconds )
-   -                               ( lost-seconds )
+   ntp>time&date >unix-seconds  to ntp-seconds
+   time&date     >unix-seconds  to rtc-seconds
+   ntp-seconds rtc-seconds -       ( lost-seconds )
    dup rtc-threshold >  if         ( lost-seconds )
       page show-fail               ( lost-seconds )
       ." Clock lost " .d ." seconds since SMT"  cr  ( )
