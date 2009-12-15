@@ -317,4 +317,21 @@ dend
    power-off
 ;
 
+\ Override the display self test
+dev /display
+
+warning @ warning off
+: selftest  ( -- error? )
+   depth d# 16 <  if  false exit  then
+
+   .vertical-bars16     wait
+    hgradient           
+
+   confirm-selftest?
+;
+
+device-end
+
+warning !
+ 
 after-runin
