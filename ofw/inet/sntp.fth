@@ -7,12 +7,42 @@ purpose: Get data and time from an NTP server using SNTP
 d# 123 constant ntp-port#
 h# 30 constant /sntp-request
 
+\ Data format:
+\  00: LLvvvmmm.TTTTTTTT.pppppppp.PPPPPPPP
+\  04: Estimated Error
+\  08: Estimated Drift Rate
+\  0c: Reference Clock Identifier
+\  10: Reference Timestamp (64-bits)
+\  18: Originate Timestamp (64-bits)
+\  20: Receive Timestamp (64-bits)
+\  28: Transmit Timestamp (64-bits)
+\
+\ LL is Leap Indicator
+\  00 normal
+\  01 +1 leap second at end of month
+\  10 -1 leap second at end of month
+\  11 reserved
+\ vvv is version number
+\ mmm is mode
+\ TTTTTTTT is Reference Clock Type
+\  0 means stop asking me
+\  1 means primary reference (e.g. radio clock)
+\  2 means secondary reference using NTP
+\  3 means secondary reference using some other protocol
+\  4 means wristwatch
+\ pppppppp is Poll
+\ PPPPPPPP is precision - signed integer exponent of 2
+
+
 : send-sntp-request  ( -- )
    /sntp-request " allocate-udp" $call-ip >r
    r@ /sntp-request erase
    3 3 lshift    \ SNTP version 3
    3 or          \ Client request
    r@ c!
+   \ The various SNTP RFCs say that the source port can be dynamically
+   \ assigned, but in my testing, servers only reply when port 123
+   \ is both src and dst.
    r@ /sntp-request  ntp-port# ntp-port# " send-udp-packet" $call-ip
    r> /sntp-request " free-udp" $call-ip
 ;
