@@ -2341,6 +2341,10 @@ false instance value do-delack?
 
    first-time?  if
       false to first-time?
+      [ifdef] random-long
+         random-long h# f000 mod h# 555 + to next-tcp-local-port
+      [then]
+
       " next-xid" $call-parent to tcp_iss
    then
 
