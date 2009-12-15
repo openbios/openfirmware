@@ -54,9 +54,11 @@ d# 20 buffer: sn-buf
 
 0 0 2value response$
 
+: final-filename$  ( -- adr len )  board#$ " %s.txt" sprintf  ;
+
 \ Send the board number as the request and return the response data
 : final-tag-exchange  ( -- )
-   board#$ " %s.txt" sprintf open-temp-file
+   final-filename$ open-temp-file
    sn$              " SN:"  put-key+value
    " Request" submit-file
    " Response" get-response  to response$ 
@@ -118,7 +120,7 @@ false value write-protect?
    2dup find-tag  if  ( value$ key$ old-value$ )       \ Tag already exists, check it
       2over " KA" $=  0=  if  ?-null  then   ( value$ key$ old-value$' )
       2>r 2over 2r@ $=  if                   ( value$ key$ r: old-value$' )
-         2drop 2drop r> 2drop                ( )
+         2drop 2drop 2r> 2drop               ( )
       else                                   ( value$ key$ r: old-value$' )
          type ." tag changed!" cr            ( value$ r: old-value$' )
          ."   Old: " r> show-tag cr          ( value$ )
