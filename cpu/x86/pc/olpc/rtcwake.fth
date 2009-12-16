@@ -51,7 +51,7 @@ dend
 
 : show-rtc-wake  ." R"  ;
 
-d# 1 constant rtc-alarm-delay
+d# 1 value rtc-alarm-delay
 : pm-sleep-rtc  ( -- )
    0 acpi-l@ h# 400.0000 or  0 acpi-l!	\ Enable RTC SCI
    ['] show-rtc-wake  rtc-alarm-delay " set-alarm" clock-node @ $call-method
@@ -102,6 +102,22 @@ d# 1 constant rtc-alarm-delay
    2drop
    autowack-off
 ;
+
+: s3-selftest  ( -- error? )
+   \ The general failure mode here is that it won't wake up, so
+   \ it's hard to return a real error code.  We just have to rely
+   \ on the operator.
+   ." Testing S3 suspend/resume"  cr
+   rtc-alarm-delay  >r
+   ." Sleeping for 1 second .. "   1 to rtc-alarm-delay  pm-sleep-rtc  cr
+   ." Sleeping for 4 seconds .. "  4 to rtc-alarm-delay  pm-sleep-rtc  cr
+   ." Sleeping for 8 seconds .. "  8 to rtc-alarm-delay  pm-sleep-rtc  cr
+   r> to rtc-alarm-delay
+   false
+;
+dev /memory
+[ifdef] test-s3  ' s3-selftest to test-s3  [then]
+dend
 
 stand-init: Century
    h# 20 cmos-century cmos!   \ The century is in BCD, hence h#
