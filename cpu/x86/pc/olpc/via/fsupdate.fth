@@ -51,13 +51,26 @@ d# 128 constant /spec-maxline
    file !                      ( )
 ;
 
+: ?compare-spec-line  ( -- )
+   secure-fsupdate?  if
+      data-buffer /spec-maxline  filefd read-line         ( len end? error? )
+      " Spec line read error" ?nand-abort                 ( len end? )
+      0= " Spec line too long" ?nand-abort                ( len )
+      data-buffer swap                                    ( adr len )
+      source $= 0=  " Spec line mismatch" ?nand-abort     ( )
+   then
+;
+
 vocabulary nand-commands
 also nand-commands definitions
 
 : zblocks:  ( "eblock-size" "#eblocks" ... -- )
+   ?compare-spec-line
    get-hex# to /nand-block
    get-hex# to #image-eblocks
    open-nand
+   " size" $call-nand  #image-eblocks /nand-block um*  d<
+   " Image size is larger than output device" ?nand-abort
    #image-eblocks  show-init
    get-inflater
    \ Separate the two buffers by enough space for both the compressed
@@ -71,8 +84,9 @@ also nand-commands definitions
 
 : zblocks-end:  ( -- )
 \ Asynchronous writes
-   " write-blocks-finish" $call-nand  drop
-   #image-eblocks erase-gap
+   " write-blocks-end" $call-nand   ( error? )
+   " Write error" ?nand-abort
+\   #image-eblocks erase-gap
 ;
 
 : data:  ( "filename" -- )
@@ -83,11 +97,6 @@ also nand-commands definitions
       true " " ?nand-abort
    then  to filefd
    linefeed filefd force-line-delimiter
-   \ Eat the initial "zblocks:" line
-   load-base /spec-maxline  filefd read-line     ( len not-eof? error? )  
-   " Read error on .zd file" ?nand-abort         ( len not-eof? )
-   0= " Premature EOF on .zd file" ?nand-abort   ( len )
-   drop                                          ( )
    true to secure-fsupdate?
 ;
 
@@ -97,17 +106,9 @@ also nand-commands definitions
 ;
 
 : get-zdata  ( comprlen -- )
-   secure-fsupdate?  if
-      data-buffer /spec-maxline  filefd read-line         ( len end? error? )
-      " Spec line read error" ?nand-abort                 ( len end? )
-      0= " Spec line too long" ?nand-abort                ( len )
-      data-buffer swap                                    ( adr len )
-      source $= 0=  " Spec line mismatch" ?nand-abort     ( )
+   ?compare-spec-line
 
-      filefd                                              ( ih )
-   else                                                   ( )
-      source-id                                           ( ih )
-   then                                                   ( ih )
+   secure-fsupdate?  if  filefd  else  source-id  then    ( ih )
 
    >r  data-buffer /nand-block +  over  r@  fgets         ( comprlen #read r: ih )
    <>  " Short read of zdata file" ?nand-abort            ( r: ih )
@@ -178,7 +179,8 @@ true value check-hash?
    
    ( eblock# )
 \ Asynchronous writes
-   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks-start" $call-nand  ( eblock# )
+   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks-start" $call-nand  ( eblock# error? )
+   " Write error" ?nand-abort   ( eblock# )
 \   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks" $call-nand  ( eblock# #written )
 \   nand-pages/block  <>  " Write error" ?nand-abort   ( eblock# )
    swap-buffers                          ( eblock# )

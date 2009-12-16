@@ -34,11 +34,11 @@ external
 \ Asynchronous write. Completes on the next call to
 \ write-blocks-start, write-blocks-finish, or close.
 \ (Don't do other read/write operations in between.)
-: write-blocks-start ( adr block# #blocks -- )
+: write-blocks-start  ( adr block# #blocks -- error? )
    false  " r/w-blocks-start" $call-parent
 ;
-: write-blocks-finish ( -- #written )
-   false  " r/w-blocks-finish" $call-parent
+: write-blocks-end  ( -- error? )
+   false  " r/w-blocks-end" $call-parent
 ;
 
 : dma-alloc   ( size -- vadr )  " dma-alloc"  $call-parent  ;

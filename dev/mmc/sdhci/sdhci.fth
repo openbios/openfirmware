@@ -691,9 +691,29 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 
 0 instance value writing?
 
+: .card-error  ( value -- )
+   dup h# 8000.0000 and  if  ." Address out of range (past end?)" cr  then
+   dup h# 4000.0000 and  if  ." Misaligned address" cr  then
+   dup h# 2000.0000 and  if  ." Block length error" cr  then
+   dup h# 1000.0000 and  if  ." Erase sequence error" cr  then
+   dup h# 0800.0000 and  if  ." Invalid erase block error" cr  then
+   dup h# 0400.0000 and  if  ." Write protect violation" cr  then
+\  dup h# 0200.0000 and  if  ." Card is locked" cr  then  \ Status, not error
+   dup h# 0100.0000 and  if  ." Lock/Unlock failed" cr  then
+   dup h# 0080.0000 and  if  ." Command CRC error" cr  then
+   dup h# 0040.0000 and  if  ." Illegal command " cr  then
+   dup h# 0020.0000 and  if  ." Card ECC failed" cr  then
+   dup h# 0010.0000 and  if  ." Card controller error" cr  then
+   dup h# 0008.0000 and  if  ." General error" cr  then
+   dup h# 0001.0000 and  if  ." CIS/CSD overwrite" cr  then
+   dup h# 0000.8000 and  if  ." Write-protected blocks skipped" cr  then
+   dup h# 0000.0008 and  if  ." Authentication sequence error" cr  then
+   drop
+;
+
 \ This is the correct way to wait for programming complete.
-: wait-write-done  ( -- )
-   writing? 0=  if  exit  then                     ( limit )
+: wait-write-done  ( -- error? )
+   writing? 0=  if  false exit  then               ( limit )
 
    get-msecs d# 1000 +                             ( limit )
    begin  get-status dup  9 rshift h# f and  7 =  while  ( limit status )
@@ -704,11 +724,13 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
       then
    repeat                                           ( limit status )
    nip                                              ( status )
-   dup h# fff9.8008 and  if                         ( status )
-      cr ." SD Error - status = " . cr
-      noop
+   dup h# fdf9.8008 and  if                         ( status )
+      cr ." SD Error - status = " dup . cr
+      .card-error
+      true
    else
       drop
+      false
    then
 
    false to writing?
@@ -806,7 +828,7 @@ external
 
 : detach-card  ( -- )
    wait-dma-done
-   intstat-on  wait-write-done  intstat-off
+   intstat-on  wait-write-done drop  intstat-off
    card-clock-off
    card-power-off
 \  unmap-regs
@@ -843,28 +865,34 @@ external
 : detach-sdio-card  ( -- )
 ;
 
+: r/w-blocks-end  ( -- error? )
+   wait-dma-done
+   intstat-on  wait-write-done  intstat-off
+;
+
 : r/w-blocks-finish  ( -- actual )
    wait-dma-done
    dma-len /block /
 ;
 
-: r/w-blocks-start  ( addr block# #blocks in? -- )
+: r/w-blocks-start  ( addr block# #blocks in? -- error? )
    wait-dma-done
-   over 0=  if  2drop 2drop  0  exit   then  \ Prevents hangs
+   over 0=  if  2drop 2drop  false  exit   then  \ Prevents hangs
    intstat-on
    >r               ( addr block# #blocks r: in? )
    rot dma-setup    ( block# r: in? )
-   wait-write-done
+   wait-write-done  if  true exit  then
    address-shift lshift  r>  if
       read-multiple
    else
       write-multiple  true to writing?
    then
    true to dma?
+   false
 ;
 
 : r/w-blocks  ( addr block# #blocks in? -- actual )
-   r/w-blocks-start  r/w-blocks-finish
+   r/w-blocks-start  if  -1 exit  then  r/w-blocks-finish
 ;
 
 : r/w-ioblocks  ( reg# function# inc? addr len blksz in? -- actual )
@@ -874,7 +902,7 @@ external
    2dup tuck 1- + swap / to io-#blocks   ( reg# function# inc? addr len blksz r: in? )
    4 pick write-blksz          ( reg# function# inc? addr len r: in? )
    iodma-setup                 ( reg# function# inc? r: in? )
-   wait-write-done
+   wait-write-done  if  -1 exit  then
    r>  if                      ( reg# function# inc? )
       io-read-blocks
    else
