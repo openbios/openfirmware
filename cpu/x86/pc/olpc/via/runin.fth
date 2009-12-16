@@ -54,7 +54,7 @@ d# 20 buffer: sn-buf
 
 0 0 2value response$
 
-: final-filename$  ( -- adr len )  board#$ " %s.txt" sprintf  ;
+: final-filename$  ( -- adr len )  sn$ " %s.txt" sprintf  ;
 
 \ Send the board number as the request and return the response data
 : final-tag-exchange  ( -- )
@@ -122,10 +122,11 @@ false value write-protect?
       2>r 2over 2r@ $=  if                   ( value$ key$ r: old-value$' )
          2drop 2drop 2r> 2drop               ( )
       else                                   ( value$ key$ r: old-value$' )
-         type ." tag changed!" cr            ( value$ r: old-value$' )
-         ."   Old: " r> show-tag cr          ( value$ )
-         ."   New: " show-tag cr             ( )
-         do-tag-error
+         2drop 2drop 2r> 2drop               ( )
+         \ type ." tag changed!" cr            ( value$ r: old-value$' )
+         \ ."   Old: " r> show-tag cr          ( value$ )
+         \ ."   New: " show-tag cr             ( )
+         \ do-tag-error
       then
    else                                      ( value$ key$ )   \ New tag, add it
       put-tag
@@ -169,10 +170,15 @@ false value write-protect?
    " TS" ($delete-tag)
    " MS" ($delete-tag)
    " BD" ($delete-tag)
+   " MD" ($delete-tag)
    make-md-tag
-   " SHIP"  " TS" ($add-tag)
+   " FINAL"  " TS" ($add-tag)
 
    response$ parse-tags
+
+   \ per request from wei-heng
+   " TS" ($delete-tag)
+   " SHIP"  " TS" put-ascii-tag
 
    flash-write-enable
    (put-mfg-data)
@@ -237,6 +243,7 @@ d# 4 constant rtc-threshold
       exit
    then                                    ( data$ tag$ )
 
+   2swap ?-null 2swap
    put-key:value                           ( )
 ;
 
@@ -253,7 +260,7 @@ d# 4 constant rtc-threshold
    final-filename$  open-temp-file
    upload-tags
    pass?  if  " PASS"  else  " FAIL"  then  " RESULT="  put-key+value
-   " Result" submit-file
+   " Handshake" submit-file
 ;
 
 : wait-connections  ( -- )
@@ -263,6 +270,11 @@ d# 4 constant rtc-threshold
    wait-lan
 \   wait-usb-key
 ;             
+
+: my-cifs-connect  ( adr -- )
+   open-dev to cifs-ih
+   cifs-ih 0= abort" Cannot open SMB share"
+;
 
 : finish-final-test  ( -- )
    wait-connections
@@ -275,13 +287,16 @@ d# 4 constant rtc-threshold
    cifs-connect final-tag-exchange cifs-disconnect
    ." Done" cr
 
+   \ save a copy of the factory server string, before we destroy MS tag
+   factory-server$ dup alloc-mem $save
+
    inject-tags
 
-   cifs-connect final-result cifs-disconnect
-   \ " int:\runin\olpc.fth" $delete-all
+   my-cifs-connect final-result cifs-disconnect
+   " int:\runin\olpc.fth" $delete-all
 
    \ Ultimately this should just be delete of runin\olpc.fth
-   " int:\runin\olpc.fth" " int:\runin\final.fth" $rename
+   \ " int:\runin\olpc.fth" " int:\runin\runin.sav" $rename
 ;
 
 \ Make the "wait for SD insertion" step highly visible 
