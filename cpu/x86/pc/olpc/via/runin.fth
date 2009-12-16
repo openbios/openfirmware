@@ -328,15 +328,21 @@ dend
       key drop  cr cr
       list
       ." Type R to restart runin, any other key to power off "
-      key dup emit upc [char] R =  if  rerunin  then
+      key dup emit cr  upc [char] R =  if
+         ." Resetting state to restart runin." cr
+         ." The old failure log is in " fail-backup-file$ type cr
+         rerunin
+      else
+         power-off
+      then
    else
       autorun-mfg-tests
       pass?  if  finish-final-test  then
       show-result-screen
-      ." Type a key to power off"
-      key cr
    then
 
+   ." Type a key to power off"
+   key cr
    power-off
 ;
 
