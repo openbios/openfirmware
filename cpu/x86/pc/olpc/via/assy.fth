@@ -2,10 +2,40 @@
 
 visible
 
+\ If the firmware file is on a CIFS share on the factory server, it
+\ should be read-only so multiple clients can read it simultaneously.
+
+false value update-firmware?          \ Make this true to update firmware
+: wanted-fw$  ( -- $ )  " q3a25"  ;   \ Set this value to the firmware version
+
 : swid$  ( -- adr len )  " OFW ASSY test $Revision$"  ;
 
 \ Location of the files containing KA tag data
 : ka-dir$  ( -- adr len )  " http:\\10.1.0.1\ka\"  ;
+
+: find-firmware-file  ( -- name$ )
+   wanted-fw$  " u:\\boot\\%s.rom" sprintf    ( name$ )
+   ." Trying " 2dup type cr                 ( name$ )
+   2dup $file-exists?  if  exit  then       ( name$ )
+   2drop                                    ( )
+
+   wanted-fw$ factory-server$ " %s\\%s.rom" sprintf  ( name$ )
+   ." Trying " 2dup type cr                 ( name$ )
+   2dup $file-exists?  if  exit  then       ( name$ )
+   2drop
+
+   true  abort" Can't find new firmware file" 
+;
+
+: ?update-firmware  ( -- )
+   update-firmware?  0=  if  exit  then
+   \ Exit if the existing firmware and the wanted firmware are the same
+   fw-version$  wanted-fw$  nocase-$=  if  exit  then
+   ." Updating firmware to version " fw-version$ type cr
+   d# 2000 ms
+   ?enough-power
+   find-firmware-file  $get-file  reflash
+;
 
 : put-ka-tag  ( value$ key$ -- )
    2over  8 min  ka-dir$ " %s%s" sprintf  ( value$ key$ filename$ )
@@ -201,6 +231,8 @@ d# 20 buffer: mac-buf
 ;
 
 : start-assy-test  ( -- )
+   ?update-firmware
+
    wait-lan
 
    get-info
