@@ -507,7 +507,7 @@ d# 5,000 constant movie-time
 : selftest  ( -- error? )
    serial-enabled?  if
       ." The serial port is in use so the camera cannot be used" cr
-      true exit
+      false exit
    then
    open 0=  if  true exit  then
    d# 300 ms
