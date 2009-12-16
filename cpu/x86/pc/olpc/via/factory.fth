@@ -70,6 +70,15 @@ d# 256 buffer: tempname-buf
    " flush" $call-cifs abort" CIFS flush failed"
    " close-file" $call-cifs  abort" CIFS close-file failed"
    tempname$  2swap  " %s\\%s" sprintf  ( new-name$ )
+
+   \ Check for preexisting destination file
+   2dup 0 open-file  0=  if             ( new-name$ )
+      close-file drop                   ( new-name$ )
+      ." Error: " type ."  already exists on the server" cr   ( )
+      tempname$ $delete drop            ( )
+      abort
+   then                                 ( new-name$ )
+
    tempname$  2swap  " $rename" $call-cifs abort" CIFS rename failed"   
 ;
 : get-response  ( subdir$ -- adr len )
