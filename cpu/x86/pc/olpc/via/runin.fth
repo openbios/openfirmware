@@ -243,7 +243,7 @@ d# 4 constant rtc-threshold
       exit
    then                                    ( data$ tag$ )
 
-   2swap ?-null 2swap
+   2swap ?-null 2swap                      ( data$' tag$ )
    put-key:value                           ( )
 ;
 
@@ -308,14 +308,16 @@ patch wait&clear wait-card? selftest
 warning !
 dend
 
-
+: fail-backup-file$  ( -- name$ )
+   time&date format-date " int:\runin\fail-%s.log" sprintf
+;
 : fail-log-file$  ( -- name$ )  " int:\runin\fail.log"   ;
 
 \ The operator can type this to reset the state to run
 \ the Linux-based runin tests again.
 : rerunin  ( -- )
    " int:\runin\olpc.fth" $delete-all
-   " int:\runin\fail.log" $delete-all
+   fail-log-file$ fail-backup-file$ $rename
 ;
 
 : after-runin  ( -- )
@@ -325,14 +327,16 @@ dend
       ." Type a key to see the failure log"
       key drop  cr cr
       list
+      ." Type R to restart runin, any other key to power off "
+      key dup emit upc [char] R =  if  rerunin  then
    else
       autorun-mfg-tests
       pass?  if  finish-final-test  then
       show-result-screen
+      ." Type a key to power off"
+      key cr
    then
 
-   ." Type a key to power off"
-   key cr
    power-off
 ;
 
