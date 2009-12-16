@@ -865,7 +865,8 @@ external
 : detach-sdio-card  ( -- )
 ;
 
-: r/w-blocks-end  ( -- error? )
+: r/w-blocks-end  ( in? -- error? )
+   drop
    wait-dma-done
    intstat-on  wait-write-done  intstat-off
 ;
