@@ -228,6 +228,7 @@ headerless
 \ Doesn't move the cursor or change the display.  Internal.
 
 : find-previous-word  ( -- adr )
+   cursor-adr line-start-adr =  if  line-start-adr exit  then
    line-start-adr  dup cursor-adr 1-  ?do   ( linestart )
       i c@  bl <>  if  drop i leave  then
    -1 +loop
