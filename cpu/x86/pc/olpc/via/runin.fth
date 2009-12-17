@@ -110,10 +110,10 @@ false value write-protect?
    put-ascii-tag
 ;
 : show-tag  ( value$ -- )
-   $tag-printable?  if  ?-null type  else  wrapped-cdump  then
+   2dup $tag-printable?  if  ?-null type  else  wrapped-cdump  then
 ;
 : do-tag-error  ( -- )
-   \ Don't know what to do here
+   ." Problem with tag processing.  Halting." cr
    begin halt again
 ;
 : handle-tag  ( value$ key$ -- )
@@ -122,11 +122,10 @@ false value write-protect?
       2>r 2over 2r@ $=  if                   ( value$ key$ r: old-value$' )
          2drop 2drop 2r> 2drop               ( )
       else                                   ( value$ key$ r: old-value$' )
-         2drop 2drop 2r> 2drop               ( )
-         \ type ." tag changed!" cr            ( value$ r: old-value$' )
-         \ ."   Old: " r> show-tag cr          ( value$ )
-         \ ."   New: " show-tag cr             ( )
-         \ do-tag-error
+         type ."  tag changed!" cr            ( value$ r: old-value$' )
+         ."   Old: " 2r> show-tag cr         ( value$ )
+         ."   New: " show-tag cr             ( )
+         do-tag-error
       then
    else                                      ( value$ key$ )   \ New tag, add it
       put-tag
@@ -172,11 +171,9 @@ false value write-protect?
    " BD" ($delete-tag)
    " MD" ($delete-tag)
    make-md-tag
-   " FINAL"  " TS" ($add-tag)
 
    response$ parse-tags
 
-   \ per request from wei-heng
    " TS" ($delete-tag)
    " SHIP"  " TS" put-ascii-tag
 
@@ -276,6 +273,11 @@ d# 4 constant rtc-threshold
    cifs-ih 0= abort" Cannot open SMB share"
 ;
 
+\ $rename gives "Unimplemented package interface procedure" on ext2
+: do-rename
+   2>r  2dup  2r>  $copy  $delete
+;
+
 : finish-final-test  ( -- )
    wait-connections
 
@@ -284,19 +286,19 @@ d# 4 constant rtc-threshold
 \   verify-rtc-date
 
    ." Getting final tags .. "
-   cifs-connect final-tag-exchange cifs-disconnect
+   cifs-connect final-tag-exchange \ Note: no disconnect...
    ." Done" cr
-
-   \ save a copy of the factory server string, before we destroy MS tag
-   factory-server$ dup alloc-mem $save
 
    inject-tags
 
-   my-cifs-connect final-result cifs-disconnect
+   ." Submitting results .. "
+   final-result cifs-disconnect
+   ." Done" cr
+
    " int:\runin\olpc.fth" $delete-all
 
    \ Ultimately this should just be delete of runin\olpc.fth
-   \ " int:\runin\olpc.fth" " int:\runin\runin.sav" $rename
+   " int:\runin\olpc.fth" " int:\runin\runin.sav" do-rename
 ;
 
 \ Make the "wait for SD insertion" step highly visible 
@@ -317,7 +319,7 @@ dend
 \ the Linux-based runin tests again.
 : rerunin  ( -- )
    " int:\runin\olpc.fth" $delete-all
-   fail-log-file$ fail-backup-file$ $rename
+   fail-log-file$ fail-backup-file$ do-rename
 ;
 
 : after-runin  ( -- )
