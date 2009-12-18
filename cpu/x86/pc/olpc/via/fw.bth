@@ -505,6 +505,8 @@ fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
 devalias fsdisk int:0
 
+fload ${BP}/dev/logdev.fth
+
 fload ${BP}/ofw/inet/sntp.fth
 : olpc-ntp-servers  ( -- )
    " DHCP time 172.18.0.1 0.pool.ntp.org 1.pool.ntp.org 2.pool.ntp.org"
@@ -558,6 +560,7 @@ true                               ' client-symbols?  set-config-int-default
    install-mux-io
    cursor-off
    true to text-on?
+   start-logging
 
    " //null" open-dev to null-ih  \ For text-off state
 
