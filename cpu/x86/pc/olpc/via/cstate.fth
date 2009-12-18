@@ -28,9 +28,31 @@ variable sleep-time
    then
 ;
 
+: lid-down?  ( -- flag )  h# 48 acpi-l@ h# 80 and 0=  ;
+false value lid-already-down?
+0 value lid-down-time
+d# 10000 constant lid-shutdown-ms
+
+: ?lid-shutdown  ( -- )
+   lid-down?  if
+      lid-already-down?  if
+         acpi-timer@ lid-down-time -  d# 3580 /  ( ms )
+         lid-shutdown-ms >=  if
+            ." Powering off after 10 seconds of lid down" cr
+            power-off
+         then
+      else
+         acpi-timer@ to lid-down-time
+         true to lid-already-down?
+      then
+   else
+      false to lid-already-down?
+   then
+;
+
 defer do-idle  ' noop to do-idle
 
-: safe-idle  ( -- )  can-idle?  if  do-idle  then  ;
+: safe-idle  ( -- )  can-idle?  if  do-idle  then  ?lid-shutdown  ;
 ' safe-idle to stdin-idle
 
 alias c1-idle halt
