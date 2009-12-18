@@ -15,50 +15,97 @@ external
 
 : $mkdir   ( name$ -- error? )
    o# 40777 ($create) if  true exit  then
-   link-count 1+ link-count!    \ The ".." entry is another link to parent
 
-   file-handle to inode#
-   link-count 1+ link-count!    \ The "." entry is another link to the new directory
+   dirent-inode@ set-inode
 
-   add-block				( block# )
+   add-block					( block# )
    file-size h# 400 + file-size!
-   dup direct0 int! update		( block# )
-   block bsize erase update	\  flush
-   wd-inum >r
-   inode# first-dirent  if  r> drop  true exit  then
-   " ."   d# 12	dir-type inode#	set-dirent
-   d# 12 diroff !
-   " .."  bsize d# 12 -	dir-type r> set-dirent
-   false				( error? )
+   dup direct0 int! update			( block# )
+   block bsize erase update  \  flush		( )
+   inode# first-dirent  if  true exit  then	( )
+   " ."  bsize	inode#	fill-dirent		( )
+   " .." wd-inum  new-dirent			( error? )
    diroff off
 ;
 
 : $delete   ( name$ -- error? )
    $find-file  if  true exit  then		( )
-   
-   (delete-file)
+
+   wf-type dir-type =  if  true exit  then
+
+   dirent-unlink
+   false
 ;
 : $delete!  $delete ;			\ XXX should these be different?
+
+: $hardlink  ( old-name$ new-name$ -- error? )
+   \ Save the current search context.  The path part of the new name
+   \ has already been parsed out and resolved.  Resolving old-name$ changes
+   \ the directory context, so we will need to restore the context for the
+   \ new name to create its dirent.
+   dirent-vars 2>r 2>r                            ( new-name$ r: 4xVars )
+
+   2swap $find-file  if                           ( new-name$ r: 4xVars )
+      2drop  2r> 2r> 4drop  true  exit
+   then                                           ( new-name$ r: 4xVars )
+
+   \ Hard links to directories mess up the filesystem tree
+   wf-type dir-type =  if  2drop true exit  then  ( new-name$ r: 4xVars)
+   
+   2r> 2r> restore-dirent	                  ( new-name$ )
+   wf-inum  new-dirent                            ( error? )
+;
+
+: $rename  ( old-name$ new-name$ -- error? )
+   \ If new-name$ is null, the destination is a directory (which has
+   \ already been located), so we set the destination filename to be
+   \ the same as the filename component of the old path.
+   dup 0=  if                            ( old-path$ new-name$ )
+      2drop                              ( old-path$ )
+      2dup [char] \  right-split-string  ( old-path$ name$ dir$ )
+      2drop                              ( old-path$ new-name$ )
+   then                                  ( old-path$ new-name$ )
+
+   2over 2swap  $hardlink  if  2drop true exit  then   ( old-name$ )
+   $delete
+;
 
 : $rmdir   ( name$ -- error? )
    $find-file  if  true exit  then		( )
    wf-type dir-type <>  if  true exit  then     ( )
+
    \ Now the dirent is the one for the directory to delete and the
    \ inode is for the parent directory
-   
-   dirent-vars 2>r 2>r	        \ save lookup state in parent directory
-   file-handle set-inode        \ Switch the inode to the directory to delete
 
-   empty-dir?  0=  if  2r> 2r> 4drop true exit  then
+   dirent-inode@ >r                             ( r: dir-i# )
 
-   \ The directory is empty so it's okay to remove it
-   delete-blocks                \ Release the data blocks used for dirent storage
-   inode# free-inode            \ Release the inode number
+   \ First verify that the directory to delete is empty
+   dirent-vars                                  ( 4xVars r: dir-i# )
+   r@ empty-dir?  0=  if  r> drop  4drop true exit  then
+   restore-dirent                               ( r: dir-i# )
+
+   \ Remove the dirent from the parent directory; the inode will not
+   \ be freed yet because its link count is still nonzero due to the
+   \ directory's "." entry.
+   dirent-unlink                                ( r: dir-i# )
+
+   \ First delete the ".." entry
+   " .." r@ $find-name  if                      ( r: dir-i# )
+      ." Corrupt filesystem - directory does not have .. entry" cr
+      r> drop  true  exit
+   then                                         ( r: dir-i# )
+   dirent-unlink                                ( r: dir-i# )
+
+   \ Then delete the "." entry
+   \ The link count should go to 0, freeing the directory blocks
+   " ." r@ $find-name  if                       ( r: dir-i# )
+      ." Corrupt filesystem - directory does not have . entry" cr
+      r> drop  true  exit
+   then                                         ( r: dir-i# )
+   dirent-unlink                                ( r: dir-i# )
+
+   r> drop                                      ( )
    
-   2r> 2r> restore-dirent	\ restore lookup state in parent directory
-   
-   del-dirent  if  true exit  then  \ Remove the dirent from the parent directory
-   link-count 1- link-count!        \ Decrement parent link count
    false
 ;
 
@@ -76,7 +123,7 @@ headers
    drop  bfbase @  bsize free-mem		\ Registered with initbuf
    modified? if
       false to modified?
-      time&date >unix-seconds file-handle inode 4 la+ int! update
+      time&date >unix-seconds dirent-inode@ set-inode ctime!
    then
 ;
 
@@ -115,12 +162,12 @@ headers
    -rot $find-file  if  drop false exit  then	        ( mode )
    wf-type regular-type <>  if  drop false exit  then   ( mode )
 
-   file-handle set-inode                                ( mode )
+   dirent-inode@ set-inode                              ( mode )
    false to modified?
    
    >r
    bsize alloc-mem bsize initbuf
-   file-handle  r@  ['] ext2fsdflen ['] ext2fsdfalign ['] ext2fsfclose ['] ext2fsdfseek 
+   dirent-inode@  r@  ['] ext2fsdflen ['] ext2fsdfalign ['] ext2fsfclose ['] ext2fsdfseek 
    r@ read =  unknown-extensions? or if  ['] nullwrite  else  ['] ext2fsfwrite  then
    r> write =  if  ['] nullread   else  ['] ext2fsfread   then
    true

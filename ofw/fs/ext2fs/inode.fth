@@ -4,6 +4,7 @@ purpose: inodes for Linux ext2fs file system
 decimal
 
 0 instance value inode#
+: set-inode  ( inode# -- )  to inode#  ;
 
 : ipb	( -- n )  bsize /inode /  ;
 : itob  ( i# -- offset block# )
@@ -18,10 +19,22 @@ decimal
 : ind   ( n -- )  inode  /inode dump  ;
 : +i  ( n -- )  inode# inode +  ;
 : file-attr   ( -- attributes )  0 +i short@  ;
+: file-attr!  ( attributes -- )  0 +i short!  update  ;
+: uid         ( -- uid )         2 +i short@  ;
+: uid!        ( uid -- )         2 +i short!  update  ;
 : filetype    ( -- type )  file-attr  h# f000 and  ;
 : file-size   ( -- n )           4 +i int@  ;
 : file-size!  ( n -- )           4 +i int!  update  ;
-: file-sec    ( -- seconds )    16 +i int@  ;	\ mtime -- is that what we want?
+: atime       ( -- seconds )     8 +i int@  ;
+: atime!      ( seconds -- )     8 +i int!  update  ;
+: ctime       ( -- seconds )    12 +i int@  ;
+: ctime!      ( seconds -- )    12 +i int!  update  ;
+: mtime       ( -- seconds )    16 +i int@  ;
+: mtime!      ( seconds -- )    16 +i int!  update  ;
+: dtime       ( -- seconds )    20 +i int@  ;
+: dtime!      ( seconds -- )    20 +i int!  update  ;
+: gid         ( -- gid )        24 +i short@  ;
+: gid!        ( gid -- )        24 +i short!  update  ;
 : link-count  ( -- n )          26 +i short@  ;
 : link-count! ( n -- )          26 +i short!  update  ;
 : #blks-held  ( -- n )          28 +i int@  ;

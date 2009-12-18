@@ -10,6 +10,13 @@ decimal
 variable diroff
 variable totoff
 
+\ Information that we need about the working file/directory
+\ The working file changes at each level of a path search
+
+0 instance value wd-inum  \ Inumber of directory to search
+0 instance value wf-inum  \ Inumber of file or directory found
+0 instance value wf-type  \ Type - 4 for directory, d# 10 for symlink, etc
+
 : get-dirblk  ( -- end? )
    lblk# bsize * file-size >=  if  true exit  then
    lblk# >pblk# to dir-block#
@@ -28,14 +35,14 @@ variable totoff
 : >reclen   ( name-length -- record-length )   8 + 4 round-up  ;
 
 : dirent-inode@  ( -- n )  dirent int@  ;
-: dirent-inode!  ( n -- )  dirent int!  ;
+: dirent-inode!  ( n -- )  dirent int!  update  ;
 : dirent-len@  ( -- n )  dirent la1+ short@  ;
-: dirent-len!  ( n -- )  dirent la1+ short!  ;
+: dirent-len!  ( n -- )  dirent la1+ short!  update  ;
 : dirent-nameadr   ( -- adr )  dirent la1+ 2 wa+  ;
 : dirent-namelen@  ( -- b )  dirent la1+ wa1+ c@  ;
-: dirent-namelen!  ( b -- )  dirent la1+ wa1+ c!  ;
+: dirent-namelen!  ( b -- )  dirent la1+ wa1+ c!  update  ;
 : dirent-type@     ( -- b )  dirent la1+ wa1+ ca1+  c@  ;
-: dirent-type!     ( b -- )  dirent la1+ wa1+ ca1+  c!  ;
+: dirent-type!     ( b -- )  dirent la1+ wa1+ ca1+  c!  update  ;
 : dirent-reclen    ( -- n )  dirent-namelen@ >reclen  ;
 
 : lblk#++  ( -- )   lblk# 1+ to lblk#  ;
@@ -44,7 +51,7 @@ variable totoff
    diroff @  totoff @  lblk#  inode#
 ;
 : restore-dirent  ( diroff totoff lblk# inode# -- )
-   to inode#  to lblk#  totoff !  diroff !
+   set-inode  to lblk#  totoff !  diroff !
    get-dirblk drop
 ;
 
@@ -59,35 +66,28 @@ variable totoff
    false
 ;
 
-\ **** From directory, get handle of the file or subdir that it references
-\ For Unix, file handle is the inode #
-: file-handle  ( -- i# )  dirent-inode@  ;
-
 \ **** From directory, get name of file
 : file-name  ( -- adr len )
    dirent la1+ wa1+  dup wa1+    ( len-adr name-adr )
    swap c@                       ( adr len )
 ;
 
-\
-\	high-level routines
-\
-\       After this point, the code should be independent of the disk format!
+: +link-count  ( increment -- )  link-count + link-count!  ;
 
-: init-inode    ( mode inode# -- )
-   inode >r			( mode r: inode-adr )
-   r@ /inode erase		( mode r: inode-adr )
-   r@ short!			( r: inode-adr )
-   time&date >unix-seconds	( time r: inode-adr )
-   dup r@ 2 la+ int!		( time r: inode-adr ) \ set access time
-   dup r@ 3 la+ int!		( time r: inode-adr ) \ set creation time
-       r@ 4 la+ int!		( r: inode-adr )      \ set modification time
-   1 r@ d# 13 wa+ short!	( r: inode-adr )      \ set links_count to 1
-   update			( r: inode-adr )
-   r> drop			( )
+: new-inode    ( mode -- inode# )
+   alloc-inode set-inode
+   0 +i /inode erase		( mode )
+   file-attr!			( )
+   time&date >unix-seconds	( time )
+   dup atime!			( time ) \ set access time
+   dup ctime!			( time ) \ set creation time
+       mtime!			( )      \ set modification time
+   1 link-count!		( )      \ set links_count to 1
+   inode#			( inode# )
 ;
 
 \ On entry:
+\   inode# refers to the directory block's inode
 \   dir-block# is the physical block number of the first directory block
 \   diroff @ is 0
 \ On successful exit:
@@ -136,14 +136,46 @@ variable totoff
    (last-dirent) drop
    dirent-len@  dirent-reclen  -
 ;
-: set-dirent   ( name$ type rec-len file-type inode# -- )
-   dirent int!						( name$ rec-len )
+0 constant unknown-type
+1 constant regular-type
+2 constant dir-type
+3 constant chrdev-type
+4 constant blkdev-type
+5 constant fifo-type
+6 constant sock-type
+7 constant symlink-type
+
+create dir-types
+   unknown-type c,     \ 0
+   fifo-type c,        \ 1
+   chrdev-type c,      \ 2
+   unknown-type c,     \ 3
+   dir-type c,         \ 4
+   unknown-type c,     \ 5
+   blkdev-type c,      \ 6
+   unknown-type c,     \ 7
+   regular-type c,     \ 8
+   unknown-type c,     \ 9
+   symlink-type c,     \ 10
+   unknown-type c,     \ 11
+   sock-type c,        \ 12
+   unknown-type c,     \ 13
+   unknown-type c,     \ 14
+   unknown-type c,     \ 15
+
+: inode>dir-type  ( -- dir-type )
+   filetype  d# 12 rshift   ( index )
+   dir-types + c@
+;
+
+: fill-dirent   ( name$ rec-len inode# -- )
+   dup set-inode   1 +link-count	( name$ rec-len inode# dir-type )
    \ XXX this should be contingent upon EXT2_FEATURE_INCOMPAT_FILETYPE
-   dirent-type!						( name$ )
-   dirent-len!						( name$ )
-   dup dirent-namelen!					( name$ )
-   dirent-nameadr swap move				( )
-   update
+   inode>dir-type  dirent-type!		( name$ rec-len inode# )
+   dirent-inode!			( name$ rec-len )
+   dirent-len!				( name$ )
+   dup dirent-namelen!			( name$ )
+   dirent-nameadr swap move		( )
 ;
 
 : to-previous-dirent  ( -- )
@@ -157,8 +189,24 @@ variable totoff
    diroff @ swap -  totoff +!			( )
 ;
 
+\ Delete the currently selected inode. Does not affect the directory entry, if any.
+: idelete   ( -- )
+   delete-blocks
+   \ clear #blks-held, link-count, etc.
+   0 +i  /inode  6 /l* /string erase
+   
+   \ delete inode, and set its deletion time.
+   time&date >unix-seconds dtime!
+   inode# free-inode
+;
+
 \ delete directory entry at diroff
-: del-dirent   ( -- error? )
+: dirent-unlink   ( -- )
+   dirent-inode@ set-inode  -1 +link-count
+
+   \ Release the inode if it has no more links
+   link-count  0<=  if  idelete  then
+
    diroff @  if
       \ Not first dirent in block; coalesce with previous
       dirent-len@				( deleted-len )
@@ -170,29 +218,38 @@ variable totoff
       \ First dirent in block; zap its inode
       0 dirent-inode!
    then      
-   update
-   false
 ;
 
-1 constant regular-type
-2 constant dir-type
-7 constant symlink-type
+\ The argument inode# means the inode to which the new directory entry
+\ will refer.  The inode of the containing directory is in the *value*
+\ named inode#
 
-: ($create)   ( name$ mode -- error? )
-   >r							( name$ r: mode )
+: new-dirent  ( name$ inode# -- error? )
+   >r					( name$ r: inode# )
    \ check for room in the directory, and expand it if necessary
-   dup >reclen  no-dir-space?   if			( name$ new-reclen r: mode )
+   dup >reclen  no-dir-space?   if	( name$ new-reclen r: inode# )
       \ doesn't fit, allocate more room
-      bsize						( name$ bsize r: mode )
-      append-block
-      lblk#++ get-dirblk drop
-   then							( name$ rec-len r: mode )
+      bsize				( name$ bsize r: inode# )
+      append-block			( name$ bsize r: inode# )
+      lblk#++ get-dirblk  if		( name$ bsize r: inode# )
+         r> 4drop			( )
+         true exit			( -- true )
+      then				( name$ bsize r: inode# )
+   then					( name$ rec-len r: inode# )
 
    \ At this point dirent points to the place for the new dirent
-   \ XXX handle symlinks!
-   r@ h# f000 and h# 4000 =  if  dir-type  else  regular-type  then  ( name$ rec-len type r: mode )
-   alloc-inode set-dirent false		( error? r: mode )
-   r> dirent-inode@ init-inode
+   r> fill-dirent			( )
+   false				( error? )
+;
+
+: ($create)  ( name$ mode -- error? )
+   new-inode		( name$ inode# )
+
+   \ new-inode changed the value of inode#; we must restore it so
+   \ new-dirent can find info about the containing diretory 
+   wd-inum set-inode    ( name$ inode# )
+
+   new-dirent		( error? )
 ;
 
 : linkpath   ( -- a )
@@ -203,15 +260,6 @@ variable totoff
       direct0
    then
 ;
-
-\ --
-
-\ Information that we need about the working file/directory
-\ The working file changes at each level of a path search
-
-0 instance value wd-inum  \ Inumber of directory to search
-0 instance value wf-inum  \ Inumber of file or directory found
-0 instance value wf-type  \ Type - 4 for directory, d# 10 for symlink, etc
 
 char \ instance value delimiter
 
@@ -231,13 +279,9 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
    then                              ( name$ )
 ;
 
-: set-inode  ( inode# -- )
-   to inode#
-   0 to lblk#
-;
-
 : first-dirent  ( dir-inode# -- end? )  \ Adapted from (init-dir)
    set-inode
+   0 to lblk#
    get-dirblk  if  true exit  then
    diroff off  totoff off               ( )
    false                                ( )
@@ -273,7 +317,7 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
 ;
 
 : symlink-resolution$  ( inum -- data$ )
-   to inode#
+   set-inode
    linkpath dup cstrlen
 ;
 
@@ -352,49 +396,14 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
 
 \ Returns true if inode# refers to a directory that is empty
 \ Side effect - changes dirent context
-: empty-dir?  ( -- empty-dir? )
+: empty-dir?  ( inode# -- empty-dir? )
+   set-inode
+
    dir? 0= if  false exit  then
 
-   file-handle first-dirent  if  false exit  then   \ Should be pointing to "." entry
+   inode# first-dirent  if  false exit  then   \ Should be pointing to "." entry
    next-dirent  if  false exit  then   \ Should be point to ".." entry
    next-dirent  ( end? )               \ The rest should be empty
-;
-
-\ Delete a file, given its inode. Does not affect the directory entry, if any.
-: idelete   ( inode# -- )
-   to inode#
-   delete-blocks
-   \ clear #blks-held, link-count, etc.
-   inode# inode  /inode  6 /l* /string erase
-   
-   \ delete inode, and set its deletion time.
-   time&date >unix-seconds		( time )
-   inode# inode 5 la+ int! update
-   inode# free-inode
-;
-
-\ Delete the file at dirent
-: (delete-file)   ( -- error? )
-   file-handle 0= if  true exit  then
-   
-   inode# >r
-   file-handle set-inode
-   file? 0= if  r> drop true exit  then	\ XXX handle symlinks
-   
-   \ is this the only link?
-   link-count  dup 2 u< if
-      drop
-      inode# idelete
-   else
-      1- link-count!
-   then
-   
-   r> to inode#
-   \ delete directory entry
-   del-dirent			( error? )
-;
-: (delete-files)   ( -- )		\ from current directory. used by rmdir
-   begin  (delete-file) until
 ;
 
 external
@@ -402,9 +411,9 @@ external
 \ directory information
 
 : file-info  ( id -- false | id' s m h d m y len attributes name$ true )
-   inode# >r   file-handle to inode#			( id )
-   1+  file-sec unix-seconds>  file-size  file-attr  file-name true
-   r> to inode#
+   inode# >r   dirent-inode@ set-inode			( id )
+   1+  mtime unix-seconds>  file-size  file-attr  file-name true
+   r> set-inode
 ;
 
 \ Deleted files at the beginning of a directory block have inode=0
@@ -412,7 +421,7 @@ external
    dup  if  
       begin
 	 next-dirent  0= while
-	 file-handle if   file-info exit   then
+	 dirent-inode@  if   file-info exit   then
       
       repeat
       drop false
