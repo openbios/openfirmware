@@ -13,7 +13,7 @@ devalias u    /usb/disk
 ;
 
 \ Restrict selftest to external USB ports 1,2,3
-dev /  2 " usb-max-test-port" integer-property  dend
+dev /  3 " usb-test-ports" integer-property  dend
 
 : (probe-usb2)  ( -- )
    " device_type" get-property  if  exit  then

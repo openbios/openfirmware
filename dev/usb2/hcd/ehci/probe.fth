@@ -30,7 +30,10 @@ headers
    make-device-node			( )
 ;
 
+0 instance value probe-error?  \ Back channel to selftest
+
 : probe-root-hub-port  ( port -- )
+   false to probe-error?
    dup portsc@ 1 and 0=  if  drop exit  then	\ No device detected
    dup portsc@ h# c00 and h# 400 =  if		\ A low speed device detected
       dup disown-port				\ Disown the port
@@ -41,9 +44,11 @@ headers
       else					\ A high speed device detected
          dup ['] make-root-hub-node catch  if	\ Process high speed device
             drop ." Failed to probe root port " dup .d cr
+            true to probe-error?
          then
       then
-   then  drop
+   then                           ( port# )
+   dup portsc@ swap portsc!       ( )		\ Clear connection change bit
 ;
 
 : grab-controller  ( -- error? )
@@ -69,7 +74,44 @@ headers
    false
 ;
 
+: probe-setup  ( -- )
+   \ Set active-package so device nodes can be added and removed
+   my-self ihandle>phandle push-package
+
+   alloc-pkt-buf
+;
+: probe-teardown  ( -- )
+   free-pkt-buf
+   pop-package
+;
+
+: #testable-ports  ( -- n )
+   #ports                                            ( #hardware-ports )
+   " usb-test-ports" get-inherited-property  0=  if  ( #hardware-ports adr len )
+      decode-int  nip nip  min                       ( #testable-ports )
+   then                                              ( #testable-ports )
+;
+
+: wait-connect  ( port# -- error? )
+   begin                            ( port# )
+      dup portsc@ h# 2001 and  0=   ( port# unconnected? )
+   while                            ( port# )
+      key?  if                      ( port# )
+         key h# 1b =  if            ( port# )   \ ESC aborts
+            drop true exit          ( -- true )
+         then                       ( port# )
+      then                          ( port# )
+   repeat                           ( port# )
+   ." Device connected - probing ... "
+   probe-setup                      ( port# )
+   dup probe-root-hub-port          ( port# )
+   probe-teardown                   ( port# )
+   probe-error?                     ( error? )
+   dup  if  ." Failed" else  ." Done"  then  cr  ( error? )
+;
+
 external
+
 : power-usb-ports  ( -- )  ;
 
 : ports-changed?  ( -- flag )
@@ -80,20 +122,16 @@ external
 ;
 
 : probe-root-hub  ( -- )
-   \ Set active-package so device nodes can be added and removed
-   my-self ihandle>phandle push-package
+   probe-setup
 
-   alloc-pkt-buf
    #ports 0  ?do			        \ For each port
       i portsc@ 2 and  if			\ Connection changed
          i rm-obsolete-children			\ Remove obsolete device nodes
          i probe-root-hub-port			\ Probe it
-         i portsc@ i portsc!			\ Clear connection change bit
       then
    loop
-   free-pkt-buf
 
-   pop-package
+   probe-teardown
 ;
 
 : open  ( -- flag )
@@ -133,6 +171,29 @@ external
    open-count 1- to open-count
    end-extra
    open-count 0=  if  free-dma-buf unmap-regs  then
+;
+
+: selftest  ( -- error? )
+   ehci-reg dup 0=  if  map-regs  then
+
+   #testable-ports  0  ?do
+      i portsc@ h# 2001 and  if		\ Port owned by usb 1.1 controller (2000) or device is present (1)
+         ." USB 2.0 port " i u. ."  in use" cr
+      else
+         diagnostic-mode?  if
+            ." Please connect a device to USB port " i u. " !" cr
+            i wait-connect  if  true unloop exit  then
+         else
+            ." Fisheye pattern out to USB 2.0 port " i u. cr
+            i test-port-begin
+            d# 2,000 ms
+            i test-port-end
+            0 i portsc!  i reset-port  i power-port
+         then
+      then
+   loop
+   0=  if  unmap-regs  then
+   false
 ;
 
 headers
