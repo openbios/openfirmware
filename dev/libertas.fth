@@ -590,11 +590,12 @@ true value got-indicator?
    respbuf >fw-data 2 + mac-adr$ move
    false
 ;
-: marvel-get-mac-address  ( -- )
+: marvel-get-mac-address  ( -- error? )
    4 0 do
-      (marvel-get-mac-address) 0=  if  unloop exit  then
+      (marvel-get-mac-address) 0=  if  false unloop exit  then
    loop  
    ." marvel-get-mac-address failed" cr
+   true
 ;
 
 : marvel-set-mac-address  ( -- )
@@ -1523,14 +1524,15 @@ variable opencount 0 opencount !
 
 headers
 
-: ?make-mac-address-property  ( -- )
-   driver-state ds-ready <  if  exit  then
-   " mac-address"  get-my-property  if
-      marvel-get-mac-address
+: ?make-mac-address-property  ( -- error? )
+   driver-state ds-ready <  if  false exit  then
+   " mac-address"  get-my-property  if   ( )
+      marvel-get-mac-address  if  true exit  then
       mac-adr$ encode-bytes  " local-mac-address" property
       mac-address encode-bytes " mac-address" property
-   else
-      2drop
+      false
+   else                                  ( adr len )
+      2drop  false
    then
 ;
 : set-frame-size  ( -- )
@@ -1542,7 +1544,7 @@ headers
 ;
 
 : init-net  ( -- )
-   ?make-mac-address-property
+   ?make-mac-address-property drop
 ;
 
 : ?load-fw  ( -- error? )
@@ -1553,8 +1555,7 @@ headers
       then
       ds-ready to driver-state
    then
-   init-net
-   false
+   ?make-mac-address-property
 ;
 
 false instance value use-promiscuous?
