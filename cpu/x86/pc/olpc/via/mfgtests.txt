@@ -111,13 +111,17 @@ The script in int:\runin\olpc.fth does the following:
        wait-scanner
        tag exchange with server 
        barcode scan of serial number to verify that the board and case are still paired
-       ??? Is the filename the MB (B#) or the case serial number (SN) ?
-       ??? If the filename is the SN, why is the SN in the request file?
-           The server can't verify if it only has the SN and not the board#
+       the filename used in the tag exchange is based on the SN, despite
+       the additional cross-checking that would be available if it were
+       based on the MB number (B#).
        delete MS and BD tags, insert tags from server
        ??? what is the format of the WP:N and AK:N info from the server?  Is it WP:0 / WP:1, or presence/absence ?
        TS should be SHIP at this point
        ??? Does the server send TS:SHIP or does the script inject it verbatim?
+       the TS tag as sent from the server is "FINAL".  the script changes
+       it to "SHIP".
+       the final result report is submitted to the "Handshake" directory
+       on the server.  (not "Result")
 
 # If selftest failed, red screen and stop.  State of machine (BD tag,
     \runin\olpc.fth) left the same as at the start of this phase so
