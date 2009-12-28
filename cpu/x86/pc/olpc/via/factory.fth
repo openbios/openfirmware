@@ -68,12 +68,12 @@ d# 256 buffer: tempname-buf
 : put-key+value  ( value$ key$ -- )  cifs-write  put-key-line  ;
 : submit-file  ( subdir$ -- )
    " flush" $call-cifs abort" CIFS flush failed"
-   " close-file" $call-cifs  abort" CIFS close-file failed"
+   " do-close" $call-cifs  abort" CIFS do-close failed"
    tempname$  2swap  " %s\\%s" sprintf  ( new-name$ )
 
    \ Check for preexisting destination file
-   2dup 0 open-file  0=  if             ( new-name$ )
-      close-file drop                   ( new-name$ )
+   2dup 0 " do-open" $call-cifs  0=  if ( new-name$ )
+      " do-close" $call-cifs drop       ( new-name$ )
       ." Error: " type ."  already exists on the server" cr   ( )
       tempname$ $delete drop            ( )
       abort
@@ -85,7 +85,7 @@ d# 256 buffer: tempname-buf
    tempname$  2swap  " %s\\%s" sprintf  ( response-name$ )
    d# 10 0 do                           ( response-name$ )
       d# 1000 ms                        ( response-name$ )
-      2dup  0 " open-file" $call-cifs  0=  if         ( response-name$ )
+      2dup  0 " do-open" $call-cifs  0=  if         ( response-name$ )
          2drop                          ( )
          " size" $call-cifs             ( d.size )
          abort" Size is > 4 GB"         ( size )

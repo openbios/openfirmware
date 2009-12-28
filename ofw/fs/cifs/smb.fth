@@ -105,10 +105,10 @@ h# c05c constant my-capabilities \ LargeRd, LargeWr, NTStat, NT SMBs, Large file
 : -xb  ( adr len -- adr' len' byte )
    1 needed  over c@ >r  1 /string r>
 ;
-: -xw  ( adr len -- adr' len' byte )
+: -xw  ( adr len -- adr' len' word )
    2 needed  over le-w@ >r  2 /string r>
 ;
-: -xl  ( adr len -- adr' len' byte )
+: -xl  ( adr len -- adr' len' long )
    4 needed  over le-l@ >r  4 /string r>
 ;
 : drop-b  ( rem$ -- rem$' )  -xb drop  ;
@@ -410,7 +410,7 @@ d# 24 buffer: p24-buf
 \ Good value for access: h# 0002
 \ Bits: 4000: WriteThrough  1000:DontCache  700:LocalityOfReference
 \ 70: SharingMode  7: Access-0:RO,1:WO,2:RW,3:Exec
-: open-file  ( path$ access -- error? )
+: do-open  ( path$ access -- error? )
    h# 02 smb{      ( path$ access )
    +xw             ( path$ )
    attributes +xw  ( path$ )
@@ -434,7 +434,7 @@ d# 24 buffer: p24-buf
    1 smb{  +path}smb  empty-response
 ;
 
-: close-file  ( -- error? )
+: do-close  ( -- error? )
    4 smb{
    fid +xw
    0 +xl  \ Time
@@ -490,16 +490,17 @@ d# 24 buffer: p24-buf
    position nip +xl   ( adr )
    --bytes--          ( adr )
    }smb  if  drop -1 exit  then        ( adr rem$ )
-   d# 12 expect-wcnt                   ( adr rem$' )
-   drop-andx                           ( adr rem$' )
-   drop-w  \ Reserved                  ( adr rem$' )
-   drop-w  \ Data compaction mode      ( adr rem$' )
-   drop-w  \ Reserved                  ( adr rem$' )
-   -xw >r  \ Actual length             ( adr rem$' r: actual )
-   drop-w  \ Offset to data            ( adr rem$' r: actual )
-   drop-w drop-w drop-w drop-w drop-w  ( adr rem$' r: actual )
-   -xw  if  drop-b  then               ( adr rem$' r: actual ) \ Byte count and pad
-   drop swap r@ move  r>               ( actual )
+   over d# 32 - -rot  \ SMB address    ( adr smb-adr rem$ )
+   d# 12 expect-wcnt                   ( adr smb-adr rem$' )
+   drop-andx                           ( adr smb-adr rem$' )
+   drop-w     \ Remaining              ( adr smb-adr rem$' )
+   drop-w     \ Data compaction mode   ( adr smb-adr rem$' )
+   drop-w     \ Reserved               ( adr smb-adr rem$' )
+   -xw >r     \ Actual length          ( adr smb-adr rem$' r: actual )
+   -xw        \ Offset to data         ( adr smb-adr rem$' data-offset r: actual )
+   nip nip                             ( adr smb-adr data-offset r: actual )
+   +                                   ( adr data-adr r: actual )
+   swap r@ move  r>                    ( actual )
    dup 0  position d+ to position      ( actual )
 ;
 : read  ( adr len -- actual )
@@ -537,7 +538,7 @@ d# 24 buffer: p24-buf
    6 expect-wcnt                       ( rem$' )
    drop-andx                           ( rem$' )
    -xw >r  \ Actual length             ( rem$' r: actual )
-\ We don't anything following
+\ We don't need anything following
 \  drop-w  \ Remaining                 ( rem$' )
 \  drop-l  \ Reserved                  ( rem$' )
    2drop  r>                           ( actual )
@@ -811,9 +812,9 @@ d# 24 buffer: p24-buf
    h# 10 and  if  true exit  then    ( )
 
    \ It's a file, so open it - first try to open read/write.
-   pathname$ 2 open-file  if         ( )
+   pathname$ 2 do-open  if         ( )
       \ Failing that, try to open read-only            
-      pathname$ 0 open-file  if      ( )
+      pathname$ 0 do-open  if      ( )
          free-buffers  false exit
       then                           ( )
    then                              ( )
@@ -827,7 +828,7 @@ d# 24 buffer: p24-buf
    then                              ( okay? )
 ;
 : close  ( -- )
-   fid  if  close-file drop  then
+   fid  if  do-close drop  then
    tree-disconnect drop
    free-buffers
 ;
