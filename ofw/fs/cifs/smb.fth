@@ -276,7 +276,7 @@ h# c05c constant my-capabilities \ LargeRd, LargeWr, NTStat, NT SMBs, Large file
    loop     ( adr )
    drop     ( )
    buf8 8
-;      
+;
 
 0 instance value password-buf
 d# 16 buffer: p21-buf
@@ -386,7 +386,7 @@ d# 24 buffer: p24-buf
    --bytes--    ( path$ )
    +path        ( )
    }smb         ( true | rem$ false )
-;   
+;
 
 0 instance value fid
 0 instance value attributes  \ 01:RO  02:Hidden  04:System  08:Volume  10:Directory  20:Archive
@@ -658,12 +658,12 @@ d# 24 buffer: p24-buf
    dup h#   1f and      2*   swap  ( secs packed )
    dup h# 07e0 and      5 >> swap  ( secs mins packed )
        h# f800 and  d# 11 >>       ( secs mins hours )
-;  
+;
 : >dmy  ( dos-packed-date -- day month year )
    dup h#   1f and          swap   ( day packed )
    dup h# 01e0 and  5 >>    swap   ( day month packed )
        h# fe00 and  9 >> d# 1980 + ( day month year )
-;  
+;
 \ Convert DOS file attributes to the firmware encoding
 \ see showdir.fth for a description of the firmware encoding
 : >canonical-attrs  ( dos-attrs -- canon-attrs )
@@ -755,7 +755,7 @@ d# 24 buffer: p24-buf
    third 1+ 2*  +xw       ( path$ access flags )  \ Byte count for string + terminator
    +xw                    ( path$ access )  \ Create flage
    0 +xw                  ( path$ access )  \ Root FID
-   
+
    --bytes--
    0 +xb                      \ Null share password
    ( path$ ) +unicode$
@@ -813,14 +813,14 @@ d# 24 buffer: p24-buf
 
    \ It's a file, so open it - first try to open read/write.
    pathname$ 2 do-open  if         ( )
-      \ Failing that, try to open read-only            
+      \ Failing that, try to open read-only
       pathname$ 0 do-open  if      ( )
          free-buffers  false exit
       then                           ( )
    then                              ( )
 
    \ If any arguments remain, assume we are dealing with a ZIP
-   \ archive and interpose the ZIP handler 
+   \ archive and interpose the ZIP handler
    tail$  dup if                     ( tail$ )
       " zip-file-system" $interpose  ( okay? )
    else                              ( tail$ )
