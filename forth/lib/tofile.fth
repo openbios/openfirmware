@@ -14,7 +14,7 @@ purpose: Redirect the output stream.
 \ keep a stack of output streams.
 
 only forth also hidden also definitions
-variable old-status  ' noop old-status token!
+variable old-end-line ' noop old-end-line token!
 variable old-(emit   ' noop old-(emit  token!
 variable old-(type   ' noop old-(type  token!
 variable old-cr      ' noop old-cr     token!
@@ -25,7 +25,7 @@ variable saved-output-valid  saved-output-valid off
 
 forth definitions
 : save-output  ( -- )
-   ['] status behavior  old-status token!
+   ['] end-line behavior  old-end-line token!
    ['] (emit  behavior  old-(emit  token!
    ['] (type  behavior  old-(type  token!
    ['] cr     behavior  old-cr     token!
@@ -38,7 +38,7 @@ forth definitions
    saved-output-valid @  if
       old-(emit  token@ is (emit
       old-(type  token@ is (type
-      old-status token@ is status
+      old-end-line token@ is end-line
       old-cr     token@ is cr
       old-exit?  token@ is exit?
       old-#out  @ #out  !
@@ -56,7 +56,7 @@ hidden definitions
 forth definitions
 : file-output  ( -- )
    save-output
-   ['] undo-file-output is status
+   ['] undo-file-output is end-line
    ['] file-(emit       is (emit
    ['] file-(type       is (type
    ['] file-cr          is cr

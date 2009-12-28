@@ -1062,6 +1062,7 @@ headers
 
 defer ?permitted  ' noop is ?permitted
 
+defer end-line  ' noop is end-line
 defer interpret
 : (interpret  (s -- )
    begin
@@ -1072,6 +1073,7 @@ defer interpret
       $compile
    repeat
    2drop
+   end-line
 ;
 ' (interpret  is interpret
 
