@@ -14,37 +14,29 @@ purpose: Redirect the output stream.
 \ keep a stack of output streams.
 
 only forth also hidden also definitions
-variable old-end-line ' noop old-end-line token!
 variable old-(emit   ' noop old-(emit  token!
 variable old-(type   ' noop old-(type  token!
 variable old-cr      ' noop old-cr     token!
 variable old-exit?   ' noop old-exit?  token!
 variable old-#out    0      old-#out        !
 variable old-#line   0      old-#line       !
-variable saved-output-valid  saved-output-valid off
 
 forth definitions
 : save-output  ( -- )
-   ['] end-line behavior  old-end-line token!
    ['] (emit  behavior  old-(emit  token!
    ['] (type  behavior  old-(type  token!
    ['] cr     behavior  old-cr     token!
    ['] exit?  behavior  old-exit?  token!
    #out  @  old-#out  !
    #line @  old-#line !
-   saved-output-valid on
 ;
 : unsave-output  ( -- )
-   saved-output-valid @  if
-      old-(emit  token@ is (emit
-      old-(type  token@ is (type
-      old-end-line token@ is end-line
-      old-cr     token@ is cr
-      old-exit?  token@ is exit?
-      old-#out  @ #out  !
-      old-#line @ #line !
-      saved-output-valid off
-   then
+   old-(emit  token@ is (emit
+   old-(type  token@ is (type
+   old-cr     token@ is cr
+   old-exit?  token@ is exit?
+   old-#out  @ #out  !
+   old-#line @ #line !
 ;
 hidden definitions
 : undo-file-output  ( -- )  unsave-output  ofd @ fclose  ;
@@ -55,20 +47,25 @@ hidden definitions
 ;
 forth definitions
 : file-output  ( -- )
-   save-output
-   ['] undo-file-output is end-line
    ['] file-(emit       is (emit
    ['] file-(type       is (type
    ['] file-cr          is cr
    ['] false            is exit?
    #out off  #line off
 ;
+: evaluate-to-file  ( adr len -- ??? )
+   save-output  file-output  ( adr len )
+   ['] evaluate  catch   ( ??? error? )
+   undo-file-output
+   throw
+;
+: cmdline-to-file  ( -- )  0 parse  evaluate-to-file  ;
 
 : to-file  \ filename  ( -- )
-   writing  file-output
+   writing  cmdline-to-file
 ;
 : append-to-file  \ filename  ( -- )
-   appending  file-output
+   appending  cmdline-to-file
 ;
 only forth also definitions
 
