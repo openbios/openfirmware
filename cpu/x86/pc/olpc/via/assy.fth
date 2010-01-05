@@ -39,6 +39,7 @@ false value update-firmware?          \ Make this true to update firmware
 
 : put-ka-tag  ( value$ key$ -- )
    2over  8 min  ka-dir$ " %s%s" sprintf  ( value$ key$ filename$ )
+   ." Fetching KA tag file " 2dup type cr ( value$ key$ filename$ )
    $read-file  if                     ( value$ key$ )
       ." ERROR: No KA tag file for " 2swap type cr  ( key$ )
       2drop                           ( )
@@ -162,6 +163,19 @@ d# 20 buffer: mac-buf
    get-sn
 ;
 
+: safe-delete   ( $name -- )
+    2dup $file-exists?  if
+       2dup $delete
+    then
+;
+
+: $copy!  ( $src $dst -- )
+   2dup $file-exists?  if
+      2dup $delete
+   then
+   $copy1
+;
+
 0 0 2value response$
 
 : execute-downloads  ( adr len -- )
@@ -170,9 +184,12 @@ d# 20 buffer: mac-buf
       ?remove-cr                  ( rem$ line$ )
       [char] : left-parse-string  ( rem$ value$ key$ )
       " Command" $=  if           ( rem$ value$ )
+         ." Will execute:" cr     ( rem$ value$ )
+         2dup type cr             ( rem$ value$ )
          evaluate                 ( rem$ )
+      else
+         2drop                    ( rem$ )
       then                        ( rem$ value$ )
-      2drop                       ( rem$ )
    repeat                         ( rem$ )
    2drop                          ( )
 ;
@@ -192,12 +209,15 @@ d# 20 buffer: mac-buf
 ;
 
 : inject-tags  ( -- )
+
+   ." Merging new tags" cr
+
    get-mfg-data
 
    " TS"  ($delete-tag)
    " MS"  ($delete-tag)
    " BD"  ($delete-tag)
-   " NT"  ($delete-tag)
+   \ leave NT so we can use one tag throughout: " NT"  ($delete-tag)
 
    sn$          " SN"  put-tag
    fwver$       " BV"  put-tag
@@ -205,6 +225,8 @@ d# 20 buffer: mac-buf
    uuid$        " U#"  put-tag
    mac$         " WM"  put-tag
    swdl-date$   " SD"  put-tag
+
+   ." Parsing tags" cr
 
    response$ parse-tags
 
@@ -242,10 +264,12 @@ d# 20 buffer: mac-buf
    ." Done" cr
 
    response$ execute-downloads
+
    inject-tags
 
    ." Powering off ..." d# 2000 ms
    power-off
 ;
 
+." Starting assembly phase" cr
 start-assy-test

@@ -111,10 +111,10 @@ d# 20 buffer: filename-buf
    smt-filename$  open-temp-file
    pass?  if  " PASS"  else  " FAIL"  then  " RESULT="  put-key+value
    " PROCESS=FVT" put-key-line
-   " STATION="    put-key-line
-   " OPID="       put-key-line
-   " GUID="       put-key-line
-   board#$  " MB_NUM=" put-key+value
+   opid$            " OPID="    put-key+value
+   station#$        " STATION=" put-key+value
+   board#$          " MB_NUM="  put-key+value
+   \ " GUID="       put-key-line
    " Result" submit-file
 ;
 
@@ -180,8 +180,9 @@ false value any-tags?
 
    response$ write-new-tags               ( )
 
+   " EN"    " SS"  put-ascii-tag         ( )
+
 \   board#$  " B#"  put-ascii-tag         ( )
-\   " EN"    " SS"  put-ascii-tag         ( )
 \   " ASSY"  " TS"  put-ascii-tag         ( )
 \   " "(D3)" " SG"  ($add-tag)            ( )
 
@@ -263,4 +264,5 @@ warning !
 dend
 
 \ Automatically run the sequence
+." Starting SMT phase" cr
 start-smt-test

@@ -117,7 +117,7 @@ false value write-protect?
    begin halt again
 ;
 : handle-tag  ( value$ key$ -- )
-   2dup find-tag  if  ( value$ key$ old-value$ )       \ Tag already exists, check it
+   2dup ram-find-tag  if  ( value$ key$ old-value$ )       \ Tag already exists, check it
       2over " KA" $=  0=  if  ?-null  then   ( value$ key$ old-value$' )
       2>r 2over 2r@ $=  if                   ( value$ key$ r: old-value$' )
          2drop 2drop 2r> 2drop               ( )
@@ -161,7 +161,7 @@ false value write-protect?
    pop-base
 ;
 : make-md-tag  ( -- )
-   time&date  ( s m h d m y )  format-date  " MD" put-ascii-tag
+   time&date  ( s m h d m y )  format-date  " md" put-ascii-tag
 ;
 : inject-tags  ( -- )
    get-mfg-data
@@ -169,6 +169,7 @@ false value write-protect?
    " TS" ($delete-tag)
    " MS" ($delete-tag)
    " BD" ($delete-tag)
+   " NT" ($delete-tag)
    " MD" ($delete-tag)
    make-md-tag
 
@@ -265,7 +266,6 @@ d# 4 constant rtc-threshold
    wait-scanner
    ?usb-keyboard
    wait-lan
-\   wait-usb-key
 ;             
 
 : my-cifs-connect  ( adr -- )
@@ -278,12 +278,26 @@ d# 4 constant rtc-threshold
    2>r  2dup  2r>  $copy  $delete
 ;
 
+: $safe-delete   ( $name -- )
+    2dup $file-exists?  if
+       2dup $delete
+    then
+;
+
+: $copy!  ( $src $dst -- )
+   2dup $file-exists?  if
+      2dup $delete
+   then
+   $copy1
+;
+
+
 : finish-final-test  ( -- )
    wait-connections
 
    get-info
 
-\   verify-rtc-date
+   verify-rtc-date
 
    ." Getting final tags .. "
    cifs-connect final-tag-exchange \ Note: no disconnect...
@@ -295,10 +309,10 @@ d# 4 constant rtc-threshold
    final-result cifs-disconnect
    ." Done" cr
 
-   " int:\runin\olpc.fth" $delete-all
+   \ need to delete target, due to #9957
+   " int:\runin\final.fth.sav" $safe-delete
 
-   \ Ultimately this should just be delete of runin\olpc.fth
-   " int:\runin\olpc.fth" " int:\runin\runin.sav" do-rename
+   " int:\runin\final.fth" " int:\runin\final.fth.sav" $rename
 ;
 
 \ Make the "wait for SD insertion" step highly visible 
@@ -318,7 +332,7 @@ dend
 \ The operator can type this to reset the state to run
 \ the Linux-based runin tests again.
 : rerunin  ( -- )
-   " int:\runin\olpc.fth" $delete-all
+   " int:\runin\final.fth" $safe-delete
    fail-log-file$ fail-backup-file$ do-rename
 ;
 
@@ -364,4 +378,5 @@ warning !
  
 device-end
 
+." Starting final phase" cr
 after-runin
