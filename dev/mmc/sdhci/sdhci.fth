@@ -786,7 +786,7 @@ external
    ['] power-up-card catch  if  true true  then   if         ( retry? )
       \ The first try at powering up failed.
       if                     ( )
-         ." Trying to reset data lines" cr
+         \ ." Trying to reset data lines" cr
          card-clock-off
          card-power-off
          d# 500 ms
