@@ -42,6 +42,13 @@ headers
    drop
 ;
 
+: watch-rtc
+   begin 
+      time&date .date ."  " .time (cr 500 ms
+   key? until
+   key drop
+;
+
 \ From fwfileop.fth
 purpose: File I/O interface using Open Firmware
 copyright: Copyright 1994 Firmworks  All Rights Reserved
