@@ -167,6 +167,7 @@ d# 20 buffer: mac-buf
     2dup $file-exists?  if
        2dup $delete
     then
+    2drop
 ;
 
 : $copy!  ( $src $dst -- )

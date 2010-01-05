@@ -282,6 +282,7 @@ d# 4 constant rtc-threshold
     2dup $file-exists?  if
        2dup $delete
     then
+    2drop
 ;
 
 : $copy!  ( $src $dst -- )
