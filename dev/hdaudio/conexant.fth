@@ -4,25 +4,40 @@ hex
 
 \ \ Conexant
 
-: power-on   ( -- )  h# 70500 cmd  ;
-: power-off  ( -- )  h# 70503 cmd  ;
+: power-on   ( -- )  h# 70500 cmd  ;  \ Set power state - on
+: power-off  ( -- )  h# 70503 cmd  ;  \ Set power state - off
 : power-on-all  ( -- )
    " "(01 10 11 12 14 15 16 17 18 19 1a 1b 1c 1d 1e 1f 20 21 22 23 24)"
    bounds  do  i c@ to node  power-on  loop
-;   
-
-: volume-on-all  ( -- )
-   h# 14 to node  h# 36006 cmd  h# 35006 cmd
-   h# 23 to node  h# 36004 cmd  h# 35004 cmd
-   h# 17 to node  h# 3a004 cmd  h# 39004 cmd
-   h# 18 to node  h# 3a004 cmd  h# 39004 cmd
-   h# 14 to node  h# 36200 cmd  h# 35200 cmd
-   h# 10 to node  h# 3a03e cmd  h# 3903e cmd
 ;
 
-h# 1a value mic-in   \ Port B
-h# 1b value mic      \ Port C
-h# 17 value mux      \ mux between the two
+: set-node  ( node-id -- )  to node  ;
+
+: afg    ( -- )      1 set-node  ;  \ Audio Function Group
+: dac1   ( -- )  h# 10 set-node  ;
+: adc1   ( -- )  h# 14 set-node  ;
+: mux    ( -- )  h# 17 set-node  ;      \ mux between port b and port c
+: mux2   ( -- )  h# 18 set-node  ;
+: porta  ( -- )  h# 19 set-node  ;
+: portb  ( -- )  h# 1a set-node  ;    \ Port B - OLPC external mic
+: portc  ( -- )  h# 1b set-node  ;    \ Port C - OLPC internal mic
+: portd  ( -- )  h# 1c set-node  ;    \ Port D - OLPC unused
+: porte  ( -- )  h# 1d set-node  ;    \ Port E - OLPC unused
+: portf  ( -- )  h# 1e set-node  ;    \ Port F - OLPC DC input
+: portg  ( -- )  h# 1f set-node  ;    \ Port G - speaker driver
+: porth  ( -- )  h# 20 set-node  ;    \ Port H - S/PDIF out
+: porti  ( -- )  h# 22 set-node  ;    \ Port I - S/PDIF out
+: portj  ( -- )  h# 23 set-node  ;    \ Digital mic
+: vendor ( -- )  h# 25 set-node  ;    \ Vendor-specific controls
+
+: volume-on-all  ( -- )
+   adc1   h# 36006 cmd  h# 35006 cmd  \ Left gain/mute, right gain/mute
+   portj  h# 36004 cmd  h# 35004 cmd  \ Left gain, right gain
+   mux    h# 3a004 cmd  h# 39004 cmd  \ Left gain, right gain
+   mux2   h# 3a004 cmd  h# 39004 cmd  \ Left gain, right gain
+   adc1   h# 36200 cmd  h# 35200 cmd  \ Left gain/mute, right gain/mute
+   dac1   h# 3a03e cmd  h# 3903e cmd  \ Left gain, right gain
+;
 
 : pin-sense?       ( -- ? )  h# f0900 cmd? h# 8000.0000 and 0<>  ;
 : set-connection   ( n -- )  h# 70100 or cmd   ;
@@ -30,25 +45,26 @@ h# 17 value mux      \ mux between the two
 : disable-hp-input ( -- )    h# 70700 cmd  ;
 
 : cx2058x-enable-recording  ( -- )
-   mic-in to node  pin-sense?  if
-      mux to node  0 set-connection  mic-in to node enable-hp-input
+   portb  pin-sense?  if
+      mux  0 set-connection  portb enable-hp-input
    else
-      mux to node  1 set-connection  mic to node enable-hp-input
+      mux  1 set-connection  portc enable-hp-input
    then
 ;
 
 : cx2058x-disable-recording  ( -- )
-   mic-in to node  disable-hp-input
-   mic    to node  disable-hp-input
+   portb  disable-hp-input
+   portc  disable-hp-input
 ;
 
 : cx2058x-enable-playback   ( -- )
-   h# 19 to node  pin-sense?  if  \ headphones attached
-      h# 1f to node  power-off    \ turn off speaker
-   else                           \ no headphones
-      h# 1f to node  power-on     \ turn on speaker 
-   then 
-   h# 10 to node  h# 70640 cmd   h# 20000 stream-format or cmd
+   porta  pin-sense?  if  \ headphones attached
+      portg  power-off     \ turn off speaker
+   else                            \ no headphones
+      portg  power-on      \ turn on speaker
+   then
+   dac1  h# 70640 cmd    \ 706sc - stream 4, channel 0
+   h# 20000 stream-format or cmd
 ;
 : cx2058x-disable-playback  ( -- )  ;
 
@@ -68,7 +84,7 @@ h# 17 value mux      \ mux between the two
 : unused      ( u -- u )  h# 40000000 or  ;
 : builtin     ( u -- u )  h# 80000000 or  ;
 
-: config(   ( node -- null-config-default )  to node  0  ;
+: config(   ( node -- null-config-default )   0  ;
 
 : )config  ( config-default -- )
    \ set the high 24 bits of the config-default value
@@ -78,25 +94,24 @@ h# 17 value mux      \ mux between the two
    8 rshift      h# ff and  71f00 or  cmd
 ;
 
-: port-a  ( -- u )  19 config(  1/8" green left hp-out jack     )config  ;
-: port-b  ( -- u )  1a config(  1/8" pink left mic-in jack      )config  ;
-: port-c  ( -- u )  1b config(  builtin front mic-in            )config  ;
-: port-d  ( -- u )  1c config(  unused line-out                 )config  ;
-: port-e  ( -- u )  1d config(  unused line-out                 )config  ;
-: port-f  ( -- u )  1e config(  1/8" pink left line-in jack     )config  ;
-: port-g  ( -- u )  1f config(  builtin front speaker           )config  ;
-: port-h  ( -- u )  20 config(  unused spdiff-out               )config  ;
-: port-i  ( -- u )  22 config(  unused spdiff-out               )config  ;
-: port-j  ( -- u )  23 config(  unused mic-in                   )config  ;
 
 : config-default  ( -- u )  f1c00 cmd?  ;
 
 : setup-config-default  ( -- )
-   port-a port-b port-c port-d port-e port-f port-g port-h port-i port-j
+   porta  config(  1/8" green left hp-out jack     )config
+   portb  config(  1/8" pink left mic-in jack      )config
+   portc  config(  builtin front mic-in            )config
+   portd  config(  unused line-out                 )config
+   porte  config(  unused line-out                 )config
+   portf  config(  1/8" pink left line-in jack     )config
+   portg  config(  builtin front speaker           )config
+   porth  config(  unused spdiff-out               )config
+   porti  config(  unused spdiff-out               )config
+   portj  config(  unused mic-in                   )config
 ;
 
 : vendor-settings  ( -- )
-   h# 25 to node
+   vendor
    h# 290a8 cmd \ high-pass filter, semi-manual mode, 600Hz cutoff
    h# 34001 cmd \ speaker power 1 dB gain
    h# 38001 cmd \ over-current / short-circuit protection, 2.6A threshold
@@ -121,7 +136,7 @@ h# 17 value mux      \ mux between the two
 
 \ Test word to make sure the right settings are configured
 : .vendor-settings  ( -- )
-   h# 25 to node
+   vendor
    h# 0a8 h# a9000 check-cmd
    h# 001 h# b4000 check-cmd
    h# 001 h# b8000 check-cmd
@@ -135,17 +150,15 @@ h# 17 value mux      \ mux between the two
 ;
 
 : cx2058x-open  ( -- )
-   h# 10 to dac
-   h# 14 to adc
+   ['] dac1 to with-dac
+   ['] adc1 to with-adc
    power-on-all
    volume-on-all
    vendor-settings
    setup-config-default
 ;
 
-: cx2058x-close  ( -- )
-   1 to node ( function group) power-off
-;
+: cx2058x-close  ( -- )  afg power-off  ;  \ Power off entire Audio Function Group
 
 : cx2058x-init  ( -- )
    ['] cx2058x-open  to open-codec

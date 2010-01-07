@@ -45,6 +45,8 @@ d# 500 value tone-freq
    /cycle +
 ;
 
+\ This version puts the tone first into the left channel for
+\ half the time, then into the right channel for the remainder
 : make-tone  ( freq -- )
    sample-rate to fs  ( freq )  set-freq
 
@@ -60,6 +62,21 @@ d# 500 value tone-freq
 
    \ Copy the wave template into the right channel
    record-base record-len 2/ + wa1+  record-len 2/ /cycle -   bounds  ?do
+      record-base  i  /cycle  move
+   /cycle +loop
+;
+
+\ This version puts the tone into both channels simultaneously
+: make-tone2  ( freq -- )
+   sample-rate to fs  ( freq )  set-freq
+
+   record-base  make-cycle  drop
+
+   \ Duplicate left into right in the template
+   record-base  #cycle /l*  bounds  ?do  i w@  i wa1+ w!  /l +loop
+
+   \ Replicate the template
+   record-base /cycle +   record-len /cycle -  bounds  ?do
       record-base  i  /cycle  move
    /cycle +loop
 ;
