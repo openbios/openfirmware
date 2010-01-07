@@ -39,11 +39,16 @@ external
 : $delete!  $delete ;			\ XXX should these be different?
 
 : $hardlink  ( old-name$ new-name$ -- error? )
+   \ Error if the new name already exists
+   2dup $find-file  0=  if                        ( old-name$ new-name$ )
+      4drop true exit                             ( -- true )
+   then                                           ( old-name$ new-name$ )
+
    \ Save the current search context.  The path part of the new name
    \ has already been parsed out and resolved.  Resolving old-name$ changes
    \ the directory context, so we will need to restore the context for the
    \ new name to create its dirent.
-   dirent-vars 2>r 2>r                            ( new-name$ r: 4xVars )
+   dirent-vars 2>r 2>r                            ( old-name$ new-name$ r: 4xVars )
 
    2swap $find-file  if                           ( new-name$ r: 4xVars )
       2drop  2r> 2r> 4drop  true  exit
@@ -51,7 +56,7 @@ external
 
    \ Hard links to directories mess up the filesystem tree
    wf-type dir-type =  if  2drop true exit  then  ( new-name$ r: 4xVars)
-   
+
    2r> 2r> restore-dirent	                  ( new-name$ )
    wf-inum  new-dirent                            ( error? )
 ;
@@ -105,7 +110,7 @@ external
    dirent-unlink                                ( r: dir-i# )
 
    r> drop                                      ( )
-   
+
    false
 ;
 
@@ -134,7 +139,7 @@ headers
 ;
 
 : ext2fsfread   ( addr count 'fh -- #read )
-   drop 
+   drop
    dup bsize > abort" Bad size for ext2fsfread"
    file-size  lblk# bsize *  -	( addr count rem )
    umin swap			( actual addr )
@@ -143,7 +148,7 @@ headers
 ;
 
 : ext2fsfwrite   ( addr count 'fh -- #written )
-   drop 
+   drop
    dup bsize > abort" Bad size for ext2fsfwrite"	( addr count )
    tuck  lblk# bsize * + dup file-size u>  if		( actual addr new )
       file-size!				\ changing byte count, NOT #blks
@@ -151,7 +156,7 @@ headers
       drop
    then							( actual addr )
    lblk# write-file-block				( actual )
-   
+
    \ XXX I am skeptical about this line.
    dup  0>  if  lblk#++  then				( actual )
    true to modified?
@@ -164,7 +169,7 @@ headers
 
    dirent-inode@ set-inode                              ( mode )
    false to modified?
-   
+
    >r
    bsize alloc-mem bsize initbuf
    dirent-inode@  r@  ['] ext2fsdflen ['] ext2fsdfalign ['] ext2fsfclose ['] ext2fsdfseek 
