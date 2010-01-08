@@ -11,7 +11,7 @@ false value update-firmware?          \ Make this true to update firmware
 : swid$  ( -- adr len )  " OFW ASSY test $Revision$"  ;
 
 \ Location of the files containing KA tag data
-: ka-dir$  ( -- adr len )  " http:\\10.1.0.1\ka\"  ;
+: ka-dir$  ( -- adr len )  " http:\\10.0.0.1\ka\"  ;
 
 : find-firmware-file  ( -- name$ )
    wanted-fw$  " u:\\boot\\%s.rom" sprintf    ( name$ )
@@ -42,6 +42,7 @@ false value update-firmware?          \ Make this true to update firmware
    ." Fetching KA tag file " 2dup type cr ( value$ key$ filename$ )
    $read-file  if                     ( value$ key$ )
       ." ERROR: No KA tag file for " 2swap type cr  ( key$ )
+      true  abort" KA file not found" ( key$ )
       2drop                           ( )
    else                               ( value$ key$ file-data$ )
       2swap ($add-tag)                ( value$ )
@@ -74,7 +75,7 @@ false value update-firmware?          \ Make this true to update firmware
 ;
 
 d# 20 buffer: sn-buf
-: sn$  ( -- adr len )  sn-buf count  ;
+: sn$  ( -- adr len ) sn-buf count ;
 
 : try-get-sn  ( -- )
    sn-buf 1+ d# 20 accept   ( n )
@@ -91,13 +92,26 @@ d# 20 buffer: sn-buf
    true
 ;
 
-: get-sn  ( -- )
-   ." *****"
+: handle-pr-tag
+   " SN" find-tag 0= abort" Found Pr with no SN"
+   2dup
+   ." Will use existing SN tag for serial number: " type cr
+   -null
+   sn-buf place
+;
 
-   begin
-      " Please Input Serial Number ......" .instructions
-      try-get-sn
-   until
+: get-sn  ( -- )
+   " Pr" find-tag if   ( prval$ -- )
+      2drop            ( -- )
+      handle-pr-tag
+      exit
+   else
+      ." *****"
+      begin
+         " Please Input Serial Number ......" .instructions
+         try-get-sn
+      until
+   then
 ;
 
 d# 38 buffer: uuid-buf
@@ -177,6 +191,24 @@ d# 20 buffer: mac-buf
    $copy1
 ;
 
+: check-err-msg  ( adr len -- )
+   begin  dup  while              ( adr len )
+      linefeed left-parse-string  ( rem$ line$ )
+      ?remove-cr                  ( rem$ line$ )
+      [char] : left-parse-string  ( rem$ value$ key$ )
+      " ERR_MSG" $=  if           ( rem$ value$ )
+         page show-fail
+         type                     ( rem$ )
+         cr cr
+         ." Perss any key to power off!"
+         key drop cr cr
+         power-off
+      then                        ( rem$ value$ )
+      2drop                       ( rem$ )
+   repeat                         ( rem$ )
+   2drop                          ( )
+;
+
 0 0 2value response$
 
 : execute-downloads  ( adr len -- )
@@ -220,7 +252,11 @@ d# 20 buffer: mac-buf
    " BD"  ($delete-tag)
    \ leave NT so we can use one tag throughout: " NT"  ($delete-tag)
 
-   sn$          " SN"  put-tag
+   " Pr" find-tag if
+      ." Preserving existing SN tag" cr
+   else
+      sn$          " SN"  put-tag
+   then
    fwver$       " BV"  put-tag
    swid$        " T#"  put-tag
    uuid$        " U#"  put-tag
@@ -251,12 +287,20 @@ d# 20 buffer: mac-buf
    make-assy-request          ( )
    " Request" submit-file     ( )
    " Response" get-response to response$
+   response$ check-err-msg
+;
+
+: wait-connections  ( -- )
+   silent-probe-usb
+   wait-scanner
+   ?usb-keyboard
+   wait-lan
 ;
 
 : start-assy-test  ( -- )
    ?update-firmware
 
-   wait-lan
+   wait-connections
 
    get-info
 
@@ -267,6 +311,11 @@ d# 20 buffer: mac-buf
    response$ execute-downloads
 
    inject-tags
+
+   clear-screen
+   ." Download PASS... Please press a key to power off." cr cr cr
+   green-screen
+   key drop  cr cr
 
    ." Powering off ..." d# 2000 ms
    power-off

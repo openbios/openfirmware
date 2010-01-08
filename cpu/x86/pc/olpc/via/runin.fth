@@ -16,6 +16,36 @@ visible
 \ the failure log (if int:\runin\fail.log is present) or modifies the
 \ manufacturing data tags to cause the next boot to enter final test.
 
+d# 128 buffer: mb-buf  : mb$ mb-buf count ;
+
+: get-mb-tags  ( --)
+   " B#" find-tag  if
+      ?-null
+   then
+   mb-buf place
+;   
+
+: set-tag-assy ( --)
+   get-mb-tags
+   
+   clear-mfg-buf
+   
+   " "      " ww"  put-ascii-tag
+
+   " "(D3)" " SG"  ($add-tag)
+   mb$      " B#"  put-ascii-tag
+   " EN"    " SS"  put-ascii-tag
+
+   " ASSY"  " TS"  put-ascii-tag
+   " cifs:\\Administrator:qmsswdl@10.0.0.2\OLPC_TM"      " MS"  put-ascii-tag
+   " u:\boot\olpc.fth net"     " BD"  put-ascii-tag
+
+   flash-write-enable
+   (put-mfg-data)
+   no-kbc-reboot
+   kbc-on
+;
+
 d# 20 buffer: sn-buf
 : sn$  ( -- adr len )  sn-buf count  ;
 
@@ -48,13 +78,36 @@ d# 20 buffer: sn-buf
    -null
 ;
 
-: get-info  ( -- )
-   scan-sn
-;
+: get-sn-value  ( --)
+   " SN" find-tag  if
+      ?-null
+   else
+      abort" Missing SN tag !!!"
+   then
+   sn-buf place
+;   
 
 0 0 2value response$
 
 : final-filename$  ( -- adr len )  sn$ " %s.txt" sprintf  ;
+
+: check-err-msg  ( adr len -- )
+   begin  dup  while              ( adr len )
+      linefeed left-parse-string  ( rem$ line$ )
+      ?remove-cr                  ( rem$ line$ )
+      [char] : left-parse-string  ( rem$ value$ key$ )
+      " ERR_MSG" $=  if           ( rem$ value$ )
+         page show-fail
+         type                     ( rem$ )
+         cr cr
+         ." Perss any key to power off!"
+         key drop cr cr
+         power-off
+      then                        ( rem$ value$ )
+      2drop                       ( rem$ )
+   repeat                         ( rem$ )
+   2drop                          ( )
+;
 
 \ Send the board number as the request and return the response data
 : final-tag-exchange  ( -- )
@@ -62,6 +115,7 @@ d# 20 buffer: sn-buf
    sn$              " SN:"  put-key+value
    " Request" submit-file
    " Response" get-response  to response$ 
+   response$ check-err-msg
 ;
 
 : show-result-screen  ( -- )
@@ -71,6 +125,7 @@ d# 20 buffer: sn-buf
       green-screen
    else
       ." FAIL" cr cr
+      set-tag-assy
       red-screen
    then
 ;
@@ -79,6 +134,7 @@ d# 20 buffer: sn-buf
    2over  8 min  ka-dir$ " %s%s" sprintf  ( value$ key$ filename$ )
    $read-file  if                     ( value$ key$ )
       ." ERROR: No KA tag file for " 2swap type cr  ( key$ )
+      true  abort" KA file not found" ( key$ )
       2drop                           ( )
    else                               ( value$ key$ file-data$ )
       2swap ($add-tag)                ( value$ )
@@ -171,6 +227,7 @@ false value write-protect?
    " BD" ($delete-tag)
    " NT" ($delete-tag)
    " MD" ($delete-tag)
+   " Pr" ($delete-tag)
    make-md-tag
 
    response$ parse-tags
@@ -263,8 +320,6 @@ d# 4 constant rtc-threshold
 
 : wait-connections  ( -- )
    silent-probe-usb
-   wait-scanner
-   ?usb-keyboard
    wait-lan
 ;             
 
@@ -294,9 +349,14 @@ d# 4 constant rtc-threshold
 
 
 : finish-final-test  ( -- )
+   
+   " del int:\runin\olpc.fth" ['] eval catch
+   " copy int:\runin\repass.fth int:\runin\olpc.fth" ['] eval catch
+   " del int:\runin\repass.fth" ['] eval catch
+  
    wait-connections
 
-   get-info
+   get-sn-value
 
    verify-rtc-date
 

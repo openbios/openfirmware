@@ -34,22 +34,56 @@ visible
 ' mfg-ntp-server to ntp-servers
 
 d# 20 buffer: bn-buf  \ Buffer for scanned-in board number string
-: board#$  ( -- adr len )  bn-buf count  ;
+: board#$  ( -- adr len ) bn-buf count ;
+d# 20 buffer: sn-buf  \ Buffer for preserving serial number string
+: sn$  ( -- adr len ) sn-buf count ;
+
+: save-manuf-data
+   ." Connecting to save mfg data .. "  cifs-connect ." Connected .. "
+   sn$ open-temp-file
+   mfg-data-range cifs-write
+   " MfgDataSave" submit-file
+   cifs-disconnect
+;
+
+: handle-pr-tag
+   " B#" find-tag 0= abort" Found Pr with no B#"
+   2dup
+   ." Will use existing B# tag for board number: " type cr
+   -null
+   bn-buf place
+
+   " SN" find-tag 0= abort" Found Pr with no SN"
+   2dup
+   ." Will use existing SN tag for serial number: " type cr
+   -null
+   sn-buf place
+
+   save-manuf-data
+;
 
 \ Get a board number from the user, retrying until valid
 \ Usually the number is entered with a barcode scanner
+\ If the Pr tag is present, make steps to preserve board and
+\ serial numbers, and avoid prompting for them.
 : get-board#  ( -- )
-   ." *****"
-   begin
-      " Please Input Board Number ......" .instructions
-      bn-buf d# 20 accept-to-buf   ( n )
-      d# 14 <>  if
-         " Wrong length (must be 14 characters), try again" .problem
-      else
-         bn-buf 1+ c@ [char] Q =  if  exit  then
-         " Must begin with Q, try again" .problem
-      then
-   again
+   " Pr" find-tag if
+      2drop
+      handle-pr-tag
+      exit
+   else
+      ." *****"
+      begin
+         " Please Input Board Number ......" .instructions
+         bn-buf d# 20 accept-to-buf   ( n )
+         d# 14 <>  if
+            " Wrong length (must be 14 characters), try again" .problem
+         else
+            bn-buf 1+ c@ [char] Q =  if  exit  then
+            " Must begin with Q, try again" .problem
+         then
+      again
+   then
 ;
 
 d# 20 buffer: station#-buf
@@ -146,6 +180,25 @@ d# 20 buffer: filename-buf
    put-ascii-tag
 ;
 
+: check-err-msg  ( adr len -- )
+   begin  dup  while              ( adr len )
+      linefeed left-parse-string  ( rem$ line$ )
+      ?remove-cr                  ( rem$ line$ )
+      [char] : left-parse-string  ( rem$ value$ key$ )
+      " ERR_MSG" $=  if           ( rem$ value$ )
+         page show-fail
+         type                     ( rem$ )
+         cr cr
+         ." Press any key to power off!"
+         key drop cr cr
+         power-off
+      then                        ( rem$ value$ )
+      2drop                       ( rem$ )
+   repeat                         ( rem$ )
+   2drop                          ( )
+;
+
+
 0 0 2value response$
 
 false value any-tags?
@@ -181,6 +234,10 @@ false value any-tags?
    response$ write-new-tags               ( )
 
    " EN"    " SS"  put-ascii-tag         ( )
+
+   sn$ dup 0<> if
+      " SN" put-ascii-tag
+      " x" " Pr" put-ascii-tag then
 
 \   board#$  " B#"  put-ascii-tag         ( )
 \   " ASSY"  " TS"  put-ascii-tag         ( )
@@ -238,6 +295,8 @@ false value any-tags?
    smt-request$  to response$
    cifs-disconnect
    ." Done" cr
+
+   response$ check-err-msg
 
    autorun-mfg-tests
 
