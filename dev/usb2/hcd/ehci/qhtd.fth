@@ -47,14 +47,16 @@ d# 1024 dup constant #framelist		\ # of entries in framelist
 : framelist!  ( n idx -- )  4 * framelist + le-l!  ;
 
 : init-framelist  ( -- )
-   \ Allocate framelist
-   /framelist /align4kb aligned-alloc	( unaligned virt )
-   swap to framelist-unaligned		( virt )
-   dup to framelist			( virt )
-   /framelist true dma-map-in to framelist-phys	( )
+   framelist 0=  if
+      \ Allocate framelist
+      /framelist /align4kb aligned-alloc	    ( unaligned virt )
+      swap to framelist-unaligned		    ( virt )
+      dup to framelist			            ( virt )
+      /framelist true dma-map-in to framelist-phys  ( )
 
-   \ Initialize framelist
-   #framelist 0  do  TERMINATE i framelist!  loop
+      \ Initialize framelist
+      #framelist 0  do  TERMINATE i framelist!  loop
+   then
    framelist-phys periodic!
 ;
 
@@ -77,8 +79,10 @@ dup constant /intr-entry
 : intr-tail!  ( adr idx -- )  'intr >intr-tail l!  ;
 
 : init-intr  ( -- )
-   /intr alloc-mem dup to intr		\ Allocate intr
-   /intr erase				\ Initialize intr
+   intr 0=  if
+      /intr alloc-mem dup to intr		\ Allocate intr
+      /intr erase				\ Initialize intr
+   then
 ;
 
 \ ---------------------------------------------------------------------------
@@ -283,16 +287,7 @@ h# c000.0000 constant QH_MULT3
    r> 4 pick link-qhqtds		( qh qtd )
 ;
 
-: free-qh  ( qh -- )
-   >r					( R: qh )
-   r@ >qh-unaligned l@			( qh.u )  ( R: qh )
-   r@ dup >qh-phys l@			( qh.u,v,p )  ( R: qh )
-   r> >qh-size l@			( qh.u,v,p size )
-   aligned32-free-map-out		( )
-;
-
-\ Same as free-qh because the size field tells all
-: free-qhqtds  ( qh -- )  free-qh  ;
+\ Qtds will be freed automatically when the qh is freed
 
 : reuse-qhqtds  ( #qtds qh -- qh qtd )
    swap dup >r  /qtd * /qh + >r		( qh )  ( R: #qtds len )
@@ -367,36 +362,41 @@ bptr-ofs-mask invert constant bptr-mask		\ Buffer Pointer mask
       usbcmd@ h# 20 and  5 >>  usbsts@ h# 8000 and d# 15 >> 
    = until
 ;
-: enable-async  ( phys -- )
-   asynclist!                async-wait
+: enable-async  ( qh -- )
+   >qh-phys l@  asynclist!   async-wait
    usbcmd@ h# 20 or usbcmd!  async-wait
 ;
 : disable-async  ( -- )
    async-wait  usbcmd@ h# 20 invert and usbcmd!  async-wait
+   0 to qh-ptr
 ;
 
+: link-to-qh-ptr  ( qh -- )
+   dup  qh-ptr >qh-next  l!                               ( qh )
+   dup  >qh-phys l@  TYP_QH or  qh-ptr >hcqh-next  le-l!  ( qh )
+   sync-qhqtds                                            ( )
+;
 : insert-qh  ( qh -- )
-   >r
-   qh-ptr  if
-      \ If there is another qh in the system, link the new qh to the existing
-      \ qh head.
-      qh-ptr r@ >qh-prev l!
-      qh-ptr >qh-next l@ r@ >qh-next l!
-      qh-ptr >hcqh-next le-l@ r@ >hcqh-next le-l!
-      r@ qh-ptr >qh-next l!
-      r@ >qh-phys l@ TYP_QH or qh-ptr >hcqh-next le-l!
+   qh-ptr  if                                                 ( qh )
+      \ If there is another qh, link the new qh to the existing qh head.
+      qh-ptr                    over >qh-prev      l!         ( qh )
+      qh-ptr >qh-next      l@   over >qh-next      l!         ( qh )
+      qh-ptr >hcqh-next le-l@   over >hcqh-next le-l!         ( qh )
 
-      r> sync-qhqtds
-      qh-ptr sync-qh
-   else
-      \ If there is no qh in the system, link it to itself and mark it the
-      \ head.
-      r@ to qh-ptr
-      r@ >hcqh-endp-char dup le-l@ QH_HEAD or swap le-l!
-      r@ dup >qh-next l!
-      r@ >qh-phys l@ dup TYP_QH or r@ >hcqh-next le-l!
-      r> sync-qhqtds
-      enable-async
+      link-to-qh-ptr                                          ( )
+
+      qh-ptr sync-qh                                          ( )
+   else                                                       ( )
+      \ If there is no other qh, make it the head, link it to itself, 
+      \ and start the asynch schedule.
+
+      to qh-ptr                                                  ( )
+
+      qh-ptr >hcqh-endp-char  dup le-l@  QH_HEAD or  swap le-l!  ( )
+
+      qh-ptr link-to-qh-ptr                                      ( )
+
+      qh-ptr enable-async                                        ( )
    then
 ;
 : fix-wraparound-qh  ( qh -- )
@@ -423,7 +423,6 @@ bptr-ofs-mask invert constant bptr-mask		\ Buffer Pointer mask
    dup >qh-next l@ over =  if
       \ If qh is the only qh in the system, disable-async and exit
       drop disable-async
-      0 to qh-ptr
    else
       \ Otherwise, qh.prev points to qh.next, fix up reclamation bits.
       \ Ring doorbell, wait for answer.
@@ -625,17 +624,20 @@ delay? 0=  if  cr  7 emit  7 emit  ." TIMEOUT" cr  debug-me  then
       drop to dummy-qh
       TERMINATE dummy-qh >hcqh-overlay >hcqtd-next le-l!
    then
+   0 to qh-ptr
    dummy-qh insert-qh
 ;
 
 : free-dummy-qh  ( -- )
-   dummy-qh ?dup  if  free-qhqtds  0 to dummy-qh  then
+   dummy-qh ?dup  if  free-qh  0 to dummy-qh  then
 ;
 
 : ?alloc-dummy-qh  ( -- )
    0 my-w@ h# 1106 ( VIA ) =  if  alloc-dummy-qh  then
 ;
 
+\ The words this calls are written so they can be called again
+\ on resume from S3 state without causing redundant memory allocation.
 : (init-extra)  ( -- )
    ?alloc-dummy-qh
    init-intr

@@ -149,7 +149,7 @@ defer set-my-dev		' set-normal-dev to set-my-dev
       then
    then
 
-   my-qh dup remove-qh  free-qhqtds		( actual )
+   my-qh dup remove-qh  free-qh			( actual )
    usb-error					( actual usberr )
 ;
 
@@ -161,7 +161,7 @@ defer set-my-dev		' set-normal-dev to set-my-dev
    \ Process results
    my-qh done? 0=  if  my-qh error? drop  then
 
-   my-qh dup remove-qh  free-qhqtds
+   my-qh dup remove-qh  free-qh
    usb-error
 ;
 

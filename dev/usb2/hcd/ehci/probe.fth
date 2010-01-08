@@ -134,6 +134,17 @@ external
    probe-teardown
 ;
 
+: do-resume  ( -- )
+   init-ehci-regs
+   start-usb
+   claim-ownership
+   init-struct
+   init-extra
+;
+
+\ This is a sneaky way to determine if the hardware has been turned off without the software's knowledge
+: suspended?  ( -- flag )  asynclist@ 0=  qh-ptr 0<>  and  ;
+
 : open  ( -- flag )
    parse-my-args
    open-count 0=  if
@@ -148,23 +159,13 @@ external
          then
          0 ehci-reg@  h# ff and to op-reg-offset
          reset-usb
-         init-ehci-regs
-         start-usb
-         claim-ownership
-         init-struct
-         init-extra
+         do-resume
       then
+      suspended?  if  do-resume  then
       probe-root-hub
    then
    open-count 1+ to open-count
    true
-;
-
-: do-resume  ( -- )
-   init-ehci-regs
-   start-usb
-   claim-ownership
-   framelist-phys periodic!
 ;
 
 : close  ( -- )

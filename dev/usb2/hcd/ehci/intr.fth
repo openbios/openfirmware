@@ -112,7 +112,7 @@ external
    intr-in-qh 0=  if  exit  then
    intr-in-qh dup fixup-intr-in-data
    intr-in-qtd map-out-bptrs
-   dup remove-intr-qh  free-qhqtds
+   dup remove-intr-qh  free-qh
    0 to intr-in-qh  0 to intr-in-qtd
 ;
 

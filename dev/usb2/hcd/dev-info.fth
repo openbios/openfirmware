@@ -25,9 +25,9 @@ struct
    1+					\ Padding for word alignment
    /di-ep-struct #max-endpoint * field >di-ep
 					\ Endpoint structure
-dup constant /di-entry
+constant /di-entry
 
-#max-dev * constant /di
+/di-entry #max-dev * constant /di
 0 value di				\ device-info
 
 0 value cur-dev				\ Value of the last assigned usb address
@@ -60,14 +60,17 @@ dup constant /di-entry
 ;
 
 : init-di  ( -- )
-   \ allocate and initialize the device descriptors
-   /di alloc-mem to di
-   di /di erase
-   /pipe0 0 0 di-maxpayload!		\ Default max payload
+   di 0=  if
+      \ allocate and initialize the device descriptors
+      /di alloc-mem to di
+      di /di erase
+      /pipe0 0 0 di-maxpayload!		\ Default max payload
+   then
 ;
 
 : init-struct  ( -- )
    init-di
+   0 to cur-dev
 ;
 
 headers

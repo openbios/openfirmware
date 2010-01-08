@@ -76,9 +76,9 @@ d# 500 constant bulk-out-timeout
    then                                           ( #qtds )
    bulk-qh reuse-qhqtds
 ;
-: free-bulk-qhqtds  ( -- )
+: free-bulk-qh  ( -- )
    bulk-qh ?dup  if                     ( qh )
-      free-qhqtds			( )
+      free-qh				( )
       0 to bulk-qh
    then
 ;
@@ -512,7 +512,7 @@ external
 
 headers
 
-: (end-extra)  ( -- )  end-bulk-in free-bulk-qhqtds ;
+: (end-extra)  ( -- )  end-bulk-in free-bulk-qh  ;
 
 
 \ LICENSE_BEGIN
