@@ -49,6 +49,8 @@ h# f.1000 constant resume-data
 h# fd00.0000 constant fw-map-base
 h# ffc0.0000 constant fw-map-limit
 
+h# 8fff.0000 constant hdac-pci-base  \ Temporary for use during early startup
+
 h# d000.0000 constant fb-pci-base
 h# f000.0000 constant gfx-pci-base
 \ h# fe01.a000 constant ohci-pci-base

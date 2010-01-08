@@ -13,22 +13,7 @@ hex
 
 : set-node  ( node-id -- )  to node  ;
 
-: afg    ( -- )      1 set-node  ;  \ Audio Function Group
-: dac1   ( -- )  h# 10 set-node  ;
-: adc1   ( -- )  h# 14 set-node  ;
-: mux    ( -- )  h# 17 set-node  ;      \ mux between port b and port c
-: mux2   ( -- )  h# 18 set-node  ;
-: porta  ( -- )  h# 19 set-node  ;
-: portb  ( -- )  h# 1a set-node  ;    \ Port B - OLPC external mic
-: portc  ( -- )  h# 1b set-node  ;    \ Port C - OLPC internal mic
-: portd  ( -- )  h# 1c set-node  ;    \ Port D - OLPC unused
-: porte  ( -- )  h# 1d set-node  ;    \ Port E - OLPC unused
-: portf  ( -- )  h# 1e set-node  ;    \ Port F - OLPC DC input
-: portg  ( -- )  h# 1f set-node  ;    \ Port G - speaker driver
-: porth  ( -- )  h# 20 set-node  ;    \ Port H - S/PDIF out
-: porti  ( -- )  h# 22 set-node  ;    \ Port I - S/PDIF out
-: portj  ( -- )  h# 23 set-node  ;    \ Digital mic
-: vendor ( -- )  h# 25 set-node  ;    \ Vendor-specific controls
+fload ${BP}/dev/hdaudio/cx2058x-nodes.fth
 
 : volume-on-all  ( -- )
    adc1   h# 36006 cmd  h# 35006 cmd  \ Left gain/mute, right gain/mute
@@ -68,23 +53,10 @@ hex
 ;
 : cx2058x-disable-playback  ( -- )  ;
 
-: 1/8"        ( u -- u )  h#    10000 or  ;
-: green       ( u -- u )  h#     4000 or  ;
-: pink        ( u -- u )  h#     9000 or  ;
-: hp-out      ( u -- u )  h#   200000 or  ;
-: spdiff-out  ( u -- u )  h#   400000 or  ;
-: mic-in      ( u -- u )  h#   a00000 or  ;
-: line-in     ( u -- u )  h#   800000 or  ;
-: line-out    ( u -- u )                  ;
-: speaker     ( u -- u )  h#   100000 or  ;
-: left        ( u -- u )  h#  3000000 or  ;
-: front       ( u -- u )  h#  2000000 or  ;
-: internal    ( u -- u )  h# 10000000 or  ;
-: jack        ( u -- u )  h# 00000000 or  ;
-: unused      ( u -- u )  h# 40000000 or  ;
-: builtin     ( u -- u )  h# 80000000 or  ;
+: config-default  ( -- u )  f1c00 cmd?  ;
 
-: config(   ( node -- null-config-default )   0  ;
+[ifdef] notdef  \ Unnecessary because we do it in early startup assembly language
+fload ${BP}/dev/hdaudio/config.fth    \ Names for configuration settings
 
 : )config  ( config-default -- )
    \ set the high 24 bits of the config-default value
@@ -94,17 +66,14 @@ hex
    8 rshift      h# ff and  71f00 or  cmd
 ;
 
-
-: config-default  ( -- u )  f1c00 cmd?  ;
-
 : setup-config-default  ( -- )
    porta  config(  1/8" green left hp-out jack     )config
    portb  config(  1/8" pink left mic-in jack      )config
-   portc  config(  builtin front mic-in            )config
+   portc  config(  builtin internal front mic-in   )config
    portd  config(  unused line-out                 )config
    porte  config(  unused line-out                 )config
    portf  config(  1/8" pink left line-in jack     )config
-   portg  config(  builtin front speaker           )config
+   portg  config(  builtin internal front speaker  )config
    porth  config(  unused spdiff-out               )config
    porti  config(  unused spdiff-out               )config
    portj  config(  unused mic-in                   )config
@@ -113,11 +82,14 @@ hex
 : vendor-settings  ( -- )
    vendor
    h# 290a8 cmd \ high-pass filter, semi-manual mode, 600Hz cutoff
-   h# 34001 cmd \ speaker power 1 dB gain
-   h# 38001 cmd \ over-current / short-circuit protection, 2.6A threshold
-   h# 39019 cmd \ temperature protection at 130C
+\  h# 34001 cmd \ speaker power 1 dB gain
+   h# 34003 cmd \ speaker power -2 dB gain (1.26W @ 4 ohms)
+   h# 38021 cmd \ over-current / short-circuit protection, 2.6A threshold
+\   h# 39019 cmd \ temperature protection at 130C
+   h# 390c5 cmd \ temperature protection at 79.5C
    h# 42011 cmd \ over-temperature shutdown of class-D
 ;
+[then]
 
 \ check (expect) that cmd yields value
 : check-cmd  ( value cmd -- )
@@ -154,8 +126,8 @@ hex
    ['] adc1 to with-adc
    power-on-all
    volume-on-all
-   vendor-settings
-   setup-config-default
+\   vendor-settings
+\   setup-config-default
 ;
 
 : cx2058x-close  ( -- )  afg power-off  ;  \ Power off entire Audio Function Group

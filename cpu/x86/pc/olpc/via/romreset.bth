@@ -86,6 +86,8 @@ fload ${BP}/cpu/x86/pc/olpc/via/startdraminit.fth  \ DDRinit subroutine
 fload ${BP}/cpu/x86/pc/olpc/via/startcominit.fth   \ cominit subroutine
 [then]
 
+fload ${BP}/dev/hdaudio/start-cx2058x.fth
+
 label startup
    h# 10 port80
 
@@ -225,6 +227,8 @@ long-offsets off
    \ Cache is now setup normally, backed by memory
    \ Setup a small stack for subroutine calls
    h# 10.0000 # esp mov
+
+   init-codec #) call
 
    long-offsets on
    acpi-io-base 4 + port-rw           \ Get APCI Status register
