@@ -31,13 +31,19 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
    sp@ 4 -  h# f0000 ax-call  \ sp@ 4 - is a dummy pdir-va location
 [then]
 \  sum-forth
+   lock[
+   " init" pic-node $call-method
+   " setup-apic" apic-ih $call-method
+   " setup-io-apic" io-apic-ih $call-method
+   d# 10 set-tick-limit
+   ]unlock
 ;
 : kb-suspend  ( -- )
    sci-wakeup
    begin
       begin  1 ms key?  while  key  dup [char] q = abort" Quit"  emit  repeat
       s3
-   again   
+   again
 ;
 : s3-suspend
    audio-ih  if  audio-ih close-dev  0 to audio-ih  then
