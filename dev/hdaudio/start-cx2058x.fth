@@ -91,7 +91,7 @@ start-verb-table
    31000 place-verb      \ Undocumented register
    32000 place-verb      \ Undocumented register
    33000 place-verb      \ Undocumented register
-   34003 place-verb \ 4 ohm/1.59W  \ Comment disagrees with documentation - Class-DSpeakerPower.pdf says value 003 is 4 ohm/1.26W
+   34001 place-verb      \ Maximum output power for speaker - see Class-DSpeakerPower.pdf
    35000 place-verb      \ Undocumented register
    3600A place-verb      \ Undocumented register
    37000 place-verb      \ Undocumented register
