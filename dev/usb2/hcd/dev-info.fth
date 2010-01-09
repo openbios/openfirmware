@@ -22,7 +22,7 @@ struct
    1 field >di-speed			\ Device speed
    1 field >di-hub			\ Hub address (EHCI only)
    1 field >di-port			\ Port number (EHCI only)
-   1+					\ Padding for word alignment
+   1 field >di-reset			\ rest flag - 0 initially or after a resume, then 1
    /di-ep-struct #max-endpoint * field >di-ep
 					\ Endpoint structure
 constant /di-entry
@@ -41,6 +41,11 @@ constant /di-entry
 : di-hub@    ( idx -- hub )    'di >di-hub   c@  ;
 : di-port!   ( port idx -- )   'di >di-port  c!  ;
 : di-port@   ( idx -- port )   'di >di-port  c@  ;
+: di-reset?  ( idx -- flag )
+   'di >di-reset          ( adr )
+   dup c@ 0=              ( adr reset? )
+   1 rot c!               ( reset? )
+;
 
 : 'di-maxpayload  ( pipe idx -- adr )  'di-ep >di-ep-maxpayload  ;
 : di-maxpayload!  ( len pipe idx -- )  'di-maxpayload w!  ;
@@ -63,9 +68,9 @@ constant /di-entry
    di 0=  if
       \ allocate and initialize the device descriptors
       /di alloc-mem to di
-      di /di erase
-      /pipe0 0 0 di-maxpayload!		\ Default max payload
    then
+   di /di erase
+   /pipe0 0 0 di-maxpayload!		\ Default max payload
 ;
 
 : init-struct  ( -- )

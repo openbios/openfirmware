@@ -238,8 +238,61 @@ defer make-dev-property-hook  ( speed dev port -- )
    0 0 2swap str-property
 ;
 
+: be-l!  ( n adr -- )
+   >r lbsplit r@ c!  r@ 1+ c!  r@ 2+ c!  r> 3 + c!
+;
+
+: reuse-node  ( dev intf port phandle -- )
+   nip nip                        ( dev phandle )
+[ifdef] notdef
+   \ This is the kosher way to do it ...
+   push-package                   ( dev )
+   2drop                          ( dev )
+   encode-int                     ( adr len )
+   " assigned-address" property   ( )
+   pop-package                    ( )
+[else]                            ( dev phandle )
+   \ But this way doesn't leak memory
+   " assigned-address" rot  get-package-property  if  ( dev )
+      drop                                            ( )
+   else                                               ( dev adr len )
+      drop be-l!                                      ( )
+   then                                               ( )
+[then]
+;
+: reuse-old-node?  ( dev intf port -- reused? )
+   my-self ihandle>phandle child                 ( dev intf port phandle )
+   begin  ?dup  while                            ( dev intf port phandle )
+      " reg" 2 pick get-package-property 0=  if  ( dev intf port phandle adr len )
+         decode-int                              ( dev intf port phandle adr len' port1 )
+         4 pick  =  if                           ( dev intf port phandle adr len )
+            decode-int nip nip                   ( dev intf port phandle intf1 )
+            3 pick  =  if                        ( dev intf port phandle )
+               reuse-node                        ( )
+               true exit                         ( -- true )
+            then                                 ( dev intf port phandle )
+         else                                    ( dev intf port phandle adr len )
+            2drop                                ( dev intf port phandle )
+         then                                    ( dev intf port phandle )
+      then                                       ( dev intf port phandle )
+      peer                                       ( dev intf port phandle' )
+   repeat                                        ( dev intf port )
+   3drop false
+;
+
 : (make-device-node)  ( dev port intf -- )
-   swap dup >r encode-unit " " 2swap  new-device set-args	( dev )  ( R: port )
+   swap                              ( dev intf port )
+   3dup  reuse-old-node?  if         ( dev intf port )
+      3drop exit
+   else
+      \ As a possible improvement, the old child node could be linked to
+      \ a retained list for possible reuse later
+\ We don't do this because it can remove nodes we just created.
+\   say we create  keyboard@3,0  then we try to create  hid@3,1
+\   rm-obsolete-children will delete  keyboard@3,0
+\     dup rm-obsolete-children       ( dev intf port )
+   then
+   dup >r encode-unit " " 2swap  new-device set-args		( dev )  ( R: port )
    dup dup di-speed@ swap r> make-dev-property-hook		( dev )
    make-common-properties			\ Make non-descriptor based properties
    make-descriptor-properties			\ Make descriptor based properties

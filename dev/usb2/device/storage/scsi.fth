@@ -183,6 +183,9 @@ external
 : set-address  ( lun -- )
    0 max max-lun min  to lun
    device set-target
+   configuration set-config  if
+      ." USB storage scsi layer: Failed to set configuration" cr
+   then
 ;
 : set-timeout  ( n -- )  bulk-timeout max set-bulk-in-timeout  ;
 

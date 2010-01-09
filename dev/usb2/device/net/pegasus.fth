@@ -121,7 +121,6 @@ h# f1 constant SET_REG
 : pg-init-nic ( -- )
    true to length-header?
    init-buf
-   1 set-config  error?
    pg-get-mac-address  2drop
    pg-init-mac
    setup-pegasus-II

@@ -41,7 +41,7 @@ external
    alloc-pkt-buf
    2 0  do
       i portsc@ h# a and  if
-         i rm-obsolete-children			\ Remove obsolete device nodes
+\        i rm-obsolete-children			\ Remove obsolete device nodes
          i ['] probe-root-hub-port catch  if
             drop ." Failed to probe root port " i .d cr
          then

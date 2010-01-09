@@ -126,7 +126,7 @@ external
 
    #ports 0  ?do			        \ For each port
       i portsc@ 2 and  if			\ Connection changed
-         i rm-obsolete-children			\ Remove obsolete device nodes
+\         i rm-obsolete-children			\ Remove obsolete device nodes
          i probe-root-hub-port			\ Probe it
       then
    loop

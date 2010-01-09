@@ -122,6 +122,11 @@ headers
    encoded$>ascii$				( )
 ;
 
+\ Returns true the first time it is called for a given target device
+\ after a reset of the USB subsystem.  Used for reinitializing hardware.
+
+: reset?  ( -- flag )  target di-reset?  ;
+
 headers
 
 \ LICENSE_BEGIN

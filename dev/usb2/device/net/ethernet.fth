@@ -211,10 +211,16 @@ external
 : open  ( -- ok? )
    my-args  " debug" $=  if  debug-on  then
    device set-target
+   configuration set-config  if
+      ." Failed to set configuration" cr
+      false exit
+   then
+
    opencount @ 0=  if
+      " reset?" $call-parent  if  init-nic  then
+
       first-open?  if
          false to first-open?
-         init-nic
          mac-adr$ encode-bytes  " local-mac-address" property  ( )
          ?make-mac-address-property
       then
