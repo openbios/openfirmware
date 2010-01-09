@@ -338,6 +338,21 @@ devalias ide /ide@0/disk
 devalias sd  /sd/disk@2
 devalias net /wlan
 
+stand-init: Standard aliases
+   atest?  if
+      " int" " /ide@0/disk" $devalias
+      " ext" " /sd/disk@2"  $devalias
+   else
+      board-revision h# d28 <  if  \ B2 and earlier
+         " int" " /sd/disk@1"  $devalias
+         " ext" " /sd/disk@2"  $devalias
+      else
+         " ext" " /sd/disk@1"  $devalias
+         " int" " /sd/disk@3"  $devalias
+      then
+   then
+;
+
 \ The "int" devalias is defined in report-disk at runtime, since it
 \ varies between A-test and later boards.
 
@@ -360,19 +375,6 @@ devalias net /wlan
    " disk"  " /usb@10,2/disk" ?report-device  \ USB 1.1
    " disk"  " /usb@10,1/disk" ?report-device  \ USB 1.1
    " disk"  " /usb@10,0/disk" ?report-device  \ USB 1.1
-
-   atest?  if
-      " int" " /ide@0/disk" $devalias
-      " ext" " /sd/disk@2"  $devalias
-   else
-      board-revision h# d28 <  if  \ B2 and earlier
-         " int" " /sd/disk@1"  $devalias
-         " ext" " /sd/disk@2"  $devalias
-      else
-         " ext" " /sd/disk@1"  $devalias
-         " int" " /sd/disk@3"  $devalias
-      then
-   then
 ;
 
 : report-keyboard  ( -- )
@@ -389,7 +391,15 @@ devalias net /wlan
 : report-net  ( -- )
    " /usb/ethernet" 2dup locate-device  0=  if  ( name$ phandle )
       drop                                      ( name$ )
-     " net" 2swap $devalias                     ( )
+
+      \ Don't recreate the alias if it is already correct
+      " net" aliased?  if                       ( name$ existing-name$ )
+         2over $=  if                           ( name$ )
+            2drop exit                          ( -- )
+         then                                   ( name$ )
+      then                                      ( name$ )
+
+      " net" 2swap $devalias                    ( )
    else                                         ( name$ )
       2drop                                     ( )
    then
