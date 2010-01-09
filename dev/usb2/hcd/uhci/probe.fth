@@ -53,6 +53,14 @@ external
    pop-package
 ;
 
+: do-resume  ( -- )
+   init-struct
+   start-usb
+;
+
+\ This is a sneaky way to determine if the hardware has been turned off without the software's knowledge
+: suspended?  ( -- flag )  flbaseadd@ 0=  framelist-phys 0<>  and  ;
+
 : open  ( -- flag )
    parse-my-args
    open-count 0=  if
@@ -61,10 +69,12 @@ external
          false to first-open?
          ?disable-smis
          reset-usb
-         init-struct
          init-lists
-         start-usb
+         do-resume
       then
+
+      suspended?  if  do-resume  then
+
       alloc-dma-buf
 
       probe-root-hub

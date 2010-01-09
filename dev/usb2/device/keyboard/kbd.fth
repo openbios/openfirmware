@@ -325,6 +325,18 @@ ff constant ks-prev			\ Previously pressed
    true
 ;
 
+\ kbd-buf and led-buf must have been allocated
+: setup-hardware  ( -- )
+   device set-target
+   configuration set-config  if  ." Failed to set USB keyboard configuration" cr  then
+   set-boot-protocol         if  ." Failed to set USB keyboard boot protocol" cr  then
+   \ Some USB keyboards don't implement set-idle properly, and it's not critical,
+   \ so we suppress the message to avoid confusing the user
+   idle-rate set-idle   drop  \  if  ." Failed to set USB keyboard idle" cr  then
+   0 set-leds
+;
+
+
 external
 
 : install-abort  ( -- )  true to check-abort?   ;   \ Check for break
@@ -346,10 +358,11 @@ external
    dup  0=  if  drop -2  then                 ( #read | -2 )
 ;
 
+
 : open  ( -- flag )
    kbd-refcount @  if  1 +refcnt true exit  then
-   device set-target
    init-kbd-buf
+   setup-hardware
    noop					\ Add noop so I can patch it before open
    normal-op?  if
       unlock
@@ -375,17 +388,8 @@ variable test-char
 
 : init  ( -- )
    init
-   init-kbd-buf
    null-entry /qe erase
    key-state /key-state erase
-   device set-target
-   configuration set-config  if  ." Failed to set USB keyboard configuration" cr  then
-   set-boot-protocol         if  ." Failed to set USB keyboard boot protocol" cr  then
-   \ Some USB keyboards don't implement set-idle properly, and it's not critical,
-   \ so we suppress the message to avoid confusing the user
-   idle-rate set-idle   drop  \  if  ." Failed to set USB keyboard idle" cr  then
-   0 set-leds
-   free-kbd-buf
 ;
 
 headers

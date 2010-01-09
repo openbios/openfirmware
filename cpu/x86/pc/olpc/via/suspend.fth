@@ -45,12 +45,16 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
       s3
    again
 ;
-: s3-suspend
+: s3-no-usb  ( -- )
    audio-ih  if  audio-ih close-dev  0 to audio-ih  then
    " video-save" screen-ih $call-method  \ Freeze display
    s3
    " video-restore" screen-ih $call-method  \ Unfreeze display
-\   " /usb@f,5" open-dev  ?dup  if  " do-resume" 2 pick $call-method  close-dev  then
+;
+: s3-suspend
+   suspend-usb
+   s3-no-usb
+   resume-usb
 ;
 alias s s3-suspend
 

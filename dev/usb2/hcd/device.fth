@@ -158,7 +158,7 @@ defer make-dev-property-hook  ( speed dev port -- )
 ;
 
 : make-ctrl-pipe-property  ( pipe size interval -- )
-   drop 2dup register-pipe		( pipe size )
+   drop					( pipe size )
    over h# f and rot h# 80 and  if	( size pipe )
       " control-in-pipe"  int-property
       " control-in-size"
@@ -168,7 +168,7 @@ defer make-dev-property-hook  ( speed dev port -- )
    then  int-property
 ;
 : make-iso-pipe-property  ( pipe size interval -- )
-   drop 2dup register-pipe		( pipe size )
+   drop					( pipe size )
    over h# 0f and rot h# 80 and  if	( size pipe )
       " iso-in-pipe"  int-property
       " iso-in-size"
@@ -178,7 +178,7 @@ defer make-dev-property-hook  ( speed dev port -- )
    then  int-property
 ;
 : make-bulk-pipe-property  ( pipe size interval -- )
-   drop 2dup register-pipe		( pipe size )
+   drop 				( pipe size )
    over h# f and rot h# 80 and  if	( size pipe )
       " bulk-in-pipe"  int-property
       " bulk-in-size"
@@ -188,7 +188,6 @@ defer make-dev-property-hook  ( speed dev port -- )
    then  int-property
 ;
 : make-intr-pipe-property  ( pipe size interval -- )
-   -rot 2dup register-pipe rot	( pipe size interval )
    rot dup h# f and swap h# 80 and  if	( size interval pipe )
       " intr-in-pipe"      int-property
       " intr-in-interval"  int-property
@@ -204,6 +203,7 @@ defer make-dev-property-hook  ( speed dev port -- )
    swap ENDPOINT find-desc swap 0  ?do	( adr' )
       dup 2 + c@			( adr pipe )
       over 4 + le-w@			( adr pipe size )
+      2dup register-pipe		( adr pipe size )
       2 pick 6 + c@			( adr pipe size interval )
       3 pick 3 + c@ 3 and  case		( adr pipe size interval type )
          0  of  make-ctrl-pipe-property  endof
@@ -238,28 +238,48 @@ defer make-dev-property-hook  ( speed dev port -- )
    0 0 2swap str-property
 ;
 
+\ Sets the di-maxpayload fields in the dev-info endpoint descriptor array
+: reregister-pipes  ( dev intf -- )
+   cfg-desc-buf swap find-intf-desc	( dev adr )
+   dup c@  over +  swap 4 + c@ 		( dev adr' #endpoints )
+   swap  ENDPOINT find-desc		( dev #endpoints adr' )
+   swap 0  ?do				( dev adr' )
+      dup 4 + le-w@			( dev adr size )
+      over 2 + c@  h# f and		( dev adr size pipe )
+      3 pick di-maxpayload!		( dev adr )
+      dup c@ +				( dev adr' )
+   loop  2drop				( )
+;
+
 : be-l!  ( n adr -- )
    >r lbsplit r@ c!  r@ 1+ c!  r@ 2+ c!  r> 3 + c!
 ;
 
 : reuse-node  ( dev intf port phandle -- )
-   nip nip                        ( dev phandle )
-[ifdef] notdef
-   \ This is the kosher way to do it ...
-   push-package                   ( dev )
-   2drop                          ( dev )
-   encode-int                     ( adr len )
-   " assigned-address" property   ( )
-   pop-package                    ( )
-[else]                            ( dev phandle )
-   \ But this way doesn't leak memory
-   " assigned-address" rot  get-package-property  if  ( dev )
-      drop                                            ( )
-   else                                               ( dev adr len )
-      drop be-l!                                      ( )
-   then                                               ( )
-[then]
+   >r drop			  ( dev intf r: phandle )
+
+   2dup reregister-pipes	  ( dev intf r: phandle )
+   drop                           ( dev      r: phandle )
+
+   \ Change the assigned-address property without leaking memory
+   " assigned-address" r@ get-package-property  if  ( dev r: phandle )
+      drop                                  ( r: phandle )
+   else                                     ( dev adr len r: phandle )
+      drop be-l!                            ( r: phandle )
+   then                                     ( r: phandle )
+
+   " probe-hub" r@ find-method  if          ( xt r: phandle )
+      r@ push-package                       ( xt r: phandle )
+      " " new-instance                      ( xt r: phandle )
+      set-default-unit                      ( xt r: phandle )
+      execute                               ( r: phandle )
+      destroy-instance                      ( r: phandle )
+      pop-package                           ( r: phandle )
+   then                                     ( r: phandle )
+
+   r> drop
 ;
+
 : reuse-old-node?  ( dev intf port -- reused? )
    my-self ihandle>phandle child                 ( dev intf port phandle )
    begin  ?dup  while                            ( dev intf port phandle )

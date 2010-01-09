@@ -22,7 +22,7 @@ struct
    1 field >di-speed			\ Device speed
    1 field >di-hub			\ Hub address (EHCI only)
    1 field >di-port			\ Port number (EHCI only)
-   1 field >di-reset			\ rest flag - 0 initially or after a resume, then 1
+   1 field >di-reset			\ reset flag - 0 initially or after a resume, then 1
    /di-ep-struct #max-endpoint * field >di-ep
 					\ Endpoint structure
 constant /di-entry

@@ -61,18 +61,41 @@ dev /  3 " usb-test-ports" integer-property  dend
 ;
 alias p2 probe-usb
 
-: ?usb-keyboard  ( -- )
+0 value usb-keyboard-ih
+
+: attach-usb-keyboard  ( -- )
    " usb-keyboard" expand-alias  if   ( devspec$ )
       drop " /usb"  comp  0=  if      ( )
-         " usb-keyboard" open-dev add-input
+         " usb-keyboard" open-dev to usb-keyboard-ih
+         usb-keyboard-ih add-input
          exit
       then
    else                               ( devspec$ )
       2drop
    then
+;
+
+: detach-usb-keyboard  ( -- )
+   usb-keyboard-ih  if
+      usb-keyboard-ih remove-input
+      usb-keyboard-ih close-dev
+      0 to usb-keyboard-ih
+   then
+;
+
+: ?usb-keyboard  ( -- )
+   attach-usb-keyboard
    " /usb/serial" open-dev  ?dup  if
       add-input
    then
+;
+: suspend-usb  ( -- )
+   detach-usb-keyboard
+;
+: resume-usb  ( -- )
+   d# 300 ms  \ USB misses devices if you probe too soon
+   silent-probe-usb
+   attach-usb-keyboard
 ;
 
 \ Unlink every node whose phys.hi component matches port
