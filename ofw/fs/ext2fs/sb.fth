@@ -28,6 +28,8 @@ defer int!    ( l adr -- )  ' be-l! to int!
 : fpg		( -- n )   9 +sbl  ;			\ h#2000 frags_per_group
 : ipg		( -- n )  10 +sbl  ;			\ h#790  inodes_per_group
 : magic         ( -- n )  28 +sbw  ;
+: state@        ( -- n )  29 +sbw  ;    \ for fsck: 0 for dirty, 1 for clean, 2 for known errors
+: state!        ( n -- )  super-block 29 wa+ short!  ;
 : revlevel	( -- n )  19 +sbl  ;
 : /inode        ( -- n )  revlevel 1 =  if  44 +sbw  else  h# 80  then  ;
 \ : bsize	( -- n )

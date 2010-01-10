@@ -75,14 +75,13 @@ variable totoff
 : +link-count  ( increment -- )  link-count + link-count!  ;
 
 : new-inode    ( mode -- inode# )
-   alloc-inode set-inode
-   0 +i /inode erase		( mode )
+   alloc-inode set-inode        ( mode )   \ alloc-inode erases the inode
    file-attr!			( )
    time&date >unix-seconds	( time )
    dup atime!			( time ) \ set access time
    dup ctime!			( time ) \ set creation time
        mtime!			( )      \ set modification time
-   1 link-count!		( )      \ set links_count to 1
+   0 link-count!		( )      \ link count will be incremented by new-dirent
    inode#			( inode# )
 ;
 
