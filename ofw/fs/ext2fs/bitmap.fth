@@ -164,7 +164,7 @@ create lowbits
 : update-gds   ( -- )
    gd-modified? if
       \ Copy group descriptors to backup locations
-      \ XXX if SPARSE_SUPER, then write only to groups 0,1, and powers of 3,5,7
+      \ If SPARSE_SUPER, then write only to groups 0,1, and powers of 3,5,7
       \ One way to find out, other than checking the numbers, is to inspect
       \ the block bitmap number in the group descriptor.  If it is larger than
       \ the calculated block number, do the backup.
