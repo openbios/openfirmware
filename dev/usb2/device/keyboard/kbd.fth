@@ -326,14 +326,20 @@ ff constant ks-prev			\ Previously pressed
 ;
 
 \ kbd-buf and led-buf must have been allocated
-: setup-hardware  ( -- )
+: setup-hardware?  ( -- error? )
    device set-target
-   configuration set-config  if  ." Failed to set USB keyboard configuration" cr  then
+   " reset?" $call-parent  if
+      configuration set-config  if
+         ." Failed to set USB keyboard configuration" cr
+         true exit
+      then
+   then
    set-boot-protocol         if  ." Failed to set USB keyboard boot protocol" cr  then
    \ Some USB keyboards don't implement set-idle properly, and it's not critical,
    \ so we suppress the message to avoid confusing the user
    idle-rate set-idle   drop  \  if  ." Failed to set USB keyboard idle" cr  then
    0 set-leds
+   false
 ;
 
 
@@ -362,7 +368,10 @@ external
 : open  ( -- flag )
    kbd-refcount @  if  1 +refcnt true exit  then
    init-kbd-buf
-   setup-hardware
+   setup-hardware?  if
+      free-kbd-buf
+      false exit
+   then
    noop					\ Add noop so I can patch it before open
    normal-op?  if
       unlock

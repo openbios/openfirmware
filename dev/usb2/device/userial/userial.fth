@@ -18,9 +18,11 @@ purpose: userial driver - see http://www.tty1.net/userial/
 
 : open  ( -- flag )
    device set-target
-   configuration set-config  if
-      ." userial: set-config failed" cr
-      false exit
+   " reset?" $call-parent  if
+      configuration set-config  if
+         ." userial: set-config failed" cr
+         false exit
+      then
    then
    alloc-buffers
    inbuf h# 10 bulk-in-pipe begin-bulk-in

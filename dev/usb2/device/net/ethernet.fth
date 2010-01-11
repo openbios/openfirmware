@@ -211,13 +211,15 @@ external
 : open  ( -- ok? )
    my-args  " debug" $=  if  debug-on  then
    device set-target
-   configuration set-config  if
-      ." Failed to set configuration" cr
-      false exit
-   then
 
    opencount @ 0=  if
-      " reset?" $call-parent  if  init-nic  then
+      " reset?" $call-parent  if
+         configuration set-config  if
+            ." Failed to set configuration" cr
+            false exit
+         then
+         init-nic
+      then
 
       first-open?  if
          false to first-open?

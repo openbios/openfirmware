@@ -54,6 +54,14 @@ external
 : open  ( -- flag )
    device set-target
    refcount @ 0=  if
+
+      " reset?" $call-parent  if
+         configuration set-config  if
+            ." Failed set serial port configuration" cr
+            false exit
+         then
+      then
+
       init-buf
       inituart rts-dtr-on
    then
