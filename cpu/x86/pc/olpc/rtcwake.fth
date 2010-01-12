@@ -75,7 +75,13 @@ d# 1 value rtc-alarm-delay
 ;
 
 : autowack-test ( ms -- )
+   dup 0< if ." Delay can't be negative.  Did you forget to provide it?" cr
+      drop exit 
+   then  
+   dup ." Setting autowack delay to " .d ." ms " cr
+   ." Press x to exit" cr
    autowack-delay
+   sci-wakeup
    autowack-on
    0 begin
       s 
@@ -88,7 +94,12 @@ d# 1 value rtc-alarm-delay
 
 \ for testing wakeups from the EC
 : wackup-test-ec  ( ms -- )
+   dup 0< if ." Delay can't be negative.  Did you forget to provide it?" cr
+      drop exit 
+   then  
+   dup ." Setting autowack delay to " .d ." ms " cr
    ." Press x to exit" cr
+   sci-wakeup
    d# 3000 autowack-delay     \ At small ms delays the host can miss the SCI so this
                               \ is the back up.
    0 begin                    ( ms count )
