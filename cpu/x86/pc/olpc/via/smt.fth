@@ -2,6 +2,16 @@
 
 visible
 
+\ Does a base 36 compare on the firmware versions
+\ true if $2 <= $1
+: fw-$compare ( $1 $2 -- $2>$1 )
+	base @ >r d# 36 base ! 		( $1 $2 )
+	$number if exit then		( $1 n2 )
+	-rot $number if exit then	( n2 n1 )
+	pop-base u<=
+;
+
+
 : wanted-fw$  ( -- $ )  " q3a23"  ;
 
 
@@ -21,7 +31,10 @@ visible
 
 : ?update-firmware  ( -- )
    \ Exit if the existing firmware and the wanted firmware are the same
-   fw-version$  wanted-fw$  nocase-$=  if  exit  then
+   fw-version$  wanted-fw$  fw-$compare if 
+	fw-version$ type ."  >= " wanted-fw$ type cr
+	." Not updating fimware" cr exit 
+   then
    ." Updating firmware to version " fw-version$ type cr
    d# 2000 ms
    ?enough-power
