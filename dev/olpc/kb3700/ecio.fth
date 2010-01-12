@@ -288,6 +288,10 @@ d# 10 constant #ec-retries
 \ EC indexed I/O will come up in enabled state.
 : ec-reboot  ( -- )   h# db ec-cmd66  ;
 
+\ This restarts only the host (no ec reset) but EC index I/O will come up 
+\ in enable sate
+: host-pwr-cycle ( -- ) h# d7 ec-cmd66 ;
+
 : ec-ixio-reboot  ( -- )
    ['] ec-reboot catch  if
       ." Automatic restart failed.  Remove/reinstall the battery and AC." cr

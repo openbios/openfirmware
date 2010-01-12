@@ -446,7 +446,7 @@ patch drop ms install-console
       2drop 2drop
    then
 
-   ec-reboot   \ Tell the EC to reboot us, so the EC can reset too
+   host-pwr-cycle \ Tell the EC to reboot us
 
    \ Prevent "resume from S3" on restart
    4 acpi-w@  h# 1c00 invert and  4 acpi-w!
