@@ -582,19 +582,15 @@ true                               ' client-symbols?  set-config-int-default
 \   .built cr
 ;
 
-: ?factory-boot-sequence  ( -- flag )
+: factory-test?  ( -- flag )
    \ TS is the "test station" tag.  Its value is set to "DL" at the
    \ end of manufacturing test.
-   " TS" find-tag  if       ( adr len )
-      ?-null  " DL" $=  0=  ( in-factory? )
-   else                     ( )
-      \ Missing TS tag is treated as not factory mode
+   " TS" find-tag  if         ( adr len )
+      ?-null  " SHIP" $=  0=  ( in-factory? )
+   else                       ( )
+      \ Missing TS tag is treated as not in factory test
       false
-   then                     ( in-factory? )
-   if                       ( )
-      " /prober /usb/ethernet disk:\boot\olpc.fth int:\boot\olpc.fth /xp ext:\boot\olpc.fth /wlan"
-      to boot-device
-   then                     ( )
+   then                       ( in-factory? )
 ;
 
 : debug-interact  ( -- )
@@ -650,7 +646,6 @@ true                               ' client-symbols?  set-config-int-default
    no-page
 
    ?factory-mode
-\   ?factory-boot-sequence
 
    disable-user-aborts
    console-start
@@ -663,7 +658,7 @@ true                               ' client-symbols?  set-config-int-default
 
    read-game-keys
 
-   text-off
+   factory-test? 0=  if  text-off  then
 
    " probe-" do-drop-in
 
@@ -688,7 +683,7 @@ true                               ' client-symbols?  set-config-int-default
    ?scan-nand
 [then]
    ?fs-update
-   secure-startup
+   factory-test? 0=  if  secure-startup  then
    unblock-exceptions
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
    ?usb-keyboard
