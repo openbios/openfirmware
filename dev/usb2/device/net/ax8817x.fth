@@ -215,12 +215,21 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
 
 0 value has-internal-loopback?
 
-h# 88 constant def-rx-ctl   \ SO (MAC ON) and AB (accept broadcast)
+h# 88 value def-rx-ctl   \ SO (MAC ON) and AB (accept broadcast)
 
 : ax-start-nic  ( -- )
    ax-auto-neg-wait
-   def-rx-ctl  my-args  " promiscuous" $=  if  1 or  then  rx-ctl!
+   h# 88
+   use-promiscuous?  if
+      1 or
+   else
+      use-multicast?  if  2 or  then
+   then
+   to def-rx-ctl
+   def-rx-ctl rx-ctl!
 ;
+: ax-promiscuous  ( -- )  rx-ctl@  1 or  rx-ctl!  ;
+: ax-set-multicast  ( adr len -- )  2drop rx-ctl@  2 or  rx-ctl!  ;
 : ax-stop-nic  ( -- )  0 rx-ctl!  ;
 
 : ax-init-nic  ( -- )		\ Per ax8817x_bind
@@ -273,6 +282,8 @@ h# 88 constant def-rx-ctl   \ SO (MAC ON) and AB (accept broadcast)
    ['] ax-mii-hw to }mii
    ['] ax-loopback{  to loopback{
    ['] ax-}loopback  to }loopback
+   ['] ax-promiscuous to promiscuous
+   ['] ax-set-multicast to set-multicast
 
    vid h# 2001 =  pid h# 1a00 = and  if  h# 009f.9d9f to ax-gpio  then
    vid h# 07b8 =  pid h# 420a = and  if  h# 001f.1d1f to ax-gpio  then

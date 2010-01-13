@@ -14,6 +14,9 @@ create mac-adr 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c,
 6 constant /mac-adr
 : mac-adr$  ( -- adr len )  mac-adr /mac-adr  ;
 
+false value use-promiscuous?
+false value use-multicast?
+
 defer init-nic         ( -- )			' noop to init-nic
 defer wrap-msg         ( adr len -- adr' len' )	' noop to wrap-msg
 defer unwrap-msg       ( adr len -- adr' len' )	' noop to unwrap-msg
@@ -25,6 +28,10 @@ defer mii{             ( -- )                   ' noop to mii{  \ Acquire
 defer }mii             ( -- )                   ' noop to }mii  \ Release
 defer mii@             ( reg -- val )           ' noop to mii@
 defer mii!             ( val reg -- )           ' drop to mii@
+external
+defer promiscuous      ( -- )                   ' noop to promiscuous
+defer set-multicast    ( adr len -- )           ' 2drop to set-multicast
+headers
 
 : phy-loopback{  ( -- )
    mii{  0 mii@  h# 4000 or  0 mii!  }mii

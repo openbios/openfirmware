@@ -9,9 +9,9 @@ h# f0 constant GET_REG
 h# f1 constant SET_REG
 
 \ Select register definitions
-: ec0        0   ;
-: ec1        1   ;
-: ec2        2   ;
+: ectl0      0   ;
+: ectl1      1   ;
+: ectl2      2   ;
 : gpio10c h# 7e  ;
 : gpio32c h# 7f  ;
 : phya    h# 25  ;
@@ -97,8 +97,8 @@ h# f1 constant SET_REG
 
 : pg-link-up?  ( -- flag )  1 pg-mii@  4 and 0<>  ;
 
-: pg-reset-mac   ( -- )  8 ec1 pg-reg-c!  ;
-: pg-mac-reset?  ( -- )  ec1 pg-reg-c@  8 and  0=  ;
+: pg-reset-mac   ( -- )  8 ectl1 pg-reg-c!  ;
+: pg-mac-reset?  ( -- )  ectl1 pg-reg-c@  8 and  0=  ;
 
 : pg-init-mac ( -- )
    pg-reset-mac  begin  pg-mac-reset?  until
@@ -130,11 +130,19 @@ h# f1 constant SET_REG
 : pg-start-nic ( -- )
    pg-sync-link-status
    \ force 100Mbps full-duplex
-   h# 0130c9 ec0 3 pg-write-reg
+   h# 0130c9
+   use-promiscuous?  if
+      h# 040000 or
+   else
+      use-multicast?  if  2 or  then
+   then
+   ectl0 3 pg-write-reg
 ;
+: pg-promiscuous  ( -- )  ectl2 pg-reg-c@  4 or  ectl2 pg-reg-c!  ;
+: pg-set-multicast  ( -- )  ectl0 pg-reg-c@  2 or  ectl0 pg-reg-c!  ;
 
 : pg-stop-nic ( -- )
-   0 ec0 2 pg-write-reg
+   0 ectl0 2 pg-write-reg
 ;
 
 \ Process the length header that's inlined after the frame
@@ -153,6 +161,8 @@ h# f1 constant SET_REG
    ['] pg-unwrap-msg to unwrap-msg
    ['] pg-mii@ to mii@
    ['] pg-mii! to mii!
+   ['] pg-promiscuous to promiscuous
+   ['] pg-set-multicast to set-multicast
 ;
 
 : init  ( -- )  init  vid pid pegasus?  if  init-pegasus  then  ;

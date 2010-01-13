@@ -201,6 +201,19 @@ here test-packet - constant /tp
    false
 ;
 
+: parse-args  ( -- )
+   false to use-promiscuous?
+   false to use-multicast?
+   my-args
+   begin  ?dup  while
+      ascii , left-parse-string
+      2dup " debug" $=  if  debug-on  then
+      2dup " promiscuous" $=  if  true to use-promiscuous?  then
+      2dup " multicast"   $=  if  true to use-multicast?  then
+      2drop
+   repeat drop
+;
+
 external
 
 : close  ( -- )
@@ -209,7 +222,7 @@ external
 ;
 
 : open  ( -- ok? )
-   my-args  " debug" $=  if  debug-on  then
+   parse-args
    device set-target
 
    opencount @ 0=  if
