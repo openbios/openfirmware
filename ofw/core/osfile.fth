@@ -2,10 +2,28 @@ purpose: Device tree node that accesses a host system file
 \ See license at end of file
 
 \ Creates a device node named "/osfile", of device-type "block", which
-\ accesses an operating system file named by its first argument.
+\ accesses an operating system file named by its first argument.  That
+\ file contains a verbatim disk image.  This feature is similar to
+\ Linux's "loopback mount" feature.
+\
 \ Backslash (\) characters in the file name are translated to
 \ the underlying operating system's directory delimiter.
-\  Example:   " /osfile:\dev\rfd0"
+\   Example:   dir /osfile:\dev\rfd0,\boot\test.fth
+\   Example:   dir /osfile:\home\wmb\fs.img,\boot\test.fth
+\ As an alternative to supplying the disk image filename in the device
+\ specifier, you can set "osfile$" to return the name.  This is
+\ helpful for cases where the image filename would interfere with
+\ the parsing of later parts of the device specifier.
+\   Example:
+\      dev /osfile
+\      : disk-image$  " /tmp/disk.img" ;
+\      ' disk-image$ to osfile$
+\      dend
+\      dir /osfile:\boot\test.fth
+\ When using the "osfile$" method, you can use either backslash (\) or
+\ the system's native delimiter in the disk image filename.  When using
+\ the device specifier argument method, you must use backslash, because
+\ forward slash delimits major device tree components in a device specifier.
 
 dev /
 \ : open true ; : close ;
@@ -13,6 +31,7 @@ dev /
 new-device
 " osfile" device-name
 also
+defer osfile$ ' null$ to osfile$
 0 instance value file#
 
 \ The deblocker converts a block/record-oriented interface to a byte-oriented
@@ -56,12 +75,17 @@ also
 ;
 : $fopen  ( adr len -- fd )  $cstr  0 swap 8 syscall 2drop retval  ;
 : open  ( -- flag )
-   my-args ascii , left-parse-string            ( rem-str filename-str )
-   2dup  convert/                               ( rem-str )
-   $fopen to file#                              ( rem-str )
-   file# 0<  if  2drop false  exit  then        ( rem-str )
+   my-args                                      ( arg$ ) 
+   osfile$  dup 0=  if                          ( arg$ null$ )
+      2drop                                     ( arg$ )
+      ascii , left-parse-string                 ( arg$' img-filename$ )
+   then                                         ( arg$ img-filename$ )
 
-   init-deblocker  0=  if  false exit  then     ( rem-str )
+   2dup  convert/                               ( arg$ img-filename$ )
+   $fopen to file#                              ( arg$ )
+   file# 0<  if  2drop false  exit  then        ( arg$ )
+
+   init-deblocker  0=  if  false exit  then     ( arg$ )
 
    init-label-package  dup 0=  if               ( flag )
       deblocker close-package                   ( false )
