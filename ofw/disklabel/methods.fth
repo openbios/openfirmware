@@ -58,6 +58,9 @@ headerless
 ;
 
 : select-partition  ( -- )
+   \ If parse-partition set #part to -2, it already mapped the partition
+   #part -2 =  if  exit  then
+
    \ Partition 0 is the raw disk, in which case we leave sector-offset at 0
    \ and avoid reading the disk.  Otherwise, we try to determine what sort
    \ of partition map the disk has, if any, and from that determine the
@@ -182,6 +185,23 @@ headerless
       over c@  to ufs-partition              ( adr len )
       1 /string                              ( adr' len' )
       dup  0=  if  2drop exit  then          ( adr len )
+   then					     ( adr len )
+
+   \ If the first character is "-", it is followed by a decimal number N and
+   \ the "partition" is the last N blocks
+   over c@  ascii -  =  if                   ( adr len )
+      1 /string                              ( adr' len' )
+      push-decimal $number pop-base  if      ( )
+         ." Bad decimal number after '-' in partition spec" cr
+         exit
+      then                                   ( n )
+      /sector um*                            ( d.partition-size )
+      get-disk-size  size-low size-high      ( d.partition-size d.disk-size )
+      2over d-  /sector um/mod nip           ( d.partition-size partition-sector )
+      to sector-offset                       ( d.partition-size )
+      to size-high to size-low               ( )
+      -2 to #part                            ( )   \ Tell select-partition
+      exit
    then					     ( adr len )
 
    \ If the first character of the string is ",", discard it
