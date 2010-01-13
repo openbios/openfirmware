@@ -417,15 +417,7 @@ headers
    2drop false
 ;
 
-: setup-multicast  ( -- )
-   server-ip-addr my-ip-addr copy-ip-addr
-   " set-multicast" my-parent ihandle>phandle find-method  if   ( acf )
-      " "(01 00 5e)" his-en-addr swap move                      ( acf )
-      my-ip-addr 1+  his-en-addr 3 +  3 move                    ( acf )
-      his-en-addr 3 + c@ h# 7f and his-en-addr 3 + c!           ( )
-      his-en-addr /e  rot my-parent call-package                ( )
-      exit
-   then
+: try-promiscuous  ( -- )
    " enable-promiscuous" my-parent ihandle>phandle find-method  if   ( acf )
       my-parent call-package
       exit
@@ -442,11 +434,31 @@ headers
    ." Can't enable multicast reception in network driver" cr
 ;
 
+: send-multicast  ( -- )
+   server-ip-addr his-ip-addr copy-ip-addr
+   " "(01 00 5e)" his-en-addr swap move                      ( acf )
+   his-ip-addr 1+  his-en-addr 3 +  3 move                   ( acf )
+   his-en-addr 3 + c@ h# 7f and his-en-addr 3 + c!           ( )
+;
+
+: receive-multicast  ( -- )
+\   server-ip-addr my-ip-addr copy-ip-addr
+   " set-multicast" my-parent ihandle>phandle find-method  if   ( acf )
+      " "(01 00 5e)" his-en-addr swap move                      ( acf )
+      my-ip-addr 1+  his-en-addr 3 +  3 move                    ( acf )
+      his-en-addr 3 + c@ h# 7f and his-en-addr 3 + c!           ( )
+      his-en-addr /e  rot my-parent call-package                ( )
+      exit
+   then
+   try-promiscuous
+;
+
 defer configured  ' noop to configured
 : configure  ( -- )
    use-last?  if  configured exit  then
 
-   server-ip-addr multicast?  if  setup-multicast exit  then
+   my-ip-addr multicast?  if  receive-multicast exit  then
+   server-ip-addr multicast?  if  send-multicast exit  then
 
    use-bootp?  if
       nvram-ip?  0=  if  process-bootp  then
