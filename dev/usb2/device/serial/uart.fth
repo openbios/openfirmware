@@ -52,6 +52,7 @@ external
 : write  ( adr len -- actual )  dup  if  write-bytes  else  nip  then  ;
 
 : open  ( -- flag )
+   set-device
    device set-target
    refcount @ 0=  if
 
@@ -88,8 +89,6 @@ variable test-char
 : init  ( -- )
    init
    init-buf
-   device set-target
-   configuration set-config  if  ." Failed set serial port configuration" cr  then
    init-hook
    free-buf
 ;

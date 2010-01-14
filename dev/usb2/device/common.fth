@@ -36,8 +36,11 @@ false instance value debug?
   get-my-property  if  0  else  decode-int nip nip  then
 ;
 
+\ This needs to be called every time that the device could have changed
+: set-device  ( -- )  " assigned-address"  get-int-property  to device  ;
+
 : init  ( -- )
-   " assigned-address"  get-int-property  to device
+   set-device
    " configuration#"    get-int-property  to configuration
    " bulk-in-pipe"      get-int-property  to bulk-in-pipe
    " bulk-out-pipe"     get-int-property  to bulk-out-pipe

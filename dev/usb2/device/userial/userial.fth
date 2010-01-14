@@ -17,6 +17,7 @@ purpose: userial driver - see http://www.tty1.net/userial/
 ;
 
 : open  ( -- flag )
+   set-device
    device set-target
    " reset?" $call-parent  if
       configuration set-config  if

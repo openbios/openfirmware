@@ -79,7 +79,6 @@ h# 53425355 constant csw-signature	\ little-endian
    init-execute-command
    alloc-bulk
    device set-target
-   configuration set-config  if  ." Failed to set storage configuration" cr  then
    get-max-lun
    free-bulk
 ;
@@ -182,6 +181,7 @@ external
 
 : set-address  ( lun -- )
    0 max max-lun min  to lun
+   set-device  \ The device number may have changed if we recycled the node
    device set-target
    " reset?" $call-parent  if
       configuration set-config  if

@@ -58,7 +58,7 @@ h# beef.face constant TYPE_USB_INDICATION
 
 : end-out-ring  ( -- )  " end-out-ring" $call-parent  ;
 
-: set-parent-channel  ( -- )  device set-target  ;
+: set-parent-channel  ( -- )  set-device  device set-target  ;
 
 : setup-bus-io  ( /inbuf /outbuf -- error? )
    4 bulk-out-pipe " begin-out-ring" $call-parent   ( /inbuf )
@@ -77,9 +77,6 @@ h# beef.face constant TYPE_USB_INDICATION
    " vendor-id"  property-or-abort  to vid
    " device-id"  property-or-abort  to pid
    set-parent-channel
-   configuration set-config  if
-      ." Failed to set USB configuration for wireless" cr
-   then
 ;
 
 init

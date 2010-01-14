@@ -41,6 +41,10 @@ constant /di-entry
 : di-hub@    ( idx -- hub )    'di >di-hub   c@  ;
 : di-port!   ( port idx -- )   'di >di-port  c!  ;
 : di-port@   ( idx -- port )   'di >di-port  c@  ;
+: di-is-reset  ( idx -- )
+   'di >di-reset          ( adr )
+   0 swap c!
+;
 : di-reset?  ( idx -- flag )
    'di >di-reset          ( adr )
    dup c@ 0=              ( adr reset? )

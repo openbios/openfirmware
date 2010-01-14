@@ -223,6 +223,7 @@ external
 
 : open  ( -- ok? )
    parse-args
+   set-device
    device set-target
 
    opencount @ 0=  if
@@ -247,12 +248,6 @@ external
 ;
 
 headers
-
-: init  ( -- )
-   init
-   device set-target
-   configuration set-config  if  ." Failed to set ethernet configuration" cr  then
-;
 
 init
 

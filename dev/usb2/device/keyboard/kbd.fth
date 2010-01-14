@@ -327,6 +327,7 @@ ff constant ks-prev			\ Previously pressed
 
 \ kbd-buf and led-buf must have been allocated
 : setup-hardware?  ( -- error? )
+   set-device
    device set-target
    " reset?" $call-parent  if
       configuration set-config  if
