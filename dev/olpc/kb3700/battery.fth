@@ -656,6 +656,8 @@ h# 90 buffer: logstr
       >sdx logstr $cat
       h# 70 bat-b@        \ AbnormalCauseCode
       >sdx logstr $cat
+      h# fc21 ec@         \ GPIO_08-0F 0E is chg mosfet
+      >sdx logstr $cat
 
       decimal
       bat-V@ bg-V>V >sd.ddd logstr $cat "  " logstr $cat \ V
