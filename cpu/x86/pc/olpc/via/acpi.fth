@@ -59,7 +59,7 @@ create fadt
 ( 070 4 )  h#  5a5 l,     \ Flags - see below for bit definitions
 ( 074 12 ) 1 c, 8 c, 0 c, 1 c,  h# 66. d,   \ Reset register - I/O, 8 bits, 0 offset, byte access
 
-( 080 1 )  h#   db c,     \ Reset value
+( 080 1 )  h#   d7 c,     \ Reset value
 ( 081 3 )  0 c, 0 c, 0 c, \ Reserved
 fadt set-acpi-table-length
 
