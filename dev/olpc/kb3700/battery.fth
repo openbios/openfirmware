@@ -644,15 +644,15 @@ h# 90 buffer: logstr
       >sdx logstr $cat  
       h# F780 ec@         \ w1 state
       >sdx logstr $cat
-      h# 40 ec-ram@       \ pwr_flag
+      h# 40 ec-ram@       \ sPOWER_FLAG 
       >sdx logstr $cat
-      h# a4 ec-ram@       \ bat_status
+      h# a4 ec-ram@       \ sMBAT_STATUS 
       >sdx logstr $cat
-      h# a5 ec-ram@       \ chg status
+      h# a5 ec-ram@       \ sMCHARGE_STATUS
       >sdx logstr $cat
-      h# a6 ec-ram@       \ bat misc
+      h# a6 ec-ram@       \ sMBAT_MISC 
       >sdx logstr $cat
-      h# a7 ec-ram@       \ bat misc2
+      h# a7 ec-ram@       \ sMBAT_MISC2
       >sdx logstr $cat
       h# 70 bat-b@        \ AbnormalCauseCode
       >sdx logstr $cat
