@@ -28,7 +28,7 @@ headers
 ;
 
 : stop-net  ( -- )
-   stop-nic
+   stop-mac
    end-bulk-in
    free-buf
 ;
@@ -41,7 +41,7 @@ external
 
 : copy-packet  ( adr len -- len' )
    dup multi-packet?  if  4 +  then   ( adr len len' )
-   /outbuf >  if  ." USB Ethernet write packet too long" cr  stop-nic abort  then  ( adr len )
+   /outbuf >  if  ." USB Ethernet write packet too long" cr  stop-mac abort  then  ( adr len )
 
    multi-packet?  if       ( adr len )
       dup wbsplit          ( adr len len.low len.high )
@@ -71,7 +71,7 @@ external
 \ The data format is:
 \  length.leword  ~length.leword  data  [ pad-to-even ]
 : extract-packet  ( -- data-adr len )
-   residue 4 <  if  ." Short residue from USB Ethernet" cr stop-nic  abort  then
+   residue 4 <  if  ." Short residue from USB Ethernet" cr stop-mac  abort  then
 
    pkt-adr dup 4 +  swap >r
    r@ c@     r@ 1+  c@ bwjoin   ( data-adr length )
@@ -130,7 +130,7 @@ external
       0					( adr 0 )
    then					( adr ihandle|0 )
 
-   dup  0=  if  ." Can't open obp-tftp support package" stop-nic abort  then
+   dup  0=  if  ." Can't open obp-tftp support package" stop-mac abort  then
 					( adr ihandle )
 
    >r
@@ -181,23 +181,25 @@ here test-packet - constant /tp
       clear-rx
       5 0  do  try-loopback?  ?leave  loop
    }loopback
+   d# 20 ms  \ Settling time after switching back
    scratch-buf d# 2000 free-mem
 ;
 
 : do-start?  ( -- error? )
-   start-nic
+   start-phy
 
    link-up? 0=  if
       ." Network not connected." cr
-      stop-nic
+      end-bulk-in
+      free-buf
       true exit
    then
 
    init-buf
    inbuf /inbuf bulk-in-pipe begin-bulk-in
+   start-mac
 
    loopback-test
-
    false
 ;
 

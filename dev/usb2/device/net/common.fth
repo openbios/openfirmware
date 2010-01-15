@@ -18,12 +18,13 @@ false value use-promiscuous?
 false value use-multicast?
 
 defer init-nic         ( -- )			' noop to init-nic
+defer reset-nic        ( -- )			' noop to reset-nic
 defer wrap-msg         ( adr len -- adr' len' )	' noop to wrap-msg
 defer unwrap-msg       ( adr len -- adr' len' )	' noop to unwrap-msg
 defer link-up?	       ( -- up? )		' true to link-up?
-defer reset-nic        ( -- )			' noop to reset-nic
-defer start-nic        ( -- )			' noop to start-nic
-defer stop-nic         ( -- )			' noop to stop-nic
+defer start-phy        ( -- )			' noop to start-phy
+defer start-mac        ( -- ) 			' noop to start-mac
+defer stop-mac         ( -- )			' noop to stop-mac
 defer mii{             ( -- )                   ' noop to mii{  \ Acquire
 defer }mii             ( -- )                   ' noop to }mii  \ Release
 defer mii@             ( reg -- val )           ' noop to mii@
@@ -80,7 +81,7 @@ d# 2048 value /inbuf    \ Power of 2 larger than max-frame-size
 
 : property-or-abort  ( name$ -- n )
    2dup get-my-property  if          ( name$ )
-      ." Can't find property " type cr  stop-nic abort
+      ." Can't find property " type cr  stop-mac abort
    then                              ( name$ value$ )
    2swap 2drop  decode-int  nip nip  ( n )
 ;

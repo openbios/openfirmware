@@ -217,8 +217,7 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
 
 h# 88 value def-rx-ctl   \ SO (MAC ON) and AB (accept broadcast)
 
-: ax-start-nic  ( -- )
-   ax-auto-neg-wait
+: ax-start-mac  ( -- )
    h# 88
    use-promiscuous?  if
       1 or
@@ -228,9 +227,13 @@ h# 88 value def-rx-ctl   \ SO (MAC ON) and AB (accept broadcast)
    to def-rx-ctl
    def-rx-ctl rx-ctl!
 ;
+
+: ax-start-phy  ( -- )
+   ax-auto-neg-wait
+;
 : ax-promiscuous  ( -- )  rx-ctl@  1 or  rx-ctl!  ;
 : ax-set-multicast  ( adr len -- )  2drop rx-ctl@  2 or  rx-ctl!  ;
-: ax-stop-nic  ( -- )  0 rx-ctl!  ;
+: ax-stop-mac  ( -- )  0 rx-ctl!  ;
 
 : ax-init-nic  ( -- )		\ Per ax8817x_bind
    bulk-out-pipe 3 >  if
@@ -249,8 +252,7 @@ h# 88 value def-rx-ctl   \ SO (MAC ON) and AB (accept broadcast)
    ax-toggle-gpio
    ax-get-phyid
    select-phy
-   h# 80 rx-ctl!  \ Turn off receiver during setup
-   \ ax-stop-nic
+   ax-stop-mac
    ax-get-mac-address  2drop
    ax-set-ipg
    ax-init-mii
@@ -273,8 +275,9 @@ h# 88 value def-rx-ctl   \ SO (MAC ON) and AB (accept broadcast)
 : init-ax  ( -- )
    ['] ax-init-nic  to init-nic
    ['] ax-link-up?  to link-up?
-   ['] ax-start-nic to start-nic
-   ['] ax-stop-nic  to stop-nic
+   ['] ax-start-mac to start-mac
+   ['] ax-start-phy to start-phy
+   ['] ax-stop-mac  to stop-mac
    ['] ax-get-mac-address to get-mac-address
    ['] ax-mii@ to mii@
    ['] ax-mii! to mii!

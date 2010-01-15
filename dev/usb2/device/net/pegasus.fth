@@ -127,8 +127,7 @@ h# f1 constant SET_REG
    pg-sync-link-status
 ;
 
-: pg-start-nic ( -- )
-   pg-sync-link-status
+: pg-start-mac  ( -- )
    \ force 100Mbps full-duplex
    h# 0130c9
    use-promiscuous?  if
@@ -138,10 +137,15 @@ h# f1 constant SET_REG
    then
    ectl0 3 pg-write-reg
 ;
+
+: pg-start-phy ( -- )
+   pg-sync-link-status
+;
+
 : pg-promiscuous  ( -- )  ectl2 pg-reg-c@  4 or  ectl2 pg-reg-c!  ;
 : pg-set-multicast  ( -- )  ectl0 pg-reg-c@  2 or  ectl0 pg-reg-c!  ;
 
-: pg-stop-nic ( -- )
+: pg-stop-mac ( -- )
    0 ectl0 2 pg-write-reg
 ;
 
@@ -155,8 +159,9 @@ h# f1 constant SET_REG
 : init-pegasus  ( -- )
    ['] pg-init-nic  to init-nic
    ['] pg-link-up?  to link-up?
-   ['] pg-start-nic to start-nic
-   ['] pg-stop-nic  to stop-nic
+   ['] pg-start-phy to start-phy
+   ['] pg-start-mac to start-mac
+   ['] pg-stop-mac  to stop-mac
    ['] pg-get-mac-address to get-mac-address
    ['] pg-unwrap-msg to unwrap-msg
    ['] pg-mii@ to mii@
