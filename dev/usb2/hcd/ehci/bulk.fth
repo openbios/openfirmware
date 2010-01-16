@@ -207,18 +207,25 @@ d# 500 constant bulk-out-timeout
    r> swap attach-qtds			( )
 ;
 
-: make-ring  ( /buf #bufs -- qh qtd )
-   2dup * alloc&map				( /buf #bufs va pa )
-   dup  4 pick 4 pick  alloc-ring-qhqtds	( /buf #bufs va pa qh qtd )
-   >r >r					( /buf #bufs va pa r: qtd qh )
-   r@ >qh-buf-pa l!  r@ >qh-buf  l!		( /buf #bufs )
-   r@ >qh-#bufs  l!  r@ >qh-/buf l!		( r: qtd qh )
+: make-ring  ( /buf #bufs in? -- qh qtd )
+   -rot                                         ( in? /buf #bufs )
+   2dup * alloc&map				( in? /buf #bufs va pa )
+   dup  4 pick 4 pick  alloc-ring-qhqtds	( in? /buf #bufs va pa qh qtd )
+   >r >r					( in? /buf #bufs va pa r: qtd qh )
+   r@ >qh-buf-pa l!  r@ >qh-buf  l!		( in? /buf #bufs )
+   r@ >qh-#bufs  l!  r@ >qh-/buf l!		( in? r: qtd qh )
 
-   \ Start bulk in transaction
-   r@ pt-bulk fill-qh				( r: qtd qh )
+   r@ pt-bulk fill-qh				( in? r: qtd qh )
 
-   \ Let the QH keep track of the data toggle
+   \ Let the QH keep track of the data toggle on an ongoing basis ...
    r@ >hcqh-endp-char dup le-l@ QH_TD_TOGGLE invert and swap le-l!
+
+   \ But we have to initialize it here based on the last state
+   r@ >hcqh-overlay >hcqtd-token                ( in? token-adr r: qtd qh )
+   dup le-l@                                    ( in? token-adr token-val r: qtd qh )
+   rot  if  bulk-in-data@  else  bulk-out-data@  then   ( token-adr token-val toggle r: qtd qh )
+   or                                           ( token-adr token-val' r: qtd qh )
+   swap le-l!                                   ( r: qtd qh )
 
    r> r>					( qh qtd )
    2dup link-ring				( qh qtd )
@@ -282,7 +289,7 @@ external
    dup to bulk-out-pipe				( /buf #bufs pipe )
    set-bulk-vars				( /buf #bufs )
 
-   make-ring					( qh qtd )
+   false make-ring				( qh qtd )
    to bulk-out-qtd  to bulk-out-qh		( )
    bulk-out-timeout bulk-out-qh >qh-timeout l!	( )
 ;
@@ -294,7 +301,7 @@ external
    dup to bulk-in-pipe				( /buf #bufs pipe )
    set-bulk-vars				( /buf #bufs )
 
-   make-ring					( qh qtd )
+   true make-ring				( qh qtd )
    dup activate-in-ring				( qh qtd )
    to bulk-in-qtd  to bulk-in-qh		( )
    bulk-in-timeout bulk-in-qh >qh-timeout l!	( )
@@ -359,8 +366,10 @@ headers
       dup >qtd-/buf l@ d# 16 <<                    ( qtd token_word )
       TD_STAT_ACTIVE or TD_C_ERR3 or TD_PID_IN or  ( qtd token_word' )
 
-      \ Maybe unnecessary based on using dt in QH
-      bulk-in-data@ or  toggle-bulk-in-data        ( qtd token_word' )
+      \ We need not adjust the data toggle here, as the controller handles
+      \ it automatically while the queue is active.  We set it initially
+      \ when creating the the queue head, and save it for later after
+      \ detaching the queue head.
 
       over >hcqtd-token le-l!                      ( qtd )
    more-qtds?   while				   ( qtd )

@@ -168,8 +168,9 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
    \ I increase the loop count in case the partner is slow in negotiating.
    \ And if there's no connection at all, let's not wait too long.
    ax-mii-sw
-   d# 2000 0  do  1 ax-mii@ 4 and  ?leave  1 ms  loop
+   d# 3000 0  do  1 ax-mii@ h# 20 and  ?leave  1 ms  loop
    ax-mii-hw
+   d# 10 ms  \ Just in case the link status bit isn't ready just yet
 ;
 
 : select-phy  ( -- )

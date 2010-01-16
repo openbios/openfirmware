@@ -244,7 +244,8 @@ h# c000.0000 constant QH_MULT3
    \ operations, where ping transactions can help significantly.
    \ (I'm not sure this matters, as the overlay will overwrite it).
 
-   TD_TOGGLE_DATA1 TD_STAT_OUT or swap >hcqtd-token le-l!	( )
+   \ The data toggle will be set later
+   TD_STAT_OUT swap >hcqtd-token le-l!	( )
 ;
 
 : link-qhqtds  ( qtd.v qtd.p #qtds qh -- )

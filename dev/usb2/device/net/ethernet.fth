@@ -147,14 +147,10 @@ external
 
 headers
 
-\ This loopback test is a reliability improvement.  The AX88772,
-\ and perhaps other chips, sometimes loses the first received
-\ packet.  That's annoying, as the first packet is often a
-\ reply that we care about, thus causing a timeout and retry.
-\ We work around that by sending ourselves a few loopback packets
-\ until we receive one.  In most cases, the first loopback packet
-\ is received correctly, and if not, the second one is okay.
-\ We try 5 times just to be safe, exiting as soon as we "win".
+\ This loopback code is here just in case it might be useful later.
+\ It was originally written as a workaround for a first-packet lossage
+\ problem, but the problem was eventually tracked down to a data toggle
+\ issue in the EHCI layer.
 
 0 value scratch-buf
 : clear-rx  ( -- )
@@ -181,7 +177,6 @@ here test-packet - constant /tp
       clear-rx
       5 0  do  try-loopback?  ?leave  loop
    }loopback
-   d# 20 ms  \ Settling time after switching back
    scratch-buf d# 2000 free-mem
 ;
 
@@ -190,8 +185,6 @@ here test-packet - constant /tp
 
    link-up? 0=  if
       ." Network not connected." cr
-      end-bulk-in
-      free-buf
       true exit
    then
 
@@ -199,7 +192,6 @@ here test-packet - constant /tp
    inbuf /inbuf bulk-in-pipe begin-bulk-in
    start-mac
 
-   loopback-test
    false
 ;
 

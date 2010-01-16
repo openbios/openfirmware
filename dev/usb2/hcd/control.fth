@@ -78,6 +78,9 @@ external
 
 : set-config  ( cfg -- usberr )
    >r 0 0 0 r> DR_DEVICE DR_OUT or SET_CONFIGURATION control-set 
+   \ Setting the configuration initializes the endpoint's bulk data toggles
+   0 bulk-out-pipe target di-out-data!
+   0 bulk-in-pipe  target di-in-data!
 ;
 
 : set-interface  ( alt intf -- usberr )
