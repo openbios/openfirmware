@@ -13,8 +13,37 @@ dev screen
 5 value fg
 h# f value bg
 
-: pointat  ( x y -- )
+: halve  ( n -- n/2 )  dup 1 and  swap u2/ +  ;
+
+defer pointat           ( x y -- )
+defer subpixel-pointat  ( xf yf -- )
+
+0 0 2value dot-offset
+
+: draw-dot  ( x y -- )
+   dot-offset d+
    bytes/line *  swap wa+  frame-buffer-adr +  fg swap w!
+;
+: subpixel-draw-dot  ( xf yf -- )
+   swap halve swap halve
+   bytes/line *  swap wa+  frame-buffer-adr +  fg swap w!
+;
+' draw-dot to pointat
+' subpixel-draw-dot to subpixel-pointat
+
+: subpixel-double-dot  ( x y -- )
+   over 1+  over     draw-dot
+   over 1+  over 1+  draw-dot
+   over     over 1+  draw-dot
+   draw-dot
+;
+: double-dot  ( x y -- )
+   swap 2* swap 2*     ( x' y' )
+   subpixel-double-dot
+;
+: double-size  ( -- )
+   ['] double-dot to pointat
+   ['] subpixel-double-dot to subpixel-pointat
 ;
 
 variable curx  variable cury
@@ -79,6 +108,13 @@ variable curx  variable cury
 
 : lineto  ( x y -- )  swap curx @ -  swap cury @ -  rline  ;
 
+: boxat  ( x y w h -- )
+   2swap moveto         ( w h )
+   0 over rline         ( w h )  \ Up
+   over 0 rline         ( w h )  \ Right
+   0 swap negate rline  ( w )    \ Down
+   negate 0  rline      ( )      \ Left
+;
 
 1 [if]
 \ Test for line drawing
@@ -104,6 +140,56 @@ d# 240 value gey0  d# 240 value gex0
    3 +loop
 ;
 [then]
+3 value subpixel-shift
+: >point  ( x y -- )  swap subpixel-shift lshift  swap subpixel-shift lshift  wljoin  ;
+
+: place-point  ( p -- )
+   lwsplit
+   swap subpixel-shift 1- rshift  swap subpixel-shift 1- rshift    ( x y )
+   subpixel-pointat                           ( )
+;
+
+: mid  ( p0 p1 -- mid )
+   +  lwsplit halve  swap halve swap wljoin
+;   
+: close-coord?  ( n0 n1 -- flag )  - abs 1 subpixel-shift lshift  <=  ;
+: close-point?   ( p0 p1 -- flag )
+   lwsplit  rot lwsplit   ( x1 y1 x0 y0 )
+   rot close-coord? -rot  close-coord? and
+;
+
+\ Bezier curve rendering by the midpoint method - see, for example,
+\ http://web.cs.wpi.edu/~matt/courses/cs563/talks/surface/bez_surf.html
+: bezier-steps  ( p0 p1 p2 p3 -- )
+   dup 4 pick close-point?  if  4drop exit  then
+   2over mid  >r      ( p0 p1 p2 p3                  r: p01 )
+   -rot tuck          ( p0 p3 p2 p1 p2               r: p01 )
+   mid >r             ( p0 p3 p2                     r: p01 p12 )
+   over mid           ( p0 p3  p23                   r: p01 p12 )
+   dup r@ mid         ( p0 p3  p23 p123              r: p01 p12 )
+   r> r@ mid          ( p0 p3  p23 p123 p012         r: p01 )
+   2dup mid           ( p0 p3  p23 p123 p012 p0123   r: p01 )
+   dup place-point    ( p0 p3  p23 p123 p012 p0123   r: p01 )
+
+   \ For convenience of stack manipulation, we calculate the right half "backwards"
+   \ This gives equivalent results due to the symmetry of the calculation 
+   tuck 2>r           ( p0  p3 p23 p123 p0123        r: p01 p012 p0123 )
+   recurse            ( p0                           r: p01 p012 p0123 )
+
+   2r> r> -rot        ( p0 p01 p012 p0123 )
+   recurse            ( )
+;
+: bezier  ( p0 p1 p2 p3 -- )
+   dup place-point  4 pick place-point  bezier-steps
+;
+
+: curveto  ( x1 y1 x2 y2 x3 y3 -- )
+   2>r                                     ( x1 y1 x2 y2 x3 y3  r: x3 y3 )
+   2r@  >point >r  >point >r  >point >r    ( r: x3 y3 p3 p2 p1 )
+   curx @ cury @ >point  r> r> r>          ( p0 p1 p2 p3 r: x3 y3 )
+   bezier                                  ( r: x3 y3 )
+   2r> cury !  curx !
+;
 
 : plot0  ( -- x y )  0  screen-height 10 -  ;
 : clear-plot  ( width height -- )
@@ -165,7 +251,7 @@ variable ylim  variable ymin
 
 dend
 
-: $call-screen  ( ? name$ -- ? )  stdout @ $call-method  ;
+\ : $call-screen  ( ? name$ -- ? )  stdout @ $call-method  ;
 : wave  ( adr -- )  " waveform" $call-screen  ;
 : clear-plot  ( width height -- )  " clear-plot"  $call-screen  ;
 : lineplot  ( xt xmin xmax xscale  ymin ymax  -- )  " plot" $call-screen  ;
