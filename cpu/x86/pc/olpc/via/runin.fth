@@ -18,14 +18,14 @@ visible
 
 d# 128 buffer: mb-buf  : mb$ mb-buf count ;
 
-: get-mb-tags  ( --)
+: get-mb-tags  ( -- )
    " B#" find-tag  if
       ?-null
    then
    mb-buf place
 ;   
 
-: set-tag-assy ( --)
+: set-tag-assy ( -- )
    get-mb-tags
    
    clear-mfg-buf
@@ -178,7 +178,7 @@ false value write-protect?
       2>r 2over 2r@ $=  if                   ( value$ key$ r: old-value$' )
          2drop 2drop 2r> 2drop               ( )
       else                                   ( value$ key$ r: old-value$' )
-         type ."  tag changed!" cr            ( value$ r: old-value$' )
+         type ."  tag changed!" cr           ( value$ r: old-value$' )
          ."   Old: " 2r> show-tag cr         ( value$ )
          ."   New: " show-tag cr             ( )
          do-tag-error
@@ -188,12 +188,28 @@ false value write-protect?
    then
 ;
 
+: replace-ka-value ( rem$ value$ key$ -- rem$ file-data$ key$ )
+   2swap 2dup 8 min  ka-dir$ " %s%s" sprintf  ( rem$ key$ value$ filename$ )
+   $read-file  if                             ( rem$ key$ value$ )
+      ." ERROR: No KA tag file for " type cr  ( rem$ key$ )
+      true  abort" KA file not found"         ( rem$ key$ )
+      2drop                                   ( rem$ )
+   else                                       ( rem$ key$ value$ file-data$ )
+      2swap 2drop                             ( rem$ key$ file-data$ )
+      2swap                                   ( rem$ file-data$ key$ )
+   then
+;
+
 : parse-tags  ( adr len -- )
    begin  dup  while              ( adr len )
       linefeed left-parse-string  ( rem$ line$ )
       ?remove-cr                  ( rem$ line$ )
       [char] : left-parse-string  ( rem$ value$ key$ )
       dup 2 =  if                 ( rem$ value$ key$ )
+            \ catch value from http, if KA tag
+            2dup " KA" $= if      ( rem$ value$ key$ )
+               replace-ka-value   ( rem$ value$' key$ )
+            then
          handle-tag               ( rem$ )
       else                        ( rem$ value$ key$ )
          4drop                    ( rem$ )
@@ -201,6 +217,7 @@ false value write-protect?
    repeat                         ( adr len )
    2drop                          ( )
 ;
+
 : format-date  ( s m h d m y -- adr len )
    push-decimal
    >r >r >r >r >r >r
@@ -243,7 +260,7 @@ false value write-protect?
    kbc-on
 ;
 
-d# 4 constant rtc-threshold
+d# 180 constant rtc-threshold   \ yes, really.  3 minutes
 0 value ntp-seconds
 0 value rtc-seconds
 : .clocks  ( -- )
@@ -350,9 +367,12 @@ d# 4 constant rtc-threshold
 
 : finish-final-test  ( -- )
    
-   " del int:\runin\olpc.fth" ['] eval catch
-   " copy int:\runin\repass.fth int:\runin\olpc.fth" ['] eval catch
-   " del int:\runin\repass.fth" ['] eval catch
+   " int:\runin\final.fth" $safe-delete
+   " int:\runin\repass.fth" 2dup $file-exists?  if
+      " int:\runin\final.fth" $copy
+   else
+      2drop
+   then
   
    wait-connections
 
@@ -369,6 +389,8 @@ d# 4 constant rtc-threshold
    ." Submitting results .. "
    final-result cifs-disconnect
    ." Done" cr
+   
+   " int:\runin\repass.fth" $safe-delete
 
    \ need to delete target, due to #9957
    " int:\runin\final.fth.sav" $safe-delete
