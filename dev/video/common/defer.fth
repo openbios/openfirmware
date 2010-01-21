@@ -49,6 +49,9 @@ defer map-io-regs		\ Mapping of non-relocateable io space words
 defer unmap-io-regs		\ Unmapping of same
 defer map-frame-buffer		\ Frame buffer mapping
 defer unmap-frame-buffer	\ Unmapping of same
+defer pixel* ' noop is pixel*
+defer pixel+ ' + is pixel+
+defer pixel! ' c! is pixel!
 
 false instance value 6-bit-primaries?	\ Indicate if DAC only supports 6bpp
 -1 value io-base			\ Where pointer to io mapping is held
@@ -71,6 +74,13 @@ d# 640 instance value /scanline		\ Bytes per line
    \ The following is correct for framebuffers without extra padding
    \ at the end of each scanline.  Adjust /scanline for others.
    width depth *  8 /  to /scanline
+   depth case
+      d# 16 of  ['] w!  ['] /w*  ['] wa+  endof
+      d# 24 of  ['] l!  ['] /l*  ['] la+  endof
+      d# 32 of  ['] l!  ['] /l*  ['] la+  endof
+      ( default )  >r  ['] c!  ['] noop  ['] +  r>
+   endcase
+   to pixel+  to pixel*  to pixel!
 ;
 : (set-resolution)  ( width height depth -- )
    >r  to height  to width  r> set-depth

@@ -21,8 +21,6 @@ d# 1024 value /scanline	\ Frame buffer line width
 : note-mode  ( mode# -- )  video-mode-adr !  ;
 : note-native-mode  ( -- )  native-mode# note-mode  ;
 
-: set-resolution  ( width height depth -- )  to depth  to height  to width  ;
-
 : create-edid-property  ( -- )
    " edid" get-my-property  if  ( )
       " edid" find-drop-in  if  ( adr len )
@@ -267,6 +265,23 @@ hex
    depth 4 = if  2/ exit  then
    effective-depth  *  ( bits )  3 >>  ( bytes )
 ;
+
+: set-pitch  ( -- )  width pixels>bytes to /scanline  ;
+: set-depth  ( depth -- )
+   to depth
+   \ The following is correct for framebuffers without extra padding
+   \ at the end of each scanline.  Adjust /scanline for others.
+   set-pitch
+   depth case
+      d# 16 of  ['] w!  ['] /w*  ['] wa+  endof
+      d# 24 of  ['] l!  ['] /l*  ['] la+  endof
+      d# 32 of  ['] l!  ['] /l*  ['] la+  endof
+      ( default )  >r  ['] c!  ['] noop  ['] +  r>
+   endcase
+   to pixel+  to pixel*  to pixel!
+;
+
+: set-resolution  ( width height depth -- )  set-depth  to height  to width  ;
 
 : lower-power  ( -- )
    7f 19 seq!  \ clock gating
@@ -553,7 +568,7 @@ hex
 \  00 32 crt!     \ HSYNC delay, SYNC drive, gamma, end blanking, etc  Already set
    c8 33 crt-clr  \ Gamma, interlace, prefetch, HSYNC shift
 
-   width pixels>bytes to /scanline
+   set-pitch
    \ Offset
    mode-3? mode-12? or  if  d# 320  else  /scanline  then  hoffset1!
 
@@ -659,7 +674,7 @@ hex
    20 67 crt-clr  \ Turn off interlace bit
 
    \ Offset - distance from one scanline to the next in the memory array
-   width pixels>bytes to /scanline
+   set-pitch
 
    \ I'm unsure how the 808 is calculated for simultaneous mode 3, but the
    \ value is what BIOS uses.  It might not matter.

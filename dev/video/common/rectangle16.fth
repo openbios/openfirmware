@@ -97,15 +97,15 @@ c;
    3drop
 ;
 
-defer pixel!  ( color fbadr i -- )
+defer transparent-pixel!  ( color fbadr i -- )
 : 565-pixel!   ( color fbadr i -- )  wa+ w!  ;
 : argb-pixel!  ( color fbadr i -- )  rot 565>argb-pixel -rot  la+ l!  ;
 
 : draw-transparent-rectangle  ( adr x y w h -- )
    depth d# 32 =  if
-      ['] argb-pixel! to pixel!
+      ['] argb-pixel! to transparent-pixel!
    else
-      ['] 565-pixel! to pixel!
+      ['] 565-pixel! to transparent-pixel!
    then
    565-rectangle-setup                  ( adr w fbadr h )
    >r  rot  r>                          ( w fbadr adr h )
@@ -115,7 +115,7 @@ defer pixel!  ( color fbadr i -- )
          dup h# ffff =  if              ( w fbadr adr color )
             drop                        ( w fbadr adr )
          else                           ( w fbadr adr color )
-            2 pick i pixel!             ( w fbadr adr )
+            2 pick i transparent-pixel! ( w fbadr adr )
          then                           ( w fbadr adr )
       loop                              ( w fbadr adr )
       swap /scanline +   swap           ( w fbadr' adr )

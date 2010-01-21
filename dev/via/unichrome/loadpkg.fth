@@ -16,6 +16,9 @@ defer index!			\ Index for generic IO
 defer video-on
 : color!  ( r g b color# -- )  2drop 2drop  ;
 : color@  ( color# -- r g b )  drop 0 0 0  ;
+defer pixel* ' noop is pixel*
+defer pixel+ ' + is pixel+
+defer pixel! ' c! is pixel!
 
 fload ${BP}/dev/video/controlr/vga.fth           \ Standard VGA interfaces
 fload ${BP}/dev/via/unichrome/unichrome.fth      \ Controller code
