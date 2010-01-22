@@ -97,14 +97,14 @@ h# ff h# ff     0  rgb>565 constant pending-color  \ yellow
     0 h# ff h# ff  rgb>565 constant strange-color  \ cyan
 h# e8 h# e8 h# e8  rgb>565 constant starting-color \ very light gray
 
-d# 28 constant status-line
+d# 26 constant status-line
 
 : gshow-init  ( #eblocks -- )
    dup set-grid-scale
    cursor-off  " erase-screen" $call-screen
 
    starting-color   ( #eblocks color )
-   over 0  ?do  i over show-state  loop  ( #eblocks color )
+   over 0  ?do  i over show-state  scale-factor +loop  ( #eblocks color )
    drop                                  ( #eblocks )
    1 status-line at-xy  
    ." Blocks/square: " scale-factor .d  ." Total blocks: " .d
@@ -233,61 +233,6 @@ end-string-array
    current-block highlight-block
 ;
 
-0 value nand-block-limit
-: +block  ( offset -- )
-   current-block +   nand-block-limit mod  ( new-block# )
-   dup point-block                         ( new-block# )
-   dup show-eblock#                        ( new-block# )
-   nand-map + c@  status-descriptions count type  kill-line
-;
-
-: process-key  ( char -- )
-   case
-      h# 9b     of  endof
-      [char] A  of  #cols negate +block  endof  \ up
-      [char] B  of  #cols        +block  endof  \ down
-      [char] C  of  1            +block  endof  \ right
-      [char] D  of  -1           +block  endof  \ left
-      [char] ?  of  #cols 8 * negate +block  endof  \ page up
-      [char] /  of  #cols 8 *        +block  endof  \ page down
-      [char] K  of  8                +block  endof  \ page right
-      [char] H  of  -8               +block  endof  \ page left
-      h# 1b     of  d# 20 ms key?  0=  if  true to examine-done?  then  endof
-   endcase
-;
-
-: examine-nand  ( -- )
-   0 status-line 1- at-xy  red-letters ." Arrows, fn Arrows to move, Esc to exit" black-letters cr
-   #nand-pages nand-pages/block /  to nand-block-limit
-   0 to current-block
-   current-block highlight-block
-   false to examine-done?
-   begin key  process-key  examine-done? until
-   current-block lowlight-block
-;
-
-: (scan-nand)  ( -- )
-   nand-map 0=  if
-      #nand-pages nand-pages/block /  alloc-mem  to nand-map
-   then
-
-   " usable-page-limit" $call-nand   
-   dup  nand-pages/block /  show-init  ( page-limit )
-
-   0  ?do
-      i classify-block       ( status )
-      i nand-pages/block /   ( status eblock# )
-      2dup nand-map + c!     ( status eblock# )
-      show-block-type        ( )
-   nand-pages/block +loop  ( )
-
-   show-done
-;
-
-: scan-nand  ( -- )
-   open-nand (scan-nand) close-nand-ihs
-   examine-nand
-;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks

@@ -1,6 +1,11 @@
 purpose: User interface for NAND multicast updater
 \ See license at end of file
 
+\ Number of blocks NANDblaster read in zdata mode
+\ nb_rx will set this using the interpret client service.
+-1 value nb-zd-#sectors
+: set-nb-zd-#sectors  ( n -- )  to nb-zd-#sectors  ;
+
 : mesh-ssids  ( -- $ )
    " olpc-mesh"nolpc-mesh"nolpc-mesh"nolpc-mesh"nolpc-mesh"nolpc-mesh"
 ;
@@ -34,6 +39,7 @@ d# 20 value redundancy
 : #nb  ( channel# -- )
    depth 1 < abort" Usage: channel# #nb"
    secure$ rot
+   -1 to nb-zd-#sectors
    " rom:nb_rx ether:%d %s" sprintf boot-load go
 ;
 : #nb-clone  ( channel# -- )
@@ -91,16 +97,21 @@ d# 20 value redundancy
 : meshnand
    use-mesh
    false to already-go?
-   " boot rom:nb_rx 239.255.1.2" eval
+   " boot rom:nb_rx ,,239.255.1.2" eval
 ;
 
 : nb_rx
    false to already-go?
-   " boot rom:nb_rx 239.255.1.2" eval
+   " boot rom:nb_rx ,,239.255.1.2" eval
 ;
 : ucastnand
    false to already-go?
    " boot rom:nb_rx 10.20.0.16,,10.20.0.44" eval
+;
+: nbit  ( "filename" -- )
+   false to already-go?
+   safe-parse-word
+   " boot rom:nb_tx udp:239.255.1.2 %s 20 131072" sprintf eval
 ;
 
 \ LICENSE_BEGIN

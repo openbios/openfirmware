@@ -470,6 +470,7 @@ fload ${BP}/cpu/x86/pc/saveabs.fth
 fload ${BP}/forth/lib/selstr.fth
 
 fload ${BP}/cpu/x86/pc/olpc/via/padlock.fth   \ Via security engine
+fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
 
 fload ${BP}/ofw/inet/loadtcp.fth
 
@@ -497,10 +498,8 @@ end-support-package
 ;
 ' olpc-ssids to default-ssids
 
-[ifdef] Later
 fload ${BP}/cpu/x86/pc/olpc/nandcastui.fth
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
-[then]
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
 devalias fsdisk int:0

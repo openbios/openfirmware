@@ -8,7 +8,7 @@ d# 24 d# 24 2value ulhc
 9 constant grid-h
 
 d# 128 value #cols
-d# 94 value #rows
+d# 90 value #rows
 : max-grid  ( -- n )  #rows #cols *  ;
 
 \needs xy+ : xy+  ( x1 y1 x2 y2 -- x3 y3 )  rot + -rot  + swap  ;

@@ -28,7 +28,7 @@ in: ${BP}/dev/ide/build/idehier.fc
 \ in: ${BP}/dev/ide/build/leghier.fc
 \ in: ${BP}/cpu/x86/pc/olpc/via/build/camera.fc
 in: ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml
-\ in: ${BP}/cpu/x86/pc/olpc/via/build/mcastnand.bin
+in: ${BP}/cpu/x86/pc/olpc/via/build/mcastnand.bin
 in: ${BP}/dev/hdaudio/build/hdaudio.fc
 in: sd8686.bin
 in: testicons.bin
@@ -188,10 +188,8 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
    " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
 
-[ifdef] Later
-   " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_rx.bin" " nb_rx"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster15_rx.bin" " nb_rx"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_tx.bin" " nb_tx"      $add-deflated-dropin
-[then]
 
 .( Dropin top is )  ofd @ fsize  .x cr
 

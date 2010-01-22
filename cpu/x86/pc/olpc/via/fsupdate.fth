@@ -68,7 +68,6 @@ also nand-commands definitions
    ?compare-spec-line
    get-hex# to /nand-block
    get-hex# to #image-eblocks
-   open-nand
    " size" $call-nand  #image-eblocks /nand-block um*  d<
    " Image size is larger than output device" ?nand-abort
    #image-eblocks  show-init
@@ -87,6 +86,7 @@ also nand-commands definitions
    " write-blocks-end" $call-nand   ( error? )
    " Write error" ?nand-abort
 \   #image-eblocks erase-gap
+   fexit
 ;
 
 : data:  ( "filename" -- )
@@ -195,7 +195,9 @@ previous definitions
 : fs-update  ( "devspec" -- )
    load-crypto  abort" Can't load hash routines"
 
-   false to secure-fsupdate?
+   open-nand                           ( )
+
+   false to secure-fsupdate?           ( )
    safe-parse-word r/o open-file       ( fd )
    abort" Can't open file"             ( fd )
 
@@ -284,6 +286,29 @@ previous definitions
    boot-read loaded do-fs-update                ( )
 ;
 : update-nand  ( "devspec" -- )  safe-parse-word  $update-nand  ;
+
+0 0  " "  " /" begin-package
+   " nb-updater" device-name
+   0. 2value offset
+   : size  ( -- d.#bytes )  nb-zd-#sectors h# 200 um*  ;
+   : open  ( -- flag )
+      nb-zd-#sectors -1 =  if
+         ." nb-updater: nb-zd-#sectors is not set" cr
+         false exit
+      then
+      nandih  0=  if
+         ." nb-updater: fsdisk device is not open" cr
+         false exit
+      then
+      " size" $call-nand  ( d.size )
+      size d- to offset
+      true
+   ;
+   : close  ;
+   : seek  ( d.pos -- )  offset d+  " seek" $call-nand  ;
+   : read  ( adr len -- actual )  " read" $call-nand  ;
+   \ No write method for this
+end-package
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks
