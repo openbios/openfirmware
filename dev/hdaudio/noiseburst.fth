@@ -1,5 +1,7 @@
-.( cross-covariance audio test) cr
-select /audio
+\ See license at end of file
+purpose: Cross-covariance audio selftest
+
+support-package: audio-test
 
 code mono-covar  ( adr1 adr2 #samples -- d.sum )
    cx pop
@@ -296,17 +298,10 @@ create testarr2   100 0 do  0 w,  -100 w,  loop
    >r  wa1+ dup  r> 2/ 2/ stereo-covar
 ;
 
-h# 40000 value /pb  \ Stereo - 10000 is okay for fixter, 40000 is better for case, 
+h# 40000 value /pb  \ Stereo - 10000 is okay for fixture, 40000 is better for case, 
 : pb  load-base  ;
 h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for case, 
 : rb  load-base  1meg +  ;
-
-: random-signal  ( -- )
-   pb /pb bounds  do  random-byte  i c!  loop
-   pb      /pb -stereo-wmean
-   pb wa1+ /pb -stereo-wmean
-   pb /pb lose-6db
-;
 
 : d..  ( -- )  <# # # # # ascii . hold # # # # ascii . hold #s #> type space  ;
 : find-max-mono  ( -- )
@@ -338,50 +333,55 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
    .covar#
 ;
 
+0 value debug?
+: >ratio  ( sum1 sum2 -- ratio*10 )
+   debug?  if  over .d dup .d ." : "  then
+   1 max  d# 10  swap */
+   debug?  if  dup .d cr  then
+;
 \ Reasonable threshold is d# 25
-: fixture-ratio-left  ( -- )
+: fixture-ratio-left  ( -- error? )
    left-range  d# 240 d# 140 sm-covar-abs-sum nip  ( sum1 ) 
    left-range  d# 400 d# 300 sm-covar-abs-sum nip  ( sum1 sum2 )
-   d# 10 swap */
-   .d
+   >ratio
+   d# 25 <
 ;
-: fixture-ratio-right  ( -- )
+: fixture-ratio-right  ( -- error? )
    right-range  d# 240 d# 140 sm-covar-abs-sum nip  ( sum1 ) 
    right-range  d# 400 d# 300 sm-covar-abs-sum nip  ( sum1 sum2 )
-   d# 10 swap */
-   .d
+   >ratio
+   d# 25 <
 ;
 
 \ This compares the total energy within the impulse response band to the
 \ total energy in a similar-length band 
-: case-ratio-left  ( -- ratio )
+: case-ratio-left  ( -- error? )
    left-range  d# 200 d# 140 sm-covar-abs-sum  nip ( sum1.high )
    left-range  d# 540 d# 400 sm-covar-abs-sum  nip ( sum1.high sum2.high )
-   d# 10 swap */
-   .d
+   >ratio
+   d# 30 <
 ;
-: case-ratio-right  ( -- ratio )
+: case-ratio-right  ( -- error? )
    right-range  d# 330 d# 140 sm-covar-abs-sum  nip ( sum1.high )
    right-range  d# 590 d# 400 sm-covar-abs-sum  nip ( sum1.high sum2.high )
-   d# 10 swap */
-   .d
+   >ratio
+   d# 15 <
 ;
 
 \ This compares the total energy within the impulse response band to the
 \ total energy in a similar-length band 
-: loopback-ratio-left  ( -- )
+: loopback-ratio-left  ( -- error? )
    left-stereo-range  d# 148 d# 128 ss-covar-abs-sum  nip ( sum1.high )
    left-stereo-range  d# 220 d# 200 ss-covar-abs-sum  nip ( sum1.high sum2.high )
-   d# 10 swap */
-   .d
+   >ratio
+   d# 70 <
 ;
-: loopback-ratio-right  ( -- )
+: loopback-ratio-right  ( -- error? )
    right-stereo-range  d# 148 d# 128 ss-covar-abs-sum  nip ( sum1.high )
    right-stereo-range  d# 220 d# 200 ss-covar-abs-sum  nip ( sum1.high sum2.high )
-   d# 10 swap */
-   .d
+   >ratio
+   d# 70 <
 ;
-
 
 d# 1024 /w* buffer: impulse-response
 
@@ -402,14 +402,34 @@ d# 1024 /w* buffer: impulse-response
    drop
 ;
 d# -23 value test-volume   \ d# -23 for test fixture, d# -9 for in-case
-defer rx-channels  ' mono is rx-channels  \ set to stereo for loopback
 defer analyze-left
 defer analyze-right
 defer fix-dc
+
+: prepare-signal  ( -- out-adr, len in-adr,len )
+   pb /pb bounds  do  random-byte  i c!  loop
+   pb      /pb -stereo-wmean
+   pb wa1+ /pb -stereo-wmean
+   pb /pb lose-6db
+   pb /pb  rb /rb
+   disable-interrupts
+;
+: analyze-signal  ( -- error? )
+   enable-interrupts
+   rb /rb fix-dc
+   false                        ( error? )
+   analyze-left  if             ( error? )
+      ." Left channel failure" cr
+      1+
+   then
+
+   analyze-right  if
+      ." Right channel failure" cr
+      2+
+   then
+;
+
 : setup-fixture  ( -- )
-   xxx - this needs to use the internal speakers and mic even though the loopback cable is attached
-   ['] mono is rx-channels
-   d# -23 is test-volume
    h# 20000 to /pb          \ Medium burst
    /pb 2/ h# 1000 + to /rb  \ Mono reception (internal mic)
 \   ['] fixture-analyze-left  to analyze-left
@@ -419,9 +439,7 @@ defer fix-dc
    ['] -mono-wmean to fix-dc
 ;
 : setup-case  ( -- )
-   xxx - this needs to use the internal speakers and mic even though the loopback cable is attached
-   ['] mono is rx-channels
-   d# -9 is test-volume
+\   xxx - this needs to use the internal speakers and mic even though the loopback cable is attached
    h# 40000 to /pb          \ Long burst for better S/N on far away speaker
    /pb 2/ h# 1000 + to /rb  \ Mono reception (internal mic)
    ['] case-ratio-left  to analyze-left
@@ -429,28 +447,15 @@ defer fix-dc
    ['] -mono-wmean to fix-dc
 ;
 : setup-loopback  ( -- )
-   ['] stereo is rx-channels
-   d# -33 is test-volume
    h# 10000 to /pb          \ Short burst
    /pb h# 1000 + to /rb     \ Stereo reception
    ['] loopback-ratio-left  to analyze-left
    ['] loopback-ratio-right to analyze-right
    ['] -stereo-wmean to fix-dc
 ;
-: doit  ( -- )
-   open-in  48kHz  16bit rx-channels    with-adc d# 73 input-gain
-   \ -23 prevents obvious visible clipping
-   open-out 48kHz  16bit stereo  test-volume set-volume
-   random-signal
-   lock[  \ Prevent timing jitter due to interrupts
-   pb /pb  rb /rb out-in
-   ]unlock
-   rb /rb fix-dc
-\   ." Mono  " find-max-mono cr
-\   ." Left  " find-max-left cr
-\   ." Right " find-max-right cr
-   analyze-left  analyze-right
-;
+: open  ( -- okay? )  true  ;
+: close  ( -- )  ;
+end-support-package
 
 0 [if]
 : make-tone2  ( freq -- )
@@ -483,4 +488,27 @@ defer fix-dc
    rb waveform
 ;
 [then]
-.( loaded) cr
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2010 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

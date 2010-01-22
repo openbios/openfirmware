@@ -29,12 +29,10 @@ fload ${BP}/dev/hdaudio/cx2058x-nodes.fth
 : enable-hp-input  ( -- )    h# 70721 cmd  ;
 : disable-hp-input ( -- )    h# 70700 cmd  ;
 
+fload ${BP}/dev/hdaudio/olpc-ports.fth
+
 : cx2058x-enable-recording  ( -- )
-   portb  pin-sense?  if
-      mux  0 set-connection  portb enable-hp-input
-   else
-      mux  1 set-connection  portc enable-hp-input
-   then
+   set-recording-port
 ;
 
 : cx2058x-disable-recording  ( -- )
@@ -43,11 +41,7 @@ fload ${BP}/dev/hdaudio/cx2058x-nodes.fth
 ;
 
 : cx2058x-enable-playback   ( -- )
-   porta  pin-sense?  if  \ headphones attached
-      portg  power-off     \ turn off speaker
-   else                            \ no headphones
-      portg  power-on      \ turn on speaker
-   then
+   set-playback-port
    dac1  h# 70640 cmd    \ 706sc - stream 4, channel 0
    h# 20000 stream-format or cmd
 ;
