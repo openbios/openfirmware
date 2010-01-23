@@ -203,19 +203,6 @@ gshow
 ;
 
 0 value current-block
-0 value examine-done?
-
-string-array status-descriptions
-   ," Marked bad in Bad Block Table"  \ 0
-   ," Read error"                     \ 1
-   ," JFFS2 data with summary"        \ 2
-   ," JFFS2 data, no summary"         \ 3
-   ," Clean (erased with JFFS2 cleanmarker)"  \ 4
-   ," Dirty, with non-JFFS2 data"     \ 5 
-   ," Erased, no cleanmarker"         \ 6
-   ," Primary Bad Block Table"        \ 7
-   ," Secondary Bad Block Table"      \ 8
-end-string-array
 
 : cell-border  ( block# color -- )
    swap >loc      ( color x y )
