@@ -151,6 +151,7 @@ purpose: Manufacturing testing
       ." Connect loopback cable to continue.. "
       begin  ?key-abort  loopback-connected?  until  cr
    then
+   d# 500 ms  \ Time to make sure the plug is all the way in
 ;
 : disconnect-loopback  ( -- )
    loopback-disconnected?  0=  if  
