@@ -154,14 +154,27 @@ h# ff h# ff h# ff rgb>565 constant white-color
    load-base  whole-screen  fill-rect
 ;
 : hold-time  ( -- )
-   smt-test?  if  d# 500 ms  else  d# 1000 ms  then
+   smt-test?  if
+      d# 500 ms
+   else
+      final-test?  if  d# 500 ms  else  d# 1000 ms  then
+   then
+;
+
+: hold-time2  ( -- )
+   smt-test?  if
+      d# 500 ms
+   else
+      final-test?  if  key drop  then
+      d# 1000 ms
+   then
 ;
 : wait  ( -- )
    hold-time
    0 set-source \ Freeze image
    hold-time
    1 set-source \ Unfreeze image
-   hold-time
+   hold-time2
 ;
 
 warning @ warning off
