@@ -12,7 +12,7 @@ visible
 ;
 
 
-: wanted-fw$  ( -- $ )  " q3a23"  ;
+: wanted-fw$  ( -- $ )  " q3a30"  ;
 
 
 : find-firmware-file  ( -- name$ )
