@@ -89,6 +89,8 @@ constant /fw-transport
    false
 ;
 
+: reset-host-bus  ( -- )  false to card-attached?  ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks
 \ 

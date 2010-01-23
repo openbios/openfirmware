@@ -558,7 +558,11 @@ true value got-indicator?
 \ Reset
 \ =========================================================================
 
-: reset-wlan  ( -- )  " wlan-reset" evaluate  ds-not-ready set-driver-state  ;
+: reset-wlan  ( -- )
+   " wlan-reset" evaluate
+   ds-not-ready to driver-state
+   reset-host-bus
+;
 
 : marvel-get-hw-spec  ( -- true | adr false )
    d# 38 h# 03 ( CMD_GET_HW_SPEC ) prepare-cmd

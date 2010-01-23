@@ -68,6 +68,7 @@ h# beef.face constant TYPE_USB_INDICATION
 
 : release-bus-resources  ( -- )  end-bulk-in end-out-ring  ;
 
+: reset-host-bus  ( -- )  ;
 
 0 value vid
 0 value pid

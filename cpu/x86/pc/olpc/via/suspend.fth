@@ -54,6 +54,7 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
 : s3-suspend
    suspend-usb
    s3-no-usb
+   " /wlan"  " reset-wlan" execute-device-method drop
    resume-usb
 ;
 alias s s3-suspend
