@@ -281,6 +281,17 @@ defer make-dev-property-hook  ( speed dev port -- )
    r> drop
 ;
 
+: id-match?  ( dev intf port phandle -- dev intf port phandle flag? )
+   " vendor-id" 2 pick get-package-property  if  false exit  then
+   decode-int nip nip   >r     ( dev intf port phandle r: vid )
+   " device-id" 2 pick get-package-property  if  r> drop  false exit  then
+   decode-int nip nip   >r     ( dev intf port phandle r: vid did )
+   " release" 2 pick get-package-property  if  r> r> 2drop  false exit  then
+   decode-int nip nip   >r     ( dev intf port phandle r: vid did rev )
+   dev-desc-buf get-vid        ( dev intf port phandle  vid1 did1 rev1 r: vid did rev )
+   r> = -rot  r> = -rot  r> =  and and
+;
+
 : reuse-old-node?  ( dev intf port -- reused? )
    my-self ihandle>phandle child                 ( dev intf port phandle )
    begin  ?dup  while                            ( dev intf port phandle )
@@ -289,8 +300,10 @@ defer make-dev-property-hook  ( speed dev port -- )
          4 pick  =  if                           ( dev intf port phandle adr len )
             decode-int nip nip                   ( dev intf port phandle intf1 )
             3 pick  =  if                        ( dev intf port phandle )
-               reuse-node                        ( )
-               true exit                         ( -- true )
+               id-match?  if                     ( dev intf port phandle )
+                  reuse-node                     ( )
+                  true exit                      ( -- true )
+               then                              ( dev intf port phandle )
             then                                 ( dev intf port phandle )
          else                                    ( dev intf port phandle adr len )
             2drop                                ( dev intf port phandle )
