@@ -32,7 +32,7 @@ stand-init: APIC
 fload ${BP}/cpu/x86/pc/olpc/via/dumpvia.fth	\ Dump a bunch of registers
 
 stand-init: CPU node
-   d# 1,500,000,000  " VIA,C7"
+   d# 1,000,000,000  " VIA,C7"
 
    " /cpu" find-device                                  ( cpu-clock-hz model$ )
       " model" string-property                          ( cpu-clock-hz )
