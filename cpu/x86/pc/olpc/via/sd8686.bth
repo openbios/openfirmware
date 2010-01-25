@@ -3,7 +3,7 @@ purpose: Fetch the firmware for the Marvell 8686 wireless LAN module
 command: &builder &this
 build-now
 
-fload ${BP}/cpu/x86/pc/olpc/via/versions.fth
+fload ${BP}/cpu/x86/pc/olpc/via/wlan-version.fth
 
 " ${GET_WLAN}" expand$  nip  [if]
    " ${GET_WLAN}" expand$ $sh

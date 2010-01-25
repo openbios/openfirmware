@@ -3,7 +3,7 @@ purpose: Fetch the EC (Embedded Controller, i.e. KB3700) microcode
 command: &builder &this
 build-now
 
-fload ${BP}/cpu/x86/pc/olpc/via/versions.fth
+fload ${BP}/cpu/x86/pc/olpc/via/ec-version.fth
 
 \ If there is a GET_EC macro, use it instead of fetching the released version.
 " ${GET_EC}" expand$  nip  [if]

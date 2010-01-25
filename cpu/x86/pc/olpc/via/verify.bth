@@ -3,7 +3,7 @@ purpose: Fetch the Crypto code and keys
 command: &builder &this
 build-now
 
-fload ${BP}/cpu/x86/pc/olpc/via/versions.fth
+fload ${BP}/cpu/x86/pc/olpc/via/crypto-version.fth
 
 " wget -q http://dev.laptop.org/pub/firmware/crypto/${KEYS}/os.public        -O os.public"        expand$ $sh
 " wget -q http://dev.laptop.org/pub/firmware/crypto/${KEYS}/fw.public        -O fw.public"        expand$ $sh

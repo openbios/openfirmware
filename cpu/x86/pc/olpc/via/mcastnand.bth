@@ -3,7 +3,7 @@ purpose: Fetch and compile the multicast NAND reflash program
 command: &builder &this
 build-now
 
-fload ${BP}/cpu/x86/pc/olpc/via/versions.fth
+fload ${BP}/cpu/x86/pc/olpc/via/mcnand-version.fth
 
 1 [if]
 " ${MCNAND_VERSION}" expand$ " test" $=  [if]

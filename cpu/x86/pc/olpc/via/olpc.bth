@@ -39,7 +39,7 @@ in: ${BP}/cpu/x86/pc/olpc/images/ebook.di
 
 build-now
 
-fload ${BP}/cpu/x86/pc/olpc/via/versions.fth
+fload ${BP}/cpu/x86/pc/olpc/via/fw-version.fth
 
 " macro: FW_VERSION Q3${FW_MAJOR}${FW_MINOR}" expand$ eval
 
