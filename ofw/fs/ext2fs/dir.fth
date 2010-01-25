@@ -201,6 +201,7 @@ create dir-types
 
 \ delete directory entry at diroff
 : dirent-unlink   ( -- )
+   inode# >r
    dirent-inode@ set-inode  -1 +link-count
 
    \ Release the inode if it has no more links
@@ -217,6 +218,7 @@ create dir-types
       \ First dirent in block; zap its inode
       0 dirent-inode!
    then      
+   r> set-inode
 ;
 
 \ The argument inode# means the inode to which the new directory entry
