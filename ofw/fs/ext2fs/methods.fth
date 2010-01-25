@@ -28,10 +28,15 @@ external
    diroff off
 ;
 
+0 value renaming?
 : $delete   ( name$ -- error? )
    $find-file  if  true exit  then		( )
 
-   wf-type dir-type =  if  true exit  then
+   \ It's okay to delete a directory if it is a rename, because a
+   \ hardlinked copy has just been made
+   renaming? 0=  if
+      wf-type dir-type =  if  true exit  then
+   then
 
    dirent-unlink
    false
@@ -39,23 +44,31 @@ external
 : $delete!  $delete ;			\ XXX should these be different?
 
 : $hardlink  ( old-name$ new-name$ -- error? )
-   \ Error if the new name already exists
-   2dup $find-file  0=  if                        ( old-name$ new-name$ )
-      4drop true exit                             ( -- true )
-   then                                           ( old-name$ new-name$ )
-
    \ Save the current search context.  The path part of the new name
    \ has already been parsed out and resolved.  Resolving old-name$ changes
    \ the directory context, so we will need to restore the context for the
    \ new name to create its dirent.
    dirent-vars 2>r 2>r                            ( old-name$ new-name$ r: 4xVars )
 
+   \ Error if the new name already exists
+   2dup $find-file  0=  if                        ( old-name$ new-name$ r: 4xVars )
+      2r> 2r> 4drop                               ( old-name$ new-name$ )
+      4drop true exit                             ( -- true )
+   then                                           ( old-name$ new-name$ )
+
    2swap $find-file  if                           ( new-name$ r: 4xVars )
-      2drop  2r> 2r> 4drop  true  exit
+      2r> 2r> 4drop                               ( new-name$ )
+      2drop  true  exit                           ( -- true )
    then                                           ( new-name$ r: 4xVars )
 
-   \ Hard links to directories mess up the filesystem tree
-   wf-type dir-type =  if  2drop true exit  then  ( new-name$ r: 4xVars)
+   \ Hard links to directories mess up the filesystem tree, but they are
+   \ okay temporarily if we are renaming and will soon delete the old one
+   renaming? 0=  if
+      wf-type dir-type =  if                      ( new-name$ r: 4xVars )  
+         2r> 2r> 4drop                            ( new-name$ )
+         2drop  true exit                         ( -- true )
+      then                                        ( new-name$ r: 4xVars)
+   then
 
    2r> 2r> restore-dirent	                  ( new-name$ )
    wf-inum  new-dirent                            ( error? )
@@ -71,8 +84,13 @@ external
       2drop                              ( old-path$ new-name$ )
    then                                  ( old-path$ new-name$ )
 
-   2over 2swap  $hardlink  if  2drop true exit  then   ( old-name$ )
-   $delete
+   true to renaming?                     ( old-path$ new-name$ )
+   2over 2swap  $hardlink  if            ( old-path$ )
+      false to renaming?                 ( old-path$ )
+      2drop true exit                    ( -- true )
+   then                                  ( old-name$ )
+   $delete                               ( error? )
+   false to renaming?                    ( old-path$ )
 ;
 
 : $rmdir   ( name$ -- error? )
