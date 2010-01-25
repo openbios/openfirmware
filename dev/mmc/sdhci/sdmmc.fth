@@ -40,6 +40,9 @@ external
 : write-blocks-end  ( -- error? )
    false  " r/w-blocks-end" $call-parent
 ;
+: write-blocks-end?  ( -- false | error? true )
+   false  " r/w-blocks-end?" $call-parent
+;
 
 : dma-alloc   ( size -- vadr )  " dma-alloc"  $call-parent  ;
 : dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;

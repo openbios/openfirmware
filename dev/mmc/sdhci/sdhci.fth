@@ -323,6 +323,27 @@ headers
    ." Stopping" cr abort
 ;
 
+: isr-event?  ( mask -- happened? )
+   h# 8000 or                                     ( mask' )
+   isr@  2dup and  if                             ( mask' isr )
+      \ Only clear the bits we will handle this time.
+      \ If additional ISR bits are set, leave them set because
+      \ later code will be waiting for them.  In practice, the
+      \ only such additional bit is the "data transfer complete"
+      \ bit - mask 2 - which "2 wait" will handle.
+      \ But we do go ahead and clear card removal/insertion
+      \ events, because we don't handle them elsewhere.
+      swap  h# c0 or  over and  isr!              ( isr )
+
+      dup h# 8000 and  if   .sderror  else  drop  then   ( )
+      true
+   else                                           ( mask' isr )
+      \ DMA interrupt - the transfer crossed an address boundary
+      8 and  if  0 cl@ 0 cl!  8 isr!  then        ( mask )
+      drop false                                  ( false )
+   then
+;
+
 : wait  ( mask -- )
    h# 8000 or                                     ( mask' )
    begin                                          ( mask )
@@ -711,6 +732,28 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
    drop
 ;
 
+: card-error?  ( status -- error? )
+   dup h# fdf9.8008 and  if                         ( status )
+      cr ." SD Error - status = " dup . cr
+      .card-error
+      true
+   else
+      drop
+      false
+   then
+;
+
+: write-done?  ( -- false | error? true )
+   intstat-on
+   get-status  dup  9 rshift h# f and  7  =  if  ( status )
+      drop false          ( false )
+   else                   ( status )
+      card-error?         ( error? )
+      true                ( error? true )
+   then                   ( false | error? true )
+   intstat-off            ( false | error? true )
+;
+
 \ This is the correct way to wait for programming complete.
 : wait-write-done  ( -- error? )
    writing? 0=  if  false exit  then               ( limit )
@@ -724,15 +767,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
       then
    repeat                                           ( limit status )
    nip                                              ( status )
-   dup h# fdf9.8008 and  if                         ( status )
-      cr ." SD Error - status = " dup . cr
-      .card-error
-      true
-   else
-      drop
-      false
-   then
-
+   card-error?                                      ( error? )
    false to writing?
 ;
 
@@ -771,6 +806,18 @@ external
 : dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;
 
 0 instance value dma?
+
+: dma-done?  ( -- flag )
+   dma?  if
+      2 isr-event?  dup  if  ( flag )
+         dma-release         ( flag )
+         intstat-off         ( flag )
+         false to dma?       ( flag )
+      then                   ( flag )
+   else
+      true
+   then
+;
 
 : wait-dma-done  ( -- )
    dma?  if
@@ -865,6 +912,17 @@ external
 : detach-sdio-card  ( -- )
 ;
 
+\ Asynchronous poll for completion
+: r/w-blocks-end?  ( in? -- false | error? true )
+   drop
+   dma-done?  if
+      write-done?
+   else
+      false
+   then      
+;
+
+\ Wait for completion
 : r/w-blocks-end  ( in? -- error? )
    drop
    wait-dma-done
