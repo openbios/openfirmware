@@ -75,6 +75,7 @@ h# e8 h# e8 h# e8  rgb>565 constant starting-color \ very light gray
 d# 26 constant status-line
 
 : gshow-init  ( #eblocks -- )
+   suspend-logging
    dup set-grid-scale
    cursor-off  " erase-screen" $call-screen
 
@@ -87,7 +88,7 @@ d# 26 constant status-line
 
 : gshow-strange   ( eblock# -- )  strange-color show-state  ;
 
-: gshow-done  ( -- )  cursor-on  ;
+: gshow-done  ( -- )  cursor-on  resume-logging  ;
 
 : gshow-pending  ( eblock# -- )  pending-color  show-state  ;
 

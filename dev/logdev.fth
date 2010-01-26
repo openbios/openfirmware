@@ -75,6 +75,8 @@ device-end
       log-ih add-output
    then
 ;
+: suspend-logging  ( -- )  log-ih  if  log-ih remove-output  then  ;
+: resume-logging  ( -- )  log-ih  if  log-ih add-output   then  ;
 : stop-logging  ( -- )
    log-ih   if
       log-ih remove-output
