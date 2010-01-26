@@ -69,8 +69,8 @@
 : led3-top  99 348  led-symbol  ;
 : mic-led  31 45   led-symbol  ;
 : camera-led  569 45  led-symbol  ;
-: wlan-conn  144 82  90 27  boxat  ;
-: wlan-card  152 7  75 75  boxat  ;
+: wlan-conn-top  144 82  90 27  boxat  ;
+: wlan-card-top  152 7  75 75  boxat  ;
 : ext-sd-slot  497 360  81 9  boxat  ;
 
 : draw-top  ( -- )
@@ -101,7 +101,7 @@
    led3-top
    mic-led
    camera-led
-   wlan-conn
-   wlan-card
+   wlan-conn-top
+   wlan-card-top
    ext-sd-slot
 ;
