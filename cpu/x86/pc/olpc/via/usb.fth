@@ -92,8 +92,20 @@ alias p2 probe-usb
 : suspend-usb  ( -- )
    detach-usb-keyboard
 ;
+: has-children?   ( devspec$ -- flag )
+   locate-device  if  false  else  child 0<>  then
+;
+: any-usb-devices?  ( -- flag )
+   " /usb" has-children?  if  true exit  then
+   " /usb@10,2" has-children?  if  true exit  then
+   " /usb@10,1" has-children?  if  true exit  then
+   " /usb@10,0" has-children?  if  true exit  then
+   false
+;
 : resume-usb  ( -- )
-   d# 300 ms  \ USB misses devices if you probe too soon
+   any-usb-devices?  if
+      d# 2000 ms  \ USB misses devices if you probe too soon
+   then
    silent-probe-usb
    attach-usb-keyboard
 ;
