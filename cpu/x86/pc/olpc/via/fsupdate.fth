@@ -86,6 +86,7 @@ also nand-commands definitions
    " write-blocks-end" $call-nand   ( error? )
    " Write error" ?nand-abort
 \   #image-eblocks erase-gap
+   release-inflater
    fexit
 ;
 
