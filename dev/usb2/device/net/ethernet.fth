@@ -221,11 +221,12 @@ external
    device set-target
 
    opencount @ 0=  if
-      " reset?" $call-parent  if
+      reset?  if
          configuration set-config  if
             ." Failed to set configuration" cr
             false exit
          then
+         bulk-in-pipe bulk-out-pipe reset-bulk-toggles
          init-nic
       then
 

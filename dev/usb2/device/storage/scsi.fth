@@ -183,10 +183,11 @@ external
    0 max max-lun min  to lun
    set-device  \ The device number may have changed if we recycled the node
    device set-target
-   " reset?" $call-parent  if
+   reset?  if
       configuration set-config  if
          ." USB storage scsi layer: Failed to set configuration" cr
       then
+      bulk-in-pipe bulk-out-pipe reset-bulk-toggles
    then
 ;
 : set-timeout  ( n -- )  bulk-timeout max set-bulk-in-timeout  ;

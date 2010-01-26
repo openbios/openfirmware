@@ -76,11 +76,15 @@ external
    0 swap DR_IN or GET_STATUS control-get
 ;
 
+\ Must be called after set-config for any device with bulk-in or
+\ bulk-out pipes.  Pass in 0 if one of the pipes is nonexistent.
+: reset-bulk-toggles  ( bulk-in-pipe bulk-out-pipe -- )
+   ?dup   if  0 swap  target  di-out-data!  then
+   ?dup   if  0 swap  target  di-in-data!   then
+;
+
 : set-config  ( cfg -- usberr )
    >r 0 0 0 r> DR_DEVICE DR_OUT or SET_CONFIGURATION control-set 
-   \ Setting the configuration initializes the endpoint's bulk data toggles
-   0 bulk-out-pipe target di-out-data!
-   0 bulk-in-pipe  target di-in-data!
 ;
 
 : set-interface  ( alt intf -- usberr )

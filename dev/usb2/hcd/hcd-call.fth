@@ -70,6 +70,23 @@ external
    " bulk-in-ready?" $call-parent
 ;
 
+: begin-in-ring  ( /buf #bufs pipe -- )
+   " begin-in-ring" $call-parent
+;
+\ : end-in-ring     " end-in-ring" $call-parent  ;
+: begin-out-ring  ( /buf #bufs pipe -- )
+   " begin-out-ring" $call-parent
+;
+: end-out-ring   ( -- )
+   " end-out-ring" $call-parent
+;
+: send-out  ( adr len -- qtd )
+   " send-out" $call-parent
+;
+: wait-out  ( qtd -- error? )
+   " wait-out" $call-parent
+;
+
 
 \ Interrupt pipe operations
 : begin-intr-in  ( buf len pipe interval -- )
@@ -84,6 +101,15 @@ external
 : end-intr-in  ( -- )
    " end-intr-in" $call-parent
 ;
+: reset-bulk-toggles  ( bulk-in-pipe bulk-out-pipe -- )
+   " reset-bulk-toggles" $call-parent
+;
+
+: reset?  ( -- flag )
+   " reset?" $call-parent
+;
+
+
 
 headers
 

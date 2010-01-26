@@ -56,11 +56,12 @@ external
    device set-target
    refcount @ 0=  if
 
-      " reset?" $call-parent  if
+      reset?  if
          configuration set-config  if
             ." Failed set serial port configuration" cr
             false exit
          then
+         bulk-in-pipe bulk-out-pipe reset-bulk-toggles
       then
 
       init-buf

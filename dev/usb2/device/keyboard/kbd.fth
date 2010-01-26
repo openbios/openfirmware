@@ -329,7 +329,7 @@ ff constant ks-prev			\ Previously pressed
 : setup-hardware?  ( -- error? )
    set-device
    device set-target
-   " reset?" $call-parent  if
+   reset?  if
       configuration set-config  if
          ." Failed to set USB keyboard configuration" cr
          true exit

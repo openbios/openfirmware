@@ -51,8 +51,10 @@ defer set-my-dev		' set-normal-dev to set-my-dev
 
 : alloc-control-qhtds  ( extra-tds -- )
    >r
-   my-maxpayload /my-buf over round-up swap / dup to my-#tds
-   dup  if  data-timeout  else  nodata-timeout  then  to timeout
+   my-maxpayload /my-buf    ( maxpayload /buf )
+   over round-up            ( maxpayload /buf-rounded )
+   swap /  dup to my-#tds   ( maxpayload #tds )
+   dup  if  data-timeout  else  nodata-timeout  then  to timeout  ( maxpayload #tds )
    r> + alloc-qhtds  to my-td  to my-qh
 ;
 

@@ -68,11 +68,12 @@ false instance value force-open?
    my-args parse-args
    set-parent-channel
    opencount @ 0=  if
-      " reset?" $call-parent  if
+      reset?  if
          configuration set-config  if
             ." Failed to set USB configuration for wireless" cr
             false exit
          then
+         bulk-in-pipe bulk-out-pipe reset-bulk-toggles
       then
       init-buf
       /inbuf /outbuf setup-bus-io  if  free-buf false exit  then
