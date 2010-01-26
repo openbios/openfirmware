@@ -506,6 +506,11 @@ fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
 devalias fsdisk int:0
 
+fload ${BP}/cpu/x86/pc/olpc/strokes.fth
+fload ${BP}/cpu/x86/pc/olpc/plot.fth
+fload ${BP}/cpu/x86/pc/olpc/via/drawboard.fth
+fload ${BP}/cpu/x86/pc/olpc/via/drawboardtop.fth
+
 fload ${BP}/dev/logdev.fth
 
 fload ${BP}/ofw/inet/sntp.fth

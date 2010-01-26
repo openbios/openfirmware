@@ -63,10 +63,10 @@
    564 259  18 18  boxat
    570 269 moveto 573 273 lineto 578 263 lineto 
 ;
-: led0  518 348  led-symbol  ;
-: led1  491 348  led-symbol  ;
-: led2  72 348  led-symbol  ;
-: led3  99 348  led-symbol  ;
+: led0-top  518 348  led-symbol  ;
+: led1-top  491 348  led-symbol  ;
+: led2-top  72 348  led-symbol  ;
+: led3-top  99 348  led-symbol  ;
 : mic-led  31 45   led-symbol  ;
 : camera-led  569 45  led-symbol  ;
 : wlan-conn  144 82  90 27  boxat  ;
@@ -95,10 +95,10 @@
    x-but
    square-but
    check-but
-   led0
-   led1
-   led2
-   led3
+   led0-top
+   led1-top
+   led2-top
+   led3-top
    mic-led
    camera-led
    wlan-conn

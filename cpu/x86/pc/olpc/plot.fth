@@ -1,3 +1,4 @@
+dev screen
 : plot0  ( -- x y )  0  screen-height 10 -  ;
 : clear-plot  ( width height -- )
    2>r
@@ -71,3 +72,10 @@ dend
 : lineplot  ( xt xmin xmax xscale  ymin ymax  -- )  " plot" $call-screen  ;
 : vgrid  ( width height interval -- )  " vgrid" $call-screen  ;
 : hgrid  ( width height interval -- )  " hgrid" $call-screen  ;
+
+: setup-plot  ( -- )
+   h# ffff set-fg  0 set-bg
+   d# 1200 d# 900 clear-plot
+   d# 1200 d# 900 d# 100 hgrid
+   d# 1200 d# 900 d# 100 vgrid
+;
