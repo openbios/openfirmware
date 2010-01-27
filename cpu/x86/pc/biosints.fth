@@ -1188,10 +1188,14 @@ end-package
          to bios-ih
          bootable-cdrom?  if
             bios-ih to bios-cdrom-ih
-            " sd:0" open-dev ?dup  if
+            " int:0" open-dev ?dup  if
                to bios-disk-ih
             else
-               ." Can't open SD device.  Install from CD-ROM probably won't work."  cr
+               " ext:0" open-dev ?dup  if
+                  to bios-disk-ih
+               else
+                  ." Can't open SD device.  Install from CD-ROM probably won't work."  cr
+               then
             then
             h# 82 to bios-boot-dev#
             true exit
@@ -1203,7 +1207,8 @@ end-package
 
       " /usb/disk:0" mbr-bootable?  if  " /usb/disk:0" set-hd-boot  true exit  then
 
-      " sd:0" mbr-bootable?  if  " sd:0" set-hd-boot  true exit  then
+      " int:0" mbr-bootable?  if  " int:0" set-hd-boot  true exit  then
+      " ext:0" mbr-bootable?  if  " ext:0" set-hd-boot  true exit  then
 
       false
    ;
