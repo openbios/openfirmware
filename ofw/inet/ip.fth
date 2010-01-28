@@ -84,6 +84,10 @@ create default-netmasks d# 255 c, d# 255 c, d# 255 c,  0 c,  0 c,  0 c,
    swap unknown-ip-addr?  or      ( flag )
 ;
 
+: multicast-ip-addr?  ( adr-buf -- flag )
+   c@ h# f0 and  h# e0 =
+;
+
 : netmask  ( -- 'ip )
    subnetmask unknown-ip-addr?  if  default-netmask  else  subnetmask  then
 ;
@@ -185,6 +189,8 @@ headerless
    drop  ip-length xw@  ip-version c@ h# f and /l*  payload
 ;
 
+0 instance value multicast-rx?
+
 : ip-addr-match?  ( -- flag )
    \ If we know the server's IP address (e.g. the user specified one, or
    \ we chose one from a RARP or BOOTP reply, or we locked onto one that
@@ -199,6 +205,10 @@ headerless
 
    \ If we don't know our own IP address yet, we accept every IP packet
    my-ip-addr unknown-ip-addr?  if  true exit  then
+
+   multicast-rx?  if
+      ip-dest-addr multicast-ip-addr?  if  true exit  then
+   then
 
    \ Otherwise, we know our IP address, so we filter out packets addressed
    \ to other destinations.

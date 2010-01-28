@@ -434,23 +434,44 @@ headers
    ." Can't enable multicast reception in network driver" cr
 ;
 
-: send-multicast  ( -- )
-   server-ip-addr his-ip-addr copy-ip-addr
-   " "(01 00 5e)" his-en-addr swap move                      ( acf )
-   his-ip-addr 1+  his-en-addr 3 +  3 move                   ( acf )
-   his-en-addr 3 + c@ h# 7f and his-en-addr 3 + c!           ( )
+: set-multicast-en-addr  ( 'ip -- )
+   " "(01 00 5e)" his-en-addr swap move              ( 'ip )
+   1+  his-en-addr 3 +  3 move                       ( )
+   his-en-addr 3 + c@ h# 7f and his-en-addr 3 + c!   ( )
 ;
 
-: receive-multicast  ( -- )
-\   server-ip-addr my-ip-addr copy-ip-addr
+: send-multicast  ( -- )
+   server-ip-addr his-ip-addr copy-ip-addr
+   his-ip-addr set-multicast-en-addr
+;
+
+0 value igmp-packet
+: send-igmp-v1-report  ( 'ip -- )
+   8 allocate-ip  to igmp-packet         ( 'ip )
+   0 igmp-packet l!                      ( 'ip )
+   h# 12 igmp-packet c!                  ( 'ip )
+   dup  igmp-packet 4 +  copy-ip-addr    ( 'ip )
+   0  igmp-packet 8  oc-checksum  igmp-packet 2+ be-w!  ( 'ip )
+
+   his-ip-addr copy-ip-addr  \ Send to the group we are registering for
+   1 ttl !   
+   igmp-packet 8  2  send-ip-packet
+   igmp-packet 8  free-ip
+   broadcast-ip-addr his-ip-addr copy-ip-addr  \ Don't filter on the server IP address
+;
+
+: join-multicast-group  ( 'ip -- )
+   dup set-multicast-en-addr    ( 'ip )
+   send-igmp-v1-report          ( )
+   true to multicast-rx?        ( )
    " set-multicast" my-parent ihandle>phandle find-method  if   ( acf )
-      " "(01 00 5e)" his-en-addr swap move                      ( acf )
-      my-ip-addr 1+  his-en-addr 3 +  3 move                    ( acf )
-      his-en-addr 3 + c@ h# 7f and his-en-addr 3 + c!           ( )
       his-en-addr /e  rot my-parent call-package                ( )
       exit
    then
    try-promiscuous
+;
+: receive-multicast  ( 'ip -- )
+   my-ip-addr join-multicast-group
 ;
 
 defer configured  ' noop to configured

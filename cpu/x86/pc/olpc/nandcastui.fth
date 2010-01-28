@@ -100,10 +100,16 @@ d# 20 value redundancy
    " boot rom:nb_rx ,,239.255.1.2" eval
 ;
 
-: nb-rx
+: nb-xx
    false to already-go?
    boot-as-call(
    " boot rom:nb_rx ,,239.255.1.2" eval
+   )boot-as-call
+;
+: nb-rx
+   false to already-go?
+   boot-as-call(
+   " boot rom:nb_rx ,,0.0.0.1" eval
    )boot-as-call
 ;
 : ucastnand

@@ -135,6 +135,12 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
    ax-mii-hw
 ;
 
+8 buffer: multicast-filter
+
+: ax-multi-filter!  ( -- )
+   multicast-filter 8  0 0  h# 16  ax-control-set
+;
+
 : ax-init-mii  ( -- )
    ax-mii-sw
 \   ax88772?  if
@@ -233,7 +239,39 @@ h# 88 value def-rx-ctl   \ SO (MAC ON) and AB (accept broadcast)
    ax-auto-neg-wait
 ;
 : ax-promiscuous  ( -- )  rx-ctl@  1 or  rx-ctl!  ;
-: ax-set-multicast  ( adr len -- )  2drop rx-ctl@  2 or  rx-ctl!  ;
+
+: crc32-le  ( adr len crc0 -- crc1 )
+   -rot  bounds  ?do    ( crc )
+      i c@ xor                            ( crc' )
+      8 0 do                              ( crc )
+         dup 1 and 0<>  h# edb88320 and   ( crc poly )
+         swap u2/ xor                     ( crc' )
+      loop                                ( crc )
+   loop                                   ( crc )
+;
+
+\  index       000   001   010   011   100   101   110   111
+\  bitrev      000   100   010   110   001   101   011   111
+create bitrev3  0 c,  4 c,  2 c,  6 c,  1 c,  5 c,  3 c,  7 c,
+
+: add-multicast-address  ( adr len -- )
+   h# ffffffff crc32-le               ( crc )
+   \ The low 3 bits - reversed - are the byte index and
+   \ the next 3 bits - reversed - are the bit number
+   dup 3 rshift 7 and bitrev3 + c@    ( crc bit# )
+   1 swap lshift                      ( crc bitmask )
+   swap  7 and bitrev3 + c@           ( bitmask byte# )
+   multicast-filter +  tuck           ( adr bitmask adr )
+   c@ or  swap c!                     ( )
+;
+
+\ : ax-set-multicast  ( adr len -- )  2drop rx-ctl@  2 or  rx-ctl!  ;
+: ax-set-multicast  ( adr len -- )
+   multicast-filter 8 erase    ( adr len )
+   add-multicast-address       ( )
+   ax-multi-filter!            ( )
+   rx-ctl@  h# 10 or  rx-ctl!
+;
 : ax-stop-mac  ( -- )  0 rx-ctl!  ;
 
 : ax-init-nic  ( -- )		\ Per ax8817x_bind
