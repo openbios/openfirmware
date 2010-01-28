@@ -106,12 +106,17 @@ d# 20 value redundancy
    " boot rom:nb_rx ,,239.255.1.2" eval
    )boot-as-call
 ;
-: nb-rx
+: $nb-rx  ( multicast-ip$ -- )
    false to already-go?
    boot-as-call(
-   " boot rom:nb_rx ,,0.0.0.1" eval
+   ( multicast-ip$ )  " boot rom:nb_rx mcast:%s" sprintf  eval
    )boot-as-call
 ;
+: nb-rx:  ( "multicast-ip" -- )
+   safe-parse-word  $nb-rx
+;
+: nb-rx  ( -- )  " 224.0.0.100" $nb-rx  ;
+
 : ucastnand
    false to already-go?
    " boot rom:nb_rx 10.20.0.16,,10.20.0.44" eval
