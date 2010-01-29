@@ -657,8 +657,19 @@ alias mv rename
 public
 
 : disk-free  ( "name" -- )
-   parse-word $disk-free drop
-   push-decimal  d# 1024 / (.) type ." K"  cr  pop-base
+   parse-word $disk-free           ( d.size )
+   dup  if    \ Larger than 4G, so display size in GB
+      d# 1,000,000,000 um/mod nip  ( gbytes )
+      .d ." GB" cr                 ( )
+      exit
+   then                            ( d.size )
+   2dup  h# 40.0000.  d<  if       ( d.size )
+      d# 1024 um/mod nip           ( kbytes )
+      .d ." KB" cr                 ( )
+      exit
+   then                            ( d.size )
+   d# 1,000,000 um/mod nip         ( mbytes )
+   .d ." MB" cr                    ( )
 ;
 
 : more  ( "devspec" -- )
