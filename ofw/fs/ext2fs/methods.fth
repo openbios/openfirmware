@@ -167,7 +167,7 @@ headers
 
 : ext2fsnowrite  ( addr count 'fh -- #written )
    ." Not writing to the ext2 filesystem because of unsupported extensions" cr
-   2drop 0
+   3drop 0
 ;
 : ext2fsfwrite   ( addr count 'fh -- #written )
    drop
