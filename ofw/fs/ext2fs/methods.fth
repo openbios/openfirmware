@@ -19,7 +19,7 @@ external
    dirent-inode@ set-inode
 
    add-block					( block# )
-   file-size h# 400 + file-size!
+   dfile-size h# 400. d+ dfile-size!		( block# )
    dup direct0 int! update			( block# )
    block bsize erase update  \  flush		( )
    inode# first-dirent  if  true exit  then	( )
@@ -136,7 +136,7 @@ headers
 
 \ EXT2FS file interface
 
-: ext2fsdflen  ( 'fhandle -- d.size )  drop  file-size 0  ;
+: ext2fsdflen  ( 'fhandle -- d.size )  drop  dfile-size  ;
 
 : ext2fsdfalign  ( d.byte# 'fh -- d.aligned )
    drop swap bsize 1- invert and  swap
@@ -159,19 +159,24 @@ headers
 : ext2fsfread   ( addr count 'fh -- #read )
    drop
    dup bsize > abort" Bad size for ext2fsfread"
-   file-size  lblk# bsize *  -	( addr count rem )
+   dfile-size  lblk# bsize um*  d- drop		( addr count rem )
    umin swap			( actual addr )
    lblk# read-file-block	( actual )
    dup  0>  if  lblk#++  then	( actual )
 ;
 
+: ext2fsnowrite  ( addr count 'fh -- #written )
+   ." Not writing to the ext2 filesystem because of unsupported extensions" cr
+   2drop 0
+;
 : ext2fsfwrite   ( addr count 'fh -- #written )
    drop
    dup bsize > abort" Bad size for ext2fsfwrite"	( addr count )
-   tuck  lblk# bsize * + dup file-size u>  if		( actual addr new )
-      file-size!				\ changing byte count, NOT #blks
-   else
-      drop
+   tuck 0  lblk# bsize um* d+				( addr count d.new-size )
+   dfile-size 2over  d<  if				( actual addr d.new )
+      dfile-size!	\ extending file		( actual addr )
+   else							( actual addr d.new )
+      2drop		\ not extending file		( actual addr )
    then							( actual addr )
    lblk# write-file-block				( actual )
 
@@ -191,7 +196,11 @@ headers
    >r
    bsize alloc-mem bsize initbuf
    dirent-inode@  r@  ['] ext2fsdflen ['] ext2fsdfalign ['] ext2fsfclose ['] ext2fsdfseek 
-   r@ read =  unknown-extensions? or if  ['] nullwrite  else  ['] ext2fsfwrite  then
+   r@ read =  unknown-extensions? or if
+      ['] ext2fsnowrite
+   else
+      ['] ext2fsfwrite
+   then
    r> write =  if  ['] nullread   else  ['] ext2fsfread   then
    true
 ;
@@ -249,8 +258,8 @@ external
 : seek   ( offset.low offset.high -- error? )
    ext2fs-fd  ['] dfseek catch  if  2drop true  else  false  then
 ;
-: size  ( -- d )  file-size  0  ;
-: load  ( adr -- size )  file-size  read  ;
+: size  ( -- d )  dfile-size  ;
+: load  ( adr -- size )  dfile-size drop  read  ;
 \ : files  ( -- )  begin   file-name type cr  next-dirent until  ;
 
 \ LICENSE_BEGIN

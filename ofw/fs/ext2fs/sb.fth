@@ -54,7 +54,7 @@ defer int!    ( l adr -- )  ' be-l! to int!
 
    23 +sbl h# ffffffff invert and        \ Accept all compat extensions
    24 +sbl h# 00000002 invert and  or    \ Incompatible - accept FILETYPE
-   25 +sbl h# 00000001 invert and  or    \ RO - accept SPARSE_SUPER
+   25 +sbl h# 00000003 invert and  or    \ RO - accept SPARSE_SUPER and LARGE_FILE
 ;
 
 : do-alloc  ( adr len -- )  " dma-alloc" $call-parent  ;

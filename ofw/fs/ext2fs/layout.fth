@@ -189,8 +189,8 @@
 ;
 
 : append-block   ( -- )
-   add-block					( block )
-   file-size bsize / dup bsize * file-size!	( block #blocks )
+   add-block						( block )
+   dfile-size bsize um/mod nip  dup bsize um* dfile-size!	( block #blocks )
    1+ >pblk int! update
 ;
 

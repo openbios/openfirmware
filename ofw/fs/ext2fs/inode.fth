@@ -23,8 +23,8 @@ decimal
 : uid         ( -- uid )         2 +i short@  ;
 : uid!        ( uid -- )         2 +i short!  update  ;
 : filetype    ( -- type )  file-attr  h# f000 and  ;
-: file-size   ( -- n )           4 +i int@  ;
-: file-size!  ( n -- )           4 +i int!  update  ;
+: dfile-size  ( -- d )           4 +i int@  108 +i int@  ;
+: dfile-size! ( d -- )         108 +i int!  4 +i int!  update  ;
 : atime       ( -- seconds )     8 +i int@  ;
 : atime!      ( seconds -- )     8 +i int!  update  ;
 : ctime       ( -- seconds )    12 +i int@  ;
@@ -40,6 +40,7 @@ decimal
 : #blks-held  ( -- n )          28 +i int@  ;
 : #blks-held! ( n -- )          28 +i int!  update  ;
 : file-acl    ( -- n )         104 +i int@  ;
+: dir-acl     ( -- n )         108 +i int@  ;
 
 d# 12 constant #direct-blocks
 : direct0     ( -- adr )   40 +i  ;

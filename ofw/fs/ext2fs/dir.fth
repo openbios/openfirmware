@@ -18,7 +18,7 @@ variable totoff
 0 instance value wf-type  \ Type - 4 for directory, d# 10 for symlink, etc
 
 : get-dirblk  ( -- end? )
-   lblk# bsize * file-size >=  if  true exit  then
+   lblk# bsize um* dfile-size d< 0=  if  true exit  then
    lblk# >pblk# to dir-block#
    false
 ;
@@ -58,7 +58,7 @@ variable totoff
 \ **** Select the next directory entry
 : next-dirent  ( -- end? )
    dirent-len@  dup diroff +!  totoff +!
-   totoff @  file-size >=  if  true exit  then
+   totoff @ u>d  dfile-size d< 0=  if  true exit  then
    diroff @  bsize =  if
       lblk#++  get-dirblk  if  true exit  then
       diroff off
@@ -130,7 +130,7 @@ variable totoff
    drop							( last )
 ;
 : last-dirent   ( -- free-bytes )
-   file-size bsize /mod swap 0= if  1-  then to lblk#	( )
+   dfile-size bsize um/mod nip  swap 0= if  1-  then to lblk#	( )
    lblk# >pblk# to dir-block#
    (last-dirent) drop
    dirent-len@  dirent-reclen  -
@@ -413,7 +413,7 @@ external
 
 : file-info  ( id -- false | id' s m h d m y len attributes name$ true )
    inode# >r   dirent-inode@ set-inode			( id )
-   1+  mtime unix-seconds>  file-size  file-attr  file-name true
+   1+  mtime unix-seconds>  dfile-size drop  file-attr  file-name true
    r> set-inode
 ;
 
