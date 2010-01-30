@@ -101,7 +101,7 @@ d# 256 buffer: tempname-buf
 ;
 
 : scanner?  ( -- flag )
-   " usb-keyboard" expand-alias  if  2drop true  else  false  then
+   " usb-keyboard" expand-alias  nip nip
 ;   
 : wait-scanner  ( -- )
    scanner?  0=  if
