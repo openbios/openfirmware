@@ -356,6 +356,16 @@ fload ${BP}/cpu/x86/pc/olpc/via/switches.fth \ Lid and ebook switches
 fload ${BP}/cpu/x86/pc/olpc/via/leds.fth     \ LEDs
 fload ${BP}/cpu/x86/pc/olpc/via/factory.fth  \ Manufacturing tools
 
+\ Pseudo device that appears in the boot order before net booting
+0 0 " " " /" begin-package
+   " prober" device-name
+   : open
+      visible
+      false
+   ;
+   : close ;
+end-package
+
 fload ${BP}/dev/logdev.fth
 
 fload ${BP}/cpu/x86/pc/olpc/disptest.fth
@@ -589,7 +599,7 @@ true                               ' client-symbols?  set-config-int-default
 ;
 
 : factory-test?  ( -- flag )
-   \ TS is the "test station" tag.  Its value is set to "DL" at the
+   \ TS is the "test station" tag, whose value is set to "SHIP" at the
    \ end of manufacturing test.
    " TS" find-tag  if         ( adr len )
       ?-null  " SHIP" $=  0=  ( in-factory? )
@@ -673,10 +683,11 @@ true                               ' client-symbols?  set-config-int-default
 
    show-child
    install-alarm
-   sound
+   ['] sound catch drop
    ?games
 
    ['] false to interrupt-auto-boot?
+   factory-test?  if  d# 1000 ms  then  \ Extra USB probe delay in the factory
    probe-usb
    " probe+" do-drop-in
 
