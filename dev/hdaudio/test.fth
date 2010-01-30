@@ -90,8 +90,8 @@ purpose: Manufacturing testing
 : test-common  ( setup$ -- error? )
    $call-analyzer                    ( )
    " prepare-signal" $call-analyzer  ( pb /pb rb /rb )
-   \ First time lets the input channel settle
-   2over 2over out-in                ( pb /pb rb /rb )
+   \ First shorter run lets the input channel settle
+   2over 4 /  2over 4 /  out-in      ( pb /pb rb /rb )
    out-in                            ( )
    " analyze-signal" $call-analyzer  ( okay? )
 ;
@@ -116,7 +116,6 @@ purpose: Manufacturing testing
    output-common-settings  d# -23 set-volume  \ -23 prevents obvious visible clipping
    " setup-fixture" test-common
    false to force-speakers?  false to force-internal-mic?
-
 ;
 : test-with-loopback  ( -- error? )
    input-common-settings  stereo

@@ -359,13 +359,13 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
    left-range  d# 200 d# 140 sm-covar-abs-sum  nip ( sum1.high )
    left-range  d# 540 d# 400 sm-covar-abs-sum  nip ( sum1.high sum2.high )
    >ratio
-   d# 30 <
+   d# 25 <
 ;
 : case-ratio-right  ( -- error? )
    right-range  d# 330 d# 140 sm-covar-abs-sum  nip ( sum1.high )
    right-range  d# 590 d# 400 sm-covar-abs-sum  nip ( sum1.high sum2.high )
    >ratio
-   d# 15 <
+   d# 14 <
 ;
 
 \ This compares the total energy within the impulse response band to the
@@ -439,8 +439,7 @@ defer fix-dc
    ['] -mono-wmean to fix-dc
 ;
 : setup-case  ( -- )
-\   xxx - this needs to use the internal speakers and mic even though the loopback cable is attached
-   h# 40000 to /pb          \ Long burst for better S/N on far away speaker
+   h# 80000 to /pb         \ Long burst for better S/N on far away speaker
    /pb 2/ h# 1000 + to /rb  \ Mono reception (internal mic)
    ['] case-ratio-left  to analyze-left
    ['] case-ratio-right to analyze-right
