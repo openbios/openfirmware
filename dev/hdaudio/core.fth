@@ -72,9 +72,24 @@ my-address my-space encode-phys
 : dplbase    h# 70 au +  ;
 : dpubase    h# 74 au +  ;
 
+0 value time-limit
+: set-time-limit  ( ms -- )   get-msecs  +  to time-limit  ;
+: 1sec-time-limit  ( -- )  d# 1000 set-time-limit  ;
+: ?timeout  ( -- )
+   get-msecs  time-limit -  0>  if
+      ." Audio device timeout!" cr
+      abort
+   then
+;
 : running?  ( -- ? )  gctl rl@ 1 and 0<> ;
-: reset  ( -- )  0 gctl rl!  begin running? 0= until ;
-: start  ( -- )  1 gctl rl!  begin running? until ;
+: reset  ( -- )
+   0 gctl rl!
+   1sec-time-limit   begin  ?timeout  running? 0= until
+;
+: start  ( -- )
+   1 gctl rl!
+   1sec-time-limit  begin   ?timeout  running? until
+;
 
 \ \\ Stream Descriptors
 \ Default: 48kHz 16bit stereo
@@ -151,7 +166,10 @@ d# 1024 constant /corb
 0 value corb-pos
 
 : corb-dma-on   ( -- )  2 corbctl rb!  ;
-: corb-dma-off  ( -- )  0 corbctl rb!  begin corbctl rb@  2 and 0= until  ;
+: corb-dma-off  ( -- )
+   0 corbctl rb!
+   1sec-time-limit  begin  ?timeout  corbctl rb@  2 and 0= until
+;
 
 : init-corb  ( -- )
     /corb dma-alloc  to corb
@@ -165,7 +183,10 @@ d# 1024 constant /corb
     corb-dma-on
 ;
 
-: wait-for-corb-sync  ( -- )  begin corbrp rw@ corb-pos = until  ;
+: wait-for-corb-sync  ( -- )
+   1sec-time-limit
+   begin  ?timeout corbrp rw@ corb-pos = until
+;
 
 : corb-tx  ( u -- )
     corb-pos 1+ d# 256 mod to corb-pos
@@ -199,7 +220,7 @@ d# 256 2* cells constant /rirb
 : rirb-data?  ( -- )  rirb-pos rirbwp rw@ <>  ;
 
 : rirb-read  ( -- resp solicited? )
-    begin rirb-data? until
+    1sec-time-limit  begin  ?timeout  rirb-data? until
     rirb-pos 1+ d# 256 mod to rirb-pos
     rirb-pos 2 * cells rirb +      ( adr )
     dup @                          ( adr resp )
@@ -228,13 +249,23 @@ d# 256 2* cells constant /rirb
 \ \ Streams
 \ \\ Starting and stopping channels
 
-: assert-stream-reset    ( -- )  1 sdctl rb!  begin  sdctl rb@ 1 and 1 =  until  ;
-: deassert-stream-reset  ( -- )  0 sdctl rb!  begin  sdctl rb@ 1 and 0 =  until  ;
+: assert-stream-reset    ( -- )
+   1 sdctl rb!
+   1sec-time-limit  begin  ?timeout  sdctl rb@ 1 and 1 =  until
+;
+: deassert-stream-reset  ( -- )
+   0 sdctl rb!
+   1sec-time-limit  begin  ?timeout  sdctl rb@ 1 and 0 =  until
+;
 
 : reset-stream  ( -- )  assert-stream-reset deassert-stream-reset  ;
-: start-stream  ( -- )  2 sdctl rb! begin  sdctl rb@ 2 and  0<> until  ;
+: start-stream  ( -- )
+   2 sdctl rb!
+   1sec-time-limit  begin  ?timeout  sdctl rb@ 2 and  0<> until
+;
 : stop-stream   ( -- )
-   0 sdctl rb! begin  sdctl rb@ 2 and  0=  until
+   0 sdctl rb!
+   1sec-time-limit  begin  ?timeout  sdctl rb@ 2 and  0=  until
    4 sdsts rb! \ clear completion flag
 ;
 
@@ -434,7 +465,9 @@ d# 256 /bd * value /bdl
 ;
 
 : stream-done?      ( -- )  sdsts c@ 4 and 0<>  ;
-: wait-stream-done  ( -- )  begin  stream-done?  until  ;
+: wait-stream-done  ( -- )
+   d# 20,000 set-time-limit  begin  ?timeout  stream-done?  until
+;
 
 \ \\ Upsampling
 
