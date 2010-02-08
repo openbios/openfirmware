@@ -29,7 +29,7 @@ d# 128 constant /spec-maxline
 
 : erase-gap  ( end-block -- )
    dup last-eblock# >  if
-      last-eblock# 1+  ?do  i erase-eblock  loop   
+      last-eblock# 1+  ?do  i erase-eblock  loop
    else
       drop
    then
@@ -177,7 +177,7 @@ true value check-hash?
    else                                  ( eblock# hashname$ hash$ )
       2drop 2drop                        ( eblock# )
    then
-   
+
    ( eblock# )
 \ Asynchronous writes
    data-buffer over nand-pages/block *  nand-pages/block  " write-blocks-start" $call-nand  ( eblock# error? )
@@ -228,7 +228,7 @@ previous definitions
 \  clear-context  nand-commands
    t(
    also nand-commands                      ( adr len )
-   
+
    true to secure-fsupdate?                ( adr len )
    ['] include-buffer  catch  ?dup  if  nip nip  .error  security-failure  then
 
