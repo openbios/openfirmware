@@ -221,13 +221,15 @@ previous definitions
    tuck  load-base h# c00000 +  swap move  ( len )
    load-base h# c00000 + swap              ( adr len )
 
-   ['] noop to show-progress
+   ['] noop to show-progress               ( adr len )
+
+   open-nand                               ( adr len )
 
 \  clear-context  nand-commands
    t(
-   also nand-commands
+   also nand-commands                      ( adr len )
    
-   true to secure-fsupdate?
+   true to secure-fsupdate?                ( adr len )
    ['] include-buffer  catch  ?dup  if  nip nip  .error  security-failure  then
 
    previous
