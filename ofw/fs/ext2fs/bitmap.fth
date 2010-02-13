@@ -169,7 +169,7 @@ create lowbits
       \ the block bitmap number in the group descriptor.  If it is larger than
       \ the calculated block number, do the backup.
       #groups 1  do
-         i bpg *  2+			( possible-gn )
+         i bpg *  gds-fs-block# +	( possible-gn )
          dup  i block-bitmap <  if	( possible-gn )
             block			( gdn-adr )
             0 group-desc		( gdn-adr gd0-adr )

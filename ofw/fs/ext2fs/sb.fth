@@ -90,7 +90,7 @@ defer int!    ( l adr -- )  ' be-l! to int!
 ;
 
 : gds-fs-block#  ( -- fs-block# )
-   bsize d# 1024 =  if  2  else  1  then	( logical block# )
+   datablock0 1+	( logical-block# )
 ;
 : gds-block#  ( -- dev-block# )
    gds-fs-block#  bsize ublock / *		( dev-block# )
