@@ -98,6 +98,11 @@ headerless
    then
 [then]
 
+   2 read-sector  ext2?  if
+      ext2fs-type to partition-type
+      get-disk-size exit
+   then
+
    \ Nothing we tried worked.
    abort
 ;

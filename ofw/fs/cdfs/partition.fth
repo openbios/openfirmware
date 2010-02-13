@@ -4,7 +4,7 @@ purpose: Recognizer for ISO-9660 file system type
 \ Returns true if the disk or partition is an ISO 9660 file
 \ system volume, as determined by reading the primary volume descriptor.
 : iso-9660?  ( -- flag )
-   d# 16  ['] read-sector catch  if  drop false exit  then
+   d# 16  ['] read-hw-sector catch  if  drop false exit  then
    sector-buf c@ 1 =  sector-buf 1+ 5 " CD001"  $=  and  dup  if   ( flag )
       iso-type to partition-type
 

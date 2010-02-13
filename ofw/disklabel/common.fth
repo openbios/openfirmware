@@ -17,10 +17,17 @@ h# 96 constant iso-type
 
 0 instance value sector-offset
 
-: read-sector  ( sector# -- )
+\ For ISO-9660 CD-ROMs
+: read-hw-sector  ( sector# -- )
    sector-offset +  /sector um*  " seek" $call-parent  abort" Seek failed"
    sector-buf /sector  " read" $call-parent  /sector <> abort" Read failed"
 ;
+\ For everything else
+: read-sector  ( sector# -- )
+   sector-offset +  h# 200 um*  " seek" $call-parent  abort" Seek failed"
+   sector-buf h# 200  " read" $call-parent  h# 200 <> abort" Read failed"
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
