@@ -744,7 +744,7 @@ previous previous definitions
 
 : enable-serial ( -- )
    serial-enabled? if exit then
-   40 8846 config-b!
+   h# 40 h# 8846 config-b!
    " com1" open-dev add-input
    " com1" open-dev add-output
 ;
