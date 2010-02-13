@@ -377,6 +377,13 @@ headers
    drop                                   ( )
 ;
 
+\ Command register: --cccccc.TTDI.C-rr  c-command# T-CmdType D-dataPresent I-CmdIndexCheck C-CmdCRCcheck r-responseType
+\  CmdType: 00-normal  01-suspend  10-resume  11-abort
+\  ResponseType: 00-none 01-136 10-48 11-48_and_check_busy
+\ Argument register:
+\ Mode register: --Md-ABD  M-Multi d-Direction A-Auto_CMD12 B-BlockCntEnable D-DMAEnable
+
+
 : cmd  ( arg cmd mode -- )
    debug?  if  ." CMD: " over 4 u.r space   then
    wait-ready
@@ -499,11 +506,13 @@ headers
 : protected?  ( group# -- 32-bits )  h# 1e1a cmd  response  ;  \ CMD30 R1 UNTESTED
 
 : erase-blocks  ( block# #blocks -- ) \ UNTESTED
+   intstat-on
    dup  0=  if  2drop exit  then
    1- bounds        ( last first )
    h# 201a 0 cmd    ( last )   \ CMD32 - R1
    h# 211a 0 cmd    ( )        \ CMD33 - R1
-   h# 261b 0 cmd               \ CMD38 - R1b (wait for busy)
+   0 h# 261b 0 cmd             \ CMD38 - R1b (wait for busy)
+   intstat-off
 ;
 
 \ CMD40 is MMC
@@ -517,10 +526,24 @@ headers
 
 : set-oc ( ocr -- ocr' )  app-prefix  h# 2902 0 cmd  response  ;  \ ACMD41 R3
 
-\ This sends back 512 bits in a single data block.
-: app-get-status  ( -- status )  app-prefix  0 h# 0d1a h# 12 cmd  response  ;  \ ACMD13 R1 UNTESTED
+\ This sends back 512 bits (64 bytes) in a single data block.  See sdstatbits
+\ It contains things like the allocation unit size and the speed class.
+: app-get-status  ( -- buf )    \ ACMD13 R1
+   intstat-on
+   scratch-buf  d# 64 dup  (dma-setup)
+   app-prefix  0 h# 0d3a h# 13 cmd
+   response  h# 20 and  0=  abort" ACMD13 not implemented!"
+   2 wait
+   dma-release
+   scratch-buf
+   intstat-off
+;
 
 : get-#write-blocks  ( -- n )  app-prefix  0 h# 161a 0 cmd  response  ;  \ ACMD22 R1 UNTESTED
+
+\ Using this before a write-multiple command speeds up the write by
+\ avoiding unnecessary preservation of data that will be clobbered.
+: pre-write-erase  ( #blocks -- )  intstat-on  app-prefix  ( #blocks )  h# 171a 0  cmd  ;  \ ACMD23 R1
 
 \ You might want to turn this off for data transfer, as it controls
 \ a resistor on one of the data lines
@@ -934,24 +957,29 @@ external
    dma-len /block /
 ;
 
-: r/w-blocks-start  ( addr block# #blocks in? -- error? )
-   wait-dma-done
-   over 0=  if  2drop 2drop  false  exit   then  \ Prevents hangs
-   intstat-on
-   >r               ( addr block# #blocks r: in? )
-   rot dma-setup    ( block# r: in? )
-   wait-write-done  if  true exit  then
-   address-shift lshift  r>  if
-      read-multiple
-   else
-      write-multiple  true to writing?
-   then
-   true to dma?
-   false
+: r/w-blocks-start  ( addr block# #blocks in? fresh? -- error? )
+   wait-dma-done    ( addr block# #blocks fresh? in? )
+   2 pick 0=  if  3drop 2drop  false  exit   then  \ Prevents hangs
+   intstat-on       ( addr block# #blocks fresh? in? )
+   2 pick >r >r >r  ( addr block# #blocks r: #blocks fresh? in? )
+   rot dma-setup    ( block#              r: #blocks fresh? in? )
+   wait-write-done  if  drop  r> r> r> 3drop true exit  then  ( block# )
+   address-shift lshift  r>  if         ( block# r: #blocks fresh? )
+      r> r> 2drop                       ( block# )
+      read-multiple                     ( )
+   else                                 ( block# r: #blocks fresh? )
+      r>  if  r> pre-write-erase  else  r> drop  then  ( block# )
+      write-multiple  true to writing?  ( )
+   then                                 ( )
+   true to dma?                         ( )
+   false                                ( error? )
+;
+: fresh-write-blocks-start  ( addr block# #blocks -- error? )
+   false true r/w-blocks-start
 ;
 
 : r/w-blocks  ( addr block# #blocks in? -- actual )
-   r/w-blocks-start  if  -1 exit  then  r/w-blocks-finish
+   false r/w-blocks-start  if  -1 exit  then  r/w-blocks-finish
 ;
 
 : r/w-ioblocks  ( reg# function# inc? addr len blksz in? -- actual )
@@ -1009,6 +1037,17 @@ external
 : csdbits  ( high low -- bits )
    swap 0 -rot  do  2*  i csdbit  or  -1 +loop
 ;
+
+\ Decoder for the result of ACMD13 - app-get-status
+: sdstatbit  ( bit# -- b )
+   d# 511 swap -        ( bit#' )
+   dup 3 rshift scratch-buf +  c@   ( bit-offset byte )
+   swap 7 and 7 xor  rshift 1 and
+;
+: sdstatbits  ( high low -- bits )
+   swap 0 -rot  do  2*  i sdstatbit  or  -1 +loop
+;
+
 
 \ The calculation below is shown on page 81 of the
 \ SD Physical Layer Simplified Specification Version 2.00.

@@ -15,7 +15,7 @@ purpose: SD disk (MMC) driver
 \ block or record oriented, but the OBP external interface is byte-oriented,
 \ in order to be independent of particular device block sizes.
 
-0 instance value deblocker
+0 value deblocker
 
 external
 
@@ -31,11 +31,15 @@ external
    false  " r/w-blocks" $call-parent
 ;
 
+: erase-blocks  ( block# #blocks -- )
+   " erase-blocks" $call-parent
+;
+
 \ Asynchronous write. Completes on the next call to
 \ write-blocks-start, write-blocks-finish, or close.
 \ (Don't do other read/write operations in between.)
 : write-blocks-start  ( adr block# #blocks -- error? )
-   false  " r/w-blocks-start" $call-parent
+   " fresh-write-blocks-start" $call-parent
 ;
 : write-blocks-end  ( -- error? )
    false  " r/w-blocks-end" $call-parent
@@ -48,33 +52,43 @@ external
 : dma-free    ( vadr size -- )  " dma-free"   $call-parent  ;
 
 : set-unit  ( -- )  0 my-unit " set-address" $call-parent  ;
+
+0 value open-count
 : open  ( -- )
    set-unit
-   " attach-card" $call-parent  0=  if  false exit  then
+   open-count 0=  if
+      " attach-card" $call-parent  0=  if  false exit  then
 
-   " "  " deblocker"  $open-package  ?dup  if
-      to deblocker
-   else
-      ." Can't open deblocker package"  cr
-      false exit
+      " "  " deblocker"  $open-package  to deblocker
+      deblocker 0=  if
+         ." Can't open deblocker package"  cr
+         false exit
+      then
    then
 
-   my-args  " disk-label"  $open-package  ?dup  if   ( ihandle )
-      to label-package 
+   my-args  " disk-label"  $open-package  to label-package
+   label-package  if
       0 0  " offset" label-package $call-method  to offset-high  to offset-low
    else
       ." Can't open disk label package"  cr
-      deblocker close-package  false exit
+      open-count 0=  if
+         deblocker close-package
+      then
+      false exit
    then
 
+   open-count 1+ to open-count
    true
 ;
 
 : close  ( -- )
-   label-package close-package
-   deblocker close-package
-   \ Close packages first in case of delayed write flush
-   " detach-card" $call-parent
+   open-count  dup  1- to open-count  ( prev-open-count )
+   label-package close-package        ( prev-open-count )
+   1 =  if                            ( )
+      deblocker close-package         ( )
+      \ Close packages first in case of delayed write flush
+      " detach-card" $call-parent     ( )
+   then                               ( )
 ;
 
 : block-size  ( -- n )  h# 200  ;
