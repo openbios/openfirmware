@@ -61,6 +61,13 @@ h# beef.face constant TYPE_USB_INDICATION
 : set-parent-channel  ( -- )  set-device  device set-target  ;
 
 : setup-bus-io  ( /inbuf /outbuf -- error? )
+   reset?  if
+      configuration set-config  if
+         ." Failed to set USB configuration for wireless" cr
+         true exit
+      then
+      bulk-in-pipe bulk-out-pipe reset-bulk-toggles
+   then
    4 bulk-out-pipe " begin-out-ring" $call-parent   ( /inbuf )
    h# 40 bulk-in-pipe  " begin-in-ring"  $call-parent
    false
