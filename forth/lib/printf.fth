@@ -38,13 +38,13 @@ d# 1024 buffer: spbuf
 : replace\  ( ... tail$ -- ... tail$' )   \ Handle backslash escapes
    1/string              ( ... tail$ char )
    case
-      [char] n  of  newline   +spchar  then
-      [char] r  of  carret    +spchar  then
-      [char] t  of  control i +spchar  then
-      [char] f  of  control l +spchar  then
-      [char] l  of  linefeed  +spchar  then
-      [char] b  of  control h +spchar  then
-      [char] !  of  bell      +spchar  then
+      [char] n  of  newline   +spchar  endof
+      [char] r  of  carret    +spchar  endof
+      [char] t  of  control i +spchar  endof
+      [char] f  of  control l +spchar  endof
+      [char] l  of  linefeed  +spchar  endof
+      [char] b  of  control h +spchar  endof
+      [char] !  of  bell      +spchar  endof
       ( default ) dup +spchar
    endcase
 ;
