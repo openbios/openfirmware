@@ -153,7 +153,18 @@ headers
 \ The debouncer takes about 300 ms to stabilize.
 
 : card-inserted?  ( -- flag )
-   present-state@ h# 30000 and  h# 30000 =
+   get-msecs d# 500 +   begin            ( time-limit )
+      \ When the stable bit is set, we can believe the answer
+      present-state@ h# 20000 and  if    ( time-limit )
+         drop                            ( )
+         present-state@ h# 10000 and 0<> ( flag )
+         exit                            ( -- flag )
+      then                               ( time-limit )
+      dup get-msecs -  0<                ( time-limit timeout? )
+   until                                 ( time-limit )
+   drop                                  ( )
+   ." SD Card detect unstable!" cr       ( )
+   false                                 ( flag )
 ;
 : write-protected?  ( -- flag )
    present-state@ h# 80000 and  0=
