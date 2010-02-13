@@ -139,8 +139,8 @@ create mode-sense-geometry    h# 1a c, 0 c, 4 c, 0 c, d# 36 c, 0 c,
 
 \ This method is called by the deblocker
 
-0 instance value #blocks
-0 instance value block-size
+0 value #blocks
+0 value block-size
 
 headers
 
@@ -193,40 +193,54 @@ external
 
 \ Methods used by external clients
 
+0 value open-count
+
 : open  ( -- flag )
    my-unit parent-set-address
 
-   \ Set timeout to 45 sec: some large (>1GB) drives take
-   \ up to 30 secs to spin up.
-   d# 45 d# 1000 *  set-timeout
+   open-count  if
+      d# 2000 set-timeout
+   else
 
-   unit-ready?  0=  if  false  exit  then
+      \ Set timeout to 45 sec: some large (>1GB) drives take
+      \ up to 30 secs to spin up.
+      d# 45 d# 1000 *  set-timeout
 
-   \ It might be a good idea to do an inquiry here to determine the
-   \ device configuration, checking the result to see if the device
-   \ really is a disk.
+      unit-ready?  0=  if  false  exit  then
 
-   \ Make sure the disk is spinning
+      \ It might be a good idea to do an inquiry here to determine the
+      \ device configuration, checking the result to see if the device
+      \ really is a disk.
 
-   timed-spin  if  false exit  then
+      \ Make sure the disk is spinning
 
-   read-block-extent  if  false exit  then  ( block-size #blocks )
-   to #blocks  to block-size
+      timed-spin  if  false exit  then
 
-   d# 2000 set-timeout
+      read-block-extent  if  false exit  then  ( block-size #blocks )
+      to #blocks  to block-size
 
-   init-deblocker  0=  if  false exit  then
+      d# 2000 set-timeout
+      init-deblocker  0=  if  false exit  then
+   then
 
    init-label-package  0=  if
-      deblocker close-package false exit
+      open-count 0=  if
+         deblocker close-package
+      then
+      false exit
    then
+
+   open-count 1+ to open-count
 
    true
 ;
 
 : close  ( -- )
-   label-package close-package
-   deblocker close-package
+   open-count dup  1- 0 max to open-count  ( old-open-count )
+   label-package close-package             ( old-open-count )
+   1 =  if
+      deblocker close-package
+   then
 ;
 
 : seek  ( offset.low offset.high -- okay? )

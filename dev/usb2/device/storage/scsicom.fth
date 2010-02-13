@@ -73,7 +73,7 @@ headers
 \ block or record oriented, but the OBP external interface is byte-oriented,
 \ in order to be independent of particular device block sizes.
 
-0 instance value deblocker
+0 value deblocker
 : init-deblocker  ( -- okay? )
    " "  " deblocker"  $open-package  to deblocker
    deblocker if
