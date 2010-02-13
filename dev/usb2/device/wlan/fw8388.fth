@@ -28,8 +28,9 @@ struct
 constant /boot-ack
 
 \ >cmd-ack-status
-0 constant boot-ack-ok			\ Download ok
-1 constant boot-ack-fail		\ Download failed
+1 constant boot-ack-ok			\ Download ok
+\ 0 constant boot-ack-fail		\ Download failed
+\ 2 constant boot-ack-unsupported	\ Unsupported command
 
 \ USB image download request structure
 struct
@@ -73,11 +74,12 @@ constant /dl-sync
       " Bad command status length" vtype
       false exit
    then                                     ( adr )
-   >boot-magic le-l@  case                  ( )
-      0 of  false exit  endof  \ BOOT_CMD_RESP_FAIL
-      1 of  true  exit  endof  \ BOOT_CMD_RESP_OK
-      2 of  false exit  endof  \ BOOT_CMD_RESP_NOT_SUPPORTED
-   endcase
+   dup >boot-magic le-l@ boot-magic <>  if  ( adr )
+      drop                                  ( )
+      " Bad magic number in boot response" vtype  ( )
+      false exit
+   then                                     ( adr )
+   >cmd-status c@ boot-ack-ok =             ( ok? )
 ;
 
 : wait-cmd-fw-dl-ack  ( -- acked? )
