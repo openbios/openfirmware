@@ -303,6 +303,7 @@ true value user-mode?
 fload ${BP}/cpu/x86/pc/olpc/banner.fth
 
 fload ${BP}/ofw/gui/loadmenu.fth
+false value smt-test?  false value final-test?
 fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 \ fload ${BP}/ofw/gui/insticon.fth
 
@@ -462,6 +463,7 @@ end-support-package
 ;
 ' olpc-ssids to default-ssids
 
+fload ${BP}/cpu/x86/bootascall.fth
 fload ${BP}/cpu/x86/pc/olpc/nandcastui.fth
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
 fload ${BP}/cpu/x86/pc/olpc/fsupdate.fth
