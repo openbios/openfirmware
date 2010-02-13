@@ -687,7 +687,7 @@ headers
    outbuf-wait
 ;
 
-: set-mac-control  ( -- error? )
+: set-mac-control  ( -- )
    (set-mac-control)  if
      (set-mac-control) drop
    then
@@ -1033,6 +1033,50 @@ headers
    4 pick to channel
 ;
 
+: adhoc-start  ( ch ssid$ -- ok? )
+   set-mac-control
+
+   h# 2b ( CMD_802_11_AD_HOC_START ) start-cmd
+   resp-wait-long to resp-wait
+
+   ( ssid$ ) tuck +x$			\ SSID
+   ( ssid-len ) d# 32 swap - +x		\ 32 bytes of SSID (zero-padded because buffer is pre-erased)
+   2 +xb				\ BssType: BSS_INDEPENDENT
+   d# 100 +xw				\ Beacon period
+   0      +xb				\ DTIM period (only for versions < 9)
+
+   \ IBSS param set
+   6 +xb				\ Elem ID = IBSS param set
+   2 +xb				\ Length
+   atim +xw				\ ATIM window
+   4 +x					\ Reserved bytes
+
+   \ DS param set
+   3 +xb				\ Elem ID = DS param set
+   1 +xb				\ Length
+   ( channel ) +xb			\ Channel
+   4 +x					\ Reserved bytes
+
+   0 +xw				\ Probe delay in uS (only for versions < 9)
+
+   2 +xw				\ Capability info: IBSS (WEP/WPA would add h# 10)
+
+   \ XXX 14 bytes for 802.11g, 8 bytes for 802.11b
+   supported-rates$ +x$			\ Common supported data rates
+
+   d# 100 +x				\ Padding as present in libertas Linux driver
+
+   finish-cmd outbuf-wait  if  ." Failed to start adhoc network" cr false exit  then
+   \ We could get the bssid from offsets 3..8 of the response buf if we needed it
+   true
+   ds-associated set-driver-state
+;
+: adhoc-stop  ( -- )
+   h# 40 ( CMD_802_11_AD_HOC_STOP ) start-cmd
+   finish-cmd outbuf-wait  if  ." Failed to stop adhoc network" cr  then
+   ds-associated reset-driver-state
+;
+
 : (join)  ( ch ssid$ target-mac$ -- ok? )
    save-associate-params
    h# 2c ( CMD_802_11_AD_HOC_JOIN ) start-cmd
@@ -1040,7 +1084,7 @@ headers
 
    ( target-mac$ ) +x$			\ Peer MAC address
    ( ssid$ ) tuck +x$			\ SSID
-   ( ssid-len ) d# 32 swap - +x		\ 32 bytes of SSID
+   ( ssid-len ) d# 32 swap - +x		\ 32 bytes of SSID (zero-padded because buffer is pre-erased)
    bss-type-adhoc +xb			\ BSS type
    d# 100 +xw				\ Beacon period
    1      +xb				\ DTIM period
@@ -1065,7 +1109,7 @@ headers
    \ XXX 14 bytes for 802.11g, 8 bytes for 802.11b
    common-rates #rates +x$		\ Common supported data rates
    d# 255 +xw				\ Association timeout
-   0      +xw				\ Probe delay time
+   0 +xw				\ Probe delay time
 
    finish-cmd outbuf-wait  if  ." Failed to join adhoc network" cr false exit  then
    true
@@ -1299,7 +1343,7 @@ instance defer mesh-default-modes
       2drop 2drop mesh-start 0=     ( ok? )
       dup  if  mesh-default-modes  then
       exit
-   then
+   then                             ( ch ssid$ target-mac$ )
    ?set-wep				\ Set WEP keys again, if ktype is WEP
    set-mac-control
    2dup authenticate
