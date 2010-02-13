@@ -65,8 +65,6 @@ d# 0  d# 0  2value first-icon-xy
 : advance  ( -- )
    icon-xy  image-width 0  d+  to icon-xy
 ;
-: $show&advance  ( filename$ -- )  $show  advance  ;
-
 : fix-cursor  ( -- )  cursor-on  ['] user-ok to (ok)  user-ok  ;
 
 : .mem  ( -- )  memory-size .d ." MB SDRAM"   ; 
@@ -288,8 +286,6 @@ false value error-shown?
 : error-banner  ( -- )
    error-shown?  if  exit  then   true to error-shown?
 
-   " error" $show&advance
-
    .sysinfo
 ;
 : visual-error  ( error# -- )
@@ -328,13 +324,6 @@ false value error-shown?
 
    0 to image-width  0 to image-height   \ In case $show-bmp fails
    
-[ifdef] old-way
-\ The graphical boot sequence display at the top of the screen
-\ has been superseded by the new secure pretty-boot scheme .
-  avoid-logo
-  " olpc" $show&advance
-[then]
-
    icon-xy to first-icon-xy
 
    show-sysinfo?  if  .sysinfo  then
@@ -359,46 +348,12 @@ dev /obp-tftp
 device-end
 [then]
 
-: show-nand  ( -- )  " nandflash"   $show&advance  ;
-: show-disk  ( -- )  " disk"        $show&advance  ;
-: show-xo   ( -- )   " xo"          $show&advance  ;
-
-: simple-load-started  ( -- )
-   screen-ih  if  ['] show-xo to load-done  then
-;
-['] simple-load-started to load-started
-
 h# 32 buffer: icon-name
 
 : show-icon  ( basename$ -- )
    [char] : left-parse-string  2nip     ( basename$' )
    $show                                ( )
 ;
-
-: ?show-package-icon  ( adr len -- )
-   locate-device  if  exit  then                    ( phandle )
-
-   " icon" 2 pick  get-package-property  0=  if     ( phandle prop$ )
-      $prep&draw advance                            ( phandle )
-      drop exit
-   then                                             ( phandle )
-
-   " iconname" 2 pick  get-package-property  0=  if ( phandle prop$ )
-      get-encoded-string  show-icon advance         ( phandle )
-      drop exit
-    then                                            ( phandle )
-
-   " name"  2 pick  get-package-property  0=  if    ( phandle prop$ )
-      get-encoded-string  show-icon advance         ( phandle )
-      drop exit
-    then                                            ( phandle )
-
-    drop
-;
-: (?show-device)  ( adr len -- adr len )
-   screen-ih  if  2dup ?show-package-icon  then
-;
-' (?show-device) to ?show-device
 
 : frozen?  ( -- flag )  " vga?" $call-screen 0=  ;
 : dcon-freeze    ( -- )  0 " set-source" $call-screen d# 30 ms  ;
