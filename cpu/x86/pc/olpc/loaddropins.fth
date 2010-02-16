@@ -41,13 +41,13 @@
 
    " ${BP}/cpu/x86/pc/olpc/images/check.565"    " check.565"     $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/xogray.565"   " xogray.565"    $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " nand.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " int.565"       $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " fastnand.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/ethernet.565" " ethernet.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/usbkey.565"   " disk.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wlan.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/xo.565"       " xo.565"        $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " sd.565"        $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " ext.565"       $add-deflated-dropin
 
    " ${BP}/ofw/termemu/15x30pc.psf"             " font"          $add-deflated-dropin
 [ifdef] use-ega
