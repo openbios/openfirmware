@@ -139,7 +139,8 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/ethernet.565" " ethernet.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/usbkey.565"   " disk.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wlan.565"      $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " sd.565"        $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " int.565"       $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " ext.565"       $add-deflated-dropin
 
    " ${BP}/cpu/x86/pc/olpc/DisplayEDID.raw"     " edid"          $add-deflated-dropin
 
