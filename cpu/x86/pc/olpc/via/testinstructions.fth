@@ -319,9 +319,9 @@ decimal
    103  85  123  75  149  75 curveto
    174  75  195  85  195  98 curveto
 
-   113 83 moveto
-   193 40 228 48 239 61 curveto
-   261 90 171 118 171 120 curveto
+   111 84 moveto
+   193 36 228 48 239 61 curveto
+   261 90 171 122 171 118 curveto
 
    235 85 moveto
    281 177 310 177 267 201 curveto
