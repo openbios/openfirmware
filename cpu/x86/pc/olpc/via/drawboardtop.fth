@@ -1,3 +1,6 @@
+\ See license at end of file
+purpose: Drawings of OLPC XO-1.5 board and components for test instructions
+
 support-package: test-instructions
 
 decimal
@@ -99,7 +102,7 @@ decimal
 : battery-conn
    444 306  27 27 boxat
    427 279  18 18 boxat
-;   
+;
 
 : led0  105 349 led-symbol  ;
 : led1  131 349 led-symbol  ;
@@ -262,8 +265,10 @@ decimal
 : camera-led  569 45  led-symbol  ;
 : wlan-conn-top  144 82  90 27  boxat  ;
 : wlan-card-top  152 7  75 75  boxat  ;
-: ext-sd-slot  497 360  81 9  boxat  ;
-
+: ext-sd-slot-top  497 360  81 9  boxat  ;
+: ext-sd-card-top
+   504 369 moveto  0 -75 rline  11 -11 rline  56 0 rline  0 86 rline  -67 0 rline
+;
 : draw-top  ( -- )
    basic-layout
 
@@ -295,7 +300,7 @@ decimal
    camera-led
    wlan-conn-top
    wlan-card-top
-   ext-sd-slot
+   ext-sd-slot-top
 ;
 
 : usb-key  ( -- )
@@ -453,14 +458,30 @@ defer selected-object  ' noop to selected-object
 
 : connect-int-sd  ( -- )
    draw-board
-   " Power off and connect internal SD card to continue.." message
+   " Connect internal SD card to continue.." message
    ['] int-sd-card green-888 highlight
-;   
+;
+: connect-ext-sd  ( -- )
+   draw-top
+   " Connect external SD card to continue.." message
+   ['] ext-sd-card-top green-888 highlight
+;
+
+: disconnect-int-sd  ( -- )
+   draw-board
+   " Disconnect internal SD card to continue.." message
+   ['] int-sd-card red-888 highlight
+;
+: disconnect-ext-sd  ( -- )
+   draw-top
+   " Disonnect external SD card to continue.." message
+   ['] ext-sd-card-top red-888 highlight
+;
 
 : open  ( -- ok )  true  ;
 : close  ( -- )  ;
 
-end-package
+end-support-package
 0 value instructions-ih
 
 : ($instructions)  ( name$ -- )
@@ -478,3 +499,29 @@ end-package
 ' (instructions-done) to instructions-done
 
 : diag-mode  ( -- )  true to diag-switch?  ;
+
+hex
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2010 FirmWorks
+\
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

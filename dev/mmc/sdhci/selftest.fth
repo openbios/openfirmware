@@ -64,11 +64,14 @@ headers
 : wait-card?  ( -- error? )
    card-present?  if  false exit  then
    diagnostic-mode?  if
-      ." Please insert card in " .slot-name ."  to continue test."  cr
+      external?  if  " connect-ext-sd"  else  " connect-int-sd"  then
+      $instructions
       begin
          d# 100 ms
+         instructions-idle
          test-abort?  if  ." Aborted" true exit  then
       card-present? until
+      instructions-done
       ." Card insertion correctly detected." cr
       d# 200 ms  \ Settling time
       false
@@ -82,12 +85,15 @@ headers
    diagnostic-mode?  0=  if  false exit  then
    external?  0=  if  false exit  then
 
-   ." Please remove card from " .slot-name ."  to continue test."  cr         
+   external?  if  " disconnect-ext-sd"  else  " disconnect-int-sd"  then
+   $instructions
 
    begin
       d# 100 ms
+      instructions-idle
       test-abort?  if  ." Aborted" true exit  then
    card-present? 0= until
+   instructions-done
    ." Card removal correctly detected." cr
    false
 ;

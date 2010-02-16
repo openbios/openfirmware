@@ -15,14 +15,16 @@ purpose: Manufacturing testing
 ;
 : connect-headphones  ( -- )
    headphone-jack pin-sense? 0= if
-      ." Connect headphones to continue.. "
-      begin  ?key-abort  pin-sense?  until  cr
+      " connect-headphones" $instructions
+      begin  ?key-abort  instructions-idle  pin-sense?  until
+      instructions-done
    then
 ;
 : disconnect-headphones  ( -- )
    headphone-jack pin-sense?  if
-      ." Disconnect headphones to continue.. "
-      begin  ?key-abort  pin-sense? 0=  until  cr
+      " disconnect-headphones" $instructions
+      begin  ?key-abort  instructions-idle  pin-sense?  0= until
+      instructions-done
    then
 ;
 : speaker-test  ( -- )
@@ -49,14 +51,16 @@ purpose: Manufacturing testing
 
 : connect-mic
    external-mic pin-sense? 0= if
-      ." Connect microphone to continue.. "
-      begin  ?key-abort pin-sense?  until  cr
+      " connect-microphone" $instructions
+      begin  ?key-abort  instructions-idle  pin-sense?  until
+      instructions-done
    then
 ;
 : disconnect-mic  ( -- )
    external-mic pin-sense?  if
-      ." Disconnect microphone to continue.. "
-      begin  ?key-abort  pin-sense? 0=  until  cr
+      " disconnect-microphone" $instructions
+      begin  ?key-abort  instructions-idle  pin-sense? 0=  until
+      instructions-done
    then
 ;
 
@@ -107,6 +111,7 @@ purpose: Manufacturing testing
    true to force-speakers?  true to force-internal-mic?
    input-common-settings  mono
    output-common-settings  d# -9 set-volume
+   ." Testing internal speakers and microphone" cr
    " setup-case" test-common
    false to force-speakers?  false to force-internal-mic?
 ;
@@ -114,12 +119,14 @@ purpose: Manufacturing testing
    true to force-speakers?  true to force-internal-mic?
    input-common-settings  mono
    output-common-settings  d# -23 set-volume  \ -23 prevents obvious visible clipping
+   ." Testing internal speakers and microphone with fixture" cr
    " setup-fixture" test-common
    false to force-speakers?  false to force-internal-mic?
 ;
 : test-with-loopback  ( -- error? )
    input-common-settings  stereo
    output-common-settings  d# -33 set-volume  \ -23 prevents obvious visible clipping
+   ." Testing headphone and microphone jacks with loopback cable" cr
    " setup-loopback" test-common
 ;
 
@@ -147,15 +154,17 @@ purpose: Manufacturing testing
 ;
 : connect-loopback  ( -- )
    loopback-connected?  0=  if  
-      ." Connect loopback cable to continue.. "
-      begin  ?key-abort  loopback-connected?  until  cr
+      " connect-loopback" $instructions
+      begin  ?key-abort  instructions-idle  loopback-connected?  until
+      instructions-done
    then
-   d# 500 ms  \ Time to make sure the plug is all the way in
+   d# 500 ms  \ Delay to make sure the plug is all the way in
 ;
 : disconnect-loopback  ( -- )
    loopback-disconnected?  0=  if  
-      ." Disconnect loopback cable to continue.. "
-      begin  ?key-abort  loopback-disconnected?  until  cr
+      " disconnect-loopback" $instructions
+      begin  ?key-abort  instructions-idle  loopback-disconnected?  until
+      instructions-done
    then
 ;
 \ Returns failure by throwing

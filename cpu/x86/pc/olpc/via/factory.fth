@@ -109,7 +109,7 @@ d# 256 buffer: tempname-buf
 \      begin  d# 250 ms  silent-probe-usb  scanner?  until
       " connect-scanner"  $instructions
       begin  instructions-idle  d# 400 ms  silent-probe-usb  scanner?  until
-      instructions-performed
+      instructions-done  clear-drawing
       ?usb-keyboard
    then
 ;
@@ -120,7 +120,7 @@ d# 256 buffer: tempname-buf
    wired-lan?  0=  if
       " connect-usb-ethernet" $instructions
       begin  d# 400 ms  instructions-idle  silent-probe-usb  wired-lan?  until
-      instructions-performed
+      instructions-done  clear-drawing
    then
 ;
 : usb-key?  ( -- flag )
@@ -130,7 +130,7 @@ d# 256 buffer: tempname-buf
    usb-key?  0=  if
       " connect-usb-key" $instructions
       begin  d# 400 ms    instructions-idle  silent-probe-usb  usb-key?  until
-      instructions-performed
+      instructions-done  clear-drawing
    then
 ;
 : stall  ( -- )  begin  halt  again  ;
