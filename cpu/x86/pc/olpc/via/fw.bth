@@ -354,7 +354,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/suspend.fth  \ Suspend/resume setup
 
 fload ${BP}/cpu/x86/pc/olpc/strokes.fth
 fload ${BP}/cpu/x86/pc/olpc/plot.fth
-fload ${BP}/cpu/x86/pc/olpc/via/drawboardtop.fth
+fload ${BP}/cpu/x86/pc/olpc/via/testinstructions.fth
 
 fload ${BP}/cpu/x86/pc/olpc/via/switches.fth \ Lid and ebook switches
 fload ${BP}/cpu/x86/pc/olpc/via/leds.fth     \ LEDs
