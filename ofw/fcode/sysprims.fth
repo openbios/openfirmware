@@ -369,9 +369,3 @@ v3    03f 2 byte-code: set-args            ( arg-str unit-str -- )
 
 \ --- parsing argument strings
 v2    040 2 byte-code: left-parse-string ( adr len char -- adrR lenR adrL lenL )
-
-\ --- New FirmWorks stuff
-v3    041 2 byte-code: debug-me
-v3    042 2 byte-code: new-instance      ( args-adr args-len -- )
-v3    043 2 byte-code: destroy-instance  ( -- )
-v3    044 2 byte-code: set-default-unit  ( -- )

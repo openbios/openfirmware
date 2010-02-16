@@ -72,6 +72,7 @@ fload ${BP}/ofw/fcode/probepkg.fth		\ Probe for FCode packages
 fload ${BP}/ofw/fcode/comptokt.fth
 fload ${BP}/ofw/fcode/primlist.fth		\ Codes for kernel primitives
 fload ${BP}/ofw/fcode/sysprims.fth		\ Codes for system primitives
+fload ${BP}/ofw/fcode/extcodes.fth		\ FirmWorks-specific primitives
 64\ fload ${BP}/ofw/fcode/sysprm64.fth	\ Codes for 64-bit system primitives
 fload ${BP}/ofw/fcode/debugfc.fth		\ FCode source directives
 fload ${BP}/ofw/fcode/loaddi.fth

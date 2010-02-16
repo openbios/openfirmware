@@ -105,8 +105,11 @@ d# 256 buffer: tempname-buf
 ;   
 : wait-scanner  ( -- )
    scanner?  0=  if
-      " Connect USB barcode scanner"  .instructions
-      begin  d# 1000 ms  silent-probe-usb  scanner?  until
+\      " Connect USB barcode scanner"  .instructions
+\      begin  d# 250 ms  silent-probe-usb  scanner?  until
+      " connect-scanner"  $instructions
+      begin  instructions-idle  d# 400 ms  silent-probe-usb  scanner?  until
+      instructions-performed
       ?usb-keyboard
    then
 ;
@@ -115,8 +118,9 @@ d# 256 buffer: tempname-buf
 ;
 : wait-lan  ( -- )
    wired-lan?  0=  if
-      " Connect USB Ethernet Adapter" .instructions
-      begin  d# 1000 ms  silent-probe-usb  wired-lan?  until
+      " connect-usb-ethernet" $instructions
+      begin  d# 400 ms  instructions-idle  silent-probe-usb  wired-lan?  until
+      instructions-performed
    then
 ;
 : usb-key?  ( -- flag )
@@ -124,8 +128,9 @@ d# 256 buffer: tempname-buf
 ;
 : wait-usb-key  ( -- )
    usb-key?  0=  if
-      " Connect USB memory stick" .instructions
-      begin  d# 1000 ms  silent-probe-usb  usb-key?  until
+      " connect-usb-key" $instructions
+      begin  d# 400 ms    instructions-idle  silent-probe-usb  usb-key?  until
+      instructions-performed
    then
 ;
 : stall  ( -- )  begin  halt  again  ;

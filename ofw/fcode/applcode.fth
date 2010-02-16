@@ -143,3 +143,7 @@ alias name device-name
 [then]
 \ alias wflips wbflips
 \ alias lflips lwflips
+
+defer $instructions  ( name$ -- )  ' 2drop to $instructions
+defer instructions-done  ( -- )    ' noop to instructions-done
+defer instructions-idle  ( -- )    ' noop to instructions-idle

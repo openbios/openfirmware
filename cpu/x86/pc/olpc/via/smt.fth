@@ -271,8 +271,10 @@ false value any-tags?
 
 : require-int-sd  ( -- )
    " int:0" open-dev  ?dup  if  close-dev exit  then
-   " Power off and insert internal SD card" .problem
-   stall
+\   " Power off and insert internal SD card" .problem
+\   stall
+   " connect-int-sd" $instructions
+   begin  instructions-idle  again
 ;
 
 : wait-connections  ( -- )
