@@ -120,9 +120,7 @@ d# 1 value rtc-alarm-delay
    \ on the operator.
    ." Testing S3 suspend/resume"  cr
    rtc-alarm-delay  >r
-   ." Sleeping for 1 second .. "   1 to rtc-alarm-delay  pm-sleep-rtc  cr
    ." Sleeping for 4 seconds .. "  4 to rtc-alarm-delay  pm-sleep-rtc  cr
-   ." Sleeping for 8 seconds .. "  8 to rtc-alarm-delay  pm-sleep-rtc  cr
    r> to rtc-alarm-delay
    false
 ;
