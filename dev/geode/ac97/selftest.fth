@@ -131,14 +131,14 @@ d# 500 value tone-freq
 : sweep-test  ( -- )
    ." Playing sweep" cr
    make-sweep
-   d# -9 set-volume  play
+   d# -9 set-volume  stereo play
 ;
 
 : mic-test  ( -- )
    ." Recording ..." cr
-   record
+   mono record
    ." Playing ..." cr
-   d# -3 set-volume  play
+   d# -3 set-volume  mono play
 ;
 
 : selftest  ( -- error? )

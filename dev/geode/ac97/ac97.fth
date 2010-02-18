@@ -209,6 +209,10 @@ constant /dma-regs
 d# 48000 instance value sample-rate
 0 instance value s/ms
 
+\ Some audio interfaces let you choose the output format; this one doesn't
+: mono  ( -- )  ;
+: stereo  ( -- )  ;
+
 : set-sample-rate  ( hz -- )  to sample-rate  ;
 
 : amp-default-on?  ( -- flag )  " gx?" eval  ;
