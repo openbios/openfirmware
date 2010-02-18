@@ -7,8 +7,8 @@ decimal
 0 instance value dir-block#
 0 instance value lblk#
 
-variable diroff
-variable totoff
+instance variable diroff
+instance variable totoff
 
 \ Information that we need about the working file/directory
 \ The working file changes at each level of a path search

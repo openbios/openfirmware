@@ -28,7 +28,7 @@ external
    diroff off
 ;
 
-0 value renaming?
+0 instance value renaming?
 : $delete   ( name$ -- error? )
    $find-file  if  true exit  then		( )
 

@@ -17,7 +17,7 @@ struct	\ buffer
    \ /n field >device
    0 field >data
 constant /buf-hdr
-0 value /buffer
+0 instance value /buffer
 
 : >bufadr   ( n -- a )   /buffer * block-bufs +  ;
 : >buffer   ( n -- adr )      >bufadr >data  ;
