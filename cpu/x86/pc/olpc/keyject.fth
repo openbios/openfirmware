@@ -139,8 +139,36 @@ false value new-firmware?
    2drop
 ;
 
+: ac-connected?  ( -- flag )  bat-status@ h# 10 and  0<>  ;
+
+\ Empirically, a weak-but-present battery can present the "trickle charge" (80)
+\ but not present the "present" bit (01).
+: battery-present?  ( -- flag )  bat-status@ h# 81 and  0<>  ;
+
+\ Similarly, a weak-but-present battery can present the "trickle charge" (80)
+\ but not present the "battery low" bit (04).
+: battery-strong?  ( -- flag )  bat-status@ h# 84 and  0=  ;
+
+: wait-enough-power  ( -- )
+   ac-connected?  0=  if
+      ." Please connect the AC adapter to continue..."
+      begin  d# 100 ms  ac-connected?  until
+      cr
+   then
+   battery-present?  0=  if
+      ." Please insert a well-charged battery to continue..."
+      begin  d# 100 ms  battery-present?  until
+      cr
+   then
+   battery-strong?  0=  if
+      ." The battery is low.  Please insert a charged one to continue..."
+      begin  d# 100 ms  battery-present? battery-strong? and  until
+   then
+;
+
 \ Firmware is in flash-buf
 : update-firmware  ( -- )
+   wait-enough-power
    write-firmware
 
    ['] verify-firmware catch  if
