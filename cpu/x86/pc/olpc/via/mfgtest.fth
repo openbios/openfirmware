@@ -30,9 +30,9 @@ h# 07e0 constant color-green
 
 : mfg-test-dev  ( $ -- )
    restore-scroller
-   find-device
-   ??cr ." Testing "  pwd
-   " selftest" current-device execute-phandle-method  ( return abort? )
+   ??cr  ." Testing " 2dup type cr
+   locate-device  if  ." Can't find device node" cr  exit  then  ( phandle )
+   " selftest" rot execute-phandle-method            ( return abort? )
    if
       ?dup  if
          ??cr ." Selftest failed. Return code = " .d cr
