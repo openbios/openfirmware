@@ -50,12 +50,32 @@ devalias net  /usb/wlan
 alias probe-usb2 probe-usb
 alias p2 probe-usb2
 
-: ?usb-keyboard  ( -- )
-   " keyboard" expand-alias  if   ( devspec$ )
-      drop " /usb"  comp  0=  if  ( )
-         red-letters  ." Using USB keyboard." cr  black-letters
-         " keyboard" input
+0 value usb-keyboard-ih
+
+: attach-usb-keyboard  ( -- )
+   " usb-keyboard" expand-alias  if   ( devspec$ )
+      drop " /usb"  comp  0=  if      ( )
+         " usb-keyboard" open-dev to usb-keyboard-ih
+         usb-keyboard-ih add-input
+         exit
       then
+   else                               ( devspec$ )
+      2drop
+   then
+;
+
+: detach-usb-keyboard  ( -- )
+   usb-keyboard-ih  if
+      usb-keyboard-ih remove-input
+      usb-keyboard-ih close-dev
+      0 to usb-keyboard-ih
+   then
+;
+
+: ?usb-keyboard  ( -- )
+   attach-usb-keyboard
+   " /usb/serial" open-dev  ?dup  if
+      add-input
    then
 ;
 

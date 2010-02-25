@@ -225,14 +225,14 @@ stand-init: NVRAM
 : report-keyboard  ( -- )
    " /usb@f,4/keyboard" locate-device  0=  if
       drop
-      " keyboard"  " /usb@f,4/keyboard"  $devalias
+      " usb-keyboard"  " /usb@f,4/keyboard"  $devalias
       exit
    then
 
    \ In case the keyboard is behind a USB 2 hub
    " /usb@f,5/keyboard" locate-device  0=  if
       drop
-      " keyboard"  " /usb@f,5/keyboard"  $devalias
+      " usb-keyboard"  " /usb@f,5/keyboard"  $devalias
    then
 ;
 
