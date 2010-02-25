@@ -168,7 +168,6 @@ false value new-firmware?
 
 \ Firmware is in flash-buf
 : update-firmware  ( -- )
-   wait-enough-power
    write-firmware
 
    ['] verify-firmware catch  if
@@ -185,6 +184,7 @@ false value new-firmware?
    \ Get the new firmware first, so any security checks use the old keys
    get-new-firmware
    do-keyject?  if
+      wait-enough-power
       flash-write-enable
       inject-keys
       new-firmware?  if  update-firmware  then
@@ -194,6 +194,7 @@ false value new-firmware?
       \ we get into an infinite reboot cycle.
       new-firmware?  if
          ." Updating firmware ..." cr
+         wait-enough-power
          flash-write-enable
          update-firmware
          flash-write-disable  \ Should reboot
