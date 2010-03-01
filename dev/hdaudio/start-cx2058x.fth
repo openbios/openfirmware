@@ -117,6 +117,10 @@ start-verb-table
    71E00 place-verb      \ Undocumented register
    71F00 place-verb      \ disable software GSMark protection
    71F00 place-verb      \ disable software GSMark protection - repeat in case of end condition issues
+   72033 place-verb      \ Low byte of product ID
+   72108 place-verb      \ High byte of product ID
+   7222d place-verb      \ Low byte of vendor ID
+   72315 place-verb      \ High byte of vendor ID
 end-verb-table
 
 \ Subroutine to turn on the HD Audio controller, push the verb table to the codec,
@@ -180,7 +184,7 @@ op: h# 8000 #  hdac-pci-base h# 58 + #)       mov  \ RIRB write pointer reset
 
    \ Copy the verb table to the CORB DMA area
    #verbs # cx mov
-   verb-table # si mov
+   verb-table asm-base - asm-origin + # si mov
    corb # di mov
    rep movs
 
