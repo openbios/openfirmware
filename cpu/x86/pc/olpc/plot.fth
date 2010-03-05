@@ -38,9 +38,9 @@ variable ylim  variable ymin
    fill-rectangle
 ;
 : waveform-start  ( -- )  0  wave0  moveto  ;
-: draw-wave  ( adr )
-   0 swap   ( last adr )
-   screen-width  0  do  ( last adr )
+: draw-wave  ( adr #samples -- )
+   0 -rot   ( last adr #samples )
+   0  do                ( last adr )
       tuck <w@          ( adr last this-unscaled )
       wave-scale >>a    ( adr last this )
       tuck swap -       ( adr this distance )
@@ -49,7 +49,8 @@ variable ylim  variable ymin
    loop                 ( last adr )
    2drop
 ;
-: waveform  ( adr -- )  clear-waveform  waveform-start  draw-wave  ;
+: waveform  ( adr -- )  clear-waveform  waveform-start  screen-width draw-wave  ;
+: wave  ( adr #samples -- )  clear-waveform  waveform-start  draw-wave  ;
 : vgrid  ( width height interval -- )
    rot  0  ?do               ( height interval )
       i plot0 nip  moveto    ( height interval )
@@ -67,7 +68,7 @@ variable ylim  variable ymin
 dend
 
 \ : $call-screen  ( ? name$ -- ? )  stdout @ $call-method  ;
-: wave  ( adr -- )  " waveform" $call-screen  ;
+: wave  ( adr #samples -- )  " wave" $call-screen  ;
 : clear-plot  ( width height -- )  " clear-plot"  $call-screen  ;
 : lineplot  ( xt xmin xmax xscale  ymin ymax  -- )  " plot" $call-screen  ;
 : vgrid  ( width height interval -- )  " vgrid" $call-screen  ;

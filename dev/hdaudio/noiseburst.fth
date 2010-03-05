@@ -383,11 +383,12 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
    d# 70 <
 ;
 
-d# 1024 /w* buffer: impulse-response
+d# 1200 constant #impulse-response
+#impulse-response /w* buffer: impulse-response
 
 : calc-sm-impulse  ( offset -- adr )  \ offset is 0 for left or 2 for right
    pb +  rb  #samples                         ( adr1 adr2 #samples )
-   d# 1200 0  do
+   #impulse-response 0  do
       3dup swap i wa+ swap stereo-mono-covar  ( adr1 adr2 #samples d.covar )
       d# 50000000 m/mod nip                   ( adr1 adr2 #samples n.covar )
       impulse-response i wa+ w!               ( adr1 adr2 #samples )
@@ -397,7 +398,7 @@ d# 1024 /w* buffer: impulse-response
 ;
 : calc-stereo-impulse  ( offset -- adr )  \ offset is 0 for left or 2 for right
    dup pb +  swap rb +  #samples              ( adr1 adr2 #samples )
-   d# 1200 0  do
+   #impulse-response 0  do
       3dup swap i wa+ swap stereo-covar       ( adr1 adr2 #samples d.covar )
       d# 50000000 m/mod nip                   ( adr1 adr2 #samples n.covar )
       impulse-response i wa+ w!               ( adr1 adr2 #samples )

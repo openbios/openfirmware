@@ -101,6 +101,7 @@ purpose: Manufacturing testing
 ;
 false value plot?  \ Set to true to plot the impulse response, for debugging
 : plot-impulse  ( adr -- )
+   d# 600              ( adr #samples )
    " 0 set-fg  h# ffff set-bg single-drawing clear-drawing wave" evaluate
    key ascii d = if debug-me then
 ;
