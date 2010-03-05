@@ -339,15 +339,15 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
    1 max  d# 10  swap */
    debug?  if  dup .d cr  then
 ;
-\ Reasonable threshold is d# 25
+
 : fixture-ratio-left  ( -- error? )
-   left-range  d# 240 d# 140 sm-covar-abs-sum nip  ( sum1 ) 
+   left-range  d# 160 d#  60 sm-covar-abs-sum nip  ( sum1 ) 
    left-range  d# 400 d# 300 sm-covar-abs-sum nip  ( sum1 sum2 )
    >ratio
    d# 25 <
 ;
 : fixture-ratio-right  ( -- error? )
-   right-range  d# 240 d# 140 sm-covar-abs-sum nip  ( sum1 ) 
+   right-range  d# 160 d#  60 sm-covar-abs-sum nip  ( sum1 ) 
    right-range  d# 400 d# 300 sm-covar-abs-sum nip  ( sum1 sum2 )
    >ratio
    d# 25 <
@@ -356,14 +356,14 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
 \ This compares the total energy within the impulse response band to the
 \ total energy in a similar-length band 
 : case-ratio-left  ( -- error? )
-   left-range  d# 200 d# 140 sm-covar-abs-sum  nip ( sum1.high )
-   left-range  d# 540 d# 400 sm-covar-abs-sum  nip ( sum1.high sum2.high )
+   left-range  d# 120 d#  60 sm-covar-abs-sum  nip ( sum1.high )
+   left-range  d# 460 d# 400 sm-covar-abs-sum  nip ( sum1.high sum2.high )
    >ratio
    d# 25 <
 ;
 : case-ratio-right  ( -- error? )
-   right-range  d# 330 d# 140 sm-covar-abs-sum  nip ( sum1.high )
-   right-range  d# 590 d# 400 sm-covar-abs-sum  nip ( sum1.high sum2.high )
+    right-range  d# 250 d#  60 sm-covar-abs-sum  nip ( sum1.high )
+    right-range  d# 590 d# 400 sm-covar-abs-sum  nip ( sum1.high sum2.high )
    >ratio
    d# 14 <
 ;
@@ -371,13 +371,13 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
 \ This compares the total energy within the impulse response band to the
 \ total energy in a similar-length band 
 : loopback-ratio-left  ( -- error? )
-   left-stereo-range  d# 148 d# 128 ss-covar-abs-sum  nip ( sum1.high )
+   left-stereo-range  d#  68 d#  48 ss-covar-abs-sum  nip ( sum1.high )
    left-stereo-range  d# 220 d# 200 ss-covar-abs-sum  nip ( sum1.high sum2.high )
    >ratio
    d# 70 <
 ;
 : loopback-ratio-right  ( -- error? )
-   right-stereo-range  d# 148 d# 128 ss-covar-abs-sum  nip ( sum1.high )
+   right-stereo-range  d#  68 d#  48 ss-covar-abs-sum  nip ( sum1.high )
    right-stereo-range  d# 220 d# 200 ss-covar-abs-sum  nip ( sum1.high sum2.high )
    >ratio
    d# 70 <
@@ -385,14 +385,25 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
 
 d# 1024 /w* buffer: impulse-response
 
-: calc-sm-impulse  ( offset -- )  \ offset is 0 for left or 2 for right
+: calc-sm-impulse  ( offset -- adr )  \ offset is 0 for left or 2 for right
    pb +  rb  #samples                         ( adr1 adr2 #samples )
-   d# 1024 0  do
+   d# 1200 0  do
       3dup swap i wa+ swap stereo-mono-covar  ( adr1 adr2 #samples d.covar )
       d# 50000000 m/mod nip                   ( adr1 adr2 #samples n.covar )
       impulse-response i wa+ w!               ( adr1 adr2 #samples )
    loop                 ( adr1 adr2 len )
    3drop                ( )
+   impulse-response     ( adr )
+;
+: calc-stereo-impulse  ( offset -- adr )  \ offset is 0 for left or 2 for right
+   dup pb +  swap rb +  #samples              ( adr1 adr2 #samples )
+   d# 1200 0  do
+      3dup swap i wa+ swap stereo-covar       ( adr1 adr2 #samples d.covar )
+      d# 50000000 m/mod nip                   ( adr1 adr2 #samples n.covar )
+      impulse-response i wa+ w!               ( adr1 adr2 #samples )
+   loop                 ( adr1 adr2 len )
+   3drop                ( )
+   impulse-response     ( adr )
 ;
 : .samples  ( adr end start -- )
    do

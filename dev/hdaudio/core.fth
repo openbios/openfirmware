@@ -56,6 +56,7 @@ my-address my-space encode-phys
 : wakeen     h# 0c au +  ; \ Wake enable
 : statests   h# 0e au +  ; \ Wake status
 : counter    h# 30 au +  ; \ Wall Clock Counter
+: ssync      h# 38 au +  ; \ Stream synchronization
 : corblbase  h# 40 au +  ;
 : corbubase  h# 44 au +  ;
 : corbwp     h# 48 au +  ;  \ CORB write pointer (last valid command)
@@ -674,8 +675,10 @@ false value right-mute?
 
 : out-in  ( out-adr out-len in-adr in-len -- )
    upsampling?  if  2swap  scale-factor upsample  2swap  then  ( out-adr,len  in-adr,len )
+   1 out-sd lshift  1 in-sd lshift  or  ssync rl!  \ Block the streams while setting up
    start-audio-in   ( out-adr out-len )
    start-audio-out  ( )
+   0 ssync rl!      ( )        \ Unblock the streams to start them simultaneously
    begin
       recording?  if  ?end-recording  then
       playing?    if  ?end-playing    then

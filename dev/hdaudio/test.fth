@@ -99,6 +99,11 @@ purpose: Manufacturing testing
    out-in                            ( )
    " analyze-signal" $call-analyzer  ( okay? )
 ;
+false value plot?  \ Set to true to plot the impulse response, for debugging
+: plot-impulse  ( adr -- )
+   " 0 set-fg  h# ffff set-bg single-drawing clear-drawing wave" evaluate
+   key ascii d = if debug-me then
+;
 : input-common-settings  ( -- )
    open-in  48kHz  16bit  with-adc d# 73 input-gain
 ;
@@ -114,6 +119,10 @@ purpose: Manufacturing testing
    ." Testing internal speakers and microphone" cr
    " setup-case" test-common
    false to force-speakers?  false to force-internal-mic?
+   plot?  if
+      0 " calc-sm-impulse" $call-analyzer  plot-impulse
+      2 " calc-sm-impulse" $call-analyzer  plot-impulse
+   then
 ;
 : test-with-fixture  ( -- error? )
    true to force-speakers?  true to force-internal-mic?
@@ -122,12 +131,20 @@ purpose: Manufacturing testing
    ." Testing internal speakers and microphone with fixture" cr
    " setup-fixture" test-common
    false to force-speakers?  false to force-internal-mic?
+   plot?  if
+      0 " calc-sm-impulse" $call-analyzer  plot-impulse
+      2 " calc-sm-impulse" $call-analyzer  plot-impulse
+   then
 ;
 : test-with-loopback  ( -- error? )
    input-common-settings  stereo
    output-common-settings  d# -33 set-volume  \ -23 prevents obvious visible clipping
    ." Testing headphone and microphone jacks with loopback cable" cr
    " setup-loopback" test-common
+   plot?  if
+      0 " calc-stereo-impulse" $call-analyzer  plot-impulse
+      2 " calc-stereo-impulse" $call-analyzer  plot-impulse
+   then
 ;
 
 0 value saved-volume
