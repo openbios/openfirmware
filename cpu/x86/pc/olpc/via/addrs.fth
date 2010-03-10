@@ -37,7 +37,8 @@ h# 100.0000 constant def-load-base      \ Convenient for initrd
 
 h#  18.0000 constant heap-size
 
-h# 40.0000 constant /dma-extra          \ In case the firmware region isn't enough
+\ h# 40.0000 constant /dma-extra          \ In case the firmware region isn't enough
+h# 1000.0000 constant /dma-extra          \ In case the firmware region isn't enough
 /fw-ram /dma-extra + constant dma-size  \ We let the DMA area overlap the FW area
 \ fw-pa /dma-extra - constant dma-base
 0 value dma-base                        \ Set in probemem.fth
