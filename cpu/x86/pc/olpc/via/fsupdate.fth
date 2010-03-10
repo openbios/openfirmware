@@ -71,6 +71,7 @@ also nand-commands definitions
    " size" $call-nand  #image-eblocks /nand-block um*  d<
    " Image size is larger than output device" ?nand-abort
    #image-eblocks  show-init
+   0 #image-eblocks " erase-blocks" $call-nand
    get-inflater
    \ Separate the two buffers by enough space for both the compressed
    \ and uncompressed copies of the data.  4x is overkill, but there
@@ -106,16 +107,30 @@ also nand-commands definitions
    #image-eblocks show-writing
 ;
 
-: get-zdata  ( comprlen -- )
-   ?compare-spec-line
+: eat-newline  ( ih -- )
+   fgetc newline <>                                    ( error? )
+   " Missing newline after zdata" ?nand-abort             ( )
+;
+: skip-zdata  ( comprlen -- )
+   ?compare-spec-line                                     ( comprlen )
 
-   secure-fsupdate?  if  filefd  else  source-id  then    ( ih )
+   secure-fsupdate?  if  filefd  else  source-id  then    ( comprlen ih )
+
+   >r  u>d  r@ dftell                                     ( d.comprlen d.pos r: ih )
+   d+  r@ dfseek                                          ( r: ih )
+
+   r> eat-newline
+;
+
+: get-zdata  ( comprlen -- )
+   ?compare-spec-line                                     ( comprlen )
+
+   secure-fsupdate?  if  filefd  else  source-id  then    ( comprlen ih )
 
    >r  data-buffer /nand-block +  over  r@  fgets         ( comprlen #read r: ih )
    <>  " Short read of zdata file" ?nand-abort            ( r: ih )
 
-   r> fgetc newline <>                                    ( error? )
-   " Missing newline after zdata" ?nand-abort             ( )
+   r> eat-newline
 
    \ The "2+" skips the Zlib header
    data-buffer /nand-block + 2+  data-buffer true  (inflate)  ( len )
@@ -169,22 +184,27 @@ true value check-hash?
    " Malformed hash string" ?nand-abort  ( eblock# hashname$ hash$ r: comprlen )
 
    ?get-crc                              ( eblock# hashname$ hash$ r: comprlen )
-   r> get-zdata                          ( eblock# hashname$ hash$ )
-   ?check-crc                            ( eblock# hashname$ hash$ )
 
-   check-hash?  if                       ( eblock# hashname$ hash$ )
-      check-hash                         ( eblock# )
-   else                                  ( eblock# hashname$ hash$ )
-      2drop 2drop                        ( eblock# )
-   then
+   2over  " fa43239bcee7b97ca62f007cc68487560a39e19f74f3dde7486db3f98df8e471" $=  if  ( eblock# hashname$ hash$ r: comprlen)
+      r> skip-zdata                         ( eblock# hashname$ hash$ )
+      2drop 2drop                           ( eblock# )
+   else                                     ( eblock# hashname$ hash$ )
+      r> get-zdata                          ( eblock# hashname$ hash$ )
+      ?check-crc                            ( eblock# hashname$ hash$ )
 
-   ( eblock# )
+      check-hash?  if                       ( eblock# hashname$ hash$ )
+         check-hash                         ( eblock# )
+      else                                  ( eblock# hashname$ hash$ )
+         2drop 2drop                        ( eblock# )
+      then                                  ( eblock# )
+
 \ Asynchronous writes
-   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks-start" $call-nand  ( eblock# error? )
-   " Write error" ?nand-abort   ( eblock# )
+      data-buffer over nand-pages/block *  nand-pages/block  " write-blocks-start" $call-nand  ( eblock# error? )
+      " Write error" ?nand-abort   ( eblock# )
 \   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks" $call-nand  ( eblock# #written )
 \   nand-pages/block  <>  " Write error" ?nand-abort   ( eblock# )
-   swap-buffers                          ( eblock# )
+      swap-buffers                          ( eblock# )
+   then
 
    dup to last-eblock#                   ( eblock# )
    show-written                          ( )
