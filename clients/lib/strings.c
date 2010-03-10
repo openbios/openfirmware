@@ -114,6 +114,23 @@ strctok(char *s, const char sep)
 	return(temp);
 }
 
+void *memchr(const void *s, int c, int len)
+{
+	unsigned char *p = s;
+	while (len--) {
+		if (*p == (unsigned char)c)
+			return p;
+		p++;
+	}
+	return NULL;
+}
+
+int toupper(int c)
+{
+	return (c >= 'a' && c <= 'z') ? (c - 'a' + 'A') : c;
+}
+
+
 // LICENSE_BEGIN
 // Copyright (c) 2006 FirmWorks
 // 

@@ -7,37 +7,65 @@
 #include <stdarg.h>
 #include "stdio.h"
 
+long
+memtol(const char *s, int len, char **endptr, int base)
+{
+	int temp = 0;
+	int minus = 0;
+	int digit;
+	const char *send = s+len;
+
+	if (s != send && *s == '+' || *s == '-') {
+		minus = *s == '-';
+		s++;
+	}
+	if (base == 0) {
+		if (s!=send && *s == '0') {
+			++s;
+			if (s!=send && toupper(*s) == 'X') {
+				++s;
+				base = 16;
+			} else {
+				base = 8;
+			}
+		} else {
+			base = 10;    
+		}
+        } else {
+		if (base == 16 && (send-s) > 1 && *s == '0' && toupper(s[1]) == 'X') {
+			s += 2;
+		}
+	}
+	while (s!=send) {
+		digit = toupper(*s) - '0';
+		if (digit >= 0 && digit <= 9) {
+			temp = (temp * base) + digit;
+			s++;
+		} else {
+			digit = digit + '0' - 'A' + 10;
+			if (digit >= 10 && digit < base) {
+				temp = (temp * base) + digit;
+				s++;
+			} else {
+				break;
+			}
+		}
+	}
+	if (endptr)
+		*endptr = (char *)s;
+	return minus ? -temp : temp;
+}
+
+long
+strtol(const char *s, char **endptr, int base)
+{
+	return memtol(s, strlen(s), endptr, base);
+}
+
 int
 atoi(const char *s)
 {
-	int temp = 0, base = 10;
-
-	if (*s == '0') {
-		++s;
-		if (*s == 'x') {
-			++s;
-			base = 16;
-		} else {
-			base = 8;
-		}
-	}
-	while (*s) {
-		switch (*s) {
-		case '0': case '1': case '2': case '3': case '4':
-		case '5': case '6': case '7': case '8': case '9':
-			temp = (temp * base) + (*s++ - '0');
-			break;
-		case 'a': case 'b': case 'c': case 'd': case 'e': case 'f':
-			temp = (temp * base) + (*s++ - 'a' + 10);
-			break;
-		case 'A': case 'B': case 'C': case 'D': case 'E': case 'F':
-			temp = (temp * base) + (*s++ - 'A' + 10);
-			break;
-		default:
-			return (temp);
-		}
-	}
-	return (temp);
+	return (int)strtol(s, NULL, 10);
 }
 
 STATIC int
