@@ -16,8 +16,8 @@ hex
 \ Interface to /supplicant support package
 0 value supplicant-ih
 : $call-supplicant  ( ...$ -- ... )  supplicant-ih $call-method  ;
-: do-associate   ( -- flag )  " do-associate" $call-supplicant  ;
-: process-eapol  ( adr len -- )  " process-eapol" $call-supplicant  ;
+: supplicant-associate   ( -- flag )  " do-associate" $call-supplicant  ;
+: supplicant-process-eapol  ( adr len -- )  " process-eapol" $call-supplicant  ;
 : .scan  ( adr -- )  " .scan" $call-supplicant  ;
 : .ssids  ( adr -- )  " .ssids" $call-supplicant  ;
 
@@ -112,8 +112,10 @@ headers
 
 \ Data rates
 d# 14 constant #rates
-create supported-rates 82 c, 84 c, 8b c, 96 c, 0c c, 12 c, 18 c, 24 c,
-		       30 c, 48 c, 60 c, 6c c, 00 c, 00 c,
+\ create supported-rates 82 c, 84 c, 8b c, 96 c, 0c c, 12 c, 18 c, 24 c,
+\ 		       30 c, 48 c, 60 c, 6c c, 00 c, 00 c,
+create supported-rates 82 c, 84 c, 8b c, 96 c, 8c c, 92 c, 98 c, a4 c,
+		       b0 c, c8 c, e0 c, ec c, 00 c, 00 c,
 #rates buffer: common-rates
 
 external
@@ -308,7 +310,7 @@ constant /rx-min
    then
 ;
 
-: do-process-eapol  ( adr len -- )  false to got-data?  process-eapol  ;
+: do-process-eapol  ( adr len -- )  false to got-data?  supplicant-process-eapol  ;
 
 \ =========================================================================
 \ Generic commands & responses
@@ -1104,7 +1106,8 @@ headers
    atim +xw				\ ATIM window
    4 +x					\ Reserved bytes
 
-   cap    +xw				\ Capability info: ESS, short slot, WEP
+\  cap    +xw				\ Capability info: ESS, short slot, WEP
+   2 +xw				\ Capability info: IBSS (WEP/WPA would add h# 10)
 
    \ XXX 14 bytes for 802.11g, 8 bytes for 802.11b
    common-rates #rates +x$		\ Common supported data rates
@@ -1352,10 +1355,12 @@ instance defer mesh-default-modes
 headers
 
 : do-associate  ( -- ok? )
-   do-associate dup  if
+   ['] 2drop to ?process-eapol  \ Don't reenter the supplicant while associating
+   supplicant-associate dup  if
       ds-disconnected reset-driver-state
       ds-associated set-driver-state
    then
+   ['] do-process-eapol to ?process-eapol
 ;
 
 : ?reassociate  ( -- )
@@ -1640,11 +1645,7 @@ false instance value force-open?
          ds-disconnected reset-driver-state
       else
          link-up? 0=  if
-            ['] 2drop to ?process-eapol
             do-associate 0=  if  free-buf false exit  then
-            ds-disconnected reset-driver-state
-            ds-associated set-driver-state
-            ['] do-process-eapol to ?process-eapol
          then
          start-nic
       then
