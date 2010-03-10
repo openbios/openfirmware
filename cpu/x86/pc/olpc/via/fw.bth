@@ -743,9 +743,14 @@ previous previous definitions
 
 : enable-serial ( -- )
    serial-enabled? if exit then
+
    h# 40 h# 8846 config-b!
-   " com1" open-dev add-input
-   " com1" open-dev add-output
+   " com1" open-dev dup to fallback-in-ih  add-input
+   " com1" open-dev dup to fallback-out-ih add-output
+;
+: disable-serial
+   fallback-in-ih   ?dup  if  remove-input  then
+   fallback-out-ih  ?dup  if  remove-output  then
 ;
 
 tag-file @ fclose  tag-file off
