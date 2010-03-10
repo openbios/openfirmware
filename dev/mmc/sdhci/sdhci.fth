@@ -516,6 +516,8 @@ headers
 : unprotect   ( group# -- )  h# 1d1b 0 cmd  ;  \ CMD29 R1b UNTESTED
 : protected?  ( group# -- 32-bits )  h# 1e1a cmd  response  ;  \ CMD30 R1 UNTESTED
 
+0 instance value writing?
+
 : erase-blocks  ( block# #blocks -- ) \ UNTESTED
    intstat-on
    dup  0=  if  2drop exit  then
@@ -524,6 +526,7 @@ headers
    h# 211a 0 cmd    ( )        \ CMD33 - R1
    0 h# 261b 0 cmd             \ CMD38 - R1b (wait for busy)
    intstat-off
+   true to writing?
 ;
 
 \ CMD40 is MMC
@@ -744,8 +747,6 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 ;
 [then]
 
-0 instance value writing?
-
 : .card-error  ( value -- )
    dup h# 8000.0000 and  if  ." Address out of range (past end?)" cr  then
    dup h# 4000.0000 and  if  ." Misaligned address" cr  then
@@ -792,8 +793,9 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 : wait-write-done  ( -- error? )
    writing? 0=  if  false exit  then               ( limit )
 
-   get-msecs d# 1000 +                             ( limit )
-   begin  get-status dup  9 rshift h# f and  7 =  while  ( limit status )
+   get-msecs d# 4000 +                             ( limit )
+   \ Wait for return to "tran" state (4)
+   begin  get-status dup  9 rshift h# f and  4 <>  while  ( limit status )
       drop                                         ( limit )
       dup get-msecs - 0<  if
          ." SDHCI: wait-write-done timeout" cr
