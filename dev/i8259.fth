@@ -72,17 +72,53 @@ external
    h# b h# 20 ocw3@  dup 4 and  if   h# b h# a0 ocw3@  bwjoin  then
 ;
 
-: eoi  ( -- )
-   h# b h# 20 ocw3@  4 and      ( slave? )
-   h# 20 h# 20 pc!              ( slave? )  \ EOI to master
-   if  h# 20 h# a0 pc!  then    ( )	    \ EOI to slave
-;
-
 \ This is only needed when operating in rotating priority mode
 \ : iack#  ( irq# -- )
 \    dup 7 and  h# 60 or  swap 8 and  if  h# a0  else  h# 20  then  pc!
 \ ;
 
+[ifdef] 386-assembler
+code this-interrupt
+   ax ax xor
+   h# f # al mov
+   al h# 20 # out
+   h# 20 # in
+   h# 80 # al test  0=  if
+      ax ax xor
+      ax push
+      next
+   then
+   h# 7 # al and
+   h# 2 # al cmp  <>  if   \ Not cascaded
+      ax push
+      ax ax xor  ax dec  ax push
+      next
+   then
+   h# f # al mov
+   al h# a0 # out
+   h# a0 # in
+   h# 80 # al test  0=  if
+      ax ax xor  ax push
+      next
+   then
+   h# 7 # al and
+   h# 8 # al add
+   ax push
+   ax ax xor  ax dec  ax push
+c;
+code eoi
+   h# b # al mov
+   al h# 20 # out
+   h# 20 # in
+   h# 04 # al test \ Test slave bit
+   h# 20 # al mov
+   al h# 20 # out  \ EOI to master
+   0<>  if
+      al h# a0 # out  \ EOI to cascaded slave
+   then
+c;
+alias interrupt-done eoi
+[else]
 : this-interrupt  ( -- false | level true )
    h# f h# 20  ocw3@  dup h# 80 and  if        ( low-code )
       7 and  dup  2 =  if                      ( low-level )
@@ -102,6 +138,12 @@ external
    then                                        ( false | level true )
 ;
 : interrupt-done  ( -- )  eoi  ;
+: eoi  ( -- )
+   h# b h# 20 ocw3@  4 and      ( slave? )
+   h# 20 h# 20 pc!              ( slave? )  \ EOI to master
+   if  h# 20 h# a0 pc!  then    ( )	    \ EOI to slave
+;
+[then]
 
 \ XXX we really should map the registers
 : open  ( -- flag? )  true  ;
