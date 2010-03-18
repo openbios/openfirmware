@@ -216,11 +216,11 @@ previous definitions
 : fs-update  ( "devspec" -- )
    load-crypto  abort" Can't load hash routines"
 
-   open-nand                           ( )
-
    false to secure-fsupdate?           ( )
    safe-parse-word r/o open-file       ( fd )
    abort" Can't open file"             ( fd )
+
+   open-nand                           ( )
 
    linefeed over force-line-delimiter  ( fd )
 
