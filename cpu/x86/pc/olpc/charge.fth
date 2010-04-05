@@ -39,20 +39,21 @@ d# 0  value wake-delay
 h# 100 buffer: fname-buf 
  
 :  charge-log-append ( adr len -- )
-      fname-buf $append-open
+      fname-buf count $append-open
       ftype
       fcr
       ofd @ fclose
 ;
 
+[ifdef] notdef
 : charge-log ( "filename" -- ) \ filename is optional
    ['] safe-parse-word catch if 
-      fname-buf place 
+      " sd:\charge.log" fname-buf place
    else 
-   " sd:\charge.log" fname-buf place
+      fname-buf place 
    then  
    ." Logging to: " fname-buf count type cr
-   fname-buf $new-file  
+   fname-buf count $new-file  
    ofd @ fclose
 
    " chg_log Ver: 1.0" charge-log-append
@@ -79,6 +80,7 @@ h# 100 buffer: fname-buf
       key?
    until key drop
 ;
+[then]
 
 : watch-charge ( -- )
    \ 5 seconds is the default unless the user sets wake-delay
