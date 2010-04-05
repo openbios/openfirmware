@@ -110,6 +110,12 @@ end-string-array
    dup abs  d# 10,000 /  <# u# u# [char] . hold u#s swap sign u#> type
    pop-base
 ;
+
+: .mppt-active?
+   h# 3d ec-cmd-b@ h# d and
+   if ." MPPT" then
+;
+
 \needs 2.d : 2.d  ( n -- )  push-decimal <# u# u#s u#>  type  pop-base  ;
 : .%  ( n -- )  2.d ." %" ;
 : .bat  ( -- )
@@ -133,9 +139,10 @@ end-string-array
       dup h# 40 and  if  ." discharging "  then
       dup h# 80 and  if  ." trickle  "  then
    else
-      ." No battery"
+      ." No battery "
    then
    drop
+   .mppt-active?
 ;
 
 : ?enough-power  ( )
@@ -156,17 +163,6 @@ end-string-array
 \ Unless you are on a serial console with stdout turned off
 \ (stdout off) this will miss some state changes.
 \
-
-: .mppt 
-   ec-pwr_limit ec-ram@       ( pwr_limit )
-   ec-rambase ec-va2 + ecw@     ( pwr_limit VA2 )
-    ." VA2: " .d ." PWM: " . 
-;
-
-: watch-mppt ( -- )
-   begin  (cr .mppt kill-line  d# 500 ms  key?  until
-   key drop
-;
 
 : next-bstate
         begin
@@ -442,6 +438,28 @@ h# 20 buffer: ds-bank-buf
    d# 16 << d# 16 >>a
 ;
 
+: >sd
+   base @ >r decimal
+   dup abs <# u#s swap sign u#>
+   r> base !
+;
+
+: >sdx
+   <# "  " hold$ u#s " 0x" hold$ u#>
+;
+
+: >sd.ddd  ( n -- formatted )
+   base @ >r  decimal
+   dup abs <# u# u# u# [char] . hold u# u#s swap sign u#>
+   r> base !
+;
+
+: >sd.dd  ( n -- formatted )
+   base @ >r  decimal
+   dup abs <# u# u# [char] . hold u# u#s swap sign u#>
+   r> base !
+;
+
 : bat-save  ( -- )
    " disk:\battery.dmp"
    2dup ['] $delete  catch  if  2drop  then  ( name$ )
@@ -533,6 +551,42 @@ h# 20 buffer: ds-bank-buf
    1w-reset
 ;
 
+\ Retrieve the key battery stats in bulk and put it on the stack
+\ sign extending the values that are 2's complement.
+: bg-charge-info@
+   ds-bank-buf 6 h# 0c 1w-read         ( )
+   ds-bank-buf c@ 8 <<              ( voltage_msb )
+   ds-bank-buf 1 + c@ or s16>s32    ( voltage )
+   ds-bank-buf 2 + c@ 8 <<          ( voltage current_msb )
+   ds-bank-buf 3 + c@ or s16>s32    ( voltage current )
+   ds-bank-buf 4 + c@ 8 <<          ( voltage current ACR_msb )
+   ds-bank-buf 5 + c@ or s16>s32    ( voltage current ACR )
+;
+
+: bg-net-addr@
+   1w-reset
+   h# 33 1w-write-byte
+   1w-read-byte
+   0 7 bounds ?do 1w-read-byte loop
+;
+
+: bg-acr>mAh ( raw-value -- acr_in_mAh )
+   d# 625 ( mV ) * d# 15 ( mOhm ) /
+;
+
+: bg-V>V ( raw-value - V_in_mV )
+   d# 488 ( mV ) * 2* d# 100 / 5 >>
+;
+
+: bg-I>mA ( raw-value -- I_in_mA )
+   3 >>a
+   d# 15625 ( nV ) * d# 15 ( mOhm ) / d# 10 /
+;
+
+: bg-temp>degc ( raw-value -- temp_in_degc )
+   d# 125 * d# 10 / 5 >>
+;
+
 : .bg-eeprom
    base @ >r
    decimal
@@ -546,6 +600,40 @@ h# 20 buffer: ds-bank-buf
    drop
    cr
    r> base !
+;
+
+: .bg-acr ( raw_acr_in_s32 -- )
+   bg-acr>mAh >sd.dd type
+;
+
+: .bg-current ( raw_I_in_s32 -- )
+   bg-I>mA >sd.dd type
+;
+
+: .bg-volt ( raw_V_in_s32 -- )
+   bg-V>V >sd.ddd type
+;
+
+: .bg-net-addr ( -- )
+   bg-net-addr@
+   0 8 bounds ?do . loop cr
+;
+
+0 value bg-last-acr
+0 value bg-v_avg
+
+: bg-watch ( -- )
+   bg-acr@
+   begin
+      bg-charge-info@
+      dup to bg-last-acr
+      ." ACR:" .bg-acr ."  I:" .bg-current ."  V:"  .bg-volt
+      dup bg-last-acr swap - ."  Chg:" .bg-acr
+      cr
+      500 ms
+      key?
+   until
+   drop
 ;
 
 : bat-set-default-status ( val -- )
@@ -573,55 +661,7 @@ h# 20 buffer: ds-bank-buf
    then 
 ;
 
-\ Retrieve the key battery stats in bulk and put it on the stack
-\ sign extending the values that are 2's complement.
-: bg-charge-info@
-   ds-bank-buf 6 h# 0c 1w-read         ( )
-   ds-bank-buf c@ 8 <<              ( voltage_msb )
-   ds-bank-buf 1 + c@ or s16>s32    ( voltage )
-   ds-bank-buf 2 + c@ 8 <<          ( voltage current_msb )
-   ds-bank-buf 3 + c@ or s16>s32    ( voltage current )
-   ds-bank-buf 4 + c@ 8 <<          ( voltage current ACR_msb )
-   ds-bank-buf 5 + c@ or s16>s32    ( voltage current ACR )
-;
-
-: >sd.ddd  ( n -- formatted )
-   base @ >r  decimal
-   dup abs <# u# u# u# [char] . hold u# u#s swap sign u#>
-   r> base !
-;
-
-: >sd.dd  ( n -- formatted )
-   base @ >r  decimal
-   dup abs <# u# u# [char] . hold u# u#s swap sign u#>
-   r> base !
-;
-
-: bg-acr>mAh ( raw-value -- acr_in_mAh )
-   d# 625 ( mV ) * d# 15 ( mOhm ) /
-;
-
-: bg-V>V ( raw-value - V_in_mV )
-   d# 488 ( mV ) * 2* d# 100 / 5 >>
-;
-
-: bg-I>mA ( raw-value -- I_in_mA )
-   3 >>a
-   d# 15625 ( nV ) * d# 15 ( mOhm ) / d# 10 /
-;
-
-: bg-temp>degc ( raw-value -- temp_in_degc )
-   d# 125 * d# 10 / 5 >>
-;
-
 h# 90 buffer: logstr
-: >sd
-   <# "  " hold$ u#s u#>
-;
-
-: >sdx
-   <# "  " hold$ u#s " 0x" hold$ u#>
-;
 
 \ Read values directly rather than using the ec-cmd
 
@@ -685,35 +725,6 @@ h# 90 buffer: logstr
       r> base !
 ;
 
-: .bg-acr ( raw_acr_in_s32 -- )
-   bg-acr>mAh >sd.dd type
-;
-
-: .bg-current ( raw_I_in_s32 -- )
-   bg-I>mA >sd.dd type
-;
-
-: .bg-volt ( raw_V_in_s32 -- )
-   bg-V>V >sd.ddd type
-;
-
-0 value bg-last-acr
-0 value bg-v_avg
-
-: bg-watch ( -- )
-   bg-acr@
-   begin
-      bg-charge-info@
-      dup to bg-last-acr
-      ." ACR:" .bg-acr ."  I:" .bg-current ."  V:"  .bg-volt
-      dup bg-last-acr swap - ."  Chg:" .bg-acr
-      cr
-      500 ms
-      key?
-   until
-   drop
-;
-
 : bat-debug
    begin
       bat-lfp-dataf@
@@ -737,7 +748,7 @@ h# 90 buffer: logstr
 ;
 
 
-: bat-charge ( -- )
+: bat-force-charge ( -- )
    batman-init?
    bat-enable-charge
    bg-acr@
@@ -773,6 +784,22 @@ h# 90 buffer: logstr
    ec-debugflag4 bat-b@ 
    h# 10 invert and ec-debugflag4 bat-b!
 ;
+
+: mppt-off h# 40 ec-cmd ;
+: mppt-on  h# 41 ec-cmd ;
+: mppt-pct 255 * 100 / h# 3f ec-cmd-b! ;
+
+: .mppt 
+   h# 3e ec-cmd-b@            ( pwr_limit )
+   h# 42 ec-cmd-b@            ( pwr_limit VA2 )
+    ." Vsa: " d# 14927 * d# 158 / >sd.ddd type ."  PWM: " . 
+;
+
+: watch-mppt ( -- )
+   begin  (cr .mppt kill-line  d# 500 ms  key?  until
+   key drop
+;
+
 
 dev /
 new-device
