@@ -172,10 +172,10 @@ static u_long compute_crc();
  * Return size of clear.
  */
 int
-inflate(wsptr, nohdr, clear, compr)
-struct workspace *wsptr;
-int nohdr;
-u_char *clear, *compr;
+inflate(struct workspace *wsptr, int nohdr, u_char* clear, u_char *compr) __attribute__((section ("text_inflate")));
+
+int
+inflate(struct workspace *wsptr, int nohdr, u_char* clear, u_char *compr)
 {
 	int	n;
 	int	flags;

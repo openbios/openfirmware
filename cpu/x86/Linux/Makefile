@@ -30,11 +30,11 @@ forth: ${OBJS}
 	${CC} -m32 -o $@ ${OBJS} ${LIBS}
 	@ln -sf forth x86forth
 
-# Compile with -O0 because with GCC4, higher optimization levels cause the
-# functions to be reordered so the "inflate" entry point is no longer at
-# the beginning.
-inflate.o: ${ZIPDIR}/inflate.c
-	${CC} -c -m32 -O0 -fpic $< -o $@
+inflate.lo: ${ZIPDIR}/inflate.c
+	${CC} -c -m32 -Wall -fno-stack-protector -ffreestanding -D_FORTIFY_SOURCE=0 -DNEED_BCOPY -O3 -fpic $< -o $@
+
+inflate.o: inflate.lo
+	${LD} -T inflate.ld $< -o $@
 
 ../build/inflate.bin: inflate.o
 	objcopy -O binary $< $@
