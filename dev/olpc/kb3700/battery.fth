@@ -480,6 +480,12 @@ h# 20 buffer: ds-bank-buf
 
 \ bg-* words access the gauge directly via 1w rather than
 \ read the value from the ec cache
+: bg-recall
+   ds-bank0 1w-recall
+   ds-bank1 1w-recall
+   ds-bank2 1w-recall
+;
+
 : bg-acr@     ( -- acr )
    batman-init?
    ds-bank-buf 2 ds-acr 1w-read                  ( )
