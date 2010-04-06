@@ -68,6 +68,10 @@ string-array bat-causes
 ( 10) ," ACR error"
 ( 11) ," NIMH 0xFF count"
 ( 12) ," FF count"
+( 13) ," Voltage Invalid"
+( 14) ," Bank 0 Invalid"
+( 15) ," Bank 1 Invalid"
+( 16) ," Bank 2 Invalid"
 end-string-array
 
 : .bat-cause  ( -- )
