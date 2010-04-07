@@ -3197,7 +3197,11 @@ defer the-action    ( phandle -- )
    r> push-device
 ;
 
-: scan-level  ( action-acf -- )  is the-action (scan-level)  ;
+: scan-level  ( action-xt -- )
+   ['] the-action behavior >r       ( action-xt r: old-xt )   
+   is the-action (scan-level)       ( r: old-xt )
+   r> is the-action                 ( )
+;
 
 headers
 
@@ -3208,11 +3212,12 @@ headers
 \ the action that it wished to undertake.
 
 : scan-subtree  ( dev-addr,len action-acf -- )
-   current-device >r  ( dev-addr,len action-acf )
-   is the-action      ( dev-addr,len )
-   find-device        (  )
-   ['] execute-action  ['] (search-preorder)  catch  2drop
-   r> push-device     (  )
+   current-device >r                ( dev-addr,len action-acf r: phandle )
+   ['] the-action behavior >r       ( dev-addr,len action-acf r: phandle xt )
+   is the-action                    ( dev-addr,len r: phandle xt )
+   find-device                      ( r: phandle xt )
+   ['] execute-action  ['] (search-preorder)  catch  2drop  ( r: phandle xt )
+   r> is the-action r> push-device  ( )
 ;
 
 headerless
