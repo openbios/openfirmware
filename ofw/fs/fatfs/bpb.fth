@@ -91,8 +91,12 @@ d# 12 constant fat12
 d# 16 constant fat16
 d# 32 constant fat32
 
-: fs-#free+  ( -- )  fs_#freeclusters  dup lel@  1+  swap lel!  true fsinfos-dirty c!  ;
-: fs-#free-  ( -- )  fs_#freeclusters  dup lel@  1-  swap lel!  true fsinfos-dirty c!  ;
+: +fs-#free  ( incr -- )
+   fs_#freeclusters  dup lel@                ( incr adr n )
+   dup h# ffffffff =  if  3drop exit  then   ( incr adr n )
+   rot +  swap lel!
+   true fsinfos-dirty c!
+;
 : fs-free#!  ( cluster# -- )  fs_freecluster# lel!  true fsinfos-dirty c!  ;
 
 

@@ -196,7 +196,7 @@ VARIABLE hint  VARIABLE fatc-start  VARIABLE fatc-end
             drop fs_freecluster# lel@              ( hint' )
          then                                      ( hint )
          (allocate-cluster)                        ( false | cluster# true )
-         dup  if  over fs-free#!  fs-#free-  then  ( false | cluster# true )
+         dup  if  over fs-free#!  -1 +fs-#free  then  ( false | cluster# true )
       else                                         ( hint )
          drop false                                ( false )
       then                                         ( false | cluster# true )
@@ -209,10 +209,10 @@ VARIABLE hint  VARIABLE fatc-start  VARIABLE fatc-end
 : deallocate-clusters  ( first-cl# -- )
    begin
       dup 0<>  over fat-end? 0= and
-   while                               ( cluster# )
-      dup  cluster@                    ( cluster# next-cluster# )
-      0 rot  cluster!                  ( next-cluster# )
-      fsinfo @  if  fs-#free+  then    ( next-cluster# )
+   while                                 ( cluster# )
+      dup  cluster@                      ( cluster# next-cluster# )
+      0 rot  cluster!                    ( next-cluster# )
+      fsinfo @  if  1 +fs-#free  then    ( next-cluster# )
    repeat
    drop
    ?flush-fat-cache

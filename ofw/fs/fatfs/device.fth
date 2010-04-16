@@ -108,7 +108,7 @@ d# 4096 constant /sector-max
    alloc-fssector
    1 fssector @  read-sectors  if
       free-fssector
-      "CaR ". ." File system inforation sector"
+      "CaR ". ." File system information sector"
       abort
    then
    not-fsinfo?  if  free-fssector  then
