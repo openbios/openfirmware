@@ -649,7 +649,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 
       false to timeout?
       mmc?  if
-         oc-mode send-op-cond   \ cmd2              ( ocr )
+         oc-mode send-op-cond   \ cmd1              ( ocr )
          timeout?  if  drop true  unloop exit  then ( ocr )
       else
          oc-mode set-oc         \ acmd41            ( ocr )
