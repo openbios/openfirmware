@@ -1026,6 +1026,7 @@ headers
 \ Adhoc join
 \ =======================================================================
 
+0 value adhoc-started?
 0 value atim
 
 : save-associate-params  ( ch ssid$ target-mac$ -- ch ssid$ target-mac )
@@ -1069,6 +1070,7 @@ headers
    d# 100 +x				\ Padding as present in libertas Linux driver
 
    finish-cmd outbuf-wait  if  ." Failed to start adhoc network" cr false exit  then
+   true to adhoc-started?
    \ We could get the bssid from offsets 3..8 of the response buf if we needed it
    true
    ds-associated set-driver-state
@@ -1660,6 +1662,7 @@ false instance value force-open?
 : close  ( -- )
    opencount @ 1-  0 max  opencount !
    opencount @ 0=  if
+      adhoc-started?  if  adhoc-stop  then
       disable-multicast
       mesh-stop drop
       link-up?  if  target-mac$ deauthenticate  then
