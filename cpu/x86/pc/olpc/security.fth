@@ -606,7 +606,7 @@ h# 10e constant /key
    2nip  2r> 2swap " rmd160" signature-good?
 ;
 
-d# 1024 constant /sec-line-max
+d# 8192 constant /sec-line-max
 /sec-line-max buffer: sec-line-buf
 
 : check-expiry  ( exp$ -- exp$ -1|0 )
