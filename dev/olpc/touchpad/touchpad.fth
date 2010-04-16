@@ -519,6 +519,11 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    \ Being able to open the touchpad is good enough in SMT mode
    smt-test?  if  close false exit  then
 
+   final-test? 0=  if
+      ." Touchpad test will start in 4 seconds" cr
+      d# 4000 ms
+   then
+
    my-args  " relative" $=  to relative?
 
    cursor-off  track-init  start
