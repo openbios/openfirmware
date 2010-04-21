@@ -61,6 +61,7 @@ d# 20 buffer: sn-buf
    then
    sn-buf 2+  sn-buf 1+  d# 11 move  \ Elide the T
    d# 11 sn-buf c!
+   sn-buf count upper
    true
 ;
 
