@@ -92,6 +92,7 @@ d# 20 buffer: sn-buf  \ Buffer for preserving serial number string
          d# 14 <>  if
             " Wrong length (must be 14 characters), try again" .problem
          else
+            bn-buf count upper
             bn-buf 1+ c@ [char] Q =  if  exit  then
             " Must begin with Q, try again" .problem
          then

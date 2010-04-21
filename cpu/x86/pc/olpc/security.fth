@@ -376,6 +376,7 @@ d# 67 buffer: machine-id-buf
       2drop true exit
    then                                             ( adr len )
    machine-id-buf  swap  move
+   machine-id-buf d# 11 upper
 
    [char] : machine-id-buf d# 11 + c!
 
