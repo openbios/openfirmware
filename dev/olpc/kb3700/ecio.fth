@@ -101,6 +101,7 @@ h# 380 constant iobase
 : ec-wl    ( -- l )  lbsplit ec-wb ec-wb ec-wb ec-wb ;
 
 : (ec-cmd-b!)  ( b cmd -- )  ec-cmd-out  ec-wb  ;
+: (ec-cmd-w!)  ( b cmd -- )  ec-cmd-out  ec-ww  ;
 : (ec-cmd-l!)  ( l cmd -- )  ec-cmd-out  ec-wl  ;
 : (ec-cmd-b@)  ( cmd -- b )  ec-cmd-out  ec-rb  ;
 : (ec-cmd-w@)  ( cmd -- w )  ec-cmd-out  ec-rw  ;
@@ -128,6 +129,17 @@ d# 10 constant #ec-retries
    loop                                    ( b cmd )
    too-many-retries
 ;
+
+: ec-cmd-w!  ( w cmd -- )
+   #ec-retries  0  do                      ( b cmd )
+      2dup  ['] (ec-cmd-w!) catch  0=  if  ( b cmd )
+         2drop unloop exit
+      then                                 ( b cmd x x )
+      2drop                                ( b cmd )
+   loop                                    ( b cmd )
+   too-many-retries
+;
+
 
 : ec-cmd-l!  ( l cmd -- )
    #ec-retries  0  do                      ( b cmd )
