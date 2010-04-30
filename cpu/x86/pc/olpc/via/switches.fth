@@ -3,6 +3,7 @@ purpose: Driver/selftest for OLPC lid and ebook switches
 
 0 0  " 0"  " /" begin-package
 " switches" device-name
+0 0 reg  \ So test-all will run the test
 : open  ( -- okay? )  true  ;
 : close  ( -- )  ;
 : lid?    ( -- flag )  h# 48 acpi-l@ h#  80 and 0=  ;

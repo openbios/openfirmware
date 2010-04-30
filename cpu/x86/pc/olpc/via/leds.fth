@@ -2,6 +2,7 @@
 purpose: Driver/selftest for OLPC XO-1.5 LEDs
 
 0 0  " 0"  " /" begin-package
+0 0 reg  \ So test-all will run the test
 " leds" device-name
 : open  ( -- okay? )  true  ;
 : close  ( -- )  ;

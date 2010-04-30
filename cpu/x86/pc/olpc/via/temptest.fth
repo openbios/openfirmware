@@ -1,6 +1,7 @@
 purpose: Test for heat spreader on OLPC XO-1.5
 \ See license at end of file
 
+dev /switches
 : cold-secs  ( n -- )  d# 100 *  0  do  safe-idle  loop  ;
 : hot-secs  ( n -- )  d# 1000 *  0  do  ms-factor spins  loop  ;
 : temp-rise  ( -- delta-degrees )
@@ -21,6 +22,15 @@ d# 8 constant temperature-threshold
    then                                            ( fail? )
    black-letters
 ;
+: selftest  ( -- error? )
+   selftest  if  true exit  then
+
+   \ The heat spreader is not attached in SMT test.
+   \ Final test need to be very fast, and anyway the preceding
+   \ runin test has already tested the heat spreader
+   smt-test? final-test? or  if  false  else  .temp-rise  then
+;
+dend
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
