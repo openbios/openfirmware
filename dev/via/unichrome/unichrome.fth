@@ -1237,9 +1237,6 @@ defer gp-install  ' noop to gp-install
 0 value open-count
 
 : display-remove  ( -- )
-   open-count 1 =  if
-   then
-   open-count 1- 0 max to open-count
 ;
 
 : display-install  ( -- )
@@ -1252,7 +1249,6 @@ defer gp-install  ' noop to gp-install
    default-font set-font
    set-terminal
    fb-va to frame-buffer-adr
-   open-count 1+ to open-count
 ;
 
 : display-selftest  ( -- failed? )  false  ;
@@ -1260,6 +1256,18 @@ defer gp-install  ' noop to gp-install
 ' display-install  is-install
 ' display-remove   is-remove
 ' display-selftest is-selftest
+
+\ The previous value of "open" is created automatically by the execution
+\ of "is-install".   We need this override to prevent auto-clearing the
+\ screen when the display node is re-opened during the camera selftest.
+: open  ( -- okay? )
+   open-count 0=  if  open  else  true  then
+   dup  if  open-count 1+ to open-count  then
+;
+: close  ( -- )
+   open-count 1 =  if  close  then
+   open-count 1- 0 max to open-count
+;
 
 " display"                      device-type
 " ISO8859-1" encode-string    " character-set" property
