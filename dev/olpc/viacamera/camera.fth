@@ -498,7 +498,7 @@ d# 5,000 constant movie-time
       shoot-still  if  drop true exit  then 	( timeout )
       dup get-msecs - 0<=                       ( timeout reached )
    until					( timeout )
-   false
+   drop false
 ;
 
 : mirrored  ( -- )  h# 1e ov@  h# 20 or  h# 1e ov!  ;
