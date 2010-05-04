@@ -27,6 +27,7 @@
 ;
 : crtc-table  ( -- )  h# 3d4 index-table  ;
 : seq-table  ( -- )  h# 3c4 index-table  ;
+: grf-table  ( -- )  h# 3ce index-table  ;
 
 : seq-setup  ( index -- )
    [ also assembler ]

@@ -196,6 +196,96 @@ end-table
 
 \ end of lower-power
 
+[ifdef] extra-gfx-restore
+\ VT-fixups
+seq-table
+   ae 15 ireg  \ 8 bit LUT, enable wrap, 32bpp, extended display enable
+   08 16 ireg  \ FIFO threshold
+   08 1a ireg  \ Extended mode memory access enable
+   30 1c ireg  \ Horizontal display fetch count
+   01 1d ireg  \ Horizontal display fetch count
+   08 22 ireg  \ Display queue request expire number +++
+   0f 2a ireg  \ LVDS Channel 1 and DVI I/O pad control +++
+   9d 44 ireg  \ VCK PLL
+   8c 45 ireg  \ VCK PLL
+   85 46 ireg  \ VCK PLL
+   9d 4a ireg  \ 2nd PLL
+   8c 4b ireg  \ 2nd PLL
+   85 4c ireg  \ 2nd PLL
+   00 58 ireg  \ Display FIFO low threshold select
+   00 59 ireg  \ clock gating  XXX the driver really should gate the clocks
+end-table
+
+\ VT-fixups
+crtc-table
+   99 00 ireg \ VGA timing stuff
+   95 01 ireg \
+   95 02 ireg \
+   1D 03 ireg \
+   97 04 ireg \
+   1B 05 ireg \
+   8E 06 ireg \
+   FF 07 ireg \
+   00 08 ireg \
+   60 09 ireg \
+   1E 0a ireg \
+   84 10 ireg \ VGA stuff
+   8E 11 ireg \
+   83 12 ireg \
+   58 13 ireg \
+   00 14 ireg \
+   83 15 ireg \
+   8F 16 ireg \
+   E3 17 ireg \
+   FF 18 ireg \
+   06 33 ireg \ HSYNC adj
+   00 34 ireg
+   50 35 ireg \ extended overflow
+   31 36 ireg \ 01 - monitor control - 30 is DPMS standby state
+   B8 56 ireg \ Hsync low
+   C0 57 ireg \ Hsyncend low
+   89 5e ireg \ Vsync low
+   6C 5f ireg \ Vsyncend all and Vsync overflow
+   88 68 ireg \ Display queue depth f, Display queue read threshold 8
+   E8 6a ireg \ Enable secondary display - 20 bit set is 8 (not 6) bits for second display LUT
+   40 88 ireg \ LVDS sequential
+   88 8a ireg \ LCD adjust LP
+   00 8b ireg \ LCD power sequence control - ca is default
+   00 8c ireg \ LCD power sequence control - ca is default
+   00 8d ireg \ LCD power sequence control - ca is default
+   00 8e ireg \ LCD power sequence control - ca is default
+   00 8f ireg \ LCD power sequence control - 11 is default
+   00 90 ireg \ LCD power sequence control - 11 is default
+   08 92 ireg \ Read threshold 2 - 00 is default
+   D0 94 ireg \ 80 is Display Queue depth bit [4], rest is display 2 Expire number bits [6:0]
+   22 95 ireg \ Read threshold 1 (bits 6:4) and read threshold 2 (bit 2:0)
+   10 99 ireg \ ? LVDS channel 1 function select
+   00 9b ireg \ O Digital video Port 1 Function Select 0  !!! setting this to 00 messes up the display
+end-table
+
+grf-table
+   40 05 ireg \ graphics mode
+   05 06 ireg \ graphics misc
+   0F 07 ireg \ color don't care
+end-table
+
+\ Attribute registers
+3da port-rb  \ reset-attr-addr
+10 3c0 port-wb  41 3c0 port-wb  \ mode control
+11 3c0 port-wb  ff 3c0 port-wb  \ overscan color
+12 3c0 port-wb  0f 3c0 port-wb  \ color plane enable
+13 3c0 port-wb  00 3c0 port-wb  \ horizontal pixel pan
+3da port-rb  \ reset-attr-addr
+20 3c0 port-wb                  \ palette on
+
+seq-table
+   04 40 ireg  \ Pulse LCDCK PLL reset
+   00 40 ireg  \ Release LCDCK PLL reset
+end-table
+
+cf 3c2 port-wb  \ use external clock (MISC register reads at 3cc, writes at 3c2)
+
+[else]
 seq-table
    9f 4a ireg  \ 2nd PLL value 0
    0c 4b ireg  \ 2nd PLL value 1
@@ -205,6 +295,7 @@ seq-table
 end-table
 
 3cc port-rb  0c bitset  3c2 # dx mov  al dx out  \ use external clock (MISC register reads at 3cc, writes at 3c2)
+[then]
 
 80 17 crt-set  \ Release reset
 
