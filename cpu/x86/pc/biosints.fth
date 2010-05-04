@@ -464,7 +464,12 @@ h# 1ff and  case
 
 0 value bios-ih
 0 value bios-cdrom-ih
+[ifdef] two-bios-disks
+0 value bios-disk-ih0
+0 value bios-disk-ih1
+[else]
 0 value bios-disk-ih
+[then]
 
 false value show-reads?
 -1 value read-match
@@ -509,12 +514,26 @@ false value show-reads?
 ;
 
 : select-bios-disk  ( drive# -- )
+[ifdef] two-bios-disks
+   case
+      h# 80  of  bios-disk-ih0  endof
+      h# 81  of  bios-disk-ih1  endof
+      h# 82  of  bios-cdrom-ih  endof
+      ( default ) bios-ih swap
+   endcase
+   to bios-ih
+[else]
    h# 82 =  if  bios-cdrom-ih  else  bios-disk-ih  then  to bios-ih
+[then]
 ;
 : check-drive  ( -- error? )
    show-reads?  if  ." Drive " rm-dl@ .x  then
    rm-dl@  h# 80 h# 81 between 0=  if  rm-set-cf  7 rm-ah!  true exit  then
+[ifdef] two-bios-disks
+   rm-dl@  select-bios-disk
+[else]
    bios-disk-ih to bios-ih
+[then]
    bios-ih  0=  dup  if  rm-set-cf  h# aa rm-ah!   then
 ;
 : lba-check-drive  ( -- error? )
@@ -1063,7 +1082,14 @@ here bounce-timer - constant /bounce-timer
    populate-memory-map
    rm-platform-fixup
 ;
-: close-bios-disk  ( -- )  bios-disk-ih ?dup  if  close-dev   0 to bios-disk-ih  then  ;
+: close-bios-disk  ( -- )
+[ifdef] two-bios-disks
+   bios-disk-ih0 ?dup  if  close-dev   0 to bios-disk-ih0  then
+   bios-disk-ih0 ?dup  if  close-dev   0 to bios-disk-ih1  then
+[else]
+   bios-disk-ih ?dup  if  close-dev   0 to bios-disk-ih  then
+[then]
+;
 : close-bios-cdrom  ( -- )  bios-cdrom-ih ?dup  if  close-dev   0 to bios-cdrom-ih  then  ;
 : close-bios-devices  ( -- )  close-bios-disk  close-bios-cdrom  ;
 ' close-bios-devices to quiesce-devices
@@ -1136,10 +1162,18 @@ warning !
    true
 ;
 : set-hd-boot  ( dev$ -- )
+[ifdef] two-bios-disks
+   open-dev to bios-disk-ih0
+[else]
    open-dev to bios-disk-ih
+[then]
    0 to boot-sector#  1 to boot-#sectors
    h# 80 to bios-boot-dev#
+[ifdef] two-bios-disks
+   bios-disk-ih0 to bios-ih
+[else]
    bios-disk-ih to bios-ih
+[then]
 ;
 : get-one-sector  ( dev$ -- error? )
    open-dev to bios-ih
@@ -1148,9 +1182,12 @@ warning !
    close-bios-ih                       ( #read )
    1 <>                                ( error? )
 ;
+: first-partition-bootable?  ( -- flag )
+   load-base h# 1be + c@  h# 80 =
+;
 : mbr-bootable?  ( dev$ -- flag )
    get-one-sector  if  false exit  then
-   load-base h# 1be + c@  h# 80 =
+   first-partition-bootable?
 ;
 
 : ntfs?  ( dev$ -- flag )
@@ -1188,11 +1225,21 @@ end-package
          to bios-ih
          bootable-cdrom?  if
             bios-ih to bios-cdrom-ih
+[ifdef] two-bios-disks
+            " ext:0" open-dev ?dup  if
+               to bios-disk-ih1
+[else]
             " int:0" open-dev ?dup  if
                to bios-disk-ih
+[then]
             else
+[ifdef] two-bios-disks
+               " int:0" open-dev ?dup  if
+                  to bios-disk-ih1
+[else]
                " ext:0" open-dev ?dup  if
                   to bios-disk-ih
+[then]
                else
                   ." Can't open SD device.  Install from CD-ROM probably won't work."  cr
                then
@@ -1200,6 +1247,25 @@ end-package
             h# 82 to bios-boot-dev#
             true exit
          then
+[ifdef] two-bios-disks
+         \ Check for bootable USB FLASH drive and set the SD drive number if possible
+         load-base 0 1 (bios-read-sectors)  1 =  if
+            first-partition-bootable?  if
+               bios-ih to bios-disk-ih0
+               " ext:0" open-dev ?dup  if
+                  to bios-disk-ih1
+               else
+                  " int:0" open-dev ?dup  if
+                     to bios-disk-ih1
+                  else
+                     ." Can't open SD device.  Install from UFD probably won't work."  cr
+                  then
+               then
+               h# 80 to bios-boot-dev#
+               true exit
+            then
+         then
+[then]
          close-bios-ih
       then
 

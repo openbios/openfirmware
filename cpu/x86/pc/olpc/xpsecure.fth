@@ -21,7 +21,11 @@ devalias sba ext:0//secure-boot-area//zip-file-system
    ramdisk-base swap move                         ( )
 
    \ Tell the BIOS INT 13 emulator code to use the ramdisk instead of the SD
+[ifdef] two-bios-disks
+   ramdisk-ih to bios-disk-ih0
+[else]
    ramdisk-ih to bios-disk-ih
+[then]
    h# 80 to bios-boot-dev#
 ;
 
