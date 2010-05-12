@@ -4,7 +4,7 @@
    3dup lskip            ( adr len pattern residue )
    dup  if               ( adr len pattern residue )
       ." FAILED - got "  ( adr len pattern residue )
-      nip >r - +         ( adr' )
+      nip - +            ( adr' )
       dup l@ .x  ." at " .x  cr   ( )
       true
    else                  ( adr len pattern residue )
