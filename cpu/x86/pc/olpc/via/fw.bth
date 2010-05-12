@@ -305,7 +305,7 @@ false value fru-test?
 : user-ok  "ok"  ;  \ This is supposed to check for authorization
 true value user-mode?
 
-fload ${BP}/cpu/x86/pc/olpc/banner.fth
+fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
 
 fload ${BP}/ofw/gui/loadmenu.fth
 patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
