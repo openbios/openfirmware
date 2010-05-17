@@ -509,7 +509,7 @@ d# 10,000 constant movie-time
 : display-frame  ( adr -- )
 \   test-x test-y VGA_WIDTH VGA_HEIGHT " draw-rectangle" " $call-screen" evaluate
    " expand-to-screen" " $call-screen" evaluate
-   autobright
+\  autobright
 ;
 
 : timeout-read  ( adr len timeout -- actual )
