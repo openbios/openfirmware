@@ -9,7 +9,7 @@ dev /isa/timer
 \ depend on being able to see any specific value.
 : wait-rollover  ( -- error? )
    get-msecs  d# 100 +   begin   ( time-limit )
-      0 count@  5 <  if  drop false exit  then
+      0 count@  6 <  if  drop false exit  then
       dup get-msecs -            ( time-limit diff )
    0<= until
    drop true
