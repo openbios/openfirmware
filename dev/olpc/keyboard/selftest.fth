@@ -7,6 +7,9 @@ purpose: Interactive keyboard test shows which keys are pressed
 dev /8042/keyboard
 hex
 
+\ This is 1 for the original rubber keyboard and 2 for the mechanical keyboard
+1 value keyboard-type
+
 \ There are two scancode tables:
 \   1.  simple scancode (down values); up value is f0 + scancode
 \   2.  e0 + scancode (down values);   up value is e0 + f0 + scancode
@@ -74,7 +77,7 @@ d#  40 constant button-h
 ;
 : make-button  ( x y -- )  button-w button-h (make-key)  ;
 
-: make-keys  ( -- )
+: make-keys1  ( -- )
    0 to #keys
    top-key-row
    2 0  do  make-single-key  loop
@@ -101,8 +104,38 @@ d#  40 constant button-h
    make-space-key
    5 0  do  make-single-key  loop
 ;
+: make-narrower-key  ( -- )  d# 65 make-key&gap  ;
+: make-wider-key  ( -- )  d# 83 make-key&gap  ;
+: make-keys2  ( -- )
+   0 to #keys
+   top-key-row
+   d# 15 0  do  d# 69 make-key&gap  loop  \ exc, f1-f12,ins,del
+   next-key-row
+   make-narrower-key  \ `
+   d# 10 0  do  make-wider-key  loop  \ 1-0
+   make-narrower-key  \ -
+   d# 95 make-key&gap  \ bksp
+   next-key-row
+   d# 95 make-key&gap  \ Tab
+   d# 10 0  do  make-wider-key  loop \ Q-P
+   make-narrower-key make-narrower-key \ []
+   next-key-row
+   d# 125 make-key&gap \ ctrl
+   d# 9 0  do  make-wider-key  loop  \ A-L
+   make-narrower-key  \ ;
+   d# 125 make-key&gap  \ enter
+
+   next-key-row
+   d# 160 make-key&gap  \ lshift
+   d# 7 0  do  make-wider-key  loop
+   d# 3 0  do  make-narrower-key  loop
+   d# 125 make-key&gap  \ rshift
+   next-key-row
+   make-wider-key make-wider-key make-narrower-key  make-wider-key  \ fn hand \ alt
+   d# 330 make-key&gap  \ space
+   7 0  do  d# 60 make-key&gap  loop  \ altgr,+,",left,down,up,right
+;
 : make-buttons
-   h# 59 to #keys
    d#   80 d#  30 make-button  \ Rocker up    65
    d#   30 d#  80 make-button  \ Rocker left  67
    d#  130 d#  80 make-button  \ Rocker right 68
@@ -172,10 +205,26 @@ d# 128 8 / constant #key-bytes
    -1 to last-1   -1 to last-2
 ;
 
-h# ffd5ab57 constant funny-map
-create all-keys-bitmap
+\ Funny-map1 has bits clear at the locations of intermediate
+\ slider keys.  Those keys are only active by pressing the fn
+\ key, and need not be tested during operator finger-sweeps of the
+\ keyboard.  It is okay if the operator tests them, so we mask
+\ off those bits if they happen to be set in the bitmap.
+h# ffd5ab57 constant funny-map1
+
+create all-keys-bitmap1
 57 c, ab c, d5 c, ff c, ff c, ff c, ff c, ff c,  \ Omits the intermediate slider keys
 ff c, ff c, ff c, ff c, 03 c, 00 c, 00 c, 00 c,
+
+\ The mechanical keyboard has no slider keys. All displayed button locations are
+\ activated by pressing single keystrokes, so the map is dense
+h# ffffff constant funny-map2
+create all-keys-bitmap2
+ff c, ff c, ff c, ff c, ff c, ff c, ff c, ff c,
+ff c, ff c, 3f c, 00 c, 00 c, 00 c, 00 c, 00 c,
+
+: all-keys-bitmap  ( -- adr )  keyboard-type 2 =  if  all-keys-bitmap2  else  all-keys-bitmap1  then  ;
+: funny-map  ( -- adr )  keyboard-type 2 =  if  funny-map2  else  funny-map1  then  ;
 
 defer all-tested?
 : all-keys-tested?  ( -- flag )
@@ -184,8 +233,14 @@ defer all-tested?
 ;
 ' all-keys-tested? to all-tested?
 
-: all-buttons-tested?  ( -- flag )
+: all-buttons-tested?1  ( -- flag )
    key-bitmap h# b + w@  h# 3fe and  h# 3fe =
+;
+: all-buttons-tested?2  ( -- flag )
+   key-bitmap h# 9 + w@  h# 3fe0 and  h# 3fe0 =
+;
+: all-buttons-tested?  ( -- flag )
+   keyboard-type 2 =  if  all-buttons-tested?1  else  all-buttons-tested?2  then
 ;
 
 \ This table is indexed by the (unescaped) scanset1 code, giving
@@ -218,14 +273,14 @@ hex
       h# 38 of  d# 62  endof  \ R ALT
 
 \ For a standard PC keyboard
-\     h# 1c of  d# 64  endof  \ Numeric enter
-\     h# 1d of  d# 64  endof  \ R CTRL
-\     h# 52 of  d# 75  endof  \ Insert
-\     h# 53 of  d# 76  endof  \ Delete
-\     h# 47 of  d# 80  endof  \ Home
-\     h# 4f of  d# 81  endof  \ End
-\     h# 49 of  d# 85  endof  \ PageUp
-\     h# 51 of  d# 86  endof  \ PageDown
+( \ ) h# 1c of  d# 64  endof  \ Numeric enter
+( \ ) h# 1d of  d# 64  endof  \ R CTRL
+      h# 52 of  d# 75  endof  \ Insert
+      h# 53 of  d# 76  endof  \ Delete
+( \ ) h# 47 of  d# 80  endof  \ Home
+( \ ) h# 4f of  d# 81  endof  \ End
+( \ ) h# 49 of  d# 85  endof  \ PageUp
+( \ ) h# 51 of  d# 86  endof  \ PageDown
 
       h# 3b of  d# 112 endof  \ Fn 1
       h# 3c of  d# 113 endof  \ Fn 2
@@ -292,7 +347,7 @@ hex
 \ "ibm#" is the key number as shown on the original IBM PC documents
 \ These keynum values are from the ALPS spec "CL1-matrix-20060920.pdf"
 decimal
-create ibm#s
+create ibm#s1
    \ Top row, key#s 0x00-0x18
    110 c, 135 c,                                     \ ESC, view source
    112 c, 136 c, 113 c, 137 c, 114 c, 138 c, 115 c,  \ Left bar
@@ -319,8 +374,46 @@ create ibm#s
    150 c, 151 c, 152 c, 153 c,        \ Rocker up, left, right, down
    154 c,                             \ Rotate
    156 c, 157 c, 158 c, 159 c,        \ Game O, square, check, X
-here ibm#s - constant /ibm#s
+here ibm#s1 - constant /ibm#s1
 hex
+
+\ "key#" is a physical location on the screen
+\ "ibm#" is the key number as shown on the original IBM PC documents
+\ The actual #s for F6 and F7 are 146 and 147, but the EC does some magic
+decimal
+create ibm#s2
+   \ Top row, key#s 0x00-0x18
+   110 c,                                            \ ESC
+   112 c, 113 c, 114 c, 115 c, 116 c, 117 c,         \ F1-F6
+   118 c, 119 c, 120 c, 121 c, 122 c, 123 c,         \ F6-F12
+\  148 c, 149 c,                                     \ ins, del
+    75 c,  76 c,                                     \ ins, del
+
+   \ Number row
+   1 c, 2 c, 3 c, 4 c, 5 c, 6 c, 7 c, 8 c, 9 c, 10 c, 11 c, 12 c, 15 c,  \ 1 is really 150
+
+   \ Top alpha row - tab QWERTYUIOP []
+   16 c, 17 c, 18 c, 19 c, 20 c, 21 c, 22 c, 23 c, 24 c, 25 c, 26 c, 27 c, 28 c, \ 28 is really 151
+
+   \ Middle alpha row - ctrl ASDFGHIJKL ; enter
+   58 c, 31 c, 32 c, 33 c, 34 c, 35 c, 36 c, 37 c, 38 c, 39 c, 40 c, 43 c,
+
+   \ Bottom alpha row - shift ZXCVBNM , . / shift
+   44 c, 46 c, 47 c, 48 c, 49 c, 50 c, 51 c, 52 c, 53 c, 54 c, 55 c, 57 c,
+
+   \ Function row - fn grab \ alt space altgr   ..  left down up right  29 is really 152, 13>153, 41>154
+   59 c, 127 c, 29 c, 60 c, 61 c, 62 c, 13 c, 41 c, 79 c, 84 c, 83 c, 89 c,
+
+   \ Game buttons - key#s 0x59 - 0x61  (these IBM#s are made up just for this program)
+   150 c, 151 c, 152 c, 153 c,        \ Rocker up, left, right, down
+   154 c,                             \ Rotate
+   156 c, 157 c, 158 c, 159 c,        \ Game O, square, check, X
+here ibm#s2 - constant /ibm#s2
+hex
+
+: make-keys  ( -- )  keyboard-type 2 =  if  make-keys2  else  make-keys1  then  ;
+: ibm#s  ( -- adr )  keyboard-type 2 =  if  ibm#s2  else  ibm#s1  then  ;
+: /ibm#s  ( -- len )  keyboard-type 2 =  if  /ibm#s2  else  /ibm#s1  then  ;
 
 : ibm#>key#  ( ibm# -- true | key# false )
    /ibm#s 0  ?do   ( ibm# )
@@ -468,8 +561,8 @@ false value verbose?
    clear-key-bitmap
    get-msecs to last-timestamp
    begin
-      get-data?  if
-         process-raw
+      get-data?  if     ( scancode )
+         process-raw    ( exit? )
          get-msecs to last-timestamp
       else
          final-test?  smt-test?  or  if
@@ -484,9 +577,20 @@ false value verbose?
 
 : toss-keys  ( -- )  begin  key?  while  key drop  repeat  ;
 
+: set-keyboard-type  ( -- )
+   " KM" find-tag  if                    ( adr len )
+      -null                              ( adr' len' )
+      " olpc2" $=  if  2  else  1  then  ( type )
+   else                                  ( )
+      1                                  ( type )
+   then                                  ( type )
+   to keyboard-type
+;
 warning @ warning off
 : selftest  ( -- error? )
    open  0=  if  true exit  then
+
+   set-keyboard-type
 
    \ Being able to open the keyboard is good enough in SMT mode
 \   smt-test?  if  close false exit  then
