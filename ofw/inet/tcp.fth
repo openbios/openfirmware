@@ -2239,7 +2239,7 @@ false instance value do-delack?
    dup 0=  if  nip exit  then
    dup snd_una + 1- to snd_up          ( adr len )
    true to t_force                     ( adr len )
-   write                               ( len|-1 )
+   write tcp_output                    ( len|-1 )
    false to t_force                    ( len|-1 )
 ;
 
