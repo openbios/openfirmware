@@ -16,7 +16,7 @@ hex
 fload ${BP}/cpu/x86/pc/biosload/config.fth
 
 h# 0.0400 constant gdt-pa
-h# 0.1000 constant stacktop
+h# 8.0000 constant stacktop
 
 : >seg  ( adr -- seg-val )  h# f.0000 and  d# 4 rshift  ;
 
