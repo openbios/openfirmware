@@ -81,7 +81,7 @@ h# e1000 constant smm-sp0
 h# e1400 constant smm-rp0
 h# e1800 constant smm-gdt
 
-h# fc000 constant dsdt-adr
+h# fc000 constant dsdt-adr   \ Don't change this address; Windows OEM Activation depends on it
 h# fd000 constant ssdt-adr
 
 h# ffc00 constant smbios-adr
