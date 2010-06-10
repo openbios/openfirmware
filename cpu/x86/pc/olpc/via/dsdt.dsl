@@ -30,6 +30,16 @@ DefinitionBlock ("dsdt.aml",      // AML file name
                  0x00000001)      // OEM Revision
 {
 
+// This entity must be present very near the beginning of the DSDT
+// so Windows OEM Activation will work.  The OEMBIOS.INI file that
+// was supplied to Microsoft stipulates that the sequence "OLPC XO"
+// will appear within 60 bytes of the address 0xfc000, which is the
+// DSDT start address.
+Name (VERS, Package (0x02) {
+    "OLPC XO-1.5", 
+    "$Id$"
+})
+
 OperationRegion (UART, SystemIO, 0x03f8, 0x07)
 
 // set to 1 to enable debug output
