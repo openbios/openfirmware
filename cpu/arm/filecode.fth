@@ -3,12 +3,6 @@ purpose: Code words to support the file system interface
 
 decimal
 
-\ signed mixed mode addition
-code ln+  ( l n -- l )  \ same as l+ or =
-   pop     r0,sp      
-   add     tos,tos,r0 
-c;
-
 \ &ptr is the address of a pointer.  fetch the pointed-to character and
 \ post-increment the pointer.
 code @c@++  ( &ptr -- char )
@@ -27,13 +21,6 @@ code @c!++  ( char &ptr -- )
    str     r1,[tos]   
    mov     tos,r2      
 c;
-
-: cindex  ( adr len char -- [ adr' true ]  | false )
-   false swap 2swap  bounds  ?do  ( false char )
-      dup  i c@  =  if  nip i true rot  leave  then
-   loop                           ( false char  |  adr' true char )
-   drop
-;
 
 [ifdef] notdef
 \ "adr1 len2" is the longest initial substring of the string "adr1 len1"
@@ -157,28 +144,6 @@ code parse-line  ( adr1 len1 -- adr1 len2  adr2 len3 )
    stmdb   sp!,{r4,r3,r1}
 c;
 [then]
-
-nuser delimiter
-
-nuser file
-
-:-h struct  ( -- 0 )  00  ;-h
-
-\ header-t (file-field)
-code-field: dofield  ( -- fd+offset )
-   psh     tos,sp      
-   lnk     r0
-   ldr     r0,[r0]    
-   ldr     tos,'user file
-   add     tos,tos,r0 
-c;
-
-:-h file-field-cf  ( -- )  dofield  place-cf-t  ;-h
-
-\ Assembles the code field when metacompiling a field
-:-h file-field  ( "name" offset size -- offset )
-   " file-field-cf"  header-t  over ,-t + ?debug
-;-h
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
