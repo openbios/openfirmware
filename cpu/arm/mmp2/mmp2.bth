@@ -1,0 +1,178 @@
+purpose: Load file for OFW on Marvell MMP2 ARM demo board
+\ See license at end of file
+
+dictionary: ${BP}/cpu/arm/build/basefw.dic
+command: &armforth &dictionary &this
+build-now
+
+" mmp2.tag" r/w create-file drop  tag-file !
+
+\ ' $report-name is include-hook
+
+use-movable-vector-base  \ CortexA8 CPU core has a movable vector base
+
+h# 8.0000 constant initial-heap-size
+
+: (initial-heap)  ( -- adr len )   limit  initial-heap-size  ;
+' (initial-heap) to initial-heap
+
+fload ${BP}/dev/omap/diaguart.fth	\ OMAP UART
+h# d4018000 to uart-base		\ UART# base address on MMP2
+
+fload ${BP}/forth/lib/sysuart.fth	\ Set console I/O vectors to UART
+
+
+\ Install the simple UART driver from the standalone I/O init chain
+: stand-init-io  ( -- )
+   stand-init-io
+   inituarts  install-uart-io
+;
+
+\ ---
+\ ' $report-name to include-hook
+
+h# 1000 to pagesize
+d# 12   to pageshift
+
+fload ${BP}/cpu/arm/mmp2/physaddr.fth	\ Architecture-generic phys. addresses
+fload ${BP}/cpu/arm/mmp2/virtaddr.fth	\ Virtual addresses for the firmware
+
+fload ${BP}/cpu/arm/mmp2/addrs.fth
+fload ${BP}/cpu/arm/mmp2/twsi.fth
+fload ${BP}/cpu/arm/mmp2/timer.fth
+fload ${BP}/cpu/arm/mmp2/mfpr.fth
+: init-stuff
+   set-camera-domain-voltage
+   acgr-clocks-on
+   init-mfprs
+   set-gpio-directions
+   init-timers
+   init-twsi
+   power-on-dsi
+;
+fload ${BP}/cpu/arm/mmp2/gpio.fth
+fload ${BP}/cpu/arm/mmp2/lcdcfg.fth
+fload ${BP}/cpu/arm/mmp2/dsi.fth
+fload ${BP}/cpu/arm/mmp2/lcd.fth
+: display-on
+   init-stuff
+   init-lcd
+   fb-pa  hdisp vdisp * >bytes  h# ff fill
+;
+
+
+\ fload ${BP}/cpu/arm/rootnode.fth	\ Root node mapping
+fload ${BP}/cpu/arm/mmp2/rootnode.fth	\ Root node mapping - physical mode
+dev /
+   " Marvell,Bonnell" model
+   " ARM SOC" encode-string  " architecture" property
+   d# 1,000,000,000 " clock-frequency" integer-property
+device-end
+
+: (cpu-arch  ( -- adr len )
+   " architecture" ['] root-node  get-package-property  drop
+   get-encoded-string
+;
+' (cpu-arch to cpu-arch
+
+\ Memory management services
+fload ${BP}/ofw/core/clntmem1.fth	\ client services for memory
+fload ${BP}/ofw/core/memlist.fth	\ Resource list common routines
+fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
+fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
+fload ${BP}/ofw/core/availpm.fth	\ Available memory list
+
+fload ${BP}/cpu/arm/mmp2/probemem.fth	\ Populate memory node
+stand-init: Probing memory
+   " probe" memory-node @ $call-method
+;
+
+fload ${BP}/cpu/arm/loadvmem.fth	\ /mmu node
+stand-init: MMU
+   " /mmu" open-dev mmu-node !
+;
+\ fload ${BP}/pkg/console/bailout.fth	\ Keyboard bailout code
+
+hex
+warning on
+
+" /openprom" find-device
+   " FirmWorks,3.0" encode-string " model" property
+device-end
+
+\ fload ${BP}/arch/dna/mmusetup.fth	\ Initial values for MMU lists
+
+\ fload ${BP}/arch/dna/boot.fth
+
+\ false ' auto-boot? set-config-int-default
+
+\ 1 section   before origin  section table
+h# 10.0000      h# 8000 -      h# 4000 -      dictionary-size !
+
+\ dev /mmu
+\ patch instruction! l! section!
+\ device-end
+
+defer probe-all
+: (probe-all)  ( -- )
+   " probe-" do-drop-in
+   " probe+" do-drop-in
+;
+' (probe-all) to probe-all
+
+\ ---
+
+d# 3000 to ms-factor
+
+fload ${BP}/cpu/arm/mmp2/sdhcimmp2.fth
+
+tag-file @ fclose  tag-file off
+
+fload ${BP}/cpu/arm/saverom.fth  \ Save the dictionary for standalone startup
+
+.( --- Saving mmp2.dic --- )  cr " mmp2.dic" $save-forth
+
+\ This is some glue code to convert the machine setup that QEMU gives us
+\ to the setup that start-forth (see arm/boot.fth) wants.
+\ We get here via a call instruction at origin+8, which is inserted below
+
+code stand-cold-code    ( r0: 0  r1: board-id  r2: &kernel-args  lr: &aif_header+8c )
+   here  origin 8 +  put-call  \ Insert call instruction
+
+   \ Put the arguments in safe registers
+   sub   r6,lr,#0x8c        \ r6 points to header (lr set by code at origin)
+   mov   r7,#0              \ r7: functions
+   add   r8,r6,0x200000     \ r8: memtop - 2MiB above load address
+                            \ r9 is up
+   mov   r10,#0             \ r10: argc
+   mov   r11,r2             \ r11: argv (kernel args)
+   mov   r12,`initial-heap-size`  \ r12: initial-heap-size
+
+   b     'code start-forth  \ Branch to the generic startup code
+end-code
+
+.( --- Saving mmp2.rom --- )  cr " mmp2.rom" $save-rom
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2010 FirmWorks
+\
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
