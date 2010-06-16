@@ -1,5 +1,5 @@
-purpose: Load file for Forth toolkit, without firmware
 \ See license at end of file
+purpose: Load file for Forth toolkit, without firmware
 
 dictionary: ${BP}/cpu/arm/build/kernel.dic
 command: &armforth &dictionary &this
@@ -10,6 +10,8 @@ build-now
 \ : rn  (cr 2dup type 15 spaces  ;  ' rn is include-hook
 
 " tools.tag" r/w create-file drop  tag-file !
+
+create resident-packages
 
 fload ${BP}/forth/lib/fwsetup.fth
 
