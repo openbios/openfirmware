@@ -8,6 +8,7 @@ silent on
 begin-tokenizing sdhcixo.fc
 
 FCode-version2
+fload ${BP}/dev/mmc/sdhci/pciregs.fth
 fload ${BP}/dev/mmc/sdhci/sdhci.fth
 
 init
