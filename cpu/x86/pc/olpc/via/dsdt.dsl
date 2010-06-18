@@ -40,7 +40,7 @@ Name (VERS, Package (0x02) {
     "$Id$"
 })
 
-OperationRegion (UART, SystemIO, 0x03f8, 0x07)
+OperationRegion (UART, SystemIO, 0x03f8, 0x08)
 
 // set to 1 to enable debug output
 Name (UDBG, 0)
@@ -2064,6 +2064,7 @@ Scope(\_SB)
                     IO(Decode16,0x93,0x93,0x00,0x0C)
                     IO(Decode16,0xA2,0xA2,0x00,0x1E)
                     IO(Decode16,0xE0,0xE0,0x00,0x10)
+                    IO(Decode16,0x380,0x380,0x00,0x8)			// Additional EC port
                     IO(Decode16,0x3E0,0x3E0,0x00,0x8)
 
                     // Reserve  4D0 and 4D1 for IRQ edge/level control port
