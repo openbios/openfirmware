@@ -1098,7 +1098,7 @@ warning !
       0 left-parse-string  2nip   ( time$ )
       \ Erase the tag if it is invalid
       expiration-to-seconds   if  efface-md exit  then  ( begin-seconds )
-      dup 3 days>seconds +        ( begin-seconds end-seconds )
+      dup d# 10 days>seconds +        ( begin-seconds end-seconds )
       \ Erase the tag if its time is up
       current-seconds  -rot within 0=  if  efface-md exit  then  ( )
       true to in-factory?
