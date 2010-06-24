@@ -196,6 +196,8 @@ struct
    1 field >tx-pwr
    1 field >tx-delay		\ in 2ms
    1+
+   0 field >tx-pkt-no-mesh
+dup constant /tx-hdr-no-mesh
    1+  \ tx-mesh must be 0
    1+  \ tx-mesh must be 0
    1 field >tx-mesh-ttl
@@ -204,6 +206,7 @@ struct
 constant /tx-hdr
 
 0 constant tx-ctrl		\ Tx rates, etc
+: set-tx-ctrl  ( n -- )  to tx-ctrl  ;
 
 \ The Libertas FW is currently abusing the WDS flag to mean "send on the mesh".
 \ At some point a separate mesh flag might be defined ...
@@ -211,19 +214,32 @@ h# 20000 constant TX_WDS
 
 : mesh-on?  ( -- flag )  tx-ctrl TX_WDS and 0<>  ;
 
-: wrap-msg  ( adr len -- adr' len' )
-   outbuf  /tx-hdr  erase			( adr len )
-   over  outbuf >tx-mac  /mac-adr  move		( adr len )
+: (wrap-msg-thin)  ( adr len dst-mac-adr -- adr' len' )
+   outbuf  /tx-hdr  erase			( adr len dst-mac-adr )
+         outbuf >tx-mac  /mac-adr  move		( adr len )
+   dup   outbuf >tx-len  le-w!			( adr len )
+   tuck  outbuf >tx-pkt-no-mesh  swap  move		( len )
+
+   /tx-hdr-no-mesh 4 -  outbuf >tx-offset le-l!	( len )  \ Offset from >tx-ctrl field
+   tx-ctrl        outbuf >tx-ctrl   le-l!	( len )
+
+   outbuf  swap /tx-hdr-no-mesh +		( adr' len' )
+;
+: (wrap-msg)  ( adr len dst-mac-adr -- adr' len' )
+   outbuf  /tx-hdr  erase			( adr len dst-mac-adr )
+         outbuf >tx-mac  /mac-adr  move		( adr len )
    dup   outbuf >tx-len  le-w!			( adr len )
    tuck  outbuf >tx-pkt  swap  move		( len )
 
-   /tx-hdr 4 -    outbuf >tx-offset le-l!	( len )  \ Offset from >tx-ctrl field
+   /tx-hdr 4 - outbuf >tx-offset le-l!	( len )  \ Offset from >tx-ctrl field
    tx-ctrl        outbuf >tx-ctrl   le-l!	( len )
 
    mesh-on?  if  1 outbuf >tx-mesh-ttl c!  then	( len )
 
    outbuf  swap /tx-hdr +			( adr' len' )
 ;
+: wrap-802.11  ( adr len -- adr' len' )  over 4 +  (wrap-msg-thin)  ;
+: wrap-msg  ( adr len -- adr' len' )  over (wrap-msg)  ;
 
 \ =========================================================================
 \ Receive Packet Descriptor
@@ -388,6 +404,10 @@ constant /rx-min
       0075  of  ." CMD_802_11_SUBSCRIBE_EVENT"		endof
       0076  of  ." CMD_802_11_RATE_ADAPT_RATESET"	endof
       007f  of  ." CMD_TX_RATE_QUERY"			endof
+      00a5  of  ." CMD_SET_BOOT2_VER"			endof  \ Thin firmware only
+      00b0  of  ." CMD_802_11_BEACON_CTRL"		endof  \ Thin firmware only
+      00cb  of  ." CMD_802_11_BEACON_SET"		endof  \ Thin firmware only
+      00cc  of  ." CMD_802_11_SET_MODE"			endof  \ Thin firmware only
       ( default )  ." Unknown command: " dup u.
    endcase
    cr   
@@ -421,11 +441,27 @@ true value got-indicator?
 
 : .event  ?cr  ." Event: "  type  cr ;
 0 instance value last-event
+0 instance value backlog
 : process-ind  ( adr len -- )
    drop
    true to got-indicator?
    4 + le-l@  dup to last-event
+   dup h# 10000 u>=  if              ( event-code )
+      \ TX feedback from thin firmware
+      backlog 1- 0 max  to backlog   ( event-code )
+      \ Cozybit asked for this test to help debug the thin firmware
+      lbsplit  2swap 2drop           ( retrycnt failure )
+      ?dup  if                       ( retrycnt failure )
+         cr ." Failure code 0x" base @ hex  swap .  base ! cr
+      then                           ( retrycnt )
+      dup d# 10 <>  if               ( retrycnt )
+         cr ." Retry count (decimal) " base @ decimal  over .  base !  cr
+      then                           ( retrycnt )
+      drop
+      exit
+   then
    case
+      h# 37  of   endof  \ Beacon sent - Handle this silently
       h# 00  of  " Tx PPA Free" .event  endof  \ n
       h# 01  of  " Tx DMA Done" .event  endof  \ n
       h# 02  of  " Link Loss with scan" .event  process-disconnect  endof
@@ -608,7 +644,7 @@ true value got-indicator?
    8 h# 4d ( CMD_802_11_MAC_ADDRESS ) prepare-cmd
    ACTION_SET +xw
    mac-adr$ +x$
-   outbuf-wait  if  exit  then
+   outbuf-wait drop
 ;
 
 : marvel-get-mc-address  ( -- )
@@ -626,7 +662,7 @@ true value got-indicator?
    to #mc-adr
    ( adr len ) 2dup +x$				\ Multicast addresses
    mc-adrs swap move
-   outbuf-wait  if  exit  then
+   outbuf-wait drop
 ;
 
 \ =========================================================================
@@ -663,11 +699,77 @@ true value got-indicator?
 \ Miscellaneous control settings
 \ =========================================================================
 
+: set-boot2-version  ( version -- )  \ Thin firmware only
+   4 h# a5 ( CMD_SET_BOOT2_VER ) prepare-cmd
+   0 +xw       ( version )
+   +xw         ( )
+   outbuf-wait drop
+;
+: set-boot2-from-usb  ( -- )  \ Thin firmware only
+   " release" get-my-property 0=  if
+      decode-int nip nip  set-boot2-version
+   then
+;
+: set-mode  ( mode -- )  \ Thin firmware only - 0 is passive, 1 is sta, 2 is ap
+   2 h# cc ( CMD_SET_MODE ) prepare-cmd
+   +xw
+   outbuf-wait drop
+;
+: set-ap-mode  ( -- )  2 set-mode  ;  \ Thin firmware only
+
+: broadcast-mac$  ( -- adr len )  " "(ff ff ff ff ff ff)"  ;
+
+: make-beacon  ( -- )
+   h# cb ( CMD_802_11_BEACON_SET ) start-cmd  ( )
+   ssid$ nip d# 66 +  +xw  \ Length of the following, including SSID len
+
+   h# 0080        +xw  \ Frame type/subtype - management, beacon
+   0              +xw  \ duration
+   broadcast-mac$ +x$  \ destination MAC
+   mac-adr$       +x$  \ source MAC
+   mac-adr$       +x$  \ BSS MAC
+   0              +xw  \ Sequence number
+   0 +xl        0 +xl  \ 8-byte timestamp
+   d# 100         +xw  \ Beacon interval
+   cap            +xw  \ Capability mask
+
+   0              +xb  \ element ID = SSID
+   ssid$ dup      +xb  \ length  ( adr len )
+   ( adr len )    +x$  \ SSID
+
+   1              +xb  \ element ID = Supported rates
+   8              +xb  \ length
+   2     +xb  4     +xb  d# 11 +xb  d# 22 +xb  \ 1 2 5.5 11 Mb/sec
+   d# 12 +xb  d# 18 +xb  d# 24 +xb  d# 36 +xb  \ 6 9 12 18 Mb/sec
+   
+   3              +xb  \ element ID = DS parameter set
+   1              +xb  \ length
+   channel        +xb  \ Channel number
+
+   5              +xb  \ element ID = TIM (Traffic Indicator Map) parameter set
+   4              +xb  \ length
+   1              +xb  \ DTIM Count
+   2              +xb  \ DTIM Period
+   0              +xb  \ Bitmap control
+   0              +xb  \ Bitmap
+
+   d# 42          +xb  \ element ID = ERP info
+   1              +xb  \ length
+   0              +xb  \ no non-ERP stations, do not use protection, short or long preambles
+
+   d# 50          +xb  \ element ID = Extended supported rates
+   4              +xb  \ length
+   d# 48 +xb  d# 72 +xb  d# 96 +xb  d# 108 +xb  \ 24 36 48 54 Mb/sec
+   finish-cmd
+
+   outbuf-wait drop
+;
+
 : set-radio-control  ( -- )
    4 h# 1c ( CMD_802_11_RADIO_CONTROL ) prepare-cmd
    ACTION_SET +xw
    preamble 1 or +xw	\ Preamble, RF on
-   outbuf-wait  if  exit  then
+   outbuf-wait drop
 ;
 
 : (set-bss-type)  ( bsstype -- ok? )
@@ -701,7 +803,7 @@ headers
    7 +xw				\ Type = MrvlIETypes_DomainParam_t
    ( len ) dup +xw			\ Length of payload
    ( adr len ) +x$			\ Country IE
-   outbuf-wait  if  exit  then
+   outbuf-wait drop
 ;
 
 : enable-11d  ( -- )
@@ -710,7 +812,7 @@ headers
    9 +xw		\ Object = enable 11D
    2 +xw		\ Size of object
    1 +xw		\ Enable 11D
-   outbuf-wait  if  exit  then
+   outbuf-wait drop
 ;
 
 external
@@ -748,7 +850,7 @@ external
    mac-ctrl h# 20 invert and  to mac-ctrl
    set-mac-control
 ;
-: set-multicast  ( adr len -- )   marvel-set-mc-address  enable-multicast  ;
+: set-multicast  ( adr len -- )  enable-multicast  marvel-set-mc-address  ;
 
 : mac-off  ( -- )
    0 to mac-ctrl  set-mac-control  3 to mac-ctrl
@@ -1014,7 +1116,7 @@ headers
    ( kinfo )  +xw			\ Key info
    dup        +xw			\ Key length
    ( key$ )   +x$			\ key$
-   finish-cmd outbuf-wait  if  exit  then
+   finish-cmd outbuf-wait drop
 ;
 
 external
@@ -1132,7 +1234,7 @@ headers
    dup 1+ h# 11 ( CMD_802_11_AUTHENTICATE ) prepare-cmd
    ( target-mac$ ) +x$		\ Peer MAC address
    auth-mode +xb		\ Authentication mode
-   outbuf-wait  if  exit  then
+   outbuf-wait drop
 ;
 
 : deauthenticate  ( mac$ -- )
@@ -1149,7 +1251,7 @@ headers
    h# 82 h# 9b ( CMD_MESH_ACCESS ) prepare-cmd  ( value cmd )
    +xw  +xl                                     ( )
 
-   outbuf-wait  if  exit  then
+   outbuf-wait drop
 ;
 : mesh-access@  ( cmd -- value )
    h# 82 h# 9b ( CMD_MESH_ACCESS ) prepare-cmd  ( value cmd )
@@ -1182,7 +1284,7 @@ headers
 : mesh-stop  ( -- error? )
    mesh-on?  if
       " "  0 0 0 mesh-config-set                ( error? )
-      tx-ctrl  TX_WDS invert and  to tx-ctrl    ( error? )
+      tx-ctrl  TX_WDS invert and  set-tx-ctrl   ( error? )
       ds-associated reset-driver-state          ( error? )
    else
       false                                     ( error? )
@@ -1200,7 +1302,7 @@ headers
    then
      
    dup 0=  if                         ( error? )
-      tx-ctrl  TX_WDS or to tx-ctrl   ( error? )
+      tx-ctrl  TX_WDS or set-tx-ctrl  ( error? )
       ds-associated set-driver-state  ( error? )
    then                               ( error? )
 ;
@@ -1263,7 +1365,7 @@ instance variable mesh-param
 
    ( target-mac$ ) +x$			\ Peer MAC address
    cap    +xw				\ Capability info: ESS, short slot, WEP
-   d#  10 +xw				\ Listen interval
+   d# 300 +xw				\ Listen interval
    d# 100 +xw				\ Beacon period
    1      +xb				\ DTIM period
 
@@ -1352,7 +1454,11 @@ instance defer mesh-default-modes
    ?set-wep				\ Set WEP keys again, if ktype is WEP
    set-mac-control
    2dup authenticate
-   bss-type bss-type-managed =  if  (associate)  else  (join)  then
+   d# 10 0 do
+      bss-type bss-type-managed =  if  (associate)  else  (join)  then  ( ok? )
+      if  true unloop  exit  then
+   loop
+   false
 ;
 headers
 
@@ -1390,6 +1496,16 @@ headers
    ." Current channel = " respbuf >fw-data 2 + le-w@ .d cr
 ;
 
+: set-rf-channel  ( -- )
+   d# 40 h# 1d ( CMD_802_11_RF_CHANNEL ) prepare-cmd
+   ACTION_SET +xw
+   channel +xw
+   0 +xw   \ rftype
+   0 +xw   \ reserved
+   " "(00 88 cc cb 20 8c 6d cc 60 40 25 cc 44 ce 76 cc 29 8e 42 c0 f2 ff ff ff 00 00 00 00 4c ce 76 cc)" +x$ \ channel list
+   outbuf-wait drop
+;
+
 : get-beacon  ( -- interval enabled? )
    6 h# b0 ( CMD_802_11_BEACON_CTRL ) prepare-cmd
    ACTION_GET +xw
@@ -1399,11 +1515,91 @@ headers
 
 : set-beacon  ( interval enabled? -- )
    6 h# b0 ( CMD_802_11_BEACON_CTRL ) prepare-cmd
-   ACTION_SET +xw   ( interval enabled? )
-   +xw +xw
+   ACTION_SET +xw     ( interval enabled? )
+   0<> 1 and +xw  +xw ( )
    outbuf-wait drop
 ;
 
+d# 24 constant /802.11-header
+d# 1600 constant /packet-buf
+/packet-buf buffer: packet-buf
+0 instance value seq#
+
+\ The low byte of the frame type word is:
+\ ssssTTpp
+\ pp is protocol, always 00
+\ TT is type, 00 for management, 01 (i.e. 4) control, 10 (i.e. 8) data, 11 reserved
+\ ssss is subtype
+\ Management subtypes are:
+\ 0000 (00) Association request
+\ 0001 (10) Association response
+\ 0010 (20) Reassociation request
+\ 0011 (30) Reassociation response
+\ 0100 (40) Probe request
+\ 0101 (50) Probe response
+\ 0110-0111 (60-70) Reserved
+\ 1000 (80) Beacon
+\ 1001 (90) ATIM
+\ 1010 (a0) Disassociation
+\ 1011 (b0) Authentication
+\ 1100 (c0) Deauthentication
+\ 1101-1111 (d0-f0) Reserved
+\ Control subtypes are (other codes are reserved):
+\ 1010 (a4) PS-Poll
+\ 1011 (b4) RTS
+\ 1100 (c4) CTS
+\ 1101 (d4) ACK
+\ 1110 (e4) CF End
+\ 1111 (f4) CF End-ACK
+\ Data subtypes are (other codes are reserved):
+\ 0000 (08) Data
+\ 0001 (18) Data+CF-ACK
+\ 0010 (28) Data+CF-Poll
+\ 0011 (38) Data+CF-ACK+CF-Poll
+\ 0100 (48) Null (no data)
+\ 0101 (58) CF-ACK (no data)
+\ 0110 (68) CF-Poll (no data),
+\ 0111 (78) CF-ACK+CF-Poll (no-data)
+
+: set-802.11-header  ( adr3$ adr2$ adr1$ duration frame-type -- )
+   packet-buf le-w!                ( adr3$ adr2$ adr1$ duration )
+   packet-buf 2+ le-w!             ( adr3$ adr2$ adr1$ )
+   packet-buf 4 +  swap move       ( adr3$ adr2$ )
+   packet-buf d# 10 +  swap move   ( adr3$ )
+   packet-buf d# 16 +  swap move   ( )
+   seq#  packet-buf d# 22 +  le-w! ( )
+   seq# h# 10 +  to seq#           ( )  \ The 4 LSBs are the fragment number
+;
+: +pkt-data  ( offset -- adr )  packet-buf +  /802.11-header +  ;
+: send-deauth  ( -- )
+   tx-ctrl >r  h# 10 set-tx-ctrl
+   mac-adr$  mac-adr$  broadcast-mac$  0  h# c0  set-802.11-header
+   h# 0002  0 +pkt-data  le-w!  \ Reason code: auth no longer valid
+   packet-buf  /802.11-header 2 +   wrap-802.11    ( adr len )
+   data-out
+   r> set-tx-ctrl
+;
+
+\ Howto set up access point:
+\   ok setenv wlan-fw u:\usb8388t.bin       \ Thin firmware
+\   ok select /wlan:force
+\   ok 1 " xoAP" start-ap
+
+: start-ap  ( channel ssid$ -- )
+   rot to channel   ( ssid$ )
+   to /ssid         ( ssid-adr )
+   ssid /ssid move  ( )
+   set-boot2-from-usb
+   marvel-get-mac-address drop
+   set-mac-control
+   4 set-preamble  set-radio-control   \ auto preamble
+   set-rf-channel
+   set-ap-mode   
+   marvel-set-mac-address
+   send-deauth
+   make-beacon
+   d# 100 1 set-beacon
+;
 
 : get-log  ( -- )
    0 h# b ( CMD_802_11_GET_LOG ) prepare-cmd
@@ -1736,6 +1932,108 @@ false instance value force-open?
    " load" r@ ['] $call-method	catch   ( len false | x x x true )
    r> close-package
    throw
+;
+
+0 instance value /packet
+: find-tag  ( tag-id #fixed-params -- false | tag-adr tag-len true )
+   +pkt-data                    ( tag-id adr )
+   /packet  over packet-buf - - ( tag-id adr len )
+   begin  dup  while            ( tag-id adr len )
+      2 pick  2 pick c@  =  if  ( tag-id adr len )
+         drop nip               ( adr )
+         dup 2+ swap 1+ c@      ( tag-adr tag-len )
+         true exit              ( -- tag-adr tag-len true )
+      then                      ( tag-id adr len )
+      over 1+ c@ 2+ /string     ( tag-id adr' len' )
+   repeat                       ( tag-id adr len )
+   3drop false
+;
+
+1 value association-id#
+: associate-reply  ( -- )
+   cr ." S" cr
+   0 4 find-tag  0=  if  exit  then   ( adr len )  \ Exit if SSID parameter is missing
+   ssid$ $=  0=  if  exit  then   ( )  \ Exit if SSID is wrong
+   
+   mac-adr$ mac-adr$  packet-buf d# 10 + 6  d# 314  h# 10  set-802.11-header
+
+   cap        0 +pkt-data  le-w!   \ Capability mask
+   0          2 +pkt-data  le-w!   \ Status - okay
+   association-id# h# 3fff and  h# c000 or   4 +pkt-data  le-w!   \ 
+   association-id# 1+ to association-id#
+   
+   " "(01 08 02 04 0b 16 0c 12 18 24 32 04 30 48 e0 ec)"   ( tags-adr tags-len )
+   tuck   6 +pkt-data  swap  move                          ( tags-size )
+   packet-buf  swap /802.11-header +  6 +   wrap-802.11    ( adr len )
+   data-out
+;
+
+: authenticate-reply  ( -- )
+   cr ." U" cr
+   mac-adr$ mac-adr$  packet-buf d# 10 + 6  d# 314  h# b0  set-802.11-header
+   0          0 +pkt-data  le-w!   \ Open system auth code
+   2 +pkt-data  le-w@   1+  2 +pkt-data  le-w!   \ auth seq#
+   0          4 +pkt-data  le-w!   \ Status - okay
+   
+   packet-buf  /802.11-header 6 +   wrap-802.11    ( adr len )
+   data-out
+;
+
+defer handle-data  ' noop is handle-data
+: process-mgmt-frame  ( -- )
+   packet-buf /packet-buf  read-force   ( len )
+   dup -2 =  if  drop exit  then        ( len )
+   to /packet                           ( )
+
+   packet-buf c@  case     ( type )
+      h#  0  of  associate-reply    exit  endof   \ Association
+      h# 40  of                     exit  endof   \ Probe request
+      h# 48  of                     exit  endof   \ Null function
+      h# 50  of                     exit  endof   \ Probe response
+      h# b0  of  authenticate-reply exit  endof   \ Authenticate
+      h# c0  of                     exit  endof   \ Deauthenticate
+      h# d4  of                     exit  endof   \ Acknowledgment
+   endcase
+
+   handle-data
+;
+: dump-pkt  ( -- )
+   packet-buf /packet  " no-page dump" evaluate
+;
+: run-ap  ( -- )
+   begin  process-mgmt-frame  key? until
+;
+: do-ap  ( -- )
+   ['] dump-pkt to handle-data
+   1 " xxAP" start-ap
+   run-ap
+;
+
+1 value delay
+: throttle delay ms  ;
+\ Convert an 802.3 frame to an 802.11 frame and send it
+: thin-send-data-frame  ( adr len -- len )
+   begin  backlog 8 >=  while  process-mgmt-frame  repeat
+   backlog 1+ to backlog
+   tuck over >r         ( len adr len  r: adr )
+   \ In 208, 200 is the fromDS bit, indicating that the frame is ostensibly coming
+   \ from an AP, and 8 is the code for a non-acked Data frame.
+   mac-adr$  r@ 6 + 6  r> 6  0  h# 208  set-802.11-header    ( len adr len )
+   d# 12 /string                                        ( len adr' elen )
+   " "(aa aa 03 00 00 00)"  0 +pkt-data  swap move      ( len adr' elen )
+   tuck  6 +pkt-data swap move                          ( len elen )
+   packet-buf  swap /802.11-header +  6 +  wrap-802.11  ( len padr plen )
+   data-out                                             ( len )
+   throttle
+;
+
+d# 1600 buffer: test-buf
+: send-test-pkt  ( -- )
+   h# 1c set-tx-ctrl
+   " "(01 00 5e 7f 01 02)" test-buf  swap  move
+   mac-adr$ test-buf 6 +  swap  move
+   " XO" test-buf d# 12 +  swap  move
+   test-buf d# 1440 thin-send-data-frame drop
 ;
 
 : reset  ( -- flag )  reset-nic  ;

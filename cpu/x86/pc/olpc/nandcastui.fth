@@ -1,10 +1,5 @@
-purpose: User interface for NAND multicast updater
+purpose: User interface for NAND multicast updater - transmission
 \ See license at end of file
-
-\ Number of blocks NANDblaster read in zdata mode
-\ nb_rx will set this using the interpret client service.
--1 value nb-zd-#sectors
-: set-nb-zd-#sectors  ( n -- )  to nb-zd-#sectors  ;
 
 : mesh-ssids  ( -- $ )
    " olpc-mesh"nolpc-mesh"nolpc-mesh"nolpc-mesh"nolpc-mesh"nolpc-mesh"
@@ -36,12 +31,6 @@ purpose: User interface for NAND multicast updater
 
 d# 20 value redundancy
 
-: #nb  ( channel# -- )
-   depth 1 < abort" Usage: channel# #nb"
-   secure$ rot
-   -1 to nb-zd-#sectors
-   " rom:nb_rx ether:%d %s" sprintf boot-load go
-;
 : #nb-clone  ( channel# -- )
    depth 1 < abort" Usage: channel# #nb-clone"
    redundancy swap
@@ -84,48 +73,60 @@ d# 20 value redundancy
 : nb-secure6   ( -- )      6 #nb-secure-def  ;
 : nb-secure11  ( -- )  d# 11 #nb-secure-def  ;
 
-: nb1  ( -- )       1 #nb  ;
-: nb6  ( -- )       6 #nb  ;
-: nb11  ( -- )  d# 11 #nb  ;
-
 : mesh-clone
    use-mesh
    false to already-go?
    redundancy " boot rom:nb_tx udp:239.255.1.2 nand: %d" sprintf eval
 ;
 
-: meshnand
-   use-mesh
+\ This sender is for multicast operation over a wired network.
+\ It is rarely used, because the wired multicast mode is primarily
+\ used in the factory with a big server as the sender.
+\ Example: wired-nb-tx: u:\os201.zd 224.0.0.2
+: wired-nb-tx:  ( "filename" "multicast-ip-address" -- )
    false to already-go?
-   " boot rom:nb_rx ,,239.255.1.2" eval
+   safe-parse-word safe-parse-word
+   " boot rom:nb_tx udp:%s %s 20 131072" sprintf eval
 ;
 
-: nb-xx
-   false to already-go?
-   boot-as-call(
-   " boot rom:nb_rx ,,239.255.1.2" eval
-   )boot-as-call
-;
-: $nb-rx  ( multicast-ip$ -- )
-   false to already-go?
-   boot-as-call(
-   ( multicast-ip$ )  " boot rom:nb_rx mcast:%s" sprintf  eval
-   )boot-as-call
-;
-: nb-rx:  ( "multicast-ip" -- )
-   safe-parse-word  $nb-rx
-;
-: nb-rx  ( -- )  " 224.0.0.100" $nb-rx  ;
+\ This sends to XO-1.5 receivers, but the sender itself can run on either XO-1 or XO-1.5.
+\ On XO-1, you must load the special "thin" firmware from a USB stick.
+: nb15-tx:  ( "filename" "channel" "redundancy" -- )
+   " /wlan" find-package 0= abort" No /wlan device"  ( phandle )
 
-: ucastnand
+   " thin" rot get-package-property  if              ( )
+      \ Absence of "thin" property means we need to get special firmware
+      " u:\usb8388t.bin" " wlan-fw" $setenv
+   else                                              ( adr len )
+      \ Presence of "thin" property means we are good to go
+      2drop
+   then
+
    false to already-go?
-   " boot rom:nb_rx 10.20.0.16,,10.20.0.44" eval
+
+   safe-parse-word                ( filename$ )
+   safe-parse-word   2>r          ( filename$ r: channel$ )
+   parse-word                     ( filename$ redundancy$ r: channel$ )
+   dup 0=  if  2drop " 20"  then  ( filename$ redundancy$' r: channel$ )
+   2swap 2r>                      ( redundancy$ filename$ channel$ )
+
+   " boot rom:nb_tx thinmac:OLPC-NANDblaster,%s %s %s 131072" sprintf eval
 ;
-: nbit  ( "filename" -- )
+
+[ifdef] use-nb15-precomputed
+\ NANDblaster sender using thin firmware on XO-1.5, with precomputed
+\ packet data.  This turns out to be useless because the packets can
+\ be computed on-the-fly faster than the module can send.
+: nb15-precomputed:  ( "filename" ["delay"]-- )
    false to already-go?
-   safe-parse-word
-   " boot rom:nb_tx udp:239.255.1.2 %s 20 131072" sprintf eval
+   safe-parse-word  ( name$ )
+   safe-parse-word 2>r ( name$ r: channel$ )
+   parse-word  2swap   ( delay$ name$ r: channel$ )
+   2r>
+   " u:\usb8388t.bin" " wlan-fw" $setenv
+   " boot rom:blaster thinmac:OLPC-NANDblaster,%s %s %s" sprintf eval
 ;
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2008 FirmWorks

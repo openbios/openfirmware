@@ -21,7 +21,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/mcnand-version.fth
 " (cd multicast-nand; make BPDIR=../../../../../../.. nandblaster15_rx.bin nandblaster_tx.bin; cp nandblaster15_rx.bin nandblaster_tx.bin ..)" expand$ $sh
 [else]
 " (cd /home/wmb/Git/multicast-nand; make BPDIR=/home/wmb/ofw.test nandblaster15_rx.bin nandblaster_tx.bin;)" $sh
-" cp /home/wmb/Git/multicast-nand/nandblaster*.bin ." expand$ $sh
+" cp /home/wmb/Git/multicast-nand/*blaster*.bin ." expand$ $sh
 [then]
 
 \ This forces the creation of a .log file, so we don't re-fetch

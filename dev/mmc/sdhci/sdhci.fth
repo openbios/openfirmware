@@ -443,7 +443,6 @@ headers
    h# 211a 0 cmd    ( )        \ CMD33 - R1
    0 h# 261b 0 cmd             \ CMD38 - R1b (wait for busy)
    intstat-off
-   true to writing?
 ;
 
 \ CMD40 is MMC

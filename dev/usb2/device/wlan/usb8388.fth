@@ -19,6 +19,13 @@ hex
 \    wlan-fw             e.g., rom:usb8388.bin, disk:\usb8388.bin
 \ =======================================================================
 
+" mv8388" encode-string  " module-type" property
+
+\ This really depends on the firmware that we load, but we don't want
+\ to load the firmware in advance, so we hardcode this.  It will need
+\ to be changed if we bundle thin-capable firmware in OFW.
+0 0 encode-bytes  " fullmac" property
+
 : wlan-fw  ( -- $ )
    " wlan-fw" " $getenv" evaluate  if  " rom:usb8388.bin"  then  
 ;

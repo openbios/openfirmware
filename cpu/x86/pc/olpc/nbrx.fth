@@ -1,30 +1,35 @@
-purpose: Marvel SDIO 8686 wireless ethernet driver loader
+purpose: User interface for NAND multicast updater - reception
 \ See license at end of file
 
-command: &tokenize &this
-build-now
+: #nb  ( channel# -- )
+   depth 1 < abort" Usage: channel# #nb"
+   secure$ rot
+   " rom:nb_rx ether:%d %s" sprintf boot-load go
+;
+: meshnand
+   use-mesh
+   false to already-go?
+   " boot rom:nb_rx ,,239.255.1.2" eval
+;
 
-silent on
+: ucastnand
+   false to already-go?
+   " boot rom:nb_rx 10.20.0.16,,10.20.0.44" eval
+;
 
-begin-tokenizing mv8686.fc
+: nb1  ( -- )       1 #nb  ;
+: nb6  ( -- )       6 #nb  ;
+: nb11  ( -- )  d# 11 #nb  ;
 
-FCode-version2
-
-fload ${BP}/dev/mmc/sdhci/mv8686/common.fth	\ Ethernet common variables and routines
-fload ${BP}/dev/mmc/sdhci/mv8686/ring.fth	\ Receive ring management
-fload ${BP}/dev/mmc/sdhci/mv8686/sdio.fth	\ SDIO interface routines
-fload ${BP}/dev/mmc/sdhci/mv8686/mv8686.fth	\ SDIO I/O interface for Marvell 8686
-fload ${BP}/dev/libertas.fth			\ Marvell "Libertas" common code
-fload ${BP}/dev/mmc/sdhci/mv8686/fw8686.fth	\ Marvell firmware download for SDIO
-\ fload ${BP}/dev/mmc/sdhci/mv8686/wlan.fth	\ External interface methods
-
-end0
-
-end-tokenizing
+: nandblaster  ( -- )
+   find-multinand-server abort" No multicast NAND server"  ( chan# )
+   #nb
+;
+alias nb nandblaster
 
 
 \ LICENSE_BEGIN
-\ Copyright (c) 2007 FirmWorks
+\ Copyright (c) 2008 FirmWorks
 \ 
 \ Permission is hereby granted, free of charge, to any person obtaining
 \ a copy of this software and associated documentation files (the

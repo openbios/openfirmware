@@ -81,7 +81,6 @@ fload ${BP}/ofw/core/memlist.fth	\ Resource list common routines
 fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
 fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
 fload ${BP}/ofw/core/availpm.fth	\ Available memory list
-fload ${BP}/ofw/core/allocmor.fth	\ Secondary allocator
 
 fload ${BP}/cpu/x86/pc/rootnode.fth	\ Platform-specific root node changes
 
@@ -517,7 +516,7 @@ end-support-package
 
 fload ${BP}/cpu/x86/bootascall.fth
 fload ${BP}/cpu/x86/pc/olpc/nandcastui.fth
-fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
+fload ${BP}/cpu/x86/pc/olpc/via/nbrx.fth
 fload ${BP}/cpu/x86/pc/olpc/via/blockfifo.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth

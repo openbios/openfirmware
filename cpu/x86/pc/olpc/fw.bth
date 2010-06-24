@@ -466,6 +466,7 @@ end-support-package
 fload ${BP}/cpu/x86/bootascall.fth
 fload ${BP}/cpu/x86/pc/olpc/nandcastui.fth
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
+fload ${BP}/cpu/x86/pc/olpc/nbrx.fth
 fload ${BP}/cpu/x86/pc/olpc/fsupdate.fth
 
 fload ${BP}/ofw/inet/sntp.fth
@@ -672,6 +673,7 @@ true                               ' client-symbols?  set-config-int-default
 \   " wifi media lab 802.11" eval
 \   " flash http:\\18.85.46.172\new.rom" eval
 ;
+: urom  " flash! u:\new.rom" eval  ;
 
 \ Fancy battery charge logger.
 fload ${BP}/cpu/x86/pc/olpc/charge.fth

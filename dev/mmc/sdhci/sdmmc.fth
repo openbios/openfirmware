@@ -70,7 +70,7 @@ external
    label-package  if
       0 0  " offset" label-package $call-method  to offset-high  to offset-low
    else
-      ." Can't open disk label package"  cr
+\     ." Can't open disk label package"  cr
       open-count 0=  if
          deblocker close-package
       then

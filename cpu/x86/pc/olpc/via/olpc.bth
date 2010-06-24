@@ -186,7 +186,7 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
    " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
 
-   " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster15_rx.bin" " nb_rx"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_tx.bin" " nb_tx"      $add-deflated-dropin
 
 .( Dropin top is )  ofd @ fsize  .x cr

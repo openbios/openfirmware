@@ -4,6 +4,14 @@ purpose: Transport interface for Marvel 8686 wireless ethernet driver
 headers
 hex
 
+" mv8686" encode-string  " module-type" property
+
+\ This really depends on the firmware that we load, but we don't want
+\ to load the firmware in advance, so we hardcode this, assuming that
+\ the firmware we include with OFW has both thin and fullmac capability.
+0 0 encode-bytes  " thin" property
+0 0 encode-bytes  " fullmac" property
+
 \ =======================================================================
 \ Wireless environment variables
 \    wlan-fw             e.g., rom:mv8686.bin, disk:\mv8686.bin

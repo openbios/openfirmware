@@ -176,11 +176,6 @@ d# 10 constant rssi-threshold
    search-channels
    close-wlan
 ;
-: nandblaster  ( -- )
-   find-multinand-server abort" No multicast NAND server"  ( chan# )
-   #nb
-;
-alias nb nandblaster
 
 d# 1514 buffer: mesh-test-buf
 
