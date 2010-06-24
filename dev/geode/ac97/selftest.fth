@@ -88,6 +88,41 @@ d# 500 value tone-freq
    record-base record-len la1+  " dma-free" $call-parent
 ;
 
+create tone-freqs
+decimal
+200 , 
+250 ,
+296 ,
+400 ,
+500 ,
+666 ,
+800 ,
+1000 ,
+1333 ,
+1600 ,
+2000 ,
+2400 ,
+3000 ,
+3428 ,
+4000 ,
+4800 ,
+5333 ,
+6000 ,
+6857 ,
+8000 ,
+9600 ,
+12000 ,
+16000 ,
+here tone-freqs - /n /  constant #tones
+
+: fr-tones  ( -- )
+   #tones  0  do
+      tone-freqs i na+ @
+      dup .d
+      tone
+   loop
+;
+
 : copy-cycle  ( adr #copies -- adr' )
    1  ?do                      ( adr )
       dup  /cycle -  over      ( adr adr- adr )
