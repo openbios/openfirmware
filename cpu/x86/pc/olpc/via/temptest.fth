@@ -22,6 +22,7 @@ d# 8 constant temperature-threshold
    then                                            ( fail? )
    black-letters
 ;
+warning off
 : selftest  ( -- error? )
    selftest  if  true exit  then
 
@@ -30,7 +31,8 @@ d# 8 constant temperature-threshold
    \ runin test has already tested the heat spreader
    smt-test? final-test? or  if  false  else  .temp-rise  then
 ;
-dend
+warning on
+device-end
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks

@@ -3,7 +3,7 @@ purpose: Banner customization for this system
 
 headerless
 
-
+[ifdef] get-partition-from-driver
 : partition-end  ( name$ -- false | d.end true )
    open-dev  ?dup  if                ( ihandle )
       >r                             ( r: ihandle )
@@ -28,6 +28,7 @@ headerless
    then                          ( )
    ." internal storage"          ( )
 ;
+[then]
 
 h# 40 buffer: partition-map
 : partition-end  ( offset -- sector# )

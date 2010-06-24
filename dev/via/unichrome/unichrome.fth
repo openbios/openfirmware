@@ -1260,6 +1260,7 @@ defer gp-install  ' noop to gp-install
 \ The previous value of "open" is created automatically by the execution
 \ of "is-install".   We need this override to prevent auto-clearing the
 \ screen when the display node is re-opened during the camera selftest.
+warning off
 : open  ( -- okay? )
    open-count 0=  if  open  else  true  then
    dup  if  open-count 1+ to open-count  then
@@ -1268,6 +1269,7 @@ defer gp-install  ' noop to gp-install
    open-count 1 =  if  close  then
    open-count 1- 0 max to open-count
 ;
+warning on
 
 " display"                      device-type
 " ISO8859-1" encode-string    " character-set" property

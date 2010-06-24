@@ -127,7 +127,6 @@ fload ${BP}/dev/pci/isaall.fth
 dev /serial  warning @ warning off  : selftest false ;  warning !  device-end
 
 [ifndef] demo-board
-.( Removing ctlr-selftest from 8042 open !!!) cr
 dev /8042
    patch false ctlr-selftest open
 device-end
@@ -158,7 +157,6 @@ fload ${BP}/forth/lib/tofile.fth	\ to-file and append-to-file
 fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
 
 fload ${BP}/cpu/x86/pc/olpc/via/cmos.fth  \ CMOS RAM indices are 1f..ff , above RTC
-.( XXX Not clearing CMOS) cr
 patch noop init-bios-cmos stand-init
 
 [ifdef] use-null-nvram

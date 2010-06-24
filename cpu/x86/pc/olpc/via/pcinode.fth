@@ -109,7 +109,6 @@ h# 0000.8000 to first-io		\ Avoid mappings established by BIOS
 \ parlance) from the child's "interrupt pin" and the child's address,
 \ returning "int-line true" if the child's interrupt line register should
 \ be set or "false" otherwise.
-.( XXX make assign-int-line depend on PIC vs. APIC mode) cr
 : assign-int-line  ( phys.hi.func INTx -- irq true )
    \ Get the value from the platform-specific mapping registers
    \ XXX PIC version is below - need APIC version too

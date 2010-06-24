@@ -1,15 +1,19 @@
 \ See license at end of file
 purpose: Menu for manufacturing tests
 
-h# f800 constant color-red
-h# 07e0 constant color-green
+h# f800 constant mfg-color-red
+h# 07e0 constant mfg-color-green
 
 : flush-keyboard  ( -- )  begin  key?  while  key drop  repeat  ;
 
 : sq-border!  ( bg -- )  current-sq sq >border !  ;
 
-: red-screen    ( -- )  h# ffff color-red   " replace-color" $call-screen  ;
-: green-screen  ( -- )  h# ffff color-green " replace-color" $call-screen  ;
+warning off
+\ Intentional redefinitions.  It would be better to change the name, but
+\ Quanta could be using these words directly in manufacturing test scripts.
+: red-screen    ( -- )  h# ffff mfg-color-red   " replace-color" $call-screen  ;
+: green-screen  ( -- )  h# ffff mfg-color-green " replace-color" $call-screen  ;
+warning on
 
 0 value pass?
 
@@ -36,7 +40,7 @@ h# 07e0 constant color-green
    if
       ?dup  if
          ??cr ." Selftest failed. Return code = " .d cr
-         color-red sq-border!
+         mfg-color-red sq-border!
          false to pass?
          red-screen
          flush-keyboard
@@ -45,13 +49,13 @@ h# 07e0 constant color-green
          green-letters
          ." Okay" cr
          black-letters
-         color-green sq-border!
+         mfg-color-green sq-border!
          true to pass?
          d# 2000 hold-message
       then
    else
       ." Selftest failed due to abort"  cr
-      color-red sq-border!
+      mfg-color-red sq-border!
       false to pass?
       red-screen
       flush-keyboard
@@ -62,7 +66,7 @@ h# 07e0 constant color-green
 ;
 
 : draw-error-border  ( -- )
-   color-red d# 20 d# 20 d# 1160 d# 820 d# 20 box
+   mfg-color-red d# 20 d# 20 d# 1160 d# 820 d# 20 box
 ;
 
 icon: play.icon     rom:play.565
@@ -121,7 +125,7 @@ d# 15 value #mfgtests
 : quit-item     ( -- )  menu-done  ;
 : cpu-item      ( -- )  " /cpu"       mfg-test-dev  ;
 : battery-item  ( -- )  " /battery"   mfg-test-dev  ;
-: flash-item    ( -- )  " /flash"     mfg-test-dev  ;
+: spiflash-item ( -- )  " /flash"     mfg-test-dev  ;
 : memory-item   ( -- )  " /memory"    mfg-test-dev  ;
 : usb-item      ( -- )  " /usb"       mfg-test-dev  ;
 : int-sd-item   ( -- )  " int:0"      mfg-test-dev  ;
@@ -144,7 +148,7 @@ d# 15 value #mfgtests
 \   ['] cpu-item      cpu.icon      1 0 install-icon
 
    " SPI Flash: Contains EC code, firmware, manufacturing data."
-   ['] flash-item    spi.icon      1 0 install-icon
+   ['] spiflash-item    spi.icon      1 0 install-icon
 
    " RAM chips"
    ['] memory-item   ram.icon      1 1 install-icon
