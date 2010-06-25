@@ -442,6 +442,7 @@ true value got-indicator?
 : .event  ?cr  ." Event: "  type  cr ;
 0 instance value last-event
 0 instance value backlog
+0 value debug-tx-feedback?
 : process-ind  ( adr len -- )
    drop
    true to got-indicator?
@@ -449,14 +450,16 @@ true value got-indicator?
    dup h# 10000 u>=  if              ( event-code )
       \ TX feedback from thin firmware
       backlog 1- 0 max  to backlog   ( event-code )
-      \ Cozybit asked for this test to help debug the thin firmware
-      lbsplit  2swap 2drop           ( retrycnt failure )
-      ?dup  if                       ( retrycnt failure )
-         cr ." Failure code 0x" base @ hex  swap .  base ! cr
-      then                           ( retrycnt )
-      dup d# 10 <>  if               ( retrycnt )
-         cr ." Retry count (decimal) " base @ decimal  over .  base !  cr
-      then                           ( retrycnt )
+      debug-tx-feedback?  if
+         \ Cozybit asked for this test to help debug the thin firmware
+         lbsplit  2swap 2drop           ( retrycnt failure )
+         ?dup  if                       ( retrycnt failure )
+            cr ." Failure code 0x" base @ hex  swap .  base ! cr
+         then                           ( retrycnt )
+         dup d# 10 <>  if               ( retrycnt )
+            cr ." Retry count (decimal) " base @ decimal  over .  base !  cr
+         then                           ( retrycnt )
+      then
       drop
       exit
    then
