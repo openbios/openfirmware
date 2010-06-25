@@ -2,45 +2,45 @@
 purpose: Character queue
 
 struct ( queue )
-   /l field >qbase
-   /l field >qsize
-   /l field >qgetp
-   /l field >qputp
+   /n field >qbase
+   /n field >qsize
+   /n field >qgetp
+   /n field >qputp
 constant /queue
 
-: clearq  ( q -- )  dup >qbase l@ swap  2dup >qgetp l!  >qputp l!  ;
+: clearq  ( q -- )  dup >qbase @ swap  2dup >qgetp !  >qputp !  ;
 : makeq  ( size -- q )
    /queue alloc-mem         ( size q )
-   swap 1+ over  >qsize l!  ( q )
-   dup >qsize l@ alloc-mem  over >qbase l!  dup clearq
+   swap 1+ over  >qsize !  ( q )
+   dup >qsize @ alloc-mem  over >qbase !  dup clearq
 ;
 : decqp  ( q ptr -- q ptr' )
-   over >qbase l@  over =  if  over >qsize l@ +  then 1-
+   over >qbase @  over =  if  over >qsize @ +  then 1-
 ;
 : putq  ( char q -- )
-   dup >qputp l@  decqp                                 ( char q putptr )
-   begin  over >qgetp l@  over =  while  pause  repeat  ( char q putptr )
-   rot over c!                                          ( q putptr )
-   swap >qputp l!                                       ( )
+   dup >qputp @  decqp                                 ( char q putptr )
+   begin  over >qgetp @  over =  while  pause  repeat  ( char q putptr )
+   rot over c!                                         ( q putptr )
+   swap >qputp !                                       ( )
 ;
 : getq  ( q -- char )
-   dup >qgetp @                                         ( q getptr )
-   begin  over >qputp l@  over =  while  pause  repeat  ( q getptr )
-   decqp                                                ( q getptr )
-   dup c@ -rot                                          ( char q getptr )
-   swap >qgetp l!                                       ( char )
+   dup >qgetp @                                        ( q getptr )
+   begin  over >qputp @  over =  while  pause  repeat  ( q getptr )
+   decqp                                               ( q getptr )
+   dup c@ -rot                                         ( char q getptr )
+   swap >qgetp !                                       ( char )
 ;
-: qempty?  ( q -- flag )  dup >qgetp l@  swap >qputp @ =  ;
-: qfull?   ( q -- flag )  dup >qputp l@  decqp  swap >qgetp @ =  ;
+: qempty?  ( q -- flag )  dup >qgetp @  swap >qputp @ =  ;
+: qfull?   ( q -- flag )  dup >qputp @  decqp  swap >qgetp @ =  ;
 : qlen  ( q -- len )
-   dup >qgetp l@  over >qputp l@ -        ( q len )
-   dup 0<  if  over >qsize l@  +  then    ( q len' )
+   dup >qgetp @  over >qputp @ -        ( q len )
+   dup 0<  if  over >qsize @  +  then    ( q len' )
    nip                                    ( len )
 ;
-: q#open  ( q -- n )  dup >qsize l@  1-  swap qlen  -  ;
+: q#open  ( q -- n )  dup >qsize @  1-  swap qlen  -  ;
 \ 10 makeq constant q1
 \ : .q  ( q -- )
-\    dup >qbase l@ . dup >qsize l@ . dup >qgetp l@ .  dup >qputp l@ . cr
+\    dup >qbase @ . dup >qsize @ . dup >qgetp @ .  dup >qputp @ . cr
 \    drop
 \ ;
 
