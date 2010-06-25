@@ -220,7 +220,7 @@ ff c, ff c, ff c, ff c, 03 c, 00 c, 00 c, 00 c,
 \ activated by pressing single keystrokes, so the map is dense
 h# ffffff constant funny-map2
 create all-keys-bitmap2
-ff c, ff c, ff c, ff c, ff c, ff c, ff c, ff c,
+ff c, ff c, ff c, 00 c, ff c, ff c, ff c, ff c,
 ff c, ff c, 3f c, 00 c, 00 c, 00 c, 00 c, 00 c,
 
 : all-keys-bitmap  ( -- adr )  keyboard-type 2 =  if  all-keys-bitmap2  else  all-keys-bitmap1  then  ;
