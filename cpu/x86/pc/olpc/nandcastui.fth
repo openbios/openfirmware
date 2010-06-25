@@ -79,55 +79,6 @@ d# 20 value redundancy
    redundancy " boot rom:nb_tx udp:239.255.1.2 nand: %d" sprintf eval
 ;
 
-\ This sender is for multicast operation over a wired network.
-\ It is rarely used, because the wired multicast mode is primarily
-\ used in the factory with a big server as the sender.
-\ Example: wired-nb-tx: u:\os201.zd 224.0.0.2
-: wired-nb-tx:  ( "filename" "multicast-ip-address" -- )
-   false to already-go?
-   safe-parse-word safe-parse-word
-   " boot rom:nb_tx udp:%s %s 20 131072" sprintf eval
-;
-
-\ This sends to XO-1.5 receivers, but the sender itself can run on either XO-1 or XO-1.5.
-\ On XO-1, you must load the special "thin" firmware from a USB stick.
-: nb15-tx:  ( "filename" "channel" "redundancy" -- )
-   " /wlan" find-package 0= abort" No /wlan device"  ( phandle )
-
-   " thin" rot get-package-property  if              ( )
-      \ Absence of "thin" property means we need to get special firmware
-      " u:\usb8388t.bin" " wlan-fw" $setenv
-   else                                              ( adr len )
-      \ Presence of "thin" property means we are good to go
-      2drop
-   then
-
-   false to already-go?
-
-   safe-parse-word                ( filename$ )
-   safe-parse-word   2>r          ( filename$ r: channel$ )
-   parse-word                     ( filename$ redundancy$ r: channel$ )
-   dup 0=  if  2drop " 20"  then  ( filename$ redundancy$' r: channel$ )
-   2swap 2r>                      ( redundancy$ filename$ channel$ )
-
-   " boot rom:nb_tx thinmac:OLPC-NANDblaster,%s %s %s 131072" sprintf eval
-;
-
-[ifdef] use-nb15-precomputed
-\ NANDblaster sender using thin firmware on XO-1.5, with precomputed
-\ packet data.  This turns out to be useless because the packets can
-\ be computed on-the-fly faster than the module can send.
-: nb15-precomputed:  ( "filename" ["delay"]-- )
-   false to already-go?
-   safe-parse-word  ( name$ )
-   safe-parse-word 2>r ( name$ r: channel$ )
-   parse-word  2swap   ( delay$ name$ r: channel$ )
-   2r>
-   " u:\usb8388t.bin" " wlan-fw" $setenv
-   " boot rom:blaster thinmac:OLPC-NANDblaster,%s %s %s" sprintf eval
-;
-[then]
-
 \ LICENSE_BEGIN
 \ Copyright (c) 2008 FirmWorks
 \ 

@@ -1954,7 +1954,6 @@ false instance value force-open?
 
 1 value association-id#
 : associate-reply  ( -- )
-   cr ." S" cr
    0 4 find-tag  0=  if  exit  then   ( adr len )  \ Exit if SSID parameter is missing
    ssid$ $=  0=  if  exit  then   ( )  \ Exit if SSID is wrong
    
@@ -1972,7 +1971,6 @@ false instance value force-open?
 ;
 
 : authenticate-reply  ( -- )
-   cr ." U" cr
    mac-adr$ mac-adr$  packet-buf d# 10 + 6  d# 314  h# b0  set-802.11-header
    0          0 +pkt-data  le-w!   \ Open system auth code
    2 +pkt-data  le-w@   1+  2 +pkt-data  le-w!   \ auth seq#

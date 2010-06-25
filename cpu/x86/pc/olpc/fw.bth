@@ -466,6 +466,7 @@ end-support-package
 fload ${BP}/cpu/x86/bootascall.fth
 fload ${BP}/cpu/x86/pc/olpc/nandcastui.fth
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
+fload ${BP}/cpu/x86/pc/olpc/nb15tx.fth
 fload ${BP}/cpu/x86/pc/olpc/nbrx.fth
 fload ${BP}/cpu/x86/pc/olpc/fsupdate.fth
 
