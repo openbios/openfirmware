@@ -40,6 +40,17 @@ Name (VERS, Package (0x02) {
     "$Id$"
 })
 
+OperationRegion (SMIR, SystemIO, 0x042f, 0x01)
+Field (SMIR, ByteAcc, NoLock, Preserve)
+{
+    SMIE,   8
+}
+Method (FRTH, 1, NotSerialized)
+{
+    Store(Arg0, SMIE)
+    // Type "resume" at the OK prompt to return
+}
+
 OperationRegion (UART, SystemIO, 0x03f8, 0x08)
 
 // set to 1 to enable debug output
@@ -290,6 +301,7 @@ Method(_PIC, 0x01, NotSerialized) {
 //
 Method(_WAK, 1, Serialized)
 {
+    FRTH(2)
     Notify(\_SB.PCI0.USB1, 0x00)
     Notify(\_SB.PCI0.USB2, 0x00)
     Notify(\_SB.PCI0.USB3, 0x00)
@@ -369,6 +381,7 @@ Method (_PTS, 1, NotSerialized)
         Store (Zero, GS04)          // Clear EXTSMI# Status, why?
      }
     Sleep(0x64)
+    FRTH(One)
     Return (0x00)
 }
 
@@ -2066,6 +2079,7 @@ Scope(\_SB)
                     IO(Decode16,0xE0,0xE0,0x00,0x10)
                     IO(Decode16,0x380,0x380,0x00,0x8)			// Additional EC port
                     IO(Decode16,0x3E0,0x3E0,0x00,0x8)
+                    IO(Decode16,0x3F8,0x3F8,0x00,0x8)			// UART
 
                     // Reserve  4D0 and 4D1 for IRQ edge/level control port
                     IO(Decode16, 0x4D0,0x4D0,0x00,0x2)
@@ -2075,6 +2089,8 @@ Scope(\_SB)
                     IO(Decode16, 0, 0, 0, 0, IO1)
                     // SPI Memory Map IO Base
                     Memory32Fixed(ReadWrite, 0x00000000, 0x00000000, MEM0)
+                    Memory32Fixed(ReadWrite, 0xfed00000, 0x00001000, MEM0)  // HPET MMIO
+                    Memory32Fixed(ReadWrite, 0xfed30000, 0x00001000, MEM0)  // SPI MMIP
                 })
 
                 Method(_CRS, 0)

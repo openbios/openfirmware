@@ -15,8 +15,9 @@ purpose: Node names for Conexant CX2058x HD Audio CODEC
 : portg  ( -- )  h# 1f set-node  ;    \ Port G - speaker driver
 : porth  ( -- )  h# 20 set-node  ;    \ Port H - S/PDIF out
 : porti  ( -- )  h# 22 set-node  ;    \ Port I - S/PDIF out
-: portj  ( -- )  h# 23 set-node  ;    \ Digital mic
+: portj  ( -- )  h# 23 set-node  ;    \ Digital mic 1/2
 : vendor ( -- )  h# 25 set-node  ;    \ Vendor-specific controls
+: portk  ( -- )  h# 27 set-node  ;    \ Port K - Dig Mic 3/4
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 Luke Gorrie <luke@bup.co.nz>

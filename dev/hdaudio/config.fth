@@ -4,6 +4,9 @@ purpose: Names for HD Audio Configuration Default values
 : config(   ( -- null-config-default )   0  ;
 
 : 1/8"        ( u -- u )  h#    10000 or  ;
+: oanalog     ( u -- u )  h#    70000 or  ;	\ other analog
+: overrd      ( u -- u )  h#      100 or  ;	\ override
+: black       ( u -- u )  h#     1000 or  ;
 : green       ( u -- u )  h#     4000 or  ;
 : pink        ( u -- u )  h#     9000 or  ;
 : hp-out      ( u -- u )  h#   200000 or  ;
@@ -12,6 +15,8 @@ purpose: Names for HD Audio Configuration Default values
 : line-in     ( u -- u )  h#   800000 or  ;
 : line-out    ( u -- u )                  ;
 : speaker     ( u -- u )  h#   100000 or  ;
+: top         ( u -- u )  h#  5000000 or  ;
+: right       ( u -- u )  h#  4000000 or  ;
 : left        ( u -- u )  h#  3000000 or  ;
 : front       ( u -- u )  h#  2000000 or  ;
 : internal    ( u -- u )  h# 10000000 or  ;

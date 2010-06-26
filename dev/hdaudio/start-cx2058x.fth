@@ -60,16 +60,17 @@ start-verb-table
    porta  config(  1/8" green left hp-out jack     )config
    porta  config(  1/8" green left hp-out jack     )config
    portb  config(  1/8" pink left mic-in jack      )config
-   portc  config(  builtin internal front mic-in   )config
-   portd  config(  unused line-out                 )config
-   porte  config(  unused line-out                 )config
-   portf  config(  1/8" pink left line-in jack     )config
-   portg  config(  builtin internal front speaker  )config
-   porth  config(  unused spdiff-out               )config
-   porti  config(  unused spdiff-out               )config
-   portj  config(  unused mic-in                   )config
+   portc  config(  builtin internal top mic-in overrd oanalog )config
+   portd  config(  unused line-out overrd          )config
+   porte  config(  unused line-out overrd          )config
+   portf  config(  unused line-out overrd          )config
+   portg  config(  builtin internal front speaker overrd oanalog )config
+   porth  config(  unused line-out overrd          )config
+   porti  config(  unused line-out overrd          )config
+   portj  config(  unused line-out overrd          )config
 
    vendor  \ Vendor node
+   portk  config(  unused line-out overrd          )config \ Luna
 
    \ Codec registers
    21000 place-verb      \ Undocumented register
@@ -91,12 +92,12 @@ start-verb-table
    31000 place-verb      \ Undocumented register
    32000 place-verb      \ Undocumented register
    33000 place-verb      \ Undocumented register
-   34001 place-verb      \ Maximum output power for speaker - see Class-DSpeakerPower.pdf
+   34003 place-verb      \ Maximum output power for speaker - see Class-DSpeakerPower.pdf
    35000 place-verb      \ Undocumented register
    3600A place-verb      \ Undocumented register
    37000 place-verb      \ Undocumented register
-   38021 place-verb      \ over-current / short-circuit protection, 2.6A threshold
-   390C5 place-verb      \ temperature protection at 79.5C
+   38022 place-verb      \ over-current / short-circuit protection, 2.6A threshold
+   39057 place-verb      \ temperature protection at 79.5C
    3A000 place-verb      \ Undocumented register
    \ Digital registers
    41541 place-verb      \ Undocumented register
@@ -112,7 +113,7 @@ start-verb-table
 
    afg  \ Audio Function Group node
 
-   71C01 place-verb      \ Undocumented register
+   71C00 place-verb      \ Undocumented register
    71D00 place-verb      \ SPDIF OFF BUT Int-Mic on        \ Undocumented register
    71E00 place-verb      \ Undocumented register
    71F00 place-verb      \ disable software GSMark protection
