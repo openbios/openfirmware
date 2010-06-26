@@ -301,7 +301,7 @@ Method(_PIC, 0x01, NotSerialized) {
 //
 Method(_WAK, 1, Serialized)
 {
-    FRTH(2)
+//    FRTH(2)
     Notify(\_SB.PCI0.USB1, 0x00)
     Notify(\_SB.PCI0.USB2, 0x00)
     Notify(\_SB.PCI0.USB3, 0x00)
@@ -381,7 +381,7 @@ Method (_PTS, 1, NotSerialized)
         Store (Zero, GS04)          // Clear EXTSMI# Status, why?
      }
     Sleep(0x64)
-    FRTH(One)
+//    FRTH(One)
     Return (0x00)
 }
 
