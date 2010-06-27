@@ -40,16 +40,16 @@ Name (VERS, Package (0x02) {
     "$Id$"
 })
 
-OperationRegion (SMIR, SystemIO, 0x042f, 0x01)
-Field (SMIR, ByteAcc, NoLock, Preserve)
-{
-    SMIE,   8
-}
-Method (FRTH, 1, NotSerialized)
-{
-    Store(Arg0, SMIE)
-    // Type "resume" at the OK prompt to return
-}
+// OperationRegion (SMIR, SystemIO, 0x042f, 0x01)
+// Field (SMIR, ByteAcc, NoLock, Preserve)
+// {
+//     SMIE,   8
+// }
+// Method (FRTH, 1, NotSerialized)
+// {
+//     Store(Arg0, SMIE)
+//     // Type "resume" at the OK prompt to return
+// }
 
 OperationRegion (UART, SystemIO, 0x03f8, 0x08)
 
@@ -2089,8 +2089,8 @@ Scope(\_SB)
                     IO(Decode16, 0, 0, 0, 0, IO1)
                     // SPI Memory Map IO Base
                     Memory32Fixed(ReadWrite, 0x00000000, 0x00000000, MEM0)
-                    Memory32Fixed(ReadWrite, 0xfed00000, 0x00001000, MEM0)  // HPET MMIO
-                    Memory32Fixed(ReadWrite, 0xfed30000, 0x00001000, MEM0)  // SPI MMIP
+                    Memory32Fixed(ReadWrite, 0xfed00000, 0x00001000)  // HPET MMIO
+                    Memory32Fixed(ReadWrite, 0xfed30000, 0x00001000)  // SPI MMIO
                 })
 
                 Method(_CRS, 0)
