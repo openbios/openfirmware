@@ -60,17 +60,17 @@ start-verb-table
    porta  config(  1/8" green left hp-out jack     )config
    porta  config(  1/8" green left hp-out jack     )config
    portb  config(  1/8" pink left mic-in jack      )config
-   portc  config(  builtin internal top mic-in overrd oanalog )config
-   portd  config(  unused line-out overrd          )config
-   porte  config(  unused line-out overrd          )config
-   portf  config(  unused line-out overrd          )config
-   portg  config(  builtin internal front speaker overrd oanalog )config
-   porth  config(  unused line-out overrd          )config
-   porti  config(  unused line-out overrd          )config
-   portj  config(  unused line-out overrd          )config
+   portc  config(  builtin internal top mic-in no-detect other-analog )config
+   portd  config(  unused line-out no-detect       )config
+   porte  config(  unused line-out no-detect       )config
+   portf  config(  unused line-out no-detect       )config
+   portg  config(  builtin internal front speaker no-detect other-analog )config
+   porth  config(  unused line-out no-detect       )config
+   porti  config(  unused line-out no-detect       )config
+   portj  config(  unused line-out no-detect       )config
 
    vendor  \ Vendor node
-   portk  config(  unused line-out overrd          )config \ Luna
+   portk  config(  unused line-out no-detect       )config
 
    \ Codec registers
    21000 place-verb      \ Undocumented register
