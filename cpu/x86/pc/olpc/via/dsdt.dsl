@@ -2055,6 +2055,14 @@ Scope(\_SB)
                 }
             }
 
+            Device(HPET) [
+                Name(_HID,EISAID("PNP0103"))
+                Name(_UID, 0)
+                Name(_CRS,ResourceTemplate() {
+                    Memory32Fixed(ReadWrite, 0xfed00000, 0x00000400, MEM0)
+                })
+            }
+
             Device(RMSC) {   // all "PNP0C02" devices- pieces that don't fit anywhere else
                 Name(_HID,EISAID("PNP0C02"))        // Generic motherboard devices
                 Name (_UID, 0x13)
@@ -2089,7 +2097,6 @@ Scope(\_SB)
                     IO(Decode16, 0, 0, 0, 0, IO1)
                     // SPI Memory Map IO Base
                     Memory32Fixed(ReadWrite, 0x00000000, 0x00000000, MEM0)
-                    Memory32Fixed(ReadWrite, 0xfed00000, 0x00001000)  // HPET MMIO
                     Memory32Fixed(ReadWrite, 0xfed30000, 0x00001000)  // SPI MMIO
                 })
 
