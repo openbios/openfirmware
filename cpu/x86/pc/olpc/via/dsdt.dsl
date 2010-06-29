@@ -2055,7 +2055,7 @@ Scope(\_SB)
                 }
             }
 
-            Device(HPET) [
+            Device(HPET) {
                 Name(_HID,EISAID("PNP0103"))
                 Name(_UID, 0)
                 Name(_CRS,ResourceTemplate() {
