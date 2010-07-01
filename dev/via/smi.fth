@@ -615,6 +615,13 @@ defer sbp-hook
    then
 [then]
 
+\   h# 2f acpi-b@ case
+\      1 of  ." Entered from ACPI _PTS "  endof
+\      2 of  ." Entered from ACPI _WAK "  endof
+\      ( default )  ." Entered with argument 0x" dup .x 
+\   endcase
+\   ." - type 'resume' to return" cr
+
    smi-interact
 ;
 
