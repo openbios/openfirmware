@@ -394,7 +394,7 @@ c;
    pad h# 30 -leading -trailing
 ;
 
-: +OEM  ( adr -- adr' )  " QUANTACOMPUTER" +smbios$  ;
+: +OLPC  ( adr -- adr' )  " OLPC" +smbios$  ;
 : setup-smbios  ( -- )
    0 to #smbios-tables
    0 to portinfo#
@@ -405,7 +405,7 @@ c;
    bios-info copy-smbios-table       ( adr )
       test-name$ +smbios$
       test-version$ +smbios$
-\      +OEM
+\      +OLPC
 \      fw-version$ +smbios$
       fw-date$    +smbios$
    end-smbios-table
@@ -413,7 +413,7 @@ c;
    dup >r                            ( adr  r: adr )
    system-info copy-smbios-table     ( adr  r: adr )
       get-uuid  r> 8 +  swap move    ( adr )   
-      +OEM
+      +OLPC
       " XO" +smbios$
       " 1.5" +smbios$    \ Version
       " SN" get-tag$ +smbios$
@@ -428,7 +428,7 @@ c;
 
    \ XXX might need to amend the security status field
    system-enclosure copy-smbios-table       ( adr )
-      +OEM
+      +OLPC
       " 1.5" +smbios$    \ Version
    end-smbios-table
 

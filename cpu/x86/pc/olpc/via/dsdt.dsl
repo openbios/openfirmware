@@ -25,7 +25,7 @@
 DefinitionBlock ("dsdt.aml",      // AML file name
                  "DSDT",          // Table signature, DSDT
                  0x01,            // Compliance Revision
-                 "OLPC",          // OEM ID
+                 "QUANTACOMPUTER",// OEM ID
                  "XO-1.5  ",      // Table ID
                  0x00000001)      // OEM Revision
 {
