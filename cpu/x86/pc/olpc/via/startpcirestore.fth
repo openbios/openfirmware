@@ -52,5 +52,4 @@
 \        64 88e5 config-wb  \ 04 bit enables PCS1
 
 \ acpi-io-base h# 2b + # dx mov  dx al in  h# 80 # al or  al dx out  \ Enable SMI on GPIO Range 1 access
-
 \ acpi-io-base h# 4 + # dx mov  dx al in  h# 01 # al or  al dx out  \ Enable SCI
