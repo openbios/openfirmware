@@ -2434,6 +2434,79 @@ Scope(\_SB)
             }
         }//Device(HDAC)
 
+        Name(DEVA, 0x3)     //Replace the CMOS location, Since T-SEG SMM can not call INT10 any more
+
+        Device(VGA)			  // Device
+        {
+            Name(_ADR,0x10000)	
+            Name(SWIT,0x1)
+            Method(_DOS,1)	  // Enable/Disable Output Switching
+            {
+                Store(Arg0, SWIT) // Store the argument as the switch
+            }
+
+            Method(_INI,0)	  // Enable Initial display 
+            {
+		// BIOS don't switch display, but change _DGS 
+		// Video Extension is used to help in switching .
+		store(DEVA, Local1)
+
+
+		If( LNotEqual(And(Local1, 0x2), 0x00) )	// LCD Turn On
+		{
+		    Store( 0x1, \_SB.PCI0.VGA.LCD._DGS)
+		}
+		Else
+		{
+		    Store( 0x0, \_SB.PCI0.VGA.LCD._DGS)
+		}
+            }
+
+
+            Name(_DOD,Package()		//Package
+            {
+                0x00010110,		//LCD, detectable by BIOS
+            })
+
+            Device(LCD)
+            {
+                Name(_ADR,0x0110)
+                Name(_DCS,0x1F)		//Return the status of output device
+                Name(_DGS,1)		//Query Graphics Desired State
+                Method(_DSS,1)		// Device Set State
+                {
+                    // Device Set State
+                    If(And(Arg0,0xC0000000))
+                    {
+			//If Bit30=1, don't do actual switching, but change _DGS to next state.
+	              	If(LEqual(And(Arg0,0x40000000), 0x00))
+        	      	{
+			    Store(Arg0, Local0)
+              		    Store(And(Local0,0x1),Local0)
+                            Store(Not(0x1), Local1)
+                            Store(And(\_SB.PCI0.VGA.LCD._DGS, Local1), \_SB.PCI0.VGA.LCD._DGS)
+                            Store(Or(\_SB.PCI0.VGA.LCD._DGS, Local0),\_SB.PCI0.VGA.LCD._DGS)
+                        }
+                    }
+                }
+                Method(_BCL) {
+                    Return(Package(0x8) {
+                        100,
+                        50,
+                        20,
+                        30,
+                        40,
+                        60,
+                        80,
+                        90,
+                    })
+                }
+                Method(_BCM, 1) {
+                    // Store(Arg0, \_SB.PCI0.PIB.PORT80)
+                }
+            }
+        }	
+
     } // Device(PCI0)
 
     //-----------------------------------------------------------------------
