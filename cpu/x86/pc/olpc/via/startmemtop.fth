@@ -19,3 +19,9 @@
 
    bx  mem-info-pa 4 + #) mov   \ Top of memory
 
+\   bx di mov
+\   h# 800.0000 # di sub         \ Clear the last 128 MB
+\   h# 800.0000 4 / # cx mov     \ Longword count
+\   cld
+\   ax ax xor
+\   rep  ax stos
