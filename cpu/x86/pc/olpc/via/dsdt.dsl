@@ -25,7 +25,7 @@
 DefinitionBlock ("dsdt.aml",      // AML file name
                  "DSDT",          // Table signature, DSDT
                  0x01,            // Compliance Revision
-                 "QUANTACOMPUTER",// OEM ID
+                 "OLPC",          // OEM ID
                  "XO-1.5  ",      // Table ID
                  0x00000001)      // OEM Revision
 {
@@ -36,7 +36,7 @@ DefinitionBlock ("dsdt.aml",      // AML file name
 // will appear within 60 bytes of the address 0xfc000, which is the
 // DSDT start address.
 Name (VERS, Package (0x02) {
-    "OLPC XO-1.5", 
+    "QUANTACOMPUTER XO-1.5", 
     "$Id$"
 })
 
