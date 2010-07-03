@@ -1607,6 +1607,12 @@ d# 1600 constant /packet-buf
    make-beacon
    d# 100 1 set-beacon
 ;
+\ This is a bit heavy-handed, but I don't know a more precise recipe
+: stop-ap  ( -- )
+   ds-not-ready  to driver-state  \ Forces firmware reload on next open
+   reset-host-bus                 \ Primes module to accept new firmware
+   false to ap-mode?
+;
 
 : get-log  ( -- )
    0 h# b ( CMD_802_11_GET_LOG ) prepare-cmd
@@ -1865,7 +1871,7 @@ false instance value force-open?
 : close  ( -- )
    opencount @ 1-  0 max  opencount !
    opencount @ 0=  if
-      ap-mode?  if  set-sta-mode  then
+      ap-mode?  if  stop-ap  then
       adhoc-started?  if  adhoc-stop  then
       disable-multicast
       mesh-stop drop
