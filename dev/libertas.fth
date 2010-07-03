@@ -718,7 +718,10 @@ true value got-indicator?
    +xw
    outbuf-wait drop
 ;
-: set-ap-mode  ( -- )  2 set-mode  ;  \ Thin firmware only
+0 value ap-mode?
+: set-ap-mode  ( -- )  2 set-mode  true to ap-mode?  ;  \ Thin firmware only
+: set-sta-mode  ( -- )  1 set-mode  false to ap-mode?  ;  \ Thin firmware only
+: set-passive-mode  ( -- )  0 set-mode  false to ap-mode?  ;  \ Thin firmware only
 
 : broadcast-mac$  ( -- adr len )  " "(ff ff ff ff ff ff)"  ;
 
@@ -1028,6 +1031,7 @@ external
    \ It prevents listening stations, of which there can be many,
    \ from transmitting when they come on-line.
    2dup  " olpc-mesh"  $=  if  passive-scan  then
+   2dup  " olpc-NANDblaster"  $=  if  passive-scan  then
 
    h# 32 min  scan-ssid pack drop
 ;
@@ -1861,6 +1865,7 @@ false instance value force-open?
 : close  ( -- )
    opencount @ 1-  0 max  opencount !
    opencount @ 0=  if
+      ap-mode?  if  set-sta-mode  then
       adhoc-started?  if  adhoc-stop  then
       disable-multicast
       mesh-stop drop
@@ -1901,40 +1906,6 @@ false instance value force-open?
    then					( actual )
 
    recycle-packet			( actual )
-;
-
-\ Normal read and write methods.
-: write  ( adr len -- actual )
-   link-up? 0=  if  2drop 0 exit  then	\ Not associated yet.
-   ?reassociate				\ In case if the connection is dropped
-   write-force
-;
-: read  ( adr len -- actual )
-   \ If a good receive packet is ready, copy it out and return actual length
-   \ If a bad packet came in, discard it and return -1
-   \ If no packet is currently available, return -2
-
-   link-up? 0=  if  2drop 0 exit  then	\ Not associated yet.
-   ?reassociate				\ In case if the connection is dropped
-   read-force
-;
-
-: load  ( adr -- len )
-   link-up? 0=  if  drop 0 exit  then	\ Not associated yet.
-
-   " obp-tftp" find-package  if		( adr phandle )
-      my-args rot  open-package		( adr ihandle|0 )
-   else					( adr )
-      0					( adr 0 )
-   then					( adr ihandle|0 )
-
-   dup  0=  if  ." Can't open obp-tftp support package" stop-nic abort  then
-					( adr ihandle )
-
-   >r
-   " load" r@ ['] $call-method	catch   ( len false | x x x true )
-   r> close-package
-   throw
 ;
 
 0 instance value /packet
@@ -2014,8 +1985,6 @@ defer handle-data  ' noop is handle-data
 : throttle delay ms  ;
 \ Convert an 802.3 frame to an 802.11 frame and send it
 : thin-send-data-frame  ( adr len -- len )
-   begin  backlog 8 >=  while  process-mgmt-frame  repeat
-   backlog 1+ to backlog
    tuck over >r         ( len adr len  r: adr )
    \ In 208, 200 is the fromDS bit, indicating that the frame is ostensibly coming
    \ from an AP, and 8 is the code for a non-acked Data frame.
@@ -2024,6 +1993,8 @@ defer handle-data  ' noop is handle-data
    " "(aa aa 03 00 00 00)"  0 +pkt-data  swap move      ( len adr' elen )
    tuck  6 +pkt-data swap move                          ( len elen )
    packet-buf  swap /802.11-header +  6 +  wrap-802.11  ( len padr plen )
+   begin  backlog 8 >=  while  process-mgmt-frame  repeat
+   backlog 1+ to backlog
    data-out                                             ( len )
    throttle
 ;
@@ -2035,6 +2006,44 @@ d# 1600 buffer: test-buf
    mac-adr$ test-buf 6 +  swap  move
    " XO" test-buf d# 12 +  swap  move
    test-buf d# 1440 thin-send-data-frame drop
+;
+
+\ Normal read and write methods.
+: write  ( adr len -- actual )
+   ap-mode?  if
+      thin-send-data-frame
+   else
+      link-up? 0=  if  2drop 0 exit  then	\ Not associated yet.
+      ?reassociate				\ In case if the connection is dropped
+      write-force
+   then
+;
+: read  ( adr len -- actual )
+   \ If a good receive packet is ready, copy it out and return actual length
+   \ If a bad packet came in, discard it and return -1
+   \ If no packet is currently available, return -2
+
+   link-up? 0=  if  2drop 0 exit  then	\ Not associated yet.
+   ?reassociate				\ In case if the connection is dropped
+   read-force
+;
+
+: load  ( adr -- len )
+   link-up? 0=  if  drop 0 exit  then	\ Not associated yet.
+
+   " obp-tftp" find-package  if		( adr phandle )
+      my-args rot  open-package		( adr ihandle|0 )
+   else					( adr )
+      0					( adr 0 )
+   then					( adr ihandle|0 )
+
+   dup  0=  if  ." Can't open obp-tftp support package" stop-nic abort  then
+					( adr ihandle )
+
+   >r
+   " load" r@ ['] $call-method	catch   ( len false | x x x true )
+   r> close-package
+   throw
 ;
 
 : reset  ( -- flag )  reset-nic  ;

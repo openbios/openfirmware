@@ -5,13 +5,14 @@ purpose: User interface for NAND multicast updater - transmission
    " olpc-mesh"nolpc-mesh"nolpc-mesh"nolpc-mesh"nolpc-mesh"nolpc-mesh"
 ;
 
-: use-mesh  ( -- )
+: select-mesh-mode  ( -- )
    \ Check for already set because re-setting it will force rescanning
    ['] mesh-ssids to default-ssids
    wifi-cfg >wc-ssid pstr@  " olpc-mesh" $=  0=  if
       " olpc-mesh" $essid
    then
 ;
+
 : $file-to-mem  ( filename$ -- adr len )
    $read-open
    ifd @ fsize  dup alloc-mem  swap     ( adr len )
@@ -74,7 +75,7 @@ d# 20 value redundancy
 : nb-secure11  ( -- )  d# 11 #nb-secure-def  ;
 
 : mesh-clone
-   use-mesh
+   select-mesh-mode
    false to already-go?
    redundancy " boot rom:nb_tx udp:239.255.1.2 nand: %d" sprintf eval
 ;

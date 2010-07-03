@@ -5,11 +5,6 @@ purpose: Analyze WIFI spectrum to find good channels for NANDblaster
 d# 2048 buffer: scan-buf
 
 : $call-wlan  ( args method$ -- res )  wlan-ih $call-method  ;
-: stop-mesh  ( -- )  " mesh-stop" $call-wlan drop  ;
-: start-mesh  ( channel# -- )
-   " mesh-start" $call-wlan drop
-   d# 100 0 " set-beacon" $call-wlan
-;
 
 : open-wlan  ( -- )
    " /wlan:force" open-dev to wlan-ih
@@ -143,6 +138,14 @@ d# 10 constant rssi-threshold
    then                              ( chan# )
 ;
 
+d# 1514 buffer: tx-test-buf
+
+[ifdef] use-mesh
+: stop-mesh  ( -- )  " mesh-stop" $call-wlan drop  ;
+: start-mesh  ( channel# -- )
+   " mesh-start" $call-wlan drop
+   d# 100 0 " set-beacon" $call-wlan
+;
 : multinand-traffic?  ( channel# -- flag )
    start-mesh
    " "(01 00 5e 7e 01 02)" " set-multicast" $call-wlan
@@ -176,24 +179,42 @@ d# 10 constant rssi-threshold
    search-channels
    close-wlan
 ;
-
-d# 1514 buffer: mesh-test-buf
-
-: (channel-speed)  ( channel# -- kb/sec )
-   dup >r  start-mesh
+: start-direct-wlan  ( channel# -- )
+   start-mesh
    " enable-multicast" $call-wlan
    1 " mesh-set-ttl" $call-wlan
    h# b " mesh-set-bcast" $call-wlan
 
-   " "(00 00 00 00 00 00 01 00 5e 7e 01 01)XO" mesh-test-buf swap move
+   " "(00 00 00 00 00 00 01 00 5e 7e 01 01)XO" tx-test-buf swap move
+;
+: stop-direct-wlan  ( -- )  stop-mesh  ;
+\ : send-direct-wlan  ( adr len -- )  " write" $call-wlan  ;
+[then]
 
+[ifdef] use-thinmac
+: start-direct-wlan  ( channel# -- )
+   ( channel# )
+   " OLPC-NANDblaster" " start-ap" $call-wlan  ( )
+   h# 1b " set-tx-ctrl" $call-wlan             ( )  \ Fast data rate
+   " "(01)OLPC"(02)"  tx-test-buf swap move    ( )
+   " get-mac-address" $call-wlan   tx-test-buf 6 +  swap move   ( )
+   " XO" tx-test-buf d# 12 +  swap move        ( )
+;
+: stop-direct-wlan  ( -- )
+   " set-sta-mode" $call-wlan
+;
+\ : send-direct-wlan  ( adr len -- )  " thin-send-data-frame" $call-wlan  ;
+[then]
+
+: (channel-speed)  ( channel# -- kb/sec )
+   dup >r  start-direct-wlan
    tsc@
    d# 1000 0 do
-      mesh-test-buf d# 1514 " write" $call-wlan drop
+      tx-test-buf d# 1514 " write" $call-wlan  drop
    loop
    tsc@ 2swap d- ms-factor um/mod nip   ( ms )
    d# 1,514,000 swap /                  ( kb/sec )
-   stop-mesh                            ( kb/sec )
+   stop-direct-wlan                     ( kb/sec )
    dup r> >channel-speed !              ( kb/sec )
 ;
 : channel-speed  ( channel# -- kb/sec )
@@ -293,9 +314,11 @@ d# 2000 constant wifi-speed-threshold
    d# 4000 ms
 ;
 
+[ifdef] use-mesh
 : nb-clone    ( -- )  nb-auto-channel  #nb-clone  ;
 : nb-secure   ( -- )  nb-auto-channel  #nb-secure-def  ;
 : nb-update   ( -- )  nb-auto-channel  #nb-update-def  ;
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2008 FirmWorks

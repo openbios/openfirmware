@@ -49,6 +49,8 @@ defer default-ssids  ( -- $ )  ' null$ to default-ssids
    wifi-cfg  /wifi-cfg erase    ( adr len )
    wifi-cfg >wc-ssid pstr!      ( )
    true to ssid-reset?
+   \ When an explicit SSID is given, don't fall back to the default list
+   ['] null$ to default-ssids
 ;
 
 : $wep  ( wep$ -- )

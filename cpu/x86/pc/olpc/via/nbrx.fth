@@ -14,7 +14,6 @@ purpose: User interface for NAND multicast updater - reception
 ;
 alias nb nandblaster
 
-
 \ This is the wired version that is used in the factory with big Ethernet switches.
 : $nb-rx  ( multicast-ip$ -- )
    false to already-go?
@@ -22,9 +21,7 @@ alias nb nandblaster
    ( multicast-ip$ )  " boot rom:nb15_rx mcast:%s" sprintf  eval
    )boot-as-call
 ;
-: nb-rx:  ( "multicast-ip" -- )
-   safe-parse-word  $nb-rx
-;
+: nb-rx:  ( "multicast-ip" -- )  safe-parse-word  $nb-rx  ;
 : nb-rx  ( -- )  " 224.0.0.100" $nb-rx  ;
 
 [ifdef] adhoc-NANDblaster
@@ -54,6 +51,7 @@ create NB-sniffing
 : mcopen
    " net:force" open-dev to nb-ih
    nb-ih 0= abort" Can't open net"
+   ['] null$ to default-ssids
    " OLPC-NANDblaster" $essid
    " do-associate" nb-ih $call-method drop
    " "(01 00 5e 7f 01 02)" " set-multicast" nb-ih $call-method
