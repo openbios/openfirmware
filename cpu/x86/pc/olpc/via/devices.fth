@@ -150,7 +150,7 @@ dev /cpu
 warning @  warning off
 : selftest  ( -- error? )
    h# 198 msr@ drop      ( msr.low )
-   h# ff and  6 <>  if   ( )
+   h# ff and  1 8 between 0=  if   ( )
       ." Wrong CPU Voltage" cr
       true exit
    then
