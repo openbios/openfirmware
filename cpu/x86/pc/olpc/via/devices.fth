@@ -144,6 +144,21 @@ stand-init: RTC
 fload ${BP}/cpu/x86/pc/cpunode.fth
 fload ${BP}/cpu/x86/k6cputest.fth	\ Burnin test for K6 CPU
 
+\ Amend the CPU selftest method to check for Via processors that
+\ require a different voltage than the one we provide.
+dev /cpu
+warning @  warning off
+: selftest  ( -- error? )
+   h# 198 msr@ drop      ( msr.low )
+   h# ff and  6 <>  if   ( )
+      ." Wrong CPU Voltage" cr
+      true exit
+   then
+   selftest
+;
+warning !
+device-end
+
 0 [if]
 fload ${BP}/ofw/console/bailout.fth
 stand-init:  Keyboard overrides
