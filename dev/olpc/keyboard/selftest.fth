@@ -580,7 +580,7 @@ false value verbose?
 : set-keyboard-type  ( -- )
    " KM" find-tag  if                    ( adr len )
       -null                              ( adr' len' )
-      " olpc2" $=  if  2  else  1  then  ( type )
+      " olpcm" $=  if  2  else  1  then  ( type )
    else                                  ( )
       1                                  ( type )
    then                                  ( type )
