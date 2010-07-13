@@ -62,6 +62,56 @@ code fb16-invert  ( adr width height bytes/line fg-color bg-color -- )
    repeat
 c;
 
+\ Within the rectangular region, replace 3-byte pixels whose current value
+\ is the same as fg-color with bg-color, and vice versa, leaving bytes that
+\ match neither value unchanged.
+code fb24-invert  ( adr width height bytes/line fg-color bg-color -- )
+   ldmia   sp!,{r1,r2,r3,r4,r5}
+   \ r0:scratch  r1:fg-colour r2:bytes/line  r3:height  r4:width  r5:adr
+   \ r6 bytes/line, r7 scratch, r8 scratch, tos bg-color
+
+   add        r4,r4,r4, lsl #1  \ Multiply width by 4 to get bytes
+   begin
+      cmp     r3,#0
+   > while
+      mov     r6,#0
+      begin
+         cmp     r4,r6		\ more pixels/line?
+      > while
+         add     r0,r5,r6       \ r0 points to the pixel
+         ldrb    r7,[r0]        \ Start reading a 3-byte pixel
+         ldrb    r8,[r0,#1]
+         orr     r7, r7, r8, lsl #8
+         ldrb    r8,[r0,#2]
+         orr     r7, r7, r8, lsl #16
+
+         cmp     r7,tos   \ Is it the background color?
+         0=  if
+            \ If so, replace with the foreground color
+            strb  r1,[r0]
+            mov   r8,r1,lsr #8
+            strb  r8,[r0,#1]
+            mov   r8,r1,lsr #16
+            strb  r8,[r0,#2]
+         then
+
+         cmp     r7,r1   \ Is it the foreground color?
+         0=  if
+            \ If so, replace with the background color
+            strb  tos,[r0]
+            mov   r8,tos,lsr #8
+            strb  r8,[r0,#1]
+            mov   r8,tos,lsr #16
+            strb  r8,[r0,#2]
+         then
+         inc   r6,#3     \ Advance offset to the next pixel
+      repeat
+      add     r5,r5,r2   \ Advance to next scan line
+      dec     r3,#1      \ Decrease the remaining line count
+   repeat
+   pop   tos,sp
+c;
+
 \ Within the rectangular region, replace halfwords whose current value is
 \ the same as fg-color with bg-color, and vice versa, leaving bytes that
 \ match neither value unchanged.
@@ -158,6 +208,55 @@ code fb16-paint
    ldmia   sp!,{r9,tos}
 c;
 
+\ Draws a character from a 1-bit-deep font into a 24bpp frame buffer
+\ Font bits are stored 1-bit-per-pixel, with the most-significant-bit of
+\ the font byte corresponding to the leftmost pixel in the group for that
+\ byte.  "font-width" is the distance in bytes from the first font byte for
+\ a scan line of the character to the first font byte for its next scan line.
+code fb24-paint
+  ( fontadr fontbytes width height screenadr bytes/line fg-color bg-color -- )
+   ldmia   sp!,{r1,r2,r3,r4,r5,r6,r7}
+   psh     r9,sp
+\ tos:bg-col  r1:fg-col  r2:bytes/line  r3: screenadr  r4:height  r5:width
+\ r6:font-width  r7:fontadr
+\ free: r8 r9 r0
+   begin
+      cmp     r4,#0
+   > while
+      mov     r8,#0			\ r8: pixel-offset
+      begin
+         cmp     r5,r8			\ one more pixel?
+      > while
+         ldrb    r9,[r7,r8,lsr #3]	\ r9 fontdatabyte
+         and     r0,r8,#7               \ r9 bit offset 0-7
+         rsb     r0,r0,#8               \ r0 bit offset 8-1
+         movs    r0,r9,asr r0           \ Test font bit
+         add     r9,r3,r8,lsl #1        \ r9 = r3 = r8*2 - Partial address computation
+         add     r9,r9,r8               \ r9 = r3 + r8*3
+         u<  if
+            \ Background
+            strb    tos,[r9]		\ store first byte of pixel
+            mov     r0,tos,lsr #8
+            strb    r0,[r9,#1]		\ store second byte of pixel
+            mov     r0,tos,lsr #16
+            strb    r0,[r9,#2]		\ store third byte of pixel
+         else
+            \ Foreground
+            strb    r1,[r9]		\ store first byte of pixel
+            mov     r0,r1,lsr #8
+            strb    r0,[r9,#1]		\ store second byte of pixel
+            mov     r0,r1,lsr #16
+            strb    r0,[r9,#2]		\ store third byte of pixel
+         then
+         inc     r8,#1
+      repeat
+      add     r7,r7,r6			\ new font-line
+      add     r3,r3,r2			\ new screen-line
+      dec     r4,#1
+   repeat
+   ldmia   sp!,{r9,tos}
+c;
+
 \ Draws a character from a 1-bit-deep font into an 8-bit-deep frame buffer
 \ Font bits are stored 1-bit-per-pixel, with the most-significant-bit of
 \ the font byte corresponding to the leftmost pixel in the group for that
@@ -181,9 +280,9 @@ code fb32-paint
          and     r0,r8,#7
          rsb     r0,r0,#8
          movs    r0,r9,asr r0
-         strcs   r1,[r3,r8]
-         strcc   tos,[r3,r8]
-         inc     r8,#4
+         strcs   r1,[r3,r8,lsl #2]
+         strcc   tos,[r3,r8,lsl #2]
+         inc     r8,#1
       repeat
       add     r7,r7,r6			\ new font-line
       add     r3,r3,r2			\ new screen-line

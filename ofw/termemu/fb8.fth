@@ -260,6 +260,17 @@ headerless
    /w +loop                      ( color mask )
    2drop                         ( )
 ;
+[ifdef] t!
+: fb24-merge  ( color bits dst-adr width -- )
+   3*  bounds  ?do               ( color mask )
+      dup h# 80000000 and  if    ( color mask )
+         over i t!               ( color mask )
+      then                       ( color mask )
+      3*                         ( color mask' )
+   3 +loop                       ( color mask )
+   2drop                         ( )
+;
+[then]
 : fb32-merge  ( color bits dst-adr width -- )
    /l*  bounds  ?do              ( color mask )
       dup h# 80000000 and  if    ( color mask )
@@ -328,6 +339,17 @@ headers
          ['] fb16-merge  to fb-merge
          ['] colors-565  to fb-16map
       endof
+
+[ifdef] fb24-invert
+      d# 24 of
+         ['] /t*         to pix*
+         ['] fb24-invert to fb-invert
+         ['] tfill       to fb-fill
+         ['] fb24-paint  to fb-paint
+         ['] fb24-merge  to fb-merge
+         ['] colors-32bpp to fb-16map
+      endof
+[then]
 
       d# 32 of
          ['] /l*         to pix*

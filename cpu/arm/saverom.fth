@@ -13,6 +13,7 @@ purpose: Save the Forth dictionary image in a ROM-bootable format
 
    " stand-init-io" $find-name is init-io
    " stand-init"    init-save
+   " startup" $find drop  is cold-hook
 
    aif-header  h# 80  2r>  $save-image
 ;

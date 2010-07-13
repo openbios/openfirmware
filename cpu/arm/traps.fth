@@ -65,8 +65,7 @@ code vector-base! ( adr --- )
    pop  tos,sp
 c;
 
-h# 80 buffer: ram-vector-base-buf
-: move-vector-base  ( -- )  ram-vector-base-buf h# 20 round-up vector-base!  ;
+: move-vector-base  ( -- )  h# 80 alloc-mem h# 20 round-up vector-base!  ;
 
 \ Execute this at compile time for processors that need it.
 \ Ideally we would detect the vector base register at run time
@@ -76,7 +75,7 @@ h# 80 buffer: ram-vector-base-buf
    ['] move-vector-base to init-vector-base
 ;
 
-: stand-init-io  ( -- )
+: stand-init-io  \ Exception handlers
    stand-init-io
    ['] (restart           is restart
    ['] hw-install-handler is install-handler

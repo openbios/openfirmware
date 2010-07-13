@@ -1,3 +1,4 @@
+
 : lcd@  ( offset -- l )  lcd-pa + l@  ;
 : lcd!  ( l offset -- )  lcd-pa + l!  ;
 
@@ -52,9 +53,9 @@
 ;
 
 : init-lcd  ( -- )
-   0 h# 190 lcd!   \ Disable LCD DMA controller
-   fb-pa  h# f4 lcd!  \ Frame buffer area 0
-   0  h# f8 lcd!      \ Frame buffer area 1
+   0      h# 190 lcd!   \ Disable LCD DMA controller
+   fb-pa               h# f4 lcd!  \ Frame buffer area 0
+   0                   h# f8 lcd!  \ Frame buffer area 1
    hdisp bytes/pixel * h# fc lcd!  \ Pitch in bytes
 
    hdisp vdisp wljoin  dup h# 104 lcd!  dup h# 108 lcd!  h# 118 lcd!  \ size, size after zoom, disp
@@ -65,8 +66,8 @@
    hbp >chunks  wljoin  h# 11c lcd!
    
    vfp vbp wljoin  h# 120 lcd!
-   h# 2000FF00 h# 194 lcd!   \ DMA CTRL 1
-   h# d h# 1b8 lcd!         \ Dumb panel controller
+   h# 2000FF00 h# 194 lcd!  \ DMA CTRL 1
+   h#        d h# 1b8 lcd!  \ Dumb panel controller
    h# 01330133 h# 13c lcd!  \ Panel VSYNC Pulse Pixel Edge Control
    h# 40001108 h# 1a8 lcd!  \ Clock divider
    h# 00021100 h# 190 lcd!  \ DMA CTRL 0 - enable DMA, 24 bpp mode

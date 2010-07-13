@@ -12,6 +12,7 @@ dev /
 extend-package
 
 1 encode-int  " #address-cells"  property
+1 encode-int  " #size-cells"  property
 
 hex
 

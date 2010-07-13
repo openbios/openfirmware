@@ -1,8 +1,6 @@
-h# 004c constant pmua_display1_clk_res_ctrl_offset         \ DISPLAY1 Clock/Reset Control Register
-h# 0110 constant pmua_display2_clk_res_ctrl_offset      \ DISPLAY2 Clock/Reset Control Register
-h# 0050 constant pmua_ccic_clk_res_ctrl_offset     \ CCIC Clock/Reset Control Register
-
-
+h# 004c constant pmua_display1_clk_res_ctrl_offset  \ DISPLAY1 Clock/Reset Control Register
+h# 0110 constant pmua_display2_clk_res_ctrl_offset  \ DISPLAY2 Clock/Reset Control Register
+h# 0050 constant pmua_ccic_clk_res_ctrl_offset      \ CCIC Clock/Reset Control Register
 
 : pmua@  ( offset -- n )  pmua-pa + l@  ;
 : pmua!  ( n offset -- )  pmua-pa + l!  ;
@@ -15,6 +13,7 @@ h# 0050 constant pmua_ccic_clk_res_ctrl_offset     \ CCIC Clock/Reset Control Re
 ; 
 : dsi-twsi@  ( reg# -- l )  wbsplit 2 4 twsi-get  bljoin  ;
 : dsi-twsi-w@  ( reg# -- w )  wbsplit 2 2 twsi-get  bwjoin  ;
+
 : dsi1!  ( n offset -- )  dsi1-pa + l!  ;
 : dsi1@  ( n offset -- )  dsi1-pa + l@  ;
 : dsi2!  ( n offset -- )  dsi2-pa + l!  ;
@@ -41,9 +40,9 @@ h# 0050 constant pmua_ccic_clk_res_ctrl_offset     \ CCIC Clock/Reset Control Re
    \ Disable DSI
    0  h# 00 dsi1!  \ Stop the interface
    h# c000.0000  dsi1-pa h# 00 +  bitset
-   1 ms
+   2 ms
    h# c000.0000  dsi1-pa h# 00 +  bitclr
-   1 ms
+   2 ms
    d# 83 gpio-clr  1 ms  d# 83 gpio-set  1 ms  \ LCD_RST_N line resets DSI bridge
    
    5 set-address h# 16 set-slave       \ TWSI address of TC358762 MIPI DSI bridge
@@ -138,6 +137,8 @@ h# 0050 constant pmua_ccic_clk_res_ctrl_offset     \ CCIC Clock/Reset Control Re
    vdisp 2-   wljoin
    h# 118 dsi1!  \ DSI_LCD1_TIMING_2
 ;
+
+[ifdef] debug-dsi
 : .dsi  ( index -- )  dup 3 u.r space dsi-twsi@ 8 u.r cr  ;
 : .dsiw  ( index -- )  dup 3 u.r space dsi-twsi-w@ 8 u.r cr  ;
 : dump-dsi  ( -- )
@@ -168,6 +169,8 @@ h# 0050 constant pmua_ccic_clk_res_ctrl_offset     \ CCIC Clock/Reset Control Re
    430 .dsiw
    432 .dsiw
 ;
+[then]
+
 [ifdef] support-low-speed-dsi
 : parity  ( n -- 0|1 )
    dup d# 16 rshift xor
@@ -232,6 +235,7 @@ h# 0050 constant pmua_ccic_clk_res_ctrl_offset     \ CCIC Clock/Reset Control Re
 ;
 
 [then]
+
 [ifdef] use-dsi2
 : set-dsi-data  ( l index -- )
    swap h# 30 dsi!                  ( index )   \ Data register
@@ -345,6 +349,7 @@ h# 0050 constant pmua_ccic_clk_res_ctrl_offset     \ CCIC Clock/Reset Control Re
 
 ;
 : dsi-read  ( -- n )  h# 64 dsi2@  ;
+
 : dsi-lcd  ( enable? -- )
    0 dsi1@  7 invert and  0 dsi1!   \ Disable all panels
    h# 4c pmua@  2 invert and  h# 4c pmua!  \ stop clock?

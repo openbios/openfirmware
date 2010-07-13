@@ -17,3 +17,8 @@ d# 24 constant bpp
 
 : >bytes   ( pixels -- chunks )  bytes/pixel *  ;
 : >chunks  ( pixels -- chunks )  >bytes #lanes /  ;
+
+alias width  hdisp
+alias height vdisp
+alias depth  bpp
+width >bytes constant /scanline  

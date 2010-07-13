@@ -155,6 +155,7 @@ headerless
    current-sq sq >help 2@ show-description
 ;
 
+[ifdef] x86-assembler
 code expand-rect  ( src dst w h --- )
    dx  pop              \ Height of source image in pixels
    4 [sp] edi xchg
@@ -175,6 +176,7 @@ code expand-rect  ( src dst w h --- )
    edi pop   \ Restore EDI
    esi pop   \ Restore ESI
 c;
+[then]
 
 : expand-icon  ( adr - eadr )
    /icon alloc-mem tuck  ( eadr adr eadr )

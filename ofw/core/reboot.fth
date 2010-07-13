@@ -1,50 +1,42 @@
 \ See license at end of file
-purpose: Check for auto-boot interruption
+purpose: Reboot system: save reboot info in nvram configuration variables
 
 headerless
-: get-countdown   ( -- #seconds )
-   \ Use the default value "6" if there is no COUNTDOWN variable or if its
-   \ value cannot be parsed as a number.
-   " auto-boot-countdown" $getenv  if
-      6		\ No such environment variable
-   else
-      base @ >r decimal  $number  r> base !  if  6  then
-   then
+: put-env-number  ( n name$ -- )  hex   rot (.) 2swap (put-ge-var) drop  ;
+: get-env-number  ( name$ -- n )
+   hex   $getenv  if  0  else  $number  if  0  then  then
 ;
-: show-countdown   ( #seconds -- interrupted? )
-   1 swap  do
-      i .d  (cr
-      d# 10 0  do 
-         d# 100 ms
-         
-         key?  if
-            key drop  true unloop unloop exit
-         then
-[ifndef] install-mux-io
-[ifdef] ukey
-         ukey? if
-            ukey drop
-            com1 io
-            true unloop unloop exit
-         then
-[then]
-[then]
 
-      loop
-   -1 +loop
-   space (cr
-   false
+0 value reboot-info
+: +rb  ( offset -- adr )  reboot-info +  ;
+: copy-reboot-info  ( -- )
+   " reboot-command" $getenv  if  false to reboot?  exit  then
+
+   d# 140 alloc-mem  to reboot-info
+   " reboot-command" $getenv  if  " "  then  d#   0 +rb place
+   " reboot-line#"   get-env-number          d# 132 +rb !
+   " reboot-column#" get-env-number          d# 136 +rb !
+
+   " reboot-command" $unsetenv
+   " reboot-line#"   $unsetenv
+   " reboot-column#" $unsetenv
+
+   true to reboot?
 ;
-: (interrupt-auto-boot?)  ( -- flag )
-   get-countdown  dup 0=  if  exit  then		( #seconds )
 
-   ." Type any key to interrupt automatic startup" cr
-   \ XXX should sound a beep here in case the screen hasn't warmed up
-   show-countdown
+: (save-reboot-info)  ( cmd$ line# column# -- )
+   " reboot-column#" put-env-number
+   " reboot-line#"   put-env-number
+   " reboot-command" (put-ge-var) drop
 ;
-' (interrupt-auto-boot?) to interrupt-auto-boot?
+' (save-reboot-info) to save-reboot-info
 
+: (get-reboot-info)  ( -- cmd$ line# column# )
+   0 +rb count  d# 132 +rb @  d# 136 +rb @
+;
+' (get-reboot-info) to get-reboot-info
 headers
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

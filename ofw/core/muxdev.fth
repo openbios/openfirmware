@@ -68,6 +68,8 @@ constant /list-node
 ;
 
 : add-device  ( ihandle -- )
+   ?dup  0=  if  exit  then                      ( ihandle )
+
    /list-node alloc-mem >r                       ( ihandle r: listnode )
 
    dup r@ >ihandle !                             ( ihandle r: listnode )
@@ -112,6 +114,8 @@ constant /list-node
 ;
 
 : remove-device  ( ihandle -- )
+   ?dup  0=  if  exit  then             ( ihandle )
+
    >r  first-device                     ( prev r: ihandle )
 
    begin  dup >link @  dup  while       ( prev this  r: ihandle )

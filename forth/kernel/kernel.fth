@@ -225,7 +225,7 @@ headers
 [ifndef] run-time
 0 value "temp
 headerless
-d# 1024 1+ /n-t +  constant /stringbuf  \ 1024 bytes + /n for length + 1 for null
+d# 1024 1+ /n-t +  aligned-t  constant /stringbuf  \ 1024 bytes + /n for length + 1 for null
 0 value stringbuf
 0 value $buf
 : init  ( -- )

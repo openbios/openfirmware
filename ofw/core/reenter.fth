@@ -1,50 +1,51 @@
 \ See license at end of file
-purpose: Check for auto-boot interruption
+purpose: Handle various kinds of entries into Forth from traps, etc.
 
 headerless
-: get-countdown   ( -- #seconds )
-   \ Use the default value "6" if there is no COUNTDOWN variable or if its
-   \ value cannot be parsed as a number.
-   " auto-boot-countdown" $getenv  if
-      6		\ No such environment variable
-   else
-      base @ >r decimal  $number  r> base !  if  6  then
+: .go-message  ( -- )
+   \ Restarting is only possible if the state that was first saved
+   \ is from a restartable exception.
+   state-valid @  -1 =  already-go? and  if
+      restartable? on
+      ." Type  'go' to resume" cr
    then
 ;
-: show-countdown   ( #seconds -- interrupted? )
-   1 swap  do
-      i .d  (cr
-      d# 10 0  do 
-         d# 100 ms
-         
-         key?  if
-            key drop  true unloop unloop exit
-         then
-[ifndef] install-mux-io
-[ifdef] ukey
-         ukey? if
-            ukey drop
-            com1 io
-            true unloop unloop exit
-         then
-[then]
-[then]
 
-      loop
-   -1 +loop
-   space (cr
-   false
-;
-: (interrupt-auto-boot?)  ( -- flag )
-   get-countdown  dup 0=  if  exit  then		( #seconds )
+: .entry  ( -- )
+   talign		\ ... in case dp is misaligned
 
-   ." Type any key to interrupt automatic startup" cr
-   \ XXX should sound a beep here in case the screen hasn't warmed up
-   show-countdown
+   aborted? @  if
+      aborted? off  hex cr  ." Keyboard interrupt" cr  .go-message   exit
+   then
+
+   [ also hidden ] (.exception) [ previous ]
 ;
-' (interrupt-auto-boot?) to interrupt-auto-boot?
 
 headers
+stand-init:
+   ['] .entry is .exception
+;
+
+\ Temporary hacks until we implement these functions correctly
+
+0 value client-rerun?
+
+defer user-interface ' quit to user-interface
+also client-services definitions
+\ " reenter.fth: Implement 'exit' client service correctly" ?reminder
+: exit  ( -- )
+   [ also hidden ] breakpoints-installed off  [ previous ]
+   [ifdef] vector  vector off  [then]
+
+   " restore"  stdout @  ['] $call-method  catch  if  3drop  then
+   " restore"  stdin  @  ['] $call-method  catch  if  3drop  then
+
+   client-rerun? 0= to already-go?
+   user-interface
+;
+: enter  ( -- )  interact  ;
+previous definitions
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

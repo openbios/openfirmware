@@ -1,52 +1,36 @@
 \ See license at end of file
-purpose: Check for auto-boot interruption
+purpose: CRC-32 calculation
 
-headerless
-: get-countdown   ( -- #seconds )
-   \ Use the default value "6" if there is no COUNTDOWN variable or if its
-   \ value cannot be parsed as a number.
-   " auto-boot-countdown" $getenv  if
-      6		\ No such environment variable
-   else
-      base @ >r decimal  $number  r> base !  if  6  then
-   then
-;
-: show-countdown   ( #seconds -- interrupted? )
-   1 swap  do
-      i .d  (cr
-      d# 10 0  do 
-         d# 100 ms
-         
-         key?  if
-            key drop  true unloop unloop exit
-         then
-[ifndef] install-mux-io
-[ifdef] ukey
-         ukey? if
-            ukey drop
-            com1 io
-            true unloop unloop exit
-         then
-[then]
+\ Load this before forth/lib/crc32.fth
+
+[ifdef] notdef
+code crcstep  ( crc b table-adr -- crc' )
+   \ tos: table-adr, r1:b, r2:crc
+   ldmia   sp!,{r1,r2}
+   eor     r1,r1,r2             \ r1: crc ^ byte
+   and     r1,r1,#0xff          \ index
+   ldr     tos,[tos,r1,lsl #2]  \ Table data
+   eor     tos,tos,r2,lsr #8    \ Return crc'=table_data^(crc>>8)
+c;
 [then]
 
-      loop
-   -1 +loop
-   space (cr
-   false
-;
-: (interrupt-auto-boot?)  ( -- flag )
-   get-countdown  dup 0=  if  exit  then		( #seconds )
+code ($crc)  ( crc table-adr adr len -- crc' )
+   movs    r3,tos
+   ldmia   sp!,{r1,r2,tos}     \ r1:adr, r2:table-adr, r3:len, tos:crc
+   nxteq                       \ Bail out if len is 0
 
-   ." Type any key to interrupt automatic startup" cr
-   \ XXX should sound a beep here in case the screen hasn't warmed up
-   show-countdown
-;
-' (interrupt-auto-boot?) to interrupt-auto-boot?
+   begin
+      ldrb     r4,[r1],#1         \ Get next byte
+      eor      r4,r4,tos          \ r4: crc^byte
+      and      r4,r4,#0xff        \ r4: index
+      ldr      r4,[r2,r4,lsl #2]  \ lookup in table
+      decs     r2,1               \ Decrement len
+      eor      tos,r4,tos,lsr #8  \ crc' = table_data ^ (crc >> 8)
+   0= until
+c;
 
-headers
 \ LICENSE_BEGIN
-\ Copyright (c) 2006 FirmWorks
+\ Copyright (c) 2010 FirmWorks
 \ 
 \ Permission is hereby granted, free of charge, to any person obtaining
 \ a copy of this software and associated documentation files (the

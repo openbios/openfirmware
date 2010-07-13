@@ -689,6 +689,23 @@ code unaligned-!  ( n adr -- )
    strb      r4,[r5],#1
 c;
 
+code t!  ( n adr -- )
+   mov       r5,tos         \ r5: adr
+   ldmia     sp!,{r4,tos}
+   strb      r4,[r5],#1
+   mov       r4,r4,ror #8
+   strb      r4,[r5],#1
+   mov       r4,r4,ror #8
+   strb      r4,[r5],#1
+c;
+code t@  ( adr -- w )
+   ldrb      r0,[tos]
+   ldrb      tos,[tos,#1]
+   orr       r0,r0,tos,lsl #8
+   ldrb      tos,[tos,#2]
+   orr       tos,r0,tos,lsl #16
+c;
+
 code unaligned-w@  ( adr -- w )
    ldrb      r0,[tos]
    ldrb      tos,[tos,#1]
@@ -852,6 +869,21 @@ code wfill       ( adr cnt w -- )
    < until
 c;
 
+\ tfill fills with a 3-byte value.  It's useful for 24bpp frame buffers
+code tfill       ( adr cnt t -- )
+   mov       r2,tos
+   ldmia     sp!,{r0,r1,tos}  \ r0-cnt r1-adr r2-data
+   mov       r3,r2,lsr #8
+   mov       r4,r2,lsr #16
+   begin
+      decs    r0,3
+      strgeb  r2,[r1],#1
+      strgeb  r3,[r1],#1
+      strgeb  r4,[r1],#1
+   < until
+c;
+
+
 code lfill       ( adr cnt l -- )
    mov       r2,tos
    ldmia     sp!,{r0,r1,tos} \ r0-cnt r1-adr r2-data
@@ -859,6 +891,36 @@ code lfill       ( adr cnt l -- )
       decs    r0,4
       strge   r2,[r1],#4
    < until
+c;
+
+\ Skip initial occurrences of bvalue, returning the residual length
+code bskip  ( adr len bvalue -- residue )
+   ldmia  sp!,{r0,r1}  \ r0-len r1-adr tos-bvalue
+   mov    r2,tos       \ r2-bvalue
+   movs   tos,r0       \ tos-len
+   nxteq               \ Bail out if len=0
+
+   begin
+      ldrb   r0,[r1],#1
+      cmp    r0,r2
+      nxtne
+      decs   tos,1
+   = until
+c;
+
+\ Skip initial occurrences of lvalue, returning the residual length
+code lskip  ( adr len lvalue -- residue )
+   ldmia  sp!,{r0,r1}  \ r0-len r1-adr tos-lvalue
+   mov    r2,tos       \ r2-lvalue
+   movs   tos,r0       \ tos-len
+   nxteq               \ Bail out if len=0
+
+   begin
+      ldr    r0,[r1],#4
+      cmp    r0,r2
+      nxtne
+      decs   tos,4
+   = until
 c;
 
 \ code /link  ( -- /link )  psh tos,sp   mov tos,/link  c;
@@ -902,6 +964,9 @@ code /c*  ( n1 -- n1 )  c;
 code /w*  ( n1 -- n2 )  mov tos,tos,lsl #1  c;
 code /l*  ( n1 -- n2 )  mov tos,tos,lsl #2  c;
 code /n*  ( n1 -- n2 )  mov tos,tos,lsl #2  c;
+
+code /t*  ( n1 -- n2 )  add tos,tos,tos,lsl #1  c;
+code 3*   ( n1 -- n2 )  add tos,tos,tos,lsl #1  c;
 
 8 equ nvocs     \ Number of slots in the search order
 

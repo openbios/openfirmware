@@ -90,6 +90,7 @@ resident   dispose   0 0 set-transize   \ true is suppress-transient
 
 tag-file @ fclose  tag-file off
 
+h# 10.0000  dictionary-size !
 .( --- Saving basefw.dic --- )  cr " basefw.dic" $save-forth
 [then]
 

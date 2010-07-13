@@ -16,7 +16,7 @@ h#         0 value high
 
 headers
 : probe  ( -- )
-   0 sdram-size log&release
+   0 available-ram-size log&release
 
    0 0 encode-bytes                                   ( adr 0 )
    physavail  ['] make-phys-memlist  find-node        ( adr len  prev 0 )
