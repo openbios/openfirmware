@@ -72,25 +72,36 @@ d# 905 value resumeline  \ Configurable; should be set from args
    ." Wait for VGA ready timed out" cr
 ;
 
-: wait-dcon-mode  ( -- )
+: mark-time  ( -- start-time )  8 acpi-l@  ;
+: delta-ms  ( start-time -- elapsed-ms )
+   mark-time  swap -  d# 3,580 /    \ ACPI timer ticks at 3.57955 Mhz
+;
+: wait-dcon-mode  ( -- retry? )
    dcon-enable-irq
-   8 acpi-l@  d# 357,955 +   ( end-time )  \ 100 ms timeout
-   begin                            ( end-time )
-      dcon-irq?  if
-         dcon-disable-irq
-         dcon-stat@  dcon-clr-irq  2 =  if  \ DCONSTAT=10
-            drop exit   
-         then            
-         dcon-enable-irq
-      then
-      dup 8 acpi-l@ - 0<            ( end-time reached? )
-   until                            ( end-time )
+   mark-time                            ( start-time )
+   begin                                ( start-time )
+      dcon-irq?  if                     ( start-time )
+         dcon-disable-irq               ( start-time )
+         dcon-stat@  dcon-clr-irq  2 =  if  \ DCONSTAT=10  ( start-time )
+            \ Sometimes the DCON ack's the UNLOAD command sooner than it
+            \ should.  When that happens, it doesn't really capture the
+            \ new frame data.  The workaround is to detect the case and
+            \ retry the sequence.
+            delta-ms  d# 20 <           ( retry? )
+            exit   
+         then                           ( start-time )
+         dcon-enable-irq                ( start-time )
+      then                              ( start-time )
+      dup delta-ms  d# 100 >            ( start-time reached? )    \ 100 ms timeout
+   until                                ( start-time )
    drop
    dcon-disable-irq
    ." Timeout entering DCON mode" cr
+   \ We say false here because we don't want to retry; it probably won't succeed
+   false
 ;
 
-: set-source ( vga? -- )
+: set-source ( vga? -- )  \ true to unfreeze display, false to freeze it
    dup vga? =  if  drop exit  then  ( source )
    dup to vga?                      ( source )
    if
@@ -101,9 +112,14 @@ d# 905 value resumeline  \ Configurable; should be set from args
       d# 25 ms   \ Ensure that that DCON sees the DCONLOAD high
 \      display-on
    else
-      dcon-unload  \ Put the DCON in self-refresh mode
-      lock[ wait-dcon-mode ]unlock
-\      display-off
+      begin                             ( )
+         dcon-unload  \ Put the DCON in self-refresh mode
+         lock[ wait-dcon-mode ]unlock   ( retry? )
+\        display-off                    ( retry? )
+      while                             ( )
+         \ We got a false ack from the DCON so start over from LOAD state
+         dcon-load  d# 25 ms            ( )
+      repeat                            ( )
    then
 ;
 
