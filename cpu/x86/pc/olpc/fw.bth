@@ -175,8 +175,8 @@ fload ${BP}/ofw/elf/elfdebug.fth
 [then]
 
 \ Reboot and re-entry code
-fload ${BP}/cpu/x86/pc/reboot.fth	\ Restart the client program
-fload ${BP}/cpu/x86/pc/reenter.fth	\ Various entries into Forth
+fload ${BP}/ofw/core/reboot.fth		\ Restart the client program
+fload ${BP}/ofw/core/reenter.fth	\ Various entries into Forth
 
 headerless
 [ifdef] virtual-mode
