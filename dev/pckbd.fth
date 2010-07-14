@@ -257,17 +257,10 @@ previous definitions
 
 [ifdef] olpc
 [ifndef] demo-board
-: ?olpc-keyboard  ( -- )
-    " enable-intf" $call-parent
-    begin  d# 50 timed-read 0=  while
-       drop
-       true to keyboard-present?
-       exit
-    repeat
-    keyboard-present?  if  exit  then
-    kbd-reset 0= to keyboard-present?
-;
 
+[ifdef] trust-ec-keyboard
+: ?olpc-keyboard  ( -- )  true to keyboard-present?  ;
+[else]
 \ For the ENE keyboard controller we have to tell the EC to use
 \ a different internal mapping table.  OLPC switched from an
 \ ALPS to an ENE controller in late 2007.
@@ -284,7 +277,23 @@ previous definitions
    
    \ This looks like an ENE controller, so flip the mapping table
    h# f7 cmd
+;   
+
+: ?olpc-keyboard  ( -- )
+    " enable-intf" $call-parent
+    begin  d# 50 timed-read 0=  while
+       drop
+       true to keyboard-present?
+       exit
+    repeat
+    keyboard-present?  if  exit  then
+    kbd-reset 0= to keyboard-present?
+
+    \ Try resetting the keyboard
+    kbd-reset 0= to keyboard-present?
+    keyboard-present?  if  olpc-set-ec-keymap  then
 ;
+[then]
 
 fload ${BP}/cpu/x86/pc/olpc/keymap.fth
 [then]
@@ -423,7 +432,6 @@ create func-map  81 c,  8c c,
    clear-state
 [ifdef] ?olpc-keyboard
    ?olpc-keyboard
-   keyboard-present?  if  olpc-set-ec-keymap exit  then
 [else]
    get-initial-state
 

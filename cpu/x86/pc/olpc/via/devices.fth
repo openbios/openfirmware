@@ -121,6 +121,8 @@ end-support-package
 [then]
 : serial-enabled?  ( -- flag )  h# 8846 config-b@ h# 40 and 0<>  ;
 
+create trust-ec-keyboard
+
 fload ${BP}/dev/pci/isaall.fth
 \ We don't need a serial selftest because the serial port is internal only
 \ and the selftest turns off the diag device
