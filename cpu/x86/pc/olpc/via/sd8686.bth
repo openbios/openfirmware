@@ -5,22 +5,24 @@ build-now
 
 fload ${BP}/cpu/x86/pc/olpc/via/wlan-version.fth
 
+" macro: WLAN_FILE lbtf_sdio-${WLAN_VERSION}" expand$ eval
+
 " ${GET_WLAN}" expand$  nip  [if]
    " ${GET_WLAN}" expand$ $sh
 [else]
 " rm -f sd8686.bin sd8686_helper.bin" expand$ $sh
 
-" wget -q http://dev.laptop.org/pub/firmware/libertas/sd8686-${WLAN_VERSION}.bin" expand$ $sh
-" wget -q http://dev.laptop.org/pub/firmware/libertas/sd8686-${WLAN_VERSION}.bin.md5" expand$ $sh
-" md5sum -b sd8686-${WLAN_VERSION}.bin | cmp - sd8686-${WLAN_VERSION}.bin.md5" expand$ $sh
+" wget -q http://dev.laptop.org/pub/firmware/libertas/thinfirm/${WLAN_FILE}.bin" expand$ $sh
+" wget -q http://dev.laptop.org/pub/firmware/libertas/thinfirm/${WLAN_FILE}.bin.md5" expand$ $sh
+" md5sum ${WLAN_FILE}.bin | cmp - ${WLAN_FILE}.bin.md5" expand$ $sh
 
-" mv sd8686-${WLAN_VERSION}.bin sd8686.bin" expand$ $sh
+" mv ${WLAN_FILE}.bin sd8686.bin" expand$ $sh
 
 " wget -q http://dev.laptop.org/pub/firmware/libertas/sd8686_helper.bin" expand$ $sh
 " wget -q http://dev.laptop.org/pub/firmware/libertas/sd8686_helper.bin.md5" expand$ $sh
 " md5sum -b sd8686_helper.bin | cmp - sd8686_helper.bin.md5" expand$ $sh
 
-" rm sd8686-${WLAN_VERSION}.bin.md5 sd8686_helper.bin.md5" expand$ $sh
+" rm ${WLAN_FILE}.bin.md5 sd8686_helper.bin.md5" expand$ $sh
 [then]
 
 \ This forces the creation of a .log file, so we don't re-fetch

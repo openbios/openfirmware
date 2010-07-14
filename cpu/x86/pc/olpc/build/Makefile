@@ -36,7 +36,7 @@ build: ../../../${OS}/forth
 	@ln -sf ../../../${OS}/forth build
 
 clean:
-	rm -f *.dic *.log headers *~ *.elf *.di *.img builton.fth build *.rom ec.version olpc.version
+	rm -f *.dic *.log headers *~ *.elf *.di *.img builton.fth build *.rom *.version *.bin *.tag tags
 
 clean-all: clean
 	@make -C ../../../build clean

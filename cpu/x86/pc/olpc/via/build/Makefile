@@ -37,7 +37,7 @@ build: ${CPUDIR}/${OS}/forth
 	@ln -sf ${CPUDIR}/${OS}/forth build
 
 clean:
-	rm -f *.dic *.log headers *~ *.elf *.di *.img builton.fth build *.rom ec.version olpc.version
+	rm -f *.dic *.log headers *~ *.elf *.di *.img builton.fth build *.rom *.version *.bin *.tag tags
 
 clean-all: clean
 	@make -C ${CPUDIR}/build clean
