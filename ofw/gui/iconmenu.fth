@@ -155,7 +155,7 @@ headerless
    current-sq sq >help 2@ show-description
 ;
 
-[ifdef] x86-assembler
+[ifdef] 386-assembler
 code expand-rect  ( src dst w h --- )
    dx  pop              \ Height of source image in pixels
    4 [sp] edi xchg
