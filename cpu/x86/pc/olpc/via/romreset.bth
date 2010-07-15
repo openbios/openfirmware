@@ -248,9 +248,10 @@ long-offsets off
          ax jmp         \ Jump in 32-bit protected mode
       then
 
-      \ This only works if prep-rm has already been executed;
-      \ otherwise it will hang trying to re-enable SMM
-      fload ${BP}/cpu/x86/pc/olpc/via/startpcirestore.fth  \ SD host controller PCI BARs
+      \ These fixups are only needed by Windows, and some of them are bad for Linux
+      windows-mode-adr #)  ax  mov  ax ax or  0<>  if
+         fload ${BP}/cpu/x86/pc/olpc/via/startpcirestore.fth  \ SD host controller PCI BARs
+      then
 
       facs-adr h# c + #) ax mov  ax ax or  0<>  if
          \ Resume in real mode for ACPI operating systems

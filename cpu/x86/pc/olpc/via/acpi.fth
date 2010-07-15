@@ -290,6 +290,8 @@ here do-acpi-wake - constant /do-acpi-wake
 
    do-acpi-wake wake-adr  /do-acpi-wake  move
 
+   false windows-mode-adr !
+
 [ifdef] notdef
    \ Copy in the SSDT
    \ I suppose we could point to it in FLASH - if so don't compress it,
@@ -315,16 +317,10 @@ stand-init: ACPI tables
 
 defer more-platform-fixup  ' noop to more-platform-fixup
 : rm-platform-fixup  ( -- )
-[ifdef] Later
-Geode   xp-smbus-base h# f001   h# 5140.000b  3dup msr!  find-msr-entry  2!
-Geode   xp-smbus-base 1+  h# 10 isa-hdr  >hdr-value  l!
+   \ Disable the internal SD to prevent Windows from making it C:
+   h# f9 h# 6099 config-b!
+   true windows-mode-adr !  \ Tell the resume code to do it too
 
-   begin  sci-queue@  0=  until   \ Clean out the SCI queue
-   h# 20 acpi-w@  h# 20 acpi-w!   \ Ack outstanding events
-Geode   h# 4e sci-mask!                \ Include in the mask only events we care about
-
-Geode   0 h# 40 pm!                    \ Restore long delay for power-off button
-[then]
    more-platform-fixup
 ;
 
