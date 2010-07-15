@@ -1209,8 +1209,6 @@ warning !
       " ext:1" ntfs?  if
          " ext:0" set-hd-boot
          " sound-end" evaluate
-         \ Disable the internal SD to prevent Windows from making it C:
-         h# f9 h# 6099 config-b!
          true exit
       then
       false
