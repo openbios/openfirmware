@@ -32,7 +32,8 @@
 \              al 8000.1029 #) mov
 \              al 8000.2029 #) mov
 
-       f9 6099 config-wb  \ Two SD slots (correct for XP, wrong for Linux)
+        f9 6099 config-wb  \ Two SD slots (correct for XP, wrong for Linux)
+        03 6084 config-wb  \ D3 power state
 
 \       \ Enable System Management Mode, assuming that the in-memory data structures are already set up
 \       21  383 config-wb  \ Enable A/Bxxxx range as memory instead of frame buffer (with fxxxx region R/O)
