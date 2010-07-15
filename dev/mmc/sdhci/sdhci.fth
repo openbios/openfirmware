@@ -391,10 +391,9 @@ headers
 : deselect-card  ( -- )   0   h# 0700 0 cmd  ;  \ CMD7 - with null RCA
 : select-card    ( -- )    \ CMD7 R1b
    rca h# 071b 0 cmd
-   \ In principle this shouldn't be necessary, but the Via VX855's SD
-   \ host controller incorrectly sets the "data transfer complete" bit
-   \ during CMD7 with nonzero RCA, and if you don't clear it, subsequent
-   \ commands sometimes fail with either Command Timeout or CRC error.
+   \ Unlike Version 1.00, version 2.00 of the SD Host Controller
+   \ Specification says that Transfer Complete is set after R1b
+   \ commands, so we must clear that bit if it is set.
    isr@ isr!
 ;
 
@@ -408,7 +407,7 @@ headers
 
 : stop-transmission  ( -- )  rca  h# 0c1b 0 cmd  ;        \ CMD12 R1b UNTESTED
 
-: get-status ( -- status )  rca  h# 0d1a 0 cmd  response  ;  \ CMD13 R1 UNTESTED
+: get-status ( -- status )  rca  h# 0d1a 0 cmd  response  ;  \ CMD13 R1
 
 : go-inactive  ( -- )  rca  h# 0f00 0 cmd  ;         \ CMD15 - UNTESTED
 
@@ -620,16 +619,16 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
    else
       2 set-bus-width  \ acmd6 - bus width 4
       4-bit
-      /block set-blocklen  \ Cmd 16
+      /block set-blocklen  \ cmd16
 
       \ High speed didn't exist until SD spec version 1.10
       \ The low nibble of the first byte of SCR data is 0 for v1.0 and v1.01,
       \ 1 for v1.10, and 2 for v2.
-      get-scr c@  h# f and  0=  if  exit  then
+      get-scr c@  h# f and  0=  if  exit  then   \ acmd51
 
       \ Ask if high-speed is supported
-      h# 00ff.fff1 switch-function d# 13 + c@  2  and  if
-         h# 80ff.fff1 switch-function drop   \ Perform the switch
+      h# 00ff.fff1 switch-function d# 13 + c@  2  and  if   \ cmd6
+         h# 80ff.fff1 switch-function drop   \ Perform the switch  cmd6
          \ Bump the host controller clock
          host-high-speed  \ Changes the clock edge
          card-clock-50

@@ -2,10 +2,11 @@
 purpose: Check for auto-boot interruption
 
 \ This is similar to the ofw/core/countdwn.fth, except that you
-\ have to use a specific key from the main keyboard, because
-\ children tend to pound on the keyboard randomly.  If you have
-\ a serial console, you can still use any key, since only developers
-\ have serial consoles.
+\ have to use a specific key (escape) from the main keyboard, because
+\ children tend to pound on the keyboard randomly.  The serial
+\ console also requires the escape key, because the Windows kernel
+\ debugger might be connected to the serial port.  It sends (non-escape)
+\ characters periodically, and we don't want those to break into OFW.
 
 headerless
 : show-countdown   ( #seconds -- interrupted? )
@@ -16,7 +17,7 @@ headerless
          
          stdin @  if
             console-key?  if
-               console-key  h# 1b =  if
+               console-key  h# 1b =  if  \ 1b is ESC
                   \ consume extra escapes in case the user typed several
                   begin console-key? while console-key drop repeat
                   true unloop unloop exit
@@ -26,7 +27,7 @@ headerless
 [ifdef] ukey
          ukey? if
 \            ukey drop
-          ukey  h# 1b =  if
+          ukey  h# 1b =  if  \ 1b is ESC
             true unloop unloop exit
           then
          then
