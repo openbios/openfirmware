@@ -334,6 +334,7 @@ Method(_WAK, 1, Serialized)
     IF (LEqual(Arg0, 0x03))     //S3
     {
         Store(0x2,\_SB.PCI0.MEMC.FSEG)  //Set F Segment to Read only
+        // Notify(\_SB.PCI0, 0x00)
     }
 
     Or (Arg0, 0xB0,  Local0)
@@ -621,359 +622,359 @@ Scope(\_SB)
             }
         }//Device(USBD)
 
-        // SDIO Controller
-        Device (SDIO)
-        {
-            Name(_ADR, 0x000C0000)
+//        // SDIO Controller
+//        Device (SDIO)
+//        {
+//            Name(_ADR, 0x000C0000)
+//
+//            OperationRegion(RSDC,PCI_Config,0x00,0x100)
+//            Field(RSDC,ByteAcc,NoLock,Preserve){
+//                Offset(0x00),
+//                VID, 16,
+//                Offset(0x04),
+//                CMDR, 3,
+//            }
+//
+//            Method(_STA, 0)
+//            {
+//                If(LNotEqual(\_SB.PCI0.SDIO.VID, 0x1106)) {
+//                    Return(0x00)
+//                } Else {
+//                    If(LEqual(\_SB.PCI0.SDIO.CMDR, 0x00)) {
+//                        Return(0x0D)
+//                    } Else {
+//                        Return(0x0F)    // present, enabled, functioning
+//                    }
+//                }
+//            }
+//        }//Device(SDIO)
 
-            OperationRegion(RSDC,PCI_Config,0x00,0x100)
-            Field(RSDC,ByteAcc,NoLock,Preserve){
-                Offset(0x00),
-                VID, 16,
-                Offset(0x04),
-                CMDR, 3,
-            }
-
-            Method(_STA, 0)
-            {
-                If(LNotEqual(\_SB.PCI0.SDIO.VID, 0x1106)) {
-                    Return(0x00)
-                } Else {
-                    If(LEqual(\_SB.PCI0.SDIO.CMDR, 0x00)) {
-                        Return(0x0D)
-                    } Else {
-                        Return(0x0F)    // present, enabled, functioning
-                    }
-                }
-            }
-        }//Device(SDIO)
-
-        // SD $ MS Controller
-        Device (SDMS)
-        {
-            Name(_ADR, 0x000D0000)
-
-            OperationRegion(RSDM,PCI_Config,0x00,0x100)
-            Field(RSDM,ByteAcc,NoLock,Preserve){
-                Offset(0x00),
-                VID, 16,
-                Offset(0x04),
-                CMDR, 3,
-            }
-
-            Method(_STA, 0)
-            {
-                If(LNotEqual(\_SB.PCI0.SDMS.VID, 0x1106)) {
-                    Return(0x00)
-                } Else {
-                    If(LEqual(\_SB.PCI0.SDMS.CMDR, 0x00)) {
-                        Return(0x0D)
-                    } Else {
-                        Return(0x0F)    // present, enabled, functioning
-                    }
-                }
-            }
-        }//Device(SDMS)
-
-        // CE-ATA $ NF Controller(Card Boot)
-        Device(CENF)
-        {
-            Name(_ADR, 0x000E0000)
-
-            OperationRegion(RENF,PCI_Config,0x00,0x100)
-            Field(RENF,ByteAcc,NoLock,Preserve){
-                Offset(0x00),
-                VID, 16,
-                Offset(0x04),
-                CMDR, 3,
-            }
-
-            Method(_STA, 0)
-            {
-                If(LNotEqual(\_SB.PCI0.CENF.VID, 0x1106)) {
-                    Return(0x00)
-                } Else {
-                    If(LEqual(\_SB.PCI0.CENF.CMDR, 0x00)) {
-                        Return(0x0D)
-                    } Else {
-                        Return(0x0F)    // present, enabled, functioning
-                    }
-                }
-            }
-        }
-
-        Device(IDEC)
-        {
-
-            Name(_ADR, 0x000F0000)  //D15F0: a Pata device
-
-            Method(_STA,0,NotSerialized)    //Status of the Pata Device
-            {
-                If(LNot(LEqual(\_SB.PCI0.IDEC.VID,0x1106)))
-                {
-                    Return(0x00)    //device not exists
-                }
-                Else
-                {
-                    If(LEqual(\_SB.PCI0.IDEC.CMDR,0x00))
-                    {
-                        Return(0x0D)        //device exists & disable
-                    }
-                    Else
-                    {
-                        Return(0x0F)        //device exists & enable
-                    }
-                }
-            }
-            OperationRegion(SAPR,PCI_Config,0x00,0xC2)
-            Field(SAPR,ByteAcc,NoLock,Preserve)
-            {
-                VID,16,
-                Offset(0x04),
-                CMDR,3,
-                Offset(0x40),
-                        , 1,
-                EPCH, 1,                    // Enable Primary channel.
-                Offset(0x4A),
-                PSPT, 8,                    // IDE Timings, Primary Slave
-                PMPT, 8,                    // IDE Timings, Primary Master
-                Offset(0x52),
-                PSUT, 4,                    // Primary Slave UDMA Timing
-                PSCT, 1,                    // Primary Drive Slave Cabal Type
-                PSUE, 3,                    // Primary Slave UDMA Enable
-                PMUT, 4,                    // Primary Master UDMA Timing
-                PMCT, 1,                    // Primary Drive Master Cabal Type
-                PMUE, 3,                    // Primary Master UDMA Enable
-            }
-
-            Name(REGF,0x01)         //accessible OpRegion default
-            Method(_REG,2,NotSerialized)    // is PCI Config space accessible as OpRegion?
-            {
-                If(LEqual(Arg0,0x02))
-                {
-                    Store(Arg1,REGF)
-                }
-            }
-            /*
-            Name(TIM0,Package(0x04){
-                Package(){0x78,0xB4,0xF0,0x017F,0x0258},
-                Package(){0x20,0x22,0x33,0x47,0x5D},
-                Package(){0x78,0x50,0x3C,0x2D,0x1E,0x14,0x0F},
-                Package(){0x06,0x05,0x04,0x04,0x03,0x03,0x02,0x02,0x01,0x01,0x01,0x01,0x01,0x01,0x00}
-            })
-        */
-            Name(TIM0, Package()
-            {                               // Primary / Secondary channels timings
-                Package(){120, 180, 240, 383, 600},         // Timings in ns - Mode 4,3,2,1,0 defined from ATA spec.
-                Package(){0x20, 0x22, 0x33, 0x47, 0x5D },   // PIO Timing - Mode 4,3,2,1,0
-                Package(){4, 3, 2, 1, 0},                           // PIO mode (TIM0,0)
-                Package(){2, 1, 0, 0},                              // Multi-word DMA mode
-                Package(){120, 80, 60, 45, 30, 20, 15},         // Min UDMA Timings in ns
-                Package(){6,5,4,4,3,3,2,2,1,1,1,1,1,1,0},   // UDMA mode
-                Package(){0x0E, 8, 6, 4, 2, 1, 0},          // UDMA timing
-            })
-
-            Name(TMD0,Buffer(0x14){})
-            CreateDwordField(TMD0,0x00,PIO0)
-            CreateDwordField(TMD0,0x04,DMA0)
-            CreateDwordField(TMD0,0x08,PIO1)
-            CreateDwordField(TMD0,0x0C,DMA1)
-            CreateDwordField(TMD0,0x10,CHNF)
-
-            Name(GMPT, 0)           // Master PIO Timings
-            Name(GMUE, 0)           // Master UDMA enable
-            Name(GMUT, 0)           // Master UDMA Timings
-            Name(GSPT, 0)           // Slave PIO Timings
-            Name(GSUE, 0)           // Slave UDMA enable
-            Name(GSUT, 0)           // Slave UDMA Timings
-
-            Device(CHN0)    //Primary Channel: Pata device
-            {
-                Name(_ADR,0x00)
-
-                Method(_STA,0,NotSerialized)
-                {
-                    If(LNotEqual(\_SB.PCI0.IDEC.EPCH, 0x1))
-                    {
-                        Return(0x00)        //channel disable
-                    }
-                    Else
-                    {
-                        Return(0x0F)        //channel enable
-                    }
-               }
-                Method(_GTM,0,NotSerialized)        //Get Timing Mode
-                {
-                    Return(GTM(PMPT,PMUE,PMUT,PSPT,PSUE,PSUT))
-                }
-                Method(_STM, 3)                     // Set Timing PIO/DMA Mode
-                {
-                   Store(Arg0, TMD0)        // Copy Arg0 into TMD0 buffer
-                   Store(PMPT, GMPT)        // Master PIO Timings
-                   Store(PMUE, GMUE)        // Master UDMA enable
-                   Store(PMUT, GMUT)        // Master UDMA Timings
-                   Store(PSPT, GSPT)        // Slave PIO Timings
-                   Store(PSUE, GSUE)        // Slave UDMA enable
-                   Store(PSUT, GSUT)        // Slave UDMA Timings
-                   STM()
-                   Store(GMPT, PMPT)        // Master PIO Timings
-                   Store(GMUE, PMUE)        // Master UDMA enable
-                   Store(GMUT, PMUT)        // Master UDMA Timings
-                   Store(GSPT, PSPT)        // Slave PIO Timings
-                   Store(GSUE, PSUE)        // Slave UDMA enable
-                   Store(GSUT, PSUT)        // Slave UDMA Timings
-                }                           // end Method _STM
-
-                Device(DRV0)        //Master Device
-                {
-                    Name(_ADR,0x00) //0 indicates master drive
-                    Method(_GTF,0,NotSerialized)    //Get Task File: return a buffer of ATA command used to re-initialize the device
-                    {
-                            Return(GTF(0,PMUE,PMUT,PMPT))
-                    }
-                }
-                Device(DRV1)        //Slave Device
-                {
-                    Name(_ADR,0x01) //1 indicates slave drive
-                    Method(_GTF,0,NotSerialized)    //Get Task File: return a buffer of ATA command used to re-initialize the device
-                    {
-                            Return(GTF(0,PSUE,PSUT,PSPT))
-                    }
-                }
-            }
-
-            Method(GTM,6,Serialized)
-            {
-                Store(Ones,PIO0)    //default value: all bits set to 1
-                Store(Ones,PIO1)    //default value: all bits set to 1
-                Store(Ones,DMA0)    //default value: all bits set to 1
-                Store(Ones,DMA1)    //default value: all bits set to 1
-                Store(0x10,CHNF)    //default value: 0x10
-                If(REGF)
-                {
-                }
-                Else
-                {
-                    Return(TMD0)    //unable to setup PCI config space as opRegion;return default value
-                }
-                Store(Match(DeRefOf(Index(TIM0,0x01)),MEQ,Arg0,MTR,0x00,0x00),Local6)
-                If(LLess(Local6,Ones))
-                {
-                    Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x00)),Local6)),Local7)
-                    Store(Local7,DMA0)
-                    Store(Local7,PIO0)
-                }
-                Store(Match(DeRefOf(Index(TIM0,0x01)),MEQ,Arg3,MTR,0x00,0x00),Local6)
-                If(LLess(Local6,Ones))
-                {
-                    Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x00)),Local6)),Local7)
-                    Store(Local7,DMA1)
-                    Store(Local7,PIO1)
-                }
-                If(Arg1)
-                {
-                    Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x05)),Arg2)),Local5)
-                    Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x04)),Local5)),DMA0)
-                    Or(CHNF,0x01,CHNF)
-                }
-                If(Arg4)
-                {
-                    Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x05)),Arg5)),Local5)
-                    Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x04)),Local5)),DMA1)
-                    Or(CHNF,0x04,CHNF)
-                }
-                Return(TMD0)        //return timing mode
-            }
-
-            Method(STM, 0, Serialized)
-            {
-
-                If(REGF){}                  // PCI space not accessible
-                Else        {  Return(TMD0)  }
-
-                Store(0x00, GMUE)           // Master UDMA Disable
-                Store(0x00, GSUE)           // Slave UDMA Disable
-                Store(0x07, GMUT)           // Master UDMA Mode 0
-                Store(0x07, GSUT)           // Slave UDMA Mode 0
-
-                If(And(CHNF, 0x1))
-                {
-                    Store(Match(DeRefOf(Index(TIM0, 4)), MLE, DMA0, MTR,0,0), Local0)    // Get DMA mode
-                    Store(DeRefOf(Index(DeReFof(Index(TIM0, 6)), Local0)), GMUT)         // Timing bit mask 66Mhz
-                    Or(GMUE, 0x07, GMUE)                                    // Enable UltraDMA for Device 0
-                }
-                Else        // non - UDMA mode. Possible Multi word DMA
-                {
-                    If(Or(LEqual(PIO0,Ones), LEqual(PIO0,0)))
-                    {
-                        If(And(LLess(DMA0,Ones), LGreater(DMA0,0)))
-                        {
-                            Store(DMA0, PIO0)       // Make PIO0=DMA0
-                        }
-                    }
-                }
-
-                If(And(CHNF, 0x4))
-                {
-                    Store(Match(DeRefOf(Index(TIM0, 4)), MLE, DMA1, MTR,0,0), Local0)
-                    Store(DeRefOf(Index(DeReFof(Index(TIM0, 6)), Local0)), GSUT) // Timing bit mask 66Mhz
-                    Or(GSUE, 0x07, GSUE)    // Enable UltraDMA for Device 0
-                }
-                Else        // non - UDMA mode. Possible Multi word DMA
-                {
-                    If(Or(LEqual(PIO1, Ones), LEqual(PIO1,0)))
-                    {
-                        If(And(LLess(DMA1, Ones), LGreater(DMA1,0)))
-                        {
-                           Store(DMA1, PIO1)        // Make PIO1 = DMA1
-                        }
-                    }
-                }
-
-                And(Match(DeRefOf(Index(TIM0, 0)), MGE, PIO0, MTR,0,0), 0x3, Local0)
-                Store(DeRefOf(Index(DeReFof(Index(TIM0, 1)), Local0)), Local1)
-                Store(Local1, GMPT)
-
-                And(Match(DeRefOf(Index(TIM0, 0)), MGE, PIO1, MTR,0,0), 0x3, Local0)
-                Store(DeRefOf(Index(DeReFof(Index(TIM0, 1)), Local0)), Local1)
-                Store(Local1, GSPT)
-                Return(TMD0)
-            } // end Method STM
-
-            Method(GTF , 4 , Serialized)
-            {
-                Store(Buffer(7){0x03, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xEF}, Local1)
-                Store(Buffer(7){0x03, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xEF}, Local2)
-                CreateByteField(Local1, 1, Mode)            // PIO mode
-                CreateByteField(Local2, 1, UMOD)            // Ultra mode
-                CreateByteField(Local1, 5, PCHA)            // master or slave
-                CreateByteField(Local2, 5, UCHA)            // master or slave
-                And(Arg0,0x03,Local3)
-
-                If(Lequal(And(Local3,0x01),0x01))
-                {
-                    Store(0xB0,PCHA)        // drive 1
-                    Store(0xB0,UCHA)        // drive 1
-                }
-
-                If(Arg1)
-                {
-                    Store(DeRefOf(Index(DeReFof(Index(TIM0, 5)), Arg2)), UMOD)     //Programming DMA Mode
-                    Or( UMOD, 0x40, UMOD)
-                }
-                Else
-                {   // non-UltraDMA
-                    Store(Match(DeRefOf(Index(TIM0, 1)), MEQ, Arg3, MTR,0,0), Local0)
-                    Or(0x20, DeRefOf(Index(DeReFof(Index(TIM0, 3)), Local0)), UMOD)
-                }
-
-                Store(Match(DeRefOf(Index(TIM0, 1)), MEQ, Arg3, MTR,0,0), Local0)
-                Or(0x08, DeRefOf(Index(DeReFof(Index(TIM0, 2)), Local0)), Mode)
-                Concatenate(Local1, Local2, Local6)
-                Return(Local6)
-
-            } // end of GTF
-        }
+//        // SD $ MS Controller
+//        Device (SDMS)
+//        {
+//            Name(_ADR, 0x000D0000)
+//
+//            OperationRegion(RSDM,PCI_Config,0x00,0x100)
+//            Field(RSDM,ByteAcc,NoLock,Preserve){
+//                Offset(0x00),
+//                VID, 16,
+//                Offset(0x04),
+//                CMDR, 3,
+//            }
+//
+//            Method(_STA, 0)
+//            {
+//                If(LNotEqual(\_SB.PCI0.SDMS.VID, 0x1106)) {
+//                    Return(0x00)
+//                } Else {
+//                    If(LEqual(\_SB.PCI0.SDMS.CMDR, 0x00)) {
+//                        Return(0x0D)
+//                    } Else {
+//                        Return(0x0F)    // present, enabled, functioning
+//                    }
+//                }
+//            }
+//        }//Device(SDMS)
+//
+//        // CE-ATA $ NF Controller(Card Boot)
+//        Device(CENF)
+//        {
+//            Name(_ADR, 0x000E0000)
+//
+//            OperationRegion(RENF,PCI_Config,0x00,0x100)
+//            Field(RENF,ByteAcc,NoLock,Preserve){
+//                Offset(0x00),
+//                VID, 16,
+//                Offset(0x04),
+//                CMDR, 3,
+//            }
+//
+//            Method(_STA, 0)
+//            {
+//                If(LNotEqual(\_SB.PCI0.CENF.VID, 0x1106)) {
+//                    Return(0x00)
+//                } Else {
+//                    If(LEqual(\_SB.PCI0.CENF.CMDR, 0x00)) {
+//                        Return(0x0D)
+//                    } Else {
+//                        Return(0x0F)    // present, enabled, functioning
+//                    }
+//                }
+//            }
+//        }
+//
+//        Device(IDEC)
+//        {
+//
+//            Name(_ADR, 0x000F0000)  //D15F0: a Pata device
+//
+//            Method(_STA,0,NotSerialized)    //Status of the Pata Device
+//            {
+//                If(LNot(LEqual(\_SB.PCI0.IDEC.VID,0x1106)))
+//                {
+//                    Return(0x00)    //device not exists
+//                }
+//                Else
+//                {
+//                    If(LEqual(\_SB.PCI0.IDEC.CMDR,0x00))
+//                    {
+//                        Return(0x0D)        //device exists & disable
+//                    }
+//                    Else
+//                    {
+//                        Return(0x0F)        //device exists & enable
+//                    }
+//                }
+//            }
+//            OperationRegion(SAPR,PCI_Config,0x00,0xC2)
+//            Field(SAPR,ByteAcc,NoLock,Preserve)
+//            {
+//                VID,16,
+//                Offset(0x04),
+//                CMDR,3,
+//                Offset(0x40),
+//                        , 1,
+//                EPCH, 1,                    // Enable Primary channel.
+//                Offset(0x4A),
+//                PSPT, 8,                    // IDE Timings, Primary Slave
+//                PMPT, 8,                    // IDE Timings, Primary Master
+//                Offset(0x52),
+//                PSUT, 4,                    // Primary Slave UDMA Timing
+//                PSCT, 1,                    // Primary Drive Slave Cabal Type
+//                PSUE, 3,                    // Primary Slave UDMA Enable
+//                PMUT, 4,                    // Primary Master UDMA Timing
+//                PMCT, 1,                    // Primary Drive Master Cabal Type
+//                PMUE, 3,                    // Primary Master UDMA Enable
+//            }
+//
+//            Name(REGF,0x01)         //accessible OpRegion default
+//            Method(_REG,2,NotSerialized)    // is PCI Config space accessible as OpRegion?
+//            {
+//                If(LEqual(Arg0,0x02))
+//                {
+//                    Store(Arg1,REGF)
+//                }
+//            }
+//            /*
+//            Name(TIM0,Package(0x04){
+//                Package(){0x78,0xB4,0xF0,0x017F,0x0258},
+//                Package(){0x20,0x22,0x33,0x47,0x5D},
+//                Package(){0x78,0x50,0x3C,0x2D,0x1E,0x14,0x0F},
+//                Package(){0x06,0x05,0x04,0x04,0x03,0x03,0x02,0x02,0x01,0x01,0x01,0x01,0x01,0x01,0x00}
+//            })
+//        */
+//            Name(TIM0, Package()
+//            {                               // Primary / Secondary channels timings
+//                Package(){120, 180, 240, 383, 600},         // Timings in ns - Mode 4,3,2,1,0 defined from ATA spec.
+//                Package(){0x20, 0x22, 0x33, 0x47, 0x5D },   // PIO Timing - Mode 4,3,2,1,0
+//                Package(){4, 3, 2, 1, 0},                           // PIO mode (TIM0,0)
+//                Package(){2, 1, 0, 0},                              // Multi-word DMA mode
+//                Package(){120, 80, 60, 45, 30, 20, 15},         // Min UDMA Timings in ns
+//                Package(){6,5,4,4,3,3,2,2,1,1,1,1,1,1,0},   // UDMA mode
+//                Package(){0x0E, 8, 6, 4, 2, 1, 0},          // UDMA timing
+//            })
+//
+//            Name(TMD0,Buffer(0x14){})
+//            CreateDwordField(TMD0,0x00,PIO0)
+//            CreateDwordField(TMD0,0x04,DMA0)
+//            CreateDwordField(TMD0,0x08,PIO1)
+//            CreateDwordField(TMD0,0x0C,DMA1)
+//            CreateDwordField(TMD0,0x10,CHNF)
+//
+//            Name(GMPT, 0)           // Master PIO Timings
+//            Name(GMUE, 0)           // Master UDMA enable
+//            Name(GMUT, 0)           // Master UDMA Timings
+//            Name(GSPT, 0)           // Slave PIO Timings
+//            Name(GSUE, 0)           // Slave UDMA enable
+//            Name(GSUT, 0)           // Slave UDMA Timings
+//
+//            Device(CHN0)    //Primary Channel: Pata device
+//            {
+//                Name(_ADR,0x00)
+//
+//                Method(_STA,0,NotSerialized)
+//                {
+//                    If(LNotEqual(\_SB.PCI0.IDEC.EPCH, 0x1))
+//                    {
+//                        Return(0x00)        //channel disable
+//                    }
+//                    Else
+//                    {
+//                        Return(0x0F)        //channel enable
+//                    }
+//               }
+//                Method(_GTM,0,NotSerialized)        //Get Timing Mode
+//                {
+//                    Return(GTM(PMPT,PMUE,PMUT,PSPT,PSUE,PSUT))
+//                }
+//                Method(_STM, 3)                     // Set Timing PIO/DMA Mode
+//                {
+//                   Store(Arg0, TMD0)        // Copy Arg0 into TMD0 buffer
+//                   Store(PMPT, GMPT)        // Master PIO Timings
+//                   Store(PMUE, GMUE)        // Master UDMA enable
+//                   Store(PMUT, GMUT)        // Master UDMA Timings
+//                   Store(PSPT, GSPT)        // Slave PIO Timings
+//                   Store(PSUE, GSUE)        // Slave UDMA enable
+//                   Store(PSUT, GSUT)        // Slave UDMA Timings
+//                   STM()
+//                   Store(GMPT, PMPT)        // Master PIO Timings
+//                   Store(GMUE, PMUE)        // Master UDMA enable
+//                   Store(GMUT, PMUT)        // Master UDMA Timings
+//                   Store(GSPT, PSPT)        // Slave PIO Timings
+//                   Store(GSUE, PSUE)        // Slave UDMA enable
+//                   Store(GSUT, PSUT)        // Slave UDMA Timings
+//                }                           // end Method _STM
+//
+//                Device(DRV0)        //Master Device
+//                {
+//                    Name(_ADR,0x00) //0 indicates master drive
+//                    Method(_GTF,0,NotSerialized)    //Get Task File: return a buffer of ATA command used to re-initialize //////the device
+//                    {
+//                            Return(GTF(0,PMUE,PMUT,PMPT))
+//                    }
+//                }
+//                Device(DRV1)        //Slave Device
+//                {
+//                    Name(_ADR,0x01) //1 indicates slave drive
+//                    Method(_GTF,0,NotSerialized)    //Get Task File: return a buffer of ATA command used to re-initialize //the device
+//                    {
+//                            Return(GTF(0,PSUE,PSUT,PSPT))
+//                    }
+//                }
+//            }
+//
+//            Method(GTM,6,Serialized)
+//            {
+//                Store(Ones,PIO0)    //default value: all bits set to 1
+//                Store(Ones,PIO1)    //default value: all bits set to 1
+//                Store(Ones,DMA0)    //default value: all bits set to 1
+//                Store(Ones,DMA1)    //default value: all bits set to 1
+//                Store(0x10,CHNF)    //default value: 0x10
+//                If(REGF)
+//                {
+//                }
+//                Else
+//                {
+//                    Return(TMD0)    //unable to setup PCI config space as opRegion;return default value
+//                }
+//                Store(Match(DeRefOf(Index(TIM0,0x01)),MEQ,Arg0,MTR,0x00,0x00),Local6)
+//                If(LLess(Local6,Ones))
+//                {
+//                    Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x00)),Local6)),Local7)
+//                    Store(Local7,DMA0)
+//                    Store(Local7,PIO0)
+//                }
+//                Store(Match(DeRefOf(Index(TIM0,0x01)),MEQ,Arg3,MTR,0x00,0x00),Local6)
+//                If(LLess(Local6,Ones))
+//                {
+//                    Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x00)),Local6)),Local7)
+//                    Store(Local7,DMA1)
+//                    Store(Local7,PIO1)
+//                }
+//                If(Arg1)
+//                {
+//                    Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x05)),Arg2)),Local5)
+//                    Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x04)),Local5)),DMA0)
+//                    Or(CHNF,0x01,CHNF)
+//                }
+//                If(Arg4)
+//                {
+//                    Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x05)),Arg5)),Local5)
+//                    Store(DeRefOf(Index(DeRefOf(Index(TIM0,0x04)),Local5)),DMA1)
+//                    Or(CHNF,0x04,CHNF)
+//                }
+//                Return(TMD0)        //return timing mode
+//            }
+//
+//            Method(STM, 0, Serialized)
+//            {
+//
+//                If(REGF){}                  // PCI space not accessible
+//                Else        {  Return(TMD0)  }
+//
+//                Store(0x00, GMUE)           // Master UDMA Disable
+//                Store(0x00, GSUE)           // Slave UDMA Disable
+//                Store(0x07, GMUT)           // Master UDMA Mode 0
+//                Store(0x07, GSUT)           // Slave UDMA Mode 0
+//
+//                If(And(CHNF, 0x1))
+//                {
+//                    Store(Match(DeRefOf(Index(TIM0, 4)), MLE, DMA0, MTR,0,0), Local0)    // Get DMA mode
+//                    Store(DeRefOf(Index(DeReFof(Index(TIM0, 6)), Local0)), GMUT)         // Timing bit mask 66Mhz
+//                    Or(GMUE, 0x07, GMUE)                                    // Enable UltraDMA for Device 0
+//                }
+//                Else        // non - UDMA mode. Possible Multi word DMA
+//                {
+//                    If(Or(LEqual(PIO0,Ones), LEqual(PIO0,0)))
+//                    {
+//                        If(And(LLess(DMA0,Ones), LGreater(DMA0,0)))
+//                        {
+//                            Store(DMA0, PIO0)       // Make PIO0=DMA0
+//                        }
+//                    }
+//                }
+//
+//                If(And(CHNF, 0x4))
+//                {
+//                    Store(Match(DeRefOf(Index(TIM0, 4)), MLE, DMA1, MTR,0,0), Local0)
+//                    Store(DeRefOf(Index(DeReFof(Index(TIM0, 6)), Local0)), GSUT) // Timing bit mask 66Mhz
+//                    Or(GSUE, 0x07, GSUE)    // Enable UltraDMA for Device 0
+//                }
+//                Else        // non - UDMA mode. Possible Multi word DMA
+//                {
+//                    If(Or(LEqual(PIO1, Ones), LEqual(PIO1,0)))
+//                    {
+//                        If(And(LLess(DMA1, Ones), LGreater(DMA1,0)))
+//                        {
+//                           Store(DMA1, PIO1)        // Make PIO1 = DMA1
+//                        }
+//                    }
+//                }
+//
+//                And(Match(DeRefOf(Index(TIM0, 0)), MGE, PIO0, MTR,0,0), 0x3, Local0)
+//                Store(DeRefOf(Index(DeReFof(Index(TIM0, 1)), Local0)), Local1)
+//                Store(Local1, GMPT)
+//
+//                And(Match(DeRefOf(Index(TIM0, 0)), MGE, PIO1, MTR,0,0), 0x3, Local0)
+//                Store(DeRefOf(Index(DeReFof(Index(TIM0, 1)), Local0)), Local1)
+//                Store(Local1, GSPT)
+//                Return(TMD0)
+//            } // end Method STM
+//
+//            Method(GTF , 4 , Serialized)
+//            {
+//                Store(Buffer(7){0x03, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xEF}, Local1)
+//                Store(Buffer(7){0x03, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xEF}, Local2)
+//                CreateByteField(Local1, 1, Mode)            // PIO mode
+//                CreateByteField(Local2, 1, UMOD)            // Ultra mode
+//                CreateByteField(Local1, 5, PCHA)            // master or slave
+//                CreateByteField(Local2, 5, UCHA)            // master or slave
+//                And(Arg0,0x03,Local3)
+//
+//                If(Lequal(And(Local3,0x01),0x01))
+//                {
+//                    Store(0xB0,PCHA)        // drive 1
+//                    Store(0xB0,UCHA)        // drive 1
+//                }
+//
+//                If(Arg1)
+//                {
+//                    Store(DeRefOf(Index(DeReFof(Index(TIM0, 5)), Arg2)), UMOD)     //Programming DMA Mode
+//                    Or( UMOD, 0x40, UMOD)
+//                }
+//                Else
+//                {   // non-UltraDMA
+//                    Store(Match(DeRefOf(Index(TIM0, 1)), MEQ, Arg3, MTR,0,0), Local0)
+//                    Or(0x20, DeRefOf(Index(DeReFof(Index(TIM0, 3)), Local0)), UMOD)
+//                }
+//
+//                Store(Match(DeRefOf(Index(TIM0, 1)), MEQ, Arg3, MTR,0,0), Local0)
+//                Or(0x08, DeRefOf(Index(DeReFof(Index(TIM0, 2)), Local0)), Mode)
+//                Concatenate(Local1, Local2, Local6)
+//                Return(Local6)
+//
+//            } // end of GTF
+//        }
 
         Device(USB1)        {
             Name(_ADR,0x00100000)   //Address+function.
