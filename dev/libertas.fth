@@ -719,6 +719,7 @@ true value got-indicator?
    outbuf-wait drop
 ;
 0 value ap-mode?
+: set-fullmac-mode  ( -- )  3 set-mode  false to ap-mode?  ;  \ Thin firmware only
 : set-ap-mode  ( -- )  2 set-mode  true to ap-mode?  ;  \ Thin firmware only
 : set-sta-mode  ( -- )  1 set-mode  false to ap-mode?  ;  \ Thin firmware only
 : set-passive-mode  ( -- )  0 set-mode  false to ap-mode?  ;  \ Thin firmware only
@@ -771,12 +772,16 @@ true value got-indicator?
    outbuf-wait drop
 ;
 
-: set-radio-control  ( -- )
+: (set-radio-control)  ( arg -- )
    4 h# 1c ( CMD_802_11_RADIO_CONTROL ) prepare-cmd
    ACTION_SET +xw
-   preamble 1 or +xw	\ Preamble, RF on
+   ( arg ) +xw
    outbuf-wait drop
-;
+;   
+
+\ Preamble, RF on
+: set-radio-control ( -- )  preamble 1 or (set-radio-control)  ;
+: radio-off  ( -- )  0 (set-radio-control)  ;
 
 : (set-bss-type)  ( bsstype -- ok? )
    6 d# 128 + h# 16 ( CMD_802_11_SNMP_MIB ) prepare-cmd
@@ -1367,6 +1372,8 @@ instance variable mesh-param
 : (associate)  ( ch ssid$ target-mac$ -- ok? )
    save-associate-params
 
+   set-radio-control			\ In case of changes to preamble
+
    h# 50 ( CMD_802_11_ASSOCIATE ) start-cmd
    resp-wait-long to resp-wait
 
@@ -1452,6 +1459,8 @@ instance defer mesh-default-modes
 ;
 ' nandcast-mesh-modes to mesh-default-modes
 
+\ The supplicant package invokes this via call-parent after setting up
+\ various parameters via methods like set-atim .
 : associate  ( ch ssid$ target-mac$ -- ok? )
    2over  " olpc-mesh" $=  if       ( ch ssid$ target-mac$ )
       2drop 2drop mesh-start 0=     ( ok? )
@@ -1587,6 +1596,20 @@ d# 1600 constant /packet-buf
    r> set-tx-ctrl
 ;
 
+\ adr len is the BSSID (MAC ADDRESS) of the wlan when acting as an access point.
+: set-bssid  ( adr len -- )
+   7 h# cd  ( CMD_802_11_SET_MODE ) prepare-cmd  ( adr len )
+   +x$                                           ( )
+   1 +xb    \ activate                           ( )
+   outbuf-wait drop
+;
+: deactivate-bssid  ( -- )
+   7 h# cd  ( CMD_802_11_SET_MODE ) prepare-cmd  ( adr len )
+   " "(00 00 00 00 00 00)" +x$                   ( )
+   0 +xb    \ deactivate                         ( )
+   outbuf-wait drop
+;
+
 \ Howto set up access point:
 \   ok setenv wlan-fw u:\usb8388t.bin       \ Thin firmware
 \   ok select /wlan:force
@@ -1595,7 +1618,7 @@ d# 1600 constant /packet-buf
 : start-ap  ( channel ssid$ -- )
    rot to channel   ( ssid$ )
    to /ssid         ( ssid-adr )
-   ssid /ssid move  ( )
+   ssid$ move       ( )
    set-boot2-from-usb
    marvel-get-mac-address drop
    set-mac-control
@@ -1605,13 +1628,22 @@ d# 1600 constant /packet-buf
    marvel-set-mac-address
    send-deauth
    make-beacon
+   mac-adr$ set-bssid
    d# 100 1 set-beacon
 ;
-\ This is a bit heavy-handed, but I don't know a more precise recipe
+
 : stop-ap  ( -- )
-   ds-not-ready  to driver-state  \ Forces firmware reload on next open
-   reset-host-bus                 \ Primes module to accept new firmware
-   false to ap-mode?
+   radio-off
+   0 0 set-beacon
+   set-fullmac-mode
+   deactivate-bssid
+   4 set-preamble  set-radio-control
+
+\ This is a heavy-handed way to force the device back into baseline state
+\ The recipe above is nicer.
+\   ds-not-ready  to driver-state  \ Forces firmware reload on next open
+\   reset-host-bus                 \ Primes module to accept new firmware
+\   false to ap-mode?
 ;
 
 : get-log  ( -- )
