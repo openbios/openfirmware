@@ -56,6 +56,20 @@ c;
    sha-buf h# 20  2dup lbflips
 ;
 
+dev /cpu
+warning off
+: selftest  ( -- )
+   h# 100  0  do  i  load-base i +  c!  loop
+   load-base h# 100 sha-256    ( adr len )
+   " "(40 af f2 e9 d2 d8 92 2e 47 af d4 64 8e 69 67 49 71 58 78 5f bd 1d a8 70 e7 11 02 66 bf 94 48 80)"
+   $=  0=  if
+      ." The CPU's cryptographic hardware is broken" cr  true exit
+   then
+   selftest
+;
+warning on
+dend
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks
 \ 
