@@ -185,10 +185,10 @@ true value check-hash?
 
    ?get-crc                              ( eblock# hashname$ hash$ r: comprlen )
 
-   2over  " fa43239bcee7b97ca62f007cc68487560a39e19f74f3dde7486db3f98df8e471" $=  if  ( eblock# hashname$ hash$ r: comprlen)
-      r> skip-zdata                         ( eblock# hashname$ hash$ )
-      2drop 2drop                           ( eblock# )
-   else                                     ( eblock# hashname$ hash$ )
+\  2dup  " fa43239bcee7b97ca62f007cc68487560a39e19f74f3dde7486db3f98df8e471" $=  if  ( eblock# hashname$ hash$ r: comprlen)
+\     r> skip-zdata                         ( eblock# hashname$ hash$ )
+\     2drop 2drop                           ( eblock# )
+\  else                                     ( eblock# hashname$ hash$ )
       r> get-zdata                          ( eblock# hashname$ hash$ )
       ?check-crc                            ( eblock# hashname$ hash$ )
 
@@ -204,7 +204,7 @@ true value check-hash?
 \   data-buffer over nand-pages/block *  nand-pages/block  " write-blocks" $call-nand  ( eblock# #written )
 \   nand-pages/block  <>  " Write error" ?nand-abort   ( eblock# )
       swap-buffers                          ( eblock# )
-   then
+\  then
 
    dup to last-eblock#                   ( eblock# )
    show-written                          ( )
