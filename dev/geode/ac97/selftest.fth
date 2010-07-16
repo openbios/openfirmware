@@ -18,14 +18,19 @@ h# 808 value rlevel
    d# 250 ms    \ Settling time for DC offset filter
 ;
 
+\ We record in stereo even thought there is probably only one mic.
+\ For some systems (e.g. AD1888 AC97 CODEC on XO-1), the data from the one
+\ mic appears in both left and right channels.  For others (e.g.
+\ Conexant HDaudio CODEC on XO-1.5), the mic data appears in only the
+\ left channel.  We take care of that later in "mic-test".
 : record  ( -- )
-   open-in  establish-level
+   open-in  stereo  establish-level
    record-base  record-len  audio-in drop
    close-in
 ;
 
 : play  ( -- )
-   open-out
+   open-out  stereo
    record-base  record-len  audio-out drop  write-done
 ;
 
@@ -169,11 +174,22 @@ here tone-freqs - /n /  constant #tones
    d# -9 set-volume  stereo play
 ;
 
+\ Duplicate left channel data into the right channel
+: copy-left-to-right  ( adr len -- )
+   bounds  ?do  i w@  i wa1+ w!  /l +loop
+;
+
+\ The recording data format is stereo, but usually there is only one mic.
+\ Depending on the CODEC used, the right channel of the recording is either
+\ the same as the left or quiet.  In this test, we use copy-left-to-right
+\ to propagate the left input into both channels for playback.
+
 : mic-test  ( -- )
    ." Recording ..." cr
-   mono record
+   record
+   record-base record-len copy-left-to-right
    ." Playing ..." cr
-   d# -3 set-volume  mono play
+   d# -3 set-volume  play
 ;
 
 : selftest  ( -- error? )
