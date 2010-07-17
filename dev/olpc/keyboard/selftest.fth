@@ -77,6 +77,19 @@ d#  40 constant button-h
 ;
 : make-button  ( x y -- )  button-w button-h (make-key)  ;
 
+: make-buttons
+   d#   80 d#  30 make-button  \ Rocker up    65
+   d#   30 d#  80 make-button  \ Rocker left  67
+   d#  130 d#  80 make-button  \ Rocker right 68
+   d#   80 d# 130 make-button  \ Rocker down  66
+   d#   80 d# 230 make-button  \ Rotate       69
+
+   d# 1080 d#  30 make-button  \ O            e0 65
+   d# 1030 d#  80 make-button  \ square       e0 67
+   d# 1130 d#  80 make-button  \ check        e0 68
+   d# 1080 d# 130 make-button  \ X            e0 66
+;
+
 : make-keys1  ( -- )
    0 to #keys
    top-key-row
@@ -103,6 +116,8 @@ d#  40 constant button-h
    3 0  do  make-single-key  loop
    make-space-key
    5 0  do  make-single-key  loop
+
+   make-buttons
 ;
 : make-narrower-key  ( -- )  d# 65 make-key&gap  ;
 : make-wider-key  ( -- )  d# 83 make-key&gap  ;
@@ -134,18 +149,8 @@ d#  40 constant button-h
    make-wider-key make-wider-key make-narrower-key  make-wider-key  \ fn hand \ alt
    d# 330 make-key&gap  \ space
    7 0  do  d# 60 make-key&gap  loop  \ altgr,+,",left,down,up,right
-;
-: make-buttons
-   d#   80 d#  30 make-button  \ Rocker up    65
-   d#   30 d#  80 make-button  \ Rocker left  67
-   d#  130 d#  80 make-button  \ Rocker right 68
-   d#   80 d# 130 make-button  \ Rocker down  66
-   d#   80 d# 230 make-button  \ Rotate       69
 
-   d# 1080 d#  30 make-button  \ O            e0 65
-   d# 1030 d#  80 make-button  \ square       e0 67
-   d# 1130 d#  80 make-button  \ check        e0 68
-   d# 1080 d# 130 make-button  \ X            e0 66
+   make-buttons
 ;
 
 0 [if]
@@ -223,25 +228,18 @@ create all-keys-bitmap2
 ff c, ff c, ff c, 00 c, ff c, ff c, ff c, ff c,
 ff c, ff c, 3f c, 00 c, 00 c, 00 c, 00 c, 00 c,
 
-: all-keys-bitmap  ( -- adr )  keyboard-type 2 =  if  all-keys-bitmap2  else  all-keys-bitmap1  then  ;
-: funny-map  ( -- adr )  keyboard-type 2 =  if  funny-map2  else  funny-map1  then  ;
-
+: all-tested?0  ( -- flag )  \ Just buttons
+   key-bitmap w@  h# 1ff and  h# 1ff =
+;
+: all-tested?1  ( -- flag )
+   key-bitmap @ funny-map1 and key-bitmap !
+   key-bitmap  all-keys-bitmap1  #key-bytes comp 0=
+;
+: all-tested?2  ( -- flag )
+   key-bitmap @ funny-map2 and key-bitmap !
+   key-bitmap  all-keys-bitmap2  #key-bytes comp 0=
+;
 defer all-tested?
-: all-keys-tested?  ( -- flag )
-   key-bitmap @ funny-map and key-bitmap !
-   key-bitmap  all-keys-bitmap  #key-bytes comp 0=
-;
-' all-keys-tested? to all-tested?
-
-: all-buttons-tested?1  ( -- flag )
-   key-bitmap h# b + w@  h# 3fe and  h# 3fe =
-;
-: all-buttons-tested?2  ( -- flag )
-   key-bitmap h# 9 + w@  h# 3fe0 and  h# 3fe0 =
-;
-: all-buttons-tested?  ( -- flag )
-   keyboard-type 2 =  if  all-buttons-tested?1  else  all-buttons-tested?2  then
-;
 
 \ This table is indexed by the (unescaped) scanset1 code, giving
 \ an IBM physical key number.
@@ -343,10 +341,23 @@ hex
    if  e0-scan1>ibm#  else  (scan1>ibm#) + c@  then
 ;
 
+decimal
+: ,game-buttons  ( -- )
+   \ Game buttons - key#s 0x59 - 0x61  (these IBM#s are made up just for this program)
+   150 c, 151 c, 152 c, 153 c,        \ Rocker up, left, right, down
+   154 c,                             \ Rotate
+   156 c, 157 c, 158 c, 159 c,        \ Game O, square, check, X
+;
+hex
+
 \ "key#" is a physical location on the screen
 \ "ibm#" is the key number as shown on the original IBM PC documents
 \ These keynum values are from the ALPS spec "CL1-matrix-20060920.pdf"
 decimal
+create ibm#s0
+   ,game-buttons
+here ibm#s0 - constant /ibm#s0
+
 create ibm#s1
    \ Top row, key#s 0x00-0x18
    110 c, 135 c,                                     \ ESC, view source
@@ -370,17 +381,12 @@ create ibm#s1
    \ Function row - key#s 0x50 - 0x58
    59 c, 127 c, 60 c, 61 c, 62 c, 128 c, 79 c, 84 c, 89 c,  \ Fn, lgrab, alt, space, altgr, rgrab, left, down, right
 
-   \ Game buttons - key#s 0x59 - 0x61  (these IBM#s are made up just for this program)
-   150 c, 151 c, 152 c, 153 c,        \ Rocker up, left, right, down
-   154 c,                             \ Rotate
-   156 c, 157 c, 158 c, 159 c,        \ Game O, square, check, X
+   ,game-buttons
 here ibm#s1 - constant /ibm#s1
-hex
 
 \ "key#" is a physical location on the screen
 \ "ibm#" is the key number as shown on the original IBM PC documents
 \ The actual #s for F6 and F7 are 146 and 147, but the EC does some magic
-decimal
 create ibm#s2
    \ Top row, key#s 0x00-0x18
    110 c,                                            \ ESC
@@ -404,16 +410,13 @@ create ibm#s2
    \ Function row - fn grab \ alt space altgr   ..  left down up right  29 is really 152, 13>153, 41>154
    59 c, 127 c, 29 c, 60 c, 61 c, 62 c, 13 c, 41 c, 79 c, 84 c, 83 c, 89 c,
 
-   \ Game buttons - key#s 0x59 - 0x61  (these IBM#s are made up just for this program)
-   150 c, 151 c, 152 c, 153 c,        \ Rocker up, left, right, down
-   154 c,                             \ Rotate
-   156 c, 157 c, 158 c, 159 c,        \ Game O, square, check, X
+   ,game-buttons
 here ibm#s2 - constant /ibm#s2
 hex
 
-: make-keys  ( -- )  keyboard-type 2 =  if  make-keys2  else  make-keys1  then  ;
-: ibm#s  ( -- adr )  keyboard-type 2 =  if  ibm#s2  else  ibm#s1  then  ;
-: /ibm#s  ( -- len )  keyboard-type 2 =  if  /ibm#s2  else  /ibm#s1  then  ;
+defer make-keys  ( -- )
+defer ibm#s      ( -- adr )
+defer /ibm#s     ( -- n )
 
 : ibm#>key#  ( ibm# -- true | key# false )
    /ibm#s 0  ?do   ( ibm# )
@@ -518,7 +521,7 @@ h# ffff constant kbd-bc
 : draw-keyboard  ( -- )
    kbd-bc fill-screen
    #keys 0  ?do  i key-up  loop
-   0 d# 13 at-xy ." X"
+   final-test?  smt-test?  or  0=  if  0 d# 13 at-xy ." X"  then
 ;
 
 false value verbose?
@@ -578,32 +581,34 @@ false value verbose?
 : toss-keys  ( -- )  begin  key?  while  key drop  repeat  ;
 
 : set-keyboard-type  ( -- )
-   " KM" find-tag  if                    ( adr len )
-      -null                              ( adr' len' )
-      " olpcm" $=  if  2  else  1  then  ( type )
-   else                                  ( )
-      1                                  ( type )
-   then                                  ( type )
+   smt-test?  if
+      0
+   else
+      " KM" find-tag  if                    ( adr len )
+         -null                              ( adr' len' )
+         " olpcm" $=  if  2  else  1  then  ( type )
+      else                                  ( )
+         1                                  ( type )
+      then                                  ( type )
+   then
    to keyboard-type
+   keyboard-type  case
+
+      0 of  ['] make-buttons  ['] ibm#s0  ['] /ibm#s0  ['] all-tested?0  endof
+      1 of  ['] make-keys1    ['] ibm#s1  ['] /ibm#s1  ['] all-tested?1  endof
+      2 of  ['] make-keys2    ['] ibm#s2  ['] /ibm#s2  ['] all-tested?2  endof
+      ( default )  true abort" Unknown keyboard type"
+   endcase
+   to all-tested?  to /ibm#s  to ibm#s  to make-keys
 ;
+
 warning @ warning off
 : selftest  ( -- error? )
    open  0=  if  true exit  then
 
    set-keyboard-type
 
-   \ Being able to open the keyboard is good enough in SMT mode
-\   smt-test?  if  close false exit  then
-
-   smt-test?  if
-      ['] all-buttons-tested?
-   else
-      make-keys
-      ['] all-keys-tested?
-   then
-   to all-tested?
-      
-   make-buttons
+   make-keys
 
    cursor-off draw-keyboard
    true to locked?   \ Disable the keyboard alarm handler; it steals our scancodes
