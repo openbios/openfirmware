@@ -123,7 +123,6 @@ headers
 ;
 : internal-clock-off  ( -- )  h# 2c cw@  1 invert and  h# 2c cw!  ;
 
-
 : card-clock-on   ( -- )  h# 2c cw@  4 or  h# 2c cw!  ;
 : card-clock-off  ( -- )  h# 2c cw@  4 invert and  h# 2c cw!  ;
 
@@ -227,6 +226,11 @@ headers
 0 instance value timeout?
 
 : .sderror  ( isr -- )
+   debug?  if
+      ." Chip registers: " cr
+      chip h# 80 " ldump" evaluate cr
+   then
+
    esr@ dup esr!           ( isr esr )
 
    dup 1 and  if           ( isr esr )
@@ -254,6 +258,8 @@ headers
 : isr-event?  ( mask -- happened? )
    h# 8000 or                                     ( mask' )
    isr@  2dup and  if                             ( mask' isr )
+      dup h# 8000 and  if  dup .sderror  then     ( mask isr )
+
       \ Only clear the bits we will handle this time.
       \ If additional ISR bits are set, leave them set because
       \ later code will be waiting for them.  In practice, the
@@ -261,9 +267,8 @@ headers
       \ bit - mask 2 - which "2 wait" will handle.
       \ But we do go ahead and clear card removal/insertion
       \ events, because we don't handle them elsewhere.
-      swap  h# c0 or  over and  isr!              ( isr )
+      swap  h# c0 or  and  isr!                   ( )
 
-      dup h# 8000 and  if   .sderror  else  drop  then   ( )
       true
    else                                           ( mask' isr )
       \ DMA interrupt - the transfer crossed an address boundary
@@ -282,6 +287,8 @@ headers
       8 and  if  0 cl@ 0 cl!  8 isr!  then        ( mask )
    repeat                                         ( mask isr )
 
+   dup h# 8000 and  if  dup .sderror  then        ( mask isr )
+
    \ Only clear the bits we will handle this time.
    \ If additional ISR bits are set, leave them set because
    \ later code will be waiting for them.  In practice, the
@@ -289,9 +296,7 @@ headers
    \ bit - mask 2 - which "2 wait" will handle.
    \ But we do go ahead and clear card removal/insertion
    \ events, because we don't handle them elsewhere.
-   swap  h# c0 or  over and  isr!                 ( isr )
-
-   dup h# 8000 and  if   .sderror  else  drop  then   ( )
+   swap  h# c0 or  and  isr!                      ( )
 ;
 
 : wait-ready  ( -- )
@@ -729,6 +734,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
    card-power-on  d# 40 ms  \ This delay is just a guess (20 was barely too slow for a Via board)
    card-inserted?  0=  if  card-power-off  intstat-off  false true exit  then   
    card-clock-slow  d# 10 ms  \ This delay is just a guess
+
    reset-card     \ Cmd 0
    set-operating-conditions  if  intstat-off  true true exit  then
    false
@@ -781,6 +787,8 @@ external
 
 : attach-card  ( -- okay? )
    setup-host
+   set-timeout
+
    ['] power-up-card catch  if  true true  then   if         ( retry? )
       \ The first try at powering up failed.
       if                     ( )
@@ -815,8 +823,6 @@ external
    get-csd           \ Cmd 9 - Get card-specific data
 
    select-card       \ Cmd 7 - Select
-
-   set-timeout
 
    configure-transfer
 
