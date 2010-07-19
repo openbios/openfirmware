@@ -10,7 +10,8 @@ purpose: User interface for NAND multicast updater - reception
 : nandblaster  ( -- )
    false to already-go?
    -1 to nb-zd-#sectors
-   " boot rom:nb15_rx ssid:OLPC-NANDblaster" sprintf eval
+   secure$
+   " boot rom:nb15_rx ssid:OLPC-NANDblaster %s" sprintf eval
 ;
 alias nb nandblaster
 

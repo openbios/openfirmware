@@ -28,24 +28,36 @@ purpose: User interface for NAND multicast updater - transmission to XO-1.5
       2drop
    then
 ;
-: $nb15-tx  ( redundancy$ filename$ channel$ -- )
+
+: $nb-tx  ( filename$ channel# -- )
+   >r 2>r  redundancy  2r> r>
    ?load-thin-wlan-fw
    false to already-go?
 
-   " boot rom:nb_tx thinmac:OLPC-NANDblaster,%s %s %s 131072" sprintf eval
+   " boot rom:nb_tx thinmac:OLPC-NANDblaster,%d %s %d 131072" sprintf eval
 ;
-: nb15-tx:  ( "filename" [ "redundancy" ] -- )
-   safe-parse-word                ( filename$ )
-   parse-word                     ( filename$ redundancy$ )
-   dup 0=  if  2drop " 20"  then  ( filename$ redundancy$' )
-   2swap                          ( redundancy$ filename$ )
-   nb-auto-channel                ( redundancy$ filename$ channel# )
+
+: nb-tx:  ( "filename" -- )
+   redundancy                     ( redundancy )
+   safe-parse-word                ( redundancy filename$ )
+   nb-auto-channel                ( redundancy filename$ channel# )
 
    ?load-thin-wlan-fw
    false to already-go?
 
-   " boot rom:nb_tx thinmac:OLPC-NANDblaster,%d %s %s 131072" sprintf eval
+   " boot rom:nb_tx thinmac:OLPC-NANDblaster,%d %s %d 131072" sprintf eval
 ;
+: #nb-secure  ( zip-filename$ image-filename$ channel# -- )
+   depth 5 < abort" #nb-secure-update - too few arguments"
+   >r 2>r                             ( placement-filename$ r: channel# image-filename$ )
+   load-read  sig$ ?save-string swap  ( siglen sigadr r: channel# image-filename$ )
+   img$ ?save-string swap             ( siglen sigadr speclen specadr r: channel# image-filename$ )
+   redundancy  2r> r>                 ( siglen sigadr speclen specadr redundancy image-filename$ channel# )
+   " rom:nb_tx thinmac:OLPC-NANDblaster,%d %s %d 131072 %d %d %d %d" sprintf boot-load go
+;
+: #nb-secure-def  ( channel# -- )  >r " u:\fs.zip" " u:\fs.zd" r> #nb-secure  ;
+
+: nb-secure   ( -- )  nb-auto-channel  #nb-secure-def  ;
 
 [ifdef] use-nb15-precomputed
 \ NANDblaster sender using thin firmware on XO-1.5, with precomputed

@@ -11,6 +11,7 @@ h# 4000 value /chunk
 0 instance value write-index
 0 instance value max-depth
 false instance value synchronous?
+0 value debug?
 
 : #queued  ( -- n )
    write-index read-index -
@@ -106,7 +107,9 @@ false instance value synchronous?
 
 : drain-queue  ( -- )
    synchronous?  0=  if
-      ." Max queue depth was " max-depth .d  ." , current is " #queued .d cr
+      debug?  if
+         ." Max queue depth was " max-depth .d  ." , current is " #queued .d cr
+      then
       true to synchronous?
    then
    begin  empty?  0=  while  poll  repeat

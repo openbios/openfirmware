@@ -92,12 +92,18 @@ also nand-commands definitions
 ;
 
 : data:  ( "filename" -- )
-   safe-parse-word fn-buf place
-   " ${DN}${PN}\${CN}${FN}" expand$  image-name-buf place
-   image-name$ r/o open-file  if
+   safe-parse-word            ( filename$ )
+   nb-zd-#sectors  if         ( filename$ )
+      2drop  " /nb-updater"   ( filename$' )
+   else                       ( filename$ )
+      fn-buf place            ( )
+      " ${DN}${PN}\${CN}${FN}" expand$  image-name-buf place
+      image-name$             ( filename$' )
+   then                       ( filename$ )
+   r/o open-file  if          ( fd )
       drop ." Can't open " image-name$ type cr
       true " " ?nand-abort
-   then  to filefd
+   then  to filefd            ( )
    linefeed filefd force-line-delimiter
    true to secure-fsupdate?
 ;

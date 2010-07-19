@@ -320,6 +320,19 @@ d# 2000 constant wifi-speed-threshold
 : nb-update   ( -- )  nb-auto-channel  #nb-update-def  ;
 [then]
 
+: load-read  ( filename$ -- )
+   open-dev  dup 0=  abort" Can't open file"  >r  ( r: ih )
+   load-base " load" r@ $call-method  !load-size
+   r> close-dev
+;
+
+: secure$  ( -- adr len )
+   secure? security-off? 0= and  if  " secure"  else  null$  then
+;
+
+d# 20 value redundancy
+
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2008 FirmWorks
 \ 
