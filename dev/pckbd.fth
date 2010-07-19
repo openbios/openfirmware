@@ -450,12 +450,12 @@ create func-map  81 c,  8c c,
 
 \     7 set-leds  d# 100 ms  0 set-leds
    then
-[then]
 
    \ Leave the keyboard in scan set 2 (its default state), but also leave
    \ the 8042 in the mode where it translates to scan set 1.
 
    keyboard-present?  if  enable-scan  then
+[then]
    true to keyboard-probed?
 ;
 
