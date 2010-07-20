@@ -93,7 +93,7 @@ also nand-commands definitions
 
 : data:  ( "filename" -- )
    safe-parse-word            ( filename$ )
-   nb-zd-#sectors  if         ( filename$ )
+   nb-zd-#sectors  -1 <>  if  ( filename$ )
       2drop  " /nb-updater"   ( filename$' )
    else                       ( filename$ )
       fn-buf place            ( )
