@@ -152,7 +152,8 @@ headerless
 [ifdef] virtual-mode
 : (initial-heap)  ( -- adr len )  sp0 @ ps-size -  dict-limit  tuck -  ;
 [else]
-: (initial-heap)  ( -- adr len )  RAMtop heap-size  ;
+   \ : (initial-heap)  ( -- adr len )  RAMtop heap-size  ;
+: (initial-heap)  ( -- adr len )  limit heap-size  ;
 [then]
 ' (initial-heap) is initial-heap
 headers
@@ -188,6 +189,7 @@ end-support-package
 devalias nfs net//obp-tftp:last//nfs
 
 fload ${BP}/cpu/arm/linux.fth
+h# 20.0000 to linux-params  \ The Jasper Linux kernel fails unless the params are between 0x20.0000 and 0x20.4000
 d# 2382 to arm-linux-machine-type  \ Marvell Jasper
 
 \ Add a tag describing the linear frame buffer

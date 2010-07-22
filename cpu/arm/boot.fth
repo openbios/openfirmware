@@ -54,13 +54,8 @@ code start-forth        ( r6: header r7: syscall-vec r8: memtop )
    str     r1,'user dp         	       \ set here
 
    str     r8,'user memtop
-   sub     sp,r8,#0x40
+   sub     sp,r8,#0x40                 \ Guard band
    \ Now the stacks are just below the end of our memory
-
-   ps-size-t rs-size-t + #
-   sub     r8,r8,*
-   sub     r8,r8,r12                        
-   str     r8,'user limit
 
    str     r7,'user syscall-vec
    str     r10,'user #args
@@ -77,7 +72,16 @@ code start-forth        ( r6: header r7: syscall-vec r8: memtop )
    dec     sp,*
    dec     sp,#0x20              
    str     sp,'user sp0
+
+   mov     r8,sp
+
+   ps-size-t #
+   dec     r8,*
+   sub     r8,r8,r12            \ Heap size
+   str     r8,'user limit       \ Initial heap will be from limit to bottom of stack
+
    inc     sp,1cell             \ account for the top of stack register
+
    adr     ip,'body cold
 c;
 

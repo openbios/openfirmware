@@ -36,9 +36,9 @@ variable last-protocol
       /l-t constant /token-t
       /l-t constant /link-t
 /token-t   constant /defer-t
-/n-t 800 * constant user-size-t
-/n-t 100 * constant ps-size-t
-/n-t 100 * constant rs-size-t
+/n-t th c00 * constant user-size-t
+/n-t th 200 * constant ps-size-t
+/n-t th 200 * constant rs-size-t
 /l-t constant /user#-t
 
 \ 32 bit host Forth compiling 32-bit target Forth

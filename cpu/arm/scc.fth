@@ -3,27 +3,84 @@ purpose: System Control Coprocessor access words
 
 hex
 code scc-id@            ( -- n )   psh tos,sp  mrc p15,0,tos,cr0,cr0,0  c;
+code cache-type@        ( -- n )   psh tos,sp  mrc p15,0,tos,cr0,cr0,1  c;
+code tlb-type@          ( -- n )   psh tos,sp  mrc p15,0,tos,cr0,cr0,3  c;
 code control@           ( -- n )   psh tos,sp  mrc p15,0,tos,cr1,cr0,0  c;
 code ttbase@            ( -- n )   psh tos,sp  mrc p15,0,tos,cr2,cr0,0  c;
+code ttbase0@           ( -- n )   psh tos,sp  mrc p15,0,tos,cr2,cr0,0  c;
+code ttbase1@           ( -- n )   psh tos,sp  mrc p15,0,tos,cr2,cr1,0  c;
+code ttcontrol@         ( -- n )   psh tos,sp  mrc p15,0,tos,cr2,cr2,0  c;
 code domain-access@     ( -- n )   psh tos,sp  mrc p15,0,tos,cr3,cr0,0  c;
 code fault-status@      ( -- n )   psh tos,sp  mrc p15,0,tos,cr5,cr0,0  c;
+code i-fault-status@    ( -- n )   psh tos,sp  mrc p15,0,tos,cr5,cr1,0  c;
 code fault-address@     ( -- n )   psh tos,sp  mrc p15,0,tos,cr6,cr0,0  c;
+code wp-fault-address@  ( -- n )   psh tos,sp  mrc p15,0,tos,cr6,cr1,0  c;
+code i-fault-address@   ( -- n )   psh tos,sp  mrc p15,0,tos,cr6,cr2,0  c;
 
 code control!           ( n -- )   mcr p15,0,tos,cr1,cr0,0  pop tos,sp  c;
 code ttbase!            ( n -- )   mcr p15,0,tos,cr2,cr0,0  pop tos,sp  c;
+code ttbase0!           ( n -- )   mcr p15,0,tos,cr2,cr0,0  pop tos,sp  c;
+code ttbase1!           ( n -- )   mcr p15,0,tos,cr2,cr1,0  pop tos,sp  c;
+code ttcontrol!         ( n -- )   mcr p15,0,tos,cr2,cr2,0  pop tos,sp  c;
 code domain-access!     ( n -- )   mcr p15,0,tos,cr3,cr0,0  pop tos,sp  c;
 code fault-status!      ( n -- )   mcr p15,0,tos,cr5,cr0,0  pop tos,sp  c;
+code i-fault-status!    ( n -- )   mcr p15,0,tos,cr5,cr1,0  pop tos,sp  c;
 code fault-address!     ( n -- )   mcr p15,0,tos,cr6,cr0,0  pop tos,sp  c;
-code flush-i&d$         ( -- )     mcr p15,0,r0,cr7,cr7,0  c;
+code wp-fault-address!  ( n -- )   mcr p15,0,tos,cr6,cr1,0  pop tos,sp  c;
+code i-fault-address!   ( n -- )   mcr p15,0,tos,cr6,cr2,0  pop tos,sp  c;
+
+code c7-wfi             ( -- )     mcr p15,0,r0,cr7,cr0,4  c;
+
 code flush-i$           ( -- )     mcr p15,0,r0,cr7,cr5,0  c;
+code flush-i$-entry     ( va -- )  mcr p15,0,tos,cr7,cr5,1  pop tos,sp c;
+code flush-i$-entry-way ( sw -- )  mcr p15,0,tos,cr7,cr5,2  pop tos,sp c;
+code flush-prefetch     ( -- )     mcr p15,0,r0,cr7,cr5,4  c;
+code flush-bt$          ( -- )     mcr p15,0,r0,cr7,cr5,6  c;
+code flush-bt$-entry    ( va -- )  mcr p15,0,tos,cr7,cr5,7  pop tos,sp c;
+
 code flush-d$           ( -- )     mcr p15,0,r0,cr7,cr6,0  c;
-code flush-d$-entry     ( va -- )  mcr p15,0,tos,cr7,cr6,1   pop tos,sp  c;
+code flush-d$-entry     ( va -- )  mcr p15,0,tos,cr7,cr6,1  pop tos,sp  c;
+code flush-d$-entry-way ( sw -- )  mcr p15,0,tos,cr7,cr6,2  pop tos,sp  c;
+
+code flush-i&d$         ( -- )     mcr p15,0,r0,cr7,cr7,0  c;
+code flush-u$           ( -- )     mcr p15,0,r0,cr7,cr7,0  c;
+code flush-u$-entry     ( va -- )  mcr p15,0,tos,cr7,cr7,1  pop tos,sp  c;
+code flush-u$-way       ( sw -- )  mcr p15,0,tos,cr7,cr7,2  pop tos,sp  c;
+
+code clean-d$           ( -- )     mcr p15,0,r0,cr7,cr10,0  c;
 code clean-d$-entry     ( va -- )  mcr p15,0,tos,cr7,cr10,1  pop tos,sp  c;
+code clean-d$-way       ( sw -- )  mcr p15,0,tos,cr7,cr10,2  pop tos,sp  c;
+code test&clean-d$      ( -- )     mcr p15,0,r0,cr7,cr10,3  c;
+
+code clean-u$           ( -- )     mcr p15,0,r0,cr7,cr11,0  c;
+code clean-u$-entry     ( va -- )  mcr p15,0,tos,cr7,cr11,1  pop tos,sp  c;
+code clean-u$-way       ( sw -- )  mcr p15,0,tos,cr7,cr11,2  pop tos,sp  c;
+
+code clean&flush-d$             ( -- )     mcr p15,0,r0,cr7,cr14,0  c;
+code clean&flush-d$-entry       ( va -- )  mcr p15,0,tos,cr7,cr14,1  pop tos,sp  c;
+code clean&flush-d$-entry-way   ( sw -- )  mcr p15,0,tos,cr7,cr14,2  pop tos,sp  c;
+code test,clean&flush-d$        ( -- )     mcr p15,0,tos,cr7,cr14,3  c;
+
+code clean&flush-u$             ( -- )     mcr p15,0,r0,cr7,cr15,0  c;
+code clean&flush-u$-entry       ( va -- )  mcr p15,0,tos,cr7,cr15,1  pop tos,sp  c;
+code clean&flush-u$-entry-way   ( sw -- )  mcr p15,0,tos,cr7,cr15,2  pop tos,sp  c;
+
+
+
 code drain-write-buffer ( -- )     mcr p15,0,r0,cr7,cr10,4  c;
+alias data-sync-barrier drain-write-buffer
+code drain-write-buffer ( -- )     mcr p15,0,r0,cr7,cr10,4  c;
+code data-memory-barrier ( -- )    mcr p15,0,r0,cr7,cr10,5  c;
+
 code flush-i&d-tlb      ( -- )     mcr p15,0,r0,cr8,cr7,0  c;
+code flush-i&d-tlb-entry ( va -- ) mcr p15,0,tos,cr8,cr7,1  pop tos,sp  c;
+code flush-i&d-tlb-asid  ( as -- ) mcr p15,0,tos,cr8,cr7,2  pop tos,sp  c;
 code flush-i-tlb        ( -- )     mcr p15,0,r0,cr8,cr5,0  c;
+code flush-i-tlb-entry  ( va -- )  mcr p15,0,tos,cr8,cr5,1  pop tos,sp  c;
+code flush-i-tlb-asid   ( as -- )  mcr p15,0,tos,cr8,cr5,2  pop tos,sp  c;
 code flush-d-tlb        ( -- )     mcr p15,0,r0,cr8,cr6,0  c;
 code flush-d-tlb-entry  ( va -- )  mcr p15,0,tos,cr8,cr6,1  pop tos,sp  c;
+code flush-d-tlb-asid   ( as -- )  mcr p15,0,tos,cr8,cr6,1  pop tos,sp  c;
 
 code enable-odd-lfsr    ( -- )     mcr p15,0,r0,cr15,cr1,1  c;
 code enable-even-lfsr   ( -- )     mcr p15,0,r0,cr15,cr2,1  c;
@@ -52,6 +109,23 @@ d# 32 constant /cache-line
       i clean-d$-entry  i flush-d$-entry
    /cache-line +loop
 ;
+
+code turn-off-dcache  ( adr len -- )
+   pop r0,sp  \ tos:len r0:adr
+   cmp tos,#0
+   <>  if
+      begin
+         mcr   p15,0,r0,cr7,cr10,1    \ Clean D$ entry
+         mcr   p15,0,r0,cr7,cr6,1     \ Flush D$ entry
+         add   r0,r0,#32              \ Advance to next line
+         decs  tos,#32     \ Assume cache line size of 32 bytes
+      0= until
+   then
+   mcr  p15,0,r0,cr7,cr10,4           \ Drain write buffer
+   mrc  p15,0,r0,cr1,cr0,0            \ Read control register
+   bic  r0,r0,#4                      \ Clear DCache enable bit
+   mcr  p15,0,r0,cr1,cr0,0            \ Write control register
+c;
 
 \ System-dependent function to flush the entire cache
 \ (In normal ARM nomenclature, as used by most of the words in this file,

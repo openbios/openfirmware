@@ -1,0 +1,32 @@
+\ This is a recipe for using OFW to debug into the Linux kernel
+\ startup.  You can cut/paste groups into the serial window
+
+fatload mmc 1:1 0x1f800000 ofw.rom ; boot 0x1f800000
+fatload mmc 1:1 0x1fe00000 ofw.rom ; boot 0x1fe00000
+ 
+dev /memory 1f800000 400000 0 claim
+load ext:\zimage
+
+1100134 till  \ After uncompress
+--bp
+
+208064 till   \ About to turn on MMU
+--bp 
+
+text-off  ofw-sections      \ Put OFW in pdir
+vector-base f.0000 80 move  \ Clone vector table to xxxf.0000
+c0e page-table@ fff la+ l!  \ Alias vector table at ffff.0000
+step                        \ Turn on MMU, high vector loc
+
+c0009fb0 till  \ paging_init
+--bp
+
+e35e041f c000b6e8 instruction!  \ Stop clearing PDIR at Forth loc - Changes MODULES_VADDR
+c000b6f0 till                   \ Just before second pmd_clear loop
+--bp
+2000.0000 to r14                \ Bump addr to skip OFW mapping
+
+e35104d4 c000b76c instruction!  \ Change VMALLOC_END to device physical base to preserve device access
+
+\ Now can set breakpoints at other places
+c0010130 till  \ memzero

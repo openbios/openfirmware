@@ -62,7 +62,7 @@ devalias com1 /uart
 ' com1 is fallback-device   
 
 0 0  " d420b000"  " /" begin-package
-   " screen" name
+   " display" name
    fload ${BP}/cpu/arm/mmp2/lcdcfg.fth
    fload ${BP}/cpu/arm/mmp2/dsi.fth
 
@@ -94,7 +94,7 @@ devalias com1 /uart
    ' display-remove   is-remove
    ' display-selftest is-selftest
 end-package
-devalias screen /screen
+devalias screen /display
    
 devalias keyboard /keyboard
 

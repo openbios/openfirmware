@@ -11,7 +11,7 @@ c;
 
 
 : map-section  ( pa+mode va -- )
-   d# 18 rshift  page-table@ +  l!
+   d# 18 rshift  page-table@ +  tuck l!  clean-d$-entry
 ;
 : map-sections  ( pa mode va size -- )
    2>r  +  2 or   2r>     ( pa+mode va size )
@@ -22,13 +22,18 @@ c;
    drop
 ;
 
+: ofw-sections  ( -- )
+   h# 0000.0000  h# c0e  over  fb-pa        map-sections  \ Cache and write bufferable
+   fw-pa         h# c0e  over  /fw-ram      map-sections  \ Cache and write bufferable
+   fb-pa         h# c06  over  fb-size      map-sections  \ Write bufferable
+   h# d400.0000  h# c02  over  h# 0040.0000 map-sections  \ I/O - no caching or buffering
+;
+
 : setup-sections
    page-table-pa page-table!
    page-table-pa /page-table erase
 
-   h# 0000.0000 h# c0e             0 fb-pa        map-sections  \ Cache and write bufferable
-   fb-pa        h# c06  fb-pa        fb-size      map-sections  \ Write bufferable
-   h# d400.0000 h# c02  h# d400.0000 h# 0100.0000 map-sections  \ I/O - no caching or buffering
+   ofw-sections
 ;
 \ Do we need to map SRAM and DDRC ?
 
