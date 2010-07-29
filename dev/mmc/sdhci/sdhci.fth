@@ -904,7 +904,7 @@ external
    else                                 ( block# r: #blocks fresh? )
       \ Ugly ugly workaround for a problem with AData Class 6 SD cards
       \ They hang (data timeout) if you start a write too soon after a read.
-      " d# 900 us" evaluate
+      " d# 1200 us" evaluate
       r>  if  r> pre-write-erase  else  r> drop  then  ( block# )
       write-multiple  true to writing?  ( )
    then                                 ( )
