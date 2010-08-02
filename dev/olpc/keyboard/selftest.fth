@@ -489,7 +489,8 @@ create e0-scancode
 raw-scancode value cur-sc-table
 [then]
 
-h# 07ff constant pressed-key-color
+h# f81f constant down-key-color
+h# 07ff constant tested-key-color
 h# 001f constant idle-key-color
 h# ffff constant kbd-bc
 
@@ -511,8 +512,9 @@ h# ffff constant kbd-bc
       " fill-rectangle" $call-screen
    then
 ;
-: key-down  ( key# -- )  pressed-key-color draw-key  ;
-: key-up    ( key# -- )  idle-key-color    draw-key  ;
+: key-tested ( key# -- )  tested-key-color draw-key  ;
+: key-down   ( key# -- )  down-key-color   draw-key  ;
+: key-up     ( key# -- )  idle-key-color   draw-key  ;
 
 : fill-screen  ( color -- )
    0 0 " dimensions" $call-screen " fill-rectangle" $call-screen
@@ -536,6 +538,7 @@ false value verbose?
       else                                   ( scan key# )
          swap h# 80 and  if   \ Up           ( key# )
             final-test?  smt-test?  or  if   ( key# )
+               dup key-tested                ( key# )
                dup 0=  last-1 0= and  last-2 0=  and  if   ( key# )
                   drop true                  ( exit? )
                else                          ( key# )
