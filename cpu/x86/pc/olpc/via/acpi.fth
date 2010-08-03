@@ -319,6 +319,9 @@ defer more-platform-fixup  ' noop to more-platform-fixup
 : rm-platform-fixup  ( -- )
    \ Disable the internal SD to prevent Windows from making it C:
    h# f9 h# 6099 config-b!
+   h# 80 h# 6088 config-b!  \ Set timeout clock 0:33Mhz
+   h# 00 h# 6089 config-b!  \ Set max clock to 33Mhz
+
    true windows-mode-adr !  \ Tell the resume code to do it too
 
    more-platform-fixup
