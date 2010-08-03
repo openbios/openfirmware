@@ -432,6 +432,9 @@ headers
 : write-single    ( address -- )  h# 183a h# 03 cmd  ;  \ CMD24 R1 WRITE_SINGLE_BLOCK
 : write-multiple  ( address -- )  h# 193a h# 27 cmd  ;  \ CMD25 R1 WRITE_MULTIPLE
 
+: issue-write  ( address #blocks -- )  1 =  if  write-single  else  write-multiple  then  ;
+: issue-read   ( address #blocks -- )  1 =  if  read-single   else  read-multiple   then  ;
+
 : program-csd  ( -- )     0  h# 1b1a 0 cmd  ;  \ CMD27 R1 UNTESTED
 : protect     ( group# -- )  h# 1c1b 0 cmd  ;  \ CMD28 R1b UNTESTED
 : unprotect   ( group# -- )  h# 1d1b 0 cmd  ;  \ CMD29 R1b UNTESTED
@@ -711,7 +714,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 
 \ This is the correct way to wait for programming complete.
 : wait-write-done  ( -- error? )
-   writing? 0=  if  false exit  then               ( limit )
+   writing? 0=  if  false exit  then
 
    get-msecs d# 4000 +                             ( limit )
    \ Wait for return to "tran" state (4)
@@ -899,14 +902,12 @@ external
    rot dma-setup    ( block#              r: #blocks fresh? in? )
    wait-write-done  if  drop  r> r> r> 3drop true exit  then  ( block# )
    address-shift lshift  r>  if         ( block# r: #blocks fresh? )
-      r> r> 2drop                       ( block# )
-      read-multiple                     ( )
+      r> drop                           ( block# r: #blocks )
+      r> issue-read                     ( )
    else                                 ( block# r: #blocks fresh? )
-      \ Ugly ugly workaround for a problem with AData Class 6 SD cards
-      \ They hang (data timeout) if you start a write too soon after a read.
-      " d# 1200 us" evaluate
-      r>  if  r> pre-write-erase  else  r> drop  then  ( block# )
-      write-multiple  true to writing?  ( )
+      r>  if  r@ pre-write-erase  then  ( block# r: #blocks )
+      r> issue-write                    ( )
+      true to writing?                  ( )
    then                                 ( )
    true to dma?                         ( )
    false                                ( error? )
