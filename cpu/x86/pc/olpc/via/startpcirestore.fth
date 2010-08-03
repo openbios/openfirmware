@@ -7,7 +7,7 @@
        0a 603c config-wb  \ Interrupt line
 
    \ This is a workaround for an odd problem with the Via Vx855 chip.
-   \ You have to tell it to use 1.8 V, otherwise when you tell it
+   \ You have to tell it once to use 1.8 V, otherwise when you tell it
    \ it to use 3.3V, it will use 1.8 V instead!  You only have to
    \ do this 1.8V thing once after power-up to fix it until the
    \ next power cycle.  The "fix" survives resets; it takes a power
@@ -28,12 +28,10 @@
              al 8000.1029 #) mov
              al 8000.2029 #) mov
 
-\ 0e # al mov  al 8000.0029 #) mov
-\              al 8000.1029 #) mov
-\              al 8000.2029 #) mov
-
         f9 6099 config-wb  \ Two SD slots (correct for XP, wrong for Linux)
-        03 6084 config-wb  \ D3 power state
+        d# 10000 wait-us   \ 10 ms delay to let power come on
+        80 6088 config-wb  \ Set timeout clock 0:33Mhz
+        00 6089 config-wb  \ Set max clock to 33Mhz
 
 \       \ Enable System Management Mode, assuming that the in-memory data structures are already set up
 \       21  383 config-wb  \ Enable A/Bxxxx range as memory instead of frame buffer (with fxxxx region R/O)
