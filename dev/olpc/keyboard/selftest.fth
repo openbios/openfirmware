@@ -23,6 +23,7 @@ struct
    /n field >key-y
    /n field >key-w
    /n field >key-h
+   /n field >key-time
 constant /key
 
 /key d# 128 * buffer: keys
@@ -54,7 +55,8 @@ d#  40 constant button-h
 : add-key-gap  ( -- )  key-gap ++key-x  ;
 : (make-key)  ( x y w h -- )
    #keys key-adr >r
-   r@ >key-h ! r@ >key-w !  r@ >key-y !  r> >key-x !
+   r@ >key-h ! r@ >key-w !  r@ >key-y !  r@ >key-x !
+   0 r> >key-time !
    #keys++
 ;
 : make-key  ( w -- )  dup key-x key-y rot single-key-h (make-key) ++key-x  ;
@@ -194,6 +196,18 @@ h# 80 buffer: sc1
 ;
 [then]
 
+: key-stuck?  ( -- flag )
+   ukey?  if  debug-me  then
+   #keys  0  do
+      i key-adr >key-time @  ?dup  if      ( msecs )
+         d# 3,000 +  get-msecs -  0<  if   ( )
+            true unloop exit
+         then
+      then
+   loop
+   false
+;
+
 d# 128 8 / constant #key-bytes
 #key-bytes buffer: key-bitmap
 : set-key-bit  ( key# -- )
@@ -223,9 +237,9 @@ ff c, ff c, ff c, ff c, 03 c, 00 c, 00 c, 00 c,
 
 \ The mechanical keyboard has no slider keys. All displayed button locations are
 \ activated by pressing single keystrokes, so the map is dense
-h# ffffff constant funny-map2
+h# ffffffff constant funny-map2
 create all-keys-bitmap2
-ff c, ff c, ff c, 00 c, ff c, ff c, ff c, ff c,
+ff c, ff c, ff c, ff c, ff c, ff c, ff c, ff c,
 ff c, ff c, 3f c, 00 c, 00 c, 00 c, 00 c, 00 c,
 
 : all-tested?0  ( -- flag )  \ Just buttons
@@ -502,19 +516,29 @@ h# ffff constant kbd-bc
    ibm#>key#
 ;
 
-: draw-key  ( key# color -- )
-   swap
-   key-adr >r          ( color# r: key-adr )
-   r@ >key-w @  hidden-key-w  =  if
-      r> 2drop
+: set-key-time  ( timestamp key-adr -- )
+   over 0<>  over >key-time @  0<>  and   if  ( timestamp key-adr )
+      \ If both timestamp and old key time are nonzero, then we preserve the old key time
+      2drop
    else
-      r@ >key-x @  r@ >key-y @  r@ >key-w @  r> >key-h @
-      " fill-rectangle" $call-screen
+      \ If either timestamp or old key time is 0, we set the key time
+      >key-time !
    then
 ;
-: key-tested ( key# -- )  tested-key-color draw-key  ;
-: key-down   ( key# -- )  down-key-color   draw-key  ;
-: key-up     ( key# -- )  idle-key-color   draw-key  ;
+
+: draw-key  ( key# color timestamp  -- )
+   rot key-adr >r          ( color# timestamp r: key-adr )
+   r@ set-key-time         ( color#           r: key-adr )
+   r@ >key-w @  hidden-key-w  =  if  ( color# r: key-adr )
+      r> 2drop                       ( )
+   else                              ( color# r: key-adr )
+      r@ >key-x @  r@ >key-y @  r@ >key-w @  r> >key-h @  ( color# x y w h )
+      " fill-rectangle" $call-screen   ( )
+   then
+;
+: key-tested ( key# -- )  tested-key-color 0          draw-key  ;
+: key-down   ( key# -- )  down-key-color   get-msecs  draw-key  ;
+: key-up     ( key# -- )  idle-key-color   0          draw-key  ;
 
 : fill-screen  ( color -- )
    0 0 " dimensions" $call-screen " fill-rectangle" $call-screen
@@ -567,6 +591,9 @@ false value verbose?
    clear-key-bitmap
    get-msecs to last-timestamp
    begin
+      final-test?  smt-test?  or  if
+         key-stuck?  if  exit  then
+      then
       get-data?  if     ( scancode )
          process-raw    ( exit? )
          get-msecs to last-timestamp
@@ -623,8 +650,17 @@ warning @ warning off
    close
 
    final-test? smt-test? or  if
-      all-tested?  0=
-      dup  if  ." Some keys were not pressed" cr  then
+      key-stuck?  if
+         ." Stuck key" cr
+         true exit
+      then
+
+      all-tested?  if
+         false
+      else
+         ." Some keys were not pressed" cr
+         true
+      then
    else
       confirm-selftest?
    then
