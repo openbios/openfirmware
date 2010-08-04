@@ -23,6 +23,8 @@ purpose: Driver for SDHCI (Secure Digital Host Controller)
 
 h# 200 constant /block  \ 512 bytes
 
+defer ?mv8686-quirk  ' noop to ?mv8686-quirk
+
 external
 : set-address  ( rca slot -- )  to slot  to rca  map-regs  ;
 : get-address  ( -- rca )       rca  ;
@@ -749,6 +751,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
    card-power-off d# 500 ms
    card-power-on  d# 50 ms  \ This delay is just a guess (20 was barely too slow for a Via board)
    card-inserted?  0=  if  card-power-off  intstat-off  false true exit  then   
+   ?mv8686-quirk
    card-clock-slow  d# 50 ms  \ This delay is just a guess
    reset-card     \ Cmd 0
    false
