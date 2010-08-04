@@ -517,7 +517,7 @@ end-support-package
 create use-thinmac
 fload ${BP}/cpu/x86/bootascall.fth
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
-fload ${BP}/cpu/x86/pc/olpc/nb15tx.fth
+fload ${BP}/cpu/x86/pc/olpc/via/nbtx.fth
 fload ${BP}/cpu/x86/pc/olpc/via/nbrx.fth
 fload ${BP}/cpu/x86/pc/olpc/via/blockfifo.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
