@@ -256,7 +256,7 @@ warning @ warning off
 : wlan-reset  ( -- )
    h# 4c acpi-l@                         ( old )
    dup h# 800 invert and  h# 4c acpi-l!  ( old )
-   d# 10 ms                              ( old )
+   d# 10 us                              ( old )
    h# 800 or h# 4c acpi-l!               ( )
 ;
 warning !

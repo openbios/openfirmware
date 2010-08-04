@@ -4,7 +4,7 @@
 \ it might not reset correctly.
 
 : mv8686-reset-quirk  ( -- )
-   d# 50 ms
+   5 ms
    " wlan-reset" evaluate
 ;
 ' mv8686-reset-quirk to ?mv8686-quirk
