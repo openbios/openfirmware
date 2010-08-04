@@ -51,6 +51,10 @@ purpose: User interface for NAND multicast updater - transmission
 : #nb-update-def  ( channel# -- )  >r " u:\fs.plc" " u:\fs.img" r> #nb-update  ;
 : #nb-secure-def  ( channel# -- )  >r " u:\fs.zip" " u:\fs.img" r> #nb-secure  ;
 
+: nb-clone    ( -- )  nb-auto-channel  #nb-clone  ;
+: nb-secure   ( -- )  nb-auto-channel  #nb-secure-def  ;
+: nb-update   ( -- )  nb-auto-channel  #nb-update-def  ;
+
 : nb-clone1   ( -- )      1 #nb-clone  ;
 : nb-clone6   ( -- )      6 #nb-clone  ;
 : nb-clone11  ( -- )  d# 11 #nb-clone  ;

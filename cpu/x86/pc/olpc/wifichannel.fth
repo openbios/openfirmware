@@ -314,12 +314,6 @@ d# 2000 constant wifi-speed-threshold
    d# 4000 ms
 ;
 
-[ifdef] use-mesh
-: nb-clone    ( -- )  nb-auto-channel  #nb-clone  ;
-: nb-secure   ( -- )  nb-auto-channel  #nb-secure-def  ;
-: nb-update   ( -- )  nb-auto-channel  #nb-update-def  ;
-[then]
-
 : load-read  ( filename$ -- )
    open-dev  dup 0=  abort" Can't open file"  >r  ( r: ih )
    load-base " load" r@ $call-method  !load-size

@@ -47,6 +47,7 @@ purpose: User interface for NAND multicast updater - transmission to XO-1.5
 
    " boot rom:nb_tx thinmac:OLPC-NANDblaster,%d %s %d 131072" sprintf eval
 ;
+
 : #nb-secure  ( zip-filename$ image-filename$ channel# -- )
    depth 5 < abort" #nb-secure-update - too few arguments"
    >r 2>r                             ( placement-filename$ r: channel# image-filename$ )
@@ -57,7 +58,17 @@ purpose: User interface for NAND multicast updater - transmission to XO-1.5
 ;
 : #nb-secure-def  ( channel# -- )  >r " u:\fs.zip" " u:\fs.zd" r> #nb-secure  ;
 
+: #nb-update-def  ( channel# -- )  >r  " u:\fs.zd"  r> $nb-tx  ;
+: nb-update1   ( -- )      1 #nb-update-def  ;
+: nb-update6   ( -- )      6 #nb-update-def  ;
+: nb-update11  ( -- )  d# 11 #nb-update-def  ;
+
+: nb-secure1   ( -- )      1 #nb-secure-def  ;
+: nb-secure6   ( -- )      6 #nb-secure-def  ;
+: nb-secure11  ( -- )  d# 11 #nb-secure-def  ;
+
 : nb-secure   ( -- )  nb-auto-channel  #nb-secure-def  ;
+: nb-update   ( -- )  nb-auto-channel  #nb-update-def  ;
 
 [ifdef] use-nb15-precomputed
 \ NANDblaster sender using thin firmware on XO-1.5, with precomputed
