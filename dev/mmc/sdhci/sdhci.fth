@@ -408,7 +408,7 @@ headers
 
 \ Get Card-specific data
 : get-csd    ( -- )  rca  h# 0909 0 cmd  csd get-response136  ;  \ CMD9 R2
-: get-cid    ( -- )  rca  h# 0a09 0 cmd  cid get-response136  ;  \ CMD10 R2 UNTESTED
+: get-cid    ( -- )  rca  h# 0a09 0 cmd  cid get-response136  ;  \ CMD10 R2
 
 : stop-transmission  ( -- )  rca  h# 0c1b 0 cmd  ;        \ CMD12 R1b UNTESTED
 
@@ -824,6 +824,7 @@ external
    card-clock-25
 
    get-csd           \ Cmd 9 - Get card-specific data
+   get-cid           \ Cmd 10 - Get card ID
 
    select-card       \ Cmd 7 - Select
 
@@ -960,6 +961,21 @@ external
    map-regs
    vendor-modes
    unmap-regs
+;
+
+: cid@  ( offset -- byte )  cid + c@  ;
+: .nospace  <# u#s u#> type  ;
+: show-cid  ( -- )
+   base @ >r hex
+   ." Mfg ID: " d# 14 cid@ ." 0x" .nospace
+   ."   OEM ID: " d# 13 cid@ emit  d# 12 cid@ emit
+   ."   Name: "  7 d# 11  do  i cid@ emit  -1 +loop
+   ."   Rev: " 6 cid@  dup 4 rshift .nospace ." ." h# f and .nospace
+   decimal
+   ."   Date: "  0 cid@ 1 cid@ bwjoin  dup 4 rshift d# 2000 + .nospace ." -" h# f and .nospace
+   hex
+   ."   SN: " 2 cid@ 3 cid@ 4 cid@ 5 cid@ bljoin ." 0x" .nospace
+   r> base !
 ;
 
 \ The bit numbering follows the table on page 78 of the

@@ -105,6 +105,8 @@ external
 : load  ( addr -- size )            " load"  label-package $call-method  ;
 
 : size  ( -- d.size )  " size" label-package $call-method  ;
+
+: show-cid  ( -- )  " show-cid" $call-parent  ;
 headers
 
 \ LICENSE_BEGIN
