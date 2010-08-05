@@ -19,7 +19,7 @@ h# 200.0000 constant disk-speed-len  \ 32 MB
    push-decimal
    <# u# [char] . hold  u#s u#> type
    pop-base
-   ."  Mb/sec"
+   ."  MB/sec"
 ;
 : .speed  ( "devname" -- )
    safe-parse-word  open-dev to disk-ih
