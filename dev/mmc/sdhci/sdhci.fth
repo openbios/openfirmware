@@ -467,15 +467,39 @@ headers
 
 \ This sends back 512 bits (64 bytes) in a single data block.  See sdstatbits
 \ It contains things like the allocation unit size and the speed class.
-: app-get-status  ( -- buf )    \ ACMD13 R1
+0 value sd-status-buf
+: app-get-status  ( -- )    \ ACMD13 R1
    intstat-on
-   scratch-buf  d# 64 dup  (dma-setup)
+   sd-status-buf  d# 64 dup  (dma-setup)
    app-prefix  0 h# 0d3a h# 13 cmd
-   response  h# 20 and  0=  abort" ACMD13 not implemented!"
-   2 wait
+   response  h# 20 and  if  2 wait  then
    dma-release
-   scratch-buf
    intstat-off
+;
+
+\ Decoder for the result of ACMD13 - app-get-status
+: sdstatbit  ( bit# -- b )
+   d# 511 swap -        ( bit#' )
+   dup 3 rshift sd-status-buf +  c@   ( bit-offset byte )
+   swap 7 and 7 xor  rshift 1 and
+;
+: sdstatbits  ( high low -- bits )
+   swap 0 -rot  do  2*  i sdstatbit  or  -1 +loop
+;
+
+\ This would be more useful if more cards bothered to report the information correctly
+: show-sd-status  ( -- )
+   d# 64 " dma-alloc" $call-parent to sd-status-buf
+   app-get-status
+   base @ >r
+   decimal
+   ." Class: "  d# 447 d# 440 sdstatbits 2* .
+\   ."  AU size: "  d# 431 d# 428 sdstatbits  8 swap lshift  . ." KiB"
+\   ."  EraseSize: "  d# 423 d# 408 sdstatbits . ." AU"
+\   ."  EraseTimeout: "  d# 407 d# 402 sdstatbits . " sec"
+\   ."  EraseOffset: "  d# 401 d# 400 sdstatbits . " sec"
+   r> base !
+   sd-status-buf d# 64 " dma-free" $call-parent
 ;
 
 : get-#write-blocks  ( -- n )  app-prefix  0 h# 161a 0 cmd  response  ;  \ ACMD22 R1 UNTESTED
@@ -994,17 +1018,6 @@ external
 : csdbits  ( high low -- bits )
    swap 0 -rot  do  2*  i csdbit  or  -1 +loop
 ;
-
-\ Decoder for the result of ACMD13 - app-get-status
-: sdstatbit  ( bit# -- b )
-   d# 511 swap -        ( bit#' )
-   dup 3 rshift scratch-buf +  c@   ( bit-offset byte )
-   swap 7 and 7 xor  rshift 1 and
-;
-: sdstatbits  ( high low -- bits )
-   swap 0 -rot  do  2*  i sdstatbit  or  -1 +loop
-;
-
 
 \ The calculation below is shown on page 81 of the
 \ SD Physical Layer Simplified Specification Version 2.00.
