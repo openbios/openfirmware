@@ -71,8 +71,9 @@ purpose: Timing functions using the ACPI timer
 \ Subtracting 10 accounts for the time it takes to read the ACPI timer,
 \ which is an I/O port and therefore slow to read
 : ))t1  ( -- d.ticks )  get-timer  timestamp 2@  d-  d# 10. d-  0. dmax  ;
+: ))t-usecs  ( -- usec )  ))t1  acpi-ticks>usecs  ;
 : )t  ( -- )
-   ))t1  acpi-ticks>usecs   ( microseconds )
+   ))t-usecs   ( microseconds )
    push-decimal
    <#  u# u# u#  [char] , hold  u# u#s u#>  type  ."  uS "
    pop-base

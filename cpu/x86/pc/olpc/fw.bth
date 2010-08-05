@@ -679,6 +679,8 @@ true                               ' client-symbols?  set-config-int-default
 \ Fancy battery charge logger.
 fload ${BP}/cpu/x86/pc/olpc/charge.fth
 
+fload ${BP}/cpu/x86/pc/olpc/diskspeed.fth  \ Mass storage speed test
+
 \ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
 also hidden also keys-forth definitions
 warning @  warning off

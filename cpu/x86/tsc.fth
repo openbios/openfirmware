@@ -46,8 +46,9 @@ d# 262 value us-factor
 : t-update ;
 : t(  ( -- )  tsc@ timestamp 2! ;
 : ))t  ( -- d.ticks )  tsc@  timestamp 2@  d-  ;
+: ))t-usecs  ( -- usecs )  ))t us-factor um/mod nip  ;
 : )t  ( -- )
-   ))t us-factor um/mod nip  ( microseconds )
+   ))t-usecs  ( microseconds )
    push-decimal
    <#  u# u# u#  [char] , hold  u# u#s u#>  type  ."  uS "
    pop-base
