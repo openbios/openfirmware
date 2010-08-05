@@ -129,7 +129,7 @@ Scope(\_PR)
 
 // System Sleep States
 Name(\_S0,Package(){0,0,0,0})
-Name(\_S1,Package(){4,4,4,4})
+// Name(\_S1,Package(){4,4,4,4})  // Entering S1 sometimes prevents entry to S3 in Windows
 Name(\_S3,Package(){1,1,1,1})
 Name(\_S4,Package(){2,2,2,2})
 Name(\_S5,Package(){2,2,2,2})
