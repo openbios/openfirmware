@@ -196,17 +196,7 @@ h# 80 buffer: sc1
 ;
 [then]
 
-: key-stuck?  ( -- flag )
-   ukey?  if  debug-me  then
-   #keys  0  do
-      i key-adr >key-time @  ?dup  if      ( msecs )
-         d# 3,000 +  get-msecs -  0<  if   ( )
-            true unloop exit
-         then
-      then
-   loop
-   false
-;
+0 value key-stuck?
 
 d# 128 8 / constant #key-bytes
 #key-bytes buffer: key-bitmap
@@ -519,7 +509,7 @@ h# ffff constant kbd-bc
 : set-key-time  ( timestamp key-adr -- )
    over 0<>  over >key-time @  0<>  and   if  ( timestamp key-adr )
       \ If both timestamp and old key time are nonzero, then we preserve the old key time
-      2drop
+      >key-time @  d# 3,000 +  -  0>  to key-stuck?
    else
       \ If either timestamp or old key time is 0, we set the key time
       >key-time !
@@ -640,6 +630,7 @@ warning @ warning off
 
    make-keys
 
+   0 to key-stuck?
    cursor-off draw-keyboard
    true to locked?   \ Disable the keyboard alarm handler; it steals our scancodes
    selftest-keys
