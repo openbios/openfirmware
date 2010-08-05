@@ -180,7 +180,6 @@ h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
    flash-write                          ( )
    flash-write-disable                  ( )
 ;
-
 [then]
 
 : ?move-mfg-data  ( -- )
@@ -188,43 +187,16 @@ h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
 
    tethered?  if
       \ Read the manufacturing data from the other FLASH
-      \ First try the new location in the e.0000 block
       flash-buf mfg-data-offset +  /flash-block  mfg-data-offset  flash-read
-
-      \ If there is no mfg data in the e.0000 block, get whatever is in the
-      \ last 2K of the 0 block, where the mfg data used to live.
-      flash-buf mfg-data-end-offset + invalid-tag?  if
-         flash-buf mfg-data-offset +  /flash-block  h# ff  erase
-
-         flash-buf mfg-data-end-offset + h# 800 -  h# 800   ( adr len )
-         mfg-data-end-offset h# 800 -                       ( adr len offset )
-         flash-read                                         ( )
-      then
       exit
    then
 
+   \ Copy the entire block containing the manufacturing data into the
+   \ memory buffer.  This make verification easier.
 
-   \ If the system has mfg data in the old place, move it to the new place
-   mfg-data-top  flash-base h# 1.0000 +  =  if
-      \ Copy just the manufacturing data into the memory buffer; don't
-      \ copy the EC bits from the beginning of the block
-      mfg-data-range                          ( adr len )
-      flash-buf mfg-data-end-offset +         ( adr len ram-adr )
-      over -   swap                           ( adr ram-adr' len )
-      2dup 2>r  move  2r>                     ( ram-adr len )                              
-
-      \ Write from the memory buffer to the FLASH
-      mfg-data-offset flash-erase-block       ( ram-adr len )
-      mfg-data-end-offset over -              ( ram-adr len offset )
-      flash-write                             ( )
-   else
-      \ Copy the entire block containing the manufacturing data into the
-      \ memory buffer.  This make verification easier.
-
-      mfg-data-top /flash-block -             ( src-adr )
-      flash-buf mfg-data-offset +             ( src-adr dst-adr )
-      /flash-block move                       ( )
-   then
+   mfg-data-top /flash-block -             ( src-adr )
+   flash-buf mfg-data-offset +             ( src-adr dst-adr )
+   /flash-block move                       ( )
 ;
 
 : verify-firmware  ( -- )
@@ -235,7 +207,6 @@ h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
 [then]
 
    \ Don't verify the block containing the manufacturing data
-
    flash-buf mfg-data-end-offset +  /flash mfg-data-end-offset  verify-flash-range   \ Verify last part
 ;
 : write-firmware   ( -- )

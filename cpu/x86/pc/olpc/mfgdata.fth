@@ -44,11 +44,9 @@ purpose: Manufacturing data reader
    true                       ( adr data$ name-adr true )
 ;
 
-\ Mfg data used to be at the end of the EC erase block, but
-\ is now in a block by itself.
+\ Mfg data is in a block by itself.
 : mfg-data-top  ( -- adr )
-   flash-base h# 1.0000 +  dup  invalid-tag?  ( old-top data-adr flag )
-   nip  if  drop flash-base h# f.0000 +  then
+   flash-base h# f.0000 +
 ;
 
 : (find-tag)  ( name$ top-adr -- false | data$ true )
