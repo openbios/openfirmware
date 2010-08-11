@@ -3,6 +3,7 @@
 BP=../../..
 
 CFLAGS = -DARM -mlittle-endian
+LFLAGS = -static 
 
 WRTAIL = forth/wrapper
 WRDIR = ${BP}/${WRTAIL}
