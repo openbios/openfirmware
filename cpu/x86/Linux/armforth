@@ -1,2 +1,2 @@
 #!/bin/sh
-qemu-arm ${BP}/cpu/arm/Linux/forth $*
+qemu-arm ${BP}/cpu/arm/Linux/armforth.static $*

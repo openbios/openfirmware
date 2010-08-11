@@ -3,7 +3,6 @@
 BP=../../..
 
 CFLAGS = -DARM -mlittle-endian
-LFLAGS = -static 
 
 WRTAIL = forth/wrapper
 WRDIR = ${BP}/${WRTAIL}
@@ -25,6 +24,11 @@ forth: armforth
 
 armforth: ${OBJS}
 	${CC} ${CFLAGS} ${LFLAGS} -o $@  ${OBJS}
+
+# This staticly-linked wrapper is used by cpu/x86/Linux/armforth for cross-building
+# with the help of QEMU.
+armforth.static: ${OBJS}
+	${CC} ${CFLAGS} ${LFLAGS} -static -o $@  ${OBJS}
 
 %.o: ${WRDIR}/%.c
 	${CC} -c ${CFLAGS} $< -o $@
