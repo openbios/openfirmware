@@ -1,16 +1,13 @@
 OS := $(shell uname)
-CPU := $(shell uname -m)
-
-# We only need to build the native wrapper if we are compiling on an ARM host
-ifeq ($(findstring arm,${CPU}),arm)
-	NATIVEWRAPPER=../../${OS}/forth
-endif
 
 BASEDIR= `(cd ../../../..; pwd;)`
+
+HOSTCPU= $(shell ${BASEDIR}/forth/lib/hostcpu.sh)
+BUILDSH= ${BASEDIR}/forth/lib/build.sh
+
 TAGFILES= ../../build/*.tag *.tag
 CLIENTDIR=../../../../clients
 CLIENTPROGS=
-BUILDSH= ${BASEDIR}/forth/lib/build.sh
 
 all: mmp2.rom tags
 
@@ -19,11 +16,11 @@ mmp2.tag: mmp2.rom
 tags: mmp2.tag
 	@${BASEDIR}/forth/lib/toctags ${BASEDIR} ${TAGFILES}
 
-mmp2.rom: FORCE build ${CLIENTPROGS} ${NATIVEWRAPPER}
+mmp2.rom: FORCE build ${CLIENTPROGS} ../../../${HOSTCPU}/${OS}/forth
 	./build $@
 
-../../${OS}/forth:
-	@make -C ../../${OS} forth
+../../../${HOSTCPU}/${OS}/forth:
+	@make -C ../../../${HOSTCPU}/${OS} forth
 
 ../../build/inflate.bin:
 	@make -C ../../build inflate.bin

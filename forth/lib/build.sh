@@ -36,19 +36,7 @@ test -n "$BP" || {
 # Set HOSTDIR according to the value of BP and the host system
 test -n "$HOSTDIR" || {
     OSNAME=`uname`
-    MACHNAME=`uname -m`
-    case ${MACHNAME} in
-        sun4c) CPUNAME=sparc ;;
-        sun4u) CPUNAME=sparc ;;
-        ppc)   CPUNAME=powerpc ;;
-        i386)  CPUNAME=x86 ;;
-        i586)  CPUNAME=x86 ;;
-	i686)  CPUNAME=x86 ;;
-        mips)  CPUNAME=mips ;;
-        arm*)  CPUNAME=arm ;;
-        sun3)  CPUNAME=m68k ;;
-        *)     CPUNAME=${MACHNAME} ;;
-    esac
+    CPUNAME=`${BP}/forth/lib/hostcpu.sh`
 }
 export HOSTDIR=${BP}/cpu/${CPUNAME}/${OSNAME}
 
