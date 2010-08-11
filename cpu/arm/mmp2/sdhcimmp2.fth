@@ -4,6 +4,7 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
 
    fload ${BP}/cpu/arm/mmp2/sdregs.fth
    fload ${BP}/dev/mmc/sdhci/sdhci.fth
+   true to avoid-high-speed?
 
    new-device
       3 encode-int " reg" property
