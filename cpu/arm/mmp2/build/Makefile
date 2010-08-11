@@ -4,6 +4,7 @@ BASEDIR= `(cd ../../../..; pwd;)`
 TAGFILES= ../../build/*.tag *.tag
 CLIENTDIR=../../../../clients
 CLIENTPROGS=
+BUILDSH= ${BASEDIR}/forth/lib/build.sh
 
 all: mmp2.rom tags
 
@@ -12,7 +13,7 @@ mmp2.tag: mmp2.rom
 tags: mmp2.tag
 	@${BASEDIR}/forth/lib/toctags ${BASEDIR} ${TAGFILES}
 
-mmp2.rom: FORCE build ${CLIENTPROGS}
+mmp2.rom: FORCE build ../../${OS}/forth ${CLIENTPROGS}
 	./build $@
 
 ../../${OS}/forth:
@@ -21,8 +22,8 @@ mmp2.rom: FORCE build ${CLIENTPROGS}
 ../../build/inflate.bin:
 	@make -C ../../build inflate.bin
 
-build: ../../${OS}/forth
-	@ln -sf ../../${OS}/forth build
+build:
+	@ln -sf ${BUILDSH} build
 
 clean:
 	rm -f *.dic *.log headers *~ *.elf *.di *.img builton.fth build *.rom *.version
