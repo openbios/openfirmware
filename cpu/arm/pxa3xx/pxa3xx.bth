@@ -1,11 +1,11 @@
-purpose: Load file for OFW on ARM beagleboard
+purpose: Load file for OFW on ARM PXA3xx
 \ See license at end of file
 
 dictionary: ${BP}/cpu/arm/build/basefw.dic
 command: &armforth &dictionary &this
 build-now
 
-" beagle.tag" r/w create-file drop  tag-file !
+" pxa3xx.tag" r/w create-file drop  tag-file !
 
 \ ' $report-name is include-hook
 

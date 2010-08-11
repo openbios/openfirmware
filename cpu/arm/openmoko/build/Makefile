@@ -1,35 +1,41 @@
-OS := $(shell uname)
+ROMNAME=openmoko
 
 BASEDIR= `(cd ../../../..; pwd;)`
+
+OS := $(shell uname)
+HOSTCPU= $(shell ${BASEDIR}/forth/lib/hostcpu.sh)
+HOSTDIR= ../../../${HOSTCPU}/${OS}
+BUILDSH= ${BASEDIR}/forth/lib/build.sh
+
 TAGFILES= ../../build/*.tag *.tag
 CLIENTDIR=../../../../clients
 CLIENTPROGS=
 
-all: openmoko.rom tags
+all: ${ROMNAME}.rom tags
 
-openmoko.tag: openmoko.rom
+${ROMNAME}.tag: ${ROMNAME}.rom
 
-tags: openmoko.tag
+tags: ${ROMNAME}.tag
 	@${BASEDIR}/forth/lib/toctags ${BASEDIR} ${TAGFILES}
 
-openmoko.rom: FORCE build ${CLIENTPROGS}
+${ROMNAME}.rom: FORCE build ${CLIENTPROGS} ${HOSTDIR}/forth
 	./build $@
 
-../../${OS}/forth:
-	@make -C ../../${OS} forth
+${HOSTDIR}/forth:
+	@make -C ${HOSTDIR} forth
 
 ../../build/inflate.bin:
 	@make -C ../../build inflate.bin
 
-build: ../../${OS}/forth
-	@ln -sf ../../${OS}/forth build
+build:
+	@ln -sf ${BUILDSH} build
 
 clean:
-	rm -f *.dic *.log headers *~ *.elf *.di *.img builton.fth build *.rom *.version
+	rm -f *.dic *.log headers *~ *.elf *.di *.img builton.fth build *.rom *.version tags *.tag
 
 clean-all: clean
 	@make -C ../../build clean
-	@make -C ../../${OS} clean
+	@make -C ${HOSTDIR} clean
 
 .PHONY: FORCE clean all clean-all
 

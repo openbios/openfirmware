@@ -1,35 +1,41 @@
-OS := $(shell uname)
+ROMNAME=pxa3xx
 
 BASEDIR= `(cd ../../../..; pwd;)`
+
+OS := $(shell uname)
+HOSTCPU= $(shell ${BASEDIR}/forth/lib/hostcpu.sh)
+HOSTDIR= ../../../${HOSTCPU}/${OS}
+BUILDSH= ${BASEDIR}/forth/lib/build.sh
+
 TAGFILES= ../../build/*.tag *.tag
 CLIENTDIR=../../../../clients
 CLIENTPROGS=
 
-all: pxa3xx.rom tags
+all: ${ROMNAME}.rom tags
 
-pxa3xx.tag: pxa3xx.rom
+${ROMNAME}.tag: ${ROMNAME}.rom
 
-tags: pxa3xx.tag
+tags: ${ROMNAME}.tag
 	@${BASEDIR}/forth/lib/toctags ${BASEDIR} ${TAGFILES}
 
-pxa3xx.rom: FORCE build ${CLIENTPROGS}
+${ROMNAME}.rom: FORCE build ${CLIENTPROGS} ${HOSTDIR}/forth
 	./build $@
 
-../../${OS}/forth:
-	@make -C ../../${OS} forth
+${HOSTDIR}/forth:
+	@make -C ${HOSTDIR} forth
 
 ../../build/inflate.bin:
 	@make -C ../../build inflate.bin
 
-build: ../../${OS}/forth
-	@ln -sf ../../${OS}/forth build
+build:
+	@ln -sf ${BUILDSH} build
 
 clean:
-	rm -f *.dic *.log headers *~ *.elf *.di *.img builton.fth build *.rom *.version
+	rm -f *.dic *.log headers *~ *.elf *.di *.img builton.fth build *.rom *.version tags *.tag
 
 clean-all: clean
 	@make -C ../../build clean
-	@make -C ../../${OS} clean
+	@make -C ${HOSTDIR} clean
 
 .PHONY: FORCE clean all clean-all
 
@@ -56,4 +62,3 @@ clean-all: clean
 # WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #
 # LICENSE_END
-

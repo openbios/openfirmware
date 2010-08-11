@@ -1,11 +1,11 @@
-purpose: Load file for OFW on ARM beagleboard
+purpose: Load file for OFW on ARM OpenMoko
 \ See license at end of file
 
 dictionary: ${BP}/cpu/arm/build/basefw.dic
 command: &armforth &dictionary &this
 build-now
 
-" beagle.tag" r/w create-file drop  tag-file !
+" openmoko.tag" r/w create-file drop  tag-file !
 
 \ ' $report-name is include-hook
 
@@ -15,11 +15,10 @@ h# 8.0000 constant initial-heap-size
 ' (initial-heap) to initial-heap
 
 
-\ fload ${BP}/dev/diaguartbb.fth	\ beagleboard UART3
-fload ${BP}/cpu/arm/beagle/diaguartbb.fth	\ beagleboard UART3 
-\ h# 50000000 to uart-base \ UART# base address on beagleboard
-h# 50004000 to uart-base \ UART# base address on beagleboard
-\ h# 50008000 to uart-base \ UART# base address on beagleboard
+fload ${BP}/dev/omap/diaguart.fth	\ OMAP UART
+\ h# 50000000 to uart-base
+h# 50004000 to uart-base
+\ h# 50008000 to uart-base
 
 fload ${BP}/forth/lib/sysuart.fth	\ Set console I/O vectors to UART
 
