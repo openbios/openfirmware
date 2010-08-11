@@ -2282,6 +2282,10 @@ s_flushcache(adr, len)
      char *adr;
      long len;
 {
+#if defined(__linux__) && defined(ARM) 
+	__clear_cache(adr, adr+len);
+#endif
+
 #if defined(__linux__) && defined(MIPS) 
        extern int cacheflush(char *addr, int nbytes, int cache);
        (void) cacheflush(adr, len, BCACHE);
