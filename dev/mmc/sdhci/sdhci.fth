@@ -643,6 +643,24 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
    h# e data-timeout!   \ 2^26 / 48 MHz = 1.4 sec
 ;
 
+false value avoid-high-speed?
+: set-speed  ( -- )
+   avoid-high-speed?  if
+      card-clock-25
+      exit
+   then
+
+   \ Ask if high-speed is supported
+   h# 00ff.fff1 switch-function d# 13 + c@  2  and  if   \ cmd6
+      h# 80ff.fff1 switch-function drop   \ Perform the switch  cmd6
+      \ Bump the host controller clock
+      host-high-speed  \ Changes the clock edge
+      card-clock-50
+   else
+      card-clock-25
+   then
+;
+
 : configure-transfer  ( -- )
    mmc?  if
       1-bit
@@ -660,15 +678,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
       \ 1 for v1.10, and 2 for v2.
       get-scr c@  h# f and  0=  if  exit  then   \ acmd51
 
-      \ Ask if high-speed is supported
-      h# 00ff.fff1 switch-function d# 13 + c@  2  and  if   \ cmd6
-         h# 80ff.fff1 switch-function drop   \ Perform the switch  cmd6
-         \ Bump the host controller clock
-         host-high-speed  \ Changes the clock edge
-         card-clock-50
-      else
-         card-clock-25
-      then
+      set-speed
    then
 ;
 
