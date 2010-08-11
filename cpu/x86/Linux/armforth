@@ -1,2 +1,11 @@
 #!/bin/sh
-qemu-arm ${BP}/cpu/arm/Linux/armforth.static $*
+
+# The "-0 $0" below causes the wrapper to skip arguments
+# before the -0, so the program name appears to be the
+# name of this script ($0).  That makes the logger put the
+# this script name in the "command: " line, instead of
+# putting cpu/arm/Linux/armforth.static, which is not
+# directly executable in the cross environment, there.
+# That makes fast-rebuilds from the .log file work right.
+
+qemu-arm ${BP}/cpu/arm/Linux/armforth.static -0 $0 $*

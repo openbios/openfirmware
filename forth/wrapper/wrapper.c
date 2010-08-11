@@ -815,6 +815,20 @@ main(argc, argv, envp)
    	argc = ccommand(&argv);
 #endif
 
+	/*
+	 * This is a special accomodation for running the wrapper under an emulator
+	 * like QEMU.  You can make a shell script containing a line like:
+	 *   qemu-arm wrapper_name -0 script_name ...
+	 * The logger will then log the name of script instead of the actual wrapper.
+	 * An alternate would be to use Linux's binfmt_misc facility to bind the
+	 * emulator to the wrapper binary, but the problem with that is that it
+	 * requires root to register the binding every time you start the computer.
+	 */
+	if (argc > 1 && (0 == strcmp(argv[1], "-0"))) {
+		argv += 2;
+		argc -= 2;
+	}
+
 	progname = argv[0];
 
 	log_command_line(progname, dictfile, f, argc, argv);
