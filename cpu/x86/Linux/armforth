@@ -1,0 +1,2 @@
+#!/bin/sh
+qemu-arm ${BP}/cpu/arm/Linux/forth $*
