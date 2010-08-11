@@ -1,4 +1,10 @@
 OS := $(shell uname)
+CPU := $(shell uname -m)
+
+# We only need to build the native wrapper if we are compiling on an ARM host
+ifeq ($CPU, arm)
+	NATIVEWRAPPER=../../${OS}/forth
+endif
 
 BASEDIR= `(cd ../../../..; pwd;)`
 TAGFILES= ../../build/*.tag *.tag
@@ -13,7 +19,7 @@ mmp2.tag: mmp2.rom
 tags: mmp2.tag
 	@${BASEDIR}/forth/lib/toctags ${BASEDIR} ${TAGFILES}
 
-mmp2.rom: FORCE build ../../${OS}/forth ${CLIENTPROGS}
+mmp2.rom: FORCE build ${CLIENTPROGS} ${NATIVEWRAPPER}
 	./build $@
 
 ../../${OS}/forth:
