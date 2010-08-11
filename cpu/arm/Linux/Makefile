@@ -18,8 +18,8 @@ all: forth
 
 # Use forth when you just need to run Forth but don't care what
 # native instruction set it is on.
-# Use x86forth when you need to compile new dictionaries that will
-# run on x86 systems.
+# Use armforth when you need to compile new dictionaries that will
+# run on ARM systems.
 forth: armforth
 	@ln -sf armforth forth
 
