@@ -45,8 +45,7 @@ test -n "$HOSTDIR" || {
         i586)  CPUNAME=x86 ;;
 	i686)  CPUNAME=x86 ;;
         mips)  CPUNAME=mips ;;
-        arm)   CPUNAME=arm ;;
-        arm32) CPUNAME=arm ;;
+        arm*)  CPUNAME=arm ;;
         sun3)  CPUNAME=m68k ;;
         *)     CPUNAME=${MACHNAME} ;;
     esac

@@ -2,7 +2,7 @@ OS := $(shell uname)
 CPU := $(shell uname -m)
 
 # We only need to build the native wrapper if we are compiling on an ARM host
-ifeq ($CPU, arm)
+ifeq ($(findstring arm,${CPU}),arm)
 	NATIVEWRAPPER=../../${OS}/forth
 endif
 
