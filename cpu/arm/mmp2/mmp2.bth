@@ -194,6 +194,8 @@ end-code
 
 .( --- Saving mmp2.rom --- )  cr " mmp2.rom" $save-rom
 
+interact
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
 \

@@ -9,14 +9,14 @@ TAGFILES= ../../build/*.tag *.tag
 CLIENTDIR=../../../../clients
 CLIENTPROGS=
 
-all: mmp2.rom tags
+all: ofw.rom tags
 
-mmp2.tag: mmp2.rom
+ofw.tag: ofw.rom
 
-tags: mmp2.tag
+tags: ofw.tag
 	@${BASEDIR}/forth/lib/toctags ${BASEDIR} ${TAGFILES}
 
-mmp2.rom: FORCE build ${CLIENTPROGS} ../../../${HOSTCPU}/${OS}/forth
+ofw.rom: FORCE build ${CLIENTPROGS} ../../../${HOSTCPU}/${OS}/forth
 	./build $@
 
 ../../../${HOSTCPU}/${OS}/forth:
