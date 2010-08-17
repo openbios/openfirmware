@@ -6,6 +6,7 @@
 #include "test.h"
 #include "config.h"
 #include "ega.h"
+#include <inttypes.h>
 
 extern int segs, bail;
 extern volatile ulong *p;
@@ -35,12 +36,12 @@ void addr_tst1()
 
 	/* Test the global address bits */
 	for (p1=0, j=0; j<2; j++) {
-        	hprint(LINE_PAT, COL_PAT, p1);
+		hprint(LINE_PAT, COL_PAT, p1);
 
 		/* Set pattern in our lowest multiple of 0x20000 */
 		p = (ulong *)roundup((ulong)v->map[0].start, 0x1ffff);
 		*p = p1;
-	
+
 		/* Now write pattern compliment */
 		p1 = ~p1;
 		end = v->map[segs-1].end;
@@ -48,15 +49,15 @@ void addr_tst1()
 			mask = 4;
 			do {
 				pt = (ulong *)((ulong)p | mask);
-				if (pt == p) {
+				if ((uintptr_t)pt == (uintptr_t)p) {
 					mask = mask << 1;
 					continue;
 				}
-				if (pt >= end) {
+				if ((uintptr_t)pt >= (uintptr_t)end) {
 					break;
 				}
 				*pt = p1;
-				if ((bad = *p) != ~p1) {
+				if ((uintptr_t)(bad = *p) != (uintptr_t)~p1) {
 					ad_err1((ulong *)p, (ulong *)mask,
 						bad, ~p1);
 					i = 1000;
@@ -77,14 +78,14 @@ void addr_tst1()
 		bank = 0x40000;
 	}
 	for (p1=0, k=0; k<2; k++) {
-        	hprint(LINE_PAT, COL_PAT, p1);
+		hprint(LINE_PAT, COL_PAT, p1);
 
 		for (j=0; j<segs; j++) {
 			p = v->map[j].start;
 			/* Force start address to be a multiple of 256k */
 			p = (ulong *)roundup((ulong)p, bank - 1);
 			end = v->map[j].end;
-			while (p < end) {
+			while ((uintptr_t)p < (uintptr_t)end) {
 				*p = p1;
 
 				p1 = ~p1;
@@ -93,24 +94,24 @@ void addr_tst1()
 					do {
 						pt = (ulong *)
 						    ((ulong)p | mask);
-						if (pt == p) {
+						if ((uintptr_t)pt == (uintptr_t)p) {
 							mask = mask << 1;
 							continue;
 						}
-						if (pt >= end) {
+						if ((uintptr_t)pt >= (uintptr_t)end) {
 							break;
 						}
 						*pt = p1;
-						if ((bad = *p) != ~p1) {
+						if ((uintptr_t)(bad = *p) != (uintptr_t)~p1) {
 							ad_err1((ulong *)p,
-							    (ulong *)mask,
-							    bad,~p1);
+							        (ulong *)mask,
+							        bad,~p1);
 							i = 200;
 						}
 						mask = mask << 1;
 					} while(mask);
 				}
-				if (p + bank > p) {
+				if ((uintptr_t)(p + bank) > (uintptr_t)p) {
 					p += bank;
 				} else {
 					p = end;
@@ -133,7 +134,7 @@ void addr_tst2()
 	volatile ulong *pe;
 	volatile ulong *end, *start;
 
-        cprint(LINE_PAT, COL_PAT, "        ");
+	cprint(LINE_PAT, COL_PAT, "        ");
 
 	/* Write each address with it's own address */
 	for (j=0; j<segs; j++) {
@@ -144,16 +145,16 @@ void addr_tst2()
 		done = 0;
 		do {
 			/* Check for overflow */
-			if (pe + SPINSZ > pe) {
+			if ((uintptr_t)(pe + SPINSZ) > (uintptr_t)pe) {
 				pe += SPINSZ;
 			} else {
 				pe = end;
 			}
-			if (pe >= end) {
+			if ((uintptr_t)pe >= (uintptr_t)end) {
 				pe = end;
 				done++;
 			}
-			if (p == pe ) {
+			if ((uintptr_t)p == (uintptr_t)pe) {
 				break;
 			}
 
@@ -188,16 +189,16 @@ void addr_tst2()
 		done = 0;
 		do {
 			/* Check for overflow */
-			if (pe + SPINSZ > pe) {
+			if ((uintptr_t)(pe + SPINSZ) > (uintptr_t)pe) {
 				pe += SPINSZ;
 			} else {
 				pe = end;
 			}
-			if (pe >= end) {
+			if ((uintptr_t)pe >= (uintptr_t)end) {
 				pe = end;
 				done++;
 			}
-			if (p == pe ) {
+			if ((uintptr_t)p == (uintptr_t)pe ) {
 				break;
 			}
 /* Original C code replaced with hand tuned assembly code
@@ -220,7 +221,7 @@ void addr_tst2()
 				"cmpl %%edx,%%edi\n\t"
 				"jb L91\n\t"
 				"jmp L94\n\t"
-			
+
 				"L93:\n\t"
 				"pushl %%edx\n\t"
 				"pushl %%ecx\n\t"
@@ -264,7 +265,7 @@ void movinvr()
 	}
 
 	/* Display the current seed */
-        hprint(LINE_PAT, COL_PAT, seed1);
+	hprint(LINE_PAT, COL_PAT, seed1);
 	rand_seed(seed1, seed2);
 	for (j=0; j<segs; j++) {
 		start = v->map[j].start;
@@ -274,16 +275,16 @@ void movinvr()
 		done = 0;
 		do {
 			/* Check for overflow */
-			if (pe + SPINSZ > pe) {
+			if ((uintptr_t)(pe + SPINSZ) > (uintptr_t)pe) {
 				pe += SPINSZ;
 			} else {
 				pe = end;
 			}
-			if (pe >= end) {
+			if ((uintptr_t)pe >= (uintptr_t)end) {
 				pe = end;
 				done++;
 			}
-			if (p == pe ) {
+			if ((uintptr_t)p == (uintptr_t)pe) {
 				break;
 			}
 /* Original C code replaced with hand tuned assembly code */
@@ -293,19 +294,19 @@ void movinvr()
 			}
  */
 
-                        asm __volatile__ (
-                                "jmp L200\n\t"
-                                ".p2align 4,,7\n\t"
-                                "L200:\n\t"
-                                "call rand\n\t"
+			asm __volatile__ (
+				"jmp L200\n\t"
+				".p2align 4,,7\n\t"
+				"L200:\n\t"
+				"call rand\n\t"
 				"movl %%eax,(%%edi)\n\t"
-                                "addl $4,%%edi\n\t"
-                                "cmpl %%ebx,%%edi\n\t"
-                                "jb L200\n\t"
-                                : "=D" (p)
-                                : "D" (p), "b" (pe)
+				"addl $4,%%edi\n\t"
+				"cmpl %%ebx,%%edi\n\t"
+				"jb L200\n\t"
+				: "=D" (p)
+				: "D" (p), "b" (pe)
 				: "eax"
-                        );
+			);
 
 			do_tick();
 			BAILR
@@ -325,16 +326,16 @@ void movinvr()
 			done = 0;
 			do {
 				/* Check for overflow */
-				if (pe + SPINSZ > pe) {
+				if ((uintptr_t)(pe + SPINSZ) > (uintptr_t)pe) {
 					pe += SPINSZ;
 				} else {
 					pe = end;
 				}
-				if (pe >= end) {
+				if ((uintptr_t)pe >= (uintptr_t)end) {
 					pe = end;
 					done++;
 				}
-				if (p == pe ) {
+				if ((uintptr_t)p == (uintptr_t)pe) {
 					break;
 				}
 /* Original C code replaced with hand tuned assembly code */
@@ -410,7 +411,7 @@ void movinv1(int iter, ulong p1, ulong p2)
 	volatile ulong *start,*end;
 
 	/* Display the current pattern */
-        hprint(LINE_PAT, COL_PAT, p1);
+	hprint(LINE_PAT, COL_PAT, p1);
 
 	/* Initialize memory with the initial pattern.  */
 	for (j=0; j<segs; j++) {
@@ -421,17 +422,17 @@ void movinv1(int iter, ulong p1, ulong p2)
 		done = 0;
 		do {
 			/* Check for overflow */
-			if (pe + SPINSZ > pe) {
+			if ((uintptr_t)(pe + SPINSZ) > (uintptr_t)pe) {
 				pe += SPINSZ;
 			} else {
 				pe = end;
 			}
-			if (pe >= end) {
+			if ((uintptr_t)pe >= (uintptr_t)end) {
 				pe = end;
 				done++;
 			}
 			len = pe - p;
-			if (p == pe ) {
+			if ((uintptr_t)p == (uintptr_t)pe) {
 				break;
 			}
 /* Original C code replaced with hand tuned assembly code
@@ -462,16 +463,16 @@ void movinv1(int iter, ulong p1, ulong p2)
 			done = 0;
 			do {
 				/* Check for overflow */
-				if (pe + SPINSZ > pe) {
+				if ((uintptr_t)(pe + SPINSZ) > (uintptr_t)pe) {
 					pe += SPINSZ;
 				} else {
 					pe = end;
 				}
-				if (pe >= end) {
+				if ((uintptr_t)pe >= (uintptr_t)end) {
 					pe = end;
 					done++;
 				}
-				if (p == pe ) {
+				if ((uintptr_t)p == (uintptr_t)pe) {
 					break;
 				}
 /* Original C code replaced with hand tuned assembly code
@@ -528,16 +529,16 @@ void movinv1(int iter, ulong p1, ulong p2)
 			done = 0;
 			do {
 				/* Check for underflow */
-				if (pe - SPINSZ < pe) {
+				if ((uintptr_t)(pe - SPINSZ) < (uintptr_t)pe) {
 					pe -= SPINSZ;
 				} else {
 					pe = start;
 				}
-				if (pe <= start) {
+				if ((uintptr_t)pe <= (uintptr_t)start) {
 					pe = start;
 					done++;
 				}
-				if (p == pe ) {
+				if ((uintptr_t)p == (uintptr_t)pe) {
 					break;
 				}
 /* Original C code replaced with hand tuned assembly code
@@ -612,16 +613,16 @@ void movinv32(int iter, ulong p1, ulong lb, ulong hb, int sval, int off)
 		pat = p1;
 		do {
 			/* Check for overflow */
-			if (pe + SPINSZ > pe) {
+			if ((uintptr_t)(pe + SPINSZ) > (uintptr_t)pe) {
 				pe += SPINSZ;
 			} else {
 				pe = end;
 			}
-			if (pe >= end) {
+			if ((uintptr_t)pe >= (uintptr_t)end) {
 				pe = end;
 				done++;
 			}
-			if (p == pe ) {
+			if ((uintptr_t)p == (uintptr_t)pe) {
 				break;
 			}
 			/* Do a SPINSZ section of memory */
@@ -674,16 +675,16 @@ void movinv32(int iter, ulong p1, ulong lb, ulong hb, int sval, int off)
 			pat = p1;
 			do {
 				/* Check for overflow */
-				if (pe + SPINSZ > pe) {
+				if ((uintptr_t)(pe + SPINSZ) > (uintptr_t)pe) {
 					pe += SPINSZ;
 				} else {
 					pe = end;
 				}
-				if (pe >= end) {
+				if ((uintptr_t)pe >= (uintptr_t)end) {
 					pe = end;
 					done++;
 				}
-				if (p == pe ) {
+				if ((uintptr_t)p == (uintptr_t)pe) {
 					break;
 				}
 /* Original C code replaced with hand tuned assembly code
@@ -787,16 +788,16 @@ void movinv32(int iter, ulong p1, ulong lb, ulong hb, int sval, int off)
 			done = 0;
 			do {
 				/* Check for underflow */
-				if (pe - SPINSZ < pe) {
+				if ((uintptr_t)(pe - SPINSZ) < (uintptr_t)pe) {
 					pe -= SPINSZ;
 				} else {
 					pe = start;
 				}
-				if (pe <= start) {
+				if ((uintptr_t)pe <= (uintptr_t)start) {
 					pe = start;
 					done++;
 				}
-				if (p == pe ) {
+				if ((uintptr_t)p == (uintptr_t)pe) {
 					break;
 				}
 /* Original C code replaced with hand tuned assembly code
@@ -882,9 +883,9 @@ void modtst(int offset, int iter, ulong p1, ulong p2)
 	volatile ulong *start, *end;
 
 	/* Display the current pattern */
-        hprint(LINE_PAT, COL_PAT-2, p1);
+	hprint(LINE_PAT, COL_PAT-2, p1);
 	cprint(LINE_PAT, COL_PAT+6, "-");
-        dprint(LINE_PAT, COL_PAT+7, offset, 2, 1);
+	dprint(LINE_PAT, COL_PAT+7, offset, 2, 1);
 
 	/* Write every nth location with pattern */
 	for (j=0; j<segs; j++) {
@@ -895,16 +896,16 @@ void modtst(int offset, int iter, ulong p1, ulong p2)
 		done = 0;
 		do {
 			/* Check for overflow */
-			if (pe + SPINSZ > pe) {
+			if ((uintptr_t)(pe + SPINSZ) > (uintptr_t)pe) {
 				pe += SPINSZ;
 			} else {
 				pe = end;
 			}
-			if (pe >= end) {
+			if ((uintptr_t)pe >= (uintptr_t)end) {
 				pe = end;
 				done++;
 			}
-			if (p == pe ) {
+			if ((uintptr_t)p == (uintptr_t)pe) {
 				break;
 			}
 /* Original C code replaced with hand tuned assembly code
@@ -940,16 +941,16 @@ void modtst(int offset, int iter, ulong p1, ulong p2)
 			k = 0;
 			do {
 				/* Check for overflow */
-				if (pe + SPINSZ > pe) {
+				if ((uintptr_t)(pe + SPINSZ) > (uintptr_t)pe) {
 					pe += SPINSZ;
 				} else {
 					pe = end;
 				}
-				if (pe >= end) {
+				if ((uintptr_t)pe >= (uintptr_t)end) {
 					pe = end;
 					done++;
 				}
-				if (p == pe ) {
+				if ((uintptr_t)p == (uintptr_t)pe) {
 					break;
 				}
 /* Original C code replaced with hand tuned assembly code
@@ -998,16 +999,16 @@ void modtst(int offset, int iter, ulong p1, ulong p2)
 		done = 0;
 		do {
 			/* Check for overflow */
-			if (pe + SPINSZ > pe) {
+			if ((uintptr_t)(pe + SPINSZ) > (uintptr_t)pe) {
 				pe += SPINSZ;
 			} else {
 				pe = end;
 			}
-			if (pe >= end) {
+			if ((uintptr_t)pe >= (uintptr_t)end) {
 				pe = end;
 				done++;
 			}
-			if (p == pe ) {
+			if ((uintptr_t)p == (uintptr_t)pe) {
 				break;
 			}
 /* Original C code replaced with hand tuned assembly code
@@ -1052,11 +1053,11 @@ void modtst(int offset, int iter, ulong p1, ulong p2)
 			BAILR
 		} while (!done);
 	}
-        cprint(LINE_PAT, COL_PAT, "          ");
+	cprint(LINE_PAT, COL_PAT, "          ");
 }
 
 /*
- * Test memory using block moves 
+ * Test memory using block moves
  * Adapted from Robert Redelmeier's burnBX test
  */
 void block_move(int iter)
@@ -1066,7 +1067,7 @@ void block_move(int iter)
 	volatile ulong p, pe, pp;
 	volatile ulong start, end;
 
-        cprint(LINE_PAT, COL_PAT-2, "          ");
+	cprint(LINE_PAT, COL_PAT-2, "          ");
 
 	/* Initialize memory with the initial pattern.  */
 	for (j=0; j<segs; j++) {
@@ -1085,16 +1086,16 @@ void block_move(int iter)
 		done = 0;
 		do {
 			/* Check for overflow */
-			if (pe + SPINSZ*4 > pe) {
+			if ((uintptr_t)(pe + SPINSZ*4) > (uintptr_t)pe) {
 				pe += SPINSZ*4;
 			} else {
 				pe = end;
 			}
-			if (pe >= end) {
+			if ((uintptr_t)pe >= (uintptr_t)end) {
 				pe = end;
 				done++;
 			}
-			if (p == pe ) {
+			if ((uintptr_t)p == (uintptr_t)pe) {
 				break;
 			}
 			len  = ((ulong)pe - (ulong)p) / 64;
@@ -1134,7 +1135,7 @@ void block_move(int iter)
 		} while (!done);
 	}
 
-	/* Now move the data around 
+	/* Now move the data around
 	 * First move the data up half of the segment size we are testing
 	 * Then move the data to the original location + 32 bytes
 	 */
@@ -1154,16 +1155,16 @@ void block_move(int iter)
 		done = 0;
 		do {
 			/* Check for overflow */
-			if (pe + SPINSZ*4 > pe) {
+			if ((uintptr_t)(pe + SPINSZ*4) > (uintptr_t)pe) {
 				pe += SPINSZ*4;
 			} else {
 				pe = end;
 			}
-			if (pe >= end) {
+			if ((uintptr_t)pe >= (uintptr_t)end) {
 				pe = end;
 				done++;
 			}
-			if (p == pe ) {
+			if ((uintptr_t)p == (uintptr_t)pe) {
 				break;
 			}
 			pp = p + ((pe - p) / 2);
@@ -1201,7 +1202,7 @@ void block_move(int iter)
 		} while (!done);
 	}
 
-	/* Now check the data 
+	/* Now check the data
 	 * The error checking is rather crude.  We just check that the
 	 * adjacent words are the same.
 	 */
@@ -1221,16 +1222,16 @@ void block_move(int iter)
 		done = 0;
 		do {
 			/* Check for overflow */
-			if (pe + SPINSZ*4 > pe) {
+			if ((uintptr_t)(pe + SPINSZ*4) > (uintptr_t)pe) {
 				pe += SPINSZ*4;
 			} else {
 				pe = end;
 			}
-			if (pe >= end) {
+			if ((uintptr_t)pe >= (uintptr_t)end) {
 				pe = end;
 				done++;
 			}
-			if (p == pe ) {
+			if ((uintptr_t)p == (uintptr_t)pe) {
 				break;
 			}
 			asm __volatile__ (
@@ -1296,7 +1297,7 @@ void bit_fade()
 			end = v->map[j].end;
 			pe = start;
 			p = start;
-			for (p=end; p<end; p++) {
+			for (p=start; p<end; p++) {
 				*p = p1;
 			}
 			do_tick();
@@ -1311,8 +1312,8 @@ void bit_fade()
 			end = v->map[j].end;
 			pe = start;
 			p = start;
-			for (p=end; p<end; p++) {
- 				if ((bad=*p) != p1) {
+			for (p=start; p<end; p++) {
+				if ((bad=*p) != p1) {
 					error((ulong*)p, p1, bad);
 				}
 			}
