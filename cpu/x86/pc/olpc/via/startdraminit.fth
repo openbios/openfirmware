@@ -25,10 +25,33 @@ label DDRinit
    13 36b config-wb  \ SDRAM MRS Enable
 \  101258 #) ax mov  \ Depends on Twr, CL, and Burst Length
 
+   \ The address in the mov below sends setup information to the DDR2 SDRAM chips
+   \ The address bits are:
+   \    P .... .www DmCC CtBB B___
+   \
+   \ ___ are the low-order address bits that don't go directly to the RAM chips
+   \ because the DRAM data bus from the processor is 8 bytes wide.
+   \
+   \ BBB is Burst Length    - 010=BL4, 011=BL8
+   \ t is Burst Type        - 0=sequential, 1=interleaved
+   \ CCC is CAS Latency     - 010=CL2, 011=CL3, 100=CL4, 101=CL5, 110=CL6
+   \ m is test mode         - 0=normal, 1=test
+   \ D is DLL reset         - 0=no reset, 1=reset
+   \ www is Write Recovery  - 001=WR2, 010=WR3, 011=WR4, 100=WR5, 101=WR6
+   \ P is Power Down Exit   - 0=fast, 1=slow
+      
+   \ At this point, the address multiplexing is set for 12 column addresses, i.e MA type 111,
+   \ per the preceding setting of D0F3 Rx50 in demodram.fth  (50 ee ee mreg).
+   \ That keep the 12-bit group "www DmCC CtBB B" together as a contiguous set.
+   \ I'm not sure how the P bit gets routed from processor A20 to SDRAM A12.  In fact
+   \ I'm just assuming that that leading 1 in the addresses below is the P bit.
+   \ It can't be a bank address bit, because BA0, BA1, and BA2 are suppose to be all 0
+   \ for MRS (Mode Register Set)
+
    acpi-io-base 48 + port-rl  h# 0008.0000 # ax and  0<>  if  \ Memory ID0 bit - set for CL4 SDRAM
-      102258 #) ax mov  \ Depends on Twr, CL, and Burst Length - CL4
+      102258 #) ax mov  \ Depends on Twr, CL, and Burst Length - WR3, CL4, BL8
    else
-      1021d8 #) ax mov  \ Depends on Twr, CL, and Burst Length - CL3
+      1021d8 #) ax mov  \ Depends on Twr, CL, and Burst Length - WR3, CL3, BL8
    then
 
 0 [if]

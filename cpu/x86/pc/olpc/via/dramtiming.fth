@@ -105,7 +105,8 @@ h# 400.0000 constant /fbmem
    TCL  4 lshift or   \ CAS Latency
    0    7 lshift or   \ Normal mode, not test mode
    0    8 lshift or   \ Not DLL reset
-   Twr Tck / 1-  scramble-mrs  or   \ Twr cycles minus 1
-   3 lshift
+   Twr Tck / 1-  or   \ Twr cycles minus 1
+   1 d# 17 lshift or  \ Slow exit from power down
+   3 lshift           \ Push past byte-select bits (8-byte-wide memory bus)
 ;
 [then]
