@@ -154,10 +154,6 @@ end-support-package
 support-package: zip-file-system
    fload ${BP}/ofw/fs/zipfs.fth		\ Zip file system
 end-support-package
-
-support-package: dropin-file-system
-   fload ${BP}/ofw/fs/dropinfs.fth	\ Dropin file system
-end-support-package
 [then]
 
 support-package: minix-file-system
@@ -691,6 +687,7 @@ true                               ' client-symbols?  set-config-int-default
    probe-usb
    " probe+" do-drop-in
 
+   make-bda
    setup-smbios  \ Must be done after build-date is defined via do-drop-in
 
    interpreter-init
