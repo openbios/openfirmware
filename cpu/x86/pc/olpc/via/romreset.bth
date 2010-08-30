@@ -112,8 +112,6 @@ label startup
 \   acpi-io-base 1 + 8888 config-ww   \ Set ACPI base address
 \   8c 8881 config-wb   \ Enable ACPI regs, 32-bit PM timer, guard RTC against power glitches
 
-   h# 1d port80
-
 \ This is a device ID backdoor to fake out the ID so Ubuntu will install
 \   8879 config-rb  h# 40 # al or  al dx out  \ I don't know what this is, but coreboot does it
 
@@ -214,6 +212,8 @@ then
 long-offsets off
 [then]
 
+   h# 18 port80
+
    fload ${BP}/cpu/x86/pc/olpc/via/startmtrrinit.fth
 
    fload ${BP}/cpu/x86/pc/olpc/via/ioinit.fth
@@ -228,7 +228,11 @@ long-offsets off
    \ Setup a small stack for subroutine calls
    h# 10.0000 # esp mov
 
+   h# 19 port80
+
    init-codec #) call
+
+   h# 1a port80
 
    long-offsets on
    acpi-io-base 4 + port-rw           \ Get APCI Status register
