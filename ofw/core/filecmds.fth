@@ -590,20 +590,21 @@ d# 128 buffer: destination$
    first-match  if  2drop dir?  else  false  then
 ;   
 d# 128 buffer: search-dir
-: $copy-all  ( pattern$ dir-path$ -- )
-   2>r
+: $copy-all  ( pattern$ dir$ -- )
+   2>r                                                 ( pattern$ r: dir$ )
    2r@ is-dir?  0= abort" The destination for pattern copies must be a directory"
-   2dup canonical-path file&dir 2nip search-dir place
-   begin-search  begin  another-match?  while      ( 8attributes name$ )
-      2>r dir?  if                                 ( )
-         ." Not copying the directory: " 2r> type cr
-      else
-         search-dir count source$ pack
-         2r> source$ $cat
-         source$ count  2r@  $copy-to-dir
-      then
-   repeat
-   2r> 2drop
+   2dup canonical-path                                 ( pattern$ canonical$ r: dir$ )
+   file&dir 2nip search-dir place  \ note source dir   ( pattern$ r: dir$ )
+   begin-search  begin  another-match?  while          ( 8attributes name$ r: dir$ )
+      2>r dir?  if                                     ( r: dir$ name$ )
+         ." Not copying the directory: " 2r> type cr   ( r: dir$ )
+      else                                             ( r: dir$ name$ )
+         search-dir count source$ place                ( r: dir$ name$ )
+         2r> source$ $cat                              ( r: dir$ )
+         source$ count  2r@  $copy-to-dir              ( r: dir$ )
+      then                                             ( r: dir$ )
+   repeat                                              ( r: dir$ )
+   2r> 2drop                                           ( )
 ;
 
 : $copy2  ( path$1 path$2 -- )
