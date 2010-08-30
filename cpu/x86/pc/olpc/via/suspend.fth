@@ -38,13 +38,6 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
    d# 10 set-tick-limit
    ]unlock
 ;
-: kb-suspend  ( -- )
-   sci-wakeup
-   begin
-      begin  1 ms key?  while  key  dup [char] q = abort" Quit"  emit  repeat
-      s3
-   again
-;
 : s3-no-usb  ( -- )
    audio-ih  if  audio-ih close-dev  0 to audio-ih  then
    " video-save" screen-ih $call-method  \ Freeze display
@@ -58,6 +51,13 @@ code ax-call  ( ax-value dst -- )  bx pop  ax pop  bx call  c;
    resume-usb
 ;
 alias s s3-suspend
+: kb-suspend  ( -- )
+   sci-wakeup
+   begin
+      begin  1 ms key?  while  key  dup [char] q = abort" Quit"  emit  repeat
+      s3-no-usb
+   again
+;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks
