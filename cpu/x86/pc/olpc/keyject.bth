@@ -14,6 +14,7 @@ in: ${BP}/dev/geode/ac97/build/ac97.fc
 in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
 in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
 in: ${BP}/dev/usb2/device/hub/build/hub.fc
+in: ${BP}/dev/usb2/device/generic/build/generic.fc
 in: ${BP}/dev/usb2/device/net/build/usbnet.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
@@ -21,7 +22,7 @@ in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
 in: ${BP}/dev/usb2/device/wlan/build/usb8388.fc
 in: ${BP}/dev/olpc/cafenand/build/cafenand.fc
 in: ${BP}/dev/olpc/cafecamera/build/cafecamera.fc
-in: ${BP}/clients/memtest86/memtest
+in: memtest
 in: ${BP}/clients/emacs/x86/emacs
 in: ${BP}/cpu/x86/pc/olpc/build/verify.img
 in: ${BP}/cpu/x86/pc/olpc/build/usb8388.bin
@@ -68,7 +69,7 @@ $new-file
    fload ${BP}/cpu/x86/pc/olpc/loaddropins.fth
    " sourceurl"   " sourceurl"                    $add-dropin
 
-   " ${BP}/clients/memtest86/memtest"               " memtest"  $add-deflated-dropin
+   " memtest"                                        " memtest"  $add-deflated-dropin
 \   " ${BP}/cpu/x86/pc/olpc/images/olpc16EQima.wav"  " splash"   $add-deflated-dropin
 \   " ${BP}/cpu/x86/pc/olpc/images/Edge1-16k-EQ-Comp-Amp-ima.wav"  " splash"   $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
