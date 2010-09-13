@@ -30,7 +30,7 @@ external
 
 0 instance value renaming?
 : $delete   ( name$ -- error? )
-   $find-file  if  true exit  then		( )
+   $resolve-path  if  true exit  then		( )
 
    \ It's okay to delete a directory if it is a rename, because a
    \ hardlinked copy has just been made

@@ -190,7 +190,10 @@ create dir-types
 
 \ Delete the currently selected inode. Does not affect the directory entry, if any.
 : idelete   ( -- )
-   delete-blocks
+   \ Short symlinks hold no blocks, but have a string in the direct block list,
+   \ so we must not interpret that string as a block list.
+   #blks-held  if  delete-blocks  then
+
    \ clear #blks-held, link-count, etc.
    0 +i  /inode  6 /l* /string erase
    
