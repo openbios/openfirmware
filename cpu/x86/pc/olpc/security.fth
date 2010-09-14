@@ -1035,7 +1035,7 @@ warning !
 : secure-startup  ( -- )
    in-factory?  if
       button-check button-x or  button-o or  button-square or  button-rotate or  ( mask )
-      game-key-mask =  if  sound-end exit  then
+      game-key-mask =  if  0 to game-key-mask  sound-end exit  then
    then
 
    ['] noop to ?show-device
