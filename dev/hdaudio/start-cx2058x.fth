@@ -88,6 +88,8 @@ start-verb-table
    2D000 place-verb      \ Undocumented register
    2E000 place-verb      \ Undocumented register
    2F000 place-verb      \ Undocumented register  \ Conexant once recommended 2f800 but now are saying 2f000
+                                                  \ 800 enables a debounce delay for class-D overcurrent;
+                                                  \ the latest info is that no-debounce provides better protection
    \ Analog registers
    31000 place-verb      \ Undocumented register
    32000 place-verb      \ Undocumented register
@@ -101,6 +103,8 @@ start-verb-table
    3A000 place-verb      \ Undocumented register
    \ Digital registers
    4154d place-verb      \ Undocumented register \ Conexant once recommended 41541 but now are saying 4154d
+                                                 \ "d" instead of "1" turns on Intel ECR15B support, which
+                                                 \ is apparently needed for Window WHQL certification.
    42011 place-verb      \ over-temperature shutdown of class-D amplifier
    43000 place-verb      \ This documented as a status register and thus is presumably read-only.  Why write to it?
    44000 place-verb      \ Undocumented register
