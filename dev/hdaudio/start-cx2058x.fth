@@ -68,9 +68,9 @@ start-verb-table
    porth  config(  unused line-out no-detect       )config
    porti  config(  unused line-out no-detect       )config
    portj  config(  unused line-out no-detect       )config
+   portk  config(  unused line-out no-detect       )config
 
    vendor  \ Vendor node
-   portk  config(  unused line-out no-detect       )config
 
    \ Codec registers
    21000 place-verb      \ Undocumented register
@@ -81,13 +81,13 @@ start-verb-table
    26000 place-verb      \ Undocumented register
    27000 place-verb      \ Undocumented register
    28000 place-verb      \ Undocumented register
-   290a8 place-verb      \ high-pass filter, semi-manual mode, 600Hz cutoff
+   290a8 place-verb      \ high-pass filter, semi-manual mode, 600Hz cutoff \ Conexant: 29088 - 150Hz
    2A000 place-verb      \ low-pass filter (for subwoofers) off
    2B002 place-verb      \ Undocumented register
    2C020 place-verb      \ Undocumented register
    2D000 place-verb      \ Undocumented register
    2E000 place-verb      \ Undocumented register
-   2F800 place-verb      \ Undocumented register
+   2F000 place-verb      \ Undocumented register  \ Conexant once recommended 2f800 but now are saying 2f000
    \ Analog registers
    31000 place-verb      \ Undocumented register
    32000 place-verb      \ Undocumented register
@@ -100,7 +100,7 @@ start-verb-table
    39057 place-verb      \ temperature protection at 79.5C
    3A000 place-verb      \ Undocumented register
    \ Digital registers
-   41541 place-verb      \ Undocumented register
+   4154d place-verb      \ Undocumented register \ Conexant once recommended 41541 but now are saying 4154d
    42011 place-verb      \ over-temperature shutdown of class-D amplifier
    43000 place-verb      \ This documented as a status register and thus is presumably read-only.  Why write to it?
    44000 place-verb      \ Undocumented register

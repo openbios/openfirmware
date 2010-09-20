@@ -33,6 +33,25 @@ false value force-internal-mic?
       select-internal-mic
    then
 ;
+: .2xuc  ( n -- )
+   push-hex
+   <# u# u# u#>
+   2dup bounds ?do
+      i c@  h# 61 >=  if
+         i c@  h# 20 -  i c!
+      then
+   loop
+   type
+   pop-base
+;
+: .vendor-table  ( -- )
+   vendor
+   " "(a1 a2 a3 a4 a5 a6 a7 a8 a9 aa ab ac ad ae af b1 b2 b3 b4 b5 b6 b7 b8 b9 ba c1 c2 c3 c4 c5 c6 c7 c8 c9 cc)"
+   bounds  ?do
+      ." [0x0" node .2xuc  i c@ .2xuc  ." 000] = "
+      i c@ d# 12 << cmd? .x  cr
+   loop
+;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
