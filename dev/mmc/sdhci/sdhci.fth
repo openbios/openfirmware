@@ -443,7 +443,6 @@ headers
 : protected?  ( group# -- 32-bits )  h# 1e1a cmd  response  ;  \ CMD30 R1 UNTESTED
 
 0 instance value writing?
-0 instance value last-write-time
 
 : erase-blocks  ( block# #blocks -- ) \ UNTESTED
    intstat-on
@@ -874,10 +873,6 @@ external
 
 : detach-card  ( -- )
    wait-dma-done
-   last-write-time  if
-      begin  get-msecs last-write-time -  d# 3000 >  until
-   then
-
    intstat-on  wait-write-done drop  intstat-off
    card-clock-off
    card-power-off
@@ -950,7 +945,6 @@ external
    else                                 ( block# r: #blocks fresh? )
       r>  if  r@ pre-write-erase  then  ( block# r: #blocks )
       r> issue-write                    ( )
-      get-msecs to last-write-time      ( )
       true to writing?                  ( )
    then                                 ( )
    true to dma?                         ( )
