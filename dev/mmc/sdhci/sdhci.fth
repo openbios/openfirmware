@@ -1044,7 +1044,7 @@ external
          um*
       endof
       1 of
-         d# 70 d# 48 csdbits  d# 10 lshift  h# 200  um*
+         d# 70 d# 48 csdbits 1+  d# 10 lshift  h# 200  um*
       endof
       ( default )
       ." SD: Warning - invalid CSD; using default device size." cr
