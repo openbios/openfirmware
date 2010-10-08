@@ -1,5 +1,15 @@
 fload ${BP}/dev/omap/diaguart.fth	\ OMAP UART
 h# d4018000 to uart-base		\ UART# base address on MMP2
+d# 26000000 to uart-clock-frequency
+defer init-clocks  ' noop to init-clocks
+: inituarts  ( -- )
+   init-clocks
+
+   h# 40 1 uart!          \ Marvell-specific UART Enable bit
+   3 3 uart!              \ 8 bits, no parity
+   7 2 uart!		  \ Clear and enable FIFOs
+   d# 38400 baud
+;
 
 fload ${BP}/forth/lib/sysuart.fth	\ Set console I/O vectors to UART
 
@@ -13,8 +23,15 @@ warning off
 : stand-init-io  ( -- )
    stand-init-io
    inituarts  install-uart-io
+   ." UART installed" cr
 ;
 warning on
+
+\ Create a pseudo-device that presents the dropin modules as a filesystem.
+fload ${BP}/ofw/fs/dropinfs.fth
+
+\ This devalias lets us say, for example, "dir rom:"
+devalias rom     /dropin-fs
 
 fload ${BP}/cpu/arm/mmp2/twsi.fth
 fload ${BP}/cpu/arm/mmp2/timer.fth
@@ -27,6 +44,7 @@ fload ${BP}/cpu/arm/mmp2/mfpr.fth
    init-timers
    init-twsi
    power-on-dsi
+   power-on-sd
 ;
 stand-init:
    init-stuff
@@ -106,3 +124,5 @@ fload ${BP}/cpu/arm/mmp2/sdhcimmp2.fth
 
 devalias ext /sd/disk@1
 
+fload ${BP}/dev/olpc/kb3700/spicmd.fth
+   

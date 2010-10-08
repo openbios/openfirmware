@@ -11,7 +11,8 @@ fb-pa constant available-ram-size
 ' (memory?) to memory?
 
 \ OFW implementation choices
-h# 1fe0.0000 constant fw-pa
+\ h# 1fe0.0000 constant fw-pa
+0 constant fw-pa
 
 [ifdef] virtual-mode
 h# f700.0000 constant fw-virt-base
@@ -30,8 +31,7 @@ h# 0110.0000 constant def-load-base
 h#  10.0000 constant heap-size
 heap-size constant initial-heap-size
 
-h# 4000 constant page-table-pa
-
+h# 40.0000 constant page-table-pa
 
 \ Defined by CPU core
 h# 1000 to pagesize

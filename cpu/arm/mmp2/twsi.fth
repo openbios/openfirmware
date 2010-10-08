@@ -314,3 +314,12 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
 : vibrate-on  ( -- )  select-pmic  h# 1f h# 3c twsi-b!  ;  \ LDO10
 : vibrate-off  ( -- )  select-pmic  h# 1e h# 3c twsi-b!  ;
 
+: power-on-sd ( -- )
+   select-pmic
+   h# 29 h# 42 twsi-b!
+   h# 1f h# 40 twsi-b!
+;
+: power-off-sd  ( -- )
+   select-pmic
+   h# 1e h# 40 twsi-b!
+;

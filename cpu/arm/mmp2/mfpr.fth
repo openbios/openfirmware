@@ -1,9 +1,11 @@
+: aib-unlock  
+   h# baba h# d4015068 l!  \ Unlock sequence
+   h# eb10 h# d401506c l!
+;
 : set-camera-domain-voltage
-   h# baba h# d4015068 l!  \ Unlock sequence
-   h# ec10 h# d401506c l!
+   aib-unlock
    h# d401e80c l@  4 or   ( n )  \ Set 1.8V selector bit in AIB_GPIO2_IO
-   h# baba h# d4015068 l!  \ Unlock sequence
-   h# ec10 h# d401506c l!
+   aib-unlock
    h# d401e80c l!
 ;
 : acgr-clocks-on  ( -- )
@@ -138,12 +140,18 @@ create mfpr-table
    1 af,      \ GPIO_71 - TWSI3_SCL    (for CAM)
    1 af,      \ GPIO_72 - TWSI3_CLK    (for CAM)
    0 af,      \ GPIO_73 - CCIC_RST_N   (use as GPIO out)
-   0 af,      \ GPIO_74 - LED - ORANGE (use as GPIO out)  LCD VSYNC
-   0 af,      \ GPIO_75 - LED - BLUE   (use as GPIO out)  LCD HSYNV
-   0 af,      \ GPIO_76 - LED - RED    (use as GPIO out)  LCD PCLK
-   0 af,      \ GPIO_77 - LED - GREEN  (use as GPIO out)
-   5 af,      \ GPIO_78 - SSP4_CLK
-   5 af,      \ GPIO_79 - SSP4_FRM
+\    0 af,      \ GPIO_74 - LED - ORANGE (use as GPIO out)  LCD VSYNC
+\    0 af,      \ GPIO_75 - LED - BLUE   (use as GPIO out)  LCD HSYNV
+\    0 af,      \ GPIO_76 - LED - RED    (use as GPIO out)  LCD PCLK
+\    0 af,      \ GPIO_77 - LED - GREEN  (use as GPIO out)
+   4 af,      \ GPIO_74 - SSP3_CLK - EC_SPI
+   4 af,      \ GPIO_75 - SSP3_FRM - EC_SPI
+   4 af,      \ GPIO_76 - SSP3_TXD - EC_SPI
+   4 af,      \ GPIO_77 - SSP3_RXD - EC_SPI
+\    5 af,      \ GPIO_78 - SSP4_CLK
+\    5 af,      \ GPIO_79 - SSP4_FRM
+   0 af,      \ GPIO_78 - EC_SPI CMD
+   0 af,      \ GPIO_79 - EC_SPI ACK
    5 af,      \ GPIO_80 - SSP4_SDA
    0 af,      \ GPIO_81 - VBUS_FLT_N   (use as GPIO  in)
    0 af,      \ GPIO_82 - VBUS_EN      (use as GPIO out)
@@ -184,10 +192,10 @@ create mfpr-table
    0 af,      \ GPIO_116 - GPIO_116 (i/o)
    0 af,      \ GPIO_117 - GPIO_117 (i/o)
    0 af,      \ GPIO_118 - GPIO_118 (i/o)
-   0 af,      \ GPIO_119 - GPIO_119 (i/o)
-   0 af,      \ GPIO_120 - GPIO_120 (i/o)
-   0 af,      \ GPIO_121 - GPIO_121 (i/o)
-   0 af,      \ GPIO_122 - GPIO_122 (i/o)
+   3 af,      \ GPIO_119 - GPIO_119 (i/o)
+   3 af,      \ GPIO_120 - GPIO_120 (i/o)
+   3 af,      \ GPIO_121 - GPIO_121 (i/o)
+   3 af,      \ GPIO_122 - GPIO_122 (i/o)
    0 af,      \ GPIO_123 - MBFLT_N    (use as GPIO  in)
    1 af,      \ GPIO_124 - MMC1_DAT[7]
    1 af,      \ GPIO_125 - MMC1_DAT[6]
