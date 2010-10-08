@@ -1,0 +1,90 @@
+  gpios:
+    gpio: d0000010 d0004d56  \ CONFIG_DECODE_ADDR
+    gpio: d0000100 000c0001  \ MMAP0
+    gpio: d0000110 100c0001  \ MMAP1
+    gpio: d0000020 00006420  \ SDRAM_CONFIG_TYPE1-CS0
+    gpio: d0000030 00006420  \ SDRAM_CONFIG_TYPE1-CS1
+    gpio: d0000b40 00000000  \ SDRAM_CONFIG_TYPE2-CS0
+    gpio: d0000b50 00000000  \ SDRAM_CONFIG_TYPE2-CS1
+    gpio: d0000050 488700c5  \ SDRAM_TIMING1
+    gpio: d0000060 323300d2  \ SDRAM_TIMING2
+    gpio: d0000190 20000e12  \ SDRAM_TIMING3
+    gpio: d00001c0 3023009d  \ SDRAM_TIMING4
+    gpio: d0000650 00050082  \ SDRAM_TIMING5
+    gpio: d0000660 00909064  \ SDRAM_TIMING6
+    gpio: d0000080 00005000  \ SDRAM_CTRL1
+    gpio: d0000090 00080010  \ SDRAM_CTRL2
+    gpio: d00000f0 c0000000  \ SDRAM_CTRL3
+    gpio: d00001a0 20c08115  \ SDRAM_CTRL4
+    gpio: d0000280 01010101  \ SDRAM_CTRL5_ARB_WEIGHTS
+    gpio: d0000760 00000000  \ SDRAM_CTRL6_SDRAM_ODT_CTRL
+    gpio: d0000770 03000000  \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
+    gpio: d0000780 00000133  \ SDRAM_CTRL8_SDRAM_ODT_CTRL2
+    gpio: d00007b0 01010101  \ SDRAM_CTRL11_ARB_WEIGTHS_FAST_QUEUE
+    gpio: d00007d0 0000000f  \ SDRAM_CTRL13
+    gpio: d00007e0 00000000  \ SDRAM_CTRL14
+    gpio: d0000540 00000000  \ MCB_CTRL4
+    gpio: d0000570 00000001  \ MCB_SLFST_SEL
+    gpio: d0000580 00000000  \ MCB_SLFST_CTRL0
+    gpio: d0000590 00000000  \ MCB_SLFST_CTRL1
+    gpio: d00005a0 00000000  \ MCB_SLFST_CTRL2
+    gpio: d00005b0 00000000  \ MCB_SLFST_CTRL3
+    gpio: d0000180 00000000  \ CM_WRITE_PROTECTION
+    gpio: d0000210 00000000  \ PHY_CTRL11
+    gpio: d0000240 80000000  \ PHY_CTRL14
+    gpio: d0000240 2000ce00  \ PHY_CTRL14
+    gpio: d0000240 0000ce00  \ PHY_CTRL14
+    gpio: d0000200 0011ce00  \ PHY_CTRL10
+    gpio: d0000200 0010311c  \ PHY_CTRL10
+    gpio: d0000140 20004422  \ PHY_CTRL3
+    gpio: d00001d0 13300559  \ PHY_CTRL7   (0x2330_0339 / 0x133C_2559)
+    gpio: d00001e0 03300990  \ PHY_CTRL8
+    gpio: d00001f0 00000077  \ PHY_CTRL9
+    gpio: d0000230 20000088  \ PHY_CTRL13    (0x2000_0108 / 0x2024_0109)
+    gpio: d0000e10 00000080  \ PHY_DLL_CTRL1
+    gpio: d0000e20 00000080  \ PHY_DLL_CTRL2
+    gpio: d0000e30 00000080  \ PHY_DLL_CTRL3
+    gpio: d0000e40 00000000  \ PHY_CTRL_WL_SELECT
+    gpio: d0000e50 00000000  \ PHY_CTRL_WL_CTRL0
+    gpio: d0000120 03000001  \ USER_INITIATED_COMMAND0 - init command to both CS (need to wait 200 us for tINIT3)
+    gpio: d0000410 0302003f  \ USER_INITIATED_COMMAND1 - MRW MR63 (RESET) to both CS (need to wait RESET_COUNT)
+    gpio: d0000120 01001000  \ USER_INITIATED_COMMAND0 - MRW MR10 (ZQ long cal) to CS0 (need 360 ns delay for tZQCS)
+    gpio: d0000120 02001000  \ USER_INITIATED_COMMAND0 - MRW MR10 (ZQ long cal) to CS1 (need 360 ns delay for tZQCS)
+    gpio: d0000410 03020001  \ USER_INITIATED_COMMAND1 - MRW MR1 to both CS
+    gpio: d0000410 03020002  \ USER_INITIATED_COMMAND1 - MRW MR2 to both CS
+    gpio: d0000410 03020003  \ USER_INITIATED_COMMAND1 - MRW MR3 to both CS
+  end-package
+  ddrc:
+    pair: 00000000 00006320   \ ConfTypeCS0
+    pair: 00000001 00006320   \ ConfTypeCS1
+    pair: 00000002 4cd800c5   \ Timing1
+    pair: 00000003 84660342   \ Timing2
+    pair: 00000004 2000381b   \ Timing3
+    pair: 00000005 3023009d   \ Timing4
+    pair: 00000006 00110142   \ Timing5
+    pair: 00000007 00005000   \ Cntrl1
+    pair: 00000008 00080000   \ Cntrl2
+    pair: 00000009 c0000000   \ Cntrl3
+    pair: 0000000a 20c08115   \ Cntrl4
+    pair: 0000000b 01010101   \ Cntrl5-arb
+    pair: 0000000c 00000000   \ Cntrl6-odt
+    pair: 0000000d 03000000   \ Cntrl7-odt
+    pair: 0000000e 00000000   \ mcb_cntrl1
+    pair: 0000000f 20004433   \ phy-cntrl3
+    pair: 00000010 13300559   \ phy-cntrl7
+    pair: 00000011 03300770   \ phy_cntrl8
+    pair: 00000012 00000077   \ phy-cntrl9
+    pair: 00000013 00000000   \ phy_cntrl11
+    pair: 00000014 20000088   \ phy-cntrl13
+    pair: 00000015 80000000   \ phy_cntrl14
+    pair: 00000016 00000080   \ dll-ctrl1
+    pair: 00000017 00000080   \ dll_ctrl2
+    pair: 00000018 00000080   \ dll-ctrl3
+    pair: 00000019 000b0001   \ mmap0
+    pair: 0000001a 080b0001   \ mmap1
+    pair: 0000001b 00000000   \ user_cmd0
+  end-package
+  cmcc:
+    pair: 0 0 \ config-ena? false
+    pair: 1 0 \ memtest? false
+  end-package
