@@ -1,21 +1,29 @@
 \ See license at end of file
-purpose: Load file for multi-format disk-label support package
+purpose: NTFS file system package methods
 
-fload ${BP}/ofw/disklabel/common.fth
-fload ${BP}/ofw/fs/fatfs/partition.fth
-fload ${BP}/ofw/fs/cdfs/partition.fth
-[ifdef] ufs-support
-fload ${BP}/ofw/fs/ufs/partition.fth
-[then]
-fload ${BP}/ofw/fs/ext2fs/partition.fth
-fload ${BP}/ofw/fs/ntfs/partition.fth
-[ifdef] hfs-support
-fload ${BP}/ofw/fs/macfs/partition.fth
-[then]
-fload ${BP}/ofw/disklabel/methods.fth
+\ This rudimentary file system package supports only "load", which
+\ in fact loads the Master Boot Record
+
+external
+: open  ( -- flag )
+   \ This lets us open the node during compilation
+   standalone?  0=  if  true exit  then
+
+   " bypass-bios-boot?" $find  if
+      execute  if  false  exit  then
+   then
+      
+   my-args " \boot\olpc.fth"  $=  if  true exit  then
+
+   false
+;
+: close  ( -- )  ;
+: load  ( adr -- len )
+   0 1 " read-blocks" $call-parent " block-size" $call-parent  *
+;
 
 \ LICENSE_BEGIN
-\ Copyright (c) 2006 FirmWorks
+\ Copyright (c) 2010 FirmWorks
 \ 
 \ Permission is hereby granted, free of charge, to any person obtaining
 \ a copy of this software and associated documentation files (the

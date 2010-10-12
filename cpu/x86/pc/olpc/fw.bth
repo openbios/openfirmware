@@ -138,6 +138,10 @@ support-package: jffs2-file-system
 end-support-package
 [then]
 
+support-package: nt-file-system
+   fload ${BP}/ofw/fs/ntfs/ntfs.fth	\ Windows NT File System
+end-support-package
+
 support-package: zip-file-system
    fload ${BP}/ofw/fs/zipfs.fth		\ Zip file system
 end-support-package
@@ -376,7 +380,7 @@ fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 ;
 [then]
 
-" /xp disk:\boot\olpc.fth sd:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
+" disk:\boot\olpc.fth sd:\boot\olpc.fth nand:\boot\olpc.fth /prober /usb/ethernet /usb/wlan"
    ' boot-device  set-config-string-default
 
 \needs ramdisk  " " d# 128 config-string ramdisk

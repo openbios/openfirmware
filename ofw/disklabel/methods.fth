@@ -141,6 +141,7 @@ headerless
       then
       " fat-file-system"    exit
    then
+   ntfs?    if  " nt-file-system"     exit  then
 
    ." Error: Unknown file system" cr
    abort

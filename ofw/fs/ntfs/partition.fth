@@ -1,21 +1,13 @@
 \ See license at end of file
-purpose: Load file for multi-format disk-label support package
+purpose: NTFS partition map decoding support
 
-fload ${BP}/ofw/disklabel/common.fth
-fload ${BP}/ofw/fs/fatfs/partition.fth
-fload ${BP}/ofw/fs/cdfs/partition.fth
-[ifdef] ufs-support
-fload ${BP}/ofw/fs/ufs/partition.fth
-[then]
-fload ${BP}/ofw/fs/ext2fs/partition.fth
-fload ${BP}/ofw/fs/ntfs/partition.fth
-[ifdef] hfs-support
-fload ${BP}/ofw/fs/macfs/partition.fth
-[then]
-fload ${BP}/ofw/disklabel/methods.fth
+\ Returns true if the sector buffer contains an NTFS signature
+: ntfs?  ( -- flag )
+   sector-buf 3 +  " NTFS    "  comp  0=
+;
 
 \ LICENSE_BEGIN
-\ Copyright (c) 2006 FirmWorks
+\ Copyright (c) 2010 FirmWorks
 \ 
 \ Permission is hereby granted, free of charge, to any person obtaining
 \ a copy of this software and associated documentation files (the

@@ -476,6 +476,22 @@ false value show-reads?
 
 : drive-sectors  ( -- n )  " #blocks" bios-ih $call-method  ;
 : drive-/sector  ( -- n )  " block-size" bios-ih $call-method  ;
+d# 256 buffer: bios-devname
+\ Replace the filename with "0"
+\ For example, /pci/sd@c/disk@3:\boot\olpc.fth//nt-file-system:\boot\olpc.fth
+\ becomes      /pci/sd@c/disk@3:0
+: bios-dev$  ( -- adr len )
+   load-path cscount [char] \ left-parse-string  2nip  ( head$ )
+   bios-devname place
+   " 0" bios-devname $cat
+   bios-devname count
+;
+: ?open-bios-disk  ( -- )
+   bios-disk-ih  0=  if
+      bios-dev$ open-dev to bios-disk-ih
+      bios-disk-ih 0= abort" Can't open BIOS disk device"
+   then
+;
 [ifndef] notdef
 : (bios-read-sectors)  ( adr sector# #sectors -- #sectors-read )
    drive-/sector  >r                      ( adr #sectors d.byte# r: /sector )
@@ -665,6 +681,7 @@ create cd-stat
 ;
 
 : disk-int  ( -- )  \ INT 13 handler
+   ?open-bios-disk
    rm-ah@ case
       h# 00  of  reset-disks            endof  \ Reset disk system
       h# 02  of  chs-read-sectors       endof
@@ -1104,9 +1121,7 @@ here bounce-timer - constant /bounce-timer
 ;
 [then]
 
-0 value mbr-boot?
 : is-mbr?  ( adr len -- flag )
-   mbr-boot? 0=  if  2drop false exit  then
    + 2 - le-w@  h# aa55 = 
 ;
 warning @ warning off
@@ -1199,9 +1214,9 @@ warning !
    bios-boot-dev#  select-bios-disk
    boot-sector# boot-#sectors bios-read-sectors
    bios-boot-dev#  h# 82 =  if  h# 800  else  h# 200  then  *
-   true to mbr-boot?
 ;
 
+[ifdef] notdef
 0 0 " " " /" begin-package
    " xp" device-name
    : open
@@ -1216,6 +1231,7 @@ warning !
    : close ;
    : load  ( adr -- nbytes )  mbr-load  ;      
 end-package
+[then]
 
 0 0 " " " /" begin-package
    " xpinstall" device-name
@@ -1283,11 +1299,12 @@ end-package
 
 : install-xp  ( -- )  " /xpinstall" $boot  ;
 
-label xx  h# 99 # al mov  al h# 80 # out  begin again  end-code
-here xx - constant /xx
+\ This is a debugging hack that lets you inject a dead-end port80 callout into code
+\ label xx  h# 99 # al mov  al h# 80 # out  begin again  end-code
+\ here xx - constant /xx
+\ : put-xx  ( adr -- )  xx swap /xx move  ;
 : @.w  ( -- )  w@ 5 u.r  ;
 : @.l  ( -- )  @ 9 u.r  ;
-: put-xx  ( adr -- )  xx swap /xx move  ;
 : .lreg  ( adr -- adr' )  4 -  dup l@ 9 u.r   ;
 : .wreg  ( adr -- adr' )  2 -  dup w@ 5 u.r   ;
 : .caller-regs  ( -- )
