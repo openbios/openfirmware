@@ -1,6 +1,8 @@
 \ See license at end of file
 purpose: Icon menu screen layout for Power Firmware demonstration version
 
+icon: exit.icon            ${BP}/ofw/gui/exeunt.icx
+
 \ fload ${BP}/ofw/gui/macosi.fth	\ Boot/install MacOS items
 \ fload ${BP}/ofw/gui/nti.fth		\ Boot/install NT items
 \ fload ${BP}/ofw/gui/aixi.fth		\ Boot AIX item

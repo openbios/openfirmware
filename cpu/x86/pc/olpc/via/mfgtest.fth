@@ -197,6 +197,12 @@ d# 15 value #mfgtests
 ;
 
 : full-menu  ( -- )
+   d# 4 to rows
+   d# 5 to cols
+   d# 180 to sq-size
+   d# 128 to image-size
+   d# 128 to icon-size
+
    olpc-menu-items
 
    " Run all non-interactive tests. (Press a key between tests to stop.)"

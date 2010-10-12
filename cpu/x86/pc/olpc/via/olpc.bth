@@ -189,6 +189,10 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_tx.bin" " nb_tx"      $add-deflated-dropin
 
+   " ${BP}/cpu/x86/pc/olpc/images/winlogo.565"   " winlogo.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/tux.565"       " tux.565"        $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/settings.565"  " settings.565"   $add-deflated-dropin
+
 .( Dropin top is )  ofd @ fsize  .x cr
 
 [ifdef] coreboot-loaded

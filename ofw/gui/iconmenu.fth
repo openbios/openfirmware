@@ -38,10 +38,10 @@ hex
 
 headers
 d# 32 			value    version-height
-4 constant rows
-5 constant cols
+4 value rows
+5 value cols
 headerless
-rows cols *		constant squares
+: squares  rows cols *	;
 d# 180			value sq-size
 d# 128                  value image-size \ on file
 d# 128			value icon-size  \ on screen
@@ -89,15 +89,14 @@ d# 100			value title-area
 
 struct
   /n   field >icon
-  /n   field >pixels
   /n   field >function
   /n   field >border
 2 /n * field >help	\ Brief description
 \ 32 field >label	\ later...
 dup constant /entry
 squares * buffer: squarebuf
-icon-size dup * 2 * constant /icon
-image-size dup * 2 * 8 + constant /image
+: /icon  icon-size dup * 2 *  ;
+: /image  image-size dup * 2 * 8 +  ;
    
 : sq  ( sq - a )  sq?	/entry * squarebuf +  ;
 
@@ -231,26 +230,32 @@ alias /pix* /w*
    then
 ;
 
-: load-icon  ( sq -- )
-   sq dup >pixels @ 0= if            ( sq-adr )
-      dup >icon @ count  load-pixels ( sq-adr pix-adr )
-      swap >pixels !                 ( )
-   else
-      drop                           ( )
+: (icon>pixels)  ( apf -- 'pixels )
+   ta1+ dup @  ?dup  if            ( 'icon 'pixels  )
+      nip                          ( 'pixels )
+   else                            ( 'icon )
+      dup na1+ count  load-pixels  ( 'icon 'pixels )
+      tuck swap !                  ( 'pixels )
    then
 ;
 
+\ Defining word for icon images
+: icon:  ( "name" "devicename" -- ) ( child: -- 'pixels )
+   create  ['] (icon>pixels) token,  0 ,  parse-word ",
+;
+: icon>pixels  ( icon-apf -- 'pixels )  dup token@ execute  ;
+
 : draw-sq  ( sq -- )
-   dup -1 = if exit then
-   background over sq>xy sq-size dup fill-rectangle
-   dup sq >border @  over draw-border
-   dup sq >icon @ if
-      dup load-icon
-      dup sq >pixels @
-      swap sq>xy sq-size icon-size - 2/ tuck + -rot + swap
-      icon-size dup  draw-rectangle
-      lowlight \ draw border
-   else
+   dup -1 = if exit then                              ( sq )
+   background over sq>xy sq-size dup fill-rectangle   ( sq )
+   dup sq >border @  over draw-border                 ( sq )
+   dup sq >icon @ ?dup  if                            ( sq 'icon )
+      icon>pixels                                     ( sq 'pixels )
+      swap sq>xy  sq-size icon-size - 2/              ( 'pixels  x y  size )
+      tuck + -rot + swap                              ( 'pixels  x' y' )
+      icon-size dup  draw-rectangle                   ( )
+      lowlight \ draw border                          ( )
+   else                                               ( sq )
       drop
    then
 ;
@@ -281,7 +286,7 @@ headerless
 ;
 : refresh  ( - )
    draw-background
-   squares 0 do  i draw-sq  loop
+   squares 0  ?do  i draw-sq  loop
    set-description-region
    highlight describe
 ;

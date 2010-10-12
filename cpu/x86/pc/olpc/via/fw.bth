@@ -309,7 +309,6 @@ fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
 fload ${BP}/ofw/gui/loadmenu.fth
 patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
 patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
-fload ${BP}/ofw/gui/insticon.fth
 
 fload ${BP}/cpu/x86/pc/olpc/via/cstate.fth   \ C-state tests
 
@@ -317,6 +316,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/cstate.fth   \ C-state tests
 \ so exiting from emacs doesn't invoke the diag menu.
 ' quit to user-interface
 fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
+fload ${BP}/cpu/x86/pc/olpc/via/bootmenu.fth
 
 : screen-#lines  ( -- n )
    screen-ih 0=  if  default-#lines exit  then
@@ -645,6 +645,12 @@ true                               ' client-symbols?  set-config-int-default
 ;
 [then]
 
+: ?boot-menu  ( -- )
+   button-rotate game-key?  if
+      protect-fw  visible  bootmenu
+   then
+;
+
 : ?fs-update  ( -- )
    button-check button-x or  button-o or  button-square or   ( mask )
    game-key-mask =  if  protect-fw try-fs-update  then
@@ -706,6 +712,8 @@ true                               ' client-symbols?  set-config-int-default
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
    ?usb-keyboard
    auto-banner?  if  banner  then
+
+   ?boot-menu
 
    auto-boot
 

@@ -50,12 +50,6 @@ headers
    does> dup na1+ swap @   ( adr len )
 ;
 
-\ Defining word for icon images
-: icon:  ( "name" "devicename" -- ) ( child: -- adr )
-   create  parse-word ",
-;
-
-icon: exit.icon            ${BP}/ofw/gui/exeunt.icx
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
