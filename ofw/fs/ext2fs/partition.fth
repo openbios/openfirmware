@@ -1,8 +1,7 @@
 \ See license at end of file
 purpose: Ext2/3 partition map decoding support
 
-\ Returns true if the sector buffer appears to contain an ext2/3 super block
-\ which signifies the beginning of a DOS "FAT" file system.
+\ Returns true if the sector buffer contains an ext2/3 super block
 : ext2?  ( -- flag )
    sector-buf h# 38 +  w@              ( magic )
    dup h# ef53 =  swap h# 53ef =  or   ( ext2? )
