@@ -3,6 +3,8 @@ purpose: Subrange device to access Secure Boot Area between boot record and firs
 
 support-package: secure-boot-area
 
+h# 10.0000 constant sba-offset  \ This leaves room for other stuff like saved MBRs
+
 d# 512 constant /sector
 /sector instance buffer: sector-buf
 
@@ -29,7 +31,7 @@ external
    sector-buf h# 1fe + le-w@  h# aa55  <>  if  false exit  then      \ FDisk?
    ptable-adr 4 + c@  7 <>  if  false exit  then                     \ NTFS?
    ptable-adr 8 + le-l@  1-  /sector um* to image-size  \ The 1- skips sector 0
-   /sector u>d to offset   \ The SBA starts just after the Master Boot Record sector
+   sba-offset u>d to offset
    true
 ;
 

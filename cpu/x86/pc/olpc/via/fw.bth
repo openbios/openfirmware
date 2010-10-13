@@ -397,6 +397,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/smbios.fth
 fload ${BP}/dev/via/smi.fth
 \ fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
 fload ${BP}/cpu/x86/pc/biosints.fth
+fload ${BP}/cpu/x86/pc/olpc/via/chooseos.fth
 [ifdef] Later
 fload ${BP}/cpu/x86/pc/olpc/biosresume.fth
 [then]
