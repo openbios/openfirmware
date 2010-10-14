@@ -51,18 +51,53 @@ my-address      my-space  h# 1000  encode-reg
    then
 ;
 
-0 value ssp-base
+h# d4037000 value ssp-base  \ Default to SSP3
 : ssp-sscr0  ( -- adr )  ssp-base  ;
 : ssp-sscr1  ( -- adr )  ssp-base  la1+  ;
 : ssp-sssr   ( -- adr )  ssp-base  2 la+  ;
 : ssp-ssdr   ( -- adr )  ssp-base  4 la+  ;
 
-: init-ssp-in-slave-mode  ( -- )
-   7 h# d4015058 l!   3 h# d4015058 l!  \ Enable clock to SSP3
+: enable  ( -- )
+   h# 87 ssp-sscr0 rl!   \ Enable, 8-bit data, SPI normal mode
+;
+: disable  ( -- )
    h# 07 ssp-sscr0 rl!   \ 8-bit data, SPI normal mode
-   h# 1380.0000 ssp-sscr1 rl!  \ SCFR=1, slave mode, rx w/o tx
+;
+\ Switch to master mode, for testing
+: master  ( -- )
+   disable
+   h# 0000.0000 ssp-sscr1 rl!  \ master mode
+   enable
+;
+
+: ssp1-clk-on  7 h# d4015050 l!   3 h# d4015050 l!  ;
+: ssp2-clk-on  7 h# d4015054 l!   3 h# d4015052 l!  ;
+: ssp3-clk-on  7 h# d4015058 l!   3 h# d4015058 l!  ;
+: ssp4-clk-on  7 h# d401505c l!   3 h# d401505c l!  ;
+
+: wb  ( byte -- )  ssp-ssdr rl!  ;
+: rb  ( -- byte )  ssp-ssdr rl@ .  ;
+
+\ Wait until the CSS (Clock Synchronization Status) bit is 0
+: wait-clk-sync  ( -- )
+   begin  ssp-sssr rl@ h# 400.0000 and  0=  until
+;
+
+\ Choose alternate function 4 (SSP3) for the pins we use
+: select-ssp3-pins
+   h# c4 h# d401e170 rl!  \ GPIO74
+   h# c4 h# d401e174 rl!  \ GPIO75
+   h# c4 h# d401e178 rl!  \ GPIO76
+   h# c4 h# d401e17c rl!  \ GPIO77
+;
+: init-ssp-in-slave-mode  ( -- )
+   select-ssp3-pins
+   ssp3-clk-on
+   h# 07 ssp-sscr0 rl!   \ 8-bit data, SPI normal mode
+   h# 1380.0000 ssp-sscr1 rl!  \ SCFR=1, slave mode, Rx w/o Tx
    \ The enable bit must be set last, after all configuration is done
    h# 87 ssp-sscr0 rl!   \ Enable, 8-bit data, SPI normal mode
+   wait-clk-sync
 ;
 : set-ssp-receive-w/o-transmit  ( -- )
    ssp-sscr1 rl@  h# 0080.0000 or  ssp-sscr1 rl!
@@ -79,14 +114,17 @@ my-address      my-space  h# 1000  encode-reg
    ssp-sssr rl@ d# 12 rshift h# f and  ssp-rx-threshold  =
 ;
 
+\ Set the direction on the ACK and CMD GPIOs
+d# 78 constant cmd-gpio#
+d# 79 constant ack-gpio#
 : init-ec-spi-gpios  ( -- )
-   d# 78 gpio-dir-out
-   d# 79 gpio-dir-out
+   cmd-gpio# gpio-dir-out
+   ack-gpio# gpio-dir-out
 ;
-: clr-cmd  ( -- )  d# 78 gpio-clr  ;
-: set-cmd  ( -- )  d# 78 gpio-set  ;
-: clr-ack  ( -- )  d# 79 gpio-clr  ;
-: set-ack  ( -- )  d# 79 gpio-set  ;
+: clr-cmd  ( -- )  cmd-gpio# gpio-clr  ;
+: set-cmd  ( -- )  cmd-gpio# gpio-set  ;
+: clr-ack  ( -- )  ack-gpio# gpio-clr  ;
+: set-ack  ( -- )  ack-gpio# gpio-set  ;
 : pulse-ack  ( -- )  clr-ack set-ack  ;
 
 0 value ec-spi-cmd-done  \ 0 - still waiting, 1 - successful send, 2 - timeout
