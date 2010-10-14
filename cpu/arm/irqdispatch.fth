@@ -4,6 +4,7 @@ purpose: Chip-independent part of interrupt dispatch code
 0 value pic-node
 : enable-interrupt   ( level -- )  " enable-irq"  pic-node $call-method  ;
 : disable-interrupt  ( level -- )  " disable-irq" pic-node $call-method  ;
+: interrupt-enabled?  ( level -- flag )  " irq-enabled?" pic-node $call-method  ;
 
 : stray-interrupt  ( level -- )
    ." Unexpected interrupt on IRQ" dup .d cr

@@ -154,3 +154,17 @@ variable timestamp
    d# 15 enable-interrupt
 ;
 ' (set-tick-limit) to set-tick-limit
+
+: can-idle?  ( -- flag )
+   interrupts-enabled?  if
+      d# 15 interrupt-enabled?
+   else
+      false
+   then
+;
+: do-idle  ( -- )  c7-wfi  ;
+: safe-idle  ( -- )
+   can-idle?  if  do-idle  then
+   \ do-lid
+;
+' safe-idle to stdin-idle

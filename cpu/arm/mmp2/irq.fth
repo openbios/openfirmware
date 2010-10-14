@@ -15,6 +15,7 @@ d# 64 constant #levels
 : block-irqs  ( -- )  1 h# 110 ic!  ;
 : unblock-irqs  ( -- )  0 h# 110 ic!  ;
 
+: irq-enabled?  ( level -- flag )  /l* ic@ h# 20 and 0<>  ;
 : enable-irq  ( level -- )  h# 21 swap /l* ic!  ;  \ Enable for IRQ1
 : disable-irq  ( level -- )  0 swap /l* ic!  ;
 
