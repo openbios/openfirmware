@@ -1,7 +1,17 @@
 fload ${BP}/dev/omap/diaguart.fth	\ OMAP UART
 h# d4018000 to uart-base		\ UART# base address on MMP2
 d# 26000000 to uart-clock-frequency
-defer init-clocks  ' noop to init-clocks
+
+: init-clocks
+   -1    h# d4051024 l!   \ PMUM_CGR_PJ - everything on
+   h# 07 h# d4015064 l!   \ APBC_AIB_CLK_RST - reset, functional and APB clock on
+   h# 03 h# d4015064 l!   \ APBC_AIB_CLK_RST - release reset, functional and APB clock on
+   h# 13 h# d4015034 l!   \ APBC_UART3_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
+   h# c1 h# d401e120 l!   \ GPIO51 = af1 for UART3 RXD
+   h# c1 h# d401e124 l!   \ GPIO52 = af1 for UART3 TXD
+   h# 1b h# d4282854 l!   \ SD0 clocks
+;
+
 : inituarts  ( -- )
    init-clocks
 
@@ -33,8 +43,8 @@ fload ${BP}/ofw/fs/dropinfs.fth
 \ This devalias lets us say, for example, "dir rom:"
 devalias rom     /dropin-fs
 
-fload ${BP}/cpu/arm/mmp2/twsi.fth
 fload ${BP}/cpu/arm/mmp2/timer.fth
+fload ${BP}/cpu/arm/mmp2/twsi.fth
 fload ${BP}/cpu/arm/mmp2/mfpr.fth
 : init-stuff
    set-camera-domain-voltage
@@ -51,6 +61,7 @@ stand-init:
 ;
 
 fload ${BP}/cpu/arm/mmp2/gpio.fth
+fload ${BP}/cpu/arm/mmp2/irq.fth
 
 fload ${BP}/cpu/arm/mmp2/watchdog.fth	\ reset-all using watchdog timer
 
@@ -118,11 +129,33 @@ devalias keyboard /keyboard
 
 fload ${BP}/ofw/termemu/cp881-16.fth
 
-d# 3000 to ms-factor
-
 fload ${BP}/cpu/arm/mmp2/sdhcimmp2.fth
 
 devalias ext /sd/disk@1
 
 fload ${BP}/dev/olpc/kb3700/spicmd.fth
-   
+
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2010 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

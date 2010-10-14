@@ -1,33 +1,35 @@
-purpose: Build Open Firmware for Marvell MMP2
 \ See license at end of file
+purpose: Chip-independent part of interrupt dispatch code
 
-in: sp.img
-in: fw.img
-command: &builder &this
-build-now
+0 value pic-node
+: enable-interrupt   ( level -- )  " enable-irq"  pic-node $call-method  ;
+: disable-interrupt  ( level -- )  " disable-irq" pic-node $call-method  ;
 
-fload ${BP}/cpu/arm/marvell/tim.fth
+: stray-interrupt  ( level -- )
+   ." Unexpected interrupt on IRQ" dup .d cr
+   disable-interrupt				\ To prevent recurrence
+;
 
-\ Marvel Trusted Image Module image creation script for
-\ MMP2 platform with 512M of Elpida RAM
-\ Running OFW directly, with no intermediate loader
+0 value interrupt-handlers
+: interrupt-handler!  ( xt int# -- )
+   my-self swap  interrupt-handlers swap 2* na+  2!
+;
+: interrupt-handler@  ( int-level -- xt )
+   interrupt-handlers swap 2* na+ 2@  drop
+;
 
-tim: 00030102 0 Sky! PXA688
-flash: NAN'6
-timh:  TIMH        0 d1020000
-\ Skip Marvell's Bad Block Table from 0x1000 to 0x7ffff
-\ Secure Processor code loaded into SRAM
-image: WTMI    80000 d1000000 sp.img
-\ Main Processor code loaded into DRAM
-image: OBMI    84000        0 fw.img
-reserved:
+: (dispatch-interrupt)  ( -- )  " run-interrupt" pic-node $call-method  ;
 
-  fload ${BP}/cpu/arm/mmp2/ddr_elpida_512m.fth
-  term:
-end-reserved
-end-tim
-
-save-image: ofw.rom
+: (init-dispatcher)  ( -- )
+   pic-node  0=  if
+      " /interrupt-controller" open-dev to pic-node
+      " #levels" pic-node $call-method                         ( #levels )
+      dup 2* /n*  alloc-mem to interrupt-handlers              ( #levels )
+      0  do  ['] stray-interrupt  i interrupt-handler!  loop   ( 0 )
+      ['] (dispatch-interrupt) to dispatch-interrupt
+   then
+;
+' (init-dispatcher) to init-dispatcher
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks

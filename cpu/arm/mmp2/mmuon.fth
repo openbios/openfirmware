@@ -26,6 +26,7 @@ c;
    h# 0000.0000  h# c0e  over  fb-pa        map-sections  \ Cache and write bufferable
 \  fw-pa         h# c0e  over  /fw-ram      map-sections  \ Cache and write bufferable
    fb-pa         h# c06  over  fb-size      map-sections  \ Write bufferable
+   h# d100.0000  h# c0e  over  fb-pa        map-sections  \ Cache and write bufferable (SRAM)
    h# d400.0000  h# c02  over  h# 0040.0000 map-sections  \ I/O - no caching or buffering
 ;
 
@@ -67,6 +68,8 @@ c;
    start-mmu
    dcache-on
    icache-on
-   d# 400,000 to ms-factor
-   d# 400 to us-factor
+\  l2cache-on  \ Leave off for now, to avoid potential problems with Linux
+   bpu-on
+\   d# 400,000 to ms-factor
+\   d# 400 to us-factor
 ;

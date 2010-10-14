@@ -170,9 +170,7 @@ fload ${BP}/cpu/arm/mmp2/devices.fth
 warning off
 : stand-init-io
    stand-init-io
-   ." Going fast" cr
    go-fast         \ From mmuon.fth
-   ." Gone fast" cr
 ;
 warning on
 [then]
@@ -238,11 +236,6 @@ warning @  warning off
 
    standalone?  if
       disable-interrupts
-hex
-      here . cr
-      limit . cr
-      initial-heap . . cr
-      vector-base . cr
 [ifdef] notdef
       d# 1000
       i-key-wait  if
@@ -499,6 +492,10 @@ tag-file @ fclose  tag-file off
 
 .( --- Saving fw.dic ...)
 " fw.dic" $save-forth cr
+
+fload ${BP}/cpu/arm/mmp2/rawboot.fth
+
+.( --- Saving fw.img --- )  cr " fw.img" $save-rom
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks

@@ -42,10 +42,38 @@ code flush-d$           ( -- )     mcr p15,0,r0,cr7,cr6,0  c;
 code flush-d$-entry     ( va -- )  mcr p15,0,tos,cr7,cr6,1  pop tos,sp  c;
 code flush-d$-entry-way ( sw -- )  mcr p15,0,tos,cr7,cr6,2  pop tos,sp  c;
 
-code flush-i&d$         ( -- )     mcr p15,0,r0,cr7,cr7,0  c;
-code flush-u$           ( -- )     mcr p15,0,r0,cr7,cr7,0  c;
-code flush-u$-entry     ( va -- )  mcr p15,0,tos,cr7,cr7,1  pop tos,sp  c;
-code flush-u$-way       ( sw -- )  mcr p15,0,tos,cr7,cr7,2  pop tos,sp  c;
+code flush-i&d$         ( -- )     mcr p15,1,r0,cr7,cr7,0  c;
+code flush-u$           ( -- )     mcr p15,1,r0,cr7,cr7,0  c;
+code flush-u$-entry     ( va -- )  mcr p15,1,tos,cr7,cr7,1  pop tos,sp  c;
+code flush-u$-way       ( sw -- )  mcr p15,1,tos,cr7,cr7,2  pop tos,sp  c;
+
+code clean-l2$          ( -- )     mcr p15,1,r0,cr7,cr11,0  c;
+code clean-l2$-entry    ( va -- )  mcr p15,1,tos,cr7,cr11,1  pop tos,sp  c;
+code clean-l2$-way      ( ws -- )  mcr p15,1,tos,cr7,cr11,2  pop tos,sp  c;
+code clean-l2$-pa       ( pa -- )  mcr p15,1,tos,cr7,cr11,3  pop tos,sp  c;
+
+code flush-l2$          ( -- )     mcr p15,1,r0,cr7,cr7,0  c;
+code flush-l2$-entry    ( va -- )  mcr p15,1,tos,cr7,cr7,1  pop tos,sp  c;
+code flush-l2$-way      ( ws -- )  mcr p15,1,tos,cr7,cr7,2  pop tos,sp  c;
+code flush-l2$-pa       ( pa -- )  mcr p15,1,tos,cr7,cr7,3  pop tos,sp  c;
+
+code clean&flush-l2$          ( -- )     mcr p15,1,r0,cr7,cr15,0  c;
+code clean&flush-l2$-entry    ( va -- )  mcr p15,1,tos,cr7,cr15,1  pop tos,sp  c;
+code clean&flush-l2$-way      ( ws -- )  mcr p15,1,tos,cr7,cr15,2  pop tos,sp  c;
+code clean&flush-l2$-pa       ( pa -- )  mcr p15,1,tos,cr7,cr15,3  pop tos,sp  c;
+
+\ Bit 24 is L2 prefetch disable, bit 23 is L2 ECC enable
+code l2$-efr  ( n -- )  mcr p15,1,tos,cr15,cr1,0  pop tos,sp  c;  
+
+code l2$-lockdown-way   ( bits -- )  mcr p15,1,tos,cr15,cr10,7  pop tos,sp  c;
+
+code l2$-error@  ( -- n )  psh tos,sp  mcr p15,1,tos,cr15,cr9,6  c;
+code l2$-error!  ( n -- )  mcr p15,1,tos,cr15,cr9,6  pop tos,sp  c;
+
+code l2$-error-threshold@  ( -- n )  psh tos,sp  mcr p15,1,tos,cr15,cr9,7  c;
+code l2$-error-threshold!  ( n -- )  mcr p15,1,tos,cr15,cr9,7  pop tos,sp  c;
+
+code l2$-error-capture@    ( -- n )  psh tos,sp  mcr p15,1,tos,cr15,cr11,7  c;
 
 code clean-d$           ( -- )     mcr p15,0,r0,cr7,cr10,0  c;
 code clean-d$-entry     ( va -- )  mcr p15,0,tos,cr7,cr10,1  pop tos,sp  c;
@@ -64,8 +92,6 @@ code test,clean&flush-d$        ( -- )     mcr p15,0,tos,cr7,cr14,3  c;
 code clean&flush-u$             ( -- )     mcr p15,0,r0,cr7,cr15,0  c;
 code clean&flush-u$-entry       ( va -- )  mcr p15,0,tos,cr7,cr15,1  pop tos,sp  c;
 code clean&flush-u$-entry-way   ( sw -- )  mcr p15,0,tos,cr7,cr15,2  pop tos,sp  c;
-
-
 
 code drain-write-buffer ( -- )     mcr p15,0,r0,cr7,cr10,4  c;
 alias data-sync-barrier drain-write-buffer
@@ -135,6 +161,12 @@ c;
 \ the former and "flush" the latter.  "flush-cache" is a generic Open Firmware
 \ operation, so it uses the Open Firmware nomenclature.
 defer flush-cache  ' noop to flush-cache
+
+: l2cache-on   ( -- )  flush-l2$  control@  h# 0400.0000 or          control!  ;
+: l2cache-off  ( -- )  clean-l2$  control@  h# 0400.0000 invert and  control!  ;
+
+: bpu-on   ( -- )  flush-bt$  control@  h# 0800 or          control!  ;
+: bpu-off  ( -- )             control@  h# 0800 invert and  control!  ;
 
 : icache-on   ( -- )  flush-i$  control@  h# 1000 or          control!  ;
 : icache-off  ( -- )            control@  h# 1000 invert and  control!  ;

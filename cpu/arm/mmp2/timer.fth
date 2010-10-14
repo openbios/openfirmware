@@ -22,7 +22,7 @@
 ;
 
 
-code timer0@  ( -- n )  \ 3.25 MHz
+code timer0@  ( -- n )  \ 6.5 MHz
    psh  tos,sp
    set  r1,0xD4014000
    mov  r0,#1
@@ -48,3 +48,109 @@ code timer2@  ( -- n )  \ 1 kHz
    mov  r0,r0
    ldr  tos,[r1,#0x30]
 c;
+
+: timer0-status@  ( -- n )  h# d4014034 l@  ;
+: timer1-status@  ( -- n )  h# d4014038 l@  ;
+: timer2-status@  ( -- n )  h# d401403c l@  ;
+
+: timer0-ier@  ( -- n )  h# d4014040 l@  ;
+: timer1-ier@  ( -- n )  h# d4014044 l@  ;
+: timer2-ier@  ( -- n )  h# d4014048 l@  ;
+
+: timer0-icr!  ( n -- )  h# d4014074 l!  ;
+: timer1-icr!  ( n -- )  h# d4014078 l!  ;
+: timer2-icr!  ( n -- )  h# d401407c l!  ;
+
+: timer0-ier!  ( n -- )  h# d4014040 l!  ;
+: timer1-ier!  ( n -- )  h# d4014044 l!  ;
+: timer2-ier!  ( n -- )  h# d4014048 l!  ;
+
+: timer0-match0!  ( n -- )  h# d4014004 l!  ;  : timer0-match0@  ( -- n )  h# d4014004 l@  ;
+: timer0-match1!  ( n -- )  h# d4014008 l!  ;  : timer0-match1@  ( -- n )  h# d4014008 l@  ;
+: timer0-match2!  ( n -- )  h# d401400c l!  ;  : timer0-match2@  ( -- n )  h# d401400c l@  ;
+
+: timer1-match0!  ( n -- )  h# d4014010 l!  ;  : timer1-match0@  ( -- n )  h# d4014010 l@  ;
+: timer1-match1!  ( n -- )  h# d4014014 l!  ;  : timer1-match1@  ( -- n )  h# d4014014 l@  ;
+: timer1-match2!  ( n -- )  h# d4014018 l!  ;  : timer1-match2@  ( -- n )  h# d4014018 l@  ;
+
+: timer2-match0!  ( n -- )  h# d401401c l!  ;  : timer2-match0@  ( -- n )  h# d401401c l@  ;
+: timer2-match1!  ( n -- )  h# d4014020 l!  ;  : timer2-match1@  ( -- n )  h# d4014020 l@  ;
+: timer2-match2!  ( n -- )  h# d4014024 l!  ;  : timer2-match2@  ( -- n )  h# d4014024 l@  ;
+
+' timer2@ to get-msecs
+: (ms)  ( delay-ms -- )
+   get-msecs +  begin     ( limit )
+      pause               ( limit )
+      dup get-msecs -     ( limit delta )
+   0< until               ( limit )
+   drop
+;
+' (ms) to ms
+
+: us  ( delay-us -- )
+   d# 13 2 */  timer0@ +  ( limit )
+   begin                  ( limit )
+      dup timer0@ -       ( limit delta )
+   0< until               ( limit )
+   drop
+;
+
+\ Timing tools
+variable timestamp
+: t-update ;
+: t(  ( -- )  timer0@ timestamp ! ;
+: ))t  ( -- ticks )  timer0@  timestamp @  -  ;
+: ))t-usecs  ( -- usecs )  ))t 2 d# 13 */  ;
+: )t  ( -- )
+   ))t-usecs  ( microseconds )
+   push-decimal
+   <#  u# u# u#  [char] , hold  u# u#s u#>  type  ."  us "
+   pop-base
+;
+: t-msec(  ( -- )  timer2@ timestamp ! ;
+: ))t-msec  ( -- msecs )  timer2@  timestamp @  -  ;
+: )t-msec  ( -- )
+   ))t-msec
+   push-decimal
+   <# u# u#s u#>  type  ." ms "
+   pop-base
+;
+
+: t-sec(  ( -- )  t-msec(  ;
+: ))t-sec  ( -- secs )  ))t-msec d# 1000 /  ;
+: )t-sec  ( -- )
+   ))t-sec
+   push-decimal
+   <# u# u#s u#>  type  ." s "
+   pop-base
+;
+
+: .hms  ( seconds -- )
+   d# 60 /mod   d# 60 /mod    ( sec min hrs )
+   push-decimal
+   <# u# u#s u#> type ." :" <# u# u# u#> type ." :" <# u# u# u#>  type
+   pop-base
+;
+: t-hms(  ( -- )  t-sec(  ;
+: )t-hms
+   ))t-sec  ( seconds )
+   .hms
+;
+
+: reschedule-tick  ( -- )
+   timer2@ ms/tick + timer2-match0!
+   1 timer2-icr!
+;
+: tick-interrupt  ( level -- )
+   drop
+   reschedule-tick
+   check-alarm
+;
+: (set-tick-limit)  ( interval -- )
+   to ms/tick
+   reschedule-tick
+   timer2-ier@ 1 or timer2-ier!
+   ['] tick-interrupt d# 15 interrupt-handler!  \ d# 15 is the IRQ# for timer0 in the first timer block
+   d# 15 enable-interrupt
+;
+' (set-tick-limit) to set-tick-limit

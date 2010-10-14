@@ -1,8 +1,6 @@
 purpose: Build Open Firmware for Marvell MMP2
 \ See license at end of file
 
-in: sp.img
-in: fw.img
 command: &builder &this
 build-now
 
@@ -16,18 +14,18 @@ tim: 00030102 0 Sky! PXA688
 flash: NAN'6
 timh:  TIMH        0 d1020000
 \ Skip Marvell's Bad Block Table from 0x1000 to 0x7ffff
-\ Secure Processor code loaded into SRAM
-image: WTMI    80000 d1000000 sp.img
-\ Main Processor code loaded into DRAM
-image: OBMI    84000        0 fw.img
+in: sp.img
+in: fw.img
+image: OBMI    80000 d101c000 /home/wmb/OLPC/1.75/dummy.img
+image: WTMI    80400 d1000000 /home/wmb/OLPC/1.75/cforth-from-0xc0000.img
 reserved:
 
-  fload ${BP}/cpu/arm/mmp2/ddr_elpida_512m.fth
+\  fload ${BP}/cpu/arm/mmp2/ddr_elpida_512m.fth
   term:
 end-reserved
 end-tim
 
-save-image: ofw.rom
+save-image: cforth.rom
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
