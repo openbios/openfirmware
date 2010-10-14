@@ -53,6 +53,7 @@ d# 262 value us-factor
    <#  u# u# u#  [char] , hold  u# u#s u#>  type  ."  uS "
    pop-base
 ;
+: t-sec(  ( -- )  t(  ;
 : )t-sec  ( -- )
    ))t  us-factor d# 1,000,000 *  um/mod nip  ( seconds )
    push-decimal
@@ -65,6 +66,7 @@ d# 262 value us-factor
    <# u# u#s u#> type ." :" <# u# u# u#> type ." :" <# u# u# u#>  type
    pop-base
 ;
+: t-hms(  ( -- )  t(  ;
 : )t-hms
    ))t  us-factor d# 1,000,000 *  um/mod nip  ( seconds )
    .hms

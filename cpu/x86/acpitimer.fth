@@ -78,6 +78,7 @@ purpose: Timing functions using the ACPI timer
    <#  u# u# u#  [char] , hold  u# u#s u#>  type  ."  uS "
    pop-base
 ;
+: t-sec(  ( -- )  t(  ;
 : ))t-sec  ( -- sec )  ))t1  d# 3,580,000 um/mod nip  ;
 : )t-sec  ( -- )
    ))t-sec  ( seconds )
@@ -91,6 +92,7 @@ purpose: Timing functions using the ACPI timer
    <# u# u#s u#> type ." :" <# u# u# u#> type ." :" <# u# u# u#>  type
    pop-base
 ;
+: t-hms(  ( -- )  t(  ;
 : )t-hms  ( -- )  ))t-sec  .hms  ;
 [then]
 

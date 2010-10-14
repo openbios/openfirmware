@@ -230,7 +230,7 @@ previous definitions
 
    linefeed over force-line-delimiter  ( fd )
 
-   t(                                  ( fd )
+   t-hms(                              ( fd )
    also nand-commands                  ( fd )
    ['] include-file catch  ?dup  if    ( x error )
       nip .error
