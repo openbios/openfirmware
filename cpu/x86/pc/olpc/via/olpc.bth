@@ -59,6 +59,10 @@ hex
    ?do  h# ff ofd @ fputc  loop
 ;
 
+\ Tell the dropin manager to skip the area reserved for manufacturing data
+h# e0000 to reserved-start
+h# f0000 to reserved-end
+
 .( --- Saving as )
 " ${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
 2dup type cr  ( adr len )
@@ -69,12 +73,7 @@ $new-file
 
    dropin-base rom-pa -  pad-file
 
-[ifdef] coreboot-loaded
-   " romstart.di"           $add-file
-[else]
    " romreset.di"           $add-file
-[then]
-
    " resume.di"             $add-file
 
 \ Loads the set of drivers that is common to different output formats
@@ -195,11 +194,7 @@ $new-file
 
 .( Dropin top is )  ofd @ fsize  .x cr
 
-[ifdef] coreboot-loaded
-   /rom h# 10000 - pad-file	\ coreboot init image must be in last FLASH block
-   " coreboot.img"   $add-file
-[else]
-   /rom h# 10000 - pad-file	\ coreboot init image must be in last FLASH block
+\   /rom h# 10000 - pad-file	\ coreboot init image must be in last FLASH block
 \  " cforth.img"     $add-file  \ Small Forth that runs from cache
 
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
@@ -241,7 +236,6 @@ filebuf /rom ofd @ fgets /rom <> abort" Can't read back image"
 
 /rom h# 2c - ofd @ fseek
 crcbuf /l ofd @ fputs
-[then]
 
 ofd @ fclose
 

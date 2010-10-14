@@ -93,7 +93,7 @@ end-package
 0 0  " 10000"  " /flash" begin-package
    " dropins" device-name
 
-   h# d0000 constant /device
+   h# f0000 constant /device
    fload ${BP}/dev/subrange.fth
 end-package
 

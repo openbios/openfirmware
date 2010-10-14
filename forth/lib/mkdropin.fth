@@ -75,6 +75,9 @@ purpose: Encapsulate memory images in dropin-driver format
 \   make-dropin test.di test.img test
 \   make-deflated-dropin test.di test.img test
 
+-1 value reserved-start
+-1 value reserved-end
+
 \needs push-decimal  : push-decimal  r> base @ >r >r  decimal  ;
 \needs push-hex      : push-hex      r> base @ >r >r  hex      ;
 \needs pop-base      : pop-base      r> r> base ! >r  ;
@@ -113,7 +116,7 @@ warning !
    ifd @ fclose             ( len )
 ;
 : putlong  ( n -- )  lbsplit  4 0 do  ofd @ fputc  loop  ;
-: write-dropin  ( adr len expanded-len name-str -- )
+: write-dropin'  ( adr len expanded-len name-str -- )
    2>r >r                                          ( adr len )
    " OBMD" ofd @ fputs                             ( adr len )
    dup putlong                                     ( adr len )
@@ -125,6 +128,26 @@ warning !
 
    \ Pad out to a 4-byte boundary
    dup 4 round-up swap  ?do  1 ofd @ fputc  loop   ( )
+;
+: write-dropin  ( adr len expanded-len name-str -- )
+   2>r >r                                   ( adr len  r: name$ expanded-len )
+
+   \ Calculate expected ending position
+   dup  ofd @ ftell +                         ( adr len pos )
+
+   \ Encroaches upon manufacturing data area?  If so, enumerate as a dropin.
+   reserved-start h# 20 -  reserved-end  within  if
+      \ Calculate size of a dropin covering reserved area
+      reserved-end ofd @ ftell -  h# 20 -     ( adr len reslen )
+      \ Allocate memory for it
+      dup alloc-mem swap                      ( adr len resadr reslen )
+      \ Fill it
+      2dup h# ff fill                         ( adr len resadr reslen )
+      \ Write it out
+      2dup 0 " reserved" write-dropin'        ( adr len resadr reslen )
+      free-mem                                ( adr len )
+   then                                       ( adr len  r: name$ expanded-len )
+   r> 2r> write-dropin'
 ;
 : write-deflated-dropin  ( adr len name-str -- )
    2>r  tuck $deflate           ( in-len out-adr,len r: name$ )
