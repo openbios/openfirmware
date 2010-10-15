@@ -16,7 +16,8 @@
    
    h# 000e.0000  gpio-base h# 0c +  l!  \ Bits 19, 18, 17
    h# 0704.2000  gpio-base h# 10 +  l!  \ Bits 58,57,56,50 and 45
-   h# 03ec.3e00  gpio-base h# 14 +  l!  \ Bits 89:85,83,82, and 77:73
+\   h# 03ec.3e00  gpio-base h# 14 +  l!  \ Bits 89:85,83,82, and 77:73
+   h# 03ec.3200  gpio-base h# 14 +  l!  \ Bits 89:85,83,82, and 77:76 and 73 (leave 74 and 75 as input)
 
    h# 0200.3c00  gpio-base h# 20 +  l!  \ Turn off LEDS (3c00) and turn on 5V (0200.0000)
 ;
@@ -192,10 +193,10 @@ create mfpr-table
    0 af,      \ GPIO_116 - GPIO_116 (i/o)
    0 af,      \ GPIO_117 - GPIO_117 (i/o)
    0 af,      \ GPIO_118 - GPIO_118 (i/o)
-   3 af,      \ GPIO_119 - GPIO_119 (i/o)
-   3 af,      \ GPIO_120 - GPIO_120 (i/o)
-   3 af,      \ GPIO_121 - GPIO_121 (i/o)
-   3 af,      \ GPIO_122 - GPIO_122 (i/o)
+   0 af,      \ GPIO_119 - GPIO_119 (i/o)
+   0 af,      \ GPIO_120 - GPIO_120 (i/o)
+   0 af,      \ GPIO_121 - GPIO_121 (i/o)
+   0 af,      \ GPIO_122 - GPIO_122 (i/o)
    0 af,      \ GPIO_123 - MBFLT_N    (use as GPIO  in)
    1 af,      \ GPIO_124 - MMC1_DAT[7]
    1 af,      \ GPIO_125 - MMC1_DAT[6]
