@@ -2,7 +2,7 @@ purpose: Maintains a bitmap identifying longwords that need to be relocated
 \ See license at end of file
 
 \ h# 8.0000 equ      max-image
-h# 8.0000 constant max-image
+h# 10.0000 constant max-image
 
 0 value relocation-map
 
