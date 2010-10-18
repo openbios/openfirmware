@@ -72,3 +72,6 @@
    ." print ""              ____^^__\n""" cr
    ." print ""\n""" cr
 ;
+
+: start-dram-init  ( -- )  ;
+: end-dram-init  ( -- )  ;
