@@ -73,6 +73,8 @@
 \ tCKSRE max(5nCK, 10ns)
 \ tCKSRX max(5nCK, 10ns)
 
+start-dram-init
+
 mmap0
 h# 0000.0000 d# 23 rshift start-addr   
 h# 4000.0000 log2 d# 16 - area-length
@@ -554,3 +556,5 @@ wait-tzqinit
 do-dummy-reads
 
 show-dll-delay
+
+end-dram-init

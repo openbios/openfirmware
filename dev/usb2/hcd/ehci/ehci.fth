@@ -12,24 +12,11 @@ true value first-open?
 0 value ehci-reg
 0 value op-reg-offset
 
-h# 100 constant /regs
-
-\ Configuration space registers
-my-address my-space          encode-phys
-                           0 encode-int encode+ 0 encode-int encode+
-\ EHCI operational registers
-0 0    my-space  0200.0010 + encode-phys encode+
-                           0 encode-int encode+  /regs encode-int encode+
-" reg" property
-
 : map-regs  ( -- )
-   4 my-w@  h# 16 or  4 my-w!  \ memory write and invalidate, bus master, mem
-   0 0 my-space h# 0200.0010 + /regs  map-in to ehci-reg
+   /regs my-map-in to ehci-reg
 ;
 : unmap-regs  ( -- )
-   \ Don't disable because somebody else might be using the controller.
-   \ 4 my-w@  7 invert and  4 my-w!
-   ehci-reg  /regs  map-out  0 to ehci-reg
+   ehci-reg  /regs  my-map-out  0 to ehci-reg
 ;
 
 : ehci-reg@  ( idx -- data )  ehci-reg + rl@  ;
@@ -101,23 +88,14 @@ my-address my-space          encode-phys
 0 value dbgp-offset
 0 value dbgp-bar
 
-: find-dbgp-regs  ( -- )
-   h# 34 my-l@                   ( capability-ptr )
-   begin  dup  while             ( cap-offset )
-      dup my-b@ h# 0a =  if      ( cfg-adr )
-         2+ my-w@                ( dbgp-ptr )
-         dup h# 1fff and to dbgp-offset  ( )
-         d# 13 rshift  7 and  1- /l* h# 10 +  to dbgp-bar
-         exit
-      then                       ( cfg-adr )
-      1+ my-b@                   ( cap-offset' )
-   repeat                        ( cap-offset )
-   drop
-;
 : debug-port-active?  ( -- flag )
    hcsparams@  h# f0.0000 and  0=  if  false exit  then
-   find-dbgp-regs
-   dbgp-offset 0=  if  false exit  then
+   has-dbgp-regs?  if   ( offset bar )
+      to dbgp-bar  to dbgp-offset
+   else                 ( )
+      false exit
+   then
+
    \ We should take dbgp-bar into account, but for now we
    \ just assume it's the same BAR as for the main registers.
    dbgp-offset ehci-reg@

@@ -633,8 +633,9 @@ delay? 0=  if  cr  7 emit  7 emit  ." TIMEOUT" cr  debug-me  then
    dummy-qh ?dup  if  free-qh  0 to dummy-qh  then
 ;
 
+
 : ?alloc-dummy-qh  ( -- )
-   0 my-w@ h# 1106 ( VIA ) =  if  alloc-dummy-qh  then
+   needs-dummy-qh?  if  alloc-dummy-qh  then
 ;
 
 \ The words this calls are written so they can be called again

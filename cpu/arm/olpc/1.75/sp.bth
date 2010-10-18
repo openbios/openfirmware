@@ -1,0 +1,397 @@
+purpose: Load file for ARM Forth kernel
+\ See license at end of file
+
+command: &builder &this
+build-now
+
+[ifndef] arm-assembler		\ Make sure we have the ARM assembler
+only forth also definitions
+
+fload ${BP}/forth/lib/bitops.fth
+\needs set-relocation-bit  defer set-relocation-bit  \ keep init-assem happy
+
+\ only forth also meta also definitions
+
+fload ${BP}/cpu/arm/assem.fth
+fload ${BP}/cpu/arm/code.fth
+
+[then]
+: assembler  ( -- )  arm-assembler  ;
+: setreg  \ reg value  ( -- )
+   safe-parse-word $hnumber abort" Bad number"
+   safe-parse-word $hnumber abort" Bad number"
+   swap
+   " set  r1,``" evaluate
+   " set  r0,``" evaluate
+   " str  r0,[r1]" evaluate
+;
+: getreg  \ reg  ( -- )
+   safe-parse-word $hnumber abort" Bad number"
+   " set  r1,``" evaluate
+   " ldr  r0,[r1]" evaluate
+;
+: putreg  \ reg  ( -- )
+   " str  r0,[r1]" evaluate
+;
+: bitset  \ reg  ( -- )
+   safe-parse-word $hnumber abort" Bad number"
+   " orr  r0,r0,``" evaluate
+;
+: bitclr  \ reg  ( -- )
+   safe-parse-word $hnumber abort" Bad number"
+   " bic  r0,r0,``" evaluate
+;
+
+label unreset
+  \ From jasper.c
+        setreg d4051024 ffffffff \ PMUM_CGR_PJ - Clocks on
+
+        setreg D42828dc 1FFFF    \ PMUA_GLB_CLK_CTRL - Enable CLK66 to APB, PLL2/12/6/3/16/8/4/2/1, PLL1/12/6/3/16/8/4
+
+        setreg  D4015064 07      \ AIB clock
+        setreg  D4015064 03      \ AIB clock
+
+        setreg D401502c 13       \ UART1 clk - 26 MHz
+        setreg D4015034 13       \ UART3 clk - 26 MHz
+
+        getreg D401E160          \ G_CLK_REQ
+        bitset 4000              \ Enable pullup
+	putreg
+
+        setreg D4015000 83       \ APBC_RTC_CLK_RST - Enable RTC clock and power
+
+        setreg D4015024 05       \ APBC_TIMERS1_CLK_RST - Reset
+        setreg D4015024 33       \ APBC_TIMERS1_CLK_RST - Enable Timers at 26 MHz
+
+        getreg d4282c08          \ SCU_PJ4_CPU_CONF
+        bitset       40          \ Bit  6 - bypass clock gate
+        bitset      200          \ Bit  9 - allow CPU in WFI to be woken up by Multi-ICE as well as by interrupt
+        bitset     2000          \ Bit 13 - disable MMU translation abort for L2 cache
+        bitset     4000          \ Bit 14 - bypass clock gate in L2 cache
+        bitset    80000          \ Bit 19 - L2 Cache burst 8 enable
+        bitclr   800000          \ Bit 23 - use slow queue for CPU to DDR access
+        putreg
+
+  \ Now change the frequency
+  \ from freq_ll.S
+
+        set     r4, 0xd0000000         \ DMEM base address
+        set     r5, 0xd4050000         \ PMUM base address
+        set     r6, 0xd4282800         \ PMUA base address
+
+        set     r7, 0xffffffff         \ All clocks ON
+        str     r7, [r5, #0x0024]      \ PMUM_CGR_SP
+        set     r7, 0x00061808         \ Reserved bits, but supposed to "allow freq"
+        str     r7, [r6, #0x88]        \ PMUA_DEBUG
+
+	\ change to PLL1/2 first, start-up operation point
+        set     r7, 0x00000000
+        str     r7, [r5, #0x8]
+        set     r7, 0x08fd96d9
+        str     r7, [r6, #0x00]
+        set     r7, 0x78fd96d9
+        str     r7, [r6, #0x04]
+
+        \ select PLL2 frequency, 520MHz
+        set     r7, 0x08600322         \ Bandgap+charge pump+VCO loading+regulator defaults, 486.3-528.55 PLL2 (bits 10:6)
+        str     r7, [r5, #0x0414]      \ PMUM_PLL2_CTRL1
+        set     r7, 0x00FFFE00         \ refclk divisor and feedback divisors at max, software controls activation
+        str     r7, [r5, #0x0034]      \ PMUM_PLL2_CTRL2
+        set     r7, 0x0021da00         \ refclk divisor=4, feedback divisor=0x76=118, software controls activation
+        str     r7, [r5, #0x0034]      \ PMUM_PLL2_CTRL1
+        set     r7, 0x0021db00         \ same plus enable
+        str     r7, [r5, #0x0034]      \ PMUM_PLL2_CTRL2
+        set     r7, 0x28600322         \ same as above plus release PLL loop filter
+        str     r7, [r5, #0x0414]      \ PMUM_PLL2_CTRL1
+        \ select clock source, PJ4-PLL1, SP-PLL1/2, AXI/DDR-PLL1
+        set     r7, 0x20800000         \ PLL1 > PJ4 (bits 31:29), PLL1/2 > SP (bits 28:26), PLL1 > AXI&DDR (bits 25:23)
+        str     r7, [r5, #0x0008]      \ PMUM_FCCR
+        \ divider setting and frequency change request, core-800, ddr-400, axi-200
+        set     r7, 0x08fd8248         \ speed change voting, ACLK:3, DCLK:0, BACLK1:1, PCLK:0
+        str     r7, [r6, #0x00]        \ PMUA_CC_SP
+        set     r7, 0x78fd8248         \ etc - hard to decipher
+        str     r7, [r6, #0x04]        \ PMUA_CC_PJ
+
+        \ DDR recalibration after frequency change
+        \ CONFIG_DECODE_ADDR
+        set     r7, 0xD0004D56
+        str     r7, [r4, #0x010]
+
+        \ This is for Elpida DDR2 512M
+        \ MMAP
+        set     r7, 0x000C0001
+        str     r7, [r4, #0x100]
+        set     r7, 0x100C0001
+        str     r7, [r4, #0x110]
+
+        \ CONFIG_TYPE
+        set     r7, 0x00006420
+        str     r7, [r4, #0x020]
+        set     r7, 0x00006420
+        str     r7, [r4, #0x030]
+        set     r7, 0x00000000
+        str     r7, [r4, #0xB40]
+        set     r7, 0x00000000
+        str     r7, [r4, #0xB50]
+
+        \ TIMING
+        set     r7, 0x4CDA00C5
+        str     r7, [r4, #0x050]
+        set     r7, 0x94860342
+        str     r7, [r4, #0x060]
+        set     r7, 0x2000381B
+        str     r7, [r4, #0x190]
+        set     r7, 0x3023009D
+        str     r7, [r4, #0x1C0]
+        set     r7, 0x00110142
+        str     r7, [r4, #0x650]
+        set     r7, 0x02424190
+        str     r7, [r4, #0x660]
+   \ End of Elpida-specific stuff
+
+        \ CTRL
+        set     r7, 0x00005000
+        str     r7, [r4, #0x080]
+        set     r7, 0x00080010
+        str     r7, [r4, #0x090]
+        set     r7, 0xC0000000
+        str     r7, [r4, #0x0F0]
+        set     r7, 0x20C08115
+        str     r7, [r4, #0x1A0]
+        set     r7, 0x01010101
+        str     r7, [r4, #0x280]
+        set     r7, 0x00000000
+        str     r7, [r4, #0x760]
+        set     r7, 0x03000000
+        str     r7, [r4, #0x770]
+        set     r7, 0x00000133
+        str     r7, [r4, #0x780]
+        set     r7, 0x01010101
+        str     r7, [r4, #0x7B0]
+        set     r7, 0x0000000F
+        str     r7, [r4, #0x7D0]
+        set     r7, 0x00000000
+        str     r7, [r4, #0x7E0]
+
+        \ MCB
+        set     r7, 0x00000000
+        str     r7, [r4, #0x540]
+        set     r7, 0x00000001
+        str     r7, [r4, #0x570]
+        set     r7, 0x00000000
+        str     r7, [r4, #0x580]
+        set     r7, 0x00000000
+        str     r7, [r4, #0x590]
+        set     r7, 0x00000000
+        str     r7, [r4, #0x5A0]
+        set     r7, 0x00000000
+        str     r7, [r4, #0x5B0]
+
+        \ WRITE_PROTECTION
+        set     r7, 0x00000000
+        str     r7, [r4, #0x180]
+
+        \ __PHY Deskew PLL config and PHY initialization
+        set     r7, 0x00000000
+        str     r7, [r4, #0x210]
+        set     r7, 0x80000000
+        str     r7, [r4, #0x240]
+
+        \ DLL reset, Need this after any DCLK freq change
+        set     r8, 0x20000000
+        ldr     r7, [r4, #0x240]
+        orr     r7, r7, r8
+        str     r7, [r4, #0x240]
+        set     r8, 0xdFFFFFFF
+        ldr     r7, [r4, #0x240]
+        and     r7, r7, r8
+        str     r7, [r4, #0x240]
+
+        \ Pad drive strength auto calibration
+        set     r8, 0x00110000
+        ldr     r7, [r4, #0x200]
+        orr     r7, r7, r8
+        str     r7, [r4, #0x200]
+        ldr     r7, [r4, #0x240]
+        set     r8, 0xFFFeFFFF
+        ldr     r7, [r4, #0x200]
+        and     r7, r7, r8
+        str     r7, [r4, #0x200]
+
+        \ Elpida DDR2 512M-specific
+        set     r7, 0x20004444
+        str     r7, [r4, #0x140]
+        set     r7, 0x13300559
+        str     r7, [r4, #0x1D0]
+        set     r7, 0x03300990
+        str     r7, [r4, #0x1E0]
+        set     r7, 0x00000077
+        str     r7, [r4, #0x1F0]
+        \ End of Elpida-specific
+   
+        set     r7, 0x20000088
+        str     r7, [r4, #0x230]
+        set     r7, 0x00000080
+        str     r7, [r4, #0xE10]
+        set     r7, 0x00000080
+        str     r7, [r4, #0xE20]
+        set     r7, 0x00000080
+        str     r7, [r4, #0xE30]
+
+        set     r7, 0x00000000
+        str     r7, [r4, #0xE40]
+        set     r7, 0x00000000
+        str     r7, [r4, #0xE50]
+
+        \ initialize LPDDR2
+        set     r7, 0x03000001
+        str     r7, [r4, #0x120]
+        ldr     r7, [r4, #0x1B0]
+        set     r7, 0x0302003F
+        str     r7, [r4, #0x410]
+        set     r7, 0x01001000
+        str     r7, [r4, #0x120]
+        set     r7, 0x02001000
+        str     r7, [r4, #0x120]
+        set     r7, 0x03020001
+        str     r7, [r4, #0x410]
+        set     r7, 0x03020002
+        str     r7, [r4, #0x410]
+        set     r7, 0x03020003
+        str     r7, [r4, #0x410]
+
+\ End of frequency change
+
+   setreg d4282110 0          \ Release global IRQ0 mask
+
+   setreg d4283894 11000008   \ DFI chip select timing configuration for CS1
+
+   setreg d428290c 600        \ Power up audio module
+   setreg d428290c 610        \ and enable peripheral clock
+   setreg d428290c 710        \ and disable isolation
+   setreg d428290c 712        \ and release reset
+
+   setreg d4050040 d0080040   \ I2S0 SYSCLK_EN, PLL1/2, denom=0x10, numerator=0x40
+   setreg d4050044 d0040040   \ I2S0 SYSCLK_EN, PLL1/2, denom=0x08, numerator=0x40
+
+   setreg d42a0c3c 10800      \ Undocumented register in SSPA
+   setreg d42a0c34 211921     \ Undocumented register in SSPA
+
+   setreg d428285c 08         \ Enable AXI clock to USB
+   setreg d428285c 09         \ and release from reset
+
+   setreg d42828f8 18         \ Enable HSIC1 SPH Controller Clock and AXI Clock
+   setreg d42828f8 1b         \ and release from reset
+
+   setreg d42828fc 18         \ Undocumented, probably another USB HSIC
+   setreg d42828fc 1b         \ Undocumented ..
+
+   setreg d4282900 18         \ Enable FSIC SPH Controller Clock and AXI Clock
+   setreg d4282900 1b         \ and release from reset
+
+   setreg d4282848 08         \ Enable AXI clock to IRE
+   setreg d4282848 09         \ and release from reset
+
+   setreg D4015004 03         \ Enable TWSI1 clk
+   \ Delay 99999
+
+   setreg d4282854 1b         \ Enable SDHC0 clk
+   setreg d42828e8 1b         \ Enable SDHC3 clk
+
+   getreg d42828a4            \ Vmeta
+   bitset 400                 \ Module powered up
+   bitclr 200                 \ Inputs isolated
+   putreg
+   bitset 008                 \ AXI clock enabled
+   putreg
+   bitset 001                 \ AXI released from reset
+   putreg
+   bitset 010                 \ Peripheral clock enabled
+   putreg
+   bitset 002                 \ Peripheral released from reset
+   putreg
+   bitset 020                 \ PLL2/3
+   putreg
+   bitset 004                 \ Reserved
+   putreg
+   bitset 100                 \ Isolation disabled
+   putreg
+   bitclr 240                 \ Input isolation disabled, (bit 6 is part of the clock select field)
+   putreg
+   \ Whew, that was tedious
+
+   setreg d428284c 08         \ PMUA_DISPLAY1_CLK_RES_CTL - AXI Clk enabled
+   setreg d428284c 09         \ plus AXI released from reset
+   setreg d428284c 19         \ plus peripheral clock enabled
+   setreg d428284c 1b         \ plus peripheral released from reset
+
+   setreg d4015038 03         \ Use 32 kHz clock input (bit 1 reserved)
+
+\   mrc    p15,0,r0,c1,c0,2
+\   orr    r0,r0,#0xf           \ Enable MMX
+\   mcr    p15,0,r0,c1,c0,2
+
+\ Allow access of performance counters (PMU) from user space
+\	mov	r0, #0x1
+\	mrc	p15, 0, r0, c9, c14, 0
+\	orr	r0, r0, #0x1
+\	mcr	p15, 0, r0, c9, c14, 0
+
+\ Ensure branch prediction is enabled - BPU (Default)
+\	mrc	p15, 0, r0, c1, c0, 0
+\	orr	r0, r0, #0x800
+\	mcr	p15, 0, r0, c1, c0, 0
+
+\       setreg d4015064 03   \ AIB clock, redundant with above
+
+\    //BU_REG_WRITE( SMC_CSDFICFGX, 0x51890009 );              // SMC_CSDFICFG0
+\    //BU_REG_WRITE( SMC_CSADRMAPX, 0x10000F00 );              // SMC_CSADRMAP0
+\	//BU_REG_WRITE(0xd4283824, 0xC6CFF2C9 );
+\	setreg d4283894 11000008 \ DFI, redundant with above
+
+\	setreg d4015000 83    \ RTC, redundant with above
+	setreg d4015074 03    \ MPMU, clocks on
+	setreg d4282864 09    \ DMA enabled and release from reset
+	setreg d4282860 b8    \ NAND FLASH PLL1/8 + ECC PLL1/4, AXI clock enabled
+	setreg d4282860 bf    \ plus ECC&controller&AXI released from reset
+
+\ Finally, release the reset for the main CPU
+
+   set r0,0xd4050020
+   ldr r1,[r0]
+   bic r1,r1,#2
+   str r1,[r0]
+
+   begin
+      mcr p15,0,r0,cr7,cr0,4  \ Wait For Interrupt
+   again
+
+end-code
+
+writing sp.img
+   unreset  here over -  ofd @ fputs
+ofd @ fclose
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2008 FirmWorks
+\
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

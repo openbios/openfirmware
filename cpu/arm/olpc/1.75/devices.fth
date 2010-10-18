@@ -1,14 +1,17 @@
 fload ${BP}/dev/omap/diaguart.fth	\ OMAP UART
-h# d4018000 to uart-base		\ UART# base address on MMP2
+h# d4030000 to uart-base		\ UART# base address on MMP2
 d# 26000000 to uart-clock-frequency
 
 : init-clocks
    -1    h# d4051024 l!   \ PMUM_CGR_PJ - everything on
    h# 07 h# d4015064 l!   \ APBC_AIB_CLK_RST - reset, functional and APB clock on
    h# 03 h# d4015064 l!   \ APBC_AIB_CLK_RST - release reset, functional and APB clock on
+   h# 13 h# d401502c l!   \ APBC_UART1_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
    h# 13 h# d4015034 l!   \ APBC_UART3_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
-   h# c1 h# d401e120 l!   \ GPIO51 = af1 for UART3 RXD
-   h# c1 h# d401e124 l!   \ GPIO52 = af1 for UART3 TXD
+   h# c1 h# d401e0c8 l!   \ GPIO29 = af1 for UART1 RXD
+   h# c1 h# d401e0cc l!   \ GPIO30 = af1 for UART1 TXD
+   h# c4 h# d401e260 l!   \ GPIO115 = af4 for UART3 RXD
+   h# c4 h# d401e264 l!   \ GPIO116 = af4 for UART3 TXD
    h# 1b h# d4282854 l!   \ SD0 clocks
 ;
 
@@ -48,8 +51,8 @@ fload ${BP}/cpu/arm/mmp2/twsi.fth
 fload ${BP}/cpu/arm/mmp2/mfpr.fth
 fload ${BP}/cpu/arm/mmp2/gpio.fth
 
-fload ${BP}/cpu/arm/mmp2/boardtwsi.fth
-fload ${BP}/cpu/arm/mmp2/boardgpio.fth
+fload ${BP}/cpu/arm/olpc/1.75/boardtwsi.fth
+fload ${BP}/cpu/arm/olpc/1.75/boardgpio.fth
 : init-stuff
    set-camera-domain-voltage
    acgr-clocks-on
@@ -68,17 +71,23 @@ fload ${BP}/cpu/arm/mmp2/irq.fth
 
 fload ${BP}/cpu/arm/mmp2/watchdog.fth	\ reset-all using watchdog timer
 
-0 0  " d4018000"  " /" begin-package  \ UART3
+0 0  " d4030000"  " /" begin-package  \ UART1
    fload ${BP}/cpu/arm/mmp2/uart.fth
 end-package
 devalias com1 /uart
 : com1  " com1"  ;
 ' com1 is fallback-device   
 
+0 0  " d4018000"  " /" begin-package  \ UART3
+   fload ${BP}/cpu/arm/mmp2/uart.fth
+end-package
+devalias com2 /uart
+: com2  " com2"  ;
+
 0 0  " d420b000"  " /" begin-package
    " display" name
-   fload ${BP}/cpu/arm/mmp2/lcdcfg.fth
-   fload ${BP}/cpu/arm/mmp2/dsi.fth
+   fload ${BP}/cpu/arm/olpc/1.75/lcdcfg.fth
+\   fload ${BP}/cpu/arm/mmp2/dsi.fth
 
    fload ${BP}/cpu/arm/mmp2/lcd.fth
    : display-on
@@ -120,7 +129,7 @@ devalias ext /sd/disk@1
 
 fload ${BP}/dev/olpc/kb3700/spicmd.fth
 
-0 0  " d4208000"  " /" begin-package
+0 0  " d4208000"  " /" begin-package  \ USB Host Controller
    h# 200 constant /regs
    my-address my-space /regs reg
    : my-map-in  ( len -- adr )

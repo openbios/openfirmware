@@ -21,7 +21,7 @@
    7 h# 84 timer!
 ;
 
-
+[ifdef] arm-assembler
 code timer0@  ( -- n )  \ 6.5 MHz
    psh  tos,sp
    set  r1,0xD4014000
@@ -48,6 +48,11 @@ code timer2@  ( -- n )  \ 1 kHz
    mov  r0,r0
    ldr  tos,[r1,#0x30]
 c;
+[else]
+: timer0@  ( -- n )  1 h# d40140a4 l!  h# d4014028 l@  ;
+: timer1@  ( -- n )  1 h# d40140a8 l!  h# d401402c l@  ;
+: timer2@  ( -- n )  1 h# d40140ac l!  h# d4014030 l@  ;
+[then]
 
 : timer0-status@  ( -- n )  h# d4014034 l@  ;
 : timer1-status@  ( -- n )  h# d4014038 l@  ;

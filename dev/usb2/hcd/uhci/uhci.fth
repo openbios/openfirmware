@@ -10,24 +10,10 @@ true value first-open?
 0 value open-count
 0 value uhci-reg
 
-h# 400 constant /regs
-
-\ Configuration space registers
-my-address my-space          encode-phys
-                           0 encode-int  encode+  0     encode-int encode+
-\ UHCI operational registers
-0 0    my-space  0100.0020 + encode-phys encode+
-                           0 encode-int  encode+  /regs encode-int encode+
-" reg" property
-
-: map-regs  ( -- )
-   4 my-w@  h# 17 or  4 my-w!
-   0 0 my-space h# 0100.0020 + /regs  map-in to uhci-reg
-;
+: map-regs  ( -- )  /regs my-map-in to uhci-reg  ;
 
 : unmap-regs  ( -- )
-   4 my-w@  7 invert and  4 my-w!
-   uhci-reg  /regs  map-out  0 to uhci-reg
+   uhci-reg  /regs  my-map-out  0 to uhci-reg
 ;
 
 : uhci-b@  ( idx -- data )  uhci-reg + rb@  ;
@@ -51,10 +37,6 @@ my-address my-space          encode-phys
 : sof!        ( data -- )   c uhci-b!  ;
 : portsc@     ( port -- data )  2* 10 + uhci-w@  ;
 : portsc!     ( data port -- )  2* 10 + uhci-w!  ;
-
-: ?disable-smis  ( -- )
-   0 my-l@ h# 27c88086 =  if   h# af00 h# 80 my-w!  then
-;
 
 : reset-usb  ( -- )
    uhci-reg dup 0=  if  map-regs  then

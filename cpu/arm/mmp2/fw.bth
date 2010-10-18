@@ -215,7 +215,6 @@ d# 2382 to arm-linux-machine-type  \ Marvell Jasper
 true to stand-init-debug?
 
 : protect-fw  ( -- )  ;
-: usb-power-on  ( -- )  ;
 
 hex
 : i-key-wait  ( ms -- pressed? )
@@ -236,7 +235,6 @@ warning @  warning off
 
    standalone?  if
       disable-interrupts
-[ifdef] notdef
       d# 1000
       i-key-wait  if
 \        protect-fw
@@ -244,7 +242,6 @@ warning @  warning off
       then
       \ Turn on USB power here to overlap the time with other startup actions
       usb-power-on
-[then]
    then
 ;
 warning !

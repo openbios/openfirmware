@@ -45,7 +45,7 @@ h# 0050 constant pmua_ccic_clk_res_ctrl_offset      \ CCIC Clock/Reset Control R
    2 ms
    d# 83 gpio-clr  1 ms  d# 83 gpio-set  1 ms  \ LCD_RST_N line resets DSI bridge
    
-   5 set-address h# 16 set-slave       \ TWSI address of TC358762 MIPI DSI bridge
+   h# 16 5 set-twsi-target    \ TWSI address of TC358762 MIPI DSI bridge
    \ Data   Reg#.......
    0  h# 047c dsi-twsi!  \ Turn off sleep mode
    2 ms
@@ -142,7 +142,7 @@ h# 0050 constant pmua_ccic_clk_res_ctrl_offset      \ CCIC Clock/Reset Control R
 : .dsi  ( index -- )  dup 3 u.r space dsi-twsi@ 8 u.r cr  ;
 : .dsiw  ( index -- )  dup 3 u.r space dsi-twsi-w@ 8 u.r cr  ;
 : dump-dsi  ( -- )
-   5 set-address  16 set-slave
+   16 5 set-twsi-target
    47c .dsi
    210 .dsi
    470 .dsi

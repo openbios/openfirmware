@@ -58,18 +58,6 @@ false instance value noprobe?
 \ Common routines
 \ ---------------------------------------------------------------------------
 
-: my-b@  ( offset -- b )  my-space +  " config-b@" $call-parent  ;
-: my-b!  ( b offset -- )  my-space +  " config-b!" $call-parent  ;
-
-: my-w@  ( offset -- w )  my-space +  " config-w@" $call-parent  ;
-: my-w!  ( w offset -- )  my-space +  " config-w!" $call-parent  ;
-
-: my-l@  ( offset -- l )  my-space +  " config-l@" $call-parent  ;
-: my-l!  ( l offset -- )  my-space +  " config-l!" $call-parent  ;
-
-: map-in   ( phys.lo,md,hi len -- vaddr )  " map-in"   $call-parent  ;
-: map-out  ( vaddr size -- )               " map-out"  $call-parent  ;
-
 \ XXX Room for improvement: keep tab of hcd-map-in's to improve performance.
 : hcd-map-in   ( virt size -- phys )  false dma-map-in  ;
 : hcd-map-out  ( virt phys size -- )  dma-map-out  ;

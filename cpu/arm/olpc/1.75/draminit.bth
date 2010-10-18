@@ -1,0 +1,9 @@
+purpose: Build Open Firmware for Marvell MMP2
+\ See license at end of file
+
+command: &builder &this
+build-now
+
+fload ../dram.fth
+fload ../dram-forth.fth
+fload ../xo-dram.fth
