@@ -27,7 +27,8 @@
    then                             ( )
 ;
 
-: hex,  ( -- )  safe-parse-word  $hnumber abort" Bad hex number"  l,  ;
+: get-hex  ( -- )  safe-parse-word  $hnumber abort" Bad hex number"  ;
+: hex,  ( -- )  get-hex  l,  ;
 : get-word  ( -- adr len )  safe-parse-word  ;
 : get-filename  ( -- adr len )  0 parse  ;
 
@@ -100,16 +101,18 @@
 : $file-size  ( adr len -- size )
    $read-open  ifd @ fsize  ifd @ fclose
 ;
+0 value image-offset
 : place-image  ( adr len -- size )
    $read-open  ifd @ fsize     ( size )
-   here 8 - l@                 ( size offset )
+   image-offset                ( size offset )
    2dup + ?realloc-image       ( size offset )
    image-adr +  over           ( size adr size )
    ifd @ fgets                 ( size read-size )
    over <> abort" Read failed" ( size )
    ifd @ fclose                ( size )
 \   h# 1000 round-up
-   4 round-up
+    h# 800 round-up
+\   4 round-up
 ;
 : place-hash  \ XXX need to implement non-null hash info
    d# 10 0  do  0 l,  loop
@@ -118,9 +121,14 @@
 : start-image  ( adr len -- )
    +#images
    get-word  2dup 4c,  set-last-image
-   hex,            \ Flash offset
+   get-hex  dup to image-offset  l,  \ Flash offset
    hex,            \ Load address
 ;
+: anonymous: \ flash-offset filename
+   get-hex to image-offset
+   get-filename place-image drop
+;
+   
 : image:  \ name flash-offset mem-load-addr filename
    start-image
    get-filename place-image l,
