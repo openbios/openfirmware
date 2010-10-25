@@ -85,7 +85,8 @@ headers
 \ sitting around waiting for insertion/removal events.
 \ The debouncer takes about 300 ms to stabilize.
 
-: card-inserted?  ( -- flag )
+defer card-inserted?
+: sdhci-card-inserted?  ( -- flag )
    get-msecs d# 500 +   begin            ( time-limit )
       \ When the stable bit is set, we can believe the answer
       present-state@ h# 20000 and  if    ( time-limit )
@@ -99,11 +100,14 @@ headers
    ." SD Card detect unstable!" cr       ( )
    false                                 ( flag )
 ;
+' sdhci-card-inserted? to card-inserted?
 : write-protected?  ( -- flag )
    present-state@ h# 80000 and  0=
 ;
 
-: card-power-on  ( -- )
+defer card-power-on
+defer card-power-off
+: sdhci-card-power-on  ( -- )
    \ Card power on does not work if a removal interrupt is pending
    h# c0  isr!              \ Clear any pending insert/remove events
 
@@ -117,7 +121,10 @@ headers
    dup h# 29  cb!   ( voltage )  \ First set the voltage
    1 or h# 29  cb!  ( )          \ Then turn it on
 ;
-: card-power-off  ( -- )  0  h# 29  cb!  ;
+: sdhci-card-power-off  ( -- )  0  h# 29  cb!  ;
+
+' sdhci-card-power-on to card-power-on
+' sdhci-card-power-off to card-power-off
 
 : internal-clock-on  ( -- )
    h# 2c cw@  1 or  h# 2c cw!

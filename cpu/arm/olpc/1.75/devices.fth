@@ -1,5 +1,6 @@
 fload ${BP}/dev/omap/diaguart.fth	\ OMAP UART
-h# d4030000 to uart-base		\ UART# base address on MMP2
+h# d4018000 to uart-base		\ UART3 base address on MMP2
+\ h# d4030000 to uart-base		\ UART1 base address on MMP2
 d# 26000000 to uart-clock-frequency
 
 : init-clocks
@@ -12,7 +13,6 @@ d# 26000000 to uart-clock-frequency
    h# c1 h# d401e0cc l!   \ GPIO30 = af1 for UART1 TXD
    h# c4 h# d401e260 l!   \ GPIO115 = af4 for UART3 RXD
    h# c4 h# d401e264 l!   \ GPIO116 = af4 for UART3 TXD
-   h# 1b h# d4282854 l!   \ SD0 clocks
 ;
 
 : inituarts  ( -- )
@@ -51,17 +51,17 @@ fload ${BP}/cpu/arm/mmp2/twsi.fth
 fload ${BP}/cpu/arm/mmp2/mfpr.fth
 fload ${BP}/cpu/arm/mmp2/gpio.fth
 
-fload ${BP}/cpu/arm/olpc/1.75/boardtwsi.fth
+\ fload ${BP}/cpu/arm/olpc/1.75/boardtwsi.fth
 fload ${BP}/cpu/arm/olpc/1.75/boardgpio.fth
 : init-stuff
-   set-camera-domain-voltage
+\   set-camera-domain-voltage
    acgr-clocks-on
    init-mfprs
    set-gpio-directions
    init-timers
    init-twsi
-   power-on-dsi
-   power-on-sd
+\   power-on-dsi
+\   power-on-sd
 ;
 stand-init:
    init-stuff
@@ -71,19 +71,39 @@ fload ${BP}/cpu/arm/mmp2/irq.fth
 
 fload ${BP}/cpu/arm/mmp2/watchdog.fth	\ reset-all using watchdog timer
 
-0 0  " d4030000"  " /" begin-package  \ UART1
+0 0  " d4018000"  " /" begin-package  \ UART3
    fload ${BP}/cpu/arm/mmp2/uart.fth
 end-package
 devalias com1 /uart
 : com1  " com1"  ;
 ' com1 is fallback-device   
 
-0 0  " d4018000"  " /" begin-package  \ UART3
+0 0  " d4030000"  " /" begin-package  \ UART1
    fload ${BP}/cpu/arm/mmp2/uart.fth
 end-package
 devalias com2 /uart
 : com2  " com2"  ;
 
+\needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
+
+fload ${BP}/dev/olpc/spiflash/flashif.fth   \ Generic FLASH interface
+
+fload ${BP}/dev/olpc/spiflash/spiif.fth    \ Generic low-level SPI bus access
+fload ${BP}/dev/olpc/spiflash/spiflash.fth \ SPI FLASH programming
+
+: ignore-power-button ;  \ XXX implement me
+: ssp-spi-reprogrammed ;
+: ?erased  ( adr len -- flag )  2drop true  ;
+: ?enough-power  ( -- )  ;
+
+fload ${BP}/cpu/arm/mmp2/sspspi.fth        \ Synchronous Serial Port SPI interface
+
+fload ${BP}/cpu/arm/olpc/1.75/spiui.fth    \ User interface for SPI FLASH programming
+\ fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
+: ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
+' ofw-fw-filename$ to fw-filename$
+
+0 [if]
 0 0  " d420b000"  " /" begin-package
    " display" name
    fload ${BP}/cpu/arm/olpc/1.75/lcdcfg.fth
@@ -122,10 +142,12 @@ devalias screen /display
 devalias keyboard /keyboard
 
 fload ${BP}/ofw/termemu/cp881-16.fth
+[then]
 
-fload ${BP}/cpu/arm/mmp2/sdhcimmp2.fth
+fload ${BP}/cpu/arm/olpc/1.75/sdhci.fth
 
-devalias ext /sd/disk@1
+devalias int /sd@d4281000/disk
+devalias ext /sd@d4280000/disk
 
 fload ${BP}/dev/olpc/kb3700/spicmd.fth
 
@@ -145,10 +167,12 @@ end-package
    
 : usb-power-on  ( -- )  d# 82 gpio-set  ;  \ 1 instead of 82 for XO
 
+0 [if]
 fload ${BP}/cpu/arm/marvell/utmiphy.fth
 stand-init: Init USB Phy
    init-usb-phy
 ;
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks

@@ -22,11 +22,13 @@ purpose: Board-specific setup details - pin assigments, etc.
    d# 58 gpio-dir-out  \ WLAN_RESET#
    d# 73 gpio-dir-out  \ CAM_RST
 
+   d# 125 gpio-set
    d# 125 gpio-dir-out  \ EC_SPI_ACK
    d# 145 gpio-dir-out  \ EN_CAM_PWR
    d# 146 gpio-dir-out  \ HUB_RESET#
    d# 151 gpio-dir-out  \ DCONLOAD
-   d# 151 gpio-dir-out  \ EC_SPI_CMD
+   d# 155 gpio-clr
+   d# 155 gpio-dir-out  \ EC_SPI_CMD
 
    d# 162 gpio-dir-out  \ DCON_SCL
    d# 163 gpio-dir-out  \ DCON_SDA
@@ -160,7 +162,7 @@ create mfpr-table
    1 af,      \ GPIO_110 - (ND_IO[13]) - Not connected (TP43)
    1 af,      \ GPIO_111 - (ND_IO[8])  - Not connected (TP108)
    0 af,      \ GPIO_112 - ND_RDY[0]
-   3 af,      \ GPIO_113 - (SM_RDY)    - MSD_CMD
+   3 af,      \ GPIO_113 - (SM_RDY)    - MSD_CMD (externally pulled up)
    1 af,      \ GPIO_114 - G_CLK_OUT - Not connected (TP93)
 
    4 af,      \ GPIO_115 - UART3_TXD (J4)
@@ -175,22 +177,24 @@ create mfpr-table
    3 af,      \ GPIO_123 - 32 KHz_CLK_OUT - Not connected (TP92)
 
    0 af,      \ GPIO_124 - DCONIRQ
-   0 af,      \ GPIO_125 - EC_SPI_ACK
+\   0 af,      \ GPIO_125 - EC_SPI_ACK
+   0 pull-up, \ GPIO_125 - EC_SPI_ACK
 
-   3 af,      \ GPIO_126 - MSD_DATA2
-   3 af,      \ GPIO_127 - MSD_DATA0
+   3 pull-up, \ GPIO_126 - MSD_DATA2
+   3 pull-up, \ GPIO_127 - MSD_DATA0
    0 af,      \ GPIO_128 - EB_MODE#
    0 af,      \ GPIO_129 - LID_SW#
-   3 af,      \ GPIO_130 - MSD_DATA3
-   1 af,      \ GPIO_131 - SD_DATA3
-   1 af,      \ GPIO_132 - SD_DATA2
-   1 af,      \ GPIO_133 - SD_DATA1
-   1 af,      \ GPIO_134 - SD_DATA0
-   3 af,      \ GPIO_135 - MSD_DATA1
-   1 af,      \ GPIO_136 - SD_CMD
+   3 pull-up, \ GPIO_130 - MSD_DATA3
+   1 +fast pull-up,      \ GPIO_131 - SD_DATA3
+   1 +fast pull-up,      \ GPIO_132 - SD_DATA2
+   1 +fast pull-up,      \ GPIO_133 - SD_DATA1
+   1 +fast pull-up,      \ GPIO_134 - SD_DATA0
+   3 pull-up, \ GPIO_135 - MSD_DATA1
+\  1 +fast pull-up,      \ GPIO_136 - SD_CMD
+   1 +fast af,           \ GPIO_136 - SD_CMD  - CMD is pulled up externally
    no-update, \ GPIO_137 - Not connected (TP111)
-   3 af,      \ GPIO_138 - MSD_CLK
-   1 af,      \ GPIO_139 - SD_CLK
+   3 pull-up, \ GPIO_138 - MSD_CLK
+   1 +fast pull-up,      \ GPIO_139 - SD_CLK
    no-update, \ GPIO_140 - Not connected if R130 is nopop
 \  1 af,      \ GPIO_140 - (SD_CD# if R130 is populated)
    1 af,      \ GPIO_141 - SD_WP
@@ -209,7 +213,7 @@ create mfpr-table
    1 af,      \ GPIO_152 - (SM_BELn) - Not connected (TP40)
    1 af,      \ GPIO_153 - (SM_BEHn) - Not connected (TP105)
    0 af,      \ GPIO_154 - (SM_INT) - EC_IRQ#
-   1 af,      \ GPIO_155 - (EXT_DMA_REQ0) - EC_SPI_CMD
+   1 pull-dn, \ GPIO_155 - (EXT_DMA_REQ0) - EC_SPI_CMD
    no-update, \ GPIO_156 - PRI_TDI (JTAG)
    no-update, \ GPIO_157 - PRI_TDS (JTAG)
    no-update, \ GPIO_158 - PRI_TDK (JTAG)

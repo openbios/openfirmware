@@ -262,15 +262,16 @@ defer write-spi-flash  ( adr len offset -- )
 \ those commands.  The AB command seems to be supported by all
 \ of them, so it's a good starting point.
 
+0 value spi-id#
 : spi-identify  ( -- )
-   ab-id   ( id )
-
+   ab-id to spi-id#
    \ ST, Spansion, and WinBond all identify as 13
    \ For now, we only need to distinguish between if it's
    \ a common page-write part or the SST part with its
    \ unique auto-increment address writing scheme.
-   case
+   spi-id# case
       h# 13  of  ['] common-write  endof
+      h# 34  of  ['] common-write  endof
       h# bf  of  ['] sst-write     endof
       h# 14  of
          ." The SPI FLASH ID reads as 14.  This is due to an infrequent hardware problem."  cr
@@ -290,7 +291,10 @@ defer write-spi-flash  ( adr len offset -- )
    ['] write-spi-flash behavior  ['] sst-write  =  if
       ." SST"
    else
-      ." type 13 - Spansion, Winbond, or ST"
+      spi-id#  case
+         h# 13  of  ." type 13 - Spansion, Winbond, or ST"  endof
+         h# 34  of  ." type 34 - Macronyx"  endof
+      endcase
    then
 ;
 

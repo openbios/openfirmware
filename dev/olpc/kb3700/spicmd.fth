@@ -94,7 +94,7 @@ h# d4037000 value ssp-base  \ Default to SSP3
    select-ssp3-pins
    ssp3-clk-on
    h# 07 ssp-sscr0 rl!   \ 8-bit data, SPI normal mode
-   h# 1380.0000 ssp-sscr1 rl!  \ SCFR=1, slave mode, Rx w/o Tx
+   h# 1380.0010 ssp-sscr1 rl!  \ SCFR=1, slave mode, Rx w/o Tx, early phase
    \ The enable bit must be set last, after all configuration is done
    h# 87 ssp-sscr0 rl!   \ Enable, 8-bit data, SPI normal mode
    wait-clk-sync
@@ -115,8 +115,8 @@ h# d4037000 value ssp-base  \ Default to SSP3
 ;
 
 \ Set the direction on the ACK and CMD GPIOs
-d# 78 constant cmd-gpio#
-d# 79 constant ack-gpio#
+d# 151 constant cmd-gpio#
+d# 125 constant ack-gpio#
 : init-ec-spi-gpios  ( -- )
    cmd-gpio# gpio-dir-out
    ack-gpio# gpio-dir-out
@@ -125,7 +125,9 @@ d# 79 constant ack-gpio#
 : set-cmd  ( -- )  cmd-gpio# gpio-set  ;
 : clr-ack  ( -- )  ack-gpio# gpio-clr  ;
 : set-ack  ( -- )  ack-gpio# gpio-set  ;
-: pulse-ack  ( -- )  clr-ack set-ack  ;
+: fast-ack  ( -- )  set-ack clr-ack  ;
+: slow-ack  ( -- )  d# 10 ms  set-ack d# 10 ms  clr-ack  ;
+defer pulse-ack  ' slow-ack to pulse-ack  \ FIXME !!!
 
 0 value ec-spi-cmd-done  \ 0 - still waiting, 1 - successful send, 2 - timeout
 
@@ -189,7 +191,7 @@ defer ec-spi-upstream
    init-ssp-in-slave-mode
    set-ssp-receive-w/o-transmit
    clr-cmd
-   set-ack
+   clr-ack  \ Tell EC that it is okay to send
    ['] ec-spi-upstream to ec-spi-state
 ;
 
@@ -208,6 +210,7 @@ defer ec-spi-upstream
       ['] ec-spi-upstream to ec-spi-state      
       exit
    then
+   ec-spi-handle-message
 ;
 
 : ec-command  ( [ args ] #args #results cmd-code -- [ results ] error? )
