@@ -86,6 +86,17 @@ devalias com2 /uart
 
 \needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
 
+[ifdef] notyet
+fload ${BP}/dev/olpc/confirm.fth             \ Selftest interaction modalities
+fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
+fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
+fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
+
+fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
+[else]
+: find-tag  ( adr len -- false | value$ true )  2drop false  ;
+[then]
+
 fload ${BP}/dev/olpc/spiflash/flashif.fth   \ Generic FLASH interface
 
 fload ${BP}/dev/olpc/spiflash/spiif.fth    \ Generic low-level SPI bus access
@@ -103,14 +114,16 @@ fload ${BP}/cpu/arm/olpc/1.75/spiui.fth    \ User interface for SPI FLASH progra
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
 ' ofw-fw-filename$ to fw-filename$
 
-0 [if]
 0 0  " d420b000"  " /" begin-package
    " display" name
    fload ${BP}/cpu/arm/olpc/1.75/lcdcfg.fth
-\   fload ${BP}/cpu/arm/mmp2/dsi.fth
 
-   fload ${BP}/cpu/arm/mmp2/lcd.fth
+   fload ${BP}/cpu/arm/olpc/1.75/lcd.fth
+   fload ${BP}/cpu/arm/olpc/1.75/dconsmb.fth     \ SMB access to DCON chip - bitbanged
+   fload ${BP}/dev/olpc/dcon/mmp2dcon.fth        \ DCON control
+
    : display-on
+      init-xo-display  \ Turns on DCON
       init-lcd
       fb-pa  hdisp vdisp * >bytes  h# ff fill
    ;
@@ -137,12 +150,15 @@ fload ${BP}/cpu/arm/olpc/1.75/spiui.fth    \ User interface for SPI FLASH progra
    ' display-remove   is-remove
    ' display-selftest is-selftest
 end-package
+
 devalias screen /display
    
 devalias keyboard /keyboard
 
-fload ${BP}/ofw/termemu/cp881-16.fth
-[then]
+create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
+' 15x30pc to romfont
+
+\ fload ${BP}/ofw/termemu/cp881-16.fth
 
 fload ${BP}/cpu/arm/olpc/1.75/sdhci.fth
 
@@ -150,6 +166,8 @@ devalias int /sd@d4281000/disk
 devalias ext /sd@d4280000/disk
 
 fload ${BP}/dev/olpc/kb3700/spicmd.fth
+
+devalias keyboard /ec-spi/keyboard
 
 0 0  " d4208000"  " /" begin-package  \ USB Host Controller
    h# 200 constant /regs
@@ -165,14 +183,25 @@ fload ${BP}/dev/olpc/kb3700/spicmd.fth
    fload ${BP}/dev/usb2/hcd/ehci/loadpkg.fth
 end-package
    
-: usb-power-on  ( -- )  d# 82 gpio-set  ;  \ 1 instead of 82 for XO
+: usb-power-on  ( -- )  1 gpio-set  ;
+: unreset-usb-hub  ( -- )  d# 146 gpio-set  ;
 
-0 [if]
 fload ${BP}/cpu/arm/marvell/utmiphy.fth
-stand-init: Init USB Phy
+
+: start-usb  ( -- )
+   h# 9 h# d428285c l!  \ Enable clock to USB block
+   unreset-usb-hub
    init-usb-phy
 ;
+
+0 [if]
+stand-init: Init USB Phy
+\  usb-power-on   \ The EC now controls the USB power
+   start-usb
+;
 [then]
+
+fload ${BP}/dev/olpc/mmp2camera/loadpkg.fth
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks

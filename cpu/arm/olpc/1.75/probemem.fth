@@ -24,6 +24,7 @@ headers
    2drop  " reg" property
 
    \ Claim the memory used by OFW
+   fw-pa  /fw-ram    0 claim  drop
 \   high h# 10.0000 -  h# 10.0000    0 claim  drop
 ;
 

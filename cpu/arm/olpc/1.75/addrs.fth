@@ -12,7 +12,7 @@ fb-pa constant available-ram-size
 
 \ OFW implementation choices
 \ h# 1fe0.0000 constant fw-pa
-0 constant fw-pa
+h# 1fa0.0000 constant fw-pa
 
 [ifdef] virtual-mode
 h# f700.0000 constant fw-virt-base

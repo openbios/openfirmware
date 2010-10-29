@@ -35,12 +35,31 @@ my-address      my-space  h# 1000  encode-reg
 1 " #address-cells"  integer-property
 0 " #size-cells"     integer-property
 
-3 /n* buffer: port-data
-: init-queue  ( -- )  port-data  3 na+  bounds  ?do  -1 i !  /n +loop  ;
-: enque  ( data port# -- )
+: encode-unit  ( phys -- adr len )  push-hex  (u.)  pop-base  ;
+: decode-unit  ( adr len -- phys )  push-hex  $number  if  0  then  pop-base  ;
+
+d# 155 constant cmd-gpio#
+d# 125 constant ack-gpio#
+
+\ Channel#(port#) Meaning
+\ 0              Invalid
+\ 1              Switch to Command Mode
+\ 2              Command response
+\ 3              Keyboard
+\ 4              Touchpad
+\ 5              Event
+\ 6              EC Debug
+
+5 constant #ports
+#ports /n* buffer: port-data
+: init-queue  ( -- )  port-data  #ports /n*  bounds  ?do  -1 i !  /n +loop  ;
+: enque  ( data channel# -- )
+   2-                      ( data queue# )
+   dup #ports >=  if  2drop exit  then
    port-data swap na+ !    ( data adr )
 ;
-: deque?  ( port# -- false | data true )
+: deque?  ( channel# -- false | data true )
+   2-                      ( queue# )
    port-data swap na+      ( adr )
    dup @                   ( adr data )
    dup -1 =  if            ( adr data )
@@ -70,54 +89,49 @@ h# d4037000 value ssp-base  \ Default to SSP3
    enable
 ;
 
-: ssp1-clk-on  7 h# d4015050 l!   3 h# d4015050 l!  ;
-: ssp2-clk-on  7 h# d4015054 l!   3 h# d4015052 l!  ;
+\ : ssp1-clk-on  7 h# d4015050 l!   3 h# d4015050 l!  ;
+\ : ssp2-clk-on  7 h# d4015054 l!   3 h# d4015052 l!  ;
 : ssp3-clk-on  7 h# d4015058 l!   3 h# d4015058 l!  ;
-: ssp4-clk-on  7 h# d401505c l!   3 h# d401505c l!  ;
+\ : ssp4-clk-on  7 h# d401505c l!   3 h# d401505c l!  ;
 
-: wb  ( byte -- )  ssp-ssdr rl!  ;
-: rb  ( -- byte )  ssp-ssdr rl@ .  ;
+: wb  ( byte -- )  ssp-ssdr rl!  ;  \ Debugging tool
+: rb  ( -- byte )  ssp-ssdr rl@ .  ;  \ Debugging tool
 
 \ Wait until the CSS (Clock Synchronization Status) bit is 0
 : wait-clk-sync  ( -- )
    begin  ssp-sssr rl@ h# 400.0000 and  0=  until
 ;
 
-\ Choose alternate function 4 (SSP3) for the pins we use
-: select-ssp3-pins
-   h# c4 h# d401e170 rl!  \ GPIO74
-   h# c4 h# d401e174 rl!  \ GPIO75
-   h# c4 h# d401e178 rl!  \ GPIO76
-   h# c4 h# d401e17c rl!  \ GPIO77
-;
 : init-ssp-in-slave-mode  ( -- )
-   select-ssp3-pins
    ssp3-clk-on
    h# 07 ssp-sscr0 rl!   \ 8-bit data, SPI normal mode
-   h# 1380.0010 ssp-sscr1 rl!  \ SCFR=1, slave mode, Rx w/o Tx, early phase
+   h# 1300.0010 ssp-sscr1 rl!  \ SCFR=1, slave mode, early phase
    \ The enable bit must be set last, after all configuration is done
    h# 87 ssp-sscr0 rl!   \ Enable, 8-bit data, SPI normal mode
    wait-clk-sync
 ;
-: set-ssp-receive-w/o-transmit  ( -- )
-   ssp-sscr1 rl@  h# 0080.0000 or  ssp-sscr1 rl!
-;
-: clr-ssp-receive-w/o-transmit  ( -- )
-   ssp-sscr1 rl@  h# 0080.0000 invert and  ssp-sscr1 rl!
-;
-0 value ssp-rx-threshold
+2 value ssp-rx-threshold
 : set-ssp-fifo-threshold  ( n -- )  to ssp-rx-threshold  ;
-\ tx fifo trigger threshold?
 
 : .ssr  ssp-sssr rl@  .  ;
-: ssp-ready?  ( -- flag )
-   ssp-sssr rl@ d# 12 rshift h# f and  ssp-rx-threshold  =
+: rxavail  ( -- n )
+   ssp-sssr rl@  dup 8 and  if   ( val )
+      d# 12 rshift h# f and  1+
+   else
+      drop 0
+   then
 ;
+: prime-fifo  ( -- )
+   ssp-rx-threshold  0  ?do  0 ssp-ssdr l!  loop
+;
+: rxflush  ( -- )
+   begin  ssp-sssr rl@  8 and  while  ssp-ssdr l@ drop  repeat
+;
+: ssp-ready?  ( -- flag )  rxavail  ssp-rx-threshold  >=  ;
 
+false value debug?
 \ Set the direction on the ACK and CMD GPIOs
-d# 151 constant cmd-gpio#
-d# 125 constant ack-gpio#
-: init-ec-spi-gpios  ( -- )
+: init-gpios  ( -- )
    cmd-gpio# gpio-dir-out
    ack-gpio# gpio-dir-out
 ;
@@ -125,21 +139,18 @@ d# 125 constant ack-gpio#
 : set-cmd  ( -- )  cmd-gpio# gpio-set  ;
 : clr-ack  ( -- )  ack-gpio# gpio-clr  ;
 : set-ack  ( -- )  ack-gpio# gpio-set  ;
-: fast-ack  ( -- )  set-ack clr-ack  ;
+: fast-ack  ( -- )  set-ack clr-ack  debug?  if  ." ACK " cr  then  ;
 : slow-ack  ( -- )  d# 10 ms  set-ack d# 10 ms  clr-ack  ;
-defer pulse-ack  ' slow-ack to pulse-ack  \ FIXME !!!
+defer pulse-ack  ' fast-ack to pulse-ack
 
-0 value ec-spi-cmd-done  \ 0 - still waiting, 1 - successful send, 2 - timeout
+0 value cmdbuf
+0 value cmdlen
+0 value sticky?
 
-6 buffer: ec-cmdbuf
-d# 16 buffer: ec-respbuf
-: expected-response-length  ( -- n )  ec-cmdbuf 1+ c@ h# f and  ;
-
-: write-cmd-to-ssp-fifo  ( -- )
-   6 0  do
-      ec-cmdbuf i + c@  ssp-ssdr rl!
-   loop
-;
+0 value databuf
+0 value datalen
+0 value datain?
+0 value command-finished?
 
 0 value ec-cmd-time-limit
 : ec-cmd-timeout?   ( -- flag )
@@ -152,100 +163,124 @@ d# 16 buffer: ec-respbuf
    ec-cmd-time-limit 0=  if  1 to ec-cmd-time-limit  then  \ Avoid reserved value
 ;
 
-defer ec-spi-state  ' noop to ec-spi-state
+defer do-state  ' noop to do-state
+defer upstream
 
-defer ec-spi-upstream
-: ec-spi-response  ( -- )
-   cancel-cmd-timeout
-   expected-response-length  0  ?do
-      ssp-ssdr rl@  ec-respbuf i + c!
-   loop
-   1 to ec-spi-cmd-done
+: enter-upstream-state  ( -- )
    2 set-ssp-fifo-threshold
-   clr-cmd
-   ['] ec-spi-upstream to ec-spi-state
+   ['] upstream to do-state
 ;
-: ec-spi-switched  ( -- )
-   set-ssp-receive-w/o-transmit
-   expected-response-length  if
-      expected-response-length set-ssp-fifo-threshold
-      ['] ec-spi-response to ec-spi-state
-   else
-      ec-spi-response
+: command-done  ( -- )
+   cancel-cmd-timeout
+   true to command-finished?
+   sticky?  0=  if
+      enter-upstream-state
+      prime-fifo
+      pulse-ack
    then
-;
-: (ec-spi-upstream)  ( -- )
-   ssp-ssdr rl@  ssp-ssdr rl@             ( channel# data )
-   over 3 =  if  \ Switched               ( channel# data )
-      2drop                               ( )
-      write-cmd-to-ssp-fifo               ( )
-      clr-ssp-receive-w/o-transmit        ( )
-      ['] ec-spi-switched to ec-spi-state ( )
-   else                                   ( channel# data )
-      swap enque                          ( )
-   then
-;
-' (ec-spi-upstream) to ec-spi-upstream
-: init-ec-spi  ( -- )
-   init-ec-spi-gpios
-   init-ssp-in-slave-mode
-   set-ssp-receive-w/o-transmit
-   clr-cmd
-   clr-ack  \ Tell EC that it is okay to send
-   ['] ec-spi-upstream to ec-spi-state
+   \ In sticky mode, we hold off on pulsing ACK until we have the
+   \ next command to send.
 ;
 
-: ec-spi-handle-message  ( -- )
-   ec-spi-state
+\ Discard 'len' bytes from the Rx FIFO.  Used after a send
+\ operation to get rid of the bytes that were received as
+\ a side effect.
+: clean-fifo  ( len -- )  0  ?do  ssp-ssdr rl@ drop  loop  ;
+
+: response  ( -- )
+   datalen  if
+      \ XXX switch to 64-byte mode if necessary
+      datain?  if
+         debug?  if  ." Data from EC: "  then
+         datalen  0  ?do
+            ssp-ssdr rl@
+            debug?  if  dup .  then
+            databuf i + c!
+         loop
+      else
+         \ Unload the spurious (result of sending data) rx bytes from the FIFO
+         datalen clean-fifo
+      then
+      debug?  if  cr  then
+   then
+   command-done
+;
+: switched  ( -- )
+   \ Unload the spurious (result of sending command) rx bytes from the FIFO
+   cmdlen clean-fifo
+   datalen  if
+      datalen set-ssp-fifo-threshold
+      ['] response to do-state
+      \ XXX switch to 64-byte mode if necessary
+      datain?  if
+         prime-fifo
+      else
+         debug?  if  ." Data to EC: "  then
+         datalen  0  ?do
+            databuf i + c@
+            debug?  if  dup .  then
+            ssp-ssdr rl!
+         loop
+      then
+      pulse-ack
+   else
+      command-done
+   then
+;
+: handoff-command  ( -- )
+   debug?  if  ." CMD: "  then
+   cmdlen 0  do
+      cmdbuf i + c@
+      debug?  if  dup .  then
+      ssp-ssdr rl!
+   loop
+   debug?  if  cr  then
+   cmdlen set-ssp-fifo-threshold
+   sticky?  0=  if  clr-cmd  then
+   ['] switched to do-state            ( )
    pulse-ack
 ;
-: poll-ec-spi  ( -- )
-   ssp-ready?  if
-      exit
+: (upstream)  ( -- )
+   ssp-ssdr rl@  ssp-ssdr rl@              ( channel# data )
+   debug? if
+      ." UP: " over . dup . cr
    then
-   ec-cmd-timeout?  if
-      clr-cmd
-      cancel-cmd-timeout
-      2 to ec-spi-cmd-done   \ Timeout
-      ['] ec-spi-upstream to ec-spi-state      
-      exit
-   then
-   ec-spi-handle-message
+   over case                               ( channel# data )
+      0 of  2drop prime-fifo pulse-ack  endof  ( channel# data )  \ Invalid
+      1 of  2drop handoff-command   endof  ( channel# data )  \ Switched
+      ( default )                          ( channel# data channel# )
+         enque  prime-fifo pulse-ack       ( channel# )
+   endcase
+;
+' (upstream) to upstream
+: init  ( -- )
+   init-gpios
+   init-ssp-in-slave-mode
+   rxflush
+   init-queue
+   clr-cmd
+   prime-fifo
+   clr-ack  \ Tell EC that it is okay to send
+   enter-upstream-state
 ;
 
-: ec-command  ( [ args ] #args #results cmd-code -- [ results ] error? )
-   ec-cmdbuf 6 erase       ( [ args ] #args #results cmd-code )
-   ec-cmdbuf c!            ( [ args ] #args #results )
-   over 4 lshift or        ( [ args ] #args #args|#results )
-   ec-cmdbuf 1+ c!         ( [ args ] #args )
-   dup 4 >  abort" Too many EC command arguments"
-   0  ?do                  ( ... arg )
-      ec-cmdbuf 2+ i + c!  ( ... )
-   loop                    ( )
-
-   set-cmd-timeout
-   set-cmd
-
-   0 to ec-spi-cmd-done
-   begin
-      poll-ec-spi
-      ec-spi-cmd-done
-   until
-
-   ec-spi-cmd-done  2 =  if  true  exit  then
-
-   ec-cmdbuf 1+ c@  0 ?do  \ XXX maybe this loop should go backwards?
-      ec-respbuf i + c@
-   loop
-   false
+: poll  ( -- )
+   ssp-ready?  if  do-state  then
+   debug?  if  key?  if  key drop debug-me  then  then
+;
+: cancel-command  ( -- )  \ Called when the command child times out
+   clr-cmd
+   ['] upstream to do-state      
+   prime-fifo
+   pulse-ack
 ;
 
 0 instance value port#
 : set-port  ( port# -- )  to port#  ;
-: put-data  ( byte -- )  port# 2 0 d# 99 ec-command  ;  \ XXX
+\ : put-data  ( byte -- )  port# 2 0 d# 99 ec-command  ;  \ XXX
 : get-data?  ( -- false | data true )
    port# deque?     ( false | data true )
-   poll-ec-spi
+   poll
 ;
 : get-data  ( -- data | -1 )  \ Wait for data from our device
    d# 1000 0  do
@@ -254,7 +289,7 @@ defer ec-spi-upstream
    loop
    true \ abort" Timeout waiting for data from device" 
 ;
-: put-get-data  ( cmd -- data | -1 )  put-data get-data  ;
+\ : put-get-data  ( cmd -- data | -1 )  put-data get-data  ;
 \ Wait until the device stops sending data
 : clear-out-buf  ( -- )  begin  d# 120 ms  get-data?  while  drop  repeat  ;
 
@@ -263,17 +298,182 @@ defer ec-spi-upstream
    open-count  0=  if
       my-address my-space  h# 1000  " map-in" $call-parent  is ssp-base
 \     setup-pin-mux
-      init-ec-spi
+      init
    then
    open-count 1+ to open-count
    true
 ;
 : close  ( -- )
    open-count 1 =  if
-      ssp-base h# 1000  " map-in" $call-parent  0 is ssp-base
+      ssp-base h# 1000  " map-out" $call-parent  0 is ssp-base
    then
    open-count 1- 0 max to open-count
 ;
+
+: data-command  ( databuf datalen datain? cmdadr cmdlen more? -- )
+   to sticky?  to cmdlen   to cmdbuf
+   to datain?  to datalen  to databuf
+   false to command-finished?
+
+   ['] do-state behavior ['] upstream =  if
+      set-cmd-timeout
+      set-cmd
+   else
+      handoff-command
+   then
+   begin  poll  command-finished?  until
+;
+
+: no-data-command  ( adr len sticky? -- )
+   >r >r >r  0 0 0  r> r> r>  data-command
+;
+
+new-device
+" "  " 2" set-args
+" eccmd" name
+my-space " reg" integer-property
+: open  ( -- flag )
+   my-unit " set-port" $call-parent
+   true
+;
+: close  ( -- )
+;
+8 buffer: ec-cmdbuf
+d# 16 buffer: ec-respbuf
+: expected-response-length  ( -- n )  ec-cmdbuf 1+ c@ h# f and  ;
+
+0 value #results
+: set-cmdbuf  ( [ args ] #args #results cmd-code slen -- )
+   >r                      ( [ args ] #args #results cmd-code r: slen )
+   ec-cmdbuf 8 erase       ( [ args ] #args #results cmd-code )
+   ec-cmdbuf c!            ( [ args ] #args #results )
+   to #results             ( [ args ] #args )
+   dup ec-cmdbuf 1+ c!     ( [ args ] #args  r: slen )
+   r> ec-cmdbuf 2+ c!      ( [ args ] #args  r: )
+   h# f and                ( [ args ] #args' )
+   dup 5 >  abort" Too many EC command arguments"
+   ec-cmdbuf 3 +   swap  bounds  ?do  i c!  loop  ( )
+;
+: get-results  ( -- [ results ] )
+   ec-respbuf  #results  bounds  ?do
+      begin  " get-data?" $call-parent  until  ( byte )
+      i c!
+   loop
+
+   #results 0 ?do  \ XXX maybe this loop should go backwards?
+      ec-respbuf i + c@
+   loop
+;
+: ec-command  ( [ args ] #args #results cmd-code -- [ results ] error? )
+   0 set-cmdbuf
+
+   ec-cmdbuf 8 false " no-data-command" $call-parent
+
+   get-results
+   false
+;
+: enter-updater  ( -- )
+   0 0 h# 50 1 set-cmdbuf
+   
+   ec-respbuf 1 true  ec-cmdbuf 8 true " data-command" $call-parent
+;
+
+create pgm-cmd     h# 51 c, h# 84 c, d# 16 c, h# 02 c, h# 00 c, 0 c, 0 c, 0 c,
+create read-cmd    h# 51 c, h# 04 c, d# 16 c, h# 03 c, h# 00 c, 0 c, 0 c, 0 c,
+create rdstat-cmd  h# 51 c, h# 01 c, d# 01 c, h# 05 c, h# 80 c, 0 c, 0 c, 0 c,
+create wena-cmd    h# 51 c, h# 01 c, d# 00 c, h# 06 c, h# 80 c, 0 c, 0 c, 0 c,
+create erase-cmd   h# 51 c, h# 01 c, d# 00 c, h# 60 c, h# 80 c, 0 c, 0 c, 0 c,
+
+: set-offset&len  ( offset len template -- )
+   >r            ( offset len r: template )
+   r@ 2+ c!      ( offset r: template )
+   lbsplit drop  ( low mid hi r: template )
+   r@ 4 + c!  r@ 5 + c!  r> 6 + c!
+;
+: flash-command  ( datadr datlen in? template -- )
+   8 true  " data-command" $call-parent
+;
+: write-flash-chunk  ( adr len offset -- )  \ len limited to 16 bytes for now
+   over pgm-cmd set-offset&len   ( adr len )
+   false pgm-cmd flash-command   ( )
+;
+: read-flash-chunk  ( adr len offset -- )
+   over read-cmd set-offset&len
+   true read-cmd flash-command   ( )
+;
+: read-flash-status  ( -- stat )
+   ec-respbuf 1 true rdstat-cmd flash-command
+   ec-respbuf c@
+;
+: write-enable-flash  ( -- )
+   0 0 false wena-cmd flash-command
+;
+: erase-flash-all  ( -- )
+   0 0 false erase-cmd flash-command
+;
+: read-flash  ( adr len offset -- )
+   swap bounds  ?do        ( adr )
+      i . (cr              ( adr )
+      dup  h# 10  i  read-flash-chunk  ( adr )
+      h# 10 +              ( adr' )
+   h# 10 +loop             ( adr )
+   drop                    ( )
+;
+: wait-write-enabled  ( -- )
+   write-enable-flash   ( adr )
+   begin  read-flash-status 2 and  until
+;
+: wait-write-done  ( -- )
+   begin  read-flash-status 1 and 0=  until
+;
+
+: erase-flash  ( -- )
+   wait-write-enabled
+   erase-flash-all
+   wait-write-done
+;
+
+: write-flash  ( adr len offset -- )
+   swap bounds  ?do        ( adr )
+      i . (cr              ( adr )
+      wait-write-enabled
+      dup  h# 10  i  write-flash-chunk  ( adr )
+      wait-write-done      ( adr )
+      h# 10 +              ( adr' )
+   h# 10 +loop             ( adr )
+   drop                    ( )
+;
+h# 6000 value flash-size
+: get-flash  ( -- )
+   load-base flash-size  0 read-flash
+;
+: put-flash  ( -- )
+   ." Erasing" cr
+   erase-flash
+   ." Writing" cr
+   load-base flash-size  0 write-flash
+;
+: help  ( -- )
+   ." enter-updater" cr
+   ." h# 8000 to flash-size   ( default is 6000)" cr
+   ." get-flash"  cr
+   ." load-base 100 ldump" cr
+   ." put-flash"  cr
+;
+
+finish-device
+
+new-device
+   " "  " 3" set-args
+   fload ${BP}/dev/pckbd.fth
+finish-device
+
+new-device
+   " "  " 4" set-args
+   fload ${BP}/dev/ps2mouse.fth
+finish-device
+
+
 end-package
 
 \ LICENSE_BEGIN

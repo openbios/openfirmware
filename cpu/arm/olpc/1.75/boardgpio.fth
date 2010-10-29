@@ -19,6 +19,7 @@ purpose: Board-specific setup details - pin assigments, etc.
    d# 34 gpio-dir-out  \ EN_WLAN_PWR
    d# 35 gpio-dir-out  \ EN_SD_PWR
    d# 57 gpio-dir-out  \ WLAN_PD#
+   d# 58 gpio-set      \ WLAN_RESET#
    d# 58 gpio-dir-out  \ WLAN_RESET#
    d# 73 gpio-dir-out  \ CAM_RST
 
@@ -221,7 +222,7 @@ create mfpr-table
    0 af,      \ GPIO_160 - ND_RDY[1]
    1 af,      \ GPIO_161 - ND_IO[12] - Not connected (TP 44)
    1 af,      \ GPIO_162 - (ND_IO[11]) - DCON_SCL
-   1 af,      \ GPIO_163 - (ND_IO[10]) - DCON_SDA
+   1 pull-up, \ GPIO_163 - (ND_IO[10]) - DCON_SDA
    1 af,      \ GPIO_164 - (ND_IO[9]) - Not connected (TP106)
    0 af,      \ GPIO_165 - ND_IO[3]
    0 af,      \ GPIO_166 - ND_IO[2]

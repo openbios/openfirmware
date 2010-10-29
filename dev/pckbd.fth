@@ -6,13 +6,12 @@ purpose: Package methods for 80C42 keyboard controller
 hex
 headerless
 
+my-space " reg " integer-property
 " keyboard"  device-name
 
 " pnpPNP,303" " compatible" string-property
 
 " keyboard" device-type
-
-0 " reg" integer-property
 
 : kbdtest ;
 
@@ -528,7 +527,7 @@ headers
 : open  ( -- okay? )
    kbd-refcount @  if  1 +refcnt  true exit  then
    unlock
-   0 set-port
+   my-space set-port
    keyboard-present?  if  clear-out-buf  else  reset  then
    keyboard-present?  0=  if  false exit  then
    choose-type

@@ -6,11 +6,13 @@ purpose: Create keyboard node
 fload ${BP}/dev/i8042.fth
 
    new-device
+   " "  " 0" set-args
    fload ${BP}/dev/pckbd.fth
 \   d# 1 encode-int  3 encode-int encode+  " interrupts" property
    finish-device
 
    new-device
+   " "  " 1" set-args
    fload ${BP}/dev/ps2mouse.fth
 \   d# 12 encode-int  3 encode-int encode+  " interrupts" property
    finish-device

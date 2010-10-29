@@ -355,6 +355,60 @@ label unreset
 	setreg d4282860 b8    \ NAND FLASH PLL1/8 + ECC PLL1/4, AXI clock enabled
 	setreg d4282860 bf    \ plus ECC&controller&AXI released from reset
 
+   \ Read the SPI FLASH into DRAM
+   
+   setreg d4035000 0010000f  \ 32-bit, not enabled
+   setreg d4035000 0010008f  \ 32-bit, enabled
+
+   setreg d401901c 00004000  \ Drive GPIO46 (SPI CS#) high
+
+   setreg d4019058 00004000  \ Set GPIO46 to output direction
+
+   setreg d401e10c 000000c0  \ GPIO mode for FRM
+   delay 10              
+   setreg d4019028 00004000  \ Drive GPIO46 (SPI CS#) low
+
+   set r0,0xd4035000   \ Register base address
+   set r1,0x00100000   \ Remaining length
+   set r2,0x00000000   \ DRAM (and FLASH) address
+
+   orr   r3,r2,#0x03000000  \ SPI FLASH command - read (3) with address in low bytes
+   str   r3,[r0,#0x10]      \ Put command in FIFO
+
+   mov   r3,#0              \ Value to write (could be anything)
+   str   r3,[r0,#0x10]      \ Put dummy value in FIFO to force read
+
+   begin
+      ldr  r5,[r0,#0x08]    \ Read status
+      ands r5,#8            \ Test RxFIFO not empty bit
+   0<> until
+   ldr   r5,[r0,#0x10]      \ Read (and discard) first FIFO entry
+
+   begin
+      str   r3,[r0,#0x10]    \ Put dummy value in FIFO to keep the read going
+
+      begin
+         ldr  r5,[r0,#0x08]  \ Read status
+         ands r5,#8          \ Test RxFIFO not empty bit
+      0<> until
+      ldr   r5,[r0,#0x10]    \ Read FIFO entry
+
+      rev r5,r5              \ byte reverse because the FIFO is big-endian
+      str  r5,[r2],#4        \ Write out
+
+      cmp  r2,#0x100000
+   = until
+
+   \ Discard the extra entry just for cleanliness
+   begin
+      ldr  r5,[r0,#0x08]    \ Read status
+      ands r5,#8            \ Test RxFIFO not empty bit
+   0<> until
+   ldr   r5,[r0,#0x10]      \ Read (and discard) first FIFO entry
+
+   setreg d401901c 00004000  \ Drive GPIO46 (SPI CS#) high
+
+
 \ Finally, release the reset for the main CPU
 
    set r0,0xd4050020

@@ -4,7 +4,7 @@ purpose: Driver for PS/2 mouse
 " mouse"          device-name
 " mouse"          device-type
 " pnpPNP,f03" " compatible" string-property
-1 " reg" integer-property
+my-space " reg " integer-property
 
 headerless
 : get-data  ( -- byte )  " get-data" $call-parent  ;
@@ -299,7 +299,7 @@ headerless
    lock[
    identify  if
       \ This port is unresponsive; try the other
-      0 set-port  identify  if  ]unlock  true exit  then
+      my-unit 1- set-port  identify  if  ]unlock  true exit  then
    then                                   ( id )
 
    dup  h# ab =  if                       ( id )
@@ -312,7 +312,7 @@ headerless
       my-port 0=  if  ]unlock  true exit  then
 
       \ Otherwise look for the mouse on the keyboard port
-      0 set-port  identify  if  ]unlock  true exit  then  ( id )
+      my-unit 1- set-port  identify  if  ]unlock  true exit  then  ( id )
    then                                   ( id )
    ]unlock                                ( id )
 
@@ -325,7 +325,7 @@ headerless
 
 headers
 : open  ( -- flag )
-   1 set-port
+   my-unit set-port
 
    open-count 0=  if
       \ The "force" argument causes the open to succeed even if no mouse

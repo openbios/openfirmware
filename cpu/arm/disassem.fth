@@ -251,9 +251,20 @@ d# 25 constant d#25
       imm12  if  ., ." #" +/- imm12 u.h  then
    then
 ;
+: .rev  ( -- )  {<cond>}  op.rd, .rm  ;
+: .stuff  ( -- )
+   0 d# 28 bits  h# 0fff.0ff0 and  
+   case
+      h# 06bf0f30  of  ." rev"    .rev  endof
+      h# 06bf0fb0  of  ." rev16"  .rev  endof
+      h# 06ff0f30  of  ." revsh"  .rev  endof
+      ( default )
+      ." undefined" {<cond>}
+   endcase
+;
 : .ldr/str  ( -- )   \ d# 25 3 bits 2|3 =
    0 d# 28 bits  h# 0e00.0010 and  h# 0600.0010 =  if
-      ." undefined" {<cond>}
+      .stuff
       exit
    then
    .ld/st  ." r"  {<cond>} {b}  {t}

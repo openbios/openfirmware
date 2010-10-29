@@ -546,6 +546,7 @@ headers hex
 : amode-rrop2  ( -- )  init-operands  get-r12 get-r16 get-opr2  !op  ;
 : amode-rnop2  ( -- )  init-operands  get-r16 get-opr2  !op  ;
 : amode-rdop2  ( -- )  init-operands  get-r12 get-opr2  !op  ;
+: amode-rev    ( -- )  init-operands  get-r12 get-r00   !op  ;
 
 : amode-lsm  ( -- )
    init-operands
@@ -950,6 +951,10 @@ also arm-assembler definitions
 
 : ldr  ( -- )  0410.0000 {cond} {shbt}  ;
 : str  ( -- )  0400.0000 {cond} {hbt}   ;
+
+: rev    ( -- )  06bf0f30 {cond} amode-rev  ;
+: rev16  ( -- )  06bf0fb0 {cond} amode-rev  ;
+: revsh  ( -- )  06ff0f30 {cond} amode-rev  ;
 
 : rd-field  ( reg# -- )  d# 12 set-field  ;
 : rb-field  ( reg# -- )  d# 16 set-field  ;
