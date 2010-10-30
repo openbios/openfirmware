@@ -104,7 +104,7 @@ VARIABLE next-cl#  \ marks next 1st cluster of non-continuous cluster range
    begin
       dup 0>
       remaining @ 0>  and
-      current-position fh_length l@ <  and
+      current-position fh_length l@ u<  and
       last-cluster? 0=  and
    while                                              ( #cls-remaining )
       to-next-cluster 
@@ -134,10 +134,10 @@ VARIABLE next-cl#  \ marks next 1st cluster of non-continuous cluster range
 
    \ If the last cluster of the file has been read, account for the
    \ true length of the file
-   fh_length l@ current-position -  0  min +  ( bytes-valid )
-   0 max  \ **** cpt 12/29/89, neg value must not be returned for appending
+   fh_length l@ current-position -  +      ( bytes-valid )
    false
 ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
