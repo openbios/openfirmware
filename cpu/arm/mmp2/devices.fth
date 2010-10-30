@@ -130,7 +130,7 @@ fload ${BP}/dev/olpc/kb3700/spicmd.fth
    : my-map-out  ( adr len -- )  swap h# 100 - swap " map-out" $call-parent  ;
    false constant has-dbgp-regs?
    false constant needs-dummy-qh?
-   false constant grab-controller
+   : grab-controller  ( config-adr -- error? )  drop false  ;
    fload ${BP}/dev/usb2/hcd/ehci/loadpkg.fth
 end-package
    
