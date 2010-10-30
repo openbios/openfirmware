@@ -129,10 +129,12 @@ external
       alloc-dma-buf
       first-open?  if
          false to first-open?
-         grab-controller  if
-            ." Can't take control of EHCI from underlying BIOS" cr
-            free-dma-buf unmap-regs
-            false exit
+         hccparams@ 8 rshift h# ff and  ?dup  if  ( config-adr )
+            grab-controller  if
+               ." Can't take control of EHCI from underlying BIOS" cr
+               free-dma-buf unmap-regs
+               false exit
+            then
          then
          0 ehci-reg@  h# ff and to op-reg-offset
          reset-usb

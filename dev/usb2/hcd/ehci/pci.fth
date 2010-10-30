@@ -43,25 +43,22 @@ my-address my-space encode-phys
    drop  false                   ( false )
 ;
 : needs-dummy-qh?  ( -- flag )  0 my-w@ h# 1106 ( VIA ) =  ;
-: grab-controller  ( -- error? )
-   hccparams@ 8 rshift h# ff and  dup  if    ( config-adr )
-      dup my-l@  h# 10001 =  if              ( config-adr )
-         h# 100.0000 over my-l!              ( config-adr )  \ Ask for it
-         true                                ( config-adr error? )
-         d# 100 0  do                        ( config-adr error? )
-            over my-l@ h# 101.0000 and  h# 100.0000 =  if
-               \ Turn off SMIs in Legacy Support Extended CSR
-               h# e000.0000 h# 6c my-l!      ( config-adr error? )
-               0 my-l@ h# 27cc8086 =  if
-                  h# ffff.0000  h# 70  my-l!  \ Clear EHCI Intel special SMIs
-               then
-               0= leave                      ( config-adr error?' )
-            then                             ( config-adr error? )
-            d# 10 ms                         ( config-adr error? )
-         loop                                ( config-adr error? )
-         nip exit
-      then                                   ( config-adr )
-   then                                      ( config-adr )
-   drop                                      ( )
-   false
+: grab-controller  ( config-adr -- error? )
+   dup my-l@  h# 10001 =  if              ( config-adr )
+      h# 100.0000 over my-l!              ( config-adr )  \ Ask for it
+      true                                ( config-adr error? )
+      d# 100 0  do                        ( config-adr error? )
+         over my-l@ h# 101.0000 and  h# 100.0000 =  if
+            \ Turn off SMIs in Legacy Support Extended CSR
+            h# e000.0000 h# 6c my-l!      ( config-adr error? )
+            0 my-l@ h# 27cc8086 =  if
+               h# ffff.0000  h# 70  my-l!  \ Clear EHCI Intel special SMIs
+            then
+            0= leave                      ( config-adr error?' )
+         then                             ( config-adr error? )
+         d# 10 ms                         ( config-adr error? )
+      loop                                ( config-adr error? )
+      nip exit
+   then                                   ( config-adr )
+   drop false                             ( false )
 ;
