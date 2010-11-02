@@ -118,16 +118,6 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
 ;
 
 
-\ Perform a series of sanity checks on the new firmware image.
-
-: check-firmware-image  ( adr len -- adr len )
-   dup /flash <>  abort" Wrong image length"      ( adr len )
-   2dup +  h# 40 -                                ( adr len signature-adr )
-   dup " CL1" comp  abort" No firmware signature" ( adr len signature-adr )
-   ." Firmware: " h# 10 type                      ( adr len )
-   \ XXX add some more sanity checks
-;
-
 [ifdef] load-base
 : flash-buf  load-base  ;
 : mfg-data-buf     load-base /flash +  ;
@@ -137,7 +127,7 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
 [then]
 0 value file-loaded?
 
-h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
+h# 28 constant crc-offset   \ From end
 
 : crc  ( adr len -- crc )  0 crctab  2swap ($crc)  ;
 
@@ -153,7 +143,6 @@ h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
    r> <>  abort" Firmware image has bad internal CRC"
 ;
 
-[ifdef] mfg-data-offset
 : ?image-valid   ( len -- )
    /flash <> abort" Image file is the wrong length"
 
@@ -163,18 +152,15 @@ h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
 
    ?crc
 
+[ifdef] mfg-data-offset
    flash-buf mfg-data-offset +  /flash-block  ['] ?erased  catch
    abort" Firmware image has data in the manufacturing data block"
 [ifdef] use-flash-nvram
    flash-buf nvram-offset +  /flash-block  ['] ?erased  catch
    abort" Firmware image has data in the NVRAM block"
 [then]
-;
-[else]
-: ?image-valid  ( len -- )
-   drop
-;
 [then]
+;
 
 : $get-file  ( "filename" -- )
    $read-open
@@ -315,6 +301,16 @@ device-end
 [then]
 
 0 [if]
+\ Perform a series of sanity checks on the new firmware image.
+
+: check-firmware-image  ( adr len -- adr len )
+   dup /flash <>  abort" Wrong image length"      ( adr len )
+   2dup +  h# 40 -                                ( adr len signature-adr )
+   dup " CL1" comp  abort" No firmware signature" ( adr len signature-adr )
+   ." Firmware: " h# 10 type                      ( adr len )
+   \ XXX add some more sanity checks
+;
+
 \ Erase the first block containing the EC microcode.  This is dangerous...
 
 : erase-ec  ( -- )  0 flash-erase-block  ;

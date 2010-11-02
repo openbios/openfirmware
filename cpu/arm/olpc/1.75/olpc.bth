@@ -191,7 +191,7 @@ signature h# 10  ofd @ fputs
 filebuf /rom ofd @ fgets /rom <> abort" Can't read back image"
 0 crctab  filebuf /rom  ($crc)  crcbuf !
 
-/rom h# 2c - ofd @ fseek
+/rom h# 28 - ofd @ fseek
 crcbuf /l ofd @ fputs
 
 ofd @ fclose

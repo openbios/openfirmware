@@ -24,7 +24,7 @@ code ($crc)  ( crc table-adr adr len -- crc' )
       eor      r4,r4,tos          \ r4: crc^byte
       and      r4,r4,#0xff        \ r4: index
       ldr      r4,[r2,r4,lsl #2]  \ lookup in table
-      decs     r2,1               \ Decrement len
+      decs     r3,1               \ Decrement len
       eor      tos,r4,tos,lsr #8  \ crc' = table_data ^ (crc >> 8)
    0= until
 c;
