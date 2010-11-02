@@ -21,7 +21,7 @@ d# 26000000 to uart-clock-frequency
    h# 40 1 uart!          \ Marvell-specific UART Enable bit
    3 3 uart!              \ 8 bits, no parity
    7 2 uart!		  \ Clear and enable FIFOs
-   d# 38400 baud
+   d# 115200 baud
 ;
 
 fload ${BP}/forth/lib/sysuart.fth	\ Set console I/O vectors to UART
@@ -100,6 +100,7 @@ fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
 fload ${BP}/dev/olpc/spiflash/flashif.fth   \ Generic FLASH interface
 
 fload ${BP}/dev/olpc/spiflash/spiif.fth    \ Generic low-level SPI bus access
+
 fload ${BP}/dev/olpc/spiflash/spiflash.fth \ SPI FLASH programming
 
 : ignore-power-button ;  \ XXX implement me
@@ -108,6 +109,26 @@ fload ${BP}/dev/olpc/spiflash/spiflash.fth \ SPI FLASH programming
 : ?enough-power  ( -- )  ;
 
 fload ${BP}/cpu/arm/mmp2/sspspi.fth        \ Synchronous Serial Port SPI interface
+
+\ Create the top-level device node to access the entire boot FLASH device
+0 0  " d4035000"  " /" begin-package
+   " flash" device-name
+
+   h# 10.0000 value /device
+   my-address my-space h# 100 reg
+   fload ${BP}/dev/nonmmflash.fth
+end-package
+
+\ Create a node below the top-level FLASH node to accessing the portion
+\ containing the dropin modules
+0 0  " 20000"  " /flash" begin-package
+   " dropins" device-name
+
+   h# e0000 constant /device
+   fload ${BP}/dev/subrange.fth
+end-package
+
+devalias dropins /dropins
 
 fload ${BP}/cpu/arm/olpc/1.75/spiui.fth    \ User interface for SPI FLASH programming
 \ fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
@@ -174,32 +195,33 @@ devalias keyboard /ec-spi/keyboard
    my-address my-space /regs reg
    : my-map-in  ( len -- adr )
       my-space swap  " map-in" $call-parent  h# 100 +  ( adr )
-      3 over h# a8 + rl!   ( adr )  \ Force host mode
    ;
    : my-map-out  ( adr len -- )  swap h# 100 - swap " map-out" $call-parent  ;
    false constant has-dbgp-regs?
    false constant needs-dummy-qh?
    : grab-controller  ( config-adr -- error? )  drop false  ;
    fload ${BP}/dev/usb2/hcd/ehci/loadpkg.fth
+   : otg-set-host-mode  3 h# a8 ehci-reg!  ;  \ Force host mode
+   ' otg-set-host-mode to set-host-mode
+
 end-package
    
-: usb-power-on  ( -- )  1 gpio-set  ;
-: unreset-usb-hub  ( -- )  d# 146 gpio-set  ;
+\ : usb-power-on  ( -- )  1 gpio-set  ; 
+: usb-power-on  ( -- )  ;  \ The EC controls the USB power
+: reset-usb-hub  ( -- )  d# 146 gpio-set  d# 10 ms  d# 146 gpio-set  ;
 
 fload ${BP}/cpu/arm/marvell/utmiphy.fth
 
-: start-usb  ( -- )
+: init-usb  ( -- )
    h# 9 h# d428285c l!  \ Enable clock to USB block
-   unreset-usb-hub
+   reset-usb-hub
    init-usb-phy
 ;
 
-0 [if]
 stand-init: Init USB Phy
 \  usb-power-on   \ The EC now controls the USB power
-   start-usb
+   init-usb
 ;
-[then]
 
 fload ${BP}/dev/olpc/mmp2camera/loadpkg.fth
 

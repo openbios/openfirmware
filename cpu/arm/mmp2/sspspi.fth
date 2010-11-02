@@ -35,8 +35,6 @@ h# d4035000 value ssp-base  \ SSP1
 : ssp-spi-in  ( -- b )  0 ssp-spi-out-in  ;
 
 : safe-spi-start
-   disable-interrupts
-   ignore-power-button
    ssp-spi-start
    \ The following clears out some glitches so the chip will respond
    \ to the ab-id command.

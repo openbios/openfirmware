@@ -10,6 +10,8 @@
 
 0 value image-size
 0 value image-adr
+: tim$  ( -- adr len )  image-adr image-size  ;
+
 0 value new-image-size
 : ?realloc-image  ( new-size -- )
    dup image-size >  if             ( new-size )

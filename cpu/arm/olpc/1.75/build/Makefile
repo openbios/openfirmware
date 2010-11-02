@@ -1,4 +1,4 @@
-ROMNAME=ofw
+ROMNAME=olpc
 
 BASEDIR= `(cd ../../../../..; pwd;)`
 

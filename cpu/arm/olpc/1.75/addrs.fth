@@ -6,9 +6,10 @@ h#   40.0000 constant fb-size  \ The screen use a little more than 3 MiB at 1200
 
 fb-pa constant available-ram-size
 
+h#  20000 constant dropin-offset  \ Offset to dropin driver area in SPI FLASH
+h# 100000 constant /rom           \ Total size of SPI FLASH
 
 : (memory?)  ( phys -- flag )  total-ram-size u<  ;
-' (memory?) to memory?
 
 \ OFW implementation choices
 \ h# 1fe0.0000 constant fw-pa
@@ -32,9 +33,3 @@ h#  10.0000 constant heap-size
 heap-size constant initial-heap-size
 
 h# 40.0000 constant page-table-pa
-
-\ Defined by CPU core
-h# 1000 to pagesize
-d# 12   to pageshift
-h# 10.0000 constant /section
-h# 4000 constant /page-table

@@ -1,53 +1,18 @@
 purpose: Construct the Open Firmware module collection
 
 command: &builder &this
-in: ${BP}/cpu/x86/pc/olpc/via/build/ec.img
-in: ${BP}/cpu/x86/pc/olpc/via/build/romreset.di
-in: ${BP}/cpu/x86/pc/olpc/via/build/romstart.di
-in: ${BP}/cpu/x86/pc/olpc/via/build/resume.di
-in: ${BP}/cpu/x86/pc/olpc/via/build/rmstart.img
-in: ${BP}/cpu/x86/pc/olpc/via/build/paging.di
-in: ${BP}/cpu/x86/pc/olpc/via/build/fw.dic
-in: ${BP}/dev/mmc/sdhci/build/sdhci2.fc
-in: ${BP}/dev/mmc/sdhci/build/sdhcixo.fc
-in: ${BP}/dev/mmc/sdhci/build/sdmmc.fc
-in: ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc
-in: ${BP}/dev/usb2/hcd/uhci/build/uhci.fc
-in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
-in: ${BP}/dev/usb2/device/hub/build/hub.fc
-in: ${BP}/dev/usb2/device/generic/build/generic.fc
-in: ${BP}/dev/usb2/device/net/build/usbnet.fc
-in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
-in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
-in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
-in: ${BP}/clients/memtest86/memtest
-in: ${BP}/clients/emacs/x86/emacs
-in: ${BP}/cpu/x86/pc/olpc/via/build/verify.img
-in: ${BP}/dev/pci/build/pcibridg.fc
-in: ${BP}/dev/ide/build/idehier.fc
-\ in: ${BP}/dev/ide/build/leghier.fc
-\ in: ${BP}/cpu/x86/pc/olpc/via/build/camera.fc
-in: ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml
-in: ${BP}/cpu/x86/pc/olpc/via/build/mcastnand.bin
-in: ${BP}/dev/hdaudio/build/hdaudio.fc
-in: sd8686.bin
-in: testicons.bin
-in: ${BP}/cpu/x86/pc/olpc/images/bigx.di
-in: ${BP}/cpu/x86/pc/olpc/images/bigcheck.di
-in: ${BP}/cpu/x86/pc/olpc/images/leds.di
-in: ${BP}/cpu/x86/pc/olpc/images/ebook.di
-
+in: ${BP}/cpu/arm/olpc/1.75/build/fw.img
 build-now
 
-fload ${BP}/cpu/x86/pc/olpc/via/fw-version.fth
+fload ${BP}/cpu/arm/olpc/1.75/fw-version.fth
 
 " macro: FW_VERSION Q4${FW_MAJOR}${FW_MINOR}" expand$ eval
 
-fload ${BP}/cpu/x86/pc/olpc/via/config.fth
+fload ${BP}/cpu/arm/olpc/1.75/config.fth
 
 \ Always re-create the builton.fth file when we make a new rom.img
 fload ${BP}/cpu/x86/pc/builton.bth
-fload ${BP}/cpu/x86/pc/olpc/via/sourceurl.fth
+fload ${BP}/cpu/arm/olpc/1.75/sourceurl.fth
 
 fload ${BP}/forth/lib/crc32.fth
 
@@ -59,68 +24,80 @@ hex
    ?do  h# ff ofd @ fputc  loop
 ;
 
-\ Tell the dropin manager to skip the area reserved for manufacturing data
-h# e0000 to reserved-start
-h# f0000 to reserved-end
+fload ${BP}/cpu/arm/marvell/tim.fth
+
+\ Marvel Trusted Image Module image creation script for
+\ XO-1.75 platform.
+
+tim: 00030102 0 Sky! PXA688
+flash: SPI'10
+timh:  TIMH        0 d101f000
+\ Main Processor code loaded into DRAM
+image: OBMI      800 d101c000 ${BP}/cpu/arm/olpc/1.75/dummy.img
+\ Secure Processor code loaded into SRAM
+image: WTMI     1000 d1018000 /scratchbox/users/wmb/home/wmb/cforth.git/build/arm-xo-1.75/shim.img
+image: CFTH     2000 d1000000 /scratchbox/users/wmb/home/wmb/cforth.git/build/arm-xo-1.75/app.img
+\ anonymous:     20000 ${BP}/cpu/arm/olpc/1.75/build/fw.img
+reserved:
+\  fload ${BP}/cpu/arm/olpc/1.75/ddr_samsung_1g.fth
+  term:
+end-reserved
+end-tim
 
 .( --- Saving as )
 " ${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
 2dup type cr  ( adr len )
 $new-file
-[ifdef] xo-board
-   " ec.img"                $add-file
-[then]
+   tim$ ofd @ fputs
 
-   dropin-base rom-pa -  pad-file
-
-   " romreset.di"           $add-file
-   " resume.di"             $add-file
+   dropin-offset  pad-file
 
 \ Loads the set of drivers that is common to different output formats
 
-   " paging.di"             $add-file
-   " ${BP}/cpu/x86/build/inflate.bin"        " inflate"         $add-dropin
+   " ${BP}/cpu/arm/build/inflate.bin"        " inflate"         $add-dropin
    " fw.img"   " firmware"  $add-deflated-dropin
 \   " fw.img"   " firmware"  $add-dropin
 
-   " ${BP}/dev/usb2/hcd/uhci/build/uhci.fc"	" class0c0300"      $add-deflated-dropin
-   " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"      $add-deflated-dropin
-   " ${BP}/dev/usb2/device/hub/build/hub.fc"     " usb,class9"      $add-dropin
+\   " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"      $add-deflated-dropin
+   " ${BP}/dev/usb2/device/hub/build/hub.fc"     " usb,class9"      $add-deflated-dropin
    " ${BP}/dev/usb2/device/generic/build/generic.fc"  " usbdevice"  $add-deflated-dropin
    " ${BP}/dev/usb2/device/net/build/usbnet.fc"       " usbnet"     $add-deflated-dropin
-   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"  " usb,class3,1" $add-dropin
+   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"  " usb,class3,1" $add-deflated-dropin
    " ${BP}/dev/usb2/device/serial/build/usbserial.fc" " usbserial"  $add-deflated-dropin
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
-\  " mrv8686.bin" " mrv8686.bin"                                    $add-deflated-dropin
 
-[ifdef] notdef
-   " ${BP}/dev/pci/build/pcibridg.fc"            " class060400"   $add-deflated-dropin
-\  " ${BP}/dev/ide/build/leghier.fc"             " class01018a"   $add-deflated-dropin
-   " ${BP}/dev/ide/build/idehier.fc"             " class01018f"   $add-deflated-dropin
-[then]
-[ifdef] xo-board
-   " ${BP}/dev/mmc/sdhci/build/sdhcixo.fc"       " class080501"   $add-deflated-dropin
-[then]
-[ifdef] demo-board
+
+0 [if]
    " ${BP}/dev/mmc/sdhci/build/sdhci2.fc"        " class080501"   $add-deflated-dropin
 [then]
+
+0 [if]
    " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"         " sdmmc"         $add-deflated-dropin
    " ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc" " mv8686"        $add-deflated-dropin
+[then]
+
+0 [if]
    " sd8686_helper.bin"                          " helper_sd.bin" $add-deflated-dropin
    " sd8686.bin"                                 " sd8686.bin"    $add-deflated-dropin
+[then]
 
    " builton.fth"                       " probe-"          $add-dropin
 
+0 [if]
    " ${BP}/clients/emacs/x86/emacs"             " emacs"         $add-deflated-dropin
    " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
    " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
+[then]
 
    " ${BP}/ofw/fcode/memtest.fth"  " memtest.fth"          $add-deflated-dropin
 
+0 [if]
    " ${BP}/dev/hdaudio/build/hdaudio.fc"         " class040300"   $add-deflated-dropin
 
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
+[then]
 
+0 [if]
 \    " ${BP}/cpu/x86/pc/olpc/images/warnings.565"  " warnings.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/lightdot.565"  " lightdot.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/yellowdot.565" " yellowdot.565" $add-deflated-dropin
@@ -140,28 +117,28 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wlan.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " int.565"       $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " ext.565"       $add-deflated-dropin
-
-   " ${BP}/cpu/x86/pc/olpc/DisplayEDID.raw"     " edid"          $add-deflated-dropin
-
-   " ${BP}/ofw/termemu/15x30pc.psf"             " font"          $add-deflated-dropin
-[ifdef] use-ega
-   " ${BP}/ofw/termemu/cp881-16.obf"            " pcfont"        $add-deflated-dropin
 [then]
 
-   " memtest"                                   " memtest"       $add-deflated-dropin
+0 [if]
+   " ${BP}/ofw/termemu/15x30pc.psf"             " font"          $add-deflated-dropin
+[then]
 
+0 [if]
+   " memtest"                                   " memtest"       $add-deflated-dropin
+[then]
+
+0 [if]
    " verify.img"                                " verify"        $add-deflated-dropin
    " os.public"                                 " ospubkey"      $add-dropin \ Incompressible
    " fw.public"                                 " fwpubkey"      $add-dropin \ Incompressible
    " fs.public"                                 " fspubkey"      $add-dropin \ Incompressible
    " lease.public"                              " leasepubkey"   $add-dropin \ Incompressible
    " developer.public"                          " develpubkey"   $add-dropin \ Incompressible
+[then]
    " sourceurl"   " sourceurl"                    $add-dropin
 
+0 [if]
    " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
-
-   " ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml"      " dsdt"            $add-deflated-dropin
-\  " ${BP}/cpu/x86/pc/olpc/via/build/ssdt.aml"      " ssdt"            $add-deflated-dropin
 
    \ icons for mfg test gui
    " testicons/play.565"        " play.565"     $add-deflated-dropin
@@ -191,14 +168,11 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/winlogo.565"   " winlogo.565"    $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/tux.565"       " tux.565"        $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/settings.565"  " settings.565"   $add-deflated-dropin
+[then]
 
 .( Dropin top is )  ofd @ fsize  .x cr
 
-\   /rom h# 10000 - pad-file	\ coreboot init image must be in last FLASH block
-\  " cforth.img"     $add-file  \ Small Forth that runs from cache
-
-   /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
-   " rmstart.img"    $add-file
+/rom pad-file
 
 \ Insert the revision signature
 /rom h# 40 - ofd @ fseek
@@ -206,30 +180,13 @@ h# 10 buffer: signature
 signature h# 10 blank
 " CL1"                    signature         swap move
 " ${FW_VERSION}" expand$  signature     6 + swap move
-" Q3${FW_MAJOR}" expand$  signature d# 13 + swap move
+" Q4${FW_MAJOR}" expand$  signature d# 13 + swap move
 signature h# 10  ofd @ fputs
-
-create sipbuf
-  cc c, 66 c, aa c, 55 c, 54 c, 24 c, 01 c, 88 c,
-  77 c, 77 c, 10 c, 77 c, 14 c, 08 c, 77 c, 00 c,
-  00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c,
-  00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 00 c, 
-here sipbuf - constant /sipbuf
 
 /l buffer: crcbuf
 /rom buffer: filebuf
 
-\ Via SIP ROM pointer
-\ The address "-30" is fixed by the VX855 hardware.
-\ We get to choose the address ffffffa0
-h# ffffff80 crcbuf l!
-/rom h# 30 - ofd @ fseek
-crcbuf /l ofd @ fputs
-
-/rom h# 80 - ofd @ fseek
-sipbuf /sipbuf ofd @ fputs
-
-\ Read the entire image, compute the CRC, and store it h# 30 from the end
+\ Read the entire image, compute the CRC, and store it h# 28 from the end
 0 ofd @ fseek
 filebuf /rom ofd @ fgets /rom <> abort" Can't read back image"
 0 crctab  filebuf /rom  ($crc)  crcbuf !
@@ -246,3 +203,30 @@ ofd @ fclose
 writing olpc.version
 " ${FW_VERSION}" expand$  2dup lower  ofd @ fputs
 ofd @ fclose
+
+
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2010 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
+

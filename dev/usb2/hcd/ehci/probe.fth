@@ -119,6 +119,9 @@ external
    init-extra
 ;
 
+\ Some OTG controllers need to do something after reset-usb to go into host mode
+defer set-host-mode  ' noop to set-host-mode
+
 \ This is a sneaky way to determine if the hardware has been turned off without the software's knowledge
 : suspended?  ( -- flag )  asynclist@ 0=  qh-ptr 0<>  and  ;
 
@@ -138,6 +141,7 @@ external
          then
          0 ehci-reg@  h# ff and to op-reg-offset
          reset-usb
+         set-host-mode
          do-resume
       then
       suspended?  if  do-resume  then

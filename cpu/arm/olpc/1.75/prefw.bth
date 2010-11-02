@@ -12,6 +12,7 @@ hex
 ' noop is include-hook
 
 fload ${BP}/cpu/arm/olpc/1.75/config.fth
+' (memory?) to memory?
 
 : headerless ;  : headers  ;  : headerless0 ;
 

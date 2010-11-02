@@ -298,12 +298,20 @@ defer write-spi-flash  ( adr len offset -- )
    then
 ;
 
-: spi-flash-write-enable  ( -- )  spi-start spi-identify  .spi-id cr  ;
+
+: spi-flash-open  ( -- )
+   \ One retry
+   spi-start  ['] spi-identify catch  if
+      spi-start  spi-identify
+   then
+;
+: spi-flash-write-enable  ( -- )  flash-open  .spi-id cr  ;
 
 : use-spi-flash-read  ( -- )  ['] read-spi-flash to flash-read  ;
 
 \ Install the SPI FLASH versions as their implementations.
 : use-spi-flash  ( -- )
+   ['] spi-flash-open          to flash-open
    ['] spi-flash-write-enable  to flash-write-enable
    ['] spi-reprogrammed        to flash-write-disable
    ['] write-spi-flash         to flash-write
