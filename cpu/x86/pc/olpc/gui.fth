@@ -362,6 +362,7 @@ h# 32 buffer: icon-name
 \ === Stuff moved from security.fth ===
 
 : visible  dcon-unfreeze text-on   ;
+: invisible  text-off dcon-freeze  ;
 
 0 0 2value next-icon-xy
 0 0 2value next-dot-xy

@@ -647,8 +647,8 @@ true                               ' client-symbols?  set-config-int-default
 [then]
 
 : ?boot-menu  ( -- )
-   button-rotate game-key?  if
-      protect-fw  visible  bootmenu
+   rocker-down game-key?  if
+      protect-fw  visible  bootmenu  invisible show-child
    then
 ;
 
