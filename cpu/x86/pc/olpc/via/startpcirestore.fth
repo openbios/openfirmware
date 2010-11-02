@@ -28,7 +28,9 @@
              al 8000.1029 #) mov
              al 8000.2029 #) mov
 
-        f9 6099 config-wb  \ Two SD slots (correct for XP, wrong for Linux)
+        2 #  windows-#sd-slots #)  cmp  =  if
+            f9 6099 config-wb  \ Two SD slots (correct for XP, wrong for Linux)
+        then
         d# 10000 wait-us   \ 10 ms delay to let power come on
         80 6088 config-wb  \ Set timeout clock 0:33Mhz
         00 6089 config-wb  \ Set max clock to 33Mhz

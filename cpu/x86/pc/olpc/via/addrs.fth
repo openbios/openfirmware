@@ -89,7 +89,8 @@ h# fff00 constant wake-adr   \ Needs to be at least h# 32 bytes - used in acpi.f
 h# fff40 constant rm-buf     \ 8-byte buffer used by BIOS INT 15 AH=C0 for returning config info
 h# fff48 constant video-mode-adr    \ Saves display mode for resume code
 h# fff4c constant windows-mode-adr  \ Flag to control Windows-specific resume fixups
-\ h# fff50 Next address available for resume variables
+h# fff50 constant windows-#sd-slots \ Number of SD slots to enable
+\ h# fff54 Next address available for resume variables
 
 h# fff80 constant 'int10-dispatch
 

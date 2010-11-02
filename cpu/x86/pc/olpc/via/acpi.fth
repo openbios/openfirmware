@@ -315,10 +315,31 @@ stand-init: ACPI tables
 
 \ Geode h# 6000 constant xp-smbus-base
 
+: loaded-from-external-sd?  ( -- flag )
+   " /chosen" find-package drop                ( phandle )
+   " bootpath" rot get-package-property  abort" No bootpath property"
+                                               ( adr len )
+   [char] : left-parse-string 2nip             ( devname$ )
+   find-package 0= abort" Can't find bootpath device node"
+                                               ( phandle )
+   " slot-name" rot get-package-property  if   ( )
+      false    \ If no slot-name, say false    ( flag )
+   else                                        ( adr len )
+      " external" $=                           ( flag )
+   then
+;
+
 defer more-platform-fixup  ' noop to more-platform-fixup
 : rm-platform-fixup  ( -- )
-   \ Disable the internal SD to prevent Windows from making it C:
-   h# f9 h# 6099 config-b!
+   loaded-from-external-sd?  if
+      \ Disable the internal SD to prevent Windows from making it C:
+      h# f9 h# 6099 config-b!
+      2
+   else
+      3
+   then
+   windows-#sd-slots !
+
    h# 80 h# 6088 config-b!  \ Set timeout clock 0:33Mhz
    h# 00 h# 6089 config-b!  \ Set max clock to 33Mhz
 
