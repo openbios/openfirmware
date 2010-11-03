@@ -18,6 +18,7 @@ purpose: Board-specific setup details - pin assigments, etc.
    d# 33 gpio-dir-out  \ EN_MSD_PWR
    d# 34 gpio-dir-out  \ EN_WLAN_PWR
    d# 35 gpio-dir-out  \ EN_SD_PWR
+   d# 57 gpio-set      \ WLAN_PD#
    d# 57 gpio-dir-out  \ WLAN_PD#
    d# 58 gpio-set      \ WLAN_RESET#
    d# 58 gpio-dir-out  \ WLAN_RESET#

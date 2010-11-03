@@ -260,6 +260,19 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    quit
 ;
 
+: newrom
+   " flash! http:\\10.20.0.14\new.rom" eval
+\   " wifi media lab 802.11" eval
+\   " flash http:\\18.85.46.172\new.rom" eval
+;
+: urom  " flash! u:\new.rom" eval  ;
+: erom  " flash! ext:\new.rom" eval  ;
+: no-usb-delay  " dev /usb  false to delay?  dend"  evaluate  ;
+: null-fsdisk
+   " dev /null : write-blocks-start 3drop ; : write-blocks-finish ; dend" evaluate
+   " devalias fsdisk //null" evaluate
+;
+
 \ tag-file @ fclose  tag-file off
 
 .( --- Saving fw.dic ...)

@@ -2,6 +2,7 @@ purpose: Construct the Open Firmware module collection
 
 command: &builder &this
 in: ${BP}/cpu/arm/olpc/1.75/build/fw.img
+in: sd8686.bin
 build-now
 
 fload ${BP}/cpu/arm/olpc/1.75/fw-version.fth
@@ -76,10 +77,8 @@ $new-file
    " ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc" " mv8686"        $add-deflated-dropin
 [then]
 
-0 [if]
    " sd8686_helper.bin"                          " helper_sd.bin" $add-deflated-dropin
    " sd8686.bin"                                 " sd8686.bin"    $add-deflated-dropin
-[then]
 
    " builton.fth"                       " probe-"          $add-dropin
 

@@ -173,18 +173,38 @@ support-package: http
    fload ${BP}/ofw/inet/http.fth	\ HTTP client
 end-support-package
 
-[ifdef] notyet
-fload ${BP}/cpu/x86/pc/olpc/memtest.fth
-[then]
+support-package: cifs
+   fload ${BP}/ofw/fs/cifs/loadpkg.fth
+end-support-package
+devalias smb tcp//cifs
+devalias cifs tcp//cifs
+: op  " select smb:\\test:testxxx@10.20.0.14\XTest\hello.txt" eval ;
+: dsmb  " dir smb:\\test:testxxx@10.20.0.14\XTest\" eval ;
 
 [ifdef] notyet
+fload ${BP}/cpu/arm/olpc/1.75/memtest.fth
+[then]
+
+fload ${BP}/cpu/arm/mmp2/hash.fth      \ Hashes - SHA1, SHA-256, MD5
+
 fload ${BP}/ofw/wifi/wifi-cfg.fth
 support-package: supplicant
 fload ${BP}/ofw/wifi/loadpkg.fth
 end-support-package
 
-: ofw-ssids  ( -- $ )  " OFWSSID"  ;
-' ofw-ssids to default-ssids
+: olpc-ssids  ( -- $ )  " OLPCOFW"  ;
+' olpc-ssids to default-ssids
+
+[ifdef] notyet
+create use-thinmac
+fload ${BP}/cpu/x86/bootascall.fth
+fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
+fload ${BP}/cpu/x86/pc/olpc/via/nbtx.fth
+fload ${BP}/cpu/x86/pc/olpc/via/nbrx.fth
+fload ${BP}/cpu/x86/pc/olpc/via/blockfifo.fth
+fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
+fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
+devalias fsdisk int:0
 [then]
 
 fload ${BP}/ofw/inet/sntp.fth
@@ -219,7 +239,6 @@ true ' local-mac-address? set-config-int-default
 support-package: nfs
    fload ${BP}/ofw/fs/nfs/loadpkg.fth
 end-support-package
-
 [then]
 devalias nfs net//obp-tftp:last//nfs
 
