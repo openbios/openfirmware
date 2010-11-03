@@ -134,7 +134,10 @@ VARIABLE next-cl#  \ marks next 1st cluster of non-continuous cluster range
 
    \ If the last cluster of the file has been read, account for the
    \ true length of the file
-   fh_length l@ current-position -  +      ( bytes-valid )
+   current-position fh_length l@ u>  if    ( bytes-tranferred )
+      current-position fh_length l@ -  -   ( bytes-valid )
+   then                                    ( bytes-valid )
+
    false
 ;
 
