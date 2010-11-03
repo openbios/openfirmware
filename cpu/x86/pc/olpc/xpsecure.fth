@@ -6,7 +6,8 @@ h# b00.0000 constant ramdisk-base
 fload ${BP}/dev/ramdisk.fth
 fload ${BP}/cpu/x86/pc/olpc/sba.fth
 
-devalias sba ext:0//secure-boot-area//zip-file-system
+devalias ext-sba ext:0//secure-boot-area//zip-file-system
+devalias int-sba int:0//secure-boot-area//zip-file-system
 
 0 value ramdisk-ih  \ Instance handle for accessing ramdisk device
 
