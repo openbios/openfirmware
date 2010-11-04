@@ -2,7 +2,6 @@
 
 show-rebuilds?  false to show-rebuilds?   \ We don't need to see these commands
 
-" svn info ../../../../.. | grep URL: | cut -d ' ' -f 2 | tr \\n ' ' >sourceurl" $sh
-" svnversion -n ../../../../.. >>sourceurl" $sh
+" if svn info ${BP} 2>/dev/null >/dev/null; then svn info ${BP} | grep URL: | cut -d ' ' -f 2 | tr \\n ' ' >sourceurl; svnversion -n ${BP} >>sourceurl; else git log -1 | grep git-svn-id: >sourceurl; fi" $sh
 
 to show-rebuilds?
