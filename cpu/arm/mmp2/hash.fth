@@ -137,7 +137,7 @@ d# 20 constant /sha1-digest
 ;
 [else]
 \ This procedure works
-: init-entropy-digital  ( -- )
+: init-entropy  ( -- )  \ Using digital method
    h# 21117c0 h# d4292c00 l!
 ;
 [then]
@@ -148,6 +148,11 @@ d# 20 constant /sha1-digest
 ;
 : random-long  ( -- l )
    random-short random-short wljoin
+;
+alias random random-long
+
+stand-init: Random number generator
+   init-entropy
 ;
 
 \ LICENSE_BEGIN

@@ -1,7 +1,7 @@
 purpose: From Forth, call the C subroutine whose address is on the stack
 \ See license at end of file
 
-code sp-call  ( [ arg5 .. arg0 ] adr sp -- [ arg5 .. arg0 ] result )
+code sp-call  ( [ arg19 .. arg0 ] adr sp -- [ arg19 .. arg0 ] result )
    pop     r6,sp		\ Get the subroutine address
 
    str     sp,'user saved-sp	\ Save for callbacks
@@ -10,10 +10,22 @@ code sp-call  ( [ arg5 .. arg0 ] adr sp -- [ arg5 .. arg0 ] result )
 
    mov     rp,#0		\ Set the frame pointer to null
 
-   \ Pass up to 6 arguments
-   ldmia   sp,{r0,r1,r2,r3,r4,r5}
+   \ Pass up to 20 arguments
+   add     r4,sp,#0x10
+   sub     r5,tos,#0x50
 
-   mov     sp,tos		\ Switch to the new stack
+   ldmia   r4!,{r0,r1,r2,r3}    \ Arguments 4-7
+   stmia   r5!,{r0,r1,r2,r3}    \ .. onto new stack
+   ldmia   r4!,{r0,r1,r2,r3}    \ Arguments 8-11
+   stmia   r5!,{r0,r1,r2,r3}    \ .. onto new stack
+   ldmia   r4!,{r0,r1,r2,r3}    \ Arguments 12-15
+   stmia   r5!,{r0,r1,r2,r3}    \ .. onto new stack
+   ldmia   r4!,{r0,r1,r2,r3}    \ Arguments 16-19
+   stmia   r5!,{r0,r1,r2,r3}    \ .. onto new stack
+
+   ldmia   sp,{r0,r1,r2,r3}     \ First 4 arguments in registers
+
+   sub     sp,tos,#0x50		\ Switch to the new stack
 
    mov     lk,pc		\ Set link register to return address
    mov     pc,r6		\ Call the subroutine
@@ -23,7 +35,7 @@ code sp-call  ( [ arg5 .. arg0 ] adr sp -- [ arg5 .. arg0 ] result )
    ldr     sp,'user saved-sp	\ Restore the stack pointer
    mov     tos,r0		\ Return subroutine result
 c;
-: call  ( [ arg5 .. arg0 ] adr -- [ arg5 .. arg0 ] result )  sp@ sp-call  ;
+: call  ( [ arg19 .. arg0 ] adr -- [ arg19 .. arg0 ] result )  sp@ sp-call  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 1997 FirmWorks

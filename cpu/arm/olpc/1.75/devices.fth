@@ -185,6 +185,7 @@ fload ${BP}/cpu/arm/olpc/1.75/sdhci.fth
 
 devalias int /sd@d4281000/disk
 devalias ext /sd@d4280000/disk
+devalias net /wlan  \ XXX should report-net in case of USB Ethernet
 
 fload ${BP}/dev/olpc/kb3700/spicmd.fth
 

@@ -26,5 +26,5 @@
    h# 2000000d h# 1b8 lcd!  \ Dumb panel controller - 18 bit RGB666 on LDD[17:0]
    h# 01330133 h# 13c lcd!  \ Panel VSYNC Pulse Pixel Edge Control
    clkdiv      h# 1a8 lcd!  \ Clock divider
-   h# 00021100 h# 190 lcd!  \ DMA CTRL 0 - enable DMA, 24 bpp mode
+   h# 08021100 h# 190 lcd!  \ DMA CTRL 0 - enable DMA, 24 bpp mode
 ;

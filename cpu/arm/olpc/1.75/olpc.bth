@@ -3,6 +3,7 @@ purpose: Construct the Open Firmware module collection
 command: &builder &this
 in: ${BP}/cpu/arm/olpc/1.75/build/fw.img
 in: sd8686.bin
+in: verify.img
 build-now
 
 fload ${BP}/cpu/arm/olpc/1.75/fw-version.fth
@@ -126,14 +127,13 @@ $new-file
    " memtest"                                   " memtest"       $add-deflated-dropin
 [then]
 
-0 [if]
    " verify.img"                                " verify"        $add-deflated-dropin
    " os.public"                                 " ospubkey"      $add-dropin \ Incompressible
    " fw.public"                                 " fwpubkey"      $add-dropin \ Incompressible
    " fs.public"                                 " fspubkey"      $add-dropin \ Incompressible
    " lease.public"                              " leasepubkey"   $add-dropin \ Incompressible
    " developer.public"                          " develpubkey"   $add-dropin \ Incompressible
-[then]
+
    " sourceurl"   " sourceurl"                    $add-dropin
 
 0 [if]

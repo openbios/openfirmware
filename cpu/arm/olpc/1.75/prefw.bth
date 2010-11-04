@@ -167,6 +167,10 @@ fload ${BP}/cpu/arm/mmusetup.fth	\ Initial values for MMU lists
 
 fload ${BP}/forth/lib/selstr.fth
 
+fload ${BP}/cpu/arm/mmp2/hash.fth      \ Hashes - SHA1, SHA-256, MD5
+fload ${BP}/cpu/x86/pc/olpc/crypto.fth \ Cryptographic image validation
+fload ${BP}/cpu/x86/pc/olpc/lzip.fth   \ Access zip images from memory
+
 fload ${BP}/ofw/inet/loadtcp.fth
 
 support-package: http
@@ -184,8 +188,6 @@ devalias cifs tcp//cifs
 [ifdef] notyet
 fload ${BP}/cpu/arm/olpc/1.75/memtest.fth
 [then]
-
-fload ${BP}/cpu/arm/mmp2/hash.fth      \ Hashes - SHA1, SHA-256, MD5
 
 fload ${BP}/ofw/wifi/wifi-cfg.fth
 support-package: supplicant
