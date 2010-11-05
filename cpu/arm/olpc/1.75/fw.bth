@@ -11,8 +11,6 @@ hex
 \ ' $report-name is include-hook
 \ ' noop is include-hook
 
-: confirm-selftest?  ( -- flag )  true  ;  \ XXX implement me
-
 fload ${BP}/cpu/arm/olpc/1.75/devices.fth
 
 [ifndef] virtual-mode

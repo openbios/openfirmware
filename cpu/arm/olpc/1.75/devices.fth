@@ -27,7 +27,6 @@ d# 26000000 to uart-clock-frequency
 fload ${BP}/forth/lib/sysuart.fth	\ Set console I/O vectors to UART
 
 0 value keyboard-ih
-0 value screen-ih
 
 fload ${BP}/ofw/core/muxdev.fth          \ I/O collection/distribution device
 
@@ -86,6 +85,7 @@ devalias com2 /uart
 
 \needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
 
+
 [ifdef] notyet
 fload ${BP}/dev/olpc/confirm.fth             \ Selftest interaction modalities
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
@@ -94,6 +94,7 @@ fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
 [else]
+: confirm-selftest?  ( -- flag )  false  ;  \ XXX implement me
 : find-tag  ( adr len -- false | value$ true )  2drop false  ;
 [then]
 

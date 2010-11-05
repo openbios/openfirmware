@@ -18,7 +18,7 @@ VGA_WIDTH VGA_HEIGHT * 2* constant /dma-buf
    then
 ;
 : free-dma-bufs  ( -- )
-   dma-bufs  dma-bufs-phys  /dma-buf #dma-bufs *  " free-capture-buffer" $call-parent
+   dma-bufs  dma-bufs-phys  /dma-buf #dma-bufs *  free-capture-buffer
    0 to dma-bufs 0 to dma-bufs-phys
 ;
 
@@ -105,21 +105,20 @@ h#        00 constant rgb-endian  \ 0c bits
 
 0 value buf-act
 : /string  ( adr len n -- adr' len' )  tuck - -rot + swap  ;
-: buf-done?  ( -- false | buf-adr true )
+: buf-done?  ( -- false | buf# true )
    h# 30 cl@  dup 1 next-buf lshift  and   if  ( value )
       h# 30 cl!                ( )
-      next-buf 'dma-buf        ( buf-adr )
-      true                     ( buf-adr true )
+      next-buf true            ( buf# true )
    else                        ( value )
       drop false               ( false )
    then
 ;
 
 
-: snap  ( timeout -- true | adr false )
+: snap  ( timeout -- true | buf# false )
    0  do
-      buf-done?  if   ( buf-adr )
-         false  unloop exit  ( -- buf-adr false )
+      buf-done?  if   ( buf# )
+         false  unloop exit  ( -- buf# false )
       then
       1 ms
    loop
@@ -129,11 +128,12 @@ h#        00 constant rgb-endian  \ 0c bits
 external
 
 : read   ( adr len -- actual )
-   buf-done?  if          ( adr len buf-adr )
-      -rot /dma-buf min   ( buf-adr adr actual )
+   buf-done?  if          ( adr len buf# )
+      'dma-buf -rot       ( buf-adr adr len )
+      /dma-buf min        ( buf-adr adr actual )
       dup >r  move  r>    ( actual )
    else
-      2drop 0
+      2drop -2
    then
 ;
 
@@ -145,7 +145,15 @@ external
    true
 ;
 
+: start-display  ( -- )
+   0 'dma-buf-phys VGA_WIDTH VGA_HEIGHT " start-video" $call-screen
+;
+: stop-display  ( -- )
+   " stop-video" $call-screen
+;
+
 : close  ( -- )
+   stop-display
    ctlr-stop
    interrupts-off
    power-off
@@ -210,8 +218,9 @@ VGA_WIDTH 2* value src-pitch
    2drop                ( )
 ;
 
-: display-frame  ( adr -- )
-   fb-pa copy16>24
+: display-frame  ( buf# -- )
+   'dma-buf-phys " set-video-dma-adr" $call-screen
+\  'dma-buf fb-pa copy16>24
 \   autobright
 ;
 
@@ -223,7 +232,7 @@ VGA_WIDTH 2* value src-pitch
 ;
 
 : shoot-still  ( -- error? )
-   d# 1000 snap  if  true exit  then   ( adr )
+   d# 1000 snap  if  true exit  then   ( buf# )
    display-frame
    false
 ;
@@ -243,6 +252,7 @@ VGA_WIDTH 2* value src-pitch
 : selftest  ( -- error? )
    open 0=  if  true exit  then
    d# 300 ms
+   start-display
    unmirrored  shoot-still  ?dup  if  close exit  then	( error? )
    d# 1,000 ms
    mirrored   shoot-movie  full-brightness		( error? )
