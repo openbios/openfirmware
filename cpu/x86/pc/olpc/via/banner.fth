@@ -95,15 +95,19 @@ h# 40 buffer: partition-map
    then
 ;
 
+: ofw-model$  ( -- adr len )
+   " /openprom" find-package drop  ( phandle )
+   " model" rot get-package-property  if
+      " ???   ?????  ???"
+   else
+      decode-string
+   then
+;
+: ofw-version$  ( -- adr len )
+   ofw-model$ drop 6 +  7  -trailing
+;
 : .rom  ( -- )
-   ." OpenFirmware  "
-   \ push-decimal
-   \ major-release (.) type ." ." minor-release (.) type    sub-release type
-   \ pop-base
-   \ This is the manufacturing signature 
-[ifdef] rom-loaded
-   h# ffff.ffc0 h# 10 type 
-[then]
+   ." OpenFirmware  "  ofw-version$ type
 ;
 
 : .ec

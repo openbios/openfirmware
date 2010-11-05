@@ -851,8 +851,8 @@ warning !
 : ?force-secure  ( -- )  button-x game-key?  if  true to secure?  then  ;
 
 6 buffer: fw#buf
-: (fw-version)  ( base-adr -- n )
-   h# f.ffc7 + fw#buf 5 move
+: ((fw-version))  ( adr -- n )
+   fw#buf 5 move
    fw#buf 4 + c@  bl  =  if  [char] 0 fw#buf 4 + c!  then
    base @ >r  d# 36 base !
    fw#buf 5 $number  if
@@ -861,11 +861,21 @@ warning !
    then
    pop-base
 ;
+: (fw-version)  ( base-adr -- n )
+   h# f.ffc7 +  ((fw-version)
+;
+
+\ Returns an integer that is derived from a base-36 decoding
+\ of the OFW version number (e.g. Q2A36b) beginning at the
+\ character after the Q.
+: ofw-version-int  ( -- n )
+   ofw-version$ drop 1+ ((fw-version))
+;
 
 : firmware-up-to-date?  ( img$ -- )
    /flash <>  if  show-x  " Invalid Firmware image" .security-failure  then  ( adr )
-   (fw-version)          ( file-version# )
-   rom-pa (fw-version)   ( file-version# rom-version# )
+   h# f.ffc7 + ((fw-version))       ( file-version# )
+   ofw-version-int                  ( file-version# rom-version# )
    u<=
 ;
 

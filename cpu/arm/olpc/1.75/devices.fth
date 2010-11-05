@@ -254,6 +254,34 @@ stand-init: Init USB Phy
 
 fload ${BP}/dev/olpc/mmp2camera/loadpkg.fth
 
+warning @ warning off
+: stand-init
+   stand-init
+   root-device
+[ifdef] notyet
+      model-name$   2dup model     ( name$ )
+      " OLPC " encode-bytes  2swap encode-string  encode+  " banner-name" property
+      board-revision " board-revision-int" integer-property
+[then]
+      \ The "1-" removes the null byte
+      " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
+[ifdef] notyet
+      8 ec-cmd-b@ dup " ec-version" integer-property
+
+      XXX Get EC name with an EC command
+      " ec-name" string-property
+[then]
+   dend
+
+   " /openprom" find-device
+      flash-open  pad d# 16  2dup  h# fffc0  flash-read  ( adr len )
+      " model" string-property
+
+      " sourceurl" find-drop-in  if  " source-url" string-property  then
+   dend
+;
+warning !
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
 \ 
