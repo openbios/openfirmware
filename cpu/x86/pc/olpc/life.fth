@@ -35,6 +35,7 @@ variable cell-sum
 
 \needs xy+ : xy+  ( x1 y1 x2 y2 -- x3 y3 )  rot +  -rot +  swap ;
 
+[ifdef] 386-assembler
 code sumcell  ( adr -- sum )
    bx pop
    ax ax xor
@@ -49,7 +50,29 @@ code sumcell  ( adr -- sum )
 
    ax push
 c;
-
+[then]
+[ifdef] arm-assembler
+code sumcell  ( adr -- sum )
+   mov   r0,#0
+   ldrb  r1,[tos, `lf_width negate`]
+   add   r0,r0,r1
+   ldrb  r1,[tos, `lf_width 1- negate`]
+   add   r0,r0,r1
+   ldrb  r1,[tos, `lf_width 1+ negate`]
+   add   r0,r0,r1
+   ldrb  r1,[tos, #-1]
+   add   r0,r0,r1
+   ldrb  r1,[tos, #1]
+   add   r0,r0,r1
+   ldrb  r1,[tos, `lf_width`]
+   add   r0,r0,r1
+   ldrb  r1,[tos, `lf_width 1-`]
+   add   r0,r0,r1
+   ldrb  r1,[tos, `lf_width 1+`]
+   add   r0,r0,r1
+   mov   r0,tos   
+c;
+[then]
 
 : +sum  ( i j +i +j -- i j )
    2over xy+             ( i j i' j' )

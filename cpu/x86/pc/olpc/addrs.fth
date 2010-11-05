@@ -71,6 +71,14 @@ h# 3d constant cmos-alarm-day	\ Offset of day alarm in CMOS
 h# 3e constant cmos-alarm-month	\ Offset of month alarm in CMOS
 h# 32 constant cmos-century	\ Offset of century byte in CMOS
 
+[ifdef] use-flash-nvram
+h# d.0000 constant nvram-offset
+[then]
+
+h# e.0000 constant mfg-data-offset     \ Offset to manufacturing data area in SPI FLASH
+h# f.0000 constant mfg-data-end-offset \ Offset to end of manufacturing data area in SPI FLASH
+h# f.ffd0 constant crc-offset
+
 fload ${BP}/cpu/x86/pc/virtaddr.fth
 [ifndef] virtual-mode
 h# ff80.0000 to fw-virt-base  \ Override the usual setting; we use an MSR to double-map some memory up high

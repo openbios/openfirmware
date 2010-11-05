@@ -45,6 +45,15 @@ fload ${BP}/ofw/fs/dropinfs.fth
 \ This devalias lets us say, for example, "dir rom:"
 devalias rom     /dropin-fs
 
+fload ${BP}/cpu/x86/pc/cpunode.fth  \ The PC CPU node is actually fairly generic
+
+: cpu-mhz  ( -- n )
+   " /cpu@0" find-package drop	( phandle )
+   " clock-frequency" rot get-package-property  if  0 exit  then  ( adr )
+   decode-int nip nip  d# 1000000 /  
+;
+
+
 fload ${BP}/cpu/arm/mmp2/timer.fth
 fload ${BP}/cpu/arm/mmp2/twsi.fth
 fload ${BP}/cpu/arm/mmp2/mfpr.fth
@@ -53,14 +62,11 @@ fload ${BP}/cpu/arm/mmp2/gpio.fth
 \ fload ${BP}/cpu/arm/olpc/1.75/boardtwsi.fth
 fload ${BP}/cpu/arm/olpc/1.75/boardgpio.fth
 : init-stuff
-\   set-camera-domain-voltage
    acgr-clocks-on
    init-mfprs
    set-gpio-directions
    init-timers
    init-twsi
-\   power-on-dsi
-\   power-on-sd
 ;
 stand-init:
    init-stuff
@@ -85,19 +91,6 @@ devalias com2 /uart
 
 \needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
 
-
-[ifdef] notyet
-fload ${BP}/dev/olpc/confirm.fth             \ Selftest interaction modalities
-fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
-fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
-fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
-
-fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
-[else]
-: confirm-selftest?  ( -- flag )  false  ;  \ XXX implement me
-: find-tag  ( adr len -- false | value$ true )  2drop false  ;
-[then]
-
 fload ${BP}/dev/olpc/spiflash/flashif.fth   \ Generic FLASH interface
 
 fload ${BP}/dev/olpc/spiflash/spiif.fth    \ Generic low-level SPI bus access
@@ -106,7 +99,6 @@ fload ${BP}/dev/olpc/spiflash/spiflash.fth \ SPI FLASH programming
 
 : ignore-power-button ;  \ XXX implement me
 : ssp-spi-reprogrammed ;
-: ?erased  ( adr len -- flag )  2drop true  ;
 : ?enough-power  ( -- )  ;
 
 fload ${BP}/cpu/arm/mmp2/sspspi.fth        \ Synchronous Serial Port SPI interface
@@ -131,7 +123,18 @@ end-package
 
 devalias dropins /dropins
 
-fload ${BP}/cpu/arm/olpc/1.75/spiui.fth    \ User interface for SPI FLASH programming
+fload ${BP}/dev/olpc/confirm.fth             \ Selftest interaction modalities
+fload ${BP}/cpu/arm/olpc/1.75/getmfgdata.fth \ Get manufacturing data
+fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
+fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
+
+[ifdef] notyet
+fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
+[then]
+
+false constant tethered?                     \ We only support reprogramming our own FLASH
+
+fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
 \ fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
 ' ofw-fw-filename$ to fw-filename$
@@ -143,6 +146,32 @@ fload ${BP}/cpu/arm/olpc/1.75/spiui.fth    \ User interface for SPI FLASH progra
    fload ${BP}/cpu/arm/olpc/1.75/lcd.fth
    fload ${BP}/cpu/arm/olpc/1.75/dconsmb.fth     \ SMB access to DCON chip - bitbanged
    fload ${BP}/dev/olpc/dcon/mmp2dcon.fth        \ DCON control
+   defer pixel*
+   defer pixel+
+   defer pixel!
+   depth d# 24 =  [if]
+      code 3a+  ( adr n -- n' )
+         pop  r0,sp
+         inc  tos,#3
+         add  tos,tos,r0
+      c;
+      code rgb888!  ( n adr -- )
+         pop   r0,sp
+         strb  r0,[tos]
+         mov   r0,r0,lsr #8
+         strb  r0,[tos,#1]
+         mov   r0,r0,lsr #8
+         strb  r0,[tos,#2]
+         pop   tos,sp
+      c;
+      ' 3* to pixel*
+      ' 3a+ to pixel+
+      ' rgb888! to pixel!
+   [else]
+      ' /w* to pixel*
+      ' wa+ to pixel+
+      ' w!  to pixel!
+   [then]
 
    : display-on
       init-xo-display  \ Turns on DCON
@@ -179,8 +208,6 @@ devalias keyboard /keyboard
 
 create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
 ' 15x30pc to romfont
-
-\ fload ${BP}/ofw/termemu/cp881-16.fth
 
 fload ${BP}/cpu/arm/olpc/1.75/sdhci.fth
 

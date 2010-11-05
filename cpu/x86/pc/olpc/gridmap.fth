@@ -35,6 +35,7 @@ d# 90 value #rows
 
 : show-state  ( eblock# state -- )  swap >loc  glyph-w glyph-h  do-fill  ;
 
+[ifdef] 386-assembler
 code map-color  ( color24 -- color565 )
    bx pop
    bx ax mov  3 # ax shr  h#   1f # ax and            \ Blue in correct place
@@ -42,6 +43,22 @@ code map-color  ( color24 -- color565 )
               8 # bx shr  h# f800 # bx and  bx ax or  \ Red, green and blue in place
    ax push   
 c;
+[then]
+[ifdef] arm-assembler
+code map-color  ( color24 -- color565 )
+   mov  r0,tos,lsr #3
+   and  r0,r0,#0x1f     \ Blue
+
+   mov  r1,tos,lsr #5
+   and  r1,r1,#0x7e0
+   orr  r0,r0,r1        \ Green
+
+   mov  tos,tos,lsr #8
+   and  tos,tos,#0xf800
+   orr  tos,tos,r0      \ Red
+c;
+[then]
+
 : show-color  ( eblock# color32 -- )  map-color show-state  ;
 
 dev screen  : erase-screen erase-screen ;  dend

@@ -8,13 +8,6 @@ purpose: User interface for reflashing SPI FLASH parts
 
 h# 4000 constant /chunk   \ Convenient sized piece for progress reports
 
-[ifdef] use-flash-nvram
-h# d.0000 constant nvram-offset
-[then]
-
-h# e.0000 constant mfg-data-offset
-mfg-data-offset /flash-block +  constant mfg-data-end-offset
-
 : write-flash-range  ( adr end-offset start-offset -- )
    ." Writing" cr
    ?do                ( adr )
@@ -24,7 +17,7 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
          \ Just write if reading is slow
          true                               ( adr must-write? )
       else                                  ( adr )
-         dup  /flash-block  i  flash-verify   ( adr must-write? )
+         dup  /flash-block  i  flash-verify ( adr must-write? )
       then                                  ( adr must-write? )
 
       if
@@ -59,21 +52,18 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
 
 [ifdef] load-base
 : flash-buf  load-base  ;
-: mfg-data-buf     load-base /flash +  ;
 [else]
 /flash buffer: flash-buf
-/flash-block buffer: mfg-data-buf
 [then]
-0 value file-loaded?
 
-h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
+0 value file-loaded?
 
 : crc  ( adr len -- crc )  0 crctab  2swap ($crc)  ;
 
 : ?crc  ( -- )
    ." Checking integrity ..." cr
 
-   flash-buf /flash + crc-offset -   ( crc-adr )
+   flash-buf crc-offset +            ( crc-adr )
    dup l@  >r                        ( crc-adr r: crc )
    -1 over l!                        ( crc-adr r: crc )
 
@@ -129,8 +119,6 @@ h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
 
 : verify  ( -- )  ?file  flash-buf  /flash  0  verify-flash-range  ;
 
-: mfg-data-range  ( -- adr len )  mfg-data-top dup last-mfg-data  tuck -  ;
-
 [ifdef] $call-method
 : make-sn-name  ( -- filename$ )
    " SN" find-tag 0=  abort" No serial number in mfg data"  ( sn$ )
@@ -161,14 +149,16 @@ h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
    ." Creating " 2dup type cr
    $create-file                               ( ihandle )
    dup 0= abort" Can't create file"   >r      ( r: ihandle )
-   mfg-data-range  " write" r@ $call-method   ( r: ihandle )
+   mfg-data-buf /flash-block                  ( adr len  r: ihandle )
+   2dup mfg-data-offset  flash-read           ( adr len r: ihandle )
+   " write" r@ $call-method                   ( r: ihandle )
    r> close-dev
 ;
 : restore-mfg-data  ( "filename" -- )
    reading
-   ifd @ fsize  dup /flash-block >  if  ( len )
+   ifd @ fsize  dup /flash-block <>  if  ( len )
       drop  ifd @ fclose                ( )
-      true abort" File is too big"
+      true abort" File is the wrong size - should be 65536 bytes"
    then                                 ( len )
    mfg-data-buf  swap                   ( adr len )
    2dup ifd @ fgets drop                ( adr len )
@@ -176,28 +166,10 @@ h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
 
    flash-write-enable
    mfg-data-offset flash-erase-block    ( adr len )
-   mfg-data-end-offset over -           ( adr len offset )
-   flash-write                          ( )
+   mfg-data-offset flash-write          ( )
    flash-write-disable                  ( )
 ;
 [then]
-
-: ?move-mfg-data  ( -- )
-   ." Merging existing manufacturing data" cr
-
-   tethered?  if
-      \ Read the manufacturing data from the other FLASH
-      flash-buf mfg-data-offset +  /flash-block  mfg-data-offset  flash-read
-      exit
-   then
-
-   \ Copy the entire block containing the manufacturing data into the
-   \ memory buffer.  This make verification easier.
-
-   mfg-data-top /flash-block -             ( src-adr )
-   flash-buf mfg-data-offset +             ( src-adr dst-adr )
-   /flash-block move                       ( )
-;
 
 : verify-firmware  ( -- )
 [ifdef] use-flash-nvram
@@ -231,8 +203,6 @@ h# 30 constant crc-offset   \ From end (modified in devices.fth for XO 1.5)
    ?file
    flash-write-enable
 
-   ?move-mfg-data
-
    write-firmware
 
    spi-us d# 20 <  if
@@ -260,12 +230,14 @@ defer fw-filename$  ' null$ to fw-filename$
 : flash  ( ["filename"] -- )  get-file ?enough-power reflash  ;
 : flash! ( ["filename"] -- )  get-file reflash  ;
 
+[ifdef] rom-pa
 \ This is a slower version of "rom-va flash-buf /flash lmove"
 \ It works around the problem that continuous CPU access to the
 \ SPI FLASH starves the EC of instruction fetch cycles, often
-\ causing it to turn off the system.
+\ causing it to turn off the system.  This is only a problem
+\ for systems where the CPU and EC share the SPI FLASH.
 0 value rom-va
-: slow-flash-read  ( -- )
+: safe-flash-read  ( -- )
    rom-pa /flash root-map-in to rom-va
    /flash  0  do
       rom-va i +  flash-buf i +  h# 1.0000 lmove
@@ -273,6 +245,11 @@ defer fw-filename$  ' null$ to fw-filename$
    h# 1.0000 +loop
    rom-va /flash root-map-out  0 to rom-va
 ;
+[else]
+: safe-flash-read  ( -- )
+   flash-buf  /flash  0 flash-read
+;
+[then]
 
 [ifdef] dev
 dev /flash
@@ -280,12 +257,12 @@ dev /flash
    .mfg-data cr
 
    ." Checking SPI FLASH CRC ..."
-   slow-flash-read
+   safe-flash-read
    \ Replace the manufacturing data block with all FF
    flash-buf mfg-data-offset +  /flash-block  h# ff fill
 
    \ Get the CRC and then replace it with -1
-   flash-buf /flash + crc-offset - dup l@ swap
+   flash-buf crc-offset + dup l@ swap
    -1 swap l!
 
    flash-buf /flash crc  <>

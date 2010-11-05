@@ -44,11 +44,6 @@ purpose: Manufacturing data reader
    true                       ( adr data$ name-adr true )
 ;
 
-\ Mfg data is in a block by itself.
-: mfg-data-top  ( -- adr )
-   flash-base h# f.0000 +
-;
-
 : (find-tag)  ( name$ top-adr -- false | data$ true )
    -rot  drop >r                ( adr r: name-adr )
    begin  another-tag?  while   ( adr' data$ tname-adr r: name-adr )

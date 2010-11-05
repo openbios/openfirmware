@@ -69,7 +69,7 @@ ballsize pscale * value reflect_left_x
    get-msecs to grandseed
 ;
 
-: random ( -- n ) grandseed 16807 * 17 + abs to grandseed grandseed 1000 mod ;
+: random1k ( -- n ) grandseed 16807 * 17 + abs to grandseed grandseed 1000 mod ;
 : unscale ( n -- n ) pscale 2/ + pscale / ;
 : calcbatx ( n -- x )  screenw  ballsize 3 *  -  *  ballsize +  ;
 : paintrect ( c pixx pixy pixw pixh -- ) " fill-rectangle" $call-screen ;
@@ -236,16 +236,16 @@ ballsize pscale * value reflect_left_x
 
 : resetball ( -- )
   500 to ballstop
-  screenw ballsize - 2 / pscale *  ballx pscale mod  +  random +  to ballx
-  screenh ballsize - 2 / pscale *  bally pscale mod  +  random +  to bally
+  screenw ballsize - 2 / pscale *  ballx pscale mod  +  random1k +  to ballx
+  screenh ballsize - 2 / pscale *  bally pscale mod  +  random1k +  to bally
   
-  random  screenw pscale *  *  2000000 /  to balldx
-  random  screenh pscale *  *  2000000 /  to balldy
-  balldx  screenw pscale *      3000 / +  to balldx
-  balldy  screenh pscale *      6000 / +  to balldy
+  random1k  screenw pscale *  *  2000000 /  to balldx
+  random1k  screenh pscale *  *  2000000 /  to balldy
+  balldx    screenw pscale *      3000 / +  to balldx
+  balldy    screenh pscale *      6000 / +  to balldy
   
-  random 500 < if  balldx negate to balldx  then
-  random 500 < if  balldy negate to balldy  then
+  random1k  500 < if  balldx negate to balldx  then
+  random1k  500 < if  balldy negate to balldy  then
 ;
 
 : initvalues ( -- )
@@ -391,11 +391,11 @@ alias pong-ih keyboard-ih
         then      
 
         ballx reflect_left_x >  if
-          balldx abs random 50 / + to balldx
+          balldx abs random1k 50 / + to balldx
 
           leftbaty bally - unscale
           dup 0 batsize between  if
-            batsize 2 / - random * 2 / batsize / 25 / balldy + to balldy
+            batsize 2 / - random1k * 2 / batsize / 25 / balldy + to balldy
           else
             drop
           then
@@ -417,11 +417,11 @@ alias pong-ih keyboard-ih
         then      
 
         ballx reflect_right_x <  if
-          balldx abs random 50 / + negate to balldx
+          balldx abs random1k 50 / + negate to balldx
 
           rightbaty bally - unscale
           dup 0 batsize between  if
-            batsize 2 / - random * 2 / batsize / 25 / balldy + to balldy
+            batsize 2 / - random1k * 2 / batsize / 25 / balldy + to balldy
           else
             drop
           then

@@ -8,13 +8,120 @@ purpose: User interface for reflashing SPI FLASH parts
 
 h# 4000 constant /chunk   \ Convenient sized piece for progress reports
 
-[ifdef] use-flash-nvram
-h# d.0000 constant nvram-offset
-[then]
-
-[ifdef] mfg-data-top
-h# e.0000 constant mfg-data-offset
 mfg-data-offset /flash-block +  constant mfg-data-end-offset
+
+: write-flash-range  ( adr end-offset start-offset -- )
+   ." Writing" cr
+   ?do                ( adr )
+      \ Save time - don't write if the data is the same
+      i .x (cr                              ( adr )
+      spi-us d# 20 >=  if                   ( adr )
+         \ Just write if reading is slow
+         true                               ( adr must-write? )
+      else                                  ( adr )
+         dup  /flash-block  i  flash-verify   ( adr must-write? )
+      then                                  ( adr must-write? )
+
+      if
+         i flash-erase-block
+         dup  /flash-block  i  flash-write  ( adr )
+      then
+      /flash-block +                        ( adr' )
+   /flash-block +loop                       ( adr )
+   cr  drop           ( )
+;
+
+: verify-flash-range  ( adr end-offset start-offset -- )
+   ." Verifying" cr
+   ?do                ( adr )
+      i .x (cr
+      dup   /flash-block  i  flash-verify   abort" Verify failed"
+      /flash-block +  ( adr' )
+   /flash-block +loop ( adr )
+   cr  drop           ( )
+;
+
+
+\ Perform a series of sanity checks on the new firmware image.
+
+: check-firmware-image  ( adr len -- adr len )
+   dup /flash <>  abort" Wrong image length"      ( adr len )
+   2dup +  h# 40 -                                ( adr len signature-adr )
+   dup " CL1" comp  abort" No firmware signature" ( adr len signature-adr )
+   ." Firmware: " h# 10 type                      ( adr len )
+   \ XXX add some more sanity checks
+;
+
+[ifdef] load-base
+: flash-buf  load-base  ;
+: mfg-data-buf     load-base /flash +  ;
+[else]
+/flash buffer: flash-buf
+/flash-block buffer: mfg-data-buf
+[then]
+0 value file-loaded?
+
+: crc  ( adr len -- crc )  0 crctab  2swap ($crc)  ;
+
+: ?crc  ( -- )
+   ." Checking integrity ..." cr
+
+   flash-buf crc-offset +            ( crc-adr )
+   dup l@  >r                        ( crc-adr r: crc )
+   -1 over l!                        ( crc-adr r: crc )
+
+   flash-buf /flash crc              ( crc-adr calc-crc r: crc )
+   r@ rot l!                         ( calc-crc r: crc )
+   r> <>  abort" Firmware image has bad internal CRC"
+;
+
+: ?image-valid   ( len -- )
+   /flash <> abort" Image file is the wrong length"
+
+   ." Got firmware version: "
+   flash-buf h# f.ffc0 +  dup  h# 10  type cr  ( adr )
+   " CL1" comp  abort" Wrong machine type"
+
+   ?crc
+
+   flash-buf mfg-data-offset +  /flash-block  ['] ?erased  catch
+   abort" Firmware image has data in the manufacturing data block"
+[ifdef] use-flash-nvram
+   flash-buf nvram-offset +  /flash-block  ['] ?erased  catch
+   abort" Firmware image has data in the NVRAM block"
+[then]
+;
+
+: $get-file  ( "filename" -- )
+   $read-open
+   flash-buf  /flash  ifd @ fgets   ( len )
+   ifd @ fclose
+
+   ?image-valid
+
+   true to file-loaded?
+;
+
+: ?file  ( -- )
+   file-loaded?  0=  if
+      ." You must first load a valid FLASH image file with" cr
+      ."    get-file filename" cr
+      abort
+   then
+;
+
+: read-flash  ( "filename" -- )
+   writing
+   /flash  0  do
+      i .x (cr
+      flash-buf  i +  /chunk i  flash-read
+   /chunk +loop
+   flash-buf  /flash  ofd @ fputs
+   ofd @ fclose
+;
+
+: verify  ( -- )  ?file  flash-buf  /flash  0  verify-flash-range  ;
+
 : mfg-data-range  ( -- adr len )  mfg-data-top dup last-mfg-data  tuck -  ;
 
 [ifdef] $call-method
@@ -84,115 +191,7 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
    flash-buf mfg-data-offset +             ( src-adr dst-adr )
    /flash-block move                       ( )
 ;
-[then]
 
-: write-flash-range  ( adr end-offset start-offset -- )
-   ." Writing" cr
-   ?do                ( adr )
-      \ Save time - don't write if the data is the same
-      i .x (cr                              ( adr )
-      spi-us d# 20 >=  if                   ( adr )
-         \ Just write if reading is slow
-         true                               ( adr must-write? )
-      else                                  ( adr )
-         dup  /flash-block  i  flash-verify   ( adr must-write? )
-      then                                  ( adr must-write? )
-
-      if
-         i flash-erase-block
-         dup  /flash-block  i  flash-write  ( adr )
-      then
-      /flash-block +                        ( adr' )
-   /flash-block +loop                       ( adr )
-   cr  drop           ( )
-;
-
-: verify-flash-range  ( adr end-offset start-offset -- )
-   ." Verifying" cr
-   ?do                ( adr )
-      i .x (cr
-      dup   /flash-block  i  flash-verify   abort" Verify failed"
-      /flash-block +  ( adr' )
-   /flash-block +loop ( adr )
-   cr  drop           ( )
-;
-
-
-[ifdef] load-base
-: flash-buf  load-base  ;
-: mfg-data-buf     load-base /flash +  ;
-[else]
-/flash buffer: flash-buf
-/flash-block buffer: mfg-data-buf
-[then]
-0 value file-loaded?
-
-h# 28 constant crc-offset   \ From end
-
-: crc  ( adr len -- crc )  0 crctab  2swap ($crc)  ;
-
-: ?crc  ( -- )
-   ." Checking integrity ..." cr
-
-   flash-buf /flash + crc-offset -   ( crc-adr )
-   dup l@  >r                        ( crc-adr r: crc )
-   -1 over l!                        ( crc-adr r: crc )
-
-   flash-buf /flash crc              ( crc-adr calc-crc r: crc )
-   r@ rot l!                         ( calc-crc r: crc )
-   r> <>  abort" Firmware image has bad internal CRC"
-;
-
-: ?image-valid   ( len -- )
-   /flash <> abort" Image file is the wrong length"
-
-   ." Got firmware version: "
-   flash-buf h# f.ffc0 +  dup  h# 10  type cr  ( adr )
-   " CL1" comp  abort" Wrong machine type"
-
-   ?crc
-
-[ifdef] mfg-data-offset
-   flash-buf mfg-data-offset +  /flash-block  ['] ?erased  catch
-   abort" Firmware image has data in the manufacturing data block"
-[ifdef] use-flash-nvram
-   flash-buf nvram-offset +  /flash-block  ['] ?erased  catch
-   abort" Firmware image has data in the NVRAM block"
-[then]
-[then]
-;
-
-: $get-file  ( "filename" -- )
-   $read-open
-   flash-buf  /flash  ifd @ fgets   ( len )
-   ifd @ fclose
-
-   ?image-valid
-
-   true to file-loaded?
-;
-
-: ?file  ( -- )
-   file-loaded?  0=  if
-      ." You must first load a valid FLASH image file with" cr
-      ."    get-file filename" cr
-      abort
-   then
-;
-
-: read-flash  ( "filename" -- )
-   writing
-   /flash  0  do
-      i .x (cr
-      flash-buf  i +  /chunk i  flash-read
-   /chunk +loop
-   flash-buf  /flash  ofd @ fputs
-   ofd @ fclose
-;
-
-: verify  ( -- )  ?file  flash-buf  /flash  0  verify-flash-range  ;
-
-[ifdef] mfg-data-offset
 : verify-firmware  ( -- )
 [ifdef] use-flash-nvram
    flash-buf  nvram-offset     0  verify-flash-range     \ Verify first part
@@ -214,14 +213,6 @@ h# 28 constant crc-offset   \ From end
 
    flash-buf mfg-data-end-offset +   /flash  mfg-data-end-offset  write-flash-range  \ Write last part
 ;
-[else]
-: verify-firmware  ( -- )
-   flash-buf  /flash   0  verify-flash-range     \ Verify entire FLASH
-;
-: write-firmware   ( -- )
-   flash-buf  /flash   0  write-flash-range      \ Write entire FLASH
-;
-[then]
 
 : .verify-msg  ( -- )
    ." Type verify if you want to verify the data just written."  cr
@@ -233,9 +224,7 @@ h# 28 constant crc-offset   \ From end
    ?file
    flash-write-enable
 
-[ifdef] ?move-mfg-data
    ?move-mfg-data
-[then]
 
    write-firmware
 
@@ -264,7 +253,6 @@ defer fw-filename$  ' null$ to fw-filename$
 : flash  ( ["filename"] -- )  get-file ?enough-power reflash  ;
 : flash! ( ["filename"] -- )  get-file reflash  ;
 
-0 [if]
 \ This is a slower version of "rom-va flash-buf /flash lmove"
 \ It works around the problem that continuous CPU access to the
 \ SPI FLASH starves the EC of instruction fetch cycles, often
@@ -290,7 +278,7 @@ dev /flash
    flash-buf mfg-data-offset +  /flash-block  h# ff fill
 
    \ Get the CRC and then replace it with -1
-   flash-buf /flash + crc-offset - dup l@ swap
+   flash-buf crc-offset + dup l@ swap
    -1 swap l!
 
    flash-buf /flash crc  <>
@@ -298,19 +286,8 @@ dev /flash
 ;
 device-end
 [then]
-[then]
 
 0 [if]
-\ Perform a series of sanity checks on the new firmware image.
-
-: check-firmware-image  ( adr len -- adr len )
-   dup /flash <>  abort" Wrong image length"      ( adr len )
-   2dup +  h# 40 -                                ( adr len signature-adr )
-   dup " CL1" comp  abort" No firmware signature" ( adr len signature-adr )
-   ." Firmware: " h# 10 type                      ( adr len )
-   \ XXX add some more sanity checks
-;
-
 \ Erase the first block containing the EC microcode.  This is dangerous...
 
 : erase-ec  ( -- )  0 flash-erase-block  ;

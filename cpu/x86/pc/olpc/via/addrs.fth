@@ -103,6 +103,15 @@ h# 7d constant cmos-alarm-day	\ Offset of day alarm in CMOS
 h# 7e constant cmos-alarm-month	\ Offset of month alarm in CMOS
 h# 7f constant cmos-century	\ Offset of century byte in CMOS
 
+
+[ifdef] use-flash-nvram
+h# d.0000 constant nvram-offset
+[then]
+
+h# e.0000 constant mfg-data-offset     \ Offset to manufacturing data area in SPI FLASH
+h# f.0000 constant mfg-data-end-offset \ Offset to end of manufacturing data area in SPI FLASH
+h# f.ffd4 constant crc-offset
+
 fload ${BP}/cpu/x86/pc/virtaddr.fth
 
 

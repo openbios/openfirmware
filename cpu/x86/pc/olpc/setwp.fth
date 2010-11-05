@@ -28,11 +28,6 @@
 
 \ Set and clear the write-protect tag by copying, erasing, rewriting
 
-\ Read mfg data from FLASH to RAM
-: get-mfg-data  ( -- )
-   rom-pa mfg-data-offset +  mfg-data-buf  /flash-block lmove
-;
-
 : (put-mfg-data)
    mfg-data-buf  mfg-data-end-offset mfg-data-offset  write-flash-range
 ;

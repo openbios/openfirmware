@@ -281,6 +281,7 @@ stand-init: Wireless reset
 ;
 
 fload ${BP}/dev/olpc/confirm.fth             \ Selftest interaction modalities
+fload ${BP}/cpu/x86/pc/olpc/getmfgdata.fth   \ Low-level access to manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
 fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
@@ -288,7 +289,6 @@ fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
    
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
-h# 2c to crc-offset
 fload ${BP}/cpu/x86/pc/olpc/via/recover.fth  \ XO-to-XO SPI FLASH recovery
 
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;

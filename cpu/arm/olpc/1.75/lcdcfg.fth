@@ -14,9 +14,15 @@ d#    5 value vbp    \ Back porch
 : hfp  ( -- n )  htotal hdisp -  hsync -  hbp -  ;  \ 24
 : vfp  ( -- n )  vtotal vdisp -  vsync -  vbp -  ;  \ 4
 
+0 [if]
 3 constant #lanes
 3 constant bytes/pixel
 d# 24 constant bpp
+[else]
+2 constant #lanes
+2 constant bytes/pixel
+d# 16 constant bpp
+[then]
 
 : >bytes   ( pixels -- chunks )  bytes/pixel *  ;
 : >chunks  ( pixels -- chunks )  >bytes #lanes /  ;

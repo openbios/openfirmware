@@ -3,6 +3,80 @@ purpose: Drawing functions for 16-bit graphics extension
 
 external
 
+[ifdef] arm-assembler
+code 565>argb-pixel  ( 565 -- argb )
+   mov r0,tos,lsr #11
+   mov r0,r0,lsl #19    \ Red
+   orr r0,r0,#0x70000
+
+   mov r1,tos,lsl #27
+   mov r1,r1,lsr #24
+   orr r1,r1,#0x7
+   orr r0,r0,r1         \ Blue
+
+   mov tos,tos,lsl #21
+   mov tos,tos,lsr #26
+   mov tos,tos,lsl #10
+   orr tos,tos,#0x300
+
+   orr tos,tos,r0
+   orr tos,tos,#0xff000000
+c;
+code 565>argb  ( src dst #pixels -- )
+   mov   r2,tos
+   ldmia sp!,{r0,r1,tos}  \ r0:dst, r1:src, r2:#pixels
+
+   begin
+      ldrh  r3,[r1]
+      inc   r1,#2
+
+      mov r4,r3,lsr #11
+      mov r4,r4,lsl #19    \ Red
+      orr r4,r4,#0x70000
+
+      mov r5,r3,lsl #27
+      mov r5,r5,lsr #24
+      orr r5,r5,#0x7
+      orr r4,r4,r5         \ Blue
+
+      mov r3,r3,lsl #21
+      mov r3,r3,lsr #26
+      mov r3,r3,lsl #10
+      orr r3,r3,#0x300
+
+      orr r3,r3,r4
+      orr r3,r3,#0xff000000
+
+      str  r3,[r0],#4
+      decs r2,#1
+   0= until
+c;
+code argb>565-pixel  ( argb -- 565 )
+   ax pop
+   ax bx mov  d# 19 # bx shr  d# 11 # bx shl  \ Red
+   ax dx mov  d# 24 # dx shl  d# 27 # dx shr  dx bx or  \ Blue
+   d# 16 # ax shl  d# 26 # ax shr  d# 5 # ax shl  bx ax or  \ Green
+   ax push
+c;
+
+code argb>565  ( src dst #pixels -- )
+   cx pop
+   di  0 [sp]  xchg
+   si  4 [sp]  xchg
+
+   begin
+      ax lods
+      ax bx mov  d# 19 # bx shr  d# 11 # bx shl  \ Red
+      ax dx mov  d# 24 # dx shl  d# 27 # dx shr  dx bx or  \ Blue
+      d# 16 # ax shl  d# 26 # ax shr  d# 5 # ax shl  bx ax or  \ Green
+      op: ax stos
+   loopa
+
+   di pop
+   si pop
+c;
+[then]
+[ifdef] 386-assembler
 code 565>argb-pixel  ( 565 -- argb )
    ax pop
    ax bx mov  d# 11 # bx shr  d# 19 # bx shl  \ Red
@@ -53,6 +127,7 @@ code argb>565  ( src dst #pixels -- )
    di pop
    si pop
 c;
+[then]
 
 : rectangle-setup  ( x y w h -- wb fbadr h )
    swap depth * 3 rshift swap              ( x y wbytes h )

@@ -9,7 +9,7 @@
    h# 19 pmua-disp-clk-sel + h# d428284c l!
    h# 1b pmua-disp-clk-sel + h# d428284c l!
 
-   0      h# 190 lcd!   \ Disable LCD DMA controller
+   0                  h# 190 lcd!  \ Disable LCD DMA controller
    fb-pa               h# f4 lcd!  \ Frame buffer area 0
    0                   h# f8 lcd!  \ Frame buffer area 1
    hdisp bytes/pixel * h# fc lcd!  \ Pitch in bytes
@@ -26,7 +26,8 @@
    h# 2000000d h# 1b8 lcd!  \ Dumb panel controller - 18 bit RGB666 on LDD[17:0]
    h# 01330133 h# 13c lcd!  \ Panel VSYNC Pulse Pixel Edge Control
    clkdiv      h# 1a8 lcd!  \ Clock divider
-   h# 08021100 h# 190 lcd!  \ DMA CTRL 0 - enable DMA, 24 bpp mode
+\  h# 08021100 h# 190 lcd!  \ DMA CTRL 0 - enable DMA, 24 bpp mode
+  h# 08001100 h# 190 lcd!  \ DMA CTRL 0 - enable DMA, 16 bpp mode
 ;
 
 : normal-hsv  ( -- )

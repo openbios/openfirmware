@@ -304,6 +304,7 @@ stand-init: PCI properties
 ;
 
 fload ${BP}/dev/olpc/confirm.fth             \ Selftest interaction modalities
+fload ${BP}/cpu/x86/pc/olpc/getmfgdata.fth   \ Low-level access to manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
 fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type

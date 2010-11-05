@@ -43,12 +43,13 @@ code fb16-invert  ( adr width height bytes/line fg-color bg-color -- )
    ldmia   sp!,{r1,r2,r3,r4,r5,tos}
    \ r0:bg-colour  r1:fg-colour r2:bytes/line  r3:height  r4:width  r5:adr
 
+   add      r4,r4,r4     \ Byte count instead of pixel count
    begin
       cmp     r3,#0
    > while
       mov     r6,#0
       begin
-         cmp     r4,r6		\ more pixels/line?
+         cmp     r4,r6		\ more bytes/line?
       > while
          ldrh    r7,[r5,r6]	\ get pixel colour at adr+offset
          cmp     r7,r0
@@ -70,13 +71,13 @@ code fb24-invert  ( adr width height bytes/line fg-color bg-color -- )
    \ r0:scratch  r1:fg-colour r2:bytes/line  r3:height  r4:width  r5:adr
    \ r6 bytes/line, r7 scratch, r8 scratch, tos bg-color
 
-   add        r4,r4,r4, lsl #1  \ Multiply width by 4 to get bytes
+   add        r4,r4,r4, lsl #1  \ Multiply width by 3 to get bytes
    begin
       cmp     r3,#0
    > while
       mov     r6,#0
       begin
-         cmp     r4,r6		\ more pixels/line?
+         cmp     r4,r6		\ more bytes on this line?
       > while
          add     r0,r5,r6       \ r0 points to the pixel
          ldrb    r7,[r0]        \ Start reading a 3-byte pixel
@@ -125,14 +126,14 @@ code fb32-invert  ( adr width height bytes/line fg-color bg-color -- )
    > while
       mov     r6,#0
       begin
-         cmp     r4,r6		\ more pixels/line?
+         cmp     r4,r6		\ more bytes on this line?
       > while
-         ldr     r7,[r5,r6]	\ get pixel colour at adr+offset
+         ldr     r7,[r5,r6,lsl #2]	\ get pixel colour at adr+offset
          cmp     r7,r0
-         streq   r1,[r5,r6]
+         streq   r1,[r5,r6,lsl #2]
          cmp     r7,r1
-         streq   r0,[r5,r6]
-         inc     r6,#4
+         streq   r0,[r5,r6,lsl #2]
+         inc     r6,#1
       repeat
       add     r5,r5,r2
       dec     r3,#1
@@ -197,9 +198,10 @@ code fb16-paint
          and     r0,r8,#7
          rsb     r0,r0,#8
          movs    r0,r9,asr r0
-         strcsh  r1,[r3,r8]
-         strcch  tos,[r3,r8]
-         inc     r8,#2
+         mov     r0,r8,lsl #1
+         strcsh  r1,[r3,r0]
+         strcch  tos,[r3,r0]
+         inc     r8,#1
       repeat
       add     r7,r7,r6			\ new font-line
       add     r3,r3,r2			\ new screen-line

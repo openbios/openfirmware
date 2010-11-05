@@ -255,6 +255,7 @@ previous previous definitions
 false value gui-safeboot?
 
 : 2tuck  ( d1 d2 -- d2 d1 d2 )  2swap 2over  ;
+false value fru-test?
 : user-ok  "ok"  ;  \ This is supposed to check for authorization
 true value user-mode?
 

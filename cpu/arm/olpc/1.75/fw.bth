@@ -90,6 +90,19 @@ warning !
 ;
 ' (.firmware) to .firmware
 
+\ fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
+
+patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
+patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
+
+[ifdef] notyet
+\ Uninstall the diag menu from the general user interface vector
+\ so exiting from emacs doesn't invoke the diag menu.
+' quit to user-interface
+fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
+fload ${BP}/cpu/x86/pc/olpc/via/bootmenu.fth
+[then]
+
 : screen-#lines  ( -- n )
    screen-ih 0=  if  default-#lines exit  then
    screen-ih  package( #lines )package
@@ -111,17 +124,44 @@ true value text-on?
    then
 ;
 
+fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
+
 fload ${BP}/cpu/x86/pc/olpc/help.fth
+fload ${BP}/cpu/x86/pc/olpc/gui.fth
+fload ${BP}/cpu/x86/pc/olpc/strokes.fth
+fload ${BP}/cpu/x86/pc/olpc/plot.fth
+
+\ Pseudo device that appears in the boot order before net booting
+0 0 " " " /" begin-package
+   " prober" device-name
+   : open
+      visible
+      false
+   ;
+   : close ;
+end-package
+
+fload ${BP}/dev/logdev.fth
+[ifdef] notyet
+fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
+fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
+[then]
+fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
+fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
 
 [ifdef] notyet
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
-
 : emacs  ( -- )
    false to already-go?
    boot-getline to boot-file   " rom:emacs" $boot
 ;
+defer rm-go-hook  \ Not used, but makes security happy
+fload ${BP}/cpu/x86/pc/olpc/security.fth
+
+[then]
 
 fload ${BP}/ofw/gui/ofpong.fth
+[ifdef] notyet
 fload ${BP}/cpu/x86/pc/olpc/life.fth
 [then]
 

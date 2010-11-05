@@ -30,7 +30,7 @@
 
 : clone  ( -- )
    ." Getting a copy of this machine's FLASH" cr
-   slow-flash-read
+   safe-flash-read
    true to file-loaded?
 
    (serial-flash)
