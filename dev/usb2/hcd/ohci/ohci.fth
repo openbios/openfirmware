@@ -21,13 +21,16 @@ true value first-open?
 0 value open-count
 0 value ohci-reg
 
+: my-w@  ( offset -- w )  my-space +  " config-w@" $call-parent  ;
+: my-w!  ( w offset -- )  my-space +  " config-w!" $call-parent  ;
+
 : map-regs  ( -- )
    4 my-w@  h# 16 or  4 my-w!
-   0 0 my-space h# 0200.0010 + 1000  map-in to ohci-reg
+   0 0 my-space h# 0200.0010 + 1000  " map-in" $call-parent to ohci-reg
 ;
 
 : unmap-regs  ( -- )
-   ohci-reg  1000  map-out  0 to ohci-reg
+   ohci-reg  1000  " map-out" $call-parent  0 to ohci-reg
 ;
 
 : ohci-reg@  ( idx -- data )  ohci-reg + rl@  ;
