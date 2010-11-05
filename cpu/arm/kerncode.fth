@@ -139,8 +139,8 @@ code (lit)  ( -- lit )
 c;
 code (dlit)  ( -- d )
    ldmia   ip!,{r0,r1}
-   stmdb   sp!,{r1,tos}
-   mov     tos,r0
+   stmdb   sp!,{r0,tos}
+   mov     tos,r1
 c;
 code execute   ( cfa -- )
    mov     r0,tos
