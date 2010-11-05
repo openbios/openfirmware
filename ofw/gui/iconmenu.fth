@@ -504,13 +504,7 @@ defer root-menu  ' noop to root-menu
    2r> to current-sq set-menu refresh
 ;
 
-\ Note that menu establishes a new return stack state. Be sure to
-\ clear any installed handler chain and establish a new base catch frame.
-
-: menu  ( -- )  recursive
-   rp0 @ rp!
-   0 handler !
-   ['] menu to user-interface
+: (menu)  ( -- )
    setup-menu
 
    ['] root-menu ['] nest-menu catch drop
@@ -519,8 +513,20 @@ defer root-menu  ' noop to root-menu
    0 0			( color x y )
    screen-wh		( color x y w y )
    fill-rectangle-noff	( )
-   
+
    restore-scroller
+;
+
+\ Note that menu establishes a new return stack state. Be sure to
+\ clear any installed handler chain and establish a new base catch frame.
+
+: menu  ( -- )  recursive
+   rp0 @ rp!
+   0 handler !
+   ['] menu to user-interface
+
+   (menu)
+
    .menu
    ['] quit to user-interface
    quit

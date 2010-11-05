@@ -29,22 +29,49 @@ h# 80000 /mbr /  constant saved-mbrs-base
    #switched " read-blocks" mbr-ih $call-method   ( nread )
    #switched <> abort" Read failed"
 ;
+
 : put-sectors  ( adr sector# -- )
    #switched  " write-blocks" mbr-ih $call-method   ( nread )
    #switched <> abort" Write failed"
 ;
-: choose-os  ( n -- )
-   " int:0" open-dev dup  to mbr-ih  0= abort" Can't open internal storage"  ( n )
-   current-mbr  0  get-sectors    ( )
+
+: open-mbr
+   " int:0" open-dev  dup 0= abort" Can't open internal storage"  ( ihandle )
+   to mbr-ih
+;
+
+: get-desired-mbr  ( n -- )
    desired-mbr  swap #switched *  saved-mbrs-base +  get-sectors
-   desired-mbr /mbr is-mbr?  0=  if
-      mbr-ih close-dev
+;
+
+: is-desired-mbr?  ( -- is-mbr? )
+   desired-mbr /mbr is-mbr?
+;
+
+: close-mbr
+   mbr-ih close-dev
+;
+
+: choice-present?  ( -- present? )
+   open-mbr
+   0 get-desired-mbr is-desired-mbr?
+   1 get-desired-mbr is-desired-mbr?
+   and
+   close-mbr
+;
+
+: choose-os  ( n -- )
+   open-mbr
+   current-mbr  0  get-sectors    ( )
+   get-desired-mbr
+   is-desired-mbr?  0=  if
+      close-mbr
       true abort" The chosen MBR is invalid" cr
    then
    current-mbr desired-mbr /mbr comp  if
       desired-mbr  0  put-sectors
    then
-   mbr-ih close-dev
+   close-mbr
 ;
 
 \ LICENSE_BEGIN

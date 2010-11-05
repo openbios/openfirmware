@@ -648,7 +648,7 @@ true                               ' client-symbols?  set-config-int-default
 
 : ?boot-menu  ( -- )
    rocker-down game-key?  if
-      protect-fw  visible  bootmenu  invisible show-child
+      protect-fw  visible  bootmenu  show-child invisible
    then
 ;
 
@@ -708,13 +708,12 @@ true                               ' client-symbols?  set-config-int-default
    ?scan-nand
 [then]
    ?fs-update
+   ?boot-menu
    factory-test? 0=  if  secure-startup  then
    unblock-exceptions
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
    ?usb-keyboard
    auto-banner?  if  banner  then
-
-   ?boot-menu
 
    auto-boot
 
