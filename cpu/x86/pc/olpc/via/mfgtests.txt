@@ -45,7 +45,7 @@ The booted script performs selftest in test-station=1 mode.  Upon success,
 it performs tag exchange with the "MS" server and rewrites the tags to
 the value the server specified (examples below).
 
-=== ASSY state === 
+=== ASSY state ===
 
 Entry condition:
 
@@ -54,7 +54,7 @@ Entry condition:
    BD=u:\boot\olpc.fth net
 
 The booted (from the net, using TFTP etc) script does the tag
-exchange, runs any "Command:" pseudo-tags, and rewrites the tags. 
+exchange, runs any "Command:" pseudo-tags, and rewrites the tags.
 The next state is RUNIN.
 
 The response includes one or more "Command:<Forth_commands>" lines.
@@ -109,7 +109,7 @@ The script in int:\runin\olpc.fth does the following:
        Tell operator to move to the download station and insert USB LAN
        wait-lan
        wait-scanner
-       tag exchange with server 
+       tag exchange with server
        barcode scan of serial number to verify that the board and case are still paired
        the filename used in the tag exchange is based on the SN, despite
        the additional cross-checking that would be available if it were
@@ -141,7 +141,7 @@ The above design has the following features:
 
 * Once the machine leaves the factory, it does not contain any
   information about factory server names or their credentials.
-  (The tags containing that information are deleted for CUSTOMER
+  (The tags containing that information are deleted for SHIP
   state, and the Linux-based runin scripts contain no hardcoded
   factory server identification.)
 
