@@ -378,6 +378,8 @@ d# 16 buffer: ec-respbuf
    ec-respbuf 1 true  ec-cmdbuf 8 true " data-command" $call-parent
 ;
 
+: reboot-ec  ( -- )  0 0 h# 28 ec-command drop  ;
+
 create pgm-cmd     h# 51 c, h# 84 c, d# 16 c, h# 02 c, h# 00 c, 0 c, 0 c, 0 c,
 create read-cmd    h# 51 c, h# 04 c, d# 16 c, h# 03 c, h# 00 c, 0 c, 0 c, 0 c,
 create rdstat-cmd  h# 51 c, h# 01 c, d# 01 c, h# 05 c, h# 80 c, 0 c, 0 c, 0 c,
@@ -442,23 +444,6 @@ create erase-cmd   h# 51 c, h# 01 c, d# 00 c, h# 60 c, h# 80 c, 0 c, 0 c, 0 c,
       h# 10 +              ( adr' )
    h# 10 +loop             ( adr )
    drop                    ( )
-;
-h# 6000 value flash-size
-: get-flash  ( -- )
-   load-base flash-size  0 read-flash
-;
-: put-flash  ( -- )
-   ." Erasing" cr
-   erase-flash
-   ." Writing" cr
-   load-base flash-size  0 write-flash
-;
-: help  ( -- )
-   ." enter-updater" cr
-   ." h# 8000 to flash-size   ( default is 6000)" cr
-   ." get-flash"  cr
-   ." load-base 100 ldump" cr
-   ." put-flash"  cr
 ;
 
 finish-device

@@ -34,61 +34,9 @@ h# 808 value rlevel
    record-base  record-len  audio-out drop  write-done
 ;
 
-d# 500 value tone-freq
-
-: /cycle  ( -- #bytes )  #cycle /l*  ;
-
-: make-cycle  ( adr -- adr' )
-   #quarter-cycle 1+  0  do               ( adr )
-      i isin                              ( adr isin )
-      2dup  swap  i la+ w!                ( adr isin )
-      2dup  swap  #half-cycle i - la+ w!  ( adr isin )
-      negate                              ( adr -isin )
-      2dup  swap  #half-cycle i + la+ w!  ( adr -isin )
-      over  #cycle i - la+ w!             ( adr )
-   loop                                   ( adr )
-   /cycle +
-;
-
-\ This version puts the tone first into the left channel for
-\ half the time, then into the right channel for the remainder
-: make-tone  ( freq -- )
-   sample-rate to fs  ( freq )  set-freq
-
-   \ Start with everything quiet
-   record-base record-len erase
-
-   record-base  make-cycle  drop
-
-   \ Copy the wave template into the left channel
-   record-base /cycle +   record-len 2/  /cycle -  bounds  ?do
-      record-base  i  /cycle  move
-   /cycle +loop
-
-   \ Copy the wave template into the right channel
-   record-base record-len 2/ + wa1+  record-len 2/ /cycle -   bounds  ?do
-      record-base  i  /cycle  move
-   /cycle +loop
-;
-
-\ This version puts the tone into both channels simultaneously
-: make-tone2  ( freq -- )
-   sample-rate to fs  ( freq )  set-freq
-
-   record-base  make-cycle  drop
-
-   \ Duplicate left into right in the template
-   record-base  #cycle /l*  bounds  ?do  i w@  i wa1+ w!  /l +loop
-
-   \ Replicate the template
-   record-base /cycle +   record-len /cycle -  bounds  ?do
-      record-base  i  /cycle  move
-   /cycle +loop
-;
-
 : tone  ( freq -- )
-   record-len la1+  " dma-alloc" $call-parent  to record-base
-   make-tone
+   record-len la1+  " dma-alloc" $call-parent  to record-base  ( freq )
+   record-base record-len  rot sample-rate make-tone           ( )
    d# -9 set-volume  play
    record-base record-len la1+  " dma-free" $call-parent
 ;

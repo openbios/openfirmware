@@ -15,13 +15,16 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
    patch 203  003 card-clock-50    \ n is 2, divisor is 4, clk is 50 MHz
    patch 043 8003 card-clock-slow  \ n is h# 100 (high 2 bits in [7:6], for divisor of 512 from 200 MHz clock
 
-   : gpio-card-inserted?  ( -- flag )  d# 31 gpio-pin@ 0=  ;
-   ' gpio-card-inserted? to card-inserted?
+   : olpc-card-inserted?  ( -- flag )
+      slot 1 =  if  d# 31 gpio-pin@ 0=  else  true  then
+   ;
+   ' olpc-card-inserted? to card-inserted?
 
-   : gpio-power-on  ( -- )  sdhci-card-power-on  d# 35 gpio-set  ;
+   \ Slot:power_GPIO - 1:35, 2:34, 3:33
+   : gpio-power-on  ( -- )  sdhci-card-power-on  d# 36 slot - gpio-set  ;
    ' gpio-power-on to card-power-on
 
-   : gpio-power-off  ( -- )  d# 35 gpio-clr  sdhci-card-power-off  ;
+   : gpio-power-off  ( -- )  d# 36 slot - gpio-clr  sdhci-card-power-off  ;
    ' gpio-power-off to card-power-off
 
    new-device
@@ -31,64 +34,13 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
       " external" " slot-name" string-property
    finish-device
 
-end-package
-
-0 0  " d4280800"  " /"  begin-package
-
-   fload ${BP}/cpu/arm/olpc/1.75/sdregs.fth
-   fload ${BP}/dev/mmc/sdhci/sdhci.fth
-
-   true to avoid-high-speed?
-
-   hex
-   \ The new clock divisor layout is low 8 bits in [15:8] and high 2 bits in [7:6]
-   \ The resulting 10-bit value is multiplied by 2 to form the divisor for the
-   \ 200 MHz base clock.
-   patch 403  103 card-clock-25    \ n is 4, divisor is 8, clk is 25 MHz
-   patch 203  003 card-clock-50    \ n is 2, divisor is 4, clk is 50 MHz
-   patch 043 8003 card-clock-slow  \ n is h# 100 (high 2 bits in [7:6], for divisor of 512 from 200 MHz clock
-
-   ' true to card-inserted?
-
-   : gpio-power-on  ( -- )  sdhci-card-power-on  d# 34 gpio-set  ;
-   ' gpio-power-on to card-power-on
-
-   : gpio-power-off  ( -- )  d# 34 gpio-clr  sdhci-card-power-off  ;
-   ' gpio-power-off to card-power-off
-
    new-device
-      1 encode-int " reg" property
+      2 encode-int " reg" property
       fload ${BP}/dev/mmc/sdhci/mv8686/loadpkg.fth
    finish-device
 
-end-package
-
-0 0  " d4281000"  " /"  begin-package
-
-   fload ${BP}/cpu/arm/olpc/1.75/sdregs.fth
-   fload ${BP}/dev/mmc/sdhci/sdhci.fth
-
-   true to avoid-high-speed?
-
-   hex
-   \ The new clock divisor layout is low 8 bits in [15:8] and high 2 bits in [7:6]
-   \ The resulting 10-bit value is multiplied by 2 to form the divisor for the
-   \ 200 MHz base clock.
-   patch 403  103 card-clock-25    \ n is 4, divisor is 8, clk is 25 MHz
-   patch 203  003 card-clock-50    \ n is 2, divisor is 4, clk is 50 MHz
-   patch 043 8003 card-clock-slow  \ n is h# 100 (high 2 bits in [7:6], for divisor of 512 from 200 MHz clock
-
-   ' true to card-inserted?
-
-   : gpio-power-on  ( -- )  sdhci-card-power-on d# 33 gpio-set  ;
-   ' gpio-power-on to card-power-on
-
-   : gpio-power-off  ( -- )  d# 33 gpio-clr  sdhci-card-power-off  ;
-   ' gpio-power-off to card-power-off
-
-
    new-device
-      1 encode-int " reg" property
+      3 encode-int " reg" property
       fload ${BP}/dev/mmc/sdhci/sdmmc.fth
       \ fload ${BP}/dev/mmc/sdhci/selftest.fth
       " internal" " slot-name" string-property

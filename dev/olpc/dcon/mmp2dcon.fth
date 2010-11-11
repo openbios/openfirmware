@@ -28,6 +28,17 @@
 \ h# 4000 constant DM_DEBUG
 \ h# 8000 constant DM_SELFTEST
 
+: set-dcon-slave  ( -- )
+   d# 162 to smb-clock-gpio#
+   d# 163 to smb-data-gpio#
+   h# 1a to smb-slave
+;
+
+: smb-init    ( -- )  set-dcon-slave  smb-on  smb-pulses  ;
+
+: dcon@  ( reg# -- word )  set-dcon-slave  smb-word@  ;
+: dcon!  ( word reg# -- )  set-dcon-slave  smb-word!  ;
+
 : dcon-load  ( -- )  d# 151 gpio-set  ;
 : dcon-unload  ( -- )  d# 151 gpio-clr  ;
 \ : dcon-blnk?  ( -- flag )  ;  \ Not hooked up
@@ -160,14 +171,10 @@ d# 905 value resumeline  \ Configurable; should be set from args
 
 : video-save
    0 set-source  \ Freeze image
-\  olpc-lcd-off
 ;
 
 : video-restore
    smb-init
-\  olpc-lcd-mode
-
-\   gp-setup
    1 set-source  \ Unfreeze image
 ;
 
@@ -178,14 +185,10 @@ d# 905 value resumeline  \ Configurable; should be set from args
 : init-xo-display  ( -- )
    smb-init
 
-\   olpc-lcd-mode
-
    dcon-load
    dcon-enable  ( maybe-set-cmos )
    \ dcon-enable leaves mode set to 69 - 40:antialias, 20:swizzle, 8:backlight on, 1:passthru off
 ;
-
-\ ' init-xo-display to init-display
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks

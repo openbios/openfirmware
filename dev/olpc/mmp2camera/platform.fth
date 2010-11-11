@@ -8,7 +8,8 @@ hex
 
 : ov-smb-setup  ( -- )
    1 to smb-dly-us
-   d# 108 to smb-clk-gpio# d# 109 to smb-data-gpio#
+   d# 108 to smb-clock-gpio#
+   d# 109 to smb-data-gpio#
    h# 42 to smb-slave
 ;
 

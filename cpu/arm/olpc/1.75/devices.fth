@@ -91,7 +91,9 @@ devalias com2 /uart
 
 \needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
 
-fload ${BP}/dev/olpc/spiflash/flashif.fth   \ Generic FLASH interface
+fload ${BP}/cpu/arm/olpc/1.75/smbus.fth    \ Bit-banged SMBUS (I2C) using GPIOs
+
+fload ${BP}/dev/olpc/spiflash/flashif.fth  \ Generic FLASH interface
 
 fload ${BP}/dev/olpc/spiflash/spiif.fth    \ Generic low-level SPI bus access
 
@@ -144,7 +146,6 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH prog
    fload ${BP}/cpu/arm/olpc/1.75/lcdcfg.fth
 
    fload ${BP}/cpu/arm/olpc/1.75/lcd.fth
-   fload ${BP}/cpu/arm/olpc/1.75/dconsmb.fth     \ SMB access to DCON chip - bitbanged
    fload ${BP}/dev/olpc/dcon/mmp2dcon.fth        \ DCON control
    defer pixel*
    defer pixel+
@@ -219,6 +220,8 @@ fload ${BP}/dev/olpc/kb3700/spicmd.fth
 
 devalias keyboard /ec-spi/keyboard
 
+fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
+
 0 0  " d4208000"  " /" begin-package  \ USB Host Controller
    h# 200 constant /regs
    my-address my-space /regs reg
@@ -253,6 +256,11 @@ stand-init: Init USB Phy
 ;
 
 fload ${BP}/dev/olpc/mmp2camera/loadpkg.fth
+
+fload ${BP}/cpu/arm/olpc/1.75/sound.fth
+fload ${BP}/cpu/arm/olpc/1.75/rtc.fth
+fload ${BP}/cpu/arm/olpc/1.75/accelerometer.fth
+fload ${BP}/cpu/arm/olpc/1.75/compass.fth
 
 warning @ warning off
 : stand-init

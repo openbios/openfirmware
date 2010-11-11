@@ -7,8 +7,8 @@ purpose: Compute a fixed-point sin table
 \ sample index from 0 to fs/freq/4 .
 
 d# 16000 value fs
-0 value x
-0 value xsq
+0 value theta
+0 value thetasq
 
 d#  32767 constant one
 d# 102943 constant pi
@@ -19,8 +19,9 @@ d# 102943 constant pi
 0 value #half-cycle
 0 value #quarter-cycle
 
-: set-freq  ( freq -- )
-   dup to freq
+: set-freq  ( freq sample-rate -- )
+   to fs             ( freq )
+   dup to freq       ( freq )
    pi * to fstep
    fs freq /  dup  to #cycle
    2/         dup  to #half-cycle
@@ -38,16 +39,16 @@ d# 102943 constant pi
 \ : times  ( n1 n2 -- n3 )  d# 32767 */  ;   \ Insignificantly more accurate, but slower
 : times  ( n1 n2 -- n3 )  *  d# 15 rshift   ;
 
-\ Computes  (1 - (x^2 / divisor) * last)
-: sin-step  ( last divisor -- next )  xsq  swap /  times  one min  one swap -  ;
+\ Computes  (1 - (theta^2 / divisor) * last)
+: sin-step  ( last divisor -- next )  thetasq  swap /  times  one min  one swap -  ;
 
 \ Taylor series expansion of sin, calculated as
-\ x * (1 - (x^2/(2*3)) * (1 - (x^2/(4*5)) * (1 - (x^2/(6*7)) * (1 - (x^2/(8*9))))))
+\ theta * (1 - (theta^2/(2*3)) * (1 - (theta^2/(4*5)) * (1 - (theta^2/(6*7)) * (1 - (theta^2/(8*9))))))
 \ This is good for the first quadrant only, i.e. 0 <= index <= fs / freq / 4
 : isin  ( index -- frac )
-   fstep *  fs 2/  /  to x
-   x dup times to xsq
-   one  d# 72 sin-step d# 42 sin-step  d# 20 sin-step  6 sin-step  x times  one min
+   fstep *  fs 2/  /  to theta
+   theta dup times to thetasq
+   one  d# 72 sin-step d# 42 sin-step  d# 20 sin-step  6 sin-step  theta times  one min
 ;
 
 : one-cycle  ( adr -- )
