@@ -34,7 +34,7 @@ inflate.lo: ${ZIPDIR}/inflate.c
 	${CC} -c -m32 -Wall -fno-stack-protector -ffreestanding -D_FORTIFY_SOURCE=0 -DNEED_BCOPY -O3 -fpic $< -o $@
 
 inflate.o: inflate.lo
-	${LD} -T inflate.ld $< -o $@
+	${LD} -melf_i386 -T inflate.ld $< -o $@
 
 ../build/inflate.bin: inflate.o
 	objcopy -O binary $< $@
