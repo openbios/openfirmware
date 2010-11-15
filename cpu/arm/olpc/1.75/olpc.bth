@@ -10,6 +10,7 @@ in: ${BP}/dev/usb2/device/net/build/usbnet.fc
 in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
+in: testicons.bin
 build-now
 
 fload ${BP}/cpu/arm/olpc/1.75/fw-version.fth
@@ -103,7 +104,6 @@ $new-file
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
 [then]
 
-0 [if]
 \    " ${BP}/cpu/x86/pc/olpc/images/warnings.565"  " warnings.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/lightdot.565"  " lightdot.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/yellowdot.565" " yellowdot.565" $add-deflated-dropin
@@ -123,7 +123,6 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wlan.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " int.565"       $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " ext.565"       $add-deflated-dropin
-[then]
 
 0 [if]
    " ${BP}/ofw/termemu/15x30pc.psf"             " font"          $add-deflated-dropin
@@ -142,7 +141,6 @@ $new-file
 
    " sourceurl"   " sourceurl"                    $add-dropin
 
-0 [if]
    " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
 
    \ icons for mfg test gui
@@ -167,6 +165,7 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
    " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
 
+0 [if]
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_tx.bin" " nb_tx"      $add-deflated-dropin
 

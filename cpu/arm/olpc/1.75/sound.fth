@@ -354,7 +354,6 @@ d# 48000 value sample-rate
    true
 ;
 : close  ( -- )  ;
-.s cr
 
 fload ${BP}/forth/lib/isin.fth
 fload ${BP}/forth/lib/tones.fth

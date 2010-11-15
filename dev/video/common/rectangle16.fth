@@ -52,28 +52,39 @@ code 565>argb  ( src dst #pixels -- )
    0= until
 c;
 code argb>565-pixel  ( argb -- 565 )
-   ax pop
-   ax bx mov  d# 19 # bx shr  d# 11 # bx shl  \ Red
-   ax dx mov  d# 24 # dx shl  d# 27 # dx shr  dx bx or  \ Blue
-   d# 16 # ax shl  d# 26 # ax shr  d# 5 # ax shl  bx ax or  \ Green
-   ax push
+   mov  r0,tos,lsr #3    \ Blue
+   and  r0,tos,#0x1f
+
+   and  r1,tos,#0xfc00   \ Green
+   orr  r0,r1,r1,lsr #5
+
+   and  r1,tos,#0xf80000 \ Red
+   orr  r0,r1,r1,lsr #8
+
+   mov  tos,r0
 c;
 
 code argb>565  ( src dst #pixels -- )
-   cx pop
-   di  0 [sp]  xchg
-   si  4 [sp]  xchg
+   mov   r0,tos            \ r0:#pixels
+   ldmia sp!,{r1,r2,tos}   \ r1:dst r2:src
 
    begin
-      ax lods
-      ax bx mov  d# 19 # bx shr  d# 11 # bx shl  \ Red
-      ax dx mov  d# 24 # dx shl  d# 27 # dx shr  dx bx or  \ Blue
-      d# 16 # ax shl  d# 26 # ax shr  d# 5 # ax shl  bx ax or  \ Green
-      op: ax stos
-   loopa
+      ldr  r3,[r2],#4      \ Get source pixel
 
-   di pop
-   si pop
+      mov  r4,r3,lsr #3    \ Blue
+      and  r4,r3,#0x1f
+
+      and  r5,r3,#0xfc00   \ Green
+      orr  r4,r5,r5,lsr #5
+
+      and  r5,r3,#0xf80000 \ Red
+      orr  r4,r5,r5,lsr #8
+
+      strh r4,[r1]
+      inc  r4,#2
+
+      decs r0,#1
+   0= until
 c;
 [then]
 [ifdef] 386-assembler

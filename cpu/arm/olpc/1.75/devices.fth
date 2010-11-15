@@ -174,6 +174,11 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH prog
       ' w!  to pixel!
    [then]
 
+   : color!  ( r g b index -- )  4drop  ;
+   : color@  ( index -- r g b )  drop 0 0 0  ;
+
+   fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
+
    : display-on
       init-xo-display  \ Turns on DCON
       init-lcd
