@@ -177,6 +177,30 @@ code expand-rect  ( src dst w h --- )
 c;
 [then]
 
+[ifdef] arm-assembler
+code expand-rect  ( src dst w h --- )
+   mov    r0,tos             \ r0: Height of source image in pixels
+   ldmia  sp!,{r1,r2,r3,tos} \ r1: Width of source, r2: dst address, r3: src address
+   begin
+      add  r5,r3,r1,lsl #2          \ End address for this line
+      begin
+         ldrh r4,[r3]               \ Get pixel value
+         inc  r3,#2                 \ Increment src
+         strh r4,[r2]               \ Write pixel to dst
+         strh r4,[r2,#2]            \ Duplicate pixel on this line
+         inc  r2,#256               \ Next destination line
+         strh r4,[r2]               \ Write pixel to next line
+         strh r4,[r2,#2]            \ Duplicate pixel on next line
+         dec  r2,#256               \ Back to original destination line
+         inc  r2,#4                 \ Next destination pixel
+         cmp  r3,r5                 \ End?
+      = until
+      inc r2,#256                   \ Skip the next output line - already written
+      decs r0,#1
+   0= until
+c;
+[then]
+
 : expand-icon  ( adr - eadr )
    /icon alloc-mem tuck  ( eadr adr eadr )
    dup /icon 0 fill \ temp - clear old data
