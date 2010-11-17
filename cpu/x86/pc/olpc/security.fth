@@ -862,7 +862,7 @@ warning !
    pop-base
 ;
 : (fw-version)  ( base-adr -- n )
-   h# f.ffc7 +  ((fw-version)
+   h# f.ffc7 +  ((fw-version))
 ;
 
 \ Returns an integer that is derived from a base-36 decoding

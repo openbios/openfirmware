@@ -91,7 +91,7 @@ h# c05c constant my-capabilities \ LargeRd, LargeWr, NTStat, NT SMBs, Large file
 
 : smb-init  ( -- )
    signature 8 erase
-   random h# ffff and to pid
+   random1k h# ffff and to pid
    0 to tid
    0 to mid
    0 to uid
