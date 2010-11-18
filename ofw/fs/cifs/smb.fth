@@ -89,9 +89,15 @@ h# c05c constant my-capabilities \ LargeRd, LargeWr, NTStat, NT SMBs, Large file
 
 0 instance value last-command
 
+[ifdef] random1k
+: random-pid random1k ;
+[else]
+: random-pid get-msecs ;
+[then]
+
 : smb-init  ( -- )
    signature 8 erase
-   random1k h# ffff and to pid
+   random-pid h# ffff and to pid
    0 to tid
    0 to mid
    0 to uid

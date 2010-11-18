@@ -3,7 +3,7 @@ purpose: Expand the test icons
 command: &builder &this
 build-now
 
-" tar xfz ${BP}/cpu/x86/pc/olpc/via/testicons.tgz" expand$ $sh
+" tar xfz ../../../../../cpu/x86/pc/olpc/via/testicons.tgz" expand$ $sh
 
 \ This forces the creation of a .log file, so we don't re-fetch
 writing testicons.version
