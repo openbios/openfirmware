@@ -220,8 +220,8 @@ create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
 
 fload ${BP}/cpu/arm/olpc/1.75/sdhci.fth
 
-devalias int /sd/disk@1
-devalias ext /sd/disk@3
+devalias int /sd/disk@3
+devalias ext /sd/disk@1
 devalias net /wlan  \ XXX should report-net in case of USB Ethernet
 
 fload ${BP}/dev/olpc/kb3700/spicmd.fth
