@@ -1,6 +1,6 @@
 \ See license at end of file
 \ Add this code to the existing mouse driver
-dev /pci/isa/8042@i60/mouse
+dev /mouse
 
 variable 'get-data  'get-data  off
 variable 'get-data? 'get-data? off

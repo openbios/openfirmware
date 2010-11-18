@@ -30,7 +30,7 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
    new-device
       1 encode-int " reg" property
       fload ${BP}/dev/mmc/sdhci/sdmmc.fth
-      \ fload ${BP}/dev/mmc/sdhci/selftest.fth
+      fload ${BP}/dev/mmc/sdhci/selftest.fth
       " external" " slot-name" string-property
    finish-device
 
@@ -42,7 +42,7 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
    new-device
       3 encode-int " reg" property
       fload ${BP}/dev/mmc/sdhci/sdmmc.fth
-      \ fload ${BP}/dev/mmc/sdhci/selftest.fth
+      fload ${BP}/dev/mmc/sdhci/selftest.fth
       " internal" " slot-name" string-property
    finish-device
 

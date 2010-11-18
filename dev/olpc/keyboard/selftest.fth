@@ -4,7 +4,7 @@ purpose: Interactive keyboard test shows which keys are pressed
 \needs final-test?  0 value final-test?
 \needs smt-test?    0 value smt-test?
 
-dev /8042/keyboard
+dev /keyboard
 hex
 
 \ This is 1 for the original rubber keyboard and 2 for the mechanical keyboard

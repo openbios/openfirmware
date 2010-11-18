@@ -60,5 +60,3 @@ c;
 [then]
 
 : show-color  ( eblock# color32 -- )  map-color show-state  ;
-
-dev screen  : erase-screen erase-screen ;  dend

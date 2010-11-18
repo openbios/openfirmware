@@ -55,6 +55,7 @@ hex
    swap in-skip + swap
 ;
 
+[ifdef] 386-assembler
 code adpcm-decode-sample  ( in out sample# -- in' out' )
    \ Get the delta value
    eax pop                              ( in out )
@@ -106,6 +107,34 @@ code adpcm-decode-sample  ( in out sample# -- in' out' )
    d# 88 # eax cmp >  if  d# 88 # eax mov  then
    eax 'user index mov                  \ Update index
 c;
+[then]
+[ifndef] adpcm-decode-sample
+: adpcm-decode-sample  ( in out sample# -- in' out' )
+   7 and  if             ( in out )
+      in-val 4 rshift    ( in out delta )
+   else                  ( in out )
+      over l@            ( in out delta )
+      rot la1+ -rot      ( in' out delta )
+   then                  ( in out delta )
+   dup to in-val         ( in out delta )
+   h# f and  >r          ( in out r: delta' )
+
+   \ Compute difference and new predicated value
+   \ Computes 'vpdiff = (delta+0.5)*step/4', but see comment in adpcm-coder.
+   'stepsize-table index la+ l@    ( in out step r: delta )
+   dup 3 rshift                    ( in out step vpdiff r: delta )
+   r@ 4 and  if  over     +  then  ( in out step vpdiff' r: delta )
+   r@ 2 and  if  over /w* +  then  ( in out step vpdiff' r: delta )
+   r@ 1 and  if  over /l* +  then  ( in out step vpdiff' r: delta )
+   nip                             ( in out vpdiff r: delta )
+
+   r@ 8 and  if  val-pred +  else  val-pred swap -  then  ( in out vp r: delta )
+   d# 32767 min  d# -32768 max   dup to val-pred          ( in out vp r: delta )
+   over w!                                                ( in out  r: delta )
+   out-skip +                                             ( in out' r: delta )
+   'index-table r> la+ l@  index +  0 max  d# 88 min  to index  ( in out )
+;
+[then]
 
 : adpcm-decode-ch  ( in out #sample -- )
    0  ?do

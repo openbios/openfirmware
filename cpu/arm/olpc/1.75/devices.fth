@@ -191,6 +191,9 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH prog
    " ISO8859-1" encode-string    " character-set" property
    0 0  encode-bytes  " iso6429-1983-colors"  property
 
+   \ Used as temporary storage for images by $get-image
+   : graphmem  ( -- adr )  dimensions * pixel*  fb-pa +  ;
+
    : display-install  ( -- )
       display-on
       default-font set-font
@@ -217,8 +220,8 @@ create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
 
 fload ${BP}/cpu/arm/olpc/1.75/sdhci.fth
 
-devalias int /sd@d4281000/disk
-devalias ext /sd@d4280000/disk
+devalias int /sd/disk@1
+devalias ext /sd/disk@3
 devalias net /wlan  \ XXX should report-net in case of USB Ethernet
 
 fload ${BP}/dev/olpc/kb3700/spicmd.fth
@@ -262,8 +265,14 @@ stand-init: Init USB Phy
 
 fload ${BP}/dev/olpc/mmp2camera/loadpkg.fth
 
+fload ${BP}/cpu/x86/adpcm.fth            \ ADPCM decoding
+d# 32 is playback-volume
+
 fload ${BP}/cpu/arm/olpc/1.75/sound.fth
 fload ${BP}/cpu/arm/olpc/1.75/rtc.fth
+stand-init: RTC
+   " /rtc" open-dev  clock-node !
+;
 fload ${BP}/cpu/arm/olpc/1.75/accelerometer.fth
 fload ${BP}/cpu/arm/olpc/1.75/compass.fth
 

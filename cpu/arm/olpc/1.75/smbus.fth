@@ -11,7 +11,7 @@
 : smb-data@  ( -- flag )  smb-data-gpio# gpio-pin@  ;
 : smb-clk@  ( -- flag )  smb-clock-gpio# gpio-pin@  ;
 : smb-off  ( -- )  smb-data-gpio# gpio-dir-in  ;
-: smb-on  ( -- )  smb-data-gpio# gpio-dir-out  ;
+: smb-on  ( -- )  smb-data-gpio# gpio-dir-out  smb-clock-gpio# gpio-dir-out  ;
 : smb-data-dir-out  ( -- )  smb-data-gpio# gpio-dir-out  ;
 : smb-data-dir-in  ( -- )  smb-data-gpio# gpio-dir-in  ;
 

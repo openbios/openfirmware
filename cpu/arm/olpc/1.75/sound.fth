@@ -2,10 +2,12 @@
 " audio" name
 my-space h# 40 reg
 
-: sspa!  ( n offset -- )  h# d42a.0c00 + l!  ;  \ Write a register in SSPA1
-: sspa@  ( offset -- n )  h# d42a.0c00 + l@  ;  \ Read a register in SSPA1
-: adma!  ( n offset -- )  h# d42a.0800 + l!  ;
-: adma@  ( offset -- n )  h# d42a.0800 + l@  ;
+h# d42a.0c00 constant sspa-base
+h# d42a.0800 constant adma-base
+: sspa!  ( n offset -- )  sspa-base + l!  ;  \ Write a register in SSPA1
+: sspa@  ( offset -- n )  sspa-base + l@  ;  \ Read a register in SSPA1
+: adma!  ( n offset -- )  adma-base + l!  ;
+: adma@  ( offset -- n )  adma-base + l@  ;
 
 : audio-clock-on  ( -- )
    h# 600 h# d428.290c l!  d# 10 us  \ Enable
@@ -14,22 +16,34 @@ my-space h# 40 reg
    h# 712 h# d428.290c l!  d# 10 us  \ Release reset
 
 
+[ifdef] 24mhz
    \  * 10 / 27 gives about 147.456
    \ The M/N divisor gets 199.33 MHz (Figure 283 - clock tree - in Datasheet)
    \ But the M/N divisors always have an implicit /2 (section 7.3.7 in datasheet),
    \ so the input frequency is 99.67 with respect to NOM (sic) and DENOM.
-   \ we want 24.576 MHz SYSCLK.  99.67 * 18 / 73 = 24.575 - 50 ppm error.
+   \ we want 24.576 MHz SYSCLK.  99.67 * 18 / 73 = 24.575 so 50 ppm error.
    d# 18 d# 15 lshift d# 73 or h# d000.0000 or  h# d4050040 l!
+[else]
+   \  * 10 / 27 gives about 147.456
+   \ The M/N divisor gets 199.33 MHz (Figure 283 - clock tree - in Datasheet)
+   \ But the M/N divisors always have an implicit /2 (section 7.3.7 in datasheet),
+   \ so the input frequency is 99.67 with respect to NOM (sic) and DENOM.
+   \ we want 12.288 MHz SYSCLK.  99.67 * 9 / 73 = 12.2876 so 50 ppm error.
+   d# 9 d# 15 lshift d# 73 or h# d000.0000 or  h# d4050040 l!
+[then]
 
    h# d405.0024 l@  h# 20 or  h# d405.0024 l!  \ Enable 12S clock out to SSPA1
 
    h# 10800 38 sspa!
+  
+[ifdef] 24mhz
    \ Bits 14:9 set the divisor from SYSCLK to BITCLK.  The setting below
    \ is d# 16, which gives BITCLK = 3.072 MHz.  That's 32x 48000, just enough
    \ for two (stereo) 16-bit samples.
-\   h#  2183 34 sspa!
-  
-   h#  2183 34 sspa!  \ Divisor 16 - BITCLK = 3.072 Mhz
+   h#  2183 h# 34 sspa!  \ Divisor 16 - BITCLK = 3.072 Mhz
+[else]
+   h#  1183 h# 34 sspa!  \ Divisor  8 - BITCLK = 3.072 Mhz
+[then]
 ;
 
 : setup-sspa-rx  ( -- )
@@ -52,6 +66,8 @@ my-space h# 40 reg
    d# 31 d#  4 lshift or \ Frame sync period
    1     d#  2 lshift or \ Flush the FIFO
    h# 0c sspa!
+
+   h# 10 h# 10 sspa!   \ Rx FIFO limit
 ;
 : enable-sspa-rx  ( -- )  h# 0c sspa@  h# 8004.0001 or  h# 0c sspa!  ;
 : disable-sspa-rx  ( -- )  h# 0c sspa@  h# 8000.0040 or  h# 4.0001 invert and    h# 0c sspa!  ;
@@ -68,7 +84,7 @@ my-space h# 40 reg
    2 d#  5 lshift or  \ 16 bit word in phase 1
    0 d#  3 lshift or  \ Left justified data
    2 d#  0 lshift or  \ 16-bit audio sample in phase 1
-   h# 88 sspa!   \ Receive control register
+   h# 88 sspa!   \ Transmit control register
 
    h# 8000.0000          \ Enable writes
    d# 15 d# 20 lshift or \ Frame sync width
@@ -79,81 +95,78 @@ my-space h# 40 reg
    d# 31 d#  4 lshift or \ Frame sync period
    1     d#  2 lshift or \ Flush the FIFO
    h# 8c sspa!
+
+   h# 10 h# 90 sspa!  \ Tx FIFO limit
 ;
 : enable-sspa-tx  ( -- )  h# 8c sspa@  h# 8004.0001 or  h# 8c sspa!  ;
 : disable-sspa-tx  ( -- )  h# 8c sspa@  h# 8000.0040 or  h# 4.0001 invert and  h# 8c sspa!  ;
-: set-tx-fifo-limit  ( n -- )  h# 90 sspa!  ;
-: set-rx-fifo-limit  ( n -- )  h# 10 sspa!  ;
 
-: putsample  ( w -- )
-   d# 16 lshift    \ Justify               ( l )
-   h# a0 sspa@                             ( l fifo-size )
-   begin  dup h# 9c sspa@ <>  until  drop  ( w )
-   h# 80 sspa!
-;
-: getsample  ( -- w )
-   begin  h# 1c sspa@  until
-   0 sspa@ d# 16 rshift
-;
-: audio-in  ( adr len -- actual )
-   tuck bounds  ?do
-      getsample  i w!
-   /w +loop
-;
-: audio-out  ( adr len -- actual )
-   tuck bounds  ?do
-      i w@  putsample
-   /w +loop
-;
-0 value descriptors
-0 value /descriptors
-: make-out-dma-descriptor-chain  ( adr len -- )
-   dup h# 8000 round-up h# 8000 / to /descriptors
-   /descriptors alloc-mem  to descriptors    ( adr len )
-   descriptors /descriptors  bounds  ?do     ( adr len )
-      dup h# 8000 max     i l!               ( adr len )
-      over          i 1 la+ l!               ( adr len )
-      h# d42a.0c80  i 2 la+ l!               ( adr len )
-      i h# 10 +     i 3 la+ l!               ( adr len )
-      h# 8000 /string                        ( adr' len' )
-   h# 10 +loop                               ( adr len )
-   2drop
-   0 descriptors /descriptors + -1 la+ l!
-;
-: make-in-dma-descriptor-chain  ( adr len -- )
-   dup h# 8000 round-up h# 8000 / to /descriptors
-   /descriptors alloc-mem  to descriptors    ( adr len )
-   descriptors /descriptors  bounds  ?do     ( adr len )
-      dup h# 8000 max     i l!               ( adr len )
-      h# d42a.0c00  i 1 la+ l!               ( adr len )
-      over          i 2 la+ l!               ( adr len )
-      i h# 10 +     i 3 la+ l!               ( adr len )
-      h# 8000 /string                        ( adr' len' )
-   h# 10 +loop                               ( adr len )
-   2drop
-   0 descriptors /descriptors + -1 la+ l!
-;
-: dma-audio-in  ( adr len -- )
-   make-in-dma-descriptor-chain
-   \ Channel 1
-   tuck  4 adma!  h# 14 adma! \ Address and length
-   h# d42a.0c00 h# 24 adma!   \ RX Data register
-   0 h# 34 adma!              \ Next descriptor
-   h# 0081.1208   h# 44 adma! \ 16 bits, pack, enable, non-chain, inc dest, hold src
-;
-: dma-audio-out  ( adr len -- )
-   \ Channel 0
-   tuck  0 adma!  h# 10 adma! \ Address and length
-   h# d42a.0c80 h# 20 adma!   \ Tx data register
-   0 h# 30 adma!              \ Next descriptor
-   h# 0081.1220   h# 40 adma! \ 16 bits, pack, enable, non-chain, hold dest, inc src
-;
-: write-done  ;
+h# e000.0000 constant audio-sram
+h# fc0 constant /audio-buf
+audio-sram           constant out-bufs
+audio-sram h# 1f80 + constant out-desc
+audio-sram h# 2000 + constant in-bufs
+audio-sram h# 3f80 + constant in-desc
 
-: open-in   ( -- )  h# 10 set-tx-fifo-limit enable-sspa-rx  ;
-: close-in  ( -- )  disable-sspa-rx  ;
-: open-out  ( -- )  h# 10 set-tx-fifo-limit enable-sspa-tx  ;
-: close-out ( -- )  disable-sspa-tx  ;
+\ Descriptor format:
+\ Byte count
+\ Source
+\ Destination
+\ link
+
+0 value my-out-desc  \ out-desc or out-desc h# 20 +
+0 value out-adr
+0 value out-len
+0 value my-in-desc   \ in-desc or in-desc h# 20 +
+0 value in-adr
+0 value in-len
+: set-descriptor   ( next dest source length adr -- )
+   >r  r@ l!  r@ la1+ l!  r@ 2 la+ l!  r> 3 la+ l!
+;
+: make-out-ring  ( adr len -- )
+   out-desc h# 10 +  sspa-base h# 80 +  out-bufs               /audio-buf   out-desc          set-descriptor
+   out-desc          sspa-base h# 80 +  out-bufs /audio-buf +  /audio-buf   out-desc  h# 10 + set-descriptor
+   out-desc  h# 30 adma!   \ Link to first descriptor
+   out-desc to my-out-desc
+;
+: start-out-ring  ( -- )
+   1 h# 80 adma!           \ Enable DMA completion interrupts
+   h# 0081.3020   h# 40 adma! \ 16 bits, pack, fetch next, enable, chain, hold dest, inc src
+;
+: make-in-ring  ( adr len -- )
+   in-desc h# 10 +  in-bufs               sspa-base   /audio-buf   in-desc          set-descriptor
+   in-desc          in-bufs /audio-buf +  sspa-base   /audio-buf   in-desc  h# 10 + set-descriptor
+   in-desc  h# 34 adma!   \ Link to first descriptor
+   in-desc to my-in-desc
+;
+: start-in-ring  ( -- )
+   1 h# 84 adma!           \ Enable DMA completion interrupts
+\   h# 0081.3008   h# 44 adma! \ 16 bits, pack, fetch next, enable, chain, inc dest, hold src
+   h# 00a1.31c8   h# 44 adma! \ 16 bits, pack, fetch next, enable, chain, burst32, inc dest, hold src
+;
+
+: copy-out  ( -- )
+   my-out-desc >r                        ( r: desc )
+   out-len /audio-buf min                ( this-len r: desc )
+   dup r@ l!                             ( this-len r: desc )
+   out-adr  r@ la1+ l@  third  move      ( this-len r: desc )
+   out-adr  over +  to out-adr           ( this-len r: desc )
+   out-len  swap -  to out-len           ( r: desc )
+   out-len  if
+      r> 3 la+ l@  to my-out-desc
+   else
+      0 r> 3 la+ l!  \ When there is no more data, terminate the list
+   then
+;
+
+: copy-in  ( -- )
+   in-len /audio-buf min                       ( this-len )
+   my-in-desc 2 la+ l@  in-adr  third  move       ( this-len )
+   in-adr  over +  to in-adr                   ( this-len )
+   in-len  over -  to in-len                   ( this-len )
+   drop                                        ( )
+   my-in-desc 3 la+ l@ to my-in-desc
+;
 
 \ Reset is unconnected on current boards
 \ : audio-reset  ( -- )  8 gpio-clr  ;
@@ -203,6 +216,25 @@ my-space h# 40 reg
 : codec-off  ( -- )
    h# ef00 h# 26 codec!  \ Power down everything
 ;
+d# 48000 value sample-rate
+
+\ Longest time to wait for a buffer event - a little more
+\ than the time it takes to output /audio-buf samples
+\ at the current sample rate.
+0 value buf-timeout
+
+: set-sample-rate  ( rate -- )
+   to sample-rate
+   sample-rate case
+      d#  8000 of  h# 2222 h# 5272 d# 48  d# 129  endof
+      d# 16000 of  h# 2020 h# 2272 d# 24  d#  65  endof
+      d# 32000 of  h# 2121 h# 2172 d# 12  d#  33  endof
+      d# 48000 of  h# 0000 h# 3072 d#  8  d#  23  endof
+      ( default )  true abort" Unsupported audio sample rate"
+   endcase   ( reg62val2 reg60val sspareg34val timeout )
+   to buf-timeout
+   9 lshift h# 183 or  h# 34 sspa!  h# 60 codec!  h# 62 codec!
+;
 
 \ Mic bias 2 is for external mic
 \ I think we don't need to use the audio PLL, because we are using the PMUM M/N divider
@@ -213,19 +245,57 @@ my-space h# 40 reg
 \    h# 0000.0000 h# 3c sspa!
 \ ;
 
-: init-audio  ( -- )
-   audio-clock-on
-   codec-on
-   setup-sspa-rx
-   setup-sspa-tx
-;
-: test-setup  ( -- )
-   h# 2000 0 do
-      i     h# e000.0000 i wa+  w!
+: dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
+: dma-free  ( adr len -- )  " dma-free" $call-parent  ;
+
+: open-in   ( -- )  setup-sspa-rx  ;
+: close-in  ( -- )  ;
+: open-out  ( -- )  setup-sspa-tx  ;
+: close-out ( -- )  ;
+: write-done  ( -- )  ;
+
+: wait-out  ( -- )
+   buf-timeout  0  do   
+      1 ms  h# a0 adma@ 1 and  ?leave
    loop
+   0 h# a0 adma!
 ;
-: dma  h# e000.0000 h# 4000 dma-audio-out  ;
-: run  open-out  d# 200 ms  close-out  ;
+: audio-out  ( adr len -- actual )
+   tuck  to out-len  to out-adr   
+   make-out-ring
+   copy-out
+   start-out-ring
+   enable-sspa-tx
+   begin  out-len  while
+      copy-out
+      wait-out
+   repeat
+   wait-out
+   disable-sspa-tx
+;
+: write  ( adr len -- actual )  open-out audio-out   ;
+
+: wait-in  ( -- )
+   buf-timeout  0  do
+      1 ms  h# a4 adma@ 1 and  ?leave
+   loop
+   0 h# a4 adma!
+;
+: audio-in  ( adr len -- actual )
+   tuck  to in-len  to in-adr  ( actual )
+   make-in-ring                ( actual )
+   enable-sspa-rx              ( actual )
+   start-in-ring               ( actual )
+   begin  in-len  while        ( actual )
+      wait-in                  ( actual )
+      copy-in                  ( actual )
+   repeat                      ( actual )
+   disable-sspa-rx             ( actual )
+;
+: read  ( adr len -- actual )  open-in audio-in  ;
+
+: wait-sound  ( -- )  ;
+: stop-sound  ( -- )  ;
 
 0 [if]
 \ Notes:
@@ -245,7 +315,6 @@ my-space h# 40 reg
 : mic+20db  ( -- )  h# 500 mic-gain  ;  \ Needed
 : mic+30db   ( -- )  h# a00 mic-gain  ;
 : mic+40db   ( -- )  h# f00 mic-gain  ;
-
 
 : mic-bias-off  ( -- )  h# 000c h# 3a codec-clr  ;
 : mic-bias-on   ( -- )  h# 000c h# 3a codec-set  ;
@@ -283,23 +352,22 @@ my-space h# 40 reg
 
 : headphones-inserted?  ( -- flag )  h# 54 codec@ 2 and 0<>  ;
 
-\ 0 is off, 1 is softest non-off, etc
-: set-record-gain  ( n -- )
-   0 max  h# 1f max  dup 7 lshift   h# 0f9f h# 12 codec-field
-;
-: attenuation>lr  ( n -- true | regval false )
-   0 max        ( n' )
-   ?dup  if     ( n )
-      h# 1f min
-      h# 20 swap -
+\ The range is from -34.5 db to +12 dB
+: gain>lr  ( db -- true | regval false )
+   2* 3 /              ( steps )  \ Converts -34.5 .. 12 db to -23 .. 8 steps
+   dup d# -23 <  if    ( steps )
+      drop true
+   else                ( steps )
+      8 swap -         ( -steps )
+      0 max            ( clipped-steps )
       dup 8 lshift or  ( regval )
       false
-   else         ( )
-      true
    then
-;   
-: >output-volume  ( n -- regval mask )
-   attenuation>lr  if  h# 8080  then   h# 9f9f       
+;
+\ The range is from -46.5 db to 0 dB
+: >output-volume  ( db -- regval mask )
+   d# 12 +     \ Bias to the range used by gain>lr
+   gain>lr  if  h# 8080  then   h# 9f9f       
 ;
 : set-speaker-volume    ( n -- )  >output-volume  2 codec-field  ;
 : set-headphone-volume  ( n -- )  >output-volume  4 codec-field  ;
@@ -307,19 +375,21 @@ my-space h# 40 reg
 : set-volume  ( n -- )
    dup set-speaker-volume  set-headphone-volume
 ;
-d# 8 constant default-dac-gain
-
-d# 20 constant default-volume
+d#  0 constant default-adc-gain            \  0 dB - range is -16.5 to +30
+d#  0 constant default-dac-gain            \  0 dB - range is -34.5 to +12
+d# 44 constant default-mic-gain            \ 44 dB - range is -34.5 to 
+d#  0 constant default-speaker-volume      \  0 dB - range is -46.5 to 0
+d#  0 constant default-headphone-volume    \  0 dB - range is -46.5 to 0
 
 : select-headphones  ( -- )  h# 300 h# 1c codec!  ;
 : select-speakers-ab  ( -- )  h# 4800 h# 1c codec!  ;  \ ClassAB, headphone mixer
 : select-speakers  ( -- )  h# 6800 h# 1c codec!  ;  \ ClassD, headphone mixer
 
 : set-line-in-gain  ( n -- )
-   attenuation>lr  if  h# e000  then  h# ff1f  h# a  codec-field
+   gain>lr  if  h# e000  then  h# ff1f  h# 0a codec-field
 ;
 : set-dac-gain  ( n -- )
-   attenuation>lr  if  h# e000  then  h# ff1f  h# c  codec-field
+   gain>lr  if  h# e000  then  h# ff1f  h# 0c codec-field
 ;
 false value external-mic?
 : mic-routing  ( -- n )
@@ -328,34 +398,65 @@ false value external-mic?
    \ For internal, we send MIC1 to both left and right
    external-mic?  if   h# 2040  else  h# 2020  then
 ;
-: set-mic-gain  ( n -- )
-   attenuation>lr  if  ( )  \ Mute
+: set-mic-boost  ( db -- db' )
+   dup d# 26 >  if  mic+40db d# 40 -  exit  then
+   dup d# 16 >  if  mic+30db d# 30 -  exit  then
+   dup d# 06 >  if  mic+20db d# 20 -  exit  then
+   mic+0db
+;
+: set-mic-gain  ( db -- )
+   set-mic-boost              ( db' )   
+   gain>lr  if                ( )  \ Mute
       \ Turn everything off
+      mic-bias-off            ( )
       0  h# 6060  h# e0e0     ( gain adc-mute mic-output-mute )
    else                       ( gain )
+      mic-bias-on             ( gain )
       \ Mic routing to ADC depends on internal or external mic
-      \ We route the mic only to the headphone output
-      mic-routing  h# 6060    ( gain adc-mute mic-output-mute )
+      mic-routing             ( gain adc-mute )
+      \ To avoid feedback, we do not feedthrough the mic
+      h# e0e0                 ( gain adc-mute mic-output-mute )
    then                       ( gain adc-mute mic-output-mute )
    h# e0e0 h# 10 codec-field  ( gain adc-mute )
    h# 6060 h# 14 codec-field  ( gain )
-   h# 1f1f h# 0c codec-field
+   h# 1f1f h# 0e codec-field
+;
+: set-adc-gain  ( db -- )  \ Range is -16.5 dB to +30 dB
+   d# 18 -       ( db' )
+   gain>lr  if  0  then   ( gain )
+   h# f9f h# 12 codec-field
+   h# 60 h# 12 codec-set  \ Enable ADC zero-cross detectors
+;
+   
+\ This is called from "record" in "mic-test" in "selftest"
+: set-record-gain  ( db -- )
+   \ translate value from ac97 selftest code into our default value
+   dup h# 808  =  if          ( db )
+      drop default-adc-gain   ( db' )
+      d# 40 set-mic-gain      ( db )
+   then                       ( db )
+   set-adc-gain
 ;
 
 : stereo  ;
 : mono  ;
 
-d# 48000 value sample-rate
 : open  ( -- flag )
-   init-audio
+   audio-clock-on
+   codec-on
    headphones-inserted?  if  select-headphones  else  select-speakers  then
-   default-volume set-volume
+   default-speaker-volume set-speaker-volume
+   default-headphone-volume set-headphone-volume
    default-dac-gain set-dac-gain
+   default-mic-gain set-mic-gain
+   default-adc-gain set-adc-gain
+   d# 48000 set-sample-rate
    true
 ;
 : close  ( -- )  ;
 
 fload ${BP}/forth/lib/isin.fth
 fload ${BP}/forth/lib/tones.fth
+fload ${BP}/dev/geode/ac97/selftest.fth
 
 end-package

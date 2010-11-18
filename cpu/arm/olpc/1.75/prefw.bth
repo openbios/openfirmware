@@ -38,6 +38,8 @@ true ' fcode-debug? set-config-int-default
 " com1" ' input-device set-config-string-default
 [then]
 
+fload ${BP}/ofw/core/memlist.fth	\ Resource list common routines
+fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
 
 fload ${BP}/cpu/arm/mmp2/rootnode.fth	\ Root node mapping - physical mode
 dev /
@@ -64,8 +66,7 @@ fload ${BP}/ofw/core/clntphy1.fth	\ client services for memory
    then
 ;
 [then]
-fload ${BP}/ofw/core/memlist.fth	\ Resource list common routines
-fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
+
 fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
 fload ${BP}/ofw/core/availpm.fth	\ Available memory list
 
@@ -196,18 +197,6 @@ end-support-package
 
 : olpc-ssids  ( -- $ )  " OLPCOFW"  ;
 ' olpc-ssids to default-ssids
-
-[ifdef] notyet
-create use-thinmac
-fload ${BP}/cpu/x86/bootascall.fth
-fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
-fload ${BP}/cpu/x86/pc/olpc/via/nbtx.fth
-fload ${BP}/cpu/x86/pc/olpc/via/nbrx.fth
-fload ${BP}/cpu/x86/pc/olpc/via/blockfifo.fth
-fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
-fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
-devalias fsdisk int:0
-[then]
 
 fload ${BP}/ofw/inet/sntp.fth
 : olpc-ntp-servers  ( -- )

@@ -247,6 +247,8 @@ defer transparent-pixel!  ( color fbadr i -- )
       2drop
    then
 ;
+\ This creates a device method from a termemu method
+: erase-screen  ( -- )  erase-screen  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

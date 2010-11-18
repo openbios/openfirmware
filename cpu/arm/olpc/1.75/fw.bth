@@ -5,7 +5,7 @@ dictionary: ${BP}/cpu/arm/olpc/1.75/build/prefw.dic
 command: &armforth &dictionary &this
 build-now
 
-\ " fw.tag" r/w create-file drop  tag-file !
+" fw.tag" r/w create-file drop  tag-file !
 
 hex
 \ ' $report-name is include-hook
@@ -51,6 +51,8 @@ d# 9999 to arm-linux-machine-type  \ Marvell Jasper
 \ false to stand-init-debug?
 true to stand-init-debug?
 
+false value secure?
+
 : protect-fw  ( -- )  ;
 
 hex
@@ -90,8 +92,6 @@ warning !
 ;
 ' (.firmware) to .firmware
 
-\ fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
-
 patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
 patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
 
@@ -126,6 +126,12 @@ true value text-on?
 
 fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
 
+h# d00 value board-revision   \ Implement me!!!
+
+\ This must be defined after spiui.fth, otherwise spiui will choose some wrong code
+: rom-pa  ( -- adr )  mfg-data-buf mfg-data-offset -  ;  \ Fake out setwp.fth
+fload ${BP}/cpu/x86/pc/olpc/setwp.fth
+
 fload ${BP}/cpu/x86/pc/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/strokes.fth
@@ -142,23 +148,49 @@ fload ${BP}/cpu/x86/pc/olpc/plot.fth
 end-package
 
 fload ${BP}/dev/logdev.fth
-[ifdef] notyet
+0 value smt-test?  \ !!!
+0 value final-test?  \ !!!
+fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
-[then]
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
 
-[ifdef] notyet
+: game-key@  ( -- n )  0  ;   \ Implement me!!!
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 : emacs  ( -- )
    false to already-go?
    boot-getline to boot-file   " rom:emacs" $boot
 ;
 defer rm-go-hook  \ Not used, but makes security happy
+: tsc@  ( -- d.ticks )  timer0@ u>d  ;
+d# 6500 constant ms-factor
+0 value ec-indexed-io-off?    \ !!!
+: ec-indexed-io-off  ( -- )  ;  \ !!!
+: ec-ixio-reboot  ( -- )  ;   \ !!!
+: flash-base  ( -- )  true abort" The stuff that relies on flash-base in security.fth needs to be reworked!"  ;
+: cmos@  ( index -- data )  h# 38 mod  8 +  " rtc@" clock-node @  $call-method  ;
+: cmos!  ( index data -- )  h# 38 mod  8 +  " rtc!" clock-node @  $call-method  ;
+: halt  ( -- )  c7-wfi  ;
+fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 
+[ifdef] notyet
+create use-thinmac
+fload ${BP}/cpu/x86/bootascall.fth
+fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
+fload ${BP}/cpu/x86/pc/olpc/via/nbtx.fth
+fload ${BP}/cpu/x86/pc/olpc/via/nbrx.fth
+fload ${BP}/cpu/x86/pc/olpc/via/blockfifo.fth
+[else]
+0 value nb-zd-#sectors
+: nandblaster  true abort" No nandblaster yet"  ;
+: show-temperature  ;
 [then]
+
+fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
+fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
+devalias fsdisk int:0
 
 fload ${BP}/ofw/gui/ofpong.fth
 [ifdef] notyet
@@ -170,6 +202,8 @@ fload ${BP}/cpu/x86/pc/olpc/life.fth
 
 \needs ramdisk  " " d# 128 config-string ramdisk
 " "   ' boot-file      set-config-string-default   \ Let the boot script set the cmdline
+
+2 config-int auto-boot-countdown
 
 \ Eliminate 4 second delay in install console for the case where
 \ there is no keyboard.  The delay is unnecessary because the screen
@@ -212,7 +246,9 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    warning on
    only forth also definitions
 
+   show-child
    install-alarm
+   ['] sound catch drop
 
    page-mode
    #line off
@@ -250,6 +286,7 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    game-key-mask =  if  protect-fw try-fs-update  then
 ;
 [then]
+
 
 : startup  ( -- )
    standalone?  0=  if  exit  then
@@ -311,7 +348,7 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    " devalias fsdisk //null" evaluate
 ;
 
-\ tag-file @ fclose  tag-file off
+tag-file @ fclose  tag-file off
 
 .( --- Saving fw.dic ...)
 " fw.dic" $save-forth cr

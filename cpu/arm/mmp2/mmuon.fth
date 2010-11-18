@@ -29,7 +29,7 @@ c;
 \   h# d100.0000  h# c0e  over  h# 0030.0000 map-sections  \ Cache and write bufferable (SRAM)
    h# d100.0000  h# c02  over  h# 0030.0000 map-sections  \ I/O - no caching or buffering (SRAM)
    h# d400.0000  h# c02  over  h# 0040.0000 map-sections  \ I/O - no caching or buffering
-   h# e000.0000  h# c02  over  /section     map-sections  \ I/O - no caching or buffering
+   h# e000.0000  h# c02  over  /section     map-sections  \ Audio SRAM - no caching or buffering
 ;
 
 : setup-sections

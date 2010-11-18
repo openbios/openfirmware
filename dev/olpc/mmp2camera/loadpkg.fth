@@ -22,7 +22,6 @@
    ;
 [then]
 
-   fload ${BP}/cpu/arm/olpc/1.75/smbus.fth
    fload ${BP}/dev/olpc/mmp2camera/platform.fth
    fload ${BP}/dev/olpc/mmp2camera/ov.fth
    fload ${BP}/dev/olpc/mmp2camera/ccic.fth

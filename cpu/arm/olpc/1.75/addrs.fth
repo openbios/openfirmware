@@ -6,6 +6,7 @@ h#   40.0000 constant fb-size  \ The screen use a little more than 3 MiB at 1200
 
 fb-pa constant available-ram-size
 
+
 h#  20000 constant dropin-offset   \ Offset to dropin driver area in SPI FLASH
 [ifdef] use-flash-nvram
 h# d.0000 constant nvram-offset
@@ -20,8 +21,10 @@ h# 10.0000 constant /rom           \ Total size of SPI FLASH
 : (memory?)  ( phys -- flag )  total-ram-size u<  ;
 
 \ OFW implementation choices
-\ h# 1fe0.0000 constant fw-pa
 h# 1fa0.0000 constant fw-pa
+
+h# 1f00.0000 constant dma-base
+h#   a0.0000 constant dma-size
 
 [ifdef] virtual-mode
 h# f700.0000 constant fw-virt-base
