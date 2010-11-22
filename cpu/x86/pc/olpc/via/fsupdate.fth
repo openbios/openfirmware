@@ -64,7 +64,20 @@ d# 128 constant /spec-maxline
 vocabulary nand-commands
 also nand-commands definitions
 
+: flash-led  ( -- )
+    h# 4c acpi-l@
+    h# 400000 xor
+    h# 4c acpi-l!
+;
+
+: clear-led  ( -- )
+    h# 4c acpi-l@
+    h# 400000 or
+    h# 4c acpi-l!
+;
+
 : zblocks:  ( "eblock-size" "#eblocks" ... -- )
+   flash-led
    ?compare-spec-line
    get-hex# to /nand-block
    get-hex# to #image-eblocks
@@ -87,6 +100,7 @@ also nand-commands definitions
    " write-blocks-end" $call-nand   ( error? )
    " Write error" ?nand-abort
 \   #image-eblocks erase-gap
+   clear-led
    release-inflater
    fexit
 ;
@@ -215,6 +229,7 @@ true value check-hash?
    dup to last-eblock#                   ( eblock# )
    show-written                          ( )
    show-temperature
+   flash-led
 ;
 
 previous definitions
