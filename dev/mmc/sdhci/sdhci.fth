@@ -135,20 +135,24 @@ defer card-power-off
 : card-clock-on   ( -- )  h# 2c cw@  4 or  h# 2c cw!  ;
 : card-clock-off  ( -- )  h# 2c cw@  4 invert and  h# 2c cw!  ;
 
+: sdhci-version3?  ( -- flag )  h# fe cw@  h# ff and  2 >=  ;
 : card-clock-slow  ( -- )  \ Less than 400 kHz, for init
    card-clock-off
-   h# 8003 h# 2c cw!   \ Set divisor to 2^128, leaving internal clock on
+   \ Set divisor, leaving internal clock on
+   sdhci-version3?  if  h# 43  else  h# 8001  then  h# 2c cw!
    card-clock-on
 ;
 
 : card-clock-25  ( -- )
    card-clock-off
-   h# 103 h# 2c cw!   \ Set divisor to 2^1, leaving internal clock on
+   \ Set divisor, leaving internal clock on
+   sdhci-version3?  if  h# 403  else  h# 103  then  h# 2c cw!
    card-clock-on
 ;
 : card-clock-50  ( -- )
    card-clock-off
-   h# 003     \ division = 2^0, clocks on
+   \ Set divisor, leaving internal clock on
+   sdhci-version3?  if  h# 203  else  h# 001  then
 
    ?cafe-fpga-quirk
 
@@ -659,6 +663,7 @@ false value avoid-high-speed?
 
    \ Ask if high-speed is supported
    h# 00ff.fff1 switch-function d# 13 + c@  2  and  if   \ cmd6
+      2 ms
       h# 80ff.fff1 switch-function drop   \ Perform the switch  cmd6
       \ Bump the host controller clock
       host-high-speed  \ Changes the clock edge

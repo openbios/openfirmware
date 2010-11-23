@@ -5,16 +5,9 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
    fload ${BP}/cpu/arm/olpc/1.75/sdregs.fth
    fload ${BP}/dev/mmc/sdhci/sdhci.fth
 
-   true to avoid-high-speed?
+\   true to avoid-high-speed?
 
    hex
-   \ The new clock divisor layout is low 8 bits in [15:8] and high 2 bits in [7:6]
-   \ The resulting 10-bit value is multiplied by 2 to form the divisor for the
-   \ 200 MHz base clock.
-   patch 403  103 card-clock-25    \ n is 4, divisor is 8, clk is 25 MHz
-   patch 203  003 card-clock-50    \ n is 2, divisor is 4, clk is 50 MHz
-   patch 043 8003 card-clock-slow  \ n is h# 100 (high 2 bits in [7:6], for divisor of 512 from 200 MHz clock
-
    : olpc-card-inserted?  ( -- flag )
       slot 1 =  if  d# 31 gpio-pin@ 0=  else  true  then
    ;
