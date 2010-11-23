@@ -241,6 +241,7 @@ defer upstream
    pulse-ack
 ;
 : (upstream)  ( -- )
+   rxavail 2 <>  if  ." ec-spi rxavail = " rxavail . cr  debug-me  then
    ssp-ssdr rl@  ssp-ssdr rl@              ( channel# data )
    debug? if
       ." UP: " over . dup . cr
@@ -265,7 +266,9 @@ defer upstream
 ;
 
 : poll  ( -- )
+   lock[
    ssp-ready?  if  do-state  then
+   ]unlock
    debug?  if  key?  if  key drop debug-me  then  then
 ;
 : cancel-command  ( -- )  \ Called when the command child times out
@@ -354,10 +357,20 @@ d# 16 buffer: ec-respbuf
    dup 5 >  abort" Too many EC command arguments"
    ec-cmdbuf 3 +   swap  bounds  ?do  i c!  loop  ( )
 ;
+: timed-get-data  ( -- b )
+   get-msecs  d# 20 +   begin         ( limit )
+      " get-data?" $call-parent  if   ( limit data )
+         nip exit
+      then                            ( limit )
+      dup get-msecs - 0<              ( limit )
+   until                              ( limit )
+   drop
+   true abort" EC command result timeout"
+;
+   
 : get-results  ( -- [ results ] )
    ec-respbuf  #results  bounds  ?do
-      begin  " get-data?" $call-parent  until  ( byte )
-      i c!
+      timed-get-data i c!
    loop
 
    #results 0 ?do  \ XXX maybe this loop should go backwards?
