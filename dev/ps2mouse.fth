@@ -299,7 +299,7 @@ headerless
    lock[
    identify  if
       \ This port is unresponsive; try the other
-      my-unit 1- set-port  identify  if  ]unlock  true exit  then
+      my-space 1- set-port  identify  if  ]unlock  true exit  then
    then                                   ( id )
 
    dup  h# ab =  if                       ( id )
@@ -312,7 +312,7 @@ headerless
       my-port 0=  if  ]unlock  true exit  then
 
       \ Otherwise look for the mouse on the keyboard port
-      my-unit 1- set-port  identify  if  ]unlock  true exit  then  ( id )
+      my-space 1- set-port  identify  if  ]unlock  true exit  then  ( id )
    then                                   ( id )
    ]unlock                                ( id )
 
@@ -325,7 +325,7 @@ headerless
 
 headers
 : open  ( -- flag )
-   my-unit set-port
+   my-space set-port
 
    open-count 0=  if
       \ The "force" argument causes the open to succeed even if no mouse
