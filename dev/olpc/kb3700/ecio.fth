@@ -238,6 +238,8 @@ d# 10 constant #ec-retries
 : sci-inhibit      ( -- )  h# 32 ec-cmd  ;
 : sci-uninhibit    ( -- )  h# 34 ec-cmd  ;
 
+: mppt-active@  ( -- b )  h# 3d ec-cmd-b@  ;
+
 : autowack-on      ( -- )         1 33 ec-cmd-b! ;
 : autowack-off     ( -- )         0 33 ec-cmd-b! ;
 : autowack-delay   ( delay -- )   wbsplit f650 ec! f651 ec! ;

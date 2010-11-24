@@ -126,8 +126,6 @@ true value text-on?
 
 fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
 
-h# d00 value board-revision   \ Implement me!!!
-
 \ This must be defined after spiui.fth, otherwise spiui will choose some wrong code
 : rom-pa  ( -- adr )  mfg-data-buf mfg-data-offset -  ;  \ Fake out setwp.fth
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth

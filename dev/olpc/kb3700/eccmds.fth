@@ -37,40 +37,30 @@ d# 10 constant #ec-retries
    loop
    too-many-retries
 ;
-: (bat-gauge@)   ( -- b )  h# 31 1 1 h# 18 do-ec-cmd  ;  \ 31 is the EEPROM address
-: bat-gauge@  ( -- b )
-   #ec-retries  0  do
-      ['] (bat-gauge@) catch  0=  if  unloop exit  then
-   loop
-   too-many-retries
-;
 
-: (bat-type@)    ( -- b )  h# 5f 1 1 h# 18 do-ec-cmd  ;  \ 5f is the EEPROM address
-: bat-type@  ( -- b )
-   #ec-retries  0  do
-      ['] (bat-type@) catch  0=  if  unloop exit  then
-   loop
-   too-many-retries
-;
 
-: board-id  ( -- n )  h# 19 ec-cmd-w@  ;
+: board-id@  ( -- n )  h# 19 ec-cmd-w@  ;
 : reset-ec  ( -- )  h# 28 ec-cmd  ;
 
+: bat-type@  ( -- b )  h# 2c ec-cmd-b@  ;
 : autowack-on      ( -- )         1 33 ec-cmd-b! ;
 : autowack-off     ( -- )         0 33 ec-cmd-b! ;
 
+: bat-gauge@  ( -- w )  h# 4e ec-cmd-w@  ;
+
 : ec-echo  ( ... n -- ... )  dup h# 52 do-ec-cmd  ;
 
+: mppt-active@  ( -- b )  h# 3d ec-cmd-b@  ;
+
+: bat-cause@  ( -- b )  h# 1f ec-cmd-b@  ;
+
 [ifdef] notdef
-#define CMD_READ_BATT_ERR_CODE           0x1f
-#define CMD_READ_BATTERY_TYPE            0x2c
 #define CMD_SET_EC_WAKEUP_TIMER          0x36
 #define CMD_READ_EXT_SCI_MASK            0x37
 #define CMD_WRITE_EXT_SCI_MASK           0x38
 #define CMD_CLEAR_EC_WAKEUP_TIMER        0x39
 #define CMD_ENABLE_RUNIN_DISCHARGE       0x3B
 #define CMD_DISABLE_RUNIN_DISCHARGE      0x3C
-#define CMD_READ_MPPT_ACTIVE             0x3d
 #define CMD_READ_MPPT_LIMIT              0x3e
 #define CMD_SET_MPPT_LIMIT               0x3f
 #define CMD_DISABLE_MPPT                 0x40
@@ -79,15 +69,12 @@ d# 10 constant #ec-retries
 #define CMD_EXT_SCI_QUERY                0x43
 #define CMD_READ_LOCATION                0x44
 #define CMD_WRITE_LOCATION               0x45
-#define CMD_KEYBOARD_CMD                 0x46
-#define CMD_TOUCHPAD_CMD                 0x47
 #define RSP_KEYBOARD_DATA                0x48
 #define RSP_TOUCHPAD_DATA                0x49
 #define CMD_GET_FW_VER                   0x4a
 #define CMD_POWER_CYCLE                  0x4b
 #define CMD_POWER_OFF                    0x4c
 #define CMD_RESET_EC_SOFT                0x4d
-#define CMD_READ_GUAGE_U16               0x4e
 #define CMD_ENABLE_MOUSE                 0x4f
 [then]
 

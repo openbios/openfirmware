@@ -230,6 +230,7 @@ devalias keyboard /ec-spi/keyboard
 
 fload ${BP}/dev/olpc/kb3700/eccmds.fth
 fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
+fload ${BP}/cpu/arm/olpc/1.75/boardrev.fth   \ Board revision decoding
 
 0 0  " d4208000"  " /" begin-package  \ USB Host Controller
    h# 200 constant /regs
@@ -281,15 +282,14 @@ warning @ warning off
 : stand-init
    stand-init
    root-device
-[ifdef] notyet
       model-name$   2dup model     ( name$ )
       " OLPC " encode-bytes  2swap encode-string  encode+  " banner-name" property
       board-revision " board-revision-int" integer-property
-[then]
+
       \ The "1-" removes the null byte
       " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
 [ifdef] notyet
-      8 ec-cmd-b@ dup " ec-version" integer-property
+      ec-api-ver@ " ec-version" integer-property
 
       XXX Get EC name with an EC command
       " ec-name" string-property
