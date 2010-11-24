@@ -228,6 +228,7 @@ fload ${BP}/dev/olpc/kb3700/spicmd.fth
 
 devalias keyboard /ec-spi/keyboard
 
+fload ${BP}/dev/olpc/kb3700/eccmds.fth
 fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
 
 0 0  " d4208000"  " /" begin-package  \ USB Host Controller

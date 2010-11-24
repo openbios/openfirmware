@@ -1,20 +1,6 @@
 \ See license at end of file
 purpose: Reflash the EC code
 
-0 value ec-ih
-: open-ec  ( -- )
-   ec-ih 0=  if
-      " /eccmd" open-dev to ec-ih
-   then
-   ec-ih 0= abort" Can't open eccmd node"
-;
-: close-ec  ( -- )
-   ec-ih  if
-      ec-ih close-dev
-      0 to ec-ih
-   then
-;
-
 h# 10000 value /ec-flash
 
 char 3 value expected-ec-version
@@ -45,24 +31,20 @@ char 3 value expected-ec-version
 ;
 : flash-ec  ( "filename" -- )
    get-ec-file
-   open-ec
-   " enter-updater" ec-ih $call-method
-   ." Erasing ..." " erase-flash" ec-ih $call-method cr
-   ." Writing ..." load-base /ec-flash 0 " write-flash" ec-ih $call-method  cr
+   " enter-updater" $call-ec
+   ." Erasing ..." " erase-flash" $call-ec cr
+   ." Writing ..." load-base /ec-flash 0 " write-flash" $call-ec  cr
    ." Verifying ..."
-   load-base /ec-flash + /ec-flash 0 " read-flash" ec-ih $call-method
+   load-base /ec-flash + /ec-flash 0 " read-flash" $call-ec
    load-base  load-base /ec-flash +  /ec-flash  comp
    abort" Miscompare!"
    cr
-   " reboot-ec" ec-ih $call-method
-   close-ec
+   reset-ec
 ;
 : read-ec-flash  ( -- )
-   open-ec
-   " enter-updater" ec-ih $call-method
-   flash-buf /ec-flash 0 " read-flash" ec-ih $call-method
-\  " reboot-ec" ec-ih $call-method
-   close-ec
+   " enter-updater" $call-ec
+   flash-buf /ec-flash 0 " read-flash" $call-ec
+\  " reboot-ec" $call-ec
 ;
 : save-ec-flash  ( "name" -- )
    safe-parse-word $new-file

@@ -280,7 +280,6 @@ defer upstream
 
 0 instance value port#
 : set-port  ( port# -- )  to port#  ;
-\ : put-data  ( byte -- )  port# 2 0 d# 99 ec-command  ;  \ XXX
 : get-data?  ( -- false | data true )
    port# deque?     ( false | data true )
    poll
@@ -292,7 +291,6 @@ defer upstream
    loop
    true \ abort" Timeout waiting for data from device" 
 ;
-\ : put-get-data  ( cmd -- data | -1 )  put-data get-data  ;
 \ Wait until the device stops sending data
 : clear-out-buf  ( -- )  begin  d# 120 ms  get-data?  while  drop  repeat  ;
 
@@ -331,16 +329,6 @@ defer upstream
    >r >r >r  0 0 0  r> r> r>  data-command
 ;
 
-new-device
-" "  " 2" set-args
-" eccmd" name
-my-space " reg" integer-property
-: open  ( -- flag )
-   my-unit " set-port" $call-parent
-   true
-;
-: close  ( -- )
-;
 8 buffer: ec-cmdbuf
 d# 16 buffer: ec-respbuf
 : expected-response-length  ( -- n )  ec-cmdbuf 1+ c@ h# f and  ;
@@ -357,11 +345,12 @@ d# 16 buffer: ec-respbuf
    dup 5 >  abort" Too many EC command arguments"
    ec-cmdbuf 3 +   swap  bounds  ?do  i c!  loop  ( )
 ;
-: timed-get-data  ( -- b )
+: timed-get-results  ( -- b )
    get-msecs  d# 20 +   begin         ( limit )
-      " get-data?" $call-parent  if   ( limit data )
-         nip exit
+      2 deque?  if                    ( limit b )
+         nip exit                     ( -- b )
       then                            ( limit )
+      poll                            ( limit )
       dup get-msecs - 0<              ( limit )
    until                              ( limit )
    drop
@@ -370,7 +359,7 @@ d# 16 buffer: ec-respbuf
    
 : get-results  ( -- [ results ] )
    ec-respbuf  #results  bounds  ?do
-      timed-get-data i c!
+      timed-get-results i c!
    loop
 
    #results 0 ?do  \ XXX maybe this loop should go backwards?
@@ -380,18 +369,27 @@ d# 16 buffer: ec-respbuf
 : ec-command  ( [ args ] #args #results cmd-code -- [ results ] error? )
    0 set-cmdbuf
 
-   ec-cmdbuf 8 false " no-data-command" $call-parent
+   ec-cmdbuf 8 false no-data-command
 
    get-results
    false
 ;
+: put-data  ( byte -- )
+   1 0
+   port# case
+      3 of  h# 46 endof
+      4 of  h# 47 endof
+      ( default )  3drop exit
+   endcase   ( byte #args #results cmd )
+   ec-command drop
+;
+: put-get-data  ( cmd -- data | -1 )  put-data get-data  ;
+
 : enter-updater  ( -- )
    0 0 h# 50 1 set-cmdbuf
    
-   ec-respbuf 1 true  ec-cmdbuf 8 true " data-command" $call-parent
+   ec-respbuf 1 true  ec-cmdbuf 8 true data-command
 ;
-
-: reboot-ec  ( -- )  0 0 h# 28 ec-command drop  ;
 
 create pgm-cmd     h# 51 c, h# 84 c, d# 16 c, h# 02 c, h# 00 c, 0 c, 0 c, 0 c,
 create read-cmd    h# 51 c, h# 04 c, d# 16 c, h# 03 c, h# 00 c, 0 c, 0 c, 0 c,
@@ -405,9 +403,8 @@ create erase-cmd   h# 51 c, h# 01 c, d# 00 c, h# 60 c, h# 80 c, 0 c, 0 c, 0 c,
    lbsplit drop  ( low mid hi r: template )
    r@ 4 + c!  r@ 5 + c!  r> 6 + c!
 ;
-: flash-command  ( datadr datlen in? template -- )
-   8 true  " data-command" $call-parent
-;
+: flash-command  ( datadr datlen in? template -- )  data-command  ;
+
 : write-flash-chunk  ( adr len offset -- )  \ len limited to 16 bytes for now
    over pgm-cmd set-offset&len   ( adr len )
    false pgm-cmd flash-command   ( )
@@ -458,8 +455,6 @@ create erase-cmd   h# 51 c, h# 01 c, d# 00 c, h# 60 c, h# 80 c, 0 c, 0 c, 0 c,
    h# 10 +loop             ( adr )
    drop                    ( )
 ;
-
-finish-device
 
 new-device
    " "  " 3" set-args
