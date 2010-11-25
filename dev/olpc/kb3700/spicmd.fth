@@ -403,7 +403,7 @@ create erase-cmd   h# 51 c, h# 01 c, d# 00 c, h# 60 c, h# 80 c, 0 c, 0 c, 0 c,
    lbsplit drop  ( low mid hi r: template )
    r@ 4 + c!  r@ 5 + c!  r> 6 + c!
 ;
-: flash-command  ( datadr datlen in? template -- )  data-command  ;
+: flash-command  ( datadr datlen in? template -- )  8 true  data-command  ;
 
 : write-flash-chunk  ( adr len offset -- )  \ len limited to 16 bytes for now
    over pgm-cmd set-offset&len   ( adr len )
