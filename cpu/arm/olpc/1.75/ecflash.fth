@@ -32,9 +32,9 @@ char 3 value expected-ec-version
 : flash-ec  ( "filename" -- )
    get-ec-file
    " enter-updater" $call-ec
-   ." Erasing ..." " erase-flash" $call-ec cr
-   ." Writing ..." load-base /ec-flash 0 " write-flash" $call-ec  cr
-   ." Verifying ..."
+   ." Erasing ..." cr  " erase-flash" $call-ec cr
+   ." Writing ..." cr  load-base /ec-flash 0 " write-flash" $call-ec  cr
+   ." Verifying ..." cr
    load-base /ec-flash + /ec-flash 0 " read-flash" $call-ec
    load-base  load-base /ec-flash +  /ec-flash  comp
    abort" Miscompare!"
