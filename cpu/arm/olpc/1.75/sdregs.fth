@@ -18,5 +18,8 @@ my-space /regs  reg
 ;
 
 : vendor-modes  ( -- )  ;
-: ?cafe-fpga-quirk  ( -- )  ;
+
+\ This tunes the data timing for better operation at 50 MHz
+: ?cafe-fpga-quirk  ( -- )  h# 10a chip + rw@  h# 3f00 or  h# 10a chip + rw!  ;
+
 : ?via-quirk  ( -- )  ;
