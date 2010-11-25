@@ -18,7 +18,7 @@ purpose: Determine the board revision based on hardware and EC info
 ;
 
 stand-init: board revision
-   ['] board-id@ catch  if  0  then
+   ['] board-id@ catch  if  h# 1a1  then
    dup  if  h# 10 * 8 +  then   to board-revision
 ;
 
