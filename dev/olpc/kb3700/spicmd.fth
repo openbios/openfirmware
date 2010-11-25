@@ -241,7 +241,7 @@ defer upstream
    pulse-ack
 ;
 : (upstream)  ( -- )
-   rxavail 2 <>  if  ." ec-spi rxavail = " rxavail . cr  debug-me  then
+   rxavail 2 <>  if  ." ec-spi rxavail = " rxavail . cr  then
    ssp-ssdr rl@  ssp-ssdr rl@              ( channel# data )
    debug? if
       ." UP: " over . dup . cr
