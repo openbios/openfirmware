@@ -99,8 +99,8 @@ d# 905 value resumeline  \ Configurable; should be set from args
          \ We got a false ack from the DCON so start over from LOAD state
          dcon-load  d# 25 ms            ( )
       repeat                            ( )
-   then
 [then]
+   then
 ;
 
 \ gx_configure_tft(info);
