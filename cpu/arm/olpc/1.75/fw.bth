@@ -365,7 +365,7 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    auto-boot
 
    frozen? text-on? 0=  and  ( no-banner? )
-   unfreeze visible          ( no-banner? )
+   unfreeze visible cursor-on ( no-banner? )
    if  banner  then  \ Reissue banner if it was suppressed
 
    blue-letters ." Type 'help' for more information." black-letters
