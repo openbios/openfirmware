@@ -89,6 +89,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
       dcon-load  \ Put the DCON in VGA-refreshed mode
       d# 25 ms   \ Ensure that that DCON sees the DCONLOAD high
 \      display-on
+[ifdef] notdef
    else
       begin                             ( )
          dcon-unload  \ Put the DCON in self-refresh mode
@@ -99,6 +100,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
          dcon-load  d# 25 ms            ( )
       repeat                            ( )
    then
+[then]
 ;
 
 \ gx_configure_tft(info);
