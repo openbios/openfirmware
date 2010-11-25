@@ -521,6 +521,8 @@ fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
 fload ${BP}/cpu/x86/pc/olpc/via/nbtx.fth
 fload ${BP}/cpu/x86/pc/olpc/via/nbrx.fth
 fload ${BP}/cpu/x86/pc/olpc/via/blockfifo.fth
+: hdd-led-toggle  ( -- )  h# 4c acpi-l@  h# 400000 xor  h# 4c acpi-l!  ;
+: hdd-led-off     ( -- )  h# 4c acpi-l@  h# 400000 or   h# 4c acpi-l!  ;
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
 devalias fsdisk int:0

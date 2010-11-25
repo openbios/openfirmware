@@ -76,7 +76,7 @@ warning @  warning off
       disable-interrupts
       d# 1000
       i-key-wait  if
-\        protect-fw
+         protect-fw
          ." Interacting" cr  hex interact
       then
       \ Turn on USB power here to overlap the time with other startup actions
@@ -154,7 +154,15 @@ fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
 
-: game-key@  ( -- n )  0  ;   \ Implement me!!!
+: game-key@  ( -- n )
+   0
+   d# 16 gpio-pin@ 0=  if  h#  80 or  then  \ O
+   d# 17 gpio-pin@ 0=  if  h#  02 or  then  \ Check
+   d# 18 gpio-pin@ 0=  if  h# 100 or  then  \ X
+   d# 19 gpio-pin@ 0=  if  h#  01 or  then  \ Square
+   d# 20 gpio-pin@ 0=  if  h#  40 or  then  \ Rotate
+;
+
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 : emacs  ( -- )
    false to already-go?
@@ -191,6 +199,10 @@ fload ${BP}/cpu/x86/pc/olpc/via/blockfifo.fth
 : nandblaster  true abort" No nandblaster yet"  ;
 : show-temperature  ;
 [then]
+
+: hdd-led-off     ( -- )  d# 10 gpio-clr  ;
+: hdd-led-on      ( -- )  d# 10 gpio-set  ;
+: hdd-led-toggle  ( -- )  d# 10 gpio-pin@  if  hdd-led-off  else  hdd-led-on  then  ;
 
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
@@ -295,12 +307,11 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
       protect-fw  text-on  ['] scan-nand guarded
    then
 ;
+[then]
 : ?fs-update  ( -- )
    button-check button-x or  button-o or  button-square or   ( mask )
    game-key-mask =  if  protect-fw try-fs-update  then
 ;
-[then]
-
 
 : startup  ( -- )
    standalone?  0=  if  exit  then
@@ -313,9 +324,7 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    disable-user-aborts
    console-start
 
-[ifdef] notyet
    read-game-keys
-[then]
 
    factory-test?  if  text-off  then
 
