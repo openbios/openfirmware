@@ -167,8 +167,14 @@ d# 6500 constant ms-factor
 : ec-indexed-io-off  ( -- )  ;  \ !!!
 : ec-ixio-reboot  ( -- )  ;   \ !!!
 : flash-base  ( -- )  true abort" The stuff that relies on flash-base in security.fth needs to be reworked!"  ;
-: cmos@  ( index -- data )  h# 38 mod  8 +  " rtc@" clock-node @  $call-method  ;
-: cmos!  ( index data -- )  h# 38 mod  8 +  " rtc!" clock-node @  $call-method  ;
+: cmos@  ( index -- data )
+   h# 38 mod  8 +  " rtc@" clock-node @  ( index adr len ih )
+   ['] $call-method catch  if  4drop 0  then
+;
+: cmos!  ( data index -- )
+   h# 38 mod  8 +  " rtc!" clock-node @  ( data index adr len ih )
+   ['] $call-method  if  2drop 3drop  then
+;
 : halt  ( -- )  c7-wfi  ;
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
@@ -201,7 +207,7 @@ fload ${BP}/cpu/x86/pc/olpc/life.fth
 \needs ramdisk  " " d# 128 config-string ramdisk
 " "   ' boot-file      set-config-string-default   \ Let the boot script set the cmdline
 
-2 config-int auto-boot-countdown
+3 config-int auto-boot-countdown
 
 \ Eliminate 4 second delay in install console for the case where
 \ there is no keyboard.  The delay is unnecessary because the screen
@@ -227,7 +233,7 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
 
 : console-start  ( -- )
    install-mux-io
-\  cursor-off
+   cursor-off
    true to text-on?
 
    " //null" open-dev to null-ih  \ For text-off state
@@ -244,14 +250,24 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    warning on
    only forth also definitions
 
-   show-child
    install-alarm
-   ['] sound catch drop
 
    page-mode
    #line off
 
 \   .built cr
+;
+
+
+: factory-test?  ( -- flag )
+   \ TS is the "test station" tag, whose value is set to "SHIP" at the
+   \ end of manufacturing test.
+   " TS" find-tag  if         ( adr len )
+      ?-null  " SHIP" $=  0=  ( in-factory? )
+   else                       ( )
+      \ Missing TS tag is treated as not in factory test
+      false
+   then                       ( in-factory? )
 ;
 
 [ifdef] notyet
@@ -289,26 +305,32 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
-\  block-exceptions
+   block-exceptions
    no-page
 
+   ?factory-mode
+
+   disable-user-aborts
    console-start
 
 [ifdef] notyet
    read-game-keys
 [then]
 
-\  text-off
+   factory-test?  if  text-off  then
 
    " probe-" do-drop-in
 
+   show-child
+   install-alarm
+   ['] sound catch drop
 [ifdef] notyet
-   sound
    ?games
 [then]
 
    ['] false to interrupt-auto-boot?
 [ifdef] probe-usb
+   factory-test?  if  d# 1000 ms  then  \ Extra USB probe delay in the factory
    probe-usb
    report-disk
    report-keyboard
@@ -317,19 +339,31 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
 
    interpreter-init
 [ifdef] notyet
-   ?scan-nand
    ?diags
+[ifdef] Later
+   ?scan-nand
+[then]
    ?fs-update
 [then]
-\  unblock-exceptions
+   factory-test? 0=  if  secure-startup  then
+   unblock-exceptions
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
-\  ?usb-keyboard
+[ifdef] notyet
+   ?usb-keyboard
+[then]
    auto-banner?  if  banner  then
 
    auto-boot
 
+   frozen? text-on? 0=  and  ( no-banner? )
+   unfreeze visible          ( no-banner? )
+   if  banner  then  \ Reissue banner if it was suppressed
+
+   blue-letters ." Type 'help' for more information." black-letters
    cr cr
 
+   enable-user-aborts
+   stop-sound   
    quit
 ;
 

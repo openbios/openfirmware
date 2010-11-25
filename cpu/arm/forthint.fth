@@ -145,7 +145,7 @@ c;
       interrupt-preamble  6  install-handler
       init-dispatcher
       [ previous ]
-      d# 10 set-tick-limit
+      d# 1 set-tick-limit
    enable-interrupts        \ Turn interrupts on
 ;
 

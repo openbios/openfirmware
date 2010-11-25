@@ -123,7 +123,7 @@ audio-sram h# 3f80 + constant in-desc
 : set-descriptor   ( next dest source length adr -- )
    >r  r@ l!  r@ la1+ l!  r@ 2 la+ l!  r> 3 la+ l!
 ;
-: make-out-ring  ( adr len -- )
+: make-out-ring  ( -- )
    out-desc h# 10 +  sspa-base h# 80 +  out-bufs               /audio-buf   out-desc          set-descriptor
    out-desc          sspa-base h# 80 +  out-bufs /audio-buf +  /audio-buf   out-desc  h# 10 + set-descriptor
    out-desc  h# 30 adma!   \ Link to first descriptor
@@ -133,7 +133,9 @@ audio-sram h# 3f80 + constant in-desc
    1 h# 80 adma!           \ Enable DMA completion interrupts
    h# 0081.3020   h# 40 adma! \ 16 bits, pack, fetch next, enable, chain, hold dest, inc src
 ;
-: make-in-ring  ( adr len -- )
+: stop-out-ring  ( -- )  h# 100000 h# 40 adma!  ;
+
+: make-in-ring  ( -- )
    in-desc h# 10 +  in-bufs               sspa-base   /audio-buf   in-desc          set-descriptor
    in-desc          in-bufs /audio-buf +  sspa-base   /audio-buf   in-desc  h# 10 + set-descriptor
    in-desc  h# 34 adma!   \ Link to first descriptor
@@ -252,7 +254,6 @@ d# 48000 value sample-rate
 : close-in  ( -- )  ;
 : open-out  ( -- )  setup-sspa-tx  ;
 : close-out ( -- )  ;
-: write-done  ( -- )  ;
 
 : wait-out  ( -- )
    buf-timeout  0  do   
@@ -260,20 +261,84 @@ d# 48000 value sample-rate
    loop
    0 h# a0 adma!
 ;
-: audio-out  ( adr len -- actual )
-   tuck  to out-len  to out-adr   
+
+defer playback-alarm
+0 value alarmed?
+
+: install-playback-alarm     ( -- )
+   true to alarmed?  ['] playback-alarm d# 3 alarm
+;
+: uninstall-playback-alarm   ( -- )
+   alarmed?  if
+      ['] playback-alarm d#  0 alarm
+      false to alarmed?
+   then
+;
+
+false value playing?
+
+: stop-out  ( -- )
+   disable-sspa-tx
+   stop-out-ring
+   uninstall-playback-alarm
+   false to playing?
+;
+
+: ?end-playing  ( -- )
+   h# a0 adma@ 1 and  0=  if  exit  then
+   0 h# a0 adma!
+   out-len  if  copy-out  then
+   h# 40 adma@  h# 4000 and  0=  if
+      stop-out
+   then
+;
+: playback-continue-alarm  ( -- )
+   playing?  if
+      ?end-playing
+   else
+      \ If playback has already stopped as a result of
+      \ someone else having waited for completion, we
+      \ just uninstall ourself.
+      uninstall-playback-alarm
+   then
+;
+' playback-continue-alarm to playback-alarm
+
+: start-audio-out  ( adr len -- )
+   to out-len            ( adr )
+   to out-adr            ( )
    make-out-ring
    copy-out
    start-out-ring
    enable-sspa-tx
-   begin  out-len  while
-      copy-out
-      wait-out
-   repeat
-   wait-out
-   disable-sspa-tx
+   out-len  if  copy-out  then  \ Prefill the second buffer
+   install-playback-alarm
+   true to playing?
 ;
-: write  ( adr len -- actual )  open-out audio-out   ;
+
+: audio-out  ( adr len -- actual )  tuck start-audio-out  ;
+
+: stop-sound  ( -- )
+   lock[
+   playing?  if  stop-out  then
+   ]unlock
+;
+
+0 value time-limit
+: set-time-limit  ( ms -- )   get-msecs  +  to time-limit  ;
+: 1sec-time-limit  ( -- )  d# 1000 set-time-limit  ;
+: ?timeout  ( -- )
+   get-msecs  time-limit -  0>  if
+      ." Audio device timeout!" cr
+      abort
+   then
+;
+: wait-out-done  ( -- )
+   d# 20,000 set-time-limit  begin  ?timeout  playing? 0=  until
+;
+: write-done  ( -- )  wait-out-done  stop-out  ;
+
+: write  ( adr len -- actual )  open-out audio-out  ;
 
 : wait-in  ( -- )
    buf-timeout  0  do
@@ -294,8 +359,11 @@ d# 48000 value sample-rate
 ;
 : read  ( adr len -- actual )  open-in audio-in  ;
 
-: wait-sound  ( -- )  ;
-: stop-sound  ( -- )  ;
+: wait-sound  ( -- )
+   lock[
+   begin  playing?  while   d# 10 ms  ?end-playing  repeat
+   ]unlock
+;
 
 0 [if]
 \ Notes:
@@ -441,8 +509,7 @@ false value external-mic?
 : stereo  ;
 : mono  ;
 
-: open  ( -- flag )
-   audio-clock-on
+: init-codec  ( -- )
    codec-on
    headphones-inserted?  if  select-headphones  else  select-speakers  then
    default-speaker-volume set-speaker-volume
@@ -451,9 +518,19 @@ false value external-mic?
    default-mic-gain set-mic-gain
    default-adc-gain set-adc-gain
    d# 48000 set-sample-rate
+;
+0 value open-count
+: open  ( -- flag )
+   open-count 0=  if  audio-clock-on  init-codec  then
+   open-count 1+ to open-count
    true
 ;
-: close  ( -- )  ;
+: close  ( -- )
+   open-count 1 =  if
+      uninstall-playback-alarm  codec-off  ( audio-clock-off )
+   then
+   open-count 1- 0 max to open-count
+;
 
 fload ${BP}/forth/lib/isin.fth
 fload ${BP}/forth/lib/tones.fth

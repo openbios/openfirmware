@@ -1,9 +1,13 @@
 0 0  " "  " /" begin-package
 " rtc" name
 
-: set-address  ( -- )  h# d0 2 set-twsi-target  ;
-: rtc@  ( reg# -- byte )  set-address  twsi-b@  ;
-: rtc!  ( byte reg# -- )  set-address  twsi-b!  ;
+: set-address  ( -- )
+   d# 97 to smb-clock-gpio#
+   d# 98 to smb-data-gpio#
+   h# d0 to smb-slave
+;
+: rtc@  ( reg# -- byte )  set-address  smb-byte@  ;
+: rtc!  ( byte reg# -- )  set-address  smb-byte!  ;
 
 headerless
 
@@ -21,8 +25,8 @@ headerless
 : >bcd  ( binary -- bcd )  d# 10 /mod  4 << +  ;
 
 : bcd-time&date  ( -- s m h d m y century )
-   0 1 7 twsi-get   ( s m h dow d m y )
-   3 roll drop      ( s m h dow d m y )
+   7 0 smb-read-n  ( s m h dow d m y )
+   3 roll drop     ( s m h dow d m y )
    d# 20
 ;
 : bcd!  ( n offset -- )  swap >bcd  swap rtc!  ;

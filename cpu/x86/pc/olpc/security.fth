@@ -328,7 +328,8 @@ d# 256 constant /sig
 
 : date-bad?  ( -- flag )
    current-seconds  0=  if
-      time&date >unix-seconds to current-seconds
+      ['] time&date catch  if  true exit  then
+      >unix-seconds to current-seconds
    then
 
    \ earliest is the earliest acceptable date value (in seconds).

@@ -23,6 +23,8 @@ purpose: Board-specific setup details - pin assigments, etc.
    d# 58 gpio-set      \ WLAN_RESET#
    d# 58 gpio-dir-out  \ WLAN_RESET#
    d# 73 gpio-dir-out  \ CAM_RST
+   d# 97 gpio-dir-out  \ RTC_SCK
+   d# 98 gpio-dir-out  \ RTC_SDA
 
    d# 125 gpio-set
    d# 125 gpio-dir-out  \ EC_SPI_ACK
@@ -90,10 +92,10 @@ create mfpr-table
    no-update, \ GPIO_50 - Not connected (TP114)
    no-update, \ GPIO_51 - Not connected (TP59)
    no-update, \ GPIO_52 - Not connected (TP113)
-   2 af,      \ GPIO_53 - RTC_SCK (TWSI2) if R124 populated
-   2 af,      \ GPIO_54 - RTC_SDA (TWSI2) if R125 populated
-\  no-update, \ GPIO_53 - Not connected if nopop R124 to use TWSI6 for RTC
-\  no-update, \ GPIO_54 - Not connected if nopop R125 to use TWSI6 for RTC
+\  2 af,      \ GPIO_53 - RTC_SCK (TWSI2) if R124 populated
+\  2 af,      \ GPIO_54 - RTC_SDA (TWSI2) if R125 populated
+   no-update, \ GPIO_53 - Not connected if nopop R124 to use TWSI6 for RTC
+   no-update, \ GPIO_54 - Not connected if nopop R125 to use TWSI6 for RTC
    no-update, \ GPIO_55 - Not connected (TP51)
    no-update, \ GPIO_56 - Not connected (TP60)
    0 af,      \ GPIO_57 - WLAN_PD#
@@ -141,10 +143,12 @@ create mfpr-table
 
    no-update, \ GPIO_96  - Not connected (TP112)
 
-   no-update, \ GPIO_97  - Not connected (R100 nopop) if we use TWSI2 for RTC
-   no-update, \ GPIO_98  - Not connected (R106 nopop) if we use TWSI2 for RTC
+\  no-update, \ GPIO_97  - Not connected (R100 nopop) if we use TWSI2 for RTC
+\  no-update, \ GPIO_98  - Not connected (R106 nopop) if we use TWSI2 for RTC
 \  2 af,      \ GPIO_97  - RTC_SCK (TWSI6) if R100 populated
 \  2 af,      \ GPIO_98  - RTC_SDA (TWSI6) if R106 populated
+   0 af,      \ GPIO_97  - RTC_SCK (bitbang) if R100 populated
+   0 af,      \ GPIO_98  - RTC_SDA (bitbang) if R106 populated
 
    0 af,      \ GPIO_99  - TOUCH_SCR_INT
    0 af,      \ GPIO_100 - DCONSTAT0
