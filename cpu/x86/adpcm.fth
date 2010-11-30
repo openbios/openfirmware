@@ -323,11 +323,15 @@ d# -9 value playback-volume  \ -9 is clipping threshold
    false                                    ( error? )
 ;
 
-: (play-wav)  ( adr -- error? )
+: free-wav  ( -- )
    pcm-base if
       pcm-base /pcm-output " dma-free" $call-audio
       0 to pcm-base
    then
+;
+
+: (play-wav)  ( adr -- error? )
+   free-wav
 
    parse-wav-ok?  not  if  ." Not a .wav file" cr true exit  then
    audio-ih  0=  if

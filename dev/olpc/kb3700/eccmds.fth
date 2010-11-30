@@ -4,7 +4,10 @@ purpose: EC Commands for XO-1.75 and later
 0 value ec-ih
 : $call-ec  ( ... adr len -- ... )  ec-ih $call-method  ;
 : do-ec-cmd  ( [ args ] #args #results cmd-code -- [ results ] )
-   " ec-command" $call-ec  abort" EC command failed"
+   " ec-command" $call-ec
+;
+: do-ec-cmd-buf  ( [ args ] #args #results cmd-code -- buf-adr )
+   " ec-command-buf" $call-ec
 ;
 stand-init: EC
    " /ec-spi" open-dev to ec-ih   
@@ -45,6 +48,18 @@ d# 10 constant #ec-retries
 : bat-type@  ( -- b )  h# 2c ec-cmd-b@  ;
 : autowack-on      ( -- )         1 33 ec-cmd-b! ;
 : autowack-off     ( -- )         0 33 ec-cmd-b! ;
+
+: cscount-max  ( adr maxlen -- adr len )
+   dup 0  ?do        ( adr maxlen )
+      over i + c@ 0=  if
+         drop i unloop exit
+      then
+   loop
+;
+: ec-name$  ( -- adr len )
+   0 d# 16 h# 4a do-ec-cmd-buf   ( adr )
+   d# 16 cscount-max
+;
 
 : bat-gauge@  ( -- w )  h# 4e ec-cmd-w@  ;
 

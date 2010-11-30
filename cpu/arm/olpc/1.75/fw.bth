@@ -150,7 +150,7 @@ fload ${BP}/dev/logdev.fth
 0 value final-test?  \ !!!
 fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
-fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
+fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
 
@@ -186,6 +186,12 @@ d# 6500 constant ms-factor
 : halt  ( -- )  c7-wfi  ;
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
+
+: pre-setup-for-linux  ( -- )
+   [ ' linux-pre-hook behavior compile, ]    \ Chain to old behavior
+   sound-end
+;
+' pre-setup-for-linux to linux-pre-hook
 
 [ifdef] notyet
 create use-thinmac
@@ -380,6 +386,9 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    " flash! http:\\10.20.0.14\new.rom" eval
 \   " wifi media lab 802.11" eval
 \   " flash http:\\18.85.46.172\new.rom" eval
+;
+: newec
+   " flash-ec http:\\10.20.0.14\ecimage.bin" eval
 ;
 : urom  " flash! u:\new.rom" eval  ;
 : erom  " flash! ext:\new.rom" eval  ;

@@ -290,10 +290,9 @@ warning @ warning off
       " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
 [ifdef] notyet
       ec-api-ver@ " ec-version" integer-property
-
-      XXX Get EC name with an EC command
-      " ec-name" string-property
 [then]
+
+      ec-name$ " ec-name" string-property
    dend
 
    " /openprom" find-device

@@ -50,24 +50,49 @@ d# 125 constant ack-gpio#
 \ 5              Event
 \ 6              EC Debug
 
-5 constant #ports
-#ports /n* buffer: port-data
-: init-queue  ( -- )  port-data  #ports /n*  bounds  ?do  -1 i !  /n +loop  ;
-: enque  ( data channel# -- )
-   2-                      ( data queue# )
-   dup #ports >=  if  2drop exit  then
-   port-data swap na+ !    ( data adr )
+6 constant #ports
+#ports 2- constant #queues
+
+d# 16 constant /q
+
+0 value queue#
+#queues /n* buffer: heads  : head  ( -- adr )  heads queue# na+  ;
+#queues /n* buffer: tails  : tail  ( -- adr )  tails queue# na+  ;
+
+#queues /q * buffer: qs    : q  ( adr -- )  qs queue# /q * +  ;
+
+/q 1- value   q-end
+
+: init-queues  ( -- )
+   #queues  0  do
+      i to queue#
+      0 head !  0 tail !   /q 1- to q-end
+   loop
 ;
-: deque?  ( channel# -- false | data true )
-   2-                      ( queue# )
-   port-data swap na+      ( adr )
-   dup @                   ( adr data )
-   dup -1 =  if            ( adr data )
-      2drop false          ( false )
-   else                    ( adr data )
-      -1 rot !             ( data )
-      true                 ( data true )
+: inc-q-ptr  ( pointer-addr -- )
+   dup @ q-end >=  if  0 swap !  else  /c swap +!  then
+;
+
+: select-queue  ( channel# -- error? )
+   2- to queue#
+   queue# #queues >=
+;
+
+: enque  ( new-entry channel# -- )
+   select-queue  if  drop exit  then   ( new-entry )
+   tail @  head @  2dup >  if  - q-end  else  1-  then  ( new-entry tail head )
+   <>  if  q tail @ ca+ c!  tail inc-q-ptr  else  drop  then
+;
+
+: deque?  ( channel# -- false | entry true )
+   select-queue  if  false exit  then
+   lock[
+   head @  tail @  <>  if
+      q head @ ca+ c@   head inc-q-ptr  true
+   else
+      false
    then
+   ]unlock
 ;
 
 h# d4037000 value ssp-base  \ Default to SSP3
@@ -258,7 +283,7 @@ defer upstream
    init-gpios
    init-ssp-in-slave-mode
    rxflush
-   init-queue
+   init-queues
    clr-cmd
    prime-fifo
    clr-ack  \ Tell EC that it is okay to send
@@ -357,23 +382,22 @@ d# 16 buffer: ec-respbuf
    true abort" EC command result timeout"
 ;
    
-: get-results  ( -- [ results ] )
-   ec-respbuf  #results  bounds  ?do
-      timed-get-results i c!
-   loop
+: ec-command-buf  ( [ args ] #args #results cmd-code -- result-buf-adr )
+   0 set-cmdbuf                            ( )
 
-   #results 0 ?do  \ XXX maybe this loop should go backwards?
-      ec-respbuf i + c@
-   loop
+   ec-cmdbuf 8 false no-data-command       ( )
+
+   ec-respbuf    #results  bounds  ?do     ( )
+      timed-get-results i c!               ( )
+   loop                                    ( )
+
+   ec-respbuf                              ( result-buf-adr )
 ;
-: ec-command  ( [ args ] #args #results cmd-code -- [ results ] error? )
-   0 set-cmdbuf
-
-   ec-cmdbuf 8 false no-data-command
-
-   get-results
-   false
+: ec-command  ( [ args ] #args #results cmd-code -- [ results ] )
+   ec-command-buf                    ( result-buf-adr )
+   #results bounds  ?do  i c@  loop  ( [ results ] )
 ;
+
 : put-data  ( byte -- )
    1 0
    port# case
@@ -381,7 +405,7 @@ d# 16 buffer: ec-respbuf
       4 of  h# 47 endof
       ( default )  3drop exit
    endcase   ( byte #args #results cmd )
-   ec-command drop
+   ec-command
 ;
 : put-get-data  ( cmd -- data | -1 )  put-data get-data  ;
 

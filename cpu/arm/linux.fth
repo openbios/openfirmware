@@ -1,7 +1,8 @@
 \ See license at end of file
 purpose: ARM Linux zImage program loading
 
-defer linux-hook  ' noop to linux-hook
+defer linux-hook      ' noop to linux-hook
+defer linux-pre-hook  ' noop to linux-pre-hook
 
 0 value ramdisk-adr
 0 value /ramdisk
@@ -170,7 +171,8 @@ warning @ warning off
    init-program
    linux-loaded?  if
       ['] linux-place-ramdisk to place-ramdisk
-      memory-limit to linux-memtop  \ load-ramdisk may change this
+      linux-pre-hook
+      memory-limit 1meg round-down  to linux-memtop  \ load-ramdisk may change this
       ['] load-ramdisk guarded
       linux-fixup
    then

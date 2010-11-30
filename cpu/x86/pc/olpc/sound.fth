@@ -39,9 +39,11 @@ h# -9 constant default-volume
 ;
 : sound-end  ( -- )
    " wait-sound" ['] $call-audio catch  if  2drop  then
+   free-wav
 ;
 : stop-sound  ( -- )
    " stop-sound" ['] $call-audio catch  if  2drop  then
+   free-wav
 ;
 
 \ LICENSE_BEGIN
