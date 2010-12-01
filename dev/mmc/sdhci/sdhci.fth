@@ -238,6 +238,25 @@ defer card-power-off
 0 instance value allow-timeout?
 0 instance value timeout?
 
+8 instance buffer: cmds
+: init-cmds  ( -- )  cmds 8 h# ff fill  ;
+: add-cmd  ( cmdreg -- )
+   cmds 1+  cmds  7 move  ( cmdreg )
+   8 rshift cmds 7 + c!
+;
+: show-cmds  ( -- )
+   ." Recent commands (decimal): " 
+   cmds 8 bounds  do
+      i c@ dup h# ff <>  if        ( cmd )
+         base @ decimal            ( cmd base )
+         swap .                    ( base )
+         base !                    ( )
+      else                         ( cmd )
+         drop                      ( )
+      then                         ( )
+   loop
+   cr
+;
 : .sderror  ( isr -- )
    debug?  if
       ." Chip registers: " cr
@@ -262,6 +281,10 @@ defer card-power-off
 
    ." SDHCI: Error: ISR = " swap u.
    ." ESR = " dup u.  decode-esr
+   ." Command reg: " h# e cw@ u.
+   ." Mode reg: " h# c cw@ u.
+   ." Arg reg: " h# 8 cl@ u. cr
+   show-cmds
 \  debug-me
    card-clock-off
    card-power-off
@@ -329,9 +352,9 @@ defer card-power-off
 \ Argument register:
 \ Mode register: --Md-ABD  M-Multi d-Direction A-Auto_CMD12 B-BlockCntEnable D-DMAEnable
 
-
 : cmd  ( arg cmd mode -- )
    debug?  if  ." CMD: " over 4 u.r space   then
+   over add-cmd
    wait-ready
    h# c cw!              ( arg cmd )  \ Mode
    swap 8 cl!            ( cmd )      \ Arg
@@ -994,6 +1017,7 @@ external
    open-count 0=  if
       d# 64 " dma-alloc" $call-parent to scratch-buf
    then
+   init-cmds
    open-count 1+ to open-count
    true
 ;
