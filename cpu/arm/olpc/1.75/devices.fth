@@ -292,7 +292,7 @@ warning @ warning off
       ec-api-ver@ " ec-version" integer-property
 [then]
 
-      ec-name$ " ec-name" string-property
+      ['] ec-name$  catch  0=  if  " ec-name" string-property  then
    dend
 
    " /openprom" find-device

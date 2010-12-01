@@ -177,15 +177,15 @@ defer pulse-ack  ' fast-ack to pulse-ack
 0 value datain?
 0 value command-finished?
 
-0 value ec-cmd-time-limit
-: ec-cmd-timeout?   ( -- flag )
-   ec-cmd-time-limit 0=  if  false exit  then
-   get-msecs  ec-cmd-time-limit  -  0>=
+0 value cmd-time-limit
+: cmd-timeout?   ( -- flag )
+   cmd-time-limit 0=  if  false exit  then
+   get-msecs  cmd-time-limit  -  0>=
 ;
-: cancel-cmd-timeout  ( -- )  0 to ec-cmd-time-limit  ;
+: cancel-cmd-timeout  ( -- )  0 to cmd-time-limit  ;
 : set-cmd-timeout  ( -- )
-   get-msecs d# 1000 +  to ec-cmd-time-limit
-   ec-cmd-time-limit 0=  if  1 to ec-cmd-time-limit  then  \ Avoid reserved value
+   get-msecs d# 1000 +  to cmd-time-limit
+   cmd-time-limit 0=  if  1 to cmd-time-limit  then  \ Avoid reserved value
 ;
 
 defer do-state  ' noop to do-state
@@ -341,13 +341,17 @@ defer upstream
    to datain?  to datalen  to databuf
    false to command-finished?
 
+   set-cmd-timeout
    ['] do-state behavior ['] upstream =  if
-      set-cmd-timeout
       set-cmd
    else
       handoff-command
    then
-   begin  poll  command-finished?  until
+   begin                   ( )
+      poll                 ( )
+      cmd-timeout? throw   ( )
+      command-finished?    ( done? )
+   until
 ;
 
 : no-data-command  ( adr len sticky? -- )
