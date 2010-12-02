@@ -22,6 +22,7 @@ h#  0001 constant di-mask
 : bb-spi-cs-on   ( -- )  gpo-port dup pc@ 8 invert and  swap pc!  ;
 : bb-spi-cs-off  ( -- )  gpo-port dup pc@ 8 or          swap pc!  ;
 
+[ifdef] 386-assembler
 code bb-spi-out  ( b -- )
    bx pop
 
@@ -39,6 +40,8 @@ code bb-spi-out  ( b -- )
       ax dx out
       bl bl add                  \ Shift left
    loopa
+   clk-mask do-mask +  invert #  ax  and   \ Clk low
+   ax dx out
 c;
 
 code bb-spi-in  ( -- b )
@@ -66,9 +69,44 @@ code bb-spi-in  ( -- b )
          bx inc
       then
    loopa
+   bp ax mov                  \ Base value
+   gpo-port # dx mov          \ Out port
+   ax dx out                  \ CLK low
    bp pop
    bx push
 c;
+[then]
+[ifndef] bb-spi-in
+: bb-spi-out  ( b -- )
+   gpo-port pl@                  ( portval )
+   clk-mask invert and           ( portval' )
+   do-mask invert and            ( portval' )
+   swap                          ( portval b )
+   8 0  do                       ( portval b )
+      2dup h# 80 and  if         ( portval b portval )
+         do-mask or              ( portval b portval' )
+      then                       ( portval b portval )
+      dup gpo-port pl!           ( portval b portval )  \ CLK low with data
+      clk-mask or  gpo-port pl!  ( portval b )          \ CLK high with data
+      2*                         ( portval b' )
+   loop                          ( portval b )
+   drop   gpo-port pl!           ( )                    \ CLK low
+;
+
+: bb-spi-in  ( -- b )
+   gpo-port pl@                      ( portval )
+   clk-mask invert and  0            ( portval b )
+   8 0  do                           ( portval b )
+      over gpo-port pl!              ( portval b )  \ CLK low
+      over clk-mask or  gpo-port pl! ( portval b )  \ CLK high
+      2*                             ( portval b' )
+      gpi-port pl@ di-mask and  if   ( portval b )
+         1+                          ( portval b' )
+      then                           ( portval b )
+   loop                              ( portval b )
+   swap  gpo-port pl!                ( b )          \ CLK low
+;
+[then]
 
 : bb-spi-start  ( -- )
    ['] bb-spi-in     to spi-in
@@ -80,7 +118,7 @@ c;
 \  use-spi-flash-read           \ Readback with SPI commands, not memory ops
    use-hw-spi-flash-read
 
-   gpo-port dup pc@  clk-mask invert and  do-mask invert and  cs-mask or  swap pc!     \ CLK, DO low, CS# high
+   gpo-port dup pl@  clk-mask invert and  do-mask invert and  cs-mask or  swap pl!     \ CLK, DO low, CS# high
    h# 88e4 config-b@ 2 or  h# 88e4 config-b!
 ;
 
