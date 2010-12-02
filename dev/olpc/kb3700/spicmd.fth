@@ -179,13 +179,10 @@ defer pulse-ack  ' fast-ack to pulse-ack
 
 0 value cmd-time-limit
 : cmd-timeout?   ( -- flag )
-   cmd-time-limit 0=  if  false exit  then
    get-msecs  cmd-time-limit  -  0>=
 ;
-: cancel-cmd-timeout  ( -- )  0 to cmd-time-limit  ;
 : set-cmd-timeout  ( -- )
    get-msecs d# 1000 +  to cmd-time-limit
-   cmd-time-limit 0=  if  1 to cmd-time-limit  then  \ Avoid reserved value
 ;
 
 defer do-state  ' noop to do-state
@@ -196,7 +193,6 @@ defer upstream
    ['] upstream to do-state
 ;
 : command-done  ( -- )
-   cancel-cmd-timeout
    true to command-finished?
    sticky?  0=  if
       enter-upstream-state
