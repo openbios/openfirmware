@@ -65,6 +65,16 @@ d# 10 constant #ec-retries
 
 : ec-echo  ( ... n -- ... )  dup h# 52 do-ec-cmd  ;
 
+: ec-date$  ( -- adr len )
+   0 d# 16 h# 53 do-ec-cmd-buf   ( adr )
+   d# 16 cscount-max
+;
+: ec-user$  ( -- adr len )
+   0 d# 16 h# 54 do-ec-cmd-buf   ( adr )
+   d# 16 cscount-max
+;
+
+
 : mppt-active@  ( -- b )  h# 3d ec-cmd-b@  ;
 
 : bat-cause@  ( -- b )  h# 1f ec-cmd-b@  ;
