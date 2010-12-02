@@ -293,6 +293,8 @@ warning @ warning off
 [then]
 
       ['] ec-name$  catch  0=  if  " ec-name" string-property  then
+      ['] ec-date$  catch  0=  if  " ec-date" string-property  then
+      ['] ec-user$  catch  0=  if  " ec-user" string-property  then
    dend
 
    " /openprom" find-device
