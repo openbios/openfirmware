@@ -801,10 +801,16 @@ false value avoid-high-speed?
    false to writing?
 ;
 
+\ time to hold card power off to allow VCC_SD to discharge
+\ 25ms required for XO-1.5 with external SanDisk 32 G class 10 SD card
+\ 29ms required for XO-1.5 with external SanDisk 8 G class 4 SD card
+\ 1ms should be required for XO-1.75 A2 (due to discharge clamps)
+d# 40 value power-off-time
+
 \ -1 means error, 1 means retry
 : power-up-card  ( -- false | retry? true )
    intstat-on
-   card-power-off d# 20 ms
+   card-power-off power-off-time ms
    card-power-on  d# 40 ms  \ This delay is just a guess (20 was barely too slow for a Via board)
    card-inserted?  0=  if  card-power-off  intstat-off  false true exit  then   
    card-clock-slow  d# 10 ms  \ This delay is just a guess
