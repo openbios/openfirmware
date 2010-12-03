@@ -245,6 +245,8 @@ devalias keyboard /ec-spi/keyboard
 
 end-package
    
+: wlan-reset  ( -- )  d# 58 gpio-clr  d# 20 ms  d# 58 gpio-set  ;
+
 \ : usb-power-on  ( -- )  1 gpio-set  ; 
 : usb-power-on  ( -- )  ;  \ The EC controls the USB power
 : reset-usb-hub  ( -- )  d# 146 gpio-set  d# 10 ms  d# 146 gpio-set  ;

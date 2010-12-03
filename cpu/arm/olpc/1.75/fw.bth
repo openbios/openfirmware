@@ -193,18 +193,15 @@ fload ${BP}/cpu/x86/pc/olpc/security.fth
 ;
 ' pre-setup-for-linux to linux-pre-hook
 
-[ifdef] notyet
+: show-temperature  ( -- )  ;
+: boot-as-call(  ( -- )  ." Implement boot-as-call" cr  ;
+: )boot-as-call  ( -- )  ;
+\ fload ${BP}/cpu/x86/bootascall.fth
 create use-thinmac
-fload ${BP}/cpu/x86/bootascall.fth
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
 fload ${BP}/cpu/x86/pc/olpc/via/nbtx.fth
 fload ${BP}/cpu/x86/pc/olpc/via/nbrx.fth
 fload ${BP}/cpu/x86/pc/olpc/via/blockfifo.fth
-[else]
-0 value nb-zd-#sectors
-: nandblaster  true abort" No nandblaster yet"  ;
-: show-temperature  ;
-[then]
 
 : hdd-led-off     ( -- )  d# 10 gpio-clr  ;
 : hdd-led-on      ( -- )  d# 10 gpio-set  ;
