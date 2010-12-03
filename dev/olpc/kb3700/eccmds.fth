@@ -17,7 +17,7 @@ stand-init: EC
 d# 10 constant #ec-retries
 
 : ec-cmd  ( cmd -- )   0 0 rot do-ec-cmd  ;
-: ec-cmd-b@  ( cmd -- w )   0 1 rot do-ec-cmd  bwjoin  ;
+: ec-cmd-b@  ( cmd -- b )   0 1 rot do-ec-cmd          ;
 : ec-cmd-w@  ( cmd -- w )   0 2 rot do-ec-cmd  bwjoin  ;
 : ec-cmd-l@  ( cmd -- l )   0 4 rot do-ec-cmd  bljoin  ;
 : ec-cmd-b!  ( b cmd -- )   1 0 rot do-ec-cmd  ;
