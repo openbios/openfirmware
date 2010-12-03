@@ -170,13 +170,12 @@ d# 10 constant #ec-retries
    too-many-retries
 ;
 
-: bat-voltage@   ( -- w )  h# 10 ec-cmd-w@  ;
-: bat-current@   ( -- w )  h# 11 ec-cmd-w@  ;
-: bat-acr@       ( -- w )  h# 12 ec-cmd-w@  ;
-: bat-temp@      ( -- w )  h# 13 ec-cmd-w@  ;
-: ambient-temp@  ( -- w )  h# 14 ec-cmd-w@  ;
-: bat-status@    ( -- b )  h# 15 ec-cmd-b@  ;
-: bat-soc@       ( -- b )  h# 16 ec-cmd-b@  ;
+fload ${BP}/dev/olpc/kb3700/eccmdcom.fth
+
+\ Commands that are specific to XO-1 and XO-1.5
+: write-protect-fw ( -- )  3 ec-cmd  ;
+: sci-queue@       ( -- b )  h# 84 ec-cmd-b@  ;
+
 : (bat-gauge-id@)  ( -- sn0 .. sn7 )  h# 17 ec-cmd-out  8 0  do ec-rb  loop  ;
 : bat-gauge-id@  ( -- sn0 .. sn7 )
    #ec-retries  0  do
@@ -184,6 +183,36 @@ d# 10 constant #ec-retries
    loop
    too-many-retries
 ;
+: board-id@      ( -- b )  h# 19 ec-cmd-b@  ;
+: sci-source@    ( -- b )  h# 1a ec-cmd-b@  ;
+: sci-mask!      ( b -- )  h# 1b ec-cmd-b!  ;
+: sci-mask@      ( -- b )  h# 1c ec-cmd-b@  ;
+: game-key@      ( -- w )  h# 1d ec-cmd-w@  ;
+: (ec-date!)     ( day month year -- )  h# 1e ec-cmd-out  ec-wb ec-wb ec-wb  ;
+: ec-date!       ( day month year -- )
+   #ec-retries  0  do    ( d m y )
+      3dup ['] (ec-date!) catch  0=  if  3drop unloop exit  then  ( d m y x x x )
+      3drop              ( d m y )
+   loop                  ( d m y )
+   too-many-retries
+;
+
+: bat-init-nimh-gp     ( -- )  h# 20 ec-cmd  ;
+: bat-init-lifepo4-byd ( -- )  h# 21 ec-cmd  ;
+: bat-init-lifepo4-gp  ( -- )  h# 22 ec-cmd  ;
+\ EC cmd 23 never worked right and has been deprecated
+\ : wlan-off         ( -- )  0 h# 23 ec-cmd-b!  ;
+\ : wlan-on          ( -- )  1 h# 23 ec-cmd-b!  ;
+: wlan-wake        ( -- )  h# 24 ec-cmd  ;
+: wlan-reset       ( -- )  h# 25 ec-cmd  ;
+: dcon-power-off   ( -- )  0 h# 26 ec-cmd-b!  ;
+: dcon-power-on    ( -- )  1 h# 26 ec-cmd-b!  ;
+: reset-ec-warm    ( -- )  h# 27 ec-cmd  ;
+: ebook-mode?      ( -- b )  h# 2a ec-cmd-b@  ;
+: wlan-freeze      ( -- )  h# 35 ec-cmd  ;
+: ec-wackup   ( ms -- ) lbsplit h# 36 ec-cmd-out ec-wb ec-wb ec-wb ec-wb ;
+
+
 : (bat-gauge@)   ( -- b )  h# 18 ec-cmd-out  h# 31 ec-wb  ec-rb  ;  \ 31 is the EEPROM address
 : bat-gauge@  ( -- b )
    #ec-retries  0  do
@@ -200,51 +229,12 @@ d# 10 constant #ec-retries
    too-many-retries
 ;
 
-: board-id@      ( -- b )  h# 19 ec-cmd-b@  ;
-: sci-source@    ( -- b )  h# 1a ec-cmd-b@  ;
-: sci-mask!      ( b -- )  h# 1b ec-cmd-b!  ;
-: sci-mask@      ( -- b )  h# 1c ec-cmd-b@  ;
-: game-key@      ( -- w )  h# 1d ec-cmd-w@  ;
-: (ec-date!)     ( day month year -- )  h# 1e ec-cmd-out  ec-wb ec-wb ec-wb  ;
-: ec-date!       ( day month year -- )
-   #ec-retries  0  do    ( d m y )
-      3dup ['] (ec-date!) catch  0=  if  3drop unloop exit  then  ( d m y x x x )
-      3drop              ( d m y )
-   loop                  ( d m y )
-   too-many-retries
-;
-
-: ec-wackup   ( ms -- ) lbsplit h# 36 ec-cmd-out ec-wb ec-wb ec-wb ec-wb ;
-
-: ec-abnormal@   ( -- b )  h# 1f ec-cmd-b@  ;
-
-: bat-init-nimh-gp     ( -- )  h# 20 ec-cmd  ;
-: bat-init-lifepo4-byd ( -- )  h# 21 ec-cmd  ;
-: bat-init-lifepo4-gp  ( -- )  h# 22 ec-cmd  ;
-\ EC cmd 23 never worked right and has been deprecated
-\ : wlan-off         ( -- )  0 h# 23 ec-cmd-b!  ;
-\ : wlan-on          ( -- )  1 h# 23 ec-cmd-b!  ;
-: wlan-wake        ( -- )  h# 24 ec-cmd  ;
-: wlan-reset       ( -- )  h# 25 ec-cmd  ;
-: dcon-power-off   ( -- )  0 h# 26 ec-cmd-b!  ;
-: dcon-power-on    ( -- )  1 h# 26 ec-cmd-b!  ;
-: reset-ec-warm    ( -- )  h# 27 ec-cmd  ;
-: reset-ec         ( -- )  h# 28 ec-cmd  ;
-: write-protect-fw ( -- )  3 ec-cmd  ;
-: ebook-mode?      ( -- b )  h# 2a ec-cmd-b@  ;
-: wlan-freeze      ( -- )  h# 35 ec-cmd  ;
-: sci-queue@       ( -- b )  h# 84 ec-cmd-b@  ;
-: ec-api-ver@      ( -- b )  h# 08 ec-cmd-b@  ;
-: sci-inhibit      ( -- )  h# 32 ec-cmd  ;
-: sci-uninhibit    ( -- )  h# 34 ec-cmd  ;
-
-: mppt-active@  ( -- b )  h# 3d ec-cmd-b@  ;
-
-: autowack-on      ( -- )         1 33 ec-cmd-b! ;
-: autowack-off     ( -- )         0 33 ec-cmd-b! ;
 : autowack-delay   ( delay -- )   wbsplit f650 ec! f651 ec! ;
 
 : ec-indexed-io-off  ( -- )  h# fe95 ec@  h# 40 invert and  h# fe95 ec!  ;
+
+: sci-inhibit      ( -- )  h# 32 ec-cmd  ;
+: sci-uninhibit    ( -- )  h# 34 ec-cmd  ;
 
 0 [if]
 \ EC mailbox access words

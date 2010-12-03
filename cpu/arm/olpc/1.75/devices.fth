@@ -101,7 +101,6 @@ fload ${BP}/dev/olpc/spiflash/spiflash.fth \ SPI FLASH programming
 
 : ignore-power-button ;  \ XXX implement me
 : ssp-spi-reprogrammed ;
-: ?enough-power  ( -- )  ;
 
 fload ${BP}/cpu/arm/mmp2/sspspi.fth        \ Synchronous Serial Port SPI interface
 
@@ -130,9 +129,9 @@ fload ${BP}/cpu/arm/olpc/1.75/getmfgdata.fth \ Get manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
 
-[ifdef] notyet
-fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
-[then]
+fload ${BP}/dev/olpc/kb3700/eccmds.fth
+fload ${BP}/dev/olpc/kb3700/batstat.fth      \ Battery status reports
+fload ${BP}/cpu/arm/olpc/1.75/boardrev.fth   \ Board revision decoding
 
 false constant tethered?                     \ We only support reprogramming our own FLASH
 
@@ -140,6 +139,8 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH prog
 \ fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
 ' ofw-fw-filename$ to fw-filename$
+
+fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
 
 0 0  " d420b000"  " /" begin-package
    " display" name
@@ -227,10 +228,6 @@ devalias net /wlan  \ XXX should report-net in case of USB Ethernet
 fload ${BP}/dev/olpc/kb3700/spicmd.fth
 
 devalias keyboard /ec-spi/keyboard
-
-fload ${BP}/dev/olpc/kb3700/eccmds.fth
-fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
-fload ${BP}/cpu/arm/olpc/1.75/boardrev.fth   \ Board revision decoding
 
 0 0  " d4208000"  " /" begin-package  \ USB Host Controller
    h# 200 constant /regs

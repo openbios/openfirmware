@@ -24,14 +24,11 @@ d# 10 constant #ec-retries
 : ec-cmd-w!  ( w cmd -- )   >r wbsplit 2 0 r> do-ec-cmd  ;
 : ec-cmd-l!  ( l cmd -- )   >r lbsplit 4 0 r> do-ec-cmd  ;
 
-: ec-api-ver@    ( -- b )  h# 08 ec-cmd-b@  ;
-: bat-voltage@   ( -- w )  h# 10 ec-cmd-w@  ;
-: bat-current@   ( -- w )  h# 11 ec-cmd-w@  ;
-: bat-acr@       ( -- w )  h# 12 ec-cmd-w@  ;
-: bat-temp@      ( -- w )  h# 13 ec-cmd-w@  ;
-: ambient-temp@  ( -- w )  h# 14 ec-cmd-w@  ;
-: bat-status@    ( -- b )  h# 15 ec-cmd-b@  ;
-: bat-soc@       ( -- b )  h# 16 ec-cmd-b@  ;
+fload ${BP}/dev/olpc/kb3700/eccmdcom.fth  \ Common commands 
+
+\ Commands that are different for XO-1.75
+: board-id@      ( -- n )  h# 19 ec-cmd-w@  ;
+: bat-cause@     ( -- b )  h# 1f ec-cmd-b@  ;
 
 : (bat-gauge-id@)  ( -- sn0 .. sn7 )  0 8 h# 17 do-ec-cmd  ;
 : bat-gauge-id@  ( -- sn0 .. sn7 )
@@ -41,13 +38,11 @@ d# 10 constant #ec-retries
    too-many-retries
 ;
 
-
-: board-id@  ( -- n )  h# 19 ec-cmd-w@  ;
-: reset-ec  ( -- )  h# 28 ec-cmd  ;
-
 : bat-type@  ( -- b )  h# 2c ec-cmd-b@  ;
-: autowack-on      ( -- )         1 33 ec-cmd-b! ;
-: autowack-off     ( -- )         0 33 ec-cmd-b! ;
+
+: ec-wackup  ( ms -- )  lbsplit 4 0 h# 36 do-ec-cmd  ;
+
+: bat-gauge@  ( -- w )  h# 4e ec-cmd-w@  ;
 
 : cscount-max  ( adr maxlen -- adr len )
    dup 0  ?do        ( adr maxlen )
@@ -61,8 +56,6 @@ d# 10 constant #ec-retries
    d# 16 cscount-max
 ;
 
-: bat-gauge@  ( -- w )  h# 4e ec-cmd-w@  ;
-
 : ec-echo  ( ... n -- ... )  dup h# 52 do-ec-cmd  ;
 
 : ec-date$  ( -- adr len )
@@ -74,29 +67,17 @@ d# 10 constant #ec-retries
    d# 16 cscount-max
 ;
 
-
-: mppt-active@  ( -- b )  h# 3d ec-cmd-b@  ;
-
-: bat-cause@  ( -- b )  h# 1f ec-cmd-b@  ;
-
-[ifdef] notdef
-#define CMD_SET_EC_WAKEUP_TIMER          0x36
+[ifdef] notdef  \ These commands are awaiting documentation on their interfaces
 #define CMD_READ_EXT_SCI_MASK            0x37
 #define CMD_WRITE_EXT_SCI_MASK           0x38
 #define CMD_CLEAR_EC_WAKEUP_TIMER        0x39
 #define CMD_ENABLE_RUNIN_DISCHARGE       0x3B
 #define CMD_DISABLE_RUNIN_DISCHARGE      0x3C
-#define CMD_READ_MPPT_LIMIT              0x3e
-#define CMD_SET_MPPT_LIMIT               0x3f
-#define CMD_DISABLE_MPPT                 0x40
-#define CMD_ENABLE_MPPT                  0x41
-#define CMD_READ_VIN                     0x42
 #define CMD_EXT_SCI_QUERY                0x43
 #define CMD_READ_LOCATION                0x44
 #define CMD_WRITE_LOCATION               0x45
 #define RSP_KEYBOARD_DATA                0x48
 #define RSP_TOUCHPAD_DATA                0x49
-#define CMD_GET_FW_VER                   0x4a
 #define CMD_POWER_CYCLE                  0x4b
 #define CMD_POWER_OFF                    0x4c
 #define CMD_RESET_EC_SOFT                0x4d
