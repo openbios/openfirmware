@@ -63,6 +63,16 @@ defer item!  ( data-item addr-item -- )
 0 value resboundary   \ Lower boundary of region to dispose
 0 value tranboundary
 
+: transient-item?  ( item -- transient? )
+   tranboundary there within
+;
+: resident-item?  ( item -- resident? )
+   origin >link resboundary within
+;
+: safe-transient-item?  ( item -- safe-transient? )
+   transtart tranboundary within
+;
+
 \ relink removes transients from any linked list. It must be called
 \ with a known good first link, as it doesn't know how to reset
 \ the head of the list, which is usually a global variable.
@@ -71,13 +81,13 @@ defer item!  ( data-item addr-item -- )
       \ Skip over all consecutive words in the transient vocabulary
       dup
       begin   ( prev-item this-item )
-         item@  dup tranboundary >=  ( prev-item next-item tran? )
+         item@  dup transient-item? ( prev-item next-item tran? )
          dup if  over showit  then
       0= until       ( prev-item next-kept-item )
       \ Link the next non-transient word to the previous non-transient one
-      dup rot  item!           ( next-kept-item )
-      dup resboundary <        ( next-kept-item <resboundary? )
-      over transtart >=   ( next-kept-item <resboundary? safe-transient? )
+      dup rot  item!             ( next-kept-item )
+      dup resident-item?         ( next-kept-item resident? )
+      over safe-transient-item?  ( next-kept-item resident? safe-transient? )
       or
    until   drop
 ;
@@ -101,7 +111,7 @@ defer item!  ( data-item addr-item -- )
 : relink-buffer:s  ( -- )
    ['] buf-link@ is item@  ['] buf-link! is item!  ['] buffer:. is link.
    buffer-link begin			\ Check for transient at head
-      link@ dup tranboundary >=
+      link@ dup transient-item?
    while
       dup showit  >buffer-link
    repeat  buffer-link link!
@@ -116,7 +126,7 @@ defer item!  ( data-item addr-item -- )
 : relink-voc-list  ( -- )
    ['] voc-link@ is item@  ['] voc-link! is item!  ['] vocab. is link.
    voc-link begin			\ Check for transient at head
-      link@ dup tranboundary >=
+      link@ dup transient-item?
    while
       dup showit  >voc-link
    repeat  voc-link link!
