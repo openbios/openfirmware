@@ -9,8 +9,6 @@ begin-tokenizing ehci.fc
 
 FCode-version2
 
-" ehci" encode-string " device_type" property
-
 fload ${BP}/dev/usb2/hcd/ehci/pci.fth
 fload ${BP}/dev/usb2/hcd/ehci/loadpkg.fth
 

@@ -1,6 +1,8 @@
 purpose: Driver for EHCI USB Controller
 \ See license at end of file
 
+" ehci" encode-string " device_type" property
+
 hex
 headers
 
