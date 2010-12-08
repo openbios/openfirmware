@@ -35,7 +35,7 @@ h# 20000 constant ntldr-base  \ The address where NTLDR expects to be loaded
 false value ntldr-prepped?
 : is-ntldr?  ( adr len -- flag )
    h# 5000 <  if  drop false exit  then
-   " NTLDR is corrupt" rot h# 5000 sindex -1 <>
+   " NTLDR" rot h# 5000 sindex -1 <>
 ;
 
 warning @ warning off
