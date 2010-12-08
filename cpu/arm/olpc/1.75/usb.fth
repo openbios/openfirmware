@@ -12,7 +12,7 @@ purpose: USB elaborations for the BIOS loaded OFW
    false constant needs-dummy-qh?
    : grab-controller  ( config-adr -- error? )  drop false  ;
    fload ${BP}/dev/usb2/hcd/ehci/loadpkg.fth
-   false to delay?  \ No need for a polling delay on this platform
+\  false to delay?  \ No need for a polling delay on this platform
    : otg-set-host-mode  3 h# a8 ehci-reg!  ;  \ Force host mode
    ' otg-set-host-mode to set-host-mode
 
