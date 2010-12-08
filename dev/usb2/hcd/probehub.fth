@@ -49,7 +49,10 @@ external
 
    tuck  1  ?do  i power-hub-port  loop  2* ms
 					( hub-dev #ports )
-   d# 100 ms
+   " usb-delay" ['] evaluate catch  if  ( hub-dev #ports x x )
+      2drop  d# 100                     ( hub-dev #ports ms )
+   then                                 ( hub-dev #ports ms )
+   ms
 
    ( hub-dev #ports ) 1  ?do
       dup i ['] probe-hub-port  catch  if
