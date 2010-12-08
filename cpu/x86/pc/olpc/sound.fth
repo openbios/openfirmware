@@ -37,13 +37,21 @@ h# -9 constant default-volume
    r> to load-started
    r> to playback-volume
 ;
+: close-audio  ( -- )
+   audio-ih  if
+      audio-ih close-dev
+      0 to audio-ih
+   then
+;
 : sound-end  ( -- )
    " wait-sound" ['] $call-audio catch  if  2drop  then
    free-wav
+   close-audio
 ;
 : stop-sound  ( -- )
    " stop-sound" ['] $call-audio catch  if  2drop  then
    free-wav
+   close-audio
 ;
 
 \ LICENSE_BEGIN
