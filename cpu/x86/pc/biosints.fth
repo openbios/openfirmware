@@ -1067,8 +1067,11 @@ label bounce-timer  \ Redirect the timer interrupt through INT 1c
    16-bit
    ax   push
    h# 20 # ax mov
-   al   h# 20 #  out
+   al   h# 20 #  out  \ Writing h# 20 to IO port 20 is interrupt ack
    ax   pop
+   \ After acking the hardware interrupt, we call the INT 1c vector,
+   \ which NTLDR hooks when it wants to receive timer ticks.  That
+   \ vector will perform the IRET to return from the hardware interrupt.
    cs:  h# 72 #)  push
    cs:  h# 70 #)  push
    far ret
@@ -1081,6 +1084,9 @@ here bounce-timer - constant /bounce-timer
    bounce-timer h# c0  /bounce-timer  move
 
    \ Change INT 20 (the timer tick) to point to the bounce vector with CS=0
+   \ INT 20 is called by the timer hardware via IRQ 0, which vectors to INT 20
+   \ (vector-base0 = 0x20).  The following causes it to execute the "bounce-timer"
+   \ code which has been placed at location 0xc0.
    0 h# 82 w!  h# c0 h# 80 w!  \ CS = 0, IP = h# c0 = INT 30
 ;
 
