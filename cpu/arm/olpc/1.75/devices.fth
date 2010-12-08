@@ -229,27 +229,52 @@ fload ${BP}/dev/olpc/kb3700/spicmd.fth
 
 devalias keyboard /ec-spi/keyboard
 
-0 0  " d4208000"  " /" begin-package  \ USB Host Controller
-   h# 200 constant /regs
-   my-address my-space /regs reg
-   : my-map-in  ( len -- adr )
-      my-space swap  " map-in" $call-parent  h# 100 +  ( adr )
-   ;
-   : my-map-out  ( adr len -- )  swap h# 100 - swap " map-out" $call-parent  ;
-   false constant has-dbgp-regs?
-   false constant needs-dummy-qh?
-   : grab-controller  ( config-adr -- error? )  drop false  ;
-   fload ${BP}/dev/usb2/hcd/ehci/loadpkg.fth
-   : otg-set-host-mode  3 h# a8 ehci-reg!  ;  \ Force host mode
-   ' otg-set-host-mode to set-host-mode
-
-end-package
-   
 : wlan-reset  ( -- )  d# 58 gpio-clr  d# 20 ms  d# 58 gpio-set  ;
 
-\ : usb-power-on  ( -- )  1 gpio-set  ; 
-: usb-power-on  ( -- )  ;  \ The EC controls the USB power
-: reset-usb-hub  ( -- )  d# 146 gpio-set  d# 10 ms  d# 146 gpio-set  ;
+\ Create the alias unless it already exists
+: $?devalias  ( alias$ value$ -- )
+   2over  not-alias?  if  $devalias exit  then  ( alias$ value$ alias$ )
+   2drop 4drop
+;
+
+: ?report-device  ( alias$ pathname$ -- )
+   2dup  locate-device  0=  if  ( alias$ pathname$ phandle )
+      drop                      ( alias$ pathname$ )
+      2over 2over $?devalias    ( alias$ pathname$ )
+   then                         ( alias$ pathname$ )
+   4drop                        ( )
+;
+
+: report-disk  ( -- )
+   " disk"  " /usb/disk" ?report-device
+;
+
+: report-keyboard  ( -- )
+   \ Prefer direct-attached
+   " usb-keyboard"  " /usb/keyboard" ?report-device  \ USB 2   (keyboard behind a hub)
+;
+
+\ If there is a USB ethernet adapter, use it as the default net device.
+\ We can't use ?report-device here because we already have net aliased
+\ to /wlan, and ?report-device won't override an existing alias.
+: report-net  ( -- )
+   " /usb/ethernet" 2dup locate-device  0=  if  ( name$ phandle )
+      drop                                      ( name$ )
+
+      \ Don't recreate the alias if it is already correct
+      " net" aliased?  if                       ( name$ existing-name$ )
+         2over $=  if                           ( name$ )
+            2drop exit                          ( -- )
+         then                                   ( name$ )
+      then                                      ( name$ )
+
+      " net" 2swap $devalias                    ( )
+   else                                         ( name$ )
+      2drop                                     ( )
+   then
+;
+
+fload ${BP}/cpu/arm/olpc/1.75/usb.fth
 
 fload ${BP}/cpu/arm/marvell/utmiphy.fth
 

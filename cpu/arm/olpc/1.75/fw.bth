@@ -23,6 +23,14 @@ warning on
 [then]
 
 fload ${BP}/cpu/arm/linux.fth
+
+: usb-quiet  ( -- )
+   [ ' linux-hook behavior compile, ]    \ Chain to old behavior
+   " /usb" " reset-usb" execute-device-method drop
+;
+
+' usb-quiet to linux-hook
+
 d# 9999 to arm-linux-machine-type  \ Marvell Jasper
 
 \ Add a tag describing the linear frame buffer
@@ -360,9 +368,9 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    factory-test? 0=  if  secure-startup  then
    unblock-exceptions
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
-[ifdef] notyet
+
    ?usb-keyboard
-[then]
+
    auto-banner?  if  banner  then
 
    auto-boot
