@@ -109,9 +109,12 @@ headers
 ;
 : dma-map-out  ( virt devaddr size -- )  nip flush-d$-range  ;
 
-: dma-sync  ( virt devaddr size -- )  nip flush-d$-range  ;
-: dma-push  ( virt devaddr size -- )  nip flush-d$-range  ;
-: dma-pull  ( virt devaddr size -- )  nip flush-d$-range  ;
+\ : dma-sync  ( virt devaddr size -- )  nip flush-d$-range  ;
+\ : dma-push  ( virt devaddr size -- )  nip flush-d$-range  ;
+\ : dma-pull  ( virt devaddr size -- )  nip flush-d$-range  ;
+: dma-sync  ( virt devaddr size -- )  3drop  ;
+: dma-push  ( virt devaddr size -- )  3drop  ;
+: dma-pull  ( virt devaddr size -- )  3drop  ;
 
 finish-device
 
