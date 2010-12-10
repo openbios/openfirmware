@@ -167,9 +167,9 @@ variable timestamp
       false
    then
 ;
-: do-idle  ( -- )  c7-wfi  ;
+code wfi   ( -- )  wfi   c;
 : safe-idle  ( -- )
-   can-idle?  if  do-idle  then
+   can-idle?  if  wfi  then
    \ do-lid
 ;
 ' safe-idle to stdin-idle

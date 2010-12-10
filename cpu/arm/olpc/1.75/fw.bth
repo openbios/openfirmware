@@ -191,7 +191,7 @@ d# 6500 constant ms-factor
    h# 38 mod  8 +  " rtc!" clock-node @  ( data index adr len ih )
    ['] $call-method  if  2drop 3drop  then
 ;
-: halt  ( -- )  c7-wfi  ;
+code halt  ( -- )  wfi   c;
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 
