@@ -141,8 +141,25 @@ d# 25 constant d#25
    4  0  do  dup 1 and  if  over i + c@ emit  then  2/  loop
    2drop
 ;
+: .event  ( -- )
+    0 3 bits case
+       0 of  ." nop32" endof
+       1 of  ." yield" endof
+       2 of  ." wfe"   endof
+       3 of  ." wfi"   endof
+       4 of  ." sev"   endof
+       5 of  ." nop5"  endof
+       6 of  ." nop6"  endof
+       7 of  ." nop7"  endof
+    endcase
+    {<cond>}
+;
 : .mrs/sr  ( -- )
     d#21 bit?  if	\ MSR
+       instruction @ h# 00cf.fff8 and  h# 00000.f000 =  if       
+          .event
+          exit
+       then
        ." msr" {<cond>}
        op-col  .psr .fields ., .r/imm
     else		\ MRS

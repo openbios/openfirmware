@@ -990,6 +990,12 @@ also arm-assembler definitions
 : adr  ( -- )  true  (set)  ;
 : set  ( -- )  false (set)  ;
 
+: nop32 ( -- )  h# 0320f000 {cond} !op  ;
+: yield ( -- )  h# 0320f001 {cond} !op  ;
+: wfe   ( -- )  h# 0320f002 {cond} !op  ;
+: wfi   ( -- )  h# 0320f003 {cond} !op  ;
+: sev   ( -- )  h# 0320f004 {cond} !op  ;
+
 : nop  ( -- )  h# e1a00000 asm,  ;	\ mov r0,r0
 
 : #    ( -- adt-immed )  adt-immed  ;
