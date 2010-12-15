@@ -37,7 +37,7 @@ This Open Firmware implementation has been ported to quite a
 few different CPUs and platforms.  The initial release contains
 the processor-independent core code, x86 CPU support, drivers
 for some common PC peripherals, and the current version of the
-port to the One Laptop Per Child computer.  The support code
+port to the One Laptop per Child computer.  The support code
 for other CPUs and devices, and documentation, will be released
 as time permits.
 

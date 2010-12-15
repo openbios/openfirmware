@@ -343,6 +343,9 @@ Method(_WAK, 1, Serialized)
     // always want to hear both lid events when awake
     Store (GPI7, LPOL)  // watch either edge
 
+    // always want to hear ebook events (through THRM# GPIO)
+    Store (One, \_SB.PCI0.VT86.ENTH)
+
     Return (0)
 }
 
@@ -1172,6 +1175,10 @@ Scope(\_SB)
                 Offset(0x88),
                     , 7,
                 IOBA, 9,        // Power Management I/O Base
+
+                Offset(0x8c), // Host Power Management Control
+                    , 3,
+                ENTH, 1,      // THRM# enable
 
                 Offset(0x94),
                     , 5,
@@ -2354,6 +2361,7 @@ Scope(\_SB)
 
             Method(_INI, 0)
             {
+                Store (One, \_SB.PCI0.VT86.ENTH)
                 Store (One, THRM)
                 Store (GPI9, TPOL)  // init edge detect from current state
             }
