@@ -142,6 +142,7 @@ fload ${BP}/cpu/x86/pc/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/strokes.fth
 fload ${BP}/cpu/x86/pc/olpc/plot.fth
+fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
 
 \ Pseudo device that appears in the boot order before net booting
 0 0 " " " /" begin-package
@@ -379,7 +380,7 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    unfreeze visible cursor-on ( no-banner? )
    if  banner  then  \ Reissue banner if it was suppressed
 
-   blue-letters ." Type 'help' for more information." black-letters
+   blue-letters ." Type 'help' for more information." black-letters cancel
    cr cr
 
    enable-user-aborts
