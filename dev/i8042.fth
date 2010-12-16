@@ -33,7 +33,13 @@ hex
 
 \ 0 means the keyboard port, 1 means the aux port
 : encode-unit  ( n -- adr len )  if  " aux"  else  " kbd"  then  ;
-: decode-unit  ( adr len -- n )  " aux"  $=  0=  if  0  else  1  then  ;
+: decode-unit  ( adr len -- n )
+   2dup  $number  if                        ( adr len )
+      " aux"  $=  0=  if  0  else  1  then  ( n )
+   else                                     ( adr len n )
+      nip nip                               ( n )
+   then
+;
 
 \ Queues for distributing bytes sent from the two devices
 d# 100 constant /q
