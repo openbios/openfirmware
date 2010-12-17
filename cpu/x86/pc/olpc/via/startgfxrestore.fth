@@ -303,7 +303,8 @@ end-table
 30 1e seq-set  \ Power up DVP1 pads
 0c 2a seq-set  \ Power up LVDS pads
 30 1b seq-set  \ Turn off primary engine clock to save power
-   
+
+[ifdef] resume-dcon
 d# 32000 wait-us
 \ Wait for DCON_BLNK to be low
 d# 100 # cx mov
@@ -315,7 +316,11 @@ begin
    cx dec
 0= until  then  \ "then" resolves "while"
 
+\ This is a cheesy way to set the DCON LOAD bit --
+ff acpi-io-base 4d + port-wb  \ B1 and B2 - DCON LOAD is the 0x04 bit (bit number 2) of PMIO+4d
+ff acpi-io-base 4f + port-wb  \ A1 and A2 - DCON LOAD is the 0x10 bit (bit number 4) of PMIO+4f
 d# 19000 wait-us
+[then]
 
 then
 long-offsets !
