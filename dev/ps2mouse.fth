@@ -4,7 +4,7 @@ purpose: Driver for PS/2 mouse
 " mouse"          device-name
 " mouse"          device-type
 " pnpPNP,f03" " compatible" string-property
-my-space " reg " integer-property
+my-space " reg" integer-property
 
 headerless
 : get-data  ( -- byte )  " get-data" $call-parent  ;
@@ -315,6 +315,9 @@ headerless
       my-space 1- set-port  identify  if  ]unlock  true exit  then  ( id )
    then                                   ( id )
    ]unlock                                ( id )
+
+   \ Map the Sentelic ID into the mouse ID
+   dup 4 =  if  drop 0  then
 
    \ The mouse ID is supposed to be zero.
    \ If the ID is still non-zero, read the second ID byte and give up

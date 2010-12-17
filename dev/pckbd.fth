@@ -6,7 +6,7 @@ purpose: Package methods for 80C42 keyboard controller
 hex
 headerless
 
-my-space " reg " integer-property
+my-space " reg" integer-property
 " keyboard"  device-name
 
 " pnpPNP,303" " compatible" string-property
