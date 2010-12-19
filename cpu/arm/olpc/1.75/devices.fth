@@ -75,6 +75,13 @@ stand-init:
 fload ${BP}/cpu/arm/mmp2/irq.fth
 
 fload ${BP}/cpu/arm/mmp2/watchdog.fth	\ reset-all using watchdog timer
+: olpc-reset-all  ( -- )
+   " screen" " dcon-off" ['] execute-device-method catch if
+      2drop 2drop
+   then
+   (reset-all)
+;
+' olpc-reset-all to reset-all
 
 0 0  " d4018000"  " /" begin-package  \ UART3
    fload ${BP}/cpu/arm/mmp2/uart.fth
