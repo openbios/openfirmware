@@ -1,3 +1,5 @@
+\ create cl2-a1
+create cl2-a2
 create debug-startup
 create olpc
 create trust-ec-keyboard
