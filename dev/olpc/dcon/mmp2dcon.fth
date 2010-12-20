@@ -29,8 +29,13 @@
 \ h# 8000 constant DM_SELFTEST
 
 : set-dcon-slave  ( -- )
+[ifdef] cl2-a1
    d# 162 to smb-clock-gpio#
    d# 163 to smb-data-gpio#
+[else]
+   d# 161 to smb-clock-gpio#
+   d# 110 to smb-data-gpio#
+[then]
    h# 1a to smb-slave
 ;
 
@@ -39,8 +44,13 @@
 : dcon@  ( reg# -- word )  set-dcon-slave  smb-word@  ;
 : dcon!  ( word reg# -- )  set-dcon-slave  smb-word!  ;
 
+[ifdef] cl2-a1
 : dcon-load  ( -- )  d# 151 gpio-set  ;
 : dcon-unload  ( -- )  d# 151 gpio-clr  ;
+[else]
+: dcon-load  ( -- )  d# 142 gpio-set  ;
+: dcon-unload  ( -- )  d# 142 gpio-clr  ;
+[then]
 \ : dcon-blnk?  ( -- flag )  ;  \ Not hooked up
 : dcon-stat@  ( -- n )  h# d4019100 l@ 4 rshift 3 and  ;
 : dcon-irq?  ( -- flag )  d# 124 gpio-pin@  0=  ;

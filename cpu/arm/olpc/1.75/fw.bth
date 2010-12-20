@@ -163,13 +163,44 @@ fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
 
+fload ${BP}/cpu/arm/mmp2/keypad.fth
+[ifndef] cl2-a1
+stand-init: keypad
+   keypad-on
+   8 keypad-direct-mode
+;
+: keypad-bit  ( n keypad out-mask key-mask -- n' keypad )
+   third invert  and  if    ( n keypad out-mask )
+      rot or swap           ( n' keypad )
+   else                     ( n keypad out-mask )
+      drop                  ( n keypad )
+   then                     ( n' keypad )
+;
+[then]
+
+fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
+
 : game-key@  ( -- n )
-   0
+   0                                        ( n )
+[ifdef] cl2-a1
    d# 16 gpio-pin@ 0=  if  h#  80 or  then  \ O
    d# 17 gpio-pin@ 0=  if  h#  02 or  then  \ Check
    d# 18 gpio-pin@ 0=  if  h# 100 or  then  \ X
    d# 19 gpio-pin@ 0=  if  h#  01 or  then  \ Square
    d# 20 gpio-pin@ 0=  if  h#  40 or  then  \ Rotate
+[else]
+   d# 15 gpio-pin@ 0=  if  button-rotate or  then   ( n )
+   keypad-scan                              ( n keypad )
+   button-o       h# 01  keypad-bit         ( n' keypad )
+   button-check   h# 02  keypad-bit         ( n' keypad )
+   button-x       h# 04  keypad-bit         ( n' keypad )
+   button-square  h# 08  keypad-bit         ( n' keypad )
+   rocker-up      h# 10  keypad-bit         ( n' keypad )
+   rocker-right   h# 20  keypad-bit         ( n' keypad )
+   rocker-down    h# 40  keypad-bit         ( n' keypad )
+   rocker-left    h# 80  keypad-bit         ( n' keypad )
+   drop                                     ( n )
+[then]
 ;
 
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth

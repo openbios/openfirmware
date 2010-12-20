@@ -15,8 +15,13 @@ hex
 
 : reset-sensor  ( -- )  d# 73 gpio-clr  1 ms  d# 73 gpio-set  ;
 
+[ifdef] cl2-a1
 : sensor-power-on   ( -- )  d# 145 gpio-set  ;
 : sensor-power-off  ( -- )  d# 145 gpio-clr  ;
+[else]
+: sensor-power-on   ( -- )  d# 150 gpio-set  ;
+: sensor-power-off  ( -- )  d# 150 gpio-clr  ;
+[then]
 
 \ CAM_HSYNC is on GPIO67, CAM_VSYNC is on GPIO68
 \ PIXMCLK on GPIO69, PIXCLK on GPIO70, PIXDATA[7:0] on GPIO[59:66]

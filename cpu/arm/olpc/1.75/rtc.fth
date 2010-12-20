@@ -2,8 +2,13 @@
 " rtc" name
 
 : set-address  ( -- )
+[ifdef] cl2-a1
    d# 97 to smb-clock-gpio#
    d# 98 to smb-data-gpio#
+[else]
+   d# 53 to smb-clock-gpio#
+   d# 54 to smb-data-gpio#
+[then]
    h# d0 to smb-slave
 ;
 : rtc@  ( reg# -- byte )  set-address  smb-byte@  ;
