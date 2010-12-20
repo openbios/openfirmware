@@ -59,12 +59,8 @@ fload ${BP}/cpu/arm/mmp2/twsi.fth
 fload ${BP}/cpu/arm/mmp2/mfpr.fth
 fload ${BP}/cpu/arm/mmp2/gpio.fth
 
-\ fload ${BP}/cpu/arm/olpc/1.75/boardtwsi.fth
-fload ${BP}/cpu/arm/olpc/1.75/boardgpio.fth
 : init-stuff
    acgr-clocks-on
-   init-mfprs
-   set-gpio-directions
    init-timers
    init-twsi
 ;
