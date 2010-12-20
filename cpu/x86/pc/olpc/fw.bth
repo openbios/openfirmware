@@ -343,6 +343,7 @@ fload ${BP}/cpu/x86/pc/olpc/copynand.fth
 \ fload ${BP}/cpu/x86/pc/olpc/carousel.fth     \ Carouseled NAND writing
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth       \ Cryptographic image validation
 fload ${BP}/cpu/x86/pc/olpc/lzip.fth         \ Access zip images from memory
+fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 
 : emacs  ( -- )
