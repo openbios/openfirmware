@@ -190,7 +190,7 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
    d# 20 gpio-pin@ 0=  if  h#  40 or  then  \ Rotate
 [else]
    d# 15 gpio-pin@ 0=  if  button-rotate or  then   ( n )
-   keypad-scan                              ( n keypad )
+   scan-keypad                              ( n keypad )
    button-o       h# 01  keypad-bit         ( n' keypad )
    button-check   h# 02  keypad-bit         ( n' keypad )
    button-x       h# 04  keypad-bit         ( n' keypad )
