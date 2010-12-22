@@ -64,37 +64,25 @@ decimal
 ;
 
 : board-outline
-  \ bottom left corner
-     2 370 moveto
-
-  \ left side cutout
-     2 253 lineto   11 253 lineto   11 236 lineto   6  236 lineto
-
-  \ top left corner
-     6  37 lineto
-  \ wireless cutout
-    60  37 lineto   60   0 lineto  114   0 lineto  114  96 lineto
-   205  96 lineto  205   0 lineto  524   0 lineto  524  37 lineto
-
-  \ top right corner
-   580 37 lineto
-
-  \ right side cutout
-   580 164 lineto  569 164 lineto  569 207 lineto  576 207 lineto
-   576 242 lineto  569 242 lineto  569 259 lineto  580 259 lineto
-
-  \ bottom right corner
-   580 370 lineto
-
-  \ lower cutout
-   495 370 lineto  495 366 lineto  446 366 lineto
-   446 353 lineto  423 353 lineto  423 336 lineto
-   396 336 lineto  396 231 lineto  183 231 lineto  183 333 lineto
-   155 333 lineto  155 349 lineto  132 349 lineto  132 366 lineto
-    95 366 lineto   95 370 lineto
-
-  \ bottom left corner
-     2 370 lineto
+    ( lower left corner  )   2  370 moveto
+    ( left side cutout   )   0 -117 rline    9    0 rline
+                             0  -17 rline   -5    0 rline
+    ( upper left corner  )   0 -199 rline
+    ( wireless cutout    )  54    0 rline    0  -37 rline   54    0 rline
+                             0   96 rline   91    0 rline    0  -96 rline
+                           319    0 rline    0   37 rline
+    ( upper right corner )  56    0 rline
+    ( right side cutout  )   0  127 rline  -11    0 rline    0   43 rline
+                             7    0 rline    0   35 rline   -7    0 rline
+                             0   17 rline   11    0 rline
+    ( lower right corner )   0  111 rline
+    ( lower cutout       ) -85    0 rline    0   -4 rline  -49    0 rline
+                             0  -13 rline  -23    0 rline    0  -17 rline
+                           -27    0 rline    0 -105 rline -213    0 rline
+                             0  102 rline  -28    0 rline    0   16 rline
+                           -23    0 rline    0   17 rline  -37    0 rline
+                             0    4 rline
+    ( lower left corner  ) -93    0 rline
 ;
 
 : mic-conn
@@ -229,13 +217,18 @@ decimal
    2dup  18 18 boxat
    swap 9 +  swap 9 +  6 circleat
 ;
+
 : top-outline
-   153 360 moveto
-   153 324 lineto  441 324 lineto  441 360 lineto  585 360 lineto
-   585  36 lineto  531  36 lineto  531   0 lineto  234   0 lineto
-   234  99 lineto  144  99 lineto  144   0 lineto   63   0 lineto
-    63  36 lineto    9  36 lineto    9 360 lineto  153 360 lineto 
+    584 370 moveto
+    0 -117 rline -9 0 rline 0 -17 rline 5 0 rline 0 -199 rline -54 0 rline
+    0 -37 rline -54 0 rline 0 96 rline -91 0 rline 0 -96 rline -319 0 rline
+    0 37 rline -56 0 rline 0 127 rline 11 0 rline 0 43 rline -7 0 rline
+    0 35 rline 7 0 rline 0 17 rline -11 0 rline 0 111 rline 85 0 rline
+    0 -4 rline 49 0 rline 0 -13 rline 23 0 rline 0 -17 rline 27 0 rline
+    0 -105 rline 213 0 rline 0 102 rline 28 0 rline 0 16 rline 23 0 rline
+    0 17 rline 37 0 rline 0 4 rline 93 0 rline
 ;
+
 : headphones-top
    2 95   7 18  boxat
    9 91  45 28  boxat
@@ -296,8 +289,8 @@ decimal
 : led3-top  99 348  led-symbol  ;
 : mic-led  31 45   led-symbol  ;
 : camera-led  569 45  led-symbol  ;
-: wlan-conn-top  144 82  90 27  boxat  ;
-: wlan-card-top  152 7  75 75  boxat  ;
+: wlan-conn-top  374 76  104 27  boxat  ;
+: wlan-card-top  389 7  75 75  boxat  ;
 : ext-sd-slot-top  497 360  81 9  boxat  ;
 : ext-sd-card-top
    504 369 moveto  0 -75 rline  11 -11 rline  56 0 rline  0 86 rline  -67 0 rline
