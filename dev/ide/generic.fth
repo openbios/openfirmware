@@ -310,6 +310,8 @@ fload ${BP}/dev/ide/atapi.fth
             else
                false                               ( found? )
             then
+         else
+            false                                  ( found? )
          then
       then
    else
