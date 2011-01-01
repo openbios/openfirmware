@@ -21,13 +21,13 @@ typedef unsigned long long  u64;
 
 static u32 trace = 0;
 
-//#if TRACE
+#if TRACE
 #define INSTR(a)   if (trace) printf("%s -- %0x N%d Z%d C%d V%d %s\n", \
                           a, COND, N, Z, C, V, cond ? "true" : "false"); \
                    if (cond == 0) break
-//#else
-//#define INSTR(a)   if (cond == 0) break
-//#endif
+#else
+#define INSTR(a)   if (cond == 0) break
+#endif
 
 #define MAXMEM 0x80000
 #define MEM(type, adr)   *(type *)(&mem[(adr)])
@@ -248,10 +248,10 @@ simulate(u8 *mem, u32 start, u32 header, u32 syscall_vec,
     while (1) {
         instruction = MEM(u32, PC - 8);
         last_pc = PC;
-//#if TRACE
+#if TRACE
         if (trace)
             regdump(instruction, last_pc, 0);
-//#endif
+#endif
         EVAL_COND(COND);
         if (cond == 0xf)
                 UNIMP("unconditional");
