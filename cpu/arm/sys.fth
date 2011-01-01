@@ -28,11 +28,13 @@ code syscall  ( call# -- )
 
    psh     ip,rp			\ This register may be clobbered
    ldr     r6,'user syscall-vec		\ Get address of system call table
-   add     r6,r6,tos			\ Call through vector
-   ldr     r6,[r6]                
+   cmp     r6,#0
+   wrceq   tos                          \ For the simulator, we execute a fake instruction
+   addne   r6,r6,tos			\ Call through vector
+   ldrne   r6,[r6]                
 
-   mov     lk,pc                  	\ Return address
-   mov     pc,r6                  
+   movne    lk,pc                  	\ Return address
+   movne    pc,r6                  
 \   ldr     pc,[r6,tos]			\ Call through vector
 
    str     r0,'user sysretval		\ Save the result
@@ -73,9 +75,30 @@ hex
 ;
 ' sys-init-io is init-io
 
-: sys-init ;  \ Environment initialization chain
+code (wrapper-find-next)  ( adr len link origin -- adr len alf true | adr len false )
+   mov    r3,tos         \ origin in r3
+   ldmia  sp,{r0,r1,r2}  \ r0: link, r1: len, r2: adr
+   ldr    r0,[r0]        \ Dereference first link in threads area
+   mvn    r4,#0          \ -1 in r4 - tells the wrapper to do the find thing
+   wrc    r4
+   cmp    r0,#0
+   strne  r0,[sp]        \ Found: alf on memory stack (second item)
+   mvnne  tos,#0         \ Found: true in top of stack register
+   inceq  sp,1cell       \ Not found - remove link from memory stack
+   moveq  tos,#0         \ Not found - false in top of stack register
+c;
+: wrapper-find-next  ( adr len link -- adr len alf true | adr len false )
+   origin (wrapper-find-next)
+;
+\ Override $find-next with the wrapper accelerator version if we are
+\ hosted under armsim
+: sys-init  ( -- )
+   syscall-vec @  0=  if  ['] wrapper-find-next  is $find-next  then
+;
+
 ' sys-init is init-environment
 decimal
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 1994 FirmWorks

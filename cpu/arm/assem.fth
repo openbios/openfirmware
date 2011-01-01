@@ -990,6 +990,9 @@ also arm-assembler definitions
 : adr  ( -- )  true  (set)  ;
 : set  ( -- )  false (set)  ;
 
+\ Wrapper Call - FirmWorks pseudo-op for armsim wrapper calls
+: wrc   ( -- )  h# 03200010 {cond} init-operands get-r16 !op  ;
+
 : nop32 ( -- )  h# 0320f000 {cond} !op  ;
 : yield ( -- )  h# 0320f001 {cond} !op  ;
 : wfe   ( -- )  h# 0320f002 {cond} !op  ;

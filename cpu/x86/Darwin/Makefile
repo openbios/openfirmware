@@ -52,8 +52,11 @@ forth: ${OBJS}
 inflate.o: ${ZIPDIR}/inflate.c
 	${CC} -c -m32 -O0 -fpic $< -o $@
 
+# Well, we're not going to get objcopy in a generic OS X environment, so
+# let's just fake it.
 ../build/inflate.bin: inflate.o
-	${OBJCOPY} -O binary $< $@
+	# ${OBJCOPY} -O binary $< $@
+	dd if=$< of=$@ bs=256 skip=1
 
 %.o: ${WRDIR}/%.c
 	${CC} -c ${CFLAGS} -I${ZIPDIR} $< -o $@

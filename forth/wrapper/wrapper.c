@@ -339,7 +339,6 @@ INTERNAL char *	substr();
 INTERNAL long	path_open();
 INTERNAL void	keymode();
 INTERNAL void	keyqmode();
-INTERNAL void	restoremode();
 
 INTERNAL long 	f_open(), f_creat();
 INTERNAL long	f_close(), f_read(), f_write();
@@ -347,13 +346,16 @@ INTERNAL long	f_ioctl();
 INTERNAL long	f_lseek();
 INTERNAL long	f_crstr();
 
-#ifdef PPCSIM
+#if defined(PPCSIM) || defined (ARMSIM)
   /* These are not INTERNAL because the PowerPC simulator uses then */
          long	c_key();
          long	s_bye();
+         void   simulate();
+         void	restoremode();
 #else
   INTERNAL long	c_key();
   INTERNAL long	s_bye();
+  INTERNAL void	restoremode();
 #endif
 
 INTERNAL long	c_emit();
@@ -976,7 +978,7 @@ main(argc, argv, envp)
 
 	if (header.h_magic != CPU_MAGIC) {
 		error("forth: Incorrect dictionary file header in ", dictfile);
-/* XXX */ printf("%x %x\n", CPU_MAGIC, header.h_magic);
+/* XXX */ printf("%x %x\n", CPU_MAGIC, (unsigned int) header.h_magic);
 		exit(1);
 	}
 
@@ -1003,6 +1005,10 @@ main(argc, argv, envp)
 # ifdef PPCSIM
 	printf("PowerPC Instruction Set Simulator\n");
 	printf("Copyright 1994 FirmWorks   All rights reserved\n");
+# elif ARMSIM
+	printf("ARM Instruction Set Simulator\n");
+	printf("Copyright 1994 FirmWorks   All rights reserved\n");
+	printf("Copyright 2010 Apple, Inc. All rights reserved\n");
 # endif
 
 	loadaddr = (char *)m_alloc(dictsize);
@@ -1056,10 +1062,14 @@ main(argc, argv, envp)
 	 * exit with its return value as the status code.
 	 */
 
-#ifdef PPCSIM
+#if defined(PPCSIM)
 	simulate(0L, loadaddr+sizeof(header)+START_OFFSET,
 		 loadaddr, functions, ((long)loadaddr+dictsize - 16) & ~15,
 		 argc, argv, 1 /* 0=POWER, 1=PowerPC */);
+#elif defined(ARMSIM)
+        // printf("loadaddr = 0x%x\n",loadaddr);
+	simulate(0L, loadaddr, loadaddr, functions,
+         ((long)loadaddr+dictsize - 16) & ~15, argc, argv);
 #else
 	s_flushcache(loadaddr, dictsize);  /* We're about to execute data! */
 # ifdef TARGET_X86
@@ -1104,6 +1114,7 @@ main(argc, argv, envp)
 	s_bye(0L);
 # endif
 #endif
+    restoremode();
 }
 
 /*
@@ -1516,7 +1527,7 @@ keymode()
 	}
 }
 
-INTERNAL void
+void
 restoremode()
 {
 	initline();

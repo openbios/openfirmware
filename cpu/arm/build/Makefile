@@ -1,4 +1,9 @@
+BASEDIR= `(cd ../../../; pwd;)`
+
 OS := $(shell uname)
+HOSTCPU= $(shell ${BASEDIR}/forth/lib/hostcpu.sh)
+HOSTDIR= ../${HOSTCPU}/${OS}
+BUILDSH= ${BASEDIR}/forth/lib/build.sh
 
 all: basefw.dic
 
@@ -9,8 +14,11 @@ all: basefw.dic
 ../${OS}/forth:
 	@make -C ../${OS} forth
 
-build: ../${OS}/forth
-	@ln -sf ../${OS}/forth $@
+build:
+	@ln -sf ${BUILDSH} build
+
+# build: ../${OS}/forth
+# 	@ln -sf ../${OS}/forth $@
 
 %.dic: FORCE build
 	./build $@

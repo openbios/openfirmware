@@ -154,10 +154,19 @@ d# 25 constant d#25
     endcase
     {<cond>}
 ;
+\ Wrapper call pseudo-op - used to request system functions from armsim
+: .wrc  ( -- )
+    ." wrc"
+    {<cond>} op-col .rn
+;
 : .mrs/sr  ( -- )
     d#21 bit?  if	\ MSR
-       instruction @ h# 00cf.fff8 and  h# 00000.f000 =  if       
+       instruction @ h# 00cf.fff8 and  h# 0000.f000 =  if
           .event
+          exit
+       then
+       instruction @ h# 00c0.fff8 and  h# 0000.0010 =  if
+          .wrc
           exit
        then
        ." msr" {<cond>}
