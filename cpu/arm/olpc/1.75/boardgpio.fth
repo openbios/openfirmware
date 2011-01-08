@@ -5,6 +5,7 @@ purpose: Board-specific setup details - pin assigments, etc.
    
    d# 01 gpio-dir-out  \ EN_USB_PWR
    d# 04 gpio-dir-out  \ COMPASS_SCL
+   d# 05 gpio-dir-out  \ COMPASS_SDA
    d# 08 gpio-dir-out  \ AUDIO_RESET#
    d# 10 gpio-dir-out  \ LED_STORAGE
    d# 11 gpio-dir-out  \ VID2
@@ -16,10 +17,10 @@ purpose: Board-specific setup details - pin assigments, etc.
    d# 58 gpio-set      \ WLAN_RESET#
    d# 58 gpio-dir-out  \ WLAN_RESET#
    d# 73 gpio-dir-out  \ CAM_RST
-   d# 97 gpio-dir-out  \ RTC_SCK
-   d# 98 gpio-dir-out  \ RTC_SDA
 
 [ifdef] cl2-a1
+   d# 97 gpio-dir-out  \ RTC_SCK
+   d# 98 gpio-dir-out  \ RTC_SDA
 [else]
    d#  53 gpio-set      \ RTC_SCK
    d#  53 gpio-dir-out  \ RTC_SCK
@@ -313,10 +314,10 @@ create mfpr-table
    2 af,      \ GPIO_162 - eMMC_D6
    2 af,      \ GPIO_163 - eMMC_D4
    2 af,      \ GPIO_164 - eMMC_D2
-   1 af,      \ GPIO_165 - eMMC_D7
-   1 af,      \ GPIO_166 - eMMC_D5
-   1 af,      \ GPIO_167 - eMMC_D3
-   1 af,      \ GPIO_168 - eMMC_D1
+   2 af,      \ GPIO_165 - eMMC_D7
+   2 af,      \ GPIO_166 - eMMC_D5
+   2 af,      \ GPIO_167 - eMMC_D3
+   2 af,      \ GPIO_168 - eMMC_D1
 [then]
 
 : init-mfprs
