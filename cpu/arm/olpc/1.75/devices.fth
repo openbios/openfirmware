@@ -223,6 +223,9 @@ create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
 ' 15x30pc to romfont
 
 fload ${BP}/cpu/arm/olpc/1.75/sdhci.fth
+[ifndef] cl2-a1
+fload ${BP}/cpu/arm/olpc/1.75/emmc.fth
+[then]
 
 devalias int /sd/disk@3
 devalias ext /sd/disk@1
@@ -319,9 +322,11 @@ warning @ warning off
       ec-api-ver@ " ec-version" integer-property
 [then]
 
+[ifndef] cl2-a2  \ XXX remove this ifndef when the new EC code is ready
       ['] ec-name$  catch  0=  if  " ec-name" string-property  then
       ['] ec-date$  catch  0=  if  " ec-date" string-property  then
       ['] ec-user$  catch  0=  if  " ec-user" string-property  then
+[then]
    dend
 
    " /openprom" find-device
