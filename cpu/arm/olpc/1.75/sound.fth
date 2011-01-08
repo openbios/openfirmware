@@ -188,7 +188,11 @@ audio-sram h# 3f80 + constant in-desc
 ;
 
 : codec-bias-off  ( -- )
+[ifdef] cl2-a1
    h# 8080 h# 02 codec-set
+[else]
+   h# c0c0 h# 02 codec-set
+[then]
    h# 8080 h# 04 codec-set
    h# 0000 h# 3a codec!
    h# 0000 h# 3c codec!
@@ -196,7 +200,7 @@ audio-sram h# 3f80 + constant in-desc
 ;
 : linux-codec-on
    h# 0000 h# 26 codec!  \ Don't power down any groups
-   h# 8000 h# 53 codec!  \ Disable fast vref
+   h# 8000 h# 5e codec!  \ Disable fast vref
    h# 0c00 h# 3e codec!  \ enable HP out volume power
    h# 0002 h# 3a codec!  \ enable Main bias
    h# 2000 h# 3c codec!  \ enable Vref
@@ -207,6 +211,7 @@ audio-sram h# 3f80 + constant in-desc
    h# 04e8 h# 40 codec!  \ General Purpose Control
 ;
 : codec-on  ( -- )
+[ifdef] cl2-a1
    h# 30 1 set-twsi-target
    h# 0000 h# 26 codec!  \ Don't power down any groups
    h# 8002 h# 34 codec!  \ Slave mode, 16 bits, left justified
@@ -214,9 +219,29 @@ audio-sram h# 3f80 + constant in-desc
    b# 1010.0011.1111.0011 h# 3c codec!  \ All on except ClassAB, PLL, speaker mixer, MONO mixer
    b# 0011.1111.1100.1111 h# 3e codec!  \ All on except MONO_OUT and PHONE in
    h# 0140 h# 40 codec!  \ MCLK is SYSCLK, HPamp Vmid 1.25, ClassDamp Vmid 1.5
+[else]
+   h# 34 1 set-twsi-target
+   h# 8001 h# 34 codec!  \ Slave mode, 16 bits, left justified
+   b# 1001.1111.1110.0000 h# 3a codec!  \ All on
+   b# 1111.1100.0011.1100 h# 3b codec!  \ All on except PLL
+   b# 1010.0000.0001.1101 h# 3c codec!  \ All on except AX and MONO
+   b# 1111.1100.0000.0000 h# 3e codec!  \ AXI and MONO IN off
+\   h# 8c00 h# 40 codec!  \ Speaker Amp Auto Ratio GAIN, use HPFs
+   h# 8000 h# 40 codec!  \ Speaker Amp Auto Ratio GAIN, no HPFs
+   h# 0000 h# 42 codec!  \ Use MCLK, not PLL
+   b# 1110.1100.1001.0000 h# 52 codec!  \ Protection on
+   h# 4000 h# 56 codec!  \ Power on Cap-free block with de-pop
+[then]
 ;
 : codec-off  ( -- )
+[ifdef] cl2-a1
    h# ef00 h# 26 codec!  \ Power down everything
+[else]
+   0 h# 3a codec!  \ All off
+   0 h# 3b codec!  \ All off
+   0 h# 3c codec!  \ All off
+   0 h# 3e codec!  \ All off
+[then]
 ;
 d# 48000 value sample-rate
 
@@ -378,6 +403,8 @@ false value playing?
 \ Page 1498 - The data transmit register is listed as RO.  How can a transmit register be RO????
 [then]
 
+[ifdef] cl2-a1
+\ Realtek ALC5624 CODEC
 : mic-gain  ( bits11:8 -- )  h# f00 h# 22 codec-field  ;
 : mic+0db   ( -- )  0 mic-gain  ;  \ Needed
 : mic+20db  ( -- )  h# 500 mic-gain  ;  \ Needed
@@ -495,6 +522,143 @@ false value external-mic?
    h# f9f h# 12 codec-field
    h# 60 h# 12 codec-set  \ Enable ADC zero-cross detectors
 ;
+[else]
+\ Realtek ALC5631Q CODEC
+: mic-bias-off  ( -- )  h# 000c h# 3b codec-clr  ;
+: mic-bias-on   ( -- )  h# 000c h# 3b codec-set  ;
+
+: mic1-high-bias  ( -- )  h# 80 h# 22 codec-clr  mic-bias-on  ;  \ 0.90*AVDD, e.g. 3V with AVDD=3.3V
+: mic1-low-bias   ( -- )  h# 80 h# 22 codec-set  mic-bias-on  ;  \ 0.75*AVDD, e.g. 2.5V with AVDD=3.3V
+: mic2-high-bias  ( -- )  h# 08 h# 22 codec-clr  mic-bias-on  ;  \ 0.90*AVDD, e.g. 3V with AVDD=3.3V
+: mic2-low-bias   ( -- )  h# 08 h# 22 codec-set  mic-bias-on  ;  \ 0.75*AVDD, e.g. 2.5V with AVDD=3.3V
+
+: headphones-inserted?  ( -- flag )  d# 97 gpio-pin@  ;
+: microphone-inserted?  ( -- flag )  d# 96 gpio-pin@  ;
+
+\ The range is from -46.5 db to +12 dB
+: gain>lr-12  ( db -- true | regval false )
+   d# 12 min           ( db' )
+   2* 3 /              ( steps )  \ Converts -46.5 .. 12 db to -31 .. 8 steps
+   dup d# -31 <  if    ( steps )
+      drop true
+   else                ( steps )
+      8 swap -         ( -steps )
+      0 max            ( clipped-steps )
+      dup 8 lshift or  ( regval )
+      false
+   then
+;
+\ The range is from -46.5 db to 0 dB
+: gain>lr  ( db -- true | regval false )
+   0 min               ( db' )
+   2* 3 /              ( steps )  \ Converts -46.5 .. 12 db to -31 .. 8 steps
+   dup d# -31 <  if    ( steps )
+      drop true
+   else                ( steps )
+      0 swap -         ( -steps )
+      0 max            ( clipped-steps )
+      dup 8 lshift or  ( regval )
+      false
+   then
+;
+
+\ This sets up a simple routing from the DAC to the headphone and speaker outputs
+: output-config  ( -- )
+   h# df00 h# 1a codec!     \ DACL -> OUTMIXL
+   h# df00 h# 1c codec!     \ DACR -> OUTMIXR
+   h# 4040 h# 04 codec-set  \ OUTMIXLR -> HPOVOLLR
+   h# d0d0 h# 28 codec!     \ DACLR -> SPKMIXLR
+   h# 4040 h# 02 codec-set  \ SPKMIXLR -> SPKVOLLR
+   h# 9000 h# 2a codec!     \ SPKVOLL -> SPOLMIX, SPKVOLR -> SPORMIX
+   h# 0000 h# 2c codec!     \ SPOxMIX -> SPKRMUX, HPOVOL -> HPMUX
+;
+
+: mute-speakers  ( -- )  h# 8080 2 codec-set  ;
+: set-speaker-volume    ( n -- )  \ DONE
+   gain>lr-12  if  h# 8080  then   h# bfbf   2 codec-field
+;
+: mute-headphones  ( -- )  h# 8080 4 codec-set  ;
+: set-headphone-volume  ( n -- )  \ DONE
+   gain>lr  if  h# 8080  then   h# 9f9f   4 codec-field
+;
+: set-volume  ( n -- )
+   headphones-inserted?  if
+      set-headphone-volume
+   else
+      set-speaker-volume
+   then
+;
+d#   0 constant default-adc-gain            \   0 dB - range is -96.625 to +28.5
+d#   0 constant default-dac-gain            \   0 dB - range is -96.625 to +28.5
+d#  44 constant default-mic-gain            \  44 dB - range is  0 to 50 dB
+d#   0 constant default-speaker-volume      \   0 dB - range is -46.5 to +12
+d# -10 constant default-headphone-volume    \ -10 dB - range is -46.5 to 0
+
+: adc-mute-all  ( -- )   h# f0f0 h# 14 codec!  ;
+: adc-mute-mic  ( -- )   h# 4040 h# 14 codec-set  ;
+: adc-unmute-mic  ( -- )   h# 4040 h# 14 codec-clr  ;
+\ : adc-unmute-outmix  ( -- )   h# 8080 h# 14 codec-clr  ;
+
+\ The useful one is outmix-unmute-dac
+: outmix-mute-all  ( -- )   h# ff00 dup h# 1a codec!  h# 1c codec!  ;
+: outmix-mute-mic  ( -- )   h# 1000 dup h# 1a codec-set  h# 1c codec-set  ;
+: outmix-unmute-mic  ( -- )   h# 1000 dup h# 1a codec-clr  h# 1c codec-clr  ;
+: outmix-mute-dac  ( -- )   h# 2000 dup h# 1a codec-set  h# 1c codec-set  ;
+: outmix-unmute-dac  ( -- )   h# 2000 dup h# 1a codec-clr  h# 1c codec-clr  ;
+: outmix-mute-recmix  ( -- )   h# 8000 dup h# 1a codec-set  h# 1c codec-set  ;
+: outmix-unmute-recmix  ( -- )   h# 8000 dup h# 1a codec-clr  h# 1c codec-clr  ;
+
+: gain>lr-3/8  ( -- lrgain boost )
+   d# 28 min
+   dup 0>= if          ( n )
+      8 3 */           ( boost )  \ Convert to .375 dB increments
+      0 swap           ( lrgain boost )
+   else                        ( n )
+      dup d# -96 <=  if        ( n )
+         drop                  ( )
+         h# ffff h# 8080       ( lrgain boost )
+      else                     ( n )
+         negate 8 3 */         ( steps )
+         dup bwjoin            ( lrgain )
+         0                     ( lrgain boost )
+      then                     ( lrgain boost )
+   then                        ( lrgain boost )
+;
+: set-dac-gain  ( n -- )
+   dup d# -96 <  if  outmix-mute-dac  else  outmix-unmute-dac  then
+   gain>lr-3/8  h# 0c codec!  h# 10 codec!
+;
+: set-adc-gain  ( n -- )
+   gain>lr-3/8  h# 12 codec!  h# 16 codec!
+;
+: mic1-balanced  ( -- )   h# 8000 h# 8000 h# 0e codec-field  ;
+: mic1-single-ended  ( -- )     0 h# 8000 h# 0e codec-field  ;
+: mic2-balanced  ( -- )   h# 0080 h# 0080 h# 0e codec-field  ;
+: mic2-single-ended  ( -- )     0 h# 0080 h# 0e codec-field  ;
+
+false value external-mic?
+: mic-routing  ( -- n )
+   mic1-single-ended mic2-single-ended
+   adc-unmute-mic
+;
+: db>mic-boost  ( db -- code )
+   dup d# 52 >=  if  drop h# 8800 exit  then
+   dup d# 50 >=  if  drop h# 7700 exit  then
+   dup d# 44 >=  if  drop h# 6600 exit  then
+   dup d# 40 >=  if  drop h# 5500 exit  then
+   dup d# 35 >=  if  drop h# 4400 exit  then
+   dup d# 30 >=  if  drop h# 3300 exit  then
+   dup d# 24 >=  if  drop h# 2200 exit  then
+   dup d# 20 >=  if  drop h# 1100 exit  then
+   drop h# 0000
+;
+: set-mic-gain  ( db -- )
+   db>mic-boost h# ff00 h# 22 codec-field
+   mic-routing
+;
+: mic+0db  ( -- )  0 set-mic-gain  ;
+: mic+20db  ( -- )  d# 20 set-mic-gain  ;
+[then]
    
 \ This is called from "record" in "mic-test" in "selftest"
 : set-record-gain  ( db -- )
@@ -511,9 +675,20 @@ false value external-mic?
 
 : init-codec  ( -- )
    codec-on
+[ifdef] cl2-a1
    headphones-inserted?  if  select-headphones  else  select-speakers  then
    default-speaker-volume set-speaker-volume
    default-headphone-volume set-headphone-volume
+[else]
+   output-config
+   headphones-inserted?  if
+      default-headphone-volume set-headphone-volume
+      mute-speakers
+   else
+      default-speaker-volume set-speaker-volume
+      mute-headphones
+   then
+[then]
    default-dac-gain set-dac-gain
    default-mic-gain set-mic-gain
    default-adc-gain set-adc-gain
