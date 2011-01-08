@@ -8,7 +8,7 @@ purpose: Driver for Armada 610/MMP2 keypad controller
 : kp!  ( n offset -- )  h# d4012000 + l!  ;
 : kp@  ( offset -- n )  h# d4012000 + l@  ;
 : keypad-direct-mode  ( #keys -- )
-   1+ 6 lshift  h# 202 or  0 kp!
+   1- 6 lshift  h# 202 or  0 kp!
 ;
 : scan-keypad  ( -- n )
    0 kp@  h# 4000.0000 or  0 kp!
