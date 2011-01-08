@@ -74,8 +74,16 @@ headers
 : host-high-speed  ( -- )  h# 28 cb@  4 or  h# 28 cb!  ;
 : host-low-speed   ( -- )  h# 28 cb@  4 invert and  h# 28 cb!  ;
 
-: 4-bit  ( -- )  h# 28 cb@  2 or  h# 28 cb!  ;
-: 1-bit  ( -- )  h# 28 cb@  2 invert and  h# 28 cb!  ;
+: 4-bit  ( -- )  h# 28 cb@  h# 20 invert and  2 or  h# 28 cb!  ;
+: 1-bit  ( -- )  h# 28 cb@  h# 22 invert and  h# 28 cb!  ;
+
+: hc-supports-8-bit?  ( -- flag )
+   h# 28 cb@                 ( old-val )
+   dup h# 20 or  h# 28 cb!   ( old-val )
+   h# 28 cb@ h# 20 and  0<>  ( old-val flag )
+   swap h# 28 cb!            ( flag )
+;
+: 8-bit  ( -- )  h# 28 cb@  h# 20 or  h# 28 cb!  ;
 
 \ : led-on   ( -- )  h# 28 cb@  1 or  h# 28 cb!  ;
 \ : led-off  ( -- )  h# 28 cb@  1 invert and  h# 28 cb!  ;
@@ -428,6 +436,9 @@ headers
    dma-release
    scratch-buf
 ;
+: mmc-switch  ( arg -- )    \ CMD6 for MMC - no data
+   h# 061b 0 cmd  response  h# 80 and  if  ." MMC SWITCH_ERROR" cr  then
+;
 
 : deselect-card  ( -- )   0   h# 0700 0 cmd  ;  \ CMD7 - with null RCA
 : select-card    ( -- )    \ CMD7 R1b
@@ -511,6 +522,34 @@ headers
    intstat-off
 ;
 
+\ The bit numbering follows the table on page 78 of the
+\ SD Physical Layer Simplified Specification Version 2.00.
+
+\ The "8 -" accounts for the fact that the chip's response
+\ registers omit the CRC and tag in bits [7:0]
+: csdbit  ( bit# -- b )
+   8 -
+   dup 3 rshift csd +  c@   ( bit# byte )
+   swap 7 and rshift 1 and
+;
+: csdbits  ( high low -- bits )
+   swap 0 -rot  do  2*  i csdbit  or  -1 +loop
+;
+
+: mmc-v4?  ( -- flag )   d# 125 d# 122 csdbits  4 >=  ;
+
+\ This sends back 512 bytes in a single data block.
+0 instance value ext-csd-buf
+
+\ Must be called with inststat-on
+: get-ext-csd  ( -- )    \ CMD8 R1
+   d# 512 " dma-alloc" $call-parent to ext-csd-buf
+   ext-csd-buf  d# 512 dup  (dma-setup)
+   0 h# 083a h# 13 cmd
+   2 wait
+   dma-release
+;
+
 \ Decoder for the result of ACMD13 - app-get-status
 : sdstatbit  ( bit# -- b )
    d# 511 swap -        ( bit#' )
@@ -540,7 +579,13 @@ headers
 
 \ Using this before a write-multiple command speeds up the write by
 \ avoiding unnecessary preservation of data that will be clobbered.
-: pre-write-erase  ( #blocks -- )  intstat-on  app-prefix  ( #blocks )  h# 171a 0  cmd  ;  \ ACMD23 R1
+: pre-write-erase  ( #blocks -- )
+   mmc?  if
+      drop
+   else
+      intstat-on  app-prefix  ( #blocks )  h# 171a 0  cmd  \ ACMD23 R1
+   then
+;
 
 \ You might want to turn this off for data transfer, as it controls
 \ a resistor on one of the data lines
@@ -661,7 +706,7 @@ h# 8010.0000 value oc-mode  \ Voltage settings, etc.
 
    \ SD version 2 adds CMD8.  Pre-v2 cards will time out.
    false to timeout?  send-if-cond      (  )
-   timeout?   if  h# 0030.0000  else  h# 4030.0000  then  to oc-mode
+   timeout?   if  h# 40ff.8000  else  h# 4030.0000  then  to oc-mode
 
    wait-powered  if  true exit  then
 
@@ -696,13 +741,46 @@ false value avoid-high-speed?
    then
 ;
 
+: ext-csd-set  ( mask index -- )  0 -rot  1 bljoin  mmc-switch   ;
+: ext-csd-clr  ( mask index -- )  0 -rot  2 bljoin  mmc-switch   ;
+: ext-csd!     ( value index -- )  0 -rot  3 bljoin  mmc-switch   ;
+: mmc-ddr-4-bit  ( -- )  5 d# 183 ext-csd!  ;
+: mmc-ddr-8-bit  ( -- )  6 d# 183 ext-csd!  ;
+: mmc-1-bit  ( -- )  0 d# 183 ext-csd!  ;
+: mmc-4-bit  ( -- )  1 d# 183 ext-csd!  ;
+: mmc-8-bit  ( -- )  2 d# 183 ext-csd!  ;
+: mmc-high-speed  ( -- )  1 d# 185 ext-csd!  ;
+: mmc-26-mhz?  ( -- flag )  d# 196 ext-csd-buf + c@  1 and  0<>  ;
+: mmc-52-mhz?  ( -- flag )  d# 196 ext-csd-buf + c@  2 and  0<>  ;
+: configure-mmc  ( -- )
+   mmc-v4?  if
+      get-ext-csd      \ MMC Cmd 8 - Get extended CSD
+
+      \ Ideally, the width selection would be done by using CMD19 to test the bus
+      hc-supports-8-bit?  if
+         mmc-8-bit  8-bit
+      else
+         mmc-4-bit  4-bit
+      then
+
+      \ Ideally, we should set the speed class/power consumption - but the devices
+      \ I have don't really care, so it's hard to test.
+
+      mmc-52-mhz?  if
+         mmc-high-speed  card-clock-50
+      else
+         mmc-26-mhz?  if
+            mmc-high-speed  card-clock-25
+         then
+      then
+   else
+      \ Pre-v4 MMC cards do not support SWITCH, so the only choice is 1-bit
+      1-bit
+   then
+; 
 : configure-transfer  ( -- )
    mmc?  if
-      1-bit
-      \ We don't support 4-bit mode for MMC yet
-
-      \ We don't support switching to high speed on MMC yet.
-      \ Doing so requires reading the EXT_CSD block
+      configure-mmc
    else
       2 set-bus-width  \ acmd6 - bus width 4
       4-bit
@@ -897,12 +975,14 @@ external
 
    get-all-cids   \ Cmd 2
    mmc?  if
-      h# 10000 set-rca   \ Cmd 3 (MMC) - Get relative card address
+      h# 20000 set-rca   \ Cmd 3 (MMC) - Get relative card address
    else
       get-rca        \ Cmd 3 (SD) - Get relative card address
    then
 
-   card-clock-25
+   mmc? 0=  if
+      card-clock-25
+   then
 
    get-csd           \ Cmd 9 - Get card-specific data
    get-cid           \ Cmd 10 - Get card ID
@@ -1034,6 +1114,7 @@ external
 : close  ( -- )
    open-count  1 =  if
       scratch-buf d# 64 " dma-free" $call-parent
+      ext-csd-buf  if  ext-csd-buf d# 512 " dma-free" $call-parent  then
    then
    open-count 1- 0 max  to open-count
 ;
@@ -1060,23 +1141,14 @@ external
    r> base !
 ;
 
-\ The bit numbering follows the table on page 78 of the
-\ SD Physical Layer Simplified Specification Version 2.00.
-
-\ The "8 -" accounts for the fact that the chip's response
-\ registers omit the CRC and tag in bits [7:0]
-: csdbit  ( bit# -- b )
-   8 -
-   dup 3 rshift csd +  c@   ( bit# byte )
-   swap 7 and rshift 1 and
-;
-: csdbits  ( high low -- bits )
-   swap 0 -rot  do  2*  i csdbit  or  -1 +loop
-;
-
 \ The calculation below is shown on page 81 of the
 \ SD Physical Layer Simplified Specification Version 2.00.
 : size  ( -- d.bytes )
+   ext-csd-buf  if
+      ext-csd-buf d# 212 + le-l@  d# 512 um*
+      exit
+   then
+
    d# 127 d# 126 csdbits  case
       0 of
          d# 49 d# 47 csdbits      ( c_size_mult )
