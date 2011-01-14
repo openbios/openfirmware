@@ -548,16 +548,18 @@ headers hex
 : amode-rdop2  ( -- )  init-operands  get-r12 get-opr2  !op  ;
 : amode-rev    ( -- )  init-operands  get-r12 get-r00   !op  ;
 
-: amode-lsm  ( -- )
+: amode-lsm  ( need-r16? -- )
    init-operands
-   get-r16                                 ( )
-   adr-delim ascii ! =  if                 ( )
-      flip-w                               ( )
-      require-field  " ," ?expecting drop  ( )
-   then                                    ( )
+   if
+      get-r16                                 ( )
+      adr-delim ascii ! =  if                 ( )
+         flip-w                               ( )
+         require-field  " ," ?expecting drop  ( )
+      then                                    ( )
 
-   \ There should be a comma on the end of the register.
-   adr-delim ascii , <>  " ," ?expecting
+      \ There should be a comma on the end of the register.
+      adr-delim ascii , <>  " ," ?expecting
+   then
 
    \ The next thing up should be an open brace for the register list.
    get-whatever adt-delimiter <>  " {" ?expecting
@@ -583,7 +585,6 @@ headers hex
 
    \ We've finished the register list, is there a ^ hanging on the end?
    ascii ^ parse-1  if  flip-b  then
-
    !op
 ;
 
@@ -713,6 +714,9 @@ defer do-offset
 : amode-swp  ( -- )
    init-operands  get-r12  get-r00   ['] get-off0  get-ea  !op
 ;
+: amode-ldrex  ( -- )
+   init-operands  get-r12  ['] get-off0  get-ea  !op
+;
 
 : amode-copr  ( -- )	\ Co-processors: mcr, mrc
    \ p, #, r, c, c, #
@@ -768,6 +772,9 @@ defer do-offset
 
 \ This word looks for [|b] on swp commands.
 : {b}  ( -- )  ascii b parse-1  if  flip-b  then  ;
+
+\ This word looks for [|bh] on ld/strex commands.
+: {bh}  ( -- )  ascii h parse-1  if  flip-b flip-w  else  {b}  then  ;
 
 \ If the s flag is found, set bit 20 for alu commmands.
 : {s}  ( -- )  ascii s parse-1  if  0010.0000 iop  then  ;
@@ -913,6 +920,7 @@ also arm-assembler definitions
 : orr   0180.0000 {cond/s} amode-rrop2  ;
 : bic   01c0.0000 {cond/s} amode-rrop2  ;
 
+: clz   016f.0f10 {cond/s} amode-rdop2  ;
 : mov   01a0.0000 {cond/s} amode-rdop2  ;
 : mvn   01e0.0000 {cond/s} amode-rdop2  ;
 
@@ -944,10 +952,14 @@ also arm-assembler definitions
 
 : bx    012f.ff10 {cond} amode-bx     ;
 
-: swp   0100.0090 {cond} {b} amode-swp  ;
+: swp   0100.0090 {cond} {b}  amode-swp  ;
+: strex 0180.0f90 {cond} {bh} amode-swp  ;
+: ldrex 0190.0f9f {cond} {bh} amode-ldrex  ;
 
-: ldm   0810.0000 {cond} 1 parse-inc  amode-lsm  ;
-: stm   0800.0000 {cond} 0 parse-inc  amode-lsm  ;
+: ldm   0810.0000 {cond} 1 parse-inc 1 amode-lsm  ;
+: popm  08bd.0000 {cond}             0 amode-lsm  ;
+: stm   0800.0000 {cond} 0 parse-inc 1 amode-lsm  ;
+: pushm 092d.0000 {cond}             0 amode-lsm  ;
 
 : ldr  ( -- )  0410.0000 {cond} {shbt}  ;
 : str  ( -- )  0400.0000 {cond} {hbt}   ;
@@ -959,33 +971,42 @@ also arm-assembler definitions
 : rd-field  ( reg# -- )  d# 12 set-field  ;
 : rb-field  ( reg# -- )  d# 16 set-field  ;
 
-\ XXX need ADR, SET
 \ adr{cond}  rN,<address>
+\ set{cond}  rN,<imm>
+: asm-const  ( const adr? -- op )
+   ea00.0000 asm,                        \ b here+8
+   if  here asm-set-relocation-bit drop  then
+   asm,                                  \ const
+   051f.000c                             \ ldr rN,[pc,#-12]
+;
 : (set)  ( address? -- )
    >r
    0000.0000 {cond}  init-operands
    \ Put the register number on the return stack so it won't interfere
    \ with the stack items used by any "*" operands there may be.
    get-register  >r              ( r: adr? reg# )
-   get-immediate                 ( address r: adr? reg# )
-   dup here  >offset             ( address offset r: adr? reg# )
-   dup  fits?  if                ( address offset r: adr? reg# )
-      nip nip  028f.0000         ( op r: adr? reg# )      \ add rN,pc,#<offset>
-   else                          ( address offset r: adr? reg# )
-      negate  fits?  if          ( address r: adr? reg# )
-         drop  024f.0000         ( op r: adr? reg# )      \ sub rN,pc,#<offset>
-      else                       ( address r: adr? reg# )
-         ea00.0000 asm,          ( address r: adr? reg# ) \ b here+8
-         r> r@ swap >r  if       ( address r: adr? reg# )
-            here asm-set-relocation-bit drop
+   get-immediate  r> r> rot      ( reg# adr? addr|imm )
+   2dup swap  if                 ( reg# adr? addr|imm addr|imm )
+      here  >offset              ( reg# adr? addr|imm offset|imm )
+   then
+   dup  fits?  if                ( reg# adr? addr|imm offset|imm )
+      2drop  if
+         028f.0000               ( reg# op )      \ add rN,pc,#<offset>
+      else
+         03a0.0000               ( reg# op )      \ mov rN,#<imm>
+      then
+   else                          ( reg# adr? addr|imm offset|imm )
+      rot  if                    ( reg# addr offset )
+         negate  fits?  if       ( reg# addr )
+            drop  024f.0000      ( reg# op )      \ sub rN,pc,#<offset>
+         else                    ( reg# addr )
+            true asm-const       ( reg# op )
          then
-         asm,                    ( r: adr? reg# )         \ adr
-         051f.000c               ( op r: adr? reg# )      \ ldr rN,[pc,#-12]
-      then                       ( op r: adr? reg# )
-   then                          ( op r: adr? reg# )
-   iop  r> rd-field              ( )
-   r> drop
-   !op
+      else                       ( reg# imm imm )
+         drop false asm-const    ( reg# op )
+      then                       ( reg# op )
+   then                          ( reg# op )
+   iop  rd-field  !op
 ;
 : adr  ( -- )  true  (set)  ;
 : set  ( -- )  false (set)  ;
@@ -1000,6 +1021,9 @@ also arm-assembler definitions
 : sev   ( -- )  h# 0320f004 {cond} !op  ;
 
 : nop  ( -- )  h# e1a00000 asm,  ;	\ mov r0,r0
+: dsb  ( -- )  h# f57ff040 asm,  ;
+: dmb  ( -- )  h# f57ff050 asm,  ;
+: isb  ( -- )  h# f57ff060 asm,  ;
 
 : #    ( -- adt-immed )  adt-immed  ;
 : reg  ( -- adt-reg )  adt-reg  ;
