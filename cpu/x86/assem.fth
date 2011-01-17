@@ -749,6 +749,25 @@ HEX
 : rdmsr   ( -- )  prefix-0f  h# 32 asm8,  ;
 : cpuid   ( -- )  prefix-0f  h# a2 asm8,  ;  \ Arg in %eax, results in ax,bx,dx,cx
 
+: imul2  ( MR REG -- )  \ REG <- REG * R/M
+   prefix-0f h# AF asm8,  r/m,
+;
+
+: imul-imm  ( imm # MR REG -- )  \ REG <- R/M * imm16/32   "500 #  bx cx  imul-imm"
+   here >r                                    ( imm # MR r: adr )
+   h# 69 asm8,                                ( imm # MR )
+   r/m,                                       ( imm # )
+   # <> abort" Expecting # in imul-imm"       ( imm )
+   dup big?  if                               ( imm  r: adr )
+      16bit?  if  asm16,  else  asm32,  then  (  r: adr )
+      r> drop                                 ( )
+   else                                       ( imm  r: adr )
+      asm8,                                   (  r: adr )
+      \ Change the opcode from 69 to 6b
+      h# 6b r> asm8!                          ( )
+   then
+;
+
 \ Structured Conditionals
 \ single pass forces fixed size. optimize for small, fast structures:
 \ always use 8-bit offsets.
