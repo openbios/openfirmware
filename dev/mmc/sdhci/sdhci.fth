@@ -1141,6 +1141,12 @@ external
    r> base !
 ;
 
+[ifndef] le-l@
+: le-l@  ( adr -- l )
+   >r  r@ c@  r@ 1+ c@  r@ 2+ c@  r> 3 + c@  bljoin
+;
+[then]
+
 \ The calculation below is shown on page 81 of the
 \ SD Physical Layer Simplified Specification Version 2.00.
 : size  ( -- d.bytes )
