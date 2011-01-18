@@ -1912,6 +1912,13 @@ create !ops
    ' !      token,-t	\ constant
    ' !      token,-t	\ variable
 
+create is-ops
+   ' isdefer    token,-t	\ defer
+   ' isuser     token,-t	\ user variable
+   ' isvalue    token,-t	\ value
+   ' isconstant token,-t	\ constant
+   ' isvariable token,-t	\ variable
+
 : associate  ( acf -- true  |  index false )
    word-type  ( n )
    word-types  begin              ( n adr )
@@ -1957,11 +1964,17 @@ headers
 [ifndef] run-time
 
 : do-is  ( data acf -- )
-   dup kerntype?  if     ( [data] acf )
-      state @  if   compile (is)  token,  else  (is   then
-   else                    ( [data] acf )
+   dup associate  if              ( [data] acf )
       to-hook
-   then
+   else                           ( [data] acf index )
+      state @  if                 ( acf index )
+         is-ops swap ta+ token@   ( acf is-token )
+         token, token,            ( )
+      else                        ( data acf index )
+         tuck data-locs +execute  ( data index data-adr )
+         swap !ops +execute       ( )
+      then                        ( )
+   then                           ( )
 ;
 \ is is the word that is actually used by applications
 : is  \ name  ( data -- )

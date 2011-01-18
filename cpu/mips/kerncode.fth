@@ -207,6 +207,53 @@ end-code
 
 meta definitions
 
+code isdefer  ( xt -- )
+   ip        t0   get
+   ip             ainc
+
+   t0 4      t0   lw    \ Get user number
+   t0 up     t0   addu  \ User area address
+   tos base  tos  subu  \ relocate xt
+   tos      t0 0  sw    \ Store value
+   sp             ainc  \ finish popping stack
+c;
+
+code isuser  ( xt -- )
+   ip        t0   get
+   ip             ainc
+
+   t0 4      t0   lw    \ Get user number
+   t0 up     t0   addu  \ User area address
+   tos      t0 0  sw    \ Store value
+   sp             ainc  \ finish popping stack
+c;
+
+code isvalue  ( xt -- )
+   ip        t0   get
+   ip             ainc
+
+   t0 4      t0   lw    \ Get user number
+   t0 up     t0   addu  \ User area address
+   tos      t0 0  sw    \ Store value
+   sp             ainc  \ finish popping stack
+c;
+
+code isconstant  ( xt -- )
+   ip        t0   get
+   ip             ainc
+
+   tos      t0 4  sw    \ Store value
+   sp             ainc  \ finish popping stack
+c;
+
+code isvariable  ( xt -- )
+   ip        t0   get
+   ip             ainc
+
+   tos      t0 4  sw    \ Store value
+   sp             ainc  \ finish popping stack
+c;
+
 \ dovariable constant dovariable
 \ dodoes     constant dodoes
 

@@ -300,7 +300,7 @@ variable extent  extent off
 headers
 : skip-(')      ( ip -- ip' )  ta1+ ta1+  ;
 headerless
-: .is           ( ip -- ip' )  .cword  dup token@ .name  ta1+ ;
+: .is           ( ip -- ip' )  ." to "  ta1+ dup token@ .name  ta1+ ;
 : .string-tail  ( ip -- ip' )  dup count type  +str  ;
 : .string       ( ip -- ip' )  .cword .string-tail  put"  ;
 : .pstring      ( ip -- ip' )  ?cr  ." p"  put"  ta1+ .string-tail  put"  ;
@@ -322,7 +322,7 @@ headerless
 \ classify each word in a definition
 
 \  Common constant for sizing the three classes:
-d# 30 constant #decomp-classes
+d# 36 constant #decomp-classes
 
 #decomp-classes tassociative: execution-class  ( token -- index )
    (  0 ) [compile]  (lit)           (  1 ) [compile]  ?branch
@@ -337,9 +337,12 @@ d# 30 constant #decomp-classes
    ( 18 ) [compile]  (endof)         ( 19 ) [compile]  (endcase)
    ( 20 ) [compile]  ("s)	     ( 21 ) [compile]  (is)
    ( 22 ) [compile]  (dlit)          ( 23 ) [compile]  (llit)
-   ( 24 ) [compile]  (n")            ( 25 ) [compile]  dummy
-   ( 26 ) [compile]  dummy           ( 27 ) [compile]  dummy
-   ( 28 ) [compile]  dummy           ( 29 ) [compile]  dummy
+   ( 24 ) [compile]  (n")            ( 25 ) [compile]  isdefer
+   ( 26 ) [compile]  isuser          ( 27 ) [compile]  isvalue
+   ( 28 ) [compile]  isconstant      ( 29 ) [compile]  isvariable
+   ( 30 ) [compile]  dummy           ( 31 ) [compile]  dummy
+   ( 32 ) [compile]  dummy           ( 33 ) [compile]  dummy
+   ( 34 ) [compile]  dummy           ( 35 ) [compile]  dummy
 
 \ Print a word which has been classified by  execution-class
 #decomp-classes 1+ case: .execution-class  ( ip index -- ip' )
@@ -355,9 +358,12 @@ d# 30 constant #decomp-classes
    ( 18 )     .endof                 ( 19 )     .endcase
    ( 20 )     .pstring               ( 21 )     .is
    ( 22 )     .dlit                  ( 23 )     .llit
-   ( 24 )     .nstring               ( 25 )     dummy
-   ( 26 )     dummy                  ( 27 )     dummy
-   ( 28 )     dummy                  ( 29 )     dummy
+   ( 24 )     .nstring               ( 25 )     .is
+   ( 26 )     .is                    ( 27 )     .is
+   ( 28 )     .is                    ( 29 )     .is
+   ( 30 )     dummy                  ( 31 )     dummy
+   ( 32 )     dummy                  ( 32 )     dummy
+   ( 34 )     dummy                  ( 35 )     dummy
    ( default ) .word
 ;
 
@@ -376,9 +382,12 @@ d# 30 constant #decomp-classes
    ( 18 )     skip-branch            ( 19 )     skip-word
    ( 20 )     skip-string            ( 21 )     skip-word
    ( 22 )     skip-dlit              ( 23 )     skip-llit
-   ( 24 )     skip-nstring           ( 25 )     dummy
-   ( 26 )     dummy                  ( 27 )     dummy
-   ( 28 )     dummy                  ( 29 )     dummy
+   ( 24 )     skip-nstring           ( 25 )     skip-word
+   ( 26 )     skip-word              ( 27 )     skip-word
+   ( 28 )     skip-word              ( 29 )     skip-word
+   ( 30 )     dummy                  ( 31 )     dummy
+   ( 32 )     dummy                  ( 32 )     dummy
+   ( 34 )     dummy                  ( 35 )     dummy
   ( default ) skip-word
 ;
 

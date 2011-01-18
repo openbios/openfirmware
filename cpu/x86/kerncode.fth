@@ -161,6 +161,39 @@ c;
 
 \ ---- Run-time words compiled by compiling words.
 
+code isdefer  ( xt -- )
+   0 [ip]  ax  mov   ip ainc  /cf [ax] ax mov  ?bswap-ax  up ax add  \ data address in ax
+[ifdef] big-endian-t
+   ax bx mov  ax pop  ?bswap-ax  ax 0 [bx] mov
+[else]
+   bx pop  bx  0 [ax] mov
+[then]
+c;   
+code isvalue  ( n -- )
+   0 [ip]  ax  mov   ip ainc  /cf [ax] ax mov  ?bswap-ax  up ax add  \ data address in ax
+[ifdef] big-endian-t
+   ax bx mov  ax pop  ?bswap-ax  ax 0 [bx] mov
+[else]
+   bx pop  bx  0 [ax] mov
+[then]
+c;   
+code isuser  ( n -- )
+   0 [ip]  ax  mov   ip ainc  /cf [ax] ax mov  ?bswap-ax  up ax add  \ data address in ax
+[ifdef] big-endian-t
+   ax bx mov  ax pop  ?bswap-ax  ax 0 [bx] mov
+[else]
+   bx pop  bx  0 [ax] mov
+[then]
+c;   
+code isconstant  ( n -- )
+   0 [ip]  bx  mov   ip ainc
+   ax pop  ?bswap-ax  ax /cf [bx] mov
+c;   
+code isvariable  ( n -- )
+   0 [ip]  bx  mov   ip ainc
+   ax pop  ?bswap-ax  ax /cf [bx] mov
+c;   
+
 code bswap  (s n1 -- n2 )
    ax pop
 

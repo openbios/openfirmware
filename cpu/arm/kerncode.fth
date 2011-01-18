@@ -133,6 +133,35 @@ compvoc         \ cfa of vocabulary is compiled here
 
 meta definitions
 
+code isdefer  ( xt -- )
+   ldr r0,[ip],1cell   \ Get CFA of target word
+   ldr r0,[r0,1cell]   \ Get user number
+   str tos,[r0,up]     \ Store value
+   pop tos,sp          \ Fix stack
+c;
+code isvalue  ( n -- )
+   ldr r0,[ip],1cell   \ Get CFA of target word
+   ldr r0,[r0,1cell]   \ Get user number
+   str tos,[r0,up]     \ Store value
+   pop tos,sp          \ Fix stack
+c;
+code isuser  ( n -- )
+   ldr r0,[ip],1cell   \ Get CFA of target word
+   ldr r0,[r0,1cell]   \ Get user number
+   str tos,[r0,up]     \ Store value
+   pop tos,sp          \ Fix stack
+c;
+code isconstant  ( n -- )
+   ldr r0,[ip],1cell   \ Get CFA of target word
+   str tos,[r0,1cell]  \ Store value
+   pop tos,sp          \ Fix stack
+c;
+code isvariable  ( n -- )
+   ldr r0,[ip],1cell   \ Get CFA of target word
+   str tos,[r0,1cell]  \ Store value
+   pop tos,sp          \ Fix stack
+c;
+
 code (lit)  ( -- lit )
    psh     tos,sp
    ldr     tos,[ip],1cell

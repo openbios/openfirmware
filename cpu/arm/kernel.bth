@@ -31,7 +31,6 @@ fload ${BP}/forth/kernel/meta1.fth
 
 
 [ifndef] arm-assembler		\ Make sure we have the ARM assembler
-order cr
 only forth also definitions
 
 fload ${BP}/forth/lib/bitops.fth

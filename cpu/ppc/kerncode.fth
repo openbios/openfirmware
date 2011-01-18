@@ -190,6 +190,39 @@ end-code
 
 meta definitions
 
+code isdefer  ( xt -- )
+   literal-to-t0
+   lwz    t0,/cf(t0)   \ User number in t0
+   stwx   tos,t0,up
+   pop-tos
+c;
+
+code isvalue  ( n -- )
+   literal-to-t0
+   lwz    t0,/cf(t0)   \ User number in t0
+   stwx   tos,t0,up
+   pop-tos
+c;
+
+code isuser  ( n -- )
+   literal-to-t0
+   lwz    t0,/cf(t0)   \ User number in t0
+   stwx   tos,t0,up
+   pop-tos
+c;
+
+code isconstant ( n -- )
+   literal-to-t0
+   stw    tos,/cf(t0)
+   pop-tos
+c;
+
+code isvariable ( n -- )
+   literal-to-t0
+   stw    tos,/cf(t0)
+   pop-tos
+c;
+
 \ dovariable constant dovariable
 \ dodoes     constant dodoes
 
