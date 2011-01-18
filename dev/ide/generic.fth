@@ -393,6 +393,7 @@ defer set-drive-cfg  ' noop to set-drive-cfg
 
    first-open?  if
       max#drives 0  do
+         d# 80 ms
          0 i  set-address  get-drive-parms  if  set-drive-cfg  then  loop
       false to first-open?
    then
