@@ -18,11 +18,14 @@ ${ROMNAME}.tag: ${ROMNAME}.rom
 tags: ${ROMNAME}.tag
 	@${BASEDIR}/forth/lib/toctags ${BASEDIR} ${TAGFILES}
 
-${ROMNAME}.rom: FORCE build ${CLIENTPROGS} ${HOSTDIR}/forth
+${ROMNAME}.rom: FORCE build ${CLIENTPROGS} ${HOSTDIR}/forth ${HOSTDIR}/armforth
 	./build $@
 
 ${HOSTDIR}/forth:
 	@make -C ${HOSTDIR} forth
+
+${HOSTDIR}/armforth:
+	@make -C ${HOSTDIR} armforth
 
 ../../build/inflate.bin:
 	@make -C ../../build inflate.bin

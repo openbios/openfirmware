@@ -1005,10 +1005,6 @@ main(argc, argv, envp)
 # ifdef PPCSIM
 	printf("PowerPC Instruction Set Simulator\n");
 	printf("Copyright 1994 FirmWorks   All rights reserved\n");
-# elif ARMSIM
-	printf("ARM Instruction Set Simulator\n");
-	printf("Copyright 1994 FirmWorks   All rights reserved\n");
-	printf("Copyright 2010 Apple, Inc. All rights reserved\n");
 # endif
 
 	loadaddr = (char *)m_alloc(dictsize);
