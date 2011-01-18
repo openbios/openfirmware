@@ -2,7 +2,7 @@ BASEDIR= `(cd ../../../; pwd;)`
 
 OS := $(shell uname)
 HOSTCPU= $(shell ${BASEDIR}/forth/lib/hostcpu.sh)
-HOSTDIR= ../${HOSTCPU}/${OS}
+HOSTDIR= ../../${HOSTCPU}/${OS}
 BUILDSH= ${BASEDIR}/forth/lib/build.sh
 
 all: basefw.dic
@@ -11,10 +11,13 @@ all: basefw.dic
 
 .PRECIOUS: builder.dic
 
-../${OS}/forth:
-	@make -C ../${OS} forth
+${HOSTDIR}/forth:
+	@make -C ${HOSTDIR} forth
 
-build:
+${HOSTDIR}/armforth:
+	@make -C ${HOSTDIR} armforth
+
+build: ${HOSTDIR}/forth ${HOSTDIR}/armforth
 	@ln -sf ${BUILDSH} build
 
 # build: ../${OS}/forth

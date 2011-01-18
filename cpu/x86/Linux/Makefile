@@ -45,5 +45,27 @@ inflate.o: inflate.lo
 %.o: ${ZIPDIR}/%.c
 	${CC} -c ${CFLAGS} -I${ZIPDIR} $< -o $@
 
+%.o: ${ARMDIR}/%.c
+	${CC} -c ${ARMCFLAGS} $< -o $@
+
+# ARM simulator wrapper build rules
+
+ARMDIR = ${BP}/cpu/arm
+ARMCFLAGS = -g -m32 -DARMSIM -DTARGET_ARM -DARM -DSIMNEXT
+ARMSIMOBJS = wrapsim.o armsim.o logger.o ${ZIPOBJS}
+ARMTRACEOBJS = wrapsim.o armsim.trace.o logger.o ${ZIPOBJS}
+
+wrapsim.o: ${WRDIR}/wrapper.c
+	${CC} -c ${ARMCFLAGS} -c $< -o $@
+
+armsim.trace.o: $(ARMDIR)/armsim.c
+	${CC} -c ${ARMCFLAGS} -DTRACE=1 -c $< -o $@
+
+armforth: ${ARMSIMOBJS}
+	${CC} ${ARMSIMOBJS} -o $@
+
+armforth.trace: ${ARMTRACEOBJS}
+	${CC} ${ARMTRACEOBJS}  -o $@
+
 clean:
-	@rm -f forth x86forth *.o *~ inflate.bin
+	@rm -f forth x86forth armforth *.o *~ inflate.bin
