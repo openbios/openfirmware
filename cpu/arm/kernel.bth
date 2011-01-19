@@ -59,7 +59,7 @@ fload ${BP}/forth/kernel/metanswapmap.fth	\ Null swap map
 \ : : : lastacf .name cr ;
 fload ${BP}/cpu/arm/target.fth
 fload ${BP}/forth/kernel/forward.fth
-fload ${BP}/cpu/ppc/fixvoc.fth
+fload ${BP}/cpu/arm/fixvoc.fth
 fload ${BP}/forth/kernel/metacompile.fth
 
 fload ${BP}/cpu/arm/metarel.fth
