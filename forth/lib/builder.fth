@@ -500,6 +500,9 @@ also tags definitions
 
 \ : debug-in:  ['] in: (debug  ;
 
+: fixme:  ." FIXME: "  -1 parse type cr  ;
+
+
 previous definitions
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
