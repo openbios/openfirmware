@@ -347,11 +347,11 @@ INTERNAL long	f_lseek();
 INTERNAL long	f_crstr();
 
 #if defined(PPCSIM) || defined (ARMSIM)
-  /* These are not INTERNAL because the PowerPC simulator uses then */
-         long	c_key();
-         long	s_bye();
-         void   simulate();
-         void	restoremode();
+  /* These are not INTERNAL because the simulators use then */
+           long	c_key();
+           long	s_bye();
+           void	simulate();
+           void	restoremode();
 #else
   INTERNAL long	c_key();
   INTERNAL long	s_bye();
@@ -1002,9 +1002,15 @@ main(argc, argv, envp)
 	dictsize = sizeof(header) + imagesize +  extrasize ; 
 	dictsize += 16;		/* Allow for alignment */
 
-# ifdef PPCSIM
+# ifdef VERBOSE
+#  ifdef PPCSIM
 	printf("PowerPC Instruction Set Simulator\n");
 	printf("Copyright 1994 FirmWorks   All rights reserved\n");
+#  elif ARMSIM
+	printf("ARM Instruction Set Simulator\n");
+	printf("Copyright 1994 FirmWorks   All rights reserved\n");
+	printf("Copyright 2010 Apple, Inc. All rights reserved\n");
+#  endif
 # endif
 
 	loadaddr = (char *)m_alloc(dictsize);
@@ -1063,7 +1069,6 @@ main(argc, argv, envp)
 		 loadaddr, functions, ((long)loadaddr+dictsize - 16) & ~15,
 		 argc, argv, 1 /* 0=POWER, 1=PowerPC */);
 #elif defined(ARMSIM)
-        // printf("loadaddr = 0x%x\n",loadaddr);
 	simulate(0L, loadaddr, loadaddr, functions,
          ((long)loadaddr+dictsize - 16) & ~15, argc, argv);
 #else
