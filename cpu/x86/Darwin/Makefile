@@ -79,10 +79,10 @@ armsim.trace.o: $(ARMDIR)/armsim.c
 	${CC} -c ${ARMCFLAGS} -DTRACE=1 -c $< -o $@
 
 armforth: ${ARMSIMOBJS}
-	${CC} ${ARMSIMOBJS} -o $@
+	${CC} ${LFLAGS} ${ARMSIMOBJS} -o $@
 
 armforth.trace: ${ARMTRACEOBJS}
-	${CC} ${ARMTRACEOBJS}  -o $@
+	${CC} ${LFLAGS} ${ARMTRACEOBJS}  -o $@
 
 clean:
 	@rm -f forth x86forth armforth *.o *~ inflate.bin
