@@ -41,13 +41,16 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
    cr  drop           ( )
 ;
 
+create machine-signature ," CL2"
+: downgrade  [char] 1 machine-signature count drop 2+ c! ;
 
 \ Perform a series of sanity checks on the new firmware image.
 
 : check-firmware-image  ( adr len -- adr len )
    dup /flash <>  abort" Wrong image length"      ( adr len )
    2dup +  h# 40 -                                ( adr len signature-adr )
-   dup " CL1" comp  abort" No firmware signature" ( adr len signature-adr )
+   dup machine-signature count comp  abort" No machine signature"
+                                                  ( adr len signature-adr )
    ." Firmware: " h# 10 type                      ( adr len )
    \ XXX add some more sanity checks
 ;
@@ -80,7 +83,7 @@ mfg-data-offset /flash-block +  constant mfg-data-end-offset
 
    ." Got firmware version: "
    flash-buf h# f.ffc0 +  dup  h# 10  type cr  ( adr )
-   " CL1" comp  abort" Wrong machine type"
+   machine-signature count comp  abort" Wrong machine signature"
 
    ?crc
 
