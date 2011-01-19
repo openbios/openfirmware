@@ -951,6 +951,7 @@ also arm-assembler definitions
 : bl    0b00.0000 {cond} amode-bbl    ;
 
 : bx    012f.ff10 {cond} amode-bx     ;
+: blx   012f.ff30 {cond} amode-bx     ;
 
 : swp   0100.0090 {cond} {b}  amode-swp  ;
 : strex 0180.0f90 {cond} {bh} amode-swp  ;

@@ -52,6 +52,7 @@ forth-regs
    swap >mask  and        ( field )
 ;
 : 4bits  ( right-bit -- field )  4 bits  ;
+: 8bits  ( right-bit -- field )  8 bits  ;
 : bit?  ( bit# -- f )  instruction @ 1 rot lshift and  0<>  ;
 \ Extracts an index from the field "bit# #bits", indexes into the string
 \ "adr len", which is assumed to contain substrings of length /entry,
@@ -83,12 +84,13 @@ variable start-column
 : op.rd,  ( -- )  op-col  .rd,  ;
 : .rb  ( -- )  d# 16 .reg  ;
 alias .rn .rb
+: rn  ( -- rn )  d# 16 4bits  ;
 
 : .rm,shift  ( -- )
    .rm
-   d# 4 8 bits  if   \ LSL #0 is no-shift; this isn't it
+   d# 4 8bits  if   \ LSL #0 is no-shift; this isn't it
       .,
-      4 8 bits  6 =  if  ." rrx"  exit  then
+      4 8bits  6 =  if  ." rrx"  exit  then
       5 2 " lsllsrasrror" 3 .fld  ."  "
       4 bit?  if  .rs  else  ." #" 7 5 bits .d  then
    then
@@ -96,7 +98,7 @@ alias .rn .rb
 
 : u.h  ( n -- )  dup  d# 9 u>  if  ." 0x"  then  (u.) type  ;
 : ror  ( n cnt -- )  2dup d# 32 swap - lshift  -rot rshift or  ;
-: .imm  ( -- )  0 8 bits  8 4bits  2*  ror u.h  ;
+: .imm  ( -- )  0 8bits  8 4bits  2*  ror u.h  ;
 
 : ?.bit  ( adr len bit# -- )  bit?  if  type  else  2drop  then  ;
 
@@ -159,6 +161,9 @@ d# 25 constant d#25
     ." wrc"
     {<cond>} op-col .rn
 ;
+: .clz  ( -- )
+   ." clz" {<cond>} op.rd, .rm
+;
 : .mrs/sr  ( -- )
     d#21 bit?  if	\ MSR
        instruction @ h# 00cf.fff8 and  h# 0000.f000 =  if
@@ -167,6 +172,10 @@ d# 25 constant d#25
        then
        instruction @ h# 00c0.fff8 and  h# 0000.0010 =  if
           .wrc
+          exit
+       then
+       instruction @ h# 0fff.0ff0 and  h# 016f.0f10 =  if
+          .clz
           exit
        then
        ." msr" {<cond>}
@@ -198,9 +207,11 @@ d# 25 constant d#25
 : p-bit  ( -- flag )  d#24 bit?  ;
 
 \ LD/ST extension space
-\ SWP{<cond>} Rd, Rm, [Rn]           cond 0001 00ZZ   Rn   Rd  SBZ 1001   Rm
 \ LDR{<cond>}{H|SH|SB} Rd, Rm, [Rn]  cond 000P UBW1   Rn   Rd addr 1SH1 addr
 \ STR{<cond>}{H|SH|SB} Rd, Rm, [Rn]  cond 000P UBW0   Rn   Rd addr 1SH1 addr
+\ SWP{<cond>}{B}       Rd, Rm, [Rn]  cond 0001 0BZZ   Rn   Rd  SBZ 1001   Rm
+\ LDREX{<cond>}{H|B}   Rd, [Rn]      cond 0001 1BH1   Rn   Rd  SBO 1001  SBO
+\ STREX{<cond>}{H|B}   Rd, Rm, [Rn]  cond 0001 1BH0   Rn   Rd  SBO 1001   Rm
 : imm8  ( -- n )  8 4bits 4 lshift  0 4bits or  ;
 : ,.r/imm8  ( -- )
     d#22 bit?  if
@@ -215,9 +226,20 @@ d# 25 constant d#25
     op.rd,
     .[ .rn  p-bit  if  ,.r/imm8 .] {!}  else  .] ,.r/imm8  then
 ;
-: .swp  ( -- )  ." swp"  {<cond>}  " b" d#22 ?.bit  op.rd, .rm ., .[ .rn .]  ;
+: .swp/ex  ( -- )
+   8 4bits 0=  if
+      ." swp"  {<cond>}  " b" d#22 ?.bit  op.rd, .rm ., .[ .rn .]
+   else
+      .ld/st ." rex" {<cond>}
+      d#21 2 bits case
+      1 of ." d" endof
+      2 of ." b" endof
+      3 of ." h" endof endcase
+      op.rd,  d#20 bit? 0= if .rm ., then  .[ .rn .]
+   then
+;
 
-: .ld/st-ext  ( -- )  5 2 bits  if  .ldx  else  .swp  then  ;
+: .ld/st-ext  ( -- )  5 2 bits  if  .ldx  else  .swp/ex  then  ;
 
 : .ext  ( -- )		\ Extension space
    d#24 bit? 0=  5 2 bits 0=  and  if  .alu-ext  else  .ld/st-ext  then
@@ -322,7 +344,7 @@ XXX decode floating opcodes:
 [then]
 : p#  ( -- n )  8 4bits  ;
 : .p#,  ( n -- )  ." p" p# n.d  .,  ;
-: .offset8  ( -- )  ." #" +/-  0 8 bits 4 *  u.h  ;
+: .offset8  ( -- )  ." #" +/-  0 8bits 4 *  u.h  ;
 : .ldc/stc  ( -- )
    .ld/st ." c" {<cond>} " l" d#22 ?.bit
    op-col .p#,  d# 12 .creg .,  .[ .rn
@@ -413,10 +435,29 @@ create classes
    ['] .ldc/stc compile,  \ 6
    ['] .coproc  compile,  \ 7
 
+: uncond-op   ( -- op  )  d#  4  bit?  ;
+: uncond-op1  ( -- op1 )  d# 20 8bits  ;
+: uncond-op2  ( -- op2 )  d#  4 4bits  ;
+
+: .uncond  ( -- )
+   uncond-op1  case
+   h# 57 of uncond-op2  case
+      4 of ." dsb" endof
+      5 of ." dmb" endof
+      6 of ." isb" endof
+      endcase endof
+   ." ?"
+   endcase
+;
+
 : disasm  ( x -- )
    push-hex
    instruction !
-   classes  d#25 3 bits ta+  token@ execute
+   d# 28 4bits h# f =  if
+      .uncond
+   else
+      classes  d#25 3 bits ta+  token@ execute
+   then
    pop-base
 ;
 
