@@ -70,12 +70,6 @@
    [OK: Changes for Open Firmware by Mike Tuciarone, June 1994.]
  */
 
-/* gzip.h -- common declarations for all gzip modules
- * Copyright (C) 1992-1993 Jean-loup Gailly.
- * This is free software; you can redistribute it and/or modify it under the
- * terms of the GNU General Public License, see the file COPYING.
- */
-
 #define u_long  unsigned long
 #define u_short unsigned short
 #define u_char  unsigned char
@@ -86,8 +80,7 @@ static u_long NEEDBITS();
 static int huft_fixed();
 static int huft_dynamic();
 
-/* gzip flag byte */
-#define ORIG_NAME    0x08 /* bit 3 set: original file name present */
+#define FILENAME_PRESENT    0x08 /* flag byte bit meaning filename follows */
 
 /* ROM
  * Workspace definitions
@@ -207,7 +200,7 @@ inflate(struct workspace *wsptr, int nohdr, u_char* clear, u_char *compr)
             flags = NEXTBYTE;
             for (n = 0; n < 6; ++n)
 		(void) NEXTBYTE;
-            if (flags & ORIG_NAME)
+            if (flags & FILENAME_PRESENT)
 		while (NEXTBYTE)
                     ;
          }
