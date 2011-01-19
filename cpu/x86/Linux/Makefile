@@ -2,7 +2,12 @@
 
 BP=../../..
 
-CFLAGS	= -O -g -m32 -DTARGET_X86
+# Flags for the OS and CPU
+MFLAGS = -m32
+
+OPT = -O
+CFLAGS	= -g $(MFLAGS) -DTARGET_X86
+LFLAGS = $(MFLAGS)
 
 # Uncomment these lines to include X windows support to the wrapper
 # via libxcb.  The libxcb development package (headers, etc) must be
@@ -13,10 +18,18 @@ CFLAGS	= -O -g -m32 -DTARGET_X86
 
 WRTAIL = forth/wrapper
 WRDIR = ${BP}/${WRTAIL}
+
+ifdef OMIT_ZIP
+ZIPDIR = ${WRDIR}
+ZIPOBJS = nullzip.o
+INFLATEBIN =
+else
 ZIPTAIL = ${WRTAIL}/zip
 ZIPDIR = ${BP}/${ZIPTAIL}
 
 ZIPOBJS = zipmem.o deflate.o trees.o bits.o util.o inflate.o
+
+endif
 
 OBJS += wrapper.o logger.o ${ZIPOBJS}
 
@@ -27,11 +40,11 @@ all: forth x86forth ../build/inflate.bin
 # Use x86forth when you need to compile new dictionaries that will
 # run on x86 systems.
 forth: ${OBJS}
-	${CC} -m32 -o $@ ${OBJS} ${LIBS}
+	${CC} ${MFLAGS} -o $@ ${OBJS} ${LIBS}
 	@ln -sf forth x86forth
 
 inflate.lo: ${ZIPDIR}/inflate.c
-	${CC} -c -m32 -Wall -fno-stack-protector -ffreestanding -D_FORTIFY_SOURCE=0 -DNEED_BCOPY -O3 -fpic $< -o $@
+	${CC} -c $(MFLAGS) -Wall -fno-stack-protector -ffreestanding -D_FORTIFY_SOURCE=0 -DNEED_BCOPY -O3 -fpic $< -o $@
 
 inflate.o: inflate.lo
 	${LD} -melf_i386 -T inflate.ld $< -o $@
@@ -40,15 +53,15 @@ inflate.o: inflate.lo
 	objcopy -O binary $< $@
 
 %.o: ${WRDIR}/%.c
-	${CC} -c ${CFLAGS} $< -o $@
+	${CC} -c ${OPT} ${CFLAGS} $< -o $@
 
 %.o: ${ZIPDIR}/%.c
-	${CC} -c ${CFLAGS} -I${ZIPDIR} $< -o $@
+	${CC} -c ${OPT} ${CFLAGS} -I${ZIPDIR} $< -o $@
 
 # ARM simulator wrapper build rules
 
 ARMDIR = ${BP}/cpu/arm
-ARMCFLAGS = -g -m32 -DARMSIM -DTARGET_ARM -DARM -DSIMNEXT
+ARMCFLAGS = -g ${MFLAGS} -DARMSIM -DTARGET_ARM -DARM -DSIMNEXT
 ARMSIMOBJS = wrapsim.o armsim.o logger.o ${ZIPOBJS}
 ARMTRACEOBJS = wrapsim.o armsim.trace.o logger.o ${ZIPOBJS}
 
