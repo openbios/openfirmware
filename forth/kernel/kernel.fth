@@ -3082,6 +3082,7 @@ defer environment?
 : command: [compile] \ ;
 : in: [compile] \ ;
 : dictionary: [compile] \ ;
+: fixme:  ." FIXME: "  -1 parse type cr  ;
 
 \ From cmdline.fth
 
