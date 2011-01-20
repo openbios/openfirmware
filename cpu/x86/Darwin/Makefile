@@ -6,8 +6,8 @@ BP=../../..
 MFLAGS = -m32
 
 OPT = -O
-CFLAGS	= -g $(MFLAGS) -DTARGET_X86
-LFLAGS  = $(MFLAGS)
+CFLAGS	= -g ${MFLAGS} -DTARGET_X86
+LFLAGS  = ${MFLAGS}
 
 # Extra CFLAGS needed by Darwin hosts. GCC doesn't define __unix__ here,
 # so we must include it ourselves.
@@ -49,7 +49,7 @@ all: forth x86forth ${INFLATEBIN}
 # Use x86forth when you need to compile new dictionaries that will
 # run on x86 systems.
 forth: ${OBJS}
-	${CC} $(MFLAGS) -o $@ ${OBJS}
+	${CC} ${MFLAGS} -o $@ ${OBJS}
 	@ln -sf forth x86forth
 
 %.o: ${WRDIR}/%.c
@@ -75,7 +75,7 @@ ARMCFLAGS += -D__unix__=1 -Wimplicit-function-declaration
 wrapsim.o: ${WRDIR}/wrapper.c
 	${CC} -c ${ARMCFLAGS} -c $< -o $@
 
-armsim.trace.o: $(ARMDIR)/armsim.c
+armsim.trace.o: ${ARMDIR}/armsim.c
 	${CC} -c ${ARMCFLAGS} -DTRACE=1 -c $< -o $@
 
 armforth: ${ARMSIMOBJS}

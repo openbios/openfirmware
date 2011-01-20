@@ -6,8 +6,8 @@ BP=../../..
 MFLAGS = -m32
 
 OPT = -O
-CFLAGS	= -g $(MFLAGS) -DTARGET_X86
-LFLAGS = $(MFLAGS)
+CFLAGS	= -g ${MFLAGS} -DTARGET_X86
+LFLAGS = ${MFLAGS}
 
 # Uncomment these lines to include X windows support to the wrapper
 # via libxcb.  The libxcb development package (headers, etc) must be
@@ -44,7 +44,7 @@ forth: ${OBJS}
 	@ln -sf forth x86forth
 
 inflate.lo: ${ZIPDIR}/inflate.c
-	${CC} -c $(MFLAGS) -Wall -fno-stack-protector -ffreestanding -D_FORTIFY_SOURCE=0 -DNEED_BCOPY -O3 -fpic $< -o $@
+	${CC} -c ${MFLAGS} -Wall -fno-stack-protector -ffreestanding -D_FORTIFY_SOURCE=0 -DNEED_BCOPY -O3 -fpic $< -o $@
 
 inflate.o: inflate.lo
 	${LD} -melf_i386 -T inflate.ld $< -o $@
@@ -71,14 +71,14 @@ ARMTRACEOBJS = wrapsim.o armsim.trace.o logger.o ${ZIPOBJS}
 wrapsim.o: ${WRDIR}/wrapper.c
 	${CC} -c ${ARMCFLAGS} -c $< -o $@
 
-armsim.trace.o: $(ARMDIR)/armsim.c
+armsim.trace.o: ${ARMDIR}/armsim.c
 	${CC} -c ${ARMCFLAGS} -DTRACE=1 -c $< -o $@
 
 armforth: ${ARMSIMOBJS}
-	${CC} ${ARMSIMOBJS} -o $@
+	${CC} ${LFLAGS} ${ARMSIMOBJS} -o $@
 
 armforth.trace: ${ARMTRACEOBJS}
-	${CC} ${ARMTRACEOBJS}  -o $@
+	${CC} ${LFLAGS} ${ARMTRACEOBJS}  -o $@
 
 clean:
 	@rm -f forth x86forth armforth *.o *~ inflate.bin
