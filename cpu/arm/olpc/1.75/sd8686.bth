@@ -3,6 +3,24 @@ purpose: Fetch the firmware for the Marvell 8686 wireless LAN module
 command: &builder &this
 build-now
 
+char * value prefix
+\needs $md5digest1 fload ${BP}/ofw/ppp/md5.fth
+: $md5sum-file  ( filename$ -- )
+   2dup $read-file         ( filename$ adr len )
+   2dup $md5digest1        ( filename$ adr len md5$ )
+   2swap free-mem          ( filename$ md5$ )
+   " md5string" $new-file  ( filename$ md5$ )
+   bounds  ?do             ( filename$ )
+      i c@  push-hex  <# u# u# u#> ofd @ fputs  pop-base
+   loop                    ( filename$ )
+   "  " ofd @ fputs        ( filename$ )
+   prefix ofd @ fputc      ( filename$ )
+   ofd @ fputs             ( )
+   fcr
+   ofd @ fclose
+;
+
+
 fload ${BP}/cpu/arm/olpc/1.75/wlan-version.fth
 
 " macro: WLAN_FILE lbtf_sdio-${WLAN_VERSION}" expand$ eval
@@ -14,15 +32,18 @@ fload ${BP}/cpu/arm/olpc/1.75/wlan-version.fth
 
 " wget -q http://dev.laptop.org/pub/firmware/libertas/thinfirm/${WLAN_FILE}.bin" expand$ $sh
 " wget -q http://dev.laptop.org/pub/firmware/libertas/thinfirm/${WLAN_FILE}.bin.md5" expand$ $sh
-" md5sum ${WLAN_FILE}.bin | cmp - ${WLAN_FILE}.bin.md5" expand$ $sh
+
+bl to prefix  " ${WLAN_FILE}.bin" expand$ $md5sum-file
+" cmp md5string ${WLAN_FILE}.bin.md5" expand$ $sh
 
 " mv ${WLAN_FILE}.bin sd8686.bin" expand$ $sh
 
 " wget -q http://dev.laptop.org/pub/firmware/libertas/sd8686_helper.bin" expand$ $sh
 " wget -q http://dev.laptop.org/pub/firmware/libertas/sd8686_helper.bin.md5" expand$ $sh
-" md5sum -b sd8686_helper.bin | cmp - sd8686_helper.bin.md5" expand$ $sh
+char * to prefix  " sd8686_helper.bin" $md5sum-file
+" cmp md5string sd8686_helper.bin.md5" expand$ $sh
 
-" rm ${WLAN_FILE}.bin.md5 sd8686_helper.bin.md5" expand$ $sh
+" rm ${WLAN_FILE}.bin.md5 sd8686_helper.bin.md5 md5string" expand$ $sh
 [then]
 
 \ This forces the creation of a .log file, so we don't re-fetch
