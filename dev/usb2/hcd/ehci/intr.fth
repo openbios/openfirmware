@@ -118,10 +118,8 @@ external
 
 headers
 
-warning @ warning off
 : (end-extra)  ( -- )  (end-extra) end-intr-in  ;
 ' (end-extra) to end-extra
-warning !
 
 
 \ LICENSE_BEGIN
