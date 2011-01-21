@@ -64,21 +64,21 @@ external
 ;
 
 : intr-in?  ( -- actual usberr )
-   intr-in-qh 0=  if  0 USB_ERR_INV_OP exit  then
-   clear-usb-error
-   intr-in-qh qh-done?  if
-      intr-in-qh error?  if
-         0
-      else
-         intr-in-qh dup sync-qhqtds
-         intr-in-qtd  dup intr-in-qh >qh-#qtds l@ get-actual
-         over >qtd-buf rot >qtd-pbuf l@ 2 pick dma-sync
-      then
-      usb-error
-      intr-in-qh fixup-intr-in-data
-   else
-      0 usb-error
-   then
+   intr-in-qh 0=  if  0 USB_ERR_INV_OP exit  then  ( )
+   clear-usb-error                   ( )
+   intr-in-qh qh-done?  if           ( )
+      intr-in-qh error?  if          ( )
+         0                           ( actual )
+      else                           ( )
+         intr-in-qh sync-qhqtds      ( )
+         intr-in-qtd  intr-in-qh >qh-#qtds l@  get-actual  ( actual )
+         intr-in-qtd >qtd-buf  intr-in-qtd >qtd-pbuf l@  2 pick  dma-sync  ( actual )
+      then                           ( actual )
+      usb-error                      ( actual usberr )
+      intr-in-qh fixup-intr-in-data  ( actual usberr )
+   else                              ( )
+      0 usb-error                    ( actual usberr )
+   then                              ( actual usberr )
 ;
 
 headers
