@@ -11,10 +11,10 @@ all: basefw.dic
 
 .PRECIOUS: builder.dic
 
-${HOSTDIR}/forth:
+${HOSTDIR}/forth: FORCE
 	@make -C ${HOSTDIR} forth
 
-${HOSTDIR}/armforth:
+${HOSTDIR}/armforth: FORCE
 	@make -C ${HOSTDIR} armforth
 
 build: ${HOSTDIR}/forth ${HOSTDIR}/armforth
