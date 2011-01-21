@@ -123,7 +123,6 @@ fload ${BP}/cpu/arm/savemeta.fth
 \Tags close-tag-file
 \NotTags .( --- Saving )  " kernel.dic"  type .(  ---)
 " kernel.dic" $save-meta cr
-cr
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2008 FirmWorks
