@@ -496,7 +496,7 @@ case 0x08: switch (BXTYPE) {
            default:  UNIMP("BXTYPE"); break;
            } break;
 case 0x09: switch (BXTYPE) {
-           case 0x0: UNIMP("msr"); break;
+           case 0x0: INSTR("msr"); APSR.all = RM; break;
            case 0x1: INSTR("bx"); PC = RM; break;
            case 0x2: INSTR("bxj"); PC = RM; break;
            case 0x3: INSTR("blx"); if (LINK) LR = PC - 4; PC = RM; break;
@@ -805,7 +805,7 @@ case 0x14: /* if (instruction == 0xe2809020) trace = 0; */
 case 0x15: INSTR("adc"); ADC(RD, RN, IMM32, C); break;
 case 0x16: INSTR("sbc"); SBB(RD, IMM32, RN, C); break;
 case 0x17: INSTR("rsc"); SBB(RD, IMM32, RN, C); break;
-case 0x18: INSTR("mov"); RD = IMM16; break;
+case 0x18: INSTR("movw"); RD = IMM16; break;
 case 0x19: switch (BXTYPE) {
            case 0x0: INSTR("nop"); break;
            case 0x1:

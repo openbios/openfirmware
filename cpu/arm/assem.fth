@@ -548,6 +548,18 @@ headers hex
 : amode-rdop2  ( -- )  init-operands  get-r12 get-opr2  !op  ;
 : amode-rev    ( -- )  init-operands  get-r12 get-r00   !op  ;
 
+: set-imm16  ( n -- )
+   dup fff and  0 set-field
+   d# 12 >>  d# 16 set-field
+;
+: amode-movw   ( -- )
+   init-operands  get-r12  get-immediate      ( imm )
+   dup 0 10000 within  0=  if
+      " Immediate value won't fit in 16 bits" ad-error
+   then
+   set-imm16  !op
+;
+
 : amode-lsm  ( need-r16? -- )
    init-operands
    if
@@ -923,6 +935,7 @@ also arm-assembler definitions
 : clz   016f.0f10 {cond/s} amode-rdop2  ;
 : mov   01a0.0000 {cond/s} amode-rdop2  ;
 : mvn   01e0.0000 {cond/s} amode-rdop2  ;
+: movw  0300.0000 {cond}   amode-movw   ;
 
 : mul   0000.0090 {cond/s} amode-mul   ;
 : mla   0020.0090 {cond/s} amode-mla   ;
@@ -988,7 +1001,7 @@ also arm-assembler definitions
    get-register  >r              ( r: adr? reg# )
    get-immediate  r> r> rot      ( reg# adr? addr|imm )
    2dup swap  if                 ( reg# adr? addr|imm addr|imm )
-      here  >offset              ( reg# adr? addr|imm offset|imm )
+      here  >offset              ( reg# adr? addr|imm offset )
    then
    dup  fits?  if                ( reg# adr? addr|imm offset|imm )
       2drop  if
@@ -1004,7 +1017,11 @@ also arm-assembler definitions
             true asm-const       ( reg# op )
          then
       else                       ( reg# imm imm )
-         drop false asm-const    ( reg# op )
+         0 1.0000 within  if     ( reg# imm )
+            set-imm16 0300.0000  ( reg# op )      \ movw rN,#<imm16>
+         else                    ( reg# imm )
+            false asm-const      ( reg# op )
+         then
       then                       ( reg# op )
    then                          ( reg# op )
    iop  rd-field  !op
