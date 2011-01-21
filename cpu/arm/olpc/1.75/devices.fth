@@ -308,6 +308,9 @@ stand-init: RTC
 fload ${BP}/cpu/arm/olpc/1.75/accelerometer.fth
 fload ${BP}/cpu/arm/olpc/1.75/compass.fth
 
+fload ${BP}/cpu/arm/olpc/1.75/bbedi.fth
+fload ${BP}/cpu/arm/olpc/1.75/edi.fth
+
 warning @ warning off
 : stand-init
    stand-init
