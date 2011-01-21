@@ -21,7 +21,7 @@ fload ${BP}/cpu/arm/olpc/1.75/wlan-version.fth
 to-file md5string  "  "  " ${WLAN_FILE}.bin" expand$ $md5sum-file
 " cmp md5string ${WLAN_FILE}.bin.md5" expand$ $sh
 
-" mv ${WLAN_FILE}.bin sd8686.bin" expand$ $sh
+" cp ${WLAN_FILE}.bin sd8686.bin" expand$ $sh
 
 " wget -q http://dev.laptop.org/pub/firmware/libertas/sd8686_helper.bin" expand$ $sh
 " wget -q http://dev.laptop.org/pub/firmware/libertas/sd8686_helper.bin.md5" expand$ $sh
