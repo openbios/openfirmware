@@ -1,18 +1,19 @@
 0 0  " "  " /" begin-package
 " rtc" name
 
-: set-address  ( -- )
 [ifdef] cl2-a1
+: set-address  ( -- )
    d# 97 to smb-clock-gpio#
    d# 98 to smb-data-gpio#
-[else]
-   d# 53 to smb-clock-gpio#
-   d# 54 to smb-data-gpio#
-[then]
    h# d0 to smb-slave
 ;
 : rtc@  ( reg# -- byte )  set-address  smb-byte@  ;
 : rtc!  ( byte reg# -- )  set-address  smb-byte!  ;
+[else]
+: set-address  ( -- )   h# d0 2 set-twsi-target  ;
+: rtc@  ( reg# -- byte )  set-address  twsi-b@  ;
+: rtc!  ( byte reg# -- )  set-address  twsi-b!  ;
+[then]
 
 headerless
 
@@ -30,7 +31,11 @@ headerless
 : >bcd  ( binary -- bcd )  d# 10 /mod  4 << +  ;
 
 : bcd-time&date  ( -- s m h d m y century )
+[ifdef] cl2-a1
    7 0 smb-read-n  ( s m h dow d m y )
+[else]
+   0 1 7 twsi-get  ( s m h dow d m y )
+[then]
    3 roll drop     ( s m h dow d m y )
    d# 20
 ;
