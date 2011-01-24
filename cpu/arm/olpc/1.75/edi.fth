@@ -13,7 +13,7 @@ purpose: Access and FLASH programming for KB3731 EC via its "EDI" interface
 \  spi-out    ( byte -- ) - Send byte
 \  spi-in     ( -- byte ) - Receive byte
 
-h# 128 constant /flash-page
+d# 128 constant /flash-page
 
 : edi-cmd,adr  ( offset cmd -- )   \ Send command plus 3 address bytes
    spi-cs-on     ( offset cmd )
@@ -32,6 +32,7 @@ h# 128 constant /flash-page
          unloop exit
       then
    loop
+   spi-cs-off
    true abort" EDI byte in timeout"
 ;
 [then]
@@ -114,7 +115,7 @@ h# 128 constant /flash-page
 
 : send-byte  ( b offset -- )  set-offset  h# feaa edi-b!  2 flash-cmd  ;
 
-: program-page  ( adr offset -- )
+: edi-program-page  ( adr offset -- )
    \ Clear HVPL
    wait-flash-busy  h# 80 flash-cmd  ( adr offset )
 
@@ -130,6 +131,14 @@ h# 128 constant /flash-page
    h# 70 flash-cmd                ( )
    wait-flash-busy                ( )
 ;
+: edi-program-flash  ( adr len offset -- )
+   cr
+   swap  0  ?do
+      (cr i .
+      over i +  over i +  edi-program-page  ( adr offset )
+   /flash-page +loop    ( adr offset )
+   2drop                ( )
+;
 : edi-read-flash  ( adr len offset -- )
    over 0=  if  3drop exit  then  ( adr len offset )
    edi-b@                         ( adr len byte )
@@ -138,44 +147,6 @@ h# 128 constant /flash-page
       edi-next-b@ i c!            ( )
    loop                           ( )
 ;
-: edi-open  ( -- )
-   \ slow-edi-clock   \ Target speed between 1 and 2 MHz
-   spi-start
-   reset-8051
-   \ fast-edi-clock   \ Target speed up to 16 MHz
-   \ reset
-;
-0 [if]
-+// IO3731 internal register locations
-+#define E51_RST         0xf010  // 8051 Reset Control
-+#define CODE_SEL        0xf011  // Code Source selection
-+#define CHIP_ID_H       0xf01c  // Chip ID High Byte
-+#define CHIP_ID_L       0xf01d  // Chip ID Low Byte
-+#define IOSCCR		0xf02b  // Internal OSC Control
-+#define LVD_TRIM	0xf035  // Low Voltage Detect Trim
-+#define XBIEFCFG        0xfea0  // XBI Embedded Flash Configuration
-+#define XBIEFSIG1       0xfea1  // XBI Embedded Flash signals 1 in FW mode
-+#define XBIEFSIG2       0xfea2  // XBI Embedded Flash signals 2 in FW mode
-+#define XBIPUMP         0xfea3  // XBI Pump IP trimming bits
-+#define XBIFM           0xfea4  // XBI Flash IP trimming bits
-+#define XBIVR           0xfea5  // XBI VR IP trimming bits
-+#define XBIMISC         0xfea6  // XBI MISC Reg
-+#define XBIEFCMD        0xfea7  // XBI Embedded Flash Command Port
-+#define XBIEFA0         0xfea8  // XBI Embedded Flash Address high
-+#define XBIEFA1         0xfea9  // XBI Embedded Flash Address low
-+#define XBIEFDO         0xfeaa  // XBI Embedded Flash Output Data Port
-+#define XBIEFDI         0xfeab  // XBI Embedded Flash Input Data Port
-+
-+
-+// IO3731 embedded flash command support:
-+#define PAGE_LATCH     0x02  // Page latch
-+#define READ           0x03  // Read
-+#define ERASEPAGE      0x20  // Erase selected page
-+#define ERASECHIP      0x60  // Erase whole e-flash
-+#define PROGRAMPAGE    0x70  // Program selected page
-+#define CLEARPAGELATCH 0x80  // Clear HVPL data
-+#define READTRIMDATA   0x90  // Read Trim data from special rows
-[then]
 : trim@  ( offset -- b )
    set-offset
    h# 90 flash-cmd
@@ -239,6 +210,16 @@ h# 128 constant /flash-page
          then
       then
 \   then
+;
+: edi-open  ( -- )
+   \ slow-edi-clock   \ Target speed between 1 and 2 MHz
+   spi-start
+   \ The first operation often fails so retry it
+   ['] select-flash  catch  if  select-flash  then
+   reset-8051
+   trim-tune
+   \ fast-edi-clock   \ Target speed up to 16 MHz
+   \ reset
 ;
 
 \ LICENSE_BEGIN

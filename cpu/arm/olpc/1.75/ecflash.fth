@@ -1,14 +1,19 @@
 \ See license at end of file
 purpose: Reflash the EC code
 
-h# 10000 value /ec-flash
 
+[ifdef] cl2-a1
+h# 10000 value /ec-flash
 char 3 value expected-ec-version
+[else]
+h# 8000 value /ec-flash
+char 4 value expected-ec-version
+[then]
 
 : check-signature  ( adr -- )
-   h# ff00 +                   ( adr' )
+   /ec-flash +  h# 100 -                                 ( adr' )
    dup  " XO-EC" comp abort" Bad signature in EC image"  ( adr )
-   dup ." EC firmware verison: " cscount type cr         ( adr )
+   dup ." EC firmware version: " cscount type cr         ( adr )
    dup 6 + c@ expected-ec-version <>  abort" Wrong EC version"  ( adr )
    drop
 ;
@@ -31,20 +36,38 @@ char 3 value expected-ec-version
 ;
 : flash-ec  ( "filename" -- )
    get-ec-file
+[ifdef] cl2-a1
    " enter-updater" $call-ec
    ." Erasing ..." cr  " erase-flash" $call-ec cr
    ." Writing ..." cr  load-base /ec-flash 0 " write-flash" $call-ec  cr
    ." Verifying ..." cr
    load-base /ec-flash + /ec-flash 0 " read-flash" $call-ec
+[else]
+   use-edi-spi  edi-open
+   ." Erasing ..."  erase-chip cr
+   ." Writing ..."  load-base /ec-flash 0 edi-program-flash cr
+   ." Verifying ..."
+   load-base /ec-flash + /ec-flash 0 edi-read-flash  
+[then]
    load-base  load-base /ec-flash +  /ec-flash  comp
-   abort" Miscompare!"
+   abort"  Miscompare!"
    cr
+[ifndef] cl2-a1
+   ." Restarting EC and powering off" cr
+   d# 3000 ms
+   unreset-8051
+[then]
    reset-ec
 ;
 : read-ec-flash  ( -- )
+[ifdef] cl2-a1
    " enter-updater" $call-ec
    flash-buf /ec-flash 0 " read-flash" $call-ec
 \  " reboot-ec" $call-ec
+[else]
+   use-edi-spi  edi-open
+   flash-buf /ec-flash 0 edi-read-flash
+[then]
 ;
 : save-ec-flash  ( "name" -- )
    safe-parse-word $new-file

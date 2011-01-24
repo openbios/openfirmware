@@ -143,6 +143,9 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH prog
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
 ' ofw-fw-filename$ to fw-filename$
 
+fload ${BP}/cpu/arm/olpc/1.75/bbedi.fth
+fload ${BP}/cpu/arm/olpc/1.75/edi.fth
+
 fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
 
 0 0  " d420b000"  " /" begin-package
@@ -307,9 +310,6 @@ stand-init: RTC
 ;
 fload ${BP}/cpu/arm/olpc/1.75/accelerometer.fth
 fload ${BP}/cpu/arm/olpc/1.75/compass.fth
-
-fload ${BP}/cpu/arm/olpc/1.75/bbedi.fth
-fload ${BP}/cpu/arm/olpc/1.75/edi.fth
 
 warning @ warning off
 : stand-init
