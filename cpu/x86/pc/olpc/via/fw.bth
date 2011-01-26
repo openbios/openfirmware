@@ -724,7 +724,7 @@ true                               ' client-symbols?  set-config-int-default
    unfreeze visible          ( no-banner? )
    if  banner  then  \ Reissue banner if it was suppressed
 
-   blue-letters ." Type 'help' for more information." black-letters
+   blue-letters ." Type 'help' for more information." black-letters cancel
    cr cr
 
    enable-user-aborts
