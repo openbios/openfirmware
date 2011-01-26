@@ -38,6 +38,18 @@ true value first-open?
 : portsc@     ( port -- data )  2* 10 + uhci-w@  ;
 : portsc!     ( data port -- )  2* 10 + uhci-w!  ;
 
+\ We mustn't wait more than 3 ms between releasing the reset and enabling
+\ the port to begin the SOF stream, otherwise some devices (e.g. pl2303)
+\ will go into suspend state and then not respond to set-address.
+: reset-port  ( port -- )
+   dup >r  portsc@ h# 20e invert and    ( value r: port )  \ Clear reset, enable, status
+   dup h# 200 or  r@ portsc!	        ( value r: port )  \ Reset port
+   d# 30 ms                             ( value r: port )  \ > 10 ms - reset time
+   dup r@ portsc!                       ( value r: port )  \ Release reset
+   1 ms                                 ( value r: port )  \ > 5.3 uS - reconnect time
+   h# e or  r> portsc!	                ( )  \ Enable port and clear status
+;
+
 : reset-usb  ( -- )
    uhci-reg dup 0=  if  map-regs  then
    4 usbcmd!			\ Global reset

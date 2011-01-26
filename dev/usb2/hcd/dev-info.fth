@@ -62,10 +62,11 @@ constant /di-entry
 : di-in-data-toggle   ( pipe idx -- )  2dup di-in-data@  1 xor -rot di-in-data!   ;
 : di-out-data-toggle  ( pipe idx -- )  2dup di-out-data@ 1 xor -rot di-out-data!  ;
 
-: ok-to-add-device?  ( -- flag )  cur-dev 1+ #max-dev <  ;
-: new-address  ( -- dev )
+: next-device#  ( -- true | dev false )
+   cur-dev 1+ #max-dev >=  if  true exit  then
    cur-dev 1+ dup to cur-dev  
    /pipe0 0 cur-dev di-maxpayload!
+   false
 ;
 
 : init-di  ( -- )

@@ -10,7 +10,6 @@ defer make-dev-property-hook  ( speed dev port -- )
 \ Buffers for descriptor manipulation
 0 value cfg-desc-buf			\ Configuration Descriptor
 0 value dev-desc-buf			\ Device Descriptor
-0 value gen-desc-buf			\ Any Descriptor
 0 value d$-desc-buf			\ Device String Descriptor
 0 value v$-desc-buf			\ Vendor String Descriptor
 0 value s$-desc-buf			\ Serial Number String Descriptor
@@ -25,7 +24,6 @@ defer make-dev-property-hook  ( speed dev port -- )
    cfg-desc-buf 0=  if
       /cfg alloc-mem dup to cfg-desc-buf /cfg erase
       /cfg alloc-mem dup to dev-desc-buf /cfg erase
-      /cfg alloc-mem dup to gen-desc-buf /cfg erase
       /str alloc-mem dup to d$-desc-buf /str erase
       /str alloc-mem dup to v$-desc-buf /str erase
       /str alloc-mem dup to s$-desc-buf /str erase
@@ -34,14 +32,27 @@ defer make-dev-property-hook  ( speed dev port -- )
 : free-pkt-buf  ( -- )
    cfg-desc-buf ?dup  if  /cfg free-mem  0 to cfg-desc-buf  then
    dev-desc-buf ?dup  if  /cfg free-mem  0 to dev-desc-buf  then
-   gen-desc-buf ?dup  if  /cfg free-mem  0 to gen-desc-buf  then
    d$-desc-buf  ?dup  if  /str free-mem  0 to d$-desc-buf   then
    v$-desc-buf  ?dup  if  /str free-mem  0 to v$-desc-buf   then
    s$-desc-buf  ?dup  if  /str free-mem  0 to s$-desc-buf   then
 ;
 
+: dev-desc@  ( index -- byte )  dev-desc-buf + c@  ;
+: get-class  ( -- class subclass protocol )
+   4 dev-desc@ ?dup  if			( class )
+      \ Class is in device descriptor
+      true to class-in-dev?			( class )
+      5 dev-desc@  6 dev-desc@			( class subclass protocol )
+   else						( )
+      \ Class is in interface descriptor
+      false to class-in-dev?			( )
+      cfg-desc-buf my-address find-intf-desc	( intf-adr )
+      >r  r@ 5 + c@  r@ 6 + c@   r> 7 + c@	( class subclass protocol )
+   then
+;
+
 : make-class-properties  ( -- )
-   dev-desc-buf cfg-desc-buf my-address get-class	( class subclass protocol )
+   get-class  ( class subclass protocol )
    " protocol" int-property
    " subclass" int-property
    " class"    int-property
@@ -83,8 +94,12 @@ defer make-dev-property-hook  ( speed dev port -- )
    device-name
 ;
 
+: get-vid  ( adr -- vendor product rev )
+   dev-desc-buf 8 + le-w@   dev-desc-buf d# 10 + le-w@  dev-desc-buf c + le-w@
+;
+
 : make-vendor-properties  ( -- )
-   dev-desc-buf get-vid			( vendor product rev )
+   get-vid			( vendor product rev )
    " release"   int-property
    " device-id" int-property
    " vendor-id" int-property
@@ -256,6 +271,18 @@ defer make-dev-property-hook  ( speed dev port -- )
    >r lbsplit r@ c!  r@ 1+ c!  r@ 2+ c!  r> 3 + c!
 ;
 
+: probe-hub-node  ( phandle -- )
+   >r                                       ( r: phandle )
+   " probe-hub" r@ find-method  if          ( xt r: phandle )
+      r@ push-package                       ( xt r: phandle )
+      " " new-instance                      ( xt r: phandle )
+      set-default-unit                      ( xt r: phandle )
+      execute                               ( r: phandle )
+      destroy-instance                      ( r: phandle )
+      pop-package                           ( r: phandle )
+   then                                     ( r: phandle )
+   r> drop
+;
 : reuse-node  ( dev intf port phandle -- )
    >r drop			  ( dev intf r: phandle )
 
@@ -269,18 +296,8 @@ defer make-dev-property-hook  ( speed dev port -- )
       drop be-l!                            ( r: phandle )
    then                                     ( r: phandle )
 
-   " probe-hub" r@ find-method  if          ( xt r: phandle )
-      r@ push-package                       ( xt r: phandle )
-      " " new-instance                      ( xt r: phandle )
-      set-default-unit                      ( xt r: phandle )
-      execute                               ( r: phandle )
-      destroy-instance                      ( r: phandle )
-      pop-package                           ( r: phandle )
-   then                                     ( r: phandle )
-
-   r> drop
+   r> probe-hub-node
 ;
-
 : id-match?  ( dev intf port phandle -- dev intf port phandle flag? )
    " vendor-id" 2 pick get-package-property  if  false exit  then
    decode-int nip nip   >r     ( dev intf port phandle r: vid )
@@ -288,7 +305,7 @@ defer make-dev-property-hook  ( speed dev port -- )
    decode-int nip nip   >r     ( dev intf port phandle r: vid did )
    " release" 2 pick get-package-property  if  r> r> 2drop  false exit  then
    decode-int nip nip   >r     ( dev intf port phandle r: vid did rev )
-   dev-desc-buf get-vid        ( dev intf port phandle  vid1 did1 rev1 r: vid did rev )
+   get-vid                     ( dev intf port phandle  vid1 did1 rev1 r: vid did rev )
    r> = -rot  r> = -rot  r> =  and and
 ;
 
@@ -335,42 +352,126 @@ defer make-dev-property-hook  ( speed dev port -- )
 ;
 
 \ Get all the descriptors we need in making properties now because target is
-\ questionable in the child's context.
+\ questionable in the child's context.  The descriptor buffers are not instance
+\ data, so they can be accessed by code that is defined in the root hub node
+\ but executing in a subordinate hub node context or a child node context.
 
 h# 409 constant language  			\ Unicode id
+\ Executed in root hub node context
 : get-string ( lang idx adr -- actual )
    over 0=  if  3drop  0 exit  then		\ No string index
    -rot get-str-desc
 ;
+
+\ Executed in root hub node context
 : get-str-descriptors  ( -- )
    language					( lang )
    dup dev-desc-buf d# 14 + c@ v$-desc-buf get-string to /v$-desc-buf
    dup dev-desc-buf d# 15 + c@ d$-desc-buf get-string to /d$-desc-buf
        dev-desc-buf d# 16 + c@ s$-desc-buf get-string to /s$-desc-buf
 ;
-: refresh-desc-bufs  ( -- )
+
+\ Executed in root hub node context
+: refresh-desc-bufs  ( dev -- )
+   set-target
    dev-desc-buf 12 get-dev-desc to /dev-desc-buf		\ Refresh dev-desc-buf
    cfg-desc-buf  0 get-cfg-desc to /cfg-desc-buf		\ Refresh cfg-desc-buf
    get-str-descriptors
 ;
 
-: set-maxpayload  ( dev -- )
-   dev-desc-buf /pipe0 get-dev-desc  if
-      dev-desc-buf 7 + c@ 0 rot di-maxpayload!
-   else
-      drop
-   then
+\ Executed in root hub node context
+: get-initial-descriptors  ( dev -- )
+   dev-desc-buf /pipe0 get-dev-desc  if		( dev )
+      dev-desc-buf 7 + c@ 0 rot di-maxpayload!	( )
+   else						( dev )
+      drop					( )
+   then						( )
+   cfg-desc-buf 0 get-cfg-desc to /cfg-desc-buf	( )
 ;
 
+\ Executed in hub node context (root hub or subordinate hub) - creates new child nodes via (make-device-node)
 : make-device-node  ( port dev -- )
-   dup set-maxpayload			( port dev )
-   cfg-desc-buf 0 get-cfg-desc dup to /cfg-desc-buf
-   0=  if  2drop  exit  then
-   cfg-desc-buf 4 + c@ 0  ?do		( port dev )
-      dup set-target			( port dev )		\ Refresh target
-      refresh-desc-bufs			( port dev )
-      2dup swap i (make-device-node)	( port dev )
-   loop  2drop				( )
+   dup " get-initial-descriptors" my-self $call-method	( port dev )
+   /cfg-desc-buf 0=  if  2drop  exit  then		( port dev )
+   cfg-desc-buf 4 + c@ 0  ?do				( port dev )
+      dup " refresh-desc-bufs" my-self $call-method	( port dev )
+      2dup swap i (make-device-node)			( port dev )
+   loop  2drop						( )
+;
+
+\ See hcd/ehci/probehub.fth for information about hub20-dev and hub20-port
+
+: get-hub20-dev  ( -- hub-dev )
+   " hub20-dev" get-inherited-property 0=  if   ( value$ )
+      decode-int nip nip                        ( hub-dev )
+   else                                         ( )
+      1                                         ( hub-dev )
+   then                                         ( hub-dev )
+;
+
+: get-hub20-port  ( port -- port' )
+   " hub20-port" get-inherited-property 0=  if  ( port value$ )
+      rot drop				        ( value$ )
+      decode-int nip nip                        ( port' )
+   then                                         ( port )
+;
+
+\ Executed in the root hub node context
+: setup-new-node  ( port speed hub-port hub-dev -- true | port dev xt false )
+  \ Allocate device number
+   next-device#  if  2drop  exit  then	( port speed hub-port hub-dev dev )
+
+   tuck di-hub!				( port speed hub-port dev )
+   tuck di-port!			( port speed dev )
+   tuck di-speed!			( port dev )
+
+   0 set-target				( port dev )	\ Address it as device 0
+   dup set-address  if			( port dev )	\ Assign it usb addr dev
+      ." Retrying with a delay" cr
+      over reset-port  d# 5000 ms
+      dup set-address  if		( port dev )	\ Assign it usb addr dev
+         \ Recycle device number?
+         2drop false exit		( -- false )
+      then				( port dev )
+   then					( port dev )
+
+   dup set-target			( port dev )	\ Address it as device dev
+   ['] make-device-node	 true		( port dev xt )
+;
+
+\ Begins execution in a (root or subordinate) hub node context, creates an instance record
+\ for the subordinate hub node "phandle", switches to that instance context, executes
+\ "reprobe-hub" in that context, destroys the instance, and returns to the original context.
+: reprobe-hub-node  ( phandle -- )
+   >r                                       ( r: phandle )
+   " reprobe-hub" r@ find-method  if        ( xt r: phandle )
+      r@ push-package                       ( xt r: phandle )
+      " " new-instance                      ( xt r: phandle )
+      set-default-unit                      ( xt r: phandle )
+      execute                               ( r: phandle )
+      destroy-instance                      ( r: phandle )
+      pop-package                           ( r: phandle )
+   then                                     ( r: phandle )
+   r> drop
+;
+
+\ Returns true if there is a child hub node associated with port
+: port-is-hub?  ( port -- false | phandle true )
+   my-self ihandle>phandle child                       ( port phandle )
+   begin  ?dup  while                                  ( port phandle )
+      " name" 2 pick get-package-property 0=  if       ( port phandle adr len )
+         1-  " hub" $=  if                             ( port phandle )
+            " reg" 2 pick get-package-property 0=  if  ( port phandle adr len )
+               decode-int nip nip                      ( port phandle port1 )
+               2 pick =  if                            ( port phandle )
+                  nip true exit                        ( -- phandle true )
+               then                                    ( port phandle )
+            then                                       ( port phandle )
+         then                                          ( port phandle )
+      then                                             ( port phandle )
+      peer                                             ( port phandle' )
+   repeat                                              ( port )
+   drop false                                          ( false )
 ;
 
 headers

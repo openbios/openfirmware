@@ -5,29 +5,18 @@ hex
 headers
 
 : make-root-hub-node  ( port -- )
-   ok-to-add-device? 0=  if  drop exit  then		\ Can't add another device
-
-   0 set-target				( port )	\ Address it as device 0
-
+   \ Some devices (e.g. Lexar USB-to-SD) fail unless you get the cfg desc from device 0 first
+   0 set-target	\ First address it as device 0	( port )
    speed-high 0 di-speed!     \ Use high speed for getting the device descriptor
-   \ Some devices (e.g. Lexar USB-to-SD) don't work unless you do this first
-   dev-desc-buf h# 40 get-cfg-desc drop
+   dev-desc-buf h# 40 get-cfg-desc drop		( port )
 
-   new-address				( port dev )
-   speed-high over di-speed!		( port dev )
+   speed-high					( port speed )
 
-   0 set-target				( port dev )	\ Address it as device 0
+   \ hub-port and hub-dev route USB 1.1 transactions through USB 2.0 hubs
+   over get-hub20-port  get-hub20-dev		( port speed hub-port hub-dev )
 
-   dup set-address  if			( port dev )	\ Assign it usb addr dev
-      ." Retrying with a delay" cr
-      over reset-port  d# 5000 ms
-      dup set-address  if		( port dev )	\ Assign it usb addr dev
-         2drop exit
-      then
-   then ( port dev )
-
-   dup set-target			( port dev )	\ Address it as device dev
-   make-device-node			( )
+   \ Execute setup-new-node in root context and make-device-node in hub node context
+   setup-new-node  if  execute  then	( )
 ;
 
 0 instance value probe-error?  \ Back channel to selftest
@@ -43,7 +32,7 @@ headers
 	 dup disown-port			\ Disown the port
       else					\ A high speed device detected
          dup ['] make-root-hub-node catch  if	\ Process high speed device
-            drop ." Failed to probe root port " dup .d cr
+            drop ." Failed to make root hub node for port " dup .d cr
             true to probe-error?
          then
       then
@@ -105,6 +94,10 @@ external
       i portsc@ 2 and  if			\ Connection changed
 \         i rm-obsolete-children			\ Remove obsolete device nodes
          i probe-root-hub-port			\ Probe it
+      else
+         i port-is-hub?  if     ( phandle )     \ Already-connected hub?
+            reprobe-hub-node                    \ Check for changes on its ports
+         then
       then
    loop
 

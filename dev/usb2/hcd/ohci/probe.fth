@@ -4,7 +4,7 @@ purpose: OHCI USB Controller probe
 hex
 headers
 
-: enable-root-hub-port  ( port -- )
+: reset-port  ( port -- )
    >r
    h# 1.0002 r@ hc-rh-psta!		\ enable port
    10 r@ hc-rh-psta!			\ reset port
@@ -18,17 +18,17 @@ headers
 ;
 
 : probe-root-hub-port  ( port -- )
-   dup hc-rh-psta@ 1 and 0=  if  drop exit  then	\ No device connected
-   ok-to-add-device? 0=  if  drop exit  then		\ Can't add another device
+   dup hc-rh-psta@ 1 and 0=  if  drop exit  then	( port )	\ No device connected
 
-   dup enable-root-hub-port		( port )
-   new-address				( port dev )
-   over hc-rh-psta@ 200 and  if  speed-low  else  speed-full  then over di-speed!
+   \ Reset the port to determine the speed
+   dup reset-port					( port )
+   dup hc-rh-psta@ 200 and  if  speed-low  else  speed-full  then	( port speed )
 
-   0 set-target				( port dev )	\ Address it as device 0
-   dup set-address  if  2drop exit  then ( port dev )	\ Assign it usb addr dev
-   dup set-target			( port dev )	\ Address it as device dev
-   make-device-node			( )
+   \ hub-port and hub-speed are irrelevant for OHCI (USB 1.1)
+   0 0							( port speed hub-port hub-dev )
+
+   \ Execute setup-new-node in root context and make-device-node in hub node context
+   setup-new-node  if  execute  then			( port dev xt )
 ;
 
 false value ports-powered?
@@ -99,6 +99,10 @@ external
 	    drop ." Failed to probe root port " i u. cr
          then
          3.0000 i hc-rh-psta!			\ Clear change bits
+      else
+         i port-is-hub?  if     ( phandle )     \ Already-connected hub?
+            reprobe-hub-node                    \ Check for changes on its ports
+         then
       then
    loop
    free-pkt-buf

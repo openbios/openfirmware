@@ -80,7 +80,7 @@ DR_CLASS DR_INTERFACE or constant DR_HIDD
 
 \ Use tmp-l to make sure that le-l! and le-w! are atomic writes
 
-instance variable tmp-l
+variable tmp-l
 : le-w@   ( a -- w )   dup c@ swap ca1+ c@ bwjoin  ;
 : (le-w!) ( w a -- )   >r  wbsplit r@ ca1+ c! r> c!  ;
 : le-w!   ( w a -- )   swap tmp-l (le-w!) tmp-l w@ swap w!  ;

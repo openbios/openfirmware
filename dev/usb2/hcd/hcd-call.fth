@@ -10,9 +10,28 @@ external
 : dma-alloc    ( size -- virt )              " dma-alloc" $call-parent    ;
 : dma-free     ( virt size -- )              " dma-free" $call-parent     ;
 
-: set-target  ( device -- )  " set-target" $call-parent  ;
-: probe-hub-xt  ( -- adr )   " probe-hub-xt" $call-parent  ;
-: set-pipe-maxpayload  ( size len -- ) " set-pipe-maxpayload" $call-parent  ;
+\ Probing support
+: set-target  ( device -- )
+   " set-target" $call-parent
+ ;
+: probe-hub-xt  ( -- adr )
+    " probe-hub-xt" $call-parent
+;
+: reprobe-hub-xt  ( -- adr )
+    " reprobe-hub-xt" $call-parent
+;
+: set-pipe-maxpayload  ( size len -- )
+   " set-pipe-maxpayload" $call-parent
+;
+: setup-new-node  ( port speed hub-port hub-dev -- false | port dev xt true )
+   " setup-new-node" $call-parent
+;
+: get-initial-descriptors  ( dev -- )
+   " get-initial-descriptors" $call-parent
+;
+: refresh-desc-bufs  ( dev -- )
+   " refresh-desc-bufs" $call-parent
+;
 
 \ Control pipe operations
 : control-get  ( adr len idx value rtype req -- actual usberr )

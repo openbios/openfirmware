@@ -4,31 +4,18 @@ purpose: UHCI USB Controller probe
 hex
 headers
 
-\ We mustn't wait more than 3 ms between releasing the reset and enabling
-\ the port to begin the SOF stream, otherwise some devices (e.g. pl2303)
-\ will go into suspend state and then not respond to set-address.
-: reset-root-hub-port  ( port -- )
-   dup >r  portsc@ h# 20e invert and    ( value r: port )  \ Clear reset, enable, status
-   dup h# 200 or  r@ portsc!	        ( value r: port )  \ Reset port
-   d# 30 ms                             ( value r: port )  \ > 10 ms - reset time
-   dup r@ portsc!                       ( value r: port )  \ Release reset
-   1 ms                                 ( value r: port )  \ > 5.3 uS - reconnect time
-   h# e or  r> portsc!	                ( )  \ Enable port and clear status
-;
-
 : probe-root-hub-port  ( port -- )
-   dup reset-root-hub-port
-   dup portsc@ 1 and 0=  if  drop exit  then		\ No device-connected
-   ok-to-add-device? 0=  if  drop exit  then		\ Can't add another device
+   \ Reset the port to perform connection status and speed detection
+   dup reset-port				( port )
+   dup portsc@ 1 and 0=  if  drop exit  then	( port )	\ No device-connected
 
-   new-address				( port dev )
-   over portsc@ 100 and  if  speed-low  else  speed-full  then
-   over di-speed!			( port dev )
+   dup portsc@ 100 and  if  speed-low  else  speed-full  then	( port speed )
 
-   0 set-target				( port dev )    \ Address it as device 0
-   dup set-address  if  2drop exit  then ( port dev )	\ Assign it usb addr dev
-   dup set-target			( port dev )    \ Address it as device dev
-   make-device-node			( )
+   \ hub-port and hub-speed are irrelevant for UHCI (USB 1.1)
+   0 0							( port speed hub-port hub-dev )
+
+   \ Execute setup-new-node in root context and make-device-node in hub node context
+   setup-new-node  if  execute  then			( )
 ;
 
 external
@@ -46,6 +33,10 @@ external
             drop ." Failed to probe root port " i .d cr
          then
          i portsc@ i portsc!			\ Clear change bits
+      else
+         i port-is-hub?  if     ( phandle )     \ Already-connected hub?
+            reprobe-hub-node                    \ Check for changes on its ports
+         then
       then
    loop
    free-pkt-buf

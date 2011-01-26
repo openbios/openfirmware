@@ -24,22 +24,6 @@ false value class-in-dev?
    repeat
 ;
 
-: get-class  ( dev-adr cfg-adr intfidx -- protocol subclass class )
-   rot dup 4 + c@ ?dup 0=  if		( cfg-adr intfidx dev-adr )
-      false to class-in-dev?		\ Class is not in device descriptor
-      drop find-intf-desc		( intf-adr )
-      dup 5 + c@ swap dup 6 + c@ swap 7 + c@
-   else					\ Class is in device-descriptor
-      true to class-in-dev?		( cfg-adr intfidx dev-adr class )
-      2swap 2drop			( dev-adr class )
-      swap dup 5 + c@ swap 6 + c@
-   then
-;
-
-: get-vid  ( adr -- vendor product rev )
-   dup 8 + le-w@ swap dup d# 10 + le-w@ swap c + le-w@
-;
-
 : unicode$>ascii$  ( adr -- actual )
    dup c@ 2 - 2/ swap 2 + over 0  ?do	( actual adr' )
       dup i 2* 1+ + c@ 0=  if		\ ASCII

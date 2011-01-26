@@ -31,38 +31,18 @@ hex
 \ value and the /usb/hub/mouse hub20-port value are used in the qTD.
 
 : ?set-hub20-port  ( speed dev port -- )
-   " hub20-dev" my-parent ihandle>phandle get-package-property 0=  if
-      2drop nip swap speed-high <>  if
-         " hub20-port" int-property
-      else
-         drop
-      then
-   else
-      3drop
-   then
+   " hub20-dev" my-parent ihandle>phandle get-package-property 0=  if  ( speed dev port value$ )
+      2drop                                     ( speed dev port )
+      nip swap speed-high <>  if                ( port )
+         encode-int " hub20-port" property      ( )
+      else                                      ( speed )
+         drop                                   ( )
+      then                                      ( )
+   else                                         ( speed dev port )
+      3drop                                     ( )
+   then                                         ( )
 ;
 ' ?set-hub20-port to make-dev-property-hook
-
-: get-hub20-dev  ( -- hub-dev )
-   " hub20-dev" get-inherited-property 0=  if
-      decode-int nip nip
-   else
-      1
-   then
-;
-
-: get-hub20-port  ( port -- port' )
-   " hub20-port" get-inherited-property 0=  if
-      rot drop				( $ )
-      decode-int nip nip
-   then
-;
-
-\ Initialize USB 2.0 specific characteristics in di
-: set-usb20-char  ( port dev -- )
-        get-hub20-dev  over di-hub!
-   swap get-hub20-port swap di-port!
-;
 
 headers
 

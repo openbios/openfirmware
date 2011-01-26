@@ -33,12 +33,24 @@ headers
    then
    decode-int nip nip
 ;
+: ?make-hub20-dev  ( hub-dev -- hub-dev )
+   is-hub20?  if                                ( hub-dev )
+      " hub20-dev" get-my-property   if         ( hub-dev )
+         dup encode-int " hub20-dev" property   ( hub-dev )
+      else   \ Property already exists          ( hub-dev adr len )
+         2drop                                  ( hub-dev )
+      then                                      ( hub-dev )
+   then                                         ( hub-dev )
+;
 : probe-hub  ( -- )
    ['] hub-id catch 0=  if
-      is-hub20?  if
-         dup encode-int " hub20-dev" property
-      then
+      ?make-hub20-dev
       probe-hub-xt execute
+   then
+;
+: reprobe-hub  ( -- )
+   ['] hub-id catch 0=  if
+      reprobe-hub-xt execute
    then
 ;
 

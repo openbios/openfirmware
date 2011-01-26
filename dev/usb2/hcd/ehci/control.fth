@@ -65,7 +65,7 @@ defer set-my-dev		' set-normal-dev to set-my-dev
       swap  case				( qh endp-char pipetype )
          pt-ctrl  of  QH_MULT1  d#  64  endof	( qh endp-char endp-cap /max )
          pt-bulk  of  QH_MULT1  d# 512  endof	( qh endp-char endp-cap /max )
-         ( default )  r> QH_MULT1  my-maxpayload r>
+         ( default )  >r QH_MULT1  my-maxpayload r>
 						( qh endp-char endp-cap /max )
       endcase
       d# 16 << rot or swap			( qh endp-char endp-cap )

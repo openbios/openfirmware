@@ -7,62 +7,121 @@ hex
 : set-usb20-char  ( port dev -- )  2drop  ;
 [then]
 
-: power-hub-port   ( port -- )      PORT_POWER  DR_PORT set-feature drop  ;
-: reset-hub-port   ( dev port -- )  PORT_RESET  DR_PORT set-feature drop  d# 20 ms  ;
+8 buffer: hub-buf                       \ For hub probing
 
-: probe-hub-port  ( hub-dev port -- )
-   swap set-target			( port )
-   dup reset-hub-port			( port )
-
-   gen-desc-buf 4 2 pick DR_PORT get-status nip  if
+: power-hub-port   ( port -- )  PORT_POWER  DR_PORT " set-feature" $call-parent drop  ;
+: reset-hub-port   ( port -- )  PORT_RESET  DR_PORT " set-feature" $call-parent drop  d# 20 ms  ;
+: clear-status-change  ( port -- )  C_PORT_CONNECTION  DR_PORT " clear-feature" $call-parent drop  ;
+: parent-set-target  ( dev -- )  " set-target" $call-parent  ;
+: get-port-status  ( port -- error? )
+   hub-buf 4  2 pick   DR_PORT " get-status" $call-parent    ( port actual usberror )
+   nip  if                                   ( port )
       ." Failed to get port status for port " u. cr
-      exit
-   then					( port )
+      true                                   ( true )
+   else                                      ( port )
+      drop false                             ( false )
+   then                                      ( )
+;
+: port-status-changed?  ( hub-dev port -- false | connected? true )
+   swap parent-set-target       ( port )
+   dup get-port-status  if      ( port )
+      drop false exit           ( -- false )
+   then                         ( port )
 
-   gen-desc-buf c@ 1 and 0=  if	 drop exit  then	\ No device connected
-   ok-to-add-device?     0=  if  drop exit  then	\ Can't add another device
-
-   new-address				( port dev )
-   gen-desc-buf le-w@ h# 600 and 9 >> over di-speed!
-					( port dev )
-   2dup set-usb20-char			( port dev )
-
-   0 set-target				( port dev )	\ Address it as device 0
-   dup set-address  if  2drop exit  then ( port dev )	\ Assign it usb addr dev
-   dup set-target			( port dev )	\ Address it as device dev
-   make-device-node			( )
+   hub-buf 2+ c@  1 and  if     ( port )
+      \ Status changed
+      clear-status-change       ( )
+      hub-buf c@ 1 and  0<>     ( connected? )
+      true                      ( connected? true )
+   else                         ( port )
+      drop false                ( false )
+   then
 ;
 
+: probe-hub-port  ( hub-dev port -- )
+   \ Reset the port to determine the speed
+   swap parent-set-target			( port )
+   dup reset-hub-port				( port )
+
+   \ get-port-status fills hub-buf with connection status, speed, and other information
+   dup get-port-status  			( port error? )
+   over clear-status-change              	( port error? )
+   if  drop exit  then				( port )
+
+   hub-buf c@ 1 and 0=  if  drop exit  then	\ No device connected
+   hub-buf le-w@ h# 600 and 9 >>  		( port speed )
+
+   \ hub-port and hub-dev route USB 1.1 transactions through USB 2.0 hubs
+   over get-hub20-port  get-hub20-dev		( port speed hub-port hub-dev )
+
+   \ Execute setup-new-node in root context and make-device-node in hub node context
+   " setup-new-node" $call-parent  if  execute  then  ( )
+;
+
+: hub-#ports  ( -- n )
+   hub-buf 8 0 0 HUB DR_HUB " get-desc" $call-parent nip  if
+      ." Failed to get hub descriptor" cr
+      0 exit
+   then
+   hub-buf 2 + c@ 1+		( #ports )
+;
+: hub-delay  ( -- #2ms )  hub-buf 5 + c@  ;
+
+: power-hub-ports  ( #ports -- )
+   1  ?do  i power-hub-port  loop           ( )
+   
+   hub-delay 2* ms                          ( )
+
+   " usb-delay" ['] evaluate catch  if      ( )
+      2drop  d# 100                         ( ms )
+   then                                     ( ms )
+   ms
+;
+
+: safe-probe-hub-port  ( hub-dev port -- )
+   tuck ['] probe-hub-port catch  if    ( port x x )
+      2drop  ." Failed to probe hub port " . cr  ( )
+   else                                 ( port )
+      drop                              ( )
+   then                                 ( )
+;
 external
 : probe-hub  ( dev -- )
-   dup set-target			( hub-dev )
-   gen-desc-buf 8 0 0 HUB DR_HUB get-desc nip  if
-      ." Failed to get hub descriptor" cr
-      exit
-   then
+   dup parent-set-target		( hub-dev )
+   hub-#ports                           ( hub-dev #ports )
 
-   gen-desc-buf dup 5 + c@ swap		( hub-dev #2ms adr )
-   2 + c@ 1+				( hub-dev #2ms #ports )
+   " configuration#" get-int-property
+   " set-config" $call-parent           ( hub-dev #ports usberr )
+   if  drop  ." Failed to set config for hub at " u. cr exit  then  ( hub-dev #ports )
 
-   " configuration#" get-int-property set-config	( hub-dev #2ms #ports usberr )
-   if  2drop  ." Failed to set config for hub at " u. cr exit  then
+   dup power-hub-ports                  ( hub-dev #ports )
 
-   tuck  1  ?do  i power-hub-port  loop  2* ms
-					( hub-dev #ports )
-   " usb-delay" ['] evaluate catch  if  ( hub-dev #ports x x )
-      2drop  d# 100                     ( hub-dev #ports ms )
-   then                                 ( hub-dev #ports ms )
-   ms
-
-   ( hub-dev #ports ) 1  ?do
-      dup i ['] probe-hub-port  catch  if
-         2drop
-         ." Failed to probe hub port " i u. cr
-      then
-   loop  drop
+   1  ?do                                       ( hub-dev )
+      dup i safe-probe-hub-port                 ( hub-dev )
+   loop                                         ( hub-dev )
+   drop                                         ( )
 ;
 
 : probe-hub-xt  ( -- adr )  ['] probe-hub  ;
+
+: do-reprobe-hub  ( dev -- )
+   dup parent-set-target			( hub-dev )
+   hub-#ports  1  ?do                           ( hub-dev )
+      dup i port-status-changed?  if            ( hub-dev connected? )
+         if                                     ( hub-dev )
+            dup i safe-probe-hub-port           ( hub-dev )
+     \   else  Handle disconnect
+         then                                   ( hub-dev )
+      else                                      ( hub-dev )
+         i port-is-hub?  if                     ( hub-dev phandle )
+            reprobe-hub-node                    ( hub-dev )
+         then                                   ( hub-dev )
+      then                                      ( hub-dev )
+   loop                                         ( hub-dev )
+   drop                                         ( )
+;
+
+: reprobe-hub-xt  ( -- adr )  ['] do-reprobe-hub  ;
 
 headers
 

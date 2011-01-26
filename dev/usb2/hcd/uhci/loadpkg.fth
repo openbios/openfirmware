@@ -21,7 +21,7 @@ fload ${BP}/dev/usb2/vendor.fth			\ Vendor/product table manipulation
 fload ${BP}/dev/usb2/device/vendor.fth		\ Supported vendor/product tables
 fload ${BP}/dev/usb2/hcd/fcode.fth		\ Load fcode driver for child
 fload ${BP}/dev/usb2/hcd/device.fth		\ Make child node & its properties
-fload ${BP}/dev/usb2/hcd/uhci/probe.fth		\ Probe root hub
 fload ${BP}/dev/usb2/hcd/probehub.fth		\ Probe usb hub
+fload ${BP}/dev/usb2/hcd/uhci/probe.fth		\ Probe root hub
 
 
