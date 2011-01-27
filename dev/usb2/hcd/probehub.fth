@@ -13,6 +13,21 @@ hex
 : reset-hub-port   ( port -- )  PORT_RESET  DR_PORT " set-feature" $call-parent drop  d# 20 ms  ;
 : clear-status-change  ( port -- )  C_PORT_CONNECTION  DR_PORT " clear-feature" $call-parent drop  ;
 : parent-set-target  ( dev -- )  " set-target" $call-parent  ;
+: hub-error?  ( -- error? )
+   hub-buf 4  0  DR_HUB " get-status" $call-parent    ( actual usberror )
+   nip  if                                   ( )
+      ." Failed to get hub status" cr
+      true                                   ( true )
+   else                                      ( )
+      hub-buf 2+ c@ 2 and  if                ( )
+         ." USB Hub shut down due to over-current" cr      ( )
+         true                                ( true )
+      else                                   ( )
+         false                               ( false )
+      then                                   ( error? )
+   then                                      ( error? )
+;
+
 : get-port-status  ( port -- error? )
    hub-buf 4  2 pick   DR_PORT " get-status" $call-parent    ( port actual usberror )
    nip  if                                   ( port )
@@ -27,6 +42,11 @@ hex
    dup get-port-status  if      ( port )
       drop false exit           ( -- false )
    then                         ( port )
+
+   hub-buf c@ 8 and  if         ( port )
+      ." Hub port " . ." is over current" cr
+      false  exit               ( -- false )
+   then
 
    hub-buf 2+ c@  1 and  if     ( port )
       \ Status changed
@@ -58,17 +78,17 @@ hex
    " setup-new-node" $call-parent  if  execute  then  ( )
 ;
 
-: hub-#ports  ( -- n )
+: hub-#ports  ( -- #ports )
    hub-buf 8 0 0 HUB DR_HUB " get-desc" $call-parent nip  if
       ." Failed to get hub descriptor" cr
       0 exit
    then
-   hub-buf 2 + c@ 1+		( #ports )
+   hub-buf 2 + c@ 		( #ports )
 ;
 : hub-delay  ( -- #2ms )  hub-buf 5 + c@  ;
 
 : power-hub-ports  ( #ports -- )
-   1  ?do  i power-hub-port  loop           ( )
+   1+  1  ?do  i power-hub-port  loop       ( )
    
    hub-delay 2* ms                          ( )
 
@@ -88,25 +108,36 @@ hex
 external
 : probe-hub  ( dev -- )
    dup parent-set-target		( hub-dev )
-   hub-#ports                           ( hub-dev #ports )
+   hub-#ports  dup  0=  if		( hub-dev #ports )
+      2drop exit			( -- )
+   then					( hub-dev #ports )
 
-   " configuration#" get-int-property
+   " configuration#" get-int-property	( hub-dev #ports config# )
    " set-config" $call-parent           ( hub-dev #ports usberr )
    if  drop  ." Failed to set config for hub at " u. cr exit  then  ( hub-dev #ports )
 
-   dup power-hub-ports                  ( hub-dev #ports )
+   dup power-hub-ports			( hub-dev #ports )
 
-   1  ?do                                       ( hub-dev )
-      dup i safe-probe-hub-port                 ( hub-dev )
-   loop                                         ( hub-dev )
-   drop                                         ( )
+   hub-error?  if  2drop exit  then	( hub-dev #ports )
+
+   1+ 1  ?do				( hub-dev )
+      dup i safe-probe-hub-port		( hub-dev )
+   loop					( hub-dev )
+   drop					( )
 ;
 
 : probe-hub-xt  ( -- adr )  ['] probe-hub  ;
 
 : do-reprobe-hub  ( dev -- )
    dup parent-set-target			( hub-dev )
-   hub-#ports  1  ?do                           ( hub-dev )
+   
+   hub-#ports  dup 0=  if                       ( hub-dev #ports )
+      2drop exit                                ( -- )
+   then                                         ( hub-dev #ports )
+
+   hub-error?  if  2drop exit  then		( hub-dev #ports )
+
+   1+  1  ?do                                   ( hub-dev )
       dup i port-status-changed?  if            ( hub-dev connected? )
          if                                     ( hub-dev )
             dup i safe-probe-hub-port           ( hub-dev )
