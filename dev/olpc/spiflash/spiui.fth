@@ -42,14 +42,6 @@ h# 4000 constant /chunk   \ Convenient sized piece for progress reports
 
 \ Perform a series of sanity checks on the new firmware image.
 
-: check-firmware-image  ( adr len -- adr len )
-   dup /flash <>  abort" Wrong image length"      ( adr len )
-   2dup +  h# 40 -                                ( adr len signature-adr )
-   dup " CL1" comp  abort" No firmware signature" ( adr len signature-adr )
-   ." Firmware: " h# 10 type                      ( adr len )
-   \ XXX add some more sanity checks
-;
-
 [ifdef] load-base
 : flash-buf  load-base  ;
 [else]
@@ -76,8 +68,7 @@ h# 4000 constant /chunk   \ Convenient sized piece for progress reports
    /flash <> abort" Image file is the wrong length"
 
    ." Got firmware version: "
-   flash-buf h# f.ffc0 +  dup  h# 10  type cr  ( adr )
-   " CL1" comp  abort" Wrong machine type"
+   flash-buf h# f.ffc0 +  h# 10  type cr
 
    ?crc
 
@@ -280,6 +271,14 @@ device-end
 
 : erase-firmware  ( -- )
    h# 100000 /flash-block  do   (cr i .x  i flash-erase-block  /flash-block +loop  cr
+;
+
+: check-firmware-image  ( adr len -- adr len )
+   dup /flash <>  abort" Wrong image length"      ( adr len )
+   2dup +  h# 40 -                                ( adr len signature-adr )
+   dup " CL1" comp  abort" No firmware signature" ( adr len signature-adr )
+   ." Firmware: " h# 10 type                      ( adr len )
+   \ XXX add some more sanity checks
 ;
 
 : reprogram-firmware  ( adr len -- )
