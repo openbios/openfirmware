@@ -681,6 +681,12 @@ defer do-offset
 
 : amode-lsr  ( -- )  init-operands   (amode-ls)  {!}  !op  ;
 
+: amode-pld  ( -- )
+   \ Like amode-ls and friends except r16 vice r12.
+   0080.0000 iop
+   ['] get-off12  get-ea  !op
+;
+
 : get-off8  ( -- )
    \ Get the offset for [ldr|str][h\sh\sb] instructions.
    get-whatever case
@@ -835,6 +841,7 @@ defer do-offset
    d# 28 set-field		\ put the condition code in.
 ;
 : {cond/s}  ( opcode -- )  {cond} {s}  ;
+: {uncond}  ( opcode -- )  is newword  ;
 
 : parse-inc  ( l-flag -- )
    \ Parse the increment tag for ldm and stm.  There MUST be a two letter
@@ -864,11 +871,14 @@ defer do-offset
    set-parse  rem$ lower    ( )
 
    5 ?match  if  execute exit  then
+   4 ?match  if  execute exit  then
    3 ?match  if  execute exit  then
 
    \ Don't try a 2-character match if the string length is 3, because,
    \ for example, "blt" (i.e. b{lt}) would then match "bl" instead of "b".
-   rem-len 3 <>  if  2 ?match  if  execute  then  then
+   rem-len 3 <>  if
+      2 ?match  if  execute exit  then
+   then
 
    1 ?match  if  execute exit  then
 
@@ -1042,6 +1052,9 @@ also arm-assembler definitions
 : dsb  ( -- )  h# f57ff040 asm,  ;
 : dmb  ( -- )  h# f57ff050 asm,  ;
 : isb  ( -- )  h# f57ff060 asm,  ;
+
+: pld   ( -- )  h# f550.f000 {uncond} amode-pld  ;
+: pldw  ( -- )  h# f510.f000 {uncond} amode-pld  ;
 
 : #    ( -- adt-immed )  adt-immed  ;
 : reg  ( -- adt-reg )  adt-reg  ;

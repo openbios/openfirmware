@@ -441,6 +441,11 @@ create classes
    ['] .ldc/stc compile,  \ 6
    ['] .coproc  compile,  \ 7
 
+: .pld  ( -- )
+   d#22 bit?  if  ." pld"  else  ." pldw"  then
+   op-col .[ .rn ,.addr-mode .] 
+;
+
 : uncond-op   ( -- op  )  d#  4  bit?  ;
 : uncond-op1  ( -- op1 )  d# 20 8bits  ;
 : uncond-op2  ( -- op2 )  d#  4 4bits  ;
@@ -452,6 +457,10 @@ create classes
       5 of ." dmb" endof
       6 of ." isb" endof
       endcase endof
+   h# 51 of  .pld  endof
+   h# 55 of  .pld  endof
+   h# 59 of  .pld  endof
+   h# 5d of  .pld  endof
    ." ?"
    endcase
 ;

@@ -1,8 +1,8 @@
-BASEDIR= `(cd ../../../; pwd;)`
+BASEDIR= $(shell cd ../../../; pwd)
 
 OS := $(shell uname)
 HOSTCPU= $(shell ${BASEDIR}/forth/lib/hostcpu.sh)
-HOSTDIR= ../../${HOSTCPU}/${OS}
+HOSTDIR= ${BASEDIR}/cpu/${HOSTCPU}/${OS}
 BUILDSH= ${BASEDIR}/forth/lib/build.sh
 
 all: basefw.dic
@@ -20,9 +20,6 @@ ${HOSTDIR}/armforth: FORCE
 build: ${HOSTDIR}/forth ${HOSTDIR}/armforth
 	@ln -sf ${BUILDSH} build
 
-# build: ../${OS}/forth
-# 	@ln -sf ../${OS}/forth $@
-
 %.dic: FORCE build
 	./build $@
 
@@ -35,4 +32,5 @@ inflate.bin:
 
 # Don't use *.dic so as not to remove builder.dic
 clean:
-	rm -f tools.dic kernel.dic basefw.dic *.log headers *~ inflate.bin build
+	rm -f tools.dic kernel.dic basefw.dic *.log headers *~ inflate.bin build *.tag
+
