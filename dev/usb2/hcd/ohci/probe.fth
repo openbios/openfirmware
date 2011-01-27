@@ -121,9 +121,8 @@ external
          init-ohci-regs
       then
       alloc-dma-buf
-
-      probe-root-hub
    then
+   probe-root-hub
    open-count 1+ to open-count
    true
 ;

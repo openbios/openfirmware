@@ -138,8 +138,8 @@ defer set-host-mode  ' noop to set-host-mode
          do-resume
       then
       suspended?  if  do-resume  then
-      probe-root-hub
    then
+   probe-root-hub
    open-count 1+ to open-count
    true
 ;
