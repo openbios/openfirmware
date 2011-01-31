@@ -69,7 +69,7 @@ h# 4000 constant /chunk   \ Convenient sized piece for progress reports
 
    ." Got firmware version: "
    flash-buf h# f.ffc0 +  dup  h# 10  type cr  ( adr )
-   h# ffff.ffc0 3 comp  abort" Wrong machine signature"
+   machine-signature count comp  abort" Wrong machine signature"
 
    ?crc
 
@@ -277,7 +277,7 @@ device-end
 : check-firmware-image  ( adr len -- adr len )
    dup /flash <>  abort" Wrong image length"      ( adr len )
    2dup +  h# 40 -                                ( adr len signature-adr )
-   h# ffff.ffc0 3 comp  abort" Wrong machine signature"
+   machine-signature count comp  abort" Wrong machine signature"
                                                   ( adr len signature-adr )
    ." Firmware: " h# 10 type                      ( adr len )
    \ XXX add some more sanity checks

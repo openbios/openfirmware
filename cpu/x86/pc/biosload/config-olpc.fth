@@ -28,6 +28,8 @@ create use-watch-all
 create use-null-nvram
 create no-floppy-node
 
+create machine-signature ," CL1"
+
 fload ${BP}/cpu/x86/pc/biosload/addrs.fth
 
 \ LICENSE_BEGIN

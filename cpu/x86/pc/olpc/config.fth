@@ -37,6 +37,8 @@ create save-msrs
 create use-null-nvram  \ Don't store configuration variables
 \ create use-flash-nvram  \ Store configuration variables in firmware FLASH
 
+create machine-signature ," CL1"
+
 fload ${BP}/cpu/x86/pc/olpc/addrs.fth
 
 \ LICENSE_BEGIN
