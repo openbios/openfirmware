@@ -2,23 +2,6 @@
 \ Add this code to the existing mouse driver
 dev /mouse
 
-variable 'get-data  'get-data  off
-variable 'get-data? 'get-data? off
-
-: setup  ( -- )
-   'get-data @  0=  if
-      " get-data" my-parent ihandle>phandle find-method  if
-         'get-data !
-      then
-   then
-   'get-data? @  0=  if
-      " get-data?" my-parent ihandle>phandle find-method  if
-         'get-data? !
-      then
-   then
-;
-
-
 h# f800 constant red
 h# 07e0 constant green
 h# 001f constant blue
@@ -41,24 +24,13 @@ h# 4 value y-offset
 \ existing Open Firmware mouse driver:
 
 \ open            initializes the port and resets the device
-\ cmd             sends a command byte and waits for the ack
-\ read1           reads 1 response byte
-\ read2           reads 2 response bytes
-\ mouse1:1        command e6
 \ mouse2:1        command e7
 \ stream-on       command f4
-\ stream-off      command f5
+\ stream-mode     command ea,f4
 \ mouse-status    command e9 and reads 3 response bytes
-\ set-resolution  command e8 then sends another command byte
-\ get-data?       reads a data byte if one is available
-\ get-data        waits for and reads a data byte
-
+\ stream-poll?    ( -- false | dx dy buttons true )
 
 variable ptr
-0 value show-raw?
-
-\ Runs the special Device ID command and checks for the ALPS return code
-\ Ref: 5.2.10 (1) of Hybrid-GP2B-T-1.pdf
 
 \ The Synaptics touchpad version is 64.02.30
 
@@ -67,20 +39,18 @@ variable ptr
    0 bljoin
 ;
 
-\ Put the device into advanced mode and enable it
+\ Put the device into streaming mode and enable it
 : start  ( -- )
-   setup
    stream-mode
 ;
 
 \ The normal mouse driver uses remote mode, but this device
 \ doesn't support remote mode, so patch the mouse driver
-\ "open" routine to substitute "noop" for "remote-mode".
+\ "open" routine to substitute "start" for "remote-mode".
 
 patch start remote-mode open
 
-\ The following code receives and decodes touchpad packets in the
-\ various special formats
+\ The following code receives and decodes touchpad packets
 
 : show-packets  ( adr len -- )
    push-hex
@@ -112,7 +82,7 @@ variable mouse-y
    r>                                ( buttons )
 ;
 
-\ Try to receive a GS-format packet.  If one arrives within
+\ Try to receive a mouse report packet.  If one arrives within
 \ 20 milliseconds, return true and the decoded information.
 \ Otherwise return false.
 : pad?  ( -- false | x y buttons true )
@@ -123,8 +93,7 @@ variable mouse-y
    then
 ;
 
-\ Switch the device to glide format and display
-\ the data that it sends.  Stop when a key is typed.
+\ Display raw data from the device, stopping when a key is typed.
 : show-pad  ( -- )
    start
    begin
