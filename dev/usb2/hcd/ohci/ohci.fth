@@ -58,6 +58,19 @@ true value first-open?
 : hc-cntl-clr  ( bit-mask -- )  hc-cntl@ swap invert and hc-cntl!  ;
 : hc-cntl-set  ( bit-mask -- )  hc-cntl@ swap or hc-cntl!  ;
 
+: reset-port  ( port -- )
+   >r
+   h# 1.0002 r@ hc-rh-psta!		\ enable port
+   h# 10 r@ hc-rh-psta!			\ reset port
+   r@ d# 10 0  do
+      d# 10 ms
+      dup hc-rh-psta@ 10.0000 and  ?leave
+   loop  drop
+   r@ hc-rh-psta@ 10.0000 and 0=  if  abort  then
+   h# 1f.0000 r> hc-rh-psta!		\ clear status change bits
+   d# 256 ms
+;
+
 : reset-usb  ( -- )
    ohci-reg dup 0=  if  map-regs  then
    1 hc-rh-stat!		\ power-off root hub
@@ -65,6 +78,7 @@ true value first-open?
    d# 10 ms
    0= if  unmap-regs  then
 ;
+
 : init-ohci-regs  ( -- )
    hcca-phys hc-hcca!		\ physical address of hcca
 

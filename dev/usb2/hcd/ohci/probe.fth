@@ -4,19 +4,6 @@ purpose: OHCI USB Controller probe
 hex
 headers
 
-: reset-port  ( port -- )
-   >r
-   h# 1.0002 r@ hc-rh-psta!		\ enable port
-   10 r@ hc-rh-psta!			\ reset port
-   r@ d# 10 0  do
-      d# 10 ms
-      dup hc-rh-psta@ 10.0000 and  ?leave
-   loop  drop
-   r@ hc-rh-psta@ 10.0000 and 0=  if  abort  then
-   h# 1f.0000 r> hc-rh-psta!		\ clear status change bits
-   100 ms
-;
-
 : probe-root-hub-port  ( port -- )
    dup hc-rh-psta@ 1 and 0=  if  drop exit  then	( port )	\ No device connected
 
