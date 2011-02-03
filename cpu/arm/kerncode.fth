@@ -952,6 +952,66 @@ code lskip  ( adr len lvalue -- residue )
    = until
 c;
 
+\ Find the first occurence of bvalue, returning the residual string
+code bscan  ( adr len bvalue -- adr' len' )
+   ldmia  sp!,{r0,r1}  \ r0-len r1-adr tos-bvalue
+   mov    r2,tos       \ r2-bvalue
+   movs   tos,r0       \ tos-len
+   psheq  r1,sp
+   nxteq               \ Bail out if len=0
+
+   begin
+      ldrb   r0,[r1],#1
+      cmp    r0,r2
+      deceq  r1,#1
+      psheq  r1,sp
+      nxteq
+      decs   tos,1
+   = until
+   psh  r1,sp
+c;
+
+\ Find the first occurrence of wvalue, returning the residual string
+code wscan  ( adr len wvalue -- adr' len' )
+   ldmia  sp!,{r0,r1}  \ r0-len r1-adr tos-lvalue
+   mov    r2,tos       \ r2-lvalue
+   movs   tos,r0       \ tos-len
+   psheq  r1,sp
+   nxteq               \ Bail out if len=0
+
+   begin
+      ldrh   r0,[r1],#2
+      cmp    r0,r2
+      deceq  r1,#2
+      psheq  r1,sp
+      nxteq
+      decs   tos,2
+   <= until
+   psh  r1,sp
+   mov  tos,#0
+c;
+
+\ Find the first occurrence of lvalue, returning the residual string
+code lscan  ( adr len lvalue -- adr' len' )
+   ldmia  sp!,{r0,r1}  \ r0-len r1-adr tos-lvalue
+   mov    r2,tos       \ r2-lvalue
+   movs   tos,r0       \ tos-len
+   psheq  r1,sp
+   nxteq               \ Bail out if len=0
+
+   begin
+      ldr    r0,[r1],#4
+      cmp    r0,r2
+      deceq  r1,#4
+      psheq  r1,sp
+      nxteq
+      decs   tos,4
+   <= until
+   psh  r1,sp
+   mov  tos,#0
+c;
+
+
 \ code /link  ( -- /link )  psh tos,sp   mov tos,/link  c;
 
 code /char  ( -- 1 )  psh tos,sp  mov tos,#1  c;

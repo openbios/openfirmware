@@ -234,17 +234,39 @@ defer transparent-pixel!  ( color fbadr i -- )
 : dimensions  ( -- width height )  width height  ;
 
 : replace-color  ( old new -- )
-   depth d# 32 =  if
+   depth d# 32 =  if                           ( old new )
       swap 565>argb-pixel swap 565>argb-pixel  ( old' new' )
-      frame-buffer-adr  width height * /l* bounds do
+      frame-buffer-adr  width height * /l*     ( old new adr len )
+[ifdef] lscan
+      begin              ( old new adr len )
+         fourth lscan    ( old new adr' len' )
+      dup while          ( old new adr' len' )
+         third third l!  ( old new adr len )
+         /l /string      ( old new adr' len' )
+      repeat             ( old new adr' len' )
+      4drop              ( )
+[else]
+      bounds  do         ( old new )
          over i l@ xor h# ffffff and 0=  if  dup i l!  then
       /l +loop
       2drop
-   else
-      frame-buffer-adr  width height * /w* bounds do
-         over i w@ = if  dup i w!  then
-      /w +loop
-      2drop
+[then]
+   else                                      ( old new )
+      frame-buffer-adr  width height * /w*   ( old new adr len )
+[ifdef] wscan
+      begin              ( old new adr len )
+         fourth wscan    ( old new adr' len' )
+      dup while          ( old new adr' len' )
+         third third w!  ( old new adr len )
+         /w /string      ( old new adr' len' )
+      repeat             ( old new adr' len' )
+      4drop              ( )
+[else]
+      bounds do                            ( old new )
+         over i w@ = if  dup i w!  then    ( old new )
+      /w +loop                             ( old new )
+      2drop                                ( )
+[then]
    then
 ;
 \ This creates a device method from a termemu method
