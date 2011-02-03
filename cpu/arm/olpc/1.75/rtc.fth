@@ -31,6 +31,7 @@ headerless
 : >bcd  ( binary -- bcd )  d# 10 /mod  4 << +  ;
 
 : bcd-time&date  ( -- s m h d m y century )
+   set-address
 [ifdef] cl2-a1
    7 0 smb-read-n  ( s m h dow d m y )
 [else]
