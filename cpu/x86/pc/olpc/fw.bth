@@ -603,9 +603,9 @@ true                               ' client-symbols?  set-config-int-default
 : ?resume-botch
    h# 1454 pl@ 2 and  if
       red-letters
-      ." Interacting due to botched resume" cr
+      ." Restarting due to botched resume" cr
       black-letters
-      hex interact
+      bye
    then
 ;
 
