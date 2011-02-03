@@ -7,10 +7,6 @@ decimal
  0 value erasecol
 -1 value drawcol
 
-0 value key_left_up
-0 value key_left_down
-0 value key_right_up
-0 value key_right_down
 0 value key_esc
 0 value key_off
 
@@ -42,36 +38,39 @@ ballsize 2 / value scoresize
 ballsize 5 * value batsize
 1000 value pscale
 
+: scale  ( coord -- scaled-coord )  pscale *  ;
+
 0 value ball_limit_x
-ballsize pscale * value ball_limit_lo_y
+ballsize scale value ball_limit_lo_y
 0 value ball_limit_hi_y
 
-ballsize pscale * value bat_limit_lo_y
+ballsize scale value bat_limit_lo_y
 0 value bat_limit_hi_y
 
 0 value hit_limit_left_lo_x
-ballsize 2 * pscale * value hit_limit_left_hi_x
+ballsize 2 * scale value hit_limit_left_hi_x
 0 value hit_limit_right_lo_x
 0 value hit_limit_right_hi_x
 
-ballsize pscale * value reflect_left_x
+ballsize scale value reflect_left_x
 0 value reflect_right_x
 
 : initlimits
    " dimensions" $call-screen to screenh  to screenw
-   screenw ballsize - pscale * to ball_limit_x
-   screenh ballsize 2 * - pscale * to ball_limit_hi_y
-   screenh ballsize batsize + - pscale * to bat_limit_hi_y
-   screenw ballsize 3 * - pscale * to hit_limit_right_lo_x
-   screenw ballsize - pscale * to hit_limit_right_hi_x
+   screenw ballsize - scale to ball_limit_x
+   screenh ballsize 2 * - scale to ball_limit_hi_y
+   screenh ballsize batsize + - scale to bat_limit_hi_y
+   screenw ballsize 3 * - scale to hit_limit_right_lo_x
+   screenw ballsize - scale to hit_limit_right_hi_x
 
-   screenw ballsize 2 * - pscale * to reflect_right_x
+   screenw ballsize 2 * - scale to reflect_right_x
    get-msecs to grandseed
 ;
 
 : random1k ( -- n ) grandseed 16807 * 17 + abs to grandseed grandseed 1000 mod ;
 : unscale ( n -- n ) pscale 2/ + pscale / ;
-: calcbatx ( n -- x )  screenw  ballsize 3 *  -  *  ballsize +  ;
+: leftbatx  ( -- n )  ballsize  ;
+: rightbatx  ( -- n )  screenw  ballsize 2*  -  ;
 : paintrect ( c pixx pixy pixw pixh -- ) " fill-rectangle" $call-screen ;
 
 \needs xy* : xy*  ( x y w h -- x' y' )  rot *  >r  *  r>  ;
@@ -223,8 +222,8 @@ ballsize pscale * value reflect_left_x
   
   ballsize 7 *  ballsize 2*  leftscore  drawnumber
   screenw  ballsize 7 *  9 scoresize * + -  ballsize 2*  rightscore  drawnumber
-  0 calcbatx  leftbaty   plotbat
-  1 calcbatx  rightbaty  plotbat
+  leftbatx   leftbaty   plotbat
+  rightbatx  rightbaty  plotbat
   ballx bally plotball
 ;
 
@@ -236,23 +235,23 @@ ballsize pscale * value reflect_left_x
 
 : resetball ( -- )
   500 to ballstop
-  screenw ballsize - 2 / pscale *  ballx pscale mod  +  random1k +  to ballx
-  screenh ballsize - 2 / pscale *  bally pscale mod  +  random1k +  to bally
+  screenw ballsize - 2 / scale  ballx pscale mod  +  random1k +  to ballx
+  screenh ballsize - 2 / scale  bally pscale mod  +  random1k +  to bally
   
-  random1k  screenw pscale *  *  2000000 /  to balldx
-  random1k  screenh pscale *  *  2000000 /  to balldy
-  balldx    screenw pscale *      3000 / +  to balldx
-  balldy    screenh pscale *      6000 / +  to balldy
+  random1k  screenw scale  *  2000000 /  to balldx
+  random1k  screenh scale  *  2000000 /  to balldy
+  balldx    screenw scale      3000 / +  to balldx
+  balldy    screenh scale      6000 / +  to balldy
   
   random1k  500 < if  balldx negate to balldx  then
   random1k  500 < if  balldy negate to balldy  then
 ;
 
 : initvalues ( -- )
-  ballsize 2* pscale *  to leftbaty
-  screenh ballsize 2 * - batsize - pscale *  to rightbaty
+  ballsize 2* scale  to leftbaty
+  screenh ballsize 2* - batsize - scale  to rightbaty
   
-  screenh pscale * 1000 / to batdy
+  screenh scale 1000 / to batdy
 ;
 
 : doreset ( -- )
@@ -267,6 +266,54 @@ ballsize pscale * value reflect_left_x
 \ poll key states if you can.
 
 [ifdef] olpc
+[ifdef] pong-use-touchscreen
+0 value pong-ih
+: >bat-center  ( baty -- centery )  batsize scale 2/ +  ;
+0 value left-bat-target
+0 value right-bat-target
+: initkeys  ( -- )
+   pong-ih 0=  if
+      " /touchscreen" open-dev to pong-ih
+   then
+   pong-ih 0=  abort" Can't open touchscreen"
+
+   rightbaty >bat-center to right-bat-target
+   leftbaty >bat-center to left-bat-target
+
+   false to key_esc
+   false to key_off
+;
+: restorekeys  ( -- )  pong-ih  ?dup  if  close-dev  0 to pong-ih  then  ;
+: scale-xy  ( x y -- x' y' )
+   swap screenw 1- * d# 15 rshift
+   swap screenh 1- * d# 15 rshift
+;
+: scankeys  ( -- )
+   " get-touch?" pong-ih $call-method  if  ( x y z down? touch# )
+      3drop                                ( x y )
+      scale-xy                             ( x' y' )
+      scale  swap  4 lshift  screenw /     ( y' 0<=x'<16 )
+      dup 1 <=  if                         ( y 0<=x'<16 )
+         drop   to left-bat-target         ( )
+         exit
+      then                                 ( y 0<=x'<16 )
+      d# 14 >=  if                         ( y )
+         to right-bat-target
+         exit
+      then                                 ( y )
+      drop                                 ( )
+   then
+   key?  if  key 27 =  if   true to key_off  else  true to key_esc  then   then
+;
+\ The "5 >>a" makes the paddles a little sluggish, for more challenge
+: left-deltay  ( deltat oldy -- oldy deltay )
+   nip  left-bat-target  over >bat-center  -  5 >>a
+;
+: right-deltay  ( deltat oldy -- oldy deltay )
+   nip  right-bat-target  over >bat-center  -  5 >>a
+;
+: wait-esc-off  false to key_esc  ;
+[else]
 \ This works with the FirmWorks pckbd driver.  The key map below
 \ is good for the OLPC keyboard.
 [ifdef] keyboard-ih
@@ -274,6 +321,11 @@ alias pong-ih keyboard-ih
 [else]
 : pong-ih stdin @ ;
 [then]   
+
+0 value key_left_up
+0 value key_left_down
+0 value key_right_up
+0 value key_right_down
 
 : initkeys
    ." Shift, Hand, Esc, Square" cr
@@ -314,9 +366,15 @@ alias pong-ih keyboard-ih
       then
    repeat
 ;
+: wait-esc-off  ( -- )  begin scankeys key_esc 0= until  ;
+[then]
 [else]
 \ This version uses "key" with normal ASCII.  It is typically too slow
 \ dup to limited keyboard repeat rate.
+0 value key_left_up
+0 value key_left_down
+0 value key_right_up
+0 value key_right_down
 : initkeys ;
 : restorekeys ;
 : scankeys
@@ -338,6 +396,33 @@ alias pong-ih keyboard-ih
      endcase
    then
 ;
+: wait-esc-off  false to key_esc  ;
+[then]
+[ifndef] right-deltay
+: left-deltay  ( deltat oldy -- oldy deltay ) 
+  0                                  ( deltat oldy deltay )
+  over bat_limit_lo_y >  if          ( deltat oldy deltay )
+     key_left_up  if  batdy -  then  ( deltat oldy deltay' )
+  then                                 ( deltat oldy deltay )
+
+  over bat_limit_hi_y <  if            ( deltat oldy deltay )
+     key_left_down  if  batdy +  then  ( deltat oldy deltay )
+  then                                 ( deltat oldy deltay )
+
+  rot *                                ( oldy deltay' ) \ Scale by the elapsed time
+;
+: right-deltay  ( deltat oldy -- oldy deltay )
+   0                                   ( deltat oldy deltay )
+
+   over bat_limit_lo_y >  if           ( deltat oldy deltay )
+     key_right_up  if  batdy -  then   ( deltat oldy deltay' )
+  then                             
+
+  over bat_limit_hi_y <  if
+     key_right_down  if  batdy +  then
+  then
+  rot * 
+;
 [then]
 
 : moveball ( oldx oldy newx newy -- )  2swap eraseball  plotball  ;
@@ -353,7 +438,7 @@ alias pong-ih keyboard-ih
   ballx 0<  if
     resetball
     balldx abs negate to balldx
-    ballx ballsize 2 * pscale * + to ballx
+    ballx ballsize 2 * scale + to ballx
     rightscore 1 + to rightscore
     rightscore 15 = if
       -1 to ballstop
@@ -362,7 +447,7 @@ alias pong-ih keyboard-ih
   ballx ball_limit_x >  if
     resetball
     balldx abs to balldx
-    ballx ballsize 2 * pscale * - to ballx
+    ballx ballsize 2 * scale - to ballx
     leftscore 1 + to leftscore
     leftscore 15 = if
       -1 to ballstop
@@ -380,13 +465,13 @@ alias pong-ih keyboard-ih
   
   balldx 0<  if
     ballx hit_limit_left_lo_x hit_limit_left_hi_x between if
-      bally leftbaty ballsize pscale * - leftbaty batsize pscale * + between if
+      bally leftbaty ballsize scale - leftbaty batsize scale + between if
         
         bally leftbaty <  if
           balldy abs negate to balldy
         then
         
-        bally leftbaty batsize ballsize - pscale * + >  if
+        bally leftbaty batsize ballsize - scale + >  if
           balldy abs to balldy
         then      
 
@@ -406,13 +491,13 @@ alias pong-ih keyboard-ih
   
   balldx 0>  if
     ballx hit_limit_right_lo_x hit_limit_right_hi_x between  if
-      bally rightbaty ballsize pscale * - rightbaty batsize pscale * + between if
+      bally rightbaty ballsize scale - rightbaty batsize scale + between if
       
         bally rightbaty <  if
           balldy abs negate to balldy
         then
         
-        bally rightbaty batsize ballsize - pscale * + >  if
+        bally rightbaty batsize ballsize - scale + >  if
           balldy abs to balldy
         then      
 
@@ -472,8 +557,8 @@ alias pong-ih keyboard-ih
    drawcol   batx  r> batsize +      ballsize r>          paintrect
 ;
 
-: movebat ( n oldy newy -- )
-  rot calcbatx to batx  swap            ( newy oldy )
+: movebat ( oldy newy x -- )
+  to batx  swap                 ( newy oldy )
   over unscale  over unscale -  ( newy oldy deltay )
   dup abs  batsize <  if        ( newy oldy deltay )
     dup  if                     ( newy oldy deltay )
@@ -493,36 +578,19 @@ alias pong-ih keyboard-ih
   then
 ;
 
-: updatebats ( deltat -- )
+: updatebats  ( deltat -- )
   >r
-  0 leftbaty 0      ( n oldy deltay )
+  r@  leftbaty  left-deltay   ( oldy deltay  r: deltat )
 
-  over bat_limit_lo_y >  if
-     key_left_up  if  batdy -  then
-  then
-
-  over bat_limit_hi_y <  if
-     key_left_down  if  batdy +  then
-  then
-
-  r@ *               ( n oldy deltay' ) \ Scale by the elapsed time
-  over +             ( n oldy newy )
-  dup to leftbaty    ( n oldy newy )
-  movebat
+  over +                 ( oldy newy  r: deltat )
+  dup to leftbaty        ( oldy newy  r: deltat )
+  leftbatx movebat
   
-  1 rightbaty 0  ( 1 right dy )
+  r> rightbaty  right-deltay   ( oldy deltay )
 
-  over bat_limit_lo_y >  if
-     key_right_up  if  batdy -  then
-  then
-
-  over bat_limit_hi_y <  if
-     key_right_down  if  batdy +  then
-  then
-
-  r> * over +
-  dup to rightbaty
-  movebat
+  over +                       ( oldy newy )
+  dup to rightbaty             ( oldy newy )
+  rightbatx  movebat           ( )
 ;
 
 : initeverything ( -- )
@@ -548,25 +616,25 @@ alias pong-ih keyboard-ih
 ;
 
 : pong ( -- )
-  initeverything
-  begin
-    get-msecs glastupdate -
+   initeverything
+   begin
+      get-msecs glastupdate -
       dup 0> if
-        dup 250 > if
-          drop
-          get-msecs to glastupdate
-          250
-        then
-        doloop
+         dup 250 > if
+            drop
+            get-msecs to glastupdate
+            250
+         then
+         doloop
       else
-        drop
+         drop
       then
-    scankeys
-    key_esc  if  doreset  begin scankeys key_esc 0= until   then
-  key_off until
-  restorekeys
-  h# ffff 0 0 screenw screenh paintrect
-  page
+      scankeys
+      key_esc  if  doreset  wait-esc-off   then
+   key_off until
+   restorekeys
+   h# ffff 0 0 screenw screenh paintrect
+   page
 \  " Count:" type loopcount .d cr
 \  " Avg millisec:" type totalupdate loopcount / .d cr
 ;

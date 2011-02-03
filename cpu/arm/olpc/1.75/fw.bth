@@ -252,6 +252,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
 devalias fsdisk int:0
 
+create pong-use-touchscreen
 fload ${BP}/ofw/gui/ofpong.fth
 [ifdef] notyet
 fload ${BP}/cpu/x86/pc/olpc/life.fth

@@ -6,6 +6,8 @@ my-space encode-int  my-address encode-int encode+  " reg" property
 " touchscreen" name
 : open  ( -- okay? )
    my-unit " set-address" $call-parent  true
+   \ Read once to prime the interrupt
+   d# 10 " get" $call-parent  4drop 4drop 2drop
 ;
 : close  ( -- )  ;
 : get-touch?  ( -- false | x y z down? contact# true )
