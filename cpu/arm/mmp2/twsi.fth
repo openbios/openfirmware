@@ -91,41 +91,32 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
 
 : twsi-get  ( register-address .. #reg-bytes #data-bytes -- data-byte ... )
    >r                    ( reg-adr .. #regs  r: #data-bytes )
-   \ Handle the case where the device does not require that a write register address be sent
-   slave-address         ( reg-adr .. #regs slave-address  r: #data-bytes )
-   over 0=  if           ( reg-adr .. #regs slave-address  r: #data-bytes )
-      r@  if             ( reg-adr .. #regs slave-address  r: #data-bytes )
-         1 or            ( reg-adr .. #regs slave-address' r: #data-bytes )
-      then               ( reg-adr .. #regs slave-address' r: #data-bytes )
-   then                  ( reg-adr .. #regs slave-address' r: #data-bytes )
+   ?dup  if              ( reg-adr .. #regs slave-address  r: #data-bytes )
+      slave-address      ( reg-adr .. #regs slave-address  r: #data-bytes )
+      twsi-start         ( reg-adr .. #regs  r: #data-bytes )
 
-   twsi-start            ( reg-adr .. #regs  r: #data-bytes )
+      \ Send register addresses
+      0  ?do  0 twsi-putbyte  loop       ( r: #data-bytes )
 
-   \ Abort the transaction if both #reg-bytes and #data-bytes are 0
-   dup r@ or  0=  if                  ( #regs  r: #data-bytes )
-      iue+scle bbu_ICR_MA or  cr!     ( #regs  r: #data-bytes )  \ Master abort
-      r> 2drop exit                   ( -- )
-   then                               ( reg-adr .. #regs  r: #data-bytes )
+      \ If no result data requested, quit now
+      r@ 0=  if                          ( r: #data-bytes )
+         r> drop                         ( )
+         iue+scle bbu_ICR_STOP or  cr!   ( )
+         exit
+      then                               ( r: #data-bytes )
+   then                                  ( r: #data-bytes )
 
-   \ Send register addresses, if any
-   0  ?do  0 twsi-putbyte  loop       ( r: #data-bytes )
+   r>  ?dup  if                          ( #data-bytes )
+      \ Send the read address with a (or another) start bit
+      slave-address 1 or  bbu_ICR_START twsi-putbyte     ( #data-bytes )   
+      sr@ sr!    \ clear ITE and IRF status bits         ( #data-bytes )
+      \ Bug on line 367 of bbu_TWSI.s - writes SR without first reading it
 
-   \ If no result data requested, quit now
-   r>  dup 0=  if                     ( #data-bytes )
-      drop                            ( )
-      iue+scle bbu_ICR_STOP or  cr!   ( )
-      exit
-   then                               ( #data-bytes )
+      1-  0  ?do  0 twsi-getbyte   loop  ( bytes )
 
-   \ Otherwise send the read address with another start bit
-   slave-address 1 or  bbu_ICR_START twsi-putbyte     ( #data-bytes )   
-   sr@ sr!    \ clear ITE and IRF status bits         ( #data-bytes )
-   \ Bug on line 367 of bbu_TWSI.s - writes SR without first reading it
-
-   1-  0  ?do  0 twsi-getbyte   loop  ( bytes )
-
-   \ Set the stop bit on the final byte
-   bbu_ICR_STOP  bbu_ICR_ACKNAK or twsi-getbyte   ( bytes )
+      \ Set the stop bit on the final byte
+      bbu_ICR_STOP  bbu_ICR_ACKNAK or twsi-getbyte   ( bytes )
+   then
 ;
 
 : twsi-write  ( byte .. #bytes -- )
@@ -137,3 +128,20 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
 
 : twsi-b@  ( reg -- byte )  1 1 twsi-get  ;
 : twsi-b!  ( byte reg -- )  2 twsi-write  ;
+
+0 0  " "  " /" begin-package
+" twsi" name
+
+0 0 instance 2value child-address
+: open  ( -- okay? )  true  ;
+: close  ( -- )  ;
+: set-address  ( target channel -- )  to child-address  ;
+2 " #address-cells" integer-property
+0 " #size-cells" integer-property
+: get  ( #bytes -- bytes ... )
+   child-address set-twsi-target
+   0 swap twsi-get
+;
+: decode-unit  ( adr len -- low high )  parse-2int  ;
+: encode-unit  ( low high -- adr len )  >r <# u#s drop [char] , hold r> u#s u#>  ;
+end-package
