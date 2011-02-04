@@ -102,7 +102,7 @@ create keypad-map  h# 59 c,  h# 63 c,
    then
 ;
 
-\ Searascii for a matascii for "byte" in the "key" position of the table at
+\ Search for a match for "byte" in the "key" position of the table at
 \ "table-adr". If a match is found, return the corresponding "value" byte
 \ and true.  Otherwise return the argument byte and false.  The table
 \ consists of pairs of bytes - the first byte of the pair is "key" and
