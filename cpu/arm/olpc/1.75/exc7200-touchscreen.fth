@@ -166,10 +166,15 @@ false value right-hit?
 ;
 0 value pressure
 
+: *3/5  ( n -- n' )  3 5 */  ;
+: dimmer  ( color -- color' )
+   565>rgb rot *3/5 rot *3/5 rot *3/5 rgb>565
+;
+
 : track  ( x y z down? contact# -- )
    setcolor                       ( x y z down? )
    0=  if
-      pixcolor @ black " replace-color" $call-screen
+      pixcolor @  dup dimmer  " replace-color" $call-screen
       3drop exit
    then                           ( x y z )
    to pressure                    ( x y )
