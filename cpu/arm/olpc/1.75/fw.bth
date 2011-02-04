@@ -164,6 +164,9 @@ fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
 fload ${BP}/cpu/arm/olpc/1.75/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
 
+fload ${BP}/cpu/arm/olpc/1.75/pinch.fth  \ Touchscreen gestures
+: pinch  " pinch" screen-ih $call-method  ;
+
 fload ${BP}/cpu/arm/mmp2/keypad.fth
 [ifndef] cl2-a1
 stand-init: keypad
