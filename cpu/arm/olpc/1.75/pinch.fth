@@ -78,8 +78,8 @@ d# 60 d# 80 2constant min-wh
 ;
 : close-touch  ( -- )  touch-ih  ?dup  if  close-dev  0 to touch-ih  then  ;
 
-: mark-touch  ( -- )
-   p0 to base-touch-xy
+: mark-touch  ( point -- )
+   to base-touch-xy
    image-center-xy to base-center-xy
 ;
 : mark-size  ( -- )
@@ -98,44 +98,56 @@ d# 60 d# 80 2constant min-wh
 : do-touch0  ( x y down? -- )
    -rot to p0  if      ( )    \ Down
       down1?  if              \ Double-touch - resize
-         down0?  if           \ Not the initial touch pair - resize the screen image
+         down0?  if           \ Not the initial touch pair - resize the image
             resize&recenter
          else                 \ Initial touch pair - establish the baseline size
             mark-size
+
+            \ Retouch of first finger - reestablish the base position
+            \ in case the image was moved by the other finger
+            p1 mark-touch
          then
-      else                    \ The second finger is up, so this is a move
+      else                    \ The other finnger is up, so this is a move
          down0?  if           \ Not the initial touch - move the image
             p0 move-image
          else                 \ Initial touch - establish the base position
-            mark-touch
+            p0 mark-touch
          then
       then
 
       true to down0?
    else                       \ Up
+      \ When this finger goes up, reestablish the base position on the other
+      \ finger so its subsequent movement will cause stable image movement
+      p1 mark-touch
       false to down0?
    then
 ;
 : do-touch1  ( x y down? -- )
-   -rot to p1  if    ( )      \ Down
+   -rot to p1  if      ( )    \ Down
       down0?  if              \ Double-touch - resize
-         down1?  if           \ Not the initial touch pair - resize the window
+         down1?  if           \ Not the initial touch pair - resize the image
             resize&recenter
          else                 \ Initial touch pair - establish the baseline size
             mark-size
 
-            \ Initial touch of second finger - reestablish the base position
-            \ in case the image was moved after the first finger when down
-            mark-touch
+            \ Initial or re-touch of second finger - reestablish the base position
+            \ in case the image was moved by the other finger
+            p0 mark-touch
          then
-      else                    \ The first finger is now up - do nothing in this case
+      else                    \ The other finnger is up, so this is a move
+         down1?  if           \ Not the initial touch - move the image
+            p1 move-image
+         else                 \ Initial touch - establish the base position
+            p1 mark-touch
+         then
       then
 
       true to down1?
    else                       \ Up
-      \ When the second finger goes up, we again must reestablish the base position
-      \ so subsequent movement of the first finger will cause stable image movement
-      mark-touch
+      \ When this finger goes up, reestablish the base position on the other
+      \ finger so its subsequent movement will cause stable image movement
+      p0 mark-touch
       false to down1?
    then
 ;
@@ -157,6 +169,8 @@ d# 60 d# 80 2constant min-wh
    endcase
 ;
 : pinch
+   ." Use one and two finger gestures to resize and move the scroller." cr
+   ." Type a key to exit."  cr
    open-touch
    begin do-gesture key? until
    close-touch
