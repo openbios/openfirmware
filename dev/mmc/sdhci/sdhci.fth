@@ -431,7 +431,7 @@ headers
 \ CMD6 (R1) is switch-function.  It can be used to enter high-speed mode
 : switch-function  ( arg -- adr )
    scratch-buf  d# 64  d# 64  (dma-setup)
-   h# 063b h# 11 cmd  ( response drop )
+   h# 063a h# 11 cmd  ( response drop )
    2 wait
    dma-release
    scratch-buf
