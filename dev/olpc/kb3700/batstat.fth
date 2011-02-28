@@ -145,6 +145,8 @@ end-string-array
 dev /
 new-device
 " battery" device-name
+" olpc,xo1-battery" +compatible
+
 0 0 reg  \ Needed so test-all will run the selftest
 
 \ Test that the battery is inserted and not broken.

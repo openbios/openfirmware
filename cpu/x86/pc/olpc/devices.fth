@@ -152,6 +152,12 @@ stand-init: RTC
    " /rtc" open-dev  clock-node !
 ;
 
+\ Linux identifies XO-1 RTC with EC-based wakeup capabilities through this
+\ device property.
+dev /rtc
+" olpc,xo1-rtc" +compatible
+dend
+
 fload ${BP}/cpu/x86/pc/cpunode.fth
 fload ${BP}/cpu/x86/k6cputest.fth	\ Burnin test for K6 CPU
 

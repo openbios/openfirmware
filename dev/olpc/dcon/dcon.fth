@@ -1,5 +1,9 @@
 \ See license at end of file
-\ " dcon" device-name
+
+new-device
+" dcon" device-name
+" olpc,xo1-dcon" +compatible
+finish-device
 
 \ DCON internal registers, accessed via I2C
 \ 0 constant DCON_ID
