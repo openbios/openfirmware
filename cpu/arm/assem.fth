@@ -44,6 +44,8 @@ defer asm@     \ ( adr -- n ) read n at adr            "
 defer asm-set-relocation-bit
 
 also arm-assembler definitions
+false value use-movw?
+
 : asm,  ( n -- )  here  /l asm-allot  asm!  ;
 previous definitions
 
@@ -1162,15 +1164,15 @@ also arm-assembler definitions
             true asm-const       ( reg# op )
          then
       else                       ( reg# imm imm )
-[ifdef] armv7
-         0 1.0000 within  if     ( reg# imm )
-            set-imm16 0300.0000  ( reg# op )      \ movw rN,#<imm16>
-         else                    ( reg# imm )
-            false asm-const      ( reg# op )
-         then
-[else]
-         drop false asm-const    ( reg# op )
-[then]
+         use-movw?  if           ( reg# imm imm )
+            1.0000 u<  if           ( reg# imm )
+               set-imm16 0300.0000  ( reg# op )      \ movw rN,#<imm16>
+            else                    ( reg# imm )
+               false asm-const      ( reg# op )
+            then                    ( reg# op )
+         else                    ( reg# imm imm )
+            drop false asm-const ( reg# op )
+         then                    ( reg# op )
       then                       ( reg# op )
    then                          ( reg# op )
    iop  rd-field  !op
