@@ -37,6 +37,21 @@ end-string-array
 : forth-regs  ['] (forth-regs is regs  ;
 forth-regs
 
+string-array dregs
+," d0"  ," d1"  ," d2"  ," d3"  ," d4"  ," d5"  ," d6"  ," d7"
+," d8"  ," d9"  ," d10" ," d11" ," d12" ," d13" ," d14" ," d15"
+," d16" ," d17" ," d18" ," d19" ," d20" ," d21" ," d22" ," d23"
+," d24" ," d25" ," d26" ," d27" ," d28" ," d29" ," d30" ," d31"
+end-string-array
+
+string-array sregs
+," s0"  ," s1"  ," s2"  ," s3"  ," s4"  ," s5"  ," s6"  ," s7"
+," s8"  ," s9"  ," s10" ," s11" ," s12" ," s13" ," s14" ," s15"
+," s16" ," s17" ," s18" ," s19" ," s20" ," s21" ," s22" ," s23"
+," s24" ," s25" ," s26" ," s27" ," s28" ," s29" ," s30" ," s31"
+end-string-array
+
+
 : udis. ( n -- )
    push-hex
    <#
@@ -77,24 +92,40 @@ variable start-column
 : .,  ( -- )  ." , "  ;
 : .[  ( -- )  ." ["  ;
 : .]  ( -- )  ." ]"  ;
+: .{  ( -- )  ." {"  ;
+: .}  ( -- )  ." }"  ;
 
 : .rm  ( -- )      0 .reg  ;
 : .rs  ( -- )      8 .reg  ;
-: .rd,  ( -- )  d# 12 .reg  ., ;
+: .rd  ( -- )  d# 12 .reg  ;
+: .rd,  ( -- )  .rd ., ;
 : op.rd,  ( -- )  op-col  .rd,  ;
 : .rb  ( -- )  d# 16 .reg  ;
 alias .rn .rb
 : rn  ( -- rn )  d# 16 4bits  ;
 
-: .rm,shift  ( -- )
+: .rm,shift  ( rsr? -- )
    .rm
    d# 4 8bits  if   \ LSL #0 is no-shift; this isn't it
       .,
-      4 8bits  6 =  if  ." rrx"  exit  then
+      4 8bits  6 =  if  ." rrx"  drop exit  then
       5 2 " lsllsrasrror" 3 .fld  ."  "
-      4 bit?  if  .rs  else  ." #" 7 5 bits .d  then
+      ( rsr? ) 4 bit? and  if  .rs  else  ." #" 7 5 bits .d  then
+   else
+      drop
    then
 ;
+
+: get-vd  ( dbit-lo? -- reg# )
+   if
+      d# 12 4bits 1 <<  d# 22 bit? if  1+  then
+   else
+      d# 12 4bits  d# 22 bit? if  h# 10 +  then
+   then
+;
+: .dreg ( reg# -- )  dregs ".  ;
+: .sreg ( reg# -- )  sregs ".  ;
+: op.vd,  ( dbit-lo? -- )  op-col get-vd 8 bit? if .dreg else .sreg then ., ;
 
 : u.h  ( n -- )  dup  d# 9 u>  if  ." 0x"  then  (u.) type  ;
 : ror  ( n cnt -- )  2dup d# 32 swap - lshift  -rot rshift or  ;
@@ -116,7 +147,7 @@ d# 25 constant d#25
 : +/-  ( -- )  d#23 bit?  0=  if  ." -"  then  ;
 
 : .r/imm  ( -- )
-   d#25 bit?  if  ." #" .imm  else  .rm,shift  then
+   d#25 bit?  if  ." #" .imm  else  1 .rm,shift  then
 ;
 \ Indicates the form of the instruction that affects both PC and CPSR/SPSR
 : {p}  ( -- )
@@ -278,7 +309,7 @@ d# 25 constant d#25
 \ : byte  ( -- ) 00400000 op-or ; \ ldr str operate bytewide
 
 : .mregs  ( -- )
-   ." {"                         ( )
+   .{                            ( )
    0 d# 16 bits   false          ( n need,? )
    d# 16  0  do                  ( n need,? )
       over 1 and  if             ( n need,? )
@@ -288,7 +319,7 @@ d# 25 constant d#25
       swap 2/ swap               ( n need,?' )
    loop                          ( n need,?' )
    2drop                         ( )
-   ." }"                         ( )
+   .}                            ( )
 ;
 : .inc  ( -- )  d#23 2 " daiadbib" 2 .fld  ;
 : .ldm/stm  ( -- )   \ d# 25 3 bits 4 =
@@ -300,18 +331,25 @@ d# 25 constant d#25
 : imm12  ( -- n )  0 d# 12 bits  ;
 : ,.addr-mode  ( -- )
    d#25 bit?  if
-      ., +/- .rm,shift
+      ., +/- 1 .rm,shift
    else
       imm12  if  ., ." #" +/- imm12 u.h  then
    then
 ;
 : .rev  ( -- )  {<cond>}  op.rd, .rm  ;
+: .uadd ( -- )  {<cond>}  op.rd, .rn ., .rm  ;
+: .uxtab  ( -- )  {<cond>}  op.rd, .rn ., 0 .rm,shift ;
 : .stuff  ( -- )
-   0 d# 28 bits  h# 0fff.0ff0 and  
+   0 d# 28 bits  h# 0ff0.00f0 and  
    case
-      h# 06bf0f30  of  ." rev"    .rev  endof
-      h# 06bf0fb0  of  ." rev16"  .rev  endof
-      h# 06ff0f30  of  ." revsh"  .rev  endof
+      h# 0650.0090  of  ." uadd8"  .uadd  endof
+      h# 0650.0010  of  ." uadd16" .uadd  endof
+      h# 0650.0030  of  ." uasx"   .uadd  endof
+      h# 06b0.0030  of  ." rev"    .rev   endof
+      h# 06b0.00b0  of  ." rev16"  .rev   endof
+      h# 06e0.0070  of  ." uxtab"  .uxtab endof
+      h# 06f0.0030  of  ." revsh"  .rev   endof
+      h# 06f0.0030  of  ." revsh"  .rev   endof
       ( default )
       ." undefined" {<cond>}
    endcase
@@ -348,10 +386,31 @@ XXX decode floating opcodes:
 10 8  fops  rmf sin fml cos fdv tan frd asn
 18 4  fops  pol acs ??? atn
 [then]
+: .fpspec  ( -- )
+   d# 16 4bits case
+   0 of ." fpsid" endof
+   1 of ." fpscr" endof
+   8 of ." fpexc" endof
+        ." fpxxx" endcase
+;
+
 : p#  ( -- n )  8 4bits  ;
 : .p#,  ( n -- )  ." p" p# n.d  .,  ;
 : .offset8  ( -- )  ." #" +/-  0 8bits 4 *  u.h  ;
+: .vldst  ( -- )
+   24 bit?  21 bit? not  and  if
+      ." v" .ld/st ." r" {<cond>} true op.vd, .[ .rb
+      0 8bits  if  ., .offset8  then .]
+   else
+      ." v" .ld/st ." m" {<cond>} .inc
+      op-col  .rb {!} .,  .{
+      false get-vd  0 8bits 2/  bounds over -rot  do
+         i .dreg  i 1+ over <>  if  .,  then
+      loop drop .} 
+   then
+;
 : .ldc/stc  ( -- )
+   9 3 bits 5 =  if  .vldst exit  then
    .ld/st ." c" {<cond>} " l" d#22 ?.bit
    op-col .p#,  d# 12 .creg .,  .[ .rn
    p-bit  if  ., .offset8 .] {!}  else  .] ., .offset8  then
@@ -415,9 +474,19 @@ end-string-array
    dup  7 8 between  if  drop ., .flushes exit  then
    d# 15  =  if  .clocks  then  \ SA-110
 ;
+: .vfp  ( -- )  \ Decode VFP ops
+   d# 20 bit?  if
+      ." vmrs" op.rd, .fpspec
+   else
+      ." vmsr" op-col .fpspec ., .rd
+   then
+;
+   
 : .coproc  ( -- )
    p-bit  if  .swi exit  then
+
    d# 4 bit?  if		\ MRC and MCR
+      p# 1 >> 5 =  if  .vfp exit  then
       d# 20 1 " mcrmrc" 3 .fld {<cond>} 
       op-col
       p# d# 15 =  if		\ System Control Coprocessor

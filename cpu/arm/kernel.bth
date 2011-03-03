@@ -92,6 +92,7 @@ fload ${BP}/cpu/arm/extra.fth
 
 fload ${BP}/forth/kernel/uservars.fth
 fload ${BP}/cpu/arm/muldiv.fth    \ Uses "defer"; must be after uservars
+fload ${BP}/cpu/arm/sqroot.fth
 fload ${BP}/cpu/arm/dodoesad.fth
 fload ${BP}/cpu/arm/version.fth
 

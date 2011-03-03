@@ -39,10 +39,10 @@ u32 r[16];
 
 void regdump(u32 instruction, u32 last_pc, u8 cr)
 {
-    printf("  0 %08x 1 %08x 2 %08x 3 %08x\n", r[0],  r[1],  r[2],  r[3]);
-    printf("  4 %08x 5 %08x 6 %08x 7 %08x\n", r[4],  r[5],  r[6],  r[7]);
-    printf("  8 %08x 9 %08x a %08x b %08x\n", r[8],  r[9],  r[10], r[11]);
-    printf("  c %08x d %08x e %08x f %08x\n", r[12], r[13], r[14], r[15]);
+    printf(" r0 %08x r1 %08x  r2 %08x   r3 %08x\n", r[0],  r[1],  r[2],  r[3]);
+    printf(" r4 %08x r5 %08x  r6 %08x base %08x\n", r[4],  r[5],  r[6],  r[7]);
+    printf(" r8 %08x up %08x tos %08x   rp %08x\n", r[8],  r[9],  r[10], r[11]);
+    printf(" ip %08x sp %08x  lr %08x   pc %08x\n", r[12], r[13], r[14], r[15]);
     printf("pc %08x lpc %08x i %08x ", PC - 8, last_pc, instruction);
     if (cr)
         putchar('\n');
@@ -800,8 +800,7 @@ case 0x10: INSTR("and"); RD = RN & IMM32; UPCC(RD); break;
 case 0x11: INSTR("eor"); RD = RN ^ IMM32; UPCC(RD); break;
 case 0x12: INSTR("sub"); SBB(RD, RN, IMM32, 1); break;
 case 0x13: INSTR("rsb"); SBB(RD, IMM32, RN, 1); break;
-case 0x14: /* if (instruction == 0xe2809020) trace = 0; */
-           INSTR("add"); ADC(RD, RN, IMM32, 0); break;
+case 0x14: INSTR("add"); ADC(RD, RN, IMM32, 0); break;
 case 0x15: INSTR("adc"); ADC(RD, RN, IMM32, C); break;
 case 0x16: INSTR("sbc"); SBB(RD, IMM32, RN, C); break;
 case 0x17: INSTR("rsc"); SBB(RD, IMM32, RN, C); break;
@@ -810,9 +809,12 @@ case 0x19: switch (BXTYPE) {
            case 0x0: INSTR("nop"); break;
            case 0x1:
            INSTR("wrc");
-           if (RN == -2) {
+           if (UFIELD(19, 4) == 0xf) {           // "wrc pc"
                printf("Tracing on\n");
                trace = 1;
+           } else if (UFIELD(19, 4) == 0xe) {    // "wrc lr"
+               printf("Tracing off\n");
+               trace = 0;
            } else if (RN == -1) {
 //               trace = 1;
 //               printf("find %x %x %x %x\n",r[2], r[1], r[0], r[3]);

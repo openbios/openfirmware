@@ -1,6 +1,7 @@
 purpose: Integer square-root for ARM processors
 \ See license at end of file
 
+0 [if]
 \       u1 -- 32-bit unsigned
 \       n  -- significant digits
 \             16 -> sqrt-integer
@@ -26,6 +27,24 @@ code (sqrt      \ ( u1 n -- u2 )
                 top     r1      mov c;
 
 : sqrt          ( u1 -- u2 )    td 16 (sqrt ;
+[then]
+
+\ 32bit -> 16bit fixed point square root
+\ see http://www.finesse.demon.co.uk/steven/sqrt.html
+code sqrt  ( n -- root )
+   mov   r0, tos                 \ n
+   mov   tos, `1 d# 30 <<`       \ root
+   mov   r1, `3 d# 30 <<`        \ offset
+   mov   r2, 0                   \ loop count
+   begin
+      cmp   r0, tos, ror r2
+      subhs r0, r0, tos, ror r2
+      adc   tos, r1, tos, lsl #1
+      inc   r2, #2
+      cmp   r2, #32
+   = until
+   bic      tos, tos, `3 d# 30 <<`
+c;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2008 FirmWorks

@@ -4,6 +4,10 @@ purpose: Defining words for code definitions
 \ These words are specific to the virtual machine implementation
 : assembler  ( -- )  arm-assembler  ;
 
+variable pre-asm-base
+: stash-base    base @ pre-asm-base ! ;
+: restore-base  pre-asm-base @ base ! ;
+
 only forth also arm-assembler also helpers also arm-assembler also definitions
 
 \ Forth Virtual Machine registers
@@ -54,6 +58,7 @@ headerless
 : exitcode  ( -- )
    ['] $interpret-do-undefined is $do-undefined
    previous
+   restore-base
 ;
 ' exitcode is do-exitcode
 headers
@@ -119,6 +124,8 @@ alias c;  c;
 also forth definitions
 headerless
 : entercode  ( -- )
+   stash-base
+   decimal
    also assembler
 \   false is disassembling?
    [ also helpers ]

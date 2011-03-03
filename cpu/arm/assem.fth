@@ -13,8 +13,8 @@ purpose: Prefix assembler for ARM Instruction Set
 [then]
 \needs land : land and ;
 
-\needs cindex  fload ${BP}/forth/lib/parses1.fth
-\needs lex fload ${BP}/forth/lib/lex.fth
+\needs cindex   fload ${BP}/forth/lib/parses1.fth
+\needs lex      fload ${BP}/forth/lib/lex.fth
 \needs 2nip  : 2nip  ( n1 n2 n3 n4 -- n3 n4 )  2swap 2drop  ;
 vocabulary arm-assembler also arm-assembler definitions
 
@@ -149,7 +149,9 @@ next-cons  constant  adt-psrfld		\ _c, _f, etc.
 next-cons  constant  adt-reg		\ r0, r1, ..., pc.
 next-cons  constant  adt-coreg		\ c0, c1, ...
 next-cons  constant  adt-coproc		\ p0, p1, ...
-next-cons  constant  adt-xpsr		\ cpsr, spsr.
+next-cons  constant  adt-dreg		\ d0, d1, ...
+next-cons  constant  adt-sreg		\ s0, s1, ...
+next-cons  constant  adt-xpsr		\ cpsr, spsr, fpscr, ...
 next-cons  constant  adt-shift		\ Shift op in Shifter Operands.
 next-cons  constant  adt-rrx
 next-cons  constant  adt-immed		\ #immediate_value.
@@ -240,6 +242,10 @@ headers hex
    rem$  " !#*+,-[]^_{}`" lex  0=  if		( field$ )
       0 0 2swap  0				( rem$ field$ delim )
    then						( rem$ field$ delim )
+   \ Horrible special case for L#
+   dup ascii # =  2over " l" $=  and  if
+      drop 1+ 0
+   then
    is adr-delim  2swap set-rem$			( field$ )
    dup 0<>  adr-delim  or  if			( field$ )
       true					( field$ true )
@@ -267,6 +273,14 @@ headers hex
 \ Define the co-processor registers.
 : coreg:  ( n "name" -- )  create ,  does>  @ adt-coreg  ;
 : coregs:  ( 10x"name" -- )  10 0  do  i coreg:  loop  ;
+
+\ Define the VFP/SIMD double-precision registers.
+: dreg:  ( n "name" -- )  create ,  does> @ adt-dreg  ;
+: dregs:  ( 20x"name" -- )  20 0  do  i dreg:  loop  ;
+
+\ Define the VFP/SIMD single-precision registers.
+: sreg:  ( n "name" -- )  create ,  does> @ adt-sreg  ;
+: sregs:  ( 20x"name" -- )  20 0  do  i sreg:  loop  ;
 
 : range-error  ( n msg$ -- )  type .d cr  abort  ;
 
@@ -388,7 +402,9 @@ headers hex
    r> set-field
 ;
 
-: ?register  ( adt -- )  adt-reg <>  " register" ?expecting  ;
+: ?register  ( adt -- )  adt-reg  <>  " register"  ?expecting  ;
+: ?dregister ( adt -- )  adt-dreg <>  " dregister" ?expecting  ;
+: ?sregister ( adt -- )  adt-sreg <>  " sregister" ?expecting  ;
 
 : get-immediate  ( -- n )
    get-whatever adt-immed <>  " immediate" ?expecting
@@ -412,6 +428,28 @@ headers hex
 : get-r08  ( -- )      8 get-rn  ;
 : get-r12  ( -- )  d# 12 get-rn  ;
 : get-r16  ( -- )  d# 16 get-rn  ;
+
+: ?dregister  ( adt -- )  adt-dreg <>  " doubleword register" ?expecting  ;
+: get-dregister  ( -- dreg )
+   require-field $asm-execute case
+      adt-sreg   of  0000.0100 xop  endof
+      adt-dreg   of                 endof
+      " floating-point register" expecting
+   endcase
+;
+
+: set-vdfield  ( n lo-D? -- )
+   \ Reg[5] is encoded as Vd[15-12]:D[22] OR as D[22]:Vd[15-12]. Sigh.
+   if
+      dup 1 and d# 22 lshift iop
+      1 >> d# 12 lshift iop
+   else
+      dup h# 10 land d# 18 lshift iop
+      h# 0f land d# 12 lshift iop
+   then
+;
+: get-d12  ( -- )  get-dregister true set-vdfield  ;
+
 
 : expecting-reg/immed  ( -- )  " register or immediate" expecting  ;
 : get-shiftr#  ( -- )
@@ -539,6 +577,9 @@ headers hex
    !op
 ;
 
+: amode-vmrs  ( -- )  init-operands  get-r12  get-whatever ?psr  iop  !op  ;
+: amode-vmsr  ( -- )  init-operands  get-whatever ?psr  iop  get-r12  !op  ;
+
 : (amode-mul)  ( -- )  init-operands  get-r16 get-r00 get-r08  ;
 : amode-mul    ( -- )  (amode-mul)  !op  ;
 : amode-mla    ( -- )  (amode-mul) get-r12  !op  ;
@@ -600,7 +641,47 @@ headers hex
    !op
 ;
 
-\ rd, [rn, <immed12>] {!}
+: amode-vlsm  ( need-r16? -- )
+   init-operands
+   if
+      get-r16                                 ( )
+      adr-delim ascii ! =  if                 ( )
+         flip-w                               ( )
+         require-field  " ," ?expecting drop  ( )
+      then                                    ( )
+
+      \ There should be a comma on the end of the register.
+      adr-delim ascii , <>  " ," ?expecting
+   then
+
+   \ The next thing up should be an open brace for the register list.
+   get-whatever adt-delimiter <>  " {" ?expecting
+   ascii { <>  " {" ?expecting
+
+   \ Start with dreg-list "0, 0" and we'll update as we go along.
+   d# 32 0                                    ( first last )
+   begin  adr-delim ascii } <>  while
+      get-whatever case                       ( first last value adt )
+
+         adt-dreg of                          ( first last dreg )
+            \ Update first, last
+            tuck max -rot min swap            ( first' last' )
+            \ Check the delimiter for - meaning a range.
+            adr-delim  ascii -  =  if         ( first' last' )
+               get-whatever ?dregister        ( first' last' dreg )
+               max                            ( first' last'' )
+            then
+         endof
+
+         " register or }" expecting
+      endcase
+   repeat                                     ( first last )
+
+   \ Encode the resulting Vd, imm8 fields
+   1+ over - 2* iop  false set-vdfield  !op
+;
+
+\ rd, [rn, <immed12>] {!} 
 \ rd, [rn, +-rm] {!}
 \ rd, [rn, +-rm, <shift>] {!}
 \ rd, [rn], <immed12>
@@ -711,6 +792,27 @@ defer do-offset
    p?  if  {!}  then
 ;
 
+: get-imm8  ( -- )
+   \ Get the offset for v[ldr|str] instructions
+   get-whatever case
+      adt-delimiter of
+         case
+            ascii + of         get-r00  endof
+            ascii - of  flip-u get-r00  endof
+            " +, -, or number" expecting
+         endcase
+      endof
+
+      adt-immed of
+         \ If the value is negative, switch things around.
+         dup 0<  if  negate flip-u  then
+         d# 10 ?#bits  2 >>a  iop
+      endof
+
+      " immediate value" expecting
+   endcase
+;
+
 \ rd, [rn, <immed8>] {!}
 \ rd, [rn, +-rm] {!}
 \ rd, [rn], <immed8>
@@ -735,7 +837,6 @@ defer do-offset
 : amode-ldrex  ( -- )
    init-operands  get-r12  ['] get-off0  get-ea  !op
 ;
-
 : amode-copr  ( -- )	\ Co-processors: mcr, mrc
    \ p, #, r, c, c, #
    init-operands
@@ -775,6 +876,14 @@ defer do-offset
    adt-coproc 0f 08 get-this
    adt-coreg  0f 0c get-this
    ['] get-off-c get-ea
+   !op
+;
+
+: amode-vldst  ( -- ) \ vldr, vstr instructions
+   init-operands
+   \ Set the add offset and 64-bit width as defaults.
+   0080.0100 iop	
+   get-d12 ['] get-imm8 get-ea
    !op
 ;
 
@@ -843,11 +952,19 @@ defer do-offset
 : {cond/s}  ( opcode -- )  {cond} {s}  ;
 : {uncond}  ( opcode -- )  is newword  ;
 
-: parse-inc  ( l-flag -- )
-   \ Parse the increment tag for ldm and stm.  There MUST be a two letter
-   \ code to specify the increment option so we bail if we don't get one
-   \ of the eight possible codes.  l-flag true specifies ldm, vice stm.
-   0= >r next-2?  0=  " increment specifier" ?expecting
+: parse-inc  ( default$ l-flag -- )
+   \ Parse the increment tag for ldm and stm.
+   \ If default is -1 then there MUST be a two letter code to specify
+   \ the increment option: we bail if we don't get one of the eight
+   \ possible codes. If default$ is non-null we'll use that instead
+   \ (see vldm et al.).
+   \ l-flag true specifies ldm, vice stm.
+   0= >r
+   next-2?  0=  if                                      ( default$ )
+     ?dup 0=  if drop true " increment specifier" ?expecting  then
+   else                                                 ( default$ incr-spec$ )
+     2swap 2drop
+   then
 
    \ Correct tags have an even index from sindex.
    " daiadbibfafdeaed" sindex dup 1 land  " increment specifier" ?expecting
@@ -918,6 +1035,9 @@ also arm-assembler definitions
 
 : spsr  ( -- n1 n2 )  00400000 adt-xpsr  ;
 : cpsr  ( -- n1 n2 )  00000000 adt-xpsr  ;
+: fpsid ( -- n1 n2 )  00000000 adt-xpsr  ;
+: fpscr ( -- n1 n2 )  00010000 adt-xpsr  ;
+: fpexc ( -- n1 n2 )  00080000 adt-xpsr  ;
 
 psrs:    _c _x _cx _s _cs _xs _cxs _f _cf _xf _cxf _sf _csf _xsf _cxsf
 1 psr: _ctl
@@ -927,70 +1047,85 @@ psrs:    _c _x _cx _s _cs _xs _cxs _f _cf _xf _cxf _sf _csf _xsf _cxsf
 coprocs: p0 p1 p2 p3 p4 p5 p6 p7 p8 p9 p10 p11 p12 p13 p14 p15
 coregs:  cr0 cr1 cr2 cr3 cr4 cr5 cr6 cr7 cr8 cr9 cr10 cr11 cr12 cr13 cr14 cr15
 regs:    r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15
+dregs:   d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23 d24 d25 d26 d27 d28 d29 d30 d31
+sregs:   s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31
 
 previous definitions
 
 also arm-assembler definitions
-: and   0000.0000 {cond/s} amode-rrop2  ;
-: eor   0020.0000 {cond/s} amode-rrop2  ;
-: sub   0040.0000 {cond/s} amode-rrop2  ;
-: rsb   0060.0000 {cond/s} amode-rrop2  ;
-: add   0080.0000 {cond/s} amode-rrop2  ;
-: adc   00a0.0000 {cond/s} amode-rrop2  ;
-: sbc   00c0.0000 {cond/s} amode-rrop2  ;
-: rsc   00e0.0000 {cond/s} amode-rrop2  ;
-: orr   0180.0000 {cond/s} amode-rrop2  ;
-: bic   01c0.0000 {cond/s} amode-rrop2  ;
+: and    0000.0000 {cond/s} amode-rrop2  ;
+: eor    0020.0000 {cond/s} amode-rrop2  ;
+: sub    0040.0000 {cond/s} amode-rrop2  ;
+: rsb    0060.0000 {cond/s} amode-rrop2  ;
+: add    0080.0000 {cond/s} amode-rrop2  ;
+: adc    00a0.0000 {cond/s} amode-rrop2  ;
+: sbc    00c0.0000 {cond/s} amode-rrop2  ;
+: rsc    00e0.0000 {cond/s} amode-rrop2  ;
+: orr    0180.0000 {cond/s} amode-rrop2  ;
+: bic    01c0.0000 {cond/s} amode-rrop2  ;
+: uadd16 0650.0f10 {cond}   amode-rrop2  ;
+: uasx   0650.0f30 {cond}   amode-rrop2  ;
+: uadd8  0650.0f90 {cond}   amode-rrop2  ;
+: uxtab  06e0.0070 {cond}   amode-rrop2  ;
 
-: clz   016f.0f10 {cond/s} amode-rdop2  ;
-: mov   01a0.0000 {cond/s} amode-rdop2  ;
-: mvn   01e0.0000 {cond/s} amode-rdop2  ;
-: movw  0300.0000 {cond}   amode-movw   ;
+: clz    016f.0f10 {cond/s} amode-rdop2  ;
+: mov    01a0.0000 {cond/s} amode-rdop2  ;
+: mvn    01e0.0000 {cond/s} amode-rdop2  ;
+: mvn    01e0.0000 {cond/s} amode-rdop2  ;
 
-: mul   0000.0090 {cond/s} amode-mul   ;
-: mla   0020.0090 {cond/s} amode-mla   ;
-: umull 0080.0090 {cond/s} amode-lmul  ;
-: umlal 00a0.0090 {cond/s} amode-lmul  ;
-: smull 00c0.0090 {cond/s} amode-lmul  ;
-: smlal 00e0.0090 {cond/s} amode-lmul  ;
+: movw   0300.0000 {cond}   amode-movw   ;
 
-: tst   0110.0000 {cond} amode-rnop2  ;
-: teq   0130.0000 {cond} amode-rnop2  ;
-: cmp   0150.0000 {cond} amode-rnop2  ;
-: cmn   0170.0000 {cond} amode-rnop2  ;
+: mul    0000.0090 {cond/s} amode-mul   ;
+: mla    0020.0090 {cond/s} amode-mla   ;
+: umull  0080.0090 {cond/s} amode-lmul  ;
+: umlal  00a0.0090 {cond/s} amode-lmul  ;
+: smull  00c0.0090 {cond/s} amode-lmul  ;
+: smlal  00e0.0090 {cond/s} amode-lmul  ;
 
-: mrs   010f.0000 {cond} amode-mrs    ;
-: msr   0120.f000 {cond} amode-msr    ;
+: tst    0110.0000 {cond}   amode-rnop2  ;
+: teq    0130.0000 {cond}   amode-rnop2  ;
+: cmp    0150.0000 {cond}   amode-rnop2  ;
+: cmn    0170.0000 {cond}   amode-rnop2  ;
 
-: ldc   0c10.0000 {cond} amode-lsc    ;
-: stc   0c00.0000 {cond} amode-lsc    ;
-: cdp   0e00.0000 {cond} amode-cdp    ;
-: mcr   0e00.0010 {cond} amode-copr   ;
-: mrc   0e10.0010 {cond} amode-copr   ;
+: mrs    010f.0000 {cond}   amode-mrs    ;
+: msr    0120.f000 {cond}   amode-msr    ;
+ 
+: ldc    0c10.0000 {cond}   amode-lsc    ;
+: stc    0c00.0000 {cond}   amode-lsc    ;
+: cdp    0e00.0000 {cond}   amode-cdp    ;
+: mcr    0e00.0010 {cond}   amode-copr   ;
+: mrc    0e10.0010 {cond}   amode-copr   ;
 
-: swi   0f00.0000 {cond} amode-imed24 ;
+: swi    0f00.0000 {cond}   amode-imed24 ;
 
-: b     0a00.0000 {cond} amode-bbl    ;
-: bl    0b00.0000 {cond} amode-bbl    ;
+: b      0a00.0000 {cond}   amode-bbl    ;
+: bl     0b00.0000 {cond}   amode-bbl    ;
+ 
+: bx     012f.ff10 {cond}   amode-bx     ;
+: blx    012f.ff30 {cond}   amode-bx     ;
 
-: bx    012f.ff10 {cond} amode-bx     ;
-: blx   012f.ff30 {cond} amode-bx     ;
+: rev    06bf.0f30 {cond}   amode-rev  ;
+: rev16  06bf.0fb0 {cond}   amode-rev  ;
+: revsh  06ff.0f30 {cond}   amode-rev  ;
 
-: swp   0100.0090 {cond} {b}  amode-swp  ;
-: strex 0180.0f90 {cond} {bh} amode-swp  ;
-: ldrex 0190.0f9f {cond} {bh} amode-ldrex  ;
+: swp    0100.0090 {cond} {b}  amode-swp  ;
+: strex  0180.0f90 {cond} {bh} amode-swp  ;
+: ldrex  0190.0f9f {cond} {bh} amode-ldrex  ;
 
-: ldm   0810.0000 {cond} 1 parse-inc 1 amode-lsm  ;
-: popm  08bd.0000 {cond}             0 amode-lsm  ;
-: stm   0800.0000 {cond} 0 parse-inc 1 amode-lsm  ;
-: pushm 092d.0000 {cond}             0 amode-lsm  ;
+: ldm    0810.0000 {cond} " " 1 parse-inc 1 amode-lsm  ;
+: popm   08bd.0000 {cond}                 0 amode-lsm  ;
+: stm    0800.0000 {cond} " " 0 parse-inc 1 amode-lsm  ;
+: pushm  092d.0000 {cond}                 0 amode-lsm  ;
 
-: ldr  ( -- )  0410.0000 {cond} {shbt}  ;
-: str  ( -- )  0400.0000 {cond} {hbt}   ;
+: ldr    0410.0000 {cond} {shbt}  ;
+: str    0400.0000 {cond} {hbt}   ;
 
-: rev    ( -- )  06bf0f30 {cond} amode-rev  ;
-: rev16  ( -- )  06bf0fb0 {cond} amode-rev  ;
-: revsh  ( -- )  06ff0f30 {cond} amode-rev  ;
+: vldr   0d10.0a00 {cond} amode-vldst ;
+: vstr   0d00.0a00 {cond} amode-vldst ;
+: vldm   0c10.0b00 {cond} " ia" 1 parse-inc 1 amode-vlsm ;
+: vstm   0c00.0b00 {cond} " ia" 0 parse-inc 1 amode-vlsm ;
+: vmsr   0ee0.0a10 {cond} amode-vmsr ;
+: vmrs   0ef0.0a10 {cond} amode-vmrs ;
 
 : rd-field  ( reg# -- )  d# 12 set-field  ;
 : rb-field  ( reg# -- )  d# 16 set-field  ;
@@ -1027,11 +1162,15 @@ also arm-assembler definitions
             true asm-const       ( reg# op )
          then
       else                       ( reg# imm imm )
+[ifdef] armv7
          0 1.0000 within  if     ( reg# imm )
             set-imm16 0300.0000  ( reg# op )      \ movw rN,#<imm16>
          else                    ( reg# imm )
             false asm-const      ( reg# op )
          then
+[else]
+         drop false asm-const    ( reg# op )
+[then]
       then                       ( reg# op )
    then                          ( reg# op )
    iop  rd-field  !op

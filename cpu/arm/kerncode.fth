@@ -753,6 +753,7 @@ c;
 : unaligned-l!  ( l adr -- )  unaligned-!  ;
 : unaligned-d!  ( d adr -- )  tuck na1+ unaligned-!  unaligned-!  ;
 : d@            ( adr -- d )  dup @  swap na1+ @  ;
+: d!            ( d adr -- )  tuck na1+ ! ! ;
 
 code c!  ( char adr -- )  pop r0,sp  strb r0,[tos]  pop tos,sp  c;
 code 2@  ( adr -- n-high n-low )

@@ -17,7 +17,7 @@ also assembler definitions
 
 headerless
 20 constant #references-max
-10 constant #labels-max
+20 constant #labels-max
 
 #labels-max  #references-max *  /n* buffer: references
 #labels-max /n* buffer: local-labels
@@ -59,11 +59,12 @@ headers
 ;
 
 headerless
-: init-labels  ( -- )
+: (init-labels)  ( -- )
    #labels-max  0   do  i clear-label  loop
 ;
 
-init-labels
+defer init-labels
+' (init-labels) is init-labels
 
 also forth definitions
 headers
