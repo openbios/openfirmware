@@ -18,7 +18,7 @@ purpose: EC commands that are the same for all XO versions
 : autowack-off   ( -- )  0 h# 33 ec-cmd-b!  ;
 
 : mppt-active@   ( -- b )  h# 3d ec-cmd-b@  ;
-: mppt-limit@    ( -- b )  h# 3e ec-cmd-b!  ;
+: mppt-limit@    ( -- b )  h# 3e ec-cmd-b@  ;
 : mppt-limit!    ( b -- )  h# 3f ec-cmd-b!  ;
 : mppt-off       ( -- )    h# 40 ec-cmd  ;
 : mppt-on        ( -- )    h# 41 ec-cmd  ;
