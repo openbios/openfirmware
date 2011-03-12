@@ -672,6 +672,46 @@ h# 90 buffer: logstr
    h# 10 invert and ec-debugflag4 bat-b!
 ;
 
+: bat-recover-info@ ( -- voltage ACR current temp )
+   ds-bank-buf 6 h# 0c 1w-read                  ( )
+   ds-bank-buf c@ 8 <<                          ( voltage_msb )
+   ds-bank-buf 1 + c@ or d# 16 << d# 16 >>a     ( voltage )
+   ds-bank-buf 4 + c@ 8 <<                      ( voltage ACR_msb )
+   ds-bank-buf 5 + c@ or d# 16 << d# 16 >>a     ( voltage ACR )
+   ds-bank-buf 4 h# 18 1w-read                  ( voltage ACR )
+   ds-bank-buf 2 + c@ 8 <<                      ( voltage ACR current_msb )
+   ds-bank-buf 3 + c@ or d# 16 << d# 16 >>a     ( voltage ACR current )
+   swap                                         ( voltage current ACR )
+   ds-bank-buf c@ 8 <<                          ( voltage ACR current temp_msb )
+   ds-bank-buf 1 + c@ or d# 16 << d# 16 >>a     ( voltage ACR current temp )
+;
+
+4 value bon
+2 value boff
+
+: bat-recover ( -- )
+   batman-init?
+   bg-acr@
+   begin
+      bat-enable-charge
+      bon ms
+      bat-disable-charge
+      bat-recover-info@
+      bg-temp>degc >sd.dd type ."  C "
+      to bg-last-acr
+      bg-I>mA >sd.dd type ."  mA "
+      bg-v_avg + 2 / dup to bg-v_avg
+      bg-V>V >sd.ddd type ."  V "
+      dup bg-last-acr swap - 
+      bg-acr>mAh >sd.dd type ."  mAh "
+      cr
+      boff ms
+      false
+   until
+   drop
+   bat-disable-charge
+;
+
 fload ${BP}/dev/olpc/kb3700/batstat.fth
 
 \ LICENSE_BEGIN
