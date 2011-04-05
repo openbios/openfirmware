@@ -12,7 +12,7 @@ WRDIR = ${BP}/forth/wrapper
 ZIPDIR = ${WRDIR}/zip
 SIMDIR = ${BP}/cpu/ppc/ppcsim
 
-ZIPOBJS = zipmem.o deflate.o trees.o bits.o util.o inflate.o
+ZIPOBJS = adler32.o compress.o crc32.o deflate.o inflate.o trees.o zutil.o
 
 OBJS = wrapsim.o ppcsim.o logger.o ${ZIPOBJS}
 TRACEOBJS = wrapsim.o ppcsim.trace.o logger.o ${ZIPOBJS}

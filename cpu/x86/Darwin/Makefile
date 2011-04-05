@@ -25,8 +25,8 @@ else
 ZIPTAIL = ${WRTAIL}/zip
 ZIPDIR = ${BP}/${ZIPTAIL}
 
-ZIPOBJS = zipmem.o deflate.o trees.o bits.o util.o inflate.o
-INFLATEBIN = ../../build/inflate.bin
+ZIPOBJS = adler32.o compress.o crc32.o deflate.o inflate.o trees.o zutil.o
+INFLATEBIN = ../build/inflate.bin
 
 # Compile with -O0 because with GCC4, higher optimization levels cause the
 # functions to be reordered so the "inflate" entry point is no longer at

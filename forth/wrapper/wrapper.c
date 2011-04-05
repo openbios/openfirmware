@@ -64,7 +64,8 @@ which is part of the Forth image file.
 #include <ctype.h>
 /* zlib externs */
 extern int inflate();
-extern int zip_memory();
+extern int compress();
+extern long crc32();
 
 #ifdef __linux__
 char *host_os = "Linux";
@@ -2362,8 +2363,36 @@ m_deflate(outlen, outadr, inlen, inadr)
      long inlen;
      long inadr;
 {
-     return((long)zip_memory((void *)inadr, (int)inlen,
-			     (void *)outadr, (int)outlen));
+     /*
+      * Zlib compress() returns a buffer in zlib format (see RFC1950).
+      * The buffer is formatted as
+      *   Header[2]  Compressed_data[outlen-6] Adler32[4]
+      * Our inflate() routine expects gzip format (RFC1952):
+      *   Header[10] Compressed_data[outlen-6] CRC32[4] inlen[4]
+      * The conversion is simple so let's just do it here.
+      * Note the CRC32 and inlen fields are little-endian by spec.
+      * Note the overlapping copy requires memmove() or equivalent.
+      * Is the outbuf big enough to handle pathological cases?
+      */
+     unsigned char *outbuf = (unsigned char *)outadr;  /* type convenience */
+     unsigned long datalen;
+     unsigned char gzip_hdr[] = {
+        0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03
+     };
+     unsigned long crc = crc32(0, inadr, inlen);
+     int err = compress(outbuf, &outlen, (void *)inadr, inlen);
+     if (err) return 0;
+
+     datalen = outlen - 6;
+     memmove(&outbuf[10], &outbuf[2], datalen);
+     memmove(&outbuf[0], gzip_hdr, 10);
+#ifndef HOST_LITTLE_ENDIAN
+     crc = lbflip(crc);
+     inlen = lbflip(inlen);
+#endif
+     *(unsigned long *)&outbuf[10 + datalen + 0] = crc;
+     *(unsigned long *)&outbuf[10 + datalen + 4] = inlen;
+     return (10 + datalen + 8);
 }
 
 INTERNAL long

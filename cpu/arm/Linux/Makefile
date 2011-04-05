@@ -9,7 +9,7 @@ WRDIR = ${BP}/${WRTAIL}
 ZIPTAIL = ${WRTAIL}/zip
 ZIPDIR = ${BP}/${ZIPTAIL}
 
-ZIPOBJS = zipmem.o deflate.o trees.o bits.o util.o inflate.o
+ZIPOBJS = adler32.o compress.o crc32.o deflate.o inflate.o trees.o zutil.o
 
 OBJS = wrapper.o logger.o ${ZIPOBJS}
 
