@@ -82,19 +82,100 @@ void regdump(u32 instruction, u32 last_pc, u8 cr)
 struct { signed int imm24:24; } sext24;
 #define BTGT   { PC += sext24.imm24 = (IMM24 << 2); last_pc = 1; }
 
+int scout;  // Hold the last bit shifted out
 #define ROTATE(imm, rot) (((imm) >> (rot)) | ((imm) << (32-(rot))))
 #define IMM32     ROTATE(IMM8, (ROT<<1))
 
-#define SHSRC (OP1 ? RS : IMM5)
-#define SHFT(res) \
-{ \
-    switch (TYPE) { \
-    case 0: res = RM << SHSRC; break; \
-    case 1: res = RM >> SHSRC; break; \
-    case 2: if (SHSRC == 0) { res = ((s32)(RM) < 0) ? -1 : 0; } else { res = (s32)(RM) >> SHSRC; } break; \
-    case 3: res = ROTATE(RM, SHSRC); \
-    } \
+#define TEST_SHIFT	0
+#if defined(TEST_SHIFT) && TEST_SHIFT
+#define EXIT(r)   goto exit
+#else
+#define EXIT(r)   return res
+#endif
+
+u32 shifter(u32 rm, u32 rs, u32 type, u32 imm, u32 imm5, u32 cin, u32 pc, u32 ir)
+{
+    u32 res, res2;
+    int cnt;
+
+#if defined(TEST_SHIFT) && TEST_SHIFT
+    u32 res2;
+    cnt = imm ? imm5 : rs;
+    switch (type) {
+    case 0: res = rm << cnt; break;
+    case 1: res = rm >> cnt; break;
+    case 2: if (cnt == 0) { res = ((s32)(rm) < 0) ? -1 : 0; } else { res = (s32)(rm) >> cnt; } break;
+    case 3: res = ROTATE(rm, cnt);
+    }
+    res2 = res;
+#endif
+
+    if (imm && (imm5 == 0)) {
+        if (type == 0) {
+            res = rm;
+            scout = cin;
+            EXIT(res);
+            return res;
+        }
+
+        if (type == 2) {
+            if ((s32)rm < 0)   res = -1;
+            else               res = 0;
+            scout = res & 1;
+            EXIT(res);
+            return res;
+        }
+
+        if (type == 3) {
+            res = (cin << 31) | (rm >> 1);
+            scout = rm & 1;
+            EXIT(res);
+            return res;
+        }
+    }
+
+    if (imm) {
+        if (imm5 == 0) cnt = 32;
+        else           cnt = imm5;
+    } else             cnt = rs & 31;
+
+    if (cnt == 0) {
+        res = rm;
+        scout = cin;
+        EXIT(res);
+        return res;
+    }
+
+    switch (type) {
+    case 0: res = rm << cnt;       scout = rm >> (32 - cnt);  break;
+    case 1: res = rm >> cnt;       scout = rm >> (cnt - 1);   break;
+    case 2: res = (s32)rm >> cnt;  scout = rm >> (cnt - 1);   break;
+    case 3: res = ROTATE(rm, cnt); scout = res >> 31;
+    } /* switch */
+
+    scout &= 1;
+
+    EXIT(res);
+
+#if defined(TEST_SHIFT) && TEST_SHIFT
+exit:
+    if (res != res2) {
+        char *shifts[] = {"lsl", "lsr", "asr", "ror"};
+        printf("PC:  %x: %x ", pc, ir);
+        if (imm) {
+            printf("imm = #%d", imm5);
+        } else {
+            printf("RS = %d", rs & 31);
+        }
+        printf(", RM = %x, %s #%d; res = %x, res2 = %x\n", rm, shifts[type], cnt, res, res2);
+//        while (1);
+    }
+    return res;
+#endif
 }
+    
+
+#define SHFT(res) res = shifter(RM, RS, TYPE, !OP1, IMM5, C, PC, instruction)
 
 #define BF(sb, eb) ((u32)(((s32)0x80000000) >> (sb - eb))) >> (31 - sb);
 
@@ -122,7 +203,16 @@ union {
     if (S) { \
         N = (res) >> 31; \
         Z = (res == 0); \
-/* FIXME - possible problem with C bit - should be set to carry output from shifter */ \
+    } \
+}
+
+/* Factor in the shifted-out Carry. */
+#define SHFT_UPCC(res)                         \
+{ \
+    if (S) {        \
+        N = (res) >> 31; \
+        Z = (res == 0); \
+        C = scout ? 1 : 0; \
     } \
 }
 
@@ -152,7 +242,7 @@ union {
     
 #define UNIMP(s) \
 { \
-    printf("UNIMPLEMENTED '%s' op %02x s %d bxtype %02x\n", s, OP, S, BXTYPE); \
+    printf("UNIMPLEMENTED '%s' op %02x s %d bxtype %02x; Source line: %d\n", s, OP, S, BXTYPE, __LINE__); \
     regdump(instruction, last_pc, 1); \
     return; \
 }
@@ -257,7 +347,7 @@ simulate(u8 *mem, u32 start, u32 header, u32 syscall_vec,
                 UNIMP("unconditional");
         switch (OP) {
 case 0x00: if (OP1 == 0 || OP2 == 0) {
-               INSTR("and"); SHFT(res); RD = RN & res; UPCC(RD); break;
+               INSTR("and"); SHFT(res); RD = RN & res; SHFT_UPCC(RD); break;
            }
            switch (BXTYPE) {
            case 0x9: INSTR("mul"); RN = RS * RM; UPCC(RN); break;
@@ -293,7 +383,7 @@ case 0x00: if (OP1 == 0 || OP2 == 0) {
            default:  UNIMP("BXTYPE"); break;
            } break;
 case 0x01: if (OP1 == 0 || OP2 == 0) {
-               INSTR("eor"); SHFT(res); RD = RN ^ res; UPCC(RD); break;
+               INSTR("eor"); SHFT(res); RD = RN ^ res; SHFT_UPCC(RD); break;
            }
            switch (BXTYPE) {
            case 0x9: UNIMP("mla"); break;
@@ -628,13 +718,13 @@ case 0x0b: if (OP1 == 0 || OP2 == 0) {
            default:  UNIMP("BXTYPE"); break;
            } break;
 case 0x0c: if (OP1 == 0 || OP2 == 0) {
-               INSTR("orr"); SHFT(res); RD = RN | res; UPCC(res); break;
+               INSTR("orr"); SHFT(res); RD = RN | res; SHFT_UPCC(RD);
            } else {
                switch (BXTYPE) {
                case 0x1:
                case 0x3:
                case 0x5:
-               case 0x7: INSTR("orr"); SHFT(res); RD = RN | res; UPCC(res);
+               case 0x7: INSTR("orr"); SHFT(res); RD = RN | res; SHFT_UPCC(RD);
                          break;
                case 0x9: UNIMP("ldrex"); break;
     // P=1, U=0, bit22=0, W=0 - offset/pre-index, subtract offset, register, no writeback
@@ -678,16 +768,16 @@ case 0x0d: switch (BXTYPE) {
                    RD = RM; UPCC(RD); break;
                } /* else fall through */
            case 0x8:
-           case 0x1: INSTR("lsl"); SHFT(RD); UPCC(RD); break;
+           case 0x1: INSTR("lsl"); SHFT(RD); SHFT_UPCC(RD); break;
            case 0x2:
            case 0xa:
-           case 0x3: INSTR("lsr"); SHFT(RD); UPCC(RD); break;
+           case 0x3: INSTR("lsr"); SHFT(RD); SHFT_UPCC(RD); break;
            case 0x4: 
            case 0xc:
-           case 0x5: INSTR("asr"); SHFT(RD); UPCC(RD); break;
+           case 0x5: INSTR("asr"); SHFT(RD); SHFT_UPCC(RD); break;
            case 0x6:
            case 0xe:
-           case 0x7: INSTR("ror"); SHFT(RD); UPCC(RD); break;
+           case 0x7: INSTR("ror"); SHFT(RD); SHFT_UPCC(RD); break;
            case 0x9: UNIMP("ldrexd"); break;
     // P=1, U=1, bit22=0, W=1 - offset/pre-index, add offset, register, writeback
            case 0xb:
@@ -725,7 +815,7 @@ case 0x0d: switch (BXTYPE) {
            default:  UNIMP("BXTYPE"); break;
            }; break;
 case 0x0e: if (OP1 == 0 || OP2 == 0) {
-               INSTR("bic"); SHFT(res); RD = RN & ~res; UPCC(RD); break;
+               INSTR("bic"); SHFT(res); RD = RN & ~res; SHFT_UPCC(RD); break;
            }
            switch (BXTYPE) {
            case 0x9: UNIMP("ldrexb"); break;
@@ -756,7 +846,7 @@ case 0x0e: if (OP1 == 0 || OP2 == 0) {
                break;
            } break;
 case 0x0f: if (OP1 == 0 || OP2 == 0) {
-               INSTR("mvn"); SHFT(res); RD = ~res; UPCC(RD); break;
+               INSTR("mvn"); SHFT(res); RD = ~res; SHFT_UPCC(RD); break;
            } else {
                switch (BXTYPE) {
                case 0x9: UNIMP("ldrexh"); break;

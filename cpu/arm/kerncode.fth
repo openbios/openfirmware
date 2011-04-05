@@ -187,6 +187,20 @@ code @execute  ( adr -- )
    mov     pc,r0
 end-code
 
+\ execute-ip  This word will call a block of Forth words given the address
+\ of the first word.  It's used, for example, in try blocks where the
+\ a word calls 'try' and then the words that follow it are called repeatedly.
+\ This word, execute-ip, is used to transfer control back to the caller of
+\ try and execute the words that follow the call to try.
+
+\ see forth/lib/try.fth for more details.
+
+code execute-ip  ( word-list-ip -- )
+   psh      ip,rp
+   mov      ip,tos
+   pop      tos,sp
+c;
+
 \ Run-time actions for compiling words
 
 code branch  ( -- )
@@ -331,7 +345,19 @@ c;
 
 code (endcase)  ( n -- )  pop tos,sp  c;
 
-code digit  ( char base -- digit true | char false )
+\ ($endof) is the same as branch, and ($endcase) is a noop,
+\ but redefining them this way makes the decompiler much easier.
+\ code ($case)  ( $ -- $ )  c;
+
+code ($endof)   ( -- )
+\rel   ldr    r0,[ip]
+\rel   add    ip,ip,r0
+\abs   ldr    ip,[ip]
+c;
+
+code ($endcase)  ( -- )  c;
+
+code digit  ( char base -- digit true | char false )
    mov     r0,tos          \ r0 base
    ldr     r1,[sp]         \ r1 char
    and     r1,r1,#0xff

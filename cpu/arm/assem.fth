@@ -1076,6 +1076,7 @@ also arm-assembler definitions
 : mvn    01e0.0000 {cond/s} amode-rdop2  ;
 
 : movw   0300.0000 {cond}   amode-movw   ;
+: movt   0340.0000 {cond}   amode-movw   ;
 
 : mul    0000.0090 {cond/s} amode-mul   ;
 : mla    0020.0090 {cond/s} amode-mla   ;
@@ -1140,6 +1141,20 @@ also arm-assembler definitions
    asm,                                  \ const
    051f.000c                             \ ldr rN,[pc,#-12]
 ;
+: movwt  ( reg# imm -- )
+   \ newword contains conditional info we need to keep.
+   newword -rot                  ( newword reg# imm )
+   lwsplit swap                  ( newword reg# imm.hi imm.lo )
+   set-imm16 0300.0000 iop       ( newword reg# imm.hi )
+   over rd-field !op             \ movw rN,#<imm>
+   ?dup  if                      ( newword reg# imm.hi )
+      rot is newword             ( reg# imm.hi )
+      set-imm16 0340.0000 iop    ( reg# )
+      rd-field !op               \ movt rN,#<imm>
+   else
+      2drop
+   then
+;
 : (set)  ( address? -- )
    >r
    0000.0000 {cond}  init-operands
@@ -1165,11 +1180,7 @@ also arm-assembler definitions
          then
       else                       ( reg# imm imm )
          use-movw?  if           ( reg# imm imm )
-            1.0000 u<  if           ( reg# imm )
-               set-imm16 0300.0000  ( reg# op )      \ movw rN,#<imm16>
-            else                    ( reg# imm )
-               false asm-const      ( reg# op )
-            then                    ( reg# op )
+            drop movwt exit
          else                    ( reg# imm imm )
             drop false asm-const ( reg# op )
          then                    ( reg# op )

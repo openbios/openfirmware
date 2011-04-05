@@ -43,6 +43,7 @@ fload ${BP}/forth/lib/util.fth
 fload ${BP}/forth/lib/format.fth
 
 fload ${BP}/forth/lib/stringar.fth
+fload ${BP}/forth/lib/strcase.fth
 
 fload ${BP}/forth/lib/parses1.fth	\ String parsing
 

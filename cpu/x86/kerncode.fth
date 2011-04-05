@@ -222,6 +222,20 @@ code (dlit)  (s -- d )  ax lods  ?bswap-ax  1push
 \ Execute a Forth word given a code field address
 code execute   (s acf -- )   w pop   0 [w] jmp   end-code
 
+\ execute-ip  This word will call a block of Forth words given the address
+\ of the first word.  It's used, for example, in try blocks where the
+\ a word calls 'try' and then the words that follow it are called repeatedly.
+\ This word, execute-ip, is used to transfer control back to the caller of
+\ try and execute the words that follow the call to try.
+
+\ see forth/lib/try.fth for more details.
+
+code execute-ip  (s word-list-ip -- )
+   rp  adec
+   ip  0 [rp] mov
+   ip  pop
+c;
+
 \ High level branch.  The branch offset is compiled in-line.
 code branch (s -- )
 mloclabel bran1
@@ -317,6 +331,13 @@ end-code
 \ but redefining them this way makes the decompiler much easier.
 code (endof)    (s -- )    bran1 #) jmp  end-code
 code (endcase)  (s n -- )  ax pop  c;
+
+\ ($endof) is the same as branch, and ($endcase) is a noop,
+\ but redefining them this way makes the decompiler much easier.
+\ code ($case)  ( $ -- $ )  c;
+
+code ($endof)    (s -- )    bran1 #) jmp  end-code
+code ($endcase)  (s n -- )  c;
 
 mloclabel yes  assembler   true # ax mov   1push   c;
 mloclabel no   assembler  false # ax mov   1push   c;

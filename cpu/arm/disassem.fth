@@ -276,8 +276,9 @@ d# 25 constant d#25
    d#24 bit? 0=  5 2 bits 0=  and  if  .alu-ext  else  .ld/st-ext  then
 ;
 
-: .movw  ( -- )     \ movw rN,#imm
-   ." movw" {<cond>}  op.rd,  ." #" 
+: .movtw  ( -- )     \ movw rN,#imm
+   d#22 bit? if ." movt" else ." movw" then
+   {<cond>}  op.rd,  ." #" 
    d# 16 4bits d# 12 <<  0 d# 12 bits  or u.h
 ;
 
@@ -285,7 +286,7 @@ d# 25 constant d#25
 : ?pc-change  ( -- )  d# 12 4bits d# 15 =  end-found !  ;
 
 : .alu-op  ( -- )	\ d# 25 3 bits 0|1 =
-   d#20 8bits  h# 30 =  if  .movw  exit  then
+   d#20 8bits h# fb and h# 30 =  if  .movtw  exit  then
    d#25 bit? 0=  d# 4 bit? and  d# 7 bit? and  if  .ext  exit  then
    alu#  h# d and h# d =  if			\ Moves
       .alu {s}  op.rd, .r/imm

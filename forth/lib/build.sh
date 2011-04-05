@@ -22,7 +22,7 @@ test -n "$BP" || {
     {
         until [ -d ofw ]; do
             if [ `pwd` = / ] ; then
-                echo Can\'t find firmware root directory
+                echo "Can\'t find firmware root directory"
                 exit
             fi
             cd ..

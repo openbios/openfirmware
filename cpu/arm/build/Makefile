@@ -33,4 +33,4 @@ inflate.bin:
 # Don't use *.dic so as not to remove builder.dic
 clean:
 	rm -f tools.dic kernel.dic basefw.dic *.log headers *~ inflate.bin build *.tag
-
+	make -C ../${OS} clean

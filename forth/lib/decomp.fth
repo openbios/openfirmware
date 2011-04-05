@@ -181,6 +181,8 @@ variable extent  extent off
 : +branch  ( ip-of-branch -- next-ip )  ta1+ /branch +  ;
 : .endof  ( ip -- ip' )  .." endof" indent +branch  ;
 : .endcase  ( ip -- ip' )  indent .." endcase" indent ta1+  ;
+: .$endof  ( ip -- ip' )  .." $endof" indent +branch  ;
+: .$endcase  ( ip -- ip' )  indent .." $endcase" indent ta1+  ;
 
 : add-break  ( break-address break-type -- )
    end-breaks @  breaks 40 /n* +  >=         ( adr,type full? )
@@ -211,6 +213,13 @@ variable extent  extent off
    /branch - /token -        ( ip endof-addr )
    dup ['] .endof add-break  ( ip endof-addr )
    ['] .endcase ?add-break
+   +branch
+;
+: scan-$of  ( ip-of-($of -- ip' )
+   dup >target dup +extent   ( ip next-$of )
+   /branch - /token -        ( ip $endof-addr )
+   dup ['] .$endof add-break  ( ip $endof-addr )
+   ['] .$endcase ?add-break
    +branch
 ;
 : scan-branch  ( ip-of-?branch -- ip' )
@@ -264,6 +273,7 @@ variable extent  extent off
 : .loop   ( ip -- ip' )  -indent .." loop  " +branch  ;
 : .+loop  ( ip -- ip' )  -indent .." +loop " +branch  ;
 : .of     ( ip -- ip' )  .." of   " +branch  ;
+: .$of    ( ip -- ip' )  .." $of  " +branch  ;
 
 \ first check for word being immediate so that it may be preceded
 \ by [compile] if necessary
@@ -340,8 +350,8 @@ d# 36 constant #decomp-classes
    ( 24 ) [compile]  (n")            ( 25 ) [compile]  isdefer
    ( 26 ) [compile]  isuser          ( 27 ) [compile]  isvalue
    ( 28 ) [compile]  isconstant      ( 29 ) [compile]  isvariable
-   ( 30 ) [compile]  dummy           ( 31 ) [compile]  dummy
-   ( 32 ) [compile]  dummy           ( 33 ) [compile]  dummy
+   ( 30 ) [compile]  ($of)           ( 31 ) [compile]  ($endof)
+   ( 32 ) [compile]  ($endcase)      ( 33 ) [compile]  dummy
    ( 34 ) [compile]  dummy           ( 35 ) [compile]  dummy
 
 \ Print a word which has been classified by  execution-class
@@ -361,8 +371,8 @@ d# 36 constant #decomp-classes
    ( 24 )     .nstring               ( 25 )     .is
    ( 26 )     .is                    ( 27 )     .is
    ( 28 )     .is                    ( 29 )     .is
-   ( 30 )     dummy                  ( 31 )     dummy
-   ( 32 )     dummy                  ( 32 )     dummy
+   ( 30 )     .$of                   ( 31 )     .$endof
+   ( 32 )     .$endcase              ( 33 )     dummy
    ( 34 )     dummy                  ( 35 )     dummy
    ( default ) .word
 ;
@@ -385,8 +395,8 @@ d# 36 constant #decomp-classes
    ( 24 )     skip-nstring           ( 25 )     skip-word
    ( 26 )     skip-word              ( 27 )     skip-word
    ( 28 )     skip-word              ( 29 )     skip-word
-   ( 30 )     dummy                  ( 31 )     dummy
-   ( 32 )     dummy                  ( 32 )     dummy
+   ( 30 )     scan-$of               ( 31 )     skip-branch
+   ( 32 )     skip-word              ( 33 )     dummy
    ( 34 )     dummy                  ( 35 )     dummy
   ( default ) skip-word
 ;
