@@ -133,7 +133,7 @@ end-string-array
 : .mppt 
    mppt-limit@            ( pwr_limit )
    vin@                   ( pwr_limit VA2 )
-    ." Vsa: " d# 14927 * d# 158 / >sd.ddd type ."  PWM: " . 
+    ." Vin: " .d  ."  PWM: " .
 ;
 
 : watch-mppt ( -- )
