@@ -8,32 +8,20 @@ purpose: Secure NAND updater
    push-hex $number pop-base  " Bad number" ?nand-abort
 ;
 
-0 value last-eblock#
-: erase-eblock  ( eblock# -- )
-   \ XXX
-   to last-eblock#
-;
+0 value #eblocks-written
 
 : ?all-written  ( -- )
-   last-eblock# 1+ #image-eblocks <>  if
+   #eblocks-written #image-eblocks <>  if
       cr
       red-letters
       ." WARNING: The file specified " #image-eblocks .d
-      ." chunks but wrote only " last-eblock# 1+ .d ." chunks" cr
+      ." chunks but wrote only " #eblocks-written .d ." chunks" cr
       black-letters
    then
 ;
 
 0 value secure-fsupdate?
 d# 128 constant /spec-maxline
-
-: erase-gap  ( end-block -- )
-   dup last-eblock# >  if
-      last-eblock# 1+  ?do  i erase-eblock  loop
-   else
-      drop
-   then
-;
 
 \ We simultaneously DMA one data buffer onto NAND while unpacking the
 \ next block of data into another. The buffers exchange roles after
@@ -87,7 +75,6 @@ also nand-commands definitions
 \ Asynchronous writes
    " write-blocks-end" $call-nand   ( error? )
    " Write error" ?nand-abort
-\   #image-eblocks erase-gap
    hdd-led-off
    release-inflater
    fexit
@@ -111,7 +98,6 @@ also nand-commands definitions
 ;
 
 : erase-all  ( -- )
-   #image-eblocks  0  ?do  i erase-eblock  loop
    #image-eblocks show-writing
 ;
 
@@ -214,8 +200,8 @@ true value check-hash?
       swap-buffers                          ( eblock# )
 \  then
 
-   dup to last-eblock#                   ( eblock# )
-   show-written                          ( )
+   show-written                             ( )
+   #eblocks-written 1+ to #eblocks-written  ( )
    show-temperature
    hdd-led-toggle
 ;
