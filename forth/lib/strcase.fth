@@ -9,7 +9,7 @@
 \      " abc" $of  ." The string starts with abc" $endof
 \      " xyz" $of  ." Oh, it's an xyz string"     $endof
 \      ( $ ) ." **** It was " 2dup type
-\   $endcase
+\   $endcase ( $ )
 
 \ The default clause is optional.
 \ When an $of clause is executed, the remaining selector string (past
