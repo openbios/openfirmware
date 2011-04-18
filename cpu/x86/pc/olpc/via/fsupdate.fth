@@ -60,7 +60,7 @@ also nand-commands definitions
    " size" $call-nand  #image-eblocks /nand-block um*  d<
    " Image size is larger than output device" ?nand-abort
    #image-eblocks  show-init
-   0 #image-eblocks /nand-block 200 */ " erase-blocks" $call-nand
+   0 #image-eblocks /nand-block h# 200 */ " erase-blocks" $call-nand
    get-inflater
    \ Separate the two buffers by enough space for both the compressed
    \ and uncompressed copies of the data.  4x is overkill, but there
