@@ -8,14 +8,28 @@ purpose: Secure NAND updater
    push-hex $number pop-base  " Bad number" ?nand-abort
 ;
 
-0 value #eblocks-written
+0 value min-eblock#
+0 value max-eblock#
+
+: written ( eblock# -- )
+   dup
+   max-eblock# max to max-eblock# ( eblock# )
+   min-eblock# min to min-eblock#
+;
 
 : ?all-written  ( -- )
-   #eblocks-written #image-eblocks <>  if
+   max-eblock# 1+ #image-eblocks <>  if
       cr
       red-letters
-      ." WARNING: The file specified " #image-eblocks .d
-      ." chunks but wrote only " #eblocks-written .d ." chunks" cr
+      ." WARNING: The file said highest block " #image-eblocks .d
+      ." but wrote only as high as block " max-eblock# .d cr
+      black-letters
+   then
+   min-eblock# 0 <>  if
+      cr
+      red-letters
+      ." WARNING: The file did not write a zero block, "
+      ." but wrote only as low as block " min-eblock# .d cr
       black-letters
    then
 ;
@@ -52,15 +66,35 @@ d# 128 constant /spec-maxline
 vocabulary nand-commands
 also nand-commands definitions
 
+\ some cards do not respond in a reasonable time,
+\ some cards lock up and cause a command timeout in get-status,
+\ so split the erase into many parts.
+: erase-blocks
+   [char] ~ emit                        \ visual hint of erase delay
+   #image-eblocks /nand-block h# 200 */ ( #blocks )
+   dup d# 16 / swap                     ( /part #blocks )
+   0 do                                 ( /part )
+      i over " erase-blocks" $call-nand
+      hdd-led-toggle                    \ visual hint of progress
+   dup +loop                            ( /part )
+   drop
+   bs emit space bs emit hdd-led-off    \ visual hint remove
+;
+
+\ : erase-blocks
+\ 0 #image-eblocks /nand-block h# 200 */ " erase-blocks" $call-nand ;
+
 : zblocks:  ( "eblock-size" "#eblocks" ... -- )
    hdd-led-toggle
    ?compare-spec-line
    get-hex# to /nand-block
    get-hex# to #image-eblocks
+   #image-eblocks to min-eblock#
+   0 to max-eblock#
    " size" $call-nand  #image-eblocks /nand-block um*  d<
    " Image size is larger than output device" ?nand-abort
    #image-eblocks  show-init
-   0 #image-eblocks /nand-block h# 200 */ " erase-blocks" $call-nand
+   erase-blocks
    get-inflater
    \ Separate the two buffers by enough space for both the compressed
    \ and uncompressed copies of the data.  4x is overkill, but there
@@ -200,8 +234,8 @@ true value check-hash?
       swap-buffers                          ( eblock# )
 \  then
 
+   dup written                              ( eblock# )
    show-written                             ( )
-   #eblocks-written 1+ to #eblocks-written  ( )
    show-temperature
    hdd-led-toggle
 ;

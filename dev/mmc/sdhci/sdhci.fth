@@ -284,7 +284,7 @@ defer card-power-off
    then                    ( isr esr )
 
    allow-timeout?  if      ( isr esr )
-      dup 1 =  if  true to timeout?  2drop exit  then
+      dup 1 =  over h# 10 = or  if  true to timeout?  2drop exit  then
    then                    ( isr esr )
 
    ." SDHCI: Error: ISR = " swap u.
@@ -488,16 +488,6 @@ headers
 : protected?  ( group# -- 32-bits )  h# 1e1a cmd  response  ;  \ CMD30 R1 UNTESTED
 
 0 instance value writing?
-
-: erase-blocks  ( block# #blocks -- ) \ UNTESTED
-   intstat-on
-   dup  0=  if  2drop exit  then
-   1- bounds        ( last first )
-   h# 201a 0 cmd    ( last )   \ CMD32 - R1
-   h# 211a 0 cmd    ( )        \ CMD33 - R1
-   0 h# 261b 0 cmd             \ CMD38 - R1b (wait for busy)
-   intstat-off
-;
 
 \ CMD40 is MMC
 
@@ -1032,6 +1022,21 @@ external
 ;
 
 : detach-sdio-card  ( -- )
+;
+
+: erase-blocks  ( block# #blocks -- )
+   intstat-on
+   dup  0=  if  2drop exit  then
+   1- bounds        ( last first )
+   h# 201a 0 cmd    ( last )   \ CMD32 - R1
+   h# 211a 0 cmd    ( )        \ CMD33 - R1
+   0 h# 261b 0 cmd             \ CMD38 - R1b (wait for busy)
+   true to writing?                  ( )
+   true to allow-timeout?
+   false to timeout?
+   wait-write-done  drop
+   false to allow-timeout?
+   intstat-off
 ;
 
 \ Asynchronous poll for completion
