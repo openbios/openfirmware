@@ -66,24 +66,6 @@ d# 128 constant /spec-maxline
 vocabulary nand-commands
 also nand-commands definitions
 
-\ some cards do not respond in a reasonable time,
-\ some cards lock up and cause a command timeout in get-status,
-\ so split the erase into many parts.
-: erase-blocks
-   [char] ~ emit                        \ visual hint of erase delay
-   #image-eblocks /nand-block h# 200 */ ( #blocks )
-   dup d# 16 / swap                     ( /part #blocks )
-   0 do                                 ( /part )
-      i over " erase-blocks" $call-nand
-      hdd-led-toggle                    \ visual hint of progress
-   dup +loop                            ( /part )
-   drop
-   bs emit space bs emit hdd-led-off    \ visual hint remove
-;
-
-\ : erase-blocks
-\ 0 #image-eblocks /nand-block h# 200 */ " erase-blocks" $call-nand ;
-
 : zblocks:  ( "eblock-size" "#eblocks" ... -- )
    hdd-led-toggle
    ?compare-spec-line
@@ -94,7 +76,6 @@ also nand-commands definitions
    " size" $call-nand  #image-eblocks /nand-block um*  d<
    " Image size is larger than output device" ?nand-abort
    #image-eblocks  show-init
-   erase-blocks
    get-inflater
    \ Separate the two buffers by enough space for both the compressed
    \ and uncompressed copies of the data.  4x is overkill, but there
