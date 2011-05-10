@@ -219,6 +219,8 @@ h#   100 constant /spi-page     \ Largest write for page-oriented chips
 
 defer spi-reprogrammed  ( -- ) \ What to do when done reprogramming
 ' noop to spi-reprogrammed
+defer spi-reprogrammed-no-reboot  ( -- ) \ What to do when done reprogramming
+' noop to spi-reprogrammed-no-reboot
 
 defer write-spi-flash  ( adr len offset -- )
 
@@ -312,6 +314,7 @@ defer write-spi-flash  ( adr len offset -- )
 \ Install the SPI FLASH versions as their implementations.
 : use-spi-flash  ( -- )
    ['] spi-flash-open          to flash-open
+   ['] spi-reprogrammed-no-reboot to flash-close
    ['] spi-flash-write-enable  to flash-write-enable
    ['] spi-reprogrammed        to flash-write-disable
    ['] write-spi-flash         to flash-write

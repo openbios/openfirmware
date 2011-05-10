@@ -348,6 +348,10 @@ fload ${BP}/dev/olpc/kb3700/eccmdcom.fth
    ." Restarting..."  d# 2000 ms  cr
    kbc-on  begin again
 ;
+: io-spi-reprogrammed-no-reboot  ( -- )
+   no-kbc-reboot
+   kbc-on
+;
 
 : io-spi-start  ( -- )
    ['] io-spi@    to spi@
@@ -356,6 +360,7 @@ fload ${BP}/dev/olpc/kb3700/eccmdcom.fth
    use-ec-spi     \ spi-in, spi-cs-on, spi-cs-off via EC commands
 
    ['] io-spi-reprogrammed to spi-reprogrammed
+   ['] io-spi-reprogrammed-no-reboot to spi-reprogrammed-no-reboot
    use-mem-flash-read
    [ifdef] uncache-flash  uncache-flash  [then]
 

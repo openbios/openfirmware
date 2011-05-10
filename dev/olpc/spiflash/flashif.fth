@@ -2,6 +2,7 @@
 purpose: Generic interface for FLASH programming operations
 
 defer flash-open           ( -- )
+defer flash-close          ( -- )
 defer flash-write-enable   ( -- )
 defer flash-write-disable  ( -- )
 defer flash-write          ( adr len offset -- )

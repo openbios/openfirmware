@@ -728,7 +728,11 @@ d# 8192 constant /sec-line-max
    " ak" find-tag  if
       2drop  " run"
    else
-      lease-valid?  if  " run"  else  " act"  then
+      rtc-rollback?  if
+	 " act"
+      else
+	 lease-valid?  if  " run"  else  " act"  then
+      then
    then
    cn-buf place
 ;
@@ -951,6 +955,39 @@ warning !
    r> to debug-security?
 ;
 
+: fix-rtc-history  ( data$ -- )  \ SN UUID counter timestamp newtimestamp
+   \ Isolate data from first line
+   newline left-parse-string 2nip              ( rem$ )
+
+   bl left-parse-string                        ( rem$ serial$ )
+   my-sn$ $=  0=  if                           ( rem$ )
+      ." Wrong serial number" ?lease-error-cr  ( rem$ )
+      2drop exit                               ( -- )
+   then                                        ( rem$ )
+
+   \ Ignore UUID for now
+   bl left-parse-string                        ( rem$ uuid$ )
+   2drop                                       ( rem$ )
+
+   fix-rtc-timestamps                          ( )
+;
+
+: ?rtc-update  ( -- )
+   rtcar-enabled?  0=  if  exit  then
+   show-dot
+   null$ cn-buf place
+   " rtcreset" bundle-present?  if
+      "   RTCRESET found - " ?lease-debug
+      leasekey$ to pubkey$
+      img$  sig$  sha-valid?  if
+	 img$ fix-rtc-history
+         show-unlock
+      else
+	 show-lock
+      then
+   then
+;
+
 : load-from-device  ( devname$ -- done? )
 
    show-dot
@@ -971,6 +1008,8 @@ warning !
          show-lock
       then
    then
+
+   ?rtc-update
 
    show-dot
    ?leased                \ Sets cn-buf

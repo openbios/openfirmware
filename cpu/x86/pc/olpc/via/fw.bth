@@ -406,6 +406,7 @@ fload ${BP}/cpu/x86/pc/olpc/biosresume.fth
 fload ${BP}/cpu/x86/firfilter.fth
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/via/sound.fth
+fload ${BP}/cpu/x86/pc/olpc/guardrtc.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 fload ${BP}/cpu/x86/pc/olpc/xpsecure.fth
 fload ${BP}/ofw/gui/ofpong.fth

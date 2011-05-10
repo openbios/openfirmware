@@ -24,11 +24,104 @@ h# d4035000 value ssp-base  \ SSP1
 : ssp-spi-cs-on   ( -- )  d# 46 gpio-clr  ;
 : ssp-spi-cs-off  ( -- )  d# 46 gpio-set  ;
 
+code ssp-spi-out-in  ( bo -- bi )
+   set r0,`ssp-base #`
+   begin
+      ldr r1,[r0,#8]
+      ands r1,r1,#4
+   0<> until
+   str tos,[r0,#0x10]
+   begin
+      ldr r1,[r0,#8]
+      ands r1,r1,#8
+   0<> until
+   ldr tos,[r0,#0x10]
+c;
+0 [if]
 : ssp-spi-out-in  ( bo -- bi )
    begin  ssp-sssr l@ 4 and  until  \ Tx not full
    ssp-ssdr l!
    begin  ssp-sssr l@ 8 and  until  \ Rx not empty
    ssp-ssdr l@
+;
+[then]
+code ssp-spi-in16  ( adr -- adr' )
+   set r0,`ssp-base #`
+   set r2,#0xf04
+   set r3,#0xf008
+   mov r4,#0
+   begin
+      ldr r1,[r0,#8]
+      and r1,r1,r2
+      cmp r1,#4
+   0= until
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   str r4,[r0,#0x10]
+   begin
+      ldr r1,[r0,#8]
+      and r1,r1,r3
+      cmp r1,r3
+   0= until
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+   ldr r4,[r0,#0x10]
+   strb r4,[tos],#1
+c;
+: fast-spi-flash-read  ( adr len offset -- )
+   3 spi-cmd  spi-adr   ( adr len )
+   d# 16 /mod           ( adr len%16 len/16 )
+   swap >r              ( adr len/16  r: len%16 )
+   0  ?do               ( adr  r: len%16 )
+      ssp-spi-in16      ( adr' r: len%16 )
+   loop                 ( adr' r: len%16 )
+   r>  0  ?do           ( adr )
+      spi-in over c!    ( adr )
+      1+                ( adr' )
+   loop                 ( adr )
+   drop                 ( )
+   spi-cs-off           ( )
 ;
 
 : ssp-spi-out  ( b -- )  ssp-spi-out-in drop  ;
@@ -48,8 +141,10 @@ h# d4035000 value ssp-base  \ SSP1
    ['] ssp-spi-out    to spi-out
    ['] ssp-spi-cs-on  to spi-cs-on
    ['] ssp-spi-cs-off to spi-cs-off
-   ['] ssp-spi-reprogrammed to spi-reprogrammed
-   use-spi-flash-read
+   ['] noop to spi-reprogrammed
+   ['] noop to spi-reprogrammed-no-reboot
+\  use-spi-flash-read
+   ['] fast-spi-flash-read to flash-read
 ;
 use-ssp-spi
 

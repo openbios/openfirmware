@@ -103,7 +103,6 @@ fload ${BP}/dev/olpc/spiflash/spiif.fth    \ Generic low-level SPI bus access
 fload ${BP}/dev/olpc/spiflash/spiflash.fth \ SPI FLASH programming
 
 : ignore-power-button ;  \ XXX implement me
-: ssp-spi-reprogrammed ;
 
 fload ${BP}/cpu/arm/mmp2/sspspi.fth        \ Synchronous Serial Port SPI interface
 
