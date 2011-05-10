@@ -362,16 +362,7 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    game-key-mask =  if  protect-fw try-fs-update  then
 ;
 
-\ fload ${BP}/cpu/arm/mmp2/clocks.fth
-
-\ 0 [if]
-: 400mhz  ( -- )
-   h# d428.2804 l@  7 invert and  h# 7000.0000 or  1 or  h# d428.2804 l!
-;
-: 800mhz  ( -- )
-   h# d428.2804 l@  7 invert and  h# 7000.0000 or  h# d428.2804 l!
-;
-\ [then]
+fload ${BP}/cpu/arm/mmp2/clocks.fth
 
 : startup  ( -- )
    standalone?  0=  if  exit  then
