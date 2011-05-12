@@ -955,37 +955,102 @@ warning !
    r> to debug-security?
 ;
 
-: fix-rtc-history  ( data$ -- )  \ SN UUID counter timestamp newtimestamp
-   \ Isolate data from first line
+
+0 [if]
+\ SN  :   UUID     :   currrtc :   nonce    :  newrtc
+\ 0   11  12       48  49      65  66       76 77      (93)
+d# 11 1+  d# 36 +  1+  d# 16 + 1+  d# 10 +  1+ d# 16 +
+constant /rtc-signature
+/rtc-signature buffer: rtc-signature-buf
+
+: check-rtc-signature  ( sig$ currentrtc$ nonce$ newrtc$ -- good? )
+
+   rtc-signature-buf d# 77 +  swap move       ( sig$ currentrtc$ nonce$ )
+   [char] : rtc-signature-buf d# 76 + c!      ( sig$ currentrtc$ nonce$ )
+
+   rtc-signature-buf d# 66 +  swap move       ( sig$ currentrtc$ )
+   [char] : rtc-signature-buf d# 65 + c!      ( sig$ currentrtc$ )
+
+   rtc-signature-buf d# 49 +  swap move       ( sig$ )
+
+   \ Copy SN:UUID: from machine-id-buf to rtc-signature-buf
+   machine-id-buf  d# 49 rtc-signature-buf  move  ( sig$ )
+
+   rtc-signature-buf /rtc-signature  2swap        ( data$ sig$ )
+   " sha256" signature-good?                      ( good? )
+;
+   newrtc$  rtc-signature-buf d# 77 +  swap move       ( )
+   [char] : rtc-signature-buf d# 76 + c!              ( )
+
+   nonce$  rtc-signature-buf d# 66 +  swap move  ( )
+   [char] : rtc-signature-buf d# 65 + c!              ( )
+
+   currentrtc$  rtc-signature-buf d# 49 +  swap move      ( )
+   [char] : rtc-signature-buf d# 48 + c!              ( )
+
+[then]
+
+0 0 2value currentrtc$
+0 0 2value newrtc$
+0 0 2value nonce$
+0 0 2value rtcsig$
+: rtc-format-error  ( -- done? )
+   ." RTC Reset format error" ?lease-error-cr  true
+;
+: check-rtc-key  ( data$ -- done? )  \ rtc01: SN currentrtc nonce newrtc sig0N: ...
+   \ Isolate data from line
    newline left-parse-string 2nip              ( rem$ )
+
+   bl left-parse-string  " rtc01:" $=  0=  if  ( rem$ )
+      ." Unknown format" ?lease-error-cr       ( rem$ )
+      2drop true exit                          ( -- true )
+   then                                        ( rem$ )
 
    bl left-parse-string                        ( rem$ serial$ )
    my-sn$ $=  0=  if                           ( rem$ )
-      ." Wrong serial number" ?lease-error-cr  ( rem$ )
-      2drop exit                               ( -- )
+\     ." Wrong serial number" ?lease-error-cr  ( rem$ )
+      2drop false exit                         ( -- false )
    then                                        ( rem$ )
 
-   \ Ignore UUID for now
-   bl left-parse-string                        ( rem$ uuid$ )
-   2drop                                       ( rem$ )
+   bl left-parse-string to currentrtc$         ( rem$' )
+   bl left-parse-string to nonce$              ( rem$' )
+   bl left-parse-string to newrtc$             ( rem$' )
+   to rtcsig$                                  ( )
 
-   fix-rtc-timestamps                          ( )
+   currentrtc$ nip d# 16 <>  if  rtc-format-error  exit  then
+   nonce$      nip d# 10 <>  if  rtc-format-error  exit  then
+   newrtc$     nip d# 16 <>  if  rtc-format-error  exit  then
+
+   newrtc$ nonce$ currentrtc$ machine-id-buf d# 48 " %s:%s:%s:%s" sprintf  ( data$ )
+
+   rtcsig$  " sha256" signature-good?   if            ( )
+      newrtc$ nonce$ currentrtc$  fix-rtc-timestamps  ( )
+   else
+      ." Bad signature " ?lease-error-cr              ( )
+   then                                               ( )
+   true                                               ( done? )
 ;
 
 : ?rtc-update  ( -- )
    rtcar-enabled?  0=  if  exit  then
    show-dot
    null$ cn-buf place
-   " rtcreset" bundle-present?  if
+   " rtcreset.sig" open-security?  if  exit  then   >r  ( r: ih )
       "   RTCRESET found - " ?lease-debug
+      load-started
       leasekey$ to pubkey$
-      img$  sig$  sha-valid?  if
-	 img$ fix-rtc-history
-         show-unlock
-      else
-	 show-lock
-      then
-   then
+   begin
+      sec-line-buf /sec-line-max r@ read-line  if  ( actual -eof? )
+         2drop  r> close-file drop  exit
+      then                                         ( actual -eof? )
+   while                                           ( actual )
+      sec-line-buf swap check-rtc-key  if          ( )
+         r> close-file drop  exit                  ( -- )
+      then                                         ( )
+   repeat                                          ( actual )
+   drop                                            ( )
+   "   No matching records" ?lease-error-cr        ( )
+   r> close-file drop  false                       ( false )
 ;
 
 : load-from-device  ( devname$ -- done? )

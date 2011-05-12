@@ -70,6 +70,7 @@ d# 32768 timestamp-start -  /timestamp / constant #timestamps/rewrite
    flash-open           ( )
    (put-mfg-data)       ( )
    flash-close          ( )
+   d# 1000 ms           ( )  \ Give the EC time to restart
 ;
 : flash-write-some  ( adr len offset -- )
    flash-open           ( adr len offset )
@@ -142,31 +143,41 @@ d# 32768 timestamp-start -  /timestamp / constant #timestamps/rewrite
    update-timestamp                         ( status )
 ;
 
-1 buffer: byte-buf
-: encode-byte  ( b -- )  byte-buf c! byte-buf 1 encode-bytes  ;
 : +encode-bytes  ( prop$ $ -- prop$' )  encode-bytes encode+  ;
 
-: make-timestamp-property  ( -- )
-   rtc-timestamp 0=  if  exit  then
-   " /chosen" find-package drop push-package  ( )
-   rtc-timestamp unix-seconds>                ( s m h d m y )
-   push-decimal                               ( s m h d m y )
-   #timestamps (.) encode-bytes               ( s m h d m y prop$ )
-   " ," +encode-bytes  rot (.4) +encode-bytes ( s m h d m prop$ )
-   " -" +encode-bytes  rot (.2) +encode-bytes ( s m h d prop$' )
-   " -" +encode-bytes  rot (.2) +encode-bytes ( s m h prop$' )
-   " @" +encode-bytes  rot (.2) +encode-bytes ( s m prop$' )
-   " :" +encode-bytes  rot (.2) +encode-bytes ( s prop$' )
-   " :" +encode-bytes  rot (.2) +encode-bytes ( prop$' )
-   " "(00)" +encode-bytes                     ( prop$' )
-   pop-base                                   ( )
-   
-   " rtc-timestamp" (property)                ( )
-   pop-package
-;
-: make-status-property  ( value$ -- )
-   " /chosen" find-package drop push-package  ( value$ )
+string-array rtc-status-names
+   ," ok"
+   ," empty"
+   ," residue"
+   ," rollback"
+end-string-array
+
+: make-rtc-properties  ( status -- )
+   " /chosen" find-package drop push-package  ( status )
+
+   rtc-status-names count
    encode-string  " rtc-status"  (property)   ( )
+
+   rtc-timestamp  if
+      rtc-timestamp unix-seconds>      ( s m h d m y )
+      push-decimal                     ( s m h d m y )
+      (.4) encode-bytes                ( s m h d m prop$ )
+      rot (.2) +encode-bytes           ( s m h d prop$' )
+      rot (.2) +encode-bytes           ( s m h prop$' )
+      " T" +encode-bytes               ( s m h prop$' )
+      rot (.2) +encode-bytes           ( s m prop$' )
+      rot (.2) +encode-bytes           ( s prop$' )
+      rot (.2) +encode-bytes           ( prop$' )
+      " Z"(00)" +encode-bytes          ( prop$' )
+      pop-base                         ( )
+
+      " rtc-timestamp" (property)      ( )
+   then
+
+   push-decimal
+   #timestamps (.) encode-bytes  " rtc-count" (property)    ( )
+   pop-base
+
    pop-package
 ;
 
@@ -178,24 +189,19 @@ d# 32768 timestamp-start -  /timestamp / constant #timestamps/rewrite
    then                    ( flag )
 ;
 
-: rtc-rollback?  ( -- flag )
+: rtc-rollback?  ( -- error? )
    rtcar-enabled?  0=  if  exit  then
 
    find-timestamp            ( status )
    ?update-timestamp         ( status' )
-   make-timestamp-property   ( status )
-   case
-      0  of  " ok"        make-status-property  false  endof
-      1  of  " empty"     make-status-property  false  endof
-      2  of  " residue"   make-status-property  true   endof
-      3  of  " rollback"  make-status-property  true   endof
-      ( default )  true swap
-   endcase
+   dup make-rtc-properties   ( status )
+   2 >=                      ( error? )
 ;
 
-: parse-field  ( val$ delimiter expected-length -- val$' field$ )
-   >r  left-parse-string   ( val$' field$ )
-   dup r> <>  throw
+: parse-field  ( val$ length -- val$' field$ )
+   2dup < throw              ( val$ length )
+   >r  over r@               ( val$ adr length r: length )
+   2swap r> /string 2swap    ( val$' field$ )
 ;
 \ Throws an error if either a number is unparsable or out of range
 : decode-number  ( field$ min max -- n )
@@ -206,48 +212,47 @@ d# 32768 timestamp-start -  /timestamp / constant #timestamps/rewrite
 ;
 
 : decode-timestamp  ( val$ -- s m h d m y )
-   [char] - 4 parse-field   d# 2000 d# 2099 decode-number >r   ( val$' r: y )
-   [char] - 2 parse-field  1 d# 12 decode-number >r   ( val$' r: y m )
-   [char] @ 2 parse-field  1 d# 31 decode-number >r   ( val$' r: y m d )
-   [char] : 2 parse-field  0 d# 23 decode-number >r   ( val$' r: y m d h )
-   [char] : 2 parse-field  0 d# 59 decode-number >r   ( val$' r: y m d h m )
-   dup 2 <> throw          0 d# 59 decode-number >r   ( r: y m d h m s )
-   r> r> r> r> r> r>                                  ( s m h d m y )
+   4 parse-field  d# 2000 d# 2099 decode-number >r  ( val$' r: y )
+   2 parse-field  1 d# 12 decode-number >r          ( val$' r: y m )
+   2 parse-field  1 d# 31 decode-number >r          ( val$' r: y m d )
+   1 parse-field  drop c@ [char] T <> throw         ( val$' r: y m d )
+   2 parse-field  0 d# 23 decode-number >r          ( val$' r: y m d h )
+   2 parse-field  0 d# 59 decode-number >r          ( val$' r: y m d h m )
+   2 parse-field  0 d# 59 decode-number >r          ( val$' r: y m d h m s )
+   1 parse-field  drop c@ [char] Z <> throw         ( val$' r: y m d h m s )
+   nip 0<> throw                                    ( r: y m d h m s )
+   r> r> r> r> r> r>                                ( s m h d m y )
 ;
-: fix-rtc-timestamps  ( data$ -- )  \ "count old-ts new-ts"  e.g. 2011-10-12,00:23:45
-   bl left-parse-string                       ( rem$ count$ )
+: fix-rtc-timestamps  ( newrtc$ nonce$ -- currentrtc$ )
+   find-timestamp drop                        ( newrtc$ nonce$ currentrtc$ )
 
-   0 h# 7fffffff ['] decode-number catch  if  ( rem$ x x x x )
-      4drop 2drop  ." Bad count format" cr    ( )
-      exit                                    ( -- )
-   then                                       ( rem$ count )
-   -rot                                       ( count rem$ )
-
-   find-timestamp                             ( count rem$ )
-
-   bl left-parse-string                       ( count rem$ old-timestamp$ )
-   2dup " no-timestamp" $=  if                ( count rem$ old-timestamp$ )
-      2drop                                   ( count rem$ )
-      rtc-timestamp  if                       ( count rem$ )
-	 3drop                                ( )
+   2dup " 00000000T000000Z" $=  if            ( newrtc$ nonce$ currentrtc$ )
+      2drop                                   ( newrtc$ nonce$ )
+      rtc-timestamp  if                       ( newrtc$ nonce$ )
+	 4drop                                ( )
 	 ." Old timestamp mismatch" cr        ( )
 	 exit                                 ( -- )
-      then
-   else                                       ( count rem$ old-timestamp$ )
-      ['] decode-timestamp catch  if          ( count rem$ x x )
-	 5drop                                ( )
+      then                                    ( newrtc$ nonce$ )
+   else                                       ( newrtc$ nonce$ currentrtc$ )
+      ['] decode-timestamp catch  if          ( newrtc$ nonce$ x x )
+	 2drop 4drop                          ( )
 	 ." Bad timestamp format" cr          ( )
 	 exit                                 ( -- )
-      then                                    ( count rem$ s m h d m y )
-   then                                       ( count rem$ s m h d m y )
+      then                                    ( newrtc$ nonce$ s m h d m y  )
+      >unix-seconds                           ( newrtc$ nonce$ timestamp )
+      rtc-timestamp <>  if                    ( newrtc$ nonce$ )
+         4drop                                ( )
+         ." Old timestamp mismatch" cr        ( ) 
+         exit                                 ( -- )
+      then                                    ( newrtc$ nonce$ )
+   then                                       ( newrtc$ nonce$ )
 
-   >unix-seconds                              ( count rem$ old-timestamp )
-   rtc-timestamp <>  if                       ( count rem$ )
-      3drop                                   ( )
-      ." Old timestamp mismatch" cr           ( ) 
+   0 h# 7fffffff ['] decode-number catch  if  ( newrtc$ x x x x )
+      4drop 2drop  ." Bad count format" cr    ( )
       exit                                    ( -- )
-   then                                       ( count rem$ )
-   rot init-timestamp-area                    ( rem$ )
+   then                                       ( newrtc$ count )
+
+   init-timestamp-area                        ( newrtc$ )
    
    ['] decode-timestamp catch  if             ( x x )
       2drop  ." Bad timestamp format" cr      ( )
