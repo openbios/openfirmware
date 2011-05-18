@@ -34,8 +34,7 @@ char 4 value expected-ec-version
    ifd @ fclose                      ( len )
    load-base swap ?ec-image-valid
 ;
-: flash-ec  ( "filename" -- )
-   get-ec-file
+: reflash-ec
 [ifdef] cl2-a1
    " enter-updater" $call-ec
    ." Erasing ..." cr  " erase-flash" $call-ec cr
@@ -47,7 +46,7 @@ char 4 value expected-ec-version
    ." Erasing ..."  erase-chip cr
    ." Writing ..."  load-base /ec-flash 0 edi-program-flash cr
    ." Verifying ..."
-   load-base /ec-flash + /ec-flash 0 edi-read-flash  
+   load-base /ec-flash + /ec-flash 0 edi-read-flash
 [then]
    load-base  load-base /ec-flash +  /ec-flash  comp
    abort"  Miscompare!"
@@ -59,6 +58,8 @@ char 4 value expected-ec-version
 [then]
    reset-ec
 ;
+: flash-ec  ( "filename" -- )  get-ec-file ?enough-power reflash-ec  ;
+: flash-ec! ( "filename" -- )  get-ec-file reflash-ec  ;
 : read-ec-flash  ( -- )
 [ifdef] cl2-a1
    " enter-updater" $call-ec
