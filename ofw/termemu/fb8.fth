@@ -78,6 +78,11 @@ hex
    swap 2 rshift  5 lshift or
    swap 3 rshift  d# 11 lshift or
 ;
+: 565>rgb  ( w -- r g b )
+   dup d# 8 rshift 7 or
+   over 3 rshift h# fc and 3 or
+   rot 3 lshift h# f8 and  7 or
+;
 
 create colors-8bpp
    0 , 1 , 2 , 3 , 4 , 5 , 6 , 7 , 8 , 9 , a , b , c , d , e , f ,
