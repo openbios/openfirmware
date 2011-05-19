@@ -36,7 +36,8 @@ fw-pa value fw-virt-base
 
 h# 0020.0000 constant /fw-ram
 
-h# 0110.0000 constant def-load-base
+\ h# 0110.0000 constant def-load-base
+h# 0800.0000 constant def-load-base
 
 \ The heap starts at RAMtop, which on this system is "fw-pa /fw-ram +"
 
@@ -44,3 +45,7 @@ h#  10.0000 constant heap-size
 heap-size constant initial-heap-size
 
 h# 40.0000 constant page-table-pa
+
+\ RAM address where the Security Processor code places the subset of the dropin module
+\ image that it copies out of SPI FLASH.
+h#  900.0000 constant 'dropins  \ Must agree with 'compressed in cforth/src/app/arm-xo-1.75/

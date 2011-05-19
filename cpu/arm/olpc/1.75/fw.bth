@@ -70,11 +70,12 @@ hex
       ukey?  if
          ukey upc ascii I  =  if  true unloop exit  then
       then
-      1 ms
+      d# 1000 us  \ 1000 us is more precise than 1 ms, which is often close to 2 ms
    loop
    false
 ;
 
+: rotate-button?  ( -- flag )  d# 15 gpio-pin@ 0=  ;
 warning @  warning off 
 : init
 \ initial-heap add-memory
@@ -83,7 +84,8 @@ warning @  warning off
    standalone?  if
       disable-interrupts
       d# 1000
-      i-key-wait  if
+\      i-key-wait  if
+      rotate-button? if
          protect-fw
          ." Interacting" cr  hex interact
       then
@@ -225,12 +227,18 @@ d# 6500 constant ms-factor
 ;
 : cmos!  ( data index -- )
    h# 38 mod  8 +  " rtc!" clock-node @  ( data index adr len ih )
-   ['] $call-method  if  2drop 3drop  then
+   ['] $call-method  catch if  2drop 3drop  then
 ;
 code halt  ( -- )  wfi   c;
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/guardrtc.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
+
+stand-init: xid
+   0 cmos@  dup 1+  0 cmos!   ( n )
+   d# 24 lshift               ( new-xid )
+   " dev /obp-tftp  to rpc-xid  dend" evaluate
+;
 
 : pre-setup-for-linux  ( -- )
    [ ' linux-pre-hook behavior compile, ]    \ Chain to old behavior
@@ -268,7 +276,7 @@ fload ${BP}/cpu/x86/pc/olpc/life.fth
 \needs ramdisk  " " d# 128 config-string ramdisk
 " "   ' boot-file      set-config-string-default   \ Let the boot script set the cmdline
 
-3 config-int auto-boot-countdown
+2 config-int auto-boot-countdown
 
 \ Eliminate 4 second delay in install console for the case where
 \ there is no keyboard.  The delay is unnecessary because the screen

@@ -2,6 +2,7 @@ purpose: Construct the Open Firmware module collection
 
 command: &builder &this
 in: ${BP}/cpu/arm/olpc/1.75/build/fw.img
+in: ${BP}/cpu/arm/olpc/1.75/build/resetvec.img
 in: sd8686.bin
 in: verify.img
 in: ${BP}/dev/usb2/device/hub/build/hub.fc
@@ -66,6 +67,7 @@ $new-file
    " ${BP}/cpu/arm/build/inflate.bin"        " inflate"         $add-dropin
    " fw.img"   " firmware"  $add-deflated-dropin
 \   " fw.img"   " firmware"  $add-dropin
+   " resetvec.img"  " reset" $add-dropin
 
 \   " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"      $add-deflated-dropin
    " ${BP}/dev/usb2/device/hub/build/hub.fc"     " usb,class9"      $add-deflated-dropin

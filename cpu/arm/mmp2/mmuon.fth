@@ -67,6 +67,7 @@ code start-mmu
 c;
 
 : go-fast
+   control@ 1 and  if  exit  then  \ Don't do this if MMU is already on
    setup-sections
    start-mmu
    dcache-on

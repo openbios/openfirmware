@@ -6,6 +6,7 @@ code scc-id@            ( -- n )   psh tos,sp  mrc p15,0,tos,cr0,cr0,0  c;
 code cache-type@        ( -- n )   psh tos,sp  mrc p15,0,tos,cr0,cr0,1  c;
 code tlb-type@          ( -- n )   psh tos,sp  mrc p15,0,tos,cr0,cr0,3  c;
 code control@           ( -- n )   psh tos,sp  mrc p15,0,tos,cr1,cr0,0  c;
+code aux-control@       ( -- n )   psh tos,sp  mrc p15,0,tos,cr1,cr0,1  c;
 code ttbase@            ( -- n )   psh tos,sp  mrc p15,0,tos,cr2,cr0,0  c;
 code ttbase0@           ( -- n )   psh tos,sp  mrc p15,0,tos,cr2,cr0,0  c;
 code ttbase1@           ( -- n )   psh tos,sp  mrc p15,0,tos,cr2,cr1,0  c;
@@ -18,6 +19,7 @@ code wp-fault-address@  ( -- n )   psh tos,sp  mrc p15,0,tos,cr6,cr1,0  c;
 code i-fault-address@   ( -- n )   psh tos,sp  mrc p15,0,tos,cr6,cr2,0  c;
 
 code control!           ( n -- )   mcr p15,0,tos,cr1,cr0,0  pop tos,sp  c;
+code aux-control!       ( n -- )   mcr p15,0,tos,cr1,cr0,1  pop tos,sp  c;
 code ttbase!            ( n -- )   mcr p15,0,tos,cr2,cr0,0  pop tos,sp  c;
 code ttbase0!           ( n -- )   mcr p15,0,tos,cr2,cr0,0  pop tos,sp  c;
 code ttbase1!           ( n -- )   mcr p15,0,tos,cr2,cr1,0  pop tos,sp  c;
@@ -162,8 +164,13 @@ c;
 \ operation, so it uses the Open Firmware nomenclature.
 defer flush-cache  ' noop to flush-cache
 
+[ifdef] notdef
 : l2cache-on   ( -- )  flush-l2$  control@  h# 0400.0000 or          control!  ;
 : l2cache-off  ( -- )  clean-l2$  control@  h# 0400.0000 invert and  control!  ;
+[else]
+: l2cache-on   ( -- )  flush-l2$  aux-control@  2 or          aux-control!  ;
+: l2cache-off  ( -- )  clean-l2$  aux-control@  2 invert and  aux-control!  ;
+[then]
 
 : bpu-on   ( -- )  flush-bt$  control@  h# 0800 or          control!  ;
 : bpu-off  ( -- )             control@  h# 0800 invert and  control!  ;

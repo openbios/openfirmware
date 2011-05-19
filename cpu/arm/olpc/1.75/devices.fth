@@ -39,6 +39,36 @@ warning off
 ;
 warning on
 
+[ifdef] use-null-nvram
+\ For not storing configuration variable changes across reboots ...
+\ This is useful for "turnkey" systems where configurability would
+\ increase support costs.
+
+fload ${BP}/cpu/x86/pc/nullnv.fth
+stand-init: Null-NVRAM
+   " /null-nvram" open-dev  to nvram-node
+   ['] init-config-vars catch drop
+;
+[then]
+
+[ifdef] use-flash-nvram
+\ For configuration variables stored in a sector of the boot FLASH ...
+
+\ Create a node below the top-level FLASH node to access the portion
+\ containing the configuration variables.
+0 0  " d0000"  " /flash" begin-package
+   " nvram" device-name
+
+   h# 10000 constant /device
+   fload ${BP}/dev/subrange.fth
+end-package
+
+stand-init: NVRAM
+   " /nvram" open-dev  to nvram-node
+   ['] init-config-vars catch drop
+;
+[then]
+
 \ Create a pseudo-device that presents the dropin modules as a filesystem.
 fload ${BP}/ofw/fs/dropinfs.fth
 
@@ -186,9 +216,10 @@ fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
    fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
 
    : display-on
-      init-xo-display  \ Turns on DCON
+\      init-xo-display  \ Turns on DCON
+      smb-init
+      fb-pa  hdisp vdisp * >bytes  h# ffffffff lfill
       init-lcd
-      fb-pa  hdisp vdisp * >bytes  h# ff fill
    ;
    : map-frame-buffer  ( -- )
       fb-pa to frame-buffer-adr
