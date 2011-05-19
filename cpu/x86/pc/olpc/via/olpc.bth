@@ -160,8 +160,9 @@ $new-file
 
    " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
 
-   " ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml"      " dsdt"            $add-deflated-dropin
-\  " ${BP}/cpu/x86/pc/olpc/via/build/ssdt.aml"      " ssdt"            $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml"        " dsdt"            $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/via/build/dsdt-c2only.aml" " dsdt-c2only"     $add-deflated-dropin
+\  " ${BP}/cpu/x86/pc/olpc/via/build/ssdt.aml"        " ssdt"            $add-deflated-dropin
 
    \ icons for mfg test gui
    " testicons/play.565"        " play.565"     $add-deflated-dropin
