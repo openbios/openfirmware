@@ -20,13 +20,13 @@ h# d4207018 constant utmi-t0
 \ h# 7e03.ffff value pll-clr  \ PLLCALI12, PLLVDD18, PLLVDD12, KVCO, ICP, FBDIV, REFDIV, 
 \ h# 7e01.aeeb value pll-set  \         3         3         3     3    2     ee       b
 h# 0003.ffff value pll-clr  \                                KVCO, ICP, FBDIV, REFDIV, 
-h# 7e01.9eeb value pll-set  \         3         3         3     3    1     ee       b
+h# 7e01.aeeb value pll-set  \         3         3         3     5    1     ee       b
 
 h# 00df.c000 value tx-clr   \ TXVDD12, CK60_PHSEL, IMPCAL_VTH
-h# 00c8.0000 value tx-set   \       3           4           0
+h# 00c9.4000 value tx-set   \       3           4           5
 
 h# 0000.00f0 value rx-clr   \ RX_SQ_THRESH
-h# 0000.0070 value rx-set   \            7
+h# 0000.00a0 value rx-set   \            a
 
 : init-usb-phy  ( -- )
 [ifdef] notdef
@@ -36,14 +36,14 @@ h# 0000.0070 value rx-set   \            7
 [then]
 
    \ Turn on the USB PHY power
-   h# 1010.0000 utmi-ctrl regset  \ INPKT_DELAY_SOF, PU_REF
+   h# 1810.0000 utmi-ctrl regset  \ INPKT_DELAY_SOF, PU_REF
    h#         2 utmi-ctrl regset  \ PLL_PWR_UP
    d# 10 ms
    h#         1 utmi-ctrl regset  \ PWR_UP
    1 ms
 
    \ Linux code does this, perhaps redundantly
-   h# 1000.0000 utmi-ctrl regset  \ INPKT_DELAY_SOF, PU_REF
+   h# 1800.0000 utmi-ctrl regset  \ INPKT_DELAY_SOF, PU_REF
 
    h# 0000.8000 utmi-t0   regclr  \ REG_FIFO_SQ_RST
 
