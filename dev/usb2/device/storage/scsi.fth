@@ -181,8 +181,6 @@ external
 
 : set-address  ( lun -- )
    0 max max-lun min  to lun
-   set-device  \ The device number may have changed if we recycled the node
-   device set-target
    reset?  if
       configuration set-config  if
          ." USB storage scsi layer: Failed to set configuration" cr
@@ -192,7 +190,11 @@ external
 ;
 : set-timeout  ( n -- )  bulk-timeout max set-bulk-in-timeout  ;
 
-: reopen-hardware   ( -- ok? )  true  ;
+: reopen-hardware   ( -- ok? )
+   set-device?  if  false exit  then  \ The device number may have changed if we recycled the node
+   device set-target
+   true
+;
 : open-hardware     ( -- ok? )  alloc-bulk  reopen-hardware  ;
 : reclose-hardware  ( -- )	;
 : close-hardware    ( -- )      free-bulk  ;

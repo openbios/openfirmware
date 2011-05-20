@@ -52,7 +52,7 @@ external
 : write  ( adr len -- actual )  dup  if  write-bytes  else  nip  then  ;
 
 : open  ( -- flag )
-   set-device
+   set-device?  if  false exit  then
    device set-target
    refcount @ 0=  if
 

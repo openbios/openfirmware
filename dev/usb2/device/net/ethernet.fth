@@ -217,7 +217,7 @@ external
 
 : open  ( -- ok? )
    parse-args
-   set-device
+   set-device?  if  false exit  then
    device set-target
 
    opencount @ 0=  if

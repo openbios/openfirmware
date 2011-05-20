@@ -331,6 +331,23 @@ defer make-dev-property-hook  ( speed dev port -- )
    3drop false
 ;
 
+: disable-old-nodes  ( port -- )
+   my-self ihandle>phandle child                 ( port phandle )
+   begin  ?dup  while                            ( port phandle )
+      " reg" 2 pick get-package-property 0=  if  ( port phandle adr len )
+         decode-int  nip nip                     ( port phandle port1 )
+         2 pick  =  if                           ( port phandle )
+            " assigned-address"                  ( port phandle propname$ )
+            2 pick  get-package-property 0=  if  ( port phandle adr len )
+               drop -1 swap be-l!                ( port phandle )
+            then                                 ( port phandle )
+         then                                    ( port phandle )
+      then                                       ( port phandle )
+      peer                                       ( port phandle' )
+   repeat                                        ( port )
+   drop                                          ( )
+;
+
 : (make-device-node)  ( dev port intf -- )
    swap                              ( dev intf port )
    3dup  reuse-old-node?  if         ( dev intf port )

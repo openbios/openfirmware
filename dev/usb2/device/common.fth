@@ -38,6 +38,7 @@ false instance value debug?
 
 \ This needs to be called every time that the device could have changed
 : set-device  ( -- )  " assigned-address"  get-int-property  to device  ;
+: set-device?  ( -- error?  )  set-device  device -1 =  ;
 
 : init  ( -- )
    set-device

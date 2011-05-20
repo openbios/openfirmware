@@ -5,17 +5,20 @@ hex
 headers
 
 : probe-root-hub-port  ( port -- )
-   dup hc-rh-psta@ 1 and 0=  if  drop exit  then	( port )	\ No device connected
+   dup hc-rh-psta@ 1 and 0=  if		( port )
+      disable-old-nodes			( )
+      exit				( -- )
+   then					( port )
 
    \ Reset the port to determine the speed
-   dup reset-port					( port )
+   dup reset-port			( port )
    dup hc-rh-psta@ 200 and  if  speed-low  else  speed-full  then	( port speed )
 
    \ hub-port and hub-speed are irrelevant for OHCI (USB 1.1)
-   0 0							( port speed hub-port hub-dev )
+   0 0					( port speed hub-port hub-dev )
 
    \ Execute setup-new-node in root context and make-device-node in hub node context
-   setup-new-node  if  execute  then			( port dev xt )
+   setup-new-node  if  execute  then	( port dev xt )
 ;
 
 false value ports-powered?

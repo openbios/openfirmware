@@ -22,8 +22,11 @@ headers
 0 instance value probe-error?  \ Back channel to selftest
 
 : probe-root-hub-port  ( port -- )
-   false to probe-error?
-   dup portsc@ 1 and 0=  if  drop exit  then	\ No device detected
+   false to probe-error?                ( port )
+   dup portsc@ 1 and 0=  if             ( port ) \ No device detected
+      disable-old-nodes                 ( )
+      exit                              ( -- )
+   then                                 ( port )
    dup portsc@ h# c00 and h# 400 =  if		\ A low speed device detected
       dup disown-port				\ Disown the port
    else						\ Don't know what it is
