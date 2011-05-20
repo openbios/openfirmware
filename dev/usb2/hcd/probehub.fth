@@ -68,10 +68,8 @@ hex
    over clear-status-change              	( port error? )
    if  drop exit  then				( port )
 
-   hub-buf c@ 1 and 0=  if  	                ( port )  \ No device connected
-      disable-old-nodes                         ( port )
-      exit
-   then
+   dup disable-old-nodes			( port ) 
+   hub-buf c@ 1 and 0=  if  drop exit  then	( port )  \ No device connected
    hub-buf le-w@ h# 600 and 9 >>  		( port speed )
 
    \ hub-port and hub-dev route USB 1.1 transactions through USB 2.0 hubs
@@ -142,10 +140,9 @@ external
 
    1+  1  ?do                                   ( hub-dev )
       dup i port-status-changed?  if            ( hub-dev connected? )
+         i disable-old-nodes                    ( hub-dev connected? )
          if                                     ( hub-dev )
             dup i safe-probe-hub-port           ( hub-dev )
-         else  \ Handle disconnect
-            i disable-old-nodes                 ( hub-dev )
          then                                   ( hub-dev )
       else                                      ( hub-dev )
          i port-is-hub?  if                     ( hub-dev phandle )

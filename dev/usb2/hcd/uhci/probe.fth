@@ -7,10 +7,8 @@ headers
 : probe-root-hub-port  ( port -- )
    \ Reset the port to perform connection status and speed detection
    dup reset-port				( port )
-   dup portsc@ 1 and 0=  if                     ( port )  \ No device-connected
-      disable-old-nodes                         ( )
-      exit                                      ( -- )
-   then	                                        ( port )
+   dup disable-old-nodes			( port )
+   dup portsc@ 1 and 0=  if  drop exit  then	( port )  \ No device-connected
 
    dup portsc@ 100 and  if  speed-low  else  speed-full  then	( port speed )
 
