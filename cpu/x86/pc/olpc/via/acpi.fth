@@ -285,7 +285,7 @@ here do-acpi-wake - constant /do-acpi-wake
    \ Copy in the DSDT
    \ I suppose we could point to it in FLASH - if so don't compress it,
    \ and fixup the address in the fadt and rechecksum the fadt
-   board-revision h# d68 >=  if  " dsdt-c2only"  else  " dsdt"   then
+   board-revision h# d68 h# d78 between  if  " dsdt-c2only"  else  " dsdt"   then
    find-drop-in  0= abort" No DSDT "  ( adr len )
    2dup dsdt-adr swap  move  free-mem
 
