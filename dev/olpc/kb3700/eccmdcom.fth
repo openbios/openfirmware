@@ -22,7 +22,7 @@ purpose: EC commands that are the same for all XO versions
 : mppt-limit!    ( b -- )  h# 3f ec-cmd-b!  ;
 : mppt-off       ( -- )    h# 40 ec-cmd  ;
 : mppt-on        ( -- )    h# 41 ec-cmd  ;
-: vin@           ( -- b )  h# 42 ec-cmd-b@  ;
+: vin@           ( -- b )  h# 42 ec-cmd-w@  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
