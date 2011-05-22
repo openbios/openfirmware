@@ -6,6 +6,7 @@ purpose: Configuration for loading from a USB key via Syslinux
 
 \ - (Syslinux) COM32 format - USB Key w/ FAT FS - Syslinux
 create syslinux-loaded
+\ create use-syslinux-com32r  \ For syslinux v4 and later
 
 create serial-console
 create pc

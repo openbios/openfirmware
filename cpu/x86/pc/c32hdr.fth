@@ -17,14 +17,24 @@ start-assembling
 \ It also contains a multiboot header so GRUB will recognize it.
 
 label c32-hdr
+
+[ifdef] use-syslinux-com32r
+   \ This will be loaded at a 4K-aligned address
+   h# 21cd4cfe # ax mov        \ COM32R signature
+   here 5 + #)  call	       \ Get the execution address
+   si pop                      \ SI now contains load-address+10
+   h# 40  d# 10 - #  si  add   \ Address of next module - source of copy
+[else]
    \ This will be loaded at h# 10.1000
    h# 21cd4cff # ax mov  \ COM32 signature
+   h# 10.1040       #  si  mov     \ Address of next module
+[then]
+
    h# 1000 #     bx mov  \ mem-info-pa address
    sp  4 [bx]  mov       \ Save memory size
    bx  8 [bx]  mov       \ Area below DOS hole
 
    cld
-   h# 10.1040       #  si  mov     \ Address of next module
    dropin-base      #  di  mov     \ Destination of copy
    dropin-size 4 /  #  cx  mov     \ Longwords to copy
    rep movs
@@ -37,7 +47,8 @@ label c32-hdr
    h# 1BADB002        ,  \ Multiboot magic number
    h#        0        ,  \ Multiboot flags
    h# 1BADB002 negate ,  \ Multiboot checksum
-   \ This will end up at offset h# 40, absolute h# 10.1060
+
+   \ This will end up at offset h# 40 from the load address
 end-code
 
 end-assembling
