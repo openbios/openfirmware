@@ -8,7 +8,7 @@ purpose: Configuration for loading from a USB key via Syslinux
 create syslinux-loaded
 \ create use-syslinux-com32r  \ For syslinux v4 and later
 
-create serial-console
+\ create serial-console
 create pc
 
 \ create pseudo-nvram
