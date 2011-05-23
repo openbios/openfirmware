@@ -2,30 +2,40 @@ purpose: Driver for Two Wire Serial Interface on Marvell Armada 610
 
 \ 0 0  " d4011000"  " /" begin-package
 
-0 value chip
+[ifdef] unaligned-mmap
+h# d4050000 unaligned-mmap  constant clock-unit-pa
+[then]
+
+0 value twsi-chip
 0 value clock-reg
 0 value slave-address
 
-: dbr@  ( -- n )  chip h# 08 + l@   ;
-: cr@   ( -- n )  chip h# 10 + l@   ;
-: sr@   ( -- n )  chip h# 18 + l@   ;
-: sar@  ( -- n )  chip h# 20 + l@   ;
-: lcr@  ( -- n )  chip h# 28 + l@   ;
-: dbr!  ( n -- )  chip h# 08 + l!   ;
-: cr!   ( n -- )  chip h# 10 + l!   ;
-: sr!   ( n -- )  chip h# 18 + l!   ;
-: sar!  ( n -- )  chip h# 20 + l!   ;
-: lcr!  ( n -- )  chip h# 28 + l!   ;
+: dbr@  ( -- n )  twsi-chip h# 08 + l@   ;
+: cr@   ( -- n )  twsi-chip h# 10 + l@   ;
+: sr@   ( -- n )  twsi-chip h# 18 + l@   ;
+: sar@  ( -- n )  twsi-chip h# 20 + l@   ;
+: lcr@  ( -- n )  twsi-chip h# 28 + l@   ;
+: dbr!  ( n -- )  twsi-chip h# 08 + l!   ;
+: cr!   ( n -- )  twsi-chip h# 10 + l!   ;
+: sr!   ( n -- )  twsi-chip h# 18 + l!   ;
+: sar!  ( n -- )  twsi-chip h# 20 + l!   ;
+: lcr!  ( n -- )  twsi-chip h# 28 + l!   ;
 
 create channel-bases
 h# D4011000 ,  h# D4031000 ,  h# D4032000 ,  h# D4033000 ,  h# D4033800 ,  h# D4034000 ,
+
+[ifdef] unaligned-mmap
+6 0  do
+   channel-bases i la+ l@  unaligned-mmap  channel-bases i la+ l!
+loop
+[then]
 
 create clock-offsets
 h# 04 c,  h# 08 c,  h# 0c c,  h# 10 c,  h# 7c c,  h# 80 c,
 
 : set-twsi-channel  ( channel -- )
    1-
-   channel-bases over na+ @  to chip  ( channel )
+   channel-bases over na+ @  to twsi-chip  ( channel )
    clock-offsets + c@  clock-unit-pa +  to clock-reg  ( )
 ;
 : set-twsi-target  ( slave channel -- )  \ Channel numbers range from 1 to 6
@@ -129,6 +139,7 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
 : twsi-b@  ( reg -- byte )  1 1 twsi-get  ;
 : twsi-b!  ( byte reg -- )  2 twsi-write  ;
 
+[ifdef] begin-package
 0 0  " "  " /" begin-package
 " twsi" name
 
@@ -145,3 +156,4 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
 : decode-unit  ( adr len -- low high )  parse-2int  ;
 : encode-unit  ( low high -- adr len )  >r <# u#s drop [char] , hold r> u#s u#>  ;
 end-package
+[then]
