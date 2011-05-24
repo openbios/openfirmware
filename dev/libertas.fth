@@ -1469,11 +1469,13 @@ instance defer mesh-default-modes
    then                             ( ch ssid$ target-mac$ )
    ?set-wep				\ Set WEP keys again, if ktype is WEP
    set-mac-control
-   2dup authenticate
-   d# 10 0 do
-      bss-type bss-type-managed =  if  (associate)  else  (join)  then  ( ok? )
-      if  true unloop  exit  then
+   2dup authenticate                ( ch ssid$ target-mac$ )
+   d# 10 0 do                       ( ch ssid$ target-mac$ )
+      4 pick  4 pick  4 pick  4 pick  4 pick  ( ch ssid$ target-mac$  ch ssid$ target-mac$ )
+      bss-type bss-type-managed =  if  (associate)  else  (join)  then  ( ch ssid$ target-mac$ ok? )
+      if  2drop 3drop true unloop  exit  then
    loop
+   2drop 3drop
    false
 ;
 headers
