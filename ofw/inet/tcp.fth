@@ -1955,7 +1955,13 @@ nodetype: tcpnode
 \ This is basically attach
 : alloc-buffers  ( -- )
    wbuf-allocate
-   d# 1024 d# 16 *  to rbuf-len
+   \ If rbuf-len is too large, the other end can send-ahead more data
+   \ than some network interfaces can handle, leading to very poor
+   \ performance and in some cases complete failure.  Ideally we would
+   \ size this dynamically based on the network interface characteristics
+   \ (speed, buffering), but for now we don't have suitable information
+   \ in the network interface device node.
+   d# 1024 8 *  to rbuf-len
    rbuf-len alloc-mem to rbuf-adr
    0 to rbuf-actual
 
