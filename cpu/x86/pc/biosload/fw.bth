@@ -185,6 +185,8 @@ dend
 
 fload ${BP}/cpu/x86/pc/rmtools.fth
 
+fload ${BP}/cpu/x86/pc/biosload/callbios.fth
+
 [ifdef] syslinux-loaded
 fload ${BP}/cpu/x86/pc/biosload/callvbe.fth
 [then]
@@ -247,7 +249,6 @@ hex
 
 fload ${BP}/cpu/x86/pc/biosload/usb.fth
 
-fload ${BP}/cpu/x86/pc/biosload/callbios.fth
 \ fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
 
 \ false to stand-init-debug?
@@ -262,7 +263,7 @@ warning @  warning off
 
    standalone?  if
       cr ." Type 'i' to interrupt stand-init sequence" cr 
-      d# 2000 ms
+      d# 1000 ms
       key?  if
          key upc ascii I  =  if  ." Interacting" cr  hex interact  then
       then

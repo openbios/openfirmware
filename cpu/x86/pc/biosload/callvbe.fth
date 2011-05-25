@@ -1,6 +1,7 @@
 \ Call VESA BIOS from a syslinux-loaded ".c32" image
 \ COM32 arguments are at 0 @ 4 +
 
+[ifndef] bios{
 code vesa-mode  ( mode# -- )
    cx pop
 
@@ -76,6 +77,22 @@ c;
    h# 4f01 vbe-call             ( )
    h# 200 +c32-regs             ( adr )
 ;
+: current-vesa-mode  ( -- mode# )  h# 4f03 vbe-call  'c32-bx l@  ;
+: set-vesa-mode  ( mode# -- )   'c32-bx w!  h# 4f02 vbe-call  ;
+[else]
+h# 2000 constant vesa-rm-buf
+: vbe-info  ( -- adr )
+   vesa-rm-buf         ( adr )
+   h# 32454256 over l! ( adr )
+   h# 10 bios{  dup es:di  h# 4f00 ax  }bios  ( adr )
+;   
+: vesa-mode-info  ( mode# -- adr )
+   h# 10 bios{  cx  h# 2000 dup es:di  h# 4f01 ax  }bios  ( adr )
+;
+: current-vesa-mode  ( -- mode# )  h# 10 bios{  h# 4f03 ax }bios  bios-bx l@  ;
+: set-vesa-mode  ( mode# -- )   h# 10 bios{ bx  h# 4f02 ax }bios  ;
+[then]
+
 : .vesa-mode-info  ( mode# -- )
    push-hex  dup 3 u.r space
    vesa-mode-info >r  ( r: adr )
@@ -201,7 +218,5 @@ c;
 3e.l MaxPixelClock 
 [then]
 
-: current-vesa-mode  ( -- mode# )  h# 4f03 vbe-call  'c32-bx l@  ;
-: set-vesa-mode  ( mode# -- )   'c32-bx w!  h# 4f02 vbe-call  ;
 : set-linear-mode  ( mode# -- )  h# 4000 or  set-vesa-mode  ;
 : vesa-lfb-adr  ( mode# -- padr )  h# 4000 or vesa-mode-info h# 28 + l@  ;

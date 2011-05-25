@@ -79,7 +79,7 @@ label bios-ret
    op: pushf  op: pusha   ds push  es push  fs push  gs push
 
    cli
-   cs ax mov   ax ds mov
+   ax ax xor  ax ds mov    \ Assumes that the real-mode buffers are in the low 64K
 
    op: pm-gdt-save #) lgdt
    cr0 ax mov  1 # al or  ax cr0 mov
@@ -151,7 +151,7 @@ c;
 
 \ Video - INT 10
 : video-mode  ( mode# -- )
-   d# 55 set-tick-limit  h# 10 bios{ 3 al  bx  }bios  d# 10 set-tick-limit
+   ( d# 55 set-tick-limit ) h# 10 bios{ 3 al  bx  }bios  ( d# 10 set-tick-limit )
 ;
 : text-mode  3 video-mode  ;
 : 1024x768x8   h# 105 video-mode  ;
