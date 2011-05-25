@@ -1,9 +1,9 @@
-0 0  " d42a0c00"  " /" begin-package
+0 0  " d42a0800"  " /" begin-package
 " audio" name
-my-space h# 40 reg
+my-space h# 800 reg
 
-h# d42a.0c00 constant sspa-base
-h# d42a.0800 constant adma-base
+0 value sspa-base  \ E.g. h# d42a.0c00 
+0 value adma-base  \ E.g. h# d42a.0800
 : sspa!  ( n offset -- )  sspa-base + l!  ;  \ Write a register in SSPA1
 : sspa@  ( offset -- n )  sspa-base + l@  ;  \ Read a register in SSPA1
 : adma!  ( n offset -- )  adma-base + l!  ;
@@ -170,11 +170,17 @@ audio-sram h# 3f80 + constant in-desc
    my-in-desc 3 la+ l@ to my-in-desc
 ;
 
+[ifdef] cl2-a1
+: choose-smbus  ( -- )  h# 30 1 set-twsi-target  ;
+[else]
+: choose-smbus  ( -- )  h# 34 1 set-twsi-target  ;
+[then]
+
 \ Reset is unconnected on current boards
 \ : audio-reset  ( -- )  8 gpio-clr  ;
 \ : audio-unreset  ( -- )  8 gpio-set  ;
-: codec@  ( reg# -- w )  1 2 twsi-get  swap bwjoin  ;
-: codec!  ( w reg# -- )  >r wbsplit r> 3 twsi-write  ;
+: codec@  ( reg# -- w )  choose-smbus  1 2 twsi-get  swap bwjoin  ;
+: codec!  ( w reg# -- )  choose-smbus  >r wbsplit r> 3 twsi-write  ;
 : codec-i@  ( index# -- w )  h# 6a codec!  h# 6c codec@  ;
 : codec-i!  ( w index# -- )  h# 6a codec!  h# 6c codec!  ;
 
@@ -346,12 +352,8 @@ false value playing?
 [then]
 
 [ifdef] cl2-a1
-: init-smbus  ( -- )  h# 30 1 set-twsi-target  ;
-
 fload ${BP}/cpu/arm/olpc/1.75/alc5624.fth  \ Realtek ALC5624 CODEC
 [else]
-: init-smbus  ( -- )  h# 34 1 set-twsi-target  ;
-
 : headphones-inserted?  ( -- flag )  d# 97 gpio-pin@  ;
 : microphone-inserted?  ( -- flag )  d# 96 gpio-pin@  ;
 
@@ -378,20 +380,25 @@ fload ${BP}/cpu/arm/olpc/1.75/alc5631.fth  \ Realtek ALC5631Q CODEC
 : mono  ;
 
 : init-codec  ( -- )
-   init-smbus
    codec-on
    set-default-gains
    d# 48000 set-sample-rate
 ;
 0 value open-count
 : open  ( -- flag )
-   open-count 0=  if  audio-clock-on  init-codec  then
+   open-count 0=  if
+      my-space h# 800 " map-in" $call-parent to adma-base
+      adma-base h# 400 + to sspa-base
+      audio-clock-on  init-codec
+   then
    open-count 1+ to open-count
    true
 ;
 : close  ( -- )
    open-count 1 =  if
       uninstall-playback-alarm  codec-off  ( audio-clock-off )
+      adma-base h# 800 " map-out" $call-parent
+      0 to adma-base  0 to sspa-base
    then
    open-count 1- 0 max to open-count
 ;

@@ -359,6 +359,9 @@ fload ${BP}/cpu/x86/pc/olpc/smbios.fth
 fload ${BP}/cpu/x86/pc/biosints.fth
 fload ${BP}/cpu/x86/pc/olpc/biosresume.fth
 
+: dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
+: brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;
+
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/guardrtc.fth
@@ -387,39 +390,6 @@ fload ${BP}/cpu/x86/pc/olpc/rtcwake.fth
 
 \needs ramdisk  " " d# 128 config-string ramdisk
 " "   ' boot-file      set-config-string-default   \ Let the boot script set the cmdline
-
-: dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
-: brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;
-
-dev /8042/keyboard
-0 value waiting-up?
-: olpc-check-abort  ( scan-code -- abort? )  \ Square pressed?
-   last-scan   over to last-scan  ( scan-code old-scan-code )
-   h# e0 <>  if  drop false exit  then          ( scan-code )
-
-   check-abort?  0=  if  drop false exit  then  ( scan-code )
-
-   dup h# 7f and  h# 5d <>  if  drop false exit then  ( scan-code )
-
-   h# 80 and  if   \ Up
-      false to waiting-up?
-      false                             ( abort? )
-   else
-      secure?  if  false  else  waiting-up?  0=  then   ( abort? )
-      true to waiting-up?
-   then
-;
-patch olpc-check-abort check-abort get-scan
-
-: handle-volume?  ( scan-code -- scan-code flag )
-   dup h# 43 =  if  dimmer    true exit  then
-   dup h# 44 =  if  brighter  true exit  then
-   dup h# 57 =  if  softer    true exit  then
-   dup h# 58 =  if  louder    true exit  then
-   false
-;
-' handle-volume?  to scan-handled?
-dend
 
 \ Eliminate 4 second delay in install console for the case where
 \ there is no keyboard.  The delay is unnecessary because the screen

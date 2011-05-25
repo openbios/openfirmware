@@ -231,6 +231,10 @@ d# 6500 constant ms-factor
    ['] $call-method  catch if  2drop 3drop  then
 ;
 code halt  ( -- )  wfi   c;
+
+: dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
+: brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;
+
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/guardrtc.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth

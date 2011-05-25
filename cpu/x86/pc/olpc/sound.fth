@@ -54,6 +54,36 @@ h# -9 constant default-volume
    close-audio
 ;
 
+dev /keyboard
+0 value waiting-up?
+: olpc-check-abort  ( scan-code -- abort? )  \ Square pressed?
+   last-scan   over to last-scan  ( scan-code old-scan-code )
+   h# e0 <>  if  drop false exit  then          ( scan-code )
+
+   check-abort?  0=  if  drop false exit  then  ( scan-code )
+
+   dup h# 7f and  h# 5d <>  if  drop false exit then  ( scan-code )
+
+   h# 80 and  if   \ Up
+      false to waiting-up?
+      false                             ( abort? )
+   else
+      secure?  if  false  else  waiting-up?  0=  then   ( abort? )
+      true to waiting-up?
+   then
+;
+patch olpc-check-abort check-abort get-scan
+
+: handle-volume?  ( scan-code -- scan-code flag )
+   dup h# 43 =  if  dimmer    true exit  then
+   dup h# 44 =  if  brighter  true exit  then
+   dup h# 57 =  if  softer    true exit  then
+   dup h# 58 =  if  louder    true exit  then
+   false
+;
+' handle-volume?  to scan-handled?
+dend
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
