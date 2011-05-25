@@ -236,6 +236,15 @@ stand-init: Pseudo-NVRAM
 end-package
 [then]
 
+[ifdef] use-vesa
+0 0  " "  " /" begin-package
+   " display" name
+   " vesa" " compatible" string-property
+   fload ${BP}/dev/video/controlr/vesalfb.fth
+end-package
+devalias screen /display		\ Explicit, because it's not probed
+[then]
+
 [ifdef] use-ct65550
 0 0  " i3b0" " /isa" begin-package
    fload ${BP}/dev/ct6555x/loadpkg.fth	\ Video driver

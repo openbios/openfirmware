@@ -157,6 +157,9 @@ hex
 [ifdef] use-vga
    " ${BP}/ofw/termemu/cp881-16.obf"            " font"        $add-deflated-dropin
 [then]
+[ifdef] use-vesa
+   " ${BP}/ofw/termemu/cp881-16.obf"            " font"        $add-deflated-dropin
+[then]
 
 [ifdef] grub-loaded
    ofd @ fsize h# 60 -  pad !      \ file size; store in memory for convenience below

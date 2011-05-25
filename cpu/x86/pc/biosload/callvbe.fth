@@ -103,19 +103,54 @@ c;
    repeat                                        ( 'mode-list n mode# )
    drop nip                                      ( n )
 ;
-: .vesa-modes  ( -- )
+0 value vesa-modes-adr
+: vesa-mode-list  ( -- adr )
+   vesa-modes-adr ?dup  if  exit  then   ( )
    vbe-info                     ( adr )
-   dup l@  h# 41534556 <>  if   ( adr )
-      ." VBE info call failed" cr
-      drop exit
-   then                         ( adr )
-   dup 6 + seg:off@  .cstr cr   ( adr )
+   dup l@  h# 41534556 <>       ( adr flag )
+   abort" VBE info call failed" ( adr )
+\  dup 6 + seg:off@  .cstr cr   ( adr )
    d# 14 + seg:off@             ( 'mode-list )
    dup #vesa-modes 1+           ( 'mode-list #modes )
    /w* dup alloc-mem            ( 'mode-list modes-len adr )
    dup >r swap move r>          ( adr )
-   begin  dup w@ dup h# ffff <>  while  .vesa-mode-info  wa1+  repeat  cr  2drop
+   dup to vesa-modes-adr        ( adr )
 ;
+: .vesa-modes  ( -- )
+   vesa-mode-list
+   begin                     ( adr )
+      dup w@ dup h# ffff <>  ( adr mode# flag )
+      exit? 0=  and          ( adr mode# flag )
+   while                     ( adr mode# )
+      .vesa-mode-info  wa1+  ( adr' )
+   repeat  cr                ( adr mode# )
+   2drop                     ( )
+;
+: vesa-mode-match?  ( x y depth mode# -- x y depth mode# match? )
+   dup vesa-mode-info >r          ( x y depth mode# r: adr )
+   3 pick  r@ h# 12 + w@  <>  if  ( x y depth mode# r: adr )
+      r> drop false exit          ( -- x y depth mode# false )
+   then                           ( x y depth mode# r: adr )
+   2 pick  r@ h# 14 + w@  <>  if  ( x y depth mode# r: adr )
+      r> drop false exit          ( -- x y depth mode# false )
+   then                           ( x y depth mode# r: adr )
+   1 pick  r@ h# 19 + c@  <>  if  ( x y depth mode# r: adr )
+      r> drop false exit          ( -- x y depth mode# false )
+   then                           ( x y depth mode# r: adr )
+   r> drop true
+;
+: find-vesa-mode  ( x y depth -- mode# )
+   vesa-mode-list                        ( x y depth adr )
+   begin  dup w@ dup h# ffff <>  while   ( x y depth adr mode# )
+      swap >r                            ( x y depth mode#  r: adr )
+      vesa-mode-match?  if               ( x y depth mode#  r: adr )
+         nip nip nip  r> drop            ( mode# )
+         exit                            ( -- mode# )
+      then                               ( x y depth mode#  r: adr )
+      drop r> wa1+                       ( x y depth )
+   repeat                                ( x y depth adr )
+   4drop 0
+;   
 
 [ifdef] Commentary
 00.w mode attributes

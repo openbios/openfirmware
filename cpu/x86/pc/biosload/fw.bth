@@ -183,6 +183,12 @@ dend
 [then]
 [then]
 
+fload ${BP}/cpu/x86/pc/rmtools.fth
+
+[ifdef] syslinux-loaded
+fload ${BP}/cpu/x86/pc/biosload/callvbe.fth
+[then]
+
 fload ${BP}/cpu/x86/pc/biosload/devices.fth
 
 fload ${BP}/dev/scsi/probscsi.fth	\ probe-scsi and probe-scsi-all
@@ -240,13 +246,9 @@ hex
 ;
 
 fload ${BP}/cpu/x86/pc/biosload/usb.fth
-fload ${BP}/cpu/x86/pc/rmtools.fth
+
 fload ${BP}/cpu/x86/pc/biosload/callbios.fth
 \ fload ${BP}/cpu/x86/pc/biosload/rmenter.fth
-
-[ifdef] syslinux-loaded
-fload ${BP}/cpu/x86/pc/biosload/callvbe.fth
-[then]
 
 \ false to stand-init-debug?
 true to stand-init-debug?

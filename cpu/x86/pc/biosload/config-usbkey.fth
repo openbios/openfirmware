@@ -17,7 +17,8 @@ create addresses-assigned  \ Don't reassign PCI addresses
 \ create virtual-mode
 create use-root-isa
 create use-isa-ide
-create use-ega
+create use-ega          \ For text-mode display
+\ create use-vesa         \ For graphics-mode display
 create use-elf
 create use-ne2000
 create use-watch-all
