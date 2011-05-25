@@ -525,9 +525,9 @@ variable kbd-refcount
 
 headers
 : open  ( -- okay? )
+   my-space set-port
    kbd-refcount @  if  1 +refcnt  true exit  then
    unlock
-   my-space set-port
    keyboard-present?  if  clear-out-buf  else  reset  then
    keyboard-present?  0=  if  false exit  then
    choose-type
