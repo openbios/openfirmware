@@ -156,19 +156,6 @@ fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
    : close ;
 end-package
 
-fload ${BP}/dev/logdev.fth
-0 value smt-test?  \ !!!
-0 value final-test?  \ !!!
-fload ${BP}/cpu/x86/pc/olpc/disptest.fth
-fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
-fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
-fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
-fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
-fload ${BP}/cpu/arm/olpc/1.75/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
-
-fload ${BP}/cpu/arm/olpc/1.75/pinch.fth  \ Touchscreen gestures
-: pinch  " pinch" screen-ih $call-method  ;
-
 fload ${BP}/cpu/arm/mmp2/keypad.fth
 [ifndef] cl2-a1
 stand-init: keypad
@@ -210,6 +197,20 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
 ;
 
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
+
+fload ${BP}/dev/logdev.fth
+0 value smt-test?  \ !!!
+0 value final-test?  \ !!!
+fload ${BP}/cpu/x86/pc/olpc/disptest.fth
+fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
+fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
+fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
+fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
+fload ${BP}/cpu/arm/olpc/1.75/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
+
+fload ${BP}/cpu/arm/olpc/1.75/pinch.fth  \ Touchscreen gestures
+: pinch  " pinch" screen-ih $call-method  ;
+
 : emacs  ( -- )
    false to already-go?
    boot-getline to boot-file   " rom:emacs" $boot

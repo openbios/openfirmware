@@ -575,6 +575,97 @@ false value verbose?
    false
 ;
 
+\ For XO-1.75, the game buttons are connected directly to the CPU SoC,
+\ instead of going through the EC.  To preserve the rest of the test
+\ logic, we generate a stream of up-down events from the game button
+\ mask information.
+
+0 value pending-scancode  \ One-byte queue for scancodes that follow an e0 prefix
+0 value pending-buttons   \ Bitmask of button changes that haven't been sent yet
+0 value last-buttons      \ State of game keys the last time we looked
+
+\ Finds the rightmost one bit in mask
+: choose-bit  ( mask -- bit# )
+   d# 32 0  do                ( mask )
+      dup 1 and  if           ( mask )
+	 drop i unloop exit   ( -- bit# )
+      then                    ( mask )
+      u2/                     ( mask' )
+   loop                       ( mask )
+   drop -1                    ( bit# )  \ Shouldn't happen
+;
+
+\ Maps bit number to scancode sequence
+
+create button-scancodes
+\  square   check    up     down   left   right  rotate  o        x
+\  0        1        2      3      4      5      6       7        8
+   e067 w,  e068 w,  65 w,  66 w,  67 w,  68 w,  69 w,   e065 w,  e066 w,
+
+\ If the scancode has an e0 prefix, bit#>scancode returns e0 and puts
+\ the suffix scancode in pending-scancode where it will be picked up
+\ the next time.
+: bit#>scancode  ( bit# -- scancode )
+   button-scancodes over wa+ w@             ( bit# scancode )
+   \ Or in the 80 bit on an "up" transition
+   1 rot lshift  last-buttons and  0=  if   ( scancode )
+      h# 80 or                              ( scancode' )
+   then                                     ( scancode )
+   dup h# ff00 and  if                      ( scancode )
+      h# ff and to pending-scancode         ( scancode )
+      h# e0                                 ( e0 )
+   then                                     ( scancode )
+;
+
+\ Returns the next button-related scancode byte.
+: button-event?  ( -- false | scancode true )
+   \ Handle the suffix of an e0-scancode sequence
+   pending-scancode  if                              ( )
+      pending-scancode  0 to pending-scancode  true  ( scancode true )
+      exit                                           ( -- scancode true )
+   then                                              ( )
+
+   \ If the pending-buttons change mask is 0, we don't have anymore
+   \ events to generate from the last time around, so reread the
+   \ game buttons and set pending-buttons to the ones that have
+   \ changed.
+   pending-buttons  0=  if
+      game-key@                                  ( new-buttons )
+      dup last-buttons xor  to pending-buttons   ( new-buttons )
+      to last-buttons                            ( )
+   then
+
+   \ If there are bits set in pending-buttons, generate an event from
+   \ the leftmost set bit and remove that bit from pending-buttons.
+   pending-buttons  if                           ( )
+      \ Find the rightmost changed bit
+      pending-buttons choose-bit                 ( bit# )
+
+      \ Remove that bit from pending-buttons so it won't be reported again
+      1 over lshift invert                       ( bit# clear-mask )
+      pending-buttons and  to pending-buttons    ( bit# )
+
+      \ Generate an up or down scancode sequence corresponding to that bit
+      dup bit#>scancode  true                    ( scancode true )
+   else                                          ( )
+      false                                      ( false )
+   then                                          ( false | scancode true )
+;
+
+\ Check for a change in button state if necessary.
+: or-button?  ( [scancode] key? -- [scancode] flag )
+   \ If there is already a key from get-data?, handle it before checking the game buttons
+   dup  if  exit  then          ( [scancode] key? phandle )
+
+   \ If the /ec-spi device node is present, the game buttons are directly connected
+   \ so we must handle them here.  Otherwise the EC will handle them and fold their
+   \ events into the keyboard scancode stream.
+   " /ec-spi" find-package  if  ( false phandle )
+      2drop                     ( )
+      button-event?             ( [scancode] flag )
+   then                         ( [scancode] flag )
+;
+
 0 value last-timestamp
 : selftest-keys  ( -- )
    false to esc?
@@ -584,8 +675,8 @@ false value verbose?
       final-test?  smt-test?  or  if
          key-stuck?  if  exit  then
       then
-      get-data?  if     ( scancode )
-         process-raw    ( exit? )
+      get-data?  or-button?  if      ( scancode )
+         process-raw                 ( exit? )
          get-msecs to last-timestamp
       else
          final-test?  smt-test?  or  if
