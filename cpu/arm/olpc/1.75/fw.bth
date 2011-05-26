@@ -146,6 +146,10 @@ fload ${BP}/cpu/x86/pc/olpc/strokes.fth
 fload ${BP}/cpu/x86/pc/olpc/plot.fth
 fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
 
+fload ${BP}/cpu/arm/olpc/1.75/switches.fth \ Lid and ebook switches
+fload ${BP}/cpu/arm/olpc/1.75/leds.fth     \ LEDs
+\ fload ${BP}/cpu/x86/pc/olpc/via/factory.fth  \ Manufacturing tools
+
 \ Pseudo device that appears in the boot order before net booting
 0 0 " " " /" begin-package
    " prober" device-name
