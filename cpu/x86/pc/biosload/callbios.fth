@@ -50,8 +50,8 @@ label bios-call
    rm-data-desc #  ax  mov  \ 16-bit data segment
    ax ds mov  ax es mov  ax fs mov  ax gs mov  ax ss mov
 
-   pm-gdt-save #) sgdt  \ So we can get back
-   pm-idt-save #) sidt  \ So we can get back
+   op: pm-gdt-save #) sgdt  \ So we can get back
+   op: pm-idt-save #) sidt  \ So we can get back
 
    'bios-idt #) lidt
    cr0 ax mov   h# fe # al and   ax cr0 mov   \ Enter real mode
