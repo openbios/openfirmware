@@ -36,6 +36,10 @@ fload ${BP}/cpu/x86/pc/builton.bth
 
 hex
 
+[ifdef] virtualbox-loaded
+writing floppyofw.img
+[then]
+
 [ifdef] grub-loaded
   fload ${BP}/cpu/x86/pc/elfhdr.fth
     .( --- Saving as ofwgrub.elf - GRUB multiboot format) cr

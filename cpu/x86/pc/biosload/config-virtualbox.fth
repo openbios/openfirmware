@@ -6,6 +6,7 @@ purpose: Establish configuration definitions
 
 \ Load and run in VirtualBox (also works for other emulators)
 create virtualbox-loaded 
+create real-mode-entry
 
 \ create debug-startup
 \ create serial-console
