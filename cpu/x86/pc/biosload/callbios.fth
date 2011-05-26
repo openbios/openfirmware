@@ -73,25 +73,34 @@ here bios-call - constant /bios-call
 label bios-ret
    16-bit
 
-   bios-target #  sp  mov   \ Set the stack pointer to the top of the rm reg area
+   cli
+
+   \ The SS:SP is currently at bios-rflags+2, as a result of the "far ret"
+   \ in bios-call having popped bios-target and the IRET in the INT handler
+   \ having popped bios-retloc (32 bits) and bios-rflags (16 bits).
+   \ The next line moves SS:SP down so subsequents pushes will hit the
+   \ register area.
+   d# 10 #  sp  sub
 
    \ Copy the real-mode registers to the buffer
    op: pushf  op: pusha   ds push  es push  fs push  gs push
 
-   cli
-   ax ax xor  ax ds mov    \ Assumes that the real-mode buffers are in the low 64K
+   pm-gdt-save >seg:off    ( offset segment )
+   # push  ds pop          ( offset )   \ Don't kill any other registers
+   op: #) lgdt             ( )
 
-   op: pm-gdt-save #) lgdt
-   cr0 ax mov  1 # al or  ax cr0 mov
+   cr0 ax mov  1 # al or  ax cr0 mov    \ Switch to protected mode
 
-   here 5 +  bios-ret -  'bios-ret +  pm-code-desc #)  far jmp
+   here 5 +  bios-ret -  'bios-ret +  pm-code-desc #)  far jmp  \ Jump to next location
 
    32-bit
 
+   \ Reload descriptors with protected mode versions
    pm-data-desc # ax mov  ax ds mov  ax es mov  ax gs mov  ax gs mov  ax ss mov
-   pm-idt-save #) lidt
 
-   pm-sp-save #) sp mov
+   pm-idt-save #) lidt  \ Switch back to protected mode IDT
+
+   pm-sp-save #) sp mov \ Switch back to protected mode stack
    popf
    popa
 c;
@@ -114,8 +123,8 @@ c;
    bios-prepped?  if  exit  then   true to bios-prepped?
    bios-call 'bios-call  /bios-call move
    bios-ret  'bios-ret   /bios-ret  move
-   h# ffff 'bios-idt w!
-   0 'bios-idt 2+ l!
+   h# ffff 'bios-idt w!              \ IDT size
+   0 'bios-idt 2+ l!                 \ IDT base address
    bios-regs   'bios-sp    seg:off!  \ Setup real-mode full pointer for lss
    'bios-ret   bios-retloc seg:off!  \ Setup return address full pointer
    bios-flagval bios-retloc 4 + w!   \ Flags for return
