@@ -50,14 +50,16 @@ h# 20 pad-to
 
 label gdt-template	\ Will be copied to gdt-pa
   0    le-w,  0         le-l,	    0 le-w,  \  0 Mandatory null descriptor
-  0    le-w,  0         le-l,	    0 le-w,  \ * Another null descriptor
-  ffff le-w,  9b.000000 le-l,  00.c.f le-w,  \ 10 Code, linear=physical, 4GB
-  ffff le-w,  93.000000 le-l,  00.c.f le-w,  \ 18 Data, linear=physical, 4GB
+  ffff le-w,  9b.000000 le-l,	    0 le-w,  \  8 16-bit code, linear=physical, 64K
+  ffff le-w,  93.000000 le-l,  00.8.f le-w,  \ 10 16-bit data, linear=physical, 4GB
+  ffff le-w,  93.000000 le-l,       0 le-w,  \ 18 16-bit data, linear=physical, 64K
+  ffff le-w,  9b.000000 le-l,  00.c.f le-w,  \ 20 Code, linear=physical, 4GB
+  ffff le-w,  93.000000 le-l,  00.c.f le-w,  \ 28 Data, linear=physical, 4GB
 end-code
 label gdt-end  end-code
 
 label gdt-ptr	\ GDT limit + address
-  1f le-w,  gdt-pa le-l,	\ # slots (3 * 8 - 1) ,  starting address
+  2f le-w,  gdt-pa le-l,	\ # slots (3 * 8 - 1) ,  starting address
 end-code
 
 h# 100 pad-to  \ space for stack 
@@ -191,7 +193,7 @@ ascii 5 vr-report
       \ Execute a far jump to following code to reload CS with a
       \ protected mode selector.  The offset portion of the address
       \ (here asm-base - 7 +) has been relocated by the code above.
-      op:  here asm-base - 7 +  10 #)  far jmp
+      op:  here asm-base - 7 +  20 #)  far jmp
       32-bit
 
       \ The following 2 lines execute at compile time, patching the
@@ -202,7 +204,7 @@ ascii 5 vr-report
       here asm-base -  6 -  r> le-w!
 
       \ set segment registers
-      18 #  bx  mov		\ Data segment selector
+      28 #  bx  mov		\ Data segment selector
       bx    ds  mov		\ Set segment register
       bx    es  mov		\ Set segment register
       bx    fs  mov		\ Set segment register

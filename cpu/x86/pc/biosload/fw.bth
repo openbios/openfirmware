@@ -186,10 +186,7 @@ dend
 fload ${BP}/cpu/x86/pc/rmtools.fth
 
 fload ${BP}/cpu/x86/pc/biosload/callbios.fth
-
-[ifdef] syslinux-loaded
 fload ${BP}/cpu/x86/pc/biosload/callvbe.fth
-[then]
 
 fload ${BP}/cpu/x86/pc/biosload/devices.fth
 

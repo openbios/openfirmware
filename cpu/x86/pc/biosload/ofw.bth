@@ -1,7 +1,7 @@
 purpose: Construct the final BIOS-start OFW image 
 
 command: &builder &this
-\ in: biostart.img
+in: biostart.img
 in: reset.di
 in: start.di
 in: ${BP}/cpu/x86/pc/biosload/build/paging.di
