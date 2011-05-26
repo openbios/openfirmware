@@ -339,6 +339,11 @@ fload ${BP}/cpu/x86/pc/biosload/memtest.fth
    [then]
 ;
 
+\ This reduces processor use when waiting for a key.  It helps
+\ a lot when running on an emulator.
+: c1-idle  ( -- )  interrupts-enabled?  if  halt  then  ;
+' c1-idle to stdin-idle
+
 : startup  ( -- )
    standalone?  0=  if  exit  then
    ." calibrate-ms"  cr
@@ -358,7 +363,8 @@ fload ${BP}/cpu/x86/pc/biosload/memtest.fth
    warning on
    only forth also definitions
 
-\   install-alarm
+   ." Installing alarms" cr
+   install-alarm
 
    #line off
 
