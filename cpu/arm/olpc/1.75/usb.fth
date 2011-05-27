@@ -16,6 +16,9 @@ purpose: USB elaborations for the BIOS loaded OFW
    : otg-set-host-mode  3 h# a8 ehci-reg!  ;  \ Force host mode
    ' otg-set-host-mode to set-host-mode
 
+   \ Port 1 on the hub (bit 0) is connected to unused pins on the
+   \ WLAN connector, so testing it is confusing
+   h# e  " hub-port-mask" integer-property
 end-package
    
 d# 300 config-int usb-delay  \ Milliseconds to wait before probing hub ports

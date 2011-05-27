@@ -60,9 +60,10 @@ headers
    then                                              ( #testable-ports )
 ;
 
+: port-connected?  ( port# -- flag )  portsc@ h# 2001 and  ;
 : wait-connect  ( port# -- error? )
    begin                            ( port# )
-      dup portsc@ h# 2001 and  0=   ( port# unconnected? )
+      dup port-connected?  0=       ( port# unconnected? )
    while                            ( port# )
       key?  if                      ( port# )
          key h# 1b =  if            ( port# )   \ ESC aborts
@@ -156,11 +157,11 @@ defer set-host-mode  ' noop to set-host-mode
    ehci-reg dup 0=  if  map-regs  then
 
    #testable-ports  0  ?do
-      i portsc@ h# 2001 and  if		\ Port owned by usb 1.1 controller (2000) or device is present (1)
+      i port-connected?  if		\ Port owned by usb 1.1 controller (2000) or device is present (1)
          ." USB 2.0 port " i u. ."  in use" cr
       else
          diagnostic-mode?  if
-            ." Please connect a device to USB port " i u. " !" cr
+            ." Please connect a device to USB port " i u. cr
             i wait-connect  if  true unloop exit  then
          else
             ." Fisheye pattern out to USB 2.0 port " i u. cr

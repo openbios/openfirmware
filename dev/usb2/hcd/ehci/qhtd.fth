@@ -549,7 +549,7 @@ d# 32 constant intr-interval		\ 4 ms poll interval
 ;
 
 true value delay?
-: poll-delay  ( -- )  d# 100 " us" evaluate  ;
+: poll-delay  ( -- )  d# 300 " us" evaluate  ;
 : done?  ( qh -- usberr )
    delay?  if  poll-delay  then
    begin  dup qh-done?  0=  while   ( qh )

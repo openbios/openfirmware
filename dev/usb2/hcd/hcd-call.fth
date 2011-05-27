@@ -13,12 +13,15 @@ external
 \ Probing support
 : set-target  ( device -- )
    " set-target" $call-parent
- ;
+;
 : probe-hub-xt  ( -- adr )
-    " probe-hub-xt" $call-parent
+   " probe-hub-xt" $call-parent
 ;
 : reprobe-hub-xt  ( -- adr )
-    " reprobe-hub-xt" $call-parent
+   " reprobe-hub-xt" $call-parent
+;
+: hub-selftest-xt  ( -- adr )
+   " hub-selftest-xt" $call-parent
 ;
 : set-pipe-maxpayload  ( size len -- )
    " set-pipe-maxpayload" $call-parent

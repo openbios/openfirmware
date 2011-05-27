@@ -53,6 +53,11 @@ headers
       reprobe-hub-xt execute
    then
 ;
+: selftest  ( -- )
+   ['] hub-id catch 0=  if
+      hub-selftest-xt execute
+   then
+;
 
 probe-hub
 

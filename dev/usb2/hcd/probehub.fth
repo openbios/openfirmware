@@ -11,6 +11,9 @@ hex
 
 : power-hub-port   ( port -- )  PORT_POWER  DR_PORT " set-feature" $call-parent drop  ;
 : reset-hub-port   ( port -- )  PORT_RESET  DR_PORT " set-feature" $call-parent drop  d# 20 ms  ;
+\ Test modes: 1:J 2:K 3:SE0_NAK 4:Packet 5:ForceEnable
+: test-hub-port    ( port test-mode -- )  wljoin  PORT_TEST   DR_PORT " set-feature" $call-parent drop  ;
+: untest-hub-port  ( port -- )  PORT_TEST   DR_PORT " clear-feature" $call-parent drop  ;
 : clear-status-change  ( port -- )  C_PORT_CONNECTION  DR_PORT " clear-feature" $call-parent drop  ;
 : parent-set-target  ( dev -- )  " set-target" $call-parent  ;
 : hub-error?  ( -- error? )
@@ -154,6 +157,77 @@ external
 ;
 
 : reprobe-hub-xt  ( -- adr )  ['] do-reprobe-hub  ;
+
+: hub-port-connected?  ( port# -- flag )
+   get-port-status  if  false exit  then
+   hub-buf c@ 1 and  0<>
+;
+0 value hub-dev
+: wait-hub-connect  ( port# -- error? )
+   begin                            ( port# )
+      dup hub-port-connected?  0=   ( port# unconnected? )
+   while                            ( port# )
+      key?  if                      ( port# )
+         key h# 1b =  if            ( port# )   \ ESC aborts
+            drop true exit          ( -- true )
+         then                       ( port# )
+      then                          ( port# )
+   repeat                           ( port# )
+   ." Device connected - probing ... "
+   probe-setup                      ( port# )
+   hub-dev swap ['] probe-hub-port  catch  if  ( x x  )
+      2drop                         ( )
+      ." Failed" cr                 ( )
+      true                          ( true )
+   else                             ( )
+      ." Done" cr                   ( )
+      false                         ( false )
+   then                             ( error? )
+   probe-teardown                   ( error? )
+;
+
+0 value hub-test-mask
+: hub-selftest  ( hub-dev -- error? )
+   to hub-dev                               ( )
+
+   " hub-port-mask" get-inherited-property  if	( )
+      -1					( mask )
+   else						( propval$ )
+      get-encoded-int				( mask )
+   then						( mask )
+   to hub-test-mask				( )
+
+   hub-#ports 1+  1  ?do			( )
+      1  i 1-  lshift  hub-test-mask  and  if
+         hub-dev parent-set-target		( )
+         i get-port-status  if			( )
+            ." Get-port-status failed for hub port " i u. cr
+   	 true unloop exit			( -- true )
+         then					( )
+         hub-buf c@ 8 and  if	\ Connected	( )
+            ." Hub port " i u. ." in over current" cr
+            true unloop exit			( -- true )
+         then					( )
+         hub-buf c@ 1 and  if	\ Connected	( )
+            ." Hub port " i u. ." in use" cr	( )
+         else					( )
+            diagnostic-mode?  if		( )
+               ." Please connect a device to USB hub port " i u.  cr	( )
+               i wait-hub-connect  if  true unloop exit  then			( )
+            else							( )
+               ." Fisheye pattern out to USB hub port " i u. cr		( )
+               i 4 test-hub-port					( )
+               d# 2,000 ms						( )
+               i untest-hub-port					( )
+               i reset-hub-port  i power-hub-port			( )
+            then							( )
+         then								( )
+      then								( )
+   loop									( )
+   \ Mabye need to reset the entire hub here
+   false								( false )
+;
+: hub-selftest-xt  ( -- xt )  ['] hub-selftest  ;
 
 headers
 

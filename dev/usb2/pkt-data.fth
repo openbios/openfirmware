@@ -72,11 +72,13 @@ DR_CLASS DR_INTERFACE or constant DR_HIDD
 04 constant PORT_RESET
 08 constant PORT_POWER
 09 constant PORT_LOW_SPEED
-10 constant C_PORT_CONNECTION
-11 constant C_PORT_ENABLE
-12 constant C_PORT_SUSPEND
-13 constant C_PORT_OVER_CURRENT
-14 constant C_PORT_RESET
+d# 16 constant C_PORT_CONNECTION
+d# 17 constant C_PORT_ENABLE
+d# 18 constant C_PORT_SUSPEND
+d# 19 constant C_PORT_OVER_CURRENT
+d# 20 constant C_PORT_RESET
+d# 21 constant PORT_TEST
+d# 22 constant PORT_INDICATOR
 
 \ Use tmp-l to make sure that le-l! and le-w! are atomic writes
 
