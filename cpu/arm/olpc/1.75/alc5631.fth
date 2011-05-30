@@ -1,17 +1,36 @@
 \ See license at end of file
 purpose: Driver for Realtek ALC5631Q audio CODEC chip
 
+: adc-on  ( -- )  h# 0c00 h# 3a codec-set  ;
+: adc-off ( -- )  h# 0c00 h# 3a codec-clr  ;
+: dac-on  ( -- )  h# 0300 h# 3a codec-set  ;
+: dac-off ( -- )  h# 0300 h# 3a codec-clr  ;
+
 : codec-on  ( -- )
-   h# 8001 h# 34 codec!  \ Slave mode, 16 bits, left justified
-   b# 1001.1111.1110.0000 h# 3a codec!  \ All on
-   b# 1111.1100.0011.1100 h# 3b codec!  \ All on except PLL
+   0 0 codec!  \ Reset
+
    b# 1010.0000.0001.1101 h# 3c codec!  \ All on except AX and MONO
+   d# 110 ms
+   b# 1110.0000.0001.1101 h# 3c codec!  \ Fast VREF control
+   d# 100 ms
+
+   h# 8021 h# 34 codec!  \ Slave mode, 16 bits, left justified, left channel on LRCLK high
+
+   h# 1010 h# 38 codec!  \ Divisors; the values in this register don't seem to make much
+   \ difference unless you set the divisors to very high values.
+
+   \ The ADC and DAC will be turned on as needed by adc-on and dac-on, after
+   \ the BCLK clock from the SoC is on.  If you turn on the ADC when BCLK is
+   \ not clocking, the ADC often doesn't output any data.
+   b# 1001.0000.1110.0000 h# 3a codec!  \ All on except ADC and DAC
+   b# 1111.1100.0011.1100 h# 3b codec!  \ All on except PLL
    b# 1111.1100.0000.0000 h# 3e codec!  \ AXI and MONO IN off
+
 \   h# 8c00 h# 40 codec!  \ Speaker Amp Auto Ratio GAIN, use HPFs
-   h# 8000 h# 40 codec!  \ Speaker Amp Auto Ratio GAIN, no HPFs
+   h# 4e00 h# 40 codec!  \ Speaker Amp Ratio GAIN is 1.44x, no HPFs
    h# 0000 h# 42 codec!  \ Use MCLK, not PLL
-   b# 1110.1100.1001.0000 h# 52 codec!  \ Protection on
-   h# 4000 h# 56 codec!  \ Power on Cap-free block with de-pop
+\   b# 1110.1100.1001.0000 h# 52 codec!  \ Protection on
+   h# 8000 h# 56 codec!  \ HP depop by register control
 ;
 : codec-off  ( -- )
    0 h# 3a codec!  \ All off
@@ -82,7 +101,7 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
 ;
 d#   0 constant default-adc-gain            \   0 dB - range is -96.625 to +28.5
 d#   0 constant default-dac-gain            \   0 dB - range is -96.625 to +28.5
-d#  44 constant default-mic-gain            \  44 dB - range is  0 to 50 dB
+d#  52 constant default-mic-gain            \  52 dB - range is  0 to 52 dB
 d#   0 constant default-speaker-volume      \   0 dB - range is -46.5 to +12
 d# -10 constant default-headphone-volume    \ -10 dB - range is -46.5 to 0
 
@@ -131,6 +150,7 @@ d# -10 constant default-headphone-volume    \ -10 dB - range is -46.5 to 0
 false value external-mic?
 : mic-routing  ( -- n )
    mic1-single-ended mic2-single-ended
+   mic1-low-bias mic2-low-bias    \ Works better than high bias
    adc-unmute-mic
 ;
 : db>mic-boost  ( db -- code )
@@ -172,7 +192,9 @@ false value external-mic?
       d# 48000 of  h# 0000 h# 3072  endof
       ( default )  true abort" Unsupported audio sample rate"
    endcase   ( reg62val2 reg60val )
-   h# 60 codec!  h# 62 codec!
+   \ XXX need to do something with register 38
+   2drop
+\   h# 60 codec!  h# 62 codec!
 ;
 
 \ LICENSE_BEGIN

@@ -193,6 +193,15 @@ audio-sram h# 3f80 + constant in-desc
    r> codec!         ( )
 ;
 
+[ifdef] cl2-a1
+fload ${BP}/cpu/arm/olpc/1.75/alc5624.fth  \ Realtek ALC5624 CODEC
+[else]
+: headphones-inserted?  ( -- flag )  d# 97 gpio-pin@  ;
+: microphone-inserted?  ( -- flag )  d# 96 gpio-pin@  ;
+
+fload ${BP}/cpu/arm/olpc/1.75/alc5631.fth  \ Realtek ALC5631Q CODEC
+[then]
+   
 d# 48000 value sample-rate
 
 \ Longest time to wait for a buffer event - a little more
@@ -284,6 +293,7 @@ false value playing?
    copy-out
    start-out-ring
    enable-sspa-tx
+   dac-on
    out-len  if  copy-out  then  \ Prefill the second buffer
    install-playback-alarm
    true to playing?
@@ -323,6 +333,7 @@ false value playing?
    tuck  to in-len  to in-adr  ( actual )
    make-in-ring                ( actual )
    enable-sspa-rx              ( actual )
+   adc-on                      ( actual )
    start-in-ring               ( actual )
    begin  in-len  while        ( actual )
       wait-in                  ( actual )
@@ -351,15 +362,6 @@ false value playing?
 \ Page 1498 - The data transmit register is listed as RO.  How can a transmit register be RO????
 [then]
 
-[ifdef] cl2-a1
-fload ${BP}/cpu/arm/olpc/1.75/alc5624.fth  \ Realtek ALC5624 CODEC
-[else]
-: headphones-inserted?  ( -- flag )  d# 97 gpio-pin@  ;
-: microphone-inserted?  ( -- flag )  d# 96 gpio-pin@  ;
-
-fload ${BP}/cpu/arm/olpc/1.75/alc5631.fth  \ Realtek ALC5631Q CODEC
-[then]
-   
 : set-sample-rate  ( rate -- )
    dup to sample-rate
    dup set-ctlr-sample-rate
