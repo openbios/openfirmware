@@ -193,7 +193,7 @@ external
    " hub-port-mask" get-inherited-property  if	( )
       -1					( mask )
    else						( propval$ )
-      get-encoded-int				( mask )
+      decode-int nip nip			( mask )
    then						( mask )
    to hub-test-mask				( )
 

@@ -42,17 +42,6 @@ headers
    dup portsc@ swap portsc!       ( )		\ Clear connection change bit
 ;
 
-: probe-setup  ( -- )
-   \ Set active-package so device nodes can be added and removed
-   my-self ihandle>phandle push-package
-
-   alloc-pkt-buf
-;
-: probe-teardown  ( -- )
-   free-pkt-buf
-   pop-package
-;
-
 : #testable-ports  ( -- n )
    #ports                                            ( #hardware-ports )
    " usb-test-ports" get-inherited-property  0=  if  ( #hardware-ports adr len )

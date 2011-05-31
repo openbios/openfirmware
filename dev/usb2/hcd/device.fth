@@ -491,6 +491,17 @@ h# 409 constant language  			\ Unicode id
    drop false                                          ( false )
 ;
 
+: probe-setup  ( -- )
+   \ Set active-package so device nodes can be added and removed
+   my-self ihandle>phandle push-package
+
+   alloc-pkt-buf
+;
+: probe-teardown  ( -- )
+   free-pkt-buf
+   pop-package
+;
+
 headers
 
 \ LICENSE_BEGIN
