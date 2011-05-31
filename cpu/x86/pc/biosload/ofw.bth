@@ -23,6 +23,7 @@ in: ${BP}/dev/pci/build/pcibridg.fc
 in: ${BP}/dev/ide/build/leghier.fc
 in: ${BP}/cpu/x86/pc/biosload/linux.fth
 in: ${BP}/dev/mmc/sdhci/build/sdhci2.fc
+in: ${BP}/dev/mmc/sdhci/build/sdhci.fc
 in: ${BP}/dev/mmc/sdhci/build/sdmmc.fc
 in: ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc
 in: sd8686.bin
