@@ -34,7 +34,7 @@ my-space h# 800 reg
 
    h# d405.0024 l@  h# 20 or  h# d405.0024 l!  \ Enable 12S clock out to SSPA1
 
-   h# 10800 38 sspa!
+   h# 10800 h# 38 sspa!
   
 [ifdef] 24mhz
    \ Bits 14:9 set the divisor from SYSCLK to BITCLK.  The setting below
@@ -46,7 +46,11 @@ my-space h# 800 reg
 [then]
 ;
 
+: reset-rx  ( -- )  h# 8000.0002 h# 0c sspa!  ;
+
 : setup-sspa-rx  ( -- )
+   reset-rx
+
    h# 8000.0000  \ Dual phase (stereo)
    0 d# 24 lshift or  \ 1 word in phase 2
    2 d# 21 lshift or  \ 16 bit word in phase 2
@@ -60,7 +64,8 @@ my-space h# 800 reg
 
    h# 8000.0000          \ Enable writes
    d# 15 d# 20 lshift or \ Frame sync width
-   1     d# 18 lshift or \ Internal clock - master configuration
+\ We choose the master/slave configuration later, in enable-sspa-tx
+   0     d# 18 lshift or \ Internal clock - master configuration
    0     d# 17 lshift or \ Sample on rising edge of clock
    0     d# 16 lshift or \ Active high frame sync
    d# 31 d#  4 lshift or \ Frame sync period
@@ -69,11 +74,15 @@ my-space h# 800 reg
 
    h# 10 h# 10 sspa!   \ Rx FIFO limit
 ;
-: enable-sspa-rx  ( -- )  h# 0c sspa@  h# 8004.0001 or  h# 0c sspa!  ;
-: disable-sspa-rx  ( -- )  h# 0c sspa@  h# 8000.0040 or  h# 4.0001 invert and    h# 0c sspa!  ;
+: master-rx  ( -- )  h# 0c sspa@  h# 8004.0001 or  h# 0c sspa!  ;  \ Master, on
+: slave-rx  ( -- )  h# 0c sspa@  h# 8000.0001 or  h# 0c sspa!  ;  \ Slave, on
+: disable-sspa-rx  ( -- )  h# 0c sspa@  h# 8000.0004 or  h# 4.0001 invert and    h# 0c sspa!  ;
 
+: reset-tx  ( -- )  h# 8000.0002 h# 8c sspa!  ;
 
 : setup-sspa-tx  ( -- )
+   reset-tx
+
    h# 8000.0000  \ Dual phase (stereo)
    0 d# 24 lshift or  \ 1 word in phase 2
    2 d# 21 lshift or  \ 16 bit word in phase 2
@@ -88,8 +97,8 @@ my-space h# 800 reg
 
    h# 8000.0000          \ Enable writes
    d# 15 d# 20 lshift or \ Frame sync width
-   1     d# 18 lshift or \ Internal clock - master configuration
-\  0     d# 18 lshift or \ External clock - slave configuration (Rx is master)
+\ We choose the master/slave configuration later, in master-tx
+   0     d# 18 lshift or \ External clock - slave configuration (Rx is master)
    0     d# 17 lshift or \ Sample on rising edge of clock
    0     d# 16 lshift or \ Active high frame sync
    d# 31 d#  4 lshift or \ Frame sync period
@@ -98,8 +107,9 @@ my-space h# 800 reg
 
    h# 10 h# 90 sspa!  \ Tx FIFO limit
 ;
-: enable-sspa-tx  ( -- )  h# 8c sspa@  h# 8004.0001 or  h# 8c sspa!  ;
-: disable-sspa-tx  ( -- )  h# 8c sspa@  h# 8000.0040 or  h# 4.0001 invert and  h# 8c sspa!  ;
+: master-tx  ( -- )  h# 8c sspa@  h# 8004.0001 or  h# 8c sspa!  ;  \ Master, on
+: slave-tx  ( -- )  h# 8c sspa@  h# 8000.0001 or  h# 8c sspa!  ;  \ Slave, on
+: disable-sspa-tx  ( -- )  h# 8c sspa@  h# 8000.0004 or  h# 4.0001 invert and  h# 8c sspa!  ;
 
 h# e000.0000 constant audio-sram
 h# fc0 constant /audio-buf
@@ -232,7 +242,7 @@ d# 48000 value sample-rate
 : dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
 : dma-free  ( adr len -- )  " dma-free" $call-parent  ;
 
-: open-in   ( -- )  setup-sspa-rx  ;
+: open-in   ( -- )  ;
 : close-in  ( -- )  ;
 : open-out  ( -- )  setup-sspa-tx  ;
 : close-out ( -- )  ;
@@ -266,14 +276,25 @@ false value playing?
    false to playing?
 ;
 
+: out-ready?  ( -- flag )
+   h# a0 adma@ 1 and  0<>
+   dup  if  0 h# a0 adma!  then
+;
+: out-dma-done?  ( -- flag )  h# 40 adma@  h# 4000 and  0=  ;
+
 : ?end-playing  ( -- )
-   h# a0 adma@ 1 and  0=  if  exit  then
-   0 h# a0 adma!
-   out-len  if  copy-out  then
-   h# 40 adma@  h# 4000 and  0=  if
-      stop-out
+   out-ready?  if
+      out-len  if  copy-out  then
+      out-dma-done?  if  stop-out  then
    then
 ;
+
+: set-out-in-mic  ( -- )
+   h# 80 h# 12 codec!   \ Mute right channel
+   h# 00 h# 16 codec!   \ Full digital gain
+   h# 6688 h# 22 codec!   \ No mic boost, low bias
+;
+
 : playback-continue-alarm  ( -- )
    playing?  if
       ?end-playing
@@ -291,10 +312,10 @@ false value playing?
    to out-adr            ( )
    make-out-ring
    copy-out
-   start-out-ring
-   enable-sspa-tx
-   dac-on
    out-len  if  copy-out  then  \ Prefill the second buffer
+   start-out-ring
+   master-tx
+   dac-on
    install-playback-alarm
    true to playing?
 ;
@@ -323,18 +344,23 @@ false value playing?
 
 : write  ( adr len -- actual )  open-out audio-out  ;
 
+: in-ready?  ( -- flag )
+   h# a4 adma@ 1 and  0<>
+   dup  if  0 h# a4 adma!  then
+;
 : wait-in  ( -- )
    buf-timeout  0  do
-      1 ms  h# a4 adma@ 1 and  ?leave
+      1 ms  in-ready?  ?leave
    loop
-   0 h# a4 adma!
 ;
+
 : audio-in  ( adr len -- actual )
    tuck  to in-len  to in-adr  ( actual )
+   setup-sspa-rx               ( actual )
    make-in-ring                ( actual )
-   enable-sspa-rx              ( actual )
-   adc-on                      ( actual )
    start-in-ring               ( actual )
+   master-rx                   ( actual )
+   adc-on                      ( actual )
    begin  in-len  while        ( actual )
       wait-in                  ( actual )
       copy-in                  ( actual )
@@ -342,6 +368,51 @@ false value playing?
    disable-sspa-rx             ( actual )
 ;
 : read  ( adr len -- actual )  open-in audio-in  ;
+
+: out-in  ( out-adr out-len in-adr in-len -- )
+   to in-len   to in-adr       ( out-adr out-len )
+   to out-len  to out-adr      ( )
+
+   setup-sspa-tx               ( )
+   setup-sspa-rx               ( )
+
+   make-in-ring                ( )
+   make-out-ring               ( )
+   copy-out                    ( )  \ Prefill the first Tx buffer
+   out-len  if  copy-out  then ( )  \ Prefill the second Tx buffer
+
+   start-in-ring               ( )
+   start-out-ring              ( )
+
+   master-rx                   ( )  \ Now the clock is on
+   slave-tx                    ( )
+
+   adc-on                      ( )
+   dac-on                      ( )
+
+   true to playing?
+
+   begin  in-len playing? or  while  ( )
+      in-ready?  if  copy-in  then   ( )
+      playing?  if  ?end-playing  then   ( )
+   repeat                      ( )
+   disable-sspa-rx             ( )
+   disable-sspa-tx             ( )
+
+   dac-off  adc-off            ( )
+;
+
+0 [if]  \ Interactive test words for out-in
+h# 20000 constant tlen
+: xb  load-base 1meg +  ;
+: ob  load-base   ;
+: sb  load-base 1meg 2* +  ;
+: px  xb tlen write drop ;
+: po  ob tlen write drop ;
+: ps  sb tlen write drop ;
+: shiftit  xb 1+  sb  tlen move  ;
+: oi  ob tlen xb tlen out-in  ;
+[then]
 
 : wait-sound  ( -- )
    lock[
