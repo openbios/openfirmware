@@ -24,7 +24,10 @@ h# 10.0000 constant /rom           \ Total size of SPI FLASH
 h# 1fa0.0000 constant fw-pa
 
 h# 1f00.0000 constant dma-base
-h#   a0.0000 constant dma-size
+h#   80.0000 constant dma-size
+
+h# 1f80.0000 constant extra-mem-base
+h#   20.0000 constant extra-mem-size
 
 [ifdef] virtual-mode
 h# f700.0000 constant fw-virt-base

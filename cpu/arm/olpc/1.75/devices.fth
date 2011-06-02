@@ -369,7 +369,12 @@ warning @ warning off
       " sourceurl" find-drop-in  if  " source-url" string-property  then
    dend
 ;
+
 warning !
+
+stand-init: More memory
+   extra-mem-base extra-mem-size add-memory
+;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
