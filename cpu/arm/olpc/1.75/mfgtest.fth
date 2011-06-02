@@ -127,7 +127,7 @@ d# 15 value #mfgtests
 : battery-item  ( -- )  " /battery"   mfg-test-dev  ;
 : spiflash-item ( -- )  " /flash"     mfg-test-dev  ;
 : memory-item   ( -- )  " /memory"    mfg-test-dev  ;
-: usb-item      ( -- )  " /usb"       mfg-test-dev  ;
+: usb-item      ( -- )  " /usb/hub"   mfg-test-dev  ;
 : int-sd-item   ( -- )  " int:0"      mfg-test-dev  ;
 : ext-sd-item   ( -- )  " ext:0"      mfg-test-dev  ;
 : rtc-item      ( -- )  " /rtc"       mfg-test-dev  ;
