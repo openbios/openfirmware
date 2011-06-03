@@ -94,9 +94,12 @@ fload ${BP}/cpu/arm/mmp2/gpio.fth
    init-timers
    init-twsi
 ;
-stand-init:
+warning @ warning off
+: stand-init-io
+   stand-init-io
    init-stuff
 ;
+warning !
 
 fload ${BP}/cpu/arm/mmp2/irq.fth
 
