@@ -86,12 +86,6 @@ fload ${BP}/forth/lib/tofile.fth	\ to-file and append-to-file
 \ XXX remove the OS file commands from tools.dic
 fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
 
-\ Defined by CPU core
-h# 1000 to pagesize
-d# 12   to pageshift
-h# 10.0000 constant /section
-h# 4000 constant /page-table
-
 [ifndef] no-heads
 resident   dispose   0 0 set-transize   \ true is suppress-transient
 

@@ -1,4 +1,7 @@
 \ Platform design choices
+
+fload ${BP}/cpu/arm/mmuparams.fth
+
 h# 2000.0000 constant total-ram-size
 
 h# 1fc0.0000 constant fb-pa
@@ -38,6 +41,10 @@ fw-pa value fw-virt-base
 [then]
 
 h# 0020.0000 constant /fw-ram
+/fw-ram /page-table -  constant page-table-offset
+page-table-offset   constant stack-offset  \ Stack is below this
+
+fw-pa page-table-offset + constant page-table-pa
 
 \ h# 0110.0000 constant def-load-base
 h# 0800.0000 constant def-load-base
@@ -46,8 +53,6 @@ h# 0800.0000 constant def-load-base
 
 h#  10.0000 constant heap-size
 heap-size constant initial-heap-size
-
-h# 40.0000 constant page-table-pa
 
 \ RAM address where the Security Processor code places the subset of the dropin module
 \ image that it copies out of SPI FLASH.

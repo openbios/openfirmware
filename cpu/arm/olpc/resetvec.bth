@@ -30,8 +30,8 @@ also arm-assembler definitions
 ;
 previous definitions
 
-/fw-ram  h# 2.0000 -  constant workspace-offset  \ Offset of inflater workspace within destination RAM
-/fw-ram  constant stack-offset                   \ Offset of top of inflater stack within destination RAM
+\ /fw-ram  constant stack-offset                   \ Offset of top of inflater stack within destination RAM
+stack-offset  h# 2.0000 -  constant workspace-offset  \ Offset of inflater workspace within destination RAM
 
 start-assembling
 
@@ -146,7 +146,8 @@ here my-entry  put-branch
 [then]
 
    \ Setup the page (section) table and turn on the MMU and caches
-   set     r0,`page-table-pa #`
+\    set     r0,`page-table-pa #`
+   set     r0,`fw-virt-base page-table-offset + #`
    bl      `init-map`			\ Setup the initial virtual address map
    bl	   `enable-mmu`			\ Turn on the MMU
    bl	   `caches-on`			\ Turn on the caches
