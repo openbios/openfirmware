@@ -354,15 +354,12 @@ warning @ warning off
 
       \ The "1-" removes the null byte
       " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
-[ifdef] notyet
-      ec-api-ver@ " ec-version" integer-property
-[then]
 
-[ifndef] cl2-a2  \ XXX remove this ifndef when the new EC code is ready
+      ec-api-ver@ " ec-version" integer-property
+
       ['] ec-name$  catch  0=  if  " ec-name" string-property  then
       ['] ec-date$  catch  0=  if  " ec-date" string-property  then
       ['] ec-user$  catch  0=  if  " ec-user" string-property  then
-[then]
    dend
 
    " /openprom" find-device

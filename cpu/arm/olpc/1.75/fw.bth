@@ -54,8 +54,6 @@ d# 9999 to arm-linux-machine-type  \ Marvell Jasper
 ;
 ' mmp-fb-tag, to fb-tag,
 
-\ fload ${BP}/cpu/arm/mmp2/usb.fth
-
 \ false to stand-init-debug?
 true to stand-init-debug?
 
@@ -109,6 +107,7 @@ patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-le
 \ so exiting from emacs doesn't invoke the diag menu.
 ' quit to user-interface
 fload ${BP}/cpu/arm/olpc/1.75/mfgtest.fth
+
 [ifdef] notyet
 fload ${BP}/cpu/x86/pc/olpc/via/bootmenu.fth
 [then]
@@ -146,9 +145,11 @@ fload ${BP}/cpu/x86/pc/olpc/strokes.fth
 fload ${BP}/cpu/x86/pc/olpc/plot.fth
 fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
 
+code halt  ( -- )  wfi   c;
+
 fload ${BP}/cpu/arm/olpc/1.75/switches.fth \ Lid and ebook switches
 fload ${BP}/cpu/arm/olpc/1.75/leds.fth     \ LEDs
-\ fload ${BP}/cpu/x86/pc/olpc/via/factory.fth  \ Manufacturing tools
+fload ${BP}/cpu/x86/pc/olpc/via/factory.fth  \ Manufacturing tools
 
 \ Pseudo device that appears in the boot order before net booting
 0 0 " " " /" begin-package
@@ -203,8 +204,6 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 
 fload ${BP}/dev/logdev.fth
-0 value smt-test?  \ !!!
-0 value final-test?  \ !!!
 fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
@@ -234,7 +233,6 @@ d# 6500 constant ms-factor
    h# 38 mod  8 +  " rtc!" clock-node @  ( data index adr len ih )
    ['] $call-method  catch if  2drop 3drop  then
 ;
-code halt  ( -- )  wfi   c;
 
 : dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
 : brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;
@@ -275,9 +273,7 @@ devalias fsdisk int:0
 
 create pong-use-touchscreen
 fload ${BP}/ofw/gui/ofpong.fth
-[ifdef] notyet
 fload ${BP}/cpu/x86/pc/olpc/life.fth
-[then]
 
 " u:\boot\olpc.fth ext:\boot\olpc.fth int:\boot\olpc.fth ext:\zimage /prober /usb/ethernet /usb/wlan"
    ' boot-device  set-config-string-default
@@ -302,12 +298,9 @@ h# 10.0000      h# 8000 -      h# 4000 -      dictionary-size !
 
 fload ${BP}/cpu/arm/saverom.fth  \ Save the dictionary for standalone startup
 
-[ifdef] notyet
-: c1-idle  ( -- )  interrupts-enabled?  if  halt  then  ;
-' c1-idle to stdin-idle
-[then]
-
 fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
+
+\ fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
 
 : console-start  ( -- )
    install-mux-io
@@ -348,7 +341,6 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    then                       ( in-factory? )
 ;
 
-[ifdef] notyet
 : ?games  ( -- )
    rocker-right game-key?  if
       protect-fw
@@ -368,12 +360,6 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    then
 ;
 
-: ?scan-nand  ( -- )
-   rocker-up game-key?  if
-      protect-fw  text-on  ['] scan-nand guarded
-   then
-;
-[then]
 : ?fs-update  ( -- )
    button-check button-x or  button-o or  button-square or   ( mask )
    game-key-mask =  if  protect-fw try-fs-update  then
@@ -401,9 +387,8 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
    show-child
    install-alarm
    ['] sound catch drop
-[ifdef] notyet
+
    ?games
-[then]
 
    ['] false to interrupt-auto-boot?
 [ifdef] probe-usb
@@ -415,13 +400,10 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
    " probe+" do-drop-in
 
    interpreter-init
-[ifdef] notyet
+
    ?diags
-[ifdef] Later
-   ?scan-nand
-[then]
    ?fs-update
-[then]
+
    factory-test? 0=  if  secure-startup  then
    unblock-exceptions
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
@@ -446,8 +428,6 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 
 : newrom
    " flash! http:\\10.20.0.14\new.rom" eval
-\   " wifi media lab 802.11" eval
-\   " flash http:\\18.85.46.172\new.rom" eval
 ;
 : newec
    " flash-ec http:\\10.20.0.14\ecimage.bin" eval
