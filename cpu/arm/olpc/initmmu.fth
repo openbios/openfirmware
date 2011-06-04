@@ -215,8 +215,8 @@ label init-map  ( r0: section-table -- )
    set r3,#0xc02                        \ No caching or write buffering
    bl  `map-sections-v=p`
 
-   set r1,`extra-mem-base #`            \ Address of additional allocatable memory
-   set r2,`extra-mem-size #`            \ Size of additional allocatable memory
+   set r1,`extra-mem-pa #`              \ Address of additional allocatable memory
+   set r2,`/extra-mem #`                \ Size of additional allocatable memory
    set r3,#0xc0e                        \ Write bufferable
    bl  `map-sections-v=p`
 

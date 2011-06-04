@@ -373,7 +373,7 @@ warning @ warning off
 warning !
 
 stand-init: More memory
-   extra-mem-base extra-mem-size add-memory
+   extra-mem-pa /extra-mem add-memory
 ;
 
 \ LICENSE_BEGIN

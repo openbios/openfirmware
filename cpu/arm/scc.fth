@@ -119,6 +119,13 @@ code slow-clock         ( -- )     mcr p15,0,r0,cr15,cr2,2  c;
 code disable-mclk       ( -- )     mcr p15,0,r0,cr15,cr4,2  c;
 code wait-for-interrupt ( -- )     mcr p15,0,r0,cr15,cr8,2  c;
 
+code cache-level@  ( -- level )  psh tos,sp  mrc p15,2,tos,cr0,cr0,0  c;
+code cache-level!  ( level -- )              mcr p15,2,tos,cr0,cr0,0  pop tos,sp  c;
+code cache-size-id@  ( -- n )    psh tos,sp  mrc p15,1,tos,cr0,cr0,0  c;
+code cache-level-id@  ( -- n )   psh tos,sp  mrc p15,1,tos,cr0,cr0,1  c;
+
+code silicon-id@  ( -- id )  psh tos,sp  mrc p15,1,tos,cr0,cr0,7  c;
+
 : ttbase  ( -- n )  ttbase@ h# 3ff invert and  ;
 
 : .control  ( -- )  control@  " i..rsb...wcam" show-bits  ;

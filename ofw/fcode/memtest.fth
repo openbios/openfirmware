@@ -127,6 +127,8 @@ copyright: Copyright 1999-2001 Sun Microsystems, Inc.  All Rights Reserved
 hex
 
 headers
+defer memtest-flush-cache  ' noop to memtest-flush-cache
+
 defer meml!
 defer meml@
 defer memw!
@@ -203,6 +205,7 @@ nuser add-top
    \ First we write all zeroes to the top and bottom memory locations
    0 add-base @ meml!   0 add-top  @ meml!
 
+   memtest-flush-cache
    \ Now we write all ones to 2 locations: the location whose address
    \ differs from the bottom address only by the address line under test,
    \ and the location whose address differs from the top address only by
@@ -212,6 +215,7 @@ nuser add-top
    add-base @ over +  ffffffff swap meml! \ store ones at "base + [1 << addr#]"
    add-top  @ over -  ffffffff swap meml! \ store ones at "top  - [1 << addr#]"
 				( addr# offset )
+   memtest-flush-cache
 
    \ Now we check to see if either of the top or bottom locations got
    \ clobbered when we wrote the other two locations.  This tests for
@@ -233,6 +237,8 @@ nuser add-top
 
    add-base @ over +  0 swap meml! \ store 0 at location "base + [ 1 << addr#]"
    add-top  @ over -  0 swap meml! \ store 0 at location "top - [ 1 << addr#]"
+
+   memtest-flush-cache
 
    ffffffff add-base @  mem-test
    ffffffff add-top  @  mem-test
@@ -290,6 +296,8 @@ nuser add-top
    temp-buf      w@   over      memw!
    temp-buf wa1+ w@   over wa1+ memw!	     ( membase )
 
+   memtest-flush-cache
+
    h# 12345678  over  mem-test               ( membase )
 
    \ write data in byte size
@@ -298,6 +306,7 @@ nuser add-top
    temp-buf 2 ca+ c@  over 2 ca+ memc!
    temp-buf 3 ca+ c@  over 3 ca+ memc!       ( membase )
 
+   memtest-flush-cache
    h# 12345678  over  mem-test               ( membase )
    drop
    failed @			\ place failed flag on stack
@@ -311,12 +320,14 @@ nuser add-top
     				( membase )
    d# 32 0 do			\ loop over all 32 data lines
       1 i <<  over  meml!	( membase )
+      memtest-flush-cache
       1 i <<  over  mem-test	( membase )
    loop                         ( membase )
 
    \ Walking zeroes
    d# 32 0 do			 \ loop over all 32 data lines
       1 i << invert  over  meml!     ( membase )
+      memtest-flush-cache
       1 i << invert  over  mem-test  ( membase )
    /l +  loop                        ( membase )
 
@@ -330,8 +341,8 @@ nuser add-top
    failed off			\ set failed flag to false
 
    bounds			( memtop membase )
-   2dup  ?do  h# ffffffff  i  2dup meml!  mem-test  /l +loop  \ stuck at 0 test
-         ?do  h# 00000000  i  2dup meml!  mem-test  /l +loop  \ stuck at 1 test
+   2dup  ?do  h# ffffffff  i  2dup meml!  memtest-flush-cache  mem-test  /l +loop  \ stuck at 0 test
+         ?do  h# 00000000  i  2dup meml!  memtest-flush-cache  mem-test  /l +loop  \ stuck at 1 test
 
    failed @			\ put failed flag onto the stack
 ;
@@ -342,6 +353,8 @@ nuser add-top
    "     Address=data test" show-status
 
    bounds  2dup  do  i i meml!  /l +loop	( memtop membase )
+
+   memtest-flush-cache
 
    failed off
    do  i i mem-test  /l +loop
@@ -364,6 +377,8 @@ nuser mats-pattern
       dup  invert  i 1 la+ meml!
                    i 2 la+ meml!
    /l 3 * +loop
+
+   memtest-flush-cache
 
    failed off		( memtop membase )
    do
@@ -394,7 +409,10 @@ headers
       2dup address=data-test  ?suite-failed   ( membase memsize )
 \ Don't do the mats test, because I'm not convinced that it is useful
 \       2dup h# a5a5a5a5  mats-test  ?suite-failed   ( membase memsize )
-   then
+[ifdef] random-test
+      2dup random-test  ?suite-failed         ( membase memsize )
+[then]
+   then                                       ( membase memsize )
    2drop
 
    suite-failed @

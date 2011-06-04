@@ -29,8 +29,8 @@ h# 1fa0.0000 constant fw-pa
 h# 1f00.0000 constant dma-base
 h#   80.0000 constant dma-size
 
-h# 1f80.0000 constant extra-mem-base
-h#   20.0000 constant extra-mem-size
+h# 1f80.0000 constant extra-mem-pa
+h#   20.0000 constant /extra-mem
 
 [ifdef] virtual-mode
 h# f700.0000 constant fw-virt-base
