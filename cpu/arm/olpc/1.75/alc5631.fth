@@ -92,8 +92,10 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
 : set-headphone-volume  ( n -- )  \ DONE
    gain>lr  if  h# 8080  then   h# 9f9f   4 codec-field
 ;
+
+false value force-speakers?
 : set-volume  ( n -- )
-   headphones-inserted?  if
+   headphones-inserted?  force-speakers? 0=  and  if
       set-headphone-volume
    else
       set-speaker-volume
@@ -104,6 +106,11 @@ d#   0 constant default-dac-gain            \   0 dB - range is -96.625 to +28.5
 d#  52 constant default-mic-gain            \  52 dB - range is  0 to 52 dB
 d#   0 constant default-speaker-volume      \   0 dB - range is -46.5 to +12
 d# -10 constant default-headphone-volume    \ -10 dB - range is -46.5 to 0
+
+: speakers-on  ( -- )  default-speaker-volume set-speaker-volume  ;
+: speakers-off  ( -- )  d# -100 set-speaker-volume   ;
+: headphones-on  ( -- )  default-headphone-volume set-headphone-volume  ;
+: headphones-off  ( -- )  d# -100 set-headphone-volume   ;
 
 : adc-mute-all  ( -- )   h# f0f0 h# 14 codec!  ;
 : adc-mute-mic  ( -- )   h# 4040 h# 14 codec-set  ;
@@ -172,12 +179,12 @@ false value external-mic?
 : mic+20db  ( -- )  d# 20 set-mic-gain  ;
 : set-default-gains  ( -- )
    output-config
-   headphones-inserted?  if
-      default-headphone-volume set-headphone-volume
-      mute-speakers
+   headphones-inserted?  force-speakers? 0= and  if
+      headphones-on
+      speakers-off
    else
-      default-speaker-volume set-speaker-volume
-      mute-headphones
+      speakers-on
+      headphones-off
    then
    default-dac-gain set-dac-gain
    default-mic-gain set-mic-gain

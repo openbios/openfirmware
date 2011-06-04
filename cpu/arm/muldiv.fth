@@ -336,6 +336,15 @@ code sm/rem  ( d.dividend s.divisor -- s.rem s.quot )
    mov     tos,r5
 c;
 
+: m/mod  (s d# n1 -- rem quot )
+   dup >r  2dup xor >r  >r dabs r@ abs  um/mod
+   swap r>  0< if  negate  then
+   swap r> 0< if
+      negate over if  1- r@ rot - swap  then
+   then
+   r> drop
+;
+
 : /  ( dividend divisor -- quotient )  /mod nip  ;
 : mod  ( dividend divisor -- modulus )  /mod drop  ;
 : */mod  ( n1 n2 n3 -- n.mod n.quot )  >r m* r> fm/mod  ;

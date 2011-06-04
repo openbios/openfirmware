@@ -105,12 +105,20 @@ false value plot?  \ Set to true to plot the impulse response, for debugging
    " 0 set-fg  h# ffff set-bg single-drawing clear-drawing wave" evaluate
    key ascii d = if debug-me then
 ;
-: input-common-settings  ( -- )
+defer input-common-settings
+defer output-common-settings
+[ifdef] with-adc
+\ XXX this is hd-audio specific.  Factore it out
+: (input-common-settings)  ( -- )
    open-in  48kHz  16bit  with-adc d# 73 input-gain
 ;
-: output-common-settings  ( -- )
+' (input-common-settings) to input-common-settings
+: (output-common-settings)  ( -- )
    open-out 48kHz  16bit stereo
 ;
+' (output-common-settings) to output-common-settings
+[then]
+
 : test-with-case  ( -- )
    " setup-case" $call-analyzer
 \   xxx - this needs to use the internal speakers and mic even though the loopback cable is attached

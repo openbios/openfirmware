@@ -3,6 +3,122 @@ purpose: Cross-covariance audio selftest
 
 support-package: audio-test
 
+[ifdef] arm-assembler
+code mono-covar  ( adr1 adr2 #samples -- d.sum )
+   ldmia   sp!,{r1,r2}   \ tos: #samples, r1: adr2, r2: adr1
+
+   adds tos,tos,tos   \ #bytes
+   
+   psheq  tos,sp      \ Return 0. if #samples is 0
+   nxteq
+
+   mov r3,#0   \ Zero accumulator
+   mov r4,#0
+
+   dec  tos,#2
+   begin
+      ldrsh  r5,[r1,tos]
+      ldrsh  r6,[r2,tos]
+      smlal  r3,r4,r5,r6
+      decs  tos,#2
+   0< until
+
+   psh  r3,sp
+   mov  tos,r4
+c;
+code stereo-mono-covar  ( stereo-adr1 mono-adr2 #samples -- d.sum )
+   ldmia   sp!,{r1,r2}   \ tos: #samples, r1: adr2, r2: adr1
+
+   adds tos,tos,tos   \ #bytes for mono samples
+   add  r8,tos,tos    \ Index for stereo samples
+   
+   psheq  tos,sp      \ Return 0. if #samples is 0
+   nxteq
+
+   mov r3,#0   \ Zero accumulator
+   mov r4,#0
+
+   dec  tos,#2
+   dec  r8,#4
+   begin
+      ldrsh  r5,[r1,tos]   \ Mono
+      ldrsh  r6,[r2,r8]    \ Stereo sample
+      dec  r8,#4
+      smlal  r3,r4,r5,r6
+      decs  tos,#2
+   0< until
+
+   psh  r3,sp
+   mov  tos,r4
+c;
+code stereo-covar  ( stereo-adr1 stereo-adr2 #samples -- d.sum )
+   ldmia   sp!,{r1,r2}   \ tos: #samples, r1: adr2, r2: adr1
+
+   movs  tos,tos,lsl #2  \ #bytes
+   
+   psheq  tos,sp      \ Return 0. if #samples is 0
+   nxteq
+
+   mov r3,#0   \ Zero accumulator
+   mov r4,#0
+
+   dec  tos,#4
+   begin
+      ldrsh  r5,[r1,tos]
+      ldrsh  r6,[r2,tos]
+      smlal  r3,r4,r5,r6
+      decs  tos,#4        \ Stride is 4
+   0< until
+
+   psh  r3,sp
+   mov  tos,r4
+c;
+code mono-wsum  ( adr #samples -- d.sum )
+   pop     r1,sp         \ tos: len, r1: adr
+   movs    tos,tos,lsl #1
+
+   psheq  tos,sp      \ Return 0. if #samples is 0
+   nxteq
+
+   mov r3,#0   \ Zero accumulator
+   mov r4,#0
+
+   dec  tos,#2
+   begin
+      ldrsh  r5,[r1,tos]
+      mov    r6,r5,asr #31   \ Sign extend long word to 64 bits
+      adds   r3,r3,r5
+      adc    r4,r4,r6
+      decs  tos,#2
+   0< until
+
+   psh  r3,sp
+   mov  tos,r4
+c;
+code stereo-wsum  ( adr #samples -- d.sum )
+   pop     r1,sp         \ tos: len, r1: adr
+   movs    tos,tos,lsl #2
+
+   psheq  tos,sp      \ Return 0. if #samples is 0
+   nxteq
+
+   mov r3,#0   \ Zero accumulator
+   mov r4,#0
+
+   dec  tos,#4
+   begin
+      ldrsh  r5,[r1,tos]
+      mov    r6,r5,asr #31   \ Sign extend long word to 64 bits
+      adds   r3,r3,r5
+      adc    r4,r4,r6
+      decs  tos,#4
+   0< until
+
+   psh  r3,sp
+   mov  tos,r4
+c;
+[then]
+[ifdef] x86-assembler
 code mono-covar  ( adr1 adr2 #samples -- d.sum )
    cx pop
 
@@ -39,7 +155,7 @@ code mono-covar  ( adr1 adr2 #samples -- d.sum )
    bx push
    ax push
 c;
-code stereo-mono-covar  ( stereo-adr1 stereo-adr2 #samples -- d.sum )
+code stereo-mono-covar  ( stereo-adr1 mono-adr2 #samples -- d.sum )
    cx pop
 
    ax pop    \ adr2 in ax
@@ -169,6 +285,7 @@ code stereo-wsum  ( adr #samples -- d.sum )
    bx push
    ax push
 c;
+[then]
 : mono-wmean  ( adr len -- n )
    2/ tuck  mono-wsum         ( d.sum len )
    rot m/mod nip              ( mean )
@@ -419,7 +536,7 @@ defer analyze-right
 defer fix-dc
 
 : prepare-signal  ( -- out-adr, len in-adr,len )
-   pb /pb bounds  do  random-byte  i c!  loop
+   pb /pb bounds  do  random-long  i l!  /l +loop
    pb      /pb -stereo-wmean
    pb wa1+ /pb -stereo-wmean
    pb /pb lose-6db

@@ -81,8 +81,7 @@ warning @  warning off
 
    standalone?  if
       disable-interrupts
-      d# 1000
-\      i-key-wait  if
+\     d# 1000  i-key-wait  if
       rotate-button? if
          protect-fw
          ." Interacting" cr  hex interact
@@ -300,7 +299,7 @@ fload ${BP}/cpu/arm/saverom.fth  \ Save the dictionary for standalone startup
 
 fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
 
-\ fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
+fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
 
 : console-start  ( -- )
    install-mux-io
