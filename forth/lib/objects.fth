@@ -160,6 +160,7 @@ previous previous
       -level		\ Exit temporary compile state, perhaps run word
 ;
 
+also hidden
 [ifdef] object-definer
 : (object-definer)  ( action-acf -- definer )
    dup /n -  @                 ( action-acf #actions )
@@ -172,8 +173,9 @@ previous previous
       ta1+  dup  probably-cfa?
    until
 ;
-also hidden  ' (object-definer) is object-definer  previous
+' (object-definer) is object-definer
 [then]
+previous
 
 \ action-compiler: to
 action-compiler: addr
