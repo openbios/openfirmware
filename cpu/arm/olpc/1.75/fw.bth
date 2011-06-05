@@ -209,6 +209,7 @@ fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
 fload ${BP}/cpu/arm/olpc/1.75/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
+fload ${BP}/cpu/arm/olpc/1.75/roller.fth     \ Accelerometer test
 
 fload ${BP}/cpu/arm/olpc/1.75/pinch.fth  \ Touchscreen gestures
 : pinch  " pinch" screen-ih $call-method  ;
