@@ -2390,9 +2390,16 @@ m_deflate(outlen, outadr, inlen, inadr)
      crc = lbflip(crc);
      inlen = lbflip(inlen);
 #endif
-     *(unsigned long *)&outbuf[10 + datalen + 0] = crc;
-     *(unsigned long *)&outbuf[10 + datalen + 4] = inlen;
-     return (10 + datalen + 8);
+     /* The CRC and input length are little-endian, not necessarily aligned */
+     outbuf[10 + datalen] = crc & 0xff;
+     outbuf[11 + datalen] = (crc>>8) & 0xff;
+     outbuf[12 + datalen] = (crc>>16) & 0xff;
+     outbuf[13 + datalen] = (crc>>24) & 0xff;
+     outbuf[14 + datalen] = inlen & 0xff;
+     outbuf[15 + datalen] = (inlen>>8) & 0xff;
+     outbuf[16 + datalen] = (inlen>>16) & 0xff;
+     outbuf[17 + datalen] = (inlen>>24) & 0xff;
+     return (18 + datalen);
 }
 
 INTERNAL long
