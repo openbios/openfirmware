@@ -18,7 +18,7 @@ defer linux-pre-hook  ' noop to linux-pre-hook
    " available" rot get-package-property abort" No memory node available property"  ( $ )
    \ Find the memory piece that starts at 0
    begin  dup  8 >=  while           ( $ )
-      decode-int  0=  if             ( $ )   \ Found the one we want
+      decode-int  h# 1000 u<=  if    ( $ )   \ Found the one we want
          decode-int                  ( $ limit )
          nip nip  exit
       then                           ( $ )
