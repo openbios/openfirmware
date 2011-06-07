@@ -5,6 +5,7 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
    fload ${BP}/cpu/arm/olpc/1.75/sdregs.fth
    fload ${BP}/dev/mmc/sdhci/sdhci.fth
 
+   d# 1 to power-off-time  \ A2 and A3 have turn-off clamps
 \   true to avoid-high-speed?
 
    hex
