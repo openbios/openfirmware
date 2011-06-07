@@ -33,12 +33,12 @@ headerless
 : bcd-time&date  ( -- s m h d m y century )
    set-address
 [ifdef] cl2-a1
-   7 0 smb-read-n  ( s m h dow d m y )
+   9 0 smb-read-n  ( s m h dow d m y control c )
 [else]
-   0 1 7 twsi-get  ( s m h dow d m y )
+   0 1 9 twsi-get  ( s m h dow d m y control c )
 [then]
-   3 roll drop     ( s m h dow d m y )
-   d# 20
+   nip             ( s m h dow d m y c )
+   4 roll drop     ( s m h d m y c )
 ;
 : bcd!  ( n offset -- )  swap >bcd  swap rtc!  ;
 
@@ -50,7 +50,7 @@ headers
    d# 100 * +  		\ Merge century with year
 ;
 : set-time  ( s m h d m y -- )
-   d# 100 /mod  h# 1a bcd!  9 bcd!  8 bcd!  7 bcd!  4 bcd!  2 bcd!  0 bcd!
+   d# 100 /mod  h# 8 bcd!  6 bcd!  5 bcd!  4 bcd!  2 bcd!  1 bcd!  0 bcd!
 ;
 
 : selftest  ( -- flag )
