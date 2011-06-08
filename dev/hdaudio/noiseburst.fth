@@ -118,7 +118,7 @@ code stereo-wsum  ( adr #samples -- d.sum )
    mov  tos,r4
 c;
 [then]
-[ifdef] x86-assembler
+[ifdef] 386-assembler
 code mono-covar  ( adr1 adr2 #samples -- d.sum )
    cx pop
 
