@@ -333,7 +333,7 @@ Method(_WAK, 1, Serialized)
 
     IF (LEqual(Arg0, 0x03))     //S3
     {
-        Store(0x2,\_SB.PCI0.MEMC.FSEG)  //Set F Segment to Read only
+        // Store(0x2,\_SB.PCI0.MEMC.FSEG)  //Set F Segment to Read only
         // Notify(\_SB.PCI0, 0x00)
     }
 
@@ -375,7 +375,7 @@ Method (_PTS, 1, NotSerialized)
     } //End of Arg0 EQ 0x01
 
     IF (LEqual(Arg0, 0x03)) {       // S3
-        Store(0x0,\_SB.PCI0.MEMC.FSEG)     // Disable F Segment Read/Write
+        // Store(0x0,\_SB.PCI0.MEMC.FSEG)     // Disable F Segment Read/Write
     }
 
     IF (LEqual(Arg0, 0x04)) {       //S4
