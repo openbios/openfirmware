@@ -175,7 +175,7 @@ d# 240 value gey0  d# 240 value gex0
    recurse            ( )
 ;
 : bezier  ( p0 p1 p2 p3 -- )
-   dup bezier-point  4 pick bezier-point  bezier-steps
+   dup bezier-point  3 pick bezier-point  bezier-steps
 ;
 
 : curveto  ( x1 y1 x2 y2 x3 y3 -- )
