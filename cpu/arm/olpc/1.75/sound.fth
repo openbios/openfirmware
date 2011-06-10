@@ -48,6 +48,12 @@ my-space h# 800 reg
 
 : reset-rx  ( -- )  h# 8000.0002 h# 0c sspa!  ;
 
+: active-low-rx-fs  ( -- ) 
+   h# 0c sspa@  h# 8001.0000 or  h# 0c sspa!
+;
+: active-high-rx-fs  ( -- ) 
+   h# 0c sspa@  h# 10000 invert and  h# 8000.0000 or  h# 0c sspa!
+;
 : setup-sspa-rx  ( -- )
    reset-rx
 
@@ -64,10 +70,10 @@ my-space h# 800 reg
 
    h# 8000.0000          \ Enable writes
    d# 15 d# 20 lshift or \ Frame sync width
-\ We choose the master/slave configuration later, in enable-sspa-tx
+\ We choose the master/slave configuration later, in enable-sspa-rx
    0     d# 18 lshift or \ Internal clock - master configuration
    0     d# 17 lshift or \ Sample on rising edge of clock
-   0     d# 16 lshift or \ Active high frame sync
+   1     d# 16 lshift or \ Active low frame sync (I2S standard)
    d# 31 d#  4 lshift or \ Frame sync period
    1     d#  2 lshift or \ Flush the FIFO
    h# 0c sspa!
@@ -80,6 +86,12 @@ my-space h# 800 reg
 
 : reset-tx  ( -- )  h# 8000.0002 h# 8c sspa!  ;
 
+: active-low-tx-fs  ( -- )
+   h# 8c sspa@  h# 8001.0000 or  h# 8c sspa!
+;
+: active-high-tx-fs  ( -- )
+   h# 8c sspa@  h# 10000 and  h# 8000.0000 or  h# 8c sspa!
+;
 : setup-sspa-tx  ( -- )
    reset-tx
 
@@ -100,7 +112,10 @@ my-space h# 800 reg
 \ We choose the master/slave configuration later, in master-tx
    0     d# 18 lshift or \ External clock - slave configuration (Rx is master)
    0     d# 17 lshift or \ Sample on rising edge of clock
-   0     d# 16 lshift or \ Active high frame sync
+
+\ Empirically, this needs to be backwards from what we think it should be
+   0     d# 16 lshift or \ Active high frame sync (should be active low, but that gives backwards results)
+
    d# 31 d#  4 lshift or \ Frame sync period
    1     d#  2 lshift or \ Flush the FIFO
    h# 8c sspa!
@@ -247,7 +262,7 @@ d# 48000 value sample-rate
 
 : open-in   ( -- )  ;
 : close-in  ( -- )  ;
-: open-out  ( -- )  setup-sspa-tx  ;
+: open-out  ( -- )  ;
 : close-out ( -- )  ;
 
 : wait-out  ( -- )
@@ -274,6 +289,7 @@ false value playing?
 
 : stop-out  ( -- )
    disable-sspa-tx
+   reset-tx
    stop-out-ring
    uninstall-playback-alarm
    false to playing?
@@ -313,6 +329,7 @@ false value playing?
 : start-audio-out  ( adr len -- )
    to out-len            ( adr )
    to out-adr            ( )
+   setup-sspa-tx         ( )
    make-out-ring
    copy-out
    out-len  if  copy-out  then  \ Prefill the second buffer
@@ -369,15 +386,30 @@ false value playing?
       copy-in                  ( actual )
    repeat                      ( actual )
    disable-sspa-rx             ( actual )
+   reset-rx                    ( actual )
 ;
 : read  ( adr len -- actual )  open-in audio-in  ;
 
+0 value mono?
+0 value in-adr0
+0 value in-len0
+: collapse-in  ( -- )
+   in-len0  0  ?do
+      in-adr0 i la+ w@   in-adr0 i wa+ w!
+   loop
+;
 : out-in  ( out-adr out-len in-adr in-len -- )
-   to in-len   to in-adr       ( out-adr out-len )
+   to in-len0  to in-adr0      ( out-adr out-len )
    to out-len  to out-adr      ( )
+
+   in-adr0 to in-adr           ( )
+   in-len0  mono?  if  2*  then  to in-len     
+
+   audio-clock-on              ( ) \ This will mess up any frequency settings
 
    setup-sspa-tx               ( )
    setup-sspa-rx               ( )
+   active-high-rx-fs           ( )
 
    make-in-ring                ( )
    make-out-ring               ( )
@@ -402,7 +434,12 @@ false value playing?
    disable-sspa-rx             ( )
    disable-sspa-tx             ( )
 
+   reset-rx
+   reset-tx
+
    dac-off  adc-off            ( )
+
+   mono?  if  collapse-in  then  ( )
 ;
 
 0 [if]  \ Interactive test words for out-in
@@ -452,8 +489,8 @@ h# 20000 constant tlen
    set-adc-gain
 ;
 
-: stereo  ;
-: mono  ;
+: stereo  false to mono?  ;
+: mono  true to mono?  ;
 
 : init-codec  ( -- )
    codec-on
@@ -486,6 +523,12 @@ fload ${BP}/dev/geode/ac97/selftest.fth
 false value force-internal-mic?  \ Can't be implemented on XO-1.75
 2 value #channels
 fload ${BP}/dev/hdaudio/test.fth
+: input-settings  ( -- )
+   audio-clock-on              ( )  \ If you don't do this, the L/R phase is often wrong
+;
+: output-settings  ( -- )  ;
+' input-settings to input-common-settings
+' output-settings to output-common-settings
 
 end-package
 

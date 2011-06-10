@@ -14,7 +14,7 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
    b# 1110.0000.0001.1101 h# 3c codec!  \ Fast VREF control
    d# 100 ms
 
-   h# 8021 h# 34 codec!  \ Slave mode, 16 bits, left justified, left channel on LRCLK high
+   h# 8001 h# 34 codec!  \ Slave mode, 16 bits, left justified
 
    h# 1010 h# 38 codec!  \ Divisors; the values in this register don't seem to make much
    \ difference unless you set the divisors to very high values.
@@ -95,10 +95,10 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
 
 false value force-speakers?
 : set-volume  ( n -- )
-   headphones-inserted?  force-speakers? 0=  and  if
-      set-headphone-volume
+   headphones-inserted?  ( force-speakers? 0= and )  if
+      set-headphone-volume mute-speakers
    else
-      set-speaker-volume
+      set-speaker-volume mute-headphones
    then
 ;
 d#   0 constant default-adc-gain            \   0 dB - range is -96.625 to +28.5
@@ -179,7 +179,7 @@ false value external-mic?
 : mic+20db  ( -- )  d# 20 set-mic-gain  ;
 : set-default-gains  ( -- )
    output-config
-   headphones-inserted?  force-speakers? 0= and  if
+   headphones-inserted?  ( force-speakers? 0= and  ) if
       headphones-on
       speakers-off
    else

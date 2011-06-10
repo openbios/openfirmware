@@ -3,14 +3,14 @@ d# 500 value tone-freq
 : /cycle  ( -- #bytes )  #cycle /l*  ;
 
 : make-cycle  ( adr -- adr' )
-   #quarter-cycle 1+  0  do               ( adr )
-      i isin                              ( adr isin )
-      2dup  swap  i la+ w!                ( adr isin )
-      2dup  swap  #half-cycle i - la+ w!  ( adr isin )
-      negate                              ( adr -isin )
-      2dup  swap  #half-cycle i + la+ w!  ( adr -isin )
-      over  #cycle i - la+ w!             ( adr )
-   loop                                   ( adr )
+   #cycle/4 1+  0  do                  ( adr )
+      i calc-sin                       ( adr isin )
+      2dup  swap  i la+ w!             ( adr isin )
+      2dup  swap  #cycle/2 i - la+ w!  ( adr isin )
+      negate                           ( adr -isin )
+      2dup  swap  #cycle/2 i + la+ w!  ( adr -isin )
+      over  #cycle i - la+ w!          ( adr )
+   loop                                ( adr )
    /cycle +
 ;
 

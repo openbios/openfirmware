@@ -302,9 +302,11 @@ c;
    drop               ( )
 ;
 : -stereo-wmean  ( adr len -- )
-   2dup stereo-wmean  ( adr len mean )
-   -rot  bounds  ?do  ( mean )
-      i <w@ over - h# 7fff min  h# -7fff max  i w!
+   2dup stereo-wmean >r  ( adr len r: lmean )
+   over wa1+ over  stereo-wmean r> swap ( adr len lmean rmean )
+   2swap  bounds  ?do                   ( lmean rmean )
+      i      <w@ 2 pick - h# 7fff min  h# -7fff max  i      w!
+      i wa1+ <w@ over   - h# 7fff min  h# -7fff max  i wa1+ w!
    /l +loop           ( mean )
    drop               ( )
 ;
@@ -340,34 +342,44 @@ create testarr2   100 0 do  0 w,  -100 w,  loop
    3drop                ( )
 ;
 
+\ sample-delay accounts for the different timing between adc-on and dac-on
+\ for different combinations of codec and controller.
+
+d# 0 value sample-delay
+: +sample-delay  ( start #samples -- end' start' )
+   swap  sample-delay +  swap bounds
+;
 0. 2value total-covar
-: sm-covar-sum  ( adr1 adr2 len end start -- d.covar )
+: sm-covar-sum  ( adr1 adr2 len start #samples -- d.covar )
+   +sample-delay      ( adr1 adr2 len end' start' )
    0. to total-covar
    do
       3dup swap i wa+ swap stereo-mono-covar  ( adr1 adr2 len d.covar )
       total-covar d+  to total-covar          ( adr1 adr2 len )
    loop                 ( adr1 adr2 len )
    3drop                ( )
-   total-covar
+   total-covar  d2* d2*
 ;
-: sm-covar-abs-sum  ( adr1 adr2 len end start -- d.covar )
+: sm-covar-abs-sum  ( adr1 adr2 len start #samples -- d.covar )
+   +sample-delay      ( adr1 adr2 len end' start' )
    0. to total-covar
    do
       3dup swap i wa+ swap stereo-mono-covar  ( adr1 adr2 len d.covar )
       dabs  total-covar d+  to total-covar    ( adr1 adr2 len )
    loop                 ( adr1 adr2 len )
    3drop                ( )
-   total-covar
+   total-covar  d2* d2*
 ;
 
-: ss-covar-abs-sum  ( adr1 adr2 len end start -- d.covar )
+: ss-covar-abs-sum  ( adr1 adr2 len start #samples -- d.covar )
+   +sample-delay      ( adr1 adr2 len end' start' )
    0. to total-covar
    do
       3dup swap i la+ swap stereo-covar       ( adr1 adr2 len d.covar )
       dabs  total-covar d+  to total-covar    ( adr1 adr2 len )
    loop                 ( adr1 adr2 len )
    3drop                ( )
-   total-covar
+   total-covar  d2* d2*
 ;
 
 
@@ -457,47 +469,70 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
    debug?  if  dup .d cr  then
 ;
 
+d# 100 value #fixture
+d# 25 value fixture-threshold
 : fixture-ratio-left  ( -- error? )
-   left-range  d# 160 d#  60 sm-covar-abs-sum nip  ( sum1 ) 
-   left-range  d# 400 d# 300 sm-covar-abs-sum nip  ( sum1 sum2 )
+   left-range  d#  60 #fixture sm-covar-abs-sum nip  ( sum1 ) 
+   left-range  d# 300 #fixture sm-covar-abs-sum nip  ( sum1 sum2 )
    >ratio
-   d# 25 <
+   fixture-threshold <
 ;
 : fixture-ratio-right  ( -- error? )
-   right-range  d# 160 d#  60 sm-covar-abs-sum nip  ( sum1 ) 
-   right-range  d# 400 d# 300 sm-covar-abs-sum nip  ( sum1 sum2 )
+   right-range  d#  60 #fixture sm-covar-abs-sum nip  ( sum1 ) 
+   right-range  d# 300 #fixture sm-covar-abs-sum nip  ( sum1 sum2 )
    >ratio
-   d# 25 <
+   fixture-threshold <
 ;
+
+d#  60 value case-start-left
+d#  60 value case-start-right
+d# 400 value case-start-quiet
+d#  60 value #case-left
+d# 190 value #case-right
+d#  25 value case-threshold-left
+d#  14 value case-threshold-right
 
 \ This compares the total energy within the impulse response band to the
 \ total energy in a similar-length band 
 : case-ratio-left  ( -- error? )
-   left-range  d# 120 d#  60 sm-covar-abs-sum  nip ( sum1.high )
-   left-range  d# 460 d# 400 sm-covar-abs-sum  nip ( sum1.high sum2.high )
+   left-range  case-start-left  #case-left sm-covar-abs-sum  nip ( sum1.high )
+   left-range  case-start-quiet #case-left sm-covar-abs-sum  nip ( sum1.high sum2.high )
    >ratio
-   d# 25 <
+   case-threshold-left <
 ;
 : case-ratio-right  ( -- error? )
-    right-range  d# 250 d#  60 sm-covar-abs-sum  nip ( sum1.high )
-    right-range  d# 590 d# 400 sm-covar-abs-sum  nip ( sum1.high sum2.high )
+   right-range  case-start-right #case-right sm-covar-abs-sum  nip ( sum1.high )
+   right-range  case-start-quiet #case-right sm-covar-abs-sum  nip ( sum1.high sum2.high )
    >ratio
-   d# 14 <
+   case-threshold-right <
 ;
 
+d# 20 value #loopback
+d# 70 value loopback-threshold
 \ This compares the total energy within the impulse response band to the
 \ total energy in a similar-length band 
 : loopback-ratio-left  ( -- error? )
-   left-stereo-range  d#  68 d#  48 ss-covar-abs-sum  nip ( sum1.high )
-   left-stereo-range  d# 220 d# 200 ss-covar-abs-sum  nip ( sum1.high sum2.high )
+   left-stereo-range  d#  48 #loopback ss-covar-abs-sum  nip ( sum1.high )
+   left-stereo-range  d# 200 #loopback ss-covar-abs-sum  nip ( sum1.high sum2.high )
    >ratio
-   d# 70 <
+   loopback-threshold <
 ;
 : loopback-ratio-right  ( -- error? )
-   right-stereo-range  d#  68 d#  48 ss-covar-abs-sum  nip ( sum1.high )
-   right-stereo-range  d# 220 d# 200 ss-covar-abs-sum  nip ( sum1.high sum2.high )
+   right-stereo-range  d#  48 #loopback ss-covar-abs-sum  nip ( sum1.high )
+   right-stereo-range  d# 200 #loopback ss-covar-abs-sum  nip ( sum1.high sum2.high )
    >ratio
-   d# 70 <
+   loopback-threshold <
+;
+
+\ Ideally we would not put platform-specific information in this module.
+\ If we add many more platforms, this should be redesigned.
+: configure-xo1.75  ( -- )
+   d# -23 to sample-delay
+   d# 50 to fixture-threshold
+   d# 40 to #fixture
+   d# 83 to case-start-right
+   d# 30 to #case-right
+   d# 25 to case-threshold-right
 ;
 
 d# 1200 constant #impulse-response
@@ -507,7 +542,7 @@ d# 1200 constant #impulse-response
    pb +  rb  #samples                         ( adr1 adr2 #samples )
    #impulse-response 0  do
       3dup swap i wa+ swap stereo-mono-covar  ( adr1 adr2 #samples d.covar )
-      d# 50000000 m/mod nip                   ( adr1 adr2 #samples n.covar )
+      d# 500,000,000 m/mod nip                ( adr1 adr2 #samples n.covar )
       impulse-response i wa+ w!               ( adr1 adr2 #samples )
    loop                 ( adr1 adr2 len )
    3drop                ( )
@@ -516,8 +551,8 @@ d# 1200 constant #impulse-response
 : calc-stereo-impulse  ( offset -- adr )  \ offset is 0 for left or 2 for right
    dup pb +  swap rb +  #samples              ( adr1 adr2 #samples )
    #impulse-response 0  do
-      3dup swap i wa+ swap stereo-covar       ( adr1 adr2 #samples d.covar )
-      d# 50000000 m/mod nip                   ( adr1 adr2 #samples n.covar )
+      3dup swap i la+ swap stereo-covar       ( adr1 adr2 #samples d.covar )
+      d#  50,000,000 m/mod nip                ( adr1 adr2 #samples n.covar )
       impulse-response i wa+ w!               ( adr1 adr2 #samples )
    loop                 ( adr1 adr2 len )
    3drop                ( )
@@ -561,8 +596,6 @@ defer fix-dc
 : setup-fixture  ( -- )
    h# 20000 to /pb          \ Medium burst
    /pb 2/ h# 1000 + to /rb  \ Mono reception (internal mic)
-\   ['] fixture-analyze-left  to analyze-left
-\   ['] fixture-analyze-right to analyze-right
    ['] fixture-ratio-left  to analyze-left
    ['] fixture-ratio-right to analyze-right
    ['] -mono-wmean to fix-dc
