@@ -94,8 +94,8 @@ false value mem-fail?
    then                                ( adr len )
 
    begin  dup  while                   ( adr len )
-      decode-int >r  decode-int        ( adr len this-len r: this-padr )
-      r> swap test-mem                 ( adr len )
+      2 decode-ints swap               ( adr len this-len r: this-padr )
+      test-mem                         ( adr len )
       mem-fail?  if                    ( adr len )
          2drop true exit               ( -- error )
       then                             ( adr len )
