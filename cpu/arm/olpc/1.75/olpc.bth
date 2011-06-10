@@ -77,16 +77,6 @@ $new-file
    " ${BP}/dev/usb2/device/serial/build/usbserial.fc" " usbserial"  $add-deflated-dropin
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
 
-
-0 [if]
-   " ${BP}/dev/mmc/sdhci/build/sdhci2.fc"        " class080501"   $add-deflated-dropin
-[then]
-
-0 [if]
-   " ${BP}/dev/mmc/sdhci/build/sdmmc.fc"         " sdmmc"         $add-deflated-dropin
-   " ${BP}/dev/mmc/sdhci/mv8686/build/mv8686.fc" " mv8686"        $add-deflated-dropin
-[then]
-
    " sd8686_helper.bin"                          " helper_sd.bin" $add-deflated-dropin
    " sd8686.bin"                                 " sd8686.bin"    $add-deflated-dropin
 
@@ -96,12 +86,6 @@ $new-file
    " ${BP}/clients/emacs/x86/emacs"             " emacs"         $add-deflated-dropin
    " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
    " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
-[then]
-
-   " ${BP}/ofw/fcode/memtest.fth"  " memtest.fth"          $add-deflated-dropin
-
-0 [if]
-   " ${BP}/dev/hdaudio/build/hdaudio.fc"         " class040300"   $add-deflated-dropin
 [then]
 
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
@@ -125,14 +109,6 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wlan.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " int.565"       $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " ext.565"       $add-deflated-dropin
-
-0 [if]
-   " ${BP}/ofw/termemu/15x30pc.psf"             " font"          $add-deflated-dropin
-[then]
-
-0 [if]
-   " memtest"                                   " memtest"       $add-deflated-dropin
-[then]
 
    " verify.img"                                " verify"        $add-deflated-dropin
    " os.public"                                 " ospubkey"      $add-dropin \ Incompressible
@@ -171,7 +147,6 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_tx.bin" " nb_tx"      $add-deflated-dropin
 
-   " ${BP}/cpu/x86/pc/olpc/images/winlogo.565"   " winlogo.565"    $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/tux.565"       " tux.565"        $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/settings.565"  " settings.565"   $add-deflated-dropin
 [then]
