@@ -165,6 +165,9 @@ fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
 
 fload ${BP}/dev/olpc/kb3700/eccmds.fth
+: ec-power-off  ( -- )  reset-ec  begin wfi again  ;
+' ec-power-off to power-off
+
 fload ${BP}/dev/olpc/kb3700/batstat.fth      \ Battery status reports
 fload ${BP}/cpu/arm/olpc/1.75/boardrev.fth   \ Board revision decoding
 

@@ -150,6 +150,10 @@ fload ${BP}/cpu/arm/olpc/1.75/switches.fth \ Lid and ebook switches
 fload ${BP}/cpu/arm/olpc/1.75/leds.fth     \ LEDs
 fload ${BP}/cpu/x86/pc/olpc/via/factory.fth  \ Manufacturing tools
 
+\ When reprogramming this machine's SPI FLASH, rebooting the EC is unnecessary 
+: no-kbc-reboot ;
+: kbc-on ;
+
 \ Pseudo device that appears in the boot order before net booting
 0 0 " " " /" begin-package
    " prober" device-name
