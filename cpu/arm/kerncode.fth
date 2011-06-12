@@ -1108,18 +1108,10 @@ code comp  ( adr1 adr2 len -- -1 | 0 | 1 )
    0<> while
       ldrb      r2,[r0],#1
       ldrb      r3,[r1],#1
-      cmp       r2,r3
-[ifdef] fixme
-0<> if
+      cmp       r3,r2
       movgt     tos,#1
       mvnlt     tos,#0
       nxtne
-then
-[else]
-      movgt     tos,#1
-      mvnlt     tos,#0
-      nxtne
-[then]
    repeat
    mov       tos,#0
 c;
@@ -1143,18 +1135,10 @@ code caps-comp  ( adr1 adr2 len -- -1 | 0 | 1 )
          cmp     r3,#0x5b  \ ascii [
          inclt   r3,#0x20
       then
-      cmp     r2,r3
-[ifdef] fixme
-0<> if
-      movgt     tos,#1
-      mvnlt     tos,#0
-      nxtne
-then
-[else]
+      cmp     r3,r2
       movgt   tos,#1
       mvnlt   tos,#0
       nxtne
-[then]
    repeat
    mov     tos,#0
 c;
