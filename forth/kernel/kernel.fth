@@ -702,6 +702,8 @@ defer allot-error
 
 ' allot-abort is allot-error
 
+/n-t 8 * constant bits/cell
+
 : ,      (s n -- )       here   /n allot   unaligned-!   ;
 : c,     (s char -- )    here  dup set-swap-bit  /c allot   c!   ;
 : w,     (s w -- )       here   /w allot   w!   ;

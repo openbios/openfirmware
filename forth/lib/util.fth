@@ -66,7 +66,6 @@ alias eval evaluate
 \ Default value is no
 : confirmedn?  ( adr len -- yes? )  (confirmed?) [char] Y  =  ;
 
-/n 8 * constant bits/cell
 : lowmask  ( #bits -- mask )  1 swap lshift 1-  ;
 : lowbits  ( n #bits -- bits )  lowmask and  ;
 : bits  ( n bit# #bits -- bits )  -rot rshift  swap lowbits  ;
