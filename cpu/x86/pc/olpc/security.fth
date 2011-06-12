@@ -877,7 +877,7 @@ warning !
    ofw-version$ drop 1+ ((fw-version))
 ;
 
-: firmware-up-to-date?  ( img$ -- )
+: firmware-up-to-date?  ( img$ -- flag )
    /flash <>  if  show-x  " Invalid Firmware image" .security-failure  then  ( adr )
    h# f.ffc7 + ((fw-version))       ( file-version# )
    ofw-version-int                  ( file-version# rom-version# )
@@ -892,13 +892,76 @@ warning !
    drop
 ;
 
+[ifdef] reflash-ec
+: ec-up-to-date?  ( img$ -- flag )
+   /ec-flash <>  if  show-x  " Invalid EC Firmware image" .security-failure  then  ( adr )
+   /ec-flash + h# 100 - cscount                     ( version&date$ )
+   \ If the new image has an invalid signature, the old one is considered up to date
+   dup d# 25 <  if  2drop true exit  then           ( version&date$ )
+   over " XO-EC 4 " comp  if  2drop true exit  then ( version&date$ )
+   bl right-split-string 2drop                      ( date$ )
+   d# 16 <>  if  2drop true exit  then              ( date-adr )
+   ec-date$  comp  0<=                              ( flag )
+;
+
+defer ec-reflash-off?  ' false to ec-reflash-off?
+: do-ec-update  ( img$ -- )
+
+\ Keep .error from printing an input stream position report
+\ which makes a buffer@<address> show up in the error message
+   ['] noop to show-error
+
+   visible
+
+   tuck load-base  swap move   ( len )
+   load-base swap              ( adr len )
+
+   ['] ?ec-image-valid  catch  ?dup  if    ( x x )
+      2drop
+      visible
+      red-letters
+      ." Bad EC firmware image file - "  .error
+      ." Continuing with old EC firmware" cr
+      black-letters
+      exit
+   then
+
+   d# 12,000 wait-until   \ Wait for EC to notice the battery
+
+   ['] ?enough-power  catch  ?dup  if
+      visible
+      red-letters
+      ." Unsafe to update EC firmware now - " .error
+      ."  Continuing with old EC firmware" cr
+      black-letters
+      exit
+   then
+
+   " Updating EC firmware" ?lease-debug-cr
+
+   ec-indexed-io-off?  if
+      visible
+      ." Restarting to enable EC FLASH writing."  cr
+      d# 3000 ms
+      ec-ixio-reboot
+      security-failure
+   then
+
+   \ Latch alternate? flag for next startup
+   alternate?  if  [char] A h# 82 cmos!  then
+
+   reflash-ec      \ Should power-off and reboot
+   show-x
+   " EC reflash returned, unexpectedly" .security-failure
+;
+[then]
 : do-firmware-update  ( img$ -- )
 
-\ Keep .error from printing an input sream position report
+\ Keep .error from printing an input stream position report
 \ which makes a buffer@<address> show up in the error message
-  ['] noop to show-error
+   ['] noop to show-error
 
-  visible
+   visible
 
    tuck flash-buf  swap move   ( len )
 
@@ -1053,9 +1116,29 @@ constant /rtc-signature
    r> close-file drop  false                       ( false )
 ;
 
-: load-from-device  ( devname$ -- done? )
+[ifdef] reflash-ec
+: ?ec-update  ( -- )
+   null$ cn-buf place
+   " ecfw" bundle-present?  if
+      "   EC FW found - " ?lease-debug
 
-   show-dot
+      img$  ec-up-to-date?  if
+         show-plus
+         " current EC FW is up-to-date" ?lease-debug-cr
+      else
+         show-minus
+         " new - " ?lease-debug
+         fwkey$ to pubkey$
+         img$  sig$  fw-valid?  if
+            img$  do-ec-update
+         then
+         show-lock
+      then
+   then
+;
+[then]
+
+: ?fw-update  ( -- )
    null$ cn-buf place
    " bootfw" bundle-present?  if
       "   FW found - " ?lease-debug
@@ -1073,7 +1156,11 @@ constant /rtc-signature
          show-lock
       then
    then
-
+;
+: load-from-device  ( -- done? )
+   show-dot
+   ?ec-update       ( devnam)
+   ?fw-update       ( )
    ?rtc-update
 
    show-dot
