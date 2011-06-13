@@ -138,8 +138,8 @@ d# 15 value #mfgtests
 : timer-item    ( -- )  " /timer"     mfg-test-dev  ;
 : touchpad-item ( -- )  " /ec-spi/mouse"     mfg-test-dev  ;
 : keyboard-item ( -- )  " /ec-spi/keyboard"  mfg-test-dev  ;
-: switch-item   ( -- )  " /switches"  mfg-test-dev  ;
-: leds-item     ( -- )  " /leds"      mfg-test-dev  ;
+: switch-item   ( -- )  " /switches"  mfg-test-dev  " /accelerometer" mfg-test-dev  ;
+: leds-item     ( -- )  " /leds"      mfg-test-dev   ;
 \ XXX need to test sensors like accelerometer and compass
 
 : olpc-menu-items  ( -- )
@@ -193,7 +193,7 @@ d# 15 value #mfgtests
    " LEDs"
    ['] leds-item     leds.icon     3 3 install-icon
 
-   " Switches"
+   " Switches and Accelerometer"
    ['] switch-item   ebook.icon    3 4 install-icon
 ;
 

@@ -153,6 +153,11 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
    child-address set-twsi-target
    0 swap twsi-get
 ;
+: smbus-out-in  ( out ... #outs #ins -- in ... )
+   child-address set-twsi-target
+   twsi-get
+;
+
 : decode-unit  ( adr len -- low high )  parse-2int  ;
 : encode-unit  ( low high -- adr len )  >r <# u#s drop [char] , hold r> u#s u#>  ;
 end-package
