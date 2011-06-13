@@ -146,6 +146,7 @@ d# 20 constant /sha1-digest
    begin  h# d4292c04 l@  dup 0>=  while  drop  repeat
    h# ffff and
 ;
+: random-byte  ( -- b )  random-short 2/ h# ff and  ;
 : random-long  ( -- l )
    random-short random-short wljoin
 ;
