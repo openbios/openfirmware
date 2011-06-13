@@ -26,6 +26,7 @@ fload ${BP}/cpu/arm/linux.fth
 
 : usb-quiet  ( -- )
    [ ' linux-hook behavior compile, ]    \ Chain to old behavior
+   unload-crypto
    " /usb" " reset-usb" execute-device-method drop
 ;
 

@@ -14,17 +14,21 @@ defer linux-pre-hook  ' noop to linux-pre-hook
    \ If we have already loaded a RAMdisk in high memory, its base is the memory limit
    ramdisk-adr  ?dup  if  exit  then
 
-   " /memory" find-package 0= abort" No /memory node"  ( phandle )
-   " available" rot get-package-property abort" No memory node available property"  ( $ )
-   \ Find the memory piece that starts at 0
-   begin  dup  8 >=  while           ( $ )
-      decode-int  h# 1000 u<=  if    ( $ )   \ Found the one we want
-         decode-int                  ( $ limit )
-         nip nip  exit
-      then                           ( $ )
-      decode-int drop                ( $ )
-   repeat                            ( $ )
-   2drop true abort" No suitable memory piece"
+   0 0                                                 ( size base )
+   " /memory" find-package 0= abort" No /memory node"  ( size base phandle )
+   " available" rot get-package-property abort" No memory node available property"  ( limit size $ )
+   \ Find the largest memory piece
+   begin  dup  8 >=  while           ( size base $ )
+      2 decode-ints                  ( size base $ size1 base1 )
+      5 pick 2 pick <=  if           ( size base $ size1 base1 )
+         2>r 2nip 2r>                ( $ size1 base1 )
+         2swap                       ( size' base' $ )
+      else                           ( size base $ size1 base1 )
+	 2drop                       ( size base $ )
+      then                           ( size base $ )
+   repeat                            ( size base $ )
+   2drop                             ( size base )
+   +                                 ( limit )
 ;
 
 : add-root-dev  ( cmdline$ -- cmdline$' )

@@ -5,6 +5,7 @@ h# c0000 constant verify-base  \ The address the code is linked to run at
 h# d0000 constant verify-bss   \ The address the code is linked to run at
 h# 10000 constant /verify-bss
 h# 9c000 constant verify-stack
+0 value /verify
 
 0 value crypto-loaded?
 : load-crypto  ( -- error? )
@@ -12,9 +13,16 @@ h# 9c000 constant verify-stack
    " verify" find-drop-in  0=  if
       ." Can't find crypto code" cr  true exit
    then  ( prog$ )
-   2dup verify-base swap move  free-mem             ( )
+   dup to /verify                          ( prog$ )
+   verify-base /verify 0 mem-claim drop    ( prog$ )
+   2dup verify-base swap move  free-mem    ( )
    true to crypto-loaded?
    false
+;
+: unload-crypto  ( -- )
+   crypto-loaded?  0=  if  exit  then
+   verify-base /verify mem-release
+   false to crypto-loaded?
 ;
 
 : signature-bad?  ( data$ sig$ key$ hashname$ -- mismatch? )
