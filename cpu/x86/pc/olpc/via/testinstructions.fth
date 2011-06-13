@@ -474,7 +474,7 @@ defer selected-object  ' noop to selected-object
 ;
 : disconnect-ext-sd  ( -- )
    draw-top
-   " Disonnect external SD card to continue.." message
+   " Disconnect external SD card to continue.." message
    ['] ext-sd-card-top red-888 highlight
 ;
 
