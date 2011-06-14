@@ -2,10 +2,21 @@
 
 # -fno-builtin has the effect of suppressing some warnings about
 # functions that conflict with gcc builtins
-ARCH=/usr/local/arm
-UTILS=$(ARCH)/arm-linux/bin
-CC=$(UTILS)/gcc
+
+ifneq (arm, $(findstring arm,$(shell uname -p)))
+  # Cross-compiler setup
+  ARCH  := /usr/local/arm
+  UTILS := $(ARCH)/arm-linux/bin
+  CC    := $(UTILS)/gcc
+  LD    := $(UTILS)/ld
+else
+  CC    := gcc
+endif
+
 CFLAGS = -I.. -O2 -mcpu=strongarm110
+ifeq (y, $(shell $(CC) -xc -c -fno-stack-protector /dev/null -o /dev/null 2>/dev/null && echo y))
+  CFLAGS += -fno-stack-protector
+endif
 
 all: libobp.a hello start.o
 
