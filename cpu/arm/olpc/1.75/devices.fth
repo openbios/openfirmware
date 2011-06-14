@@ -379,6 +379,8 @@ stand-init: More memory
    extra-mem-pa /extra-mem add-memory
 ;
 
+fload ${BP}/cpu/arm/mmp2/thermal.fth
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
 \ 
