@@ -229,7 +229,6 @@ d# 6500 constant ms-factor
 0 value ec-indexed-io-off?    \ !!!
 : ec-indexed-io-off  ( -- )  ;  \ !!!
 : ec-ixio-reboot  ( -- )  ;   \ !!!
-: flash-base  ( -- )  true abort" The stuff that relies on flash-base in security.fth needs to be reworked!"  ;
 
 \ idt1338 rtc and ram address map
 \     00 -> 0f  rtc

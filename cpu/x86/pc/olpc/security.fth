@@ -1300,7 +1300,7 @@ constant /rtc-signature
 
 : efface-md  ( -- )
    " md" find-tag  0=  if exit then  ( data$ )
-   + 2 +  flash-base -               ( flash-offset )
+   + 2 +  mfg-data-top -  mfg-data-end-offset +   ( flash-offset )
    spi-start spi-identify            ( flash-offset )
    " MD" rot write-spi-flash         ( )
    spi-reprogrammed                  ( )
