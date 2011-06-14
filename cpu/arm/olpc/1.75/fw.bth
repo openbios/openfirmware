@@ -230,14 +230,27 @@ d# 6500 constant ms-factor
 : ec-indexed-io-off  ( -- )  ;  \ !!!
 : ec-ixio-reboot  ( -- )  ;   \ !!!
 : flash-base  ( -- )  true abort" The stuff that relies on flash-base in security.fth needs to be reworked!"  ;
+
+\ idt1338 rtc and ram address map
+\     00 -> 0f  rtc
+\     10 -> 3f  cmos
+
+: >rtc  ( index -- rtc-address )  h# 3f and  h# 10 +  ;
+
 : cmos@  ( index -- data )
-   h# 38 mod  8 +  " rtc@" clock-node @  ( index adr len ih )
+   >rtc " rtc@" clock-node @  ( index adr len ih )
    ['] $call-method catch  if  4drop 0  then
 ;
 : cmos!  ( data index -- )
-   h# 38 mod  8 +  " rtc!" clock-node @  ( data index adr len ih )
-   ['] $call-method  catch if  2drop 3drop  then
+   >rtc " rtc!" clock-node @  ( data index adr len ih )
+   ['] $call-method catch  if  2drop 3drop  then
 ;
+
+\ cmos address map
+\     80 audio volume
+\     81 audio volume
+\     82 alternate boot
+\     83 xid
 
 : dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
 : brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;
@@ -248,7 +261,7 @@ fload ${BP}/cpu/x86/pc/olpc/security.fth
 2 to bundle-suffix
 
 stand-init: xid
-   0 cmos@  dup 1+  0 cmos!   ( n )
+   h# 83 cmos@  dup 1+  h# 83 cmos!   ( n )
    d# 24 lshift               ( new-xid )
    " dev /obp-tftp  to rpc-xid  dend" evaluate
 ;
