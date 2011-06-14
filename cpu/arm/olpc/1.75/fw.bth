@@ -152,7 +152,7 @@ fload ${BP}/cpu/arm/olpc/1.75/leds.fth     \ LEDs
 fload ${BP}/cpu/x86/pc/olpc/via/factory.fth  \ Manufacturing tools
 
 \ When reprogramming this machine's SPI FLASH, rebooting the EC is unnecessary 
-: no-kbc-reboot ;
+: no-kbc-reboot  ['] noop to spi-reprogrammed  ;
 : kbc-on ;
 
 \ Pseudo device that appears in the boot order before net booting

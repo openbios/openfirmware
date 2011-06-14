@@ -141,7 +141,7 @@ c;
    ['] ssp-spi-out    to spi-out
    ['] ssp-spi-cs-on  to spi-cs-on
    ['] ssp-spi-cs-off to spi-cs-off
-   ['] noop to spi-reprogrammed
+   ['] reset-all      to spi-reprogrammed
    ['] noop to spi-reprogrammed-no-reboot
 \  use-spi-flash-read
    ['] fast-spi-flash-read to flash-read
