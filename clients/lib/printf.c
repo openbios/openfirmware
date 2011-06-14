@@ -4,6 +4,7 @@
 
 #include "1275.h"
 
+#include <string.h>
 #include <stdarg.h>
 #include "stdio.h"
 
@@ -226,7 +227,7 @@ fatal(char *fmt, ...)
 	va_start(args, fmt);
 	(void)_printf(fmt, args);
 	va_end(args);
-	exit();
+	exit(1);
 } 
 
 // LICENSE_BEGIN
