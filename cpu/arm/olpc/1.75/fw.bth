@@ -272,7 +272,7 @@ stand-init: xid
 ;
 ' pre-setup-for-linux to linux-pre-hook
 
-: show-temperature  ( -- )  ;
+: show-temperature  ( -- )  space cpu-temperature .d  ;
 fload ${BP}/cpu/arm/bootascall.fth
 create use-thinmac
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
