@@ -3,6 +3,7 @@ purpose: Construct the Open Firmware module collection
 command: &builder &this
 in: ${BP}/cpu/arm/olpc/1.75/build/fw.img
 in: ${BP}/cpu/arm/olpc/1.75/build/resetvec.img
+in: ${BP}/cpu/arm/olpc/1.75/build/mcastnand.bin
 in: sd8686.bin
 in: verify.img
 in: ${BP}/dev/usb2/device/hub/build/hub.fc
@@ -143,10 +144,9 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
    " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
 
+   " ${BP}/cpu/arm/olpc/1.75/build/nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
+   " ${BP}/cpu/arm/olpc/1.75/build/nandblaster_tx.bin"   " nb_tx"    $add-deflated-dropin
 0 [if]
-   " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_tx.bin" " nb_tx"      $add-deflated-dropin
-
    " ${BP}/cpu/x86/pc/olpc/images/tux.565"       " tux.565"        $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/settings.565"  " settings.565"   $add-deflated-dropin
 [then]

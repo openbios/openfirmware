@@ -34,7 +34,7 @@ label cif-handler
    
    ldr     rp,'user rp0			\ Set return stack pointer
    ldr     sp,'user sp0			\ Set data stack pointer
-   inc     sp,1cell			\ Account for the top of stack register
+   \ We don't increment sp because there is one item on the stack, in tos
 
    adr     ip,'body cif-exec		\ Set interpreter pointer
 c;

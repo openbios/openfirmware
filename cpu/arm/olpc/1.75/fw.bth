@@ -260,9 +260,7 @@ stand-init: xid
 ' pre-setup-for-linux to linux-pre-hook
 
 : show-temperature  ( -- )  ;
-: boot-as-call(  ( -- )  ." Implement boot-as-call" cr  ;
-: )boot-as-call  ( -- )  ;
-\ fload ${BP}/cpu/x86/bootascall.fth
+fload ${BP}/cpu/arm/bootascall.fth
 create use-thinmac
 fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
 fload ${BP}/cpu/x86/pc/olpc/via/nbtx.fth
