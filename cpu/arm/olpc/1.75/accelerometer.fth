@@ -55,9 +55,12 @@ my-address my-space encode-phys  " reg" property
 
 \ The datasheet says the selftest change range is 3 to 32, but we
 \ give a little headroom on the high end to allow for external
-\ vibration.  Empirically, on the unit I tested, the measurement
-\ was maxed out at 32.  Typical is supposed to be 19.
-: out-of-range?  ( delta -- error? )  3  d# 40 between 0=  ;
+\ vibration.  Typical is supposed to be 19.
+\ Empirically, measured maximums were:
+\ - Mitch's unit, 32
+\ - James' A3, 41 (on rubber mat on bare ground)
+\ - James' A2, 39
+: out-of-range?  ( delta -- error? )  3  d# 50 between 0=  ;
 
 : error?  ( dx dy dz -- error? )
    out-of-range?  if  ." X axis error" cr  2drop true exit  then   ( dx dy )
