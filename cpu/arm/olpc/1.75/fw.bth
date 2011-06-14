@@ -245,6 +245,7 @@ d# 6500 constant ms-factor
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/guardrtc.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
+2 to bundle-suffix
 
 stand-init: xid
    0 cmos@  dup 1+  0 cmos!   ( n )
