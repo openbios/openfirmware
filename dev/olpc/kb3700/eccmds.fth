@@ -62,10 +62,18 @@ fload ${BP}/dev/olpc/kb3700/eccmdcom.fth  \ Common commands
    0 d# 16 h# 53 do-ec-cmd-buf   ( adr )
    d# 16 cscount-max
 ;
+
 : ec-user$  ( -- adr len )
    0 d# 16 h# 54 do-ec-cmd-buf   ( adr )
    d# 16 cscount-max
 ;
+
+: ec-hash$  ( -- adr len )
+   0 d# 16 h# 55 do-ec-cmd-buf   ( adr )
+   d# 16 cscount-max
+;
+
+: als@      ( -- w )  h# 56 ec-cmd-w@  ;
 
 [ifdef] notdef  \ These commands are awaiting documentation on their interfaces
 #define CMD_READ_EXT_SCI_MASK            0x37
