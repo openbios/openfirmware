@@ -7,10 +7,15 @@ purpose: Sniff the battery state from EC internal variables
 [then]
 
 \ Names try to match the variable names in EC code
+
+h# F780  constant ec-bProcessOneWireIndex
+h# F7CF  constant ec-bHDQ_ACCESS_FLAG2
+
 h# FA00  constant ec-rambase
 h# 01    constant ec-pwr_limit
 h# 09    constant ec-va2
 h# 20    constant ec-platformID
+h# A5	 constant ec-mBAT_STATUS
 
 h# FC00  constant ec-gpiobase
 h# 00    constant ec-gpiofs00 
@@ -523,6 +528,14 @@ h# 20 buffer: ds-bank-buf
    drop
 ;
 
+\ Instruct the EC to completely reset the battery
+\ subsystem. (XO-1 F series EC code)
+
+: (bat-reset) ( -- )
+   1 ec-bHDQ_ACCESS_FLAG2    ec!
+   4 ec-bProcessOneWireIndex ec!
+;
+
 : bat-set-default-status ( val -- )
    ds-bank0 1w-recall
    ds-default-status 1w-write-start
@@ -710,6 +723,12 @@ h# 90 buffer: logstr
    until
    drop
    bat-disable-charge
+;
+
+: bat-reset
+   batman-init?
+   (bat-reset)
+   batman-stop
 ;
 
 fload ${BP}/dev/olpc/kb3700/batstat.fth
