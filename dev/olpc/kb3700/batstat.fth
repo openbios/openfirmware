@@ -128,13 +128,16 @@ end-string-array
 ;
 [then]
 
-: mppt-pct 255 * 100 / mppt-limit! ;
+: (mppt-pct) 255 * 100 / mppt-limit! ;
+
 
 : .mppt 
    mppt-limit@            ( pwr_limit )
    vin@                   ( pwr_limit VA2 )
     ." Vin: " .d  ."  PWM: " .
 ;
+
+: mppt-pct (mppt-pct) .mppt cr ;
 
 : watch-mppt ( -- )
    begin  (cr .mppt kill-line  d# 500 ms  key?  until
