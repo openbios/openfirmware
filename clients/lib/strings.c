@@ -16,7 +16,7 @@ strcmp(const char *s, const char *t)
 }
 
 int
-strncmp(const char *s, const char *t, size_t len)
+strncmp(const char *s, const char *t, int len)
 {
 	int i;
 
@@ -28,24 +28,24 @@ strncmp(const char *s, const char *t, size_t len)
 	return((int) (s[i] - t[i]));
 }
 
-size_t
+int
 strlen(const char *s)
 {
 	int i;
 
 	for (i = 0; s[i] != '\0'; ++i)
 		;
-	return((size_t) i);
+	return((int) i);
 }
 
-size_t
-strnlen(const char *s, size_t maxlen)
+int
+strnlen(const char *s, int maxlen)
 {
 	int i;
 
 	for (i = 0; i < maxlen && s[i] != '\0'; ++i)
 		;
-	return((size_t) i);
+	return((int) i);
 }
 
 char *
@@ -114,9 +114,9 @@ strctok(char *s, const char sep)
 	return(temp);
 }
 
-void *memchr(const void *s, int c, int len)
+const void *memchr(const void *s, int c, int len)
 {
-	unsigned char *p = s;
+	const unsigned char *p = s;
 	while (len--) {
 		if (*p == (unsigned char)c)
 			return p;

@@ -13,7 +13,7 @@ else
   CC    := gcc
 endif
 
-CFLAGS = -I.. -O2 -mcpu=strongarm110
+CFLAGS = -I.. -O2 -mcpu=strongarm110 -fno-builtin
 ifeq (y, $(shell $(CC) -xc -c -fno-stack-protector /dev/null -o /dev/null 2>/dev/null && echo y))
   CFLAGS += -fno-stack-protector
 endif

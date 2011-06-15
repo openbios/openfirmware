@@ -3,14 +3,14 @@
 #include "1275.h"
 
 VOID
-memcpy(char *to, char *from, size_t len)
+memcpy(char *to, char *from, int len)
 {
 	while (len--)
 		*to++ = *from++;
 }
 
 VOID
-memset(char *cp, int c, size_t len)
+memset(char *cp, int c, int len)
 {
 	while (len--)
 		*(cp + len) = c;
