@@ -56,6 +56,9 @@ fload ${BP}/dev/olpc/kb3700/eccmdcom.fth  \ Common commands
    d# 16 cscount-max
 ;
 
+: ec-power-cycle ( -- ) h# 4b ec-cmd ;
+: ec-power-off   ( -- ) h# 4c ec-cmd ;
+
 : ec-echo  ( ... n -- ... )  dup h# 52 do-ec-cmd  ;
 
 : ec-date$  ( -- adr len )
@@ -86,8 +89,6 @@ fload ${BP}/dev/olpc/kb3700/eccmdcom.fth  \ Common commands
 #define CMD_WRITE_LOCATION               0x45
 #define RSP_KEYBOARD_DATA                0x48
 #define RSP_TOUCHPAD_DATA                0x49
-#define CMD_POWER_CYCLE                  0x4b
-#define CMD_POWER_OFF                    0x4c
 #define CMD_RESET_EC_SOFT                0x4d
 #define CMD_ENABLE_MOUSE                 0x4f
 [then]
