@@ -42,7 +42,7 @@ d# 102943 constant pi
 \ Computes  (1 - (theta^2 / divisor) * last)
 : sin-step  ( last divisor -- next )  thetasq  swap /  times  one min  one swap -  ;
 
-0 [if]
+[ifdef] notdef
 \ Cos
 \ 1 - t^2/(2) + t^4/(2..4) - t^6/2..6) + t^8/(2..8)
 \ 1 - (t^2/(1*2)) * (1 - (t^2/(3*4)) * (1 - (t^2/(5*6)) * (1 - (t^2/(7*8))))
@@ -77,7 +77,7 @@ d# 102943 constant pi
 ;
 
 
-0 [if]
+[ifdef] notdef
 : reduce-to-quarter-cycle  ( -- )
    \ Move a cycle/4 to the left until negative, then fix
    #cycle/4 -  dup 0<=  if  #cycle/4 +  (sin)          exit  then  ( theta' )  \ Quadrant 1
