@@ -60,7 +60,8 @@ my-address my-space encode-phys  " reg" property
 \ - Mitch's unit, 32
 \ - James' A3, 41 (on rubber mat on bare ground)
 \ - James' A2, 39
-: out-of-range?  ( delta -- error? )  3  d# 50 between 0=  ;
+d# 50 value max-delta
+: out-of-range?  ( delta -- error? )  3  max-delta between 0=  ;
 
 : error?  ( dx dy dz -- error? )
    out-of-range?  if  ." X axis error" cr  2drop true exit  then   ( dx dy )
