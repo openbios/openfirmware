@@ -205,7 +205,11 @@ dev /file-nvram
 : fd-nv-file  ( -- )  " a:\nvram.dat"  ;
 : hd-nv-file  ( -- )  " c:\nvram.dat"  ;
 : usb-nv-file  ( -- )  " u:\nvram.dat"  ;
-' usb-nv-file to nv-file
+[ifdef] virtualbox-loaded
+   ' fd-nv-file to nv-file
+[else]
+   ' usb-nv-file to nv-file
+[then]
 device-end
 : reread-config-vars  ( -- )
    config-valid?  if  exit  then
