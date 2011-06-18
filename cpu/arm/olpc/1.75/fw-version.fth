@@ -1,8 +1,3 @@
 \ The overall firmware revision
 macro: FW_MAJOR A
-macro: FW_MINOR 14
-
-
-
-
-
+macro: FW_MINOR 15
