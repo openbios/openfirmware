@@ -270,7 +270,7 @@ previous definitions
    d# 50 timed-read  if  exit  then  ( id1 )
    h# ab <>  if  exit  then
 
-   \ The ENE keyboard controller return  ab 41
+   \ The ENE keyboard controller returns  ab 41
    d# 50 timed-read  if  exit  then  ( id2 )
    h# 41 <>  if  exit  then
    
@@ -530,6 +530,7 @@ headers
    unlock
    keyboard-present?  if  clear-out-buf  else  reset  then
    keyboard-present?  0=  if  false exit  then
+   1 set-scan-set
    choose-type
    ['] get-scan d# 10 alarm
    1 +refcnt
