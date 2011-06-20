@@ -105,27 +105,14 @@ false value plot?  \ Set to true to plot the impulse response, for debugging
    " 0 set-fg  h# ffff set-bg single-drawing clear-drawing wave" evaluate
    key ascii d = if debug-me then
 ;
-defer input-common-settings
-defer output-common-settings
-[ifdef] with-adc
-\ XXX this is hd-audio specific.  Factor it out
-: (input-common-settings)  ( -- )
-   open-in  48kHz  16bit  with-adc d# 73 input-gain
-;
-' (input-common-settings) to input-common-settings
-: (output-common-settings)  ( -- )
-   open-out 48kHz  16bit stereo
-;
-' (output-common-settings) to output-common-settings
-[then]
 
 : test-with-case  ( -- )
 \   " setup-case" $call-analyzer
 \   xxx - this needs to use the internal speakers and mic even though the loopback cable is attached
    true to force-speakers?  true to force-internal-mic?
    mic-bias-on
-   input-common-settings  mono
-   output-common-settings  d# -1 set-volume
+   input-test-settings  mono
+   output-test-settings  case-test-volume set-volume
    ." Testing internal speakers and microphone" cr
    " setup-case" test-common
    false to force-speakers?  false to force-internal-mic?
@@ -137,8 +124,8 @@ defer output-common-settings
 : test-with-fixture  ( -- error? )
    true to force-speakers?  true to force-internal-mic?
    mic-bias-on
-   input-common-settings  mono
-   output-common-settings  d# -13 set-volume  \ -23 prevents obvious visible clipping
+   input-test-settings  mono
+   output-test-settings  fixture-test-volume set-volume  \ -23 prevents obvious visible clipping
    ." Testing internal speakers and microphone with fixture" cr
    " setup-fixture" test-common
    false to force-speakers?  false to force-internal-mic?
@@ -149,8 +136,8 @@ defer output-common-settings
 ;
 : test-with-loopback  ( -- error? )
    mic-bias-off
-   input-common-settings   stereo
-   output-common-settings  d# -22 set-volume
+   input-test-settings   stereo
+   output-test-settings  loopback-test-volume set-volume
    ." Testing headphone and microphone jacks with loopback cable" cr
    " setup-loopback" test-common
    plot?  if
@@ -195,9 +182,6 @@ defer output-common-settings
       begin  ?key-abort  instructions-idle  loopback-disconnected?  until
       instructions-done
    then
-;
-: configure-platform  ( -- )
-   board-revision  h# 1a28 >=  if  " configure-xo1.75" $call-analyzer  exit  then
 ;
 \ Returns failure by throwing
 : automatic-test  ( -- )

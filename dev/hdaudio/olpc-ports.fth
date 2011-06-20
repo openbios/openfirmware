@@ -18,6 +18,10 @@ false value force-speakers?
       speakers-on
    then
 ;
+\ Connection #2 is for port e which is unused on OLPC
+: select-dc-input  ( -- )
+   mux  3 set-connection  dc-input enable-hp-input
+;
 : select-internal-mic  ( -- )
    mux  1 set-connection  internal-mic enable-hp-input
 ;
@@ -26,8 +30,13 @@ false value force-speakers?
 ;
 \ Set this to use the internal mic even if an external mic is plugged in
 false value force-internal-mic?
+false value mic-bias-off?
 : set-recording-port  ( -- )
    external-mic pin-sense?  force-internal-mic? 0=  and  if
+\ select-dc-input does not work for some reason I haven't yet discovered
+\ When you try to do a loopback test through the dc input, the received
+\ sample values are all 0
+\      mic-bias-off?  if  select-dc-input  else  select-external-mic  then
       select-external-mic
    else
       select-internal-mic

@@ -522,13 +522,19 @@ fload ${BP}/dev/geode/ac97/selftest.fth
 
 false value force-internal-mic?  \ Can't be implemented on XO-1.75
 2 value #channels
-fload ${BP}/dev/hdaudio/test.fth
-: input-settings  ( -- )
-   audio-clock-on              ( )  \ If you don't do this, the L/R phase is often wrong
+
+\ Unless you do the audio-clock-on, the L/R phase is often wrong
+: input-test-settings  ( -- )  audio-clock-on  ;
+: output-test-settings  ( -- )  ;
+
+d#  -1 constant case-test-volume
+d# -13 constant fixture-test-volume
+d# -22 constant loopback-test-volume
+: configure-platform  ( -- )
+   board-revision  h# 1a28 >=  if  " configure-xo1.75" $call-analyzer  exit  then
 ;
-: output-settings  ( -- )  ;
-' input-settings to input-common-settings
-' output-settings to output-common-settings
+
+fload ${BP}/dev/hdaudio/test.fth
 
 end-package
 

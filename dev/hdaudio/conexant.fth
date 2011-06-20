@@ -136,6 +136,25 @@ fload ${BP}/dev/hdaudio/config.fth    \ Names for configuration settings
 \   setup-config-default
 ;
 
+\ As far as I can tell, the CX2058 does not have a way to turn off the
+\ bias for the external mic port (port b).  To eliminate the bias, we
+\ would have to use port f instead, but that doesn't work with loopback
+\ because port f is DC coupled, so the DC offset on the headphone output
+\ would overwhelm the input.
+: mic-bias-off  ( -- )  true to mic-bias-off?  ;
+: mic-bias-on  ( -- )  false to mic-bias-off?  ;
+
+: input-test-settings  ( -- )
+   open-in  48kHz  16bit  with-adc d# 73 input-gain
+;
+: output-test-settings  ( -- )
+   open-out 48kHz  16bit stereo
+;
+d#  -9 constant case-test-volume
+d# -23 constant fixture-test-volume
+d# -33 constant loopback-test-volume
+: configure-platform  ( -- )  ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 Luke Gorrie <luke@bup.co.nz>
 \ 

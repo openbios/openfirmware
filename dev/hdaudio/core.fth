@@ -697,7 +697,6 @@ false value right-mute?
 : mic+20db  ( -- )  d# 20 to boost-db ;
 : mic+0db   ( -- )      0 to boost-db ;
 
-: set-record-gain  ( dB -- )  ; \ with-adc  step# input-gain  ;
 : in-amp-caps  ( -- u )  h# f000d cmd?  ;
 : in-gain-steps  ( -- n )  in-amp-caps  8 rshift h# 7f and  1+  ;
 : set-record-gain  ( dB -- )  drop ( hardcoded for now ) with-adc  h# 40 input-gain  ;
