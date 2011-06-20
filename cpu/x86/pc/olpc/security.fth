@@ -1149,6 +1149,8 @@ constant /rtc-signature
       then
    then
 ;
+[else]
+alias ?ec-update noop immediate
 [then]
 
 : ?fw-update  ( -- )
