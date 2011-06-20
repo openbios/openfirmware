@@ -190,7 +190,7 @@ end-string-array
 ;
 
 : rtc-rollback?  ( -- error? )
-   rtcar-enabled?  0=  if  exit  then
+   rtcar-enabled?  0=  if  false exit  then
 
    find-timestamp            ( status )
    ?update-timestamp         ( status' )
