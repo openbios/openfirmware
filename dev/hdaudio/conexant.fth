@@ -153,7 +153,20 @@ fload ${BP}/dev/hdaudio/config.fth    \ Names for configuration settings
 d#  -9 constant case-test-volume
 d# -23 constant fixture-test-volume
 d# -33 constant loopback-test-volume
-: configure-platform  ( -- )  ;
+
+create analysis-parameters
+d#   0 ,   \  0 Sample delay
+d# 100 ,   \  1 #fixture
+d#  25 ,   \  2 fixture-threshold
+d#  60 ,   \  3 case-start-left
+d#  60 ,   \  4 case-start-right
+d# 400 ,   \  5 case-start-quiet
+d#  60 ,   \  6 #case-left
+d# 190 ,   \  7 #case-right
+d#  25 ,   \  8 case-threshold-left
+d#  14 ,   \  9 case-threshold-right
+d#  20 ,   \ 10 #loopback
+d#  70 ,   \ 11 loopback-threshold
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 Luke Gorrie <luke@bup.co.nz>

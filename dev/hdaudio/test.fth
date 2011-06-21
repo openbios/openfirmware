@@ -185,7 +185,7 @@ false value plot?  \ Set to true to plot the impulse response, for debugging
 ;
 \ Returns failure by throwing
 : automatic-test  ( -- )
-   configure-platform   
+   analysis-parameters " set-analysis-parameters" $call-analyzer
    disconnect-loopback  \ Not for 1.5; it can test internal while loopback is connected
    " smt-test?" evaluate  if
       test-with-fixture throw

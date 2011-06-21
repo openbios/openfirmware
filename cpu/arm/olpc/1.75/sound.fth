@@ -530,11 +530,23 @@ false value force-internal-mic?  \ Can't be implemented on XO-1.75
 d#  -1 constant case-test-volume
 d# -13 constant fixture-test-volume
 d# -22 constant loopback-test-volume
-: configure-platform  ( -- )
-   board-revision  h# 1a28 >=  if  " configure-xo1.75" $call-analyzer  exit  then
-;
+
+create analysis-parameters
+d# -23 ,   \  0 Sample delay
+d#  40 ,   \  1 #fixture
+d#  50 ,   \  2 fixture-threshold
+d#  60 ,   \  3 case-start-left
+d#  83 ,   \  4 case-start-right
+d# 400 ,   \  5 case-start-quiet
+d#  60 ,   \  6 #case-left
+d#  30 ,   \  7 #case-right
+d#  25 ,   \  8 case-threshold-left
+d#  25 ,   \  9 case-threshold-right
+d#  20 ,   \ 10 #loopback
+d#  70 ,   \ 11 loopback-threshold
 
 fload ${BP}/dev/hdaudio/test.fth
+
 
 end-package
 

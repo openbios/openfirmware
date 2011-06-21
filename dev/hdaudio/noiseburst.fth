@@ -342,10 +342,25 @@ create testarr2   100 0 do  0 w,  -100 w,  loop
    3drop                ( )
 ;
 
+0 value analysis-parameters
+: set-analysis-parameters  ( adr -- )  to analysis-parameters  ;
+: param@  ( offset -- value )  analysis-parameters swap na+ @  ;
+: sample-delay          ( -- value )  d# 0 param@  ;
+: #fixture              ( -- value )  d# 1 param@  ;
+: fixture-threshold     ( -- value )  d# 2 param@  ;
+: case-start-left       ( -- value )  d# 3 param@  ;
+: case-start-right      ( -- value )  d# 4 param@  ;
+: case-start-quiet      ( -- value )  d# 5 param@  ;
+: #case-left            ( -- value )  d# 6 param@  ;
+: #case-right           ( -- value )  d# 7 param@  ;
+: case-threshold-left   ( -- value )  d# 8 param@  ;
+: case-threshold-right  ( -- value )  d# 9 param@  ;
+: #loopback             ( -- value )  d# 10 param@  ;
+: loopback-threshold    ( -- value )  d# 11 param@  ;
+
 \ sample-delay accounts for the different timing between adc-on and dac-on
 \ for different combinations of codec and controller.
 
-d# 0 value sample-delay
 : +sample-delay  ( start #samples -- end' start' )
    swap  sample-delay +  swap bounds
 ;
@@ -469,8 +484,6 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
    debug?  if  dup .d cr  then
 ;
 
-d# 100 value #fixture
-d# 25 value fixture-threshold
 : fixture-ratio-left  ( -- error? )
    left-range  d#  60 #fixture sm-covar-abs-sum nip  ( sum1 ) 
    left-range  d# 300 #fixture sm-covar-abs-sum nip  ( sum1 sum2 )
@@ -483,14 +496,6 @@ d# 25 value fixture-threshold
    >ratio
    fixture-threshold <
 ;
-
-d#  60 value case-start-left
-d#  60 value case-start-right
-d# 400 value case-start-quiet
-d#  60 value #case-left
-d# 190 value #case-right
-d#  25 value case-threshold-left
-d#  14 value case-threshold-right
 
 \ This compares the total energy within the impulse response band to the
 \ total energy in a similar-length band 
@@ -507,8 +512,6 @@ d#  14 value case-threshold-right
    case-threshold-right <
 ;
 
-d# 20 value #loopback
-d# 70 value loopback-threshold
 \ This compares the total energy within the impulse response band to the
 \ total energy in a similar-length band 
 : loopback-ratio-left  ( -- error? )
@@ -522,17 +525,6 @@ d# 70 value loopback-threshold
    right-stereo-range  d# 200 #loopback ss-covar-abs-sum  nip ( sum1.high sum2.high )
    >ratio
    loopback-threshold <
-;
-
-\ Ideally we would not put platform-specific information in this module.
-\ If we add many more platforms, this should be redesigned.
-: configure-xo1.75  ( -- )
-   d# -23 to sample-delay
-   d# 50 to fixture-threshold
-   d# 40 to #fixture
-   d# 83 to case-start-right
-   d# 30 to #case-right
-   d# 25 to case-threshold-right
 ;
 
 d# 1200 constant #impulse-response
