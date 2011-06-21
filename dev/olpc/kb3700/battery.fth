@@ -561,6 +561,25 @@ h# 20 buffer: ds-bank-buf
    then 
 ;
 
+: bat-get-id  ( -- id )  ds-bank-buf 1 ds-batid 1w-read  ds-bank-buf c@  ;
+
+: bat-set-life-byd ( -- )
+   ds-batid 1w-recall
+   ds-batid h# 6c 1w-cmd
+   h# 22 1w-write-byte
+   ds-batid 1w-copy
+;
+
+: bat-fix-byd-id
+  batman-init?
+  bat-get-id h# 22 = if
+     ." Id is already correct"
+  else
+     ." Fixing BYD bat ID"
+     bat-set-life-byd
+  then
+;
+
 h# 90 buffer: logstr
 
 \ Read values directly rather than using the ec-cmd
