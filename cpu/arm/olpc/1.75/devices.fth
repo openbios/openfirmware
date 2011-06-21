@@ -274,8 +274,6 @@ fload ${BP}/dev/olpc/kb3700/spicmd.fth
 
 devalias keyboard /ec-spi/keyboard
 
-fload ${BP}/cpu/arm/olpc/spcmd.fth
-
 : wlan-reset  ( -- )  d# 58 gpio-clr  d# 20 ms  d# 58 gpio-set  ;
 
 \ Create the alias unless it already exists

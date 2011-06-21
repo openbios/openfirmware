@@ -33,9 +33,8 @@ d# 64 constant #levels
 
 : open  ( -- flag )
    my-space to base-adr
-\ Leave the IRQ table alone so as not to steal interrupts from the SP
-\   block-irqs
-\   d# 64 0  do  i disable-irq  loop
+   block-irqs
+   d# 64 0  do  i disable-irq  loop
    unblock-irqs
    true
 ;
