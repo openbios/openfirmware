@@ -270,11 +270,11 @@ devalias int /sd/disk@3
 devalias ext /sd/disk@1
 devalias net /wlan  \ XXX should report-net in case of USB Ethernet
 
+fload ${BP}/cpu/arm/olpc/spcmd.fth
+
 fload ${BP}/dev/olpc/kb3700/spicmd.fth
 
 devalias keyboard /ec-spi/keyboard
-
-fload ${BP}/cpu/arm/olpc/spcmd.fth
 
 : wlan-reset  ( -- )  d# 58 gpio-clr  d# 20 ms  d# 58 gpio-set  ;
 
