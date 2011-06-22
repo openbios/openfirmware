@@ -685,6 +685,7 @@ create button-scancodes
             get-msecs last-timestamp -  d# 10,000 >=
          then
       then             ( exit? )
+      d# 20 ms
    until
    begin  get-data?  while  drop  repeat
 ;
