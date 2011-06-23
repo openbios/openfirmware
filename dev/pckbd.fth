@@ -530,7 +530,6 @@ headers
    unlock
    keyboard-present?  if  clear-out-buf  else  reset  then
    keyboard-present?  0=  if  false exit  then
-   1 set-scan-set
    choose-type
    ['] get-scan d# 10 alarm
    1 +refcnt
