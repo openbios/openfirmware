@@ -405,6 +405,8 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 
    read-game-keys
 
+   ?update-ec-flash
+
    factory-test?  if  text-off  then
 
    " probe-" do-drop-in

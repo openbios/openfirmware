@@ -1,6 +1,7 @@
 purpose: Construct the Open Firmware module collection
 
 command: &builder &this
+in: ${BP}/cpu/arm/olpc/1.75/build/ec.img
 in: ${BP}/cpu/arm/olpc/1.75/build/fw.img
 in: ${BP}/cpu/arm/olpc/1.75/build/resetvec.img
 in: ${BP}/cpu/arm/olpc/1.75/build/mcastnand.bin
@@ -150,6 +151,7 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/tux.565"       " tux.565"        $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/settings.565"  " settings.565"   $add-deflated-dropin
 [then]
+   " ec.img"                                     " ecimage.bin"    $add-deflated-dropin
 
 .( Dropin top is )  ofd @ fsize  .x cr
 

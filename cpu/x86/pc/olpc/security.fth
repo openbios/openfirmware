@@ -906,16 +906,6 @@ warning !
 ;
 
 [ifdef] reflash-ec
-: ec-up-to-date?  ( img$ -- flag )
-   /ec-flash <>  if  show-x  " Invalid EC Firmware image" .security-failure  then  ( adr )
-   /ec-flash + h# 100 - cscount                     ( version&date$ )
-   \ If the new image has an invalid signature, the old one is considered up to date
-   dup d# 25 <  if  2drop true exit  then           ( version&date$ )
-   over " XO-EC 4 " comp  if  2drop true exit  then ( version&date$ )
-   bl right-split-string 2drop                      ( date$ )
-   d# 16 <>  if  2drop true exit  then              ( date-adr )
-   ec-date$  comp  0<=                              ( flag )
-;
 
 defer ec-reflash-off?  ' false to ec-reflash-off?
 : do-ec-update  ( img$ -- )

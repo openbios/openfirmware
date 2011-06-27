@@ -52,11 +52,11 @@ char 4 value expected-ec-version
    abort"  Miscompare!"
    cr
 [ifndef] cl2-a1
-   ." Restarting EC and powering off" cr
-   d# 3000 ms
+   ." Restarting EC and rebooting" cr
+   d# 2000 ms
    unreset-8051
 [then]
-   reset-ec
+   ec-power-cycle
 ;
 : flash-ec  ( "filename" -- )  get-ec-file ?enough-power reflash-ec  ;
 : flash-ec! ( "filename" -- )  get-ec-file reflash-ec  ;
@@ -75,6 +75,35 @@ char 4 value expected-ec-version
    read-ec-flash
    load-base /ec-flash ofd @ fputs
    ofd @ fclose
+;
+: ec-up-to-date?  ( img$ -- flag )
+   \ If the new image has an invalid length, the old one is considered up to date
+   dup /ec-flash <>  if
+      ." Invalid EC image length" cr  2drop true exit
+   then                                             ( adr len )
+   + h# 100 - cscount                               ( version&date$ )
+   \ If the new image has an invalid signature, the old one is considered up to date
+   dup d# 25 <  if  2drop true exit  then           ( version&date$ )
+   bl left-parse-string " XO-EC" $= 0=  if  2drop true exit  then  ( version&date$ )
+   bl left-parse-string " 4" $= 0=  if  2drop true exit  then      ( version&date$ )
+   bl left-parse-string 2nip                                       ( version$ )
+   ec-name$  $caps-compare  0<=                                    ( flag )
+;
+: ?update-ec-flash  ( -- )
+   " ecimage.bin" find-drop-in  if   ( adr len )
+      2dup ec-up-to-date?  if        ( adr len )
+	 free-mem                    ( )
+      else                           ( adr len )
+         2dup load-base swap move    ( adr len )
+         free-mem                    ( )
+         ['] ?enough-power catch  ?dup  if  ( error )
+            .error
+	    ." Skipping EC reflash" cr
+         else
+	    reflash-ec
+	 then
+      then
+   then
 ;
 
 \ LICENSE_BEGIN
