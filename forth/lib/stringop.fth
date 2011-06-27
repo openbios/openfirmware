@@ -108,6 +108,59 @@ variable last-delim
    until then then                ( adr )
    here over -
 ;
+\ The result is < = > zero when $1 is < = > $2
+: $compare  ( $1 $2 -- -1|0|1 )
+   rot                               ( adr1 adr2 len2 len1 )
+   2dup =  if                        ( adr1 adr2 len2 len1 )
+      \ The strings are the same length, so consider only their contents
+      drop comp                 ( -1|0|1 )
+   else                              ( adr1 adr2 len2 len1 )
+      \ The lengths differ, so consider both contents and length
+      \ First consider the contents within the length of the shorter string
+      2>r  2r@ min                   ( adr1 adr2 min-len r: len2 len1 )
+      comp  ?dup  if            ( -1|1 r: len2 len1 )
+         \ The initial substrings differ, determining the answer
+	 2r> 2drop                   ( -1|1 )
+      else                           ( r: len2 len1 )
+         \ The initial substring are the same, so the longer string is ">"
+         2r>  swap                   ( len1 len2 )
+	 <  if  -1  else  1  then    ( -1|1 )
+      then
+   then
+;
+\ The result is < = > zero when $1 is < = > $2
+: $caps-compare  ( $1 $2 -- -1|0|1 )
+   rot                               ( adr1 adr2 len2 len1 )
+   2dup =  if                        ( adr1 adr2 len2 len1 )
+      \ The strings are the same length, so consider only their contents
+      drop caps-comp                 ( -1|0|1 )
+   else                              ( adr1 adr2 len2 len1 )
+      \ The lengths differ, so consider both contents and length
+      \ First consider the contents within the length of the shorter string
+      2>r  2r@ min                   ( adr1 adr2 min-len r: len2 len1 )
+      caps-comp  ?dup  if            ( -1|1 r: len2 len1 )
+         \ The initial substrings differ, determining the answer
+	 2r> 2drop                   ( -1|1 )
+      else                           ( r: len2 len1 )
+         \ The initial substring are the same, so the longer string is ">"
+         2r>  swap                   ( len1 len2 )
+	 <  if  -1  else  1  then    ( -1|1 )
+      then
+   then
+;
+0 [if] \ Test cases
+" "   " "     $compare .
+" a"  " a"    $compare .
+" a"  " b"    $compare .
+" a"  " ab"   $compare .
+" b"  " a"    $compare .
+" b"  " ab"   $compare .
+" a"  " a"    $caps-compare .
+" a"  " B"    $caps-compare .
+" a"  " Ba"   $caps-compare .
+" B"  " a"    $caps-compare .
+" B"  " ab"   $caps-compare .
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
