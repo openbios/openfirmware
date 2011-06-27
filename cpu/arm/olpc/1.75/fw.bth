@@ -318,10 +318,14 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
 
 fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
 
+0 value sp-kbd-ih
 : console-start  ( -- )
    install-mux-io
    cursor-off
    true to text-on?
+
+   " /ap-sp/keyboard" open-dev to sp-kbd-ih
+   sp-kbd-ih  if  sp-kbd-ih add-input  then
 
    " //null" open-dev to null-ih  \ For text-off state
 ;
@@ -330,6 +334,11 @@ fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
       keyboard-ih remove-input
       keyboard-ih close-dev
       0 to keyboard-ih
+   then
+   sp-kbd-ih  if
+      sp-kbd-ih remove-input
+      sp-kbd-ih close-dev
+      0 to sp-kbd-ih
    then
 ;
 : interpreter-init  ( -- )
