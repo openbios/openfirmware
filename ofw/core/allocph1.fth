@@ -74,9 +74,6 @@ new-device
 
 list: physavail   0 physavail !
 
-headerless
-/n 8 * constant bits/cell
-
 headers
 : first-phys-avail  ( -- phys size )
    physavail last-node node-range  ( phys size )
