@@ -617,6 +617,16 @@ create button-scancodes
    then                                     ( scancode )
 ;
 
+0 value button-poll-time
+: okay-to-poll?   ( -- flag )
+   button-poll-time 0=   get-msecs button-poll-time -  0>=  or  if
+      get-msecs d# 20 +  to button-poll-time
+      true
+   else
+      false
+   then
+;
+
 \ Returns the next button-related scancode byte.
 : button-event?  ( -- false | scancode true )
    \ Handle the suffix of an e0-scancode sequence
@@ -625,14 +635,16 @@ create button-scancodes
       exit                                           ( -- scancode true )
    then                                              ( )
 
-   \ If the pending-buttons change mask is 0, we don't have anymore
+   \ If the pending-buttons change mask is 0, we don't have any more
    \ events to generate from the last time around, so reread the
    \ game buttons and set pending-buttons to the ones that have
    \ changed.
    pending-buttons  0=  if
-      game-key@                                  ( new-buttons )
-      dup last-buttons xor  to pending-buttons   ( new-buttons )
-      to last-buttons                            ( )
+      okay-to-poll?  if
+         game-key@                                  ( new-buttons )
+         dup last-buttons xor  to pending-buttons   ( new-buttons )
+         to last-buttons                            ( )
+      then
    then
 
    \ If there are bits set in pending-buttons, generate an event from
@@ -685,7 +697,6 @@ create button-scancodes
             get-msecs last-timestamp -  d# 10,000 >=
          then
       then             ( exit? )
-      d# 20 ms
    until
    begin  get-data?  while  drop  repeat
 ;
