@@ -664,18 +664,17 @@ create button-scancodes
    then                                          ( false | scancode true )
 ;
 
+0 value ec-spi-buttons?
+
 \ Check for a change in button state if necessary.
 : or-button?  ( [scancode] key? -- [scancode] flag )
    \ If there is already a key from get-data?, handle it before checking the game buttons
-   dup  if  exit  then          ( [scancode] key? phandle )
+   dup  if  exit  then          ( false )
 
    \ If the /ec-spi device node is present, the game buttons are directly connected
    \ so we must handle them here.  Otherwise the EC will handle them and fold their
    \ events into the keyboard scancode stream.
-   " /ec-spi" find-package  if  ( false phandle )
-      2drop                     ( )
-      button-event?             ( [scancode] flag )
-   then                         ( [scancode] flag )
+   ec-spi-buttons?  if   drop button-event?  then
 ;
 
 0 value last-timestamp
@@ -728,6 +727,13 @@ create button-scancodes
 warning @ warning off
 : selftest  ( -- error? )
    open  0=  if  true exit  then
+
+   " /ec-spi" locate-device  if  ( )
+      false                      ( flag )
+   else                          ( phandle )
+      drop true                  ( flag )
+   then                          ( flag )
+   to ec-spi-buttons?            ( )
 
    set-keyboard-type
 
