@@ -209,8 +209,18 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 
 fload ${BP}/dev/logdev.fth
 fload ${BP}/cpu/x86/pc/olpc/disptest.fth
+dev /ec-spi/keyboard
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
+device-end
+dev /ap-sp/keyboard
+fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
+device-end
+dev /ec-spi/mouse
 fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
+device-end
+dev /ap-sp/mouse
+fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
+device-end
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
 fload ${BP}/cpu/arm/olpc/1.75/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
@@ -318,14 +328,24 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
 
 fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
 
-0 value sp-kbd-ih
+: select-keyboard  ( -- )
+   " /ap-sp/keyboard" open-dev  ?dup 0=  if  exit  then   >r  ( r: ih )
+   " kbd-reset" r@ $call-method   ( failed? )
+   0=  if
+      " keyboard" " /ap-sp/keyboard"  $devalias
+      " mouse"    " /ap-sp/mouse"     $devalias
+   else
+      " keyboard" " /ec-spi/keyboard" $devalias
+      " mouse"    " /ec-spi/mouse"    $devalias
+   then
+   r> close-dev
+;
+
 : console-start  ( -- )
+   select-keyboard
    install-mux-io
    cursor-off
    true to text-on?
-
-   " /ap-sp/keyboard" open-dev to sp-kbd-ih
-   sp-kbd-ih  if  sp-kbd-ih add-input  then
 
    " //null" open-dev to null-ih  \ For text-off state
 ;
@@ -334,11 +354,6 @@ fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
       keyboard-ih remove-input
       keyboard-ih close-dev
       0 to keyboard-ih
-   then
-   sp-kbd-ih  if
-      sp-kbd-ih remove-input
-      sp-kbd-ih close-dev
-      0 to sp-kbd-ih
    then
 ;
 : interpreter-init  ( -- )
@@ -405,13 +420,14 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 
    read-game-keys
 
-   ?update-ec-flash
-
    factory-test?  if  text-off  then
 
    " probe-" do-drop-in
 
    show-child
+
+   ?update-ec-flash
+
    install-alarm
    ['] sound catch drop
 

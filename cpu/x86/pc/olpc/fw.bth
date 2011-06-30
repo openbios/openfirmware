@@ -336,7 +336,9 @@ true value text-on?
 fload ${BP}/cpu/x86/pc/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/suspend.fth      \ Suspend/resume setup
+dev /keyboard
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
+device-end
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/copynand.fth

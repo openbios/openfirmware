@@ -4,7 +4,7 @@ purpose: Interactive keyboard test shows which keys are pressed
 \needs final-test?  0 value final-test?
 \needs smt-test?    0 value smt-test?
 
-dev /keyboard
+\ Must be loaded in the keyboard device node
 hex
 
 \ This is 1 for the original rubber keyboard and 2 for the mechanical keyboard
@@ -766,8 +766,6 @@ warning @ warning off
    then
 ;
 warning !
-
-device-end
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

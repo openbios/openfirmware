@@ -1,6 +1,5 @@
 \ See license at end of file
 \ Add this code to the existing mouse driver
-dev /mouse
 
 h# f800 constant red
 h# 07e0 constant green
@@ -243,10 +242,6 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    page
    final-test?  if  selftest-failed?  else  false  then
 ;
-
-\ We are finished adding code to the mouse driver.
-\ Go back to the main forth context
-device-end
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
