@@ -193,9 +193,11 @@ headers
 : toggle-leds  ( led-mask -- )  led-state xor  set-leds  ;
 
 : kbd-reset  ( -- failed-reset? )
+   lock
    \ Send kbd reset command
    h# ff cmd
    get-data  h# aa <>
+   unlock
 ;
 
 : do-esc  ( char -- ESC )
