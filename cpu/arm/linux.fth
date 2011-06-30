@@ -185,6 +185,18 @@ warning !
 
 : mcr  ( -- )  cr exit? throw  ;
 
+\ Hack to force the vaddr to a paddr, because the Linux kernel expects to be
+\ started at physical addresses.
+: (linux-elf-map-in)  ( va size -- )
+   drop                 ( va )
+   h# c000.0000 u>  if  ( )
+      p32_vaddr h# c000.0000 -  dup elf32-pheader >p32_vaddr l!  ( pa )
+      to linux-base
+      true to linux-loaded?
+   then
+;
+' (linux-elf-map-in) to elf-map-in
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
 \ 
