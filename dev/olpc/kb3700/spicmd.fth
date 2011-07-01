@@ -262,7 +262,6 @@ defer upstream
    pulse-ack
 ;
 : (upstream)  ( -- )
-   rxavail 2 <>  if  ." ec-spi rxavail = " rxavail . cr  then
    ssp-ssdr rl@  ssp-ssdr rl@              ( channel# data )
    debug? if
       ." UP: " over . dup . cr
@@ -290,7 +289,7 @@ defer upstream
    lock[
    ssp-ready?  if  do-state  then
    ]unlock
-   debug?  if  key?  if  key drop debug-me  then  then
+\  debug?  if  key?  if  key drop debug-me  then  then
 ;
 : cancel-command  ( -- )  \ Called when the command child times out
    clr-cmd
@@ -371,7 +370,7 @@ d# 16 buffer: ec-respbuf
    ec-cmdbuf 3 +   swap  bounds  ?do  i c!  loop  ( )
 ;
 : timed-get-results  ( -- b )
-   get-msecs  d# 20 +   begin         ( limit )
+   get-msecs  d# 50 +   begin         ( limit )
       2 deque?  if                    ( limit b )
          nip exit                     ( -- b )
       then                            ( limit )
