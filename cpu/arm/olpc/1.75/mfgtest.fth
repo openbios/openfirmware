@@ -136,8 +136,8 @@ d# 15 value #mfgtests
 : camera-item   ( -- )  " /camera"    mfg-test-dev  ;
 : wlan-item     ( -- )  " /wlan"      mfg-test-dev  ;
 : timer-item    ( -- )  " /timer"     mfg-test-dev  ;
-: touchpad-item ( -- )  " /ec-spi/mouse"     mfg-test-dev  ;
-: keyboard-item ( -- )  " /ec-spi/keyboard"  mfg-test-dev  ;
+: touchpad-item ( -- )  " mouse"      mfg-test-dev  ;
+: keyboard-item ( -- )  " keyboard"   mfg-test-dev  ;
 : switch-item   ( -- )  " /switches"  mfg-test-dev  " /accelerometer" mfg-test-dev  ;
 : leds-item     ( -- )  " /leds"      mfg-test-dev   ;
 \ XXX need to test sensors like accelerometer and compass
