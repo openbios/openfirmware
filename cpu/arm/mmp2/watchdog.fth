@@ -14,17 +14,12 @@ h# d4080000 value wdt-pa
    (wdt!)
 ;
 : wdt@  ( offset -- value )  wdt-pa +  l@  ;
-: (reset-all)  ( -- )
+: wdt-reset  ( -- )
    enable-wdt-clock
    2 h# 68 wdt!   \ set match register
    3 h# 64 wdt!   \ match enable: just interrupt, no reset yet
    1 h# 98 wdt!   \ Reset counter
    begin  again
-;
-' (reset-all) to reset-all
-
-stand-init:
-   ['] reset-all to bye
 ;
 
 0 [if]

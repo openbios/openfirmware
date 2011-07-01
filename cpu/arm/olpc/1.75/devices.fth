@@ -104,13 +104,6 @@ warning !
 fload ${BP}/cpu/arm/mmp2/irq.fth
 
 fload ${BP}/cpu/arm/mmp2/watchdog.fth	\ reset-all using watchdog timer
-: olpc-reset-all  ( -- )
-   " screen" " dcon-off" ['] execute-device-method catch if
-      2drop 2drop
-   then
-   (reset-all)
-;
-' olpc-reset-all to reset-all
 
 0 0  " d4018000"  " /" begin-package  \ UART3
    fload ${BP}/cpu/arm/mmp2/uart.fth
@@ -167,6 +160,18 @@ fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
 fload ${BP}/dev/olpc/kb3700/eccmds.fth
 : stand-power-off  ( -- )  ec-power-off  begin wfi again  ;
 ' stand-power-off to power-off
+
+: olpc-reset-all  ( -- )
+   " screen" " dcon-off" ['] execute-device-method catch if
+      2drop 2drop
+   then
+   ec-power-cycle
+   begin  wfi  again
+;
+' olpc-reset-all to reset-all
+stand-init:
+   ['] reset-all to bye
+;
 
 fload ${BP}/dev/olpc/kb3700/batstat.fth      \ Battery status reports
 fload ${BP}/cpu/arm/olpc/1.75/boardrev.fth   \ Board revision decoding
