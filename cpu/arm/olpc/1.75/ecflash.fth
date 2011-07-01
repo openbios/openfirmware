@@ -34,6 +34,8 @@ char 4 value expected-ec-version
    ifd @ fclose                      ( len )
    load-base swap ?ec-image-valid
 ;
+\ Tells the EC to auto-restart after power cycling
+: set-ec-reboot  ( -- )  1 h# f018 edi-b!  ;
 : reflash-ec
 [ifdef] cl2-a1
    " enter-updater" $call-ec
@@ -54,6 +56,7 @@ char 4 value expected-ec-version
 [ifndef] cl2-a1
    ." Restarting EC and rebooting" cr
    d# 2000 ms
+   set-ec-reboot
    unreset-8051
 [then]
    ec-power-cycle
@@ -100,6 +103,7 @@ char 4 value expected-ec-version
             .error
 	    ." Skipping EC reflash" cr
          else
+	    ." Updating EC code" cr
 	    reflash-ec
 	 then
       then
