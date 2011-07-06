@@ -41,7 +41,7 @@ my-address      my-space  h# 1000  encode-reg
 2 constant #ports
 #ports constant #queues
 
-d# 16 constant /q
+d# 64 constant /q
 
 0 value queue#
 #queues /n* buffer: heads  : head  ( -- adr )  heads queue# na+  ;
@@ -61,6 +61,11 @@ d# 16 constant /q
    dup @ q-end >=  if  0 swap !  else  /c swap +!  then
 ;
 
+false value locked?		  \ Interrupt lockout for get-scan
+
+: lock    ( -- )  true  to locked?  ;
+: unlock  ( -- )  false to locked?  ;
+
 : select-queue  ( channel# -- error? )
    to queue#
    queue# #queues >=
@@ -73,14 +78,14 @@ d# 16 constant /q
 ;
 
 : deque?  ( channel# -- false | entry true )
-   select-queue  if  false exit  then
-   lock[
+   lock
+   select-queue  if  unlock false exit  then
    head @  tail @  <>  if
       q head @ ca+ c@   head inc-q-ptr  true
    else
       false
    then
-   ]unlock
+   unlock
 ;
 
 0 value reg-base
@@ -89,21 +94,23 @@ d# 16 constant /q
 
 : data?  ( -- flag )  h# c8 reg@ 1 and  ;
 : send-rdy  ( -- )  h# ff00 h# 40 reg!  ;
+
 : poll  ( -- )
-   lock[
-   data?  if
+   begin  data?  while
       h# 80 reg@ wbsplit enque
       1 h# c8 reg!
       send-rdy
-   then
-   ]unlock
+   repeat
 ;
 
 0 instance value port#
 : set-port  ( port# -- )  to port#  ;
 : get-data?  ( -- false | data true )
+   locked?  if  false exit  then
+   lock
    port# deque?     ( false | data true )
    poll
+   unlock
 ;
 : get-data  ( -- data | -1 )  \ Wait for data from our device
    d# 1000 0  do
@@ -131,7 +138,10 @@ d# 16 constant /q
    open-count 1- 0 max to open-count
 ;
 
-: put-data  ( byte -- )  port# bwjoin h# 40 reg!  ;
+: put-data  ( byte -- )
+   begin  h# c4 reg@  7 and 0=  until
+   port# bwjoin h# 40 reg!
+;
 : put-get-data  ( cmd -- data | -1 )  put-data get-data  ;
 
 new-device
