@@ -213,7 +213,7 @@ ballsize scale value reflect_left_x
    erasecol -rot  swap           swap unscale  ballsize batsize  paintrect
 ;
 
-: redraw ( -- )
+: redraw-table ( -- )
    drawcol  0 0                    screenw  ballsize  paintrect
    drawcol  0 screenh  ballsize -  screenw  ballsize  paintrect
 
@@ -230,7 +230,7 @@ ballsize scale value reflect_left_x
 : drawboard ( -- )
   drawcol   0 0  screenw screenh  paintrect
   erasecol  0 0  screenw screenh  paintrect
-  redraw
+  redraw-table
 ;
 
 : resetball ( -- )
