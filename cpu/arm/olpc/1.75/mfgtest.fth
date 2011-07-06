@@ -24,7 +24,7 @@ warning on
    begin
       key?  if  key drop  refresh exit  then
       mouse-ih  if
-         10 get-event  if
+         mouse-event?  if
             \ Ignore movement, act only on a button down event
             nip nip  if  wait-buttons-up  refresh exit  then
          then

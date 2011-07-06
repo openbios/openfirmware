@@ -172,6 +172,27 @@ hex
    endcase
 ;
 headers
+
+0 value close-mouse?
+: ?close-mouse  ( -- )
+   close-mouse?  if
+      mouse-ih close-dev
+      0 to mouse-ih
+   then
+;
+: ?open-mouse  ( -- )
+   mouse-ih  0=  dup to close-mouse?  if
+      " mouse" open-dev is mouse-ih
+      mouse-ih  0=  if
+         " /mouse" open-dev to mouse-ih
+      then
+      mouse-ih  if  alloc-mouse-cursor  then
+   then
+;
+: mouse-event?  ( -- false | x y buttons true )
+   " stream-poll?" mouse-ih $call-method
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

@@ -287,7 +287,7 @@ variable pgup?
    mouse-ih 0=  if  drop false exit  then
    >r
    false to dialog-ready?
-   begin  10 get-event  while         ( x y buttons )
+   begin  mouse-event?  while         ( x y buttons )
       remove-mouse-cursor             ( x y buttons )
       -rot  update-position           ( buttons )
       r@ mouse-buttons                ( ?? )

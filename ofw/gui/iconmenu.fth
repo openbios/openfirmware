@@ -424,7 +424,7 @@ headerless
 
 : do-mouse  ( - )
    mouse-ih 0=  if  exit  then
-   begin  10 get-event  while         ( x y buttons )
+   begin  mouse-event?  while         ( x y buttons )
       remove-mouse-cursor
       -rot  update-position           ( buttons )
       new-sq?
@@ -452,15 +452,6 @@ headerless
       " screen" open-dev is screen-ih
    then
 ;
-: ?open-mouse  ( -- )
-   mouse-ih  0=  if
-      " mouse" open-dev is mouse-ih
-      mouse-ih  0=  if
-         " /mouse" open-dev to mouse-ih
-      then
-      mouse-ih  if  alloc-mouse-cursor  then
-   then
-;
  
 true config-flag menu?
 0 value default-selection
@@ -472,7 +463,13 @@ headerless
 
 : .menu  ( -- )  ." Type 'menu' to return to the menu" cr  ;
 
-: wait-buttons-up  ( -- )  begin  0 get-event drop nip nip  0= until  ;
+: wait-buttons-up  ( -- )
+   begin
+      mouse-event?  if   ( x y buttons )
+	 nip nip  0=  if  exit  then
+      then
+   again
+;
 headers
 : wait-return  ( -- )
    ." ... Press any key to return to the menu ... "
@@ -481,7 +478,7 @@ headers
    begin
       key?  if  key drop  refresh exit  then
       mouse-ih  if
-         10 get-event  if
+         mouse-event?  if
             \ Ignore movement, act only on a button down event
             nip nip  if  wait-buttons-up  refresh exit  then
          then
@@ -505,13 +502,15 @@ defer run-menu
 ' menu-interact to run-menu
 
 : setup-graphics  ( -- )
-   ?open-screen  set-menu-colors  ?open-mouse
+   ?open-screen  set-menu-colors
 ;
 : setup-menu  ( -- )
    setup-graphics
+   ?open-mouse
    cursor-off
    gui-alerts
 ;
+: unsetup-menu  ( -- )  ?close-mouse  restore-scroller  ;
 
 defer current-menu  ' clear to current-menu
 : set-menu  ( xt -- )  to current-menu  current-menu  ;
@@ -538,7 +537,7 @@ defer root-menu  ' noop to root-menu
    screen-wh		( color x y w y )
    fill-rectangle-noff	( )
 
-   restore-scroller
+   unsetup-menu
 ;
 
 \ Note that menu establishes a new return stack state. Be sure to
