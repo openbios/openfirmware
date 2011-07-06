@@ -55,6 +55,17 @@ d# 9999 to arm-linux-machine-type  \ Marvell Jasper
 ;
 ' mmp-fb-tag, to fb-tag,
 
+\ Add a tag describing the OFW callback
+: (ofw-tag,)  ( -- )
+   6            tag-l,    \ size
+   h# 41000501  tag-l,    \ ATAG_MEM
+   cif-handler  tag-l,    \ Client interface handler callback address
+   page-table@  tag-l,    \ OFW's top-level page tables
+   extra-mem-pa                     d# 20 >>  tag-l,  \ First section entry number
+   fw-pa /fw-ram +  extra-mem-pa -  d# 20 >>  tag-l,  \ Number of section entries
+;
+' (ofw-tag,) to ofw-tag,
+
 \ false to stand-init-debug?
 true to stand-init-debug?
 

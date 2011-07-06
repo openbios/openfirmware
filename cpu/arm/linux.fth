@@ -49,7 +49,8 @@ def-load-base value linux-base
 : tag-b,  ( b -- )  tag-adr c!  tag-adr ca1+ to tag-adr  ;
 : tag-l,  ( n -- )  tag-adr l!  tag-adr la1+ to tag-adr  ;
 
-defer fb-tag,  ' noop to fb-tag,  \ Define externally if appropriate
+defer fb-tag,  ' noop to fb-tag,   \ Define externally if appropriate
+defer ofw-tag, ' noop to ofw-tag,  \ Define externally if appropriate
 
 : set-parameters  ( cmdline$ -- )
    linux-params to tag-adr
@@ -92,6 +93,8 @@ defer fb-tag,  ' noop to fb-tag,  \ Define externally if appropriate
    then
 
    fb-tag,
+
+   ofw-tag,
 
    0 tag-l,    \ size of ATAG_NONE is really 2 but must be written as 0
    0 tag-l,    \ ATAG_NONE
