@@ -351,8 +351,6 @@ fload ${BP}/cpu/arm/olpc/1.75/rtc.fth
 stand-init: RTC
    " /rtc" open-dev  clock-node !
 ;
-fload ${BP}/cpu/arm/olpc/1.75/accelerometer.fth
-fload ${BP}/cpu/arm/olpc/1.75/compass.fth
 
 warning @ warning off
 : stand-init

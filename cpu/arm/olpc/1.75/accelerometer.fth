@@ -73,6 +73,8 @@ d# 50 value max-delta
 : selftest  ( -- error? )
    open 0=  if  true exit  then
 
+   final-test?  if  accelerometer-off false  exit  then
+
    \ Use the device's selftest function to force a change in one direction
    delay                     ( )
    average-acceleration@     ( x y z )

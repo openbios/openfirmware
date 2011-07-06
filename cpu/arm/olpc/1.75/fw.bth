@@ -151,6 +151,26 @@ fload ${BP}/cpu/arm/olpc/1.75/switches.fth \ Lid and ebook switches
 fload ${BP}/cpu/arm/olpc/1.75/leds.fth     \ LEDs
 fload ${BP}/cpu/x86/pc/olpc/via/factory.fth  \ Manufacturing tools
 
+fload ${BP}/cpu/arm/olpc/1.75/accelerometer.fth
+fload ${BP}/cpu/arm/olpc/1.75/compass.fth
+
+\ Suppress long memory test at final test stage
+dev /memory
+defer old-diagnostic-mode?
+: not-final-test?  ( -- flag )
+   final-test?   if  false exit  then
+   old-diagnostic-mode?
+;
+warning @ warning off
+: selftest  ( -- error? )
+   ['] (diagnostic-mode?) behavior to old-diagnostic-mode?
+   ['] not-final-test?  to (diagnostic-mode?)
+   selftest
+   ['] old-diagnostic-mode? behavior  to (diagnostic-mode?)
+;
+warning !
+device-end
+
 \ When reprogramming this machine's SPI FLASH, rebooting the EC is unnecessary 
 : no-kbc-reboot  ['] noop to spi-reprogrammed  ;
 : kbc-on ;
