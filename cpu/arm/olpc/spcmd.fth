@@ -139,8 +139,15 @@ false value locked?		  \ Interrupt lockout for get-scan
 ;
 
 : put-data  ( byte -- )
-   begin  h# c4 reg@  7 and 0=  until
-   port# bwjoin h# 40 reg!
+   get-msecs  d# 100 +        ( byte time-limit )
+   begin                      ( byte time-limit )
+      dup get-msecs - 0<  if  ( byte time-limit )
+	 2drop exit           ( -- )
+      then                    ( byte time-limit )
+      h# c4 reg@  7 and 0=    ( byte time-limit flag ) 
+   until                      ( byte time-limit )
+   drop                       ( byte )
+   port# bwjoin h# 40 reg!    ( )
 ;
 : put-get-data  ( cmd -- data | -1 )  put-data get-data  ;
 
