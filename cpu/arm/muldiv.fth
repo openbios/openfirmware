@@ -97,8 +97,11 @@ c;
 \ r0 / tos =   r0.rem tos.quot
 code  (32/32division)
    mov     r3,#1
-\   cmp     tos,#0
+   cmp     tos,#0
 \		' divide-error	dolink eq branch
+   mvneq   tos,#0
+   moveq   pc,lk
+
    begin
       cmp     tos,#0x80000000
       cmpcc   tos,r0
@@ -118,13 +121,18 @@ code  (32/32division)
 end-code
 
 code (u64division)
+   orrs    r4,r2,r3
+\  ' divide-error  bleq *
+   mvneq   r4,#0  \ Max out quotient for divide by 0
+   mvneq   r5,#0
+   moveq   pc,lk
+
    stmdb   sp!,{r7,r8,r9}
    mov     r6,#0
    mov     r7,#1
    mov     r4,#0
    mov     r5,#0
-   orrs    r8,r2,r3
-\  ' divide-error  bleq *
+
    begin
       cmp     r2,#0x80000000
       u< if
