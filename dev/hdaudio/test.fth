@@ -196,7 +196,6 @@ false value plot?  \ Set to true to plot the impulse response, for debugging
    test-with-loopback throw
    disconnect-loopback
 ;
-warning @ warning off
 : selftest  ( -- error? )
    diagnostic-mode?  if
       open 0=  if  ." Failed to open /audio" cr true exit  then
@@ -208,7 +207,6 @@ warning @ warning off
       selftest         ( error? )
    then
 ;
-warning !
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 Luke Gorrie
