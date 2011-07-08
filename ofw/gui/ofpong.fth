@@ -610,7 +610,7 @@ alias pong-ih keyboard-ih
 
   dup updatebats
   dup updateball
-  redraw
+  redraw-table
 
   glastupdate + to glastupdate
 ;
