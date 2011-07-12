@@ -33,6 +33,7 @@ LIBS=		$(LIBDIR)/libobp.a
 
 emacs:	emacs.elf
 	@$(STRIP) $< -o $@
+	@rm emacs.elf
 
 emacs.elf: $(LIBDIR)/start.o $(OFILES) $(LIBS) Makefile emacs.lds
 	$(LD) $(LFLAGS) -o $@ $(LIBDIR)/start.o $(OFILES)  $(LIBS) -L$(GLIBDIR) -lgcc
