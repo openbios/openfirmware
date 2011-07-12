@@ -14,6 +14,7 @@ in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: testicons.bin
+in: ${BP}/clients/emacs/arm/emacs
 build-now
 
 fload ${BP}/cpu/arm/olpc/1.75/fw-version.fth
@@ -55,6 +56,9 @@ reserved:
   term:
 end-reserved
 end-tim
+
+h# e.0000 to reserved-start
+h# f.0000 to reserved-end
 
 .( --- Saving as )
 " ${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
@@ -152,6 +156,9 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/settings.565"  " settings.565"   $add-deflated-dropin
 [then]
    " ec.img"                                     " ecimage.bin"    $add-deflated-dropin
+   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
+   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
+   " ${BP}/clients/emacs/arm/emacs"             " emacs"         $add-deflated-dropin
 
 .( Dropin top is )  ofd @ fsize  .x cr
 

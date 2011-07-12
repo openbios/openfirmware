@@ -37,7 +37,7 @@ add-global-mode "blue"
 	add-mode "red"
 	begining-of-file
 	2 resize-window
-	insert-string "      F1 Help on/off       F5 Open File       F6 Save File       F7 Exit"
+	insert-string "      F1 Help on/off       F6 Open File       F7 Save File       F8 Exit"
 	newline
 	insert-string "            Move with arrow keys, PageUp, PageDown, Home, and End"
 	begining-of-file

@@ -15,3 +15,12 @@ memset(char *cp, int c, int len)
 	while (len--)
 		*(cp + len) = c;
 }
+
+int
+memcmp(void *s1, void *s2, int len)
+{
+	for (; len--; ++s1, ++s2)
+		if (*(unsigned char *)s1 != *(unsigned char *)s2)
+			return *(unsigned char *)s1 - *(unsigned char *)s2;
+	return 0;
+}
