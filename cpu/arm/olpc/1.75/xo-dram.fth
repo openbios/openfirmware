@@ -77,16 +77,16 @@ start-dram-init
 
 mmap0
 h# 0000.0000 d# 23 rshift start-addr   
-h# 4000.0000 log2 d# 16 - area-length
+h# 2000.0000 log2 d# 16 - area-length
 h# 0000.0000 d# 23 rshift addr-mask
 1 cs-valid
 outbits
 
 mmap1
-h# 4000.0000 d# 23 rshift start-addr
-h# 4000.0000 log2 d# 16 - area-length
+h# 2000.0000 d# 23 rshift start-addr
+h# 2000.0000 log2 d# 16 - area-length
 h# 0000.0000 d# 23 rshift addr-mask
-0 cs-valid
+1 cs-valid
 outbits
 
 sdram-config-type1-cs0
@@ -166,16 +166,16 @@ d#   7.500 ns>clk d#   3 max txp
 outbits
 
 sdram-timing4
-d#      5.625 ns>clk d#  4 max  tcke
+d#      5.625 ns>clk ( d#  4 max ) tcke
 d# 200000.000 ns>clk d# 1024 /roundup  init-count
-            1                   trwd-ext-dly
+            2                   trwd-ext-dly
 d#    100.000 ns>clk            reset-count
-d#        390                   init-count-nop
+d#        391                   init-count-nop
 outbits
 
 sdram-timing5
 d# 37.500 ns>clk  0 max  tras
-d# 37.500 ns>clk  0 max  tfaw
+d# 37.500 ns>clk  d# 20 max  tfaw
 d#      1                tccd-ccs-ext-dly
 outbits
 
@@ -186,9 +186,9 @@ sdram-timing6
 outbits
 
 sdram-ctrl1
-1 aps-en
-1 aps-type
-4 aps-value
+0 aps-en \ 1 aps-en
+0 aps-type \ 1 aps-type
+0 aps-value \ 4 aps-value
 d# 12.500 ns>clk acs-exit-dly
 0 acs-en
 0 dll-reset
@@ -198,14 +198,14 @@ d# 12.500 ns>clk acs-exit-dly
 outbits
 
 sdram-ctrl2
-0 ref-posted-en
-0 ref-posted-max
-d# 16 sdram-line-boundary
+1 ref-posted-en
+7 ref-posted-max
+d# 8 sdram-line-boundary
 0 refpb-mode
 0 pd-mode
 0 2t-mode
 0 rdimm-mode
-1 aprecharge
+0 aprecharge
 0 int-shadow-mode
 0 test-mode
 outbits
@@ -235,9 +235,9 @@ sdram-ctrl4
 0 al-number    \ unsupported
 0 al-en
 0 rq-ds-en
-3 cas-latency        \ For DDR3, upper 3 bits of CL - so 3 for CL6 and CL7
+2 cas-latency        \ For DDR3, upper 3 bits of CL - so 3 for CL6 and CL7
 0 cas-latency-lower  \ For DDR3, lower bit of CL - so 0 for CL6, 1 for CL7
-1 cwl  \ 0 for WL5, 1 for WL6, 2 for WL7, 3 for WL8
+0 cwl  \ 0 for WL5, 1 for WL6, 2 for WL7, 3 for WL8
 0 s4-type \ LPDDR2 only
 0 asr  \ DDR3 only
 0 srt  \ DDR3 only
@@ -267,7 +267,7 @@ sdram-ctrl7-odt-ctrl2
 outbits
 
 sdram-ctrl8-odt-ctrl2
-1 xpage-en
+0 xpage-en
 3 mc-queue-size-f
 3 mc-queue-size
 outbits
@@ -354,37 +354,11 @@ cm-write-protection
 0 write-protection
 outbits
 
-phy-ctrl11
-0 mc-sync-type
-outbits
+\ phy-ctrl11
+\ 0 mc-sync-type
+\ outbits
 
-\ This is the base value
-phy-ctrl14
-1 phy-sync-en
-0 dll-update-en
-0 phy-dll-rst
-0 phy-pll-rst
-0 dll-update-en-static
-outbits
-
-\ Assert DLL reset
-phy-ctrl14
-1 phy-sync-en
-0 dll-update-en
-1 phy-dll-rst
-0 phy-pll-rst
-0 dll-update-en-static
-outbits
-
-\ Release DLL reset
-phy-ctrl14
-1 phy-sync-en
-0 dll-update-en
-0 phy-dll-rst
-0 phy-pll-rst
-0 dll-update-en-static
-outbits
-
+0 [if]
 \ First value, with auto-cal enabled
 phy-ctrl10
 1 pad-cal-interval
@@ -418,6 +392,7 @@ b# 000 pad-cal-auto-sel  \ Used fixed values, not autocalibration
 0 mc-ck-pd
 0 mc-ac-d
 outbits
+[then]
 
 phy-ctrl3
 h# 2000 phy-res                  \ Reserved, but Marvell spreadsheet sets it
@@ -426,30 +401,30 @@ h# 2000 phy-res                  \ Reserved, but Marvell spreadsheet sets it
 0 dq-oen-extend
 0 dq-oen-dly
 0 rd-ext-dly
-4 phy-rfifo-rptr-dly-val  \ Tune me !!!
-4 dq-ext-dly              \ Tune me !!!
+3 phy-rfifo-rptr-dly-val  \ Tune me !!!
+3 dq-ext-dly              \ Tune me !!!
 outbits
 
 phy-ctrl7
 1 phy-qs-vref-sel
-b# 1111 phy-dq-zpdrv
-b# 1111 phy-dq-zndrv
+b# 0111 phy-dq-zpdrv
+b# 0111 phy-dq-zndrv
 b# 1000 phy-dq-zptrm
 b# 0100 phy-dq-zntrm
-b# 1000 phy-dq-znr
-b# 0100 phy-dq-zpr
+b# 0111 phy-dq-znr
+b# 1001 phy-dq-zpr
 b#   10 phy-dq-vref-sel
 0 phy-dq-zd
 1 phy-dq-mode
 outbits
 
 phy-ctrl8
-b# 1111 phy-adcm-zpdrv
-b# 1111 phy-adcm-zndrv
+b# 0111 phy-adcm-zpdrv
+b# 0111 phy-adcm-zndrv
 b# 0000 phy-adcm-zptrm
 b# 0000 phy-adcm-zntrm
-b# 1000 phy-adcm-znr
-b# 0100 phy-adcm-zpr
+b# 0111 phy-adcm-znr
+b# 1001 phy-adcm-zpr
 0 phy-adcm-zd
 outbits
 
@@ -463,43 +438,61 @@ phy-ctrl9
 0 phy-wc-qs-dly
 0 phy-wck-ac-dly
 0 phy-wck-ck-dly
-b# 1000 phy-ck-znr
-b# 0100 phy-ck-zpr
+b# 0111 phy-ck-znr
+b# 0111 phy-ck-zpr
 outbits
 
 phy-ctrl13
-2 dll-resrt-timer
+d# 13 dll-resrt-timer
 0 dll-update-stall-mc-dis
-d# 16 dll-delay-test
-d# 08 dll-phsel
-1 dll-auto-manual-up
+0 dll-delay-test
+d# 04 dll-phsel
+0 dll-auto-manual-up
 0 dll-auto-update-en
 0 dll-test-en
 0 dll-bypass-en
 outbits
 
 phy-dll-ctrl1
-d# 16 dll-delay-test
-d#  8 dll-phsel
+0 dll-delay-test
+d# 4 dll-phsel
 0 dll-auto-update-en
 0 dll-test-en
 0 dll-bypass-en
 outbits
 
 phy-dll-ctrl2
-d# 16 dll-delay-test
-d#  8 dll-phsel
+0 dll-delay-test
+d# 4 dll-phsel
 0 dll-auto-update-en
 0 dll-test-en
 0 dll-bypass-en
 outbits
 
 phy-dll-ctrl3
-d# 16 dll-delay-test
-d#  8 dll-phsel
+0 dll-delay-test
+d# 4 dll-phsel
 0 dll-auto-update-en
 0 dll-test-en
 0 dll-bypass-en
+outbits
+
+\ Assert DLL reset
+phy-ctrl14
+0 phy-sync-en
+0 dll-update-en
+1 phy-dll-rst
+0 phy-pll-rst
+0 dll-update-en-static
+outbits
+
+\ Release DLL reset and enable update
+phy-ctrl14
+0 phy-sync-en
+1 dll-update-en
+0 phy-dll-rst
+0 phy-pll-rst
+0 dll-update-en-static
 outbits
 
 phy-ctrl-wl-select
