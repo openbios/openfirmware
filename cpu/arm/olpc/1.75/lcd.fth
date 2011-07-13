@@ -27,7 +27,7 @@
    h# 01330133 h# 13c lcd!  \ Panel VSYNC Pulse Pixel Edge Control
    clkdiv      h# 1a8 lcd!  \ Clock divider
 \  h# 08021100 h# 190 lcd!  \ DMA CTRL 0 - enable DMA, 24 bpp mode
-  h# 08001100 h# 190 lcd!  \ DMA CTRL 0 - enable DMA, 16 bpp mode
+   h# 08001100 h# 190 lcd!  \ DMA CTRL 0 - enable DMA, 16 bpp mode
 ;
 
 : normal-hsv  ( -- )
