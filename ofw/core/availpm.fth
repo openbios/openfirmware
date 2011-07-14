@@ -86,7 +86,7 @@ action:  drop  ;
 	 decode-int drop          ( adr' len' )     ( r: d.size )
 [then]
 	 decode-int drop          ( adr' len' )     ( r: d.size )
-	 decode-int  s>d          ( adr' len' ud )  ( r: d.size )
+	 decode-int  u>d          ( adr' len' ud )  ( r: d.size )
 	 2r> d+ 2>r               ( adr' len' )     ( r: d.size' )
       repeat                      ( adr 0 )         ( r: d.size' )
       2drop                       (  )              ( r: d.size' )
