@@ -17,7 +17,7 @@ memset(char *cp, int c, int len)
 }
 
 int
-memcmp(const void *s1, const void *s2, size_t n)
+memcmp(const void *s1, const void *s2, int n)
 {
 	int diff;
 	while (n--) {
