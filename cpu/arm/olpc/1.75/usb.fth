@@ -53,11 +53,20 @@ devalias u    /usb/disk
    then
 ;
 
+true value first-usb-probe?
+: (silent-probe-usb)  ( -- )  " /" ['] (probe-usb2) scan-subtree  ;
 : silent-probe-usb  ( -- )
-   " /" ['] (probe-usb2) scan-subtree
+   (silent-probe-usb)
    report-disk report-net report-keyboard
 ;
 : probe-usb  ( -- )
+   first-usb-probe?  if
+      false to first-usb-probe?
+      \ Initial probe to awaken the hub
+      (silent-probe-usb)
+      \ A little delay to let slow devices like USB scanner wake up
+      d# 150 ms
+   then
    silent-probe-usb
 
    ." USB devices:" cr
