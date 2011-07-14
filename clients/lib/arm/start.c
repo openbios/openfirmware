@@ -27,6 +27,10 @@ call_firmware(int *argarray)
     cif_handler(argarray);
 }
 
+void raise()
+{
+}
+
 // LICENSE_BEGIN
 // Copyright (c) 2006 FirmWorks
 // 

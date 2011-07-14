@@ -4,10 +4,16 @@
 #	      or just: make	
 #
 
-TOOLPREFIX=/usr/local/arm/bin/arm-linux-
-CC=$(TOOLPREFIX)gcc
-LD=$(TOOLPREFIX)ld
-STRIP=$(TOOLPREFIX)strip
+ifneq (arm, $(findstring arm,$(shell uname -p)))
+  # Cross-compiler setup
+  TOOLPREFIX=/usr/local/arm/bin/arm-linux-
+  CC=$(TOOLPREFIX)gcc
+  LD=$(TOOLPREFIX)ld
+  STRIP=$(TOOLPREFIX)strip
+else
+  CC    := gcc
+  STRIP := strip
+endif
 
 BP=../../..
 SRCDIR=..
@@ -18,6 +24,10 @@ GLIBDIR=$(dir $(shell $(CC) -print-libgcc-file-name))
 INCS=-I. -I$(SRCDIR) -I$(HLIBDIR)
 MODES=-g -O2 -fno-inline
 CFLAGS= $(INCS) $(MODES)
+
+ifeq (y, $(shell $(CC) -xc -c -fno-stack-protector /dev/null -o /dev/null 2>/dev/null && echo y))
+  CFLAGS += -fno-stack-protector
+endif
 
 LFLAGS= 	-T emacs.lds -N -e _start
 
