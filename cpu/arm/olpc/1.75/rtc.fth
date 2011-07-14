@@ -1,3 +1,5 @@
+purpose: Driver for external IDT1338 RTC chip on XO-1.75
+
 0 0  " "  " /" begin-package
 " rtc" name
 
@@ -20,8 +22,22 @@ headerless
 headerless
 
 headers
-: open  ( -- true )
-   true
+: open  ( -- okay )
+   0 ['] rtc@ catch  if        ( x )
+      drop false  exit         ( -- false )
+   then                        ( value )
+
+   \ Ensure that the Clock Halt bit is off
+   dup h# 80 and  if           ( value )
+      \ Turn off Clock Halt
+      h# 7f and 0 rtc!         ( )
+      \ Verify that it went off
+      0 rtc@ h# 80 and         ( error? )
+      dup  if  ." RTC Clock Halt is stuck on" cr  then  ( error? )
+      0=                       ( okay? )
+   else                        ( value )
+      drop true                ( true )
+   then                        ( okay? )
 ;
 : close  ( -- )
 ;
