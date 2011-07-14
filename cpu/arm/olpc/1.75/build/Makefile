@@ -9,7 +9,7 @@ BUILDSH= ${BASEDIR}/forth/lib/build.sh
 
 TAGFILES= ../../../build/*.tag *.tag
 CLIENTDIR=../../../../../clients
-CLIENTPROGS=
+CLIENTPROGS=${CLIENTDIR}/emacs/arm/emacs
 
 all: ${ROMNAME}.rom tags
 
@@ -29,6 +29,9 @@ ${HOSTDIR}/armforth:
 
 ../../build/inflate.bin:
 	@make -C ../../build inflate.bin
+
+${CLIENTDIR}/emacs/arm/emacs:
+	@make -C ${CLIENTDIR}/emacs/arm emacs
 
 build:
 	@ln -sf ${BUILDSH} build
