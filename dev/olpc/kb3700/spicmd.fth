@@ -261,16 +261,22 @@ defer upstream
    ['] switched to do-state            ( )
    pulse-ack
 ;
+: ?do-ack  ( -- )
+   \ If there is more data in the FIFO, it means that the EC
+   \ timed out and "inferred" an ACK, so we don't ACK until
+   \ the FIFO is empty.
+   ssp-ready? 0=  if  prime-fifo pulse-ack  then
+;
 : (upstream)  ( -- )
    ssp-ssdr rl@  ssp-ssdr rl@              ( channel# data )
    debug? if
       ." UP: " over . dup . cr
    then
    over case                               ( channel# data )
-      0 of  2drop prime-fifo pulse-ack  endof  ( channel# data )  \ Invalid
+      0 of  2drop ?do-ack  endof           ( channel# data )  \ Invalid
       1 of  2drop handoff-command   endof  ( channel# data )  \ Switched
       ( default )                          ( channel# data channel# )
-         enque  prime-fifo pulse-ack       ( channel# )
+         enque  ?do-ack                    ( channel# )
    endcase
 ;
 ' (upstream) to upstream
@@ -331,6 +337,9 @@ defer upstream
    open-count 1- 0 max to open-count
 ;
 
+: drain  ( -- )
+   begin  ssp-ready?  while  poll  repeat
+;
 : data-command  ( databuf datalen datain? cmdadr cmdlen more? -- )
    to sticky?  to cmdlen   to cmdbuf
    to datain?  to datalen  to databuf
@@ -338,6 +347,7 @@ defer upstream
 
    set-cmd-timeout
    ['] do-state behavior ['] upstream =  if
+      drain
       set-cmd
    else
       handoff-command
