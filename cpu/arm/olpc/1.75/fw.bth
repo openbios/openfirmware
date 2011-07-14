@@ -507,6 +507,7 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
    " flash-ec http:\\10.20.0.14\ecimage.bin" eval
 ;
 : urom  " flash! u:\new.rom" eval  ;
+: uec   " flash-ec! u:\ecimage.bin" eval  ;
 : erom  " flash! ext:\new.rom" eval  ;
 : no-usb-delay  " dev /usb  false to delay?  dend"  evaluate  ;
 : null-fsdisk
