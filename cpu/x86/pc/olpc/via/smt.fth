@@ -7,7 +7,7 @@ visible
 : fw-$compare ( $1 $2 -- $2>$1 )
 	base @ >r d# 36 base ! 		( $1 $2 )
 	$number if exit then		( $1 n2 )
-	-rot $number if exit then	( n2 n1 )
+	-rot $number if pop-base false exit then	( n2 n1 )
 	pop-base u<=
 ;
 
