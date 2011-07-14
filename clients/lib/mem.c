@@ -17,10 +17,13 @@ memset(char *cp, int c, int len)
 }
 
 int
-memcmp(void *s1, void *s2, int len)
+memcmp(const void *s1, const void *s2, size_t n)
 {
-	for (; len--; ++s1, ++s2)
-		if (*(unsigned char *)s1 != *(unsigned char *)s2)
-			return *(unsigned char *)s1 - *(unsigned char *)s2;
+	int diff;
+	while (n--) {
+		diff = *(unsigned char *)s1++ - *(unsigned char *)s2++;
+		if (diff)
+			return (diff < 0) ? -1 : 1;
+	}
 	return 0;
 }
