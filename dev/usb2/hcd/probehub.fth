@@ -174,6 +174,7 @@ external
       then                          ( port# )
    repeat                           ( port# )
    ." Device connected - probing ... "
+   d# 150 ms                        ( port# )   \ Wakeup time
    probe-setup                      ( port# )
    hub-dev swap ['] probe-hub-port  catch  if  ( x x  )
       2drop                         ( )
