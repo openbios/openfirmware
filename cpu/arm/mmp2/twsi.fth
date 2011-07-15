@@ -158,6 +158,11 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
    twsi-get
 ;
 
+d# 12,600,000 constant numerator
+: set-bus-speed  ( hz -- )  \ Useful range is currently 25,000 .. 100,000
+   child-address set-twsi-target
+   numerator swap /  h# 1ff min  h# 7e max  lcr!
+;
 : decode-unit  ( adr len -- low high )  parse-2int  ;
 : encode-unit  ( low high -- adr len )  >r <# u#s drop [char] , hold r> u#s u#>  ;
 end-package

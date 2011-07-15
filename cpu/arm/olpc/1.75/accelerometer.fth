@@ -47,6 +47,7 @@ my-address my-space encode-phys  " reg" property
 : delay  ( -- )  d# 30 ms  ;
 : open  ( -- flag )
    my-address my-space " set-address" $call-parent
+   d# 25,000 " set-bus-speed" $call-parent
    ['] accelerometer-on catch 0=   
 ;
 : close  ( -- )
