@@ -18,45 +18,36 @@ purpose: Board-specific setup details - pin assigments, etc.
    d# 58 gpio-dir-out  \ WLAN_RESET#
    d# 73 gpio-dir-out  \ CAM_RST
 
+   d# 125 gpio-set     \ EC_SPI_ACK
+   d# 125 gpio-dir-out \ EC_SPI_ACK
+   d# 146 gpio-dir-out \ HUB_RESET#
+   d# 148 gpio-clr     \ SOC_EN_KBD_PWR#
+   d# 148 gpio-dir-out \ SOC_EN_KBD_PWR#
+   d# 155 gpio-clr
+   d# 155 gpio-dir-out \ EC_SPI_CMD
 [ifdef] cl2-a1
    d# 97 gpio-dir-out  \ RTC_SCK
    d# 98 gpio-dir-out  \ RTC_SDA
+   d# 145 gpio-dir-out \ EN_CAM_PWR
+   d# 151 gpio-dir-out \ DCONLOAD
+   d# 162 gpio-dir-out \ DCON_SCL
+   d# 163 gpio-dir-out \ DCON_SDA
 [else]
-   d#  53 gpio-set      \ RTC_SCK
-   d#  53 gpio-dir-out  \ RTC_SCK
-   d# 103 gpio-dir-out  \ EC_EDI_DO
-   d# 104 gpio-set      \ EC_EDI_CS#
-   d# 104 gpio-dir-out  \ EC_EDI_CS#
-   d# 106 gpio-dir-out  \ EC_EDI_CLK
-   d# 143 gpio-clr
-   d# 143 gpio-dir-out  \ MIC_AC#/DC
-   d# 149 gpio-clr      \ eMMC_RST#
-   d# 149 gpio-dir-out  \ eMMC_RST#
-[then]
-
-   d# 125 gpio-set      \ EC_SPI_ACK
-   d# 125 gpio-dir-out  \ EC_SPI_ACK
-[ifdef] cl2-a1
-   d# 145 gpio-dir-out  \ EN_CAM_PWR
-[else]
-   d# 150 gpio-clr      \ EN_CAM_PWR
-   d# 150 gpio-dir-out  \ EN_CAM_PWR
-[then]
-   d# 146 gpio-dir-out  \ HUB_RESET#
-[ifdef] cl2-a1
-   d# 151 gpio-dir-out  \ DCONLOAD
-[else]
-   d# 142 gpio-dir-out  \ DCONLOAD
-[then]
-   d# 155 gpio-clr
-   d# 155 gpio-dir-out  \ EC_SPI_CMD
-
-[ifdef] cl2-a1
-   d# 162 gpio-dir-out  \ DCON_SCL
-   d# 163 gpio-dir-out  \ DCON_SDA
-[else]
-   d# 161 gpio-dir-out  \ DCON_SCL
-   d# 110 gpio-dir-out  \ DCON_SDA
+   d#  53 gpio-set     \ RTC_SCK
+   d#  53 gpio-dir-out \ RTC_SCK
+   d# 104 gpio-set     \ EC_EDI_CS#
+   d# 104 gpio-dir-out \ EC_EDI_CS#
+   d# 105 gpio-dir-out \ EC_EDI_MOSI
+   d# 106 gpio-dir-out \ EC_EDI_CLK
+   d# 110 gpio-dir-out \ DCON_SDA
+   d# 142 gpio-dir-out \ DCONLOAD
+   d# 143 gpio-clr     \ MIC_AC#/DC
+   d# 143 gpio-dir-out \ MIC_AC#/DC
+   d# 149 gpio-clr     \ eMMC_RST#
+   d# 149 gpio-dir-out \ eMMC_RST#
+   d# 150 gpio-clr     \ EN_CAM_PWR
+   d# 150 gpio-dir-out \ EN_CAM_PWR
+   d# 161 gpio-dir-out \ DCON_SCL
 [then]
 ;
 
@@ -120,20 +111,20 @@ create mfpr-table
    3 af,      \ GPIO_44 - SPI_MOSI
    3 af,      \ GPIO_45 - SPI_CLK
    3 af,      \ GPIO_46 - SPI_FRM
-   3 af,      \ GPIO_47 - G_SENSOR_SDL (TWSI6)
-   3 af,      \ GPIO_48 - G_SENSOR_SDA
+   3 pull-up, \ GPIO_47 - G_SENSOR_SDL (TWSI6)
+   3 pull-up, \ GPIO_48 - G_SENSOR_SDA
    no-update, \ GPIO_49 - Not connected (TP62)
    no-update, \ GPIO_50 - Not connected (TP114)
    no-update, \ GPIO_51 - Not connected (TP59)
    no-update, \ GPIO_52 - Not connected (TP113)
-\  2 af,      \ GPIO_53 - RTC_SCK (TWSI2) if R124 populated
-\  2 af,      \ GPIO_54 - RTC_SDA (TWSI2) if R125 populated
 [ifdef] cl2-a1
    no-update, \ GPIO_53 - Not connected if nopop R124 to use TWSI6 for RTC
    no-update, \ GPIO_54 - Not connected if nopop R125 to use TWSI6 for RTC
 [else]
-   0 af,      \ GPIO_53 - RTC_SCK
-   0 af,      \ GPIO_54 - RTC_SDA
+   2 af,      \ GPIO_53 - RTC_SCK (TWSI2) if R124 populated
+   2 af,      \ GPIO_54 - RTC_SDA (TWSI2) if R125 populated
+\   0 af,      \ GPIO_53 - RTC_SCK
+\   0 af,      \ GPIO_54 - RTC_SDA
 [then]
    no-update, \ GPIO_55 - Not connected (TP51)
 [ifdef] cl2-a1
@@ -157,8 +148,8 @@ create mfpr-table
    1 af,      \ GPIO_69 - PIXMCLK
    1 af,      \ GPIO_70 - PIXCLK
 
-   1 af,      \ GPIO_71 - EC_SCL (TWSI3)
-   1 af,      \ GPIO_72 - EC_SDA 
+   0 af,      \ GPIO_71 - SOC_KBD_CLK  \ Was EC_SCL (TWSI3)
+   0 af,      \ GPIO_72 - SOC_KBD_DAT  \ Was EC_SDA 
    0 af,      \ GPIO_73 - CAM_RST (use as GPIO out)
 
    1 af,      \ GPIO_74 - GFVSYNC
@@ -193,7 +184,7 @@ create mfpr-table
    0 af,      \ GPIO_97  - RTC_SCK (bitbang) if R100 populated
    0 af,      \ GPIO_98  - RTC_SDA (bitbang) if R106 populated
 [else]
-   0 af,      \ GPIO_96  - EXT_MIC_PLUG
+   0 pull-up, \ GPIO_96  - EXT_MIC_PLUG
    0 af,      \ GPIO_97  - HP_PLUG
    no-update, \ GPIO_98  - Not connected
 [then]
@@ -214,7 +205,7 @@ create mfpr-table
    1 af,      \ GPIO_105 - EC_EDI_DI
    1 af,      \ GPIO_106 - EC_EDI_CLK
 [then]
-   0 af,      \ GPIO_107 - ND_IO[4]
+   1 af,      \ GPIO_107 - (ND_IO[4]) - SOC_TPD_DAT
 
    1 af,      \ GPIO_108 - CAM_SDL - Use as GPIO, bitbang
    1 af,      \ GPIO_109 - CAM_SDA - Use as GPIO, bitbang
@@ -225,10 +216,10 @@ create mfpr-table
    0 af,      \ GPIO_112 - ND_RDY[0]
 [else]
    1 pull-up, \ GPIO_110 - DCON_SDA
-   2 af,      \ GPIO_111 - eMMC_D0
-   2 af,      \ GPIO_112 - eMMC_CMD
+   2 +fast af, \ GPIO_111 - eMMC_D0
+   2 +fast af, \ GPIO_112 - eMMC_CMD
 [then]
-   3 af,      \ GPIO_113 - (SM_RDY)  - MSD_CMD aka SD1_CMD (externally pulled up)
+   3 +fast af,      \ GPIO_113 - (SM_RDY)  - MSD_CMD aka SD1_CMD (externally pulled up)
    1 af,      \ GPIO_114 - G_CLK_OUT - Not connected (TP93)
 
    4 af,      \ GPIO_115 - UART3_TXD (J4)
@@ -246,21 +237,21 @@ create mfpr-table
 \  0 af,      \ GPIO_125 - EC_SPI_ACK
    0 pull-up, \ GPIO_125 - EC_SPI_ACK
 
-   3 pull-up, \ GPIO_126 - MSD_DATA2 AKA SD1_DATA2
-   3 pull-up, \ GPIO_127 - MSD_DATA0 AKA SD1_DATA0
+   3 +fast af, \ GPIO_126 - MSD_DATA2 AKA SD1_DATA2
+   3 +fast af, \ GPIO_127 - MSD_DATA0 AKA SD1_DATA0
    0 af,      \ GPIO_128 - EB_MODE#
    0 af,      \ GPIO_129 - LID_SW#
-   3 pull-up, \ GPIO_130 - MSD_DATA3 AKA SD1_DATA3
-   1 +fast pull-up,      \ GPIO_131 - SD_DATA3 AKA SD2_DATA3
-   1 +fast pull-up,      \ GPIO_132 - SD_DATA2 AKA SD2_DATA2
-   1 +fast pull-up,      \ GPIO_133 - SD_DATA1 AKA SD2_DATA1
-   1 +fast pull-up,      \ GPIO_134 - SD_DATA0 AKA SD2_DATA0
-   3 pull-up, \ GPIO_135 - MSD_DATA1 AKA SD1_DATA1
-\  1 +fast pull-up,      \ GPIO_136 - SD_CMD AKA SD2_CMD
-   1 +fast af,           \ GPIO_136 - SD_CMD AKA SD2_DATA - CMD is pulled up externally
+   3 +fast af, \ GPIO_130 - MSD_DATA3 AKA SD1_DATA3
+   1 +fast af, \ GPIO_131 - SD_DATA3 AKA SD2_DATA3
+   1 +fast af, \ GPIO_132 - SD_DATA2 AKA SD2_DATA2
+   1 +fast af, \ GPIO_133 - SD_DATA1 AKA SD2_DATA1
+   1 +fast af, \ GPIO_134 - SD_DATA0 AKA SD2_DATA0
+   3 +fast af, \ GPIO_135 - MSD_DATA1 AKA SD1_DATA1
+\  1 +fast pull-up, \ GPIO_136 - SD_CMD AKA SD2_CMD
+   1 +fast af,      \ GPIO_136 - SD_CMD AKA SD2_CMD - CMD is pulled up externally
    no-update, \ GPIO_137 - Not connected (TP111)
-   3 pull-up, \ GPIO_138 - MSD_CLK AKA SD1_CLK
-   1 +fast pull-up,      \ GPIO_139 - SD_CLK AKA SD2_CLK
+   3 +fast af, \ GPIO_138 - MSD_CLK AKA SD1_CLK
+   1 +fast af, \ GPIO_139 - SD_CLK AKA SD2_CLK
    no-update, \ GPIO_140 - Not connected if R130 is nopop
 \  1 af,      \ GPIO_140 - (SD_CD# if R130 is populated)
    1 af,      \ GPIO_141 - SD_WP# AKA SD2_WP#
@@ -281,7 +272,7 @@ create mfpr-table
    1 af,      \ GPIO_146 - HUB_RESET#
 
    0 af,      \ GPIO_147 - ND_WE_N
-   0 af,      \ GPIO_148 - ND_RE_N
+   1 af,      \ GPIO_148 - ND_RE_N - SOC_EN_KBD_PWR#
 [ifdef] cl2-a1
    0 af,      \ GPIO_149 - ND_CLE
    0 af,      \ GPIO_150 - ND_ALE
@@ -289,7 +280,7 @@ create mfpr-table
 [else]
    1 af,      \ GPIO_149 - eMMC_RST#
    1 af,      \ GPIO_150 - EN_CAM_PWR
-   2 af,      \ GPIO_151 - eMMC_CLK
+   2 +fast af, \ GPIO_151 - eMMC_CLK
 [then]
    1 af,      \ GPIO_152 - (SM_BELn) - Not connected (TP40)
    1 af,      \ GPIO_153 - (SM_BEHn) - Not connected (TP105)
@@ -299,7 +290,7 @@ create mfpr-table
    no-update, \ GPIO_157 - PRI_TDS (JTAG)
    no-update, \ GPIO_158 - PRI_TDK (JTAG)
    no-update, \ GPIO_159 - PRI_TDO (JTAG)
-   0 af,      \ GPIO_160 - ND_RDY[1]
+   1 af,      \ GPIO_160 - (ND_RDY[1]) - SOC_TPD_CLK
 [ifdef] cl2-a1
    1 af,      \ GPIO_161 - ND_IO[12] - Not connected (TP 44)
    1 af,      \ GPIO_162 - (ND_IO[11]) - DCON_SCL
@@ -311,13 +302,13 @@ create mfpr-table
    0 af,      \ GPIO_168 - ND_IO[0]
 [else]
    1 af,      \ GPIO_161 - DCON_SCL
-   2 af,      \ GPIO_162 - eMMC_D6
-   2 af,      \ GPIO_163 - eMMC_D4
-   2 af,      \ GPIO_164 - eMMC_D2
-   2 af,      \ GPIO_165 - eMMC_D7
-   2 af,      \ GPIO_166 - eMMC_D5
-   2 af,      \ GPIO_167 - eMMC_D3
-   2 af,      \ GPIO_168 - eMMC_D1
+   2 +fast af, \ GPIO_162 - eMMC_D6
+   2 +fast af, \ GPIO_163 - eMMC_D4
+   2 +fast af, \ GPIO_164 - eMMC_D2
+   2 +fast af, \ GPIO_165 - eMMC_D7
+   2 +fast af, \ GPIO_166 - eMMC_D5
+   2 +fast af, \ GPIO_167 - eMMC_D3
+   2 +fast af, \ GPIO_168 - eMMC_D1
 [then]
 
 : init-mfprs
