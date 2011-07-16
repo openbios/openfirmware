@@ -195,3 +195,12 @@ purpose: Call VESA BIOS functions via syslinux c32 callback
 
    d# 12 # sp  add
 [then]
+
+\ VESA modes:
+\  RESv  BPP> 4     8    15   16   24
+\  320x200              10d  10e  10f
+\  640x400        100
+\  640x480        101   110  111  112
+\  800x600  102   103   113  114  115
+\ 1024x768  104   105   116  117  118
+\ 1280x1024 106   107   119  11a  11b
