@@ -49,6 +49,22 @@ variable ptr
 
 patch start remote-mode open
 
+0 value hw-cursor?
+defer move-hw-cursor  ( x y -- )
+' 2drop to move-hw-cursor
+0 0 2value saved-cursor-fgbg
+
+: setup-hw-cursor  ( -- )
+   " cursor-xy!" screen-ih ihandle>phandle  find-method  if
+      to move-hw-cursor
+      " cursor-fgbg@" $call-screen  to saved-cursor-fgbg
+      arrow-cursor h# ff00ff h# 00ff00  " set-cursor-image" $call-screen
+      true to hw-cursor?
+   else
+      false to hw-cursor?
+   then
+;
+
 \ The following code receives and decodes touchpad packets
 
 : show-packets  ( adr len -- )
@@ -140,10 +156,12 @@ false value right-hit?
    screen-w 2/ mouse-x !  screen-h 2/ mouse-y !
    screen-ih package( bytes/line )package  to /line
    load-base ptr !
+   setup-hw-cursor
 ;
 
 : dot  ( x y -- )
    swap screen-w 3 - min  swap y-offset + screen-h 3 - min  ( x' y' )
+   2dup move-hw-cursor                      ( )
    pixcolor @  -rot   3 3                   ( color x y w h )
    fill-rectangle-noff                      ( )
 ;
@@ -237,6 +255,10 @@ false value selftest-failed?  \ Success/failure flag for final test mode
       if  track  then
    exit-test?  until
 
+   hw-cursor?  if
+      " cursor-off" $call-screen
+      saved-cursor-fgbg " cursor-fgbg!" $call-screen
+   then
    close
    cursor-on
    page

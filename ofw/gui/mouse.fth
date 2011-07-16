@@ -7,17 +7,6 @@ headerless
 
 0 value xpos  0 value ypos
 
-\ move-mouse-cursor ( x y - )
-\ remove-mouse-cursor ( - )
-\ poll-mouse  ( -- x y buttons )
-\ get-event  ( #msecs -- false | x y buttons true )
-\    0 means wait forever, buttons are ...RML
-\ trackmouse ( - ) invokes 
-\    defer handle-movement  ( x-abs y-abs buttons -- done? )
-\ e.g.
-\ ' move-cursor is handle-movement
-\ mouse position is kept in values x and y
-
 0 [if]
 d# 16 constant cursor-w
 d# 16 constant cursor-h
@@ -38,7 +27,7 @@ create black-bits
 \  04000000 ,  06000000 ,  02000000 ,  00000000 ,
    06000000 ,  06000000 ,  00000000 ,  00000000 ,
 [else]
-d# 17 constant cursor-w
+d# 18 constant cursor-w
 d# 31 constant cursor-h
 
 create white-bits
@@ -70,9 +59,9 @@ binary
    00000000110000011000000000000000 ,
    00000000110000001100000000000000 ,
    00000000011000001100000000000000 ,
-   00000000011000000110000000000000 ,
-   00000000001100011000000000000000 ,
-   00000000000111110000000000000000 ,
+   00000000011000001100000000000000 ,
+   00000000001100001100000000000000 ,
+   00000000000111111000000000000000 ,
    00000000000111110000000000000000 ,
 
 create black-bits
@@ -104,21 +93,33 @@ create black-bits
    00000000001111110000000000000000 ,
    00000000000111110000000000000000 ,
    00000000000111110000000000000000 ,
-   00000000000011100000000000000000 ,
+   00000000000011110000000000000000 ,
    00000000000000000000000000000000 ,
    00000000000000000000000000000000 ,
 hex
 [then]
 
+: arrow-cursor  ( -- 'fg 'bg w h )
+   black-bits white-bits
+   cursor-w  cursor-h
+;
 
+0 value hardware-cursor?
 
 0 value /rect
 0 value old-rect
 0 value new-rect
 : alloc-mouse-cursor  ( -- )
-   cursor-w cursor-h *  ['] pix* screen-execute  to /rect
-   cursor-w cursor-h *  alloc-pixels to old-rect
-   cursor-w cursor-h *  alloc-pixels to new-rect
+   " cursor-xy!" screen-ih ihandle>phandle  find-method  if   ( xt )
+      drop
+      true to hardware-cursor?
+      arrow-cursor 0 h# ffffff " set-cursor-image" $call-screen
+   else
+      false to hardware-cursor?
+      cursor-w cursor-h *  ['] pix* screen-execute  to /rect
+      cursor-w cursor-h *  alloc-pixels to old-rect
+      cursor-w cursor-h *  alloc-pixels to new-rect
+   then
 ;
 
 : merge-cursor  ( -- )
@@ -131,11 +132,16 @@ hex
 ;
 
 : remove-mouse-cursor  ( -- )
+   hardware-cursor?  if  " cursor-off" $call-screen  exit  then
    mouse-ih 0=  if  exit  then
    xpos ypos  old-rect  put-cursor
 ;
 : draw-mouse-cursor  ( -- )
    mouse-ih 0=  if  exit  then
+   hardware-cursor?  if
+      xpos ypos " cursor-xy!" $call-screen
+      exit
+   then
    xpos ypos 2dup old-rect -rot         ( x y adr x y )
    cursor-w cursor-h  read-rectangle    ( x y )
    old-rect  new-rect /rect move        ( x y )
@@ -178,6 +184,10 @@ headers
    close-mouse?  if
       mouse-ih close-dev
       0 to mouse-ih
+      hardware-cursor?  if
+	 false to hardware-cursor?
+	 " cursor-off" $call-screen
+      then
    then
 ;
 : ?open-mouse  ( -- )

@@ -111,9 +111,6 @@ warning !
 ;
 ' (.firmware) to .firmware
 
-patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
-patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
-
 \ Uninstall the diag menu from the general user interface vector
 \ so exiting from emacs doesn't invoke the diag menu.
 ' quit to user-interface

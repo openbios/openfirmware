@@ -100,3 +100,109 @@ defer placement ' zoomed is placement
    video-on
 ;
 : stop-video  ( -- )  video-off  ;
+
+: bg!  ( r g b -- )  h# 124 lcd!  ;
+: lcd-set  ( mask offset -- )  tuck lcd@ or swap lcd!  ;
+: lcd-clr  ( mask offset -- )  tuck lcd@ swap invert and swap lcd!  ;
+
+: cursor-on  ( -- )  h# 100.0000 h# 190 lcd-set  ;
+: cursor-off  ( -- )  h# 100.0000 h# 190 lcd-clr  ;
+
+: cursor-xy@  ( -- x y )  h# 10c lcd@ lwsplit  ;
+: cursor-xy!  ( x y -- )  cursor-off  wljoin h# 10c lcd!  cursor-on  ;
+
+: cursor-wh@  ( -- w h )  h# 110 lcd@ lwsplit  ;
+: cursor-wh!  ( w h -- )  wljoin h# 110 lcd!  ;
+
+: rgb<>bgr  ( rgb -- bgr )  lbsplit drop  swap rot  0 bljoin  ;
+: cursor-fgbg!  ( fg-rgb bg-rgb -- )  rgb<>bgr h# 12c lcd!  rgb<>bgr h# 128 lcd!  ;
+: cursor-fgbg@  ( -- fg-rgb bg-rgb )  h# 128 lcd@ rgb<>bgr  h# 12c lcd@ rgb<>bgr  ;
+
+: cursor-1bpp-mode  ( -- )  h# 200.0000 h# 190 lcd-set  ;
+: cursor-2bpp-mode  ( -- )  h# 200.0000 h# 190 lcd-clr  ;
+: cursor-opaque  ( -- )  cursor-1bpp-mode  h# 400.0000 h# 190 lcd-set  ;
+: cursor-transparent  ( -- )  cursor-1bpp-mode  h# 400.0000 h# 190 lcd-clr  ;
+
+: sram-write-mode  ( -- )  h# 198 lcd@ h# c000 invert and  h# 8000 or  h# 198 lcd!  ;
+: sram-read-mode  ( -- )  h# 198 lcd@ h# c000 invert and  h# 198 lcd!  ;
+: cursor-sram@  ( offset -- value )  h# 0c bwjoin h# 198 lcd!  h# 158 lcd@  ;
+: cursor-sram!  ( value offset -- )  swap h# 19c lcd!  h# 8c bwjoin h# 198 lcd!  ;
+: sram-read  ( adr len start path -- )
+   bwjoin  -rot  bounds ?do                 ( index )
+      dup h# 198 lcd!  h# 158 lcd@  i l!    ( index )
+      1+                                    ( index' )
+   /l +loop                                 ( index )
+   drop                                     ( )
+;
+: sram-write  ( adr len start path -- )
+   h# 80 or                                ( adr len start mode )
+   bwjoin  -rot  bounds ?do                ( index )
+      i l@ h# 19c lcd!  dup h# 198 lcd!    ( index )
+      1+                                   ( index' )
+   /l +loop                                ( index )
+   drop                                    ( )
+;
+: cursor-sram-read   ( adr len start -- )  h# c sram-read   ;
+: cursor-sram-write  ( adr len start -- )  h# c sram-write  ;
+
+0 value cursor-w
+0 value cursor-h
+
+: enable-cursor-writes  ( -- )
+   h# 8000 h# 1a4 lcd-set   \ allow writes to cursor SRAM
+;
+
+0 value #cursor-bits
+0 value cursor-bits
+0 value cursor-index
+: flush-cursor-bits  ( -- )
+   cursor-bits cursor-index cursor-sram!
+   0 to #cursor-bits
+   0 to cursor-bits
+   cursor-index 1+ to cursor-index
+;
+: +2bits  ( 0..3 -- )
+   #cursor-bits lshift cursor-bits or to cursor-bits
+   #cursor-bits 2+ to #cursor-bits
+   #cursor-bits d# 32 =  if
+      flush-cursor-bits
+   then
+;
+: init-cursor-bits  ( -- )
+   0 to #cursor-bits
+   0 to cursor-bits
+   0 to cursor-index
+;
+0 value cursor-pitch
+: set-cursor-line  ( fg-l bg-l -- )
+   cursor-w  0  do                 ( fg-l bg-l )
+      over  h# 8000.0000 and  if   ( fg-l bg-l )
+	 1     \ Color 1           ( fg-l bg-l value )
+      else                         ( fg-l bg-l )
+         dup h# 8000.0000 and  if  ( fg-l bg-l )
+            2  \ Color 2           ( fg-l bg-l value )
+	 else                      ( fg-l bg-l )
+	    0  \ Transparent       ( fg-l bg-l value )
+	 then                      ( fg-l bg-l value )
+      then                         ( fg-l bg-l value )
+      +2bits                       ( fg-l bg-l )
+      swap 2* swap 2*              ( fg-l' bg-l' )
+   loop                            ( fg-l bg-l )
+   2drop                           ( )
+;
+: set-cursor-image  ( 'fg 'bg w h fg-color bg-color -- )
+   init-cursor-bits                ( 'fg 'bg w h fg-color bg-color )
+   enable-cursor-writes            ( 'fg 'bg w h fg-color bg-color )
+   cursor-off                      ( 'fg 'bg w h fg-color bg-color )
+   cursor-2bpp-mode                ( 'fg 'bg w h fg-color bg-color )
+   cursor-fgbg!                    ( 'fg 'bg w h )
+   to cursor-h  to cursor-w        ( 'fg 'bg )
+   cursor-w cursor-h cursor-wh!    ( 'fg 'bg )
+   cursor-h  0  do                 ( 'fg 'bg )
+      over l@  over l@             ( 'fg 'bg fg-l bg-l )
+      set-cursor-line              ( 'fg 'bg )
+      swap la1+  swap la1+         ( 'fg' 'bg' )
+   loop                            ( 'fg 'bg )
+   2drop                           ( )
+   flush-cursor-bits               ( )
+;
