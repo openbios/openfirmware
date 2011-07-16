@@ -11,10 +11,6 @@ headers
 : my-l!  ( l offset -- )  my-space +  " config-l!" $call-parent  ;
 
 0 value my-bus#
-0 value my-io-base
-0 value my-io-limit
-0 value my-mem-base
-0 value my-mem-limit
 
 defer parent-decode-unit
 
@@ -153,43 +149,58 @@ headers
    2swap drop  r> swap - encode-int encode+  ( adr' len' )
 ;
 
-: make-ranges-property  ( -- )
-   0 0 encode-bytes
-   my-io-base  my-io-limit  h# 8100.0000 +range-entry
-   my-mem-base my-mem-limit h# 8200.0000 +range-entry
-   " ranges" property
-;
-
 \ decode-unit and encode-unit must be static methods, so they can't use
 \ $call-parent at run-time
 
 " decode-unit" parent-phandle find-method drop  ( xt ) to parent-decode-unit
 " encode-unit" parent-phandle find-method drop  ( xt ) to encode-unit
 
+: assign-addresses?  ( -- flag )
+\   " addresses-preassigned"  my-parent ihandle>phandle get-package-property  if
+   " addresses-preassigned"  get-inherited-property  if
+      \ Property not present
+      true
+   else                ( propval$ )
+      \ Property present
+      2drop false
+   then
+;
 : prefetch-ranges-off  ( -- )
    \ Turn off prefetchable memory forwarding range
    h# 0000ffff  h# 24 my-l!	\ Prefetchable Limit,Base
    h# ffffffff  h# 28 my-l!	\ Prefetchable Base upper 32 bits
    h#        0  h# 2c my-l!	\ Prefetchable Limit upper 32 bits
 ;
-: set-bases  ( mem-base io-base -- )
-   2dup  to my-io-base  to my-mem-base
-
-   \ Set I/O forwarding base
-   lwsplit  h# 30 my-w!  wbsplit  h# 1c my-b!  drop  ( mem-base )
-
-   \ Set non-prefetchable memory forwarding base
-   lwsplit  h# 20 my-w!  drop  ( )
+: io-base@  ( -- base )
+   0 h# 1c my-b@  bwjoin  h# 30 my-w@  wljoin
 ;
-: set-limits  ( mem-limit+1 io-limit+1 -- )
-   2dup  to my-io-limit  to my-mem-limit
-
-   \ Set I/O forwarding limit
-   1- lwsplit  h# 32 my-w!  wbsplit  h# 1d my-b!  drop  ( mem-limit )
-
-   \ Set non-prefetchable memory forwarding range
-   1- lwsplit  h# 22 my-w!  drop  ( )
+: io-base!  ( base -- )
+   lwsplit  h# 30 my-w!  wbsplit  h# 1c my-b!  drop
 ;
+: io-limit@  ( -- limit+1 )
+   0 h# 1d my-b@  bwjoin  h# 32 my-w@  wljoin  1+
+;
+: io-limit!  ( limit+1 -- )
+   1- lwsplit  h# 32 my-w!  wbsplit  h# 1d my-b!  drop
+;
+: mem-base@  ( -- base )  0  h# 20 my-w@ wljoin  ;
+: mem-base!  ( base -- )  lwsplit  h# 20 my-w!  drop  ;
+: mem-limit@  ( -- limit+1 )   0  h# 22 my-w@ wljoin  1+  ;
+: mem-limit!  ( limit+1 -- )   1- lwsplit  h# 22 my-w!  drop  ;
+: pri-bus!  ( bus# -- )  h# 18 my-b!  ;
+: pri-bus@  ( -- bus# )  h# 18 my-b@  ;
+: sec-bus!  ( bus# -- )  h# 19 my-b!  ;
+: sec-bus@  ( -- bus# )  h# 19 my-b@  ;
+: bus-limit!  ( bus# -- )  h# 1a my-b!  ;
+: bus-limit@  ( -- bus# )  h# 1a my-b@  ;
+
+: make-ranges-property  ( -- )
+   0 0 encode-bytes
+   io-base@  io-limit@  h# 8100.0000 +range-entry
+   mem-base@ mem-limit@ h# 8200.0000 +range-entry
+   " ranges" property
+;
+
 \ Paranoia, perhaps justified
 : disable-children  ( -- )
    my-bus# d# 16 lshift  4 +   ( template )
@@ -198,6 +209,46 @@ headers
 
 7 value my-bridge-modes
 
+: set-bridge-registers  ( -- )
+   \ Turn off memory and I/O response and bus mastership while setting up
+   0 4 my-w!
+
+   \ Reset secondary bus
+   h# 3e my-b@  dup h# 40 or  h# 3e my-b!
+   h# 40 invert and  h# 3e my-b! 
+
+   my-space  d# 16 rshift h# ff and         pri-bus!  \ Primary bus#
+   1 " allocate-bus#" $call-parent  rot dup sec-bus!  \ Secondary bus#
+   to my-bus#
+   ( next-mem next-io )
+
+   \ Set the subordinate bus number to ff in order to pass through any
+   \ type 1 cycle with a bus number higher then the secondary bus#
+   h# ff bus-limit!               ( next-mem next-io )
+   disable-children               ( next-mem next-io )
+   over mem-base!  dup io-base!   ( next-mem next-io )
+
+   \ Initially set the limits to encompassing the rest of the address space
+   2drop  mem-space-top mem-limit!  io-space-top io-limit!
+
+   \ Clear status bits
+   h# ffff  h# 1e my-w!      ( )
+
+   prefetch-ranges-off
+
+   \ Enable memory, IO, and bus mastership
+   \ To enable parity, SERR#, fast back-to-back, and address stepping
+   \ rebind the (global) value bridge-modes.
+   " bridge-modes" $find  if  execute  else  2drop my-bridge-modes  then
+   4 my-w@  or  4 my-w!     ( )
+;
+: reduce-bridge-limits  ( -- )
+   \ Reduce the subordinate bus# to the maximum bus number of any of
+   \ our children, and the memory and IO forwarding limits to the
+   \ limits of the address space actually allocated.
+   0 " allocate-bus#" $call-parent  rot bus-limit!   ( final-mem final-io )
+   io-limit!  mem-limit!
+;
 : setup-bridge  ( -- )
    " pci" device-name
 
@@ -211,37 +262,12 @@ headers
 
    start-interrupt-map
 
-   \ Turn off memory and I/O response and bus mastership while setting up
-   0 4 my-w!
-
-   \ Reset secondary bus
-   h# 3e my-b@  dup h# 40 or  h# 3e my-b!
-   h# 40 invert and  h# 3e my-b! 
-
-   my-space  d# 16 rshift h# ff and         h# 18 my-b!  \ Primary bus#
-   1 " allocate-bus#" $call-parent  rot dup h# 19 my-b!  \ Secondary bus#
-   to my-bus#
-   ( next-mem next-io )
-
-   \ Set the subordinate bus number to ff in order to pass through any
-   \ type 1 cycle with a bus number higher then the secondary bus#
-   h# ff h# 1a my-b!         ( next-mem next-io )
-   disable-children
-   2dup set-bases            ( next-mem next-io )
-
-   \ Initially set the limits to encompassing the rest of the address space
-   2drop  mem-space-top  io-space-top set-limits
-
-   \ Clear status bits
-   h# ffff  h# 1e my-w!      ( )
-
-   prefetch-ranges-off
-
-   \ Enable memory, IO, and bus mastership
-   \ To enable parity, SERR#, fast back-to-back, and address stepping
-   \ rebind the (global) value bridge-modes.
-   " bridge-modes" $find  if  execute  else  2drop my-bridge-modes  then
-   4 my-w@  or  4 my-w!     ( )
+   assign-addresses?  if
+      set-bridge-registers
+   else
+      sec-bus@ to my-bus#
+      0 0 " addresses-preassigned" property
+   then
 
 \ [ifdef] firepower
 \ \ The IBM bridge is somewhat funny
@@ -254,20 +280,17 @@ headers
 
    " 0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f" prober-xt execute
 
-   \ Reduce the subordinate bus# to the maximum bus number of any of
-   \ our children, and the memory and IO forwarding limits to the
-   \ limits of the address space actually allocated.
-   0 " allocate-bus#" $call-parent  rot h# 1a my-b!  ( final-mem final-io )
-   set-limits
+   assign-addresses?  if  reduce-bridge-limits  then
 
    make-ranges-property
 
    finish-interrupt-map
 
-   my-bus#  encode-int  h# 1a my-b@  encode-int encode+
+   my-bus#  encode-int  bus-limit@  encode-int encode+
    " bus-range"  property
 ;
 setup-bridge
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

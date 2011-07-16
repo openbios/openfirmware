@@ -55,6 +55,18 @@ false value probe-state?
 headers		\ These headers are for debugging convenience
 0 value current-bus#
 
+: have-property?  ( propname$ -- flag )
+   get-my-property  if  false  else  2drop true  then
+;
+: assign-addresses?  ( -- flag )  " addresses-preassigned" have-property? 0=  ;
+: parent-assign-addresses?  ( -- flag )
+   " addresses-preassigned" get-inherited-property  if  ( )
+      true
+   else                     ( propval$ )
+      2drop false
+   then
+;
+
 \ These cannot be package values because some words that use them are called
 \ directly from different contexts - both from the root of the PCI domain
 \ and also from child nodes and subordinate PCI-PCI bridge nodes.  They need
@@ -744,7 +756,7 @@ headers		\ find-fcode? doesn't have to be headered; it's just convenient
 : find-fcode?  ( -- false | adr len true )
 
    next-mem to save-mem
-   temp-assign-addresses
+   parent-assign-addresses?  if  temp-assign-addresses  then
    expansion-rom                                             ( offset )
 
 \   \ Map the expansion ROM at a high physical address that does not
@@ -770,12 +782,14 @@ headers		\ find-fcode? doesn't have to be headered; it's just convenient
    \ Turn on address decode enable in Expansion ROM Base Address Register
    r@ my-l@  1 or  r@ my-l!         ( r: size virt offset )  ( virt )
 
-   2 4 my-w!	\ Turn on memory enable                      ( virt )
+   4 my-w@  2 or  4 my-w!	\ Turn on memory enable      ( virt )
 
-   locate-fcode                                       ( false | adr len true )
+   locate-fcode                ( r: size virt offset ) ( false | adr len true )
 
    \ Turn off memory enable
-   0 4 my-w!                  ( r: size virt offset ) ( false | adr len true )
+   parent-assign-addresses?  if      ( r: size virt offset ) ( false | adr len true )
+      4 my-w@  2 invert and   4 my-w!
+   then                       ( r: size virt offset ) ( false | adr len true )
 
    \ Turn off address decode enable in Expansion ROM Base Address Register
    r@ my-l@  1 invert and  r> my-l!  ( r: size virt ) ( false | adr len true )
@@ -944,7 +958,7 @@ headerless
    make-child-properties     ( )
    card-bus?  if  make-common-properties  exit  then  ( )
 
-   clear-addresses           ( )
+   parent-assign-addresses?  if  clear-addresses  then        ( )
 
    \ Interpret FCode if present; if not, invent "name" and "reg" properties
    find-fcode?  if           ( adr len )
@@ -954,9 +968,11 @@ headerless
    then                      ( )
 
    bridge? 0=  if
-      clear-addresses           ( )
-      b my-b@ 6 <>  if
-         0 4 my-w!		\ Disables all card response
+      parent-assign-addresses?  if
+	 clear-addresses          ( )
+	 b my-b@ 6 <>  if
+	    0 4 my-w!		\ Disables all card response
+	 then
       then
    then
    restore-fcodes
@@ -1289,11 +1305,11 @@ headers
    update-pointers		\ Re-init the temporary allocation pointers,
 				\ thus erasing any probe-state mappings
 
-   assign-all-addresses
+   assign-addresses?  if  assign-all-addresses  then
    \ XXX TODO set-latency-timers  set-fast-back-to-backs
 ;
 : master-probe  ( adr len -- )
-   true to probe-state?
+   assign-addresses?  to probe-state?
    prober
 
    \ Make permanent any address assignments that occurred during the
