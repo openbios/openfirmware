@@ -11,6 +11,6 @@ h# d2 smbus-io-base 4 + port-wb   \ Target address of clock generator chip and W
 h# 05 smbus-io-base 3 + port-wb   \ Register number inside clock generator (output config)
 h# 01 smbus-io-base 5 + port-wb   \ Byte count
       smbus-io-base 2 + port-rb   \ Read to reset the byte counter for the next write
-h# 02 smbus-io-base 7 + port-wb   \ Value to put in the clock generator output config reg - turns of PCIe clocks
+h# 03 smbus-io-base 7 + port-wb   \ Value to put in the clock generator output config reg - turns off PCIe clocks
 h# 54 smbus-io-base 2 + port-wb   \ Fire off the command.  40 is the start bit, 14 is the "SMBus block data" command
 \ We don't wait for it to finish
