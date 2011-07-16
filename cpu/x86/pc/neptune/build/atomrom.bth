@@ -1,0 +1,26 @@
+purpose: Add CRC to atomic.rom
+
+command: &builder &this
+
+build-now
+
+fload ${BP}/forth/lib/crc32.fth
+
+h# 80000 constant romsize
+
+writing atomrom.rom
+   " atomic.rom" $add-file
+
+   /l buffer: crcbuf
+
+   romsize buffer: filebuf
+   0 ofd @ fseek
+
+   \ Read the entire image, compute the CRC, and store it h# 30 from the end
+   filebuf romsize ofd @ fgets romsize <> abort" Can't read back image"
+   0 crctab  filebuf romsize  ($crc)  crcbuf !
+
+   romsize h# 30 - ofd @ fseek
+   crcbuf /l ofd @ fputs
+
+ofd @ fclose
