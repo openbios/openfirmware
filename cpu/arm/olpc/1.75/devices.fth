@@ -194,9 +194,16 @@ fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
 
    fload ${BP}/cpu/arm/olpc/1.75/lcd.fth
    fload ${BP}/dev/olpc/dcon/mmp2dcon.fth        \ DCON control
+   defer convert-color ' noop to convert-color
    defer pixel*
    defer pixel+
    defer pixel!
+
+   : color!  ( r g b index -- )  4drop  ;
+   : color@  ( index -- r g b )  drop 0 0 0  ;
+
+   fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
+
    depth d# 24 =  [if]
       code 3a+  ( adr n -- n' )
          pop  r0,sp
@@ -215,16 +222,13 @@ fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
       ' 3* to pixel*
       ' 3a+ to pixel+
       ' rgb888! to pixel!
+      ' noop to convert-color
    [else]
       ' /w* to pixel*
       ' wa+ to pixel+
       ' w!  to pixel!
+      ' argb>565-pixel to convert-color
    [then]
-
-   : color!  ( r g b index -- )  4drop  ;
-   : color@  ( index -- r g b )  drop 0 0 0  ;
-
-   fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
 
    : display-on
 \      init-xo-display  \ Turns on DCON

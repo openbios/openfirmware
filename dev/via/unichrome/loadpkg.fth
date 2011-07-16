@@ -19,12 +19,18 @@ defer video-on
 defer pixel* ' noop is pixel*
 defer pixel+ ' + is pixel+
 defer pixel! ' c! is pixel!
+defer convert-color  ' noop is convert-color
 
+d# 1280 value width	\ Frame buffer line width
+d# 1024 value height	\ Screen height
+d#   16 value depth	\ Bits per pixel
+d# 1024 value /scanline	\ Frame buffer line width
+
+fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
 fload ${BP}/dev/video/controlr/vga.fth           \ Standard VGA interfaces
 fload ${BP}/dev/via/unichrome/unichrome.fth      \ Controller code
 fload ${BP}/dev/via/unichrome/accel2d.fth        \ Accelerator
 fload ${BP}/dev/via/unichrome/vgamodes.fth       \ Text mode support
-fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
 fload ${BP}/cpu/x86/pc/olpc/expand16.fth         \ Expand image by 2x
 
 \ LICENSE_BEGIN

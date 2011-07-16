@@ -209,8 +209,8 @@ d# 240 value gey0  d# 240 value gex0
 ;
 : circleat  ( x y radius -- )  >r  moveto  r> rcircle  ;
 
-: set-fg  ( fg -- )  to fg  ;
-: set-bg  ( bg -- )  to bg  ;
+: set-fg  ( fg -- )  convert-color  to fg  ;
+: set-bg  ( bg -- )  convert-color  to bg  ;
 
 dend
 

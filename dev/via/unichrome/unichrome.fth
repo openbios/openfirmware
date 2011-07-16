@@ -11,11 +11,6 @@ headers
 0 value fb-va
 0 value mmio-base
 
-d# 1280 value width	\ Frame buffer line width
-d# 1024 value height	\ Screen height
-d#   16 value depth	\ Bits per pixel
-d# 1024 value /scanline	\ Frame buffer line width
-
 \ This writes a memory variable that the early startup code can find,
 \ so the resume-from-S3 path can do the right thing
 : note-mode  ( mode# -- )  video-mode-adr !  ;
@@ -273,12 +268,13 @@ hex
    \ at the end of each scanline.  Adjust /scanline for others.
    set-pitch
    depth case
-      d# 16 of  ['] w!  ['] /w*  ['] wa+  endof
-      d# 24 of  ['] l!  ['] /l*  ['] la+  endof
-      d# 32 of  ['] l!  ['] /l*  ['] la+  endof
-      ( default )  >r  ['] c!  ['] noop  ['] +  r>
+      d# 16 of  ['] w!  ['] /w*   ['] wa+  ['] argb>565-pixel  endof
+      d# 24 of  ['] l!  ['] /l*   ['] la+  ['] noop            endof
+      d# 32 of  ['] l!  ['] /l*   ['] la+  ['] noop            endof
+      ( default )
+           >r   ['] c!  ['] noop  ['] ca+  ['] noop  r>
    endcase
-   to pixel+  to pixel*  to pixel!
+   to convert-color  to pixel+  to pixel*  to pixel!
 ;
 
 : set-resolution  ( width height depth -- )  set-depth  to height  to width  ;
