@@ -25,8 +25,8 @@ d# 32 buffer: clkgen-buf  \ Extra large in case the clock generator changes
 
 \ We don't need to call disable-unused-clocks in stand-init because
 \ it is done in early-startup so it will affect resume-from-S3 too.
-: disable-unused-clocks  ( -- )   h# 02 5 clkgen-b!  ;
-: enable-unused-clocks   ( -- )   h# de 5 clkgen-b!  ;
+: disable-unused-clocks  ( -- )   h# 03 5 clkgen-b!  ;
+: enable-unused-clocks   ( -- )   h# df 5 clkgen-b!  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks
