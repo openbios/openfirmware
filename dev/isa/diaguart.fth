@@ -4,10 +4,15 @@ purpose: Diagnostic (before console installation) access to serial port
 headerless
 d# 1843200 constant uart-clock-frequency
 
-h# 3f8 value uart-base	\ Virtual address of UART; set later
+h# 3f8 value uart-base	\ Virtual address of UART; perhaps overridden later
 
+[ifdef] mem-uart-base
+: uart@  ( reg# -- byte )  mem-uart-base +  c@  ;	\ Read from a UART register
+: uart!  ( byte reg# -- )  mem-uart-base +  c!  ;	\ Write to a UART register
+[else]
 : uart@  ( reg# -- byte )  uart-base +  pc@  ;	\ Read from a UART register
 : uart!  ( byte reg# -- )  uart-base +  pc!  ;	\ Write to a UART register
+[then]
 
 : baud  ( baud-rate -- )
    uart-clock-frequency d# 16 /  swap rounded-/    ( baud-rate-divisor )
@@ -20,11 +25,13 @@ h# 3f8 value uart-base	\ Virtual address of UART; set later
 ;
 
 : inituarts  ( -- )
+[ifndef] mem-uart-base
    3 3 uart!  		\ 8 bits, no parity
    7 2 uart!		\ Clear and enable FIFOs
 \   d# 38400 baud
 \   d# 9600 baud
    d# 115200 baud
+[then]
 ;
 
 : ukey?    ( -- flag )  5 uart@      1 and  0<>  ;  \ Test for rcv character

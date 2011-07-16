@@ -3,23 +3,37 @@ purpose: Assembler macro for tracing progress through startup code
 
 \ write a byte to an ISA port
 : isa-c!   ( n a - )  "  # dx mov   # al mov   al dx out " evaluate  ;
+: mem-c!   ( n a -- )  " >r # r> #) byte mov" evaluate  ;
 
+: ureg!  ( byte offset -- )
+   [ifdef] mem-uart-base
+      mem-uart-base + mem-c!
+   [else]
+      h# 3f8 + isa-c!
+   [then]
+;
 [ifdef] debug-startup
 : init-com1  ( -- )
-   h#  1  h# 3fc  isa-c!	\ DTR on
-   h# 80  h# 3fb  isa-c!	\ Enable divisor latch
-   h# 01  h# 3f8  isa-c!	\ Baud rate divisor low - 115200 baud
-   h#  0  h# 3f9  isa-c!	\ Baud rate divisor high - 115200 baud
-   h#  3  h# 3fb  isa-c!	\ 8 bits, no parity
-   h#  0  h# 3f9  isa-c!        \ Interrupts off
-   h#  1  h# 3fa  isa-c!        \ Enable FIFO
+   h#  1  4 ureg!	\ DTR on
+   h# 80  3 ureg!	\ Enable divisor latch
+   h# 01  0 ureg!	\ Baud rate divisor low - 115200 baud
+   h#  0  1 ureg!	\ Baud rate divisor high - 115200 baud
+   h#  3  3 ureg!	\ 8 bits, no parity
+   h#  0  1 ureg!        \ Interrupts off
+   h#  1  2 ureg!        \ Enable FIFO
 ;
 
 \ Assembler macro to assemble code to send the character "char" to COM1
 : report  ( char -- )
+[ifdef] mem-uart-base
+   " begin   h# 20 #  mem-uart-base 5 + #) byte test  0<> until" evaluate
+   ( char )  " # mem-uart-base #) byte mov" evaluate
+   " begin   h# 20 #  mem-uart-base 5 + #) byte test  0<> until" evaluate
+[else]
    " begin   h# 3fd # dx mov   dx al in   h# 20 # al and  0<> until" evaluate
    ( char )  " # al mov   h# 3f8 # dx mov  al dx out  " evaluate
    " begin   h# 3fd # dx mov  dx al in   h# 20 # al and  0<> until" evaluate
+[then]
 ;
 [else]
 : init-com1  ( -- )  ;
