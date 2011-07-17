@@ -34,18 +34,21 @@ warning on
 
 : mfg-test-dev  ( $ -- )
    restore-scroller
-   ??cr  ." Testing " 2dup type cr
-   locate-device  if  ." Can't find device node" cr  exit  then  ( phandle )
-   " selftest" rot execute-phandle-method            ( return abort? )
-   if
-      ?dup  if
+   ??cr  ." Testing " 2dup type cr                     ( $ )
+   2dup locate-device  if                              ( $ )
+      2drop ." Can't find device node" cr  exit        ( -- )
+   else
+      drop                                             ( $ )
+   then                                                ( $ phandle )
+   " selftest" execute-device-method  if               ( return-code )
+      ?dup  if                                         ( return-code )
          ??cr ." Selftest failed. Return code = " .d cr
          mfg-color-red sq-border!
          false to pass?
          red-screen
          flush-keyboard
          mfg-wait-return
-      else
+      else                                                   ( )
          green-letters
          ." Okay" cr
          black-letters
