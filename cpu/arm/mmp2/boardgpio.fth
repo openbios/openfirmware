@@ -2,20 +2,20 @@ purpose: Board-specific setup details - pin assigments, etc.
 
 : set-camera-domain-voltage
    aib-unlock
-   h# d401e80c l@  4 or   ( n )  \ Set 1.8V selector bit in AIB_GPIO2_IO
+   h# 01e80c io@  4 or   ( n )  \ Set 1.8V selector bit in AIB_GPIO2_IO
    aib-unlock
-   h# d401e80c l!
+   h# 01e80c io!
 ;
 
 : set-gpio-directions  ( -- )
-   3  h# 38 clock-unit-pa +  l!  \ Enable clocks in GPIO clock reset register
+   3  h# 38 clock-unit-pa +  io!  \ Enable clocks in GPIO clock reset register
    
-   h# 000e.0000  gpio-base h# 0c +  l!  \ Bits 19, 18, 17
-   h# 0704.2000  gpio-base h# 10 +  l!  \ Bits 58,57,56,50 and 45
-\   h# 03ec.3e00  gpio-base h# 14 +  l!  \ Bits 89:85,83,82, and 77:73
-   h# 03ec.3200  gpio-base h# 14 +  l!  \ Bits 89:85,83,82, and 77:76 and 73 (leave 74 and 75 as input)
+   h# 000e.0000  gpio-base h# 0c +  io!  \ Bits 19, 18, 17
+   h# 0704.2000  gpio-base h# 10 +  io!  \ Bits 58,57,56,50 and 45
+\   h# 03ec.3e00  gpio-base h# 14 +  io!  \ Bits 89:85,83,82, and 77:73
+   h# 03ec.3200  gpio-base h# 14 +  io!  \ Bits 89:85,83,82, and 77:76 and 73 (leave 74 and 75 as input)
 
-   h# 0200.3c00  gpio-base h# 20 +  l!  \ Turn off LEDS (3c00) and turn on 5V (0200.0000)
+   h# 0200.3c00  gpio-base h# 20 +  io!  \ Turn off LEDS (3c00) and turn on 5V (0200.0000)
 ;
 
 create mfpr-table

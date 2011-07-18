@@ -3,30 +3,30 @@ purpose: Driver for Two Wire Serial Interface on Marvell Armada 610
 \ 0 0  " d4011000"  " /" begin-package
 
 [ifdef] unaligned-mmap
-h# d4050000 unaligned-mmap  constant clock-unit-pa
+h# 050000 unaligned-mmap  constant clock-unit-pa
 [then]
 
 0 value twsi-chip
 0 value clock-reg
 0 value slave-address
 
-: dbr@  ( -- n )  twsi-chip h# 08 + l@   ;
-: cr@   ( -- n )  twsi-chip h# 10 + l@   ;
-: sr@   ( -- n )  twsi-chip h# 18 + l@   ;
-: sar@  ( -- n )  twsi-chip h# 20 + l@   ;
-: lcr@  ( -- n )  twsi-chip h# 28 + l@   ;
-: dbr!  ( n -- )  twsi-chip h# 08 + l!   ;
-: cr!   ( n -- )  twsi-chip h# 10 + l!   ;
-: sr!   ( n -- )  twsi-chip h# 18 + l!   ;
-: sar!  ( n -- )  twsi-chip h# 20 + l!   ;
-: lcr!  ( n -- )  twsi-chip h# 28 + l!   ;
+: dbr@  ( -- n )  twsi-chip h# 08 + io@   ;
+: cr@   ( -- n )  twsi-chip h# 10 + io@   ;
+: sr@   ( -- n )  twsi-chip h# 18 + io@   ;
+: sar@  ( -- n )  twsi-chip h# 20 + io@   ;
+: lcr@  ( -- n )  twsi-chip h# 28 + io@   ;
+: dbr!  ( n -- )  twsi-chip h# 08 + io!   ;
+: cr!   ( n -- )  twsi-chip h# 10 + io!   ;
+: sr!   ( n -- )  twsi-chip h# 18 + io!   ;
+: sar!  ( n -- )  twsi-chip h# 20 + io!   ;
+: lcr!  ( n -- )  twsi-chip h# 28 + io!   ;
 
 create channel-bases
-h# D4011000 ,  h# D4031000 ,  h# D4032000 ,  h# D4033000 ,  h# D4033800 ,  h# D4034000 ,
+h# 011000 ,  h# 031000 ,  h# 032000 ,  h# 033000 ,  h# 033800 ,  h# 034000 ,
 
 [ifdef] unaligned-mmap
 6 0  do
-   channel-bases i la+ l@  unaligned-mmap  channel-bases i la+ l!
+   channel-bases i la+ io@  unaligned-mmap  channel-bases i la+ io!
 loop
 [then]
 
@@ -61,7 +61,7 @@ h# 1000 constant BBU_TWSI_TimeOut          \ TWSI bus timeout loop counter value
 bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
 : init-twsi-channel  ( channel# -- )
    set-twsi-channel
-   7 clock-reg l!  3 clock-reg l!  \ Set then clear reset bit
+   7 clock-reg io!  3 clock-reg io!  \ Set then clear reset bit
    1 us
    iue+scle  bbu_ICR_UR or  cr!  \ Reset the unit
    iue+scle cr!                  \ Release the reset

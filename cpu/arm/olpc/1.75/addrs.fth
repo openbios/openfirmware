@@ -24,6 +24,7 @@ h# 10.0000 constant /rom           \ Total size of SPI FLASH
 : (memory?)  ( phys -- flag )  total-ram-size u<  ;
 
 \ OFW implementation choices
+h# d400.0000 constant io-pa
 h# 1fa0.0000 constant fw-pa
 
 h# 1f00.0000 constant dma-base
@@ -32,12 +33,19 @@ h#   80.0000 constant dma-size
 h# 1f80.0000 constant extra-mem-pa
 h#   20.0000 constant /extra-mem
 
+h# ef00.0000 constant dma-va
+h# ef80.0000 constant extra-mem-va
+h# efa0.0000 constant fw-va
+h# efc0.0000 constant fb-va
+h# fe00.0000 constant io-va
+
 [ifdef] virtual-mode
 h# f700.0000 constant fw-virt-base
 h# 0100.0000 constant fw-virt-size  \ 16 megs of mapping space
 [else]
-fw-pa value fw-virt-base
-0 value fw-virt-size
+\ fw-pa value fw-virt-base
+fw-va value fw-virt-base
+h# 20.0000 value fw-virt-size
 [then]
 
 h# 0020.0000 constant /fw-ram

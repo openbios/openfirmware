@@ -2,8 +2,8 @@ h# 004c constant pmua_display1_clk_res_ctrl_offset  \ DISPLAY1 Clock/Reset Contr
 h# 0110 constant pmua_display2_clk_res_ctrl_offset  \ DISPLAY2 Clock/Reset Control Register
 h# 0050 constant pmua_ccic_clk_res_ctrl_offset      \ CCIC Clock/Reset Control Register
 
-: pmua@  ( offset -- n )  pmua-pa + l@  ;
-: pmua!  ( n offset -- )  pmua-pa + l!  ;
+: pmua@  ( offset -- n )  pmua-pa + io@  ;
+: pmua!  ( n offset -- )  pmua-pa + io!  ;
 
 : dsi-twsi!  ( l reg# -- )
    >r  lbsplit  swap 2swap swap  r> wbsplit  6  twsi-write
@@ -14,27 +14,27 @@ h# 0050 constant pmua_ccic_clk_res_ctrl_offset      \ CCIC Clock/Reset Control R
 : dsi-twsi@  ( reg# -- l )  wbsplit 2 4 twsi-get  bljoin  ;
 : dsi-twsi-w@  ( reg# -- w )  wbsplit 2 2 twsi-get  bwjoin  ;
 
-: dsi1!  ( n offset -- )  dsi1-pa + l!  ;
-: dsi1@  ( n offset -- )  dsi1-pa + l@  ;
-: dsi2!  ( n offset -- )  dsi2-pa + l!  ;
-: dsi2@  ( n offset -- )  dsi2-pa + l@  ;
+: dsi1!  ( n offset -- )  dsi1-pa + io!  ;
+: dsi1@  ( n offset -- )  dsi1-pa + io@  ;
+: dsi2!  ( n offset -- )  dsi2-pa + io!  ;
+: dsi2@  ( n offset -- )  dsi2-pa + io@  ;
 
 0 value dsi-base
-: dsi!   ( n offset -- )  dsi-base + l!  ;
-: dsi@   ( n offset -- )  dsi-base + l@  ;
+: dsi!   ( n offset -- )  dsi-base + io!  ;
+: dsi@   ( n offset -- )  dsi-base + io@  ;
 
-: bitset  ( mask reg-adr -- )  tuck l@  or  swap l!  ;
-: bitclr  ( mask reg-adr -- )  tuck l@  swap invert and   swap l!  ;
+: bitset  ( mask reg-adr -- )  tuck io@  or  swap io!  ;
+: bitclr  ( mask reg-adr -- )  tuck io@  swap invert and   swap io!  ;
 : init-dsi1  ( -- )
    \ Ensure that the pins are set up properly
-   h# c0 d# 83 gpio>mfpr l!  \ Configure GPIO83 for function 0 - GPIO
+   h# c0 d# 83 gpio>mfpr io!  \ Configure GPIO83 for function 0 - GPIO
    d# 83 gpio-dir-out        \ Set the direction control to output
 
    h#  d123f  h# 4c pmua!  \ Send clock to TC358762 MIPI DSI bridge
    \ Enable the M/N clock output
-   main-pmu-pa h# 1024 +  l@  h# 200 or  main-pmu-pa h# 1024 +  l!  \ Set (GPC) G_CLK_OUT ena in clock gating register
+   main-pmu-pa h# 1024 +  io@  h# 200 or  main-pmu-pa h# 1024 +  io!  \ Set (GPC) G_CLK_OUT ena in clock gating register
    \ Set the M/N value and re-enable the clock gate register
-   h# 20001  main-pmu-pa h# 30 + l!  \ Set M/N divider values in PMUM_GPCR register
+   h# 20001  main-pmu-pa h# 30 + io!  \ Set M/N divider values in PMUM_GPCR register
    h# 4000  mfpr-base h# 160 +  bitset  \ pull-up
    
    \ Disable DSI

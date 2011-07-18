@@ -1,19 +1,19 @@
 \ See license at end of file
 purpose: Init UTMI USB Phy in Marvell SoC
 
-h# d4207004 constant utmi-ctrl
-h# d4207008 constant utmi-pll
-h# d420700c constant utmi-tx
-h# d4207010 constant utmi-rx
-h# d4207014 constant utmi-ivref
-h# d4207018 constant utmi-t0
+h# 207004 constant utmi-ctrl
+h# 207008 constant utmi-pll
+h# 20700c constant utmi-tx
+h# 207010 constant utmi-rx
+h# 207014 constant utmi-ivref
+h# 207018 constant utmi-t0
 
-: regset  ( mask adr -- )  tuck l@  or               swap l!  ;
-: regclr  ( mask adr -- )  tuck l@  swap invert and  swap l!  ;
+: regset  ( mask adr -- )  tuck io@  or               swap io!  ;
+: regclr  ( mask adr -- )  tuck io@  swap invert and  swap io!  ;
 
 : wait-cal  ( spins -- )
    0  do
-      utmi-pll rl@  h# 0080.0000 and  if  unloop exit  then
+      utmi-pll io@  h# 0080.0000 and  if  unloop exit  then
    loop
    ." PLL calibrate timeout" cr
 ;

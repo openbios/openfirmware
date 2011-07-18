@@ -43,9 +43,9 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
 end-package
 
 stand-init: SDHC clocks
-   h# 41b h# d4282854 l!   \ SD0 (external SD) clocks, plus set master clock divisor
-   h#  1b h# d4282858 l!   \ SD1 (WLAN) clocks
-   h#  1b h# d42828e8 l!   \ SD2 (internal microSD) clocks
-   h# 70a h# d4200104 l!  \ Clock gating
-   h# 70a h# d4201104 l!  \ Clock gating
+   h# 41b h# 282854 io!   \ SD0 (external SD) clocks, plus set master clock divisor
+   h#  1b h# 282858 io!   \ SD1 (WLAN) clocks
+   h#  1b h# 2828e8 io!   \ SD2 (internal microSD) clocks
+   h# 70a h# 200104 io!  \ Clock gating
+   h# 70a h# 201104 io!  \ Clock gating
 ;

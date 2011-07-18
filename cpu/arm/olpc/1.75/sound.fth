@@ -2,19 +2,18 @@
 " audio" name
 my-space h# 800 reg
 
-0 value sspa-base  \ E.g. h# d42a.0c00 
-0 value adma-base  \ E.g. h# d42a.0800
-: sspa!  ( n offset -- )  sspa-base + l!  ;  \ Write a register in SSPA1
-: sspa@  ( offset -- n )  sspa-base + l@  ;  \ Read a register in SSPA1
-: adma!  ( n offset -- )  adma-base + l!  ;
-: adma@  ( offset -- n )  adma-base + l@  ;
+0 value sspa-base  \ E.g. h# 2a.0c00 +io
+0 value adma-base  \ E.g. h# 2a.0800 +io
+: sspa!  ( n offset -- )  sspa-base + rl!  ;  \ Write a register in SSPA1
+: sspa@  ( offset -- n )  sspa-base + rl@  ;  \ Read a register in SSPA1
+: adma!  ( n offset -- )  adma-base + rl!  ;
+: adma@  ( offset -- n )  adma-base + rl@  ;
 
 : audio-clock-on  ( -- )
-   h# 600 h# d428.290c l!  d# 10 us  \ Enable
-   h# 610 h# d428.290c l!  d# 10 us  \ Release reset
-   h# 710 h# d428.290c l!  d# 10 us  \ Enable
-   h# 712 h# d428.290c l!  d# 10 us  \ Release reset
-
+   h# 600 h# 28.290c io!  d# 10 us  \ Enable
+   h# 610 h# 28.290c io!  d# 10 us  \ Release reset
+   h# 710 h# 28.290c io!  d# 10 us  \ Enable
+   h# 712 h# 28.290c io!  d# 10 us  \ Release reset
 
 [ifdef] 24mhz
    \  * 10 / 27 gives about 147.456
@@ -22,17 +21,17 @@ my-space h# 800 reg
    \ But the M/N divisors always have an implicit /2 (section 7.3.7 in datasheet),
    \ so the input frequency is 99.67 with respect to NOM (sic) and DENOM.
    \ we want 24.576 MHz SYSCLK.  99.67 * 18 / 73 = 24.575 so 50 ppm error.
-   d# 18 d# 15 lshift d# 73 or h# d000.0000 or  h# d4050040 l!
+   d# 18 d# 15 lshift d# 73 or h# d000.0000 or  h# 050040 io!
 [else]
    \  * 10 / 27 gives about 147.456
    \ The M/N divisor gets 199.33 MHz (Figure 283 - clock tree - in Datasheet)
    \ But the M/N divisors always have an implicit /2 (section 7.3.7 in datasheet),
    \ so the input frequency is 99.67 with respect to NOM (sic) and DENOM.
    \ we want 12.288 MHz SYSCLK.  99.67 * 9 / 73 = 12.2876 so 50 ppm error.
-   d# 9 d# 15 lshift d# 73 or h# d000.0000 or  h# d4050040 l!
+   d# 9 d# 15 lshift d# 73 or h# d000.0000 or  h# 050040 io!
 [then]
 
-   h# d405.0024 l@  h# 20 or  h# d405.0024 l!  \ Enable 12S clock out to SSPA1
+   h# 05.0024 io@  h# 20 or  h# 05.0024 io!  \ Enable 12S clock out to SSPA1
 
    h# 10800 h# 38 sspa!
   

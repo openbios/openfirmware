@@ -3,18 +3,18 @@ purpose: Hashes (MD5, SHA1, SHA-256) using Marvell hardware acceleration
 
 h# 8101 constant dval
 : dma>hash  ( adr len -- )
-   4 round-up  2 rshift  h# d429080c l!   ( adr )
-   h# d4290808 l!                         ( )
-   dval h# d4290800 l!                    ( )
-\  begin  h# d4290814 l@  1 and  until
+   4 round-up  2 rshift  h# 29080c io!    ( adr )
+   h# 290808 io!                          ( )
+   dval h# 290800 io!                     ( )
+\  begin  h# 290814 io@  1 and  until
 ;
-: dma-stop  h# d4290800 l@ 1 invert and h# d4290800 l!   ;
-: swap-axi-bytes  ( -- )  h# 5 h# d4290838 l!  ;  \ Byte swap input and output
-: in-fifo-remain  ( -- n )  h# d429083c l@  ;
-\ : in-fifo@  ( -- n )  h# d4290880 l@  ;
-\ : in-fifo!  ( n -- )  h# d4290880 l!  ;
-\ : out-fifo@  ( -- n )  h# d4290900 l@  ;
-\ : out-fifo!  ( n -- )  h# d4290900 l!  ;
+: dma-stop  h# 290800 io@ 1 invert and h# 290800 io!   ;
+: swap-axi-bytes  ( -- )  h# 5 h# 290838 io!  ;  \ Byte swap input and output
+: in-fifo-remain  ( -- n )  h# 29083c io@  ;
+\ : in-fifo@  ( -- n )  h# 290880 io@  ;
+\ : in-fifo!  ( n -- )  h# 290880 io!  ;
+\ : out-fifo@  ( -- n )  h# 290900 io@  ;
+\ : out-fifo!  ( n -- )  h# 290900 io!  ;
 
 h# 40 value /hash-block
 d# 20 value /hash-digest
@@ -23,23 +23,23 @@ d# 20 value /hash-digest
 0 value #hash-buf
 0 value #hashed
 
-: use-sha1    ( -- )  0 h# d4291800 l!  d# 20 to /hash-digest  ;
-: use-sha256  ( -- )  1 h# d4291800 l!  d# 32 to /hash-digest  ;
-: use-sha224  ( -- )  2 h# d4291800 l!  d# 28 to /hash-digest  ;
-: use-md5     ( -- )  3 h# d4291800 l!  d# 16 to /hash-digest  ;
+: use-sha1    ( -- )  0 h# 291800 io!  d# 20 to /hash-digest  ;
+: use-sha256  ( -- )  1 h# 291800 io!  d# 32 to /hash-digest  ;
+: use-sha224  ( -- )  2 h# 291800 io!  d# 28 to /hash-digest  ;
+: use-md5     ( -- )  3 h# 291800 io!  d# 16 to /hash-digest  ;
 
-: hash-control!  ( n -- )  h# d4291804 l!  ;
+: hash-control!  ( n -- )  h# 291804 io!  ;
 : hash-go  ( -- )
-   1 h# d4291808 l!
-   begin  h# d429180c l@  1 and  until
-   1 h# d429180c l!
+   1 h# 291808 io!
+   begin  h# 29180c io@  1 and  until
+   1 h# 29180c io!
 ;
 : set-msg-size  ( n -- )
-   0 h# d429181c l! \ High word of total size
-   h# d4291818 l!   \ Low word of total size
+   0 h# 29181c io! \ High word of total size
+   h# 291818 io!   \ Low word of total size
 ;
 : hash-init  ( -- )
-   1 h# d4290c00 l!  \ Select hash (0) for Accelerator A, crossing to direct DMA to it
+   1 h# 290c00 io!  \ Select hash (0) for Accelerator A, crossing to direct DMA to it
    dma-stop
    8 hash-control!  \ Reset
    0 hash-control!  \ Unreset
@@ -51,7 +51,7 @@ d# 20 value /hash-digest
 
 : hash-update-step  ( -- )
    hash-buf  /hash-block dma>hash   ( )
-   /hash-block h# d4291810 l!       ( )
+   /hash-block h# 291810 io!       ( )
    2 hash-control!  \ Update digest ( )
    hash-go                          ( )
    dma-stop
@@ -76,14 +76,14 @@ d# 20 value /hash-digest
 ;
 : hash-final  ( -- )
    #hashed set-msg-size       ( )
-   #hash-buf h# d4291810 l!   ( )
+   #hash-buf h# 291810 io!   ( )
    #hash-buf  if
       hash-buf #hash-buf  dma>hash         ( )
    then
    7 hash-control!  \ Final, with hardware padding
    hash-go
    dma-stop
-   h# d4291820 /hash-digest
+   h# 291820 /hash-digest
 ;
 : hash1  ( adr len -- )
    hash-init           ( adr len )
@@ -116,8 +116,8 @@ d# 20 constant /sha1-digest
 : sha1-update hash-update  ;
 : sha1-final hash-final drop to sha1-digest  ;
 
-: ebg-set  ( n -- )  h# d4292c00 l@  or  h# d4292c00 l!  ;
-: ebg-clr  ( n -- )  invert  h# d4292c00 l@  and  h# d4292c00 l!  ;
+: ebg-set  ( n -- )  h# 292c00 io@  or  h# 292c00 io!  ;
+: ebg-clr  ( n -- )  invert  h# 292c00 io@  and  h# 292c00 io!  ;
 
 0 [if]
 \ This is the procedure recommended by the datasheet, but it doesn't work
@@ -138,12 +138,12 @@ d# 20 constant /sha1-digest
 [else]
 \ This procedure works
 : init-entropy  ( -- )  \ Using digital method
-   h# 21117c0 h# d4292c00 l!
+   h# 21117c0 h# 292c00 io!
 ;
 [then]
 
 : random-short  ( -- w )
-   begin  h# d4292c04 l@  dup 0>=  while  drop  repeat
+   begin  h# 292c04 io@  dup 0>=  while  drop  repeat
    h# ffff and
 ;
 : random-byte  ( -- b )  random-short 2/ h# ff and  ;

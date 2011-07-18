@@ -2,18 +2,18 @@
 purpose: System reset using the watchdog timer
 
 : enable-wdt-clock
-   main-pmu-pa h# 1020 +  dup l@  h# 10 or  swap l!  \ enable wdt 2 clock  PMUM_PRR_PJ
-   7  main-pmu-pa h# 200 +  l!
-   3  main-pmu-pa h# 200 +  l!
+   main-pmu-pa h# 1020 +  dup io@  h# 10 or  swap io!  \ enable wdt 2 clock  PMUM_PRR_PJ
+   7  main-pmu-pa h# 200 +  io!
+   3  main-pmu-pa h# 200 +  io!
 ;
 
-h# d4080000 value wdt-pa
-: (wdt!)  ( value offset -- )  wdt-pa +  l!  ;
+h# 080000 value wdt-pa
+: (wdt!)  ( value offset -- )  wdt-pa +  io!  ;
 : wdt!  ( value offset -- )
    h# baba h# 9c (wdt!)   h# eb10 h# a0 (wdt!)  ( value offset )
    (wdt!)
 ;
-: wdt@  ( offset -- value )  wdt-pa +  l@  ;
+: wdt@  ( offset -- value )  wdt-pa +  io@  ;
 : wdt-reset  ( -- )
    enable-wdt-clock
    2 h# 68 wdt!   \ set match register

@@ -89,8 +89,8 @@ false value locked?		  \ Interrupt lockout for get-scan
 ;
 
 0 value reg-base
-: reg@  ( offset -- l )  reg-base + l@  ;
-: reg!  ( l offset -- )  reg-base + l!  ;
+: reg@  ( offset -- l )  reg-base + rl@  ;
+: reg!  ( l offset -- )  reg-base + rl!  ;
 
 : data?  ( -- flag )  h# c8 reg@ 1 and  ;
 : send-rdy  ( -- )  h# ff00 h# 40 reg!  ;

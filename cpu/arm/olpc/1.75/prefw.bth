@@ -21,17 +21,9 @@ fload ${BP}/cpu/arm/olpc/1.75/config.fth
 : \Tags [compile] \  ; immediate
 : \NotTags [compile] \  ; immediate
 
-: RAMbase  ( -- adr )  fw-virt-base  ;
-: RAMtop  ( -- adr )  RAMbase /fw-ram +  ;
-
 def-load-base ' load-base set-config-int-default
 
-\ use-movable-vector-base  \ Marvell CPU core has a movable vector base
-
 true ' fcode-debug? set-config-int-default
-\ false  ' auto-boot?    set-config-int-default
-
-
 
 [ifdef] serial-console
 " com1" ' output-device set-config-string-default
@@ -60,10 +52,12 @@ device-end
 fload ${BP}/ofw/core/clntmem1.fth	\ client services for memory
 [else]
 fload ${BP}/ofw/core/clntphy1.fth	\ client services for memory
+defer section-table
 : >physical  ( va -- pa )
-   dup fw-virt-base - fw-virt-size u<  if   ( va )
-      fw-virt-base -  fw-pa +
-   then
+   dup  d# 20 rshift             ( va section-index )
+   section-table swap la+  l@    ( va pte )
+   h# fffff invert and           ( va pa-base )
+   swap h# fffff and  or         ( pa )
 ;
 [then]
 
@@ -85,6 +79,7 @@ fload ${BP}/ofw/core/initdict.fth	\ Dynamic dictionary allocation
 fload ${BP}/arch/arm/loadarea.fth	\ Allocate and map program load area
 [else]
 fload ${BP}/cpu/arm/mmp2/mmuon.fth
+' page-table@ to section-table
 [then]
 
 \ XXX should be elsewhere
@@ -167,6 +162,11 @@ fload ${BP}/cpu/arm/mmusetup.fth	\ Initial values for MMU lists
 : background-rgb  ( -- r g b )  h# ff h# ff h# ff  ;
 
 fload ${BP}/forth/lib/selstr.fth
+
+\ : +io  ( offset -- va )  io-va +  ;
+: +io  ( offset -- va )  dup h# 0040.0000 >=  if  debug-me  then  io-va +  ;
+: io!  ( value offset -- )  +io l!  ;
+: io@  ( offset -- value )  +io l@  ;
 
 fload ${BP}/cpu/arm/mmp2/hash.fth      \ Hashes - SHA1, SHA-256, MD5
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth \ Cryptographic image validation

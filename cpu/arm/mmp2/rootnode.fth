@@ -25,7 +25,7 @@ hex
 : close  ( -- )  ;
 
 : map-in   ( phys size -- virt )
-   drop
+   drop  io-pa -  io-va +
 ;
 : map-out  ( virtual size -- )
    2drop

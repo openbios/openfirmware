@@ -61,8 +61,8 @@ d# 9999 to arm-linux-machine-type  \ Marvell Jasper
    h# 41000501  tag-l,    \ ATAG_MEM
    cif-handler  tag-l,    \ Client interface handler callback address
    page-table@  tag-l,    \ OFW's top-level page tables
-   extra-mem-pa                     d# 20 >>  tag-l,  \ First section entry number
-   fw-pa /fw-ram +  extra-mem-pa -  d# 20 >>  tag-l,  \ Number of section entries
+   extra-mem-va                            d# 20 >>  tag-l,  \ First section entry number
+   fw-virt-base /fw-ram +  extra-mem-va -  d# 20 >>  tag-l,  \ Number of section entries
 ;
 ' (ofw-tag,) to ofw-tag,
 

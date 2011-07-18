@@ -147,7 +147,7 @@ here my-entry  put-branch
 
    \ Setup the page (section) table and turn on the MMU and caches
 \    set     r0,`page-table-pa #`
-   set     r0,`fw-virt-base page-table-offset + #`
+   set     r0,`fw-pa page-table-offset + #`
    bl      `init-map`			\ Setup the initial virtual address map
    bl	   `enable-mmu`			\ Turn on the MMU
    bl	   `caches-on`			\ Turn on the caches

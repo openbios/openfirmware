@@ -175,6 +175,21 @@ label enable-mmu  ( -- )
    mov    pc, lr
 end-code
 
+\ Map sections within the given address range, using
+\ the given protection/cacheability mode.  pt-adr is the page table base address.
+label map-sections  ( r0: pt-adr, r1: padr, r2: len, r3: mode r4: vadr -- )
+    add  r1, r1, r3               \ PA+mode
+    begin
+       str  r1, [r0, r4, lsr #18]
+       
+       inc  r1, #0x100000
+       inc  r4, #0x100000
+       decs r2, #0x100000
+    0<= until
+
+    mov   pc, lr
+end-code
+
 \ Map sections virtual=physical within the given address range, using
 \ the given protection/cacheability mode.  pt-adr is the page table base address.
 label map-sections-v=p  ( r0: pt-adr, r1: adr, r2: len, r3: mode -- )
@@ -244,6 +259,30 @@ label init-map  ( r0: section-table -- )
    set r2,#0x00100000                   \ Size of audio SRAM
    set r3,#0xc02                        \ No caching or write buffering
    bl  `map-sections-v=p`
+
+   set r1,`dma-base #`                  \ Address of DMA area
+   set r2,`dma-size #`                  \ Size of DMA area
+   set r3,#0xc02                        \ No caching or write buffering
+   set r4,`dma-va #`                    \ Virtual address
+   bl  `map-sections`
+
+   set r1,`extra-mem-pa #`              \ Address of additional allocatable memory
+   set r2,`/extra-mem #`                \ Size of additional allocatable memory
+   set r3,#0xc0e                        \ Write bufferable
+   set r4,`extra-mem-va #'              \ Virtual address
+   bl  `map-sections`
+
+   set r1,`fw-pa #`                     \ Address of Firmware region
+   set r2,`/fw-ram #`                   \ Size of firmware region
+   set r3,#0xc0e                        \ Write bufferable
+   set r4,`fw-va #`                     \ Virtual address
+   bl  `map-sections`
+
+   set r1,#0xd4000000                   \ Address of I/O
+   set r2,#0x00400000                   \ Size of I/O region
+   set r3,#0xc02                        \ No caching or write buffering
+   set r4,`io-va #`                     \ Virtual address
+   bl  `map-sections`
 
 \ The cache is not on yet
 \   set r1,#0x4000                       \ Size of section table

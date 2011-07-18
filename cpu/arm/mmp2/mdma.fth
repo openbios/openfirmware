@@ -6,10 +6,8 @@ purpose: Test code to determine the speed of MMP2 memory to memory DMA
 \ Read from cache  (address constant) 4.2 GB/sec
 \ Read from memory (advancing address) 390 MB/sec
 
-h# d42a.0a00 value mdma0-base
-
-: mdma!  ( n offset -- )  mdma0-base + l!  ;
-: mdma@  ( offset -- n )  mdma0-base + l@  ;
+: mdma!  ( n offset -- )  h# 2a0a00 + io!  ;
+: mdma@  ( offset -- n )  h# 2a0a00 + io@  ;
 
 h# 0010.0000 constant mdma-ram
 h# ffc0 constant /mdma-buf
@@ -64,7 +62,7 @@ c;
    mdma-desc0  h# 30 mdma!   \ Link to first descriptor
 ;
 : start-test-ring  ( -- )
-\   8 h# d428.2864 l!       \ Enable DMA clock
+\   8 h# 28.2864 io!       \ Enable DMA clock
    1 h# 80 mdma!           \ Enable DMA completion interrupts
    h# 0000.3d80   h# 40 mdma! \ fetch next, enable, chain, 32 bytes, inc dest, inc src
 ;

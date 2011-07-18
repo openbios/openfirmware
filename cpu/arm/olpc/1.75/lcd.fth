@@ -1,13 +1,13 @@
 
-: lcd@  ( offset -- l )  lcd-pa + l@  ;
-: lcd!  ( l offset -- )  lcd-pa + l!  ;
+: lcd@  ( offset -- l )  lcd-pa + io@  ;
+: lcd!  ( l offset -- )  lcd-pa + io!  ;
 
 : init-lcd  ( -- )
    \ Turn on clocks
-   h# 08 pmua-disp-clk-sel + h# d428284c l!
-   h# 09 pmua-disp-clk-sel + h# d428284c l!
-   h# 19 pmua-disp-clk-sel + h# d428284c l!
-   h# 1b pmua-disp-clk-sel + h# d428284c l!
+   h# 08 pmua-disp-clk-sel + h# 28284c io!
+   h# 09 pmua-disp-clk-sel + h# 28284c io!
+   h# 19 pmua-disp-clk-sel + h# 28284c io!
+   h# 1b pmua-disp-clk-sel + h# 28284c io!
 
    0                  h# 190 lcd!  \ Disable LCD DMA controller
    fb-pa               h# f4 lcd!  \ Frame buffer area 0
@@ -148,9 +148,8 @@ defer placement ' zoomed is placement
 0 value cursor-w
 0 value cursor-h
 
-: enable-cursor-writes  ( -- )
-   h# 8000 h# 1a4 lcd-set   \ allow writes to cursor SRAM
-;
+\ allow writes to cursor SRAM
+: enable-cursor-writes  ( -- )  h# 8000 h# 1a4 lcd-set  ;
 
 0 value #cursor-bits
 0 value cursor-bits

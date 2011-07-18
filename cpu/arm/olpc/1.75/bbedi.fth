@@ -48,7 +48,7 @@ d# 150 value edi-dly-spins
 
 code edi-bit!  ( flag -- )
    mov   r0,#0x200
-   set   r1,#0xd4019100
+   set   r1,`h# 19100 +io #`
    cmp   tos,#0
    streq r0,[r1,#0x24]  \ Clr MOSI if flag is 0
    strne r0,[r1,#0x18]  \ Set MOSI if flag is non0
@@ -71,13 +71,13 @@ c;
 [ifndef] edi-bit!
 : edi-bit!  ( flag -- )
    if
-      [ edi-mosi-gpio# >gpio-pin h# 18 + ] dliteral l!  \ Fast gpio-set
+      [ edi-mosi-gpio# >gpio-pin h# 18 + ] dliteral io!  \ Fast gpio-set
    else
-      [ edi-mosi-gpio# >gpio-pin h# 24 + ] dliteral l!  \ Fast gpio-clr
+      [ edi-mosi-gpio# >gpio-pin h# 24 + ] dliteral io!  \ Fast gpio-clr
    then
-   [ edi-clk-gpio# >gpio-pin h# 18 + ] dliteral l!  \ Fast gpio-set
+   [ edi-clk-gpio# >gpio-pin h# 18 + ] dliteral io!  \ Fast gpio-set
 \   edi-dly
-   [ edi-clk-gpio# >gpio-pin h# 24 + ] dliteral l!  \ Fast gpio-set
+   [ edi-clk-gpio# >gpio-pin h# 24 + ] dliteral io!  \ Fast gpio-set
 \   edi-dly
 ;
 [then]
@@ -105,9 +105,9 @@ c;
 [else]
 code edi-out0  ( byte -- )
    mov   r2,#8
-   mov   r0,#0x200         \ MOSI mask
-   set   r1,#0xd4019100    \ GPIO register address
-   mov   r4,#0x400         \ CLK mask
+   mov   r0,#0x200           \ MOSI mask
+   set   r1,`h# 19100 +io #` \ GPIO register address
+   mov   r4,#0x400           \ CLK mask
    begin
       ands  r3,tos,#0x80   \ Test bit
 
@@ -125,10 +125,10 @@ code edi-out0  ( byte -- )
 c;
 code edi-out  ( byte -- )
    mov   r2,#8
-   mov   r0,#0x200         \ MOSI mask
-   set   r1,#0xd4019100    \ GPIO register address
-   mov   r4,#0x400         \ CLK mask
-   mov   r5,#0x600         \ CLK and MOSI mask
+   mov   r0,#0x200           \ MOSI mask
+   set   r1,`h# 19100 +io #` \ GPIO register address
+   mov   r4,#0x400           \ CLK mask
+   mov   r5,#0x600           \ CLK and MOSI mask
    begin
       ands  r3,tos,#0x80   \ Test bit
 
@@ -146,11 +146,11 @@ code edi-out  ( byte -- )
 c;
 code edi-in  ( -- byte )
    psh   tos,sp
-   mov   tos,#0            \ Initial byte value
+   mov   tos,#0               \ Initial byte value
    mov   r2,#8
    mov   r3,#0x100
-   set   r1,#0xd4019100    \ GPIO register address
-   mov   r4,#0x400         \ CLK mask
+   set   r1,`h# 19100 +io #`  \ GPIO register address
+   mov   r4,#0x400            \ CLK mask
    begin
       add   tos,tos,tos    \ Left shift byte
 

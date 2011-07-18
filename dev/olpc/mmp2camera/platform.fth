@@ -27,6 +27,6 @@ hex
 \ PIXMCLK on GPIO69, PIXCLK on GPIO70, PIXDATA[7:0] on GPIO[59:66]
 \ CAM_SCL on GPIO108, CAM_SDA on GPIO109 (bitbang)
 
-: cl!  ( l adr -- )  h# d420a000 + rl!  ;
-: cl@  ( adr -- l )  h# d420a000 + rl@  ;
-
+0 value camera-base
+: cl!  ( l adr -- )  camera-base + rl!  ;
+: cl@  ( adr -- l )  camera-base + rl@  ;

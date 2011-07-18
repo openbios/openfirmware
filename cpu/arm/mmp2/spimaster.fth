@@ -39,10 +39,10 @@ my-space value ssp-base
    enable
 ;
 
-: ssp1-clk-on  7 h# d4015050 l!   3 h# d4015050 l!  ;
-\ : ssp2-clk-on  7 h# d4015054 l!   3 h# d4015052 l!  ;
-\ : ssp3-clk-on  7 h# d4015058 l!   3 h# d4015058 l!  ;
-\ : ssp4-clk-on  7 h# d401505c l!   3 h# d401505c l!  ;
+: ssp1-clk-on  7 h# 015050 io!   3 h# 015050 io!  ;
+\ : ssp2-clk-on  7 h# 015054 io!   3 h# 015052 io!  ;
+\ : ssp3-clk-on  7 h# 015058 io!   3 h# 015058 io!  ;
+\ : ssp4-clk-on  7 h# 01505c io!   3 h# 01505c io!  ;
 
 : wb  ( byte -- )  ssp-ssdr rl!  ;
 : rb  ( -- byte )  ssp-ssdr rl@ .  ;

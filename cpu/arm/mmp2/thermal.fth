@@ -1,17 +1,17 @@
 \ See license at end of file
 purpose: Driver for the MMP2 thermal sensor
 
-h# d4013200 value thermal-base
+h# 013200 value thermal-base
 : init-thermal-sensor  ( -- )
-   thermal-base l@ h# 400 and  if  exit  then
-   3 h# d4015090 l!          \ Enable clocks to thermal sensor
-   h# 10000 thermal-base l!  \ Enable sensing
+   thermal-base io@ h# 400 and  if  exit  then
+   3 h# 015090 io!            \ Enable clocks to thermal sensor
+   h# 10000 thermal-base io!  \ Enable sensing
 ;
    
 : cpu-temperature  ( -- celcius )
    0                   ( acc )
    d# 100 0  do        ( acc )  \ Accumulate 100 samples
-      thermal-base l@  ( acc reg )
+      thermal-base io@ ( acc reg )
       h# 3ff and       ( acc val )
       +                ( acc' )
    loop                ( acc )

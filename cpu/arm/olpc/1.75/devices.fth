@@ -1,18 +1,19 @@
 fload ${BP}/dev/omap/diaguart.fth	\ OMAP UART
-h# d4018000 to uart-base		\ UART3 base address on MMP2
-\ h# d4030000 to uart-base		\ UART1 base address on MMP2
+
+h# 18000 +io to uart-base		\ UART3 base address on MMP2
+\ h# 30000 +io to uart-base		\ UART1 base address on MMP2
 d# 26000000 to uart-clock-frequency
 
 : init-clocks
-   -1    h# d4051024 l!   \ PMUM_CGR_PJ - everything on
-   h# 07 h# d4015064 l!   \ APBC_AIB_CLK_RST - reset, functional and APB clock on
-   h# 03 h# d4015064 l!   \ APBC_AIB_CLK_RST - release reset, functional and APB clock on
-   h# 13 h# d401502c l!   \ APBC_UART1_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
-   h# 13 h# d4015034 l!   \ APBC_UART3_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
-   h# c1 h# d401e0c8 l!   \ GPIO29 = af1 for UART1 RXD
-   h# c1 h# d401e0cc l!   \ GPIO30 = af1 for UART1 TXD
-   h# c4 h# d401e260 l!   \ GPIO115 = af4 for UART3 RXD
-   h# c4 h# d401e264 l!   \ GPIO116 = af4 for UART3 TXD
+   -1    h# 51024 io!   \ PMUM_CGR_PJ - everything on
+   h# 07 h# 15064 io!   \ APBC_AIB_CLK_RST - reset, functional and APB clock on
+   h# 03 h# 15064 io!   \ APBC_AIB_CLK_RST - release reset, functional and APB clock on
+   h# 13 h# 1502c io!   \ APBC_UART1_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
+   h# 13 h# 15034 io!   \ APBC_UART3_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
+   h# c1 h# 1e0c8 io!   \ GPIO29 = af1 for UART1 RXD
+   h# c1 h# 1e0cc io!   \ GPIO30 = af1 for UART1 TXD
+   h# c4 h# 1e260 io!   \ GPIO115 = af4 for UART3 RXD
+   h# c4 h# 1e264 io!   \ GPIO116 = af4 for UART3 TXD
 ;
 
 : inituarts  ( -- )
@@ -334,7 +335,7 @@ fload ${BP}/cpu/arm/olpc/1.75/usb.fth
 fload ${BP}/cpu/arm/marvell/utmiphy.fth
 
 : init-usb  ( -- )
-   h# 9 h# d428285c l!  \ Enable clock to USB block
+   h# 9 h# 28285c io!  \ Enable clock to USB block
    reset-usb-hub
    init-usb-phy
 ;

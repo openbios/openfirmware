@@ -74,8 +74,8 @@ h#        00 constant rgb-endian  \ 0c bits
 
 : power-on  ( -- )
    \ Enable clocks
-   h# 3f h# d4282828 l!  \ Clock gating - AHB, Internal PIXCLK, AXI clock always on
-   h# 0003.805b h# d4282850 l!  \ PMUA clock config for CCIC - /1, PLL1/16, AXI arb, AXI, perip on
+   h# 3f h# 282828 io!  \ Clock gating - AHB, Internal PIXCLK, AXI clock always on
+   h# 0003.805b h# 282850 io!  \ PMUA clock config for CCIC - /1, PLL1/16, AXI arb, AXI, perip on
 
 \  h# 0000.0002 h# 88 cl!   \ Clock select - PIXMCLK, 797/2 (PLL1/16) / 2 -> 24.9 MHz
 \  h# 4000.0002 h# 88 cl!   \ Clock select -     AXI, 797/2 (PLL1/16) / 2 -> 24.9 MHz
@@ -158,6 +158,7 @@ external
    interrupts-off
    power-off
    free-dma-bufs
+   camera-base h# 1000 " map-out" $call-parent
 ;
 
 
@@ -251,6 +252,7 @@ VGA_WIDTH 2* value src-pitch
 
 : selftest  ( -- error? )
    open 0=  if  true exit  then
+   my-address my-space  h# 1000  " map-in" $call-parent  to camera-base
    d# 300 ms
    start-display
    unmirrored  shoot-still  ?dup  if  close exit  then	( error? )

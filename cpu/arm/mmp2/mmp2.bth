@@ -17,7 +17,7 @@ h# 8.0000 constant initial-heap-size
 ' (initial-heap) to initial-heap
 
 fload ${BP}/dev/omap/diaguart.fth	\ OMAP UART
-h# d4018000 to uart-base		\ UART# base address on MMP2
+h# 018000 +io to uart-base		\ UART# base address on MMP2
 
 fload ${BP}/forth/lib/sysuart.fth	\ Set console I/O vectors to UART
 

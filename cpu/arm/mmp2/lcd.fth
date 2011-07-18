@@ -1,6 +1,6 @@
 
-: lcd@  ( offset -- l )  lcd-pa + l@  ;
-: lcd!  ( l offset -- )  lcd-pa + l!  ;
+: lcd@  ( offset -- l )  lcd-pa + io@  ;
+: lcd!  ( l offset -- )  lcd-pa + io!  ;
 
 : spi-clr-irq  ( -- )
    h# 1c4 lcd@  h# 00040000 invert and  h# 1c4 lcd!  \ Clear SPI_IRQ bit

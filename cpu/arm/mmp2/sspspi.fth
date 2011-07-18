@@ -6,7 +6,7 @@
 \ Every spicmd! clocks out 8 bits.  To read, you have to do a dummy
 \ write of the value 0, then you can read the data from the spidata register.
 
-h# d4035000 value ssp-base  \ SSP1
+h# 035000 value ssp-base  \ SSP1
 : ssp-sscr0  ( -- adr )  ssp-base  ;
 : ssp-sscr1  ( -- adr )  ssp-base  la1+  ;
 : ssp-sssr   ( -- adr )  ssp-base  2 la+  ;
@@ -14,9 +14,9 @@ h# d4035000 value ssp-base  \ SSP1
 
 
 : ssp-spi-start  ( -- )
-   h# 07 ssp-sscr0 l!
-   0 ssp-sscr1 l!
-   h# 87 ssp-sscr0 l!   
+   h# 07 ssp-sscr0 io!
+   0 ssp-sscr1 io!
+   h# 87 ssp-sscr0 io!   
    d# 46 gpio-set
    d# 46 gpio-dir-out
    h# c0 d# 46 af!
@@ -25,7 +25,7 @@ h# d4035000 value ssp-base  \ SSP1
 : ssp-spi-cs-off  ( -- )  d# 46 gpio-set  ;
 
 code ssp-spi-out-in  ( bo -- bi )
-   set r0,`ssp-base #`
+   set r0,`ssp-base +io #`
    begin
       ldr r1,[r0,#8]
       ands r1,r1,#4
@@ -39,14 +39,14 @@ code ssp-spi-out-in  ( bo -- bi )
 c;
 0 [if]
 : ssp-spi-out-in  ( bo -- bi )
-   begin  ssp-sssr l@ 4 and  until  \ Tx not full
-   ssp-ssdr l!
-   begin  ssp-sssr l@ 8 and  until  \ Rx not empty
-   ssp-ssdr l@
+   begin  ssp-sssr io@ 4 and  until  \ Tx not full
+   ssp-ssdr io!
+   begin  ssp-sssr io@ 8 and  until  \ Rx not empty
+   ssp-ssdr io@
 ;
 [then]
 code ssp-spi-in16  ( adr -- adr' )
-   set r0,`ssp-base #`
+   set r0,`ssp-base +io #`
    set r2,#0xf04
    set r3,#0xf008
    mov r4,#0

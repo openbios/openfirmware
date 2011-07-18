@@ -144,20 +144,20 @@ create cgr-masks  d# 13 >bit ,  d# 15 >bit ,  d# 14 >bit ,  0  ,
 
 \ Beginning of section that accesses the hardware
 
-: +pmua  ( -- adr )  h# d428.2800 +  ;
-: +pmum  ( -- adr )  h# d405.0000 +  ;
+: +pmua  ( -- adr )  h# 28.2800 +   ;
+: +pmum  ( -- adr )  h# 05.0000 +   ;
 
 : pmum-pll2cr  ( -- adr )  h# 34 +pmum  ; 
 : pmum-pll2-ctrl1  ( -- adr )  h# 414 +pmum  ; 
 : get-pll2-frequency  ( -- mhz )
-   pmum-pll2cr l@     ( regval )          \ PMUM_PLL2CR
+   pmum-pll2cr io@    ( regval )          \ PMUM_PLL2CR
    dup d# 19 5 bits   ( regval refdiv )
    swap d# 10 9 bits  ( refdiv fbdiv )
    2+  d# 26 *        ( refdiv numerator )
    swap 2+  /         ( mhz )
 ;
-: reg-set  ( mask -- )   >r r@ l@  or  r> l!  ;
-: reg-clr  ( mask -- )   >r r@ l@  swap invert and  r> l!  ;
+: reg-set  ( mask -- )   >r r@ io@  or  r> io!  ;
+: reg-clr  ( mask -- )   >r r@ io@  swap invert and  r> io!  ;
 
 4 constant refdiv  \ 4 is the only reference divisor value that is mentioned in the documentation
 
@@ -166,18 +166,18 @@ create cgr-masks  d# 13 >bit ,  d# 15 >bit ,  d# 14 >bit ,  0  ,
    1 d# 29 lshift  pmum-pll2-ctrl1  reg-clr  ( fbdiv )  \ make sure pll2 is in reset
 
    
-   pmum-pll2cr l@           ( fbdiv val )
+   pmum-pll2cr io@          ( fbdiv val )
    h# 100 invert and        ( fbdiv val' )  \ PMUM_PLL2CR_PLL2_SW_EN off
-   dup pmum-pll2cr l!       ( fbdiv val )
+   dup pmum-pll2cr io!      ( fbdiv val )
 
    h# 0007.fc00 invert and  refdiv d# 19 lshift or   ( fbdiv val' )
    h# 00f8.0000 invert and  swap   d# 10 lshift or   ( val' )
 
    h# 200 or                ( val' )  \ PMUM_PLL2CR_CTRL
-   dup pmum-pll2cr l!       ( val )
+   dup pmum-pll2cr io!      ( val )
 
    h# 100 or                ( val )
-   pmum-pll2cr l!           ( )       \ PMUM_PLL2CR_PLL2_SW_EN on
+   pmum-pll2cr io!          ( )       \ PMUM_PLL2CR_PLL2_SW_EN on
 
    1 d# 29 lshift  pmum-pll2-ctrl1  reg-set  ( )  \ pll2 out of reset
 
@@ -199,8 +199,8 @@ create cgr-masks  d# 13 >bit ,  d# 15 >bit ,  d# 14 >bit ,  0  ,
    4 lshift  h# 8000.0000 or   ( table-adr common-bits )
    #sram-table 0  do           ( table-adr common-bits )
       over i 8 * +             ( table-adr common-bits table-entry-adr )
-      dup  l@ h# c20 dmcu!     ( table-adr common-bits table-entry-adr )
-      la1+ l@ h# c30 dmcu!     ( table-adr common-bits )
+      dup  io@ h# c20 dmcu!    ( table-adr common-bits table-entry-adr )
+      la1+ io@ h# c30 dmcu!    ( table-adr common-bits )
       over i or  h# c00 dmcu!  ( common-bits table-adr )
    loop                        ( table-adr common-bits )
    2drop                       ( )
@@ -225,8 +225,8 @@ create cgr-masks  d# 13 >bit ,  d# 15 >bit ,  d# 14 >bit ,  0  ,
 ;
 
 : current-dclk  ( -- mhz )
-   8 +pmum l@  d# 23 rshift 7 and   fccr>frequency  ( source-mhz )
-   4 +pmua l@ d# 12 rshift 7 and  1+ /
+   8 +pmum io@  d# 23 rshift 7 and   fccr>frequency  ( source-mhz )
+   4 +pmua io@ d# 12 rshift 7 and  1+ /
 ;
 
 : PMUcore2_hw_fc_seq  ( -- )
@@ -241,15 +241,15 @@ create cgr-masks  d# 13 >bit ,  d# 15 >bit ,  d# 14 >bit ,  0  ,
    1 >bit  h# 98 +pmua reg-set     \ PMUA_MOH_IMR_MOH_FC_INTR_MASK bit in PMUA_PJ_IMR register
 
    begin           
-      4 +pmua l@  d# 24 >bit  and  \ PMUA_DM_CC_MOH_SEA_RD_STATUS bit in DM_CC_MOH register
+      4 +pmua io@  d# 24 >bit  and  \ PMUA_DM_CC_MOH_SEA_RD_STATUS bit in DM_CC_MOH register
    0= until
 
    new-reg-values          ( pj4-cc sp-cc fccr cgr )
 
    ?change-pll2-frequency  ( pj4-cc sp-cc fccr cgr )
 
-   h# 1024 +pmum l!        ( pj4-cc sp-cc fccr )
-   swap  0 +pmua l!        ( pj4-cc-reg fccr )
+   h# 1024 +pmum io!        ( pj4-cc sp-cc fccr )
+   swap  0 +pmua io!        ( pj4-cc-reg fccr )
    dclk  do-fcs            ( )
 
 [ifdef] notdef

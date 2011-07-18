@@ -1,7 +1,7 @@
 purpose: Change the clock frequency
 
-: fccr@    ( -- n )  h# d405.0008 l@  ;
-: fccr!    ( n -- )  h# d405.0008 l!  ;
+: fccr@    ( -- n )  h# 05.0008 io@  ;
+: fccr!    ( n -- )  h# 05.0008 io!  ;
 : pj4-clksel  ( n -- )
    d# 29 lshift                               ( field )
    fccr@  h# e000.0000 invert and  or  fccr!  ( )
@@ -10,9 +10,9 @@ purpose: Change the clock frequency
    d# 26 lshift                               ( field )
    fccr@  h# 1c00.0000 invert and  or  fccr!  ( )
 ;
-: pj4-cc!  ( n -- )  h# d428.2804 l!  ;
+: pj4-cc!  ( n -- )  h# 28.2804 io!  ;
 
-: sp-cc!     ( n -- )  h# d428.2800 l!  ;
+: sp-cc!     ( n -- )  h# 28.2800 io!  ;
 \                                     cfraaADXBpP
 : sp-100mhz  ( -- )  0 sp-clksel   o# 37077703303 sp-cc!  ;  \ A 100, D 400, XP 100, B 100, P 100
 : sp-200mhz  ( -- )  0 sp-clksel   o# 37077301101 sp-cc!  ;  \ A 200, D 400, XP 200, B 200, P 200

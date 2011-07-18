@@ -5,12 +5,12 @@ purpose: Driver for MMP2 internal RTC
 \ It is not currently used by anything, and should it
 \ ever be needed, it should be put in a device node.
 
-: int5-mask!  ( value -- )  h# d428.216c l!  ;
-: int5-mask@  ( -- value )  h# d428.216c l@  ;
-: int5-status@  ( -- value )  h# d428.2154 l@  ;
-: enable-rtc  ( -- )  h# 81 h# d401.5000 l!  ;
-: soc-rtc@  ( offset -- value )  h# d401.0000 + l@  ;
-: soc-rtc!  ( value offset -- value )  h# d401.0000 + l!  ;
+: int5-mask!  ( value -- )  h# 28.216c io!  ;
+: int5-mask@  ( -- value )  h# 28.216c io@  ;
+: int5-status@  ( -- value )  h# 28.2154 io@  ;
+: enable-rtc  ( -- )  h# 81 h# 01.5000 io!  ;
+: soc-rtc@  ( offset -- value )  h# 01.0000 + io@  ;
+: soc-rtc!  ( value offset -- value )  h# 01.0000 + io!  ;
 : take-alarm  ( -- )
    ." Alarm fired" cr
     0 8 soc-rtc!

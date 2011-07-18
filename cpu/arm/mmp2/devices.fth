@@ -1,15 +1,15 @@
 fload ${BP}/dev/omap/diaguart.fth	\ OMAP UART
-h# d4018000 to uart-base		\ UART# base address on MMP2
+h# 018000 +io to uart-base		\ UART# base address on MMP2
 d# 26000000 to uart-clock-frequency
 
 : init-clocks
-   -1    h# d4051024 l!   \ PMUM_CGR_PJ - everything on
-   h# 07 h# d4015064 l!   \ APBC_AIB_CLK_RST - reset, functional and APB clock on
-   h# 03 h# d4015064 l!   \ APBC_AIB_CLK_RST - release reset, functional and APB clock on
-   h# 13 h# d4015034 l!   \ APBC_UART3_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
-   h# c1 h# d401e120 l!   \ GPIO51 = af1 for UART3 RXD
-   h# c1 h# d401e124 l!   \ GPIO52 = af1 for UART3 TXD
-   h# 1b h# d4282854 l!   \ SD0 clocks
+   -1    h# 051024 io!   \ PMUM_CGR_PJ - everything on
+   h# 07 h# 015064 io!   \ APBC_AIB_CLK_RST - reset, functional and APB clock on
+   h# 03 h# 015064 io!   \ APBC_AIB_CLK_RST - release reset, functional and APB clock on
+   h# 13 h# 015034 io!   \ APBC_UART3_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
+   h# c1 h# 01e120 io!   \ GPIO51 = af1 for UART3 RXD
+   h# c1 h# 01e124 io!   \ GPIO52 = af1 for UART3 TXD
+   h# 1b h# 282854 io!   \ SD0 clocks
 ;
 
 : inituarts  ( -- )
