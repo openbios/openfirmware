@@ -448,7 +448,7 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 
    read-game-keys
 
-   factory-test?  if  text-off  then
+   factory-test? 0=  if  text-off  then
 
    " probe-" do-drop-in
 
