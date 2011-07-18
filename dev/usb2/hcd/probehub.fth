@@ -145,6 +145,7 @@ external
       dup i port-status-changed?  if            ( hub-dev connected? )
          i disable-old-nodes                    ( hub-dev connected? )
          if                                     ( hub-dev )
+            d# 100 ms                           ( hub-dev )  \ Time for device to wake up
             dup i safe-probe-hub-port           ( hub-dev )
          then                                   ( hub-dev )
       else                                      ( hub-dev )
