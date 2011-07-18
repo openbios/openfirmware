@@ -36,7 +36,7 @@ purpose: Access to game keys (buttons on front panel)
 
 : (hold-message)  ( ms -- )
 [ifdef] test-station
-   test-station  if  drop exit  then
+   test-station  1 5 between  if  drop exit  then
 [then]
    d# 100 /            ( decisecs )
    begin  dup  while   ( decisecs )
