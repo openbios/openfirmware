@@ -496,7 +496,7 @@ headers hex
 ;
 
 : set-i   ( -- )  0200.0000 iop  ;
-: p?      ( -- flag )  newword 0100.000 land 0<>  ;
+: p?      ( -- flag )  newword 0100.0000 land 0<>  ;
 : flip-u  ( -- )  0080.0000 xop  ;
 : flip-b  ( -- )  0040.0000 xop  ;
 : flip-w  ( -- )  0020.0000 xop  ;
