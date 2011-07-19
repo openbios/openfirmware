@@ -11,6 +11,10 @@ hex
 \ ' $report-name is include-hook
 \ ' noop is include-hook
 
+fb-pa constant display-pa
+fload ${BP}/cpu/arm/olpc/fbnums.fth
+fload ${BP}/cpu/arm/olpc/fbmsg.fth
+
 fload ${BP}/cpu/arm/olpc/1.75/devices.fth
 
 [ifndef] virtual-mode
@@ -195,10 +199,12 @@ end-package
 
 fload ${BP}/cpu/arm/mmp2/keypad.fth
 [ifndef] cl2-a1
+[ifdef] notdef  \ CForth turns on the keypad; resetting it makes it not work
 stand-init: keypad
    keypad-on
    8 keypad-direct-mode
 ;
+[then]
 : keypad-bit  ( n keypad out-mask key-mask -- n' keypad )
    third invert  and  if    ( n keypad out-mask )
       rot or swap           ( n' keypad )

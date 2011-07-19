@@ -44,6 +44,8 @@ label my-entry
    0 ,				\ To be patched later
 end-code
 
+fload ${BP}/cpu/arm/olpc/numdot.fth
+
 \ This subroutine is used by the startup code.
 \ It compares two null-terminated strings, returning zero if they match.
 \ Destroys: r2, r3
@@ -145,12 +147,18 @@ here my-entry  put-branch
    mov     pc,r0	\ Execute the dropin
 [then]
 
+   mov     r0,#0x10
+   bl      `puthex`
+
    \ Setup the page (section) table and turn on the MMU and caches
 \    set     r0,`page-table-pa #`
    set     r0,`fw-pa page-table-offset + #`
    bl      `init-map`			\ Setup the initial virtual address map
    bl	   `enable-mmu`			\ Turn on the MMU
    bl	   `caches-on`			\ Turn on the caches
+
+   mov     r0,#0x11
+   bl      `puthex`
 
    \ Now we are running with the MMU and caches on, thus going faster
 
@@ -165,12 +173,17 @@ here my-entry  put-branch
       \ and use it to inflate the firmware into RAM
       mov     r11,r0		\ Save address of firmware dropin
 
+      mov     r0,#0x12
+      bl      `puthex`
 
       \ Locate the "inflate" module.
       " inflate" $find-dropin,  \ Assemble call to find-dropin with literal arg
 
       add     r4,r0,#32		\ r1: Base address of inflater code
       
+      mov     r0,#0x13
+      bl      `puthex`
+
       \ Execute the inflater, giving it the address of the compressed firmware
       \ module, the address where the inflated firmware should be placed, and
       \ the address of some RAM the inflater can use for scratch variables.
@@ -199,7 +212,12 @@ here my-entry  put-branch
    else
       \ The firmware dropin isn't compressed, so we just copy it to RAM
 
-      ldr     r2,[r0,#4]		\ Length of image
+      mov     r11,r0
+
+      mov     r0,#0x14
+      bl      `puthex`
+
+      ldr     r2,[r11,#4]		\ Length of image
 
       eor     r1,r2,r2, ror #16 	\ Byte reverse r2 using the
       bic     r1,r1,#0xff0000   	\ tricky sequence shown in the
@@ -212,9 +230,15 @@ here my-entry  put-branch
       bl      `memcpy`			\ Copy the firmware
    then
 
+   mov     r0,#0x15
+   bl      `puthex`
+
    \ Synchronize the instruction and data caches so the firmware code can
    \ be executed.
    bl      `sync-caches`			\ Push Forth dictionary to memory
+
+   mov     r0,#0x16
+   bl      `puthex`
 
 [ifdef] notdef
    " nanoforth" $find-dropin,   \ Assemble call to find-dropin with literal arg
