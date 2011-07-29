@@ -280,7 +280,7 @@ defer write-spi-flash  ( adr len offset -- )
          ." If you power cycle and try again, it will probably work the next time." cr
          abort
       endof
-      ( default )  true abort" Unsupported SPI FLASH ID"
+      ( default )  ." Unsupported SPI FLASH ID " dup .x  cr  abort
    endcase
    to write-spi-flash
    0 spi-write-status  \ Turn off write protect bits
