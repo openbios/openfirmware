@@ -188,46 +188,57 @@ external
    probe-teardown                   ( error? )
 ;
 
-0 value hub-test-mask
+: (hub-selftest)  ( port -- stop? )
+   >r
+   hub-dev parent-set-target              ( )
+   r@ get-port-status  if                 ( )
+      ." Get-port-status failed for hub port " r@ u. cr
+      r> drop true exit                   ( -- true )
+   then                                   ( )
+   hub-buf c@ 8 and  if   \ Connected     ( )
+      ." Hub port " r@ u. ." in over current" cr
+      r> drop true exit                   ( -- true )
+   then                                   ( )
+   hub-buf c@ 1 and  if   \ Connected     ( )
+      ." Hub port " r@ u. ." in use" cr   ( )
+   else                                   ( )
+      diagnostic-mode?  if                ( )
+         ." Please connect a device to USB hub port " r@ u.  cr   ( )
+         r@ wait-hub-connect  if  r> drop true exit  then         ( )
+      else                                                        ( )
+         ." Fisheye pattern out to USB hub port " r@ u. cr        ( )
+         r@ 4 test-hub-port                                       ( )
+         d# 2,000 ms                                              ( )
+         r@ untest-hub-port                                       ( )
+         r@ reset-hub-port  r@ power-hub-port                     ( )
+      then                                                        ( )
+   then                                                           ( )
+   r> drop false
+;
+
 : hub-selftest  ( hub-dev -- error? )
-   to hub-dev                               ( )
+   to hub-dev                                           ( )
 
-   " hub-port-mask" get-inherited-property  if	( )
-      -1					( mask )
-   else						( propval$ )
-      decode-int nip nip			( mask )
-   then						( mask )
-   to hub-test-mask				( )
+   " hub-port-seq" get-inherited-property  if           ( )
+      hub-#ports 1+  1  ?do                             ( )
+         i (hub-selftest)  if  true unloop exit  then
+      loop                                              ( )
+   else                                                 ( propval$ )
+      decode-int nip nip                                ( seq )
 
-   hub-#ports 1+  1  ?do			( )
-      1  i 1-  lshift  hub-test-mask  and  if
-         hub-dev parent-set-target		( )
-         i get-port-status  if			( )
-            ." Get-port-status failed for hub port " i u. cr
-   	 true unloop exit			( -- true )
-         then					( )
-         hub-buf c@ 8 and  if	\ Connected	( )
-            ." Hub port " i u. ." in over current" cr
-            true unloop exit			( -- true )
-         then					( )
-         hub-buf c@ 1 and  if	\ Connected	( )
-            ." Hub port " i u. ." in use" cr	( )
-         else					( )
-            diagnostic-mode?  if		( )
-               ." Please connect a device to USB hub port " i u.  cr	( )
-               i wait-hub-connect  if  true unloop exit  then			( )
-            else							( )
-               ." Fisheye pattern out to USB hub port " i u. cr		( )
-               i 4 test-hub-port					( )
-               d# 2,000 ms						( )
-               i untest-hub-port					( )
-               i reset-hub-port  i power-hub-port			( )
-            then							( )
-         then								( )
-      then								( )
-   loop									( )
-   \ Mabye need to reset the entire hub here
-   false								( false )
+      4 0 do
+         dup h# ff000000 and d# 24 rshift h# ff and     ( seq port )
+         dup if                                         ( seq port )
+            (hub-selftest)  if  true exit  then
+         else
+            drop
+         then                                   ( seq )
+         d# 8 lshift                            ( seq' )
+      loop
+   then
+
+   \ Maybe need to reset the entire hub here
+   false                                        ( false )
 ;
 : hub-selftest-xt  ( -- xt )  ['] hub-selftest  ;
 
