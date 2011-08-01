@@ -4,7 +4,7 @@ purpose: Hashes (MD5, SHA1, SHA-256) using Marvell hardware acceleration
 h# 8101 constant dval
 : dma>hash  ( adr len -- )
    4 round-up  2 rshift  h# 29080c io!    ( adr )
-   h# 290808 io!                          ( )
+   >physical h# 290808 io!                ( )
    dval h# 290800 io!                     ( )
 \  begin  h# 290814 io@  1 and  until
 ;
@@ -74,7 +74,7 @@ d# 20 value /hash-digest
    repeat                                  ( adr len )
    2drop
 ;
-: hash-final  ( -- )
+: hash-final  ( -- adr len )
    #hashed set-msg-size       ( )
    #hash-buf h# 291810 io!   ( )
    #hash-buf  if
@@ -83,7 +83,7 @@ d# 20 value /hash-digest
    7 hash-control!  \ Final, with hardware padding
    hash-go
    dma-stop
-   h# 291820 /hash-digest
+   h# 291820 +io /hash-digest
 ;
 : hash1  ( adr len -- )
    hash-init           ( adr len )
