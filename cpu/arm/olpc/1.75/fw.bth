@@ -416,6 +416,13 @@ fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
    then                       ( in-factory? )
 ;
 
+: ?sound  ( -- )
+   \ Suppress the jingle if a game key is pressed, because we don't want
+   \ the jingle to interfere with diags and stuff
+   -1 game-key?  if  exit  then
+   ['] sound catch drop
+;
+
 : ?games  ( -- )
    rocker-right game-key?  if
       protect-fw
@@ -464,7 +471,7 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
    ?update-ec-flash
 
    install-alarm
-   ['] sound catch drop
+   ?sound
 
    ?games
 
