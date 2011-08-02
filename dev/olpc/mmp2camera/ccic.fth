@@ -138,6 +138,7 @@ external
 ;
 
 : open  ( -- flag )
+   my-address my-space  h# 1000  " map-in" $call-parent  to camera-base
    init
    ov7670-detected? 0=  if  false exit  then
    alloc-dma-bufs
@@ -252,7 +253,6 @@ VGA_WIDTH 2* value src-pitch
 
 : selftest  ( -- error? )
    open 0=  if  true exit  then
-   my-address my-space  h# 1000  " map-in" $call-parent  to camera-base
    d# 300 ms
    start-display
    unmirrored  shoot-still  ?dup  if  close exit  then	( error? )
