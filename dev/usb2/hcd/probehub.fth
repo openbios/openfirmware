@@ -229,13 +229,14 @@ external
       4 0 do
          dup h# ff000000 and d# 24 rshift h# ff and     ( seq port )
          dup if                                         ( seq port )
-            (hub-selftest)  if  true exit  then
-         else
-            drop
-         then                                   ( seq )
-         d# 8 lshift                            ( seq' )
-      loop
-   then
+            (hub-selftest)  if  drop true exit  then
+         else                                           ( seq port )
+            drop                                        ( seq )
+         then                                           ( seq )
+         d# 8 lshift                                    ( seq' )
+      loop                                              ( seq )
+      drop                                              ( )
+   then                                                 ( )
 
    \ Maybe need to reset the entire hub here
    false                                        ( false )
