@@ -33,11 +33,7 @@ load-base value data-buffer
 : verify-hash  ( hashname$ hash$ -- okay? )
    2swap                              ( hash$ hashname$ )
    data-buffer /nand-block 2swap      ( hash$ data$ hashname$ )
-   2dup " sha256" $=  if              ( hash$ hashname$ )
-      2drop sha-256                   ( hash$ calc-hash$ )
-   else                               ( hash$ hashname$ )
-      crypto-hash                     ( hash$ calc-hash$ )
-   then                               ( hash$ calc-hash$ )
+   fast-hash                          ( hash$ calc-hash$ )
    $=                                 ( okay? )
 ;
 

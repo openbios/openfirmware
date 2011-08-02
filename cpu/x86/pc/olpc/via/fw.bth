@@ -498,6 +498,13 @@ fload ${BP}/cpu/x86/pc/olpc/via/nbrx.fth
 fload ${BP}/cpu/x86/pc/olpc/via/blockfifo.fth
 : hdd-led-toggle  ( -- )  h# 4c acpi-l@  h# 400000 xor  h# 4c acpi-l!  ;
 : hdd-led-off     ( -- )  h# 4c acpi-l@  h# 400000 or   h# 4c acpi-l!  ;
+: fast-hash  ( adr len hashname$ -- )
+   2dup " sha256" $=  if              ( eblock# hashname$ r: hash$ )
+      2drop sha-256                   ( eblock# calc-hash$ r: hash$ )
+   else
+      crypto-hash                     ( eblock# calc-hash$ r: hash$ )
+   then
+;
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
 devalias fsdisk int:0
