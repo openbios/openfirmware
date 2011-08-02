@@ -5,7 +5,7 @@
    4 to smb-clock-gpio#
    5 to smb-data-gpio#
    h# 3c to smb-slave
-   5 smb-data-gpio# gpio-dir-out
+   smb-data-gpio# gpio-dir-out
 ;
 : smb-init    ( -- )  set-compass-slave  smb-on  smb-pulses  ;
 
@@ -40,11 +40,11 @@ end-package
    4 to smb-clock-gpio#
    5 to smb-data-gpio#
    h# 30 to smb-slave
-   5 smb-data-gpio# gpio-dir-out
+   smb-data-gpio# gpio-dir-out
 ;
 
 : sensor@  ( reg# -- byte )  set-sensor-slave  smb-byte@  ;
-: sensor!  ( byte reg# -- )  set-sensor-slave  smb-byte@  ;
+: sensor!  ( byte reg# -- )  set-sensor-slave  smb-byte!  ;
 
 : accelerometer-on   ( -- )   h# 27 h# 20 sensor!  ;
 : accelerometer-off  ( -- )   h# 07 h# 20 sensor!  ;
