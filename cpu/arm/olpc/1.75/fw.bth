@@ -510,6 +510,9 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 : newec
    " flash-ec http:\\10.20.0.14\~wmb\ecimage.bin" eval
 ;
+: qz
+   " qz" $essid  " http:\\qz\" included  \ qa test bed scripting, james cameron
+;
 : urom  " flash! u:\new.rom" eval  ;
 : uec   " flash-ec! u:\ecimage.bin" eval  ;
 : erom  " flash! ext:\new.rom" eval  ;
