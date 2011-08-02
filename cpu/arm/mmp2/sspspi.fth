@@ -12,8 +12,11 @@ h# 035000 value ssp-base  \ SSP1
 : ssp-sssr   ( -- adr )  ssp-base  2 la+  ;
 : ssp-ssdr   ( -- adr )  ssp-base  4 la+  ;
 
-
 : ssp-spi-start  ( -- )
+   \ Avoid reinitializing the device after the first time, as that
+   \ seems to cause glitches that confuse the SPI FLASH chip
+   ssp-sscr1 io@ 0=  if  exit  then
+
    h# 07 ssp-sscr0 io!
    0 ssp-sscr1 io!
    h# 87 ssp-sscr0 io!   
@@ -127,16 +130,8 @@ c;
 : ssp-spi-out  ( b -- )  ssp-spi-out-in drop  ;
 : ssp-spi-in  ( -- b )  0 ssp-spi-out-in  ;
 
-: safe-spi-start
-   ssp-spi-start
-   \ The following clears out some glitches so the chip will respond
-   \ to the ab-id command.
-   0 spi-cmd spi-cs-off
-   0 spi-cmd spi-cs-off
-;
-
 : use-ssp-spi  ( -- )
-   ['] safe-spi-start to spi-start
+   ['] ssp-spi-start  to spi-start
    ['] ssp-spi-in     to spi-in
    ['] ssp-spi-out    to spi-out
    ['] ssp-spi-cs-on  to spi-cs-on
