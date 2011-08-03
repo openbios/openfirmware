@@ -266,6 +266,12 @@ label init-map  ( r0: section-table -- )
    set r4,`dma-va #`                    \ Virtual address
    bl  `map-sections`
 
+   set r1,`fb-pa #`                     \ Address - Frame buffer
+   set r2,`fb-size #`                   \ Size of frame buffer
+   set r3,#0xc06                        \ Write bufferable
+   set r4,`fb-va #`                     \ Virtual address
+   bl  `map-sections
+
    set r1,`extra-mem-pa #`              \ Address of additional allocatable memory
    set r2,`/extra-mem #`                \ Size of additional allocatable memory
    set r3,#0xc0e                        \ Write bufferable

@@ -25,7 +25,9 @@ hex
 : close  ( -- )  ;
 
 : map-in   ( phys size -- virt )
-   drop  io-pa -  io-va +
+   drop                                     ( phys )
+   dup fb-pa =  if  drop fb-va exit  then   ( phys )
+   io-pa -  io-va +
 ;
 : map-out  ( virtual size -- )
    2drop

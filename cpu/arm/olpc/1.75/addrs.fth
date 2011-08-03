@@ -33,10 +33,10 @@ h#   80.0000 constant dma-size
 h# 1f80.0000 constant extra-mem-pa
 h#   20.0000 constant /extra-mem
 
-h# ef00.0000 constant dma-va
-h# ef80.0000 constant extra-mem-va
-h# efa0.0000 constant fw-va
-h# efc0.0000 constant fb-va
+h# fd00.0000 constant dma-va
+h# fd80.0000 constant extra-mem-va
+h# fda0.0000 constant fw-va
+h# fdc0.0000 constant fb-va
 h# fe00.0000 constant io-va
 
 [ifdef] virtual-mode

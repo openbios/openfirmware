@@ -46,27 +46,37 @@ d# 9999 to arm-linux-machine-type  \ Marvell Jasper
    d#  900 tag-w,     \ Height
    d#   24 tag-w,     \ Depth
    d# 1200 3 * tag-w, \ Pitch
-   fb-pa      tag-l,  \ Base address
+   fb-va tag-l,       \ Base address
    d# 1200 3 *  d# 900 *  tag-l,  \ Total size - perhaps could be larger
-   8     tag-b,       \ Red size
-   d#  0 tag-b,       \ Red position
-   8     tag-b,       \ Green size
-   d#  8 tag-b,       \ Green position
-   8     tag-b,       \ Blue size
-   d# 16 tag-b,       \ Blue position
+   5     tag-b,       \ Red size
+   d# 11 tag-b,       \ Red position
+   6     tag-b,       \ Green size
+   d#  5 tag-b,       \ Green position
+   5     tag-b,       \ Blue size
+   d#  0 tag-b,       \ Blue position
    0     tag-b,       \ Rsvd size
-   d# 24 tag-b,       \ Rsvd position
+   d# 16 tag-b,       \ Rsvd position
 ;
 ' mmp-fb-tag, to fb-tag,
 
 \ Add a tag describing the OFW callback
+3 constant MT_DEVICE_WC
+9 constant MT_MEMORY
 : (ofw-tag,)  ( -- )
-   6            tag-l,    \ size
-   h# 41000501  tag-l,    \ ATAG_MEM
+   4 2 * 3 +    tag-l,    \ size
+   h# 41000502  tag-l,    \ ATAG_MEM
    cif-handler  tag-l,    \ Client interface handler callback address
-   page-table@  tag-l,    \ OFW's top-level page tables
-   extra-mem-va                            d# 20 >>  tag-l,  \ First section entry number
-   fw-virt-base /fw-ram +  extra-mem-va -  d# 20 >>  tag-l,  \ Number of section entries
+
+   \ Each of these groups is a struct map_desc as defined in arch/arm/include/asm/mach/
+   extra-mem-va                            tag-l,  \ VA of OFW memory
+   extra-mem-pa pageshift rshift           tag-l,  \ Page frame number of OFW memory
+   fw-virt-base /fw-ram +  extra-mem-va -  tag-l,  \ Size of OFW memory
+   MT_MEMORY                               tag-l,  \ Mapping type of OFW memory
+
+   fb-va                                   tag-l,  \ VA of OFW Frame Buffer
+   fb-pa pageshift rshift                  tag-l,  \ PA of OFW Frame Buffer
+   fb-size                                 tag-l,  \ Size of OFW memory
+   MT_DEVICE_WC                            tag-l,  \ Mapping type of OFW frame buffer
 ;
 ' (ofw-tag,) to ofw-tag,
 

@@ -238,7 +238,7 @@ fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
       init-lcd
    ;
    : map-frame-buffer  ( -- )
-      fb-pa to frame-buffer-adr
+      fb-pa fb-size " map-in" $call-parent to frame-buffer-adr
    ;
    " display"                      device-type
    " ISO8859-1" encode-string    " character-set" property
