@@ -658,7 +658,7 @@ create button-scancodes
       pending-buttons and  to pending-buttons    ( bit# )
 
       \ Generate an up or down scancode sequence corresponding to that bit
-      dup bit#>scancode  true                    ( scancode true )
+      bit#>scancode  true                        ( scancode true )
    else                                          ( )
       false                                      ( false )
    then                                          ( false | scancode true )
