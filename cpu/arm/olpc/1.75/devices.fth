@@ -385,7 +385,7 @@ warning @ warning off
 warning !
 
 stand-init: More memory
-   extra-mem-pa /extra-mem add-memory
+   extra-mem-va /extra-mem add-memory
 ;
 
 fload ${BP}/cpu/arm/mmp2/thermal.fth
