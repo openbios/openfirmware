@@ -21,7 +21,7 @@ purpose: USB elaborations for the BIOS loaded OFW
    \ Port 2 is right upper
    \ Port 3 is left
    \ Port 4 is right lower
-   h# 03.04.02.00  " hub-port-seq" integer-property
+   " 3,4,2" " usb-hub-test-list" string-property
 
 end-package
 

@@ -219,23 +219,18 @@ external
 : hub-selftest  ( hub-dev -- error? )
    to hub-dev                                           ( )
 
-   " hub-port-seq" get-inherited-property  if           ( )
+   " usb-hub-test-list" get-inherited-property  if      ( )
       hub-#ports 1+  1  ?do                             ( )
          i (hub-selftest)  if  true unloop exit  then
       loop                                              ( )
    else                                                 ( propval$ )
-      decode-int nip nip                                ( seq )
-
-      4 0 do
-         dup h# ff000000 and d# 24 rshift h# ff and     ( seq port )
-         dup if                                         ( seq port )
-            (hub-selftest)  if  drop true exit  then
-         else                                           ( seq port )
-            drop                                        ( seq )
-         then                                           ( seq )
-         d# 8 lshift                                    ( seq' )
-      loop                                              ( seq )
-      drop                                              ( )
+      decode-string 2nip                                ( list$ )
+      begin  dup  while                                 ( list$ )
+         ascii , left-parse-string                      ( list$' dev#$ )
+         push-decimal  $number  if  0  then  pop-base   ( list$ port# )
+         (hub-selftest)  if  drop true exit  then       ( list$ )
+      repeat                                            ( list$ )
+      2drop
    then                                                 ( )
 
    \ Maybe need to reset the entire hub here
