@@ -10,6 +10,8 @@ fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
    fload ${BP}/dev/pcibus.fth		\ Generic PCI bus package
 
 [ifdef] addresses-assigned
+   0 0  " addresses-preassigned" property
+0 [if]
    \ Suppress PCI address assignment; use the addresses the BIOS assigned
    patch false true master-probe
    patch noop assign-all-addresses prober
@@ -20,6 +22,7 @@ fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
    : or-w!  ( bitmask reg# -- )  tuck my-w@  or  swap my-w!  ;
    patch or-w! my-w! find-fcode?
    patch 2drop my-w! find-fcode?
+[then]
 [then]
 
    fload ${BP}/cpu/x86/pc/biosload/pcinode.fth	\ System-specific words for PCI
@@ -249,6 +252,14 @@ end-package
 devalias screen /display		\ Explicit, because it's not probed
 [then]
 
+[ifdef] use-pineview
+0 0  " 2,0"  " /pci" begin-package
+   " display" name
+   fload ${BP}/dev/intel/graphics/pineview.fth
+end-package
+devalias screen /pci/display@2,0	\ Explicit, because it's not probed
+[then]
+
 [ifdef] use-ct65550
 0 0  " i3b0" " /isa" begin-package
    fload ${BP}/dev/ct6555x/loadpkg.fth	\ Video driver
@@ -337,13 +348,19 @@ end-package
 fload ${BP}/dev/usb2/device/debugport.fth	\ ISA COM port driver
 [else]
 fload ${BP}/dev/isa/diaguart.fth	\ ISA COM port driver
-h# 3f8 is uart-base
 [then]
 
 fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
-fload ${BP}/cpu/x86/pc/egauart.fth		\ Output also to EGA
+[ifndef] no-ega-startup-messages
+fload ${BP}/cpu/x86/pc/egauart.fth	\ Output also to EGA
+[then]
 
-fload ${BP}/cpu/x86/pc/reset.fth		\ reset-all
+0 value keyboard-ih
+0 value screen-ih
+
+fload ${BP}/ofw/core/muxdev.fth		\ I/O collection/distribution device
+
+fload ${BP}/cpu/x86/pc/reset.fth	\ reset-all
 
 [ifdef] olpc
 \ true constant lx?			\ 

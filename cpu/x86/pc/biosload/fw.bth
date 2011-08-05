@@ -7,6 +7,8 @@ in: builton.fth
 in: bootsec.hex
 build-now
 
+" fw.tag" r/w create-file drop  tag-file !
+
 hex
 \ ' $report-name is include-hook
 
@@ -354,8 +356,9 @@ fload ${BP}/cpu/x86/pc/biosload/memtest.fth
 
    auto-banner?  if
       " Probing" ?type  probe-all
-      " Install console" ?type  install-console
-      ?usb-keyboard
+      install-mux-io
+\      " Install console" ?type  install-console
+\      ?usb-keyboard
       banner
    then
 
@@ -405,6 +408,8 @@ fload ${BP}/cpu/x86/pc/biosload/vmdoor.fth   \ VMware interfaces
 fload ${BP}/cpu/x86/pc/biosload/intelfb.fth  \ Intel frame buffer setup
 
 " dhcp" ' ip-address  set-config-string-default
+
+tag-file @ fclose  tag-file off
 
 .( SAVING FW.dic ...)
 " fw.dic" $save-forth cr
