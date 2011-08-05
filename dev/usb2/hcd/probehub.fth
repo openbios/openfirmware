@@ -221,16 +221,18 @@ external
 
    " usb-hub-test-list" get-inherited-property  if      ( )
       hub-#ports 1+  1  ?do                             ( )
-         i (hub-selftest)  if  true unloop exit  then
+         i (hub-selftest)  if  true unloop exit  then   ( )
       loop                                              ( )
    else                                                 ( propval$ )
-      decode-string 2nip                                ( list$ )
+      decode-string 2swap 2drop                         ( list$ )
       begin  dup  while                                 ( list$ )
          ascii , left-parse-string                      ( list$' dev#$ )
-         push-decimal  $number  if  0  then  pop-base   ( list$ port# )
+         base @ >r decimal                              ( list$' dev#$ )
+         $number  if  0  then                           ( list$' port# )
+	 r> base !                                      ( list$ port# )
          (hub-selftest)  if  drop true exit  then       ( list$ )
       repeat                                            ( list$ )
-      2drop
+      2drop                                             ( )
    then                                                 ( )
 
    \ Maybe need to reset the entire hub here
