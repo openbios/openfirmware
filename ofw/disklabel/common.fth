@@ -8,8 +8,10 @@ h# 81 constant minix-type
 h# 83 constant ext2fs-type
 h# a5 constant ufs-type
 h# 96 constant iso-type
+h# ee constant gpt-type
 
 0 value ufs-partition
+0 0 instance 2value partition-name$
 0 instance value #part
 
 0 instance value /sector  \ Set in open by calling parent's block-size method
