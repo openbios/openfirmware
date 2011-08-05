@@ -297,15 +297,20 @@ h# 8000.0000 constant enable-bit
    wait-vblank  
 ;
 
+d# 100 constant backlight-min-period
 false value backlight-inverse?
 : set-backlight  ( percentage -- )
    h# 61254 mmio@ lwsplit nip   ( percent max )
+   backlight-min-period max     ( percent max' )
    1 invert and  >r             ( percent r: max' )
+
    d# 20 max                    ( percentage' r: max )
    r@ * d# 100 /                ( duty-cycle  r: max )
+
    backlight-inverse?  if       ( duty-cycle  r: max )
       r@ swap -                 ( duty-cycle' )
    then                         ( duty-cycle  r: max )
+
    1 invert and                 ( duty-cycle  r: max ) \ Low bit must be 0
    r> wljoin h# 61254 mmio!     ( )  \ BLC_PWM_CTL
 ;
