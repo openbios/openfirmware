@@ -80,6 +80,8 @@ headerless
    mac-disk?  if  mac-map exit  then
 [then]
 
+   gpt?  if  gpt-map exit  then
+
    fdisk?  if  fdisk-map exit  then
 
    \ We check for ISO 9660 after the ones above, because they can be
@@ -162,6 +164,7 @@ headerless
 \ <digit>:  FDISK partition number
 \ <letter>: UFS partition letter (a..h)
 \ <digit><letter>: UFS partition embedded within FDISK partition
+\ -<decimal-digits>: The last N blocks of the disk
 
 \ partition# is one of:
 \ -1, meaning the default partition, i.e. no partition was specified
@@ -171,15 +174,26 @@ headerless
 \ In addition, ufs-partition is set to the UFS partition letter (a..h)
 \ if the string appears to contain a letter.
 
-: parse-partition  ( -- )
-   null$ to filename  -1 to #part  0 to ufs-partition
+: decode-partition  ( adr len -- rem$ )
+   \ If the string parses as a decimal number, it's a partition# if
+   \ positive or the last N blocks if negative
+   2dup push-decimal $number pop-base 0=  if   ( adr len n )
+      dup 0<  if                               ( adr len n )
+         /sector um*                           ( adr len d.partition-size )
+         get-disk-size  size-low size-high     ( adr len d.partition-size d.disk-size )
+         2over d-  /sector um/mod nip          ( adr len d.partition-size partition-sector )
+         to sector-offset                      ( adr len d.partition-size )
+         to size-high to size-low              ( adr len )
+         -2 to #part                           ( adr len )   \ Tell select-partition
+      else                                     ( adr len n )
+         to #part                              ( adr len )
+      then                                     ( adr len )
+      drop 0                                   ( adr 0 )
+      exit                                     ( rem$ -- )
+   then                                      ( adr len )
 
-   my-args				     ( adr len )
-
-   \ An empty arg string is treated as a null partition and a null filename
-   dup  0=  if  2drop exit  then	     ( adr len )
-
-   \ If the first character of the string is a digit, it's a partition #
+   \ If the first character of the string is a decimal number, it's a partition #,
+   \ possibly followed by UFS partition letter
    over c@  ascii 0 ascii 9 between  if      ( adr len )
       over c@  ascii 0 -  to #part           ( adr len )
       1 /string                              ( adr' len' )
@@ -192,28 +206,24 @@ headerless
       1 /string                              ( adr' len' )
       dup  0=  if  2drop exit  then          ( adr len )
    then					     ( adr len )
+;
+: parse-partition  ( -- )
+   null$ to filename  null$ to partition-name$  -1 to #part  0 to ufs-partition
 
-   \ If the first character is "-", it is followed by a decimal number N and
-   \ the "partition" is the last N blocks
-   over c@  ascii -  =  if                   ( adr len )
-      1 /string                              ( adr' len' )
-      push-decimal $number pop-base  if      ( )
-         ." Bad decimal number after '-' in partition spec" cr
-         exit
-      then                                   ( n )
-      /sector um*                            ( d.partition-size )
-      get-disk-size  size-low size-high      ( d.partition-size d.disk-size )
-      2over d-  /sector um/mod nip           ( d.partition-size partition-sector )
-      to sector-offset                       ( d.partition-size )
-      to size-high to size-low               ( )
-      -2 to #part                            ( )   \ Tell select-partition
-      exit
-   then					     ( adr len )
+   my-args				     ( adr len )
 
-   \ If the first character of the string is ",", discard it
-   over c@  ascii ,  =  if		     ( adr len )
-      1 /string                              ( adr' len' )
-   then                                      ( adr' len' )
+   \ An empty arg string is treated as a null partition and a null filename
+   dup  0=  if  2drop exit  then	     ( adr len )
+
+   \ If the string contains a comma, the first half is the partition name
+   " ," lex  if                              ( tail$ head$ delim )
+      drop  2dup to partition-name$          ( tail$ head$ )
+      decode-partition  2drop                ( tail$ )
+      to filename                            ( )
+      exit                                   ( -- )
+   then                                      ( adr len )
+
+   decode-partition                          ( rem$ )
 
    \ The remainder of the string, if any, is the filename
    to filename
@@ -239,7 +249,7 @@ headers
 : close  ( -- )  sector-buf  if  sector-buf /sector free-mem  then  ;
 : size  ( -- d )  size-low size-high  ;
 : load  ( adr -- len )
-   \ This load method is used only for type 41 partitions
+   \ This load method is used only for type 41 (IBM "PREP") partitions
    partition-type h# 41  <>  if  drop 0  exit  then
 
    0 0          " seek" $call-parent drop   ( adr )

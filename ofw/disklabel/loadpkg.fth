@@ -12,6 +12,7 @@ fload ${BP}/ofw/fs/ntfs/partition.fth
 [ifdef] hfs-support
 fload ${BP}/ofw/fs/macfs/partition.fth
 [then]
+fload ${BP}/ofw/disklabel/gpt.fth
 fload ${BP}/ofw/disklabel/methods.fth
 
 \ LICENSE_BEGIN

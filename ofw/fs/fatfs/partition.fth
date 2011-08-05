@@ -53,12 +53,12 @@ purpose: FDisk partition map decoder
    false
 ;
 
-\ ??? i b s n apparently means #sectors start-sector boot-indicator system-indicator
-\ system-indicator: 0 no FAT, 1 12-bit FAT, 4 16-bit FAT, 5 extended, 6 over 32M
-\               ... b FAT 32, c FAT 32 LBA, e FAT-16 LBA, f extended LBA
+\ ??? n,s,b,t means #sectors start-sector boot-indicator type
+\ type: 0 empty, 1 12-bit FAT, 4 16-bit FAT, 5 extended, 6 over 32M
+\            ... b FAT 32, c FAT 32 LBA, e FAT-16 LBA, f extended LBA
 \ boot-indicator: 80 bootable
 
-: process-ptable  ( -- true | i1 b1 s1 n1 i2 b2 s2 n2 i3 b3 s3 n3 i4 b4 s4 n4 false )
+: process-ptable  ( -- true | n,s,b,t4 n,s,b,t3 n,s,b,t2 n,s,b,t1 false )
    sector-buf h# 1fe + le-w@  h# aa55  <>  if  true exit  then
 
    \ Process a real partition table
@@ -73,31 +73,31 @@ purpose: FDisk partition map decoder
 
 0 instance value extended-offset
 false value found?
-defer suitable?  ( s n -- s n flag )
+defer suitable?  ( b t -- b t flag )
 
 : (find-partition  ( sector-offset -- not-found? )
-   >r process-ptable  if  r> drop false exit  then  r>
+   >r process-ptable  if  r> drop false exit  then  r>  ( n,s,b,t*4 sector-offset )
 
-   4 0 do			( i,b,s,nN ... i,b,s,n1 sector-offset )
-      >r						( ... i,b,s,n )
-      found?  if		\ partition was found	( ... i,b,s,n )
+   4 0 do			( n,s,b,tN ... n,s,b,t1 sector-offset )
+      >r						( ... n,s,b,t )
+      found?  if		\ partition was found	( ... n,s,b,t )
          2drop 2drop					( ... )
-      else						( ... i,b,s,n )
-         ?dup 0=  if					( ... i,b,s )
-	    \ no FAT, skip it.
+      else						( ... n,s,b,t )
+         ?dup 0=  if					( ... n,s,b )
+	    \ empty, skip it.
 	    3drop					( ... )
-         else						( ... i,b,s,n )
-            dup 5 = over h# f = or  if   \ extended partition          ( ... i,b,s,n )
-               2drop nip                                ( ... b )
+         else						( ... n,s,b,t )
+            dup 5 = over h# f = or  if   \ extended partition          ( ... n,s,b,t )
+               2drop nip                                ( ... s )
                extended-offset dup 0=  if  over to extended-offset  then
                + dup read-sector recurse drop           ( ... )
-            else		\ Ordinary partition	( ... i,b,s,n )
-               suitable?  if                		( ... i,b,s,n )
-                  to partition-type drop		( ... i,b )
-                  r@ + to sector-offset			( ... i )
+            else		\ Ordinary partition	( ... n,s,b,t )
+               suitable?  if                		( ... n,s,b,t )
+                  to partition-type drop		( ... n,s )
+                  r@ + to sector-offset			( ... n )
                   /sector um* to size-high to size-low	( ... )
                   true to found?			( ... )
-               else					( ... i,b,s,n )
+               else					( ... n,s,b,t )
                   4drop					( ... )
                then					( ... )
             then					( ... )

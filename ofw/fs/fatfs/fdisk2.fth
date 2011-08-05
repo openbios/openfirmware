@@ -27,6 +27,11 @@ purpose: Display FDISK partition information
 
 headerless
 
+0 value sector-buf
+h# 200 constant /sector
+0 value disk-dev
+fload ${BP}/ofw/disklabel/showgpt.fth	\ GUID Partition table decoding
+
 0 value partition#
 0 value partition-offset
 true value primary?
@@ -40,6 +45,7 @@ true value primary?
 cr
 cr
 ;
+
 : .0x  ( n -- )
    push-hex
    dup 9 <=  if  6 u.r  else  ."   0x" (.2) type  then  \ Type field
@@ -49,8 +55,7 @@ cr
 : (.1partition)  ( adr -- )
    dup d# 12 + le-l@ 0=  if  drop exit  then		\ Empty entry
    primary? 0=  if  dup 4 + c@ 5 =  if  drop exit  then  then	\ Logical extension entry
-   base @ >r
-   decimal
+   push-decimal
    partition# dup 5 u.r 6 spaces 1+ to partition#
    primary?  if  ." Primary"  else  ." Logical"  then	\ Primary/Logical partition
    dup c@  if  ."   Yes  "  else  ."   No   "  then	\ Boot indicator
@@ -64,6 +69,7 @@ cr
       h# c  of  ."  FAT-32 LBA"  endof
       h# e  of  ."  FAT-16 LBA"  endof
       h# 83 of  ."  ext2      "  endof  \ Linux EXT2
+      h# ee of  ."  GUID      "  endof
       dup .0x
    endcase
 \   dup 1 + .hsc
@@ -72,28 +78,31 @@ cr
 \   dup 8 + le-l@  9 u.r 			\ Start block
    2 spaces
    d# 12 + le-l@  d# 1024 + d# 2048 / 6 u.r	\ Size in MB
-   r> base !
    cr
+   pop-base
 ;
 
-0 value sector-buf
-h# 200 constant /sector
-0 value disk-dev
 : (.partitions)  ( block-adr -- )
-   dup h# 1be +
-   4 0  do
-      dup (.1partition)
-      dup 4 + c@ 5 =  if
-         d# 8 + le-l@ partition-offset +
-         primary?  if  dup to partition-offset  then
-         /sector um* " seek" disk-dev $call-method drop
-         dup /sector " read" disk-dev $call-method  drop
-         false to primary?
-         recurse unloop exit
-      then
-      h# 10 +
-   loop
-   2drop
+   dup h# 1be +          ( adr partadr )
+   4 0  do               ( adr partadr )
+      dup (.1partition)  ( adr partadr )
+      dup 4 + c@ case    ( adr partadr )
+         5 of            ( adr partadr )
+            d# 8 + le-l@ partition-offset +                  ( adr part-offset )
+            primary?  if  dup to partition-offset  then      ( adr part-offset )
+            /sector um* " seek" disk-dev $call-method drop   ( adr )
+            dup /sector " read" disk-dev $call-method  drop  ( adr )
+            false to primary?                                ( adr )
+            recurse unloop exit                              ( -- )
+         endof           ( adr partadr )
+         h# ee of        ( adr partadr )
+            .gpt         ( adr partadr )
+            leave        ( adr partadr )
+         endof           ( adr partadr )
+      endcase            ( adr partadr )
+      h# 10 +            ( adr partadr' )
+   loop                  ( adr partadr )
+   2drop                 ( )
 ;
 
 : free-buf  ( -- )  sector-buf /sector free-mem  ;

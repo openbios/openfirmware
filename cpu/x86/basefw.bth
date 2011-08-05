@@ -105,6 +105,8 @@ support-package: iso9660-file-system
 end-support-package
 [then]
 
+fload ${BP}/ofw/disklabel/gpttools.fth
+
 support-package: disk-label
    fload ${BP}/ofw/disklabel/loadpkg.fth	\ Disk label package
 end-support-package

@@ -66,12 +66,12 @@ support-package: iso9660-file-system
    fload ${BP}/ofw/fs/cdfs/loadpkg.fth	\ ISO 9660 CD-ROM file system reader
 end-support-package
 
+fload ${BP}/ofw/disklabel/gpttools.fth
+
 support-package: disk-label
    fload ${BP}/ofw/disklabel/loadpkg.fth	\ Disk label package
 end-support-package
-[then]
 
-[ifdef] resident-packages
 fload ${BP}/ofw/fs/fatfs/fdisk2.fth	\ Partition map administration
 [else]
 autoload: fdisk2.fth
