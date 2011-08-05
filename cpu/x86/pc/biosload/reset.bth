@@ -67,8 +67,8 @@ label startup
 [then]
 
    h# 11 port80
-   80  70  isa-c!		\ Disable NMI
-   71 # dx mov  dx al in	\ Why do we do this?
+\   h# 80  h# 70 #  isa-c!	\ Disable NMI
+\   h# 71 # al in		\ Why do we do this?
 
 [ifdef] intel-chip-stuff
 h# 8000.f880 # ax mov  h# cf8 # dx mov  ax dx out
