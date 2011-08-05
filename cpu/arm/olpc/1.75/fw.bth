@@ -161,7 +161,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
 : rom-pa  ( -- adr )  mfg-data-buf mfg-data-offset -  ;  \ Fake out setwp.fth
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 
-fload ${BP}/cpu/x86/pc/olpc/help.fth
+fload ${BP}/cpu/arm/olpc/1.75/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/strokes.fth
 fload ${BP}/cpu/x86/pc/olpc/plot.fth
