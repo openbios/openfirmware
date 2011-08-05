@@ -1,0 +1,62 @@
+purpose: Construct the final OFW image 
+
+command: &builder &this
+in: reset.di
+in: start.di
+in: ${BP}/cpu/x86/pc/alex/build/paging.di
+in: fw.img
+in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
+in: ${BP}/dev/usb2/hcd/uhci/build/uhci.fc
+in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
+in: ${BP}/dev/usb2/device/hub/build/hub.fc
+in: ${BP}/dev/usb2/device/net/build/usbnet.fc
+in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
+in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
+in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
+in: ${BP}/dev/pci/build/pcibridg.fc
+in: ${BP}/dev/ide/build/leghier.fc
+
+build-now
+
+fload ${BP}/cpu/x86/pc/alex/config.fth
+
+\ Always re-create the builton.fth file when we make a new rom.img
+fload ${BP}/cpu/x86/pc/builton.bth
+
+hex
+
+.( --- Saving as ofw.elf - Coreboot payload format) cr
+fload ${BP}/cpu/x86/pc/elfhdr.fth
+writing ofw.elf
+elf-header /elf-header ofd @ fputs
+
+   " reset.di"              $add-file
+   " start.di"              $add-file
+   " paging.di"             $add-file
+
+   " ${BP}/cpu/x86/build/inflate.bin"           " inflate"         $add-dropin
+
+   " fw.img"                                    " firmware"        $add-deflated-dropin
+
+   " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
+   " ${BP}/dev/ide/build/leghier.fc"            " class01018a"     $add-deflated-dropin
+
+   " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"     $add-deflated-dropin
+   " ${BP}/dev/usb2/hcd/uhci/build/uhci.fc"	" class0c0300"     $add-deflated-dropin
+
+   " ${BP}/dev/usb2/device/hub/build/hub.fc"            " usb,class9"    $add-dropin
+   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"    " usb,class3,1"  $add-dropin
+   " ${BP}/dev/usb2/device/net/build/usbnet.fc"         " usbnet"        $add-deflated-dropin
+   " ${BP}/dev/usb2/device/serial/build/usbserial.fc"   " usbserial"     $add-deflated-dropin
+   " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"    $add-deflated-dropin
+
+   " builton.fth"                       " probe-"               $add-dropin
+   " ${BP}/ofw/fcode/memtest.fth"       " memtest.fth"          $add-deflated-dropin
+   " ${BP}/ofw/inet/telnetd.fth"        " telnetd"              $add-deflated-dropin
+   " ${BP}/ofw/termemu/15x30pc.psf"     " font"                 $add-deflated-dropin
+
+   ofd @ fsize pad !        \ file size; store in memory for convenience below
+   h# 44 ofd @ fseek        \ Seek to file size field; see elfhdr.bth
+   pad 4 ofd @ fputs        \ Patch file size
+   pad 4 ofd @ fputs        \ Patch memory size
+ofd @ fclose
