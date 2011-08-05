@@ -37,28 +37,48 @@ warning !
 [ifdef] debug-startup
 \ diagnostic macros
 \ Assembler macro to assemble code to send the character "char" to COM1
+: wait-tx-ready  ( -- )
+[ifdef] mem-uart-base   
+   " begin   h# 20 #  mem-uart-base 5 + #) byte test  0<> until" evaluate
+[else]
+   " begin   h# 3fd # dx mov   dx al in  h# 20 # al and   0<> until" evaluate
+[then]
+;
 : report  ( char -- )
-   " begin   h# 3fd # dx mov   dx al in  h# 20 # al and   0<> until" evaluate
-   ( char )  " # al mov  h# 3f8 # dx mov  al dx out  " evaluate
-   " begin   h# 3fd # dx mov   dx al in  h# 20 # al and   0<> until" evaluate
+   wait-tx-ready
+[ifdef] mem-uart-base
+   ( char )  " # mem-uart-base #) byte mov" evaluate
+[else]
+   ( char )  " # al mov  h# 3f8 # dx mov  al dx out" evaluate
+[then]
+   wait-tx-ready
 ;
 : nreport  ( -- )  \ print 4-bit value in bl
-   " begin  h# 3fd # dx mov   dx al in   h# 20 # al and   0<> until" evaluate
-   " bl al mov  h# 0f # ax and  h# 30 # ax add  h# 3f8 # dx mov  al dx out  "
-   evaluate
+   wait-tx-ready
+[ifdef] mem-uart-base
+   " bl al mov  h# 0f # ax and  h# 30 # ax add  al mem-uart-base #) mov" evaluate
+[else]
+   " bl al mov  h# 0f # ax and  h# 30 # ax add  h# 3f8 # dx mov  al dx out" evaluate
+[then]
 ;
 : dotbyte   ( - )     \ print byte in bl
-      "  bx 4 # ror " eval  nreport
-      "  bx 4 # rol " eval  nreport
-      h# 20 nreport
+   "  bx 4 # ror " eval  nreport
+   "  bx 4 # rol " eval  nreport
+   h# 20 nreport
 ;
 
 label putchar  ( al:char -- )
    dx push  bx push
-   ax bx mov
-   begin   h# 3fd # dx mov   dx al in  h# 20 # al and   0<> until
-   bx ax mov  h# 3f8 # dx mov  al dx out
-   begin   h# 3fd # dx mov   dx al in  h# 20 # al and   0<> until
+[ifdef] mem-uart-base
+   wait-tx-ready
+   al  mem-uart-base #) mov
+[else]
+   al bl mov
+   wait-tx-ready
+   bl al mov  h# 3f8 # dx mov  al dx out
+[then]
+   wait-tx-ready
+
    bx pop  dx pop
    ret
 end-code

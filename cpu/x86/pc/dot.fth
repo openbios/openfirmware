@@ -7,10 +7,17 @@ protected-mode
 label emit  ( al: char -- )
    cx push  dx push
 
+[ifdef] mem-uart-base
+   al cl mov
+   begin   mem-uart-base 5 + #)  al mov   h# 40 # al and  0<> until
+   cl al mov   al  mem-uart-base #) mov
+   begin   mem-uart-base 5 + #)  al mov   h# 40 # al and  0<> until
+[else]
    al cl mov
    begin   h# 3fd # dx mov  dx al in   h# 40 # al and  0<> until
    cl al mov   3f8 # dx mov  al dx out
    begin   h# 3fd # dx mov  dx al in   h# 40 # al and  0<> until
+[then]
 
    dx pop  cx pop
    ret
