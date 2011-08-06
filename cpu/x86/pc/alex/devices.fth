@@ -1,10 +1,6 @@
 \ See license at end of file
 purpose: Load device drivers according to configuration definitions
 
-fload ${BP}/cpu/x86/pc/isaio.fth
-
-fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
-
 0 0  " "  " /"  begin-package
    fload ${BP}/cpu/x86/pc/mappci.fth	\ Map PCI to root
    fload ${BP}/dev/pcibus.fth		\ Generic PCI bus package

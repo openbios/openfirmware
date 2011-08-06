@@ -82,6 +82,9 @@ fload ${BP}/ofw/core/allocmor.fth	\ Secondary allocator
 
 fload ${BP}/cpu/x86/pc/rootnode.fth	\ Platform-specific root node changes
 
+fload ${BP}/cpu/x86/pc/isaio.fth
+fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
+
 fload ${BP}/cpu/x86/pc/alex/probemem.fth	\ Memory probing
 
 [ifdef] virtual-mode
