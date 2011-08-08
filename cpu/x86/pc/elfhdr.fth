@@ -28,7 +28,7 @@ dropin-base to elf-addr             \ Copy file image directly to dropin-base
     dropin-base h# 20 +  to elf-entry  \ Skip OBMD header in RAM copy
     1 to #pheaders                     \ The pheader causes the image to be copied to RAM
     0 to file-offset                   \ Copy the whole thing, don't skip the ELF headers
-    dropin-base h# 80 - to elf-addr    \ Copied headers will precede dropin-base
+    dropin-base h# 60 - to elf-addr    \ Copied headers will precede dropin-base
   [else]
     \ For coreboot running from ROM, we can leave everything in ROM, no need to copy,
     \ so there's no need for a pheader.
