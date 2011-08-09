@@ -5,12 +5,12 @@ h# e0401000 constant mem-uart-base
 
 create coreboot-loaded
 create coreboot-qemu
-create debug-startup
+\ create debug-startup
 
 create use-timestamp-counter
 create use-tsc-timing
 
-create serial-console
+\ create serial-console
 
 \ In virtual mode, OFW runs with the MMU on.  The advantages are
 \ that OFW can automatically locate itself out of the way, at the

@@ -210,8 +210,8 @@ fload ${BP}/dev/olpc/touchpad/touchpad.fth    \ Touchpad diagnostic
 fload ${BP}/cpu/x86/pc/alex/yuv2rgb.fth       \ YUV2 to RGB conversion
 fload ${BP}/cpu/x86/pc/alex/vstest.fth        \ Video stream test helpers
 
-\ false to stand-init-debug?
-true to stand-init-debug?
+false to stand-init-debug?
+\ true to stand-init-debug?
 
 hex
 stand-init-debug?  [if]
@@ -244,13 +244,9 @@ warning !
 
 : probe-all  ( -- )
    " probe-" do-drop-in
-   ." probe-pci"  cr
-\   debug-me
    probe-pci
-   probe-usb
-   report-net
-   report-disk
    report-pci-fb
+   silent-probe-usb
 ;
 
 \ This reduces processor use when waiting for a key.  It helps
@@ -261,13 +257,15 @@ warning !
 : startup  ( -- )
    standalone?  0=  if  exit  then
 
-    ." nvramrc" cr
-    use-nvramrc?  if  nvramrc safe-evaluate  then
+   use-nvramrc?  if  nvramrc safe-evaluate  then
 
    auto-banner?  if
       " Probing" ?type  probe-all
       install-mux-io
-\      " Install console" ?type  install-console
+[ifndef] serial-console
+      fallback-in-ih  remove-input
+      fallback-out-ih remove-output
+[then]
 \      ?usb-keyboard
       banner
    then
@@ -285,6 +283,7 @@ warning !
    ." See "
    blue-letters ." http://wiki.laptop.org/go/Forth_Lessons" black-letters
    cr cr
+   ." Type  menu  to run diagnostics" cr
 
    quit
 ;

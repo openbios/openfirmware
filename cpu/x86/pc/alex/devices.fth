@@ -81,16 +81,18 @@ fload ${BP}/dev/isa/irq.fth		\ ISA interrupt dispatcher
 fload ${BP}/cpu/x86/pc/isatick.fth		\ Use ISA timer as the alarm tick timer
 fload ${BP}/cpu/x86/pc/olpc/timertest.fth  \ Selftest for PIT timer
 
+fload ${BP}/dev/pci/isaall.fth
+devalias mouse /isa/8042/mouse
+
+fload ${BP}/cpu/x86/pc/tsccal1.fth
+
 [ifdef] resident-packages
 support-package: 16550
 fload ${BP}/dev/16550pkg/16550.fth  \ Serial port support package
 end-support-package
 [then]
 
-fload ${BP}/dev/pci/isaall.fth
-devalias mouse /isa/8042/mouse
-
-fload ${BP}/cpu/x86/pc/tsccal1.fth
+fload ${BP}/dev/null2.fth
 
 0 0  hex mem-uart-base (u.)  " /" begin-package
    4 encode-int  0 encode-int encode+    " interrupts" property
@@ -99,7 +101,13 @@ fload ${BP}/cpu/x86/pc/tsccal1.fth
    fload ${BP}/dev/16550pkg/isa-int.fth
 end-package
 devalias com1 /serial:115200
-: com1  ( -- adr len )  " com1"  ;  ' com1 to fallback-device
+: com1  ( -- adr len )  " com1"  ;
+[ifdef] serial-console
+' com1 to fallback-device
+[else]
+: devnull  ( -- adr len )  " /null"  ;
+' devnull to fallback-device
+[then]
 
 0 0  " i70"  " /isa" begin-package   	\ Real-time clock node
    fload ${BP}/dev/ds1385r.fth
@@ -166,8 +174,13 @@ devalias screen /pci/display@2,0	\ Explicit, because it's not probed
 ;
 
 fload ${BP}/cpu/x86/inoutstr.fth	\ Multiple I/O port read/write
+
+[ifdef] serial-console
 fload ${BP}/dev/isa/diaguart.fth	\ ISA COM port driver
 fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
+[else]
+fload ${BP}/dev/nulluart.fth		\ Null UART driver
+[then]
 
 0 value keyboard-ih
 0 value screen-ih

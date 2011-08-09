@@ -41,7 +41,13 @@ devalias u    /usb/disk
       pwd$ $nopage-show-devs
    then
 ;
+: show-usb  ( -- )
+   ." USB2 devices:" cr
+   " /" ['] (show-usb2) scan-subtree
 
+   ." USB1 devices:" cr
+   " /" ['] (show-usb1) scan-subtree
+;
 : silent-probe-usb  ( -- )
    " /" ['] (probe-usb2) scan-subtree
    " /" ['] (probe-usb1) scan-subtree
@@ -49,12 +55,7 @@ devalias u    /usb/disk
 ;
 : probe-usb  ( -- )
    silent-probe-usb
-
-   ." USB2 devices:" cr
-   " /" ['] (show-usb2) scan-subtree
-
-   ." USB1 devices:" cr
-   " /" ['] (show-usb1) scan-subtree
+   show-usb
 ;
 alias p2 probe-usb
 
