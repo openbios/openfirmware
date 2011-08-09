@@ -79,6 +79,7 @@ devalias rom     /dropin-fs
 fload ${BP}/cpu/x86/forthint.fth	\ Low-level interrupt handling code
 fload ${BP}/dev/isa/irq.fth		\ ISA interrupt dispatcher
 fload ${BP}/cpu/x86/pc/isatick.fth		\ Use ISA timer as the alarm tick timer
+fload ${BP}/cpu/x86/pc/olpc/timertest.fth  \ Selftest for PIT timer
 
 [ifdef] resident-packages
 support-package: 16550
@@ -110,6 +111,7 @@ stand-init: RTC
 ;
 
 fload ${BP}/cpu/x86/pc/cpunode.fth
+fload ${BP}/cpu/x86/k6cputest.fth       \ Burnin test for K6 CPU
 
 fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
 fload ${BP}/forth/lib/pattern.fth	\ Text string pattern matching
@@ -120,6 +122,8 @@ fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
 0 0  " 2,0"  " /pci" begin-package
    " display" name
    fload ${BP}/dev/intel/graphics/pineview.fth
+   alias  /scanline  bytes/line
+   fload ${BP}/dev/video/common/rectangle16.fth
 end-package
 devalias screen /pci/display@2,0	\ Explicit, because it's not probed
 
