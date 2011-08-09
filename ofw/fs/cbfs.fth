@@ -1,7 +1,6 @@
 purpose: Coreboot filesystem ("CBFS") package
 \ See license at end of file
 
-h# ffc0.0000 value flash-base
 : .cbfs-type  ( type -- )
    case
       h#  10 of  ."        stage"  endof

@@ -64,7 +64,7 @@ h#   100 constant /spi-page     \ Largest write for page-oriented chips
 \ You have to wait after any command that modifies stuff
 \ inside the part - writes, erases, status register writes
 
-: wait-write-done  ( -- timeout? )
+: wait-write-done  ( -- )
    \ The Spansion part's datasheet claims that the only operation
    \ that takes longer than 500mS is bulk erase and we don't ever
    \ want to use that command
@@ -73,7 +73,6 @@ h#   100 constant /spi-page     \ Largest write for page-oriented chips
       spi-read-status 1 and 0=  if  unloop exit  then  \ Test WIP bit
       d# 10 us
    loop
-   -1
 ;
 
 \ Common start sequence for writes and erases - anything that

@@ -34,6 +34,14 @@ h# 20 to vector-base0
 h# 28 to vector-base1
 device-end
 
+fload ${BP}/dev/olpc/spiflash/flashif.fth   \ Generic FLASH interface
+
+fload ${BP}/dev/olpc/spiflash/memflash.fth  \ Memory-mapped FLASH read access
+
+warning @ warning off
+: stand-init-io  stand-init-io  h# ffc0.0000 to flash-base  ;
+warning !
+
 fload ${BP}/ofw/fs/cbfs.fth     \ Coreboot ROM filesystem
 
 \ Create the top-level device node to access the entire boot FLASH device
@@ -168,7 +176,15 @@ fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 
 fload ${BP}/ofw/core/muxdev.fth		\ I/O collection/distribution device
 
+fload ${BP}/dev/olpc/spiflash/spiif.fth     \ Generic low-level SPI bus access
+fload ${BP}/dev/intel/spi.fth               \ SPI FLASH programming
+
 fload ${BP}/cpu/x86/pc/reset.fth	\ reset-all
+
+: ?enough-power  ;                      \ Implement based on AC presence and battery status
+
+fload ${BP}/cpu/x86/pc/alex/spiui.fth   \ User interface for SPI FLASH programming
+: urom  ( -- )  " flash! u:\alex.rom" evaluate  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks
