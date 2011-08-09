@@ -128,12 +128,16 @@ d# 36 buffer: 'guid
    'guid d# 36 2dup upper             ( adr len )
 ;
 
+d# 100 constant chromeos-kernel-index
+0 value partition-type-index
+
 : .gpt-type   ( adr -- )
    >guid$  2>r  0                               ( string#  r: guid$ )
    begin                                        ( string#  r: guid$ )
       dup ['] partition-type-guids              ( string# string# xt  r: guid$ )
    catch 0= while                               ( string# 'this r: guid$ )
       count  2r@ $=  if                         ( string# r: guid$ )
+         dup to partition-type-index            ( string# r: guid$ )
          1+ partition-type-guids count type     ( r: guid$ )
          2r> 2drop exit                         ( -- )
       then                                      ( string# r: guid$ )
@@ -143,6 +147,19 @@ d# 36 buffer: 'guid
    2drop                                        ( )
 ;
 
+: .gpt-extra  ( adr -- )
+   partition-type-index chromeos-kernel-index =  if   ( adr )
+      \ For ChromeOS Kernel, display  (success,tries,priority)
+      h# 36 + le-w@  wbsplit                          ( tries|pri success )
+      ."  (" (.) type ." ,"                           ( tries|pri )
+      push-decimal                                    ( tries|pri )
+      dup 4 rshift (.) type ." ,"                     ( tries|pri )
+      h# f and (.) type ." )"                         ( )
+      pop-base                                        ( )
+   else                                               ( adr )
+      drop                                            ( )
+   then                                               ( )
+;
 : .gpt-partition  ( adr # -- )
    \ Skip unused entries
    over 8 0 bskip  0=  if  2drop exit  then  ( adr i )
@@ -152,6 +169,7 @@ d# 36 buffer: 'guid
 \  dup .gpt-guid        ( adr )
    d# 50 to-column      ( adr )
    dup .gpt-type        ( adr )
+   dup .gpt-extra       ( adr )
    drop  cr             ( )
 ;
 : .gpt-partitions  ( -- )
