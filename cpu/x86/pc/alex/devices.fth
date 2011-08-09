@@ -16,18 +16,12 @@ stand-init: PCI host bridge
 
 fload ${BP}/dev/pciprobe.fth		\ Generic PCI probing
 
-[ifdef] use-timestamp-counter
-\ Use the CPU chip's Time Stamp Counter for timing; it does just what we want
+\ Use the CPU chip's Time Stamp Counter for timing
 fload ${BP}/cpu/x86/tsc.fth
-[then]
 
 0 0  " "  " /" begin-package
    fload ${BP}/cpu/x86/pc/isabus.fth	\ ISA Bus Bridge under root node
 end-package
-
-[ifndef] use-timestamp-counter
-fload ${BP}/cpu/x86/pc/getms.fth
-[then]
 
 dev /interrupt-controller
 h# 20 to vector-base0
@@ -95,9 +89,7 @@ end-support-package
 fload ${BP}/dev/pci/isaall.fth
 devalias mouse /isa/8042/mouse
 
-[ifdef] use-timestamp-counter
 fload ${BP}/cpu/x86/pc/tsccal1.fth
-[then]
 
 0 0  hex mem-uart-base (u.)  " /" begin-package
    4 encode-int  0 encode-int encode+    " interrupts" property

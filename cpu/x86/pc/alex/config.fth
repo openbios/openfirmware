@@ -7,6 +7,9 @@ create coreboot-loaded
 create coreboot-qemu
 create debug-startup
 
+create use-timestamp-counter
+create use-tsc-timing
+
 create serial-console
 
 \ In virtual mode, OFW runs with the MMU on.  The advantages are

@@ -177,9 +177,6 @@ support-package: http
    fload ${BP}/ofw/inet/http.fth	\ HTTP client
 end-support-package
 
-[ifndef] use-timestamp-counter
-fload ${BP}/cpu/x86/pc/mscal.fth
-[then]
 fload ${BP}/cpu/x86/pc/boot.fth
 fload ${BP}/cpu/x86/pc/linux.fth
 
