@@ -197,6 +197,21 @@ hex
 
 fload ${BP}/cpu/x86/pc/alex/usb.fth
 
+fload ${BP}/ofw/gui/bmptools.fth
+fload ${BP}/ofw/gui/loadmenu.fth
+patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
+patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
+fload ${BP}/cpu/x86/pc/alex/mfgtest.fth
+fload ${BP}/dev/olpc/confirm.fth
+: bright!  ( level -- )  drop  ;
+: backlight-on   ( -- )  ;
+: backlight-off  ( -- )  ;
+fload ${BP}/cpu/x86/pc/alex/disptest.fth
+fload ${BP}/cpu/x86/pc/alex/kbdtest.fth       \ Keyboard diagnostic
+fload ${BP}/dev/olpc/touchpad/touchpad.fth    \ Touchpad diagnostic
+fload ${BP}/cpu/x86/pc/alex/yuv2rgb.fth       \ YUV2 to RGB conversion
+fload ${BP}/cpu/x86/pc/alex/vstest.fth        \ Video stream test helpers
+
 \ false to stand-init-debug?
 true to stand-init-debug?
 
