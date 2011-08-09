@@ -13,8 +13,10 @@ in: ${BP}/dev/usb2/device/net/build/usbnet.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
+in: ${BP}/dev/usb2/device/webcam/build/webcam.fc
 in: ${BP}/dev/pci/build/pcibridg.fc
 in: ${BP}/dev/ide/build/leghier.fc
+in: testicons.bin
 
 build-now
 
@@ -49,11 +51,30 @@ elf-header /elf-header ofd @ fputs
    " ${BP}/dev/usb2/device/net/build/usbnet.fc"         " usbnet"        $add-deflated-dropin
    " ${BP}/dev/usb2/device/serial/build/usbserial.fc"   " usbserial"     $add-deflated-dropin
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"    $add-deflated-dropin
+   " ${BP}/dev/usb2/device/webcam/build/webcam.fc"     " usb,classe,3,0" $add-dropin
 
    " builton.fth"                       " probe-"               $add-dropin
    " ${BP}/ofw/fcode/memtest.fth"       " memtest.fth"          $add-deflated-dropin
    " ${BP}/ofw/inet/telnetd.fth"        " telnetd"              $add-deflated-dropin
    " ${BP}/ofw/termemu/15x30pc.psf"     " font"                 $add-deflated-dropin
+
+   " ${BP}/cpu/x86/pc/alex/build/testicons/audio.565"    " audio.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/battery.565"  " battery.565"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/camera.565"   " camera.565"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/clock.565"    " clock.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/cpu.565"      " cpu.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/display.565"  " display.565"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/keyboard.565" " keyboard.565" $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/microsd.565"  " microsd.565"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/play.565"     " play.565"     $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/quit.565"     " quit.565"     $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/ram.565"      " ram.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/sdcard.565"   " sdcard.565"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/spi.565"      " spi.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/timer.565"    " timer.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/touchpad.565" " touchpad.565" $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/usb.565"      " usb.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/alex/build/testicons/wifi.565"     " wifi.565"     $add-deflated-dropin
 
    ofd @ fsize pad !        \ file size; store in memory for convenience below
    h# 44 ofd @ fseek        \ Seek to file size field; see elfhdr.bth
