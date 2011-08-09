@@ -38,8 +38,8 @@ hex
 
 headers
 d# 32 			value    version-height
-4 value rows
-5 value cols
+5 value rows
+7 value cols
 headerless
 : squares  rows cols *	;
 d# 180			value sq-size
