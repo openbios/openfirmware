@@ -1,5 +1,5 @@
 \ See license at end of file
-purpose: Driver for SPI FLASH chips connected via Intel NM10 SPI interface
+purpose: Driver for SPI FLASH chips connected via Intel ICH7-style interface
 
 h# fed1f020 value spi-base
 : spi-reg-b!  ( b offset -- )  spi-base + c!  ;
@@ -24,32 +24,54 @@ d# 64 constant max-spi-data
 
 \ Commands
 \ # t DCOA P Op 
-\ 0 0 4102    5 <no address> <1 data in>  read-status
+\ 0 0 4002    5 <no address> <1 data in>  read-status
 \ 1 2 4n12    3 <ADDR>       <N data in>  read
-\ 2 0 4322   9f <no address> <3 data in>  jedec-id
-\ 3 2 4232   90 <ADDR=0>     <2 data in>  90-id
-\ 4 2 4142   ab <ADDR=0>     <1 data in>  ab-id
-\ 5 1 4156 6  1 <no address> <1 data out> write-status
+\ 2 0 4222   9f <no address> <3 data in>  jedec-id
+\ 3 2 4132   90 <ADDR=0>     <2 data in>  90-id
+\ 4 2 4042   ab <ADDR=0>     <1 data in>  ab-id
+\ 5 1 4056 6  1 <no address> <1 data out> write-status
 \ 6 3 4n66 6  2 <ADDR>       <N data out> write
-\ 7 3 0076 6 d8 <ADDR>       <no data>    erase-block
+\ 7 2 0076 6 d8 <ADDR>       <no data>    erase-block
 
+\ 4 base ! 33122020 hex constant cycle-types
 4 base ! 33122020 hex constant cycle-types
-: intel-spi-start  ( -- )
-   h# 0406 spi-prefix!  \ Prefix 0 is write-enable, 1 is write-disable
+: ich7-uncache-flash  ( -- )
+   h# f8dc config-b@ h# c invert and  4 or h# f8dc config-b!
+;
+: ich7-cache-flash  ( -- )
+   h# f8dc config-b@ h# c invert and  8 or h# f8dc config-b!
+;
+: ich7-protect-flash  ( -- )
+   h# f8dc config-b@ 1 invert and  h# f8dc config-b!
+;
+: ich7-unprotect-flash  ( -- )
+   h# f8dc config-b@ 1 or h# f8dc config-b!
+;
+: ich7-spi-start  ( -- )
+   \ Turn off SPI FLASH caching and prefetching, enable writing
+   ich7-unprotect-flash
+   h# 0606 spi-prefix!           \ Write-enable for both prefixes
    h# d80201ab h# 5c spi-reg-l!  \ opcodes 7-4
    h# 909f0305 h# 58 spi-reg-l!  \ opcodes 3-0
-   cycle-types h# 56 spi-reg-w!
+   cycle-types spi-type!
    h# 0c spi-stat!
 ;
-: spi-do-cmd  ( code -- )
+: ich7-flash-close  ( -- )
+   ich7-protect-flash
+;
+: wait-ready  ( -- )
    begin  spi-stat@ 1 and  0=  until
-   spi-ctrl!
-   begin  spi-stat@ 4 and  until
-   4 spi-stat!
+;
+: spi-do-cmd  ( code -- )
+   spi-ctrl!                         ( )
+   begin  spi-stat@ c and  until     ( )
+   spi-stat@ 8 and  abort" SPI access blocked"
+   h# c spi-stat!
 ;
 : spi-read-status  ( -- b )
-   h# 4002 spi-do-cmd
-   spi-data c@
+   wait-ready            ( )
+   h# 4002 spi-do-cmd    ( )
+   spi-data c@           ( b )
 ;
 : wait-write-done  ( -- )
    d# 100000 0  do
@@ -58,30 +80,36 @@ d# 64 constant max-spi-data
    loop
 ;
 : spi-read-n  ( adr len offset -- )
+   wait-ready                              ( adr len offset )
    spi-addr!                               ( adr len )
    dup 1- 8 lshift h# 4012 or  spi-do-cmd  ( adr len )
    spi-data -rot move                      ( )
 ;
 : jedec-id  ( -- b3b2b1 )
-   h# 4222 spi-do-cmd
-   spi-data w@  spi-data 2+ c@  wljoin
+   wait-ready                            ( )
+   h# 4222 spi-do-cmd                    ( )
+   spi-data w@  spi-data 2+ c@  wljoin   ( b3b2b1 )
 ;
 : 90-id  ( -- b2b1 )
-   0 spi-addr!
-   h# 4132 spi-do-cmd
-   spi-data w@
+   wait-ready          ( )
+   0 spi-addr!         ( )
+   h# 4132 spi-do-cmd  ( )
+   spi-data w@         ( )
 ;
 : ab-id  ( -- b1 )
-   0 spi-addr!
-   h# 4042 spi-do-cmd
-   spi-data c@
+   wait-ready          ( )
+   0 spi-addr!         ( )
+   h# 4042 spi-do-cmd  ( )
+   spi-data c@         ( b )
 ;
 : spi-write-status  ( b -- )
+   wait-ready          ( b )
    spi-data c!         ( )
    h# 4056 spi-do-cmd  ( )
    wait-write-done     ( )
 ;
 : spi-write-n  ( adr len offset -- )
+   wait-ready           ( adr len offset )
    spi-addr!            ( adr len )
    tuck                 ( len adr len )
    spi-data swap move   ( len )
@@ -89,6 +117,7 @@ d# 64 constant max-spi-data
    wait-write-done                    ( )
 ;
 : erase-spi-block  ( offset -- )
+   wait-ready          ( offset )
    spi-addr!           ( )
    h# 0076 spi-do-cmd  ( )
    wait-write-done     ( )
@@ -220,18 +249,18 @@ h#   100 constant /spi-page     \ Largest write for page-oriented chips
 \ Install the SPI FLASH versions as their implementations.
 : use-spi-flash  ( -- )
    ['] spi-flash-open          to flash-open
-   ['] noop                    to flash-close
+   ['] ich7-flash-close        to flash-close
    ['] spi-flash-write-enable  to flash-write-enable
-   ['] noop                    to flash-write-disable
+   ['] flash-close             to flash-write-disable
    ['] write-spi-flash         to flash-write
    ['] verify-spi-flash        to flash-verify
    ['] erase-spi-block         to flash-erase-block
-   use-mem-flash-read          \ Might be overridden
+   use-spi-flash-read
    h# 40.0000  to /flash
    /spi-eblock to /flash-block
 ;
 use-spi-flash
-' intel-spi-start to spi-start
+' ich7-spi-start to spi-start
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks
