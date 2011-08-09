@@ -53,6 +53,8 @@ false instance value debug?
    " iso-out-pipe"      get-int-property  to iso-out-pipe
    " iso-in-size"       get-int-property  to /iso-in-pipe
    " iso-out-size"      get-int-property  to /iso-out-pipe
+   " iso-in-interval"   get-int-property  to iso-in-interval
+   " iso-out-interval"  get-int-property  to iso-out-interval
    " intr-in-pipe"      get-int-property  to intr-in-pipe
    " intr-out-pipe"     get-int-property  to intr-out-pipe
    " intr-in-size"      get-int-property  to /intr-in-pipe

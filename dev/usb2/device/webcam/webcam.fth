@@ -49,31 +49,12 @@ h# c00 value /data-buf		\ Buffer to store one microframe of data
    then
 ;
 
-create samsung-frame-array
-                          0 ,      0 ,       \ width height
-                     h# 280 , h# 1e0 ,
-                     h#  a0 , h#  78 ,
-                     h#  b0 , h#  90 ,
-                     h# 140 , h#  f0 ,
-                     h# 160 , h# 120 ,
-                     h# 320 , h# 258 ,
-                     h# 500 , h# 2d0 ,
-
 0 value hint
 5 value frame-idx
 h# 160 value width
 h# 120 value height
 width height * 2* value /frame      \ 16-bit per pixel
 
-create samsung-alt-array
-                        0 , h#   c0 , h#  180 , h#  200 ,
-                  h#  280 , h#  320 , h#  3b0 , h#  a80 ,
-                  h#  b20 , h#  be0 , h# 1380 , h# 13fc ,
-
-['] samsung-frame-array to frame-array   \ Comment these 2 lines to use
-['] samsung-alt-array   to alt-array     \ descriptor info
-
-\ Make sure the alt interface's endpoint and maxpayload matches
 d#    5 value alt-interface
 h#  320 value /payload
 d#  256 value #payload
@@ -82,13 +63,13 @@ d#  256 value #payload
 external
 : set-frame  ( idx -- )
    dup to frame-idx
-   /n * 2* frame-array +  dup  @  to width   na1+ @  to height
-   width height * 2* to /frame
+   frame-array@ 2dup  to height  to width
+   * bytes/pixel * to /frame
 ;
 
 : set-alt  ( idx -- )
    dup to alt-interface
-   alt-array swap na+ @ dup to /payload
+   alt-array@ dup to /payload
    dup h# 7ff and swap d# 11 >> 1+ * to /xlen
 ;
 
@@ -108,8 +89,6 @@ external
 
 : init-stream
    \ Make sure the alt interface's endpoint and maxpayload matches
-   1 to iso-in-pipe        \ Remove when init is properly done
-   1 to iso-in-interval    \ Remove when init is properly done
    /payload iso-in-pipe set-pipe-maxpayload
    #payload iso-in-pipe iso-in-interval init-iso-in
    vs-interface alt-interface set-interface  if  abort" Failed to set alternate interface"  then
@@ -118,34 +97,34 @@ external
 ;
 headers
 
-\ Algorithm for selecting a particular alternate interface and the corresponding
-\ uncompressed resolution:
+\ Algorithm for selecting a particular alternate interface and
+\ the corresponding uncompressed resolution:
 \
-\ Empirically, when the webcam sends a video line of data out at a time,
-\ ofw can process the video data reasonably well.
+\ Empirically, when the webcam sends a video line of data out at
+\ a time, ofw can process the video data reasonably well.
 \
-\ Thus, choose the largest payload bandwidth without employing MULT.
-\ Then, choose a best match video resolution.
+\ Thus, choose a video highest resolution that satisfy:
+\   width*byte/pixel+c < h# 400
+\ Then, choose a best match alternate interface
 
+h# 400 constant MAX_PAYLOAD
 0 value twidth
 0 value tidx
 : select-alt  ( -- idx )
    0 to tidx
-   0 to twidth
-   #alt 1  do
-      i alt-array@ dup h# f800 and  if
-         drop
-      else
-         dup twidth >  if  to twidth  i to tidx  else  drop  then
-      then
+   MAX_PAYLOAD to twidth
+   #alt 1+ 1  do
+      i alt-array@ dup h# 7ff and swap d# 11 >> 1+ *
+      dup width bytes/pixel * h# c + twidth between
+      if  to twidth  i to tidx  else  drop  then
    loop  tidx
 ;
 : select-frame  ( -- idx )
    0 to twidth
    0 to tidx
-   #fdesc 1  do
+   #fdesc 1+ 1  do
       i frame-array@ drop
-      dup bytes/pixel * h# c +  /xlen <=  if
+      dup bytes/pixel * h# c +  MAX_PAYLOAD <  if
          dup twidth >  if  to twidth  i to tidx  else  drop  then
       else
          drop
@@ -154,11 +133,15 @@ headers
 ;
 
 : set-params  ( -- )
-   ['] farray to frame-array
-   ['] iarray to alt-array
-
-   select-alt   set-alt
    select-frame set-frame
+   select-alt   set-alt
+;
+
+: int-property  ( n name$ -- )  rot encode-int  2swap property  ;
+: make-properties  ( -- )
+   iso-in-pipe     " iso-in-pipe"     int-property
+   iso-in-interval " iso-in-interval" int-property
+   /payload        " iso-in-size"     int-property
 ;
 
 : get-next-payload  ( -- len )
@@ -235,8 +218,9 @@ external
 
 : init   ( -- )
    init device set-target
-   ( init-params )
-   ( set-params )
+   init-params
+   set-params
+   make-properties
 ;
 
 0 value selftest-adr

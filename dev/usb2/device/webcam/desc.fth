@@ -23,14 +23,14 @@ d# 32 constant MAX_ALT_DESC       \ Maximum number of alternate interface descri
 d# 32 constant MAX_FRAME_DESC     \ Maximum number of frame descriptors/format
 0 value #fdesc                    \ Number of uncompressed frame descriptors
 0 value #alt                      \ Number of alternate interface descriptors
-MAX_FRAME_DESC /n* 2* buffer: farray  \ Array of width and height per frame
-MAX_ALT_DESC   /n*    buffer: iarray  \ Array of /payload per alternate interface
+MAX_FRAME_DESC /n* 2* buffer: frame-array  \ Array of width and height per frame
+MAX_ALT_DESC   /n*    buffer: alt-array  \ Array of /payload per alternate interface
 
 : #fdesc!  ( idx -- )  #fdesc max to #fdesc  ;
 : #alt!    ( idx -- )  #alt   max to #alt    ;
-: alt-array!    ( l idx -- )    /n* iarray + !  ;
-: alt-array@    ( idx -- l )    /n* iarray + @  ;
-: frame-array!  ( w h idx -- )  /n* 2* farray + tuck na1+ !  !  ;
+: alt-array!    ( l idx -- )    /n* alt-array + !  ;
+: alt-array@    ( idx -- l )    /n* alt-array + @  ;
+: frame-array!  ( w h idx -- )  /n* 2* frame-array + tuck na1+ !  !  ;
 : frame-array@  ( idx -- width height )  /n* 2* frame-array + dup @ swap na1+ @  ;
 
 : process-vc  ( idx -- )
@@ -40,7 +40,7 @@ MAX_ALT_DESC   /n*    buffer: iarray  \ Array of /payload per alternate interfac
 ;
 
 : process-vs-desc  ( adr -- adr' )
-   farray MAX_FRAME_DESC /n* 2* erase
+   frame-array MAX_FRAME_DESC /n* 2* erase
    begin  dup desc-buf-end <>  while            ( adr )
       dup 1+ c@  h# 24 <>  if  exit  then  \ CS_INTERFACE
       dup 2 + c@  case
@@ -59,24 +59,24 @@ MAX_ALT_DESC   /n*    buffer: iarray  \ Array of /payload per alternate interfac
 ;
 
 : process-alt-desc  ( idx adr -- )
-   iarray MAX_ALT_DESC /n* erase           ( idx adr )
+   alt-array MAX_ALT_DESC /n* erase        ( idx adr )
    begin  dup desc-buf-end <>  while       ( idx adr )
       dup 1+ c@ 4 =  if                    ( idx adr )
          2dup 2 + c@ =  if		   \ Alternate INTERFACE descriptor
             dup 3 + c@ dup #alt!           ( idx adr alt )
-            swap c@ +                      ( idx alt adr' )
+            swap dup c@ +                  ( idx alt adr' )
             dup 1+ c@ 5 =  if              \ Endpoint descriptor
                tuck 4 + le-w@ swap alt-array! ( idx adr )
                dup 3 + c@ 1 and 0=  if  abort" Expect isochronous endpoint"  then
                dup 2 + c@ h# f and         ( idx adr pipe )
-               dup 6 + c@                  ( idx adr pipe interval )
+               over 6 + c@                 ( idx adr pipe interval )
                2 pick 2 + c@ h# 80 and
                if  to iso-in-interval to iso-in-pipe  else  to iso-out-interval to iso-out-pipe  then
             then
          then
       then
       dup c@ +
-   repeat  drop
+   repeat  2drop
 ;
 
 : process-vs  ( idx -- )
