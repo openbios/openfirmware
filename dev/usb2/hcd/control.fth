@@ -87,7 +87,7 @@ external
    >r 0 0 0 r> DR_DEVICE DR_OUT or SET_CONFIGURATION control-set 
 ;
 
-: set-interface  ( alt intf -- usberr )
+: set-interface  ( intf alt -- usberr )
    0 0 2swap DR_INTERFACE DR_OUT or SET_INTERFACE control-set
 ;
 
@@ -107,6 +107,7 @@ headers
 : (unstall-pipe)  ( pipe -- )  0 DR_ENDPOINT clear-feature drop  ;
 ' (unstall-pipe) to unstall-pipe
 
+external
 : get-cfg-desc  ( adr idx -- actual )
    swap >r					( idx )  ( R: adr )
    r@ 9 0 3 pick CONFIGURATION DR_DEVICE get-desc nip 0=  if
@@ -115,6 +116,8 @@ headers
       r> 2drop 0				( actual )
    then
 ;
+headers
+
 : get-dev-desc  ( adr len -- actual )
    0 0 DEVICE DR_DEVICE get-desc drop		( actual )
 ;

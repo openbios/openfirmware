@@ -60,6 +60,7 @@ DR_CLASS DR_INTERFACE or constant DR_HIDD
 03 constant STRING
 04 constant INTERFACE
 05 constant ENDPOINT
+0b constant INTERFACE_ASSO
 29 constant HUB
 
 \ Hub Class Feature Selectors (dr-value)

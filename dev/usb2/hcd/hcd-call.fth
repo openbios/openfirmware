@@ -35,6 +35,9 @@ external
 : refresh-desc-bufs  ( dev -- )
    " refresh-desc-bufs" $call-parent
 ;
+: get-cfg-desc  ( adr idx -- actual )
+   " get-cfg-desc" $call-parent
+;
 
 \ Control pipe operations
 : control-get  ( adr len idx value rtype req -- actual usberr )
@@ -55,7 +58,7 @@ external
 : set-config  ( cfg -- usberr )
    " set-config" $call-parent
 ;
-: set-interface  ( alt intf -- usberr )
+: set-interface  ( intf alt -- usberr )
    " set-interface" $call-parent
 ;
 : clear-feature  ( intf/endp feature rtype -- usberr )
@@ -109,7 +112,6 @@ external
    " wait-out" $call-parent
 ;
 
-
 \ Interrupt pipe operations
 : begin-intr-in  ( buf len pipe interval -- )
    " begin-intr-in" $call-parent
@@ -130,8 +132,6 @@ external
 : reset?  ( -- flag )
    " reset?" $call-parent
 ;
-
-
 
 headers
 

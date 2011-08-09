@@ -456,6 +456,12 @@ bptr-ofs-mask invert constant bptr-mask		\ Buffer Pointer mask
 \ Empirically, the 4 ms poll interval works optimally with the usb keyboard.
 \ ---------------------------------------------------------------------------
 
+\ Isochronous count
+0 value #iso
+: #iso++  ( -- )  #iso 1+ to #iso  ;
+: #iso--  ( -- )  #iso 1- to #iso  ;
+
+\ Interrupt count
 0 value #intr
 d# 32 constant intr-interval		\ 4 ms poll interval
 
@@ -493,7 +499,7 @@ d# 32 constant intr-interval		\ 4 ms poll interval
    speed-high =  if  h# 0020  else  h# 1c01  then
    over >hcqh-endp-cap dup le-l@ rot or swap le-l!
    ( qh ) #framelist 0 do  dup i (insert-intr-qh)  intr-interval +loop  drop
-   #intr 0=  if  enable-periodic  then
+   #intr #iso or  0=  if  enable-periodic  then
    #intr++
 ;
 
@@ -514,7 +520,7 @@ d# 32 constant intr-interval		\ 4 ms poll interval
 : remove-intr-qh  ( qh -- )
    #intr--
    ( qh ) #framelist 0  do  dup i (remove-intr-qh)  intr-interval +loop  drop
-   #intr 0=  if  disable-periodic  then
+   #intr #iso or  0=  if  disable-periodic  then
 ;
 
 \ ---------------------------------------------------------------------------

@@ -25,6 +25,8 @@ fload ${BP}/dev/usb2/hcd/hcd-call.fth		\ HCD interface
 
 0 value iso-in-pipe
 0 value iso-out-pipe
+0 value iso-in-interval
+0 value iso-out-interval
 0 value /iso-in-pipe
 0 value /iso-out-pipe
 

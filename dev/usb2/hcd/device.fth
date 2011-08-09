@@ -38,17 +38,26 @@ defer make-dev-property-hook  ( speed dev port -- )
 ;
 
 : dev-desc@  ( index -- byte )  dev-desc-buf + c@  ;
+: asso-class?  ( -- asso? )
+   4 dev-desc@ h# ef =  5 dev-desc@ 2 =  and  6 dev-desc@ 1 =  and
+;
 : get-class  ( -- class subclass protocol )
-   4 dev-desc@ ?dup  if			( class )
+   asso-class?  if
+      \ Class is in interface association descriptor
+      true to class-in-dev?
+      cfg-desc-buf INTERFACE_ASSO find-desc	( intf-adr )
+      >r  r@ 4 + c@  r@ 5 + c@   r> 6 + c@	( class subclass protocol )
+   else
+   4 dev-desc@ ?dup  if			        ( class )
       \ Class is in device descriptor
       true to class-in-dev?			( class )
       5 dev-desc@  6 dev-desc@			( class subclass protocol )
-   else						( )
+   else
       \ Class is in interface descriptor
-      false to class-in-dev?			( )
+      false to class-in-dev?
       cfg-desc-buf my-address find-intf-desc	( intf-adr )
       >r  r@ 5 + c@  r@ 6 + c@   r> 7 + c@	( class subclass protocol )
-   then
+   then  then
 ;
 
 : make-class-properties  ( -- )
@@ -410,7 +419,8 @@ h# 409 constant language  			\ Unicode id
 : make-device-node  ( port dev -- )
    dup " get-initial-descriptors" my-self $call-method	( port dev )
    /cfg-desc-buf 0=  if  2drop  exit  then		( port dev )
-   cfg-desc-buf 4 + c@ 0  ?do				( port dev )
+   asso-class?  if  1  else  cfg-desc-buf 4 + c@  then  ( port dev #intf )
+   0  ?do				                ( port dev )
       dup " refresh-desc-bufs" my-self $call-method	( port dev )
       2dup swap i (make-device-node)			( port dev )
    loop  2drop						( )

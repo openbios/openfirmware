@@ -14,6 +14,7 @@ fload ${BP}/dev/usb2/hcd/ehci/qhtd.fth		\ EHCI QH & qTD manipulations
 fload ${BP}/dev/usb2/hcd/ehci/control.fth	\ EHCI control pipe operations
 fload ${BP}/dev/usb2/hcd/ehci/bulk.fth		\ EHCI bulk pipes operations
 fload ${BP}/dev/usb2/hcd/ehci/intr.fth		\ EHCI interrupt pipes operations
+fload ${BP}/dev/usb2/hcd/ehci/iso.fth		\ EHCI isochronous operations
 fload ${BP}/dev/usb2/hcd/control.fth		\ Common control pipe API
 
 \ EHCI usb bus probing stuff
