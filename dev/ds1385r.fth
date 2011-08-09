@@ -39,6 +39,13 @@ headerless
 h# 80 constant battery-error-bit
 [then]
 
+\ Make sure that the RTC is ticking
+: check-tick  ( -- error? )
+   0 rtc@  d# 1100 ms  0 rtc@  = dup  if
+      ." RTC did not tick" cr
+   then
+;
+
 \ make sure that the battery is charged - reg D/13 should be 80x
 : check-battery  ( -- error? )
 
@@ -149,6 +156,7 @@ headers
 : selftest  ( -- flag )
    open drop
    check-battery  \ Don't display the message here because "open" will do it
+   check-tick or
    close
 ;
 
