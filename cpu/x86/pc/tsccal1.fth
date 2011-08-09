@@ -24,7 +24,12 @@ code calibrate-loop  ( -- tscdelta )
       al ah mov
       h# 40 # al in
       al ah xchg
-      d# 5 #  ax  cmp
+      \ The number 10 below gives a sufficient window to ensure that a count
+      \ value in the range from 0 to 9 is seen.  The process of latching the
+      \ timer and reading the value is time-consuming because I/O port access
+      \ is slow, comparable to the clock that drives the ticker.  For many
+      \ systems, a value of 5 is enough, but I have seen systems that need 8.
+      d# 10 #  ax  cmp
    < until
    
    h# f c,  h# 31 c,	\ Get time-stamp counter value into DX,AX
