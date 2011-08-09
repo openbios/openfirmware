@@ -15,10 +15,8 @@ dev /memory
    \ for use as DMA memory.
    mem-info-pa 2 la+ l@   h# a.0000  release-range  \ Below DOS hole
 
-   fw-pa h# 10.0000 u>  if
-      h# 10.0000   fw-pa over -  release
-      fw-pa /fw-ram +  heap-base heap-size +  umax  /ram  release
-   then
+   h# 10.0000  fw-pa  release-range
+   fw-pa /fw-ram +  heap-base heap-size +  umax  usable-ramtop  release-range
 ;
 
 [ifndef] 8u.h

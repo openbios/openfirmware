@@ -46,23 +46,14 @@ warning on
 
 : dummy-test-dev  ( $ -- )
    clear-n-restore-scroller
-   ??cr  ." Testing " type ."  in the future" cr
+   ??cr  ." Testing " type ."  - to be implemented" cr
    mfg-color-green sq-border!
    d# 2000 hold-message
    cursor-off  gui-alerts  refresh
    flush-keyboard
 ;
 
-: mfg-test-dev  ( $ -- )
-   clear-n-restore-scroller
-   ??cr  ." Testing " 2dup type cr
-   locate-device  if
-      ." Can't find device node" cr
-      flush-keyboard
-      mfg-wait-return
-      exit
-   then                                              ( phandle )
-   " selftest" rot execute-phandle-method            ( return abort? )
+: mfg-test-result  ( return abort? -- )
    if
       ?dup  if
          ??cr ." Selftest failed. Return code = " .d cr
@@ -89,6 +80,32 @@ warning on
    then
    cursor-off  gui-alerts  refresh
    flush-keyboard
+;
+: mfg-test-dev  ( $ -- )
+   clear-n-restore-scroller
+   ??cr  ." Testing " 2dup type cr
+   locate-device  if
+      ." Can't find device node" cr
+      flush-keyboard
+      mfg-wait-return
+      exit
+   then                                              ( phandle )
+   " selftest" rot execute-phandle-method            ( return abort? )
+   mfg-test-result
+;
+: mfg-test-disk  ( name$ -- )
+   clear-n-restore-scroller
+   ??cr  ." Testing " 2dup type cr
+
+   ['] $.partitions  catch  if
+      2drop false
+   else
+      0 true
+   then
+
+   d# 2000 ms  \ More time to inspect
+
+   mfg-test-result
 ;
 
 : draw-error-border  ( -- )
@@ -164,15 +181,16 @@ icon: leds.icon     rom:leds.565
       pass? 0= if  unloop exit  then
    loop
    all-tests-passed
-;         
+;
+
 : quit-item     ( -- )  menu-done  ;
 : cpu-item      ( -- )  " /cpu"       mfg-test-dev  ;
 : battery-item  ( -- )  " /battery"   dummy-test-dev  ;
-: spiflash-item ( -- )  " /flash"     dummy-test-dev  ;
+: spiflash-item ( -- )  " /flash"     mfg-test-dev  ;
 : memory-item   ( -- )  " /memory"    mfg-test-dev  ;
 : usb-item      ( -- )  " /usb"       mfg-test-dev  ;
-: int-sd-item   ( -- )  " disk:0"     dummy-test-dev  ;
-: ext-sd-item   ( -- )  " ext:0"      mfg-test-dev  ;
+: int-sd-item   ( -- )  " disk"       mfg-test-disk  ;
+\ : ext-sd-item   ( -- )  " ext:0"      mfg-test-dev  ;
 : rtc-item      ( -- )  " /rtc"       mfg-test-dev  ;
 : display-item  ( -- )  " screen"     mfg-test-dev  ;
 : audio-item    ( -- )  " /audio"     dummy-test-dev  ;

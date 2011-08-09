@@ -61,7 +61,7 @@ d# 12   to pageshift
 dev /
 1 encode-int  " #address-cells"  property
 1 encode-int  " #size-cells"     property
-" Generic PC" model
+" Samsung Alex Chromebook" model
 " PC" encode-string  " architecture" property
 
 \ XXX figure out bus frequency.  How?
@@ -81,6 +81,7 @@ fload ${BP}/ofw/core/availpm.fth	\ Available memory list
 fload ${BP}/ofw/core/allocmor.fth	\ Secondary allocator
 
 fload ${BP}/cpu/x86/pc/rootnode.fth	\ Platform-specific root node changes
+dev /  " Samsung Alex Chromebook" " banner-name"  string-property  dend
 
 fload ${BP}/cpu/x86/pc/isaio.fth
 fload ${BP}/dev/pci/configm1.fth	\ Generic PCI configuration access
@@ -259,8 +260,6 @@ warning !
 
 : startup  ( -- )
    standalone?  0=  if  exit  then
-   ." calibrate-ms"  cr
-   calibrate-ms
 
     ." nvramrc" cr
     use-nvramrc?  if  nvramrc safe-evaluate  then
@@ -277,20 +276,16 @@ warning !
    warning on
    only forth also definitions
 
-   ." Installing alarms" cr
    install-alarm
 
    #line off
 
-   ." Open Firmware demonstration version by FirmWorks (info@firmworks.com)" cr
+   ." Open Firmware demonstration version by FirmWorks" cr
 
-[ifdef] linux-support
    ." See "
-   blue-letters ." http://www.firmworks.com/linux/demo.html" black-letters
+   blue-letters ." http://wiki.laptop.org/go/Forth_Lessons" black-letters
    cr cr
 
-   ." Type 'help-linux' to learn about Linux loading options" cr
-[then]
    quit
 ;
 

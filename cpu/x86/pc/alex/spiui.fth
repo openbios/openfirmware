@@ -149,6 +149,8 @@ defer fw-filename$  ' null$ to fw-filename$
 dev /flash
 : selftest  ( -- error? )
    .cbfs
+   d# 2000 ms  \ More time to inspect
+   false
 ;
 device-end
 

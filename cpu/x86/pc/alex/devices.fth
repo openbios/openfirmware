@@ -112,6 +112,7 @@ stand-init: RTC
 
 fload ${BP}/cpu/x86/pc/cpunode.fth
 fload ${BP}/cpu/x86/k6cputest.fth       \ Burnin test for K6 CPU
+dev /cpu  1 to default#passes  dend
 
 fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
 fload ${BP}/forth/lib/pattern.fth	\ Text string pattern matching
@@ -124,6 +125,7 @@ fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
    fload ${BP}/dev/intel/graphics/pineview.fth
    alias  /scanline  bytes/line
    fload ${BP}/dev/video/common/rectangle16.fth
+   alias color! 4drop
 end-package
 devalias screen /pci/display@2,0	\ Explicit, because it's not probed
 
@@ -181,6 +183,7 @@ fload ${BP}/cpu/x86/pc/reset.fth	\ reset-all
 
 fload ${BP}/cpu/x86/pc/alex/spiui.fth   \ User interface for SPI FLASH programming
 : urom  ( -- )  " flash! u:\alex.rom" evaluate  ;
+: netrom  ( -- )  " flash! http:\\10.20.0.105\alex.rom" evaluate  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks
