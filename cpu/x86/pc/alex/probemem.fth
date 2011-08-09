@@ -21,6 +21,24 @@ dev /memory
    then
 ;
 
+[ifndef] 8u.h
+: 8u.h  ( n -- )  push-hex (.8) type pop-base  ;
+[then]
+: .chunk  ( adr len -- )  ." Testing memory at: " swap 8u.h ."  size " 8u.h cr  ;
+defer test-s3  ( -- error? )  ' false is test-s3
+: selftest  ( -- error? )
+   " available" get-my-property  if  ." No available property" cr true exit  then
+                                         ( adr len )
+   begin  ?dup  while
+      2 decode-ints swap                 ( rem$ chunk$ )
+      2dup .chunk                        ( rem$ chunk$ )
+      \ We maintain a 1-1 convenience mapping so explicit mapping is unnecessary
+      memory-test-suite  if  2drop true exit  then       ( rem$ )
+   repeat  drop
+
+   test-s3
+;
+
 device-end
 
 also forth definitions
