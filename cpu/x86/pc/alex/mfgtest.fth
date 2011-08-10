@@ -203,6 +203,7 @@ icon: leds.icon     rom:leds.565
 : leds-item     ( -- )  " /leds"      mfg-test-dev  ;
 
 : olpc-menu-items  ( -- )
+   silent-probe-usb
    clear-menu
 
    1 0 set-col-row

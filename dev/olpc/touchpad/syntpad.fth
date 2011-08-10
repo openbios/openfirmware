@@ -166,6 +166,9 @@ false value right-hit?
    fill-rectangle-noff                      ( )
 ;
 
+: restore-bg  ( -- )
+   background  0 0  screen-w screen-h  fill-rectangle-noff
+;
 : background  ( -- )
    black  0 0  screen-w screen-h  fill-rectangle-noff
    final-test?  if
@@ -174,7 +177,7 @@ false value right-hit?
       draw-left-target
       draw-right-target
    else
-      0 d# 27 at-xy  ." Touchpad test.  Both buttons clears screen.  Type a key to exit" cr
+      0 d# 27 at-xy  ." Touchpad test.  Both buttons clears screen.  Type a key to exit"
    then
    mouse-xy dot
 ;
@@ -261,7 +264,7 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    then
    close
    cursor-on
-   page
+   restore-bg page
    final-test?  if  selftest-failed?  else  false  then
 ;
 

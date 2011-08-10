@@ -299,7 +299,7 @@ alias /pix* /w*
 : restore-scroller-white  ( -- )  0 f  (restore-scroller)  ;
 headers
 defer restore-scroller
-' restore-scroller-white to restore-scroller
+' restore-scroller-bg to restore-scroller
 
 defer do-title  ' noop to do-title
 headerless
@@ -532,7 +532,7 @@ defer root-menu  ' noop to root-menu
 
    ['] root-menu ['] nest-menu catch drop
 
-   f			( color )
+   background		( color )
    0 0			( color x y )
    screen-wh		( color x y w y )
    fill-rectangle-noff	( )

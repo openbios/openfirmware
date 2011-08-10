@@ -3,17 +3,17 @@ purpose: Null diagnostic UART driver
 
 : inituarts  ( -- )  ;
 : ukey?  ( -- flag )  false  ;
-: uemit?  ( -- flag )  false  ;
+: uemit?  ( -- flag )  true  ;
 : uemit  ( char -- )  drop  ;
-: ukey  ( -- char )  drop  ;
+: ukey  ( -- char )  0  ;
 : ubreak?  ( -- flag )  false  ;
 : clear-break  ( -- )  ;
 
 : install-uart-io  ( -- )
    ['] lf-pstr          is newline-pstring
-   ['] false            is key?
-   ['] 0                is (key
-   ['] drop             is (emit
+   ['] ukey?            is key?
+   ['] ukey              is (key
+   ['] uemit             is (emit
    ['] default-type     is (type
    ['] emit1            is emit
    ['] type1            is type
