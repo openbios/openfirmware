@@ -1,6 +1,15 @@
 \ See license at end of file
 purpose: Recalibrate DDR3 DRAM
 
+\ DDR3 DRAM requires periodic recalibration to cope with parameter drift from
+\ temperature variation.  The recalibration below affects both the DLL and
+\ the "ZQ" driver strength.
+
+\ DDR3 recalibration will cause the display to glitch if done during display DMA.
+\ The glitch can be avoided by doing the recal just after display frame done.
+\ For example (from inside the screen driver):
+\   : wait-frame-done  0 1c4 lcd!  begin 1c4 lcd@ cc00.0000 tuck and = until  ;
+
 \ This code must be executed from SRAM because it touches the DRAM memory controller
 label ddr-recal  ( r0: memctrl-va -- )
    mov   r1, #0x80000000       \ PHY Sync Enable (WO) - Synchronize dclk2x and dclk in the PHY
