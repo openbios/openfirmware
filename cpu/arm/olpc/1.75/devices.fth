@@ -390,6 +390,8 @@ stand-init: More memory
 
 fload ${BP}/cpu/arm/mmp2/thermal.fth
 
+fload ${BP}/cpu/arm/mmp2/dramrecal.fth
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
 \ 
