@@ -192,6 +192,9 @@ fload ${BP}/dev/intel/spi.fth               \ SPI FLASH programming
 
 fload ${BP}/cpu/x86/pc/reset.fth	\ reset-all
 
+fload ${BP}/dev/acpiec.fth              \ Access to ACPI EC internal variables
+fload ${BP}/cpu/x86/pc/alex/ec.fth      \ Battery, AC, CPU temperature, Fan controls
+
 : ?enough-power  ;                      \ Implement based on AC presence and battery status
 
 fload ${BP}/cpu/x86/pc/alex/spiui.fth   \ User interface for SPI FLASH programming
