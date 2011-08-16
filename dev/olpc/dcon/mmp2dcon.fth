@@ -1,6 +1,11 @@
 \ See license at end of file
 \ " dcon" device-name
 
+new-device
+" dcon" device-name
+" olpc,xo1-dcon" +compatible
+finish-device
+
 \ DCON internal registers, accessed via I2C
 \ 0 constant DCON_ID
 \ 1 constant DCON_MODE
@@ -52,15 +57,13 @@
 : dcon-unload  ( -- )  d# 142 gpio-clr  ;
 [then]
 \ : dcon-blnk?  ( -- flag )  ;  \ Not hooked up
-: dcon-stat@  ( -- n )  h# d4019100 l@ 4 rshift 3 and  ;
+: dcon-stat@  ( -- n )  h# 019100 io@ 4 rshift 3 and  ;
 : dcon-irq?  ( -- flag )  d# 124 gpio-pin@  0=  ;
 
 \ DCONSTAT values:  0 SCANINT  1 SCANINT_DCON  2 DISPLAYLOAD  3 MISSED
 
 1 value vga? \ VGA
 0 value color? \ COLOUR
-
-\ : gxfb!  ( l offset -- )  gxfb-dc-regs +  rl!  ;  \ Probably should be IO mapped
 
 d# 905 value resumeline  \ Configurable; should be set from args
 
@@ -99,7 +102,6 @@ d# 905 value resumeline  \ Configurable; should be set from args
       dcon-load  \ Put the DCON in VGA-refreshed mode
       d# 25 ms   \ Ensure that that DCON sees the DCONLOAD high
 \      display-on
-[ifdef] notdef
    else
       begin                             ( )
          dcon-unload  \ Put the DCON in self-refresh mode
@@ -109,7 +111,6 @@ d# 905 value resumeline  \ Configurable; should be set from args
          \ We got a false ack from the DCON so start over from LOAD state
          dcon-load  d# 25 ms            ( )
       repeat                            ( )
-[then]
    then
 ;
 
