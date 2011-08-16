@@ -108,7 +108,6 @@ c;
    ['] (quit) to user-interface
 ;
 ps-buf drop rs-buf drop
-: foo   boot-as-call(  emacs  )boot-as-call  cr ." Hello" cr ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
