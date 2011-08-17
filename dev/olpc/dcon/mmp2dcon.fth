@@ -1,10 +1,27 @@
 \ See license at end of file
 \ " dcon" device-name
 
+also forth definitions
+: has-dcon-ram?  ( -- flag )
+   board-revision h# 1b18 =  if  true exit  then
+   board-revision h# 1b48 >=  if  true exit  then
+   false
+;
+previous definitions
+
 new-device
 " dcon" device-name
 " olpc,xo1-dcon" +compatible
+" olpc,xo1.75-dcon" +compatible
 finish-device
+
+stand-init:
+   has-dcon-ram?  0=  if
+      " /dcon? find-device
+      0 0 " no-freeze" property
+      device-end
+   then
+;
 
 \ DCON internal registers, accessed via I2C
 \ 0 constant DCON_ID
@@ -103,14 +120,16 @@ d# 905 value resumeline  \ Configurable; should be set from args
       d# 25 ms   \ Ensure that that DCON sees the DCONLOAD high
 \      display-on
    else
-      begin                             ( )
-         dcon-unload  \ Put the DCON in self-refresh mode
-         lock[ wait-dcon-mode ]unlock   ( retry? )
-\        display-off                    ( retry? )
-      while                             ( )
-         \ We got a false ack from the DCON so start over from LOAD state
-         dcon-load  d# 25 ms            ( )
-      repeat                            ( )
+      has-dcon-ram?  if
+         begin                             ( )
+            dcon-unload  \ Put the DCON in self-refresh mode
+            lock[ wait-dcon-mode ]unlock   ( retry? )
+            \        display-off           ( retry? )
+         while                             ( )
+            \ We got a false ack from the DCON so start over from LOAD state
+            dcon-load  d# 25 ms            ( )
+         repeat                            ( )
+      then
    then
 ;
 
