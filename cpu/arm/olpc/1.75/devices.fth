@@ -363,6 +363,7 @@ warning @ warning off
       model-name$   2dup model     ( name$ )
       " OLPC " encode-bytes  2swap encode-string  encode+  " banner-name" property
       board-revision " board-revision-int" integer-property
+      " olpc,xo-1.75" " compatible" string-property
 
       \ The "1-" removes the null byte
       " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
