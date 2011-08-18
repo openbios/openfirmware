@@ -13,7 +13,7 @@ defer show-status
 ' type to show-status
 
 : bits-run  ( adr len pattern -- fail? )
-   dup .x  ." pattern ... "
+   "  "  show-status dup .x  ." pattern    "
    3dup lfill            ( adr len pattern )
    3dup lskip            ( adr len pattern residue )
    dup  if               ( adr len pattern residue )
@@ -22,12 +22,11 @@ defer show-status
       dup l@ .x  ." at " .x  cr   ( )
       true
    else                  ( adr len pattern residue )
-      ." passed"  cr     ( adr len pattern residue )
+      ." passed"         ( adr len pattern residue )
       4drop false
    then
 ;
 : mem-bits-test  ( membase memsize -- fail-status )
-   "     Data bits test" show-status
    2dup h# aaaaaaaa bits-run  if  true exit  then
    h# 55555555 bits-run
 ;
@@ -63,7 +62,7 @@ c;
       ." FAILED - got " .x ." at " .x cr
       true
    else
-      ." passed" cr
+      ." passed"
       false
    then
 ;

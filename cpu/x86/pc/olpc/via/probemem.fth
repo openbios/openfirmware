@@ -78,19 +78,34 @@ dev /memory
 [ifndef] 8u.h
 : 8u.h  ( n -- )  push-hex (.8) type pop-base  ;
 [then]
-: .chunk  ( adr len -- )  ." Testing memory at: " swap 8u.h ."  size " 8u.h cr  ;
+: .chunk  ( adr len -- )  ." Testing address 0x" swap 8u.h ."  length 0x" 8u.h cr  ;
+
 defer test-s3  ( -- error? )  ' false is test-s3
+false to do-random-test?  \ The random test takes a long time
+
+: show-line  ( adr len -- )  (cr type  3 spaces  kill-line  ;
+' show-line to show-status
+
 : selftest  ( -- error? )
-   " available" get-my-property  if  ." No available property" cr true exit  then
+   " available" get-my-property  if      ( )
+     ." No available property in memory node" cr  ( )
+     true exit                           ( -- true )
+   then                                  ( adr len )
 					 ( adr len )
-   begin  ?dup  while
+   begin  dup  while                     ( rem$ )
       2 decode-ints swap		 ( rem$ chunk$ )
       2dup .chunk			 ( rem$ chunk$ )
       \ We maintain a 1-1 convenience mapping so explicit mapping is unnecessary
-      memory-test-suite  if  2drop true exit  then	 ( rem$ )
-   repeat  drop
+      memory-test-suite  if                ( rem$ )
+         2drop                             ( )
+         "     !!Failed!!" show-status  cr ( )
+        true exit                          ( -- true )
+      else                                 ( rem$ )
+         "     Succeeded" show-status  cr  ( rem$ )
+      then                                 ( rem$ )
+   repeat  2drop                           ( )
 
-   test-s3
+   test-s3                                 ( )
 ;
 
 device-end

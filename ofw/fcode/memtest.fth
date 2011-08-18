@@ -398,6 +398,7 @@ nuser suite-failed
    then
 ;
 headers
+true value do-random-test?
 : memory-test-suite  ( membase memsize -- status )
    suite-failed off
 
@@ -410,7 +411,9 @@ headers
 \ Don't do the mats test, because I'm not convinced that it is useful
 \       2dup h# a5a5a5a5  mats-test  ?suite-failed   ( membase memsize )
 [ifdef] random-test
-      2dup random-test  ?suite-failed         ( membase memsize )
+      do-random-test?  if
+         2dup random-test  ?suite-failed      ( membase memsize )
+      then
 [then]
    then                                       ( membase memsize )
    2drop
