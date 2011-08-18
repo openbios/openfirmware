@@ -229,7 +229,7 @@ external
          ascii , left-parse-string                      ( list$' dev#$ )
          base @ >r decimal                              ( list$' dev#$ )
          $number  if  0  then                           ( list$' port# )
-	 r> base !                                      ( list$ port# )
+         r> base !                                      ( list$ port# )
          (hub-selftest)  if  drop true exit  then       ( list$ )
       repeat                                            ( list$ )
       2drop                                             ( )
