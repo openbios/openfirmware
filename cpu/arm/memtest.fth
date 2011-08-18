@@ -89,6 +89,7 @@ c;
 
    2dup afill  mask @ masked-atest
 ;
+
 code random-fill  ( adr len data index polynomial -- )
    ldmia sp!,{r1,r2,r3,r4}  \ tos:poly r1:index r2:data r3:len r4:adr
 
@@ -159,6 +160,7 @@ code random-check  ( adr len data index remain polynomial -- false | adr len dat
 
    mov tos,#0
 c;
+
 \ Polynomials for maximal length LFSRs for different bit lengths
 \ The values come from the Wikipedia article for Linear Feedback Shift Register and from
 \ http://www.xilinx.com/support/documentation/application_notes/xapp052.pdf
@@ -206,6 +208,7 @@ h# 80200003 ,      \    32 ffffffff
 defer .lfsr-mem-error
 : (.lfsr-mem-error)  ( adr len data index remain -- adr len data index remain )
    push-hex
+   ??cr
    ." Error at address "  4 pick  2 pick la+  dup 8 u.r  ( adr len data index remain err-adr )
    ."  - expected " 3 pick 8 u.r  ( adr len data index remain err-adr )
    ."  got " l@ 8 u.r cr
@@ -232,6 +235,7 @@ defer .lfsr-mem-error
    repeat                          ( r: polynomial )
    r> drop
 ;
+
 \ Not truly random - uses LFSR sequences
 : random-test  ( adr len -- error? )
    "     Random address and data test" show-status
