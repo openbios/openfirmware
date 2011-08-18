@@ -135,7 +135,7 @@ code ycbcr422>rgba8888  ( src dst count -- )
       8 [sp] dec
    0= until
 
-   d# 12 [sp]  sp  lea   \ Clean stack
-   0 [sp] di xchg    \ Restore EDI
-   4 [sp] si xchg    \ Restore ESI
+   d# 12 [sp]  sp  lea   \ Clean stack, removing Cr, Cb, and count values
+   di pop    \ Restore EDI
+   si pop    \ Restore ESI
 c;

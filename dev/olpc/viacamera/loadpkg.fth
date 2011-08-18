@@ -27,6 +27,7 @@ new-device
    " camera" device-name
    0 0 reg  \ A reg property makes "test-all" consider this device
    fload ${BP}/dev/olpc/viacamera/smbus.fth
+   fload ${BP}/dev/olpc/viacamera/ycrcbtorgb.fth
    fload ${BP}/dev/olpc/viacamera/camera.fth
 finish-device
 

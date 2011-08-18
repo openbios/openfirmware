@@ -30,6 +30,8 @@ h# 31 constant sccb-port
 
 \ ============================= camera operations =============================
 
+0 value use-ycrcb?
+
 false value ov7670-detected?
 
 : ((camera-init)  ( -- )
@@ -42,7 +44,7 @@ false value ov7670-detected?
    13 17 ov!			\ Horiz start high bits
    01 18 ov!			\ Horiz stop high bits
    b6 32 ov!			\ HREF pieces
-   0a 19 ov!			\ Vert start high bits
+   02 19 ov!			\ Vert start high bits  - !! 02
    7a 1a ov!			\ Vert stop high bits
    0a 03 ov!			\ GAIN, VSTART, VSTOP pieces
 
@@ -61,7 +63,8 @@ false value ov7670-detected?
 
    \ AGC and AEC parameters
    e0 13 ov!			\ Control 8
-   00 00 ov!			\ Gain lower 8 bits
+   00 00 ov!			\ Gain lower 8 bits  !! Linux then sets REG_AECH to 0
+   00 10 ov!
    40 0d ov!			\ Control 4 magic reserved bit
    18 14 ov!			\ Control 9: 4x gain + magic reserved bit
    05 a5 ov!			\ 50hz banding step limit
@@ -116,7 +119,7 @@ false value ov7670-detected?
    12 3b ov!			\ Control 11
    88 a4 ov!  00 96 ov!  30 97 ov!  20 98 ov!
    30 99 ov!  84 9a ov!  29 9b ov!  03 9c ov!
-   5c 9d ov!  3f 9e ov!  04 78 ov!
+   4c 9d ov!  3f 9e ov!  04 78 ov!
 
    \ Extra-weird stuff.  Some sort of multiplexor register
    01 79 ov!  f0 c8 ov!
@@ -134,7 +137,7 @@ false value ov7670-detected?
 
    \ OVT says that rewrite this works around a bug in 565 mode.
    \ The symptom of the bug is red and green speckles in the image.
-   01 11 ov!			\ 30 fps def 80
+\   01 11 ov!			\ 30 fps def 80  !! Linux doesn't do this
 ;
 
 : config-check  ( -- )
@@ -146,7 +149,7 @@ false value ov7670-detected?
    13 17 ovc			\ Horiz start high bits
    01 18 ovc			\ Horiz stop high bits
    b6 32 ovc			\ HREF pieces
-   ( 0a 19 ovc )		\ Vert start high bits
+   02 19 ovc			\ Vert start high bits
    7a 1a ovc			\ Vert stop high bits
    0a 03 ovc			\ GAIN, VSTART, VSTOP pieces
 
@@ -166,6 +169,7 @@ false value ov7670-detected?
    \ AGC and AEC parameters
    ( e0 13 ovc )		\ Control 8
    ( 00 00 ovc )		\ Gain lower 8 bits
+   ( 00 10 ovc )                \ Automatic exposure control 9:2
    40 0d ovc			\ Control 4 magic reserved bit
    ( 18 14 ovc )		\ Control 9: 4x gain + magic reserved bit
    05 a5 ovc			\ 50hz banding step limit
@@ -236,7 +240,7 @@ false value ov7670-detected?
 : init-rgb565  ( -- )
    04 12 ov!				\ VGA, RGB565
    00 8c ov!				\ No RGB444
-   40 04 ov!				\ Control 1: CCIR656 (CaFe value is 00)
+   00 04 ov!				\ Control 1: CCIR601 (H/VSYNC framing)
    10 40 ov!				\ RGB565 output
    38 14 ov!				\ 16x gain ceiling
    b3 4f ov!				\ v-red
@@ -246,6 +250,10 @@ false value ov7670-detected?
    a7 53 ov!				\ u-green
    e4 54 ov!				\ u-blue
    c0 3d ov!				\ Gamma enable, UV saturation auto adjust
+
+   \ OVT says that rewrite this works around a bug in 565 mode.
+   \ The symptom of the bug is red and green speckles in the image.
+   01 11 ov!			\ 30 fps def 80  !! Linux doesn't do this
 ;
 
 : read-agc  ( -- n )
@@ -270,7 +278,7 @@ false value ov7670-detected?
 
 : camera-config  ( -- )
    ((camera-init)
-   init-rgb565
+   use-ycrcb?  0=  if  init-rgb565  then
    d# 490 d# 10 d# 14 d# 158 set-hw	\ VGA window info
 ;
 
@@ -294,42 +302,9 @@ VGA_WIDTH VGA_HEIGHT * 2* constant /dma-buf
 : 'dma-buf       ( i -- virt )  /dma-buf * dma-bufs      +  ;
 : 'dma-buf-phys  ( i -- phys )  /dma-buf * dma-bufs-phys +  ;
 
-0 [if]
-: alloc-dma-bufs  ( -- )
-   dma-bufs 0=  if
-      /dma-buf #dma-bufs * dup dma-alloc dup to dma-bufs
-      swap false dma-map-in to dma-bufs-phys
-   then
-;
-: free-dma-bufs  ( -- )
-   dma-bufs ?dup  if
-      /dma-buf #dma-bufs 1+ * 2dup dma-bufs-phys swap dma-map-out
-      dma-free
-      0 to dma-bufs  0 to dma-bufs-phys
-   then
-;
+: temp-buf  ( -- adr )  #dma-bufs 'dma-buf  ;
 
-: setup-dma  ( -- )
-   #dma-bufs 0  do
-      i 'dma-buf-phys  2 or  i 4 *  340 + cl!	\ Capture frame buffers
-   loop
-;
-[else]
 
-[ifdef] notdef
-\ XXX Capture video to video memory only.  I don't know why I can't capture to
-\ XXX system memory.  I'm using an arbitrary offset into the video memory.
-
-h# 200.0000 constant capture-base
-
-: alloc-dma-bufs  ( -- )
-   dma-bufs 0=  if
-      capture-base dup frame-buffer-adr + to dma-bufs
-      to dma-bufs-phys
-   then
-;
-: free-dma-bufs  ( -- )  0 to dma-bufs 0 to dma-bufs-phys  ;
-[else]
 : alloc-dma-bufs  ( -- )
    dma-bufs 0=  if
       /dma-buf #dma-bufs *  " alloc-capture-buffer" $call-parent  to dma-bufs-phys  to dma-bufs
@@ -339,16 +314,14 @@ h# 200.0000 constant capture-base
    dma-bufs  dma-bufs-phys  /dma-buf #dma-bufs *  " free-capture-buffer" $call-parent
    0 to dma-bufs 0 to dma-bufs-phys
 ;
-[then]
+
 : setup-dma  ( -- )
    #dma-bufs 0  do
       i 'dma-buf-phys  340 i 4 * + cl!	\ Capture frame buffers
    loop
 ;
-[then]
 
-
-\ VGA RGB565
+\ VGA
 : setup-image  ( -- )
    0         31c cl!			\ Active video scaling control
    01e2.00f0 334 cl!			\ Maximum data count of active video
@@ -375,8 +348,10 @@ h# 200.0000 constant capture-base
 
 : (init)  ( -- )
    0         300 cl!		\ Mask all interrupts
-   8850.2114 310 cl!		\ Enable CLK, FIFO threshold, UYVY, 8-bit CCIR656,
+   8850.2104 310 cl!		\ Enable CLK, FIFO threshold, UYVY, 8-bit CCIR601,
 				\ Capture odd/even in interlace, triple buffers
+   0620.0120 314 cl!            \ Horizontal end and start cycles for CCIR601
+   01de.0000 318 cl!            \ Vertical end and start cycles for CCIR601
    VGA_WIDTH 2*  350 cl!	\ Disable coring and 640*2 stride
 ;
 
@@ -446,6 +421,7 @@ external
 
 : open  ( -- flag )
    init
+   my-args " yuv" $=  to use-ycrcb?
    ov7670-detected? 0=  if  false exit  then
    alloc-dma-bufs
    read-setup
@@ -473,12 +449,21 @@ d# 5,000 constant movie-time
 ;
 : full-brightness  ( -- )  h# f " bright!" $call-parent  ;
 
-: display-frame  ( adr -- )
-   VGA_WIDTH 2*    ( src-adr src-pitch )
-   0 0  d# 280 d# 210  VGA_WIDTH VGA_HEIGHT  " copy16>32" $call-parent
-   autobright
+: display-ycrcb-frame  ( adr -- )
+   temp-buf VGA_WIDTH VGA_HEIGHT * ycbcr422>rgba8888
+   temp-buf VGA_WIDTH 4*    ( src-adr src-pitch )
+   0 0  d# 280 d# 210  VGA_WIDTH VGA_HEIGHT  " copy32>32" $call-parent
 ;
 
+: display-rgb-frame  ( adr -- )
+   VGA_WIDTH 2*    ( src-adr src-pitch )
+   0 0  d# 280 d# 210  VGA_WIDTH VGA_HEIGHT  " copy16>32" $call-parent
+;
+
+: display-frame  ( adr -- )
+   use-ycrcb?  if  display-ycrcb-frame  else  display-rgb-frame  then
+\  autobright
+;
 : timeout-read  ( adr len timeout -- actual )
    >r 0 -rot r>  0  ?do			( actual adr len )
       2dup read ?dup  if  3 roll drop -rot leave  then

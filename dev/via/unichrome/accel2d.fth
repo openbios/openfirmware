@@ -55,6 +55,18 @@ purpose: Via Unichrome graphics acceleration
    r> h# 1c mmio!  r> 8 mmio!  r> h# 30 mmio!
 ;
 
+: copy32>32  ( src-base src-pitch src-x,y dst-x,y w,h -- )
+   wh!  dst!  src!                                 ( src-base src-pitch )
+   h# 30 mmio@ >r  8 mmio@ >r                      ( src-base src-pitch r: reg30 reg8 )
+   3 rshift  r@ lwsplit nip  wljoin  8 mmio!       ( src-base r: reg30 reg8 )
+   h# 1c mmio@ >r                                  ( src-base )
+   fb-va -  3 rshift  h# 1c mmio!                  ( )
+   0 h# 30 mmio!                                   ( )  \ No color format conversion
+   h# cc.00.00.01 0 mmio!                          ( )  \ Perform BLT Output = source
+   wait-done
+   r> h# 1c mmio!  r> 8 mmio!  r> h# 30 mmio!
+;
+
 \ some tests
 1 [if]
 : gp-fill-screen  ( color -- )
