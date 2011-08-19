@@ -340,7 +340,7 @@ headers
          \ Reset the mouse and check the response codes
          h# ff read2  0<>  swap h# aa <>  or  if  false exit  then
 
-         remote-mode
+         stream-mode
       then
    then
 

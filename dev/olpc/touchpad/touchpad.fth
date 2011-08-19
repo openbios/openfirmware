@@ -106,15 +106,14 @@ variable mode  \ 0 - unknown  1 - GS  2 - PT  3 - mouse
    olpc-touchpad?  if
       0 mode !  advanced-mode stream-on
    else
-      remote-mode  3 mode !
+      stream-mode  3 mode !
    then
 ;
 
-\ The normal mouse driver uses remote mode, but this device
-\ doesn't support remote mode, so patch the mouse driver
-\ "open" routine to substitute "noop" for "remote-mode".
+\ Substitute "start" for "stream-mode" in the driver's open
+\ method, so we can use advance-mode for the ALPS touchpad.
 
-patch start remote-mode open
+patch start stream-mode open
 
 
 \ I have been unable to get this to work.  The response is always

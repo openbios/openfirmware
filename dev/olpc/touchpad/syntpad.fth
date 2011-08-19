@@ -43,12 +43,6 @@ variable ptr
    stream-mode
 ;
 
-\ The normal mouse driver uses remote mode, but this device
-\ doesn't support remote mode, so patch the mouse driver
-\ "open" routine to substitute "start" for "remote-mode".
-
-patch start remote-mode open
-
 0 value hw-cursor?
 defer move-hw-cursor  ( x y -- )
 ' 2drop to move-hw-cursor
