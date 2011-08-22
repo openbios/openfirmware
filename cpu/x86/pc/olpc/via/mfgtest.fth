@@ -102,9 +102,10 @@ icon: leds.icon     rom:leds.565
 ;
 
 d# 15 value #mfgtests
+d# 5 value #mfgcols
 
 : mfg-test-autorunner  ( -- )  \ Unattended autorun of all tests
-   5 #mfgtests +  5  ?do
+   #mfgcols #mfgtests +  #mfgcols  ?do
       i set-current-sq
       refresh
       d# 1000 ms
@@ -114,7 +115,7 @@ d# 15 value #mfgtests
 ;
 
 : play-item     ( -- )   \ Interactive autorun of all tests
-   5 #mfgtests +  5  ?do
+   #mfgcols #mfgtests +  #mfgcols  ?do
       i set-current-sq
       refresh
       d# 200 0 do
@@ -124,7 +125,8 @@ d# 15 value #mfgtests
       pass? 0= if  unloop exit  then
    loop
    all-tests-passed
-;         
+;
+
 : quit-item     ( -- )  menu-done  ;
 : cpu-item      ( -- )  " /cpu"       mfg-test-dev  ;
 : battery-item  ( -- )  " /battery"   mfg-test-dev  ;
@@ -199,13 +201,17 @@ d# 15 value #mfgtests
    ['] switch-item   ebook.icon    3 4 install-icon
 ;
 
-: full-menu  ( -- )
+: init-menu  ( -- )
    d# 4 to rows
-   d# 5 to cols
+   #mfgcols to cols
    d# 180 to sq-size
    d# 128 to image-size
    d# 128 to icon-size
+   cursor-off
+;
 
+: full-menu  ( -- )
+   init-menu
    olpc-menu-items
 
    " Run all non-interactive tests. (Press a key between tests to stop.)"
@@ -219,9 +225,12 @@ d# 15 value #mfgtests
 ' noop to do-title
 
 : autorun-mfg-tests  ( -- )
+   init-menu
+   ['] run-menu behavior >r
    ['] mfg-test-autorunner to run-menu   \ Run menu automatically
    true to diag-switch?
    ['] olpc-menu-items  ['] nest-menu catch  drop
+   r> to run-menu
    false to diag-switch?
    restore-scroller
 ;
