@@ -49,7 +49,8 @@ false value use-movw?
 : asm,  ( n -- )  here  /l asm-allot  asm!  ;
 previous definitions
 
-: !op  ( -- )  newword asm,  ;
+: )op  ( -- )  newword asm,  ;
+: {}  is newword  ;
 
 0 value op-end
 
@@ -69,8 +70,8 @@ d# 128 buffer: cbuf
 
 0 value adr-delim
 
-: xop  ( change-bits -- )  newword xor is newword  ;
-: iop  ( on-bits -- )      newword or  is newword  ;
+: xop  ( change-bits -- )  newword xor {}  ;
+: iop  ( on-bits -- )      newword or  {}  ;
 
 : ad-error  ( msg$ -- )
    \ Types the message passed in, the contents of cbuf and the stack.
@@ -105,7 +106,7 @@ d# 128 buffer: cbuf
 
 : /rem  ( n -- )  rem$ rot /string set-rem$  ;
 
-: init-operands  ( -- )
+: op(  ( -- )
 \ We can't do this because rem$ isn't set if we have an exact match
 \   rem-len  abort" Invalid opcode"
    0 0 set-rem$
@@ -157,6 +158,8 @@ next-cons  constant  adt-xpsr		\ cpsr, spsr, fpscr, ...
 next-cons  constant  adt-shift		\ Shift op in Shifter Operands.
 next-cons  constant  adt-rrx
 next-cons  constant  adt-immed		\ #immediate_value.
+next-cons  constant  adt-wmmx		\ wr0, wr1, ...
+next-cons  constant  adt-wcx		\ wc0, wC1, ...
            constant  adt-last		\ Last +1 of the address word types.
 
 : adt?  ( n -- adt? )  adt-1st adt-last within  ;
@@ -283,6 +286,12 @@ headers hex
 \ Define the VFP/SIMD single-precision registers.
 : sreg:  ( n "name" -- )  create ,  does> @ adt-sreg  ;
 : sregs:  ( 20x"name" -- )  20 0  do  i sreg:  loop  ;
+
+\ Define the wireless MMX registers.
+: wmmxreg:  ( n "name" -- )  create ,  does>  @ adt-wmmx  ;
+: wmmxregs:  ( 10x"name" -- )  10 0  do  i wmmxreg:  loop  ;
+: wcxreg:  ( n "name" -- )  create ,  does>  @ adt-wcx  ;
+
 
 : range-error  ( n msg$ -- )  type .d cr  abort  ;
 
@@ -520,24 +529,24 @@ headers hex
    00ffffff land
 ;
 : amode-bbl ( b-adr -- )
-   init-operands
+   op(
 [ifdef] testing
    get-whatever drop aoffset
 [else]
    get-immediate here
 [then]
    >br-offset iop
-   !op
+   )op
 ;
 
-: amode-bx  ( -- )  init-operands  get-r00  !op  ;
+: amode-bx  ( -- )  op(  get-r00  )op  ;
 
 : ?psr  ( adt -- )  adt-xpsr <>  " [cs]psr" ?expecting  ;
 
-: amode-mrs  ( -- )  init-operands  get-r12  get-whatever ?psr  iop  !op  ;
+: amode-mrs  ( -- )  op(  get-r12  get-whatever ?psr  iop  )op  ;
 
 : amode-msr  ( -- )
-   init-operands
+   op(
 
    \ get xpsr and fields
    require-field  $asm-execute ?psr  iop	( )
@@ -554,14 +563,14 @@ headers hex
    \ Get the next field which we expect to be rx, or #num.
    require-field  adr-delim  case			( field$ delim )
       ascii * of  \ Take the address from the stack    ( n adt-code field$ )
-         2drop do-#32 newword fff0ffff land 02080000 or is newword
+         2drop do-#32 newword fff0ffff land 02080000 or {}
       endof
 
       ascii # of					( field$ )
          \ Immediate address, the field should be empty and the real
          \ field is the next one.
          \ get an immediate field, the default is _f = 8, 
-         newword fff0ffff land 02080000 or is newword
+         newword fff0ffff land 02080000 or {}
       endof
 
       0 of  \ This should be a register.		( field$ )
@@ -576,35 +585,35 @@ headers hex
 
       expecting-reg/immed
    endcase
-   !op
+   )op
 ;
 
-: amode-vmrs  ( -- )  init-operands  get-r12  get-whatever ?psr  iop  !op  ;
-: amode-vmsr  ( -- )  init-operands  get-whatever ?psr  iop  get-r12  !op  ;
+: amode-vmrs  ( -- )  op(  get-r12  get-whatever ?psr  iop  )op  ;
+: amode-vmsr  ( -- )  op(  get-whatever ?psr  iop  get-r12  )op  ;
 
-: (amode-mul)  ( -- )  init-operands  get-r16 get-r00 get-r08  ;
-: amode-mul    ( -- )  (amode-mul)  !op  ;
-: amode-mla    ( -- )  (amode-mul) get-r12  !op  ;
-: amode-lmul   ( -- )  init-operands  get-r12 get-r16 get-r00 get-r08 !op  ;
-: amode-rrop2  ( -- )  init-operands  get-r12 get-r16 get-opr2  !op  ;
-: amode-rnop2  ( -- )  init-operands  get-r16 get-opr2  !op  ;
-: amode-rdop2  ( -- )  init-operands  get-r12 get-opr2  !op  ;
-: amode-rev    ( -- )  init-operands  get-r12 get-r00   !op  ;
+: (amode-mul)  ( -- )  op(  get-r16 get-r00 get-r08  ;
+: amode-mul    ( -- )  (amode-mul)  )op  ;
+: amode-mla    ( -- )  (amode-mul) get-r12  )op  ;
+: amode-lmul   ( -- )  op(  get-r12 get-r16 get-r00 get-r08 )op  ;
+: amode-rrop2  ( -- )  op(  get-r12 get-r16 get-opr2  )op  ;
+: amode-rnop2  ( -- )  op(  get-r16 get-opr2  )op  ;
+: amode-rdop2  ( -- )  op(  get-r12 get-opr2  )op  ;
+: amode-rev    ( -- )  op(  get-r12 get-r00   )op  ;
 
 : set-imm16  ( n -- )
    dup fff and  0 set-field
    d# 12 >>  d# 16 set-field
 ;
 : amode-movw   ( -- )
-   init-operands  get-r12  get-immediate      ( imm )
+   op(  get-r12  get-immediate      ( imm )
    dup 0 10000 within  0=  if
       " Immediate value won't fit in 16 bits" ad-error
    then
-   set-imm16  !op
+   set-imm16  )op
 ;
 
 : amode-lsm  ( need-r16? -- )
-   init-operands
+   op(
    if
       get-r16                                 ( )
       adr-delim ascii ! =  if                 ( )
@@ -640,11 +649,11 @@ headers hex
 
    \ We've finished the register list, is there a ^ hanging on the end?
    ascii ^ parse-1  if  flip-b  then
-   !op
+   )op
 ;
 
 : amode-vlsm  ( need-r16? -- )
-   init-operands
+   op(
    if
       get-r16                                 ( )
       adr-delim ascii ! =  if                 ( )
@@ -680,7 +689,7 @@ headers hex
    repeat                                     ( first last )
 
    \ Encode the resulting Vd, imm8 fields
-   1+ over - 2* iop  false set-vdfield  !op
+   1+ over - 2* iop  false set-vdfield  )op
 ;
 
 \ rd, [rn, <immed12>] {!} 
@@ -758,16 +767,16 @@ defer do-offset
 
    get-r12  ['] get-off12  get-ea
 ;
-: amode-lst  ( -- )  init-operands  (amode-ls)  !op  ;
+: amode-lst  ( -- )  op(  (amode-ls)  )op  ;
 
 : {!}  ( -- )  ascii ! parse-1  if  flip-w  then  ;
 
-: amode-lsr  ( -- )  init-operands   (amode-ls)  {!}  !op  ;
+: amode-lsr  ( -- )  op(   (amode-ls)  {!}  )op  ;
 
 : amode-pld  ( -- )
    \ Like amode-ls and friends except r16 vice r12.
    0080.0000 iop
-   ['] get-off12  get-ea  !op
+   ['] get-off12  get-ea  )op
 ;
 
 : get-off8  ( -- )
@@ -794,6 +803,18 @@ defer do-offset
    p?  if  {!}  then
 ;
 
+: imm8-funny  ( -- )
+   \ Get the immediate value for wshufh
+   get-whatever case
+      adt-immed of
+         d# 8 ?#bits             ( immed )
+         dup f and  0 iop        ( immed ) \ Low bits at field 0
+         4 rshift  f and  14 iop ( )       \ High bits at field d# 20
+      endof
+
+      " immediate value" expecting
+   endcase
+;
 : get-imm8  ( -- )
    \ Get the offset for v[ldr|str] instructions
    get-whatever case
@@ -821,46 +842,88 @@ defer do-offset
 \ rd, [rn], +-rm
 
 : amode-lssh  ( -- )
-   init-operands
+   op(
    \ Set the add offset and immediate value as defaults.
    00c0.0000 iop	
    get-r12 ['] get-off8 get-ea
-   !op
+   )op
 ;
 
 : amode-imed24  ( -- )
-   init-operands  get-immediate  d# 24 ?#bits  iop  !op
+   op(  get-immediate  d# 24 ?#bits  iop  )op
 ;
 
 : get-off0  ( -- )  " Offset not allowed" ad-error  ;
 : amode-swp  ( -- )
-   init-operands  get-r12  get-r00   ['] get-off0  get-ea  !op
+   op(  get-r12  get-r00   ['] get-off0  get-ea  )op
 ;
 : amode-ldrex  ( -- )
-   init-operands  get-r12  ['] get-off0  get-ea  !op
+   op(  get-r12  ['] get-off0  get-ea  )op
 ;
 : amode-copr  ( -- )	\ Co-processors: mcr, mrc
    \ p, #, r, c, c, #
-   init-operands
+   op(
    adt-coproc 0f 08 get-this
    adt-immed  07 15 get-this
    adt-reg    0f 0c get-this
    adt-coreg  0f 10 get-this
    adt-coreg  0f 00 get-this
    adt-immed  07 05 get-this
-   !op
+   )op
 ;
 
 : amode-cdp  ( -- )	\ Co-processors: cdp
    \ p, #, c, c, c, #
-   init-operands  
+   op(  
    adt-coproc 0f 08 get-this
    adt-immed  0f 14 get-this
    adt-coreg  0f 0c get-this
    adt-coreg  0f 10 get-this
    adt-coreg  0f 00 get-this
    adt-immed  07 05 get-this
-   !op
+   )op
+;
+
+: wcx  adt-wcx   0f 10 get-this  ;
+: wrd  adt-wmmx  0f 0c get-this  ;
+: wrd5 adt-wmmx  0f 05 get-this  ;
+: wrn  adt-wmmx  0f 10 get-this  ;
+: wrm  adt-wmmx  0f 00 get-this  ;
+: amode-wmmx-cdp  ( -- )
+   \ wrd, wrn, wrm
+   op(
+   wrd
+   wrn
+   wrm
+   )op
+;
+: amode-wmmx-cdp2  ( -- )
+   \ wrd, wrn
+   op(
+   wrd
+   wrn
+   )op
+;
+: imm3-0  
+   adt-immed  07 00 get-this
+;
+: amode-wmmx-cdp-imm  ( -- )
+   \ wrn, wrd, wrm
+   op(
+   wrn
+   wrd
+   wrm
+   adt-immed  07 14 get-this
+   )op
+;
+
+: amode-wmmx-transfer  ( -- )
+   \ wrd, rn, wrm
+   op(
+   wrd
+   adt-reg   0f 0c get-this
+   wrm
+   )op
 ;
 
 \ Get the offset for ldc, stc instructions.
@@ -874,19 +937,19 @@ defer do-offset
 ;
 
 : amode-lsc  ( -- )	\ Co-processors: ldc, stc
-   init-operands  
+   op(  
    adt-coproc 0f 08 get-this
    adt-coreg  0f 0c get-this
    ['] get-off-c get-ea
-   !op
+   )op
 ;
 
 : amode-vldst  ( -- ) \ vldr, vstr instructions
-   init-operands
+   op(
    \ Set the add offset and 64-bit width as defaults.
    0080.0100 iop	
    get-d12 ['] get-imm8 get-ea
-   !op
+   )op
 ;
 
 \ ----------------
@@ -924,6 +987,79 @@ defer do-offset
    then
 ;
 
+: {hwd}  ( opc -- )
+   {}
+   ascii h parse-1  if  0040.0000 xop  exit  then
+   ascii w parse-1  if  0080.0000 xop  exit  then
+   ascii d parse-1  if  00c0.0000 xop  exit  then
+   " h w or d" expecting
+;
+: {bhw}  ( -- )
+   ascii b parse-1  if  0000.0000 xop  exit  then
+   ascii h parse-1  if  0040.0000 xop  exit  then
+   ascii w parse-1  if  0080.0000 xop  exit  then
+   " b h or w" expecting
+;
+: {bhw}2  ( -- )
+   ascii b parse-1  if  0000.0000 xop  exit  then
+   ascii h parse-1  if  0000.0040 xop  exit  then
+   ascii w parse-1  if  0000.0080 xop  exit  then
+   " b h or w" expecting
+;
+: {bhwd}  ( -- )
+   {}
+   ascii b parse-1  if  0000.0000 iop  exit  then
+   ascii h parse-1  if  0040.0000 iop  exit  then
+   ascii w parse-1  if  0000.0100 iop  exit  then
+   ascii d parse-1  if  0040.0100 iop  exit  then
+   " b h w or d" expecting
+;
+: {us}  ( opc -- )
+   {}
+   ascii u parse-1  if  0000.0000 xop  exit  then
+   ascii s parse-1  if  0020.0000 xop  exit  then
+   " u or s" expecting
+;
+: {us}  ( opc -- )
+   {}
+   ascii u parse-1  if  0000.0000 xop  exit  then
+   ascii s parse-1  if  0020.0000 xop  exit  then
+   " u or s" expecting
+;
+: {tb}x  ( -- )
+   ascii b parse-1  if  0000.0000 xop  exit  then
+   ascii t parse-1  if  0002.0000 xop  exit  then
+   " t or b" expecting
+;
+: {tb}y  ( -- )
+   ascii b parse-1  if  0000.0000 xop  exit  then
+   ascii t parse-1  if  0001.0000 xop  exit  then
+   " t or b" expecting
+;
+
+: {ml}  ( -- )
+   ascii l parse-1  if  0000.0000 xop  exit  then
+   ascii m parse-1  if  0010.0000 xop  exit  then
+   " m or l" expecting
+;
+: {z}  ( -- )  ascii z parse-1  if  0010.0000 iop  then  ;
+: {bh}2  ( -- )
+   {}
+   ascii b parse-1  if  0000.0000 xop  exit  then
+   ascii h parse-1  if  0040.0000 xop  exit  then
+   " b or h" expecting
+;
+
+: need-s  ( -- )  ascii s parse-1  if  " us or ss" expecting  then  ;
+: {usss}  ( -- )
+   ascii u parse-1  if  0010.0000 xop  need-s  exit  then
+   ascii s parse-1  if  0030.0000 xop  need-s  exit  then
+   " us or ss" expecting
+;
+: {g}
+   ascii g parse-1  if  0000.0100 xop  ( !! need to change mode of last operand from wrN to rN )  then
+;
+
 : parse-condition?  ( -- cond true | false )
    \ The next two characters of the input string will be checked for a
    \ valid condition code.  If found, the appropriate code will be
@@ -941,8 +1077,7 @@ defer do-offset
    then
 ;
 
-: {cond}  ( opcode -- )
-   is newword
+: +{cond}  ( -- )
    \ The next two characters of the input string will be checked for a
    \ valid condition code.  If found, the appropriate code will be
    \ inserted in newword and the string pointer / length will be
@@ -951,8 +1086,30 @@ defer do-offset
    parse-condition? 0=  if  h# e  then
    d# 28 set-field		\ put the condition code in.
 ;
+: {cond}  ( opcode -- )
+   {}
+   +{cond}
+;
 : {cond/s}  ( opcode -- )  {cond} {s}  ;
-: {uncond}  ( opcode -- )  is newword  ;
+
+: amode-wldst  ( -- )
+   op(
+   get-whatever
+   case
+      adt-wcx  of
+         0c set-field
+	 f000.0000 iop
+         newword 0040.0010 and 0000.0010 <>  if
+	    " Size must be W for WLDR or WSTR with wCX" ad-error
+	 then
+      endof
+      adt-wmmx  of  0c set-field  endof
+      " wRn or wCn" expecting
+   endcase
+   ['] get-off-c get-ea
+   )op
+;
+: amode-tmia  ( -- )  op(  wrd5 get-r00 get-r12  )op  ;
 
 : parse-inc  ( default$ l-flag -- )
    \ Parse the increment tag for ldm and stm.
@@ -1051,8 +1208,13 @@ coregs:  cr0 cr1 cr2 cr3 cr4 cr5 cr6 cr7 cr8 cr9 cr10 cr11 cr12 cr13 cr14 cr15
 regs:    r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 r13 r14 r15
 dregs:   d0 d1 d2 d3 d4 d5 d6 d7 d8 d9 d10 d11 d12 d13 d14 d15 d16 d17 d18 d19 d20 d21 d22 d23 d24 d25 d26 d27 d28 d29 d30 d31
 sregs:   s0 s1 s2 s3 s4 s5 s6 s7 s8 s9 s10 s11 s12 s13 s14 s15 s16 s17 s18 s19 s20 s21 s22 s23 s24 s25 s26 s27 s28 s29 s30 s31
-
+wmmxregs: wr0 wr1 wr2 wr3 wr4 wr5 wr6 wr7 wr8 wr9 wr10 wr11 wr12 wr13 wr14 wr15
+0 wcxreg: wcid   1 wcxreg: wcon   2 wcxreg: wcssf  3 wcxreg: wcasf
+8 wcxreg: wcgr0  9 wcxreg: wcgr1  a wcxreg: wcgr2  b wcxreg: wcgr3
+  
 previous definitions
+
+
 
 also arm-assembler definitions
 : and    0000.0000 {cond/s} amode-rrop2  ;
@@ -1098,6 +1260,72 @@ also arm-assembler definitions
 : cdp    0e00.0000 {cond}   amode-cdp    ;
 : mcr    0e00.0010 {cond}   amode-copr   ;
 : mrc    0e10.0010 {cond}   amode-copr   ;
+
+: do-mmx  ( opc -- )  0e00.0000 or  {cond}  amode-wmmx-cdp  ;
+: wor     0000.0000 do-mmx ;
+: wxor    0010.0000 do-mmx ;
+: wand    0020.0000 do-mmx ;
+: wandn   0030.0000 do-mmx ;
+: wavg2b  0080.0000 do-mmx ;
+: wavg2br 0090.0000 do-mmx ;
+: wavg2h  00c0.0000 do-mmx ;
+: wavg2hr 00d0.0000 do-mmx ;
+
+: waligni  0e00.0020 {cond}  amode-wmmx-cdp-imm  ;
+: walignr0 0080.0020 do-mmx ;
+: walignr1 0090.0020 do-mmx ;
+: walignr2 00a0.0020 do-mmx ;
+: walignr3 00b0.0020 do-mmx ;
+
+: do-mmx-shift  ( opc -- )  0e00.0000 or  {hwd} {g} +{cond}  amode-wmmx-cdp  ;
+: wsra     0000.0040 do-mmx-shift ;
+: wsll     0010.0040 do-mmx-shift ;
+: wsll     0020.0040 do-mmx-shift ;
+: wror     0030.0040 do-mmx-shift ;
+
+: wmcmpeq  0e00.0060 {}     {bhw} +{cond}  amode-wmmx-cdp  ;
+: wmcmpgt  0e10.0060 {us}   {bhw} +{cond}  amode-wmmx-cdp  ;
+
+: wpack    0e00.0080 {hwd} {usss} +{cond}  amode-wmmx-cdp  ;
+
+: wunpckeh  0e00.00c0 {us} {bhw} +{cond}  amode-wmmx-cdp2  ;
+: wunpckel  0e00.00e0 {us} {bhw} +{cond}  amode-wmmx-cdp2  ;
+: wunpckih  0e10.00c0 {}   {bhw} +{cond}  amode-wmmx-cdp   ;
+: wunpckih  0e10.00e0 {}   {bhw} +{cond}  amode-wmmx-cdp   ;
+
+: wmul      0e00.0100 {us} {ml} +{cond}  amode-wmmx-cdp  ;
+: wmac      0e40.0100 {us} {z}  +{cond}  amode-wmmx-cdp  ;
+: wmadd     0e80.0100 {us}      +{cond}  amode-wmmx-cdp  ;
+
+: wsad      0e00.0120 {bh}2 {z} +{cond}  amode-wmmx-cdp  ;
+
+: wmax      0e00.0160 {us} {bhw} +{cond}  amode-wmmx-cdp  ;
+: wmin      0e10.0160 {us} {bhw} +{cond}  amode-wmmx-cdp  ;
+
+: wadd    0e00.0180 {} {bhw} {usss} +{cond}  amode-wmmx-cdp  ;
+: wadd    0e00.01a0 {} {bhw} {usss} +{cond}  amode-wmmx-cdp  ;
+: wacc    0e00.01c0 {} {bhw}        +{cond}  amode-wmmx-cdp2  ;
+: wshufh  0e00.01e0 {cond} op( wrd wrn imm8-funny  )op  ;
+: tmcr    0e00.0110 {cond}  op( wcx get-r12 )op  ;
+\ : tmia    0e2c.0010 {} {tb}x {tb}y +{cond}  amode-tmia  ;
+: tmia    0e20.0010 {}             +{cond}  amode-tmia  ;
+: tmiaph  0e28.0010 {}             +{cond}  amode-tmia  ;
+
+: tbcst   0e40.0010 {} {bhw}2 {cond} op( wrd get-r12 )op  ;
+: tinsr   0e60.0010 {} {bhw}2 {cond} op( wrd get-r12 imm3-0 )op  ;
+
+: tmcrr   0c40.0000 {cond} op(  wrm  get-r12 get-r16  )op  ;
+: tmrrc   0c50.0000 {cond} op(  get-r12 get-r16  wrm  )op  ;
+
+: tmrc    0e10.0110 {cond} op(  get-r12 wcx  )op  ;
+: tmovmsk 0e10.0030 {} {bhw} +{cond}  op(  get-r12 wrn  )op  ;
+: tandc   0e13.f130 {} {bhw} +{cond}  op(  get-r12  )op  ;  \ rs must be R15
+: torc    0e13.f150 {} {bhw} +{cond}  op(  get-r12  )op  ;  \ rs must be R15
+: textrc  0e13.f170 {} {bhw} +{cond}  op(  get-r12  imm3-0 )op  ;  \ rs must be R15
+: textrm  0e10.0070 {us} {bhw} +{cond}  op(  get-r12 wrn imm3-0 )op  ;
+
+: wldr   0c10.0000 {bhwd} +{cond} amode-wldst  ;
+: wstr   0c00.0000 {bhwd} +{cond} amode-wldst  ;
 
 : swi    0f00.0000 {cond}   amode-imed24 ;
 
@@ -1146,18 +1374,18 @@ also arm-assembler definitions
    newword -rot                  ( newword reg# imm )
    lwsplit swap                  ( newword reg# imm.hi imm.lo )
    set-imm16 0300.0000 iop       ( newword reg# imm.hi )
-   over rd-field !op             \ movw rN,#<imm>
+   over rd-field )op             \ movw rN,#<imm>
    ?dup  if                      ( newword reg# imm.hi )
-      rot is newword             ( reg# imm.hi )
+      rot {}                     ( reg# imm.hi )
       set-imm16 0340.0000 iop    ( reg# )
-      rd-field !op               \ movt rN,#<imm>
+      rd-field )op               \ movt rN,#<imm>
    else
       2drop
    then
 ;
 : (set)  ( address? -- )
    >r
-   0000.0000 {cond}  init-operands
+   0000.0000 {cond}  op(
    \ Put the register number on the return stack so it won't interfere
    \ with the stack items used by any "*" operands there may be.
    get-register  >r              ( r: adr? reg# )
@@ -1186,27 +1414,27 @@ also arm-assembler definitions
          then                    ( reg# op )
       then                       ( reg# op )
    then                          ( reg# op )
-   iop  rd-field  !op
+   iop  rd-field  )op
 ;
 : adr  ( -- )  true  (set)  ;
 : set  ( -- )  false (set)  ;
 
 \ Wrapper Call - FirmWorks pseudo-op for armsim wrapper calls
-: wrc   ( -- )  h# 03200010 {cond} init-operands get-r16 !op  ;
+: wrc   ( -- )  03200010 {cond} op( get-r16 )op  ;
 
-: nop32 ( -- )  h# 0320f000 {cond} !op  ;
-: yield ( -- )  h# 0320f001 {cond} !op  ;
-: wfe   ( -- )  h# 0320f002 {cond} !op  ;
-: wfi   ( -- )  h# 0320f003 {cond} !op  ;
-: sev   ( -- )  h# 0320f004 {cond} !op  ;
+: nop32 ( -- )  0320f000 {cond} op( )op  ;
+: yield ( -- )  0320f001 {cond} op( )op  ;
+: wfe   ( -- )  0320f002 {cond} op( )op  ;
+: wfi   ( -- )  0320f003 {cond} op( )op  ;
+: sev   ( -- )  0320f004 {cond} op( )op  ;
 
-: nop  ( -- )  h# e1a00000 asm,  ;	\ mov r0,r0
-: dsb  ( -- )  h# f57ff040 asm,  ;
-: dmb  ( -- )  h# f57ff050 asm,  ;
-: isb  ( -- )  h# f57ff060 asm,  ;
+: nop  ( -- )  e1a00000 {} op( )op  ;   \ mov r0,r0
+: dsb  ( -- )  f57ff040 {} op( )op  ;   \ "dsb sy" is f57ff04f
+: dmb  ( -- )  f57ff050 {} op( )op  ;
+: isb  ( -- )  f57ff060 {} op( )op  ;
 
-: pld   ( -- )  h# f550.f000 {uncond} amode-pld  ;
-: pldw  ( -- )  h# f510.f000 {uncond} amode-pld  ;
+: pld   ( -- )  f550.f000 {} amode-pld  ;
+: pldw  ( -- )  f510.f000 {} amode-pld  ;
 
 : #    ( -- adt-immed )  adt-immed  ;
 : reg  ( -- adt-reg )  adt-reg  ;

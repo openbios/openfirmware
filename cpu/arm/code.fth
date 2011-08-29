@@ -80,15 +80,15 @@ alias c;  c;
 : lnk  ( -- )
 \   [ also register-names ] lk [ previous ]  drop  ( reg# )
    lk drop  ( reg# )
-   01a0.0000 or  {cond/s}  init-operands get-r12 !op
+   01a0.0000 or  {cond/s}  op( get-r12 )op
 ;
 
 : (incdec)  ( op-template -- )
    {cond/s}
-   init-operands
+   op(
    get-register  dup rd-field  rb-field
    get-opr2
-   !op
+   )op
 ;
 
 \ inc{cond}{s}      rN,<immed>
@@ -101,7 +101,7 @@ alias c;  c;
 \ sub{cond}{s}      rN,rN,<immed>
 : dec  ( -- )  0040.0000  (incdec)  ;
 
-: (pshpop)  ( op-template -- )  {cond}  init-operands get-r12 get-r16 !op  ;
+: (pshpop)  ( op-template -- )  {cond}  op( get-r12 get-r16 )op  ;
 \ psh{cond}      rN,rM
 \ is equivalent to
 \ str{cond}      rN,[rM,-1cell]!
@@ -118,7 +118,7 @@ alias c;  c;
 : nxt  ( -- )
 \   [ also register-names ] up [ previous ]  drop  ( reg# )
    up drop
-   01a0.f000 or  {cond/s}  init-operands !op
+   01a0.f000 or  {cond/s}  op( )op
 ;
 
 also forth definitions
