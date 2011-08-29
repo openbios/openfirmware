@@ -204,7 +204,7 @@ audio-sram h# 3f80 + constant in-desc
 \ : audio-reset  ( -- )  8 gpio-clr  ;
 \ : audio-unreset  ( -- )  8 gpio-set  ;
 : codec@  ( reg# -- w )  choose-smbus  1 2 twsi-get  swap bwjoin  ;
-: codec!  ( w reg# -- )  choose-smbus  >r wbsplit r> 3 twsi-write  ;
+: codec!  ( w reg# -- )  choose-smbus  >r wbsplit r> 3 twsi-out  ;
 : codec-i@  ( index# -- w )  h# 6a codec!  h# 6c codec@  ;
 : codec-i!  ( w index# -- )  h# 6a codec!  h# 6c codec!  ;
 

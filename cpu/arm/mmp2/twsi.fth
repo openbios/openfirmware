@@ -129,15 +129,22 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
    then
 ;
 
-: twsi-write  ( byte .. #bytes -- )
+: twsi-out  ( byte .. #bytes -- )
    slave-address twsi-start           ( byte .. #bytes )
 
    1-  0  ?do  0 twsi-putbyte  loop   ( byte )
    bbu_ICR_STOP twsi-putbyte          ( )
 ;
+: twsi-write  ( adr len -- )
+   0=  if  exit  then                 ( adr len )
+   slave-address twsi-start           ( adr len )
+
+   1-  0  ?do  dup c@  0 twsi-putbyte  1+  loop   ( adr' )
+   c@ bbu_ICR_STOP twsi-putbyte                   ( )
+;
 
 : twsi-b@  ( reg -- byte )  1 1 twsi-get  ;
-: twsi-b!  ( byte reg -- )  2 twsi-write  ;
+: twsi-b!  ( byte reg -- )  2 twsi-out  ;
 
 [ifdef] begin-package
 0 0  " "  " /" begin-package
@@ -156,6 +163,18 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
 : smbus-out-in  ( out ... #outs #ins -- in ... )
    child-address set-twsi-target
    twsi-get
+;
+: smbus-b@  ( -- )
+   child-address set-twsi-target
+   twsi-b@
+;
+: smbus-b!  ( -- )
+   child-address set-twsi-target
+   twsi-b!
+;
+: smbus-out  ( byte .. #bytes -- )
+   child-address set-twsi-target
+   twsi-out
 ;
 
 d# 12,600,000 constant numerator
