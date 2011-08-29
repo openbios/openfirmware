@@ -13,7 +13,7 @@ purpose: Numeric display of startup progress in ARM assembly language
 \ work in any case.
 
 label fb-adr-loc  \ Frame buffer address
-fb-pa ,
+diagfb-pa ,
 end-code
 
 label numerals

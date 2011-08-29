@@ -16,14 +16,14 @@ h#         0 value high
 
 headers
 : probe  ( -- )
-   0 available-ram-size log&release
+   0 /available-mem log&release
 
    0 0 encode-bytes                                   ( adr 0 )
    physavail  ['] make-phys-memlist  find-node        ( adr len  prev 0 )
    2drop  " reg" property
 
    \ Claim the memory used by OFW
-   fw-pa  /fw-ram    0 claim  drop
+   fw-mem-pa  /fw-mem    0 claim  drop
    extra-mem-pa  /extra-mem  0 claim  drop
 
    0 pagesize  0 claim  drop       \ Vector table
@@ -55,9 +55,12 @@ false value mem-fail?
 : show-line  ( adr len -- )  (cr type  3 spaces  kill-line  ;
 ' show-line to show-status
 
-: test-mem  ( adr len -- )	\ Test a chunk 'o memory
-   ."   Testing address 0x" over .x ." length 0x" dup .x cr
+[ifndef] 8u.h
+: 8u.h  ( n -- )  push-hex (.8) type pop-base  ;
+[then]
+: .chunk  ( adr len -- )  ." Testing address 0x" swap 8u.h ."  length 0x" 8u.h cr  ;
 
+: test-mem  ( adr len -- )	\ Test a chunk 'o memory
    2>r
    2r@ 0 mem-claim to p-adr		( ) ( r: adr len )
 [ifdef] virtual-mode
@@ -95,6 +98,7 @@ false value mem-fail?
 
    begin  dup  while                   ( adr len )
       2 decode-ints swap               ( adr len this-len r: this-padr )
+      2dup .chunk                      ( adr len this-len r: this-padr )
       test-mem                         ( adr len )
       mem-fail?  if                    ( adr len )
          2drop true exit               ( -- error )

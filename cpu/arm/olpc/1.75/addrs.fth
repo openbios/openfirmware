@@ -2,15 +2,59 @@
 
 fload ${BP}/cpu/arm/mmuparams.fth
 
-h# 2000.0000 constant total-ram-size
+h# 2000.0000 constant /ram-total  \ Total size of memory
 
-h# 1fc0.0000 constant fb-pa
-h#   40.0000 constant fb-size  \ The screen use a little more than 3 MiB at 1200x900x24
+h# 0040.0000 constant /fb-mem  \ The screen uses a little more than 3 MiB at 1200x900x24
+/ram-total /fb-mem - constant fb-mem-pa  \ e.g. h# 1fc0.0000
 
-fb-pa constant available-ram-size
+fb-mem-pa constant /available-mem
 
+: (memory?)  ( phys -- flag )  /ram-total u<  ;
+
+\ OFW implementation choices
+h# 0020.0000            constant /fw-mem
+fb-mem-pa /fw-mem -     constant fw-mem-pa     \ e.g. h# 1fa0.0000
+
+h# 0020.0000            constant /extra-mem
+fw-mem-pa /extra-mem -  constant extra-mem-pa  \ e.g. h# 1f80.0000 
+
+h# 0080.0000            constant /dma-mem
+extra-mem-pa /dma-mem - constant dma-mem-pa      \ e.g. h# 1f00.0000
+
+h# fd00.0000 constant dma-mem-va
+h# fd80.0000 constant extra-mem-va
+h# fda0.0000 constant fw-mem-va
+h# fdc0.0000 constant fb-mem-va
+
+h# fe00.0000 constant io-va  \ We map IO (APB + AXI) space at this virtual address
+
+[ifdef] virtual-mode
+h# f700.0000 constant fw-virt-base
+h# 0100.0000 constant fw-virt-size  \ 16 megs of mapping space
+[else]
+fw-mem-va value fw-virt-base
+/fw-mem   value fw-virt-size
+[then]
+
+/fw-mem /page-table -  constant page-table-offset
+page-table-offset      constant stack-offset  \ Stack is below this
+
+fw-mem-pa page-table-offset + constant page-table-pa
+
+\ h# 0110.0000 constant def-load-base
+h# 0800.0000 constant def-load-base
+
+\ The heap starts at RAMtop, which on this system is "fw-mem-pa /fw-mem +"
+
+h#  10.0000 constant heap-size
+heap-size constant initial-heap-size
+
+\ RAM address where the Security Processor code places the subset of the dropin module
+\ image that it copies out of SPI FLASH.
+h#  900.0000 constant 'dropins  \ Must agree with 'compressed in cforth/src/app/arm-xo-1.75/
 
 h#  20000 constant dropin-offset   \ Offset to dropin driver area in SPI FLASH
+
 [ifdef] use-flash-nvram
 h# d.0000 constant nvram-offset
 [then]
@@ -21,47 +65,11 @@ h#  f.ffd8 constant crc-offset
 
 h# 10.0000 constant /rom           \ Total size of SPI FLASH
 
-: (memory?)  ( phys -- flag )  total-ram-size u<  ;
+\ SRAM usage
 
-\ OFW implementation choices
-h# d400.0000 constant io-pa
-h# 1fa0.0000 constant fw-pa
+sram-pa  constant sram-va
 
-h# 1f00.0000 constant dma-base
-h#   80.0000 constant dma-size
+sram-va h# 2.0000 + constant 'ddr-recal
+sram-va h# 2.0100 + constant 'ddr-self-refresh
 
-h# 1f80.0000 constant extra-mem-pa
-h#   20.0000 constant /extra-mem
-
-h# fd00.0000 constant dma-va
-h# fd80.0000 constant extra-mem-va
-h# fda0.0000 constant fw-va
-h# fdc0.0000 constant fb-va
-h# fe00.0000 constant io-va
-
-[ifdef] virtual-mode
-h# f700.0000 constant fw-virt-base
-h# 0100.0000 constant fw-virt-size  \ 16 megs of mapping space
-[else]
-\ fw-pa value fw-virt-base
-fw-va value fw-virt-base
-h# 20.0000 value fw-virt-size
-[then]
-
-h# 0020.0000 constant /fw-ram
-/fw-ram /page-table -  constant page-table-offset
-page-table-offset   constant stack-offset  \ Stack is below this
-
-fw-pa page-table-offset + constant page-table-pa
-
-\ h# 0110.0000 constant def-load-base
-h# 0800.0000 constant def-load-base
-
-\ The heap starts at RAMtop, which on this system is "fw-pa /fw-ram +"
-
-h#  10.0000 constant heap-size
-heap-size constant initial-heap-size
-
-\ RAM address where the Security Processor code places the subset of the dropin module
-\ image that it copies out of SPI FLASH.
-h#  900.0000 constant 'dropins  \ Must agree with 'compressed in cforth/src/app/arm-xo-1.75/
+sram-pa h# 2.4000 + constant diagfb-pa           \ Low-resolution frame buffer for startup numbers

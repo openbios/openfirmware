@@ -234,23 +234,23 @@ fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
    : display-on
 \      init-xo-display  \ Turns on DCON
       smb-init
-      fb-pa  hdisp vdisp * >bytes  h# ffffffff lfill
+      frame-buffer-adr  hdisp vdisp * >bytes  h# ffffffff lfill
       init-lcd
    ;
    : map-frame-buffer  ( -- )
-      fb-pa fb-size " map-in" $call-parent to frame-buffer-adr
+      fb-mem-pa /fb-mem " map-in" $call-parent to frame-buffer-adr
    ;
    " display"                      device-type
    " ISO8859-1" encode-string    " character-set" property
    0 0  encode-bytes  " iso6429-1983-colors"  property
 
    \ Used as temporary storage for images by $get-image
-   : graphmem  ( -- adr )  dimensions * pixel*  fb-pa +  ;
+   : graphmem  ( -- adr )  dimensions * pixel*  fb-mem-pa +  ;
 
    : display-install  ( -- )
+      map-frame-buffer
       display-on
       default-font set-font
-      map-frame-buffer
       width  height                           ( width height )
       over char-width / over char-height /    ( width height rows cols )
       /scanline depth fb-install              ( )
@@ -392,6 +392,7 @@ stand-init: More memory
 fload ${BP}/cpu/arm/mmp2/thermal.fth
 
 fload ${BP}/cpu/arm/mmp2/dramrecal.fth
+fload ${BP}/cpu/arm/mmp2/rtc.fth       \ Internal RTC, used for wakeups
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks

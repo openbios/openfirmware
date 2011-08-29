@@ -23,11 +23,11 @@ c;
 ;
 
 : ofw-sections  ( -- )
-   h# 0000.0000  h# c0e  over  dma-base     map-sections  \ Cache and write bufferable
-   dma-base      h# c02  over  dma-size     map-sections  \ Non-cacheable DMA space
+   h# 0000.0000  h# c0e  over  dma-mem-pa   map-sections  \ Cache and write bufferable
+   dma-mem-pa    h# c02  over  /dma-mem     map-sections  \ Non-cacheable DMA space
    extra-mem-pa  h# c0e  over  /extra-mem   map-sections  \ Cache and write bufferable
-   fw-pa         h# c0e  over  /fw-ram      map-sections  \ Cache and write bufferable
-   fb-pa         h# c06  over  fb-size      map-sections  \ Write bufferable
+   fw-mem-pa     h# c0e  over  /fw-mem      map-sections  \ Cache and write bufferable
+   fb-mem-pa     h# c06  over  /fb-mem      map-sections  \ Write bufferable
 \  h# d100.0000  h# c0e  over  h# 0030.0000 map-sections  \ Cache and write bufferable (SRAM)
    h# d100.0000  h# c02  over  h# 0030.0000 map-sections  \ I/O - no caching or buffering (SRAM)
    h# d400.0000  h# c02  over  h# 0040.0000 map-sections  \ I/O - no caching or buffering

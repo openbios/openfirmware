@@ -25,15 +25,15 @@ hex
 : close  ( -- )  ;
 
 : map-in   ( phys size -- virt )
-   drop                                     ( phys )
-   dup fb-pa =  if  drop fb-va exit  then   ( phys )
+   drop                                             ( phys )
+   dup fb-mem-pa =  if  drop fb-mem-va exit  then   ( phys )
    io-pa -  io-va +
 ;
 : map-out  ( virtual size -- )
    2drop
 ;
 
-: dma-range  ( -- start end )  dma-base   dup dma-size +  ;
+: dma-range  ( -- start end )  dma-mem-pa   dup /dma-mem +  ;
 
 h# 0 constant dma-map-mode		\ XXX what should this be?
 

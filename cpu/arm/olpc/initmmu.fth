@@ -221,12 +221,12 @@ label init-map  ( r0: section-table -- )
    0= until
 
    mov r1,0                             \ Address of low memory
-   set r2,`dma-base #`                  \ Size of low memory - up to dma-base
+   set r2,`dma-mem-pa #`                \ Size of low memory - up to dma-base
    set r3,#0xc0e                        \ Cache and write bufferable
    bl  `map-sections-v=p`
 
-   set r1,`dma-base #`                  \ Address of DMA area
-   set r2,`dma-size #`                  \ Size of DMA area
+   set r1,`dma-mem-pa #`                \ Address of DMA area
+   set r2,`/dma-mem #`                  \ Size of DMA area
    set r3,#0xc02                        \ No caching or write buffering
    bl  `map-sections-v=p`
 
@@ -235,41 +235,41 @@ label init-map  ( r0: section-table -- )
    set r3,#0xc0e                        \ Write bufferable
    bl  `map-sections-v=p`
 
-   set r1,`fw-pa #`                     \ Address of Firmware region
-   set r2,`/fw-ram #`                   \ Size of firmware region
+   set r1,`fw-mem-pa #`                 \ Address of Firmware region
+   set r2,`/fw-mem #`                   \ Size of firmware region
    set r3,#0xc0e                        \ Write bufferable
    bl  `map-sections-v=p`
 
-   set r1,`fb-pa #`                     \ Address - Frame buffer
-   set r2,`fb-size #`                   \ Size of frame buffer
+   set r1,`fb-mem-pa #`                 \ Address - Frame buffer
+   set r2,`/fb-mem #`                   \ Size of frame buffer
    set r3,#0xc06                        \ Write bufferable
    bl  `map-sections-v=p`
 
-   set r1,#0xd1000000                   \ Address of SRAM
-   set r2,#0x00300000                   \ Size of SRAM
+   set r1,`sram-pa #`                   \ Address of SRAM
+   set r2,`/sram #`                     \ Size of SRAM
    set r3,#0xc02                        \ No caching or write buffering
    bl  `map-sections-v=p`
 
-   set r1,#0xd4000000                   \ Address of I/O
-   set r2,#0x00400000                   \ Size of I/O region
+   set r1,`io-pa #`                     \ Address of I/O
+   set r2,`/io #`                       \ Size of I/O region
    set r3,#0xc02                        \ No caching or write buffering
    bl  `map-sections-v=p`
 
-   set r1,#0xe0000000                   \ Address of Audio SRAM
-   set r2,#0x00100000                   \ Size of audio SRAM
+   set r1,`audio-sram-pa #`             \ Address of Audio SRAM
+   set r2,`/audio-sram #`               \ Size of audio SRAM
    set r3,#0xc02                        \ No caching or write buffering
    bl  `map-sections-v=p`
 
-   set r1,`dma-base #`                  \ Address of DMA area
-   set r2,`dma-size #`                  \ Size of DMA area
+   set r1,`dma-mem-pa #`                \ Address of DMA area
+   set r2,`/dma-mem #`                  \ Size of DMA area
    set r3,#0xc02                        \ No caching or write buffering
-   set r4,`dma-va #`                    \ Virtual address
+   set r4,`dma-mem-va #`                \ Virtual address
    bl  `map-sections`
 
-   set r1,`fb-pa #`                     \ Address - Frame buffer
-   set r2,`fb-size #`                   \ Size of frame buffer
+   set r1,`fb-mem-pa #`                 \ Address - Frame buffer
+   set r2,`/fb-mem #`                   \ Size of frame buffer
    set r3,#0xc06                        \ Write bufferable
-   set r4,`fb-va #`                     \ Virtual address
+   set r4,`fb-mem-va #`                 \ Virtual address
    bl  `map-sections
 
    set r1,`extra-mem-pa #`              \ Address of additional allocatable memory
@@ -278,14 +278,14 @@ label init-map  ( r0: section-table -- )
    set r4,`extra-mem-va #'              \ Virtual address
    bl  `map-sections`
 
-   set r1,`fw-pa #`                     \ Address of Firmware region
-   set r2,`/fw-ram #`                   \ Size of firmware region
+   set r1,`fw-mem-pa #`                 \ Address of Firmware region
+   set r2,`/fw-mem #`                   \ Size of firmware region
    set r3,#0xc0e                        \ Write bufferable
-   set r4,`fw-va #`                     \ Virtual address
+   set r4,`fw-mem-va #`                 \ Virtual address
    bl  `map-sections`
 
-   set r1,#0xd4000000                   \ Address of I/O
-   set r2,#0x00400000                   \ Size of I/O region
+   set r1,`io-pa #`                     \ Address of I/O
+   set r2,`/io #`                       \ Size of I/O region
    set r3,#0xc02                        \ No caching or write buffering
    set r4,`io-va #`                     \ Virtual address
    bl  `map-sections`

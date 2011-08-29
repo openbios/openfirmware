@@ -11,7 +11,6 @@ hex
 \ ' $report-name is include-hook
 \ ' noop is include-hook
 
-fb-pa constant display-pa
 fload ${BP}/cpu/arm/olpc/fbnums.fth
 fload ${BP}/cpu/arm/olpc/fbmsg.fth
 
@@ -46,7 +45,7 @@ d# 9999 to arm-linux-machine-type  \ Marvell Jasper
    d#  900 tag-w,     \ Height
    d#   24 tag-w,     \ Depth
    d# 1200 3 * tag-w, \ Pitch
-   fb-va tag-l,       \ Base address
+   fb-mem-va tag-l,   \ Base address
    d# 1200 3 *  d# 900 *  tag-l,  \ Total size - perhaps could be larger
    5     tag-b,       \ Red size
    d# 11 tag-b,       \ Red position
@@ -70,12 +69,12 @@ d# 9999 to arm-linux-machine-type  \ Marvell Jasper
    \ Each of these groups is a struct map_desc as defined in arch/arm/include/asm/mach/
    extra-mem-va                            tag-l,  \ VA of OFW memory
    extra-mem-pa pageshift rshift           tag-l,  \ Page frame number of OFW memory
-   fw-virt-base /fw-ram +  extra-mem-va -  tag-l,  \ Size of OFW memory
+   fw-mem-va /fw-mem +  extra-mem-va -     tag-l,  \ Size of OFW memory
    MT_MEMORY                               tag-l,  \ Mapping type of OFW memory
 
-   fb-va                                   tag-l,  \ VA of OFW Frame Buffer
-   fb-pa pageshift rshift                  tag-l,  \ PA of OFW Frame Buffer
-   fb-size                                 tag-l,  \ Size of OFW memory
+   fb-mem-va                               tag-l,  \ VA of OFW Frame Buffer
+   fb-mem-pa pageshift rshift              tag-l,  \ PA of OFW Frame Buffer
+   /fb-mem                                 tag-l,  \ Size of OFW memory
    MT_DEVICE_WC                            tag-l,  \ Mapping type of OFW frame buffer
 ;
 ' (ofw-tag,) to ofw-tag,
@@ -267,11 +266,12 @@ fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
 device-end
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
-fload ${BP}/cpu/arm/olpc/1.75/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
+\ fload ${BP}/cpu/arm/olpc/1.75/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
+fload ${BP}/cpu/arm/olpc/1.75/rm3150-touchscreen.fth    \ Touchscreen driver and diagnostic
 fload ${BP}/cpu/arm/olpc/1.75/roller.fth     \ Accelerometer test
 
-fload ${BP}/cpu/arm/olpc/1.75/pinch.fth  \ Touchscreen gestures
-: pinch  " pinch" screen-ih $call-method  ;
+\ fload ${BP}/cpu/arm/olpc/1.75/pinch.fth  \ Touchscreen gestures
+\ : pinch  " pinch" screen-ih $call-method  ;
 
 : emacs  ( -- )
    false to already-go?
@@ -342,7 +342,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
 devalias fsdisk int:0
 
-create pong-use-touchscreen
+\ create pong-use-touchscreen
 fload ${BP}/ofw/gui/ofpong.fth
 fload ${BP}/cpu/x86/pc/olpc/life.fth
 
