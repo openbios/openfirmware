@@ -32,7 +32,7 @@ d# 64 constant #levels
 ;
 
 : open  ( -- flag )
-   my-space to base-adr
+   my-unit h# 400 " map-in" $call-parent to base-adr
 \ Leave the IRQ table alone so as not to steal interrupts from the SP
 \   block-irqs
 \   d# 64 0  do  i disable-irq  loop
