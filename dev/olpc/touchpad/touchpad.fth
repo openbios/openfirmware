@@ -292,20 +292,26 @@ variable mouse-y
 : clipx  ( delta -- x )  mouse-x @ +  0 max  screen-w 1- min  dup mouse-x !  ;
 : clipy  ( delta -- y )  mouse-y @ +  0 max  screen-h 1- min  dup mouse-y !  ;
 
+: rel>abs  ( dy dy buttons -- x y buttons )
+   >r                                ( dx dy )
+   swap clipx  swap negate clipy     ( x y )
+   r>                                ( buttons )
+;
+
 \ Try to receive a GS-format packet.  If one arrives within
 \ 20 milliseconds, return true and the decoded information.
 \ Otherwise return false.
 : pad?  ( -- false | x y z tap? true )
    mode @ 3 =  if
-      poll-event   if    ( dx dy buttons )
-         >r                                ( dx dy )
-         swap clipx  swap negate clipy  0  ( x y z )
-         0  r@ 1 and or                    ( x y z tap )
-         r> 4 and 0<> 2 and or             ( x y z tap' )
-         8 or                              ( x y z tap' )
-         true
-      else
-         false
+      stream-poll?   if    ( dx dy buttons )
+         rel>abs                 ( x y buttons )
+         >r  0                   ( x y z  r: buttons )
+         0  r@ 1 and or          ( x y z tap  r: buttons )
+         r> 4 and 0<> 2 and or   ( x y z tap' )
+         8 or                    ( x y z tap' )
+         true                    ( x y z tap true )
+      else                       ( )
+         false                   ( false )
       then
       exit
    then
