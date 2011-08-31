@@ -60,7 +60,7 @@ c;
 \ Convert a decimal fraction to a scaled integer multiplier
 : mul:  ( "coef" -- )
    safe-parse-word  push-decimal $number drop pop-base  ( n )
-   1 mulscale lshift  d# 1,000,000,000 */                         ( n' )
+   1 mulscale lshift  d# 1,000,000,000 */               ( n' )
    ,
 ;
 
@@ -145,6 +145,8 @@ taps/phase 2* /n* buffer: zbuf
 
    r> 3drop                               ( )
 ;
+
+: upsample6  ( inbuf /inbuf outbuf -- )  2 8khz>khz  ;
 
 0 [if]
 \ Here is some Matlab/Octave code to compute the weights
