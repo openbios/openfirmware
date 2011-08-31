@@ -75,7 +75,8 @@ stand-init:
 [then]
 \ : dcon-blnk?  ( -- flag )  ;  \ Not hooked up
 : dcon-stat@  ( -- n )  h# 019100 io@ 4 rshift 3 and  ;
-: dcon-irq?  ( -- flag )  d# 124 gpio-pin@  0=  ;
+: setup-dcon-irq  ( -- )  d# 124 dup gpio-set-fer  gpio-clr-edge  ;
+: dcon-irq?  ( -- flag )  d# 124 gpio-edge@  ;
 
 \ DCONSTAT values:  0 SCANINT  1 SCANINT_DCON  2 DISPLAYLOAD  3 MISSED
 
@@ -122,8 +123,9 @@ d# 905 value resumeline  \ Configurable; should be set from args
    else
       has-dcon-ram?  if
          begin                             ( )
+            setup-dcon-irq
             dcon-unload  \ Put the DCON in self-refresh mode
-            lock[ wait-dcon-mode ]unlock   ( retry? )
+            wait-dcon-mode                 ( retry? )
             \        display-off           ( retry? )
          while                             ( )
             \ We got a false ack from the DCON so start over from LOAD state
