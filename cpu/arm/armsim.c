@@ -917,7 +917,7 @@ case 0x12: INSTR("sub"); SBB(RD, RN, IMM32, 1); break;
 case 0x13: INSTR("rsb"); SBB(RD, IMM32, RN, 1); break;
 case 0x14: INSTR("add"); ADC(RD, RN, IMM32, 0); break;
 case 0x15: INSTR("adc"); ADC(RD, RN, IMM32, C); break;
-case 0x16: INSTR("sbc"); SBB(RD, IMM32, RN, C); break;
+case 0x16: INSTR("sbc"); SBB(RD, RN, IMM32, C); break;
 case 0x17: INSTR("rsc"); SBB(RD, IMM32, RN, C); break;
 case 0x18: INSTR("movw"); RD = IMM16; break;
 case 0x19: switch (BXTYPE) {
