@@ -79,8 +79,8 @@ d# 9999 to arm-linux-machine-type  \ Marvell Jasper
 ;
 ' (ofw-tag,) to ofw-tag,
 
-\ false to stand-init-debug?
-true to stand-init-debug?
+false to stand-init-debug?
+\ true to stand-init-debug?
 
 false value secure?
 
