@@ -447,6 +447,18 @@ case 0x04: if (OP1 == 0 || OP2 == 0) {
            }
            switch (BXTYPE) {
     // P=0, U=1, bit22=0, W=0 - post-index, subtract offset, register, no writeback
+	   case 0x9: INSTR("umull");
+	       { unsigned long long result;
+		   result = (unsigned long long)RM * (unsigned long long)RS;
+                   RN = (u32)((result >> 32) & 0xffffffffLL);
+                   RD = (u32)(result & 0xffffffffLL);
+		   if (S) {
+		       N = (result < 0);
+		       Z = (result == 0);
+		   }
+	       }
+	       break;
+
            case 0xb:
                if (L) {
                    INSTR("ldrh");
@@ -487,7 +499,8 @@ case 0x05: if (OP1 == 0 || OP2 == 0) {
            case 0xf: UNIMP("ldrsh"); break; // UNPREDICTABLE
            default:  UNIMP("BXTYPE"); break;
            } break;
-case 0x06: if (OP1 == 0 || OP2 == 0) {
+case 0x06:
+ if (OP1 == 0 || OP2 == 0) {
                INSTR("sbc"); SHFT(res); 
 //               printf("sbc RN %x res %x ~res %x C %x -- ", RN, res, ~(res), C);
 //               ADC(RD, RN, ~(res), C); 
@@ -502,7 +515,19 @@ break;
                case 0x3:
                case 0x5:
                case 0x7: INSTR("sbc"); SHFT(res); SBB(RD, res, RN, C); break;
-               case 0x9: UNIMP("smull"); break;
+               case 0x9: INSTR("smull"); 
+	       { long long result, a, b;
+		   a = (int)RM;
+		   b = (int)RS;
+		   result = a * b;
+                   RN = (u32)((result >> 32) & 0xffffffffLL);
+                   RD = (u32)(result & 0xffffffffLL);
+		   if (S) {
+		       N = (result < 0);
+		       Z = (result == 0);
+		   }
+	       }
+	       break;
     // P=0, U=1, bit22=1, W=0 - post-index, subtract offset, immediate, no writeback
            case 0xb:
                if (L) {
