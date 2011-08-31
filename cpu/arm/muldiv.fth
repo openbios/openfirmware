@@ -208,23 +208,23 @@ code mu/mod  ( ud u1 -- u.rem ud.quot )
 c;
 
 code fm/mod  ( d.dividend s.divisor -- s.rem s.quot )
-   mov     r3,tos
-   mov     r2,tos,asr #0		\ sign extend divisor
-   pop     r0,sp
-   pop     r1,sp
-   stmdb   sp!,{r8,r9}
+   mov     r3,tos           \ r3:divisor.low
+   mov     r2,tos,asr #0    \ r2:divisor.high (sign extended)
+   pop     r0,sp            \ r0:dividend.high
+   pop     r1,sp            \ r1:dividend.low
+   stmdb   sp!,{r8,r9}      \ save r8 and r9
    cmp     r0,#0
-   < if
+   < if                     \ negative dividend?
       rsbs    r1,r1,#0
-      rsc     r0,r0,#0
+      rsc     r0,r0,#0      \ r0,r1: abs(dividend)
       cmp     r2,#0
-      < if
+      < if                  \ negative divisor?
          rsbs    r3,r3,#0
-         rsc     r2,r2,#0
+         rsc     r2,r2,#0   \ r2,r3: abs(divisor)
          bl      'code (u64division)
          rsbs    r1,r1,#0
-         rsc     r0,r0,#0
-      else
+         rsc     r0,r0,#0   \ negate remainder for floored division
+      else                  \ nonnegative divisor
          mov     r8,r2
          mov     r9,r3
          bl      'code (u64division)
