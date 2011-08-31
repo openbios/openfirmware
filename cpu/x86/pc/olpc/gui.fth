@@ -373,6 +373,12 @@ d# 463 d# 540 2constant progress-xy
    d# 588 d# 638 to icon-xy  " bigdot" show-icon
    " vga?" $call-screen  0=  if  dcon-unfreeze dcon-freeze  then
 ;
+
+: show-reflash ( -- )  \ bottom left corner, laptop and ellipsis
+   d# 0 d# 810 to icon-xy " int" show-icon
+   d# 450 d# 150 do i d# 844 to icon-xy " bigdot" show-icon d# 100 +loop
+;
+
 : show-x  ( -- )  " x" show-icon  ;
 : show-sad  ( -- )
    icon-xy

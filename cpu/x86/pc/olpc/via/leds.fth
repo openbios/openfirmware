@@ -6,10 +6,6 @@ purpose: Driver/selftest for OLPC XO-1.5 LEDs
 " leds" device-name
 : open  ( -- okay? )  true  ;
 : close  ( -- )  ;
-: gpio-lo ( mask -- )  h# 4c acpi-l@  swap invert and  h# 4c acpi-l!  ;
-: gpio-hi  ( mask -- )  h# 4c acpi-l@  swap or  h# 4c acpi-l!  ;
-: hdd-led-on  ( -- )  h# 400000 gpio-lo  ;
-: hdd-led-off ( -- )  h# 400000 gpio-hi  ;
 : selftest  ( -- )
    ." Flashing LEDs" cr
    " /wlan" test-dev  " /wlan" test-dev  \ Twice for longer flashing

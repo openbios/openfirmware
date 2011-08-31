@@ -6,8 +6,6 @@ purpose: Driver/selftest for OLPC XO-1.75 LEDs
 " leds" device-name
 : open  ( -- okay? )  true  ;
 : close  ( -- )  ;
-: hdd-led-on  ( -- )  d# 10 gpio-set  ;
-: hdd-led-off ( -- )  d# 10 gpio-clr  ;
 : ols-led-on  ( -- )  h# 57 ec-cmd  ;
 : ols-led-off ( -- )  h# 58 ec-cmd  ;
 : ols-assy-mode-on  ( -- )  h# 59 ec-cmd  ;

@@ -192,6 +192,7 @@ h# 4000 constant /chunk   \ Convenient sized piece for progress reports
 ;
 
 : reflash   ( -- )   \ Flash from data already in memory
+   hdd-led-on
    ?file
    flash-write-enable
 
@@ -208,6 +209,7 @@ h# 4000 constant /chunk   \ Convenient sized piece for progress reports
    else
       .verify-msg
    then   
+   hdd-led-off
 ;
 
 defer fw-filename$  ' null$ to fw-filename$

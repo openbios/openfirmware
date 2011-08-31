@@ -179,6 +179,10 @@ fload ${BP}/cpu/arm/olpc/1.75/boardrev.fth   \ Board revision decoding
 
 false constant tethered?                     \ We only support reprogramming our own FLASH
 
+: hdd-led-off     ( -- )  d# 10 gpio-clr  ;
+: hdd-led-on      ( -- )  d# 10 gpio-set  ;
+: hdd-led-toggle  ( -- )  d# 10 gpio-pin@  if  hdd-led-off  else  hdd-led-on  then  ;
+
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
 \ fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;

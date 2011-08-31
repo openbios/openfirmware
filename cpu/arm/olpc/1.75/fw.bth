@@ -333,10 +333,6 @@ fload ${BP}/cpu/x86/pc/olpc/via/nbtx.fth
 fload ${BP}/cpu/x86/pc/olpc/via/nbrx.fth
 fload ${BP}/cpu/x86/pc/olpc/via/blockfifo.fth
 
-: hdd-led-off     ( -- )  d# 10 gpio-clr  ;
-: hdd-led-on      ( -- )  d# 10 gpio-set  ;
-: hdd-led-toggle  ( -- )  d# 10 gpio-pin@  if  hdd-led-off  else  hdd-led-on  then  ;
-
 alias fast-hash crypto-hash   \ fast-hash uses acceleration when available
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
@@ -478,7 +474,7 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 
    show-child
 
-   ?update-ec-flash
+   update-ec-flash?  if  show-reflash  update-ec-flash  then
 
    install-alarm
    ?sound

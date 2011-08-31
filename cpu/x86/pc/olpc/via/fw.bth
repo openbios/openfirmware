@@ -110,6 +110,13 @@ stand-init: MMU
 
 fload ${BP}/cpu/x86/acpiio.fth          \ ACPI register access
 
+: hdd-led@  h# 4c acpi-l@  ;
+: hdd-led!  h# 4c acpi-l!  ;
+h# 400000 constant hdd-led
+: hdd-led-toggle  ( -- )  hdd-led@  hdd-led xor  hdd-led!  ;
+: hdd-led-off     ( -- )  hdd-led@  hdd-led or  hdd-led!  ;
+: hdd-led-on      ( -- )  hdd-led@  hdd-led invert and  hdd-led!  ;
+
 fload ${BP}/cpu/x86/pc/olpc/via/probemem.fth	\ Memory probing
 
 [ifdef] virtual-mode
@@ -496,8 +503,7 @@ fload ${BP}/cpu/x86/pc/olpc/wifichannel.fth
 fload ${BP}/cpu/x86/pc/olpc/via/nbtx.fth
 fload ${BP}/cpu/x86/pc/olpc/via/nbrx.fth
 fload ${BP}/cpu/x86/pc/olpc/via/blockfifo.fth
-: hdd-led-toggle  ( -- )  h# 4c acpi-l@  h# 400000 xor  h# 4c acpi-l!  ;
-: hdd-led-off     ( -- )  h# 4c acpi-l@  h# 400000 or   h# 4c acpi-l!  ;
+
 : fast-hash  ( adr len hashname$ -- )
    2dup " sha256" $=  if              ( eblock# hashname$ r: hash$ )
       2drop sha-256                   ( eblock# calc-hash$ r: hash$ )

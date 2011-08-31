@@ -37,6 +37,7 @@ char 4 value expected-ec-version
 \ Tells the EC to auto-restart after power cycling
 : set-ec-reboot  ( -- )  1 h# f018 edi-b!  ;
 : reflash-ec
+   hdd-led-on
 [ifdef] cl2-a1
    " enter-updater" $call-ec
    ." Erasing ..." cr  " erase-flash" $call-ec cr
@@ -53,6 +54,7 @@ char 4 value expected-ec-version
    load-base  load-base /ec-flash +  /ec-flash  comp
    abort"  Miscompare!"
    cr
+   hdd-led-off
 [ifndef] cl2-a1
    ." Restarting EC and rebooting" cr
    d# 2000 ms
@@ -92,7 +94,8 @@ char 4 value expected-ec-version
    bl left-parse-string 2nip                                       ( version$ )
    ec-name$  $caps-compare  0<=                                    ( flag )
 ;
-: ?update-ec-flash  ( -- )
+
+: update-ec-flash  ( -- )
    " ecimage.bin" find-drop-in  if   ( adr len )
       2dup ec-up-to-date?  if        ( adr len )
 	 free-mem                    ( )
@@ -107,6 +110,13 @@ char 4 value expected-ec-version
 	    reflash-ec
 	 then
       then
+   then
+;
+
+: update-ec-flash?  ( -- flag )
+   " ecimage.bin" find-drop-in  if   ( adr len )
+       2dup ec-up-to-date? 0=        ( adr len flag )
+       >r free-mem r>                ( flag )
    then
 ;
 
