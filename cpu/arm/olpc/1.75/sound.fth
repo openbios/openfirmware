@@ -187,7 +187,7 @@ audio-sram h# 3f80 + constant in-desc
 
 : copy-in  ( -- )
    in-len /audio-buf min                       ( this-len )
-   my-in-desc 2 la+ l@  in-adr  third  move       ( this-len )
+   my-in-desc 2 la+ l@  in-adr  third  move    ( this-len )
    in-adr  over +  to in-adr                   ( this-len )
    in-len  over -  to in-len                   ( this-len )
    drop                                        ( )
@@ -476,6 +476,10 @@ h# 20000 constant tlen
    dup to sample-rate
    dup set-ctlr-sample-rate
    set-codec-sample-rate
+;
+: set-get-sample-rate  ( rate -- actual-rate )
+   drop d# 48000             ( actual-rate )
+   dup set-sample-rate       ( actual-rate )
 ;
 
 \ This is called from "record" in "mic-test" in "selftest"

@@ -351,6 +351,8 @@ stand-init: Init USB Phy
 
 fload ${BP}/dev/olpc/mmp2camera/loadpkg.fth
 
+fload ${BP}/cpu/arm/firfilter.fth
+
 fload ${BP}/cpu/x86/adpcm.fth            \ ADPCM decoding
 d# 32 is playback-volume
 

@@ -234,8 +234,22 @@ c;
 : wav-blk-size  ( -- blk-size )  wav-fmt-adr  dup  if  h# 14 + le-w@  then  ;
 
 : set-volume  ( -- )   " set-volume" $call-audio  ;
-: set-sample-rate  ( -- )
-   wav-fmt-adr ?dup  if  h# c + le-l@ " set-sample-rate" $call-audio  then
+0 value src-sample-rate
+0 value dst-sample-rate
+: try-set-sample-rate  ( desired-rate -- )
+   dup to src-sample-rate
+   dup " set-get-sample-rate" ['] $call-audio  catch  if  ( desired x x x )
+      3drop                                               ( desired )
+      dup " set-sample-rate" $call-audio                  ( desired )
+   else                                                   ( desired actual )
+      nip                                                 ( actual )
+   then                                                   ( actual )
+   to dst-sample-rate                                     ( )
+;
+: wav-set-sample-rate  ( -- )
+   wav-fmt-adr ?dup  if
+      h# c + le-l@ try-set-sample-rate                                      ( desired-rate )
+   then
 ;
 
 0 value out-move
@@ -243,35 +257,37 @@ c;
 \ Collapse a sample array with "#output-ch" channels/sample into a smaller
 \ array with "wav-in-#ch" channels/sample, discarding the excess channels.
 
-: condense-pcm  ( adr in-len -- )
-   wav-in-#ch #output-ch - /w* to in-skip  ( adr in-len )
-   #output-ch /w* to out-move              ( adr in-len )
-   over  swap  bounds  ?do                 ( out )
-      i over out-move move                 ( out )
-      out-move +                           ( out' )
-   in-skip +loop  drop                     ( )
+: condense-pcm  ( adr in-len -- adr out-len )
+   2dup #output-ch wav-in-#ch */ 2swap     ( adr out-len adr in-len )
+   wav-in-#ch #output-ch - /w* to in-skip  ( adr out-len adr in-len )
+   #output-ch /w* to out-move              ( adr out-len adr in-len )
+   over  swap  bounds  ?do                 ( adr out-len out )
+      i over out-move move                 ( adr out-len out )
+      out-move +                           ( adr out-len out' )
+   in-skip +loop  drop                     ( adr out-len )
 ;
 
 \ Spread a sample array with "wav-in-#ch" channels/sample into a larger
 \ array with "#output-ch" channels/sample, zeroing the new channels.
 
-: expand-pcm  ( adr in-len -- )
-   #output-ch wav-in-#ch - /w* to out-skip    ( adr in-len )
-   wav-in-#ch /w* to out-move                 ( adr in-len )
-   2dup  wav-in-#ch /  #output-ch *           ( adr in-len adr out-len )
-   +  -rot                                    ( out-adr in-start in-len )
-   over +  out-move -  do                     ( out-adr )
-      out-skip -  dup out-skip erase          ( out-adr' )
-      out-move -  i over out-move move        ( out-adr' )
-   out-move negate +loop                      ( out-adr )
-   drop
+: expand-pcm  ( adr in-len -- adr out-len )
+   2dup #output-ch wav-in-#ch */ 2swap        ( adr out-len adr in-len )
+   #output-ch wav-in-#ch - /w* to out-skip    ( adr out-len adr in-len )
+   wav-in-#ch /w* to out-move                 ( adr out-len adr in-len )
+   2dup  wav-in-#ch /  #output-ch *           ( adr out-len adr in-len adr out-len )
+   +  -rot                                    ( adr out-len out-adr in-start in-len )
+   over +  out-move -  do                     ( adr out-len out-adr )
+      out-skip -  dup out-skip erase          ( adr out-len out-adr' )
+      out-move -  i over out-move move        ( adr out-len out-adr' )
+   out-move negate +loop                      ( adr out-len out-adr )
+   drop                                       ( adr out-len )
 ;
 
 \ Given a sample array of the form L0, R0, L1, R1, ..., copy the left
 \ channel into the right, giving L0, L0, L1, L1, etc.  This is
 \ particularly useful when the R samples are initially 0.
 
-: mono16>stereo16  ( adr len -- )  bounds  ?do  i w@  i wa1+ w!  /l +loop  ;
+: mono16>stereo16  ( adr len -- adr len )  2dup  bounds  ?do  i w@  i wa1+ w!  /l +loop  ;
 
 : play-wait  ( -- )  " write-done" $call-audio  ;
 
@@ -287,27 +303,55 @@ d# -9 value playback-volume  \ -9 is clipping threshold
 
 0 value pcm-base
 
-: play-raw-pcm  ( adr -- error? )
-   wav-in-#ch 0=  if  drop true exit  then              ( adr )
+: allocate-playback-buffer  ( -- in-len )
+   dst-sample-rate src-sample-rate   ( num denom )
+   2dup =  if       ( num denom )
+      false         ( num denom error? )
+   else             ( num denom )
+[ifdef] upsample6
+      2dup 6 * <>   ( num denom error? )
+[else]
+      true          ( num denom error? )
+[then]
+   then             ( num denom error? )
+   abort" Unsupported sample rate conversion"         ( num denom )
 
-   \ Allocate DMA memory for the decoded output
-   wav-data-adr 4 - le-l@                               ( adr in-len )
-   dup  wav-in-#ch /  #output-ch *  to /pcm-output      ( adr in-len )
-   /pcm-output " dma-alloc" $call-audio  to pcm-base    ( adr in-len )
-
-   tuck  pcm-base  swap  move                           ( in-len )
-
-   #output-ch wav-in-#ch <  if  pcm-base over condense-pcm  then   \ Skip extra channel data
-   #output-ch wav-in-#ch >  if  pcm-base over expand-pcm    then   \ Spread out channel data
-   #output-ch 2 =  wav-in-#ch 1 =  and  if  pcm-base over 2* mono16>stereo16   then   \ Stereo from mono
-   drop
-
-   pcm-base /pcm-output (play-pcm)
-   false
+   2>r                                                ( r: num denom )
+   wav-data-adr 4 - le-l@                             ( in-len r: num denom )
+   dup 2r> */                                         ( in-len out-len )
+   #output-ch wav-in-#ch */                           ( in-len out-len' )
+   to /pcm-output                                     ( in-len )
+   /pcm-output " dma-alloc" $call-audio  to pcm-base  ( in-len )
 ;
 
-: play-ima-adpcm  ( adr -- error? )
-   wav-fact-adr 0=  if  drop true exit  then
+: move-or-upsample   ( adr -- adr' len )
+   allocate-playback-buffer                ( adr in-len )
+
+   src-sample-rate dst-sample-rate =  if   ( adr in-len )
+      tuck  pcm-base  swap  move           ( in-len )
+   else                                    ( adr in-len )
+[ifdef] upsample6
+      dup 6 * -rot                         ( out-len adr in-len  )
+      pcm-base  upsample6                  ( out-len )
+[then]
+   then                                    ( len )
+   pcm-base swap                           ( adr' len )
+;
+: play-raw-pcm  ( -- error? )
+   wav-in-#ch 0=  if  true exit  then                ( )
+
+   wav-data-adr move-or-upsample        ( adr in-len )
+
+   #output-ch wav-in-#ch <  if  condense-pcm  then   ( adr len' )    \ Skip extra channel data
+   #output-ch wav-in-#ch >  if  expand-pcm    then   ( adr len' )    \ Spread out channel data
+   #output-ch 2 =  wav-in-#ch 1 =  and  if  mono16>stereo16   then   ( adr len )  \ Stereo from mono
+
+   (play-pcm)                                        ( )
+   false                                             ( error? )
+;
+
+: play-ima-adpcm  ( -- error? )
+   wav-fact-adr 0=  if  true exit  then
 
    wav-#sample #output-ch *  /w*  to /pcm-output
 
@@ -315,11 +359,12 @@ d# -9 value playback-volume  \ -9 is clipping threshold
    /pcm-output " dma-alloc" $call-audio  to pcm-base
 
    pcm-base /pcm-output erase               ( in )
-   pcm-base wav-#sample wav-in-#ch wav-blk-size  adpcm-decoder  ( )
-   #output-ch 2 =  wav-in-#ch 1 =  and  if  ( )
-      pcm-base /pcm-output mono16>stereo16  ( )
-   then                                     ( )
-   pcm-base /pcm-output (play-pcm)          ( )
+   wav-data-adr pcm-base wav-#sample wav-in-#ch wav-blk-size  adpcm-decoder  ( )
+   pcm-base /pcm-output                     ( adr len )
+   #output-ch 2 =  wav-in-#ch 1 =  and  if  ( adr len )
+      mono16>stereo16                       ( adr len )
+   then                                     ( adr len )
+   (play-pcm)                               ( )
    false                                    ( error? )
 ;
 
@@ -340,14 +385,15 @@ d# -9 value playback-volume  \ -9 is clipping threshold
    then
 
    playback-volume set-volume
-   set-sample-rate
+   wav-set-sample-rate
 
    wav-cc  case
-          1  of  wav-data-adr play-raw-pcm     endof
-      h# 11  of  wav-data-adr play-ima-adpcm   endof
+          1  of  play-raw-pcm     endof
+      h# 11  of  play-ima-adpcm   endof
       ( default )  ." Cannot play .wav format type: " dup .wav-cc true swap cr
    endcase
    \ audio-ih close-dev
+   free-wav
 ;
 
 : ($play-wav)  ( file-str -- )
