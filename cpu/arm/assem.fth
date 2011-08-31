@@ -884,47 +884,21 @@ defer do-offset
    )op
 ;
 
+: g?  ( -- flag )  newword 0000.0100 land 0<>  ;
+: {g}  ( -- )  ascii g parse-1  if  0000.0100 xop  then  ;
+
 : wcx  adt-wcx   0f 10 get-this  ;
+: wcx0 adt-wcx   0f  0 get-this  ;
 : wrd  adt-wmmx  0f 0c get-this  ;
 : wrd5 adt-wmmx  0f 05 get-this  ;
 : wrn  adt-wmmx  0f 10 get-this  ;
 : wrm  adt-wmmx  0f 00 get-this  ;
-: amode-wmmx-cdp  ( -- )
-   \ wrd, wrn, wrm
-   op(
-   wrd
-   wrn
-   wrm
-   )op
-;
-: amode-wmmx-cdp2  ( -- )
-   \ wrd, wrn
-   op(
-   wrd
-   wrn
-   )op
-;
-: imm3-0  
-   adt-immed  07 00 get-this
-;
-: amode-wmmx-cdp-imm  ( -- )
-   \ wrn, wrd, wrm
-   op(
-   wrn
-   wrd
-   wrm
-   adt-immed  07 14 get-this
-   )op
-;
-
-: amode-wmmx-transfer  ( -- )
-   \ wrd, rn, wrm
-   op(
-   wrd
-   adt-reg   0f 0c get-this
-   wrm
-   )op
-;
+: amode-wmmx-cdp  ( -- )  op( wrd wrn wrm )op  ;
+: amode-wmmx-cdp-g  ( -- )  op( wrd wrn  g? if  wcx0  else  wrm  then  )op  ;
+: amode-wmmx-cdp2  ( -- )  op( wrd wrn )op  ;
+: imm3-0  ( -- )  adt-immed  07 00 get-this  ;
+: amode-wmmx-cdp-imm  ( -- )  op( wrn wrd wrm   adt-immed  07 14 get-this  )op  ;
+: amode-wmmx-transfer  ( -- )  op(  wrd  get-r12  wrm  )op  ;
 
 \ Get the offset for ldc, stc instructions.
 : get-off-c  ( -- )
@@ -1056,9 +1030,6 @@ defer do-offset
    ascii s parse-1  if  0030.0000 xop  need-s  exit  then
    " us or ss" expecting
 ;
-: {g}
-   ascii g parse-1  if  0000.0100 xop  ( !! need to change mode of last operand from wrN to rN )  then
-;
 
 : parse-condition?  ( -- cond true | false )
    \ The next two characters of the input string will be checked for a
@@ -1092,6 +1063,9 @@ defer do-offset
 ;
 : {cond/s}  ( opcode -- )  {cond} {s}  ;
 
+: do-mmx  ( opc -- )  0e00.0000 or  {cond}  amode-wmmx-cdp  ;
+: do-mmx-shift  ( opc -- )  0e00.0000 or  {hwd} {g} +{cond}  amode-wmmx-cdp-g  ;
+
 : amode-wldst  ( -- )
    op(
    get-whatever
@@ -1099,7 +1073,7 @@ defer do-offset
       adt-wcx  of
          0c set-field
 	 f000.0000 iop
-         newword 0040.0010 and 0000.0010 <>  if
+         newword 0040.0100 and 0000.0100 <>  if
 	    " Size must be W for WLDR or WSTR with wCX" ad-error
 	 then
       endof
@@ -1261,7 +1235,6 @@ also arm-assembler definitions
 : mcr    0e00.0010 {cond}   amode-copr   ;
 : mrc    0e10.0010 {cond}   amode-copr   ;
 
-: do-mmx  ( opc -- )  0e00.0000 or  {cond}  amode-wmmx-cdp  ;
 : wor     0000.0000 do-mmx ;
 : wxor    0010.0000 do-mmx ;
 : wand    0020.0000 do-mmx ;
@@ -1277,7 +1250,6 @@ also arm-assembler definitions
 : walignr2 00a0.0020 do-mmx ;
 : walignr3 00b0.0020 do-mmx ;
 
-: do-mmx-shift  ( opc -- )  0e00.0000 or  {hwd} {g} +{cond}  amode-wmmx-cdp  ;
 : wsra     0000.0040 do-mmx-shift ;
 : wsll     0010.0040 do-mmx-shift ;
 : wsll     0020.0040 do-mmx-shift ;
