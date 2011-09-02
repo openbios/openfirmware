@@ -575,6 +575,9 @@ false value verbose?
    false
 ;
 
+" name" parent-device get-package-property drop decode-string ( name$ )
+" ec-spi" $=  [if]
+
 \ For XO-1.75, the game buttons are connected directly to the CPU SoC,
 \ instead of going through the EC.  To preserve the rest of the test
 \ logic, we generate a stream of up-down events from the game button
@@ -664,18 +667,19 @@ create button-scancodes
    then                                          ( false | scancode true )
 ;
 
-0 value ec-spi-buttons?
-
 \ Check for a change in button state if necessary.
 : or-button?  ( [scancode] key? -- [scancode] flag )
    \ If there is already a key from get-data?, handle it before checking the game buttons
-   dup  if  exit  then          ( false )
+   ?dup  if  exit  then      ( )
 
    \ If the /ec-spi device node is present, the game buttons are directly connected
    \ so we must handle them here.  Otherwise the EC will handle them and fold their
    \ events into the keyboard scancode stream.
-   ec-spi-buttons?  if   drop button-event?  then
+   button-event?
 ;
+[else]
+alias or-button? noop  immediate
+[then]
 
 0 value last-timestamp
 : selftest-keys  ( -- )
@@ -727,13 +731,6 @@ create button-scancodes
 warning @ warning off
 : selftest  ( -- error? )
    open  0=  if  true exit  then
-
-   " /ec-spi" locate-device  if  ( )
-      false                      ( flag )
-   else                          ( phandle )
-      drop true                  ( flag )
-   then                          ( flag )
-   to ec-spi-buttons?            ( )
 
    set-keyboard-type
 
