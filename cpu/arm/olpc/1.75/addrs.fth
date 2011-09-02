@@ -71,5 +71,6 @@ sram-pa  constant sram-va
 
 sram-va h# 2.0000 + constant 'ddr-recal
 sram-va h# 2.0100 + constant 'ddr-self-refresh
+sram-va h# 2.0400 + constant 'ddr-self-refresh-sp
 
 sram-pa h# 2.4000 + constant diagfb-pa           \ Low-resolution frame buffer for startup numbers

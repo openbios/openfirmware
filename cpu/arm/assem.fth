@@ -1401,7 +1401,7 @@ also arm-assembler definitions
 : sev   ( -- )  0320f004 {cond} op( )op  ;
 
 : nop  ( -- )  e1a00000 {} op( )op  ;   \ mov r0,r0
-: dsb  ( -- )  f57ff040 {} op( )op  ;   \ "dsb sy" is f57ff04f
+: dsb  ( -- )  f57ff04f {} op( )op  ;   \ "dsb" is equivalent to "dsb sy" - f57ff04f
 : dmb  ( -- )  f57ff050 {} op( )op  ;
 : isb  ( -- )  f57ff060 {} op( )op  ;
 

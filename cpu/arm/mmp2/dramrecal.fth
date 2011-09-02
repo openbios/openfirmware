@@ -72,25 +72,22 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
         \ orr   r1, r1, #0x000a   \ ODT{1,0}_SWITCH_MODE: Termination controlled by Read and Write enables
         \ str   r1, [r0, #0x770]  \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
 
-[ifdef] notdef
+\ Store registers in SRAM so CForth can see them, for debugging
+\       set     r2, #0xd102.0400
+\       stmia   r2, {r0-r15}
+
+        \ Linux sets the register to 0x860
         ldr     r1, [r0, #0x1e0]  \ PHY_CTRL8
         bic     r1,r1,#0x07700000 \ PHY_ADCM_ZPDRV: 0 PHY_ADCM_ZNDRV: 0 (Disable drivers 6:0)
         str     r1, [r0, #0x1e0]  \ PHY_CTRL8
-[then]
 
-        set     r2, #0xfe086000
-        set     r3, #0xfe050000
-        str     r2, [r3]          \ Final write to SP votes
-
-        mcr     p15,0,r0,7,10,4   \ Data Synchronization Barrier
-\       dsb                       \ Data Synchronization Barrier
+        dsb                       \ Data Synchronization Barrier
         wfi                       \ Wait for interrupt
 
-[ifdef] notdef
+        \ Linux sets the register to 0x07700860, hardcoding the drive strength
         ldr     r1, [r0, #0x1e0]  \ PHY_CTRL8
         orr     r1,r1,#0x07700000 \ PHY_ADCM_ZPDRV: 7 PHY_ADCM_ZNDRV: 7 (Enable drivers 6:0)
         str     r1, [r0, #0x1e0]  \ PHY_CTRL8
-[then]
 
         \ This block was commented-out in the Linux code, and the value is incorrect for OLPC in any case
         \ mov   r1, #0x02000000   \ PAD_TERM_SWITCH_MODE: Termination enabled during all reads
@@ -100,11 +97,11 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
         mov     r1, #0x80000000   \ PHY_SYNC_EN
         str     r1, [r0, #0x240]  \ PHY_CTRL14
 
-        ldr     r1, [r0, #230]    \ PHY_CTRL13
+        ldr     r1, [r0, #0x230]  \ PHY_CTRL13
         orr     r1,r1,#0xf0000000 \ DLL_RESET_TIMER: 15*256 memory clocks
 \       mov     r1, #0xf0000000   \ DLL_RESET_TIMER: 15*256 memory clocks
 \       orr     r1, r1, #0x0040   \ DLL_PHSEL: 4  (45 + 4*3 = 57 degrees) - adjust?
-        str     r1, [r0, #230]    \ PHY_CTRL13
+        str     r1, [r0, #0x230]  \ PHY_CTRL13
 
         mov     r1, #0x20000000   \ PHY_DLL_RESET
         str     r1, [r0, #0x240]  \ PHY_CTRL14
@@ -168,8 +165,11 @@ c;
 code do-self-refresh  ( -- )
    set r0,`memctrl-va #`   \ Memory controller virtual address
    set r1,`'ddr-self-refresh #`   \ Address of ddr-self-refresh routine in SRAM
+   mov r7,sp
+   set sp,`'ddr-self-refresh-sp #`
    mov lr,pc
    mov pc,r1
+   mov sp,r7
 c;
 
 : +apbc  ( offset -- io-offset )  h# 01.5000 +  ;
@@ -217,16 +217,28 @@ c;
    h# f0 h# 1c +scu io-clr    \ SCU_MCB_CONF
 ;
 : disable-apmu-clks  ( -- )
-   h#    3f h# d8 +apmu io-clr  \ PMUA_MSPRO_CLK_RES_CTRL
-   h# 1fffd h# dc +apmu io-clr  \ PMUA_GLB_CLK_RES_CTRL
-\  0        h# 68 +apmu io!     \ PMUA_WTM_CLK_RES_CTRL
-   h#     9 h# 5c +apmu io-clr  \ PMUA_USB_CLK_RES_CTRL
+   h#    1b h#  54 +apmu io-clr  \ PMUA_SDH0_CLK_RES_CTRL
+   h#    1b h#  58 +apmu io-clr  \ PMUA_SDH1_CLK_RES_CTRL
+   h#    1b h#  e8 +apmu io-clr  \ PMUA_SDH2_CLK_RES_CTRL
+   h#    1b h#  d4 +apmu io-clr  \ PMUA_SMC_CLK_RES_CTRL
+   h#    3f h#  60 +apmu io-clr  \ PMUA_NF_CLK_RES_CTRL
+   h#    3f h#  d8 +apmu io-clr  \ PMUA_MSPRO_CLK_RES_CTRL - XO does not use MSPRO
+   h#    12 h# 10c +apmu io-clr  \ PMUA_AUDIO_CLK_RES_CTRL
+   h# 1fffd h#  dc +apmu io-clr  \ PMUA_GLB_CLK_RES_CTRL
+\  0        h#  68 +apmu io!     \ PMUA_WTM_CLK_RES_CTRL
+   h#     9 h#  5c +apmu io-clr  \ PMUA_USB_CLK_RES_CTRL
 ;
 : enable-apmu-clks  ( -- )
-   h#    3f h# d8 +apmu io-set  \ PMUA_MSPRO_CLK_RES_CTRL
-   h# 1fffd h# dc +apmu io-set  \ PMUA_GLB_CLK_RES_CTRL
-\  h#    1b h# 68 +apmu io!     \ PMUA_WTM_CLK_RES_CTRL
-   h#     9 h# 5c +apmu io-set  \ PMUA_USB_CLK_RES_CTRL
+   h#    1b h#  54 +apmu io-set  \ PMUA_SDH0_CLK_RES_CTRL
+   h#    1b h#  58 +apmu io-set  \ PMUA_SDH1_CLK_RES_CTRL
+   h#    1b h#  e8 +apmu io-set  \ PMUA_SDH2_CLK_RES_CTRL
+   h#    1b h#  d4 +apmu io-set  \ PMUA_SMC_CLK_RES_CTRL \ ??? what is this and why is it on?
+   h#    3f h#  60 +apmu io-set  \ PMUA_NF_CLK_RES_CTRL \ Should this be on?
+\  h#    3f h#  d8 +apmu io-set  \ PMUA_MSPRO_CLK_RES_CTRL
+   h#    12 h# 10c +apmu io-set  \ PMUA_AUDIO_CLK_RES_CTRL
+   h# 1fffd h#  dc +apmu io-set  \ PMUA_GLB_CLK_RES_CTRL
+\  h#    1b h#  68 +apmu io!     \ PMUA_WTM_CLK_RES_CTRL
+   h#     9 h#  5c +apmu io-set  \ PMUA_USB_CLK_RES_CTRL
 ;
 : disable-mpmu-clks  ( -- )
    h#      a010 h# 1024 +mpmu io!     \ MPMU_ACGR
@@ -310,8 +322,36 @@ c;
    save-apcr h# 1000 +mpmu io!     ( )             \ Restore APCR
    save-idlecfg h# 18 +apmu io!    ( )             \ Restore IDLE_CFG
 ;
+\ Questions:
+\ Meaning of various connect type options
+\ do LP mode settings take effect immediately if SP is already at WFI, or only on entry to WFI
+\ does WFI make any difference on SP?  I don't see any difference in power
+\ Which WFI instruction on SP?
+\ Which WFI instruction on PJ4?
+\ Any undocumented bits that affect the situation?
+\ What are the _INT versions of the XDB config files?
+\ What does CS stand for in ARM/CS ?
+\ When using XDB on XO with OFW, XDB can see entry to LP state - core Status stays running - LowPower Internal
+\ How to recapture short of restarting XDB?
+\ Pushing button on JTAG box often seems to have no effect
+
 : setup-sleep-state  ( -- )
    \ begin mmp2_pm_enter_lowpower_mode(state)
+
+   \ Security processor setup
+   sleep-depth 4 >= if                        \ state at least POWER_MODE_CHIP_SLEEP (turn off most of SoC)
+      h# fe08.6000 0 +mpmu io!                \ In SP, set AXISD, resvd, SLPEN,  SPSD,   DDRCORSD, APBSD resvd, VCXOSD
+   then
+
+   sleep-depth 3 =  if                        \ state at least POWER_MODE_APPS_SLEEP (turn off slow IO)
+      h# de00.6000 0 +mpmu io!                \ In SP, set AXISD, resvd,        SPSD,   DDRCORSD, APBSD resvd,
+   then
+
+\ Linux value
+\  h# 8030.0020 h# 14 +apmu io!               \ IN PMUA_SP_IDLE_CFG, set , DIVIDER_RESET_EN, SP_DIS_MC_SW_REQ, SP_MC_WAKE_EN, TCM_STATE_RETAIN
+   h# 8020.0020 h# 14 +apmu io!               \ IN PMUA_SP_IDLE_CFG, set , DIVIDER_RESET_EN, SP_DIS_MC_SW_REQ,                TCM_STATE_RETAIN
+
+   \ PJ4 setup
 
    h# 1000 +mpmu io@ to save-apcr
    h#   18 +apmu io@ to save-idlecfg
@@ -323,20 +363,14 @@ c;
       h# 0008.0000 or              ( apcr' )  \ Set VCXOSD
    then
 
-   h# 2000.0000 0 +mpmu io-clr                \ In SP, clear SLPEN - we might set it later
-
    sleep-depth 4 >= if                        \ state at least POWER_MODE_CHIP_SLEEP (turn off most of SoC)
-      h# 2008.0000 0 +mpmu io-set             \ In SP, also set          SLPEN,                                VCXOSD
       h# 2000.0000 or              ( apcr' )  \ Set SLPEN
       setup-wakeup-sources and     ( apcr' )
    then
 
    sleep-depth 3 >=  if                       \ state at least POWER_MODE_APPS_SLEEP (turn off slow IO)
-      h# de00.0000 0 +mpmu io-set             \ In SP, set AXISD, resvd,        SPSD,   DDRCORSD, APBSD resvd,
       h# 0400.0000 or              ( apcr' )  \ Set APBSD
    then  
-
-   h# 8030.0020 h# 14 +apmu io!    ( apcr )   \ IN PMUA_SP_IDLE_CFG, set , DIVIDER_RESET_EN, SP_DIS_MC_SW_REQ, SP_MC_WAKE_EN, TCM_STATE_RETAIN
 
    sleep-depth 2 >=  if                       \ state at least POWER_MODE_APPS_IDLE  (turn off fast IO and DDR)
       h# 8800.0000 or              ( apcr' )  \ Set AXISD, DDRCORSD
@@ -344,7 +378,8 @@ c;
 
    h# 5200.0000 or                 ( apcr' )  \ Set DSPSD (bit 30, reserved), SPSD (bit 28), BBSD (bit 25, resvd)
 
-   save-idlecfg 1 invert and       ( apcr idle )   \ PMUA_MOH_IDLE
+   save-idlecfg 2 invert and       ( apcr idle )   \ Clear PMUA_MOH_IDLE (AKA PJ_IDLE)
+\  h# 8000.0000 invert and         ( apcr idle' )  \ Clear PJ_DBG_CLOCK_EN
 
    sleep-depth 2 >=  if                            \ state at least POWER_MODE_APPS_IDLE
       h# 0000.0020 or              ( apcr idle' )  \ PJ_PWRDWN
@@ -352,7 +387,7 @@ c;
 
    sleep-depth 1 >=  if                            \ state at least POWER_MODE_CORE_EXTIDLE
       h# 3000.0000 invert and      ( apcr idle' )  \ PJ_ISO_MODE_CNTRL - isolation controlled by processor logic and active
-      h# 000a.0000 or              ( apcr idle' )  \ 2 L2 power switches, 1 L1 power switch, 3 core power switches
+      h# 000a.0002 or              ( apcr idle' )  \ 2 L2 power switches, 1 L1 power switch, 3 core power switches
    then
 
    h# 0020.0000 or                 ( apcr idle' )  \ PJ_DIS_MC_SW_REQ - disable idle entry using software register bits
@@ -376,7 +411,16 @@ c;
 : stdin-idle-on   ['] safe-idle to stdin-idle  d# 15 enable-interrupt  ;
 : stdin-idle-off  ['] noop to stdin-idle  install-uart-io  d# 15 disable-interrupt  ;
 
+: timers-off  ( -- )
+   0 h# 14048 io!    \ Disable interrupts from the tick timer
+   7 h# 1407c io!    \ Clear any pending interrupts
+   h# f disable-interrupt  \ Block timer interrupt
+;
+
 : str  ( -- )
+   timers-off
+
+   screen-dark
    stdin-idle-off
    5 h# 38 +mpmu io!    \ Use 32 kHz clock instead of VCXO for slow clock
 
@@ -391,7 +435,7 @@ c;
 
    setup-sleep-state
 
-\  h# 00c0.0000 h# 8c +apmu io-set  \ Power down CoreSight SRAM
+   h# 000c.0000 h# 8c +apmu io-set  \ Power down CoreSight SRAM
 
    \ TODO - need to power down sram/l2$
    \ mmp2_cpu_disable_l2(0);
@@ -402,7 +446,7 @@ c;
    disable-clks
 
    \ begin mmp2_cpu_do_idle()
-   block-irqs                    ( )             \ Block IRQs - will be cleared by PMU
+   block-irqs                    ( )  \ Block IRQs - will be cleared by PMU
    do-self-refresh               ( )
 
    restore-run-state
