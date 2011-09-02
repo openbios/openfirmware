@@ -61,12 +61,6 @@ defer ofw-tag, ' noop to ofw-tag,  \ Define externally if appropriate
    0            tag-l,    \ start_address
 
    /ramdisk  if
-      5              tag-l,          \ size
-      h# 54410004    tag-l,          \ ATAG_RAMDISK
-      0              tag-l,          \ load flag == 0
-      d# 4096        tag-l,          \ 4k kilobytes = 4 megabytes (calculate dynamically?)
-      0              tag-l,          \ unused floppy block number
-
       4              tag-l,
       h# 54420005    tag-l,          \ ATAG_INITRD2
       ramdisk-adr >physical tag-l,   \ physical starting address
