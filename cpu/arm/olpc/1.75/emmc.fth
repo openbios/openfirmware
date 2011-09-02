@@ -1,6 +1,5 @@
 \ XXX do we need to set the internal SD for fast drive in boardgpio.fth ?
 : select-internal-sd  ( -- )
-   ." Using internal SD" cr
    h# 18c3 d# 113 af!  \ SD_CMD
    h# 18c3 d# 126 af!  \ SD_DATA2
    h# 18c3 d# 127 af!  \ SD_DATA0
@@ -19,7 +18,6 @@
    h# c1   d# 168 af!  \ eMMC_D1 as GPIO
 ;
 : select-emmc  ( -- )
-   ." Using eMMC" cr
    h# c1 d# 113 af!  \ SD_CMD as GPIO
    h# c1 d# 126 af!  \ SD_DATA2 as GPIO
    h# c0 d# 127 af!  \ SD_DATA0 as GPIO

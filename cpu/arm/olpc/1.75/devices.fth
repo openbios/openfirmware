@@ -36,7 +36,6 @@ warning off
 : stand-init-io  ( -- )
    stand-init-io
    inituarts  install-uart-io
-   ." UART installed" cr
 ;
 warning on
 
