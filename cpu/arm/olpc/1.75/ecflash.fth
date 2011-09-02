@@ -46,7 +46,6 @@ char 4 value expected-ec-version
    load-base /ec-flash + /ec-flash 0 " read-flash" $call-ec
 [else]
    use-edi-spi  edi-open
-   ." Erasing ..."  erase-chip cr
    ." Writing ..."  load-base /ec-flash 0 edi-program-flash cr
    ." Verifying ..."
    load-base /ec-flash + /ec-flash 0 edi-read-flash

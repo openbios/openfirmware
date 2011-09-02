@@ -131,13 +131,17 @@ d# 128 constant /flash-page
    h# 70 flash-cmd                ( )
    wait-flash-busy                ( )
 ;
+h# 7e80 constant ec-flags-offset
 : edi-program-flash  ( adr len offset -- )
-   cr
-   swap  0  ?do
-      (cr i .
-      over i +  over i +  edi-program-page  ( adr offset )
-   /flash-page +loop    ( adr offset )
-   2drop                ( )
+   cr                                          ( adr len offset )
+   swap  0  ?do                                ( adr offset )
+      (cr i .                                  ( adr offset )
+      dup i + ec-flags-offset <>  if           ( adr offset )
+         dup i + erase-page                    ( adr offset )
+         over i +  over i +  edi-program-page  ( adr offset )
+      then                                     ( adr offset )
+   /flash-page +loop                           ( adr offset )
+   2drop                                       ( )
 ;
 : edi-read-flash  ( adr len offset -- )
    over 0=  if  3drop exit  then  ( adr len offset )
