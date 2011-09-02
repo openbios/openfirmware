@@ -31,17 +31,11 @@ defer linux-pre-hook  ' noop to linux-pre-hook
    +                                 ( limit )
 ;
 
-: add-root-dev  ( cmdline$ -- cmdline$' )
-   /ramdisk  if                  ( cmdline$ )
-      "  root=/dev/ram0" $cat2   ( cmdline$' )
-   then                          ( cmdline$ )
-;
-
 \ see http://www.simtec.co.uk/products/SWLINUX/files/booting_article.html
 
 0 value arm-linux-machine-type  \ Set this after loading this file
 h# 100 value linux-params       \ The location recommended by the above article
-def-load-base value linux-base
+h# 10.0000 value linux-base
 0 value rootdev#                \ Set externally
 
 0 value tag-adr
@@ -74,13 +68,12 @@ defer ofw-tag, ' noop to ofw-tag,  \ Define externally if appropriate
       0              tag-l,          \ unused floppy block number
 
       4              tag-l,
-      h# 54420005    tag-l,          \ ATAG_RAMDISK2
+      h# 54420005    tag-l,          \ ATAG_INITRD2
       ramdisk-adr >physical tag-l,   \ physical starting address
       /ramdisk       tag-l,          \ size of compressed ramdisk in bytes
    then
 
    \ Command line
-   ( cmdline$ ) add-root-dev 
    ( cmdline$ )                  ( adr len )
    dup  if                       ( adr len )
       1+ 4 round-up              ( adr len+null_rounded )
@@ -121,7 +114,7 @@ defer place-ramdisk
 : linux-place-ramdisk  ( adr len -- )
    to /ramdisk                                    ( adr )
 
-   memory-limit  umin  /ramdisk -                 ( adr new-ramdisk-adr )
+   dup memory-limit  umin  /ramdisk -             ( adr new-ramdisk-adr )
    tuck /ramdisk move                             ( new-ramdisk-adr )
 \  dup to linux-memtop
    to ramdisk-adr
