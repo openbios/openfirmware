@@ -15,6 +15,7 @@ in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: testicons.bin
 in: ${BP}/clients/emacs/arm/emacs
+in: cforth.img
 build-now
 
 fload ${BP}/cpu/arm/olpc/1.75/fw-version.fth
@@ -48,8 +49,8 @@ timh:  TIMH        0 d101f000
 \ Main Processor code loaded into DRAM
 image: OBMI      800 d101c000 ${BP}/cpu/arm/olpc/1.75/dummy.img
 \ Secure Processor code loaded into SRAM
-image: WTMI     1000 d1018000 ${BP}/../cforth/build/arm-xo-1.75/shim.img
-image: CFTH     2000 d1000000 ${BP}/../cforth/build/arm-xo-1.75/app.img
+image: WTMI     1000 d1018000 shim.img
+image: CFTH     2000 d1000000 cforth.img
 \ anonymous:     20000 ${BP}/cpu/arm/olpc/1.75/build/fw.img
 reserved:
 \  fload ${BP}/cpu/arm/olpc/1.75/ddr_samsung_1g.fth
