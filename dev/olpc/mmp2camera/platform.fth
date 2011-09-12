@@ -13,7 +13,7 @@ hex
    h# 42 to smb-slave
 ;
 
-: reset-sensor  ( -- )  d# 73 gpio-clr  1 ms  d# 73 gpio-set  ;
+: reset-sensor  ( -- )  d# 102 gpio-clr  1 ms  d# 102 gpio-set  ;
 
 [ifdef] cl2-a1
 : sensor-power-on   ( -- )  d# 145 gpio-set  ;
