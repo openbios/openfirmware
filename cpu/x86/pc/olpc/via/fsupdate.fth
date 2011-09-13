@@ -252,7 +252,7 @@ previous definitions
    open-nand                               ( adr len )
 
 \  clear-context  nand-commands
-   t(
+   t-hms(
    also nand-commands                      ( adr len )
 
    true to secure-fsupdate?                ( adr len )

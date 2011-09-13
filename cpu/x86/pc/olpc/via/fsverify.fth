@@ -67,7 +67,7 @@ previous definitions
    over file !  linefeed line-delimiter c!  ( fd fd' )
    file !                              ( fd )
 
-   t(
+   t-hms(
    also fs-verify-commands   
    ['] include-file catch  dup  if
       nip .error
