@@ -69,7 +69,7 @@ previous definitions
 
    t-hms(
    also fs-verify-commands   
-   ['] include-file catch  dup  if
+   ['] include-file catch  ?dup  if    ( x error )
       nip .error
    then
    previous
