@@ -968,7 +968,8 @@ defer ec-reflash-off?  ' false to ec-reflash-off?
 
    tuck flash-buf  swap move   ( len )
 
-   ['] ?image-valid  catch  ?dup  if    ( )
+   ['] ?image-valid  catch  ?dup  if   ( x error# )
+      nip
       visible
       red-letters
       ." Bad firmware image file - "  .error
