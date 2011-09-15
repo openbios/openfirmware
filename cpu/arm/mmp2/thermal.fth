@@ -26,10 +26,22 @@ thermal-base h# 4 +  value wd-thresh
 : wd-thresh@  ( -- n )  wd-thresh io@  ;
 : wd-thresh!  ( n -- )  wd-thresh io!  ;
 
+: .c  ( n -- )  (.) type ." C " ;
+
 : .thermal
-   ." degrees="  cpu-temperature  .d
-   ." raw="  thermal-base io@  h# 3ff and  .
-   ." threshold="  wd-thresh@  h# 3ff and  .
+   push-decimal
+   time&date >unix-seconds .
+   ." limit: "  wd-thresh@  h# 3ff and  .
+   ." sensor: "  thermal-base io@  h# 3ff and  .
+   ." cpu: "  cpu-temperature  .c
+   ." battery: "  bat-temp  .c
+   pop-base
+;
+
+: watch-thermal
+   begin
+      .thermal cr d# 1000 ms key?
+   until key drop cr
 ;
 
 : test-thermal
