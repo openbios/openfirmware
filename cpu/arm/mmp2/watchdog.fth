@@ -1,10 +1,10 @@
 \ See license at end of file
 purpose: System reset using the watchdog timer
 
+main-pmu-pa h# 200 + constant wdtpcr
 : enable-wdt-clock
    main-pmu-pa h# 1020 +  dup io@  h# 10 or  swap io!  \ enable wdt 2 clock  PMUM_PRR_PJ
-   7  main-pmu-pa h# 200 +  io!
-   3  main-pmu-pa h# 200 +  io!
+   wdtpcr io@  dup  h# 7 or wdtpcr io!  h# 3 or wdtpcr io!
 ;
 
 h# 080000 value wdt-pa
@@ -17,7 +17,7 @@ h# 080000 value wdt-pa
 : wdt-reset  ( -- )
    enable-wdt-clock
    2 h# 68 wdt!   \ set match register
-   3 h# 64 wdt!   \ match enable: just interrupt, no reset yet
+   3 h# 64 wdt!   \ match enable: enable counting, enable reset
    1 h# 98 wdt!   \ Reset counter
    begin  again
 ;
@@ -26,7 +26,7 @@ h# 080000 value wdt-pa
 : test-wdt  ( -- )
    enable-wdt-clock
    h# 100  h# 68  wdt!  \ set match register
-   1 h# 64 wdt!         \ match enable: just interrupt, no reset yet
+   1 h# 64 wdt!         \ match enable: enable counting, no reset yet
    h# 6c wdt@ .  d# 100 ms  h# 6c wdt@ .
 ;
 [then]

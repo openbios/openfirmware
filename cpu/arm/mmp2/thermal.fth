@@ -7,7 +7,7 @@ h# 013200 value thermal-base
    3 h# 015090 io!            \ Enable clocks to thermal sensor
    h# 10000 thermal-base io!  \ Enable sensing
 ;
-   
+
 : cpu-temperature  ( -- celcius )
    0                   ( acc )
    d# 100 0  do        ( acc )  \ Accumulate 100 samples
@@ -21,6 +21,35 @@ h# 013200 value thermal-base
 
    d# 52940 -  d# 196 /  ( celcius )
 ;
+
+thermal-base h# 4 +  value wd-thresh
+: wd-thresh@  ( -- n )  wd-thresh io@  ;
+: wd-thresh!  ( n -- )  wd-thresh io!  ;
+
+: .thermal
+   ." degrees="  cpu-temperature  .d
+   ." raw="  thermal-base io@  h# 3ff and  .
+   ." threshold="  wd-thresh@  h# 3ff and  .
+;
+
+: test-thermal
+   .thermal cr
+
+   \ save the threshold set by cforth
+   thermal-base 4 + io@ >r
+
+   \ temporarily set the threshold close to current value
+   thermal-base io@  h# 3ff and  8 +  wd-thresh!
+
+   begin
+      (cr .thermal kill-line d# 500 ms key?
+   until key drop cr
+
+   \ restore the threshold
+   r> wd-thresh!
+   .thermal cr
+;
+
 stand-init: Thermal sensor
    init-thermal-sensor
 ;
