@@ -91,6 +91,38 @@ h#   100 constant /spi-page     \ Largest write for page-oriented chips
    1 spi-cmd  ( b ) spi-out  stop-writing
 ;
 
+\ Protect the device from further writes, by setting the Status
+\ Register Protect (SRP) bit, and the Block Protect (BP2 BP1 BP0)
+\ bits.
+
+\ Caller must then lower /WP pin, which prevents further write access
+\ to the status register until the /WP pin is raised.
+
+: spi-protect  ( -- )  h# 9c spi-write-status  ;
+
+\ Turn off the protection bits.
+
+\ Is only permitted by the device if the /WP pin is high, otherwise it
+\ is ignored and the status register protection bits are unchanged.
+
+: spi-unprotect  ( -- )  h# 0 spi-write-status  ;
+
+\ Check if the device is protected from further writes, by testing for
+\ a set SRP, and if so trying to clear it, and checking if it remained
+\ clear.
+
+: spi-protected?  ( -- flag )
+    spi-read-status h# 80 and if
+	spi-read-status                ( status )
+	spi-unprotect                  ( status )
+	spi-read-status h# 80 and if   ( status )
+	    drop true exit             ( status )
+	then                           ( status )
+	spi-write-status
+    then
+    false
+;
+
 \ Erase a 64k block
 : erase-spi-block  ( offset -- )  h# d8 setup-spi-write  stop-writing  ;
 
@@ -282,7 +314,7 @@ defer write-spi-flash  ( adr len offset -- )
       ( default )  true abort" Unsupported SPI FLASH ID"
    endcase
    to write-spi-flash
-   0 spi-write-status  \ Turn off write protect bits
+   spi-unprotect
 ;
 
 \ Display a message telling what kind of part was found
@@ -299,14 +331,17 @@ defer write-spi-flash  ( adr len offset -- )
    then
 ;
 
-
 : spi-flash-open  ( -- )
    \ One retry
    spi-start  ['] spi-identify catch  if
       spi-start  spi-identify
    then
 ;
-: spi-flash-write-enable  ( -- )  flash-open  .spi-id cr  ;
+
+: spi-flash-write-enable  ( -- )
+   flash-open  .spi-id cr
+   spi-protected?  abort" Write Protected SPI FLASH"
+;
 
 : use-spi-flash-read  ( -- )  ['] read-spi-flash to flash-read  ;
 
@@ -319,6 +354,7 @@ defer write-spi-flash  ( adr len offset -- )
    ['] write-spi-flash         to flash-write
    ['] verify-spi-flash        to flash-verify
    ['] erase-spi-block         to flash-erase-block
+   ['] spi-protect             to flash-protect
    use-spi-flash-read          \ Might be overridden
    h# 10.0000  to /flash
    /spi-eblock to /flash-block

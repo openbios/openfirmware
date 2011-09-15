@@ -9,6 +9,7 @@ defer flash-write          ( adr len offset -- )
 defer flash-read           ( adr len offset -- )
 defer flash-verify         ( adr len offset -- mismatch? )
 defer flash-erase-block    ( offset -- )
+defer flash-protect        ( -- )
 h# 10.0000 value /flash
 h# 10000 value /flash-block
 
