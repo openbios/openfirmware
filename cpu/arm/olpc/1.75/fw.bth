@@ -32,8 +32,12 @@ fload ${BP}/cpu/arm/linux.fth
    unload-crypto
    " /usb" " reset-usb" execute-device-method drop
 ;
+: quiesce  ( -- )
+   usb-quiet
+   close-ec
+;
 
-' usb-quiet to linux-hook
+' quiesce to linux-hook
 
 d# 9999 to arm-linux-machine-type  \ Marvell Jasper
 
