@@ -9,8 +9,14 @@ purpose: EC Commands for XO-1.75 and later
 : do-ec-cmd-buf  ( [ args ] #args #results cmd-code -- buf-adr )
    " ec-command-buf" $call-ec
 ;
+: open-ec  ( -- )
+   ec-ih  0=  if  " /ec-spi" open-dev to ec-ih  then
+;
+: close-ec  ( -- )
+   ec-ih  if  ec-ih close-dev  0 to ec-ih  then
+;
 stand-init: EC
-   " /ec-spi" open-dev to ec-ih   
+   open-ec
 ;
 
 : too-many-retries  ( -- )  true abort" Too many EC command retries"  ;

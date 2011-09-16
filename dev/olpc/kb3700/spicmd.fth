@@ -331,6 +331,7 @@ defer upstream
    true
 ;
 : close  ( -- )
+   set-ack
    open-count 1 =  if
       ssp-base h# 1000  " map-out" $call-parent  0 is ssp-base
    then
@@ -388,9 +389,10 @@ d# 16 buffer: ec-respbuf
       dup get-msecs - 0<              ( limit )
    until                              ( limit )
    drop
+   clr-cmd   
    true abort" EC command result timeout"
 ;
-   
+
 : ec-command-buf  ( [ args ] #args #results cmd-code -- result-buf-adr )
    0 set-cmdbuf                            ( )
 
