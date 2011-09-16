@@ -223,6 +223,22 @@ d# 905 value resumeline  \ Configurable; should be set from args
    dcon-enable  ( maybe-set-cmos )
    \ dcon-enable leaves mode set to 69 - 40:antialias, 20:swizzle, 8:backlight on, 1:passthru off
 ;
+: dcon-power-on   ( -- )  1 h# 26 ec-cmd-b!  ;
+: dcon-power-off  ( -- )  0 h# 26 ec-cmd-b!  ;
+0 value saved-dcon-mode
+0 value saved-brightness
+: dcon-suspend  ( -- )
+   bright@ to saved-brightness
+   mode@ to saved-dcon-mode
+   h# 12 mode!
+   dcon-power-off
+;
+: dcon-resume  ( -- )
+   dcon-power-on  d# 50 ms   
+   dcon-setup
+   saved-dcon-mode  mode!
+   saved-brightness bright!
+;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks

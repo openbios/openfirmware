@@ -327,9 +327,9 @@ c;
 
    \ Security processor setup
    sleep-depth 4 >= if                        \ state at least POWER_MODE_CHIP_SLEEP (turn off most of SoC)
-\     h# fe08.6000 0 mpmu!                    \ In SP, set AXISD, resvd, SLPEN,  SPSD,   DDRCORSD, APBSD resvd, VCXOSD
+     h# fe08.6000 0 mpmu!                    \ In SP, set AXISD, resvd, SLPEN,  SPSD,   DDRCORSD, APBSD resvd, VCXOSD
      \ We keep PMUM_BBDP (bit 25) off because that saves 60 mW
-     h# fc08.6000 0 mpmu!                     \ In SP, set AXISD, resvd, SLPEN,  SPSD,   DDRCORSD, APBSD resvd, VCXOSD
+\    h# fc08.6000 0 mpmu!                     \ In SP, set AXISD, resvd, SLPEN,  SPSD,   DDRCORSD, APBSD resvd, VCXOSD
    then
 
    sleep-depth 3 =  if                        \ state at least POWER_MODE_APPS_SLEEP (turn off slow IO)
@@ -396,26 +396,28 @@ c;
 : keyboard-power-off  ( -- )  d# 148 gpio-set  ;
 : wlan-power-on   ( -- )  d# 34 gpio-set  ;
 : wlan-power-off  ( -- )  d# 34 gpio-clr  ;
-: dcon-power-on   ( -- )  1 h# 26 ec-cmd-b!  ;
-: dcon-power-off  ( -- )  0 h# 26 ec-cmd-b!  ;
-h# ffff value sleep-mask
+0 value sleep-mask
 : screen-off
-  sleep-mask 1 and  if  h# 12 " mode!" $call-screen  then   \ DCON power down
-  0 h# 190 " lcd!" $call-screen
-  0 h# 4c pmua!    \ Kill the display clocks - saves 100 mW
-  \ 0 h# 54 pmua!  \ Kill the SDIO 0 clocks - insignificant savings
-  \ 0 h# 58 pmua!  \ Kill the SDIO 1 clocks - insignificant savings
-  sleep-mask 2 and  if  dcon-power-off      then  \ saves 80 mW
-  sleep-mask 4 and  if  keyboard-power-off  then  \ Should save about 17 mW
-  sleep-mask 8 and  if  wlan-power-off      then  \ saves 100 mW
+   sleep-mask 1 and  if            \ DCON power down
+      dcon-freeze
+   else
+      " dcon-suspend" $call-screen
+   then
+   " suspend" $call-screen
+   \ 0 h# 54 pmua!  \ Kill the SDIO 0 clocks - insignificant savings
+   \ 0 h# 58 pmua!  \ Kill the SDIO 1 clocks - insignificant savings
+   sleep-mask 2 and  0=  if  keyboard-power-off  then  \ Should save about 17 mW
+   sleep-mask 4 and  0=  if  wlan-power-off      then  \ saves 100 mW
 ;
 : screen-on  ( -- )
-  sleep-mask 8 and  if  wlan-power-on       then
-  sleep-mask 4 and  if  keyboard-power-on   then 
-  sleep-mask 2 and  if  dcon-power-on  d# 50 ms     then  \ saves 80 mW
-  h# 71b h# 4c pmua!
-  h# 8001100 h# 190 " lcd!" $call-screen
-  sleep-mask 1 and  if  h# 69 " mode!" $call-screen  then   \ DCON power up
+   sleep-mask 4 and  0=  if  wlan-power-on       then
+   sleep-mask 2 and  0=  if  keyboard-power-on   then 
+   " resume" $call-screen
+   sleep-mask 1 and  if            \ DCON power up
+      dcon-unfreeze
+   else
+      " dcon-resume" $call-screen
+   then
 ;
 
 : stdin-idle-on   ['] safe-idle to stdin-idle  d# 15 enable-interrupt  ;

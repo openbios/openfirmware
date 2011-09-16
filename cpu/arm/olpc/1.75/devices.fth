@@ -396,9 +396,6 @@ stand-init: More memory
 
 fload ${BP}/cpu/arm/mmp2/thermal.fth
 
-fload ${BP}/cpu/arm/mmp2/dramrecal.fth
-fload ${BP}/cpu/arm/mmp2/rtc.fth       \ Internal RTC, used for wakeups
-
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
 \ 

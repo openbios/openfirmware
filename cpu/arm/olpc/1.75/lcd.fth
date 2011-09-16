@@ -2,12 +2,18 @@
 : lcd@  ( offset -- l )  lcd-pa + io@  ;
 : lcd!  ( l offset -- )  lcd-pa + io!  ;
 
-: init-lcd  ( -- )
+: lcd-clock!  ( n -- )  pmua-disp-clk-sel + h# 4c pmua!  ;
+: lcd-clocks-on  ( -- )
    \ Turn on clocks
-   h# 08 pmua-disp-clk-sel + h# 28284c io!
-   h# 09 pmua-disp-clk-sel + h# 28284c io!
-   h# 19 pmua-disp-clk-sel + h# 28284c io!
-   h# 1b pmua-disp-clk-sel + h# 28284c io!
+   h# 08 lcd-clock!
+   h# 09 lcd-clock!
+   h# 19 lcd-clock!
+   h# 1b lcd-clock!
+;
+: lcd-clocks-off  ( -- )  0 lcd-clock!  ;
+
+: init-lcd  ( -- )
+   lcd-clocks-on
 
    0                  h# 190 lcd!  \ Disable LCD DMA controller
    fb-mem-pa           h# f4 lcd!  \ Frame buffer area 0
@@ -204,4 +210,14 @@ defer placement ' zoomed is placement
    loop                            ( 'fg 'bg )
    2drop                           ( )
    flush-cursor-bits               ( )
+;
+0 value saved-mode
+: suspend  ( -- )
+   h# 190 lcd@ to saved-mode
+   0 h# 190 lcd!
+   lcd-clocks-off
+;
+: resume  ( -- )
+   lcd-clocks-on
+   saved-mode h# 190 lcd!
 ;
