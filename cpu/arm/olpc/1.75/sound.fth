@@ -112,8 +112,7 @@ my-space h# 800 reg
    0     d# 18 lshift or \ External clock - slave configuration (Rx is master)
    0     d# 17 lshift or \ Sample on rising edge of clock
 
-\ Empirically, this needs to be backwards from what we think it should be
-   0     d# 16 lshift or \ Active high frame sync (should be active low, but that gives backwards results)
+   1     d# 16 lshift or \ Active low frame sync (I2S standard)
 
    d# 31 d#  4 lshift or \ Frame sync period
    1     d#  2 lshift or \ Flush the FIFO
@@ -259,11 +258,6 @@ d# 48000 value sample-rate
 : dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
 : dma-free  ( adr len -- )  " dma-free" $call-parent  ;
 
-: open-in   ( -- )  ;
-: close-in  ( -- )  ;
-: open-out  ( -- )  ;
-: close-out ( -- )  ;
-
 : wait-out  ( -- )
    buf-timeout  0  do   
       1 ms  h# a0 adma@ 1 and  ?leave
@@ -292,6 +286,7 @@ false value playing?
    stop-out-ring
    uninstall-playback-alarm
    false to playing?
+   close-out
 ;
 
 : out-ready?  ( -- flag )
@@ -387,7 +382,7 @@ false value playing?
    disable-sspa-rx             ( actual )
    reset-rx                    ( actual )
 ;
-: read  ( adr len -- actual )  open-in audio-in  ;
+: read  ( adr len -- actual )  open-in audio-in  close-in  ;
 
 0 value mono?
 0 value in-adr0
@@ -398,13 +393,15 @@ false value playing?
    loop
 ;
 : out-in  ( out-adr out-len in-adr in-len -- )
+   open-out-in
+
    to in-len0  to in-adr0      ( out-adr out-len )
    to out-len  to out-adr      ( )
 
    in-adr0 to in-adr           ( )
    in-len0  mono?  if  2*  then  to in-len     
 
-   audio-clock-on              ( ) \ This will mess up any frequency settings
+   ( audio-clock-on  )         ( ) \ This will mess up any frequency settings
 
    setup-sspa-tx               ( )
    setup-sspa-rx               ( )
@@ -421,8 +418,7 @@ false value playing?
    master-rx                   ( )  \ Now the clock is on
    slave-tx                    ( )
 
-   adc-on                      ( )
-   dac-on                      ( )
+   adc+dac-on                  ( )
 
    true to playing?
 
@@ -439,6 +435,8 @@ false value playing?
    dac-off  adc-off            ( )
 
    mono?  if  collapse-in  then  ( )
+
+   close-out-in
 ;
 
 0 [if]  \ Interactive test words for out-in
@@ -527,7 +525,7 @@ false value force-internal-mic?  \ Can't be implemented on XO-1.75
 2 value #channels
 
 \ Unless you do the audio-clock-on, the L/R phase is often wrong
-: input-test-settings  ( -- )  audio-clock-on  ;
+: input-test-settings  ( -- )  ( audio-clock-on ) ;
 : output-test-settings  ( -- )  ;
 
 d#  -1 constant case-test-volume

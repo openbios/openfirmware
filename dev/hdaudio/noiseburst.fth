@@ -562,8 +562,40 @@ defer analyze-left
 defer analyze-right
 defer fix-dc
 
+[ifdef] notdef
+fload ${BP}/forth/lib/isin.fth
+fload ${BP}/forth/lib/tones.fth
+
+\ This version puts the tone first into the left channel for
+\ half the time, then into the right channel for the remainder
+: make-2tones  ( adr len freq sample-rate -- )
+   2dup set-freq        ( adr len freq sample-rate )
+
+   3 pick  make-cycle  drop    ( adr len freq sample-rate )
+
+   swap 2* swap  set-freq      ( adr len )
+   over wa1+ make-cycle drop   ( adr len )
+
+
+   \ Copy the wave template into the remainder of the buffer
+   over /cycle +   over /cycle -  bounds  ?do      ( adr len )
+      over  i  /cycle  move                        ( adr len )
+   /cycle +loop                                    ( adr len )
+   2drop
+;
+1 value debug-analyzer?
+[then]
+
 : prepare-signal  ( -- out-adr, len in-adr,len )
+[ifdef] debug-analyzer?
+   debug-analyzer?  if
+      pb /pb  d# 1000  d# 48000 make-2tones
+   else
+      pb /pb bounds  do  random-long  i l!  /l +loop
+   then
+[else]
    pb /pb bounds  do  random-long  i l!  /l +loop
+[then]
    pb      /pb -stereo-wmean
    pb wa1+ /pb -stereo-wmean
    pb /pb lose-6db
