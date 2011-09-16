@@ -156,7 +156,7 @@ audio-sram h# 3f80 + constant in-desc
    1 h# 80 adma!           \ Enable DMA completion interrupts
    h# 0081.3020   h# 40 adma! \ 16 bits, pack, fetch next, enable, chain, hold dest, inc src
 ;
-: stop-out-ring  ( -- )  h# 100000 h# 40 adma!  ;
+: stop-out-ring  ( -- )  h# 100000 h# 40 adma!  0 h# 80 adma!  ;
 
 : make-in-ring  ( -- )
    in-desc h# 10 +  in-bufs               sspa-base   /audio-buf   in-desc          set-descriptor
@@ -169,6 +169,7 @@ audio-sram h# 3f80 + constant in-desc
 \   h# 0081.3008   h# 44 adma! \ 16 bits, pack, fetch next, enable, chain, inc dest, hold src
    h# 00a1.31c8   h# 44 adma! \ 16 bits, pack, fetch next, enable, chain, burst32, inc dest, hold src
 ;
+: stop-in-ring  ( -- )  h# 100000 h# 44 adma!  0 h# 84 adma!  ;
 
 : copy-out  ( -- )
    my-out-desc >r                        ( r: desc )
@@ -380,6 +381,7 @@ false value playing?
       copy-in                  ( actual )
    repeat                      ( actual )
    disable-sspa-rx             ( actual )
+   stop-in-ring                ( actual )
    reset-rx                    ( actual )
 ;
 : read  ( adr len -- actual )  open-in audio-in  close-in  ;
@@ -401,7 +403,9 @@ false value playing?
    in-adr0 to in-adr           ( )
    in-len0  mono?  if  2*  then  to in-len     
 
-   ( audio-clock-on  )         ( ) \ This will mess up any frequency settings
+   \ Resetting the clock at this point seems to prevent intermittent channel
+   \ reversal on reception.
+   audio-clock-on              ( ) \ This will mess up any frequency settings
 
    setup-sspa-tx               ( )
    setup-sspa-rx               ( )
@@ -427,6 +431,9 @@ false value playing?
    repeat                      ( )
    disable-sspa-rx             ( )
    disable-sspa-tx             ( )
+
+   stop-in-ring
+   stop-out-ring
 
    reset-rx
    reset-tx
@@ -523,8 +530,7 @@ fload ${BP}/dev/geode/ac97/selftest.fth
 false value force-internal-mic?  \ Can't be implemented on XO-1.75
 2 value #channels
 
-\ Unless you do the audio-clock-on, the L/R phase is often wrong
-: input-test-settings  ( -- )  ( audio-clock-on ) ;
+: input-test-settings  ( -- )  ;
 : output-test-settings  ( -- )  ;
 
 d#  -1 constant case-test-volume

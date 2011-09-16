@@ -183,18 +183,24 @@ false value plot?  \ Set to true to plot the impulse response, for debugging
       instructions-done
    then
 ;
-\ Returns failure by throwing
-: automatic-test  ( -- )
-   analysis-parameters " set-analysis-parameters" $call-analyzer
+: acoustic-test  ( -- )
    disconnect-loopback  \ Not for 1.5; it can test internal while loopback is connected
    " smt-test?" evaluate  if
       test-with-fixture throw
    else
       test-with-case throw
    then
+;
+: loopback-test  ( -- )
    connect-loopback
    test-with-loopback throw
    disconnect-loopback
+;
+\ Returns failure by throwing
+: automatic-test  ( -- )
+   analysis-parameters " set-analysis-parameters" $call-analyzer
+   acoustic-test
+   loopback-test
 ;
 : selftest  ( -- error? )
    diagnostic-mode?  if
