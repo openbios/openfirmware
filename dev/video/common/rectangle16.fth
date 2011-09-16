@@ -52,14 +52,14 @@ code 565>argb  ( src dst #pixels -- )
    0= until
 c;
 code argb>565-pixel  ( argb -- 565 )
-   mov  r0,tos,lsr #3    \ Blue
-   and  r0,tos,#0x1f
+   and  r0,tos,#0xf8    \ Blue
+   mov  r0,r0,lsr #3
 
    and  r1,tos,#0xfc00   \ Green
-   orr  r0,r1,r1,lsr #5
+   orr  r0,r0,r1,lsr #5
 
    and  r1,tos,#0xf80000 \ Red
-   orr  r0,r1,r1,lsr #8
+   orr  r0,r0,r1,lsr #8
 
    mov  tos,r0
 c;
