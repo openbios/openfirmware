@@ -177,6 +177,9 @@ fload ${BP}/cpu/x86/pc/olpc/strokes.fth
 fload ${BP}/cpu/x86/pc/olpc/plot.fth
 fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
 
+fload ${BP}/cpu/arm/mmp2/dramrecal.fth
+fload ${BP}/cpu/arm/mmp2/rtc.fth       \ Internal RTC, used for wakeups
+
 code halt  ( -- )  wfi   c;
 
 fload ${BP}/cpu/arm/olpc/1.75/switches.fth \ Lid and ebook switches
