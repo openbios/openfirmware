@@ -405,7 +405,6 @@ false value playing?
 
    setup-sspa-tx               ( )
    setup-sspa-rx               ( )
-   active-high-rx-fs           ( )
 
    make-in-ring                ( )
    make-out-ring               ( )
