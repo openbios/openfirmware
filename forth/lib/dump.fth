@@ -54,6 +54,21 @@ also forth definitions
 : dump ( addr len -- )      ['] c@ is dc@ (dump)  ;
 : du   ( addr -- addr+64 )  dup d# 64 dump   d# 64 +  ;
 
+\ Dumps 16-bit signed samples in decimal
+: dump-audio  ( adr len -- )
+   base @ >r
+   bounds ?do
+      hex
+      i 8 u.r ." : "
+      decimal
+      i d# 16  bounds do
+         i <w@ 7 .r
+      /w +loop
+      cr
+   d# 16 +loop
+   pop-base  
+;
+
 only forth also definitions
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
