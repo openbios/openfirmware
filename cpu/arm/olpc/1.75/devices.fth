@@ -182,15 +182,21 @@ false constant tethered?                     \ We only support reprogramming our
 : hdd-led-on      ( -- )  d# 10 gpio-set  ;
 : hdd-led-toggle  ( -- )  d# 10 gpio-pin@  if  hdd-led-off  else  hdd-led-on  then  ;
 
+fload ${BP}/cpu/arm/olpc/1.75/bbedi.fth
+fload ${BP}/cpu/arm/olpc/1.75/edi.fth
+
+[ifdef] load-base
+: flash-buf  load-base  ;
+[else]
+/flash buffer: flash-buf
+[then]
+
+fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
+
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
 \ fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
 ' ofw-fw-filename$ to fw-filename$
-
-fload ${BP}/cpu/arm/olpc/1.75/bbedi.fth
-fload ${BP}/cpu/arm/olpc/1.75/edi.fth
-
-fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
 
 0 0  " d420b000"  " /" begin-package
    " display" name

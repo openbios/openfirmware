@@ -42,12 +42,6 @@ h# 4000 constant /chunk   \ Convenient sized piece for progress reports
 
 \ Perform a series of sanity checks on the new firmware image.
 
-[ifdef] load-base
-: flash-buf  load-base  ;
-[else]
-/flash buffer: flash-buf
-[then]
-
 0 value file-loaded?
 
 : crc  ( adr len -- crc )  0 crctab  2swap ($crc)  ;
@@ -191,9 +185,23 @@ h# 4000 constant /chunk   \ Convenient sized piece for progress reports
    ." or about 5 minutes if the host is running OFW." cr
 ;
 
+: ec-spi-reprogrammed   ( -- )
+   edi-spi-start
+   set-ec-reboot
+   unreset-8051
+;
+
+: ignore-power-button  ( -- )
+   edi-spi-start
+   ['] reset-8051 catch if reset-8051 then
+   use-ssp-spi
+   ['] ec-spi-reprogrammed to spi-reprogrammed
+;
+
 : reflash   ( -- )   \ Flash from data already in memory
-   hdd-led-on
    ?file
+   hdd-led-on
+   ignore-power-button
    flash-write-enable
 
    write-firmware
@@ -208,7 +216,7 @@ h# 4000 constant /chunk   \ Convenient sized piece for progress reports
       flash-write-disable
    else
       .verify-msg
-   then   
+   then
    hdd-led-off
 ;
 
