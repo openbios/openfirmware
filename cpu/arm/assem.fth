@@ -1438,7 +1438,10 @@ headerless
 \ These implementation factors are used by the local labels package
 : <mark  ( -- <mark )  here  ;
 : >mark  ( -- >mark )  here  ;
-: >resolve  ( >mark -- )  here  over >br-offset over asm@ +  swap asm!  ;
+: >resolve  ( >mark -- )
+   \ Can't use put-branch because this may be a conditional branch.
+   here  over >br-offset  over asm@  h# ff000000 land  or  swap asm!
+;
 : <resolve  ( <mark -- <mark )  ;
 
 headers
