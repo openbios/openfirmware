@@ -30,23 +30,17 @@ d# 1600 constant /packet-max
 /packet-max buffer: packet
 
 : get-packet?  ( -- packet? )
-   packet /packet-max  " read" $call-net  to /packet
-   /packet -1 =  if  cr ." Packet error" cr false exit  then
-   /packet -2 =  if  false exit  then
-   ." ."  true
+   h# 800 " receive-ethernet-packet" $call-net  if  false exit  then   ( adr len )
+   /packet-max min  to /packet     ( adr )
+   packet /packet move             ( )
+   ." ."  true                     ( packet )
 ;
 d# 14 constant /ether-header
 0 value ip-offset
 
 : ip-header  ( -- adr )  packet ip-offset +  ;
 
-: ip?  ( -- flag )
-   ip-header c@  h# 45 =  if
-      ip-header 
-   then
-
-   false
-;
+: ip?  ( -- flag )  ip-header c@  h# 45 =   ;
 
 : link-level-ok?  ( -- flag )
    packet c@  h# 45 =  if
@@ -110,7 +104,10 @@ d# 14 constant /ether-header
       packet packet 6 +  6  exchange-bytes
    then
 ;
-: exchange-ips  ( -- )  ip-header d# 12 +  dup 4 +  4  exchange-bytes  ;
+: 'ip-src  ( -- adr )   ip-header  d# 12 +  ;
+: 'ip-dst  ( -- adr )   ip-header  d# 16 +  ;
+
+: exchange-ips  ( -- )  'ip-src  'ip-dst  4  exchange-bytes  ;
 : change-type  ( -- )  0 ip-payload drop c!  ;
 : recompute-ip-checksum  ( -- )
    0 ip-header d# 10 + be-w!	\ Zap IP checksum
@@ -148,8 +145,7 @@ constant /icmp-header
 ;
 
 : send-packet  ( -- )
-   packet /packet  " write" $call-net
-   /packet <>  if  cr ." Send failed" cr  then
+   packet /packet  'ip-dst  h# 800 " send-link-packet" $call-net
 ;
 
 : echo-packet  ( -- )
@@ -162,7 +158,6 @@ constant /icmp-header
 ;
 : ?echo-packet  ( -- )
    ping?  if
-      first?  if  .ip  false to first?  then
       echo-packet
    then
 ;
