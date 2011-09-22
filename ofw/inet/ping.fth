@@ -17,14 +17,12 @@ purpose: Ping (ICMP echo) and ping daemon (ICMP echo server)
 
 0 value ping-ih
 : open-net  ( pathname$ -- )
-   dup 0=  if  2drop " net"  then     ( pathname$' )
-   open-dev to ping-ih
+   " net//obp-tftp:last" open-dev to ping-ih
    ping-ih 0= abort" Can't open network device"
 ;
 : close-net  ( -- )  ping-ih close-dev  ;
 : $call-net  ( ? name$ -- ? )  ping-ih $call-method  ;
 
-true value first?
 0 value /packet
 d# 1600 constant /packet-max
 /packet-max buffer: packet
@@ -169,12 +167,9 @@ constant /icmp-header
    key drop
 ;
 
-: $pingd  ( pathname$ -- )
-   true to first?
+: pingd  ( -- )
    open-net  handle-requests  close-net
 ;
-
-: pingd  ( "device" -- )  parse-word $pingd  ;
 
 d# 64 value ping-size
 d# 512 value /ping-max
@@ -251,7 +246,7 @@ d# 1000 value ping-gap
 ;
 
 : $ping  ( ip$ -- )
-   " net//obp-tftp:last" open-net  " $set-host" $call-net
+   open-net  " $set-host" $call-net
    /ping-max " allocate-ip" $call-net to ping-packet
    try-pings
    ping-packet /ping-max " free-ip" $call-net
