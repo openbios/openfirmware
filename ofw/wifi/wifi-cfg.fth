@@ -81,7 +81,7 @@ defer default-ssids  ( -- $ )  ' null$ to default-ssids
 \ expressed either in straight ASCII or in hexadecimal.  In hex, the
 \ length is either 10 or 26 bytes, which converts to 5 or 13 ASCII bytes.
 : $wep  ( wep$ -- )
-   dup d# 10 =  over d# 26 =  if         ( wep$ )
+   dup d# 10 =  over d# 26 =  or  if     ( wep$ )
       decode-hex                         ( wep$' )
    else                                  ( wep$ )
       dup 5 <>  over d# 13 <>  and  abort" WEP key must be 5 or 13 ASCII characters or 10 or 26 hex digits"
