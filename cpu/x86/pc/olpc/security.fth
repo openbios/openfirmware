@@ -603,8 +603,11 @@ h# 10e constant /key
    2drop  false                      ( good? )
 ;
 
+true value require-signatures?
+
 \ Find a sig0N: line and check its sha256/rsa signature
 : sha-valid?  ( data$ sig$ -- okay? )
+   require-signatures? 0=  if  4drop true exit  then   ( data$ sig$ )
    next-sig-in-list$  if  2drop false exit  then  ( data$ rem$ sig$ )
    2nip  " sha256" signature-good?
 ;
@@ -612,6 +615,7 @@ h# 10e constant /key
 \ Find two sig0N: lines, the first with sha256 and the second with rmd160,
 \ and check their signatures
 : fw-valid?  ( data$ sig$ -- okay? )
+   require-signatures? 0=  if  4drop true exit  then   ( data$ sig$ )
    2swap 2>r                                    ( sig$ r: data$ )
    next-sig-in-list$  if  2r> 2drop false exit  then  ( rem$ sig$ )
    2r@ 2swap sha-valid?  0=  if                 ( rem$ r: data$ )
@@ -737,17 +741,22 @@ d# 8192 constant /sec-line-max
 \ like "runos.zip" (the normal OS, used when an valid lease is
 \ present) or "actos.zip" (the activation version of the OS).
 
+: use-run  ( -- )  " run" cn-buf place  ;
+: use-act  ( -- )  " act" cn-buf place  ;
 : ?leased  ( -- )
-   " ak" find-tag  if
-      2drop  " run"
-   else
-      rtc-rollback?  if
-	 " act"
+   require-signatures?  if
+      " ak" find-tag  if
+         2drop  use-run
       else
-	 lease-valid?  if  " run"  else  " act"  then
+         rtc-rollback?  if
+            use-act
+         else
+            lease-valid?  if  use-run  else  use-act  then
+         then
       then
+   else
+      use-run
    then
-   cn-buf place
 ;
 
 : set-alternate  ( -- )
@@ -1208,11 +1217,13 @@ alias ?ec-update noop immediate
       filesystem-present?  if               ( list$ )
 
          show-dot                           ( list$ )
-         has-developer-key?  if             ( list$ )
-            2drop                           ( )
-            true to security-off?
-            show-unlock
-            true exit
+         require-signatures?  if            ( list$ )
+            has-developer-key?  if          ( list$ )
+               2drop                        ( )
+               true to security-off?
+               show-unlock
+               true exit
+            then                            ( list$ )
          then                               ( list$ )
 
          load-from-device  if               ( list$ )
