@@ -529,10 +529,10 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 ;
 
 : newrom
-   " flash! http:\\10.20.0.14\new.rom" eval
+   " flash! http:\\192.168.200.200\new.rom" eval
 ;
 : newec
-   " flash-ec http:\\10.20.0.14\ecimage.bin" eval
+   " flash-ec http:\\192.168.200.200\ecimage.bin" eval
 ;
 : qz
    " qz" $essid  " http:\\qz\" included  \ qa test bed scripting, james cameron
