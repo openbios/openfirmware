@@ -12,6 +12,7 @@ struct
     /n field >wc-wep3		\ pstr (binary, len=5 or 13)
     /n field >wc-wep4		\ pstr (binary, len=5 or 13)
     /n field >wc-pmk		\ pstr (binary, len=32)
+    /n field >wc-psk		\ pstr (ASCII, arbitrary length)
 constant /wifi-cfg
 
 /wifi-cfg buffer: ram-wifi-cfg
@@ -35,11 +36,21 @@ defer wifi-cfg  ' ram-wifi-cfg to wifi-cfg
 : pstr@   ( src -- adr len )  @ ?dup  if  count  else  " "  then  ;
 : wifi-ssid$     ( -- $ )  wifi-cfg >wc-ssid pstr@  ;
 : wifi-pmk$      ( -- $ )  wifi-cfg >wc-pmk  pstr@  ;
+: wifi-psk$      ( -- $ )  wifi-cfg >wc-psk  pstr@  ; 
 : wifi-wep1$     ( -- $ )  wifi-cfg >wc-wep1 pstr@  ;
 : wifi-wep2$     ( -- $ )  wifi-cfg >wc-wep2 pstr@  ;
 : wifi-wep3$     ( -- $ )  wifi-cfg >wc-wep3 pstr@  ;
 : wifi-wep4$     ( -- $ )  wifi-cfg >wc-wep4 pstr@  ; 
 : wifi-wep-idx   ( -- n )  wifi-cfg >wc-wep-idx @ 1- 0 max 4 min  ;
+
+\ The PMK is used internally, rarely entered directly
+\ Computing it from the user-visible PSK is relatively expensive, so
+\ we store the value for later reuse.  The supplicant package calls $pmk 
+\ to store the computed value in the wifi-cfg data structure.
+: $pmk  ( pmk$ -- )
+   dup d# 32 <>  abort" PMK must be 32 bytes"
+   wifi-cfg >wc-pmk pstr!  ( )
+;
 
 defer default-ssids  ( -- $ )  ' null$ to default-ssids
 
@@ -51,19 +62,6 @@ defer default-ssids  ( -- $ )  ' null$ to default-ssids
    true to ssid-reset?
    \ When an explicit SSID is given, don't fall back to the default list
    ['] null$ to default-ssids
-;
-
-: $wep  ( wep$ -- )
-   dup 5 <>  over d# 13 <>  and  abort" WEP key must be 5 or 13 bytes"
-   wifi-cfg >wc-wep-idx   dup @          ( wep$ adr idx )
-   dup 4 >=  abort" Too many WEP keys"   ( wep$ adr idx )
-   2dup 1+ swap !                        ( wep$ adr idx )
-   2* na+ na1+  pstr!                    ( )
-;
-
-: $pmk  ( pmk$ -- )
-   dup d# 32 <>  abort" PMK must be 32 bytes"
-   wifi-cfg >wc-pmk pstr!  ( )
 ;
 
 \ Stores the result at here
@@ -79,12 +77,30 @@ defer default-ssids  ( -- $ )  ' null$ to default-ssids
    r>  here over -                       ( bin-adr bin-len )
 ;
 
+\ WEP keys are fundamentally either 5 or 13 bytes long, but they can be
+\ expressed either in straight ASCII or in hexadecimal.  In hex, the
+\ length is either 10 or 26 bytes, which converts to 5 or 13 ASCII bytes.
+: $wep  ( wep$ -- )
+   dup d# 10 =  over d# 26 =  if         ( wep$ )
+      decode-hex                         ( wep$' )
+   else                                  ( wep$ )
+      dup 5 <>  over d# 13 <>  and  abort" WEP key must be 5 or 13 ASCII characters or 10 or 26 hex digits"
+   then                                  ( wep$ )
+
+   wifi-cfg >wc-wep-idx   dup @          ( wep$ adr idx )
+   dup 4 >=  abort" Too many WEP keys"   ( wep$ adr idx )
+   2dup 1+ swap !                        ( wep$ adr idx )
+   2* na+ na1+  pstr!                    ( )
+;
+
+: $wpa  ( psk$ -- )   wifi-cfg >wc-psk pstr!  ;
+
 : essid  ( "ssid" -- )  0 parse $essid  ;
 alias wifi essid
 alias ssid essid
-: wep  ( "wep" -- )  parse-word  decode-hex  $wep  ;
-: pmk  ( "pmk" -- )  parse-word  decode-hex  $pmk  ;
 
+: wep  ( "wep" -- )  parse-word  $wep  ;
+: wpa  ( "psk" -- )  parse-word  $wpa  ;
 
 \ =====================================================================
 \ Scan wireless networks

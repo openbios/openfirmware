@@ -699,8 +699,24 @@ false value group-rekey?
 ;
 
 : pmk-ok?  ( -- flag )
-   wifi-pmk$ nip d# 32 =  
-   atype at-preshared =  and
+   atype at-preshared <>  if  false exit  then
+
+   \ If necessary, compute the PMK (pairwise master key) from the PSK (pre-shared key)
+   \ The PSK is the user-visible password, whereas the PMK is a hash of the PSK and
+   \ the SSID which is used in the key exchange.
+   wifi-pmk$ nip  case  ( length )
+      0  of                                           ( )
+         wifi-psk$ wifi-ssid$ pad d# 32 pbkdf2-sha1   ( )
+         pad d# 32 $pmk                               ( )
+         true                                         ( okay? )
+      endof
+
+      d# 32  of
+	 true                                         ( okay? )
+      endof
+
+      ( default )  false swap
+   endcase                                            ( okay? )
 ;
 
 : key-ok?  ( -- ok? )
