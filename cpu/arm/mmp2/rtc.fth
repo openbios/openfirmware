@@ -15,10 +15,13 @@ purpose: Driver for MMP2 internal RTC
 ;
 : soc-rtc@  ( offset -- value )  h# 01.0000 + io@  ;
 : soc-rtc!  ( value offset -- value )  h# 01.0000 + io!  ;
+: cancel-alarm  ( -- )
+   0 8 soc-rtc!
+   int5-mask@ 1 or int5-mask!  \ Mask alarm
+;
 : take-alarm  ( -- )
    ." Alarm fired" cr
-    0 8 soc-rtc!
-   int5-mask@ 1 or int5-mask!  \ Mask alarm
+   cancel-alarm
 ;
 : alarm-in-3  ( -- )
    enable-rtc                          \ Turn on clocks
@@ -30,3 +33,79 @@ purpose: Driver for MMP2 internal RTC
    ['] take-alarm 5 interrupt-handler!
    5 enable-interrupt
 ;
+: alarm-in-1  ( -- )
+   enable-rtc                          \ Turn on clocks
+   
+   int5-mask@ 1 invert and int5-mask!  \ Unmask alarm
+   enable-rtc-wakeup
+   0 soc-rtc@  d# 1 +  4 soc-rtc!      \ Set alarm for 3 seconds from now
+   7 8 soc-rtc!                        \ Ack old interrupts and enable new ones
+   ['] cancel-alarm 5 interrupt-handler!
+   5 enable-interrupt
+;
+: wake1  ( -- )
+   enable-rtc                          \ Turn on clocks
+   
+   int5-mask@ 1 invert and int5-mask!  \ Unmask alarm
+   enable-rtc-wakeup
+   0 soc-rtc@  d# 1 +  4 soc-rtc!      \ Set alarm for 3 seconds from now
+   7 8 soc-rtc!                        \ Ack old interrupts and enable new ones
+   ['] cancel-alarm 5 interrupt-handler!
+   5 enable-interrupt
+;
+: alarm1  ( -- )
+   enable-rtc                          \ Turn on clocks
+   
+   int5-mask@ 1 invert and int5-mask!  \ Unmask alarm
+   enable-rtc-wakeup
+   0 soc-rtc@  d# 1 +  4 soc-rtc!      \ Set alarm for 3 seconds from now
+   7 8 soc-rtc!                        \ Ack old interrupts and enable new ones
+   ['] take-alarm 5 interrupt-handler!
+   5 enable-interrupt
+;
+: test1
+   0
+   begin
+      alarm1
+      str
+      (cr dup . 1+
+      d# 500 ms
+   key? until
+;
+: test2
+   0
+   begin
+      wake1
+      str
+      (cr dup . 1+
+      d# 500 ms
+   key? until
+;
+: test3
+   0
+   begin
+      wake1
+      str
+      cr dup . 1+
+      d# 500 ms
+   key? until
+;
+: test4
+   begin
+      0 d# 13 at-xy
+      5 0  do
+         wake1  str
+         cr i .
+         d# 500 ms
+         key? if unloop exit  then
+      loop
+   again
+;
+
+\ test3
+\ wake1 str cr
+
+\ patch noop cr take-alarm test1
+\ patch (cr cr take-alarm test1
+
+\ : cx cr d# 400 ms ; patch cx cr take-alarm test1

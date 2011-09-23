@@ -176,8 +176,8 @@ d# 905 value resumeline  \ Configurable; should be set from args
    h# dc02 =
 ;
 
-: dcon-setup  ( -- )
-   0 dcon@ drop  0 dcon@ drop
+: dcon-setup  ( -- error? )
+   dcon2?  0=  if  ." Can't init DCON"  true exit  then
 
 [ifdef] notdef
    d# 1200 2 dcon!  \ HResolution
@@ -196,9 +196,10 @@ d# 905 value resumeline  \ Configurable; should be set from args
    h# 0101  h# 42 dcon!
 
    h# 12 mode!
+   false
 ;
 : dcon-enable  ( -- )
-   dcon-setup
+   dcon-setup  if  exit  then
    true set-color
    h# f bright!
 ;
@@ -234,8 +235,12 @@ d# 905 value resumeline  \ Configurable; should be set from args
    dcon-power-off
 ;
 : dcon-resume  ( -- )
-   dcon-power-on  d# 50 ms   
-   dcon-setup
+   ['] dcon-power-on catch  if
+      ." dcon-power-on failed" cr
+      exit
+   then
+   d# 80 ms   
+   dcon-setup  if  exit  then
    saved-dcon-mode  mode!
    saved-brightness bright!
 ;

@@ -59,6 +59,10 @@ end-code
 here ddr-recal - constant /ddr-recal
 
 label ddr-self-refresh  ( r0:memctrl-va -- )
+        dsb
+        mcr     p15,0,r0,cr8,cr5,0 \ Invalidate TLB
+        mcr     p15,0,r0,cr7,cr10,4 \ Write data synchronization barrier
+
         mov     r1, #0x1          \ Block all data requests
         str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
 
@@ -73,13 +77,16 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
         \ str   r1, [r0, #0x770]  \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
 
 \ Store registers in SRAM so CForth can see them, for debugging
-\       set     r2, #0xd102.0400
-\       stmia   r2, {r0-r15}
+        set     r2, #0xd102.0400
+        stmia   r2, {r0-r15}
 
         \ Linux sets the register to 0x860
         ldr     r1, [r0, #0x1e0]  \ PHY_CTRL8
         bic     r1,r1,#0x07700000 \ PHY_ADCM_ZPDRV: 0 PHY_ADCM_ZNDRV: 0 (Disable drivers 6:0)
         str     r1, [r0, #0x1e0]  \ PHY_CTRL8
+
+\       mov     r1, #0x00070000   \ PHY_SYNC_EN
+\       str     r1, [r0, #0x110]  \ MMAP_CS1
 
         dsb                       \ Data Synchronization Barrier
         wfi                       \ Wait for interrupt
@@ -295,12 +302,304 @@ c;
 \ WAKEUP6: SDH1_CD, SDH3_CD, MSP_INS
 \ WAKEUP7: PMIC INT
 5 value sleep-depth
-: setup-wakeup-sources    ( -- mask )
-   h# 0002.0094 h#   4c mpmu!  \ RTC_ALARM, WAKEUP7, WAKEUP4, WAKEUP2
-\  h# 0002.0094 h# 104c mpmu!  \ RTC_ALARM, WAKEUP7, WAKEUP4, WAKEUP2 ???
+: setup-wakeup-sources  ( -- mask )
+\  h# 0002.0094 h#   4c mpmu!  \ RTC_ALARM, WAKEUP7, WAKEUP4, WAKEUP2
+\  h# 0002.0094 h# 104c mpmu!  \ RTC_ALARM, WAKEUP7, WAKEUP4, WAKEUP2
    h# ff08.7fff   ( mask )  \ Enable all wakeup ports
 ;
 : block-irqs  ( -- )  1 h# 110 +icu io!  ;
+
+\ XXX we might need to set GPIOs 71 and 160 (ps2 clocks), and perhaps the dat lines too,
+\ for non-sleep-mode control - or maybe for sleep mode control as inputs.
+\ We also may need to enable falling edge detects.
+: disable-int40  ( -- )  d# 40 disable-interrupt  ;
+
+: gpio-wakeup?  ( gpio# -- flag )
+   h# 019800 over 5 rshift la+ l@  ( gpio# mask )
+   swap h# 1f and                  ( mask bit# )
+   1 swap lshift  and  0<>         ( flag )
+;
+
+: icu@  ( offset -- value )  h# 28.2000 + io@  ;
+: .masked  ( irq# -- )
+   dup /l* h# 10c + icu@  ( irq# masked )
+   1 and  if              ( irq# )
+      ." IRQ" .d ." is masked off" cr
+   else                   ( irq# )
+      drop                ( )
+   then                   ( )
+;
+: .selected  ( irq# -- )
+   dup /l* h# 100 + icu@  ( irq# n )
+   dup h# 40 and  if      ( irq# n )
+      ." IRQ" swap .d     ( n )
+      ." selected INT" h# 3f and .d  cr  ( )
+   else                   ( irq# n )
+      2drop               ( )
+   then                   ( )
+;
+: (.pending)  ( d -- )
+   ." pending INTs: "                      ( d )
+   d# 64 0  do                             ( d )
+      over 1 and  if  i .d  then           ( d )
+      d2/                                  ( d' )
+   loop                                    ( d )
+   2drop                                   ( )
+;
+: .pending  ( irq# -- )
+   dup 2* /l* h# 130 +  dup icu@  swap la1+ icu@   ( irq# d )
+   2dup d0=  if                                    ( irq# d )
+      3drop                                        ( )
+   else                                            ( irq# d )
+      ." IRQ " rot .d   (.pending)  cr             ( )
+   then                                            ( )
+;
+
+: bit?  ( n bit# -- n flag )  1 swap lshift over and  0<>  ;
+: .ifbit  ( n bit# msg$ -- n )
+   2>r  bit?  if       ( n r: msg$ )
+      2r> type  space  ( n )
+   else                ( n r: msg$ )
+      2r> 2drop        ( n )
+   then                ( n )
+;
+: .enabled-ints  ( -- )
+   d# 64 0  do                           ( )
+      i /l* icu@  dup h# 70 and  if      ( n )
+         ." INT" i .d ." -> IRQ"         ( n )
+         4 " 0" .ifbit                   ( n )
+         5 " 1" .ifbit                   ( n )
+         6 " 2" .ifbit                   ( n )
+         ."  Pri " h# f and .d  cr       ( )
+      else                               ( n )
+         drop                            ( )
+      then                               ( )
+   loop                                  ( )
+;
+: .int4  ( -- )
+   ." INT4 - mask "  h# 168 icu@ .x
+   ." status " h# 150 icu@ dup .x
+   0   " USB " .ifbit
+   1   " PMIC" .ifbit
+   drop  cr
+;
+: .int5  ( -- )
+   ." INT5 - mask "  h# 16c icu@ .x
+   ." status " h# 154 icu@  dup .x
+   0   " RTC " .ifbit
+   1   " RTC_Alarm" .ifbit
+   drop cr
+;
+: .int9  ( -- )
+   ." INT9 - mask "  h# 17c icu@ .x
+   ." status " h# 180 icu@  dup .x
+   0   " Keypad " .ifbit
+   1   " Rotary " .ifbit
+   2   " Trackball" .ifbit
+   drop cr
+;
+: .int17  ( -- )
+   ." INT17 - mask " h# 170 icu@ .x
+   ." status " h# 158 icu@  dup .x  ( n )
+   7 2 do              ( n )
+      dup 1 and  if    ( n )
+	." TWSI" i .d  ( n )
+      then             ( n )
+      u2/              ( n' )
+   loop                ( n )
+   drop  cr            ( )
+;
+: .int35  ( -- )
+   ." INT5 - mask "  h# 174 icu@ .x
+   ." status " h# 15c icu@  dup  .x
+   d#  0  " PJ_PerfMon" .ifbit
+   d#  1 " L2_PA_ECC"   .ifbit
+   d#  2 " L2_ECC"      .ifbit
+   d#  3 " L2_UECC"     .ifbit
+   d#  4 " DDR"         .ifbit
+   d#  5 " Fabric0"     .ifbit
+   d#  6 " Fabric1"     .ifbit
+   d#  7 " Fabric2"     .ifbit
+   d#  9 " Thermal"     .ifbit
+   d# 10 " MainPMU"     .ifbit
+   d# 11 " WDT2"        .ifbit
+   d# 12 " CoreSight"   .ifbit
+   d# 13 " PJ_Commtx"   .ifbit
+   d# 14 " PJ_Commrx"   .ifbit
+   drop
+   cr
+;
+: .int51  ( -- )
+   ." INT51 - mask " h# 178 icu@ .x
+   ." status " h# 160 icu@  dup  .x
+   0 " HSI_CAWAKE1 "  .ifbit
+   1 " MIPI_HSI1"     .ifbit
+   drop cr
+;
+: .int55  ( -- )
+   ." INT55 - mask " h# 184 icu@ .x
+   ." status " h# 188 icu@  dup  .x
+   0 " HSI_CAWAKE0 "  .ifbit
+   1 " MIPI_HSI0"     .ifbit
+   drop cr
+;
+
+: .fiq  ( -- )
+   h# 304 icu@  if  ." FIQ is masked off"  cr  then
+   h# 300 icu@  dup  h# 40 and  if  ." FIQ selected INT" h# 3f and .d cr  else  drop  then
+   h# 310 icu@  h# 314 icu@  2dup d0=  if  ( d )
+      2drop                                ( )
+   else                                    ( d )
+      ." FIQ " (.pending) cr               ( )
+   then                                    ( )
+;
+  
+: .icu  ( -- )
+   .enabled-ints
+   3 0 do  i .masked  i .selected  i .pending  loop
+   \ XXX should handle DMA interrupts too
+   .fiq
+   .int4  .int5  .int9  .int17  .int35  .int51  .int55
+;
+string-array wakeup-bit-names
+   ," WU0 "
+   ," WU1 "
+   ," WU2 "
+   ," WU3 "
+   ," WU4 "
+   ," WU5 "
+   ," WU6 "
+   ," WU7 "
+   ," TIMER_1_1 "
+   ," TIMER_1_2 "
+   ," TIMER_1_3 "
+   ," MSP_INS "
+   ," AUDIO "
+   ," WDT1 "
+   ," TIMER_2_1 "
+   ," TIMER_2_2 "
+   ," TIMER_2_3 "
+   ," RTC_ALARM "
+   ," WDT2 "
+   ," ROTARY "
+   ," TRACKBALL "
+   ," KEYPRESS "
+   ," SDH3_CARD "
+   ," SDH1_CARD "
+   ," FULL_IDLE "
+   ," ASYNC_INT "
+   ," SSP1_SRDY "
+   ," CAWAKE "
+   ," resv28 "
+   ," SSP3_SRDY "
+   ," ALL_WU "
+   ," resv31 "
+end-string-array
+
+string-array wakeup-mask-names
+   ," WU0 "
+   ," WU1 "
+   ," WU2 "
+   ," WU3 "
+   ," WU4 "
+   ," WU5 "
+   ," WU6 "
+   ," WU7 "
+   ," TIMER_1_1 "
+   ," TIMER_1_2 "
+   ," TIMER_1_3 "
+   ," "
+   ," "
+   ," "
+   ," TIMER_2_1 "
+   ," TIMER_2_2 "
+   ," TIMER_2_3 "
+   ," RTC_ALARM "
+   ," WDT2 "
+   ," ROTARY "
+   ," TRACKBALL "
+   ," KEYPRESS "
+   ," SDH3_CARD "
+   ," SDH1_CARD "
+   ," FULL_IDLE "
+   ," ASYNC_INT "
+   ," WDT1 "
+   ," SSP3_SRDY "
+   ," SSP1_SRDY "
+   ," CAWAKE "
+   ," MSP_INS "
+   ," resv31 "
+end-string-array
+
+: .active-wakeups  ( -- )
+   ." Wakeups: "
+   h# 1048 mpmu@    ( n )
+   d# 31 0  do      ( n )
+      dup 1 and  if  i wakeup-bit-names count type  then  ( n )
+      u2/           ( n' )
+   loop             ( n )
+   drop cr          ( )
+;
+: .wakeup-mask  ( -- )
+   ." Enabled wakeups: "
+   h# 4c mpmu@  h# 104c or   ( n )
+   d# 31 0  do               ( n )
+      dup 1 and  if  i wakeup-mask-names count type  then  ( n )
+      u2/                    ( n' )
+   loop                      ( n )
+   drop cr                   ( )
+;
+: .edges  ( -- )
+   ." Wakeup edges: "           ( )
+   d# 6 0  do                   ( )
+      h# 19800 i la+ io@        ( n )
+      d# 32  0  do              ( n )
+         dup 1 and  if          ( n )
+	    j d# 32 *  i +  .d  ( n )
+         then                   ( n )
+         u2/                    ( n' )
+      loop                      ( n )
+      drop                      ( )
+   loop                         ( )
+   cr                           ( )
+;
+: .edge-enables  ( -- )
+   ." Enabled edges: "
+   d# 160  0  do
+      i af@ dup  h# 70 and  h# 40 <>   if  ( n )
+         dup h# 10 and  if  ." R"  then    ( n )
+         dup h# 20 and  if  ." F"  then    ( n )
+         dup h# 40 and  if  ." C"  then    ( n )
+	 i .d                              ( n )
+      then                                 ( n )
+      drop                                 ( )
+   loop
+;
+: .wakeup  ( -- )   .active-wakeups  .wakeup-mask  .edges .edge-enables  ;
+
+: .irqstat  ( -- )  h# 148 h# 130 do  i icu@ .  4 +loop   ;
+\ !!! The problem right now is that I have woken from keyboard, but the interrupt is still asserted
+\ So perhaps the interrupt handler didn't fire
+: rotate-wakeup? ( -- flag )  d#  15 gpio-wakeup?   ;
+: kbd-wakeup?    ( -- flag )  d#  71 gpio-wakeup?   ;
+: tpd-wakeup?    ( -- flag )  d# 160 gpio-wakeup?   ;
+\ We need to do this in the SP interrupt handler
+: clear-wakeup  ( gpio# -- )
+   dup af@                 ( gpio# value )
+   2dup h# 40 or swap af!  ( gpio# value )
+   swap af!
+;
+\ How to wakeup from SP:
+: setup-key-wakeup  ( -- )
+   d# 24 d# 16 do  h# b1 i af!  loop  \ Wake SP on game keys
+   h# b0 d# 15 af!    \ Wake SP on rotate key
+   h# 220 d#  71 af!  \ Wake SP on KBD CLK falling edge
+   h# 221 d# 160 af!  \ Wake SP on TPD CLK falling edge
+   h# 4c mpmu@  h# 20.0000 or h# 4c mpmu!  \ Keypress wakes SP
+   ['] disable-int40 d# 40 interrupt-handler!
+   d# 40 enable-interrupt  \ SP to PJ4 communications interrupt
+   h# 2900cc io@ 1 invert and h# 2900cc io!  \ Unmask the communications interrupt
+;
 
 0 value save-apcr
 0 value save-idlecfg
@@ -404,6 +703,8 @@ c;
       " dcon-suspend" $call-screen
    then
    " suspend" $call-screen
+   " set-ack" $call-ec
+
    \ 0 h# 54 pmua!  \ Kill the SDIO 0 clocks - insignificant savings
    \ 0 h# 58 pmua!  \ Kill the SDIO 1 clocks - insignificant savings
    sleep-mask 2 and  0=  if  keyboard-power-off  then  \ Should save about 17 mW
@@ -412,6 +713,7 @@ c;
 : screen-on  ( -- )
    sleep-mask 4 and  0=  if  wlan-power-on       then
    sleep-mask 2 and  0=  if  keyboard-power-on   then 
+   " clr-ack" $call-ec
    " resume" $call-screen
    sleep-mask 1 and  if            \ DCON power up
       dcon-unfreeze
