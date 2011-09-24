@@ -84,6 +84,11 @@ fload ${BP}/dev/olpc/kb3700/eccmdcom.fth  \ Common commands
 
 : als@      ( -- w )  h# 56 ec-cmd-w@  ;
 
+: ec-min-pwr  ( -- )  h# 5d ec-cmd-w@ w->n  ;
+: ec-max-pwr  ( -- )  h# 5e ec-cmd-w@ w->n  ;
+: ec-rst-pwr  ( -- )  h# 5f ec-cmd  ;
+
+
 [ifdef] notdef  \ These commands are awaiting documentation on their interfaces
 #define CMD_READ_EXT_SCI_MASK            0x37
 #define CMD_WRITE_EXT_SCI_MASK           0x38

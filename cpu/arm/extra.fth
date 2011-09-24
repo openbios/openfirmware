@@ -91,6 +91,7 @@ code l->n  ( l -- n )  c;
 code n->a  ( n -- a )  c;
 code l->w  ( l -- w )  mov tos,tos,lsl #16  mov tos,tos,lsr #16  c;
 code n->w  ( n -- w )  mov tos,tos,lsl #16  mov tos,tos,lsr #16  c;
+code w->n  ( n -- w )  mov tos,tos,lsl #16  mov tos,tos,asr #16  c;  \ Sign extend
 
 code l>r  ( l -- )  psh tos,rp  pop tos,sp  c;
 code lr>  ( -- l )  psh tos,sp  pop tos,rp  c;
