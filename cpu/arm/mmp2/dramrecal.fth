@@ -46,7 +46,7 @@ label ddr-recal  ( r0: memctrl-va -- )
    \ ZQ calibration long takes 512 memory clock cycles after a reset
    \ At 400 MHz, that's a little more than 2 us.  We spin here to
    \ ensure that the recal is complete before we touch the DRAM again.
-   mov   r1, #0x100000         \ 512K spins, takes about 2.6 us
+   mov   r1, #0x20             \ 32 spins, takes about 4 uS (from SRAM)
    begin
       decs r1, #1
    0= until
@@ -61,7 +61,7 @@ here ddr-recal - constant /ddr-recal
 label ddr-self-refresh  ( r0:memctrl-va -- )
         dsb
         mcr     p15,0,r0,cr8,cr5,0 \ Invalidate TLB
-        mcr     p15,0,r0,cr7,cr10,4 \ Write data synchronization barrier
+\       mcr     p15,0,r0,cr7,cr10,4 \ Write data synchronization barrier
 
         mov     r1, #0x1          \ Block all data requests
         str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
@@ -85,8 +85,7 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
         bic     r1,r1,#0x07700000 \ PHY_ADCM_ZPDRV: 0 PHY_ADCM_ZNDRV: 0 (Disable drivers 6:0)
         str     r1, [r0, #0x1e0]  \ PHY_CTRL8
 
-\       mov     r1, #0x00070000   \ PHY_SYNC_EN
-\       str     r1, [r0, #0x110]  \ MMAP_CS1
+        mov     r1, #0x80000   str  r1, [r0, #0x110]  \ MMAP1 - breadcrumb
 
         dsb                       \ Data Synchronization Barrier
         wfi                       \ Wait for interrupt
@@ -130,8 +129,18 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
         \ orr   r1, r1, #0x80     \ Exit Self Refresh value
         \ str   r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
 
+        mov   r1, #0x100          \ 256 spins, takes about 32 uS (from SRAM)
+        begin
+	   decs r1,#1
+        0= until
+
         mov     r1, #0x0          \ Unblock data requests
         str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
+
+        dsb
+        mcr     p15,0,r0,cr8,cr5,0 \ Invalidate TLB
+
+        mov     r1, #0x80000  str  r1, [r0, #0x110]  \ MMAP1 - breadcrumb
 
         mov     pc, lr
 end-code
@@ -167,11 +176,14 @@ c;
 \ Call this from OFW to enter self-refresh
 code do-self-refresh  ( -- )
    set r0,`memctrl-va #`   \ Memory controller virtual address
+
    set r1,`'ddr-self-refresh #`   \ Address of ddr-self-refresh routine in SRAM
    mov r7,sp
    set sp,`'ddr-self-refresh-sp #`
    mov lr,pc
    mov pc,r1
+
+   mov r1,#0x90000   str r1,[r0,#0x110]  \ MMAP1 - breadcrumb
    mov sp,r7
 c;
 
@@ -446,7 +458,7 @@ c;
 
 : .fiq  ( -- )
    h# 304 icu@  if  ." FIQ is masked off"  cr  then
-   h# 300 icu@  dup  h# 40 and  if  ." FIQ selected INT" h# 3f and .d cr  else  drop  then
+   h# 300 icu@  dup  h# 40 and  if  ." FIQ selected INT: " h# 3f and .d cr  else  drop  then
    h# 310 icu@  h# 314 icu@  2dup d0=  if  ( d )
       2drop                                ( )
    else                                    ( d )
@@ -600,6 +612,8 @@ end-string-array
    d# 40 enable-interrupt  \ SP to PJ4 communications interrupt
    h# 2900cc io@ 1 invert and h# 2900cc io!  \ Unmask the communications interrupt
 ;
+
+: breadcrumb  ( n -- )  h# d000.0110 l!  ;
 
 0 value save-apcr
 0 value save-idlecfg
@@ -773,14 +787,23 @@ end-string-array
 
    disable-clks
 
+   hdd-led-off
+
    \ begin mmp2_cpu_do_idle()
    block-irqs                    ( )  \ Block IRQs - will be cleared by PMU
    do-self-refresh               ( )
 
+   hdd-led-on
+   h# a0000 breadcrumb
+
    restore-run-state
    \ end mmp2_cpu_do_idle()
 
+   h# b0000 breadcrumb
+
    enable-clks
+
+   h# c0000 breadcrumb
 
    power-islands-on
 
@@ -788,10 +811,16 @@ end-string-array
 
    \ idle_cfg &= (~PMUA_MOH_SRAM_PWRDWN);
    stdin-idle-on
+
+   h# d0000 breadcrumb
    screen-on
    timers-on
+   h# e0000 breadcrumb
    enable-interrupts
+   h# f0000 breadcrumb
+   hdd-led-off
 ;
+: strp  ( -- )  ec-rst-pwr  str  ec-max-pwr .d ." mW " ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks
