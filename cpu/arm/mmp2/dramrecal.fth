@@ -59,66 +59,53 @@ end-code
 here ddr-recal - constant /ddr-recal
 
 label ddr-self-refresh  ( r0:memctrl-va -- )
-        mov     r1, #0x1          \ Block all data requests
-        str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
+   mov     r1, #0x1          \ Block all data requests
+   str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
 
-        ldr   r1, [r0, #0x770]    \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
-        orr   r1, r1, #0x03000000 \ PAD_TERM_SWITCH_MODE: Termination disabled
-        str   r1, [r0, #0x770]    \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
+   ldr   r2, [r0, #0x770]    \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
+   orr   r1, r2, #0x03000000 \ PAD_TERM_SWITCH_MODE: Termination disabled
+   str   r1, [r0, #0x770]    \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
 
-        mov     r1, #0x40         \ Enter Self Refresh value
-        str     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
+   mov   r1, #0x40           \ Enter Self Refresh value
+   str   r1, [r0, #0x120]    \ USER_INITIATED_COMMAND0
 
-        ldr     r1, [r0, #0x1e0]  \ PHY_CTRL8
-        bic     r1,r1,#0x07700000 \ PHY_ADCM_ZPDRV: 0 PHY_ADCM_ZNDRV: 0 (Disable drivers 6:0)
-        str     r1, [r0, #0x1e0]  \ PHY_CTRL8
+   ldr   r3, [r0, #0x1e0]    \ PHY_CTRL8
+   bic   r1, r3, #0x07700000 \ PHY_ADCM_ZPDRV: 0 PHY_ADCM_ZNDRV: 0 (Disable drivers 6:0)
+   str   r1, [r0, #0x1e0]    \ PHY_CTRL8
 
-    mov     r1, #0x70000   str  r1, [r0, #0x110]  \ MMAP1 - breadcrumb
+   dsb                       \ Data Synchronization Barrier
+   wfi                       \ Wait for interrupt
 
-        dsb                       \ Data Synchronization Barrier
-        wfi                       \ Wait for interrupt
+   str   r3, [r0, #0x1e0]    \ PHY_CTRL8 - restore previous value
 
-        ldr     r1, [r0, #0x1e0]  \ PHY_CTRL8
-        orr     r1,r1,#0x07700000 \ PHY_ADCM_ZPDRV: 7 PHY_ADCM_ZNDRV: 7 (Enable drivers 6:0)
-        str     r1, [r0, #0x1e0]  \ PHY_CTRL8
+   mov   r1, #0x20000000     \ PHY_DLL_RESET
+   str   r1, [r0, #0x240]    \ PHY_CTRL14
 
-        mov     r1, #0x20000000   \ PHY_DLL_RESET
-        str     r1, [r0, #0x240]  \ PHY_CTRL14
+   mov   r1, #0x40000000     \ DLL_UPDATE_EN
+   str   r1, [r0, #0x240]    \ PHY_CTRL14
 
-        mov     r1, #0x40000000   \ DLL_UPDATE_EN
-        str     r1, [r0, #0x240]  \ PHY_CTRL14
+   mov   r1, #0x80           \ Exit Self Refresh value
+   str   r1, [r0, #0x120]    \ USER_INITIATED_COMMAND0
 
-        mov     r1, #0x80         \ Exit Self Refresh value
-        str     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
-
-        ldr   r1, [r0, #0x770]  \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
-        bic   r1, r1, #0x02000000 \ PAD_TERM_SWITCH_MODE: Change 3 to 1 to enable termination for Read and Write
-        str   r1, [r0, #0x770]  \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
-
-        mov   r1, #0x20             \ 32 spins, takes about 16 uS (from SRAM)
-        begin
-          decs r1, #1
-        0= until
+   str   r2, [r0, #0x770]    \ SDRAM_CTRL7_SDRAM_ODT_CTRL2 - restore previous value
 
 [ifdef] notdef
-        mov   r1, #0x01000000       \ Chip select 0
-        orr   r1, r1, #0x00001000   \ Initiate ZQ calibration long
-        str   r1, [r0, #0x120]      \ USER_INITIATED_COMMAND0
+   mov   r1, #0x01000000       \ Chip select 0
+   orr   r1, r1, #0x00001000   \ Initiate ZQ calibration long
+   str   r1, [r0, #0x120]      \ USER_INITIATED_COMMAND0
 
-        \ ZQ calibration long takes 512 memory clock cycles after a reset
-        \ At 400 MHz, that's a little more than 2 us.  We spin here to
-        \ ensure that the recal is complete before we touch the DRAM again.
-        mov   r1, #0x20             \ 32 spins, takes about 16 uS (from SRAM)
-        begin
-            decs r1, #1
-        0= until
+   \ ZQ calibration long takes 512 memory clock cycles after a reset
+   \ At 400 MHz, that's a little more than 2 us.  We spin here to
+   \ ensure that the recal is complete before we touch the DRAM again.
+   mov   r1, #0x20             \ 32 spins, takes about 16 uS (from SRAM)
+   begin
+      decs r1, #1
+   0= until
 [then]
+   mov     r1, #0x0          \ Unblock data requests
+   str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
 
-        mov     r1, #0x0          \ Unblock data requests
-        str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
-
-        dsb
-        mov     pc, lr
+   mov     pc, lr
 end-code
 here ddr-self-refresh - constant /ddr-self-refresh
 
@@ -154,17 +141,10 @@ code do-self-refresh  ( -- )
    set r0,`memctrl-va #`   \ Memory controller virtual address
 
    set r1,`'ddr-self-refresh #`   \ Address of ddr-self-refresh routine in SRAM
-   mov r7,sp
-   set sp,`'ddr-self-refresh-sp #`
    ldr r2,[r1]             \ Force the code translation into the TLB
    ldr r3,[r0,#0x110]      \ Force the memory controller translation into the TLB
    mov lr,pc
    mov pc,r1
-
-[ifdef] notdef1
-   mov r1,#0xa0000   str r1,[r0,#0x110]  \ MMAP1 - breadcrumb
-[then]
-   mov sp,r7
 c;
 
 : apbc-clr-rst  ( offset -- )  +apbc  4 swap io-clr  ;
@@ -688,7 +668,9 @@ end-string-array
 : keyboard-power-on   ( -- )  d# 148 gpio-clr  ;
 : keyboard-power-off  ( -- )  d# 148 gpio-set  ;
 : wlan-power-on   ( -- )  d# 34 gpio-set  ;
-: wlan-power-off  ( -- )  d# 34 gpio-clr  ;
+: wlan-power-off  ( -- )  d# 34 gpio-clr  h# 040 d# 34 af!  h# 040 d# 57 af!  h# 040 d# 58 af!  ;
+: wlan-stay-on  ( -- )  h# 140 d# 34 af!  h# 140 d# 57 af!  h# 140 d# 58 af!  ;
+
 0 value sleep-mask
 : screen-off
    sleep-mask 1 and  if            \ DCON power down
@@ -702,7 +684,7 @@ end-string-array
    \ 0 h# 54 pmua!  \ Kill the SDIO 0 clocks - insignificant savings
    \ 0 h# 58 pmua!  \ Kill the SDIO 1 clocks - insignificant savings
    sleep-mask 2 and  0=  if  keyboard-power-off  then  \ Should save about 17 mW
-   sleep-mask 4 and  0=  if  wlan-power-off      then  \ saves 100 mW
+   sleep-mask 4 and  if  wlan-stay-on  else  wlan-power-off  then  \ saves 100 mW
 ;
 : screen-on  ( -- )
    sleep-mask 4 and  0=  if  wlan-power-on       then
@@ -767,13 +749,9 @@ end-string-array
 
    disable-clks
 
-\   hdd-led-off
-
    \ begin mmp2_cpu_do_idle()
    block-irqs                    ( )  \ Block IRQs - will be cleared by PMU
    do-self-refresh               ( )
-
-\   hdd-led-on
 
    restore-run-state
    \ end mmp2_cpu_do_idle()
@@ -792,7 +770,7 @@ end-string-array
    enable-interrupts
    hdd-led-off
 ;
-: strp  ( -- )  ec-rst-pwr  str  ec-max-pwr .d ." mW " ;
+: strp  ( -- )  ec-rst-pwr  str  ec-max-pwr .d ." mW " soc .%  space  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks
