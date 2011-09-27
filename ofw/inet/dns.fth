@@ -15,7 +15,7 @@ headerless
 \ QTYPE value for "A" (host name) is 1
 \ QCLASS value for "IN" (Internet) is 1
 
-d# 1022 value fw-port#
+d# 53 value fw-port#
 
 \ Encode/decode various DNS data types
 : +dnsw  ( w -- )  wbsplit +xb +xb  ;

@@ -16,8 +16,7 @@ headerless
 \ QTYPE value for "AAAA" (IPv6 hostname) is h# 1c
 \ QCLASS value for "IN" (Internet) is 1
 
-\ d# 1022 value fw-port#                   \ It's been assigned by IANA.
-h# 800a constant fw-port#                  \ It's unassigned as of 8/13/2007.
+d# 53 constant fw-port#
 
 d# 2000 constant dns-timeout
 
