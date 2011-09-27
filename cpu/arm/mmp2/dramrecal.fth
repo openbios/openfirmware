@@ -59,22 +59,32 @@ end-code
 here ddr-recal - constant /ddr-recal
 
 label ddr-self-refresh  ( r0:memctrl-va -- )
-        dsb
-        mcr     p15,0,r0,cr8,cr5,0 \ Invalidate TLB
-\       mcr     p15,0,r0,cr7,cr10,4 \ Write data synchronization barrier
+\         dsb
+\         mcr     p15,0,r0,cr8,cr5,0 \ Invalidate TLB
+\ \       mcr     p15,0,r0,cr7,cr10,4 \ Write data synchronization barrier
 
         mov     r1, #0x1          \ Block all data requests
         str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
 
-        ldr     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
-        bic     r1, r1, #0xc0     \ USER_SR_REQUEST field
-        orr     r1, r1, #0x40     \ Enter Self Refresh value
-        str     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
+\ Latest test
+\        ldr     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
+\        bic     r1, r1, #0xc0     \ USER_SR_REQUEST field
+\        orr     r1, r1, #0x40     \ Enter Self Refresh value
+\        str     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
 
         \ This block was commented-out in the Linux code, and the value is incorrect for OLPC in any case
         \ mov   r1, #0x03000000   \ PAD_TERM_SWITCH_MODE: Termination disabled
         \ orr   r1, r1, #0x000a   \ ODT{1,0}_SWITCH_MODE: Termination controlled by Read and Write enables
         \ str   r1, [r0, #0x770]  \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
+        \ OLPC
+        ldr   r1, [r0, #0x770]  \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
+        orr   r1, r1, #0x03000000  \ PAD_TERM_SWITCH_MODE: Termination disabled
+        str   r1, [r0, #0x770]  \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
+
+\        mov     r1, #0x1000000    \ Chip select 0
+\        orr     r1, r1, #0x40     \ Enter Self Refresh value
+        mov     r1, #0x40         \ Enter Self Refresh value
+        str     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
 
 \ Store registers in SRAM so CForth can see them, for debugging
         set     r2, #0xd102.0400
@@ -85,7 +95,7 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
         bic     r1,r1,#0x07700000 \ PHY_ADCM_ZPDRV: 0 PHY_ADCM_ZNDRV: 0 (Disable drivers 6:0)
         str     r1, [r0, #0x1e0]  \ PHY_CTRL8
 
-        mov     r1, #0x80000   str  r1, [r0, #0x110]  \ MMAP1 - breadcrumb
+        mov     r1, #0x70000   str  r1, [r0, #0x110]  \ MMAP1 - breadcrumb
 
         dsb                       \ Data Synchronization Barrier
         wfi                       \ Wait for interrupt
@@ -100,8 +110,8 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
         \ orr   r1, r1, #0x000a   \ ODT{1,0}_SWITCH_MODE: Termination controlled by Read and Write enables
         \ str   r1, [r0, #0x770]  \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
 
-        mov     r1, #0x80000000   \ PHY_SYNC_EN
-        str     r1, [r0, #0x240]  \ PHY_CTRL14
+\       mov     r1, #0x80000000   \ PHY_SYNC_EN  \ Wad suggests commenting out...
+\       str     r1, [r0, #0x240]  \ PHY_CTRL14
 
         \ There used to be code to set register 230, but Marvell says it is unnecessary.
 
@@ -111,18 +121,57 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
         mov     r1, #0x40000000   \ DLL_UPDATE_EN
         str     r1, [r0, #0x240]  \ PHY_CTRL14
 
-        ldr     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
-        bic     r1, r1, #0xc0     \ USER_SR_REQUEST field
-        orr     r1, r1, #0x80     \ Exit Self Refresh value
+\        ldr     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
+\        bic     r1, r1, #0xc0     \ USER_SR_REQUEST field
+\        orr     r1, r1, #0x80     \ Exit Self Refresh value
+\        str     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
+
+\        mov     r1, #0x01000000   \ Chip select 0
+\        orr     r1, r1, #0x80     \ Exit Self Refresh value
+        mov     r1, #0x80          \ Exit Self Refresh value
         str     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
 
-        ldr     r1, [r0, #0x80]   \ SDRAM_CTRL1
-        orr     r1, r1, #0x40     \ DLL_RESET
-        str     r1, [r0, #0x80]   \ SDRAM_CTRL1
+\        ldr     r1, [r0, #0x80]   \ SDRAM_CTRL1
+\        orr     r1, r1, #0x40     \ DLL_RESET
+\        str     r1, [r0, #0x80]   \ SDRAM_CTRL1
 
-        mov     r1, #0x01000000   \ Chip select 0
-        orr     r1, r1, #0x0100   \ USER_LMR0_REQ - Initiate Mode Register Set
-        str     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
+\        mov     r1, #0x01000000   \ Chip select 0
+\        orr     r1, r1, #0x0100   \ USER_LMR0_REQ - Initiate Mode Register Set
+\        str     r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
+
+   \ ZQ calibration long takes 512 memory clock cycles after a reset
+   \ At 400 MHz, that's a little more than 2 us.  We spin here to
+   \ ensure that the recal is complete before we touch the DRAM again.
+   mov   r1, #0x200            \ 512 spins, takes about 4 uS (from SRAM)
+   begin
+      decs r1, #1
+   0= until
+
+        ldr   r1, [r0, #0x770]  \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
+        bic   r1, r1, #0x02000000 \ PAD_TERM_SWITCH_MODE: Change 3 to 1 to enable termination for Read and Write
+        str   r1, [r0, #0x770]  \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
+
+   \ ZQ calibration long takes 512 memory clock cycles after a reset
+   \ At 400 MHz, that's a little more than 2 us.  We spin here to
+   \ ensure that the recal is complete before we touch the DRAM again.
+   mov   r1, #0x20             \ 32 spins, takes about 16 uS (from SRAM)
+   begin
+      decs r1, #1
+   0= until
+
+
+[ifdef] notdef
+   mov   r1, #0x01000000       \ Chip select 0
+   orr   r1, r1, #0x00001000   \ Initiate ZQ calibration long
+   str   r1, [r0, #0x120]      \ USER_INITIATED_COMMAND0
+
+   \ ZQ calibration long takes 512 memory clock cycles after a reset
+   \ At 400 MHz, that's a little more than 2 us.  We spin here to
+   \ ensure that the recal is complete before we touch the DRAM again.
+   mov   r1, #0x20             \ 32 spins, takes about 16 uS (from SRAM)
+   begin
+      decs r1, #1
+   0= until
 
         \ ldr   r1, [r0, #0x120]  \ USER_INITIATED_COMMAND0
         \ bic   r1, r1, #0xc0     \ USER_SR_REQUEST field
@@ -133,14 +182,25 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
         begin
 	   decs r1,#1
         0= until
+[then]
 
         mov     r1, #0x0          \ Unblock data requests
         str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
 
         dsb
-        mcr     p15,0,r0,cr8,cr5,0 \ Invalidate TLB
+\        mcr     p15,0,r0,cr8,cr5,0 \ Invalidate TLB
 
         mov     r1, #0x80000  str  r1, [r0, #0x110]  \ MMAP1 - breadcrumb
+
+        mov   r1, #0x10000         \ 64k spins, takes about 32 mS (from SRAM)
+        begin
+	   decs r1,#1
+        0= until
+
+        set     r2, #0xd102.0440
+        stmia   r2, {r0-r15}
+
+        mov     r1, #0x90000  str  r1, [r0, #0x110]  \ MMAP1 - breadcrumb
 
         mov     pc, lr
 end-code
@@ -180,10 +240,12 @@ code do-self-refresh  ( -- )
    set r1,`'ddr-self-refresh #`   \ Address of ddr-self-refresh routine in SRAM
    mov r7,sp
    set sp,`'ddr-self-refresh-sp #`
+   ldr r2,[r1]             \ Force the code translation into the TLB
+   ldr r3,[r0,#0x110]      \ Force the memory controller translation into the TLB
    mov lr,pc
    mov pc,r1
 
-   mov r1,#0x90000   str r1,[r0,#0x110]  \ MMAP1 - breadcrumb
+   mov r1,#0xa0000   str r1,[r0,#0x110]  \ MMAP1 - breadcrumb
    mov sp,r7
 c;
 
@@ -794,7 +856,6 @@ end-string-array
    do-self-refresh               ( )
 
    hdd-led-on
-   h# a0000 breadcrumb
 
    restore-run-state
    \ end mmp2_cpu_do_idle()
