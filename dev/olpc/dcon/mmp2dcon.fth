@@ -169,11 +169,13 @@ d# 905 value resumeline  \ Configurable; should be set from args
 : dcon-off  ( -- )  smb-init  h# 12 ['] mode!  catch  if  drop  then  ;
 
 : dcon2?  ( -- flag )
-   0 ['] dcon@ catch  if  ( x )
-      drop   smb-init     ( )
-      0 ['] dcon@ catch  if  drop false exit  then
-   then
-   h# dc02 =
+   5 0  do
+      0 ['] dcon@ catch  0=  if    ( x )
+         h# dc02 =  unloop exit
+      then                         ( x )
+      drop   d# 50 ms  smb-init    ( )
+   loop
+   false
 ;
 
 : dcon-setup  ( -- error? )
