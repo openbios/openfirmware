@@ -6,10 +6,12 @@
 
 ifneq (arm, $(findstring arm,$(shell uname -p)))
   # Cross-compiler setup
-  TOOLPREFIX=/usr/local/arm/bin/arm-linux-
-  CC=$(TOOLPREFIX)gcc
-  LD=$(TOOLPREFIX)ld
-  STRIP=$(TOOLPREFIX)strip
+ifeq ($(CROSS),)
+    CROSS=/usr/local/arm/arm-linux/bin/
+endif
+  CC    := $(CROSS)gcc
+  LD    := $(CROSS)ld
+  STRIP := $(CROSS)strip
 else
   CC    := gcc
   STRIP := strip

@@ -4,11 +4,11 @@
 # functions that conflict with gcc builtins
 
 ifneq (arm, $(findstring arm,$(shell uname -p)))
-  # Cross-compiler setup
-  ARCH  := /usr/local/arm
-  UTILS := $(ARCH)/arm-linux/bin
-  CC    := $(UTILS)/gcc
-  LD    := $(UTILS)/ld
+ifeq ($(CROSS),)
+    CROSS=/usr/local/arm/arm-linux/bin/
+endif
+  CC    := $(CROSS)gcc
+  LD    := $(CROSS)ld
 else
   CC    := gcc
 endif
