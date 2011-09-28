@@ -9,40 +9,63 @@ my-space h# 800 reg
 : adma!  ( n offset -- )  adma-base + rl!  ;
 : adma@  ( offset -- n )  adma-base + rl@  ;
 
-: audio-clock-on  ( -- )
-   h# 600 h# 28.290c io!  d# 10 us  \ Enable
-   h# 610 h# 28.290c io!  d# 10 us  \ Release reset
-   h# 710 h# 28.290c io!  d# 10 us  \ Enable
-   h# 712 h# 28.290c io!  d# 10 us  \ Release reset
+: audio-clock!  ( -- )  h# 10c pmua!  ;
+: audio-clock-off  ( -- )
+   0 h# 38 sspa!
+   0 audio-clock!
+;
+: start-audio-pll  ( -- error? )
+   \ For VCXO=26 MHz, OCLK=12.2880 MHz
+   h# 200d.a189 h# 38 sspa!  \ DIV_OCLK_MODULO=010 FRACT=00da1 ENA_DITHER=1 ICP=0 DIV_FBCCLK=01 DIV_MCLK=0 PU=1
+   h# 0000.0801 h# 3c sspa!  \ CLK_SEL=1 (AudioPLL) DIV_OCLK_PATTERN=01
+   d# 50 0  do
+      h# 3c sspa@  h# 10000 and  if
+         false  unloop exit
+      then
+      d# 10 us
+   loop
+   ." Audio PLL did not start" cr
+   true
+;
 
-[ifdef] 24mhz
-   \  * 10 / 27 gives about 147.456
-   \ The M/N divisor gets 199.33 MHz (Figure 283 - clock tree - in Datasheet)
-   \ But the M/N divisors always have an implicit /2 (section 7.3.7 in datasheet),
-   \ so the input frequency is 99.67 with respect to NOM (sic) and DENOM.
-   \ we want 24.576 MHz SYSCLK.  99.67 * 18 / 73 = 24.575 so 50 ppm error.
-   d# 18 d# 15 lshift d# 73 or h# d000.0000 or  h# 050040 io!
+: audio-clock-on  ( -- error? )
+   h# 600 audio-clock!  d# 10 us  \ Enable
+   h# 610 audio-clock!  d# 10 us  \ Release reset
+   h# 710 audio-clock!  d# 10 us  \ Enable
+   h# 712 audio-clock!  d# 10 us  \ Release reset
+
+[ifdef] setup-audio-pll
+   start-audio-pll  if  true exit  then
+
+   \ Bits 14:9 set the divisor from SYSCLK to BITCLK.  The setting below
+   \ is d# 8, which gives BITCLK = 1.536 MHz.  That's 32x 48000, just enough
+   \ for two (stereo) 16-bit samples.
+   \ The 80 bit is 0, choosing the AudioPLL instead of the I2SCLK
+   h#  1103 h# 34 sspa!  \ SSPA_AUD_CTRL0
 [else]
+   \ This section of the code uses I2SCLK instead of the Audio PLL.  Marvell
+   \ says that I2SCLK is prone to jitter so the Audio PLL is preferred.
+
    \  * 10 / 27 gives about 147.456
    \ The M/N divisor gets 199.33 MHz (Figure 283 - clock tree - in Datasheet)
    \ But the M/N divisors always have an implicit /2 (section 7.3.7 in datasheet),
    \ so the input frequency is 99.67 with respect to NOM (sic) and DENOM.
    \ we want 12.288 MHz SYSCLK.  99.67 * 9 / 73 = 12.2876 so 50 ppm error.
-   d# 9 d# 15 lshift d# 73 or h# d000.0000 or  h# 050040 io!
-[then]
+   d# 9 d# 15 lshift d# 73 or h# d000.0000 or  h# 40 mpmu!
 
-   h# 05.0024 io@  h# 20 or  h# 05.0024 io!  \ Enable 12S clock out to SSPA1
+\  The manual says that bit 5 enables I2SCLK to SSPA1, but empirically, bit 21 seems to do it
+\  h# 1024 mpmu@  h# 20 or  h# 1024 mpmu!  \ Enable 12S clock out to SSPA1
+   h# 1024 mpmu@  h# 20.0000 or  h# 1024 mpmu!  \ Enable 12S clock out to SSPA1
 
    h# 10800 h# 38 sspa!
-  
-[ifdef] 24mhz
+
    \ Bits 14:9 set the divisor from SYSCLK to BITCLK.  The setting below
-   \ is d# 16, which gives BITCLK = 3.072 MHz.  That's 32x 48000, just enough
+   \ is d# 8, which gives BITCLK = 1.536 MHz.  That's 32x 48000, just enough
    \ for two (stereo) 16-bit samples.
-   h#  2183 h# 34 sspa!  \ Divisor 16 - BITCLK = 3.072 Mhz
-[else]
-   h#  1183 h# 34 sspa!  \ Divisor  8 - BITCLK = 3.072 Mhz
+   \ The 80 bit is 1, choosing the I2SCLK instead of the AudioPLL
+   h#  1183 h# 34 sspa!  \ SSPA_AUD_CTRL0
 [then]
+   false
 ;
 
 : reset-rx  ( -- )  h# 8000.0002 h# 0c sspa!  ;
@@ -245,16 +268,8 @@ d# 48000 value sample-rate
       ( default )  true abort" Unsupported audio sample rate"
    endcase   ( sspareg34val timeout )
    to buf-timeout
-   9 lshift h# 183 or  h# 34 sspa!
+   9 lshift  h# 34 sspa@  h# 7e00 invert and  or  h# 34 sspa!
 ;
-
-\ I think we don't need to use the audio PLL, because we are using the PMUM M/N divider
-\ DIV_MCL 0  DIV_FBCLK 01 FRACT 00da1
-\ POSTDIV 1  DIV_OCLK_MODULO 000 (NA)  DIV_OCLK_PATTERN 00 (NA)  
-\ : setup-audio-pll  ( -- )
-\    h# 000d.a189 h# 38 sspa!
-\    h# 0000.0000 h# 3c sspa!
-\ ;
 
 : dma-alloc  ( len -- adr )  " dma-alloc" $call-parent  ;
 : dma-free  ( adr len -- )  " dma-free" $call-parent  ;
@@ -405,7 +420,7 @@ false value playing?
 
    \ Resetting the clock at this point seems to prevent intermittent channel
    \ reversal on reception.
-   audio-clock-on              ( ) \ This will mess up any frequency settings
+   audio-clock-on drop         ( ) \ This will mess up any frequency settings
 
    setup-sspa-tx               ( )
    setup-sspa-rx               ( )
@@ -504,21 +519,27 @@ h# 20000 constant tlen
    set-default-gains
    d# 48000 set-sample-rate
 ;
+: (close)
+\ Reinstate audio-clock-off when Linux turns on its own clock
+\   audio-clock-off
+   adma-base h# 800 " map-out" $call-parent
+   0 to adma-base  0 to sspa-base
+;
 0 value open-count
 : open  ( -- flag )
    open-count 0=  if
       my-space h# 800 " map-in" $call-parent to adma-base
       adma-base h# 400 + to sspa-base
-      audio-clock-on  init-codec
+      audio-clock-on  if  (close) false exit  then
+      init-codec
    then
    open-count 1+ to open-count
    true
 ;
 : close  ( -- )
    open-count 1 =  if
-      uninstall-playback-alarm  codec-off  ( audio-clock-off )
-      adma-base h# 800 " map-out" $call-parent
-      0 to adma-base  0 to sspa-base
+      uninstall-playback-alarm  codec-off
+      (close)
    then
    open-count 1- 0 max to open-count
 ;
