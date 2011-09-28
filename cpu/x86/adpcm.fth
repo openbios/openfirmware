@@ -392,8 +392,9 @@ d# -9 value playback-volume  \ -9 is clipping threshold
       h# 11  of  play-ima-adpcm   endof
       ( default )  ." Cannot play .wav format type: " dup .wav-cc true swap cr
    endcase
-   \ audio-ih close-dev
-   free-wav
+
+   \ We can't do this here because we may overlap the playing with other startup steps
+   \ audio-ih close-dev  free-wav
 ;
 
 : ($play-wav)  ( file-str -- )
