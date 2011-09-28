@@ -48,7 +48,7 @@ purpose: Driver for MMP2 internal RTC
    
    int5-mask@ 1 invert and int5-mask!  \ Unmask alarm
    enable-rtc-wakeup
-   0 soc-rtc@  d# 1 +  4 soc-rtc!      \ Set alarm for 3 seconds from now
+   0 soc-rtc@  d# 2 +  4 soc-rtc!      \ Set alarm for 2 seconds from now
    7 8 soc-rtc!                        \ Ack old interrupts and enable new ones
    ['] cancel-alarm 5 interrupt-handler!
    5 enable-interrupt
@@ -91,15 +91,15 @@ purpose: Driver for MMP2 internal RTC
    key? until
 ;
 : test4
-   begin
-      0 d# 13 at-xy
+   d# 1000000 0 do
+      0 d# 13 at-xy  i .d
       5 0  do
-         wake1  str
          cr i .
+         wake1  strp
          d# 500 ms
-         key? if unloop exit  then
+         key? if unloop unloop exit  then
       loop
-   again
+   5 +loop
 ;
 
 \ test3
