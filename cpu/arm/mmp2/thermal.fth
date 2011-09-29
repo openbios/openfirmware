@@ -8,6 +8,8 @@ h# 013200 value thermal-base
    h# 10000 thermal-base io!  \ Enable sensing
 ;
 
+\ thermal watchdog is enabled by CForth
+
 : cpu-temperature  ( -- celcius )
    0                   ( acc )
    d# 100 0  do        ( acc )  \ Accumulate 100 samples
@@ -20,6 +22,28 @@ h# 013200 value thermal-base
    \ The formula (from the Linux driver) is Celcius = (raw - 529.4) / 1.96
 
    d# 52940 -  d# 196 /  ( celcius )
+;
+
+: ?thermal  ( -- )
+   cpu-temperature d# 70 > abort " CPU too hot"
+;
+
+[ifndef] wdtpcr
+main-pmu-pa h# 200 + constant wdtpcr
+[then]
+
+\ disable thermal watchdog, please use only in controlled conditions
+: thermal-off
+   wdtpcr io@
+   b# 0101.1111 and
+   wdtpcr io!
+;
+
+: thermal-on
+   wdtpcr io@
+   b# 1101.1111 and
+   b# 1000.0000 or
+   wdtpcr io!
 ;
 
 thermal-base h# 4 +  value wd-thresh
