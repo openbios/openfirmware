@@ -76,9 +76,8 @@ headers
       true  close  exit
    then
    get-time .date space .time cr
-   get-time >unix-seconds                   ( clock-seconds )
-   0 0 0 d# 29 d# 9 d# 2011 >unix-seconds   ( clock-seconds earliest-seconds )
-   u<  dup  if  ." Date in RTC is too early" cr  then
+   get-time 2nip 2nip nip
+   d# 2011 < dup  if  ." Date in RTC is too early" cr  then
    close
 ;
 
