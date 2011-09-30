@@ -12,12 +12,15 @@ d# 64 constant #levels
 : ic@  ( offset -- l )  base-adr + rl@  ;
 : ic!  ( l offset -- )  base-adr + rl!  ;
 
+: intr@  ( level -- routing )  /l* ic@  ;
+: intr!  ( routing level -- )  /l* ic!  ;
+
 : block-irqs  ( -- )  1 h# 110 ic!  ;
 : unblock-irqs  ( -- )  0 h# 110 ic!  ;
 
-: irq-enabled?  ( level -- flag )  /l* ic@ h# 20 and 0<>  ;
-: enable-irq  ( level -- )  h# 21 swap /l* ic!  ;  \ Enable for IRQ1
-: disable-irq  ( level -- )  0 swap /l* ic!  ;
+: irq-enabled?  ( level -- flag )  intr@ h# 20 and 0<>  ;
+: enable-irq  ( level -- )  dup intr@  h# 20 or  swap intr!  ;  \ Enable for IRQ1
+: disable-irq  ( level -- )  dup intr@  h# 20 invert and  swap intr!  ;
 
 : run-interrupt  ( -- )
    h# 104 ic@  dup h# 40 and  if               ( reg )
