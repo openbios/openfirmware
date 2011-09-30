@@ -74,8 +74,8 @@ h#        00 constant rgb-endian  \ 0c bits
 
 : power-on  ( -- )
    \ Enable clocks
-   h# 3f h# 282828 io!  \ Clock gating - AHB, Internal PIXCLK, AXI clock always on
-   h# 0003.805b h# 282850 io!  \ PMUA clock config for CCIC - /1, PLL1/16, AXI arb, AXI, perip on
+   h# 3f h# 28 pmua!  \ Clock gating - AHB, Internal PIXCLK, AXI clock always on
+   h# 0003.805b h# 50 pmua!  \ PMUA clock config for CCIC - /1, PLL1/16, AXI arb, AXI, perip on
 
 \  h# 0000.0002 h# 88 cl!   \ Clock select - PIXMCLK, 797/2 (PLL1/16) / 2 -> 24.9 MHz
 \  h# 4000.0002 h# 88 cl!   \ Clock select -     AXI, 797/2 (PLL1/16) / 2 -> 24.9 MHz
