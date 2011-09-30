@@ -926,7 +926,7 @@ h# 0050.f202 constant amoui			\ WPA authentication suite
 
 d# 34 instance buffer: scan-ssid
 
-0 value scan-type
+0 instance value scan-type
 : active-scan  ( -- )  0 to scan-type  ;
 : passive-scan  ( -- )  1 to scan-type  ;
 
@@ -2088,6 +2088,24 @@ d# 1600 buffer: test-buf
 
 : reset  ( -- flag )  reset-nic  ;
 
+: test-association  ( -- error? )
+   passive-scan
+   " OLPCOFW" " scan-ssid?" $call-supplicant  if
+      " (do-associate)" $call-supplicant  if
+	 \ Success
+         " target-mac$" $call-supplicant disassociate
+         true to ssid-reset?
+	 false
+      else
+	 true
+      then
+   else
+      \ There is no OLPCOFW access point, so we don't try associating
+      false
+   then
+   active-scan
+;
+
 : (scan-wifi)  ( -- error? )
    true to force-open?
    open
@@ -2106,7 +2124,8 @@ d# 1600 buffer: test-buf
             true
          then
       else                  ( adr len )
-         drop .ssids false
+         drop .ssids        ( )
+         test-association   ( error? )
       then
    then
 
