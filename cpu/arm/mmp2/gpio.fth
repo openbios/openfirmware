@@ -33,11 +33,9 @@ create gpio-offsets
 : gpio-clr-fer  ( gpio# -- )  >gpio-pin h# 90 + io!  ;
 
 : >gpio-mask    ( gpio# -- mask pa )  >gpio-pin h# 9c +  ;
-: gpio-set-mask ( gpio# -- )  >gpio-mask io!  ;
+: gpio-set-mask ( gpio# -- )  >gpio-mask tuck io@  or  swap io!  ;
+: gpio-clr-mask ( gpio# -- )  >gpio-mask tuck io@  swap invert and  swap io!  ;
 
 : >gpio-xmsk     ( gpio# -- mask pa )  >gpio-pin h# a8 +  ;
-: gpio-set-xmsk  ( gpio# -- )  >gpio-xmsk io!  ;
-
-
-
-
+: gpio-set-xmsk ( gpio# -- )  >gpio-xmsk tuck io@  or  swap io!  ;
+: gpio-clr-xmsk ( gpio# -- )  >gpio-xmsk tuck io@  swap invert and  swap io!  ;
