@@ -1,4 +1,11 @@
+\ See license at end of file
+purpose: Driver for OLPC camera connected to Marvell MMP2 CCIC port
+
 \ ==========================  video capture operations ==========================
+
+0 value camera-base
+: cl!  ( l adr -- )  camera-base + rl!  ;
+: cl@  ( adr -- l )  camera-base + rl@  ;
 
 d# 640 constant VGA_WIDTH
 d# 480 constant VGA_HEIGHT
@@ -36,18 +43,16 @@ VGA_WIDTH VGA_HEIGHT * 2* constant /dma-buf
 \ 0100.0000 for HSYNC active low
 \ 0080.0000 for VSYNC falling edge
 h# 0000.0000 constant polarities  
-h#        20 constant rgb-sensor
-h#       080 constant rgb-fb
-h#        00 constant rgb-endian  \ 0c bits
+h#    0.8000 constant ycrcb4:2:2-format  \ YCrCb input and output, 422 packed format (8000), no swapping
+h#        a0 constant rgb-format         \ RGB input (20) and output (80), no swapping
 
-\ VGA RGB565
 : setup-image  ( -- )
    VGA_WIDTH 2*  h# 24 cl!	\ 640*2 stride, UV stride in high bits = 0
 
    VGA_WIDTH 2*  VGA_HEIGHT wljoin  h# 34 cl!   \ Image size register
    0             0          wljoin  h# 38 cl!	\ Image offset
 
-   polarities  rgb-fb or  rgb-sensor or  rgb-endian or  h# 3c cl!  \ CTRL0
+   use-ycrcb?  if  ycrcb4:2:2-format  else  rgb-format  then  polarities or  h# 3c cl!  \ CTRL0
 ;
 
 : interrupts-off  ( -- )  0 h# 2c cl!  h# ffffffff h# 30 cl!  ;
@@ -96,7 +101,7 @@ h#        00 constant rgb-endian  \ 0c bits
 
 : init  ( -- )
    power-on
-   ov-smb-setup smb-on
+   camera-smb-setup  smb-on
    camera-init
 ;
 
@@ -114,6 +119,7 @@ h#        00 constant rgb-endian  \ 0c bits
    then
 ;
 
+: resync  ( -- )  ;
 
 : snap  ( timeout -- true | buf# false )
    0  do
@@ -140,21 +146,24 @@ external
 : open  ( -- flag )
    my-address my-space  h# 1000  " map-in" $call-parent  to camera-base
    init
+   my-args " yuv" $=  to use-ycrcb?
    ov7670-detected? 0=  if  false exit  then
    alloc-dma-bufs
    read-setup
    true
 ;
 
+\ There are no pin conflicts on this platform, so the camera can't be blocked
+false constant camera-blocked?
+
 : start-display  ( -- )
-   0 'dma-buf-phys VGA_WIDTH VGA_HEIGHT " start-video" $call-screen
+   0 'dma-buf-phys VGA_WIDTH VGA_HEIGHT use-ycrcb? " start-video" $call-screen
 ;
 : stop-display  ( -- )
    " stop-video" $call-screen
 ;
 
 : close  ( -- )
-   stop-display
    ctlr-stop
    interrupts-off
    power-off
@@ -165,17 +174,28 @@ external
 
 \ ============================= selftest operation ===========================
 
-d# 5,000 constant movie-time
-0 constant test-x
-0 constant test-y
-
 \ Thanks to Cortland Setlow (AKA Blaketh) for the autobrightness code
-\ and the full-screen + mirrored display.
 
-: autobright  ( -- )
-   read-agc 3 + 3 rshift  h# f min  " bright!" $call-screen
+[ifdef] notdef  \ Unnecessary, since that we don't use 24bpp
+VGA_WIDTH  value rect-w
+VGA_HEIGHT value rect-h
+
+d# 1200 3 *  value dst-pitch
+d# 1200 VGA_WIDTH  - 2/ value dst-x
+d#  800 VGA_HEIGHT - 2/ value dst-y
+
+VGA_WIDTH 2* value src-pitch
+
+: >dst-adr  ( adr -- adr' )  dst-y dst-pitch *  dst-x +  3 *  +  ;
+
+: copy16>24  ( src-adr dst-base -- )
+   >dst-adr             ( src-adr dst-adr )
+   rect-h 0  ?do        ( src-adr dst-adr )
+      2dup rect-w copy16>24-line          ( scr-adr dst-adr )
+      swap src-pitch +  swap dst-pitch +  ( scr-adr' dst-adr' )
+   loop                 ( src-adr dst-adr )
+   2drop                ( )
 ;
-: full-brightness  ( -- )  h# f " bright!" $call-screen  ;
 
 code copy16>24-line  ( src-adr dst-adr #pixels -- )
    mov     r2,tos            \ #pixels in r2
@@ -199,93 +219,11 @@ code copy16>24-line  ( src-adr dst-adr #pixels -- )
       decs  r2,1
    0= until
 c;
+[then]
 
-VGA_WIDTH  value rect-w
-VGA_HEIGHT value rect-h
-
-d# 1200 3 *  value dst-pitch
-d# 1200 VGA_WIDTH  - 2/ value dst-x
-d#  800 VGA_HEIGHT - 2/ value dst-y
-
-: >dst-adr  ( adr -- adr' )  dst-y dst-pitch *  dst-x +  3 *  +  ;
-
-VGA_WIDTH 2* value src-pitch
-
-: copy16>24  ( src-adr dst-base -- )
-   >dst-adr             ( src-adr dst-adr )
-   rect-h 0  ?do        ( src-adr dst-adr )
-      2dup rect-w copy16>24-line          ( scr-adr dst-adr )
-      swap src-pitch +  swap dst-pitch +  ( scr-adr' dst-adr' )
-   loop                 ( src-adr dst-adr )
-   2drop                ( )
-;
-
-: display-frame  ( buf# -- )
+: display-frame  ( buf -- )
    'dma-buf-phys " set-video-dma-adr" $call-screen
 \  'dma-buf fb-pa copy16>24
-\   autobright
-;
-
-: timeout-read  ( adr len timeout -- actual )
-   >r 0 -rot r>  0  ?do			( actual adr len )
-      2dup read ?dup  if  3 roll drop -rot leave  then
-      1 ms
-   loop  2drop
-;
-
-: shoot-still  ( -- error? )
-   d# 1000 snap  if  true exit  then   ( buf# )
-   display-frame
-   false
-;
-
-: shoot-movie  ( -- error? )
-   get-msecs movie-time +			( timeout )
-   begin                 			( timeout )
-      shoot-still  if  drop true exit  then 	( timeout )
-      dup get-msecs - 0<=                       ( timeout reached )
-   until					( timeout )
-   drop false
-;
-
-: mirrored  ( -- )  h# 1e ov@  h# 20 or  h# 1e ov!  ;
-: unmirrored  ( -- )  h# 1e ov@  h# 20 invert and  h# 1e ov!  ;
-
-: selftest  ( -- error? )
-   open 0=  if  true exit  then
-   d# 300 ms
-   start-display
-   unmirrored  shoot-still  ?dup  if  close exit  then	( error? )
-   d# 1,000 ms
-   mirrored   shoot-movie  full-brightness		( error? )
-   close						( error? )
-   ?dup  0=  if  confirm-selftest?  then		( error? )
-;
-
-: dump-regs  ( run# -- )
-   0 d# 16 " at-xy" eval
-   ." Pass " .d
-   key upc  h# 47 =  if ." Good" else  ." Bad" then cr  \ 47 is G
-
-   ."        0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f" cr
-   ."       -----------------------------------------------" cr
-   h# ca 0  do
-      i 2 u.r ." :  "
-      i h# 10 bounds  do
-         i h# ca <  if  i ov@ 3 u.r   then
-      loop
-      cr
-   h# 10 +loop
-;
-
-: xselftest  ( -- error? )
-   open 0=  if  true exit  then
-
-   h# 10 0 do
-      shoot-still  drop  d# 500 ms  camera-config  config-check
-      i dump-regs
-   loop
-   0 close					( error? )
 ;
 
 \ LICENSE_BEGIN
