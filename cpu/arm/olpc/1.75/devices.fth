@@ -128,8 +128,6 @@ fload ${BP}/dev/olpc/spiflash/spiif.fth    \ Generic low-level SPI bus access
 
 fload ${BP}/dev/olpc/spiflash/spiflash.fth \ SPI FLASH programming
 
-: ignore-power-button ;  \ XXX implement me
-
 fload ${BP}/cpu/arm/mmp2/sspspi.fth        \ Synchronous Serial Port SPI interface
 
 \ Create the top-level device node to access the entire boot FLASH device
@@ -185,13 +183,28 @@ false constant tethered?                     \ We only support reprogramming our
 fload ${BP}/cpu/arm/olpc/1.75/bbedi.fth
 fload ${BP}/cpu/arm/olpc/1.75/edi.fth
 
-[ifdef] load-base
-: flash-buf  load-base  ;
-[else]
-/flash buffer: flash-buf
-[then]
+load-base constant flash-buf
 
 fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
+
+: ec-spi-reprogrammed   ( -- )
+   edi-spi-start
+   set-ec-reboot
+   unreset-8051
+;
+
+: ignore-power-button  ( -- )
+   edi-spi-start
+   ['] reset-8051 catch if reset-8051 then
+   use-ssp-spi
+   ['] ec-spi-reprogrammed to spi-reprogrammed
+;
+: flash-vulnerable(  ( -- )
+   hdd-led-on
+;
+: )flash-vulnerable  ( -- )
+   hdd-led-off
+;
 
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
 \ fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery

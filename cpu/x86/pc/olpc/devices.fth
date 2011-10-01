@@ -317,6 +317,10 @@ fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
 
+load-base constant flash-buf
+: flash-vulnerable(  ( -- )  ignore-power-button  ;
+: )flash-vulnerable  ( -- )  ;
+
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
 fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;

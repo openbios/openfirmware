@@ -288,6 +288,15 @@ fload ${BP}/cpu/x86/pc/olpc/kbdtype.fth      \ Export keyboard type
 
 fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
    
+load-base constant flash-buf
+: flash-vulnerable(  ( -- )
+   hdd-led-on
+   ignore-power-button
+;
+: )flash-vulnerable  ( -- )
+   hdd-led-off
+;
+
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
 fload ${BP}/cpu/x86/pc/olpc/via/recover.fth  \ XO-to-XO SPI FLASH recovery
 
