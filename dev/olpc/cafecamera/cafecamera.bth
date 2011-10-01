@@ -9,7 +9,10 @@ begin-tokenizing cafecamera.fc
 
 FCode-version2
 
+fload ${BP}/dev/olpc/cafecamera/platform.fth
+fload ${BP}/dev/olpc/ov7670.fth
 fload ${BP}/dev/olpc/cafecamera/cafecamera.fth
+fload ${BP}/dev/olpc/cameratest.fth
 
 end0
 
