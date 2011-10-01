@@ -62,9 +62,11 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
    mov     r1, #0x1          \ Block all data requests
    str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
 
+[ifdef] notdef2
    ldr   r2, [r0, #0x770]    \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
    orr   r1, r2, #0x03000000 \ PAD_TERM_SWITCH_MODE: Termination disabled
    str   r1, [r0, #0x770]    \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
+[then]
 
    mov   r1, #0x40           \ Enter Self Refresh value
    str   r1, [r0, #0x120]    \ USER_INITIATED_COMMAND0
@@ -87,7 +89,9 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
    mov   r1, #0x80           \ Exit Self Refresh value
    str   r1, [r0, #0x120]    \ USER_INITIATED_COMMAND0
 
+[ifdef] notdef2
    str   r2, [r0, #0x770]    \ SDRAM_CTRL7_SDRAM_ODT_CTRL2 - restore previous value
+[then]
 
 [ifdef] notdef
    mov   r1, #0x01000000       \ Chip select 0
