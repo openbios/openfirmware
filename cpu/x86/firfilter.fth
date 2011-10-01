@@ -146,7 +146,7 @@ taps/phase 2* /n* buffer: zbuf
    r> 3drop                               ( )
 ;
 
-: upsample6  ( inbuf /inbuf outbuf -- )  2 8khz>khz  ;
+: upsample6  ( inbuf /inbuf outbuf -- )  2 8khz>48khz  ;
 
 0 [if]
 \ Here is some Matlab/Octave code to compute the weights
