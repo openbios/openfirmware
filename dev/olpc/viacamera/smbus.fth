@@ -1,10 +1,4 @@
-[ifndef] seq!
-: seq!  3c4 pc! 3c5 pc!  ;
-[then]
-
-[ifndef] seq@
-: seq@  3c4 pc! 3c5 pc@  ;
-[then]
+\
 
 0 value smb-port
 
@@ -123,10 +117,3 @@ h# 3500 constant smb-data-timeout-us
 : smb-pulses  ( -- )
    d# 32 0  do  smb-clk-lo smb-clk-hi  loop
 ;
-
-h# 26 constant dcon-port
-: dcon-setup  ( -- )  dcon-port to smb-port  h# 1a to smb-slave  ;
-: smb-init    ( -- )  dcon-setup  smb-on  smb-pulses  ;
-
-: dcon@  ( reg# -- word )  dcon-setup  smb-word@  ;
-: dcon!  ( word reg# -- )  dcon-setup  smb-word!  ;
