@@ -85,9 +85,8 @@ defer placement ' zoomed is placement
 \ 5:YUV422packed 6:YUV422planar 7:YUV420planar 8:SmartPanelCmd
 \ 9:Palette4bpp  A:Palette8bpp  B:RGB888A
 : set-video-mode  ( mode -- )
-   d# 20 lshift            ( x00000 )
    h# 190 lcd@             ( x00000 regval )
-   h# f00000 invert and    ( x00000 regval' )
+   h# f0.000e invert and   ( x00000 regval' )
    or                      ( regval' )
    h# 190 lcd!             ( )
 ;
@@ -95,14 +94,17 @@ defer placement ' zoomed is placement
 : video-off  ( -- )  h# 190 lcd@ 1 invert and h# 190 lcd!  ;
 : set-video-dma-adr  ( adr -- )  h# 0c0 lcd!  ;
 
-\ Assumes RGB565
-: start-video  ( adr w h -- )
-   clear-unused-regs  normal-hsv  ( adr w h )
-   over 2* h# 0e0 lcd!            ( adr w h )  \ Pitch - width * 2 bytes/pixel
-   placement                      ( adr )
-   set-video-dma-adr              ( )  \ Video buffer
-   0 set-video-mode               ( )  \ RGB565
-   d# 255 set-video-alpha         ( )  \ Opaque video
+defer foo ' noop to foo
+
+: start-video  ( adr w h ycrcb? -- )
+   >r                                    ( adr w h r: ycrcb? )
+   clear-unused-regs  normal-hsv         ( adr w h r: ycrcb? )
+   over  2* h# 0e0 lcd!                  ( adr w h r: ycrcb? )  \ Pitch - width * 2 bytes/pixel for RGB565, width for YCrCr4:2:2
+   placement                             ( adr r: ycrcb? )
+   set-video-dma-adr                     ( r: ycrcb? )  \ Video buffer
+   r> if  h# 50.000e  else  0  then  set-video-mode  ( )
+   d# 255 set-video-alpha                ( )  \ Opaque video
+   foo
    video-on
 ;
 : stop-video  ( -- )  video-off  ;
