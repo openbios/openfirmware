@@ -296,7 +296,6 @@ c;
    1 swap lshift  and  0<>         ( flag )
 ;
 
-: icu@  ( offset -- value )  h# 28.2000 + io@  ;
 : .masked  ( irq# -- )
    dup /l* h# 10c + icu@  ( irq# masked )
    1 and  if              ( irq# )
@@ -571,10 +570,10 @@ end-string-array
    h# b0 d# 15 af!    \ Wake SP on rotate key
    h# 220 d#  71 af!  \ Wake SP on KBD CLK falling edge
    h# 221 d# 160 af!  \ Wake SP on TPD CLK falling edge
-   h# 4c mpmu@  h# 20.0000 or h# 4c mpmu!  \ Keypress wakes SP
+   h# 4c +mpmu  h# 20.0000 io-set  \ Keypress wakes SP
    ['] disable-int40 d# 40 interrupt-handler!
    d# 40 enable-interrupt  \ SP to PJ4 communications interrupt
-   h# 2900cc io@ 1 invert and h# 2900cc io!  \ Unmask the communications interrupt
+   1 h# 29.00cc 1 io-clr   \ Unmask the inter-processor communications interrupt
 ;
 
 : breadcrumb  ( n -- )  h# d000.0110 l!  ;

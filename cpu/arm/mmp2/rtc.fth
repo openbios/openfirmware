@@ -1,96 +1,34 @@
+\ See license at end of file
 purpose: Driver for MMP2 internal RTC
 
-\ This code was written as a test/demonstration of using
-\ the MMP2 internal RTC to generate alarm interrupts.
-\ It is not currently used by anything, and should it
-\ ever be needed, it should be put in a device node.
+\ Interrupt 5 combines two interrupt inputs, RTC INT (bit 1) and RTC ALARM (bit 0)
+: int5-mask  ( -- offset )  h# 16c +icu  ;
+: int5-status@  ( -- value )  h# 154 icu@  ;
 
-: int5-mask!  ( value -- )  h# 28.216c io!  ;
-: int5-mask@  ( -- value )  h# 28.216c io@  ;
-: int5-status@  ( -- value )  h# 28.2154 io@  ;
-: enable-rtc  ( -- )  h# 81 h# 01.5000 io!  ;
+: enable-rtc  ( -- )  h# 81 0 apbc!  ;  \ Turn on the clock for the internal RTC
 : enable-rtc-wakeup  ( -- )
-   h# 004c mpmu@ h# 2.0010 or h# 004c mpmu!
-   h# 104c mpmu@ h# 2.0010 or h# 104c mpmu!
+   h# 2.0010  h# 104c +mpmu  io-set
 ;
 : soc-rtc@  ( offset -- value )  h# 01.0000 + io@  ;
 : soc-rtc!  ( value offset -- value )  h# 01.0000 + io!  ;
 : cancel-alarm  ( -- )
    0 8 soc-rtc!
-   int5-mask@ 1 or int5-mask!  \ Mask alarm
+   1 int5-mask io-set  \ Mask alarm
 ;
-: take-alarm  ( -- )
-   ." Alarm fired" cr
-   cancel-alarm
-;
-: alarm-in-3  ( -- )
-   enable-rtc                          \ Turn on clocks
+: take-alarm  ( -- )  ." Alarm fired" cr  cancel-alarm  ;
+: rtc-wake  ( handler-xt #seconds -- )
+   enable-rtc                          ( handler-xt #seconds )  \ Turn on clocks
    
-   int5-mask@ 1 invert and int5-mask!  \ Unmask alarm
-   enable-rtc-wakeup
-   0 soc-rtc@  d# 3 +  4 soc-rtc!      \ Set alarm for 3 seconds from now
-   7 8 soc-rtc!                        \ Ack old interrupts and enable new ones
-   ['] take-alarm 5 interrupt-handler!
-   5 enable-interrupt
+   1 int5-mask io-clr                  ( handler-xt #seconds )  \ Unmask alarm
+   enable-rtc-wakeup                   ( handler-xt #seconds )
+   0 soc-rtc@  +  4 soc-rtc!           ( handler-xt )           \ Set alarm for 2 seconds from now
+   7 8 soc-rtc!                        ( handler-xt )           \ Ack old interrupts and enable new ones
+   5 interrupt-handler!                ( )
+   5 enable-interrupt                  ( )
 ;
-: alarm-in-1  ( -- )
-   enable-rtc                          \ Turn on clocks
-   
-   int5-mask@ 1 invert and int5-mask!  \ Unmask alarm
-   enable-rtc-wakeup
-   0 soc-rtc@  d# 1 +  4 soc-rtc!      \ Set alarm for 3 seconds from now
-   7 8 soc-rtc!                        \ Ack old interrupts and enable new ones
-   ['] cancel-alarm 5 interrupt-handler!
-   5 enable-interrupt
-;
-: wake1  ( -- )
-   enable-rtc                          \ Turn on clocks
-   
-   int5-mask@ 1 invert and int5-mask!  \ Unmask alarm
-   enable-rtc-wakeup
-   0 soc-rtc@  d# 2 +  4 soc-rtc!      \ Set alarm for 2 seconds from now
-   7 8 soc-rtc!                        \ Ack old interrupts and enable new ones
-   ['] cancel-alarm 5 interrupt-handler!
-   5 enable-interrupt
-;
-: alarm1  ( -- )
-   enable-rtc                          \ Turn on clocks
-   
-   int5-mask@ 1 invert and int5-mask!  \ Unmask alarm
-   enable-rtc-wakeup
-   0 soc-rtc@  d# 1 +  4 soc-rtc!      \ Set alarm for 3 seconds from now
-   7 8 soc-rtc!                        \ Ack old interrupts and enable new ones
-   ['] take-alarm 5 interrupt-handler!
-   5 enable-interrupt
-;
-: test1
-   0
-   begin
-      alarm1
-      str
-      (cr dup . 1+
-      d# 500 ms
-   key? until
-;
-: test2
-   0
-   begin
-      wake1
-      str
-      (cr dup . 1+
-      d# 500 ms
-   key? until
-;
-: test3
-   0
-   begin
-      wake1
-      str
-      cr dup . 1+
-      d# 500 ms
-   key? until
-;
-: test4
+: wake1  ( -- )  ['] cancel-alarm 1 rtc-wake  ;
+: alarm-in-3  ( -- )  ['] take-alarm 3 rtc-wake  ;
+: wakeup-loop  ( -- )
    d# 1000000 0 do
       0 d# 13 at-xy  i .d
       5 0  do
@@ -101,11 +39,47 @@ purpose: Driver for MMP2 internal RTC
       loop
    5 +loop
 ;
+alias test4 wakeup-loop
 
-\ test3
-\ wake1 str cr
+: s3-selftest  ( -- error? )
+   \ The general failure mode here is that it won't wake up, so
+   \ it's hard to return a real error code.  We just have to rely
+   \ on the operator.
+   ." Testing suspend/resume"  cr
+   ." Sleeping for 3 seconds .. "  d# 100 ms
+   ec-rst-pwr ['] cancel-alarm 3 rtc-wake  str  ec-max-pwr  ( power )
+   \ Negative power is consumed from battery, positive is supplied to battery
+   dup  d# -250 <  if                                       ( power )
+      ." System used too much power during suspend - "  negate .d ." mW" cr  ( )
+      true                                                  ( error? )
+   else                                                     ( power )
+      drop  false                                           ( error? )
+   then                                                     ( error? )
+;
+dev /memory
+[ifdef] test-s3  ' s3-selftest to test-s3  [then]
+dend
 
-\ patch noop cr take-alarm test1
-\ patch (cr cr take-alarm test1
-
-\ : cx cr d# 400 ms ; patch cx cr take-alarm test1
+\ LICENSE_BEGIN
+\ Copyright (c) 2011 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
