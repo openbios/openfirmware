@@ -2094,7 +2094,7 @@ d# 1600 buffer: test-buf
       " (do-associate)" $call-supplicant  if
 	 \ Success
          " target-mac$" $call-supplicant disassociate
-         true to ssid-reset?
+         " true to ssid-reset?" ['] evaluate catch  if  2drop  then
 	 false
       else
 	 true
