@@ -105,7 +105,7 @@ false to do-random-test?  \ The random test takes a long time
       then                                 ( rem$ )
    repeat  2drop                           ( )
 
-   test-s3                                 ( )
+   test-s3                                 ( error? )
 ;
 
 device-end
