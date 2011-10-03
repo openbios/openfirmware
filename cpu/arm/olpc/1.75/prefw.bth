@@ -163,26 +163,7 @@ fload ${BP}/cpu/arm/mmusetup.fth	\ Initial values for MMU lists
 
 fload ${BP}/forth/lib/selstr.fth
 
-\ : +io  ( offset -- va )  io-va +  ;
-: +io  ( offset -- va )  dup h# 0040.0000 >=  if  debug-me  then  io-va +  ;
-: io!  ( value offset -- )  +io l!  ;
-: io@  ( offset -- value )  +io l@  ;
-
-: +apbc  ( offset -- io-offset )  h# 01.5000 +  ;
-: +pmua  ( offset -- io-offset )  h# 28.2800 +  ;
-: +mpmu  ( offset -- io-offset )  h# 05.0000 +  ;
-: +scu   ( offset -- io-offset )  h# 28.2c00 +  ;
-: +icu   ( offset -- io-offset )  h# 28.2000 +  ;
-
-: io-set  ( mask offset -- )  dup io@  rot or  swap io!  ;
-: io-clr  ( mask offset -- )  dup io@  rot invert and  swap io!  ;
-
-
-: mpmu@  ( offset -- l )  +mpmu io@  ;
-: mpmu!  ( l offset -- )  +mpmu io!  ;
-
-: pmua@  ( offset -- l )  +pmua io@  ;
-: pmua!  ( l offset -- )  +pmua io!  ;
+fload ${BP}/cpu/arm/mmp2/socregs.fth   \ MMP2 registers used by many functional units
 
 fload ${BP}/cpu/arm/mmp2/hash.fth      \ Hashes - SHA1, SHA-256, MD5
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth \ Cryptographic image validation
