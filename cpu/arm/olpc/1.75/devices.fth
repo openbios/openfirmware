@@ -4,26 +4,8 @@ h# 18000 +io to uart-base		\ UART3 base address on MMP2
 \ h# 30000 +io to uart-base		\ UART1 base address on MMP2
 d# 26000000 to uart-clock-frequency
 
-: init-clocks
-   -1    h# 51024 io!   \ PMUM_CGR_PJ - everything on
-   h# 07 h# 15064 io!   \ APBC_AIB_CLK_RST - reset, functional and APB clock on
-   h# 03 h# 15064 io!   \ APBC_AIB_CLK_RST - release reset, functional and APB clock on
-   h# 13 h# 1502c io!   \ APBC_UART1_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
-   h# 13 h# 15034 io!   \ APBC_UART3_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
-   h# c1 h# 1e0c8 io!   \ GPIO29 = af1 for UART1 RXD
-   h# c1 h# 1e0cc io!   \ GPIO30 = af1 for UART1 TXD
-   h# c4 h# 1e260 io!   \ GPIO115 = af4 for UART3 RXD
-   h# c4 h# 1e264 io!   \ GPIO116 = af4 for UART3 TXD
-;
-
-: inituarts  ( -- )
-   init-clocks
-
-   h# 40 1 uart!          \ Marvell-specific UART Enable bit
-   3 3 uart!              \ 8 bits, no parity
-   7 2 uart!		  \ Clear and enable FIFOs
-   d# 115200 baud
-;
+\ CForth has already set up the serial port
+: inituarts  ( -- )  ;
 
 fload ${BP}/forth/lib/sysuart.fth	\ Set console I/O vectors to UART
 
