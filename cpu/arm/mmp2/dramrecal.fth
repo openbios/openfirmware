@@ -151,8 +151,8 @@ code do-self-refresh  ( -- )
    mov pc,r1
 c;
 
-: apbc-clr-rst  ( offset -- )  +apbc  4 swap io-clr  ;
-: apbc-set-rst  ( offset -- )  +apbc  4 swap io-set  ;
+: apbc-clr-rst  ( offset -- )  4  swap +apbc  io-clr  ;
+: apbc-set-rst  ( offset -- )  4  swap +apbc  io-set  ;
 
 : disable-apbc-clks  ( -- )
    \ 3 h# 38 +apbc io-clr   \ GPIO
@@ -570,10 +570,10 @@ end-string-array
    h# b0 d# 15 af!    \ Wake SP on rotate key
    h# 220 d#  71 af!  \ Wake SP on KBD CLK falling edge
    h# 221 d# 160 af!  \ Wake SP on TPD CLK falling edge
-   h# 4c +mpmu  h# 20.0000 io-set  \ Keypress wakes SP
+   h# 20.0000  h# 4c +mpmu  io-set  \ Keypress wakes SP
    ['] disable-int40 d# 40 interrupt-handler!
    d# 40 enable-interrupt  \ SP to PJ4 communications interrupt
-   1 h# 29.00cc 1 io-clr   \ Unmask the inter-processor communications interrupt
+   1  h# 29.00cc  io-clr   \ Unmask the inter-processor communications interrupt
 ;
 
 : breadcrumb  ( n -- )  h# d000.0110 l!  ;
