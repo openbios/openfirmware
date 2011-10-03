@@ -3,13 +3,13 @@ h# 018000 +io to uart-base		\ UART# base address on MMP2
 d# 26000000 to uart-clock-frequency
 
 : init-clocks
-   -1    h# 051024 io!   \ PMUM_CGR_PJ - everything on
-   h# 07 h# 015064 io!   \ APBC_AIB_CLK_RST - reset, functional and APB clock on
-   h# 03 h# 015064 io!   \ APBC_AIB_CLK_RST - release reset, functional and APB clock on
-   h# 13 h# 015034 io!   \ APBC_UART3_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
-   h# c1 h# 01e120 io!   \ GPIO51 = af1 for UART3 RXD
-   h# c1 h# 01e124 io!   \ GPIO52 = af1 for UART3 TXD
-   h# 1b h# 282854 io!   \ SD0 clocks
+   -1    h# 1024 mpmu!   \ PMUM_CGR_PJ - everything on
+   h# 07 h#   64 apbc!   \ APBC_AIB_CLK_RST - reset, functional and APB clock on
+   h# 03 h#   64 apbc!   \ APBC_AIB_CLK_RST - release reset, functional and APB clock on
+   h# 13 h#   34 apbc!   \ APBC_UART3_CLK_RST - VCTCXO, functional and APB clock on (26 mhz)
+   h# c1 d#   51   af!   \ GPIO51 = af1 for UART3 RXD
+   h# c1 d#   51   af!   \ GPIO52 = af1 for UART3 TXD
+   h# 1b h#   54 pmua!   \ SD0 clocks
 ;
 
 : inituarts  ( -- )

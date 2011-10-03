@@ -4,8 +4,8 @@ purpose: Driver for the MMP2 thermal sensor
 h# 013200 value thermal-base
 : init-thermal-sensor  ( -- )
    thermal-base io@ h# 400 and  if  exit  then
-   3 h# 015090 io!            \ Enable clocks to thermal sensor
-   h# 10000 thermal-base io!  \ Enable sensing
+   7 h# 90 apbc!   3 h# 90 apbc!  \ Enable clocks to thermal sensor
+   h# 10000 thermal-base io!      \ Enable sensing
 ;
 
 \ thermal watchdog is enabled by CForth

@@ -1,8 +1,8 @@
 purpose: Pin multiplexing for ARMADA 610 chip (no board details)
 
 : aib-unlock  
-   h# baba h# 015068 io!  \ Unlock sequence
-   h# eb10 h# 01506c io!
+   h# baba h# 68 apbc!  \ Unlock sequence
+   h# eb10 h# 6c apbc!
 ;
 : acgr-clocks-on  ( -- )
    h# 0818.F33C acgr-pa io!  \ Turn on all clocks
