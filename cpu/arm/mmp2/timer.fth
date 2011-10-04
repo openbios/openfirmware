@@ -168,8 +168,13 @@ variable timestamp
    then
 ;
 code wfi   ( -- )  wfi   c;
+
+defer do-lid
+: lid-off ( -- )  ['] noop to do-lid  ;
+lid-off
+
 : safe-idle  ( -- )
    can-idle?  if  wfi  then
-   \ do-lid
+   do-lid
 ;
 ' safe-idle to stdin-idle

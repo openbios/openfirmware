@@ -36,6 +36,39 @@ purpose: Driver/selftest for OLPC lid and ebook switches
    ['] all-switch-states catch
 ;
 
+false value lid-already-down?
+0 value lid-down-time
+d# 10000 constant lid-shutdown-ms
+d#  2000 constant lid-warning-ms
+0 value lid-warned?
+
+: ?lid-shutdown  ( -- )
+   lid?  if
+      lid-already-down?  if
+         get-msecs lid-down-time -               ( ms )
+
+         dup lid-warning-ms >=  lid-warned? 0=  and  if
+            ." Lid switch is active - Powering off in 8 seconds" cr
+            ." Type  lid-off  to disable this function" cr
+            true to lid-warned?
+         then                                    ( ms )
+
+         lid-shutdown-ms >=  if
+            ." Powering off after 10 seconds of lid down" cr
+            power-off
+         then
+      else
+         get-msecs to lid-down-time
+         true to lid-already-down?
+      then
+   else
+      false to lid-already-down?
+      false to lid-warned?
+   then
+;
+: lid-on  ( -- )  ['] ?lid-shutdown to do-lid  ;
+' lid-on to do-lid
+
 end-package
 
 \ LICENSE_BEGIN
