@@ -22,8 +22,24 @@ purpose: USB elaborations for the BIOS loaded OFW
    \ Port 3 is left
    \ Port 4 is right lower
    " 3,4,2" " usb-hub-test-list" string-property
-
+   : suspend  ( -- )  true to first-open?  ;
+   : resume  ( -- )  ;
 end-package
+
+\ Turn on USB power after a delay, to ensure that USB devices are reset correctly on boot
+: usb-power-on  ( -- )  ;  \ The EC controls the USB power
+: reset-usb-hub  ( -- )  d# 146 gpio-set  d# 10 ms  d# 146 gpio-set  ;
+
+: init-usb  ( -- )
+   h# 9 h# 5c pmua!  \ Enable clock to USB block
+   reset-usb-hub
+   init-usb-phy
+;
+
+stand-init: Init USB Phy
+\  usb-power-on   \ The EC now controls the USB power
+   init-usb
+;
 
 d# 300 config-int usb-delay  \ Milliseconds to wait before probing hub ports
 
@@ -108,6 +124,24 @@ alias p2 probe-usb
    then
 ;
 
+: suspend-usb  ( -- )
+   detach-usb-keyboard
+   " /usb" " suspend" execute-device-method drop
+;
+: has-children?   ( devspec$ -- flag )
+   locate-device  if  false  else  child 0<>  then
+;
+: any-usb-devices?  ( -- flag )  " /usb/hub" has-children?  ;
+: resume-usb  ( -- )
+   init-usb
+   " /usb" " resume" execute-device-method drop
+   any-usb-devices?  if
+      d# 2000 ms  \ USB misses devices if you probe too soon
+   then
+   silent-probe-usb
+   attach-usb-keyboard
+;
+
 \ Unlink every node whose phys.hi component matches port
 : port-match?  ( port -- flag )
    get-unit  if  drop false exit  then
@@ -127,10 +161,6 @@ alias p2 probe-usb
    2drop                            ( )
    previous definitions
 ;
-
-\ Turn on USB power after a delay, to ensure that USB devices are reset correctly on boot
-: usb-power-on  ( -- )  ;  \ The EC controls the USB power
-: reset-usb-hub  ( -- )  d# 146 gpio-set  d# 10 ms  d# 146 gpio-set  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks

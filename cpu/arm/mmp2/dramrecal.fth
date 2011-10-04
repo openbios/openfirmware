@@ -725,6 +725,7 @@ end-string-array
 
 : str  ( -- )
    disable-interrupts
+   suspend-usb
    timers-off
 
    screen-off
@@ -770,8 +771,8 @@ end-string-array
 
    screen-on
    timers-on
+   resume-usb
    enable-interrupts
-   hdd-led-off
 ;
 : strp  ( -- )  ec-rst-pwr  str  ec-max-pwr .d ." mW " soc .%  space  ;
 

@@ -334,20 +334,9 @@ devalias keyboard /ec-spi/keyboard
    then
 ;
 
-fload ${BP}/cpu/arm/olpc/1.75/usb.fth
-
 fload ${BP}/cpu/arm/marvell/utmiphy.fth
 
-: init-usb  ( -- )
-   h# 9 h# 28285c io!  \ Enable clock to USB block
-   reset-usb-hub
-   init-usb-phy
-;
-
-stand-init: Init USB Phy
-\  usb-power-on   \ The EC now controls the USB power
-   init-usb
-;
+fload ${BP}/cpu/arm/olpc/1.75/usb.fth
 
 fload ${BP}/dev/olpc/mmp2camera/loadpkg.fth
 
