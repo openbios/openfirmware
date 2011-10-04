@@ -19,7 +19,7 @@ purpose: Driver/selftest for OLPC XO-1.75 LEDs
    ols-led-ec-control
    ols-assy-mode-on
 
-   " /wlan" test-dev  " /wlan" test-dev  \ Twice for longer flashing
+   " /wlan:quiet" test-dev  " /wlan:quiet" test-dev  \ Twice for longer flashing
 
    d# 20 0 do  hdd-led-on d# 100 ms hdd-led-off d# 100 ms  loop
    ols-assy-mode-off

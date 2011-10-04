@@ -1865,11 +1865,14 @@ external
 \ Normal operation should have force-open? be false.
 false instance value force-open?
 				
+false instance value quiet?
+
 : parse-args  ( $ -- )
    false to use-promiscuous?
    begin  ?dup  while
       ascii , left-parse-string
       2dup " debug" $=  if  debug-on  then
+      2dup " quiet" $=  if  true to quiet?  then   \ Used by LED selftest
       2dup " promiscuous" $=  if  true to use-promiscuous?  then
            " force" $=  if  true to force-open?  then
    repeat drop
@@ -2088,9 +2091,8 @@ d# 1600 buffer: test-buf
 
 : reset  ( -- flag )  reset-nic  ;
 
-: test-association  ( -- error? )
-   passive-scan
-   " OLPCOFW" " scan-ssid?" $call-supplicant  if
+: test-association  ( adr len -- error? )
+   " OLPCOFW" " select-ssid?" $call-supplicant  if
       " (do-associate)" $call-supplicant  if
 	 \ Success
          " target-mac$" $call-supplicant disassociate
@@ -2103,7 +2105,6 @@ d# 1600 buffer: test-buf
       \ There is no OLPCOFW access point, so we don't try associating
       false
    then
-   active-scan
 ;
 
 : (scan-wifi)  ( -- error? )
@@ -2123,9 +2124,15 @@ d# 1600 buffer: test-buf
             ." ERROR: No access points seen" cr
             true
          then
-      else                  ( adr len )
-         drop .ssids        ( )
-         test-association   ( error? )
+      else                    ( adr len )
+	 \ Quiet mode is for the benefit of the LEDs test, so we can flash
+         \ the WLAN LEDS without distracting messages appearing on the screen
+         quiet?  if           ( adr len )
+            2drop false       ( error? )
+         else
+            over .ssids       ( adr len )
+            test-association  ( error? )
+         then                 ( error? )
       then
    then
 

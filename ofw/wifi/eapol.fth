@@ -581,7 +581,7 @@ false value group-rekey?
    swap /string				( adr' len' )  ( R: ie-type )
    r> (find-ie)				( adr' len' true | false )
 ;
-: find-ssid  ( ssid$ adr -- adr' true | false )
+: find-ssid  ( ssid$ scanbuf-adr -- ap-adr' true | false )
    false swap				( ssid$ flag adr )
    dup 3 +				( ssid$ flag 'ap )
    swap 2 + c@				( ssid$ flag 'ap #ap )
@@ -725,7 +725,7 @@ false value group-rekey?
       kt-wep   of  wep-ok?  endof
       ( default )  pmk-ok? swap
    endcase
-   dup  if  ." found"  else  ." Keys in wifi-cfg are not valid"  then  cr
+   dup  0=  if  ." Keys in wifi-cfg are not valid - "  then
 ;
 
 h# 0050.f201 constant wpa-tag
@@ -777,19 +777,36 @@ h# 0050.f201 constant wpa-tag
    valid? 0= or
 ;
 
+: (select-ssid?)  ( ssid$ -- found? )
+   scanbuf find-ssid 0=  if  false exit  then    ( ap-adr )
+   init-common-rates                     ( ap-adr )
+   ssid-valid? 0=  if  false exit  then  ( )
+   true valid!                           ( )
+   report-associate-info                 ( )
+   true                                  ( found? )
+;
+: select-ssid?  ( volatile-scanbuf-adr,len ssid$ -- found? )
+   ssid!                                 ( volatile-scanbuf$ )
+   dup /buf >  if                        ( volatile-scanbuf$ )
+      ." Scan buffer too long" cr        ( volatile-scanbuf$ )
+      2drop false exit                   ( -- found? )
+   then                                  ( volatile-scanbuf$ )
+   scanbuf swap move                     ( )
+   ssid$ (select-ssid?)                  ( found? )
+;
+
 : scan-ssid?  ( ssid$ -- found? )
-   dup 0=  if  2drop false exit  then 
-   ssid!
-   ssid$  " set-ssid" $call-parent
-   ??cr ." Scan for: " ssid$ type space
-   scanbuf /buf scan 0=  if  ." not found" cr false exit  then
-   debug?  if  scanbuf .scan  then
-   ssid$ scanbuf find-ssid 0=  if  ." not found" cr false exit  then
-   init-common-rates
-   ssid-valid? 0=  if  exit  then
-   true valid!
-   report-associate-info
-   true
+   dup 0=  if  2drop false exit  then         ( ssid$ )
+   ssid!                                      ( )
+   ssid$  " set-ssid" $call-parent            ( )
+   ??cr ." Scan for: " ssid$ type space       ( )
+   scanbuf /buf scan  if                      ( )
+      debug?  if  scanbuf .scan  then         ( )
+      ssid$ (select-ssid?)                    ( found? )
+      dup  if  ." found"  else  ." failed"  then  cr
+   else                                       ( )
+      ." not found"  cr  false                ( found? )
+   then                                       ( found? )
 ;
 : try-scan  ( -- okay? )
    wifi-ssid$  scan-ssid?  if  true exit  then
