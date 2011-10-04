@@ -266,14 +266,8 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 
 fload ${BP}/dev/logdev.fth
 fload ${BP}/cpu/x86/pc/olpc/disptest.fth
-dev /ec-spi/keyboard
-fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
-device-end
 dev /ap-sp/keyboard
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
-device-end
-dev /ec-spi/mouse
-fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
 device-end
 dev /ap-sp/mouse
 fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
@@ -380,21 +374,10 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
 
 fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
 
-: select-keyboard  ( -- )
-   " /ap-sp/keyboard" open-dev  ?dup 0=  if  exit  then   >r  ( r: ih )
-   " kbd-reset" r@ $call-method   ( failed? )
-   0=  if
-      " keyboard" " /ap-sp/keyboard"  $devalias
-      " mouse"    " /ap-sp/mouse"     $devalias
-   else
-      " keyboard" " /ec-spi/keyboard" $devalias
-      " mouse"    " /ec-spi/mouse"    $devalias
-   then
-   r> close-dev
-;
+devalias keyboard /ap-sp/keyboard
+devalias mouse    /ap-sp/mouse
 
 : console-start  ( -- )
-   select-keyboard
    install-mux-io
    cursor-off
    true to text-on?

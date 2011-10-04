@@ -491,17 +491,6 @@ create erase-cmd   h# 51 c, h# 01 c, d# 00 c, h# 60 c, h# 80 c, 0 c, 0 c, 0 c,
    drop                    ( )
 ;
 
-new-device
-   " "  " 3" set-args
-   fload ${BP}/dev/pckbd.fth
-finish-device
-
-new-device
-   " "  " 4" set-args
-   fload ${BP}/dev/ps2mouse.fth
-finish-device
-
-
 end-package
 
 \ LICENSE_BEGIN
