@@ -10,9 +10,10 @@ purpose: Changing manufacturing data - adding and deleting tags
 \ require a full erase.  That is faster and safer than copying out the
 \ data, erasing the block and rewriting it.
 
+: wp-loc$  ( -- adr len )  mfg-data-top 2-  2  ;
 : enable-security  ( "serialnumber" -- )
    board-revision  h# b48 <  abort" Only supported on B4 and later"
-   h# fffefffe 2  " wp"  $=  if  ." wp is already set" cr  exit  then
+   wp-loc$  " wp"  $=  if  ." wp is already set" cr  exit  then
    " SN" find-tag 0=  abort" No serial number (SN tag); enabling security would brick me."  ( sn$ )
    -null            ( sn$' )
    safe-parse-word  ( sn$ confirmation$ )
@@ -22,10 +23,10 @@ purpose: Changing manufacturing data - adding and deleting tags
    0= abort" Canceled"
 
    " U#" find-tag 0=  abort" No U# tag; enabling security would brick me." 2drop
-   h# fffefffe 2  " ww"  $=  0=  abort" No ww tag"
+   wp-loc$  " ww"  $=  0=  abort" No ww tag"
    spi-start  spi-identify
    " wp"  h# efffe  write-spi-flash
-   h# fffefffe 2  " wp"  $=  if  ." Succeeded" cr  then
+   wp-loc$ " wp"  $=  if  ." Succeeded" cr  then
    spi-reprogrammed
 ;
 
