@@ -252,7 +252,7 @@ false value selftest-failed?  \ Success/failure flag for final test mode
 : selftest  ( -- error? )
    open  0=  if
 \     ." Touchscreen open failed"  true exit
-      ." No touchscreen present"  false exit
+      ." No touchscreen present" cr  false exit
    then
 
    \ Being able to open the touchpad is good enough in SMT mode
