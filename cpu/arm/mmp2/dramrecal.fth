@@ -687,10 +687,18 @@ end-string-array
    \ 0 h# 54 pmua!  \ Kill the SDIO 0 clocks - insignificant savings
    \ 0 h# 58 pmua!  \ Kill the SDIO 1 clocks - insignificant savings
    sleep-mask 2 and  0=  if  keyboard-power-off  then  \ Should save about 17 mW
-   sleep-mask 4 and  if  wlan-stay-on  else  wlan-power-off  then  \ saves 100 mW
+   sleep-mask 4 and  if
+      wlan-stay-on
+   else
+      " /wlan" " suspend" execute-device-method drop
+      wlan-power-off
+   then  \ saves 100 mW
 ;
 : screen-on  ( -- )
-   sleep-mask 4 and  0=  if  wlan-power-on       then
+   sleep-mask 4 and  0=  if
+      wlan-power-on
+      " /wlan" " resume" execute-device-method drop
+   then
    sleep-mask 2 and  0=  if  keyboard-power-on   then 
    " clr-ack" $call-ec
    " resume" $call-screen

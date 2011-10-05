@@ -604,6 +604,8 @@ true value got-indicator?
    ds-not-ready to driver-state
    reset-host-bus
 ;
+: suspend  ( -- )  reset-wlan  ;
+: resume  ( -- )  ;
 
 : marvel-get-hw-spec  ( -- true | adr false )
    d# 38 h# 03 ( CMD_GET_HW_SPEC ) prepare-cmd
