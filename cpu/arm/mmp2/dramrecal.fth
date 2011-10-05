@@ -161,7 +161,7 @@ c;
    3 h# 90 +apbc io-clr   \ THSENS1
 
    \ h# 38 apbc-set-rst
-   h# 74 apbc-set-rst   \ MPMU
+   \ h# 74 apbc-set-rst   \ MPMU  - resetting this kills TIMER2, used by the SP PS/2
    h# 78 apbc-set-rst   \ IPC
    h# 90 apbc-set-rst   \ THSENS1
 ;
