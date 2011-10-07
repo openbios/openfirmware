@@ -40,7 +40,9 @@ my-address my-space        encode-phys          0 +int          0 +int
 ;
 : unmap-regs  ( -- )
    au /chipbase " map-out" $call-parent
-   0 4 my-w!
+   \ Don't turn off the command register; it breaks Linux due to a complex interaction
+   \ with emulated PCI registers on Geode.
+   \  0 4 my-w!
 ;
 
 : dma-alloc  ( size -- virt )  " dma-alloc" $call-parent  ;
