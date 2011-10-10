@@ -1231,7 +1231,7 @@ alias ?ec-update noop immediate
             2drop                           ( )
             ['] secure-load-ramdisk to load-ramdisk
             " init-program" $find  if
-               set-cmdline
+\              set-cmdline
                execute
                sound-end
                go
