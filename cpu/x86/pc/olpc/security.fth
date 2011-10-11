@@ -1230,11 +1230,14 @@ alias ?ec-update noop immediate
             ec-indexed-io-off               ( list$ )
             2drop                           ( )
             ['] secure-load-ramdisk to load-ramdisk
-            " init-program" $find  if
-\              set-cmdline
-               execute
-               sound-end
-               go
+            " init-program" $find  if       ( xt )
+\              set-cmdline                  ( xt )
+               catch  ?dup  if              ( error )
+                  .error                    ( )
+               else                         ( )
+                  sound-end                 ( )
+                  ['] go guarded            ( )
+               then
             then
             show-x
             security-failure
