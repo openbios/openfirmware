@@ -22,7 +22,8 @@ code spins  ( count -- )
 c;
 : 1ms  ( -- )  ms-factor spins  ;
 
-: us  ( #microseconds -- )  us-factor * spins  ;
+: (us)  ( #microseconds -- )  us-factor * spins  ;
+' (us) to us
 
 : (ms)  ( #ms -- )
    dup  ms/tick 3 * u>  interrupts-enabled?  and  if  ( #ms )

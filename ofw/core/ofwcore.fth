@@ -100,6 +100,7 @@ defer diag-key?    ( -- flag )  \ Used by dlbin.
 d# 10 value ms/tick
 defer get-msecs  ( -- n )  ' 0 is get-msecs
 defer ms  ( n -- )   ' drop is ms
+defer us  ( n -- )   ' drop is us
 
 
 \ Enabling/disabling interrupts

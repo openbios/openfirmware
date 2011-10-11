@@ -33,7 +33,8 @@ d# 262 value us-factor
 ' (get-msecs) to get-msecs
 
 : 1ms  ( -- )  ms-factor spins  ;
-: us  ( #microseconds -- )  us-factor * spins  ;
+: (us)  ( #microseconds -- )  us-factor * spins  ;
+' (us) to us
 
 [ifdef] use-timestamp-counter
 : (ms)  ( #ms -- )  0  ?do  1ms  loop  ;

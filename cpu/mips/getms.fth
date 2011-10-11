@@ -24,7 +24,8 @@ d# 50 value us-factor
    begin   dup count@ -  0<=  until   \ Loop until target time reached
    drop                  ( )
 ;
-: us  ( #microseconds -- )  us-factor *  ticks ;
+: (us)  ( #microseconds -- )  us-factor *  ticks ;
+' (us) to us
 
 : (ms)  ( #ms -- )
    dup  ms/tick 3 * u>  ticks-enabled?  and  if  ( #ms )

@@ -12,3 +12,5 @@ vfw    075 2 byte-code: set-default-unit  ( -- )
 vfw    076 2 byte-code: $instructions     ( name$ -- )
 vfw    077 2 byte-code: instructions-done ( -- )
 vfw    078 2 byte-code: instructions-idle ( -- )
+
+vfw    079 2 byte-code: us ( -- )

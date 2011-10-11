@@ -92,13 +92,14 @@ c;
 ;
 ' (ms) to ms
 
-: us  ( delay-us -- )
+: (us)  ( delay-us -- )
    d# 13 2 */  timer0@ +  ( limit )
    begin                  ( limit )
       dup timer0@ -       ( limit delta )
    0< until               ( limit )
    drop
 ;
+' (us) to us
 
 \ Timing tools
 variable timestamp

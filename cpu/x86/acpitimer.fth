@@ -24,7 +24,7 @@ purpose: Timing functions using the ACPI timer
 ;
 
 [ifdef] use-acpi-delays
-: us  ( us -- )  acpi-us  ;
+' acpi-us to us
 ' acpi-ms to ms
 [then]
 
