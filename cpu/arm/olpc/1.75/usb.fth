@@ -22,8 +22,8 @@ purpose: USB elaborations for the BIOS loaded OFW
    \ Port 3 is left
    \ Port 4 is right lower
    " 3,4,2" " usb-hub-test-list" string-property
-   : suspend  ( -- )  true to first-open?  ;
-   : resume  ( -- )  ;
+   : sleep  ( -- )  true to first-open?  ;
+   : wake  ( -- )  ;
 end-package
 
 \ Turn on USB power after a delay, to ensure that USB devices are reset correctly on boot
@@ -126,7 +126,7 @@ alias p2 probe-usb
 
 : suspend-usb  ( -- )
    detach-usb-keyboard
-   " /usb" " suspend" execute-device-method drop
+   " /usb" " sleep" execute-device-method drop
 ;
 : has-children?   ( devspec$ -- flag )
    locate-device  if  false  else  child 0<>  then
@@ -134,7 +134,7 @@ alias p2 probe-usb
 : any-usb-devices?  ( -- flag )  " /usb/hub" has-children?  ;
 : resume-usb  ( -- )
    init-usb
-   " /usb" " resume" execute-device-method drop
+   " /usb" " wake" execute-device-method drop
    any-usb-devices?  if
       d# 2000 ms  \ USB misses devices if you probe too soon
    then

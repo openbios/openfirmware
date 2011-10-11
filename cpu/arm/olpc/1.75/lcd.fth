@@ -214,12 +214,12 @@ defer foo ' noop to foo
    flush-cursor-bits               ( )
 ;
 0 value saved-mode
-: suspend  ( -- )
+: sleep  ( -- )
    h# 190 lcd@ to saved-mode
    0 h# 190 lcd!
    lcd-clocks-off
 ;
-: resume  ( -- )
+: wake  ( -- )
    lcd-clocks-on
    saved-mode h# 190 lcd!
 ;

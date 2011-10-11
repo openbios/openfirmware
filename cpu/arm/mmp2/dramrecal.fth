@@ -681,7 +681,7 @@ end-string-array
    else
       " dcon-suspend" $call-screen
    then
-   " suspend" $call-screen
+   " sleep" $call-screen
    " set-ack" $call-ec
 
    \ 0 h# 54 pmua!  \ Kill the SDIO 0 clocks - insignificant savings
@@ -690,18 +690,18 @@ end-string-array
    sleep-mask 4 and  if
       wlan-stay-on
    else
-      " /wlan" " suspend" execute-device-method drop
+      " /wlan" " sleep" execute-device-method drop
       wlan-power-off
    then  \ saves 100 mW
 ;
 : screen-on  ( -- )
    sleep-mask 4 and  0=  if
       wlan-power-on
-      " /wlan" " resume" execute-device-method drop
+      " /wlan" " wake" execute-device-method drop
    then
    sleep-mask 2 and  0=  if  keyboard-power-on   then 
    " clr-ack" $call-ec
-   " resume" $call-screen
+   " wake" $call-screen
    sleep-mask 1 and  if            \ DCON power up
       dcon-unfreeze
    else

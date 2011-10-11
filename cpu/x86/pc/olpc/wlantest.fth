@@ -19,7 +19,7 @@ purpose: Wireless LAN auto-wakeup (requires modified WLAN firmware)
    begin
       " /wlan" open-dev >r
       " autostart" r@ $call-method
-      " sleep" r@ $call-method
+      " host-sleep-activate" r@ $call-method
       r> close-dev
       5 ms
       s

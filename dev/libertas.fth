@@ -604,8 +604,8 @@ true value got-indicator?
    ds-not-ready to driver-state
    reset-host-bus
 ;
-: suspend  ( -- )  reset-wlan  ;
-: resume  ( -- )  ;
+: sleep  ( -- )  reset-wlan  ;
+: wake  ( -- )  ;
 
 : marvel-get-hw-spec  ( -- true | adr false )
    d# 38 h# 03 ( CMD_GET_HW_SPEC ) prepare-cmd
@@ -1731,7 +1731,6 @@ d# 20 constant wake-gap
 
 : unicast-wakeup  ( -- )  wake-on-unicast host-sleep-config  ;
 : broadcast-wakeup  ( -- )  wake-on-unicast wake-on-broadcast or  host-sleep-config  ;
-: sleep ( -- ) host-sleep-activate  ;
 
 [ifdef] notdef
   CMD_ACT_MESH_...
