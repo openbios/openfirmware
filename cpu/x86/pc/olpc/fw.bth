@@ -644,11 +644,7 @@ true                               ' client-symbols?  set-config-int-default
    quit
 ;
 
-: newrom
-   " flash! http:\\10.20.0.14\new.rom" eval
-\   " wifi media lab 802.11" eval
-\   " flash http:\\18.85.46.172\new.rom" eval
-;
+: newrom  " flash! http:\\192.168.200.200\new.rom" eval  ;
 : urom  " flash! u:\new.rom" eval  ;
 
 \ Fancy battery charge logger.

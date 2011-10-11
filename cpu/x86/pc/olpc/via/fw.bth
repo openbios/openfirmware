@@ -482,8 +482,9 @@ support-package: cifs
 end-support-package
 devalias smb tcp//cifs
 devalias cifs tcp//cifs
-: op  " select smb:\\test:testxxx@10.20.0.14\XTest\hello.txt" eval ;
-: dsmb  " dir smb:\\test:testxxx@10.20.0.14\XTest\" eval ;
+\ Examples:
+\ select smb:\\test:testxxx@10.20.0.14\XTest\hello.txt
+\ dir smb:\\test:testxxx@10.20.0.14\XTest\
 
 fload ${BP}/cpu/x86/pc/olpc/via/memtest.fth
 
@@ -733,9 +734,7 @@ true                               ' client-symbols?  set-config-int-default
 
 : newrom
    enable-serial
-   " flash! http:\\10.20.0.14\new.rom" eval
-\   " wifi media lab 802.11" eval
-\   " flash http:\\18.85.46.172\new.rom" eval
+   " flash! http:\\192.168.200.200\new.rom" eval
 ;
 : urom  enable-serial " flash! u:\new.rom" eval  ;
 : qrom  enable-serial " essid qz" eval " flash http:\\olpc.lan\qrom.rom" eval ;
