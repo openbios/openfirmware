@@ -339,6 +339,8 @@ ff constant ks-prev			\ Previously pressed
    \ Some USB keyboards don't implement set-idle properly, and it's not critical,
    \ so we suppress the message to avoid confusing the user
    idle-rate set-idle   drop  \  if  ." Failed to set USB keyboard idle" cr  then
+   7 set-leds   \ Flash the LEDs to indicate that OFW has attached the keyboard
+   d# 200 ms
    0 set-leds
    false
 ;
