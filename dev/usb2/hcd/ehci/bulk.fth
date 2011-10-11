@@ -225,6 +225,7 @@ d# 500 constant bulk-out-timeout
    dup le-l@                                    ( in? token-adr token-val r: qtd qh )
    rot  if  bulk-in-data@  else  bulk-out-data@  then   ( token-adr token-val toggle r: qtd qh )
    or                                           ( token-adr token-val' r: qtd qh )
+   TD_IOC or                                    ( token-adr token-val' r: qtd qh )
    swap le-l!                                   ( r: qtd qh )
 
    r> r>					( qh qtd )
@@ -257,7 +258,7 @@ external
    over >hcqtd-token		( qtd len token-adr )
    tuck 2+ le-w!		( qtd token-adr )
    TD_C_ERR3  TD_PID_OUT or  TD_STAT_PING or  TD_STAT_ACTIVE or   swap le-w!  ( qtd )
-   sync-qtd
+   push-qtd
 ;
 
 : wait-out  ( qtd -- error? )
@@ -310,12 +311,12 @@ external
 : bulk-in-ready?  ( -- false | error true |  buf actual 0 true )
    clear-usb-error
    bulk-in-qtd >r
-   r@ sync-qtd
+   r@ pull-qtd
    r@ qtd-done?  if				( )
       r@  bulk-in-qh qtd-error? ?dup  0=  if	( )
          r@ >qtd-buf l@				( buf actual )
          r@ qtd-get-actual			( buf actual )
-         2dup  r@ >qtd-pbuf l@  swap  dma-sync	( buf actual )
+         2dup  r@ >qtd-pbuf l@  swap  dma-pull	( buf actual )
          0					( buf actual 0 )
       then					( error | buf actual 0 )
       true					( ... )
@@ -352,7 +353,7 @@ headers
 
    \ Recycle the first qtd last so the transaction is atomic WRT the HC
    drop dup recycle-one-qtd	( qtd0 )
-   sync-qtds
+   push-qtds
 ;
 
 \ Fixup the host-controller-writable fields in the chain of qTDs -
@@ -451,6 +452,12 @@ external
 
 : recycle-buffer restart-bulk-in ;
 
+: start-bulk-transaction  ( pid -- )
+   my-bulk-qtd fill-bulk-io-qtds	( )
+   my-bulk-qh pt-bulk fill-qh		( )
+   my-bulk-qh interrupt-on-last-td      ( )
+   my-bulk-qh insert-qh			( )
+;
 : bulk-in  ( buf len pipe -- actual usberr )
    debug?  if  ." bulk-in" cr  then
    dup to bulk-in-pipe
@@ -459,22 +466,14 @@ external
    bulk-in-timeout my-bulk-qh >qh-timeout l!
 
    \ IN qTDs
-   TD_PID_IN my-bulk-qtd fill-bulk-io-qtds
-
-   \ Start bulk in transaction
-   my-bulk-qh pt-bulk fill-qh
-   my-bulk-qh insert-qh
+   TD_PID_IN start-bulk-transaction		( )
 
    \ Process results
-   my-bulk-qh done?  if				( )
-      0						( actual )	\ System error, timeout
+   my-bulk-qh done-error?  if			( )		\ System error, timeout, or USB error
+      0						( actual )	
    else						( )
-      my-bulk-qh error?  if			( )
-         0					( actual )	\ USB error
-      else					( )
-         my-bulk-qtd dup my-#qtds get-actual	( qtd actual )
-         over >qtd-buf l@ rot >qtd-pbuf l@ 2 pick dma-sync	( actual )
-      then					( actual )
+      my-bulk-qtd dup my-#qtds get-actual	( qtd actual )
+      over >qtd-buf l@ rot >qtd-pbuf l@ 2 pick dma-pull	( actual )
    then						( actual )
 
    usb-error					( actual usberr )
@@ -486,9 +485,7 @@ external
 0 instance value bulk-out-busy?
 : done-bulk-out  ( -- error? )
    \ Process results
-   my-bulk-qh done? 0=  if  my-bulk-qh error? drop  then
-
-   usb-error				( usberr )
+   my-bulk-qh done-error?		( usberr )
    my-bulk-qtd map-out-bptrs		( usberr )
    my-bulk-qh fixup-bulk-out-data	( usberr )
    my-bulk-qh remove-qh			( usberr )
@@ -507,11 +504,7 @@ external
    my-bulk-qh >hcqh-overlay >hcqtd-token dup le-l@ TD_STAT_PING or swap le-l!
 
    \ OUT qTDs
-   TD_PID_OUT my-bulk-qtd fill-bulk-io-qtds		( )
-
-   \ Start bulk out transaction
-   my-bulk-qh pt-bulk fill-qh		( )
-   my-bulk-qh insert-qh			( )
+   TD_PID_OUT start-bulk-transaction	( )
    true to bulk-out-busy?		( )
    0					( usberr )
 ;

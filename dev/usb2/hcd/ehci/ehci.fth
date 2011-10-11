@@ -69,6 +69,16 @@ true value first-open?
    usbsts@ dup usbsts!		\ Clear interrupts and errors
    h# 10  and  if  " Host system error" USB_ERR_HCHALTED set-usb-error  then
 ;
+: hc-interrupt?  ( -- interrupt? )
+   usbsts@ h# 13 and  dup  if   ( status )
+      dup usbsts!               ( status )  \ Clear interrupts, frame rollover, errors
+      dup h# 10  and  if        ( status )
+         " USB host controller halted" USB_ERR_HCHALTED set-usb-error
+      then                      ( status )
+   then                         ( status )
+   0<>                          ( interrupt? )
+;
+
 : get-hc-status  ( -- status )
    usbsts@ dup usbsts!		\ Clear interrupts and errors
    dup h# 10  and  if  " Host system error" USB_ERR_HCHALTED set-usb-error  then

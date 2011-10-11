@@ -125,7 +125,7 @@ defer set-my-dev		' set-normal-dev to set-my-dev
          0					( actual )	\ USB error
       else
          my-td >td-next l@ dup my-#tds get-actual		( td actual )
-         over >td-buf l@ rot >td-pbuf l@ 2 pick dma-sync	( actual )
+         over >td-buf l@ rot >td-pbuf l@ 2 pick dma-pull	( actual )
       then
    then
 

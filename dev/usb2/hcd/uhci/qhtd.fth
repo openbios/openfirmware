@@ -230,8 +230,12 @@ h# 0008.0000 constant TD_TOKEN_MASK		\ Data toggle mask
    aligned16-free-map-out
 ;
 
-: sync-qhtds  ( qh -- )
-   dup >qh-phys l@ over >qh-size l@  dma-sync
+: push-qhtds  ( qh -- )
+   dup >qh-phys l@ over >qh-size l@  dma-push
+;
+
+: pull-qhtds  ( qh -- )
+   dup >qh-phys l@ over >qh-size l@  dma-pull
 ;
 
 : map-out-buf  ( td -- )
@@ -299,7 +303,7 @@ defer process-hc-status
       process-hc-status  usb-error  if
          true
       else
-         dup sync-qhtds
+         dup pull-qhtds
          dup qh-done? ?dup 0=   if
             1 ms
 	    timeout 1- dup to timeout 0=
@@ -310,7 +314,7 @@ defer process-hc-status
    ( qh ) dup qh-done? 0=  if
       " Timeout" USB_ERR_TIMEOUT set-usb-error
       TERMINATE over >hcqh-elem le-l!		\ Terminate QH
-      sync-qhtds
+      push-qhtds
       1 ms
    else
       drop

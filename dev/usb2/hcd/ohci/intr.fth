@@ -52,7 +52,7 @@ d# 500 constant intr-in-timeout
    ( ed ) dup >hced-tdhead le-l@		( ed head )
    intr-in-data@  or				( ed head' )
    over >hced-tdhead le-l!			( ed )
-   ( ed ) sync-edtds				( )
+   ( ed ) push-edtds				( )
 ;
 : remove-my-intr  ( ed -- )  dup remove-intr  free-edtds  ;
 
@@ -80,13 +80,13 @@ external
    intr-in-ed 0=  if  0 USB_ERR_INV_OP exit  then
    clear-usb-error				( )
    process-hc-status				( )
-   intr-in-ed dup sync-edtds			( ed )
+   intr-in-ed dup pull-edtds			( ed )
    ed-done?  if					( )
       intr-in-td error?  if
          0					( actual )
       else					( )
 	 intr-in-td dup get-actual		( td actual )
-         over >td-cbp l@ rot >td-pcbp l@ 2 pick dma-sync	( actual )
+         over >td-cbp l@ rot >td-pcbp l@ 2 pick dma-pull	( actual )
       then
       usb-error					( actual usberr )
       intr-in-ed fixup-intr-in-data		( actual usberr )
@@ -118,7 +118,7 @@ external
 
    \ Setup ED again
    intr-in-td >td-phys l@ intr-in-data@ or intr-in-ed >hced-tdhead le-l!
-   intr-in-ed dup sync-edtds
+   intr-in-ed dup push-edtds
    ed-unset-skip
 ;
 

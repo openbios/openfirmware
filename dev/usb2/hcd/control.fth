@@ -14,7 +14,7 @@ headers
    tuck >dr-value le-w!				( len idx vpcbp )
    tuck >dr-index le-w!				( len vpcbp )
    >dr-len le-w!				( )
-   setup-buf setup-buf-phys /dr dma-sync	( )
+   setup-buf setup-buf-phys /dr dma-push	( )
 ;
 
 external

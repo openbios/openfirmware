@@ -113,12 +113,12 @@ external
    bulk-in-qh 0=  if  0 USB_ERR_INV_OP exit  then
    clear-usb-error
    process-hc-status
-   bulk-in-qh dup sync-qhtds                            ( bulk-in-qh )
+   bulk-in-qh dup pull-qhtds                            ( bulk-in-qh )
    qh-done?  if                                         ( )
       bulk-in-actual                                    ( actual usberr )
    else                                                 ( )
       bulk-in-qh dup >hcqh-elem le-l@			( qh elem )
-      1 ms  over sync-qhtds				( qh elem )
+      1 ms  over pull-qhtds				( qh elem )
       swap >hcqh-elem le-l@ =  if			\ No movement in the past ms
          bulk-in-actual                                 ( actual usberr )
          bulk-in-td bulk-in-qh >qh-#tds l@ fixup-bulk-in-data
@@ -127,7 +127,7 @@ external
       then
    then
    over  if
-      bulk-in-td dup >td-buf l@ swap >td-pbuf l@ 2 pick dma-sync
+      bulk-in-td dup >td-buf l@ swap >td-pbuf l@ 2 pick dma-pull
    then
 ;
 
@@ -155,7 +155,7 @@ external
 
    \ Setup QH again
    bulk-in-td >td-phys l@ bulk-in-qh >hcqh-elem le-l!
-   bulk-in-qh sync-qhtds
+   bulk-in-qh push-qhtds
 ;
 
 : end-bulk-in  ( -- )
@@ -188,7 +188,7 @@ external
          0					( actual )	\ USB error
       else
          my-td dup my-#tds get-actual		( td actual )
-	 over >td-buf l@ rot >td-pbuf l@ 2 pick dma-sync	( actual )
+	 over >td-buf l@ rot >td-pbuf l@ 2 pick dma-pull	( actual )
       then
    then
 

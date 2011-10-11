@@ -189,10 +189,14 @@ h# c000.0000 constant QH_MULT3
 \ QH and its list of TDs are allocated as needed.
 \ ---------------------------------------------------------------------------
 
-: sync-qh      ( qh  -- )  dup >qh-phys  l@ /hcqh  dma-sync  ;
-: sync-qtd     ( qtd -- )  dup >qtd-phys l@ /hcqtd dma-sync  ;
-: sync-qtds    ( qtd -- )  dup >qtd-phys l@ over >qtd-size l@  dma-sync  ;
-: sync-qhqtds  ( qh  -- )  dup >qh-phys  l@ over >qh-size  l@  dma-sync  ;
+: push-qh      ( qh  -- )  dup >qh-phys  l@ /hcqh  dma-push  ;
+: pull-qh      ( qh  -- )  dup >qh-phys  l@ /hcqh  dma-pull  ;
+: push-qtd     ( qtd -- )  dup >qtd-phys l@ /hcqtd dma-push  ;
+: pull-qtd     ( qtd -- )  dup >qtd-phys l@ /hcqtd dma-pull  ;
+: push-qtds    ( qtd -- )  dup >qtd-phys l@ over >qtd-size l@  dma-push  ;
+: pull-qtds    ( qtd -- )  dup >qtd-phys l@ over >qtd-size l@  dma-pull  ;
+: push-qhqtds  ( qh  -- )  dup >qh-phys  l@ over >qh-size  l@  dma-push  ;
+: pull-qhqtds  ( qh  -- )  dup >qh-phys  l@ over >qh-size  l@  dma-pull  ;
 
 : map-out-bptrs  ( qtd -- )
    dup >qtd-buf l@ over >qtd-pbuf l@ rot >qtd-/buf-all l@ hcd-map-out
@@ -212,27 +216,6 @@ h# c000.0000 constant QH_MULT3
    over >qtd-phys l!				( v )
    TERMINATE over >hcqtd-next le-l!		( v )
    TERMINATE swap >hcqtd-next-alt le-l!		( )
-;
-
-: alloc-qtds  ( #qtds -- qtd )
-   dup >r  /qtd * dup >r		( len )  ( R: #qtds len )
-   aligned32-alloc-map-in		( u v p )  ( R: #qtds len )
-   swap					( u p v )  ( R: #qtds len )
-   dup r@ erase				( u p v )  ( R: #qtds len )
-
-   \ Record QTD size for later freeing
-   rot over >qtd-unaligned l!		( p v )  ( R: #qtds len )
-   r> over >qtd-size l!			( p v )  ( R: #qtds )
-
-   dup rot r> link-qtds			( qtd.v )
-;
-
-: free-qtds  ( qtd -- )
-   >r					( R: qtd )
-   r@ >qtd-unaligned l@			( u )  ( R: qtd )
-   r@ dup >qtd-phys l@			( u v p )  ( R: qtd )
-   r> >qtd-size l@			( u v p size )
-   aligned32-free-map-out		( )
 ;
 
 : link-qhqtd  ( qtd.p qh -- )
@@ -261,14 +244,6 @@ h# c000.0000 constant QH_MULT3
    >qh-unaligned l!			( )
 ;
 
-: alloc-qh  ( -- qh )
-   /qh aligned32-alloc-map-in		( u v p )
-   over /qh erase			( u v p )
-   over >r				( u v p r: v )
-   /qh 0 init-qh			( r: v )
-   TERMINATE r@ link-qhqtd		( r: v )
-   r>					( qh.v )
-;
 : free-qh  ( qh -- )
    >r					( R: qh )
    r@ >qh-unaligned l@			( qh.u )  ( R: qh )
@@ -375,9 +350,22 @@ bptr-ofs-mask invert constant bptr-mask		\ Buffer Pointer mask
 : link-to-qh-ptr  ( qh -- )
    dup  qh-ptr >qh-next  l!                               ( qh )
    dup  >qh-phys l@  TYP_QH or  qh-ptr >hcqh-next  le-l!  ( qh )
-   sync-qhqtds                                            ( )
+   push-qhqtds                                            ( )
 ;
+: interrupt-on-last-td  ( qh -- )
+   /qh +                                   ( qtd )
+   begin                                   ( qtd )
+      dup >hcqtd-next le-l@ TERMINATE <>   ( qtd flag )
+   while                                   ( qtd )
+      >qtd-next l@                         ( qtd' )
+   repeat                                  ( qtd )
+   >hcqtd-token                            ( 'token )
+   dup le-l@  TD_IOC or  swap le-l!        ( )
+;
+
 : insert-qh  ( qh -- )
+   hc-interrupt? drop      \ Clear any pending transfer-complete interrupts
+   0 >hcqh-cur-pqtd off
    qh-ptr  if                                                 ( qh )
       \ If there is another qh, link the new qh to the existing qh head.
       qh-ptr                    over >qh-prev      l!         ( qh )
@@ -386,7 +374,7 @@ bptr-ofs-mask invert constant bptr-mask		\ Buffer Pointer mask
 
       link-to-qh-ptr                                          ( )
 
-      qh-ptr sync-qh                                          ( )
+      qh-ptr push-qh                                          ( )
    else                                                       ( )
       \ If there is no other qh, make it the head, link it to itself, 
       \ and start the asynch schedule.
@@ -431,7 +419,7 @@ bptr-ofs-mask invert constant bptr-mask		\ Buffer Pointer mask
       dup >qh-prev l@ ?dup if		( qh prev.qh )
          over >hcqh-next le-l@ over >hcqh-next le-l!
          over >qh-next l@ swap >qh-next l!
-         dup sync-qh
+         dup push-qh
          dup >qh-next l@ qh-ptr <>  if
             dup >qh-prev l@ swap >qh-next l@ >qh-prev l!
          else
@@ -442,7 +430,7 @@ bptr-ofs-mask invert constant bptr-mask		\ Buffer Pointer mask
          qh-ptr >hcqh-endp-char dup le-l@ QH_HEAD or swap le-l!  ( qh )
          fix-wraparound-qh          ( )
          0 qh-ptr >qh-prev l!       ( )
-	 qh-ptr sync-qh
+	 qh-ptr push-qh
       then
       ring-doorbell
    then
@@ -540,40 +528,61 @@ d# 32 constant intr-interval		\ 4 ms poll interval
 ;
 
 : qtd-done?  ( qtd -- done? )
-   >hcqtd-token le-l@		( token )
-
-   dup TD_STAT_HALTED and  if	( token )
-      drop true exit
-   then				( token )
-   TD_STAT_ACTIVE and 0=	( done? )
+   >hcqtd-token le-l@  TD_STAT_ACTIVE and  0=
 ;
 
+[ifdef] notdef
+\ This version looks for the ending condition in the transfer overlay
 : qh-done?  ( qh -- done? )
-   process-hc-status          ( qh )
-   dup sync-qh                ( qh )
-   >hcqh-cur-pqtd le-l@  dup  if  qtd-done?  then  ( done? )
+   hc-interrupt? 0=  if  drop false exit  then   ( qh )
+   dup pull-qh                    ( qh )
+   dup >hcqh-cur-pqtd l@  0=  if  ( qh )
+      drop false exit             ( -- done? )
+   then                           ( qh )
+   >hcqh-overlay               ( qtd )
+   dup >hcqtd-token le-l@      ( qtd token )
+   dup TD_STAT_ACTIVE and  if  ( qtd token )
+      2drop false              ( done? )
+   else                        ( qtd token )
+      TD_STAT_HALTED and  if   ( qtd )
+         drop true             ( done? )
+      else                     ( qtd )
+         >hcqtd-next le-l@     ( next )
+	 TERMINATE =           ( done? )
+      then                     ( done? )
+   then                        ( done? )
+;
+[then]
+
+\ This version traverses the list of QTDs, looking for an ending condition
+: qh-done?  ( qh -- done? )
+   dup pull-qh      ( qh )
+\   d# 30 us         ( qh )
+   /qh +                                      ( qtd )
+   begin                                      ( qtd )
+      dup >hcqtd-token le-l@                  ( qtd token )
+      dup TD_STAT_ACTIVE and  0=              ( qtd token qtd-complete? )
+   while                                      ( qtd token )
+      \ This QTD is complete - it is the end of the list if either
+      \ the next field is TERMINATE or if the HALTED bit is set
+      TD_STAT_HALTED and  if                  ( qtd )
+         drop true exit                       ( -- done? )
+      then                                    ( qtd )
+      dup >hcqtd-next le-l@ TERMINATE =  if   ( qtd )
+         drop true exit                       ( -- done? )
+      then                                    ( qtd )
+      /qtd +                                  ( qtd' )
+   repeat                                     ( qtd token )
+   \ If we get here, we hit a QTD that is still active
+   2drop false                                ( done? )
 ;
 
-true value delay?
-: poll-delay  ( -- )  d# 300 " us" evaluate  ;
-: done?  ( qh -- usberr )
-   delay?  if  poll-delay  then
-   begin  dup qh-done?  0=  while   ( qh )
-      1 ms
-      dup >qh-timeout	( qh timeout-adr )
-      dup l@ 1-		( qh timeout-adr timeout' )
-      dup rot l!	( qh timeout' )
-      0=  if            ( qh )
-delay? 0=  if  cr  7 emit  7 emit  ." TIMEOUT" cr  debug-me  then
-         " Timeout" USB_ERR_TIMEOUT set-usb-error ( qh )
-         drop           ( )
-         usb-error      ( usberr )
-         exit
-      then
-   repeat               ( qh )
-   drop                 ( )
-
-   usb-error		( usberr )
+: intr-qh-done?  ( qh -- done? )
+   hc-interrupt?  if   ( qh )
+      qh-done?         ( done? )
+   else                ( qh )
+      drop false       ( done? )
+   then                ( done? )
 ;
 
 : qtd-error?  ( qtd qh -- usberr )
@@ -583,11 +592,27 @@ delay? 0=  if  cr  7 emit  7 emit  ." TIMEOUT" cr  debug-me  then
    usb-error
 ;
 
-: error?  ( qh -- usberr )  dup >hcqh-overlay  swap  qtd-error?   ;
+: qh-error?  ( qh -- usberr )  dup >hcqh-overlay  swap  qtd-error?   ;
+
+: done-error?  ( qh -- usberr )
+   dup >qh-timeout l@  get-msecs +   ( qh timeout )
+   begin  over intr-qh-done?  0=  while   ( qh timeout )
+      usb-error ?dup if  ." USB ERROR " . cr  then
+      dup get-msecs - 0<  if         ( qh timeout )
+         " Timeout" USB_ERR_TIMEOUT set-usb-error ( qh timeout )
+         2drop                       ( )
+         usb-error                   ( usberr )
+         exit
+      then                           ( qh timeout )
+   repeat                            ( qh timeout )
+   drop                              ( qh )
+
+   qh-error?	                     ( usberr )
+;
 
 : get-actual  ( qtd #qtd -- actual )
    0 -rot 0  ?do			( actual qtd )
-      dup sync-qtd			( actual qtd )
+      dup pull-qtd			( actual qtd )
       dup >hcqtd-token le-l@ dup TD_STAT_ACTIVE and 0=  if
          over >qtd-/buf l@		( actual qtd token len )
          swap d# 16 >> h# 7fff and -	( actual qtd len' )
@@ -601,7 +626,7 @@ delay? 0=  if  cr  7 emit  7 emit  ." TIMEOUT" cr  debug-me  then
 
 : qtd-get-actual  ( qtd -- actual )
    0 swap  begin			( actual qtd )
-      dup sync-qtd			( actual qtd )
+      dup pull-qtd			( actual qtd )
       dup >hcqtd-token le-l@ dup TD_STAT_ACTIVE and 0=  if
          over >qtd-/buf l@		( actual qtd token len )
          swap d# 16 >> h# 7fff and -	( actual qtd len' )

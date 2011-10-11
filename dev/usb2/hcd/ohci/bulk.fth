@@ -79,7 +79,7 @@ d# 500 constant bulk-out-timeout
    ( ed ) dup >hced-tdhead le-l@		( dir ed head )
    rot ED_DIR_IN =  if  bulk-in-data@  else  bulk-out-data@  then  or
    over >hced-tdhead le-l!			( ed )
-   ( ed ) sync-edtds
+   ( ed ) push-edtds
 ;
 : insert-my-bulk     ( ed dir -- )  over fill-bulk-ed  insert-bulk  ;
 : insert-my-bulk-in  ( ed -- )  ED_DIR_IN  insert-my-bulk  ;
@@ -108,12 +108,12 @@ external
 : bulk-in-ready?  ( -- false | error true |  buf actual 0 true )
    clear-usb-error				( )
    process-hc-status				( )
-   bulk-in-ed dup sync-edtds			( ed )
+   bulk-in-ed dup pull-edtds			( ed )
    ed-done?  if					( )
       bulk-in-td error? ?dup 0=  if		( )
          bulk-in-td >td-cbp l@			( buf )
          bulk-in-td get-actual			( buf actual )
-         2dup bulk-in-td >td-pcbp l@ swap dma-sync	( buf actual )
+         2dup bulk-in-td >td-pcbp l@ swap dma-pull	( buf actual )
          0					( buf actual 0 )
       then					( error | buf actual 0 )
       bulk-in-ed fixup-bulk-in-data		( error | buf actual 0 )
@@ -126,13 +126,13 @@ external
    bulk-in-ed 0=  if  0 USB_ERR_INV_OP exit  then
    clear-usb-error				( )
    process-hc-status				( )
-   bulk-in-ed dup sync-edtds			( ed )
+   bulk-in-ed dup pull-edtds			( ed )
    ed-done?  if					( )
       bulk-in-td error?  if
          0					( actual )
       else
          bulk-in-td dup get-actual		( td actual )
-         over >td-cbp l@ rot >td-pcbp l@ 2 pick dma-sync	( actual )
+         over >td-cbp l@ rot >td-pcbp l@ 2 pick dma-pull	( actual )
       then
       usb-error					( actual usberr )
       bulk-in-ed fixup-bulk-in-data		( actual usberr )
@@ -165,7 +165,7 @@ external
 
    \ Setup ED again
    bulk-in-td >td-phys l@ bulk-in-data@ or bulk-in-ed >hced-tdhead le-l!
-   bulk-in-ed dup sync-edtds
+   bulk-in-ed dup push-edtds
    ed-unset-skip
    enable-bulk
 ;
@@ -198,7 +198,7 @@ external
          0					( actual )	\ USB error
       else
          my-td dup get-actual			( td actual )
-         over >td-cbp l@ rot >td-pcbp l@ 2 pick dma-sync	( actual )
+         over >td-cbp l@ rot >td-pcbp l@ 2 pick dma-pull	( actual )
       then
    then
 

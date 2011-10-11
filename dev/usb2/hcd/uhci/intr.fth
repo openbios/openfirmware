@@ -76,11 +76,11 @@ external
    intr-in-qh 0=  if  0 USB_ERR_INV_OP exit  then
    clear-usb-error
    process-hc-status
-   intr-in-qh dup sync-qhtds
+   intr-in-qh dup pull-qhtds
    qh-done?  if
       intr-in-td intr-in-qh >qh-#tds l@ get-actual	( actual )
       usb-error						( actual usberr )
-      intr-in-td dup >td-buf l@ swap >td-pbuf l@ 2 pick dma-sync
+      intr-in-td dup >td-buf l@ swap >td-pbuf l@ 2 pick dma-pull
       intr-in-td intr-in-qh >qh-#tds l@ fixup-intr-in-data
    else
       0 usb-error					( actual usberr )
@@ -109,7 +109,7 @@ external
 
    \ Setup QH again
    intr-in-td >td-phys l@ intr-in-qh >hcqh-elem le-l!
-   intr-in-qh sync-qhtds
+   intr-in-qh push-qhtds
 ;
 
 : end-intr-in  ( -- )

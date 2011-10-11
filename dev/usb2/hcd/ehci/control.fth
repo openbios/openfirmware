@@ -135,19 +135,16 @@ defer set-my-dev		' set-normal-dev to set-my-dev
 
    \ Start control transaction
    my-qh pt-ctrl fill-qh
+   my-qh interrupt-on-last-td
    my-qh insert-qh
 
    \ Process results
-   my-qh done?  if
-      0						( actual )	\ System error, timeout
-   else
-      my-qh error?  if
-         0					( actual )	\ USB error
-      else
-         my-qtd >qtd-next l@ dup my-#qtds get-actual		( qtd actual )
-         over >qtd-buf l@ rot >qtd-pbuf l@ 2 pick dma-sync	( actual )
-      then
-   then
+   my-qh done-error?  if			( )
+      0						( actual )	\ System error, timeout, or USB error
+   else						( )
+      my-qtd >qtd-next l@ dup my-#qtds get-actual	( qtd actual )
+      over >qtd-buf l@ rot >qtd-pbuf l@ 2 pick dma-pull	( actual )
+   then						( actual )
 
    my-qh dup remove-qh  free-qh			( actual )
    usb-error					( actual usberr )
@@ -156,13 +153,12 @@ defer set-my-dev		' set-normal-dev to set-my-dev
 : run-control  ( -- usberr )
    \ Start control transaction
    my-qh pt-ctrl fill-qh
+   my-qh interrupt-on-last-td
    my-qh insert-qh
 
    \ Process results
-   my-qh done? 0=  if  my-qh error? drop  then
-
-   my-qh dup remove-qh  free-qh
-   usb-error
+   my-qh done-error?                ( usberr )
+   my-qh dup remove-qh  free-qh     ( usberr )
 ;
 
 : (control-set)  ( sbuf sphy slen buf phy len -- usberr )

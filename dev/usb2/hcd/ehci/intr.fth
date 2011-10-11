@@ -36,6 +36,8 @@ d# 500 constant intr-in-timeout
       2 pick over d# 16 << or			( dir qtd /bptr token )
       TD_C_ERR3 or TD_STAT_ACTIVE or		( dir qtd /bptr token' )
       intr-in-data@  toggle-intr-in-data  or	( dir qtd /bptr token' )
+\ See the comment about Interrupt-On-Completion elsewhere in this file
+\     i my-#qtds 1- =  if  TD_IOC or  then      ( dir qtd /bptr token' )
       2 pick >hcqtd-token le-l!			( dir qtd /bptr )
       my-buf++					( dir qtd )
       dup fixup-last-qtd			( dir qtd )
@@ -66,18 +68,28 @@ external
 : intr-in?  ( -- actual usberr )
    intr-in-qh 0=  if  0 USB_ERR_INV_OP exit  then  ( )
    clear-usb-error                   ( )
-   intr-in-qh qh-done?  if           ( )
-      intr-in-qh error?  if          ( )
-         0                           ( actual )
+   \ Ironically, we can't use Interrupt-On-Completion for interrupt pipes,
+   \ because when a bulk or control transaction is performed with IOC, the
+   \ call to hc-interrupt? from that transaction can prevent this routine
+   \ from seeing its IOC completion status.  The "right" solution might be to
+   \ scan all queue heads on an IOC "interrupt", then set a flag in the private
+   \ area of the queue head.  It's unclear that that is better for interrupt
+   \ pipes than just polling, since the polling typically happens on a timer
+   \ and thus is relatively infrequent.
+   \ If we were to use Interrupt-On-Completion for interrupt pipes, we would
+   \ use "intr-qh-done?" instead of "qh-done?" here.
+   intr-in-qh qh-done?  0=  if       ( )
+      0 usb-error                    ( actual usberr )	\ Timeout or system error
+   else				     ( )
+      intr-in-qh qh-error?  if       ( )
+	 0                           ( actual )  \ USB error
       else                           ( )
-         intr-in-qh sync-qhqtds      ( )
+         intr-in-qh pull-qhqtds      ( )
          intr-in-qtd  intr-in-qh >qh-#qtds l@  get-actual  ( actual )
-         intr-in-qtd >qtd-buf  intr-in-qtd >qtd-pbuf l@  2 pick  dma-sync  ( actual )
+         intr-in-qtd >qtd-buf  intr-in-qtd >qtd-pbuf l@  2 pick  dma-pull  ( actual )
       then                           ( actual )
       usb-error                      ( actual usberr )
       intr-in-qh fixup-intr-in-data  ( actual usberr )
-   else                              ( )
-      0 usb-error                    ( actual usberr )
    then                              ( actual usberr )
 ;
 
@@ -87,6 +99,8 @@ headers
       dup >hcqtd-bptr0 dup le-l@ h# ffff.f000 and swap le-l!
       dup >qtd-/buf l@ d# 16 <<
       TD_STAT_ACTIVE or TD_C_ERR3 or TD_PID_IN or
+\ See the comment about Interrupt-On-Completion elsewhere in this file
+\     TD_IOC or
       intr-in-data@ or 
       over >hcqtd-token le-l!
       >qtd-next l@
@@ -104,7 +118,7 @@ external
    intr-in-timeout intr-in-qh >qh-timeout l!
    intr-in-qh >hcqh-endp-char dup le-l@ QH_TD_TOGGLE invert and swap le-l!
    intr-in-qtd >qtd-phys l@ intr-in-qh >hcqh-overlay >hcqtd-next le-l!
-   intr-in-qh sync-qhqtds
+   intr-in-qh push-qhqtds
 ;
 
 : end-intr-in  ( -- )

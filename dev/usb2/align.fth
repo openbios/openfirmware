@@ -11,7 +11,8 @@ d#  32 constant /align32
 : round-up  ( n align -- n' )  1- tuck + swap invert and  ;
 
 external
-: dma-sync     ( virt phys size -- )         " dma-sync" $call-parent     ;
+: dma-push     ( virt phys size -- )         " dma-push" $call-parent     ;
+: dma-pull     ( virt phys size -- )         " dma-pull" $call-parent     ;
 : dma-alloc    ( size -- virt )              " dma-alloc" $call-parent    ;
 : dma-free     ( virt size -- )              " dma-free" $call-parent     ;
 : dma-map-in   ( virt size cache? -- phys )  " dma-map-in" $call-parent   ;

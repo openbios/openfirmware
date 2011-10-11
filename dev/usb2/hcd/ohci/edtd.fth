@@ -45,7 +45,7 @@ constant /hcca
 
    \ Initialize hcca
    hcca /hcca erase
-   hcca hcca-phys /hcca dma-sync
+   hcca hcca-phys /hcca dma-push
 ;
 
 \ ---------------------------------------------------------------------------
@@ -138,7 +138,7 @@ dup constant /ed		\ Size of each ed
    dup >hced-control dup le-l@
    ED_SKIP_MASK invert and r> or
    swap le-l!
-   dup >ed-phys l@ /hced dma-sync
+   dup >ed-phys l@ /hced dma-push
 ;
 : ed-set-skip    ( ed -- )  ED_SKIP_ON  (set-skip)  ;
 : ed-unset-skip  ( ed -- )  ED_SKIP_OFF (set-skip)  ;
@@ -269,10 +269,15 @@ f000.0000 constant TD_CC_MASK
    r> >ed-size l@			( ed.u,v,p size )
    aligned32-free-map-out		( )
 ;
-: sync-edtds  ( ed -- )
+: push-edtds  ( ed -- )
    dup >ed-phys l@			( ed.v,p )
    over >ed-size l@			( ed.v,p len )
-   dma-sync				( )
+   dma-push				( )
+;
+: pull-edtds  ( ed -- )
+   dup >ed-phys l@			( ed.v,p )
+   over >ed-size l@			( ed.v,p len )
+   dma-pull				( )
 ;
 : map-out-cbp  ( td -- )
    dup >td-cbp l@ over >td-pcbp l@ rot >td-/cbp-all l@ hcd-map-out
@@ -429,7 +434,7 @@ defer process-hc-status
 : done?  ( ed -- error? )
    begin
       process-hc-status
-      dup sync-edtds
+      dup pull-edtds
       dup ed-done? ?dup 0=  if
          1 ms
 	 timeout 1- dup to timeout 0=

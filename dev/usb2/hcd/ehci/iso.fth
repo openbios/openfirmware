@@ -174,7 +174,7 @@ headers
    else					    \ Link and replace the entry
       itd-struct >itd-link le-l!	    ( itd-phys )  ( R: idx )
    then
-   itd-struct over /itd-sync dma-sync       ( itd-phys )  ( R: idx )
+   itd-struct over /itd-sync dma-push       ( itd-phys )  ( R: idx )
    TYP_ITD or r> framelist!                 ( )
 ;
 
@@ -246,7 +246,7 @@ external
    clear-usb-error
    iso-in-cur-itd set-itd-struct              ( adr len )
    itd-struct >itd-frame @  wait-frame-safe   ( adr len )
-   itd-struct dup >itd-phys @ /itd-sync dma-sync
+   itd-struct dup >itd-phys @ /itd-sync dma-pull
    iso-in-uframe-cnt 7 and                    ( adr len uframe# )
    4 * itd-struct >itd-xstat + le-l@          ( adr len xstat )
    dup ITD_ACTIVE and  if  3drop false exit  then    \ Not done yet
@@ -295,14 +295,14 @@ headers
 
 [ifndef] notdef
 \ Debug aids
-: ldump  ( adr len -- )  " ldump" evaluate  ;
+: sys-ldump  ( adr len -- )  " ldump" evaluate  ;
 : .itd  ( -- )
-   iso-in-itd  iso-in-#itd /itd-struct *  ldump
+   iso-in-itd  iso-in-#itd /itd-struct *  sys-ldump
 ;
 : .xstat  ( -- )
    iso-in-#itd 0  do
       i set-itd-struct
-      itd-struct >itd-xstat /itd-xstat ldump
+      itd-struct >itd-xstat /itd-xstat sys-ldump
    loop
 ;
 \ Debug aids for video streaming only (and only if ITD_ACTIVE are all 0s)

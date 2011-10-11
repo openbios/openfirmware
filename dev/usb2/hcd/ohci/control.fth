@@ -105,7 +105,7 @@ defer set-my-dev		' set-normal-dev to set-my-dev
 
 : insert-my-control  ( -- )
    my-ed dup fill-control-ed
-   dup sync-edtds
+   dup push-edtds
    insert-control
 ;
 
@@ -146,7 +146,7 @@ defer set-my-dev		' set-normal-dev to set-my-dev
 	 0					( actual )	\ USB error
       else
          my-td >td-next l@ dup get-actual	( td actual )
-         over >td-cbp l@ rot >td-pcbp l@ 2 pick dma-sync	( actual )
+         over >td-cbp l@ rot >td-pcbp l@ 2 pick dma-pull	( actual )
       then
    then
 
