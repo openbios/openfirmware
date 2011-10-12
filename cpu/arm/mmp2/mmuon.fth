@@ -9,9 +9,11 @@ code page-table@  ( -- padr )
    mov tos,tos,lsl #14
 c;
 
+: (page-table-va)  fw-mem-va page-table-offset +  ;
+' (page-table-va) to page-table-va
 
 : map-section  ( pa+mode va -- )
-   d# 18 rshift  page-table@ +  tuck l!  clean-d$-entry
+   d# 18 rshift  page-table-va +  tuck l!  clean-d$-entry
 ;
 : map-sections  ( pa mode va size -- )
    2>r  +  2 or   2r>     ( pa+mode va size )
@@ -22,6 +24,7 @@ c;
    drop
 ;
 
+[ifdef] notdef
 : ofw-sections  ( -- )
    h# 0000.0000  h# c0e  over  dma-mem-pa   map-sections  \ Cache and write bufferable
    dma-mem-pa    h# c02  over  /dma-mem     map-sections  \ Non-cacheable DMA space
@@ -33,14 +36,6 @@ c;
    h# d400.0000  h# c02  over  h# 0040.0000 map-sections  \ I/O - no caching or buffering
    h# e000.0000  h# c02  over  /section     map-sections  \ Audio SRAM - no caching or buffering
 ;
-
-: setup-sections
-   page-table-pa page-table!
-   page-table-pa /page-table erase
-
-   ofw-sections
-;
-\ Do we need to map SRAM and DDRC ?
 
 code start-mmu
    set     r2, 0xFFFFFFFF       \ Set domains for Manager access
@@ -67,10 +62,21 @@ code start-mmu
    sub    pc,  pc,  #4
 c;
 
+: setup-sections
+   ['] page-table@ to page-table-va
+   page-table-pa dup page-table!  /page-table erase
+
+   ofw-sections
+   ['] (page-table-va) to page-table-va
+   start-mmu
+;
+[then]
+
 : go-fast
    control@ 1 and  if  exit  then  \ Don't do this if MMU is already on
+[ifdef] notdef
    setup-sections
-   start-mmu
+[then]
    dcache-on
    icache-on
 \  l2cache-on  \ Leave off for now, to avoid potential problems with Linux

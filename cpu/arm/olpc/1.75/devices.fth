@@ -242,14 +242,17 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH prog
       init-lcd
    ;
    : map-frame-buffer  ( -- )
-      fb-mem-pa /fb-mem " map-in" $call-parent to frame-buffer-adr
+      \ We use fb-mem-va directly instead of calling map-in on the physical address
+      \ because the physical address changes with the total memory size.  The early
+      \ assembly language startup code establishes the mapping.
+      fb-mem-va to frame-buffer-adr
    ;
    " display"                      device-type
    " ISO8859-1" encode-string    " character-set" property
    0 0  encode-bytes  " iso6429-1983-colors"  property
 
    \ Used as temporary storage for images by $get-image
-   : graphmem  ( -- adr )  dimensions * pixel*  fb-mem-pa +  ;
+   : graphmem  ( -- adr )  dimensions * pixel*  fb-mem-va +  ;
 
    : display-install  ( -- )
       map-frame-buffer
@@ -286,8 +289,6 @@ devalias net /wlan  \ XXX should report-net in case of USB Ethernet
 
 fload ${BP}/dev/olpc/kb3700/spicmd.fth
 fload ${BP}/cpu/arm/olpc/spcmd.fth
-
-devalias keyboard /ec-spi/keyboard
 
 : wlan-reset  ( -- )  d# 58 gpio-clr  d# 20 ms  d# 58 gpio-set  ;
 

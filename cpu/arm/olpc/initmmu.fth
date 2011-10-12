@@ -204,11 +204,60 @@ label map-sections-v=p  ( r0: pt-adr, r1: adr, r2: len, r3: mode -- )
     mov   pc, lr
 end-code
 
+\ Map sections within the given address range, using
+\ the given protection/cacheability mode.  pt-adr is the page table base address.
+label allocate-and-map-sections  ( r0: pt-adr, r1: padr-top, r2: len, r3: mode r4: vadr -- r1: padr-bot )
+    inc  r4, r2                   \ vadr-top
+    add  r1, r1, r3               \ PA+mode
+    begin
+       dec  r1, #0x100000
+       dec  r4, #0x100000
+
+       str  r1, [r0, r4, lsr #18]
+       
+       decs r2, #0x100000
+    0<= until
+
+    mov   r1,r1,lsr #20  \ Clear out mode bits in padr
+    mov   r1,r1,lsl #20
+
+    mov   pc, lr
+end-code
+
+\ This assumes that there are no holes and that unused MMAP registers have CS_VALID=0
+label dramsize  ( -- r0: size-in-bytes )
+   mov    r0,0
+   mov    r1,0xd0000000    \ Memory controller base address
+
+   ldr    r2,[r1,#0x100]   \ MMAP0 register
+   ands   r3,r2,#1         \ Test CS_VALID
+   movne  r3,#0x10000      \ Scale factor for memory size
+   movne  r2,r2,lsl #12    \ Clear high bits above AREA_LENGTH field
+   movne  r2,r2,lsr #28    \ Move AREA_LENGTH to LSB
+   addne  r0,r0,r3,lsl r2  \ Compute bank size and add to accumulator
+
+   ldr    r2,[r1,#0x110]   \ MMAP1 register
+   ands   r3,r2,#1         \ Test CS_VALID
+   movne  r3,#0x10000      \ Scale factor for memory size
+   movne  r2,r2,lsl #12    \ Clear high bits above AREA_LENGTH field
+   movne  r2,r2,lsr #28    \ Move AREA_LENGTH to LSB
+   addne  r0,r0,r3,lsl r2  \ Compute bank size and add to accumulator
+
+   mov    pc,lr
+end-code
+
 \ Initial the section table, setting up mappings for the platform-specific
 \ address ranges that the firmware uses.
 \ Destroys: r0-r4
-label init-map  ( r0: section-table -- )
+label init-map  ( -- )
    mov r10,lr
+
+   bl  `dramsize`                       \ r0: total-memory-size
+   mov r1,r0                            \ r1: allocation pointer starts at top of DRAM
+
+   \ Locate the page table at the top of the firmware memory, just below the frame buffer
+   dec r0,`/fb-mem #`                   \ Size of frame buffer
+   dec r0,`/page-table #`               \ r0: page-table-pa
 
    mcr p15,0,r0,cr2,cr0,0               \ Set table base address
 
@@ -219,32 +268,33 @@ label init-map  ( r0: section-table -- )
       subs    r2, r2, #1		\ Decrement section number
       str     r3, [r0, r2, lsl #2]	\ Invalidate section entry
    0= until
-
-   mov r1,0                             \ Address of low memory
-   set r2,`dma-mem-pa #`                \ Size of low memory - up to dma-base
-   set r3,#0xc0e                        \ Cache and write bufferable
-   bl  `map-sections-v=p`
-
-   set r1,`dma-mem-pa #`                \ Address of DMA area
-   set r2,`/dma-mem #`                  \ Size of DMA area
-   set r3,#0xc02                        \ No caching or write buffering
-   bl  `map-sections-v=p`
-
-   set r1,`extra-mem-pa #`              \ Address of additional allocatable memory
-   set r2,`/extra-mem #`                \ Size of additional allocatable memory
-   set r3,#0xc0e                        \ Write bufferable
-   bl  `map-sections-v=p`
-
-   set r1,`fw-mem-pa #`                 \ Address of Firmware region
-   set r2,`/fw-mem #`                   \ Size of firmware region
-   set r3,#0xc0e                        \ Write bufferable
-   bl  `map-sections-v=p`
-
-   set r1,`fb-mem-pa #`                 \ Address - Frame buffer
+                                        \ r1: top of DRAM
    set r2,`/fb-mem #`                   \ Size of frame buffer
    set r3,#0xc06                        \ Write bufferable
-   bl  `map-sections-v=p`
+   set r4,`fb-mem-va #`                 \ Virtual address
+   bl  `allocate-and-map-sections       \ r1: bottom PA of frame buffer
 
+   set r2,`/fw-mem #`                   \ Size of firmware region
+   set r3,#0xc0e                        \ Write bufferable
+   set r4,`fw-mem-va #`                 \ Virtual address
+   bl  `allocate-and-map-sections`      \ r1: bottom PA of firmware memory
+
+   set r2,`/extra-mem #`                \ Size of additional allocatable memory
+   set r3,#0xc0e                        \ Write bufferable
+   set r4,`extra-mem-va #'              \ Virtual address
+   bl  `allocate-and-map-sections`      \ r1: bottom PA of extra memory
+
+   set r2,`/dma-mem #`                  \ Size of DMA area
+   set r3,#0xc02                        \ No caching or write buffering
+   set r4,`dma-mem-va #`                \ Virtual address
+   bl  `allocate-and-map-sections`      \ r1: bottom PA of DMA memory
+
+   mov r2,r1                            \ Size of low memory
+   set r3,#0xc0e                        \ Cache and write bufferable
+   mov r4,#0                            \ Virtual address
+   bl  `allocate-and-map-sections`      \ r1: 0
+
+   \ Now we have mapped all of DRAM
    set r1,`sram-pa #`                   \ Address of SRAM
    set r2,`/sram #`                     \ Size of SRAM
    set r3,#0xc02                        \ No caching or write buffering
@@ -260,39 +310,11 @@ label init-map  ( r0: section-table -- )
    set r3,#0xc02                        \ No caching or write buffering
    bl  `map-sections-v=p`
 
-   set r1,`dma-mem-pa #`                \ Address of DMA area
-   set r2,`/dma-mem #`                  \ Size of DMA area
-   set r3,#0xc02                        \ No caching or write buffering
-   set r4,`dma-mem-va #`                \ Virtual address
-   bl  `map-sections`
-
-   set r1,`fb-mem-pa #`                 \ Address - Frame buffer
-   set r2,`/fb-mem #`                   \ Size of frame buffer
-   set r3,#0xc06                        \ Write bufferable
-   set r4,`fb-mem-va #`                 \ Virtual address
-   bl  `map-sections
-
-   set r1,`extra-mem-pa #`              \ Address of additional allocatable memory
-   set r2,`/extra-mem #`                \ Size of additional allocatable memory
-   set r3,#0xc0e                        \ Write bufferable
-   set r4,`extra-mem-va #'              \ Virtual address
-   bl  `map-sections`
-
-   set r1,`fw-mem-pa #`                 \ Address of Firmware region
-   set r2,`/fw-mem #`                   \ Size of firmware region
-   set r3,#0xc0e                        \ Write bufferable
-   set r4,`fw-mem-va #`                 \ Virtual address
-   bl  `map-sections`
-
    set r1,`io-pa #`                     \ Address of I/O
    set r2,`/io #`                       \ Size of I/O region
    set r3,#0xc02                        \ No caching or write buffering
    set r4,`io-va #`                     \ Virtual address
    bl  `map-sections`
-
-\ The cache is not on yet
-\   set r1,#0x4000                       \ Size of section table
-\   bl  `clean-dcache-range`
 
    mov     pc, r10
 end-code

@@ -16,7 +16,7 @@
    lcd-clocks-on
 
    0                  h# 190 lcd!  \ Disable LCD DMA controller
-   fb-mem-pa           h# f4 lcd!  \ Frame buffer area 0
+   fb-mem-va >physical h# f4 lcd!  \ Frame buffer area 0
    0                   h# f8 lcd!  \ Frame buffer area 1
    hdisp bytes/pixel * h# fc lcd!  \ Pitch in bytes
 

@@ -2,24 +2,12 @@
 
 fload ${BP}/cpu/arm/mmuparams.fth
 
-h# 2000.0000 constant /ram-total  \ Total size of memory
-
 h# 0040.0000 constant /fb-mem  \ The screen uses a little more than 3 MiB at 1200x900x24
-/ram-total /fb-mem - constant fb-mem-pa  \ e.g. h# 1fc0.0000
-
-fb-mem-pa constant /available-mem
-
-: (memory?)  ( phys -- flag )  /ram-total u<  ;
 
 \ OFW implementation choices
-h# 0020.0000            constant /fw-mem
-fb-mem-pa /fw-mem -     constant fw-mem-pa     \ e.g. h# 1fa0.0000
-
-h# 0020.0000            constant /extra-mem
-fw-mem-pa /extra-mem -  constant extra-mem-pa  \ e.g. h# 1f80.0000 
-
-h# 0080.0000            constant /dma-mem
-extra-mem-pa /dma-mem - constant dma-mem-pa      \ e.g. h# 1f00.0000
+h# 0020.0000 constant /fw-mem
+h# 0020.0000 constant /extra-mem
+h# 0080.0000 constant /dma-mem
 
 h# fd00.0000 constant dma-mem-va
 h# fd80.0000 constant extra-mem-va
@@ -39,7 +27,7 @@ fw-mem-va value fw-virt-base
 /fw-mem /page-table -  constant page-table-offset
 page-table-offset      constant stack-offset  \ Stack is below this
 
-fw-mem-pa page-table-offset + constant page-table-pa
+\ fw-mem-pa page-table-offset + constant page-table-pa
 
 \ h# 0110.0000 constant def-load-base
 h# 0800.0000 constant def-load-base

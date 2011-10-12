@@ -26,14 +26,15 @@ hex
 
 : map-in   ( phys size -- virt )
    drop                                             ( phys )
-   dup fb-mem-pa =  if  drop fb-mem-va exit  then   ( phys )
+   \ The display driver uses fb-mem-va directly instead of calling map-in
+   \ dup fb-mem-va >physical =  if  drop fb-mem-va exit  then   ( phys )
    io-pa -  io-va +
 ;
 : map-out  ( virtual size -- )
    2drop
 ;
 
-: dma-range  ( -- start end )  dma-mem-pa   dup /dma-mem +  ;
+: dma-range  ( -- start end )  dma-mem-va >physical  dup /dma-mem +  ;
 
 h# 0 constant dma-map-mode		\ XXX what should this be?
 
@@ -92,7 +93,10 @@ headers
    mmu-map					( )
    r>						( virt )
 [else]
-   nip
+   nip                                          ( phys )
+[ifdef] dma-mem-va
+   dma-mem-va >physical -  dma-mem-va +         ( virt )
+[then]
 [then]
 ;
 : dma-free  ( virt size -- )
@@ -102,21 +106,30 @@ headers
 						( virt size phys )
    -rot tuck                                    ( phys size  virt size )
    2dup mmu-unmap  mmu-release			( phys size )
+[else]
+[ifdef] >physical
+   swap >physical swap                          ( virt )
+[then]
 [then]
    mem-release					( )
 ;
 
 : dma-map-in   ( virt size cacheable -- devaddr )
-   drop   2dup flush-d$-range  drop   ( virt )
+   drop                 ( virt size )
+   2dup flush-d$-range  ( virt size )
+   drop                 ( virt )
+[ifdef] >physical
+   >physical            ( phys )
+[then]
 ;
 : dma-map-out  ( virt devaddr size -- )  nip flush-d$-range  ;
 
 \ : dma-sync  ( virt devaddr size -- )  nip flush-d$-range  ;
 \ : dma-push  ( virt devaddr size -- )  nip flush-d$-range  ;
 \ : dma-pull  ( virt devaddr size -- )  nip flush-d$-range  ;
-: dma-sync  ( virt devaddr size -- )  3drop  ;
+: dma-sync  ( virt devaddr size -- )  3drop  d# 30 us  ;
 : dma-push  ( virt devaddr size -- )  3drop  ;
-: dma-pull  ( virt devaddr size -- )  3drop  ;
+: dma-pull  ( virt devaddr size -- )  3drop  d# 30 us  ;
 
 finish-device
 

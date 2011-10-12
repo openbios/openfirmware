@@ -12,7 +12,6 @@ hex
 ' noop is include-hook
 
 fload ${BP}/cpu/arm/olpc/1.75/config.fth
-' (memory?) to memory?
 
 : headerless ;  : headers  ;  : headerless0 ;
 
@@ -33,7 +32,25 @@ true ' fcode-debug? set-config-int-default
 fload ${BP}/ofw/core/memlist.fth	\ Resource list common routines
 fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
 
+\ Memory management services
+[ifdef] virtual-mode
+fload ${BP}/ofw/core/clntmem1.fth	\ client services for memory
+[else]
+fload ${BP}/ofw/core/clntphy1.fth	\ client services for memory
+defer page-table-va
+: >physical  ( va -- pa )
+   dup  d# 20 rshift             ( va section-index )
+   page-table-va swap la+  l@    ( va pte )
+   h# fffff invert and           ( va pa-base )
+   swap h# fffff and  or         ( pa )
+;
+[then]
+
 fload ${BP}/cpu/arm/mmp2/rootnode.fth	\ Root node mapping - physical mode
+
+fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
+fload ${BP}/ofw/core/availpm.fth	\ Available memory list
+
 dev /
    " olpc,XO-1.75" model
    " Marvell,Armada 610" encode-string  " architecture" property
@@ -46,23 +63,6 @@ device-end
    get-encoded-string
 ;
 ' (cpu-arch to cpu-arch
-
-\ Memory management services
-[ifdef] virtual-mode
-fload ${BP}/ofw/core/clntmem1.fth	\ client services for memory
-[else]
-fload ${BP}/ofw/core/clntphy1.fth	\ client services for memory
-defer section-table
-: >physical  ( va -- pa )
-   dup  d# 20 rshift             ( va section-index )
-   section-table swap la+  l@    ( va pte )
-   h# fffff invert and           ( va pa-base )
-   swap h# fffff and  or         ( pa )
-;
-[then]
-
-fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
-fload ${BP}/ofw/core/availpm.fth	\ Available memory list
 
 fload ${BP}/cpu/arm/olpc/1.75/probemem.fth	\ Memory probing
 
@@ -79,7 +79,6 @@ fload ${BP}/ofw/core/initdict.fth	\ Dynamic dictionary allocation
 fload ${BP}/arch/arm/loadarea.fth	\ Allocate and map program load area
 [else]
 fload ${BP}/cpu/arm/mmp2/mmuon.fth
-' page-table@ to section-table
 [then]
 
 \ XXX should be elsewhere

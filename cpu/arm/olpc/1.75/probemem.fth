@@ -3,6 +3,9 @@ copyright: Copyright 1994 FirmWorks  All Rights Reserved
 
 " /memory" find-device
 
+: (memory?)  ( phys -- flag )  fb-mem-va >physical  u<  ;
+' (memory?) to memory?
+
 headerless
 
 h# ffff.ffff value low
@@ -16,15 +19,16 @@ h#         0 value high
 
 headers
 : probe  ( -- )
-   0 /available-mem log&release
+   0  fb-mem-va >physical   /fb-mem +  log&release
 
    0 0 encode-bytes                                   ( adr 0 )
    physavail  ['] make-phys-memlist  find-node        ( adr len  prev 0 )
    2drop  " reg" property
 
-   \ Claim the memory used by OFW
-   fw-mem-pa  /fw-mem    0 claim  drop
-   extra-mem-pa  /extra-mem  0 claim  drop
+   \ Claim the memory already in use
+   fb-mem-va    >physical   /fb-mem     0 claim  drop
+   fw-mem-va    >physical   /fw-mem     0 claim  drop
+   extra-mem-va >physical   /extra-mem  0 claim  drop
 
    0 pagesize  0 claim  drop       \ Vector table
 ;
