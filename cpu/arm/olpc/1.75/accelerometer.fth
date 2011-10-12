@@ -8,7 +8,6 @@ my-address my-space encode-phys  " reg" property
 \ This is for the stand-alone accelerometer chip LIS33DETR
 
 \ We could call this just once in open if we had a TWSI parent node
-: set-address  ( -- )  h# 3a 6 set-twsi-target  ;
 : acc-reg@  ( reg# -- b )  1 1 " smbus-out-in" $call-parent  ;
 : acc-reg!  ( b reg# -- )  2 0 " smbus-out-in" $call-parent  ;
 : ctl1!  ( b -- )  h# 20 acc-reg!  ;
@@ -46,7 +45,7 @@ my-address my-space encode-phys  " reg" property
 
 : delay  ( -- )  d# 30 ms  ;
 : open  ( -- flag )
-   my-address my-space " set-address" $call-parent
+   my-unit " set-address" $call-parent
    d# 25,000 " set-bus-speed" $call-parent
    ['] accelerometer-on catch 0=   
 ;
