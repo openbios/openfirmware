@@ -345,7 +345,6 @@ false value playing?
    out-len  if  copy-out  then  \ Prefill the second buffer
    start-out-ring
    master-tx
-   dac-on
    install-playback-alarm
    true to playing?
 ;
@@ -390,7 +389,6 @@ false value playing?
    make-in-ring                ( actual )
    start-in-ring               ( actual )
    master-rx                   ( actual )
-   adc-on                      ( actual )
    begin  in-len  while        ( actual )
       wait-in                  ( actual )
       copy-in                  ( actual )
@@ -436,8 +434,6 @@ false value playing?
    master-rx                   ( )  \ Now the clock is on
    slave-tx                    ( )
 
-   adc+dac-on                  ( )
-
    true to playing?
 
    begin  in-len playing? or  while  ( )
@@ -453,11 +449,8 @@ false value playing?
    reset-rx
    reset-tx
 
-   dac-off  adc-off            ( )
-
-   mono?  if  collapse-in  then  ( )
-
    close-out-in
+   mono?  if  collapse-in  then  ( )
 ;
 
 0 [if]  \ Interactive test words for out-in

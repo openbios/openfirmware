@@ -1,12 +1,6 @@
 \ See license at end of file
 purpose: Driver for Realtek ALC5631Q audio CODEC chip
 
-: adc-on  ( -- )  h# 0c00 h# 3a codec-set  ;
-: adc-off ( -- )  h# 0c00 h# 3a codec-clr  ;
-: dac-on  ( -- )  h# 0300 h# 3a codec-set  ;
-: dac-off ( -- )  h# 0300 h# 3a codec-clr  ;
-: adc+dac-on  ( -- )  h# 0f00 h# 3a codec-set  ;
-
 : set-routing  ( -- )
    h# c0c0 h# 02 codec-set  \ SPKMIXLR -> SPKVOLLR, muted
    h# c0c0 h# 04 codec-set  \ OUTMIXLR -> HPOVOLLR, muted
@@ -44,14 +38,6 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
 
    h# 1010 h# 38 codec!  \ Divisors; the values in this register don't seem to make much
    \ difference unless you set the divisors to very high values.
-;
-: elided  ( -- )
-   \ The ADC and DAC will be turned on as needed by adc-on and dac-on, after
-   \ the BCLK clock from the SoC is on.  If you turn on the ADC when BCLK is
-   \ not clocking, the ADC often doesn't output any data.
-   b# 1001.0000.1110.0000 h# 3a codec!  \ All on except ADC and DAC
-   b# 1111.1100.0011.1100 h# 3b codec!  \ All on except PLL
-   b# 1111.1100.0000.0000 h# 3e codec!  \ AXI and MONO IN off
 ;
 : mic-bias-off  ( -- )  h# 000c h# 3b codec-clr  ;
 : mic-bias-on   ( -- )  h# 000c h# 3b codec-set  ;
@@ -176,11 +162,13 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
 \  h# 0000 pwr3b!  \ Power off PLL
 ;
 : open-out-specific  ( -- )
+   \ Turning on the DAC here at the beginning seems to prevent pops better than doing
+   \ it a few steps later at the point that Realtek suggested.
+   h# 0300 h# 3a codec-set                              \ Power on DACs
    h# 0060 h# 3a codec-set                              \ Power on DAC to mixer
    speakers-on?    if  h# 1000 h# 3a codec-set  then    \ Power on ClassD amp
    speakers-on?    if  h# c000 h# 3e codec-set  then    \ Power on SPKL/RVOL
    headphones-on?  if  h# 0c00 h# 3e codec-set  then    \ Power on HPOVOLL/R
-\  h# 0300 h# 3a codec-set                              \ Power on DACL/R - defer until dac-on is called by start-audio-out or out-in
    h# c000 pwr3b!                                       \ Power on OUTMIXL/R
    speakers-on?    if  h# 3000 h# 3b codec-set  then    \ Power on SPKMIXL/R
 
@@ -192,7 +180,7 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
    open-common
    open-out-specific
 ;
- 
+
 : close-out-specific  ( -- )
    speakers-on?    if  mute-speakers       then
    headphones-on?  if  hp-powerdown-depop  then
@@ -218,7 +206,7 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
    adc-stereo
    h# 0c00 h# 3b codec-set  \ Power on RECMIXLR
    h# 0030 h# 3b codec-set  \ Power on MIC1/2 boost gain
-\  h# 0c00 h# 3a codec-set  \ Power on ADCL/R - defer until adc-on is called by audio-in or out-in
+   h# 0c00 h# 3a codec-set  \ Power on ADCL/R
 ;
 : open-in  ( -- )
 \  h# 46f0 h# 44 codec!  \ pll: 256000 -> 2048000  ??? why is this different from playback? - 8khz record?

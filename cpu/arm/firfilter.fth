@@ -21,7 +21,9 @@ d# 15 constant mulscale  \ Bits for fractional multipliers
 \ Taps/phase=16
 \ Stride=2 (mono)
 
-code 16tap-upsample  ( 'out 'in /in 'weights #phases -- )
+d# 16 constant taps/phase
+
+code 16tap-upsample  ( 'out 'in /in 'weights #phases -- 'out' )
    ldmia   sp!,{r0,r1,r2,r3}  \ r0:'weights r1:/in r2:'in r3:'out tos:#phases
 
    mov  r4,#15   \ Multiplier scale factor
@@ -88,7 +90,7 @@ code 16tap-upsample  ( 'out 'in /in 'weights #phases -- )
       decs r1,#2                   \ Decrement input length by the sample size
    0<= until
 
-   pop  tos,sp
+   mov  tos,r3
 c;
 
 \ Filter coefficients for 6x upsampling.  The following filter was
@@ -152,9 +154,19 @@ for phase=1:6
 end
 [then]
 
+taps/phase 2+ 2* /w* constant /end-buf 
+/end-buf buffer: end-buf
+
 : upsample6  ( src-adr /src dst-adr -- )
-   enable-iwmmx                                   ( src-adr #src-samples dst-adr )
-   -rot weights-6phase #phases 16tap-upsample     ( )
+   enable-iwmmx                 ( src-adr /src dst-adr )
+   >r taps/phase /w* -          ( src-adr /src'  r: dst-adr )
+   r> third third               ( src-adr /src  dst-adr src-adr /src )
+   weights-6phase #phases 16tap-upsample     ( src-adr /src dst-adr' )
+   -rot +                                    ( dst-adr src-adr' )
+   end-buf /end-buf  erase                   ( dst-adr src-adr' )
+   end-buf taps/phase /w* move               ( dst-adr )
+   end-buf taps/phase /w* weights-6phase #phases 16tap-upsample  ( dst-adr' )
+   drop
 ;
 
 \ LICENSE_BEGIN
