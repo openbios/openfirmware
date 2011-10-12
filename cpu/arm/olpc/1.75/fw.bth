@@ -71,13 +71,13 @@ d# 9999 to arm-linux-machine-type  \ Marvell Jasper
    cif-handler  tag-l,    \ Client interface handler callback address
 
    \ Each of these groups is a struct map_desc as defined in arch/arm/include/asm/mach/
-   extra-mem-va                            tag-l,  \ VA of OFW memory
-   dup  >physical pageshift rshift         tag-l,  \ Page frame number of OFW memory
+   extra-mem-va dup                        tag-l,  \ VA of OFW memory
+   >physical pageshift rshift              tag-l,  \ Page frame number of OFW memory
    fw-mem-va /fw-mem +  extra-mem-va -     tag-l,  \ Size of OFW memory
    MT_MEMORY                               tag-l,  \ Mapping type of OFW memory
 
-   fb-mem-va                               tag-l,  \ VA of OFW Frame Buffer
-   dup >physical pageshift rshift          tag-l,  \ PA of OFW Frame Buffer
+   fb-mem-va dup                           tag-l,  \ VA of OFW Frame Buffer
+   >physical pageshift rshift              tag-l,  \ PA of OFW Frame Buffer
    /fb-mem                                 tag-l,  \ Size of OFW memory
    MT_DEVICE_WC                            tag-l,  \ Mapping type of OFW frame buffer
 ;
