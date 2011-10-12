@@ -1,5 +1,5 @@
 \ The EC microcode
-macro: EC_VERSION 2_2_8
+macro: EC_VERSION 2_2_9
 
 \ Alternate command for getting EC microcode, for testing new versions.
 \ Temporarily uncomment the line and modify the path as necessary
