@@ -94,7 +94,7 @@ defer test-s3  ( -- error? )  ' false is test-s3
 ;
 
 : map-dma  ( -- )
-   dma-mem-va >physical dup  /dma-mem map-sections
+   dma-mem-va >physical  h# c02  over  /dma-mem map-sections
 ;
 : selftest  ( -- error? )
    map-dma
