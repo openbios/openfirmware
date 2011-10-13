@@ -64,6 +64,9 @@ device-end
 ;
 ' (cpu-arch to cpu-arch
 
+[ifndef] virtual-mode
+fload ${BP}/cpu/arm/mmp2/mmuon.fth
+[then]
 fload ${BP}/cpu/arm/olpc/1.75/probemem.fth	\ Memory probing
 
 stand-init: Probing memory
@@ -77,8 +80,6 @@ stand-init: MMU
 ;
 fload ${BP}/ofw/core/initdict.fth	\ Dynamic dictionary allocation
 fload ${BP}/arch/arm/loadarea.fth	\ Allocate and map program load area
-[else]
-fload ${BP}/cpu/arm/mmp2/mmuon.fth
 [then]
 
 \ XXX should be elsewhere

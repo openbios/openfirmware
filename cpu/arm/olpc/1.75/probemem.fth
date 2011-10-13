@@ -93,7 +93,11 @@ defer test-s3  ( -- error? )  ' false is test-s3
    then                                 ( )
 ;
 
+: map-dma  ( -- )
+   dma-mem-va >physical dup  /dma-mem map-sections
+;
 : selftest  ( -- error? )
+   map-dma
 
    false to mem-fail?
 
