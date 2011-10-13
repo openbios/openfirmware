@@ -75,7 +75,7 @@ d# 8 value #fraction-bits
 
 d# 19 d# 20 a/b>fraction value damping
 
-d#  1 d# 10  a/b>fraction value acc-scale
+d#  1 d# 80  a/b>fraction value acc-scale
 
 d# 20 constant ball-radius
 d# 40 constant ball-diameter
