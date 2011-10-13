@@ -5,11 +5,11 @@ headerless
 
 : ofw-model$  ( -- adr len )
    " /openprom" find-package drop  ( phandle )
-   " model" rot get-package-property  if
-      " ???   ?????  ???"
-   else
-      decode-string
-   then
+   " model" rot get-package-property  if  ( )
+      " ???   ?????  ???"          ( adr len )
+   else                            ( adr len )
+      decode-string 2nip           ( adr len' )
+   then                            ( adr len )
 ;
 : ofw-version$  ( -- adr len )
    ofw-model$ drop 6 +  7  -trailing
