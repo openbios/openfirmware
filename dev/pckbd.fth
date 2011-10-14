@@ -285,6 +285,7 @@ previous definitions
     begin  d# 50 timed-read 0=  while
        drop
        true to keyboard-present?
+       olpc-set-ec-keymap
        exit
     repeat
     keyboard-present?  if  exit  then
