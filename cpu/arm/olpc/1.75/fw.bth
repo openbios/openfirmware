@@ -120,6 +120,8 @@ warning @  warning off
 \     d# 1000  i-key-wait  if
       rotate-button? if
          protect-fw
+         \ Make the frame buffer visible so CForth won't complain about OFW not starting
+         h# 8009.1100 h# 20.b190 io!
          ." Interacting" cr  hex interact
       then
       \ Turn on USB power here to overlap the time with other startup actions
