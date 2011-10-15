@@ -673,6 +673,9 @@ copyright: Use is subject to license terms.
 
 headers
 
+defer voc>phandle ' noop to voc>phandle
+defer phandle>voc ' noop to phandle>voc
+
 \ TODO
 \ Don't use the system search order; use a private stack
 \ $find searches through the private stack
@@ -680,14 +683,14 @@ headers
 \ Either implement a true breadth-first search or don't specify it.
 
 2 actions
-action: drop context token@  ;
-action: drop context token!  definitions  ;
+action: drop context token@  voc>phandle  ;
+action: drop phandle>voc  context token!  definitions  ;
 create current-device  use-actions
 
 headerless
 : ufield  \ name  ( offset size -- offset' )
    create  over ,   +
-   does>  @  current-device  >body >user +
+   does>  @  current-device  phandle>voc  >body >user +
 ;
 
 \ Notes for a more abstract searching mechanism:
@@ -715,14 +718,17 @@ dup				\ The following fields will be "ualloc"ed
 constant /devnode-extra
 
 headers
-: >parent  ( node -- parent-node )  >voc-link  link@  ;
+: >parent  ( node -- parent-node )  >voc-link  link@ voc>phandle  ;
 : parent-device  ( -- parent-node )  current-device >parent  ;
 
+: (select-package)  ( phandle -- )  phandle>voc execute  ;
+: (push-package)  ( phandle -- )  also (select-package)  ;
+: (pop-package)  ( phandle -- )  previous  ;
 : push-package  ( phandle -- )
    dup  0=  if  ." Attempting to push null package!!!" abort  then
-   also  execute  definitions
+   (push-package)  definitions
 ;
-: pop-package  ( -- )  previous definitions  ;
+: pop-package  ( -- )  (pop-package) definitions  ;
 : push-device  ( acf -- )  to current-device  ;
 
 : pop-device  ( -- )
@@ -945,7 +951,7 @@ constant #fixed-bufs
 : >initial-value  ( pfa -- adr )
    @
    my-self  if	\ Use current instance's package if there is a current instance
-      my-voc also execute  initial-values  previous
+      my-voc (push-package)  initial-values  (pop-package)
    else		\ Otherwise use the active package
       initial-values
    then
@@ -1045,9 +1051,9 @@ headerless
 \ to a non-existent instance.
 
 : destroy-instance  ( -- )
-   also  my-voc execute               ( )
+   my-voc (push-package)              ( )
    '#values @  '#buffers @  negate    ( value-size variable-size )
-   previous                           ( value-size variable-size )
+   (pop-package)                      ( value-size variable-size )
    deallocate-instance
 
 ;
@@ -1150,6 +1156,9 @@ headerless
 : $vexecute?  ( adr len voc-acf -- true | ??? false)
    (search-wordlist)  if  execute false  else  true  then
 ;
+: $package-execute?  ( adr len phandle -- true | ??? false)
+   phandle>voc (search-wordlist)  if  execute false  else  true  then
+;
 : $vexecute  ( adr len voc-acf -- ?? )  $vexecute? drop  ;
 
 headers
@@ -1227,7 +1236,7 @@ alias dend device-end
 
 : my-#adr-cells  ( -- n )
    my-self  if	\ Use current instance's package if there is a current instance
-      my-voc also execute  '#adr-cells @  previous
+      my-voc (push-package)  '#adr-cells @  (pop-package)
    else		\ Otherwise use the active package
       '#adr-cells @
    then
@@ -1359,7 +1368,7 @@ action:  drop  ;
 
 : property  ( value-adr,len  name-adr,len  -- )
    my-self if
-      context token@ >r my-voc execute
+      context token@ >r my-voc (select-package)
       (property)
       r> context token!
    else
@@ -1515,7 +1524,7 @@ create bad-number ," Bad number syntax"
 
 headers
 : package-execute  ( ?? adr len -- ?? )
-   current-device $vexecute?  abort" Package method not found"
+   current-device $package-execute?  abort" Package method not found"
 ;
 headerless
 
@@ -1788,8 +1797,8 @@ headerless
    get-unit  0=  if                           ( unit-str )
       ." @"
       unit-str>phys                           ( phys.lo .. phys.hi )
-      " encode-unit"  parent-device           ( phys.lo .. phys.hi adr,len ph )
-      $vexecute?  if                          ( phys.lo .. phys.hi )
+      " encode-unit"  parent-device           ( phys.lo .. phys.hi adr,len phandle )
+      $package-execute?  if                   ( phys.lo .. phys.hi )
          '#adr-cells @  if  .nh  then         ( phys.lo .. phys.next )
 	 '#adr-cells @ 1-  0 max  0  ?do  ." ,"  .nh  loop  ( )
       else
@@ -2132,7 +2141,7 @@ headers
 ;
 
 : get-package-property  ( adr len phandle -- true | adr' len' false )
-   also execute  get-property  previous
+   (push-package)  get-property  (pop-package)
 ;
 
 \ Used when executing from an open package instance.  Finds a property
@@ -2273,7 +2282,7 @@ headers
 ;
 
 : apply-method  ( adr len -- no-such-method? )
-   my-voc fm-hook  ['] $vexecute?  catch  ?dup  if  ( x x x errno )
+   my-voc fm-hook  ['] $package-execute?  catch  ?dup  if  ( x x x errno )
       \ executing method caused an error
       nip nip nip                                   ( errno )
    then                                             ( ??? false | true | errno )
@@ -2771,7 +2780,7 @@ variable 'fb-node  origin 'fb-node token!
    " @" encode-bytes+ 2>r	           ( phys .. )          ( R: $ )
 
    " encode-unit"  parent-device           ( phys .. adr,len phandle ) ( R: $ )
-   $vexecute?  if                          ( phys .. )          ( R: $ )
+   $package-execute?  if                       ( phys .. )          ( R: $ )
 
       2r>                                      ( phys .. adr,len )  ( R: )
       '#adr-cells @  if  encode-number+  then  ( phys .  adr,len' )
@@ -3164,9 +3173,9 @@ copyright: Copyright 1990 Sun Microsystems, Inc.  All Rights Reserved
 headerless
 : (trace)  ( adr len phandle -- adr len phandle )
    >r  >r >r  .s  r> r>           ( adr len )  ( r: phandle )
-   also  r@ execute               ( adr len )  ( r: phandle )
+   r@ (push-package)              ( adr len )  ( r: phandle )
    " name" get-property           ( adr len value-str false )  ( r: phandle )
-   previous                       ( adr len value-str false )  ( r: phandle )
+   (pop-package)                  ( adr len value-str false )  ( r: phandle )
    drop get-encoded-string  type  ( adr len )  ( r: phandle )
    ." : "  2dup type space  cr    ( adr len )  ( r: phandle )
    r>                             ( adr len phandle )
@@ -4051,7 +4060,7 @@ headerless
 ;
 
 : setnode  ( nodeid | 0 -- )
-   dup 0=  if  drop ['] root-node  then  also execute
+   dup 0=  if  drop ['] root-node  then  (push-package)
 ;
 
 \ : copyout  ( buf adr len -- len )  >r swap r@ cmove r>  ;
@@ -4124,7 +4133,7 @@ d# 32 buffer: canon-prop
          false                       ( false )
       then
    then                              ( cstr )
-   previous
+   (pop-package)
 ;
 : .cstr  ( cstr -- )  begin  dup c@ ?dup  while  emit 1+  repeat  drop  ;
 
@@ -4150,10 +4159,10 @@ caps @ caps off
    setnode                           ( )
    0  'child                         ( last-nodeid &next-nodeid )
    begin  get-token?  while          ( last-nodeid next-nodeid )
-      nip  dup execute               ( next-nodeid )
+      nip  dup (select-package)      ( next-nodeid )
       'peer                          ( last-nodeid' &next-nodeid )
    repeat                            ( last-nodeid' )
-   previous                          ( nodeid )
+   (pop-package)                     ( nodeid )
 ;
 
 : peer  ( phandle -- phandle' )
@@ -4166,8 +4175,8 @@ caps @ caps off
    then                              ( nodeid )
 
    \ Select the first child of our parent
-   dup >parent also execute          ( nodeid )
-   'child token@ execute             ( nodeid )
+   dup >parent (push-package)        ( nodeid )
+   'child token@ (select-package)    ( nodeid )
 
    dup current-device  =  if         ( nodeid )
       \ Argument node is first child of parent; return "no more nodes"
@@ -4181,7 +4190,7 @@ caps @ caps off
       repeat                         ( nodeid )
       2drop current-device           ( nodeid' )
    then                              ( nodeid | 0 )
-   previous                          ( nodeid | 0 )
+   (pop-package)                     ( nodeid | 0 )
 ;
 
 : parent  ( phandle -- phandle' )
@@ -4203,7 +4212,7 @@ caps @ caps off
          2drop -1                              ( -1 )
       then                                     ( len | -1 )
    then                                        ( len | -1 )
-   previous                                    ( len | -1 )
+   (pop-package)                               ( len | -1 )
 ;
 
 : instance-to-package  ( ihandle -- phandle )  ihandle>phandle  ;
@@ -4228,7 +4237,7 @@ caps @ caps off
          2drop 2drop -1                                   ( -1 )
       then                                                ( len|-1 )
    then                                                   ( len|-1 )
-   previous                                               ( len|-1 )
+   (pop-package)                                          ( len|-1 )
 ;
 
 : nextprop  ( buf prev phandle -- 1|0|-1 )
@@ -4259,7 +4268,7 @@ caps @ caps off
          2drop 2drop -1                 ( -1 )
       then                              ( len|-1 )
    then                                 ( len|-1 )
-   previous
+   (pop-package)
 ;
 
 : finddevice  ( cstr -- phandle )  cscount  locate-device ?dup drop  ;
@@ -4325,8 +4334,8 @@ headerless
 
 : append-my-unit  ( phys.. -- )
    " @" canon+
-   " encode-unit"  parent-device              ( phys.. adr,len ph )
-   $vexecute?  if                             ( phys.. )
+   " encode-unit"  parent-device              ( phys.. adr,len phandle )
+   $package-execute?  if                      ( phys.. )
       '#adr-cells @  if  (nh.) canon+  then   ( phys.lo .. phys.next )
       '#adr-cells @ 1-  0 max  0  ?do         ( phys.lo .. phys.next )
          " ," canon+ (nh.) canon+             ( phys.lo .. phys.next' )
@@ -4424,13 +4433,13 @@ copyright: Copyright 1990-1994 Sun Microsystems, Inc.  All Rights Reserved
 headerless
 : ?delete-address  ( adr len -- adr len )
    my-self  if                                       ( adr len )
-      also  my-voc execute                           ( adr len )
+      my-voc (push-package)                          ( adr len )
       " address" get-property  0=  if                ( adr len value-adr,len )
          get-encoded-int  2 pick  =  if              ( adr len )
             " address" delete-property               ( adr len )
          then                                        ( adr len )
       then                                           ( adr len )
-      previous                                       ( adr len )
+      (pop-package)                                  ( adr len )
    then                                              ( adr len )
 ;
 headers
