@@ -1,0 +1,42 @@
+Artec End   VIA End
+
+1 RESET     2
+2 LAD0      4
+3 LAD1      6
+4 LAD2      8
+5 LAD3      7
+6 LFRAME#   5
+7 GND1      -
+8 CLK       3
+9 GND2      9
+10 3V3      1
+
+
+ARTEC Positionally looking down onto
+the unit with the 7-seg displays
+away from you.
+
+Bot       Top
+Row       Row
+
+3V3 10  9 GND
+CLK  8  7 GND
+LFR  6  5 LA3
+LA2  4  3 LA1
+LA0  2  1 RST
+
+
+VIA  Positionally looking down onto the
+board with the silkscreen right-reading
+
+ G L L C 3
+ N A F L V
+ D 3 R K 3
+
+ 9 7 5 3 1
+
+10 8 6 4 2
+
+   L L L R
+   A A A S
+   2 1 0 T

@@ -1,0 +1,8 @@
+Phoenix flash recipe
+
+patch noop ?image-valid $get-file
+get-file http:\\10.20.0.14\phoenix.bin
+flash-write-enable
+flash-buf 10.0000 0 write-flash-range
+flash-buf 10.0000 0 verify-flash-range
+flash-write-disable

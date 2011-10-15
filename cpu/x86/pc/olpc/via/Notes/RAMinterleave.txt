@@ -1,0 +1,8 @@
+Scramble plan for interleave 001  MA5
+
+RAM  BA2 BA1 BA0 A14 A13 A12 A11 A10 A09 A08 A07 A06 A05 A04 A03 A02 A01 A00
+ROW               30  29  28  22  21  27  19  18  17  16  25  24  23  20  26
+COL   15  14  13                  AP  12  11  10   9   8   7   6   5   4   3
+
+BIOS porting guide p 56 (77) - 59 (80)
+Programmers manual p 47 (56) - 48 (57)

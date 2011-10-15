@@ -1,0 +1,22 @@
+From william wong - address muxing for VX855
+
+interleave type 001
+
+BA2       15
+BA1       14
+BA0       13
+A14  30
+a13  29
+a12  28
+a11  22
+a10  21   AP
+a9   27   12
+a8   19   11
+a7   18   10
+a6   17    9
+a5   16    8
+a4   25    7
+a3   24    6
+a2   23    5
+a1   20    4
+a0   26    3

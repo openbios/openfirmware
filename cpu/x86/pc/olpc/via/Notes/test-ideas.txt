@@ -1,0 +1,11 @@
+attach plastic handles to cables to make insertion easier
+display test - show one pattern because operators don't watch the progression
+led test - flash all leds at once until operator confirms
+audio test - messages before speaker and loopback tests
+only one suspend pass
+shorten dhcp retry delay
+shorter camera test
+remind operator to remove internal SD card before finish
+AC test did not ask for cable to be removed
+led test only flashed one led - maybe because no wlan reception (no antenna)
+
