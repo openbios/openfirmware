@@ -1,0 +1,49 @@
+Index: cpu/x86/pc/olpc/via/devices.fth
+===================================================================
+--- cpu/x86/pc/olpc/via/devices.fth	(revision 2605)
++++ cpu/x86/pc/olpc/via/devices.fth	(working copy)
+@@ -66,6 +66,44 @@
+    fload ${BP}/dev/pci/isamisc.fth
+ end-package
+ 
++\ to be placed in new file via/gpio.fth
++\ floaded by via/devices.fth
++\ This implements the HDD LED in the form expected by Linux.
++\ See Documentation/devicetree/bindings/gpio/led.txt
++0 0  " i44b"  " /isa"  begin-package
++   " gpios" device-name
++   " via,vx855-gpio" +compatible
++   0 0 " gpio-controller" property
++   2 " #gpio-cells" integer-property
++   my-address my-space 8 reg
++end-package
++
++0 0  " "  " /" begin-package
++   " gpio-leds" device-name
++   " gpio-leds" +compatible
++
++   new-device
++      " hdd" device-name
++      " mmc2" " linux,default-trigger" string-property
++      \ gpios property will be added later to avoid relocation/byte-order issues
++      \ with embedding phandles in property values
++   finish-device
++end-package
++
++\ Create a "gpios" property in the child node.  The 
++: make-gpios-property  ( flags gpio# child-node$ -- )
++   find-device                                               ( n1 n0 )
++      " /isa/gpios" locate-device abort" Can't find gpios"   ( n1 n0 phandle )
++      encode-int  rot encode-int encode+   rot encode-int encode+  " gpios" property
++   device-end
++;   
++
++stand-init: gpios properties
++   \ HDD LED is on GPIO38 as seen by Linux
++   \ which is GPIO11 in VIA docs. It is active low.
++   1  d# 38 " /gpio-leds/hdd" make-gpios-property
++;
++
+ fload ${BP}/cpu/x86/pc/olpc/timertest.fth  \ Selftest for PIT timer
+ 
+ warning @ warning off
