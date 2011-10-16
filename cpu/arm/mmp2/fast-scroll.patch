@@ -1,0 +1,72 @@
+Index: cpu/arm/fb8-ops.fth
+===================================================================
+--- cpu/arm/fb8-ops.fth	(revision 2605)
++++ cpu/arm/fb8-ops.fth	(working copy)
+@@ -324,7 +324,67 @@
+       add     r3,r3,r1
+    repeat
+ c;
++0 [if]
++\ This is a (perhaps) faster version of fb-window-move that operates
++\ on 16 bytes in the inner loop, instead of 8.
++code fbx-window-move  ( src-start dst-start size bytes/line width -- )
++   mov     r0,tos
++   ldmia   sp!,{r1,r2,r3,r4,tos}
++   psh     r9,sp
++   \ r0:width  r1: bytes/line  r2:size  r3:dst-start  r4:src-start
++   sub     r1,r1,r0	\ r1:bytes/line - width
++   add     r2,r2,r4	\ r2:end-of-src-copy-region
++   begin
++      cmp     r4,r2
++   < while
++      mov     r9,r0	\ r9:loop-width
++      begin
++         decs    r9,#16
++         ldmgeia r4!,{r5,r6,r7,r8}
++         stmgeia r3!,{r5,r6,r7,r8}
++      < until
+ 
++      add     r4,r4,r1
++      add     r3,r3,r1
++   repeat
++   pop r9,sp
++c;
++[then]
++0 [if]
++: foo-dli  ( break-hi src-start dst-start size bytes/line width -- break-hi' )
++   3drop  over h# f4 lcd!  over to frame-buffer-adr   ( break-hi src dst )
++   \ Since we have moved the frame buffer address, we have to adjust break-hi,
++   \ which is the address where fb8-delete-lines will begin erasing, by the
++   \ difference
++   - +   ( break-hi' )
++;   
++\ XXX this only works for scrolling
++: screen-size  ( -- n ) #lines char-height * bytes/line *  ;
++: fb-limit  ( -- adr )  fb-pa fb-size +  ;
++
++: bytes/row  ( -- #bytes )  char-height bytes/line *  ;
++: excess-lines  ( -- #lines )  fb-size bytes/row / #lines -  1+  ;
++: excess-bytes  ( -- #bytes )  excess-lines  bytes/row *  ;
++: mmp2-delete-lines  ( delta-#lines -- )
++   line# 0<>  if  fb8-delete-lines exit  then
++   dup break-high  dup excess-bytes -  dup  fb-pa >=  if  ( delta src dst )
++      bytes/row  bytes/line  emu-bytes/line fb-window-move   ( delta-#lines )
++   else                                           ( delta src dst )
++      2drop                                       ( delta-#lines )
++   then                                           ( delta-#lines )
++   
++   window-bottom bytes/row +  fb-limit >  if      ( delta-#lines )
++      fb-pa                                       ( delta-#lines new-base )
++   else                                           ( delta-#lines )
++      dup break-low                               ( delta-#lines new-base )
++   then                                           ( delta-#lines )
++   dup h# f4 lcd!  to frame-buffer-adr            ( delta-#lines )
++   window-bottom swap break-high erase-lines      ( )
++;
++' mmp2-delete-lines to delete-lines
++[then]
++
++
+ \ LICENSE_BEGIN
+ \ Copyright (c) 1997 FirmWorks
+ \
