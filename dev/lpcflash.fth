@@ -78,9 +78,16 @@ warning !
 \ software locking, while SST47LF080A (LPC version) does not.  Writing
 \ the lock register addresses is innocuous on the ones without locking.
 
-: write-enable-block  ( offset -- )
+: (write-enable-block)  ( offset -- )
    h# ffff invert and  2  or         ( we-offset )
    regs-adr +   0 swap c!
+;
+: write-enable-block  ( offset -- )
+   regs-adr  if
+      (write-enable-block)
+   else
+      map-regs  (write-enable-block)  unmap-regs
+   then
 ;
 
 : write-setup  ( -- )  h# aa jedec!  h# 55 h# 2aaa >lpc-adr c!  ;
@@ -125,6 +132,7 @@ warning !
 ;
 
 : flash-write  ( adr len offset -- )
+   dup write-enable-block      ( adr len offset )
    -rot  bounds  ?do           ( offset )
       i c@ over lpc!   1+      ( offset' )
    loop                        ( offset )
