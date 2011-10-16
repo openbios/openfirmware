@@ -1,0 +1,57 @@
+*** i8042.fth	2011-06-29 22:17:18.000000000 -1000
+--- i8042-forced-reset.fth	2011-06-29 22:16:40.000000000 -1000
+***************
+*** 239,246 ****
+--- 239,268 ----
+     endcase
+     ." The keyboard '" type  ." ' line is stuck " type  ." ."  cr
+     false
+  ;
++ : consume  ( -- )
++    \ Discard any data that is already queued up
++    begin  d# 10 ms  stat@  out-buf-full and  while
++       data@ drop
++    repeat
++    d# 10 ms
++ ;
++ : reset-ps2  ( -- )
++    consume
++ 
++    \ Reset the mouse if the controller is expecting a mouse command
++    stat@ h# 38 =  if  h# ff data!  consume   then
++ 
++    \ Reset the mouse if the controller is reporting an aux port ready bit
++    stat@ h# 30 =  if
++       h# ff h# d4 put-ctlr-cmd2  consume
++    then
++ 
++    \ Reset the keyboard just for good measure
++    h# ff data!  consume
++ ;      
++ 
+  headerless
+  0 value open-count
+  headers
+  : open  ( -- flag? )
+***************
+*** 248,261 ****
+--- 270,288 ----
+     data-port 0=  if
+        my-address my-space  5  " map-in" $call-parent  is data-port
+        data-port 4 + is cmd-status-reg
+  
++ [ifdef] notdef
+        ctlr-selftest  if
+           ctlr-selftest  if	\ Retry in case we're out of sync
+              ." Failed keyboard controller self test" cr
+              false exit
+           then
+        then
++ [else]
++    reset-ps2
++ [then]
++ 
+        q0 init-q  q1 init-q
+     then
+     true
+  ;
