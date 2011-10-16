@@ -3,7 +3,7 @@ purpose: Time and date decoding functions
 
 variable clock-node  ' clock-node  " clock" chosen-variable
 
-: time&date  ( -- s m h d m y )
+: ofw-time&date  ( -- s m h d m y )
    " get-date" clock-node @ ihandle>phandle find-method  if
       drop
       " get-time" clock-node @  $call-method  swap rot
@@ -12,14 +12,16 @@ variable clock-node  ' clock-node  " clock" chosen-variable
       " get-time" clock-node @  $call-method
    then
 ;
-: now  ( -- s m h )  time&date 3drop  ;
-: today  ( -- d m y )  time&date >r >r >r  3drop  r> r> r>  ;
+stand-init:
+   ['] ofw-time&date to time&date
+;
 
 headerless
 : 2.d  ( n -- )   push-decimal  (.2)  type  pop-base  ;
+: 4.d  ( n -- )   push-decimal  <# u# u# u# u# u#>  type  pop-base  ;
 
 headers
-: .date  ( d m y -- )   swap 2.d ." /" swap 2.d ." /" d# 100 mod 2.d  ;
+: .date  ( d m y -- )   4.d ." -" 2.d ." -" 2.d  ;
 : .time  ( s m h -- )   2.d ." :" 2.d ." :" 2.d  ;
 
 \ Interactive diagnostic

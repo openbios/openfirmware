@@ -169,6 +169,12 @@ headerless
    $cstr d# 84 syscall drop retval  dup  if  cscount false  else  drop true  then
 ;
 
+: l@+  ( adr -- l adr' )  dup l@  swap la1+  ;
+: sys-time&date  ( -- s m h d m y )
+   d# 64 syscall retval                     ( adr )
+   l@+ l@+ l@+ l@+ l@+ l@+ drop  d# 1900 +  ( s m h d m y )
+;
+
 : install-wrapper-alloc  ( -- )
    \ Don't use "is" in case a relocation map needs to be allocated first
    ['] sys-alloc-mem    ['] alloc-mem >body >user token!
@@ -194,6 +200,7 @@ headerless
    \ init-relocation goes here, for versions that need it
    install-wrapper-key
    ['] sys-$getenv is $getenv
+   ['] sys-time&date is time&date
 ;
 
 headers

@@ -3134,6 +3134,10 @@ variable arg#
    bye
 ;
 [then]
+defer time&date  ( -- s m h d m y )
+: now  ( -- s m h )  time&date 3drop  ;
+: today  ( -- d m y )  time&date >r >r >r  3drop  r> r> r>  ;
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

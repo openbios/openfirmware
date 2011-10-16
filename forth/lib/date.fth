@@ -1,30 +1,7 @@
 \ See license at end of file
-purpose: Date and Time-of-day access
+purpose: Date and Time-of-day display
 
 decimal
-variable tmstruct
-: tmfield  \ name  ( offset -- offset' )
-   create  dup ,  la1+
-   does> @  tmstruct @ +
-;
-
-struct   \ tm struct returned by 4.2 localtime call
-tmfield tm_sec
-tmfield tm_min 
-tmfield tm_hour
-tmfield tm_mday
-tmfield tm_mon
-tmfield tm_year
-tmfield tm_wday
-tmfield tm_yday
-tmfield tm_isdst
-drop
-
-: (today  ( -- timeval-struct-adr )  64 syscall retval tmstruct !  ;
-: today  ( -- day month year)
-   (today  tm_mday l@   tm_mon  l@ 1+  tm_year l@ 1900 +
-;
-: now  ( -- sec min hour )  (today  tm_sec l@  tm_min l@  tm_hour l@  ;
 : time-zone  ( -- minutes-west-of-GMT)  68 syscall retval  ;
 : .time-zone  ( -- )   72 syscall retval cscount type  ;
 
@@ -76,6 +53,7 @@ end-string-array
 ;
 : .now  ( -- )  now .time  ;
 : .today  ( -- )  today .date  ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
