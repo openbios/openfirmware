@@ -73,7 +73,7 @@ defer osfile$ ' null$ to osfile$
       i c@ [char] \ =  if  [char] / i c!  then
    loop
 ;
-: $fopen  ( adr len -- fd )  $cstr  0 swap 8 syscall 2drop retval  ;
+: $fopen  ( adr len -- fd )  $cstr  2 swap 8 syscall 2drop retval  ;
 : open  ( -- flag )
    my-args                                      ( arg$ ) 
    osfile$  dup 0=  if                          ( arg$ null$ )
