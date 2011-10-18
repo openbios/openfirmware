@@ -4,13 +4,80 @@
 \ Exercises several OFW features on an ext2 filesystem on a USB stick
 \ see associated test.sh
 
+[ifndef] $md5sum-file
+: $md5sum-file  ( prefix$ filename$ -- )
+   \ Read file into memory and compute its MD5 hash
+   2dup $read-file abort" Read error" ( prefix$ filename$ adr len )
+   2dup $md5digest1        ( prefix$ filename$ adr len md5$ )
+   2swap free-mem          ( prefix$ filename$ md5$ )
+
+   \ Write the hash and the filename in the same format as
+   \ the output of the Linux "md5sum" command.  prefix$ should
+   \ be " *" to match the output of "md5sum -b" and "  "
+   \ to match the output of "md5sum" without -b.
+
+   \ Output MD5 in lower case ASCII hex
+   push-hex                ( prefix$ filename$ md5$ )
+   bounds  ?do             ( prefix$ filename$ )
+      i c@  <# u# u# u#> type
+   loop                    ( prefix$ filename$ )
+   pop-base                ( prefix$ filename$ )
+
+   \ ... followed by "  filename" or " *filename"
+   ."  "                   ( prefix$ filename$ )
+   2swap type              ( filename$ )
+   type                    ( )
+   cr
+;
+
+: md5sum  ( "file" -- )
+   "  " safe-parse-word $md5sum-file
+;
+[then]
+
+0 value a-adr
+0 value a-len
+0 value b-adr
+0 value b-len
+
+: (read-files)  ( "a" "b" -- )
+   safe-parse-word $read-file abort" Read error"
+   to b-len to b-adr
+   safe-parse-word $read-file abort" Read error"
+   to a-len to a-adr
+;
+
+: (compare-files)  ( -- equal-flag )
+   a-len b-len = if
+      a-adr b-adr b-len comp 0=
+   else
+      false
+   then
+;
+
+: (free-files)
+   a-adr a-len free-mem
+   b-adr b-len free-mem
+;
+
+: compare-files
+   (read-files) (compare-files) (free-files)
+   if ." files equal" cr else ." files differ" cr then
+;
+
+: compare-md5-files
+   (read-files)
+   d# 32 to a-len
+   d# 32 to b-len
+   (compare-files)
+   (free-files)
+   if ." checksums equal" cr else ." checksums differ" cr then
+;
+
 visible
 no-page
-start-logging
 
 .( test.fth ticket #6210 ofw ext2 filesystem tests ) cr
-
-show-aborts on
 
 .( test 0001 define u: ) cr
 volume: u:
@@ -18,11 +85,11 @@ volume: u:
 .( test 0002 reference u: ) cr
 u:
 
-\ .( test 0003 directory ) cr
-\ dir
+.( test 0003 directory ) cr
+dir
 
-\ .( test 0004 directory by name ) cr
-\ dir *.fth
+.( test 0004 directory by name ) cr
+dir boot\*.fth
 
 .( test 0005 chdir down ) cr
 chdir directory
@@ -56,6 +123,7 @@ more u:\directory\hw
 
 .( test 0015 copy a file ) cr
 copy u:\hello-world u:\copy
+.(           ) compare-files u:\hello-world u:\copy
 
 .( test 0016 display the copy ) cr
 more u:\copy
@@ -69,41 +137,61 @@ del u:\renamed
 .( test 0019 delete a non-existent file ) cr
 del u:\vapour
 
-: load-file ( "devspec" -- adr len )
-   safe-parse-word
-   open-dev  dup 0=  abort" Can't open it"   ( ih )
-   >r                                        ( r: ih )
-   load-base " load" r@ $call-method         ( len r: ih )
-   r> close-dev                              ( len )
-   load-base swap
-;
-
-: calculate-md5 ( adr len -- adr len )
-   $md5digest1 ;
-
-: print-md5 ( adr len -- )
-  bounds ?do i c@ (.2) type loop space ;
-
-: md5sum  ( "devspec" -- )  load-file  calculate-md5  print-md5  ;
-
 .( test 0020 calculate md5sum of a test file ) cr
-md5sum u:\hello-world cr
+.(           ) md5sum u:\hello-world
 
 .( test 0021 calculate md5sum of a test file and save to a file ) cr
-del u:\hello-world.md5
-load-file u:\hello-world calculate-md5 to-file u:\hello-world.md5 print-md5
+del u:\tmp.md5
+to-file u:\tmp.md5  md5sum u:\hello-world
+.(           ) compare-md5-files u:\tmp.md5 u:\hello-world.md5
+del u:\tmp.md5
 
 .( test 0022 dump forth dictionary to file ) cr
+to-file u:\words.txt  words
+to-file u:\words.tmp  words
+.(           ) compare-files u:\words.txt u:\words.tmp
 del u:\words.txt
-to-file u:\words.txt words
+del u:\words.tmp
 
-\ reference: forth/lib/tofile.fth
-\ to-file u:\words words
-\ append-to-file u:\words words
+.( test 0023 glob file copy ) cr
 
-.( done ) cr
-save-log u:\ofw.log
-stop-logging
+.(           create input files ... )
+.( a ) to-file u:\a.tst  cr
+.( b ) to-file u:\b.tst  cr
+.( c ) to-file u:\c.tst  cr
+.( d ) to-file u:\d.tst  cr
+.( e ) to-file u:\e.tst  cr
+.( f ) to-file u:\f.tst  cr
+cr
 
-\ .( boot ) cr
-\ boot n:\boot\olpc.fth
+.(           create directory ... )
+mkdir u:\j
+.( ok ) cr
+
+.(           copy ... )
+copy u:\*.tst u:\j
+.( ok ) cr
+
+.(           delete copies ... )
+.( a ) del u:\j\a.tst
+.( b ) del u:\j\b.tst
+.( c ) del u:\j\c.tst
+.( d ) del u:\j\d.tst
+.( e ) del u:\j\e.tst
+.( f ) del u:\j\f.tst
+.( ok ) cr
+
+.(           delete directory ... )
+rmdir u:\j
+.( ok ) cr
+
+.(           delete input files )
+.( a ) del u:\a.tst
+.( b ) del u:\b.tst
+.( c ) del u:\c.tst
+.( d ) del u:\d.tst
+.( e ) del u:\e.tst
+.( f ) del u:\f.tst
+.( ok ) cr
+
+.( test complete ) cr
