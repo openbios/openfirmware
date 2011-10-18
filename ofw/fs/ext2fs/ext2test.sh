@@ -142,6 +142,7 @@ cd /mnt
 touch touched
 echo hello > hello
 echo hello world > hello-world
+md5sum hello-world > hello-world.md5
 date > date
 ln -s hello hello-link
 mkdir directory
