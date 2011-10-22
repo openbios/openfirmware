@@ -63,6 +63,8 @@ call-tftp: oc-checksum     ( n adr len -- n' )
 call-tftp: link-mtu        ( -- n )
 call-tftp: max-ip-payload  ( -- n )
 call-tftp: alloc-udp-port  ( -- port# )
+call-tftp: known?          ( 'ip -- flag )
+call-tftp: ntp-server-ip   ( -- 'ip )
 
 finish-device
 device-end
