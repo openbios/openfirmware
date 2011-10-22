@@ -6,26 +6,7 @@ struct
    /l field >h_sequence
 constant /journal-header
    
-/journal-header
-     /c  field >h_chksum_type
-     /c  field >h_chksum_size
-   2 /c*       \ Padding
-   4 /l* field >h_chksum
-   2 /l* field >h_commit_sec
-     /l  field >h_commit_nsec
-constant /commit-header
-
-/journal-header
-   /l field >r_count
-constant /revoke-header
-
-struct
-   /l field >t_blocknr
-   /l field >t_flags
-dup constant /tag32
-   /l field >t_blocknr_high
-constant /tag64
-
+\ Superblock - blocktype 3 (version 1) or 4 (version 2)
 /journal-header
    /l field >s_blocksize
    /l field >s_maxlen
@@ -38,6 +19,30 @@ constant /tag64
    /l field >s_feature_ro_compat
    \ We don't need the rest
 drop
+
+\ Commit header - blocktype 2
+/journal-header
+     /c  field >h_chksum_type
+     /c  field >h_chksum_size
+   2 /c*       \ Padding
+   4 /l* field >h_chksum
+   2 /l* field >h_commit_sec
+     /l  field >h_commit_nsec
+constant /commit-header
+
+\ Revoke header - blocktype 5
+/journal-header
+   /l field >r_count
+constant /revoke-header
+
+\ Descriptor block - blocktype 1 - journal header followed by an array of tags
+\ Tag - 32-bit and 64-bit forms
+struct
+   /l field >t_blocknr
+   /l field >t_flags
+dup constant /tag32
+   /l field >t_blocknr_high
+constant /tag64
 
 0 value j-buf
 0 value j-compat
@@ -72,7 +77,7 @@ drop
    then
 
    jsb >s_start be-l@  to j-start
-   jsb 0=  if
+   j-start 0=  if
       free-journal  true exit                ( -- skip? )
    then
    
@@ -333,12 +338,15 @@ list: revoke-list
    then
 ;
 : commit-journal  ( -- )
+   jsb >s_sequence dup be-l@ 1+ swap be-l!
    0 jsb >s_start be-l!
    jsb 0 write-file-block
    flush
 ;
 : process-journal  ( -- )
    read-journal  if  exit  then
+
+." Recovering from journal ... "
 
    0 ['] one-pass catch  if
       ." Journal scan failed" cr
@@ -357,6 +365,7 @@ list: revoke-list
 
    free-revoke-list
 
-   \ commit-journal
+   commit-journal
    free-journal
+cr
 ;

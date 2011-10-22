@@ -211,7 +211,8 @@
    else			\ find or allocate physical block
       get-pblk#			( adr pblk# )
    then
-   dup h# f8 < if  dup . ." attempt to destroy file system" cr abort  then
+\ This interferes with journal recovery
+\  dup h# f8 < if  dup . ." attempt to destroy file system" cr abort  then
    block bsize move update
 ;
 

@@ -216,6 +216,8 @@ external
 
    my-args " <NoFile>"  $=  if  true exit  then
 
+   recover?  if  process-journal  then
+
    \ Start out in the root directory
    set-root
 

@@ -63,10 +63,11 @@ fi
 if [ ! -b "${DEVICE}" ]; then
 echo REMAKING FILE
 rm -f "${DEVICE}"
-dd if=/dev/zero of=${DEVICE} bs=512 count=1 seek=8388000  2> /dev/null #8388608
+# dd if=/dev/zero of=${DEVICE} bs=512 count=1 seek=8388000  2> /dev/null #8388608
 # dd if=/dev/zero of=${DEVICE} bs=512 count=1 seek=4194303 2> /dev/null
-#dd if=/dev/zero of=${DEVICE} bs=512 count=1 seek=2097151 2> /dev/null
-#dd if=/dev/zero of=${DEVICE} bs=512 count=1 seek=1050000 2> /dev/null
+# dd if=/dev/zero of=${DEVICE} bs=512 count=1 seek=2097151 2> /dev/null
+# dd if=/dev/zero of=${DEVICE} bs=512 count=1 seek=1050000 2> /dev/null
+dd if=/dev/zero of=${DEVICE} bs=512 count=1 seek=10000 2> /dev/null # 5 MiB
 chmod 666 ${DEVICE}
 fi
 # if [ ! -b "${DEVICE}" -a ! -f "${DEVICE}" ]; then
@@ -123,7 +124,7 @@ fi
 echo -n "make filesystem ... "
 #/sbin/mke2fs -n -b 4096 -q ${PARTITION}
 # /sbin/mke2fs -n -j -O dir_index,^huge_file -E resize=8G -m 1 -b 4096 -q ${PARTITION}
-/sbin/mke2fs -n -j -O dir_index -m 1 -b 1024 -q ${PARTITION}
+/sbin/mke2fs -j -O dir_index -m 1 -b 1024 -q ${PARTITION}
 echo "made"
 
 # we occasionally get
@@ -133,12 +134,12 @@ echo -n "mount filesystem ... "
 until mount ${PARTITION} /mnt; do sleep 0.1; done
 echo "mounted"
 
-echo -n "create test content and unmount ... "
+echo "create test content"
 
 mkdir /mnt/boot
 cp ext2test.fth /mnt/boot/olpc.fth
 
-cd /mnt
+pushd /mnt
 touch touched
 echo hello > hello
 echo hello world > hello-world
@@ -151,11 +152,23 @@ touch directory/touched
 echo hello world down here > directory/hw
 mkfifo fifo
 mknod node b 1 1
-cd
+popd
+
+if [ ! -b ${DEVICE} ] ; then 
+    echo -n "save dirty journal ..."
+    sleep 10
+    cp ${DEVICE} ${DEVICE}.dirty
+fi
+
+echo -n "unmount ... "
 umount /mnt
+sync
 
 if [ ! -b ${DEVICE} ] ; then 
    /sbin/losetup -d ${PARTITION}
+   sync
+   mv ${DEVICE} ${DEVICE}.clean
+   cp ${DEVICE}.dirty ${DEVICE}.test
 fi
 
 echo "finished"

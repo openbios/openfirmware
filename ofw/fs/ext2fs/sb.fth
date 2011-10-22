@@ -48,10 +48,10 @@ defer int!    ( l adr -- )  ' be-l! to int!
 : total-free-inodes!	( -- n )   super-block  4 la+ int!  ;
 : #groups   ( -- n )   total-blocks bpg ceiling  ;
 
+: recover?  ( -- flag )  24 +sbl 4 and 0<>  ;
+
 \ Don't write to a disk that uses extensions we don't understand
 : unknown-extensions?   ( -- unsafe? )
-   24 +sbl 4 and   if  ." ext3 journal needs recovery" cr  then 
-
    23 +sbl h# ffffffff invert and        \ Accept all compat extensions
    24 +sbl h# 00000002 invert and  or    \ Incompatible - accept FILETYPE
    25 +sbl h# 00000003 invert and  or    \ RO - accept SPARSE_SUPER and LARGE_FILE

@@ -10,7 +10,9 @@ fload ${BP}/ofw/fs/ext2fs/inode.fth
 fload ${BP}/ofw/fs/ext2fs/bitmap.fth
 fload ${BP}/ofw/fs/ext2fs/layout.fth
 fload ${BP}/ofw/fs/ext2fs/dir.fth
+fload ${BP}/ofw/fs/ext2fs/recovery.fth
 fload ${BP}/ofw/fs/ext2fs/methods.fth
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
