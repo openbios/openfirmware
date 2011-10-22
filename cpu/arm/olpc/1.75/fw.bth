@@ -36,6 +36,8 @@ fload ${BP}/cpu/arm/linux.fth
    timers-off
    usb-quiet
    close-ec
+   \ Change the sleep state of EC_SPI_ACK from 1 (OFW value) to 0 (Linux value)
+   d# 125 af@  h# 100 invert and  d# 125 af!
 ;
 
 ' quiesce to linux-hook
