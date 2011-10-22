@@ -8,18 +8,28 @@ copyright: Copyright 1994 FirmWorks  All Rights Reserved
 
 headerless
 
-h# ffff.ffff value low
-h#         0 value high
+list: dmaavail  0 dmaavail !
 
-: log&release  ( adr len -- )
-   over    low  umin to low   ( adr len )
-   2dup +  high umax to high  ( adr len )
-   release
+headers
+: allocate-dma-phys  ( size -- phys )
+   \ Minumum granularity of memory chunks is 1 page
+   pagesize round-up			( size' )
+
+   pagesize over dmaavail		( size alignment size list )
+   allocate-memrange			( size [ adr ] error? )
+   abort" Insufficient DMA memory"	( size adr )
+   dup rot clear-mem			( phys )
+;
+
+: free-dma-phys  ( phys size -- )
+   >page-boundaries                     ( adr' size' )
+   ['] 2drop  is ?splice                ( adr' size' )
+   dmaavail free-memrange
 ;
 
 headers
 : probe  ( -- )
-   0  fb-mem-va >physical   /fb-mem +  log&release
+   0  fb-mem-va >physical   /fb-mem +  release
 
    0 0 encode-bytes                                   ( adr 0 )
    physavail  ['] make-phys-memlist  find-node        ( adr len  prev 0 )
@@ -29,6 +39,9 @@ headers
    fb-mem-va    >physical   /fb-mem     0 claim  drop
    fw-mem-va    >physical   /fw-mem     0 claim  drop
    extra-mem-va >physical   /extra-mem  0 claim  drop
+   dma-mem-va   >physical   /dma-mem    0 claim  drop
+
+   dma-mem-va   >physical   /dma-mem    free-dma-phys
 
    0 pagesize  0 claim  drop       \ Vector table
 ;

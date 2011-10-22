@@ -27,6 +27,11 @@ warning on
 
 fload ${BP}/cpu/arm/linux.fth
 
+\ The bottom of extra-mem is the top of DMA memory.
+\ We give everything up to that address to Linux.
+: olpc-memory-limit  ( -- adr )  extra-mem-va >physical  ;
+' olpc-memory-limit to memory-limit
+
 : usb-quiet  ( -- )
    [ ' linux-hook behavior compile, ]    \ Chain to old behavior
    unload-crypto

@@ -9,8 +9,9 @@ defer linux-pre-hook  ' noop to linux-pre-hook
 
 0 value linux-memtop
 
+defer memory-limit
 \ Find the end of the largest piece of memory
-: memory-limit  ( -- limit )
+: (memory-limit)  ( -- limit )
    \ If we have already loaded a RAMdisk in high memory, its base is the memory limit
    ramdisk-adr  ?dup  if  exit  then
 
@@ -30,6 +31,7 @@ defer linux-pre-hook  ' noop to linux-pre-hook
    2drop                             ( size base )
    +                                 ( limit )
 ;
+' (memory-limit) to memory-limit  \ Override by platform code if necessary
 
 \ see http://www.simtec.co.uk/products/SWLINUX/files/booting_article.html
 
