@@ -1,0 +1,210 @@
+
+# /clients/emacs/arm/
+/clients/emacs/arm/emacs.elf
+/clients/emacs/arm/emacs
+
+# /clients/emacs/x86/
+/clients/emacs/x86/emacs.nm
+/clients/emacs/x86/emacs.obp
+/clients/emacs/x86/emacs
+
+# /clients/lib/arm/
+/clients/lib/arm/libobp.a
+
+# /clients/lib/x86/
+/clients/lib/x86/*.elf
+/clients/lib/x86/*.syms
+/clients/lib/x86/*.a
+/clients/lib/x86/hello
+
+# /clients/memtest86/
+/clients/memtest86/memtest
+/clients/memtest86/memtest_shared.bin
+/clients/memtest86/memtest_shared
+/clients/memtest86/*.s
+/clients/memtest86/*.bin
+
+# /cpu/arm/Linux/
+/cpu/arm/Linux/armforth
+/cpu/arm/Linux/forth
+
+# /cpu/arm/beagle/build/
+/cpu/arm/beagle/build/build
+/cpu/arm/beagle/build/tags
+/cpu/arm/beagle/build/*.rom
+/cpu/arm/beagle/build/*.tag
+
+# /cpu/arm/build/
+/cpu/arm/build/armbuild
+/cpu/arm/build/build
+/cpu/arm/build/*.tag
+/cpu/arm/build/core
+
+# /cpu/arm/mmp2/build/
+/cpu/arm/mmp2/build/*.rom
+/cpu/arm/mmp2/build/*.tag
+/cpu/arm/mmp2/build/tags
+/cpu/arm/mmp2/build/build
+
+# /cpu/arm/olpc/1.75/build/
+/cpu/arm/olpc/1.75/build/*.tag
+/cpu/arm/olpc/1.75/build/*.rom
+/cpu/arm/olpc/1.75/build/*.txt
+/cpu/arm/olpc/1.75/build/*.bin
+/cpu/arm/olpc/1.75/build/tags
+/cpu/arm/olpc/1.75/build/*.public
+/cpu/arm/olpc/1.75/build/*.version
+/cpu/arm/olpc/1.75/build/build
+/cpu/arm/olpc/1.75/build/builton.fth
+/cpu/arm/olpc/1.75/build/sourceurl
+/cpu/arm/olpc/1.75/build/multicast-nand
+/cpu/arm/olpc/1.75/build/armforth
+/cpu/arm/olpc/1.75/build/testicons
+
+# /cpu/arm/openmoko/build/
+/cpu/arm/openmoko/build/*.tag
+/cpu/arm/openmoko/build/*.rom
+/cpu/arm/openmoko/build/*.
+/cpu/arm/openmoko/build/tags
+/cpu/arm/openmoko/build/build
+
+# /cpu/arm/pxa3xx/build/
+/cpu/arm/pxa3xx/build/*.tag
+/cpu/arm/pxa3xx/build/*.rom
+/cpu/arm/pxa3xx/build/tags
+/cpu/arm/pxa3xx/build/build
+
+# /cpu/arm/versatilepb/build/
+/cpu/arm/versatilepb/build/*.rom
+/cpu/arm/versatilepb/build/*.tag
+/cpu/arm/versatilepb/build/tags
+/cpu/arm/versatilepb/build/core
+/cpu/arm/versatilepb/build/build
+
+# /cpu/i8051/build/
+/cpu/i8051/build/*.hex
+/cpu/i8051/build/build
+
+# /cpu/ppc/Linux/
+/cpu/ppc/Linux/ppcforth.trace
+/cpu/ppc/Linux/ppcforth
+/cpu/ppc/Linux/forth
+
+# /cpu/ppc/build/
+/cpu/ppc/build/ppcforth
+/cpu/ppc/build/build
+/cpu/ppc/build/*.tag
+
+# /cpu/ppc/olpc/build/
+/cpu/ppc/olpc/build/*.rom
+/cpu/ppc/olpc/build/ppcforth
+/cpu/ppc/olpc/build/builton.fth
+/cpu/ppc/olpc/build/sourceurl
+/cpu/ppc/olpc/build/inflate.bin
+
+# /cpu/x86/Linux/
+/cpu/x86/Linux/forth
+/cpu/x86/Linux/x86forth
+/cpu/x86/Linux/ppcforth
+/cpu/x86/Linux/*.tag
+/cpu/x86/Linux/armforth.trace
+/cpu/x86/Linux/armforth
+
+# /cpu/x86/build/
+/cpu/x86/build/inflate.bin
+/cpu/x86/build/build
+/cpu/x86/build/*.tag
+/cpu/x86/build/tags
+
+# /cpu/x86/pc/alex/build/
+/cpu/x86/pc/alex/build/*.tag
+/cpu/x86/pc/alex/build/builton.fth
+/cpu/x86/pc/alex/build/*.elf
+/cpu/x86/pc/alex/build/build
+/cpu/x86/pc/alex/build/tags
+
+# /cpu/x86/pc/biosload/build/
+/cpu/x86/pc/biosload/build/build
+/cpu/x86/pc/biosload/build/builton.fth
+/cpu/x86/pc/biosload/build/ofw.c32
+/cpu/x86/pc/biosload/build/*.elf
+/cpu/x86/pc/biosload/build/sd8686.bin
+/cpu/x86/pc/biosload/build/*.version
+/cpu/x86/pc/biosload/build/sd8686_helper.bin
+
+# /cpu/x86/pc/emu/build/
+/cpu/x86/pc/emu/build/build
+/cpu/x86/pc/emu/build/builton.fth
+/cpu/x86/pc/emu/build/emuofw.rom
+
+# /cpu/x86/pc/lxdevel/build/
+/cpu/x86/pc/lxdevel/build/*.rom
+/cpu/x86/pc/lxdevel/build/build
+/cpu/x86/pc/lxdevel/build/builton.fth
+/cpu/x86/pc/lxdevel/build/*.bin
+/cpu/x86/pc/lxdevel/build/libertas.version
+/cpu/x86/pc/lxdevel/build/*.version
+
+# /cpu/x86/pc/neptune/build/
+/cpu/x86/pc/neptune/build/build
+/cpu/x86/pc/neptune/build/ofw.elf
+/cpu/x86/pc/neptune/build/builton.fth
+/cpu/x86/pc/neptune/build/*.rom
+/cpu/x86/pc/neptune/build/*.bin
+/cpu/x86/pc/neptune/build/*.version
+/cpu/x86/pc/neptune/build/forth
+/cpu/x86/pc/neptune/build/sourceurl
+/cpu/x86/pc/neptune/build/*.tag
+/cpu/x86/pc/neptune/build/tags
+/cpu/x86/pc/neptune/build/*.elf
+
+# /cpu/x86/pc/olpc/
+/cpu/x86/pc/olpc/*.public
+
+# /cpu/x86/pc/olpc/build/
+/cpu/x86/pc/olpc/build/build
+/cpu/x86/pc/olpc/build/ofw.elf
+/cpu/x86/pc/olpc/build/builton.fth
+/cpu/x86/pc/olpc/build/*.rom
+/cpu/x86/pc/olpc/build/*.bin
+/cpu/x86/pc/olpc/build/*.version
+/cpu/x86/pc/olpc/build/forth
+/cpu/x86/pc/olpc/build/sourceurl
+/cpu/x86/pc/olpc/build/*.md5
+/cpu/x86/pc/olpc/build/*.public
+/cpu/x86/pc/olpc/build/*.stamp
+/cpu/x86/pc/olpc/build/*.aml
+/cpu/x86/pc/olpc/build/*.dsl
+/cpu/x86/pc/olpc/build/multicast-nand
+/cpu/x86/pc/olpc/build/users
+/cpu/x86/pc/olpc/build/tags
+/cpu/x86/pc/olpc/build/fw.tag
+/cpu/x86/pc/olpc/build/memtest
+
+# /cpu/x86/pc/olpc/sdtools/
+/cpu/x86/pc/olpc/sdtools/*.tgz
+/cpu/x86/pc/olpc/sdtools/sdkit
+
+# /cpu/x86/pc/olpc/via/
+/cpu/x86/pc/olpc/via/testicons
+
+# /cpu/x86/pc/olpc/via/build/
+/cpu/x86/pc/olpc/via/build/*.txt
+/cpu/x86/pc/olpc/via/build/*.public
+/cpu/x86/pc/olpc/via/build/*.rom
+/cpu/x86/pc/olpc/via/build/*.version
+/cpu/x86/pc/olpc/via/build/tags
+/cpu/x86/pc/olpc/via/build/sourceurl
+/cpu/x86/pc/olpc/via/build/*.tag
+/cpu/x86/pc/olpc/via/build/build
+/cpu/x86/pc/olpc/via/build/builton.fth
+/cpu/x86/pc/olpc/via/build/VIA.ROM
+/cpu/x86/pc/olpc/via/build/*.bin
+/cpu/x86/pc/olpc/via/build/memtest
+/cpu/x86/pc/olpc/via/build/*.aml
+/cpu/x86/pc/olpc/via/build/*.stamp
+/cpu/x86/pc/olpc/via/build/forth
+/cpu/x86/pc/olpc/via/build/testicons
+
+# /dev/geode/nandflash/build/
+/dev/geode/nandflash/build/nandflash.fc
