@@ -309,9 +309,9 @@ hex
 d#  50 value min-x
 d#  50 value min-y
 d# 150 value min-z
-d# 100 value max-x
-d# 100 value max-y
-d# 300 value max-z
+d# 150 value max-x
+d# 150 value max-y
+d# 450 value max-z
 : range?  ( delta max-delta -- error? )  between 0=  ;
 
 : error?  ( dx dy dz -- error? )
@@ -385,7 +385,7 @@ defer lis-selftest
       \ The attempt to talk at the old address failed, so we assume the new chip
       \ Support for new LIS3DHTR chip
       d#  50 to min-x  d#  50 to min-y  d#  50 to min-z 
-      d# 150 to max-x  d# 150 to max-y  d# 300 to max-z 
+      d# 150 to max-x  d# 150 to max-y  d# 450 to max-z 
       h# 32 6 encode-phys " reg" property
       ['] lis3dhtr-selftest to lis-selftest
    else
