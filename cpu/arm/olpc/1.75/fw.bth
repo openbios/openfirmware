@@ -33,6 +33,7 @@ fload ${BP}/cpu/arm/linux.fth
    " /usb" " reset-usb" execute-device-method drop
 ;
 : quiesce  ( -- )
+   timers-off
    usb-quiet
    close-ec
 ;

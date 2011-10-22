@@ -161,6 +161,11 @@ variable timestamp
 ;
 ' (set-tick-limit) to set-tick-limit
 
+: timers-off  ( -- )
+   0 timer0-ier!  0 timer1-ier!  0 timer2-ier!  \ Disable timer interrupts
+   7 timer0-icr!  7 timer1-icr!  7 timer2-icr!  \ Clear pending interrupts
+;
+
 : can-idle?  ( -- flag )
    interrupts-enabled?  if
       d# 15 interrupt-enabled?
