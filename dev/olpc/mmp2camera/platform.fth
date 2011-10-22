@@ -19,13 +19,14 @@ hex
 : sensor-power-on   ( -- )  d# 145 gpio-set  ;
 : sensor-power-off  ( -- )  d# 145 gpio-clr  ;
 [else]
-: sensor-power-on   ( -- )  d# 150 gpio-set  ;
-: sensor-power-off  ( -- )  d# 150 gpio-clr  ;
+: sensor-power-on   ( -- )  d# 150 gpio-set  d# 144 gpio-clr  ;
+: sensor-power-off  ( -- )  ( d# 144 gpio-set )  d# 150 gpio-clr  ;  \ Leave low for Linux
 [then]
 
 \ CAM_HSYNC is on GPIO67, CAM_VSYNC is on GPIO68
 \ PIXMCLK on GPIO69, PIXCLK on GPIO70, PIXDATA[7:0] on GPIO[59:66]
 \ CAM_SCL on GPIO108, CAM_SDA on GPIO109 (bitbang)
+\ CAM_PWRDN on GPIO144
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks
