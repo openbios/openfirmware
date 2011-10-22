@@ -193,17 +193,18 @@ fload ${BP}/cpu/arm/olpc/1.75/compass.fth
 
 \ Suppress long memory test at final test stage
 dev /memory
-defer old-diagnostic-mode?
+0 value old-diag-switch?
 : not-final-test?  ( -- flag )
    final-test?   if  false exit  then
-   old-diagnostic-mode?
+   smt-test?  if  false exit  then
+   old-diag-switch?
 ;
 warning @ warning off
 : selftest  ( -- error? )
-   ['] (diagnostic-mode?) behavior to old-diagnostic-mode?
-   ['] not-final-test?  to (diagnostic-mode?)
+   diag-switch? to old-diag-switch?
+   not-final-test?  to diag-switch?
    selftest
-   ['] old-diagnostic-mode? behavior  to (diagnostic-mode?)
+   old-diag-switch? to diag-switch?
 ;
 warning !
 device-end
