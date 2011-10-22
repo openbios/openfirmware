@@ -677,7 +677,7 @@ end-string-array
 : wlan-stay-on  ( -- )  h# 140 d# 34 af!  h# 140 d# 57 af!  h# 140 d# 58 af!  ;
 
 0 value sleep-mask
-: screen-off
+: screen-sleep
    sleep-mask 1 and  if            \ DCON power down
       dcon-freeze
    else
@@ -696,7 +696,7 @@ end-string-array
       wlan-power-off
    then  \ saves 100 mW
 ;
-: screen-on  ( -- )
+: screen-wake  ( -- )
    sleep-mask 4 and  0=  if
       wlan-power-on
       " /wlan" " wake" execute-device-method drop
@@ -714,12 +714,12 @@ end-string-array
 : stdin-idle-on   ['] safe-idle to stdin-idle  d# 15 enable-interrupt  ;
 : stdin-idle-off  ['] noop to stdin-idle  ( install-uart-io ) d# 15 disable-interrupt  ;
 
-: timers-off  ( -- )
+: timers-sleep  ( -- )
    0 h# 14048 io!    \ Disable interrupts from the tick timer
    7 h# 1407c io!    \ Clear any pending interrupts
    h# f disable-interrupt  \ Block timer interrupt
 ;
-: timers-on  ( -- )
+: timers-wake ( -- )
    1 h# 14048 io!    \ Enable interrupts from the tick timer
    7 h# 1407c io!    \ Clear any pending interrupts
    h# f enable-interrupt  \ Unblock timer interrupt
@@ -736,9 +736,9 @@ end-string-array
 : str  ( -- )
    disable-interrupts
    suspend-usb
-   timers-off
+   timers-sleep
 
-   screen-off
+   screen-sleep
    stdin-idle-off
    5 h# 38 mpmu!    \ Use 32 kHz clock instead of VCXO for slow clock
 
@@ -779,8 +779,8 @@ end-string-array
    \ idle_cfg &= (~PMUA_MOH_SRAM_PWRDWN);
    stdin-idle-on
 
-   screen-on
-   timers-on
+   screen-wake
+   timers-wake
    resume-usb
    enable-interrupts
 ;
