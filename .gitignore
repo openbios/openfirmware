@@ -17,3 +17,5 @@ tags
 *~
 headers
 *.md5
+*.public
+*.lo
