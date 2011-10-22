@@ -46,19 +46,22 @@ alias test4 wakeup-loop
    \ it's hard to return a real error code.  We just have to rely
    \ on the operator.
    ." Testing suspend/resume"  cr
-   ." Sleeping for 3 seconds .. "  d# 100 ms
+   ." Sleeping for 3 seconds .. "  d# 1000 ms
    ec-rst-pwr ['] cancel-alarm 3 rtc-wake  str  ec-max-pwr  ( power )
    \ Negative power is consumed from battery, positive is supplied to battery
    dup  d# -250 <  if                                       ( power )
       ." System used too much power during suspend - "  negate .d ." mW" cr  ( )
       true                                                  ( error? )
    else                                                     ( power )
-      drop  false                                           ( error? )
+      ." OKAY"  cr drop  false                              ( error? )
    then                                                     ( error? )
 ;
-dev /memory
-[ifdef] test-s3  ' s3-selftest to test-s3  [then]
-dend
+dev /switches
+: selftest  ( -- error? )
+   s3-selftest  if  true exit  then
+   selftest  
+;
+device-end
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks

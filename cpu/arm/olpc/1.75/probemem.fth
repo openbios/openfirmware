@@ -64,8 +64,6 @@ false value mem-fail?
 [then]
 : .chunk  ( adr len -- )  ." Testing address 0x" swap 8u.h ."  length 0x" 8u.h cr  ;
 
-defer test-s3  ( -- error? )  ' false is test-s3
-
 : test-mem  ( adr len -- )	\ Test a chunk 'o memory
    2>r
    2r@ 0 mem-claim to p-adr		( ) ( r: adr len )
@@ -115,8 +113,7 @@ defer test-s3  ( -- error? )  ' false is test-s3
       then                             ( adr len )
    repeat                              ( adr len )
    2drop                               ( )
-
-   test-s3                             ( error? )
+   false
 ;
 
 device-end
