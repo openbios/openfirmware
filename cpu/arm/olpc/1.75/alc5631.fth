@@ -30,7 +30,7 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
    \ The speaker gain ratio must be <= the ratio of SPKVDD to AVDD.
    \ In our system, SPKVDD is 5V and AVDD is 3.3V, so we need a gain ratio <= 1.51 .
    \ The value 3 gives a ratio of 1.44, and value 4 gives a ratio of 1.56 .  We use 3.
-   h# 3e00 h# 40 codec!  \ Speaker Amp Ratio GAIN is 1.44x, no HPFs
+   h# 3e00 h# 40 codec!  \ Speaker Amp Ratio GAIN is 1.44x, HPF on ADC and DAC
 
    h# 0000 h# 42 codec!  \ Use MCLK, not PLL
 \  b# 1110.1100.1001.0000 h# 52 codec!  \ Protection on
@@ -42,10 +42,10 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
 : mic-bias-off  ( -- )  h# 000c h# 3b codec-clr  ;
 : mic-bias-on   ( -- )  h# 000c h# 3b codec-set  ;
 
-: mic1-high-bias  ( -- )  h# 80 h# 22 codec-clr  mic-bias-on  ;  \ 0.90*AVDD, e.g. 3V with AVDD=3.3V
-: mic1-low-bias   ( -- )  h# 80 h# 22 codec-set  mic-bias-on  ;  \ 0.75*AVDD, e.g. 2.5V with AVDD=3.3V
-: mic2-high-bias  ( -- )  h# 08 h# 22 codec-clr  mic-bias-on  ;  \ 0.90*AVDD, e.g. 3V with AVDD=3.3V
-: mic2-low-bias   ( -- )  h# 08 h# 22 codec-set  mic-bias-on  ;  \ 0.75*AVDD, e.g. 2.5V with AVDD=3.3V
+: mic1-high-bias  ( -- )  h# 80 h# 22 codec-clr  ;  \ 0.90*AVDD, e.g. 3V with AVDD=3.3V
+: mic1-low-bias   ( -- )  h# 80 h# 22 codec-set  ;  \ 0.75*AVDD, e.g. 2.5V with AVDD=3.3V
+: mic2-high-bias  ( -- )  h# 08 h# 22 codec-clr  ;  \ 0.90*AVDD, e.g. 3V with AVDD=3.3V
+: mic2-low-bias   ( -- )  h# 08 h# 22 codec-set  ;  \ 0.75*AVDD, e.g. 2.5V with AVDD=3.3V
 
 : depop!  ( value -- )  h# 54 codec!  ;
 : pwr3a!  ( value -- )  h# 3a codec!  ;
@@ -201,8 +201,9 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
 : adc-mono-right       ( -- )  h# 8000 adc-source  ;  \ R->L+R
 : adc-stereo-reversed  ( -- )  h# c000 adc-source  ;  \ L->R, R->L (channels swapped)
 
+true value mic-bias?
 : open-in-specific  ( -- )
-   h# 000c h# 3b codec-set  \ Power on MIC1/2 bias
+   mic-bias?  if  mic-bias-on  else  mic-bias-off  then  \ Power on MIC1/2 bias
    adc-stereo
    h# 0c00 h# 3b codec-set  \ Power on RECMIXLR
    h# 0030 h# 3b codec-set  \ Power on MIC1/2 boost gain

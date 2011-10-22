@@ -400,6 +400,51 @@ false value playing?
 : read  ( adr len -- actual )  open-in audio-in  close-in  ;
 
 0 value mono?
+: stereo  false to mono?  ;
+: mono  true to mono?  ;
+
+: average-channel  ( adr -- n )
+   0 swap  /audio-buf  bounds  do   ( accum )
+      i <w@ +                       ( accum' )
+   /l +loop                         ( accum )
+   /audio-buf /l /  /               ( average )
+;
+: average-in  ( -- )
+   my-in-desc 2 la+ l@           ( adr )
+   (cr  push-decimal             ( adr )
+   dup average-channel           ( adr average )
+   6 .r space                    ( adr )
+   wa1+ average-channel          ( average )
+   6 .r                          ( )
+   pop-base                      ( )
+   my-in-desc 3 la+ l@ to my-in-desc
+;
+: audio-watch  ( -- )
+   setup-sspa-rx               ( )
+   make-in-ring                ( )
+   start-in-ring               ( )
+   master-rx                   ( )
+   begin                       ( )
+      wait-in                  ( )
+      average-in               ( )
+   key? until                  ( )
+   disable-sspa-rx             ( )
+   stop-in-ring                ( )
+   reset-rx                    ( )
+;
+: watch-dc  ( bias? -- )
+   to mic-bias?
+   d# 143 gpio-set   \ DC input mode
+   h# 0400 h# 40 codec-clr
+   open-in
+   stereo  0 set-adc-gain  0 set-mic-gain
+   \ High bias gets us closer to the top of the digital range - but bias can
+   \ be turned off completely with "false to mic-bias?"
+   mic1-high-bias mic2-high-bias
+   audio-watch
+   close-in
+;
+
 0 value in-adr0
 0 value in-len0
 : collapse-in  ( -- )
@@ -504,9 +549,6 @@ h# 20000 constant tlen
    set-adc-gain
 ;
 
-: stereo  false to mono?  ;
-: mono  true to mono?  ;
-
 : init-codec  ( -- )
    codec-on
    set-default-gains
@@ -569,6 +611,15 @@ fload ${BP}/dev/hdaudio/test.fth
 
 
 end-package
+
+: (watch-dc)  ( bias? -- )
+   " /audio" open-dev >r          ( bias? r: ihandle )
+   " watch-dc" r@ $call-method    ( r: ihandle )
+   r> close-dev                   ( )
+;
+: watch-dc-biased  ( -- )  true  (watch-dc)  ;
+: watch-dc-unbiased  ( -- )  false  (watch-dc)  ;
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks
