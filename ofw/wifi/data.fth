@@ -27,6 +27,8 @@ purpose: Supplicant data and environment data
 : set-key-type   ( ctp ctg ktype -- )  " set-key-type" $call-parent  ;
 : set-country-info  ( adr len -- )  " set-country-info" $call-parent  ;
 : set-atim-window   ( n -- )  " set-atim-window" $call-parent  ;
+: set-gtk-idx  ( n -- )  " set-gtk-idx" ['] $call-parent catch  if  3drop  then  ;
+: disconnected?  ( -- flag )  " disconnected?" $call-parent  ;
 
 \ =======================================================================
 \ Global data

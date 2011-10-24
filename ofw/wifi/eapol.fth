@@ -9,9 +9,38 @@ hex
 : vtype  ( adr len -- )  debug?  if  ??cr type cr  else  2drop  then  ;
 
 \ =======================================================================
-\ EAPOL data definitions
+\ Handshake variables and helper words
 
-d# 10,000 constant eapol-wait
+false value send-error?
+2 constant send-retry-cnt
+
+d# 30,000 constant timeout-eapol-limit
+d#  5,000 constant timeout-msg-limit
+
+0 value timeout-eapol         \ Global timeout value in ms
+0 value timeout-msg           \ Timeout waiting for msg from AP in ms
+
+: set-eapol-timeout  ( -- )  get-msecs timeout-eapol-limit + to timeout-eapol  ;
+: set-msg-timeout    ( -- )  get-msecs timeout-msg-limit   + to timeout-msg    ;
+: eapol-timeout?  ( -- timeout? )  get-msecs timeout-eapol >=  ;
+: msg-timeout?    ( -- timeout? )  get-msecs timeout-msg   >=  ;
+: timeout?        ( -- timeout? )  eapol-timeout? msg-timeout? or  ;
+
+false value done-pairwise-key?
+false value done-group-key?
+
+: done?  ( -- done? )  done-group-key? done-pairwise-key? and  ;
+
+: send-eapol-msg  ( adr len -- ok? )
+   send-retry-cnt 0  do
+      2dup tuck write-force =  if  2drop true unloop exit  then
+   loop  2drop
+   false  " Fail to send message" vtype
+   true to send-error?
+;
+
+\ =======================================================================
+\ EAPOL data definitions
 
 1 value    eapol-ver
 3 constant eapol-key
@@ -67,6 +96,13 @@ dup constant /eapol-key
 0800 constant ki-request	\ The supplicant requests a rekey operation
 1000 constant ki-encr-key	\ >kdata encrypted (WPA2)
 2000 constant ki-smk-msg	\ STSL master key
+
+\ Vendor IE's OUI
+h# 0050f2.01 constant oui-wpa         \ Microsoft OUI's
+h# 0050f2.02 constant oui-wmm
+h# 0050f2.04 constant oui-wps
+h# 00904c.33 constant oui-ht          \ Broadcom OUI's
+h# 00904c.34 constant oui-ht+
 
 \ =======================================================================
 \ Nonce
@@ -179,14 +215,13 @@ d# 16 dup constant /mic   buffer: mic
 \ =======================================================================
 \ Group temporal keys (GTK)
 
-false value done-group-key?
-
 d# 32 dup constant /gtk  buffer: gtk
 0 value gtk-idx				\ Active GTK idx
 
 d# 32 buffer: ek			\ Temporary rc4 key
 
 : install-group-key  ( -- )  gtk ctype-g ct>klen  set-gtk  ;
+: install-gtk-idx    ( -- )  ktype kt-wpa2 =  if  gtk-idx set-gtk-idx  then  ;
 
 : set-gtk-supplicant  ( adr -- )
    dup gtk d# 16 move
@@ -252,12 +287,54 @@ d# 32 buffer: ek			\ Temporary rc4 key
    then
 ;
 
+\ =======================================================================
+\ WPA/WPA2 handshake states
+\ State   Comment             Process
+\  s1/4   initial state       Reset wait for 1/4 timeout
+\         authenticate done   pairwise key received? = false
+\         associate done      group key received? = false
+\                             Wait for 1/4 msg from AP
+\                             1/4 timeout -> exit fail
+\  s3/4   got 1/4 msg         Send 2/4 msg to AP
+\                             Reset 3/4 timeout
+\                             Wait for 3/4 msg from AP
+\                             3/4 timeout -> s2
+\                             got 3/4 msg -> send 4/4 msg to AP
+\                             If we got group key, exit ok
+\                             Reset 1/2 timeout
+\  s1/2   pairwise key done   Wait for 1/2 msg from AP
+\                             1/2 timeout -> s2
+\                             got 1/2 msg -> send 2/2 msg to AP
+\                             exit ok
+\  exit ok                    Install keys
+\
+\ Anytime a 1/4 msg is received, goto s3/4
+\ Anytime deauthenticate is received, exit fail
+\ Global timeout, exit fail
+
+0 value eapol-state
+0 constant s0/4          \ Initial state; also invalid msg
+1 constant s1/4          \ Waiting for 1/4 from AP; also msg#
+2 constant s3/4          \ Waiting for 3/4 from AP; also msg#
+3 constant s1/2          \ Waiting for 1/2 from AP; also msg#
+
+: set-s/4  ( -- )
+   false to done-group-key?
+   false to done-pairwise-key?
+   set-msg-timeout
+;
+: set-s0/4  ( -- )  s0/4 to eapol-state  set-s/4  ;
+: set-s1/4  ( -- )  s1/4 to eapol-state  set-s/4  ;
+: set-s3/4  ( -- )  s3/4 to eapol-state  set-s/4  ;
+: set-s1/2  ( -- )
+   false to done-group-key?
+   s1/2 to eapol-state
+   set-msg-timeout
+;
 
 \ =======================================================================
 \ WPA/WPA2 pairwise keys four-way handshake
-
-false value pairwise-rekey?
-false value group-rekey?
+\ WPA group key 2-way handshake
 
 /buf buffer: data
 
@@ -269,35 +346,9 @@ false value group-rekey?
                             ktype kt-wpa2 =  if  ki-encr-key or ki-secure or  then  ;
 : pct>kinfo4  ( -- kinfo )  pct>kinfo2  ktype kt-wpa2 =  if  ki-secure or  then  ;
 
-: wait-for-eapol-key  ( -- flag )
-   false  eapol-wait 0  do
-      data /buf read-force 0>  if
-         data >etype be-w@ eapol-type =		\ EAPOL frame
-         data >ptype c@ eapol-key =  and	\ EAPOL-key
-         data >rcnt last-rcnt /rcnt comp and  if	\ A new eapol-key record
-            data >rcnt last-rcnt!		\ Update last replay counter
-            drop true
-            leave
-         then
-      then
-      1 ms
-   loop
-;
-
-: process-1-of-4  ( -- ok? )
-   " Process EAPOL-key message 1 of 4" vtype
-   data >ver      c@ to eapol-ver
-   data >dtype    c@ kt>dtype        <>  if  false exit  then	\ Descriptor type mismatch
-   data >kinfo be-w@ pct>kinfo1      <>  if  false exit  then	\ Bad key info
-   data >klen  be-w@ ctype-p ct>klen <>  if  false exit  then	\ Bad key len
-   data >knonce anonce$ move					\ Save authenticator nonce
-   true
-;
-
-: wait-for-1-of-4  ( -- ok? )
-   " Waiting for EAPOL-key message 1 of 4..." vtype
-   wait-for-eapol-key  if  process-1-of-4  else  false  then
-;
+: gct>kinfo   ( -- kinfo )  ctype-p ct-aes =  if  ki-sha1-aes  else  ki-md5-rc4  then  ;
+: gct>kinfo1  ( -- kinfo )  gct>kinfo ki-mic or ki-secure or ki-ack or  ;
+: gct>kinfo2  ( -- kinfo )  gct>kinfo ki-mic or ki-secure or  ;
 
 : set-eapolbuf-common  ( -- )
    eapolbuf /eapol-key erase
@@ -310,131 +361,167 @@ false value group-rekey?
    ctype-p ct>klen eapolbuf >klen be-w!		\ Key length
    last-rcnt   eapolbuf >rcnt /rcnt move	\ Replay counter
 ;
-: send-2-of-4  ( -- error? )
+
+: resync-gtk  ( -- )
+   last-rcnt++
+   set-eapolbuf-common
+   0 eapolbuf >klen be-w!                         \ Key length
+   /eapol-body eapolbuf >plen  be-w!              \ Packet length
+   ctype-g ct>klen eapolbuf >klen  be-w!          \ Key length
+   gct>kinfo ki-request or eapolbuf >kinfo be-w!  \ Key info
+   eapolbuf /eapol-key send-eapol-msg
+;
+
+: send-2/4  ( -- ok? )
    " Send EAPOL-key message 2 of 4" vtype
    compute-snonce
    compute-ptk-supplicant
    set-eapolbuf-common
-   /eapol-body wpa-ie$ nip + eapolbuf >plen be-w!	\ Packet length
-   pct>kinfo2  eapolbuf >kinfo be-w!		\ Key info
-   snonce      eapolbuf >knonce /nonce move	\ Supplicant nonce
-   wpa-ie$ nip eapolbuf >kdlen be-w!		\ Key data length
-   wpa-ie$     eapolbuf >kdata swap move	\ Key data is WPA IE (or RSN IE)
+   /eapol-body wpa-ie$ nip + eapolbuf >plen be-w!       \ Packet length
+   pct>kinfo2  eapolbuf >kinfo be-w!            \ Key info
+   snonce      eapolbuf >knonce /nonce move     \ Supplicant nonce
+   wpa-ie$ nip eapolbuf >kdlen be-w!            \ Key data length
+   wpa-ie$     eapolbuf >kdata swap move        \ Key data is WPA IE (or RSN IE)
    eapolbuf >ver eapolbuf >plen be-w@ 4 + ctype-p compute-mic
-   mic         eapolbuf >kmic /mic move		\ Key mic
-   eapolbuf /eapol-key wpa-ie$ nip + tuck write-force <>
+   mic         eapolbuf >kmic /mic move         \ Key mic
+   eapolbuf /eapol-key wpa-ie$ nip + send-eapol-msg 
 ;
-
-: process-3-of-4  ( -- ok? )
-   " Process EAPOL-key message 3 of 4" vtype
-   data >dtype    c@ kt>dtype        <>  if  false exit  then	\ Descriptor type mismatch
-   data >kinfo be-w@ pct>kinfo3      <>  if  false exit  then	\ Bad key info
-   data >klen  be-w@ ctype-p ct>klen <>  if  false exit  then	\ Bad key len
-   data >knonce anonce /nonce comp       if  false exit  then	\ Nonce differ
-   data ctype-p mic-ok?              0=  if  true to pairwise-rekey? false exit  then	\ Bad mic
-   data >kinfo be-w@ ki-encr-key and  if  data decrypt-parse-ie  else  true  then
-;
-: wait-for-3-of-4  ( -- ok? )
-   " Waiting for EAPOL-key message 3 of 4..." vtype
-   wait-for-eapol-key  if  process-3-of-4  else  false  then
-;
-
-: send-4-of-4  ( -- error? )
+: send-4/4  ( -- ok? )
    " Send EAPOL-key message 4 of 4" vtype
    set-eapolbuf-common
-   /eapol-body eapolbuf >plen  be-w!		\ Packet length
-   pct>kinfo4  eapolbuf >kinfo be-w!		\ Key info
+   /eapol-body eapolbuf >plen  be-w!            \ Packet length
+   pct>kinfo4  eapolbuf >kinfo be-w!            \ Key info
    eapolbuf >ver eapolbuf >plen be-w@ 4 + ctype-p compute-mic
-   mic         eapolbuf >kmic /mic move		\ Key mic
-   eapolbuf /eapol-key tuck write-force <>
+   mic         eapolbuf >kmic /mic move         \ Key mic
+   eapolbuf /eapol-key send-eapol-msg 
 ;
-
-: do-pairwise-key-handshake  ( -- ok? )
-   false
-   wait-for-1-of-4 0=  if  ." Failed to get the first pairwise key" cr exit  then
-   send-2-of-4         if  ." Failed to send the second pairwise key" cr exit  then
-   wait-for-3-of-4 0=  if  ." Failed to get the third pairwise key" cr exit  then 
-   send-4-of-4         if  ." Failed to send the fourth pairwise key" cr exit  then
-   install-pairwise-key
-   done-group-key?  if  install-group-key  then
-   drop true
-;
-
-\ =======================================================================
-\ WPA group keys 2-way handshake
-
-: gct>kinfo   ( -- kinfo )  ctype-g ct-aes =  if  ki-sha1-aes  else  ki-md5-rc4  then  ;
-: gct>kinfo1  ( -- kinfo )  gct>kinfo ki-mic or ki-secure or ki-ack or  ;
-: gct>kinfo2  ( -- kinfo )  gct>kinfo ki-mic or ki-secure or  ;
-
-: process-1-of-2  ( --  ok? )
-   " Process EAPOL-key message 1 of 2" vtype
-   data >dtype    c@ kt>dtype        <>  if  false exit  then	\ Descriptor type mismatch data >kinfo be-w@ ki-idx-mask invert and gct>kinfo1 <>  if  false exit  then	\ Bad key info
-   data >klen  be-w@ ctype-g ct>klen <>  if  false exit  then	\ Bad key len
-   data ctype-p mic-ok?              0=  if  true to group-rekey? false exit  then	\ Bad mic
-   data decrypt-gtk
-;
-: wait-for-1-of-2  ( -- ok? )
-   " Waiting for EAPOL-key message 1 of 2..." vtype
-   wait-for-eapol-key  if  process-1-of-2  else  false  then
-;
-
-: send-2-of-2  ( -- error? )
+: send-2/2  ( -- ok? )
    " Send EAPOL-key message 2 of 2" vtype
    set-eapolbuf-common
-   /eapol-body   eapolbuf >plen  be-w!		\ Packet length
-   gct>kinfo2    eapolbuf >kinfo be-w!		\ Key info
-   eapolbuf >ver eapolbuf >plen  be-w@ 4 + ctype-g compute-mic
-   mic           eapolbuf >kmic  /mic move		\ Key mic
-   eapolbuf /eapol-key tuck write-force <>
+   /eapol-body     eapolbuf >plen  be-w!          \ Packet length
+   gct>kinfo2      eapolbuf >kinfo be-w!          \ Key info
+   ctype-g ct>klen eapolbuf >klen  be-w!          \ Key length
+   eapolbuf >ver   eapolbuf >plen  be-w@ 4 + ctype-p compute-mic
+   mic             eapolbuf >kmic  /mic move      \ Key mic
+   eapolbuf /eapol-key send-eapol-msg 
 ;
-
-: do-group-key-handshake  ( -- )
-   wait-for-1-of-2 0=  if  ." Failed to get the first group key" cr exit  then
-   send-2-of-2         if  ." Failed to send the second group key" cr exit  then
-   install-group-key
+: 1/4-valid?  ( -- ok? )
+   data >dtype    c@ kt>dtype        <>  if  false exit  then  \ Descriptor type mismatch
+   data >klen  be-w@ ctype-p ct>klen <>  if  false exit  then  \ Bad key len
+   true
 ;
-
-\ =======================================================================
-\ WPA/WPA2 keys handshake
-
-: request-rekey  ( ki-pairwise -- )
-   " Send rekey message" vtype
-   last-rcnt++
-   set-eapolbuf-common
-   0 eapolbuf >klen be-w!			\ Key length
-   /eapol-body eapolbuf >plen  be-w!		\ Packet length
-   ( ki-pairwise ) dup gct>kinfo or ki-request or ki-error or ki-mic or
-   eapolbuf >kinfo be-w!			\ Key info
-   eapolbuf >ver eapolbuf >plen be-w@ 4 +
-   rot ( ki-pairwise )  if  ctype-p  else  ctype-g  then  compute-mic
-   mic         eapolbuf >kmic /mic move		\ Key mic
-   eapolbuf /eapol-key tuck write-force <>
-;
-
-: resync-gtk  ( -- )  0 request-rekey  ;
-
-: (do-key-handshakes)  ( -- )
-   false to done-group-key?
-   false to pairwise-rekey?
-   do-pairwise-key-handshake  if
-      done-group-key? 0=  if
-         2 0  do
-            false to group-rekey?
-            do-group-key-handshake
-            group-rekey?  if  resync-gtk  else  leave  then
-         loop
-      then
+: process-1/4  ( -- )
+   " Process EAPOL-key message 1 of 4" vtype
+   eapol-state s1/4 <>  if  " Unexpected pairwise key message 1 of 4" vtype  then
+   1/4-valid?  if
+      data >ver c@ to eapol-ver
+      data >knonce anonce$ move
+      send-2/4  if  set-s3/4  then
    then
 ;
-
-: do-key-handshakes  ( -- )
-   2 0  do
-      (do-key-handshakes)
-      pairwise-rekey?  if  ki-pairwise request-rekey  else  leave  then
-   loop
+: 3/4-valid?  ( -- ok? )
+   data >dtype    c@ kt>dtype        <>  if  false exit  then   \ Descriptor type mismatch
+   data >klen  be-w@ ctype-p ct>klen <>  if  false exit  then   \ Bad key len
+   data >knonce anonce /nonce comp       if  false exit  then   \ Nonce differ
+   data ctype-p mic-ok?              0=  if  false exit  then   \ Bad mic
+   data >kinfo be-w@ ki-encr-key and  if  data decrypt-parse-ie  else  true  then
 ;
-
+: process-3/4  ( -- )
+   " Process EAPOL-key message 3 of 4" vtype
+   eapol-state s3/4 =  if
+      3/4-valid?  if
+         send-4/4  if
+            install-pairwise-key
+            true to done-pairwise-key?
+            " Install pairwise key" vtype
+            done-group-key?  if
+               \ WPA2 3/4 contains the group key
+               " Install group key" vtype
+               install-gtk-idx
+               install-group-key
+            else
+               " Wait for group key message 1 of 2" vtype
+               set-s1/2
+            then
+         then
+      then
+   else
+      " Unexpected pairwise key message 3 of 4" vtype
+   then
+;
+: 1/2-valid?  ( -- ok? )
+   data >dtype    c@ kt>dtype        <>  if  false exit  then  \ Descriptor type mismatch
+   data >klen  be-w@ ctype-g ct>klen <>  if  false exit  then  \ Bad key len
+   data ctype-p mic-ok?              0=  if  false exit  then  \ Bad MIC
+   data decrypt-gtk
+;
+: process-1/2  ( -- )
+   eapol-state s1/2 =  if
+      1/2-valid?  if
+         send-2/2  if
+            " Install group key" vtype
+            install-gtk-idx
+            install-group-key
+            true to done-group-key?
+         then
+      then
+   else
+      " Unexpected group key message 1 of 2" vtype
+   then
+;
+: get-eapol-msg#  ( -- state )
+   data >kinfo be-w@
+   dup ki-pairwise and  if       \ Pairwise key info
+      dup pct>kinfo1 =  if  drop s1/4 exit  then
+          pct>kinfo3 =  if       s3/4 exit  then
+   else
+      ki-idx-mask invert and gct>kinfo1  =  if  s1/2 exit  then
+   then
+   s0/4
+;
+: process-eapol-key  ( -- )
+   get-eapol-msg#  case
+      s1/4  of  process-1/4  endof
+      s3/4  of  process-3/4  endof
+      s1/2  of  process-1/2  endof
+   endcase
+;
+: (process-eapol)  ( -- )
+   data >etype be-w@ eapol-type =         \ EAPOL frame
+   data >ptype c@ eapol-key =  and  if    \ EAPOL-key
+      data >ver c@ to eapol-ver
+      data >rcnt last-rcnt /rcnt comp 0>  if  \ A new eapol-key record
+         data >rcnt /rcnt cdump cr
+         data >rcnt last-rcnt!            \ Update last replay counter
+         process-eapol-key
+      else
+         " Same replay count; packet discarded" vtype
+      then
+   else
+      " Non EAPOL frame received" vtype
+   then
+;
+: (do-key-handshakes)  ( -- )
+   begin
+      data /buf read-force 0>  if  (process-eapol)  then
+   timeout? disconnected? or done? or send-error? or  until
+;
+: do-key-handshakes  ( -- )
+   false to send-error?
+   set-eapol-timeout
+   set-s1/4
+   (do-key-handshakes)
+   done? disconnected? or send-error? or  if  exit  then
+   done-pairwise-key?  if
+      " Timeout waiting for group key; request group key" vtype
+      resync-gtk
+      set-eapol-timeout
+      set-s1/2
+      (do-key-handshakes)
+   else
+      " Timeout waiting for 4-way handshake" vtype
+   then
+;
 
 \ =======================================================================
 \ Scan dump
@@ -445,6 +532,21 @@ false value group-rekey?
    dup 1+ c@  swap 2 + swap bounds  do
       i c@ h# 7f and 1 >> .d
    loop  cr
+;
+
+: .vendor  ( adr -- )
+   dup 2 + swap 1+ c@              ( adr' len )
+   ?dup 0=  if  drop exit  then
+   dup 4 <  if  ." Vendor Specific: " cdump cr exit  then
+   over be-l@  case                ( adr len )
+      oui-wpa  of  ." WPA: "      endof
+      oui-wmm  of  ." WMM: "      endof
+      oui-wps  of  ." WPS: "      endof
+      oui-ht   of  ." HT: "       endof
+      oui-ht+  of  ." More HT: "  endof
+      ( otherwise )  ." Vendor Specific: " 
+   endcase
+   cdump cr
 ;
 
 : .ie  ( adr -- )
@@ -482,7 +584,7 @@ false value group-rekey?
                  cr endof
       d# 48  of  ." Robust security network: " dup 2 + swap 1+ c@ cdump cr  endof
       d# 50  of  ." Extended supported rates (Mbit/s): " .rates  endof
-      d# 221  of  ." Wi-Fi Protected Access: " dup 2 + swap 1+ c@ cdump cr  endof
+      d# 221  of  .vendor  endof
       ( default )  ." Unknown IE type: " swap dup 1+ c@ 2 +  cdump  cr
    endcase
 ;
@@ -571,14 +673,6 @@ false value group-rekey?
 : find-ie  ( adr ie-type -- adr len true | false )
    >r					( adr )  ( R: ie-type )
    dup le-w@ swap 2 + swap d# 19 /string	( adr' len' )
-   r> (find-ie)				( adr' len' true | false )
-;
-: find-ie2  ( ie-adr,len adr ie-type -- adr len true | false )
-   >r		   			( ie-adr,len adr )  ( R: ie-type )
-   dup le-w@ swap 2 + swap d# 19 /string
-					( ie-adr,len adr len )  ( R: ie-type )
-   3 pick rot - -			( ie-adr,len len' )  ( R: ie-type )
-   swap /string				( adr' len' )  ( R: ie-type )
    r> (find-ie)				( adr' len' true | false )
 ;
 : find-ssid  ( ssid$ scanbuf-adr -- ap-adr' true | false )
@@ -728,14 +822,19 @@ false value group-rekey?
    dup  0=  if  ." Keys in wifi-cfg are not valid - "  then
 ;
 
-h# 0050.f201 constant wpa-tag
-: process-wpa-ie  ( ie-adr,len adr -- )
-   \ Some AP such as Linksys has a bogus WPA IE in addition to the real thing.
-   \ Skip over the bad one and see if there's another WPA IE
-   2 pick be-l@ wpa-tag =  if  drop set-wpa-ktype exit  then
-   d# 221 find-ie2  if
-      over be-l@ wpa-tag =  if  set-wpa-ktype  else  2drop  then
-   then
+: (process-vendor-ie)  ( adr -- )
+   dup 2 + swap 1+ c@              ( adr' len )
+   dup 4 >  if
+      over be-l@ oui-wpa =  if  set-wpa-ktype exit  then
+   then  2drop
+;
+
+: process-vendor-ie  ( adr -- )
+   dup le-w@ swap 2 + swap d# 19 /string   ( adr' len )
+   begin  dup 0>  while                    ( adr len )
+      over c@ h# dd =  if  over (process-vendor-ie)  then
+      over 1+ c@ 2 + /string               ( adr' len' )
+   repeat  2drop
 ;
 
 : ssid-valid?  ( adr -- flag )
@@ -754,7 +853,7 @@ h# 0050.f201 constant wpa-tag
    dup 6 find-ie  if  drop 2 + le-w@ set-atim-window  then	\ ATIM window
    dup 7 find-ie 0=  if  null$  then  do-set-country-info	\ Country channel/power info
    dup d# 48 find-ie  if  set-wpa2-ktype drop key-ok? exit  then	\ Favor RSN(WPA2) over WPA
-   dup d# 221 find-ie  if  2 pick process-wpa-ie  then
+   dup process-vendor-ie                        \ E.g. WPA
    drop key-ok?
 ;
 
@@ -764,7 +863,7 @@ h# 0050.f201 constant wpa-tag
    cr
    ktype=wpa?  if
       do-key-handshakes
-      done-group-key?
+      done?
    else
       true
    then
@@ -831,15 +930,8 @@ h# 0050.f201 constant wpa-tag
    " Process EAPOL message" vtype
    2dup vdump
    data swap move
-   data >ptype c@ eapol-key =  and  if		\ EAPOL-key
-      data >rcnt last-rcnt /rcnt comp  if	\ A new eapol-key record
-         " Got EAPOL-key message 1 of 2" vtype
-         data >rcnt last-rcnt!			\ Update last replay counter
-         process-1-of-2  if
-            send-2-of-2 0=  if  install-group-key  then
-         then
-      then
-   then
+   set-s1/2
+   (process-eapol)
 ;
 
 
