@@ -174,8 +174,20 @@ fload ${BP}/cpu/x86/pc/alex/devices.fth
 true ' local-mac-address? set-config-int-default
 fload ${BP}/ofw/inet/loadtcp.fth
 
+[ifdef] resident-packages
+support-package: nfs
+   fload ${BP}/ofw/fs/nfs/loadpkg.fth
+end-support-package
+[then]
+devalias nfs net//obp-tftp:last//nfs
+
 support-package: http
    fload ${BP}/ofw/inet/http.fth	\ HTTP client
+end-support-package
+
+fload ${BP}/ofw/wifi/wifi-cfg.fth
+support-package: supplicant
+fload ${BP}/ofw/wifi/loadpkg.fth
 end-support-package
 
 fload ${BP}/cpu/x86/pc/boot.fth
@@ -251,7 +263,7 @@ warning !
    " probe-" do-drop-in
    probe-pci
    report-pci-fb
-\   silent-probe-usb
+   silent-probe-usb
 ;
 
 \ This reduces processor use when waiting for a key.  It helps
