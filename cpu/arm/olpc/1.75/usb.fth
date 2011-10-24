@@ -41,7 +41,7 @@ stand-init: Init USB Phy
    init-usb
 ;
 
-d# 300 config-int usb-delay  \ Milliseconds to wait before probing hub ports
+d# 350 config-int usb-delay  \ Milliseconds to wait before probing hub ports
 
 devalias u    /usb/disk
 
