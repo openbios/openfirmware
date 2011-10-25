@@ -79,8 +79,7 @@ end-string-array
    if ." MPPT" then
 ;
 
-\needs 2.d : 2.d  ( n -- )  push-decimal <# u# u#s u#>  type  pop-base  ;
-: .%  ( n -- )  2.d ." %" ;
+: .%  ( n -- )  push-decimal  <# [char] % hold u# u#s u#>  type  pop-base  ;
 : .bat  ( -- )
    bat-status@  ( stat )
    ." AC:"  dup h# 10 and  if  ." on  "  else  ." off "  then  ( stat )
