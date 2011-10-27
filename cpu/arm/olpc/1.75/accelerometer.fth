@@ -16,15 +16,24 @@ hex
 
 0 [if]
 
+select /accelerometer
+
 : temperature-on  ( -- )  h# c0 h# 1f acc-reg!  ;
+: bdu  ( -- )  h# 23 acc-reg@  h# 80 or  h# 23 acc-reg!  ;
 : adc1@  ( -- )  h# 08 acc-reg@ h# 09 acc-reg@ bwjoin wext 5 >>a  ;
 : adc2@  ( -- )  h# 0a acc-reg@ h# 0b acc-reg@ bwjoin wext 5 >>a  ;
-: adc3@  ( -- )  h# 0c acc-reg@ h# 0d acc-reg@ bwjoin wext 5 >>a  ;
+
+: wait-adc3  begin  h# 07 acc-reg@ h# 04 and until  ;
+: adc3@  ( -- l h )
+    h# 0c acc-reg@ h# 0d acc-reg@ bwjoin wext 5 >>a
+;
+: 1hz  ( -- )  h# 20 acc-reg@  h# 0f and  h# 10 or  h# 20 acc-reg!  ;
 
 : .xr  ( n -- )  push-hex      2 .r  pop-base  space ;
 : .dr  ( n -- )  push-decimal  3 .r  pop-base  space ;
 : .br  ( n -- )
    push-binary  0  <# # # # # [char] . hold # # # # #>  type  pop-base  space ;
+: .status-aux  h# 07 acc-reg@  .br  ;
 
 : .reg  ( register -- value )
    space
