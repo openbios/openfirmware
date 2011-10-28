@@ -1,4 +1,4 @@
-purpose: USB elaborations for the BIOS loaded OFW
+purpose: Platform-specific USB elaborations
 \ See license at end of file
 
 0 config-int usb-delay  \ Milliseconds to wait before set-address

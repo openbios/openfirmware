@@ -1,4 +1,4 @@
-purpose: USB elaborations for the BIOS loaded OFW
+purpose: Platform-specific USB elaborations
 \ See license at end of file
 
 0 0  " d4208000"  " /" begin-package  \ USB Host Controller
