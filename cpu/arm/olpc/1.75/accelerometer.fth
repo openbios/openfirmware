@@ -298,9 +298,10 @@ select /accelerometer
 ;
 
 : delay  ( -- )  d# 30 ms  ;
+d# 25,000 value bus-speed
 : open  ( -- flag )
    my-unit " set-address" $call-parent
-   d# 25,000 " set-bus-speed" $call-parent
+   bus-speed " set-bus-speed" $call-parent
    ['] accelerometer-on catch 0=   
 ;
 : close  ( -- )
@@ -389,10 +390,11 @@ defer lis-selftest
 
 : probe  ( -- )
    h# 3a 6 " set-address" $call-parent
-   d# 25,000 " set-bus-speed" $call-parent
+   d# 25,000 " set-bus-speed" $call-parent \ XO-1.75 B1 lacks pullups SCL SDA
    ['] accelerometer-on catch  if
       \ The attempt to talk at the old address failed, so we assume the new chip
       \ Support for new LIS3DHTR chip
+      d# 100,000 to bus-speed
       d#  50 to min-x  d#  50 to min-y  d#  50 to min-z 
       d# 150 to max-x  d# 150 to max-y  d# 450 to max-z 
       h# 32 6 encode-phys " reg" property
@@ -401,6 +403,7 @@ defer lis-selftest
       accelerometer-off
       \ Something responded to the old address, so we assume it's the old chip
       \ Support for old LIS33DE chip
+      d# 25,000 to bus-speed
       d#  20 to min-x  d#  20 to min-y  d#  20 to min-z 
       d# 400 to max-x  d# 400 to max-y  d# 400 to max-z 
       h# 3a 6 encode-phys " reg" property
