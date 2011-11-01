@@ -13,7 +13,6 @@ hex
 : ctl4!  ( b -- )  h# 23 acc-reg!  ;
 : accelerometer-on  ( -- )  h# 47 ctl1!  ;
 : accelerometer-off  ( -- )  h# 07 ctl1!  ;
-
 : wext  ( b -- n )  dup h# 8000 and  if  h# ffff0000 or  then  ;
 : acceleration@  ( -- x y z )
    h# 28 acc-reg@ h# 29 acc-reg@ bwjoin wext 5 >>a
@@ -49,7 +48,7 @@ d# 25,000 value bus-speed
 : open  ( -- flag )
    my-unit " set-address" $call-parent
    bus-speed " set-bus-speed" $call-parent
-   ['] accelerometer-on catch 0=   
+   ['] accelerometer-on catch 0=
 ;
 : close  ( -- )
    accelerometer-off
@@ -122,7 +121,7 @@ d# 450 value max-z
    average-acceleration@ t-  ( dx dy dz )
    h# 08 ctl4!               ( x y z )     \ High res, Normal mode
    error?  if  accelerometer-off  true exit  then
-   
+
    accelerometer-off
    false
 ;
@@ -141,22 +140,22 @@ defer lis-selftest
    ['] accelerometer-on catch  if
       \ The attempt to talk at the old address failed, so we assume the new chip
       \ Support for new LIS3DHTR chip
-      d# 100,000 to bus-speed
-      d#  50 to min-x  d#  50 to min-y  d#  50 to min-z 
-      d# 150 to max-x  d# 150 to max-y  d# 450 to max-z 
+      d# 400,000 to bus-speed
+      d#  50 to min-x  d#  50 to min-y  d#  50 to min-z
+      d# 150 to max-x  d# 150 to max-y  d# 450 to max-z
       h# 32 6 encode-phys " reg" property
       ['] lis3dhtr-selftest to lis-selftest
    else
       accelerometer-off
       \ Something responded to the old address, so we assume it's the old chip
       \ Support for old LIS33DE chip
-      d# 25,000 to bus-speed
-      d#  20 to min-x  d#  20 to min-y  d#  20 to min-z 
-      d# 400 to max-x  d# 400 to max-y  d# 400 to max-z 
+      d#  25,000 to bus-speed
+      d#  20 to min-x  d#  20 to min-y  d#  20 to min-z
+      d# 400 to max-x  d# 400 to max-y  d# 400 to max-z
       h# 3a 6 encode-phys " reg" property
       ['] lis33de-selftest to lis-selftest
    then
-;   
+;
 
 end-package
 

@@ -58,13 +58,13 @@ h# 0400 constant bbu_ISR_BED               \ Bus Error Detect bit
 
 h# 1000 constant BBU_TWSI_TimeOut          \ TWSI bus timeout loop counter value
 
-bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
+bbu_ICR_IUE bbu_ICR_SCLE or value cr-set   \ bits to maintain as set
 : init-twsi-channel  ( channel# -- )
    set-twsi-channel
    7 clock-reg io!  3 clock-reg io!  \ Set then clear reset bit
    1 us
-   iue+scle  bbu_ICR_UR or  cr!  \ Reset the unit
-   iue+scle cr!                  \ Release the reset
+   cr-set  bbu_ICR_UR or  cr!    \ Reset the unit
+   cr-set cr!                    \ Release the reset
    0 sar!                        \ Set host slave address
    0 cr!                         \ Disable interrupts
 ;
@@ -73,7 +73,7 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
 ;
 
 : twsi-run  ( extra-flags -- )
-   iue+scle or  bbu_ICR_TB or  cr!    ( )
+   cr-set or  bbu_ICR_TB or  cr!      ( )
 
    h# 1000  0  do
       cr@ bbu_ICR_TB and 0=  if   unloop exit  then
@@ -94,7 +94,7 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
    bbu_ICR_START  twsi-putbyte        ( )
    sr@  bbu_ISR_BED and  if           ( )
       bbu_ISR_BED sr!                 ( )
-      iue+scle bbu_ICR_MA or  cr!     ( )
+      cr-set  bbu_ICR_MA or  cr!      ( )
       true abort" TWSI bus error"
    then                               ( )
 ;
@@ -111,7 +111,7 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
       \ If no result data requested, quit now
       r@ 0=  if                          ( r: #data-bytes )
          r> drop                         ( )
-         iue+scle bbu_ICR_STOP or  cr!   ( )
+         cr-set  bbu_ICR_STOP or  cr!    ( )
          exit
       then                               ( r: #data-bytes )
    then                                  ( r: #data-bytes )
@@ -177,10 +177,19 @@ bbu_ICR_IUE bbu_ICR_SCLE or constant iue+scle
    twsi-out
 ;
 
-d# 12,600,000 constant numerator
-: set-bus-speed  ( hz -- )  \ Useful range is currently 25,000 .. 100,000
-   child-address set-twsi-target
-   numerator swap /  h# 1ff min  h# 7e max  lcr!
+: set-bus-standard  cr-set  h# fffe7fff and              to cr-set  ;
+: set-bus-fast      cr-set  h# fffe7fff and  h# 8000 or  to cr-set  ;
+: set-bus-speed  ( hz -- )  \ Useful range is 25,000 .. 100,000, or 400,000
+    child-address set-twsi-target
+    dup 1- d# 100,000 < if
+        set-bus-standard
+        d# 12,600,000  swap /  h# 1ff min  h# 7e max
+        lcr@ h# ffff.ff00 and  or  lcr!
+    else
+        set-bus-fast
+        lcr@ h# ffff.00ff and  h# 0000.1d00 or  lcr!
+    then
+
 ;
 : decode-unit  ( adr len -- low high )  parse-2int  ;
 : encode-unit  ( low high -- adr len )  >r <# u#s drop [char] , hold r> u#s u#>  ;
