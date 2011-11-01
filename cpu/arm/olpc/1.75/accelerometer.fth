@@ -15,6 +15,7 @@ hex
 : accelerometer-off  ( -- )  h# 07 ctl1!  ;
 : wext  ( b -- n )  dup h# 8000 and  if  h# ffff0000 or  then  ;
 : acceleration@  ( -- x y z )
+   begin  h# 27 acc-reg@  h# 08 and  until  \ wait for data available
    h# 28 acc-reg@ h# 29 acc-reg@ bwjoin wext 5 >>a
    h# 2a acc-reg@ h# 2b acc-reg@ bwjoin wext 5 >>a
    h# 2c acc-reg@ h# 2d acc-reg@ bwjoin wext 5 >>a
