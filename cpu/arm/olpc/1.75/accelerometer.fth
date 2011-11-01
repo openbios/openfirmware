@@ -16,9 +16,13 @@ hex
 : wext  ( b -- n )  dup h# 8000 and  if  h# ffff0000 or  then  ;
 : acceleration@  ( -- x y z )
    begin  h# 27 acc-reg@  h# 08 and  until  \ wait for data available
-   h# 28 acc-reg@ h# 29 acc-reg@ bwjoin wext 5 >>a
-   h# 2a acc-reg@ h# 2b acc-reg@ bwjoin wext 5 >>a
-   h# 2c acc-reg@ h# 2d acc-reg@ bwjoin wext 5 >>a
+   h# 0a8 1 6 " smbus-out-in" $call-parent ( xl xh yl yh zl zh )
+   bwjoin wext 5 >>a     ( xl xh yl yh z )
+   >r                    ( xl xh yl yh     r: z )
+   bwjoin wext 5 >>a     ( xl xh y         r: z )
+   >r                    ( xl xh           r: z y )
+   bwjoin wext 5 >>a     ( x               r: z y )
+   r> r> ( x y z )
 ;
 
 : t+  ( x1 y1 z1 x2 y2 z2 -- x3 y3 z3 )
