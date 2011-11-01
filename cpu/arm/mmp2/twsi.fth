@@ -179,18 +179,24 @@ bbu_ICR_IUE bbu_ICR_SCLE or value cr-set   \ bits to maintain as set
 
 : set-bus-standard  cr-set  h# fffe7fff and              to cr-set  ;
 : set-bus-fast      cr-set  h# fffe7fff and  h# 8000 or  to cr-set  ;
-: set-bus-speed  ( hz -- )  \ Useful range is 25,000 .. 100,000, or 400,000
-    child-address set-twsi-target
-    dup 1- d# 100,000 < if
-        set-bus-standard
-        d# 12,600,000  swap /  h# 1ff min  h# 7e max
-        lcr@ h# ffff.ff00 and  or  lcr!
-    else
-        drop
-        set-bus-fast
-        lcr@ h# ffff.00ff and  h# 0000.1d00 or  lcr!
-    then
 
+\ The dividends below (12,600,000 and 11,600,000) are chosen to give the
+\ same values that the LCR defaults to for the data rates 100,000 and 400,000
+\ The TWSI input clock is the 26 MHz VCXO, and the divided value generates
+\ both the low phase and the high phase, so you would think that the dividend
+\ should be 13,000,000 (half of 26M), but that doesn't give the right result.
+\ Perhaps there is an additive factor in the divisor; the manual is quite vague.
+: set-bus-speed  ( hz -- )  \ Useful range is 25K .. 400K - 100K and 400K are typical
+   child-address set-twsi-target                         ( hz )
+   dup  d# 100,000 <=  if                                ( hz )
+      set-bus-standard                                   ( hz )
+      d# 12,600,000  swap /  h# 1ff min  h# 7e max       ( divisor )
+      lcr@ h# 1ff invert and  or  lcr!                   ( )
+   else                                                  ( hz )
+      set-bus-fast                                       ( hz )
+      d# 11,600,000  swap /  h# 1ff min  h# 1d max       ( divisor ) 
+      lcr@ h# 3.fe00 invert and  swap 9 lshift or  lcr!  ( )
+   then                                                  ( )
 ;
 : decode-unit  ( adr len -- low high )  parse-2int  ;
 : encode-unit  ( low high -- adr len )  >r <# u#s drop [char] , hold r> u#s u#>  ;
