@@ -186,6 +186,7 @@ bbu_ICR_IUE bbu_ICR_SCLE or value cr-set   \ bits to maintain as set
         d# 12,600,000  swap /  h# 1ff min  h# 7e max
         lcr@ h# ffff.ff00 and  or  lcr!
     else
+        drop
         set-bus-fast
         lcr@ h# ffff.00ff and  h# 0000.1d00 or  lcr!
     then
