@@ -70,7 +70,7 @@ code sumcell  ( adr -- sum )
    add   r0,r0,r1
    ldrb  r1,[tos, `lf_width 1+`]
    add   r0,r0,r1
-   mov   r0,tos   
+   mov   tos,r0
 c;
 [then]
 
