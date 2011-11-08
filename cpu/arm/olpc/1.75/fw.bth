@@ -37,15 +37,6 @@ fload ${BP}/cpu/arm/linux.fth
    unload-crypto
    " /usb" " reset-usb" execute-device-method drop
 ;
-: quiesce  ( -- )
-   timers-off
-   usb-quiet
-   close-ec
-   \ Change the sleep state of EC_SPI_ACK from 1 (OFW value) to 0 (Linux value)
-   d# 125 af@  h# 100 invert and  d# 125 af!
-;
-
-' quiesce to linux-hook
 
 d# 9999 to arm-linux-machine-type  \ Marvell Jasper
 
@@ -416,6 +407,31 @@ devalias mouse    /ap-sp/mouse
       0 to keyboard-ih
    then
 ;
+
+: teardown-mux-io  ( -- )
+   install-uart-io
+   text-off
+   keyboard-off
+   fallback-out-ih remove-output
+   fallback-in-ih remove-input
+   stdin off
+   stdout off
+   in-mux-ih close-dev
+   out-mux-ih close-dev
+;
+: quiesce  ( -- )
+   teardown-mux-io
+   timers-off
+   usb-quiet
+   close-ec
+   \ Change the sleep state of EC_SPI_ACK from 1 (OFW value) to 0 (Linux value)
+   d# 125 af@  h# 100 invert and  d# 125 af!
+;
+
+' quiesce to linux-hook
+\ Because visible doesn't work sometimes when calling back from Linux
+dev /client-services  patch noop visible enter  dend
+
 : interpreter-init  ( -- )
    hex
    warning on
