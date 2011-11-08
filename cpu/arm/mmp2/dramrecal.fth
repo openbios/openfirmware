@@ -86,8 +86,6 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
    mov   r1, #0x40000000     \ DLL_UPDATE_EN
    str   r1, [r0, #0x240]    \ PHY_CTRL14
 
-   mov   r1, #0x0300  begin  decs r1,1  0= until  \ Delay, needed for some DRAMs
-
    mov   r1, #0x80           \ Exit Self Refresh value
    str   r1, [r0, #0x120]    \ USER_INITIATED_COMMAND0
 
@@ -108,6 +106,10 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
       decs r1, #1
    0= until
 [then]
+
+   \ Delay to let the memory controller and DRAM DLLs settle
+   mov   r1, #0x0300  begin  decs r1,1  0= until
+
    mov     r1, #0x0          \ Unblock data requests
    str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
 
