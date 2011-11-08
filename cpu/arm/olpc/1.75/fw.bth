@@ -231,8 +231,10 @@ device-end
    : close ;
 end-package
 
+\ it seems to be difficult to get SoC wakeups from the keypad controller,
+\ so we set them up as gpio, instead.
+[ifdef] use_mmp2_keypad_control
 fload ${BP}/cpu/arm/mmp2/keypad.fth
-[ifndef] cl2-a1
 [ifdef] notdef  \ CForth turns on the keypad; resetting it makes it not work
 stand-init: keypad
    keypad-on
@@ -259,6 +261,7 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
    d# 19 gpio-pin@ 0=  if  h#  01 or  then  \ Square
    d# 20 gpio-pin@ 0=  if  h#  40 or  then  \ Rotate
 [else]
+[ifdef] use_mmp2_keypad_control
    d# 15 gpio-pin@ 0=  if  button-rotate or  then   ( n )
    scan-keypad                              ( n keypad )
    button-o       h# 01  keypad-bit         ( n' keypad )
@@ -270,6 +273,17 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
    rocker-down    h# 40  keypad-bit         ( n' keypad )
    rocker-left    h# 80  keypad-bit         ( n' keypad )
    drop                                     ( n )
+[else]
+   d# 15 gpio-pin@ 0=  if  button-rotate  or  then
+   d# 16 gpio-pin@ 0=  if  button-o       or  then
+   d# 17 gpio-pin@ 0=  if  button-check   or  then
+   d# 18 gpio-pin@ 0=  if  button-x       or  then
+   d# 19 gpio-pin@ 0=  if  button-square  or  then
+   d# 20 gpio-pin@ 0=  if  rocker-up      or  then
+   d# 21 gpio-pin@ 0=  if  rocker-right   or  then
+   d# 22 gpio-pin@ 0=  if  rocker-down    or  then
+   d# 23 gpio-pin@ 0=  if  rocker-left    or  then
+[then]
 [then]
 ;
 
