@@ -161,7 +161,7 @@ headers
    dup bsize > abort" Bad size for ext2fsfread"
    dfile-size  lblk# bsize um*  d- drop		( addr count rem )
    umin swap			( actual addr )
-   lblk# read-file-block	( actual )
+   lblk# j-read-file-block	( actual )
    dup  0>  if  lblk#++  then	( actual )
 ;
 
@@ -250,6 +250,7 @@ external
    update-gds
    flush
    release-buffers
+   free-overlay-list
 ;
 : read  ( adr len -- actual )
    ext2fs-fd  ['] fgets catch  if  3drop 0  then

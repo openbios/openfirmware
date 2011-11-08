@@ -133,16 +133,15 @@ constant /tag64
 
 : write-jblock  ( d.block# adr -- )
    -rot drop write-fs-block     ( error? )
-\   j-blocksize 2swap     ( adr len d.block# )
-\   j-blocksize du*       ( adr len d.byte# )
-\   write-bytes
    if  ." Journal recovery write error" cr  abort  then
 ;
 
 0 value next-log-block
+: log-block++  ( -- block# )
+   next-log-block dup 1 +wrap to next-log-block  ( block# )
+;
 : next-jblock  ( buf -- )
-   next-log-block read-file-block            ( )
-   next-log-block 1 +wrap to next-log-block  ( )
+   log-block++ read-file-block            ( )
 ;
 
 0 value crc32-sum
@@ -208,9 +207,66 @@ list: revoke-list
    then                                              ( )
 ;
 
-: replay-tag  ( -- )
-   obh next-jblock                     ( )
+listnode
+   /n 2* field >o_block#
+   /n    field >o_pblock#
+   /n    field >o_escaped?
+nodetype: overlay-node
 
+list: overlay-list
+
+: free-overlay-list  ( -- )
+   begin  overlay-list >next-node  while  ( )
+      overlay-list delete-after           ( node )
+      overlay-node free-node              ( )
+   repeat                                 ( )
+; 
+
+\ node is either the found one or the insertion point
+: find-overlay?  ( d.block# -- d.block# node found? )
+   revoke-list ['] block#> find-node drop    ( d.block# node )
+   3dup >r_block# 2@ d=                      ( d.block# node )
+;
+
+: j-read-file-block  ( adr lblk# -- )
+   >pblk#  ?dup  if               ( adr pblk# )
+      u>d find-overlay?  if       ( adr d.pblk# node )
+         nip nip                  ( adr node )
+         tuck >o_pblock# l@       ( node adr pblk# )
+         block over bsize move    ( node adr )
+         swap >o_escaped? l@  if  ( adr )
+            jbd_magic swap be-l!  ( )
+         else                     ( adr )
+	    drop                  ( )
+	 then                     ( )
+      else                        ( adr d.pblk# node )
+         2drop                    ( adr pblk# )
+         block swap bsize move    ( )
+      then                        ( )
+   else                           ( adr )
+      bsize erase                 ( )
+   then                           ( )
+;
+
+0 value j-read-only?
+: set-overlay-node  ( escaped? log-blk# d.block# node -- )
+   >r                               ( escaped? log-blk# d.block# r: node )
+   r@ >o_block# 2!                  ( escaped? log-blk# r: node )
+   >pblk# r@ >o_pblock# l!          ( escaped? r: node )
+   r> >o_escaped? l!                ( )
+;
+: note-jblock  ( d.block# escaped? log-blk# -- )
+   2swap find-overlay?  if          ( escaped? log-blk# d.block# node )
+      set-overlay-node              ( )
+   else                             ( escaped? log-blk# d.block# node )
+      >r                            ( escaped? log-blk# d.block# r: prev-node )
+      >r overlay-node allocate-node ( d.block# escaped? log-blk# newnode r: prevnode )
+      dup >r set-overlay-node       ( r: prevnode newnode )
+      r> r> insert-after            ( )
+   then
+;
+
+: replay-tag  ( -- )
    tagp >t_blocknr be-l@               ( block# )
    j-incompat 2 and  if                ( block# )     \ 2:FEATURE_INCOMPAT_64BIT
       tagp >t_blocknr_high be-l@       ( d.block# )
@@ -220,10 +276,16 @@ list: revoke-list
    2dup revoked?  if                   ( d.block# )
       2drop                            ( )
    else                                ( d.block# )
-      tagp >t_flags be-l@ 1 and  if    ( d.block# )  \ 1:FLAG_ESCAPE
-         jbd_magic obh >data be-l!     ( d.block# )
-      then                             ( d.block# )
-      obh write-jblock                 ( )
+      tagp >t_flags be-l@ 1 and        ( d.block# escaped? )
+      j-read-only?  if                 ( d.block# escaped? )
+         log-block++ note-jblock       ( )
+      else                             ( d.block# escaped? )
+         obh next-jblock               ( d.block# escaped? )
+         if                            ( d.block# )  \ 1:FLAG_ESCAPE
+            jbd_magic obh >data be-l!  ( d.block# )
+         then                          ( d.block# )
+         obh write-jblock              ( )
+      then                             ( )
    then                                ( )
 ;
 
@@ -360,7 +422,7 @@ list: revoke-list
 
    2 ['] one-pass catch  if
       ." Journal replay failed" cr
-      free-revoke-list  free-journal  exit
+      free-overlay-list free-revoke-list  free-journal  exit
    then
 
    free-revoke-list
@@ -369,3 +431,4 @@ list: revoke-list
    free-journal
 cr
 ;
+\ XXX need to do free-overlay-list in close
