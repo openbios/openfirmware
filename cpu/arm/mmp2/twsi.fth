@@ -15,11 +15,13 @@ h# 050000 unaligned-mmap  constant clock-unit-pa
 : sr@   ( -- n )  twsi-chip h# 18 + io@   ;
 : sar@  ( -- n )  twsi-chip h# 20 + io@   ;
 : lcr@  ( -- n )  twsi-chip h# 28 + io@   ;
+: wcr@  ( -- n )  twsi-chip h# 30 + io@   ;
 : dbr!  ( n -- )  twsi-chip h# 08 + io!   ;
 : cr!   ( n -- )  twsi-chip h# 10 + io!   ;
 : sr!   ( n -- )  twsi-chip h# 18 + io!   ;
 : sar!  ( n -- )  twsi-chip h# 20 + io!   ;
 : lcr!  ( n -- )  twsi-chip h# 28 + io!   ;
+: wcr!  ( -- n )  twsi-chip h# 30 + io!   ;
 
 create channel-bases
 h# 011000 ,  h# 031000 ,  h# 032000 ,  h# 033000 ,  h# 033800 ,  h# 034000 ,
@@ -58,6 +60,10 @@ h# 0400 constant bbu_ISR_BED               \ Bus Error Detect bit
 
 h# 1000 constant BBU_TWSI_TimeOut          \ TWSI bus timeout loop counter value
 
+d#   26 constant ftwsi-mhz  \ 
+d# 1400 constant tlow-nsec  \ The I2C spec calls for Tlow >= 1300 ns
+ftwsi-mhz tlow-nsec d# 1000 */ constant tlow-ticks
+
 bbu_ICR_IUE bbu_ICR_SCLE or value cr-set   \ bits to maintain as set
 : init-twsi-channel  ( channel# -- )
    set-twsi-channel
@@ -67,6 +73,9 @@ bbu_ICR_IUE bbu_ICR_SCLE or value cr-set   \ bits to maintain as set
    cr-set cr!                    \ Release the reset
    0 sar!                        \ Set host slave address
    0 cr!                         \ Disable interrupts
+   \ The COUNT field of TWSI_WCR establishes a minimum value for the SCL low time.
+   \ The minimum Tlow is the clock period * (12 + 2*COUNT)
+   wcr@ h# 1f invert and  tlow-ticks d# 12 - 2/  or  wcr!  \ Setup and hold times
 ;
 : init-twsi  ( -- )
    7 1  do  i init-twsi-channel  loop
@@ -177,25 +186,25 @@ bbu_ICR_IUE bbu_ICR_SCLE or value cr-set   \ bits to maintain as set
    twsi-out
 ;
 
-: set-bus-standard  cr-set  h# fffe7fff and              to cr-set  ;
-: set-bus-fast      cr-set  h# fffe7fff and  h# 8000 or  to cr-set  ;
 
-\ The dividends below (12,600,000 and 11,600,000) are chosen to give the
-\ same values that the LCR defaults to for the data rates 100,000 and 400,000
-\ The TWSI input clock is the 26 MHz VCXO, and the divided value generates
-\ both the low phase and the high phase, so you would think that the dividend
-\ should be 13,000,000 (half of 26M), but that doesn't give the right result.
-\ Perhaps there is an additive factor in the divisor; the manual is quite vague.
+: set-bus-standard  cr-set  h# 18000 invert and              to cr-set  ;
+: set-bus-fast      cr-set  h# 18000 invert and  h# 8000 or  to cr-set  ;
+
 : set-bus-speed  ( hz -- )  \ Useful range is 25K .. 400K - 100K and 400K are typical
    child-address set-twsi-target                         ( hz )
-   dup  d# 100,000 <=  if                                ( hz )
-      set-bus-standard                                   ( hz )
-      d# 12,600,000  swap /  h# 1ff min  h# 7e max       ( divisor )
+   ftwsi-mhz d# 1,000,000  2 pick */                     ( hz ticks )
+   swap  d# 100,000 <=  if                               ( ticks )
+      \ In slow mode, Thi = Tclk * (8+slv), Tlow = Tclk * (1+slv)
+      9 -  2/ 1+                                         ( slv )
       lcr@ h# 1ff invert and  or  lcr!                   ( )
-   else                                                  ( hz )
-      set-bus-fast                                       ( hz )
-      d# 11,600,000  swap /  h# 1ff min  h# 1d max       ( divisor ) 
-      lcr@ h# 3.fe00 invert and  swap 9 lshift or  lcr!  ( )
+      set-bus-standard                                   ( )
+   else                                                  ( ticks )
+      \ (The information below is poorly documented and was determined empirically)
+      \ In fast mode, Thi = Tclk * (10+flv), Tlo = Tclk * max(1+flv, tlow_ticks))
+      dup d# 11 - 2/ 1+  tlow-ticks  max                 ( ticks ticks-low )
+      -  d# 10 -                                         ( flv )
+      9 lshift  lcr@ h# 3.fe00 invert and  or  lcr!      ( )
+      set-bus-fast                                       ( )
    then                                                  ( )
 ;
 : decode-unit  ( adr len -- low high )  parse-2int  ;
