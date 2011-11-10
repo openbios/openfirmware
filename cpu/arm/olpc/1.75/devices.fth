@@ -182,6 +182,7 @@ fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
    ['] ec-spi-reprogrammed to spi-reprogrammed
 ;
 : flash-vulnerable(  ( -- )
+   ignore-power-button
    hdd-led-on
 ;
 : )flash-vulnerable  ( -- )
