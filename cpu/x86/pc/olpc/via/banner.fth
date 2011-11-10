@@ -65,7 +65,9 @@ h# 40 buffer: partition-map
 ;
 
 : .storage  ( -- )
-   get-internal-disk-info        ( )
+   internal-disk-present? 0=  if ( )
+      get-internal-disk-info     ( )
+   then
    internal-disk-present?  if    ( )
       internal-disk-size         ( d.size )
       d# 200,000,000.  d+        ( d.size' )  \ Round up
@@ -120,7 +122,7 @@ h# 40 buffer: partition-map
    ?spaces  cpu-model type  ." , "   .memory
    ." , " .storage
    ." , S/N "  " SN" find-tag  if  type  else  ." Unknown"  then  cr
-   ?spaces  .rom  ."    " .ec  cr
+   ?spaces  .rom  ."    " .ec  ."    " .clock
    check-internal-partitions
 ;
 ' (xbanner-basics) to banner-basics

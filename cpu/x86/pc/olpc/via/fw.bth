@@ -311,6 +311,9 @@ false value fru-test?
 : user-ok  "ok"  ;  \ This is supposed to check for authorization
 true value user-mode?
 
+: .clock  ( -- )
+   time&date .date space .time  ."  UTC" cr
+;
 fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
 
 fload ${BP}/ofw/gui/loadmenu.fth
@@ -524,9 +527,6 @@ fload ${BP}/ofw/inet/sntp.fth
 : ntp-time&date  ( -- s m h d m y )
    ntp-timestamp  abort" Can't contact NTP server"
    ntp>time&date
-;
-: .clock  ( -- )
-   time&date .date space .time  ."  UTC" cr
 ;
 : ntp-set-clock  ( -- )
    ntp-time&date  " set-time"  clock-node @ $call-method

@@ -157,6 +157,9 @@ headers
    open drop
    check-battery  \ Don't display the message here because "open" will do it
    check-tick or
+   get-time .date space .time cr
+   get-time 2nip 2nip nip
+   d# 2011 < dup  if  ." Date in RTC is too early" cr  then
    close
 ;
 
