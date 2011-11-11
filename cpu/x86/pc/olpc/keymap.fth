@@ -1,7 +1,7 @@
 purpose: Populate keymaps from the KA manufacturing data tag
 \ See license at end of file
 
-\ Per http://wiki.laptop.org/Manufacturing_Data#Keyboard_ASCII_Map
+\ Per http://wiki.laptop.org/go/Manufacturing_Data#Keyboard_ASCII_Map
 
 h# 60 constant /submap
 
