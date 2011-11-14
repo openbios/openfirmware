@@ -10,6 +10,9 @@ hex
 \ This is 1 for the original rubber keyboard and 2 for the mechanical keyboard
 1 value keyboard-type
 
+\ Scan code of abort key
+h# 5d value abort-key
+
 \ There are two scancode tables:
 \   1.  simple scancode (down values); up value is f0 + scancode
 \   2.  e0 + scancode (down values);   up value is e0 + f0 + scancode
@@ -712,12 +715,20 @@ alias or-button? noop  immediate
    else
       " KM" find-tag  if                    ( adr len )
          -null                              ( adr' len' )
-         " olpcm" $=  if  2  else  1  then  ( type )
+         " olpcm" $=  if
+            h# 53 to abort-key              \ del
+            2
+         else
+            1
+         then                               ( type )
       else                                  ( )
          1                                  ( type )
       then                                  ( type )
    then
    to keyboard-type
+;
+
+: use-keyboard-type  ( -- )
    keyboard-type  case
 
       0 of  ['] make-buttons  ['] ibm#s0  ['] /ibm#s0  ['] all-tested?0  endof
@@ -733,6 +744,7 @@ warning @ warning off
    open  0=  if  true exit  then
 
    set-keyboard-type
+   use-keyboard-type
 
    make-keys
 

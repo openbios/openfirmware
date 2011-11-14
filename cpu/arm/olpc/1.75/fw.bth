@@ -285,6 +285,9 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 dev /ap-sp/keyboard
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 device-end
+stand-init: Keyboard
+   " /ap-sp/keyboard" " set-keyboard-type" execute-device-method drop
+;
 dev /ap-sp/mouse
 fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
 device-end

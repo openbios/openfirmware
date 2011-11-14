@@ -386,6 +386,9 @@ fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 dev /keyboard
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 device-end
+stand-init: Keyboard
+   " /keyboard" " set-keyboard-type" execute-device-method drop
+;
 fload ${BP}/dev/olpc/touchpad/touchpad.fth   \ Touchpad diagnostic
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth

@@ -56,13 +56,13 @@ h# -9 constant default-volume
 
 dev /keyboard
 0 value waiting-up?
-: olpc-check-abort  ( scan-code -- abort? )  \ Square pressed?
+: olpc-check-abort  ( scan-code -- abort? )  \ an abort key pressed?
    last-scan   over to last-scan  ( scan-code old-scan-code )
    h# e0 <>  if  drop false exit  then          ( scan-code )
 
    check-abort?  0=  if  drop false exit  then  ( scan-code )
 
-   dup h# 7f and  h# 5d <>  if  drop false exit then  ( scan-code )
+   dup h# 7f and  abort-key  <>  if  drop false exit then  ( scan-code )
 
    h# 80 and  if   \ Up
       false to waiting-up?
