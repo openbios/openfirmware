@@ -177,7 +177,9 @@ fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
 
 : ignore-power-button  ( -- )
    edi-spi-start
-   ['] reset-8051 catch if reset-8051 then
+   ['] reset-8051 catch if
+      ['] reset-8051 catch if ." Write Protected EC" cr then
+   then
    use-ssp-spi
    ['] ec-spi-reprogrammed to spi-reprogrammed
 ;
@@ -188,6 +190,7 @@ fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
 ;
 : )flash-vulnerable  ( -- )
    hdd-led-off
+   d# 850 ms  \ allow time for 8051 to finish reset and power us down
 ;
 : fs-vulnerable(  ( -- )
    ols-off
