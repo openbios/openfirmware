@@ -6,11 +6,6 @@ purpose: Driver/selftest for OLPC XO-1.75 LEDs
 " leds" device-name
 : open  ( -- okay? )  true  ;
 : close  ( -- )  ;
-: ols-led-on  ( -- )  h# 57 ec-cmd  ;
-: ols-led-off ( -- )  h# 58 ec-cmd  ;
-: ols-assy-mode-on  ( -- )  h# 59 ec-cmd  ;
-: ols-assy-mode-off ( -- )  h# 5a ec-cmd  ;
-: ols-led-ec-control  ( -- )  h# 5b ec-cmd  ;
 
 : selftest  ( -- )
     ." Flashing LEDs" cr

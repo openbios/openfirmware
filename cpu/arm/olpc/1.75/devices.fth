@@ -182,11 +182,20 @@ fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
    ['] ec-spi-reprogrammed to spi-reprogrammed
 ;
 : flash-vulnerable(  ( -- )
+   ols-off
    ignore-power-button
    hdd-led-on
 ;
 : )flash-vulnerable  ( -- )
    hdd-led-off
+;
+: fs-vulnerable(  ( -- )
+   ols-off
+   hdd-led-on
+;
+: )fs-vulnerable  ( -- )
+   hdd-led-off
+   ols-on
 ;
 
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
