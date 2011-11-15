@@ -99,7 +99,6 @@ code clean&flush-u$-entry-way   ( sw -- )  mcr p15,0,tos,cr7,cr15,2  pop tos,sp 
 
 code drain-write-buffer ( -- )     mcr p15,0,r0,cr7,cr10,4  c;
 alias data-sync-barrier drain-write-buffer
-code drain-write-buffer ( -- )     mcr p15,0,r0,cr7,cr10,4  c;
 code data-memory-barrier ( -- )    mcr p15,0,r0,cr7,cr10,5  c;
 
 code flush-i&d-tlb      ( -- )     mcr p15,0,r0,cr8,cr7,0  c;
