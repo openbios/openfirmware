@@ -4,7 +4,17 @@ purpose: Menu for manufacturing tests
 h# f800 constant mfg-color-red
 h# 07e0 constant mfg-color-green
 
-: flush-keyboard  ( -- )  begin  key?  while  key drop  repeat  ;
+: blank-screen  ( -- )
+   h# ffff              ( color )
+   0 0                  ( color x y )
+   screen-wh            ( color x y w y )
+   fill-rectangle-noff  ( )
+;
+
+: clear-n-restore-scroller  ( -- )
+   blank-screen
+   restore-scroller
+;
 
 : sq-border!  ( bg -- )  current-sq sq >border !  ;
 
@@ -24,7 +34,7 @@ warning on
    begin
       key?  if  key drop  refresh exit  then
       mouse-ih  if
-         10 get-event  if
+         mouse-event?  if
             \ Ignore movement, act only on a button down event
             nip nip  if  wait-buttons-up  refresh exit  then
          then
@@ -32,15 +42,8 @@ warning on
    again
 ;
 
-: mfg-test-dev  ( $ -- )
-   restore-scroller
-   ??cr  ." Testing " 2dup type cr                     ( $ )
-   2dup locate-device  if                              ( $ )
-      2drop ." Can't find device node" cr  exit        ( -- )
-   else
-      drop                                             ( $ )
-   then                                                ( $ phandle )
-   " selftest" execute-device-method  if               ( return-code )
+: mfg-test-result  ( error? -- )
+if               ( return-code )
       ?dup  if                                         ( return-code )
          ??cr ." Selftest failed. Return code = " .d cr
          mfg-color-red sq-border!
@@ -50,14 +53,14 @@ warning on
          mfg-wait-return
       else                                                   ( )
          green-letters
-         ." Okay" cr
+         ??cr ." Okay" cr
          black-letters
          mfg-color-green sq-border!
          true to pass?
-         d# 2000 hold-message
+         d# 2000 hold-message drop
       then
    else
-      ." Selftest failed due to abort"  cr
+      ??cr ." Selftest failed due to abort"  cr
       mfg-color-red sq-border!
       false to pass?
       red-screen
@@ -67,29 +70,17 @@ warning on
    cursor-off  gui-alerts  refresh
    flush-keyboard
 ;
-
-: draw-error-border  ( -- )
-   mfg-color-red d# 20 d# 20 d# 1160 d# 820 d# 20 box
+: mfg-test-dev  ( $ -- )
+   clear-n-restore-scroller                       ( $ )
+   ??cr  ." Testing " 2dup type cr                ( $ )
+   2dup locate-device  if                         ( $ )
+      ." Can't find device node " type cr  exit   ( -- )
+   else                                           ( $ phandle )
+      drop                                        ( $ )
+   then                                           ( $ )
+   " selftest" execute-device-method              ( error? )
+   mfg-test-result
 ;
-
-icon: play.icon     rom:play.565
-icon: quit.icon     rom:quit.565
-icon: cpu.icon      rom:cpu.565
-icon: spi.icon      rom:spi.565
-icon: ram.icon      rom:ram.565
-icon: sdcard.icon   rom:sdcard.565
-icon: usb.icon      rom:usb.565
-icon: battery.icon  rom:battery.565
-icon: camera.icon   rom:camera.565
-icon: wifi.icon     rom:wifi.565
-icon: audio.icon    rom:audio.565
-icon: touchpad.icon rom:touchpad.565
-icon: display.icon  rom:display.565
-icon: keyboard.icon rom:keyboard.565
-icon: timer.icon    rom:timer.565
-icon: clock.icon    rom:clock.565
-icon: ebook.icon    rom:ebook.565
-icon: leds.icon     rom:leds.565
 
 : all-tests-passed  ( -- )
    restore-scroller
@@ -101,8 +92,25 @@ icon: leds.icon     rom:leds.565
    flush-keyboard
 ;
 
-d# 15 value #mfgtests
-d# 5 value #mfgcols
+0 value #mfgtests
+0 value #mfgcols
+0 value #mfgrows
+
+: #mfgtests++  ( -- )  #mfgtests 1+ to #mfgtests  ;
+
+0 value cur-col
+0 value cur-row
+: cur-col++  ( -- )  cur-col 1+ to cur-col  ;
+: cur-row++  ( -- )  cur-row 1+ to cur-row  ;
+: set-col-row ( row col -- )  to cur-col  to cur-row  ;
+: add-icon   ( -- )
+   cur-col #mfgcols =  if
+      cur-row++  cur-row #mfgcols >=  if  abort" Too many icons"  then
+      0 to cur-col
+   then
+   cur-row  cur-col  install-icon
+   cur-col++
+;
 
 : mfg-test-autorunner  ( -- )  \ Unattended autorun of all tests
    #mfgcols #mfgtests +  #mfgcols  ?do
@@ -113,6 +121,9 @@ d# 5 value #mfgcols
       pass? 0= ?leave
    loop
 ;
+
+icon: play.icon     rom:play.565
+icon: quit.icon     rom:quit.565
 
 : play-item     ( -- )   \ Interactive autorun of all tests
    #mfgcols #mfgtests +  #mfgcols  ?do
@@ -128,81 +139,10 @@ d# 5 value #mfgcols
 ;
 
 : quit-item     ( -- )  menu-done  ;
-: cpu-item      ( -- )  " /cpu"       mfg-test-dev  ;
-: battery-item  ( -- )  " /battery"   mfg-test-dev  ;
-: spiflash-item ( -- )  " /flash"     mfg-test-dev  ;
-: memory-item   ( -- )  " /memory"    mfg-test-dev  ;
-: usb-item      ( -- )  " /usb"       mfg-test-dev  ;
-: int-sd-item   ( -- )  " int:0"      mfg-test-dev  ;
-: ext-sd-item   ( -- )  " ext:0"      mfg-test-dev  ;
-: rtc-item      ( -- )  " /rtc"       mfg-test-dev  ;
-: display-item  ( -- )  " /display"   mfg-test-dev  ;
-: audio-item    ( -- )  " /audio"     mfg-test-dev  ;
-: camera-item   ( -- )  " /camera"    mfg-test-dev  ;
-: wlan-item     ( -- )  " /wlan"      mfg-test-dev  ;
-: timer-item    ( -- )  " /timer"     mfg-test-dev  ;
-: touchpad-item ( -- )  " /8042/mouse"     mfg-test-dev  ;
-: keyboard-item ( -- )  " /8042/keyboard"  mfg-test-dev  ;
-: switch-item   ( -- )  " /switches"  mfg-test-dev  ;
-: leds-item     ( -- )  " /leds"      mfg-test-dev  ;
-
-: olpc-menu-items  ( -- )
-   clear-menu
-
-\   " CPU"
-\   ['] cpu-item      cpu.icon      1 0 install-icon
-
-   " SPI Flash: Contains EC code, firmware, manufacturing data."
-   ['] spiflash-item    spi.icon      1 0 install-icon
-
-   " RAM chips"
-   ['] memory-item   ram.icon      1 1 install-icon
-
-   " Internal mass storage"
-   ['] int-sd-item   sdcard.icon   1 2 install-icon
-
-   " Plug-in SD card"
-   ['] ext-sd-item   sdcard.icon   1 3 install-icon
-
-   " Wireless LAN"
-   ['] wlan-item     wifi.icon     1 4 install-icon
-
-   " Display"
-   ['] display-item  display.icon  2 0 install-icon
-
-   " Camera"
-   ['] camera-item   camera.icon   2 1 install-icon
-
-   " Audio: Speaker and microphone"
-   ['] audio-item    audio.icon    2 2 install-icon
-
-   " Battery"
-   ['] battery-item  battery.icon  2 3 install-icon
-
-   " RTC (Real-Time Clock)"
-   ['] rtc-item      clock.icon    2 4 install-icon
-
-   " USB ports"
-   ['] usb-item      usb.icon      3 0 install-icon
-
-   \ These are last because they require user participation.
-   \ The earlier tests are all included in automatic batch-mode.
-
-   " Keyboard"
-   ['] keyboard-item keyboard.icon 3 1 install-icon
-
-   " Touchpad"
-   ['] touchpad-item touchpad.icon 3 2 install-icon
-
-   " LEDs"
-   ['] leds-item     leds.icon     3 3 install-icon
-
-   " Switches"
-   ['] switch-item   ebook.icon    3 4 install-icon
-;
 
 : init-menu  ( -- )
-   d# 4 to rows
+   ?open-screen  ?open-mouse
+   #mfgrows to rows
    #mfgcols to cols
    d# 180 to sq-size
    d# 128 to image-size
@@ -210,9 +150,12 @@ d# 5 value #mfgcols
    cursor-off
 ;
 
+defer test-menu-items
+
 : full-menu  ( -- )
    init-menu
-   olpc-menu-items
+   clear-menu
+   test-menu-items
 
    " Run all non-interactive tests. (Press a key between tests to stop.)"
    ['] play-item     play.icon     0 1 selected install-icon
@@ -229,12 +172,33 @@ d# 5 value #mfgcols
    ['] run-menu behavior >r
    ['] mfg-test-autorunner to run-menu   \ Run menu automatically
    true to diag-switch?
-   ['] olpc-menu-items  ['] nest-menu catch  drop
+   ['] test-menu-items  ['] nest-menu catch  drop
    r> to run-menu
    false to diag-switch?
    restore-scroller
 ;
 
+: autorun-from-gamekey  ( -- )
+   default-selection set-current-sq refresh
+   (cr kill-line
+   0  d# 30  do
+      i d# 10 mod 0=  if  (cr i d# 10 / .d  then
+      mouse-event?  dup  if  nip nip nip  then  ( moused? )
+      key?  or  if                     ( )
+	 drop                          ( )
+	 menu-interact                 ( )
+	 unloop exit                   ( -- )
+      then                             ( )
+      d# 100 ms                        ( )
+   -1 +loop
+   play-item
+;
+: gamekey-auto-menu  ( -- )
+   ['] run-menu behavior >r
+   ['] autorun-from-gamekey to run-menu   \ Run menu automatically after a timeout
+   (menu)
+   r> to run-menu
+;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 Luke Gorrie

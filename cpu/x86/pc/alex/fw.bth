@@ -213,7 +213,7 @@ d# 1280 d# 800 to max-xy
 patch noop set-menu-colors setup-graphics
 patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
 patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
-fload ${BP}/cpu/x86/pc/alex/mfgtest.fth
+fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
 fload ${BP}/dev/olpc/confirm.fth
 : bright!  ( level -- )  drop  ;
 : backlight-on   ( -- )  ;

@@ -326,6 +326,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/cstate.fth   \ C-state tests
 \ so exiting from emacs doesn't invoke the diag menu.
 ' quit to user-interface
 fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
+fload ${BP}/cpu/x86/pc/olpc/via/testitems.fth
 fload ${BP}/cpu/x86/pc/olpc/via/bootmenu.fth
 
 : screen-#lines  ( -- n )

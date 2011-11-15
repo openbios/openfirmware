@@ -139,7 +139,8 @@ warning !
 \ Uninstall the diag menu from the general user interface vector
 \ so exiting from emacs doesn't invoke the diag menu.
 ' quit to user-interface
-fload ${BP}/cpu/arm/olpc/1.75/mfgtest.fth
+fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
+fload ${BP}/cpu/arm/olpc/1.75/testitems.fth
 
 [ifdef] notyet
 fload ${BP}/cpu/x86/pc/olpc/via/bootmenu.fth
@@ -481,7 +482,7 @@ dev /client-services  patch noop visible enter  dend
 : ?diags  ( -- )
    rocker-left game-key?  if
       protect-fw
-      text-on  " test-all" ['] eval guarded
+      text-on  ['] gamekey-auto-menu guarded
       ." Tests complete - powering off" cr  d# 5000 ms  power-off
    then
 ;
