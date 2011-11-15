@@ -44,7 +44,7 @@ purpose: Access to game keys (buttons on front panel)
 ;
 ' gamekey-pause-message to pause-message
 
-: olpc-hold-message
+: olpc-hold-message  ( ms -- )
 [ifdef] test-station
    test-station  1 5 between  if  drop false exit  then
 [then]
