@@ -3278,18 +3278,18 @@ defer hold-message
 ' (hold-message) to hold-message
 
 : most-tests  ( -- exit? )
-   " selftest"  current-device  (search-wordlist)  if  ( xt )
+   " selftest"  current-device  (search-wordlist)  if   ( xt )
 
-      drop                                              (  )
+      drop                                              ( )
 
       \ We only want to execute the selftest routine if the device has
       \ a "reg" property.  This eliminates the execution of selftest
       \ routines for "wildcard" devices like st and sd.
 
-      " reg"  get-property  if  exit  then 2drop        (  )
+      " reg"  get-property  if  false exit  then 2drop  ( )
 
       \ We sometimes want to skip the testing of certain devices.
-      current-device skip-test?  if  exit  then         ( )
+      current-device skip-test?  if  false exit  then   ( )
 
       ??cr ." Testing "  pwd
       " selftest"  current-device                 ( method-adr,len phandle )
@@ -3317,16 +3317,10 @@ defer hold-message
    then                                           ( exit? )
 ;
 
-\ "action-acf" is executed for each device node in the subtree
-\ rooted at dev-addr,len , with current-device set to the
-\ node in question.  "action-acf" can perform arbitrary tests
-\ on the node to determine if that node is appropriate for
-\ the action that it wished to undertake.
-
 : test-subtree  ( dev-addr,len -- )
    current-device >r                ( dev-addr,len r: phandle )
-   find-device                      ( r: phandle xt )
-   ['] most-tests  ['] (search-preorder)  catch  2drop  ( r: phandle xt )
+   find-device                      ( r: phandle )
+   ['] most-tests  ['] (search-preorder)  catch  2drop  ( r: phandle )
    r> push-device                   ( )
 ;
 
