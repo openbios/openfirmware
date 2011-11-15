@@ -34,25 +34,24 @@ purpose: Access to game keys (buttons on front panel)
 ;
 : game-key?  ( mask -- flag )  game-key-mask and 0<>  ;
 
-: (hold-message)  ( ms -- )
-[ifdef] test-station
-   test-station  1 5 between  if  drop exit  then
-[then]
-   d# 100 /            ( decisecs )
-   begin  dup  while   ( decisecs )
-      dup d# 10 /mod  swap  if  drop  else  (cr .d  then   ( decisecs )
-      d# 100 ms        ( decisecs )
-      1-               ( decisecs )
-      button-rotate game-key@ and  if  ( decisecs )
-         (cr ." Release the game button to continue"
-         begin  button-rotate game-key@ and  while  d# 100 ms  repeat
-         (cr kill-line
-         drop exit
-      then
-   repeat
-   drop  (cr kill-line
+: gamekey-pause-message  ( decisecs -- decisecs' )
+   button-rotate game-key@ and  if                   ( decisecs )
+      (cr ." Release the game button to continue"    ( decisecs )
+      begin  button-rotate game-key@ and  while  d# 100 ms  repeat
+      (cr kill-line                                  ( decisecs )
+      drop 0                                         ( decisecs' )
+   then                                              ( decisecs )
 ;
-' (hold-message) to hold-message
+' gamekey-pause-message to pause-message
+
+: olpc-hold-message
+[ifdef] test-station
+   test-station  1 5 between  if  drop false exit  then
+[then]
+   (hold-message)
+   (cr kill-line
+;
+' olpc-hold-message to hold-message
 
 : bypass-bios-boot?  ( -- flag )  button-square game-key?  ;
 

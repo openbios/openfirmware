@@ -3256,11 +3256,29 @@ headers
    ['] do-method?  scan-subtree
 ;
 
+: flush-keyboard  ( -- )  begin  key?  while  key drop  repeat  ;
+defer pause-message ( decisecs -- decisecs' )  ' noop to pause-message
 defer hold-message
-' ms to hold-message
+: (hold-message)  ( ms -- exit? )
+   flush-keyboard
+   d# 100 /                                              ( decisecs )
+   begin  dup  while                                     ( decisecs )
+      dup d# 10 /mod  swap  if  drop  else  (cr .d  then ( decisecs )
+      d# 100 ms   1-                                     ( decisecs' )
+      pause-message                                      ( decisecs )
+      key?  if                                           ( decisecs )
+         key h# 1b =  if                                 ( decisecs )
+	    cr ." Selftest stopped from keyboard" cr     ( decisecs )
+	    drop true  exit                              ( -- true )
+	 then                                            ( decisecs )
+      then                                               ( decisecs )
+   repeat                                                ( decisecs )
+   drop  false                                           ( false )
+;
+' (hold-message) to hold-message
 
-: most-tests  ( -- )
-   method-name 2@  current-device  (search-wordlist)  if  ( xt )
+: most-tests  ( -- exit? )
+   " selftest"  current-device  (search-wordlist)  if  ( xt )
 
       drop                                              (  )
 
@@ -3274,32 +3292,47 @@ defer hold-message
       current-device skip-test?  if  exit  then         ( )
 
       ??cr ." Testing "  pwd
-      method-name 2@  current-device              ( method-adr,len phandle )
+      " selftest"  current-device                 ( method-adr,len phandle )
       execute-phandle-method  if                  ( result )
          ?dup  if
             red-letters
             ??cr ." Selftest failed. Return code = " .d cr
             black-letters
-            d# 10000 hold-message
+            d# 10000                              ( delay-ms )
          else
             green-letters
             ." Okay" cr
             black-letters
-            d# 2000 hold-message
-         then
+            d# 2000                               ( delay-ms )
+         then                                     ( delay-ms )
       else
          red-letters
          ." Selftest failed due to abort"  cr
          black-letters
-         d# 10000 hold-message
-      then
-   then                                            (  )
+         d# 10000                                 ( delay-ms )
+      then                                        ( delay-ms )
+      hold-message                                ( exit? )
+   else
+      false                                       ( exit? )
+   then                                           ( exit? )
+;
+
+\ "action-acf" is executed for each device node in the subtree
+\ rooted at dev-addr,len , with current-device set to the
+\ node in question.  "action-acf" can perform arbitrary tests
+\ on the node to determine if that node is appropriate for
+\ the action that it wished to undertake.
+
+: test-subtree  ( dev-addr,len -- )
+   current-device >r                ( dev-addr,len r: phandle )
+   find-device                      ( r: phandle xt )
+   ['] most-tests  ['] (search-preorder)  catch  2drop  ( r: phandle xt )
+   r> push-device                   ( )
 ;
 
 : test-all  ( -- )
    optional-arg-or-/$
-   " selftest" method-name 2!
-   ['] most-tests  scan-subtree
+   test-subtree
 ;
 
 \ From siftdevs.fth
