@@ -128,7 +128,6 @@ warning @  warning off
    then
 ;
 warning !
-[then]
 
 : (.firmware)  ( -- )
    ." Open Firmware  "  .built  cr
@@ -168,6 +167,47 @@ true value text-on?
 ;
 
 fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
+
+devalias keyboard /ap-sp/keyboard
+devalias mouse    /ap-sp/mouse
+
+: console-start  ( -- )
+   install-mux-io
+   cursor-off
+   true to text-on?
+
+   " //null" open-dev to null-ih  \ For text-off state
+;
+: keyboard-off  ( -- )
+   keyboard-ih  if
+      keyboard-ih remove-input
+      keyboard-ih close-dev
+      0 to keyboard-ih
+   then
+;
+
+: teardown-mux-io  ( -- )
+   install-uart-io
+   text-off
+   keyboard-off
+   fallback-out-ih remove-output
+   fallback-in-ih remove-input
+   stdin off
+   stdout off
+   in-mux-ih close-dev
+   out-mux-ih close-dev
+;
+: quiesce  ( -- )
+   teardown-mux-io
+   timers-off
+   usb-quiet
+   close-ec
+   \ Change the sleep state of EC_SPI_ACK from 1 (OFW value) to 0 (Linux value)
+   d# 125 af@  h# 100 invert and  d# 125 af!
+;
+
+\ This must precede the loading of gui.fth, which chains from linux-hook's behavior
+' quiesce to linux-hook
 
 \ This must be defined after spiui.fth, otherwise spiui will choose some wrong code
 : rom-pa  ( -- adr )  mfg-data-buf mfg-data-offset -  ;  \ Fake out setwp.fth
@@ -394,45 +434,6 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
 
 fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
 
-devalias keyboard /ap-sp/keyboard
-devalias mouse    /ap-sp/mouse
-
-: console-start  ( -- )
-   install-mux-io
-   cursor-off
-   true to text-on?
-
-   " //null" open-dev to null-ih  \ For text-off state
-;
-: keyboard-off  ( -- )
-   keyboard-ih  if
-      keyboard-ih remove-input
-      keyboard-ih close-dev
-      0 to keyboard-ih
-   then
-;
-
-: teardown-mux-io  ( -- )
-   install-uart-io
-   text-off
-   keyboard-off
-   fallback-out-ih remove-output
-   fallback-in-ih remove-input
-   stdin off
-   stdout off
-   in-mux-ih close-dev
-   out-mux-ih close-dev
-;
-: quiesce  ( -- )
-   teardown-mux-io
-   timers-off
-   usb-quiet
-   close-ec
-   \ Change the sleep state of EC_SPI_ACK from 1 (OFW value) to 0 (Linux value)
-   d# 125 af@  h# 100 invert and  d# 125 af!
-;
-
-' quiesce to linux-hook
 \ Because visible doesn't work sometimes when calling back from Linux
 dev /client-services  patch noop visible enter  dend
 
