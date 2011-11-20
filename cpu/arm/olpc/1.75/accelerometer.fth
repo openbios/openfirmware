@@ -12,7 +12,7 @@ hex
 : ctl1!  ( b -- )  h# 20 acc-reg!  ;
 : ctl4!  ( b -- )  h# 23 acc-reg!  ;
 : accelerometer-on  ( -- )  h# 47 ctl1!  ;
-: accelerometer-off  ( -- )  h# 07 ctl1!  ;
+: accelerometer-off  ( -- )  h# 07 ctl1!  ;  \ should this be 00?
 : wext  ( b -- n )  dup h# 8000 and  if  h# ffff0000 or  then  ;
 : acceleration@  ( -- x y z )
    begin  h# 27 acc-reg@  h# 08 and  until  \ wait for data available
@@ -136,6 +136,7 @@ defer lis-selftest
 
    final-test?  if  accelerometer-off false  exit  then
 
+   ." Don't move!" cr
    lis-selftest
 ;
 
