@@ -58,42 +58,92 @@ label ddr-recal  ( r0: memctrl-va -- )
 end-code
 here ddr-recal - constant /ddr-recal
 
+\ create use-auto-mc-wake  \ Let the PMU automatically wake the memory controller
+create use-block           \ Block memory controller activity in low-level sleep code
+create use-self-refresh    \ Manually issue self-refresh enter/exit
+create use-drivers         \ Turn memory drivers off during sleep
+\ create use-phy-dll-reset \ Reset the PHY DLL upon wakeup
+create use-phy-dll-update  \ Update the PHY DLL upon wakeup
+create use-dram-dll-reset  \ Reset the DRAM DLL upon wakeup
+\ create use-delay2        \ Long delay upon wakeup
+\ create use-delay3        \ Short delay upon wakeup
+
 label ddr-self-refresh  ( r0:memctrl-va -- )
+[ifdef] use-gpio
+   mov     r4, #0xfe000000
+   orr     r4, r4, 0x19000   \ GPIO 3
+   mov     r1, 0x8           \ GPIO 3
+   str     r1, [r4, #0x18]   \ Set
+[then]
+
+[ifdef] use-block
    mov     r1, #0x1          \ Block all data requests
    str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
+[then]
 
-[ifdef] notdef2
+[ifdef] use-odt
    ldr   r2, [r0, #0x770]    \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
    orr   r1, r2, #0x03000000 \ PAD_TERM_SWITCH_MODE: Termination disabled
    str   r1, [r0, #0x770]    \ SDRAM_CTRL7_SDRAM_ODT_CTRL2
 [then]
 
+[ifdef] use-self-refresh
    mov   r1, #0x40           \ Enter Self Refresh value
    str   r1, [r0, #0x120]    \ USER_INITIATED_COMMAND0
+[then]
 
+[ifdef] use-drivers
    ldr   r3, [r0, #0x1e0]    \ PHY_CTRL8
-   bic   r1, r3, #0x07700000 \ PHY_ADCM_ZPDRV: 0 PHY_ADCM_ZNDRV: 0 (Disable drivers 6:0)
+   bic   r1, r3, #0x0ff00000 \ PHY_ADCM_ZPDRV: f PHY_ADCM_ZNDRV: f (disable drivers)
    str   r1, [r0, #0x1e0]    \ PHY_CTRL8
+[then]
 
    dsb                       \ Data Synchronization Barrier
    wfi                       \ Wait for interrupt
 
-   str   r3, [r0, #0x1e0]    \ PHY_CTRL8 - restore previous value
+[ifdef] use-gpio
+   mov     r1, 0x8           \ GPIO 3
+   str     r1, [r4, #0x24]   \ Clr
+[then]
 
+[ifdef] use-drivers
+   str   r3, [r0, #0x1e0]    \ PHY_CTRL8 - restore previous value  (all drivers)
+[then]
+
+[ifdef] use-delay1
+   \ Delay to let the memory controller and DRAM DLLs settle
+   mov   r1, #0x600  begin  decs r1,1  0= until
+[then]
+
+[ifdef] use-phy-dll-reset
    mov   r1, #0x20000000     \ PHY_DLL_RESET
    str   r1, [r0, #0x240]    \ PHY_CTRL14
+[then]
 
+[ifdef] use-phy-dll-update
    mov   r1, #0x40000000     \ DLL_UPDATE_EN
    str   r1, [r0, #0x240]    \ PHY_CTRL14
+[then]
 
+[ifdef] use-dram-dll-reset
+   ldr   r1, [r0, #0x080]    \ PHY_CTRL1
+   orr   r1, r1, #0x40       \ DLL_RESET
+   str   r1, [r0, #0x080]    \ PHY_CTRL1
+   mov   r1, #0x100          \ USER_LMR0_REQ
+   orr   r1, r1, #0x03000000 \ CHIP_SELECT_0 | CHIP_SELECT_1
+   str   r1, [r0, #0x120]    \ USER_INITIATED_COMMAND0
+[then]
+
+[ifdef] use-self-refresh
    mov   r1, #0x80           \ Exit Self Refresh value
    str   r1, [r0, #0x120]    \ USER_INITIATED_COMMAND0
+[then]
 
-[ifdef] notdef2
+[ifdef] use-odt
    str   r2, [r0, #0x770]    \ SDRAM_CTRL7_SDRAM_ODT_CTRL2 - restore previous value
 [then]
 
-[ifdef] notdef
+[ifdef] use-zqcal
    mov   r1, #0x01000000       \ Chip select 0
    orr   r1, r1, #0x00001000   \ Initiate ZQ calibration long
    str   r1, [r0, #0x120]      \ USER_INITIATED_COMMAND0
@@ -107,11 +157,30 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
    0= until
 [then]
 
-   \ Delay to let the memory controller and DRAM DLLs settle
-   mov   r1, #0x0300  begin  decs r1,1  0= until
+[ifdef] use-gpio
+   mov     r1, 0x8           \ GPIO 3
+   str     r1, [r4, #0x18]   \ Set
+[then]
 
+[ifdef] use-delay2
+   \ Delay to ensure that at least 512 DRAM NOP's happen before the first access
+   mov   r1, #0x600  begin  decs r1,1  0= until
+[then]
+
+[ifdef] use-delay3
+   \ Delay to ensure that at least 512 DRAM NOP's happen before the first access
+   mov   r1, #0x20  begin  decs r1,1  0= until
+[then]
+
+[ifdef] use-gpio
+   mov     r1, 0x8           \ GPIO 3
+   str     r1, [r4, #0x24]   \ Clr
+[then]
+
+[ifdef] use-block
    mov     r1, #0x0          \ Unblock data requests
    str     r1, [r0, #0x7e0]  \ SDRAM_CTRL14
+[then]
 
    mov     pc, lr
 end-code
@@ -662,7 +731,9 @@ end-string-array
    then
 
    h# 0020.0000 or                 ( apcr idle' )  \ PJ_DIS_MC_SW_REQ - disable idle entry using software register bits
+[ifdef] use-auto-mc-wake
    h# 0010.0000 or                 ( apcr idle' )  \ PJ_MC_WAKE_EN - wake memory controller when core wakes
+[then]
 
    0 h# b0 pmua!                   ( apcr idle )   \ PMUA_MC_HW_SLP_TYPE - self-refresh power down
 
@@ -736,6 +807,10 @@ end-string-array
 ;
 
 : str  ( -- )
+[ifdef] use-gpio
+   3 gpio-dir-out
+[then]
+
    disable-interrupts
    suspend-usb
    timers-sleep
