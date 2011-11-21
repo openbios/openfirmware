@@ -1040,7 +1040,7 @@ external
    2dup  " olpc-mesh"  $=  if  passive-scan  then
    2dup  " olpc-NANDblaster"  $=  if  passive-scan  then
 
-   h# 32 min  scan-ssid pack drop
+   d# 32 min  scan-ssid pack drop
 ;
 
 : scan  ( adr len -- actual )
