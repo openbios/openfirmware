@@ -123,41 +123,45 @@ h# 4000 constant /chunk   \ Convenient sized piece for progress reports
       drop                   ( sn$ )
    then                      ( sn$ )
 
-   " disk:\" "temp place    ( sn$' )
+   " u:\" "temp place        ( sn$' )
 
-   dup 8 >  if              ( sn$ )
-      over 8 "temp $cat     ( sn$ )
-      8 /string             ( sn$' )
-      " ."   "temp $cat     ( sn$ )
-   then                     ( sn$ )
-   "temp $cat               ( )
-   "temp count              ( filename$ )
+   dup 8 >  if               ( sn$ )
+      over 8 "temp $cat      ( sn$ )
+      8 /string              ( sn$' )
+      " ."   "temp $cat      ( sn$ )
+   then                      ( sn$ )
+   "temp $cat                ( )
+   "temp count               ( filename$ )
 ;
 
 : save-mfg-data  ( -- )
-   make-sn-name      ( name$ )
-   ." Creating " 2dup type cr
+   flash-open
+   make-sn-name                               ( name$ )
+   ." Creating " 2dup type cr                 ( name$ )
    $create-file                               ( ihandle )
    dup 0= abort" Can't create file"   >r      ( r: ihandle )
    mfg-data-buf /flash-block                  ( adr len  r: ihandle )
    2dup mfg-data-offset  flash-read           ( adr len r: ihandle )
-   " write" r@ $call-method                   ( r: ihandle )
-   r> close-dev
+   " write" r@ $call-method                   ( wlen r: ihandle )
+   r> close-dev                               ( wlen r: ihandle )
+   /flash-block <> abort" Can't write file"   ( r: ihandle )
+   flash-close
 ;
 : restore-mfg-data  ( "filename" -- )
+   flash-open
    reading
-   ifd @ fsize  dup /flash-block <>  if  ( len )
-      drop  ifd @ fclose                ( )
+   ifd @ fsize  dup /flash-block <>  if       ( len )
+      drop  ifd @ fclose                      ( )
       true abort" File is the wrong size - should be 65536 bytes"
-   then                                 ( len )
-   mfg-data-buf  swap                   ( adr len )
-   2dup ifd @ fgets drop                ( adr len )
-   ifd @ fclose
-
-   flash-write-enable
-   mfg-data-offset flash-erase-block    ( adr len )
-   mfg-data-offset flash-write          ( )
-   flash-write-disable                  ( )
+   then                                       ( len )
+   mfg-data-buf  swap                         ( adr len )
+   2dup ifd @ fgets drop                      ( adr len )
+   ifd @ fclose                               ( adr len )
+   flash-write-enable                         ( adr len )
+   mfg-data-offset flash-erase-block          ( adr len )
+   mfg-data-offset flash-write                ( )
+   flash-write-disable                        ( )
+   flash-close                                ( )
 ;
 [then]
 
