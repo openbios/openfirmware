@@ -197,14 +197,14 @@ headerless
    over c@  ascii 0 ascii 9 between  if      ( adr len )
       over c@  ascii 0 -  to #part           ( adr len )
       1 /string                              ( adr' len' )
-      dup  0=  if  2drop exit  then          ( adr len )
+      dup  0=  if  exit  then                ( adr len )
    then
 
    \ If the first character is "a".."h", it's a UFS partition letter
    over c@ lcc  ascii a ascii h between  if  ( adr len )
       over c@  to ufs-partition              ( adr len )
       1 /string                              ( adr' len' )
-      dup  0=  if  2drop exit  then          ( adr len )
+      dup  0=  if  exit  then                ( adr len )
    then					     ( adr len )
 ;
 : parse-partition  ( -- )
