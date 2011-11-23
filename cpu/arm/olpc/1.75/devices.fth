@@ -187,8 +187,10 @@ fload ${BP}/cpu/arm/olpc/1.75/ecflash.fth
    ols-off
    ignore-power-button
    hdd-led-on
+   disable-interrupts
 ;
 : )flash-vulnerable  ( -- )
+   enable-interrupts
    hdd-led-off
    d# 850 ms  \ allow time for 8051 to finish reset and power us down
 ;
