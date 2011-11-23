@@ -53,7 +53,7 @@ fload ${BP}/ofw/core/availpm.fth	\ Available memory list
 
 dev /
    " olpc,XO-1.75" model
-   " Marvell,Armada 610" encode-string  " architecture" property
+   " OLPC" encode-string  " architecture" property
 \ The clock frequency of the root bus may be irrelevant, since the bus is internal to the SOC
 \    d# 1,000,000,000 " clock-frequency" integer-property
 device-end
