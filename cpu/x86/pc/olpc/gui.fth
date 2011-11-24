@@ -374,10 +374,44 @@ d# 463 d# 540 2constant progress-xy
    " vga?" $call-screen  0=  if  dcon-unfreeze dcon-freeze  then
 ;
 
-: show-reflash ( -- )  \ bottom left corner, laptop and ellipsis
-   d# 0 d# 810 to icon-xy " int" show-icon
-   d# 450 d# 150 do i d# 844 to icon-xy " bigdot" show-icon d# 100 +loop
+: show-no-power  ( -- )  \ chip, battery, overlaid sad face
+   d#  25 d# 772 to icon-xy " spi"     show-icon
+   d# 175 d# 772 to icon-xy " battery" show-icon
+   d# 175 d# 790 to icon-xy " sad"     show-icon
 ;
+
+d# 834 value bar-y
+d# 150 value bar-x
+0 value dot-adr
+
+: read-dot  ( -- )  \ rom: is unavailable during reflash
+   0 to dot-adr  0 0 to icon-xy         ( )
+   " darkdot" $get-image if exit then   ( )
+   prep-565  4drop  to dot-adr          ( )
+;
+
+: show-reflash  ( -- )  \ bottom left corner, chip and progress dots
+   d# 25 d# 772 to icon-xy " spi" show-icon
+   d# 992 bar-x + bar-y to icon-xy " yellowdot" show-icon
+   read-dot
+;
+
+: show-reflash-dot  ( n -- )  \ n to vary h# 0 to h# 8000
+   dup h# 400 mod 0=  if                   ( n )
+      dot-adr 0=  if  drop exit  then      ( n )
+      dot-adr swap h# 20 /  bar-x + bar-y  ( adr x y )
+      image-width image-height             ( adr x y w h )
+      " draw-transparent-rectangle" $call-screen
+   else
+      drop
+   then
+;
+
+0 [if]
+: test-reflash-dot
+   page show-reflash  t( h# 8000 0 do  i show-reflash-dot  h# 80 +loop )t
+;
+[then]
 
 : show-x  ( -- )  " x" show-icon  ;
 : show-sad  ( -- )

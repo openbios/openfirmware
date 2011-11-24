@@ -14,6 +14,7 @@ purpose: Access and FLASH programming for KB3731 EC via its "EDI" interface
 \  spi-in     ( -- byte ) - Receive byte
 
 d# 128 constant /flash-page
+defer edi-progress  ' drop to edi-progress  ( n -- )
 
 : edi-cmd,adr  ( offset cmd -- )   \ Send command plus 3 address bytes
    spi-cs-on     ( offset cmd )
@@ -140,6 +141,7 @@ h# 7e80 constant ec-flags-offset
          dup i + erase-page                    ( adr offset )
          over i +  over i +  edi-program-page  ( adr offset )
       then                                     ( adr offset )
+      i edi-progress                           ( adr offset )
    /flash-page +loop                           ( adr offset )
    2drop                                       ( )
 ;

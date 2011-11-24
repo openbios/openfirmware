@@ -514,7 +514,18 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 
    show-child
 
-   update-ec-flash?  if  show-reflash  update-ec-flash  then
+   update-ec-flash?  if
+      ['] ?enough-power catch  ?dup  if  ( error )
+	 show-no-power
+	 .error
+	 ." Skipping EC reflash, not enough power" cr
+	 d# 1000 ms
+      else
+	 show-reflash
+	 ['] show-reflash-dot to edi-progress
+	 update-ec-flash
+      then
+   then
 
    install-alarm
    ?sound

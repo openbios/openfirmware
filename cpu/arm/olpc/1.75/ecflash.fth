@@ -101,13 +101,8 @@ char 4 value expected-ec-version
       else                           ( adr len )
          2dup load-base swap move    ( adr len )
          free-mem                    ( )
-         ['] ?enough-power catch  ?dup  if  ( error )
-            .error
-	    ." Skipping EC reflash" cr
-         else
-	    ." Updating EC code" cr
-	    reflash-ec
-	 then
+	 ." Updating EC code" cr
+	 reflash-ec
       then
    then
 ;
