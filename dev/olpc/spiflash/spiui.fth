@@ -8,6 +8,8 @@ purpose: User interface for reflashing SPI FLASH parts
 
 h# 4000 constant /chunk   \ Convenient sized piece for progress reports
 
+defer spi-progress  ' drop to spi-progress  ( n -- )
+
 : write-flash-range  ( adr end-offset start-offset -- )
    ." Writing" cr
    ?do                ( adr )
@@ -24,6 +26,7 @@ h# 4000 constant /chunk   \ Convenient sized piece for progress reports
          i flash-erase-block
          dup  /flash-block  i  flash-write  ( adr )
       then
+      i 5 rshift dup spi-progress h# 400 + spi-progress ( adr )
       /flash-block +                        ( adr' )
    /flash-block +loop                       ( adr )
    cr  drop           ( )

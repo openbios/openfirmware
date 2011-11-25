@@ -994,6 +994,7 @@ defer ec-reflash-off?  ' false to ec-reflash-off?
    ['] ?enough-power  catch  ?dup  if
       visible
       red-letters
+      show-no-power
       ." Unsafe to update firmware now - " .error
       ."  Continuing with old firmware" cr
       black-letters
@@ -1004,6 +1005,7 @@ defer ec-reflash-off?  ' false to ec-reflash-off?
 
    ec-indexed-io-off?  if
       visible
+      show-reflash
       ." Restarting to enable SPI FLASH writing."  cr
       d# 3000 ms
       ec-ixio-reboot
@@ -1013,6 +1015,8 @@ defer ec-reflash-off?  ' false to ec-reflash-off?
    \ Latch alternate? flag for next startup
    alternate?  if  [char] A h# 82 cmos!  then
 
+   show-reflash
+   ['] show-reflash-dot to spi-progress
    reflash      \ Should power-off and reboot
    show-x
    " Reflash returned, unexpectedly" .security-failure
