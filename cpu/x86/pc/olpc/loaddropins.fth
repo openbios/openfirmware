@@ -48,6 +48,7 @@
    " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wlan.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/xo.565"       " xo.565"        $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " ext.565"       $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/spi.565"      " spi.565"       $add-deflated-dropin
 
    " ${BP}/ofw/termemu/15x30pc.psf"             " font"          $add-deflated-dropin
 [ifdef] use-ega
