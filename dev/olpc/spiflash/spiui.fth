@@ -10,6 +10,10 @@ h# 4000 constant /chunk   \ Convenient sized piece for progress reports
 
 defer spi-progress  ' drop to spi-progress  ( n -- )
 
+: .progress  ( offset -- )
+   5 rshift  dup spi-progress  h# 400 + spi-progress
+;
+
 : write-flash-range  ( adr end-offset start-offset -- )
    ." Writing" cr
    ?do                ( adr )
@@ -26,7 +30,7 @@ defer spi-progress  ' drop to spi-progress  ( n -- )
          i flash-erase-block
          dup  /flash-block  i  flash-write  ( adr )
       then
-      i 5 rshift dup spi-progress h# 400 + spi-progress ( adr )
+      i .progress                           ( adr )
       /flash-block +                        ( adr' )
    /flash-block +loop                       ( adr )
    cr  drop           ( )
@@ -186,6 +190,7 @@ defer spi-progress  ' drop to spi-progress  ( n -- )
 [then]
 
    \ Don't write the block containing the manufacturing data
+   mfg-data-offset .progress
 
    flash-buf mfg-data-end-offset +   /flash  mfg-data-end-offset  write-flash-range  \ Write last part
 ;
@@ -210,6 +215,7 @@ defer spi-progress  ' drop to spi-progress  ( n -- )
          write-firmware
          verify-firmware
       then
+      /flash .progress
       flash-write-disable
    else
       .verify-msg
