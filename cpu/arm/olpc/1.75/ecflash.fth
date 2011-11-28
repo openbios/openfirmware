@@ -36,6 +36,25 @@ char 4 value expected-ec-version
 ;
 \ Tells the EC to auto-restart after power cycling
 : set-ec-reboot  ( -- )  1 h# f018 edi-b!  ;
+: ?reflash-ec-flags  ( adr -- )
+   use-edi-spi                          ( adr )
+   spi-start                            ( adr )  \ avoids holding EC in reset
+   load-base /flash-page ec-flags-offset edi-read-flash         ( adr )
+   dup load-base /flash-page comp       ( adr different? )
+   if
+      edi-open                          ( adr )
+      hdd-led-on                        ( adr )
+      ec-flags-offset erase-page        ( adr )
+      ec-flags-offset edi-program-page  ( )
+      hdd-led-off
+      set-ec-reboot
+      unreset-8051                      \ should not return
+      ec-power-cycle
+   then
+   drop                                 ( )
+   use-ssp-spi
+;
+: ignore-ec-flags  ( adr -- )  ec-flags-offset +  /flash-page  erase  ;
 : reflash-ec
    hdd-led-on
 [ifdef] cl2-a1
@@ -50,13 +69,14 @@ char 4 value expected-ec-version
    ." Verifying ..."
    load-base /ec-flash + /ec-flash 0 edi-read-flash
 [then]
+   load-base  ignore-ec-flags
+   load-base  /ec-flash +  ignore-ec-flags
    load-base  load-base /ec-flash +  /ec-flash  comp
    abort"  Miscompare!"
    cr
    hdd-led-off
 [ifndef] cl2-a1
    ." Restarting EC and rebooting" cr
-   d# 2000 ms
    set-ec-reboot
    unreset-8051
 [then]

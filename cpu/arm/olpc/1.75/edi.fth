@@ -69,6 +69,7 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
 ;
 : unreset-8051  ( -- )  \ Reset 8-5
    h# f010 edi-b@  1 invert and  h# f010 edi-b!
+   d# 2000 ms
 ;
 
 \ 0 in bit 0 selects masked ROM as code source for 8051, 1 selects FLASH

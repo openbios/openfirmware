@@ -33,17 +33,48 @@ purpose: Changing manufacturing data - adding and deleting tags
 \ Set and clear the write-protect tag by copying, erasing, rewriting
 
 : (put-mfg-data)
+   hdd-led-on
    mfg-data-buf  mfg-data-end-offset mfg-data-offset  write-flash-range
+   hdd-led-off
 ;
 
 : ram-find-tag  ( name$ -- false | data$ true )
    mfg-data-buf /flash-block +  (find-tag)
 ;
 
+\ FIXME: ifdef XO-1.75
+
+: set-cp  ( adr -- )
+   " CP" find-tag  if           ( adr len )
+      2drop [char] C            ( expected )
+   else                         ( )
+      0                         ( expected )
+   then                         ( expected )
+   swap c!                      ( )
+;
+
+: set-ap  ( adr -- )
+   " AP" find-tag  if           ( adr len )
+      2drop [char] A            ( expected )
+   else                         ( )
+      0                         ( expected )
+   then                         ( expected )
+   swap 1+ c!                   ( )
+;
+
+/flash-page buffer: ec-flags-buf
+: ?sync-ec  ( -- )
+   ec-flags-buf /flash-page erase
+   ec-flags-buf set-cp
+   ec-flags-buf set-ap
+   ec-flags-buf ?reflash-ec-flags
+;
+
 \ Write mfg data from RAM to FLASH
 : put-mfg-data  ( -- )
    spi-start spi-identify
    (put-mfg-data)
+   ?sync-ec
    spi-reprogrammed
 ;
 
