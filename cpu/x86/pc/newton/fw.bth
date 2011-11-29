@@ -192,15 +192,19 @@ fload ${BP}/cpu/x86/pc/boot.fth
 fload ${BP}/cpu/x86/pc/linux.fth
 
 hex 
+: report-net?  ( name$ -- found? )
+   2dup  find-package  if  ( name$ phandle )
+      drop  " net" 2swap $devalias   ( )
+      true                           ( found? )
+   else                              ( name$ )
+      2drop  false                   ( found? )
+   then                              ( found? )
+;
 \ If there is a PCI ethernet adapter, use it as the default net device,
 \ otherwise use any ethernet that can be found in the device tree.
 : report-net  ( -- )
-   " /pci/ethernet" 2dup  find-package  if  ( name$ phandle )
-      drop                                  ( name$ )
-   else                                     ( name$ )
-      2drop  " /ethernet"                   ( name$' )
-   then                                     ( name$ )
-   " net" 2swap $devalias                   ( )
+   " /usb@1a/ethernet" report-net?  if  exit  then
+   " /usb@1b/ethernet" report-net?  if  exit  then
 ;
 
 fload ${BP}/cpu/x86/pc/newton/usb.fth
@@ -212,6 +216,7 @@ patch noop set-menu-colors setup-graphics
 patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
 patch merge-rect-565 merge-rect merge-cursor  \ Hack since we do all our user-level graphics in 565
 fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
+fload ${BP}/cpu/x86/pc/newton/testitems.fth
 fload ${BP}/dev/olpc/confirm.fth
 : bright!  ( level -- )  drop  ;
 : backlight-on   ( -- )  ;

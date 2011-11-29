@@ -10,9 +10,11 @@ create coreboot-qemu
 create use-timestamp-counter
 create use-tsc-timing
 
-\ create use-vesa
-create use-ega
+create use-vesa
+\ create use-ega
 \ create serial-console
+
+create no-keyboard \ Newton has no PS/2 keyboard and mouse
 
 \ In virtual mode, OFW runs with the MMU on.  The advantages are
 \ that OFW can automatically locate itself out of the way, at the

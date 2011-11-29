@@ -38,12 +38,13 @@ warning !
 
 fload ${BP}/ofw/fs/cbfs.fth     \ Coreboot ROM filesystem
 
+h# 80.0000 to /flash   \ Entire device
 \ Create the top-level device node to access the entire boot FLASH device
-0 0  " ffa00000"  " /" begin-package
+0 0  " ff800000"  " /" begin-package
    " flash" device-name
 
-   h# 10.0000 value /device
-   h# 10.0000 constant /device-phys
+   h# 80.0000 value /device
+   h# 80.0000 constant /device-phys
    my-address my-space /device-phys reg
    fload ${BP}/dev/flashpkg.fth
    fload ${BP}/dev/flashwrite.fth
@@ -51,6 +52,28 @@ end-package
 
 \ XXX later
 \ devalias cbfs /flash//cbfs-file-system
+
+\ Create a node below the top-level FLASH node to accessing the portion
+\ containing the dropin modules
+0 0  " 200000"  " /flash" begin-package
+   " dropins" device-name
+
+   h# 100000 constant /device
+   fload ${BP}/dev/subrange.fth
+end-package
+
+devalias dropins /dropins
+
+\ Create a node below the top-level FLASH node to accessing the portion
+\ containing the dropin modules
+0 0  " 780000"  " /flash" begin-package
+   " coreboot" device-name
+
+   h# 080000 constant /device
+   fload ${BP}/dev/subrange.fth
+end-package
+
+devalias coreboot /coreboot
 
 0 [if]
 \ This really should be a subrange of /flash
@@ -65,12 +88,14 @@ end-package
 end-package
 
 devalias dropins /dropinram
-[else]
-patch /l /di-header first-header
-patch /l /di-header first-header
-\ devalias dropins cbfs:fallback\payload
-devalias dropins /flash
 [then]
+
+\ [else]
+\ patch /l /di-header first-header
+\ patch /l /di-header first-header
+\ \ devalias dropins cbfs:fallback\payload
+\ devalias dropins /flash
+\ [then]
 
 \ Create a pseudo-device that presents the dropin modules as a filesystem.
 fload ${BP}/ofw/fs/dropinfs.fth

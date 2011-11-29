@@ -3,8 +3,8 @@ purpose: Create memory node properties and lists
 
 dev /memory
 
-: /ram  ( -- #bytes )  0  h# b0 config-w@  wljoin  ;  \ Base of stolen memory
-: usable-ramtop  ( -- n )  h# ac config-l@  ;  \ Top of usable DRAM
+: /ram  ( -- #bytes )  h# b0 config-l@  ;  \ Base of stolen memory
+: usable-ramtop  ( -- n )  h# b4 config-l@  ;  \ Top of usable DRAM
 
 : release-range  ( start-adr end-adr -- )  over - release  ;
 
