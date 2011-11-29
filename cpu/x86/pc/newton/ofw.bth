@@ -1,0 +1,78 @@
+purpose: Construct the final OFW image 
+
+command: &builder &this
+in: reset.di
+in: start.di
+in: ${BP}/cpu/x86/pc/newton/build/paging.di
+in: fw.img
+in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
+in: ${BP}/dev/usb2/hcd/uhci/build/uhci.fc
+in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
+in: ${BP}/dev/usb2/device/hub/build/hub.fc
+in: ${BP}/dev/usb2/device/net/build/usbnet.fc
+in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
+in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
+in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
+in: ${BP}/dev/usb2/device/webcam/build/webcam.fc
+in: ${BP}/dev/pci/build/pcibridg.fc
+in: ${BP}/dev/ide/build/leghier.fc
+in: testicons.bin
+
+build-now
+
+fload ${BP}/cpu/x86/pc/newton/config.fth
+
+\ Always re-create the builton.fth file when we make a new rom.img
+fload ${BP}/cpu/x86/pc/builton.bth
+
+hex
+
+.( --- Saving as ofw.elf - Coreboot payload format) cr
+fload ${BP}/cpu/x86/pc/elfhdr.fth
+writing ofw.elf
+elf-header /elf-header ofd @ fputs
+
+   " reset.di"              $add-file
+   " start.di"              $add-file
+   " paging.di"             $add-file
+
+   " ${BP}/cpu/x86/build/inflate.bin"           " inflate"         $add-dropin
+
+   " fw.img"                                    " firmware"        $add-deflated-dropin
+\   " fw.img"                                    " firmware"        $add-dropin
+
+   " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
+   " ${BP}/dev/ide/build/leghier.fc"            " class01018a"     $add-deflated-dropin
+
+   " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"     $add-deflated-dropin
+   " ${BP}/dev/usb2/hcd/uhci/build/uhci.fc"	" class0c0300"     $add-deflated-dropin
+
+   " ${BP}/dev/usb2/device/hub/build/hub.fc"            " usb,class9"    $add-dropin
+   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"    " usb,class3,1"  $add-dropin
+   " ${BP}/dev/usb2/device/net/build/usbnet.fc"         " usbnet"        $add-deflated-dropin
+   " ${BP}/dev/usb2/device/serial/build/usbserial.fc"   " usbserial"     $add-deflated-dropin
+   " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"    $add-deflated-dropin
+   " ${BP}/dev/usb2/device/webcam/build/webcam.fc"     " usb,classe,3,0" $add-dropin
+
+   " builton.fth"                       " probe-"               $add-dropin
+   " ${BP}/ofw/fcode/memtest.fth"       " memtest.fth"          $add-deflated-dropin
+   " ${BP}/ofw/inet/telnetd.fth"        " telnetd"              $add-deflated-dropin
+   " ${BP}/ofw/termemu/15x30pc.psf"     " font"                 $add-deflated-dropin
+
+   " ${BP}/cpu/x86/pc/newton/build/testicons/audio.565"    " audio.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/newton/build/testicons/clock.565"    " clock.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/newton/build/testicons/cpu.565"      " cpu.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/newton/build/testicons/display.565"  " display.565"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/newton/build/testicons/play.565"     " play.565"     $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/newton/build/testicons/quit.565"     " quit.565"     $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/newton/build/testicons/ram.565"      " ram.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/newton/build/testicons/spi.565"      " spi.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/newton/build/testicons/timer.565"    " timer.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/newton/build/testicons/usb.565"      " usb.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/newton/build/testicons/wifi.565"     " wifi.565"     $add-deflated-dropin
+
+   ofd @ fsize pad !        \ file size; store in memory for convenience below
+   h# 44 ofd @ fseek        \ Seek to file size field; see elfhdr.bth
+   pad 4 ofd @ fputs        \ Patch file size
+   pad 4 ofd @ fputs        \ Patch memory size
+ofd @ fclose
