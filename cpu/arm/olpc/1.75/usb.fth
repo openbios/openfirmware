@@ -28,7 +28,7 @@ end-package
 
 \ Turn on USB power after a delay, to ensure that USB devices are reset correctly on boot
 : usb-power-on  ( -- )  ;  \ The EC controls the USB power
-: reset-usb-hub  ( -- )  d# 146 gpio-set  d# 10 ms  d# 146 gpio-set  ;
+: reset-usb-hub  ( -- )  d# 146 gpio-clr  d# 10 ms  d# 146 gpio-set  ;
 
 : init-usb  ( -- )
    h# 9 h# 5c pmua!  \ Enable clock to USB block
