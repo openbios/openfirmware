@@ -20,6 +20,7 @@ in: ${BP}/dev/usb2/device/net/build/usbnet.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
+in: ${BP}/dev/usb2/device/mouse/build/usbmouse.fc
 in: ${BP}/clients/memtest86/memtest
 in: ${BP}/clients/emacs/x86/emacs
 in: ${BP}/cpu/x86/pc/olpc/via/build/verify.img
@@ -88,7 +89,8 @@ $new-file
    " ${BP}/dev/usb2/device/hub/build/hub.fc"     " usb,class9"      $add-dropin
    " ${BP}/dev/usb2/device/generic/build/generic.fc"  " usbdevice"  $add-deflated-dropin
    " ${BP}/dev/usb2/device/net/build/usbnet.fc"       " usbnet"     $add-deflated-dropin
-   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"  " usb,class3,1" $add-dropin
+   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc" " usb,class3,1,1" $add-deflated-dropin
+   " ${BP}/dev/usb2/device/mouse/build/usbmouse.fc"  " usb,class3,1,2" $add-deflated-dropin
    " ${BP}/dev/usb2/device/serial/build/usbserial.fc" " usbserial"  $add-deflated-dropin
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
 \  " mrv8686.bin" " mrv8686.bin"                                    $add-deflated-dropin

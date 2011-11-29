@@ -1,0 +1,17 @@
+purpose: Load file for USB boot mouse driver 
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing usbmouse.fc
+
+FCode-version2
+
+fload ${BP}/dev/usb2/device/common.fth		\ USB device driver common routines
+fload ${BP}/dev/usb2/device/mouse/mouse.fth	\ HID requests
+
+end0
+
+end-tokenizing

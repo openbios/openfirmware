@@ -19,6 +19,7 @@ in: ${BP}/dev/usb2/device/net/build/usbnet.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
+in: ${BP}/dev/usb2/device/mouse/build/usbmouse.fc
 in: ${BP}/dev/usb2/device/wlan/build/usb8388.fc
 in: ${BP}/dev/olpc/cafenand/build/cafenand.fc
 in: ${BP}/dev/olpc/cafecamera/build/cafecamera.fc

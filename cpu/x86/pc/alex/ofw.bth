@@ -13,6 +13,7 @@ in: ${BP}/dev/usb2/device/net/build/usbnet.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
+in: ${BP}/dev/usb2/device/mouse/build/usbmouse.fc
 in: ${BP}/dev/usb2/device/webcam/build/webcam.fc
 in: ${BP}/dev/pci/build/pcibridg.fc
 in: ${BP}/dev/ide/build/leghier.fc
@@ -47,7 +48,8 @@ elf-header /elf-header ofd @ fputs
    " ${BP}/dev/usb2/hcd/uhci/build/uhci.fc"	" class0c0300"     $add-deflated-dropin
 
    " ${BP}/dev/usb2/device/hub/build/hub.fc"            " usb,class9"    $add-dropin
-   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"    " usb,class3,1"  $add-dropin
+   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"    " usb,class3,1,1"  $add-deflated-dropin
+   " ${BP}/dev/usb2/device/mouse/build/usbmouse.fc"    " usb,class3,1,2"  $add-deflated-dropin
    " ${BP}/dev/usb2/device/net/build/usbnet.fc"         " usbnet"        $add-deflated-dropin
    " ${BP}/dev/usb2/device/serial/build/usbserial.fc"   " usbserial"     $add-deflated-dropin
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"    $add-deflated-dropin
