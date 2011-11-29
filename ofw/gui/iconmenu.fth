@@ -118,7 +118,7 @@ headerless
 
 : clear-sq  ( sq - )  >r  null$  ['] noop  0  r> set-sq  ;
 headers
-: clear-menu  ( - )  squares 0 do  i clear-sq  loop  ;
+: clear-menu  ( - )  squares 0  ?do  i clear-sq  loop  ;
 headerless
 
 : active?  ( sq - active? )

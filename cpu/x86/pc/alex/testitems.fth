@@ -68,7 +68,7 @@ icon: leds.icon     rom:leds.565
    silent-probe-usb
 
    0 to #mfgtests
-   0 1 set-col-row
+   1 0 set-row-col
 
    " CPU"
    ['] cpu-item      cpu.icon      add-icon

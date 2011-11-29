@@ -32,7 +32,6 @@ icon: quit.icon     rom:quit.565
 icon: cpu.icon      rom:cpu.565
 icon: spi.icon      rom:spi.565
 icon: ram.icon      rom:ram.565
-icon: sdcard.icon   rom:sdcard.565
 icon: usb.icon      rom:usb.565
 icon: wifi.icon     rom:wifi.565
 icon: audio.icon    rom:audio.565
@@ -62,7 +61,7 @@ icon: leds.icon     rom:leds.565
    silent-probe-usb
 
    0 to #mfgtests
-   0 1 set-col-row
+   1 0 set-row-col
 
    " CPU"
    ['] cpu-item      cpu.icon      add-icon
@@ -72,9 +71,6 @@ icon: leds.icon     rom:leds.565
 
    " RAM chips"
    ['] memory-item   ram.icon      add-icon
-
-   " Internal mass storage"
-   ['] int-sd-item   sdcard.icon   add-icon
 
    " Timer"
    ['] timer-item    timer.icon    add-icon

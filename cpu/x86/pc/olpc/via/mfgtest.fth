@@ -102,7 +102,7 @@ if               ( return-code )
 0 value cur-row
 : cur-col++  ( -- )  cur-col 1+ to cur-col  ;
 : cur-row++  ( -- )  cur-row 1+ to cur-row  ;
-: set-col-row ( row col -- )  to cur-col  to cur-row  ;
+: set-row-col  ( row col -- )  to cur-col  to cur-row  ;
 : add-icon   ( -- )
    cur-col #mfgcols =  if
       cur-row++  cur-row #mfgcols >=  if  abort" Too many icons"  then
