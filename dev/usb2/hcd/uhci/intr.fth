@@ -58,7 +58,7 @@ external
 
 : begin-intr-in  ( buf len pipe interval -- )
    debug?  if  ." begin-intr-in" cr  then
-   intr-in-qh  if  3drop exit  then		\ Already started
+   intr-in-qh  if  4drop exit  then		\ Already started
 
    to intr-in-interval
    dup to intr-in-pipe
