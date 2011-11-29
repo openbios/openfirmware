@@ -42,8 +42,7 @@ purpose: Changing manufacturing data - adding and deleting tags
    mfg-data-buf /flash-block +  (find-tag)
 ;
 
-\ FIXME: ifdef XO-1.75
-
+[ifdef] /flash-page
 : set-cp  ( adr -- )
    " CP" find-tag  if           ( adr len )
       2drop [char] C            ( expected )
@@ -69,6 +68,9 @@ purpose: Changing manufacturing data - adding and deleting tags
    ec-flags-buf set-ap
    ec-flags-buf ?reflash-ec-flags
 ;
+[else]
+: ?sync-ec  ;
+[then]
 
 \ Write mfg data from RAM to FLASH
 : put-mfg-data  ( -- )
