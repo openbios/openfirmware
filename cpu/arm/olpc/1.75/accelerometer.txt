@@ -15,17 +15,25 @@
 : bdu  ( -- )  h# 23 acc-reg@  h# 80 or  h# 23 acc-reg!  ;
 
 \ sample rate setting
-: odr!  ( n -- )  4 lshift  h# 20 acc-reg@  h# 0f and  or  h# 20 acc-reg!  ;
+0 value ctl1
+ctl1@ to ctl1
+: ctl1!  ( b -- )  dup to ctl1  h# 20 acc-reg!  ;
+: ctl1(  ( -- n )  ctl1  ;
+: )ctl1  ( n -- )  dup to ctl1  ctl1!  ;
+: nm  ( n -- n )  h# 08 invert and  ;
+: lpm  ( n -- n )  h# 08 or  ;
+: odr!  ( n odr -- n )  4 lshift  swap  h# 0f and  or  ;
 
-: 1hz     ( -- )  1 odr!  ;
-: 10hz    ( -- )  2 odr!  ;
-: 25hz    ( -- )  3 odr!  ;
-: 50hz    ( -- )  4 odr!  ;  \ power up default
-: 100hz   ( -- )  5 odr!  ;
-: 200hz   ( -- )  6 odr!  ;
-: 400hz   ( -- )  7 odr!  ;
-: 1.6khz  ( -- )  8 odr!  ;
-: 5khz    ( -- )  9 odr!  ;
+: 1hz      ( -- )  ctl1(  nm   1 odr!  )ctl1  ;
+: 10hz     ( -- )  ctl1(  nm   2 odr!  )ctl1  ;
+: 25hz     ( -- )  ctl1(  nm   3 odr!  )ctl1  ;
+: 50hz     ( -- )  ctl1(  nm   4 odr!  )ctl1  ;  \ power up default
+: 100hz    ( -- )  ctl1(  nm   5 odr!  )ctl1  ;
+: 200hz    ( -- )  ctl1(  nm   6 odr!  )ctl1  ;
+: 400hz    ( -- )  ctl1(  nm   7 odr!  )ctl1  ;
+: 1.25khz  ( -- )  ctl1(  nm   8 odr!  )ctl1  ;
+: 1.6khz   ( -- )  ctl1(  lpm  8 odr!  )ctl1  ;
+: 5khz     ( -- )  ctl1(  lpm  9 odr!  )ctl1  ;
 
 \ sign extend a byte
 : bext  ( b -- n )  dup h# 80 and  if  h# ffffff00 or  then  ;
