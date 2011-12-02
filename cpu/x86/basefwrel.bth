@@ -1,0 +1,8 @@
+\ See license at end of file
+purpose: Load file for Forth toolkit, without firmware
+
+dictionary: ${BP}/cpu/x86/build/toolsrel.dic
+command: &x86forth &dictionary &this
+build-now
+
+fload ${BP}/cpu/x86/basefw.bth

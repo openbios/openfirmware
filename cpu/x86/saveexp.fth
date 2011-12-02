@@ -55,11 +55,24 @@ variable dictionary-size  h# 40000 dictionary-size !
    $new-file
 
    exp-header  /exp-header  		 ofd @  fputs
+
+\ The dictionary pointer is kept in absolute form at runtime, but must
+\ be stored in relative form in the image file for the relative version.
+\ The absolute version relocates it via the bitmap.  The relative version
+\ relocates it with explicit code in cold-code.
+\+ rel-t dp @ origin -  dp !
+\+ rel   dp @ origin -  dp !
    code-adr    code-size    		 ofd @  fputs
+\+ rel   dp @ origin +  dp !
+\+ rel-t dp @ origin +  dp !
+
+[ifdef] relocation-map
    relocation-map code-size h# 0f + 4 >> ofd @  fputs
+[then]
  		 
    ofd @ fclose
 ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

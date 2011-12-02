@@ -4,6 +4,16 @@ purpose: Load file for x86 Forth kernel
 command: &builder &this
 build-now
 
+: defined?  ( "name" -- flag )
+   safe-parse-word  $find  dup  if  nip  else  nip nip  then
+;
+: \+  ( "name" "rest of line" -- )
+    defined?  0=  if   [compile] \  then
+; immediate
+: \-  ( "name" "rest of line" -- )
+    defined?  if  [compile] \  then
+; immediate
+ 
 \ [ifdef] use-postfix-assembler
 \ use-postfix-assembler
 \ ' 386-assembler >link fence a!
@@ -23,16 +33,16 @@ create dic-file-name  ," kernelnofiles.dic"
 [ifdef] big-endian-t
 create dic-file-name  ," kernelbe.dic"
 [else]
-create dic-file-name  ," kernel.dic"
+\- rel-t create dic-file-name  ," kernel.dic"
+\+ rel-t create dic-file-name  ," kernelrel.dic"
 [then]
 [then]
 
 : \Tags  [compile] \ ; immediate
 : \NotTags  ;  immediate
 
-
-\ ' $report-name is include-hook	' noop is include-exit-hook
   ' noop is include-hook		' noop is include-exit-hook
+\ ' $report-name is include-hook	' noop is include-exit-hook
 
 warning off	\ Turn OFF the warning messages
 
@@ -44,6 +54,11 @@ defer "header-t-hook ' (tags-header) is "header-t-hook
 [then]
 
 : resident ;
+
+\ : \rel-t ( -- ) [compile] \  ; immediate
+\ : \!rel-t ( -- )  ; immediate
+\ : \rel-t ( -- )  ; immediate
+\ : \!rel-t ( -- ) [compile] \  ; immediate
 
 fload ${BP}/forth/kernel/conft32.fth
 fload ${BP}/forth/kernel/meta1.fth
@@ -64,14 +79,7 @@ fload ${BP}/forth/kernel/forward.fth
 fload ${BP}/cpu/x86/fixvoc.fth
 fload ${BP}/forth/kernel/metacompile.fth
 
-fload ${BP}/cpu/x86/metarel.fth
-
-only forth meta also forth also definitions
-defer relocation-map
-' relocation-map-t         is relocation-map
-' meta-set-relocation-bit  is set-relocation-bit-t
-' meta-init-relocation     is init-relocation-t
-only forth also definitions
+\- rel-t fload ${BP}/cpu/x86/metarel.fth
 
 fload ${BP}/cpu/x86/metainit.fth
 
@@ -99,12 +107,11 @@ fload ${BP}/forth/kernel/double.fth
 
 fload ${BP}/forth/lib/bitops.fth
 [ifdef] omit-files
-defer set-relocation-bit
-defer clear-relocation-bits
-' noop is set-relocation-bit
-' 2drop is clear-relocation-bits
+defer set-relocation-bit     ' noop is set-relocation-bit
+defer clear-relocation-bits  ' 2drop is clear-relocation-bits
 [else]
-fload ${BP}/cpu/x86/kernrel.fth
+\- rel-t fload ${BP}/cpu/x86/kernrel.fth
+\+ rel-t fload ${BP}/cpu/x86/nullrel.fth
 [then]
 
 fload ${BP}/forth/lib/struct.fth

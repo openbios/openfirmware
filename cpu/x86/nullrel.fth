@@ -1,27 +1,17 @@
 \ See license at end of file
-hex
+purpose: Null version of relocation table management
 
-only forth also definitions
+defer set-relocation-bit     ' noop  is set-relocation-bit
+defer clear-relocation-bits  ' 2drop is clear-relocation-bits
 
-: $save-forth  ( name$ -- )
-   " sys-init-io" $find-name  is init-io           ( name$ )
-   " sys-init"    init-save
-   ['] noop is set-relocation-bit	\ Turn off until relo map is allocated
+: max-image  ( -- #bytes )  memtop @  origin -  ;
 
-   origin h# 10 +  8  erase		\ Clear #args,args argument locations
-   origin  origin h# 1c +  le-l!	\ Set relocation base address
-
-   \ Set user initialization table
-   up@ init-user-area origin + user-size  move  ( name$ )
-
-   origin 
-\+ rel h# 20 -
-   here over -  $save-image
-;
-only forth also definitions
+: relocation-on  ( -- )  ;
+: init-relocation  ( -- )  ;
+: relocation-off  ( -- )  ;
 
 \ LICENSE_BEGIN
-\ Copyright (c) 2006 FirmWorks
+\ Copyright (c) 2011 FirmWorks
 \ 
 \ Permission is hereby granted, free of charge, to any person obtaining
 \ a copy of this software and associated documentation files (the

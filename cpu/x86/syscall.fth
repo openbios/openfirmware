@@ -48,9 +48,11 @@ code (wrapper-call)  ( arg call# memtop -- )
    18 [bx]  gs mov			\ his GS
    0c [bx]  ds mov			\ his DS
 
-   here-t 5 + #)  call   here-t origin-t -  ( offset )
-   dx pop
-   ( offset ) #  dx  sub
+\+ rel-t   h# -20 [up]  dx  lea
+
+\- rel-t   here-t 5 + #)  call   here-t origin-t -  ( offset )
+\- rel-t   dx pop
+\- rel-t   ( offset ) #  dx  sub
 
    1 #  'user flat?  test  0<> if
       6 [dx] call		\ cs = 0, forth was called from windows or unix
@@ -84,10 +86,7 @@ c;
 defer wrapper-vectors  ' noop is wrapper-vectors
 defer forth-vectors    ' noop is forth-vectors
 
-: wrapper?  ( -- flag )  origin 6 + le-l@  0<>  ;
 : wrapper-call  ( arg call# -- )
-   wrapper?  0=  abort" Wrapper calls are not available"
-
    wrapper-vectors
    memtop @  (wrapper-call)
    forth-vectors

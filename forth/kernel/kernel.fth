@@ -726,6 +726,9 @@ defer allot-error
 : ?comp   (s -- )  state @  0= ( -14 ) abort" Compilation Only " ;
 : ?exec   (s -- )  state @     ( -29 ) abort" Execution Only " ;
 
+: defined?  ( "name" -- flag )
+   safe-parse-word  $find  dup  if  nip  else  nip nip  then
+;
 : $defined   (s -- adr len 0 | xt +-1 )  safe-parse-word $find  ;
 : $?missing  ( +-1 | adr len 0 -- +-1 )
    dup 0=  if  drop  .not-found  ( -13 ) abort  then

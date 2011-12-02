@@ -3,8 +3,8 @@
 
 only forth also definitions
 
-defer init-relocation-t
-defer set-relocation-bit-t
+defer init-relocation-t    ' noop is init-relocation-t
+defer set-relocation-bit-t ' noop is set-relocation-bit-t
 
 decimal
 
@@ -114,14 +114,17 @@ alias le-l@-t l@-t
          le-l@-t
 [else]
 \t32-t   l@-t
+\+ rel-t   origin-t +
 [then]
 ;
 : a!-t ( token target-address -- )
   set-relocation-bit-t
 \t16-t   swap  origin-t -  tshift-t >>  swap  w!-t
+\+ rel-t   origin-t -
 [ifdef] big-endian-t
          le-l!-t
 [else]
+\+ rel-t   swap  origin-t -  swap
 \t32-t   l!-t
 [then]
 ;
@@ -154,6 +157,7 @@ alias le-l@-t l@-t
         le@
 [else]
 \t32-t  l-t@
+\+ rel-t  origin-t +
 [then]
 ;
 : a-t! ( target-address host-address -- )
@@ -161,6 +165,7 @@ alias le-l@-t l@-t
 [ifdef] big-endian-t
         le!
 [else]
+\+ rel-t  swap origin-t - swap
 \t32-t  l-t!
 [then]
 ;
@@ -170,6 +175,7 @@ alias le-l@-t l@-t
         le@
 [else]
 \t32-t  l-t@
+\+ rel-t  origin-t +
 [then]
 ;
 : rlink-t!  ( target-adr host-adr -- )
@@ -177,6 +183,7 @@ alias le-l@-t l@-t
 [ifdef] big-endian-t
         le!
 [else]
+\+ rel-t  origin-t -
 \t32-t  l-t!
 [then]
 ;
@@ -252,6 +259,7 @@ decimal
 #align-t constant #acf-align-t
 
 \t16-t 1 tshift-t << constant #linkalign-t
+\+ rel-t 1 constant #linkalign-t
 \t32-t 1 constant #linkalign-t
 : aligned-t  ( n1 -- n2 )  #align-t 1- +  #align-t negate and  ;
 : acf-aligned-t  ( n1 -- n2 )  #acf-align-t 1- +  #acf-align-t negate and  ;

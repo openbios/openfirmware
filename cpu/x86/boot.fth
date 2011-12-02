@@ -1,12 +1,8 @@
 \ See license at end of file
 
-\ Version for running Forth under DOS, either under the Phar Lap
-\ DOS Extender or under the Zortech C DOS Extender.
-
-\ Boot code (cold and warm start).  The cold start code is executed
+\ Boot code (cold start).  The cold start code is executed
 \ when Forth is initially started.  Its job is to initialize the Forth
-\ virtual machine registers.  The warm start code is executed when Forth
-\ is re-entered, perhaps as a result of an exception.
+\ virtual machine registers.
 
 hex
 
@@ -32,8 +28,10 @@ create cold-code  ( -- )  assembler
 mlabel cold-code
 
 forth-h
-h# e9 origin-t c!-t			  \ Relative jump with 32-bit offset
-here-t  origin-t 5 +  -  origin-t 1+  !-t \ Offset relative to instruction end
+\- rel-t h# e9 origin-t c!-t			   \ Relative jump with 32-bit offset
+\- rel-t here-t  origin-t 5 +  -  origin-t 1+  !-t \ Offset relative to instruction end
+\+ rel-t h# e9 jmp-header c!			          \ Relative jump with 32-bit offset
+\+ rel-t here-t /jmp-header +   5 -  jmp-header 1+  le-l! \ Offset relative to instruction end
 assembler
 
 \ The segment registers are set correctly, and the stack pointer is
@@ -41,11 +39,15 @@ assembler
 
 \ Get the origin address
    here-t 5 + #) call   here-t origin-t -  ( offset )
-   bx  pop
-   ( offset ) #  bx  sub	\ Origin in bx
+\- rel-t   bx  pop
+\- rel-t   ( offset ) #  bx  sub	\ Origin in bx
+
+\+ rel-t   up  pop
+\+ rel-t   ( offset ) #  up  sub	\ Origin in up
    
-   20 [bx] di lea
-   di 'user up0 mov      \ initialize up0 (needed for future relocation)
+\- rel-t   20 [bx] up lea
+\- rel-t   up 'user up0 mov      \ initialize up0 (needed for future relocation)
+\+ rel-t   up 'user up0 mov      \ initialize up0 (needed for future relocation)
 
 \ Set the value of flat? so later code can determine whether or
 \ not it is safe to do things like setting the stack segment descriptor,
@@ -66,33 +68,37 @@ assembler
    sp  ax mov
 
 [ifdef] notdef
-\ this version is ROMable   
+\ this version is ROMable - and is incompatible with relative addressing
 \ Allocate the RAM copy of the User Area
    user-size-t #   sp	sub
 
 \ Copy the initial User Area image to the RAM copy
-   userarea-t [bx]  si   lea	\ Source address for copy
+   rel-t  userarea-t [bx]  si   lea	\ Source address for copy
    sp		    di   mov	\ Destination of copy
    user-size-t #    cx   mov	\ Number of bytes to copy
    cld   rep byte movs
 
-   sp               di   mov	\ Set user pointer
+   sp               up   mov	\ Set user pointer
 [else]
-   userarea-t [bx]  di   lea	\ Source address for copy
+\- rel-t   userarea-t [bx]  up   lea	\ User pointer
+\+ rel-t   userarea-t [up]  up   lea	\ User pointer
 [then]
 
 \ XXX need to swap bytes
 \ Set main-task so the exception handler can find the user area
-   di   'body main-task [bx]  mov
+\- rel-t  up   'body main-task [bx]  mov
+\+ rel-t  up   'body main-task [up]  mov
 
    ?bswap-ax
    ax     'user memtop   mov     \ Set heap pointer
 
-   h# 10 [bx]       ax   mov	\ #args
+\- rel-t  h# 10 [bx]     ax   mov	\ #args
+\+ rel-t  h# -10 [up]     ax   mov	\ #args
    ?bswap-ax
    ax      'user #args   mov
 
-   h# 14 [bx]       ax   mov	\ args
+\- rel-t   h# 14 [bx]   ax   mov	\ args
+\+ rel-t   h# -c [up]   ax   mov	\ args
    ?bswap-ax
    ax       'user args   mov
 
@@ -123,62 +129,22 @@ assembler
    ps-size-t #  ax       sub    \ allocate space for the data stack
    ax      'user limit   mov	\ Set dictionary limit
 
+\+ rel-t   'user dp  ax  mov
+\+ rel-t   up        ax  add
+\+ rel-t   ax  'user dp  mov
+
 \ Enter Forth
-   'body cold [bx]  ip   lea
+\- rel-t  'body cold [bx]  ip   lea
+\+ rel-t  'body cold [up]  ip   lea
 c;
-
-create ztc-startup   ( -- )  assembler
-
-\ This is for the Zortech C DOS Extender version which extracts the starting
-\ address from location c and jumps directly to it.
-
-forth-h
-\ here-t  origin-t h# c +  le-l!-t  \ Address of ztc-startup relative to origin
-here-t  h# 0c  token!-t  \ Address of ztc-startup relative to origin
-assembler
-
-\ The stack contains:
-\ ( Data selector [4 bytes], memory size [4 bytes], return-address [6 bytes] )
-
-   bp push
-   sp bp mov
-   si push
-   di push
-   8 [bp] dx mov                \ DX - caller's CS
-
-   ds si  mov		\ SI - caller's DS
-   ss di  mov		\ DI - caller's SS
-   sp cx  mov		\ CX - caller's SP
-
-   0c [bp] ax mov               \ Memory top
-   10 [bp] ds mov
-   ds  bx  mov
-
-   bx  ss  mov			\ Get onto new stack
-   ax  sp  mov
-
-   \  GS       FS       ES       DS       CS       SS       SP
-   gs push  fs push  es push  si push  dx push  di push  cx push  
-
-
-   dx  h# a #)  op: mov   \ Fix selector of far pointer at origin + 6
-                          \ Zortech C appears to store it incorrectly
-                          \      memtop @ 8 + le-l@  h# a le-w!
-   
-   bx  es  mov
-   bx  fs  mov
-   bx  gs  mov
-
-   cold-code #) jmp		\ Proceed with the usual startup
-end-code
 
 create unix-startup   ( -- )  assembler
 
 \ This is the entry point for the Unix wrapper
 
 forth-h
-\ here-t  origin-t h# 18 +  le-l!-t  \ Address of unix-startup relative to origin
-here-t  h# 18  token!-t  \ Address of unix-startup relative to origin
+\- rel-t  here-t  h# 18  token!-t  \ Address of unix-startup
+\+ rel-t  here-t /jmp-header +  jmp-header h# 18 +  le-l!  \ Address of unix-startup
 assembler
 
 \ The stack contains:
@@ -203,28 +169,10 @@ assembler
    cold-code #) jmp		\ Proceed with the usual startup
 end-code
 
-create warm-code  ( -- )  assembler
-\ Set the base address
-\   here-t 4 +        call	\ address of next instruction in spc
-\   here-t 4 -  base  set	\ relative address of current instruction
-\   spc base    base  sub	\ subtract them to find the base address
-\
-\ \ Set the User Pointer
-\   'body main-task  up set	\ relative address of main-task parameter field
-\   up base          up   add	\ absolute address of main-task parameter field
-\   up               up   get	\ read the value
-\
-\   'user sp0        sp   ld	\ Establish the Parameter Stack
-\   'user rp0        rp   ld	\ Establish the Return Stack
-\   'body warm       ip   set	\ Set IP to execute warm
-\   ip base          ip   add
-
-next
 meta
 
 decimal
 
-\ : install-warm  ( -- )  warm-code origin  put-branch  ;
 \ : install-cold  ( -- )  cold-code origin  put-branch  ;
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

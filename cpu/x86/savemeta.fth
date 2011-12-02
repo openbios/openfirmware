@@ -3,15 +3,16 @@
 hex
 
 only forth also meta also forth-h definitions
-: reloc-size   ( -- n )
-   here-t origin-t -  ( user-size-t + )
-   0f + 4 >>
-;
+\- rel-t : reloc-size   ( -- n )
+\- rel-t    here-t origin-t -  ( user-size-t + )
+\- rel-t    0f + 4 >>
+\- rel-t ;
 
 : $save-meta  ( filename$ -- )
 \   origin-t >hostaddr  here-t origin-t -  save-image
 
-   origin-t  origin-t h# 1c +  le-l!-t	\ Relocation base of saved image
+\- rel-t   origin-t  origin-t h# 1c +  le-l!-t	\ Relocation base of sav
+\+ rel-t -1  jmp-header h# 1c +  le-l!	\ Relocation base of saved image
 
    here-t origin-t - is code-size
    origin-t >hostaddr is code-adr
@@ -19,8 +20,9 @@ only forth also meta also forth-h definitions
 
    $new-file
    exp-header /exp-header ofd @ fputs
+\+ rel-t   jmp-header /jmp-header  ofd @ fputs
    code-adr code-size ofd @ fputs
-   relocation-map-t reloc-size ofd @ fputs
+\- rel-t   relocation-map-t reloc-size ofd @ fputs
 
    ofd @ fclose
 ;

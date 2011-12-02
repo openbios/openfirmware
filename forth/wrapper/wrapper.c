@@ -958,18 +958,21 @@ main(argc, argv, envp)
 	}
 	f_close(f);
 	
-	code_size = ( (int)header.size_blocks -2)*0x200
-			+ (int)header.size_fragment ;
-	code_wsize = (code_size+1) /2 ;
 	old_org = *(int*)(&loadaddr[0x1c]);
-	delta_org = (int)loadaddr - old_org ;
-	reloc_table = &loadaddr[code_size] ;
-	for(i=0 ; i<code_wsize ; i++) {
-		if(bittest(reloc_table, i)) {
-			*(int*)(&loadaddr[2*i]) += delta_org ;
+	if (old_org != -1) {
+		/* Otherwise relocate lots of things via the bitmap */
+		code_size = ( (int)header.size_blocks -2)*0x200
+			+ (int)header.size_fragment ;
+		code_wsize = (code_size+1) /2 ;
+		delta_org = (int)loadaddr - old_org ;
+		reloc_table = &loadaddr[code_size] ;
+		for(i=0 ; i<code_wsize ; i++) {
+			if(bittest(reloc_table, i)) {
+				*(int*)(&loadaddr[2*i]) += delta_org ;
+			}
 		}
+		memcpy(&loadaddr[dictsize], reloc_table, (code_size+15)/16);
 	}
-	memcpy(&loadaddr[dictsize], reloc_table, (code_size+15)/16);
 
 #else 
 
@@ -1079,6 +1082,8 @@ main(argc, argv, envp)
 	int (*codep)();
 	/* There is a pointer to the startup code at offset 0x18 */
 	codep = (int (*)()) *(int *)(&loadaddr[0x18]);
+	if (old_org == -1)
+		codep = (int (*)())((int)codep + (int)loadaddr);
 	*(void **)(loadaddr+0x6) = fsyscall;    
 	*(short *)(&loadaddr[0x0a]) = 0;
 	*(long *)(&loadaddr[0x10]) = argc;                        

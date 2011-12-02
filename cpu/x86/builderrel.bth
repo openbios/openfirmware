@@ -1,0 +1,7 @@
+purpose: Load file for i386 builder
+
+dictionary: ${BP}/cpu/x86/build/toolsrel.dic
+command: &x86forth &dictionary &this
+build-now
+
+fload ${BP}/cpu/x86/builder.bth

@@ -30,13 +30,13 @@
 
 : [then]  ( -- )  ;  immediate
 
-: [ifdef]  ( "name" -- )
-   $defined  nip  dup 0=  if  nip  then  postpone [if]
-; immediate
+: [ifdef]   ( "name" -- )  defined?      postpone [if]  ; immediate
+: [ifndef]  ( "name" -- )  defined?  0=  postpone [if]  ; immediate
 
-: [ifndef]  ( "name" -- )
-   $defined  nip  0= dup  if  nip  then  postpone [if]
-; immediate
+: \+  ( "name" "rest of line" -- )  defined?  0=  if   postpone \  then  ; immediate
+: \-  ( "name" "rest of line" -- )  defined?  if  postpone \  then  ; immediate
+
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

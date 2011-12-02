@@ -129,8 +129,8 @@ resident   dispose   0 0 set-transize   \ true is suppress-transient
 
 tag-file @ fclose  tag-file off
 
-cr .( --- Saving basefw.dic --- )  " basefw.dic" $save-forth  cr
-
+\- rel cr .( --- Saving basefw.dic --- )  " basefw.dic" $save-forth  cr
+\+ rel cr .( --- Saving basefwrel.dic --- )  " basefwrel.dic" $save-forth  cr
 [then]
 
 \ LICENSE_BEGIN

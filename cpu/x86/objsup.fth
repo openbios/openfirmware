@@ -26,6 +26,7 @@ code >action-adr  ( object-acf action# -- )
    cx           pop		\ action# in cx
    ax           pop		\ object-acf in ax 
     0 [ax]  bx  mov		\ code address in bx
+\+ rel  up bx add
    -4 [bx]  cx  cmp		\ Test action number
    > if				\ "true" branch is error
       cx          push		\ Push action#
@@ -37,7 +38,8 @@ code >action-adr  ( object-acf action# -- )
    4 #          ax  add		\ Push object-apf
    ax               push
    cx               neg		\ Index backwards into action table
-   -4 [bx] [cx] *4  push	\ Push action-adr
+\- rel  -4 [bx] [cx] *4  push	\ Push action-adr
+\+ rel  -4 [bx] [cx] *4  ax mov   up ax add   ax push	\ Push action-adr
    ax           ax  xor		\ Return false for no error
    1push
 c;
@@ -48,15 +50,19 @@ c;
    4 [ax]  cx  mov	\ Action# in cx
 
    ax          lods	\ Object acf in ax
+\+ rel  up ax add
    4 #     ax  add	\ Compute pfa
    ax          push	\ and push it
 
    -4 [ax] ax  mov	\ Token of default action 
+\+ rel  up ax add
    
    cx          neg	\ Index backwards into action table
    -4 [ax] [cx] *4  ax  mov	\ Address of action code
+\+ rel up ax add
 
-   0 [ax]      jmp	\ Tail of "NEXT"
+\- rel   0 [ax]      jmp	\ Tail of "NEXT"
+\+ rel   0 [ax]  bx mov  up bx add    bx jmp	\ Tail of "NEXT"
 end-code
 : >action#  ( apf -- action# )  @  ;
 

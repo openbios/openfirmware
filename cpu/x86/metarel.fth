@@ -28,6 +28,12 @@ relocation-map-t    /relocation-map-t  erase
 :-h meta-init-relocation ( -- )
   relocation-map-t /relocation-map-t 0 fill
 ;
+
+only forth meta also forth also definitions
+' meta-set-relocation-bit  is set-relocation-bit-t
+' meta-init-relocation     is init-relocation-t
+only forth also definitions
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

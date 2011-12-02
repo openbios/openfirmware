@@ -1,0 +1,8 @@
+purpose: Load file for x86 Forth kernel
+\ See license at end of file
+
+command: &builder &this
+build-now
+
+create rel-t
+fload ${BP}/cpu/x86/kernel.bth

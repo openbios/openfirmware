@@ -41,7 +41,11 @@ extend-meta-assembler
 [ifdef] omit-files
 \ assembler macro to assemble next
 :-h next
-   meta-asm[  ax lods  0 [ax] jmp  ]meta-asm
+   meta-asm[
+   ax lods
+\+ rel-t  up ax add   0 [ax] bx mov  up bx add   bx jmp
+\- rel-t  0 [w] jmp
+  ]meta-asm
 ;-h
 [else]
 \ assembler macro to assemble next
@@ -84,7 +88,10 @@ extend-meta-assembler
 here-t
 mlabel >next  assembler
 userarea-t dp-t !
-   ax lods  0 [ax] jmp
+   ax lods
+
+\+ rel-t  up ax add   0 [ax] bx mov   up bx add   bx jmp
+\- rel-t  0 [w] jmp
    nop nop nop nop nop
 end-code
 dp-t !
@@ -116,11 +123,15 @@ code-field: douser
 c;
 
 code-field: dovalue
-   [apf] ax mov  ?bswap-ax   up ax add   0 [ax] ax mov  ?bswap-ax  1push
+   [apf] ax mov  ?bswap-ax   up ax add   0 [ax] ax mov  ?bswap-ax
+   1push
 c;
 
 code-field: dodefer
-   [apf] ax mov  ?bswap-ax   up ax add   0 [ax] w mov   0 [w] jmp
+   [apf] ax mov  ?bswap-ax   up ax add   0 [ax] w mov   
+\ Tail of "next"
+\+ rel-t  up ax add   0 [ax] bx mov  up bx add   bx jmp
+\- rel-t  0 [w] jmp
 end-code
 
 code-field: doconstant
@@ -160,17 +171,23 @@ c;
 
 
 \ ---- Run-time words compiled by compiling words.
-
 code isdefer  ( xt -- )
-   0 [ip]  ax  mov   ip ainc  /cf [ax] ax mov  ?bswap-ax  up ax add  \ data address in ax
+   0 [ip]  ax  mov   ip ainc
+\+ rel-t  up ax add
+   /cf [ax] ax mov  ?bswap-ax  up ax add  \ data address in ax
 [ifdef] big-endian-t
    ax bx mov  ax pop  ?bswap-ax  ax 0 [bx] mov
 [else]
-   bx pop  bx  0 [ax] mov
+   bx pop
+\+ rel-t  up bx sub
+   bx  0 [ax] mov
 [then]
 c;   
+
 code isvalue  ( n -- )
-   0 [ip]  ax  mov   ip ainc  /cf [ax] ax mov  ?bswap-ax  up ax add  \ data address in ax
+   0 [ip]  ax  mov   ip ainc
+\+ rel-t  up ax add
+  /cf [ax] ax mov  ?bswap-ax  up ax add  \ data address in ax
 [ifdef] big-endian-t
    ax bx mov  ax pop  ?bswap-ax  ax 0 [bx] mov
 [else]
@@ -178,7 +195,9 @@ code isvalue  ( n -- )
 [then]
 c;   
 code isuser  ( n -- )
-   0 [ip]  ax  mov   ip ainc  /cf [ax] ax mov  ?bswap-ax  up ax add  \ data address in ax
+   0 [ip]  ax  mov   ip ainc
+\+ rel-t  up ax add
+   /cf [ax] ax mov  ?bswap-ax  up ax add  \ data address in ax
 [ifdef] big-endian-t
    ax bx mov  ax pop  ?bswap-ax  ax 0 [bx] mov
 [else]
@@ -187,11 +206,15 @@ code isuser  ( n -- )
 c;   
 code isconstant  ( n -- )
    0 [ip]  bx  mov   ip ainc
-   ax pop  ?bswap-ax  ax /cf [bx] mov
+   ax pop  ?bswap-ax
+\+ rel-t up bx add
+   ax /cf [bx] mov
 c;   
 code isvariable  ( n -- )
    0 [ip]  bx  mov   ip ainc
-   ax pop  ?bswap-ax  ax /cf [bx] mov
+   ax pop  ?bswap-ax  
+\+ rel-t up bx add
+   ax /cf [bx] mov
 c;   
 
 code bswap  (s n1 -- n2 )
@@ -220,7 +243,12 @@ code (dlit)  (s -- d )  ax lods  ?bswap-ax  1push
 [then]
 
 \ Execute a Forth word given a code field address
-code execute   (s acf -- )   w pop   0 [w] jmp   end-code
+code execute   (s acf -- )
+   w pop
+\ Partial tail of "next"
+\+ rel-t  0 [ax] bx mov  up bx add  bx jmp
+\- rel-t  0 [w] jmp
+end-code
 
 \ execute-ip  This word will call a block of Forth words given the address
 \ of the first word.  It's used, for example, in try blocks where the
@@ -743,7 +771,11 @@ code 5drop  (s n1 n2 n3 n4 n5 -- )
    ax pop  ax pop  ax pop  ax pop  ax pop
 c;
 
-code (')  (s -- acf )   ax lods   1push c;
+code (')  (s -- acf )
+   ax lods   
+\+ rel-t  up ax add   
+   1push
+c;
 
 \ Modifies caller's ip to skip over an in-line string
 code skipstr (s -- addr len)
@@ -886,20 +918,32 @@ c;
 \ >target depends on the way that branches are compiled
 : >target  ( ip-of-branch-instruction -- target )  ta1+ dup branch@ +  ;
 
+\+ rel-t create rel
+
 headerless
 /a constant /a
-code a@  ( adr1 -- adr2 )   bx pop   0 [bx] push   c;
+code a@ (s addr -- cfa )
+   ax pop
+\+ rel-t   0 [ax] ax mov   up ax add  ax push
+\- rel-t   0 [ax] push
+c;
 \ [ifdef] big-endian-t
-: a!  ( adr1 adr2 -- )  set-relocation-bit  le-!  ;
+\+ rel-t code a!  ( xt adr -- )  bx pop  ax pop  up ax sub  ax 0 [bx] mov  c;
+\- rel-t : a!  ( adr1 adr2 -- )  set-relocation-bit  le-!  ;
 \ [else]
 \ code a!  ( adr1 adr2 -- )   bx pop   0 [bx] pop    c;
 \ [then]
 : a,  ( adr -- )  here  /a allot  a!  ;
 
 /token constant /token
-code token@ (s addr -- cfa )   bx pop   0 [bx] push   c;
+code token@ (s addr -- cfa )
+   ax pop
+\+ rel-t   0 [ax] ax mov  up ax add  ax push
+\- rel-t   0 [ax] push
+c;
 \ [ifdef] big-endian-t
-: token!  ( adr1 adr2 -- )  set-relocation-bit  le-!  ;
+\+ rel-t code token!  ( xt adr -- )  bx pop  ax pop  up ax sub  ax 0 [bx] mov  c;
+\- rel-t : token!  ( adr1 adr2 -- )  set-relocation-bit  le-!  ;
 \ [else]
 \ code token! (s cfa addr -- )   bx pop   0 [bx] pop    c;
 \ [then]
@@ -916,9 +960,9 @@ code token@ (s addr -- cfa )   bx pop   0 [bx] push   c;
 : another-link?  ( adr -- false | link true )  link@  non-null?  ;
 
 
-origin-t constant origin
-   /n negate allot-t  origin-t token,-t  ( make origin relocatable )
-
+\+ rel-t code origin  (s -- addr )  up push  c;
+\- rel-t origin-t constant origin
+\- rel-t    /n negate allot-t  origin-t token,-t  ( make origin relocatable )
 
 \ The "word type" is a number which distinguishes one type of word
 \ from another.  This is highly implementation-dependent.
@@ -1098,10 +1142,12 @@ code ($find-next)  (s adr len link -- adr len alf true  |  adr len false )
    di		push	\ Save UP
    cx      cx   xor	\ Clear high bytes
 
-   here-t 5 + #)  call	\ Figure out the origin address
-   here-t
-   bp pop
-   origin-t - #  bp  sub
+\+ rel-t   up bp mov            \ up (==di) is the origin, but we need to use di for string compare
+
+\- rel-t   here-t 5 + #)  call	\ Figure out the origin address
+\- rel-t   here-t
+\- rel-t   bp pop
+\- rel-t   origin-t - #  bp  sub
 
    ahead
    begin
@@ -1136,7 +1182,8 @@ code ($find-next)  (s adr len link -- adr len alf true  |  adr len false )
    but then
       \ The names did not match, so check the next name in the list
       0 [ax]  ax  mov	\ Fetch next link
-      ax      bp  cmp	\ Test for end of list
+\+ rel-t bp ax add
+   ax  bp  cmp	\ Test for end of list
    0= until
 
    \ If we get here, we've checked all the names with no luck

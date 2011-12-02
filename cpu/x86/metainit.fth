@@ -8,6 +8,10 @@
 warning off
 forth definitions
 
+\+ rel-t \ This is prepended to the dictionary image
+\+ rel-t h# 20 constant /jmp-header
+\+ rel-t /jmp-header buffer: jmp-header
+
 metaon
 meta definitions
 
@@ -23,7 +27,7 @@ th 11000 alloc-mem  target-image  \ Allocate space for the target image
 \ This number is a target token rather than an absolute address.
 hex
 
-0.0000 org  0.0000
+ 0 org  0
    voc-link-t token-t!
 
 ps-size-t equ ps-size
@@ -41,30 +45,30 @@ assembler
 hex
 mlabel cld
 
-\ boot.fth will store a jmp instruction to cold-code at this location,
-\ so that the PharLap DOS extender may execute the Forth image directly
-\ by jumping to its beginning address.
-( offset 0 )   0 c,-t  0 l,-t
+\- rel-t \ boot.fth will store a jmp instruction to cold-code at this location,
+\- rel-t \ so that the Forth image can be executed by jumping to its beginning address.
+\- rel-t ( offset 0 )   0 c,-t  0 l,-t
+\- rel-t 
+\- rel-t \ This byte is unused
+\- rel-t ( offset 5 )   0 c,-t
+\- rel-t 
+\- rel-t \ (Historical) The Zortech loader will put a far pointer to EMACS at location 6
+\- rel-t ( offset 6 )   0 l,-t  0 w,-t
+\- rel-t 
+\- rel-t \ boot.fth will store the address of cold-code at this location.
+\- rel-t \ The Zortech-based protected-mode loader reads this location to find the
+\- rel-t \ place to begin execution.  Zortech's null-pointer detection prevents
+\- rel-t \ the use of location zero.
+\- rel-t ( offset c )   0 l,-t
+\- rel-t 
+\- rel-t \ These locations are used for the argc and argv values for the Zortech loader
+\- rel-t 
+\- rel-t ( offset 10 )  0 l,-t  \ argc  (set by Zortech loader, read by cold-code)
+\- rel-t ( offset 14 )  0 l,-t  \ argv  (set by Zortech loader, read by cold-code)
+\- rel-t 
+\- rel-t ( offset 18 )  0 l,-t  \ Address of entry point for executing from the wrapper
+\- rel-t ( offset 1c )  0 l,-t  \ Base address where last saved, or -1 for position-independent
 
-\ This byte is unused
-( offset 5 )   0 c,-t
-
-\ The Zortech loader will put a far pointer to EMACS at location 6
-( offset 6 )   0 l,-t  0 w,-t
-
-\ boot.fth will store the address of cold-code at this location.
-\ The Zortech-based protected-mode loader reads this location to find the
-\ place to begin execution.  Zortech's null-pointer detection prevents
-\ the use of location zero.
-( offset c )   0 l,-t
-
-\ These location are used for the argc and argv values for the Zortech loader
-
-( offset 10 )  0 l,-t  \ argc  (set by Zortech loader, read by cold-code)
-( offset 14 )  0 l,-t  \ argv  (set by Zortech loader, read by cold-code)
-
-( offset 18 )  0 l,-t  \ padding
-( offset 1c )  0 l,-t  \ padding
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
