@@ -4,7 +4,7 @@ purpose: Create "builton.fth" file containing the current date
 command: &builder &this
 build-now
 
-\needs today         fload ${BP}/forth/wrapper/date.fth
+\needs time$  fload ${BP}/forth/lib/date.fth
 
 : put$  ( adr len -- )  ofd @ fputs  ;
 
