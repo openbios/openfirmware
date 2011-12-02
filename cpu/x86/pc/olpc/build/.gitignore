@@ -3,3 +3,4 @@ multicast-nand/
 build
 dsdt.stamp
 sourceurl
+memtest
