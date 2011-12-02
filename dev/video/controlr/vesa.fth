@@ -11,8 +11,8 @@ my-address my-space encode-phys  /fb encode-int encode+  " reg" property
 
 \ Assume mode 117 - 1024x768x16 - for now
 d#   16 value depth
-d# 1280 value width  \ If scaled is false, will be replaced with hdisplay
-d# 1024 value height \ If scaled is false, will be replaced with vdisplay
+d# 1280 value width  \ Mode 11a
+d# 1024 value height
 
 : setmode  ( -- )   ;
 
