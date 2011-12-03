@@ -536,8 +536,7 @@ warning !
 \ so exiting from emacs doesn't invoke the diag menu.
 ' quit to user-interface
 fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
-\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/testitems.fth
-\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/testitems.fth
+fload ${BP}/cpu/arm/olpc/testitems.fth
 
 [ifdef] notyet
 fload ${BP}/cpu/x86/pc/olpc/via/bootmenu.fth

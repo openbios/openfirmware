@@ -7,9 +7,9 @@ icon: battery.icon  rom:battery.565
 icon: camera.icon   rom:camera.565
 icon: wifi.icon     rom:wifi.565
 icon: audio.icon    rom:audio.565
-icon: touchpad.icon rom:touchpad.565
+\- olpc-cl3 icon: touchpad.icon rom:touchpad.565
 icon: display.icon  rom:display.565
-icon: keyboard.icon rom:keyboard.565
+\- olpc-cl3 icon: keyboard.icon rom:keyboard.565
 icon: timer.icon    rom:timer.565
 icon: clock.icon    rom:clock.565
 icon: ebook.icon    rom:ebook.565
@@ -25,15 +25,15 @@ d# 4 to #mfgrows
 : memory-item   ( -- )  " /memory"    mfg-test-dev  ;
 : usb-item      ( -- )  " /usb/hub"   mfg-test-dev  ;
 : int-sd-item   ( -- )  " int:0"      mfg-test-dev  ;
-: ext-sd-item   ( -- )  " ext:0"      mfg-test-dev  ;
+\- olpc-cl3 : ext-sd-item   ( -- )  " ext:0"      mfg-test-dev  ;
 : rtc-item      ( -- )  " /rtc"       mfg-test-dev  ;
 : display-item  ( -- )  " /display"   mfg-test-dev  ;
 : audio-item    ( -- )  " /audio"     mfg-test-dev  ;
 : camera-item   ( -- )  " /camera"    mfg-test-dev  ;
 : wlan-item     ( -- )  " /wlan"      mfg-test-dev  ;
 : timer-item    ( -- )  " /timer"     mfg-test-dev  ;
-: touchpad-item ( -- )  " mouse"      mfg-test-dev  ;
-: keyboard-item ( -- )  " keyboard"   mfg-test-dev  ;
+\- olpc-cl3 : touchpad-item ( -- )  " mouse"      mfg-test-dev  ;
+\- olpc-cl3 : keyboard-item ( -- )  " keyboard"   mfg-test-dev  ;
 : switch-item   ( -- )  " /accelerometer" mfg-test-dev  " /switches"  mfg-test-dev  ;
 : leds-item     ( -- )  " /leds"      mfg-test-dev   ;
 
@@ -52,8 +52,8 @@ d# 4 to #mfgrows
    " Internal mass storage"
    ['] int-sd-item   sdcard.icon   1 2 install-icon
 
-   " Plug-in SD card"
-   ['] ext-sd-item   sdcard.icon   1 3 install-icon
+\- olpc-cl3    " Plug-in SD card"
+\- olpc-cl3    ['] ext-sd-item   sdcard.icon   1 3 install-icon
 
    " Wireless LAN"
    ['] wlan-item     wifi.icon     1 4 install-icon
@@ -79,11 +79,11 @@ d# 4 to #mfgrows
    \ These are last because they require user participation.
    \ The earlier tests are all included in automatic batch-mode.
 
-   " Keyboard"
-   ['] keyboard-item keyboard.icon 3 1 install-icon
+\- olpc-cl3    " Keyboard"
+\- olpc-cl3    ['] keyboard-item keyboard.icon 3 1 install-icon
 
-   " Touchpad"
-   ['] touchpad-item touchpad.icon 3 2 install-icon
+\- olpc-cl3    " Touchpad"
+\- olpc-cl3    ['] touchpad-item touchpad.icon 3 2 install-icon
 
    " LEDs"
    ['] leds-item     leds.icon     3 3 install-icon

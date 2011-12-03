@@ -152,10 +152,10 @@ $new-file
 
    " nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
    " nandblaster_tx.bin"   " nb_tx"    $add-deflated-dropin
-   " ec.img"                                     " ecimage.bin"    $add-deflated-dropin
-   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
-   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
-   " ${BP}/clients/emacs/arm/emacs"             " emacs"         $add-deflated-dropin
+\   " ec.img"                                     " ecimage.bin"    $add-deflated-dropin
+\   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
+\   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
+\   " ${BP}/clients/emacs/arm/emacs"             " emacs"         $add-deflated-dropin
 
 .( Dropin top is )  ofd @ fsize  .x cr
 
@@ -216,4 +216,3 @@ ofd @ fclose
 \ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 \
 \ LICENSE_END
-

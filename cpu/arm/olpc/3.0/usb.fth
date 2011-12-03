@@ -1,7 +1,7 @@
 purpose: Platform-specific USB elaborations
 \ See license at end of file
 
-0 0  " d4208000"  " /" begin-package  \ USB Host Controller
+0 0  " d4208000"  " /" begin-package  \ USB OTG Host Controller
    h# 200 constant /regs
    my-address my-space /regs reg
    : my-map-in  ( len -- adr )
@@ -16,19 +16,35 @@ purpose: Platform-specific USB elaborations
    : otg-set-host-mode  3 h# a8 ehci-reg!  ;  \ Force host mode
    ' otg-set-host-mode to set-host-mode
 
-   \ Port 1 on the hub is connected to unused pins on the WLAN connector,
-   \ so testing it is confusing
-   \ Port 2 is right upper
-   \ Port 3 is left
-   \ Port 4 is right lower
-   " 3,4,2" " usb-hub-test-list" string-property
+   : sleep  ( -- )  true to first-open?  ;
+   : wake  ( -- )  ;
+end-package
+
+0 0  " f0001000"  " /" begin-package  \ USB Host Controller 1 - ULPI
+   h# 200 constant /regs
+   my-address my-space /regs reg
+   : my-map-in  ( len -- adr )
+      my-space swap  " map-in" $call-parent  h# 100 +  ( adr )
+   ;
+   : my-map-out  ( adr len -- )  swap h# 100 - swap " map-out" $call-parent  ;
+   false constant has-dbgp-regs?
+   false constant needs-dummy-qh?
+   : grab-controller  ( config-adr -- error? )  drop false  ;
+   fload ${BP}/dev/usb2/hcd/ehci/loadpkg.fth
+\  false to delay?  \ No need for a polling delay on this platform
+
    : sleep  ( -- )  true to first-open?  ;
    : wake  ( -- )  ;
 end-package
 
 \ Turn on USB power after a delay, to ensure that USB devices are reset correctly on boot
-: usb-power-on  ( -- )  ;  \ The EC controls the USB power
-: reset-usb-hub  ( -- )  d# 146 gpio-clr  d# 10 ms  d# 146 gpio-set  ;
+: usb-power-on  ( -- )
+   d# 126 gpio-clr  \ OTG 5V on
+   d# 127 gpio-clr  \ ULPI 5V on
+;
+: reset-usb-hub  ( -- )
+   d# 146 gpio-clr  d# 10 ms  d# 146 gpio-set  \ Resets ULPI hub
+;
 
 : init-usb  ( -- )
    h# 9 h# 5c pmua!  \ Enable clock to USB block

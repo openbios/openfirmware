@@ -1,3 +1,4 @@
+.( *** testinstructions.fth needs to be fixed for XO-3) cr
 \ See license at end of file
 purpose: Drawings of OLPC XO-1.75 board and components for test instructions
 

@@ -2,13 +2,15 @@ h# 40001102 value clkdiv  \ Display Clock 1 / 2 -> 56.93 MHz
 h# 00000700 value pmua-disp-clk-sel  \ PLL1 / 7 -> 113.86 MHz 
 
 d#    8 value hsync  \ Sync width
-d# 1200 value hdisp  \ Display width
-d# 1256 value htotal \ Display + FP + Sync + BP
+d# 1024 value hdisp  \ Display width
+d# 1344 value htotal \ Display + FP + Sync + BP
+\ d# 1200 value hdisp  \ Display width
+\ d# 1256 value htotal \ Display + FP + Sync + BP
 d#   24 value hbp    \ Back porch
 
 d#    3 value vsync  \ Sync width
-d#  900 value vdisp  \ Display width
-d#  912 value vtotal \ Display + FP + Sync + BP
+d#  768 value vdisp  \ Display width
+d#  806 value vtotal \ Display + FP + Sync + BP
 d#    5 value vbp    \ Back porch
 
 : hfp  ( -- n )  htotal hdisp -  hsync -  hbp -  ;  \ 24
