@@ -1,0 +1,10 @@
+purpose: Build OFW Forth dictionary for OLPC ARM platforms
+\ See license at end of file
+
+dictionary: ${BP}/cpu/arm/olpc/3.0/build/prefw.dic
+command: &armforth &dictionary &this
+build-now
+
+" fw.tag" r/w create-file drop  tag-file !
+
+fload ${BP}/cpu/arm/olpc/build-fw.fth
