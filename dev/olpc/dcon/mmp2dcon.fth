@@ -222,8 +222,8 @@ d# 905 value resumeline  \ Configurable; should be set from args
 : init-xo-display  ( -- )
    smb-init
 
-   dcon-load
-   dcon-enable  ( maybe-set-cmos )
+\ Unnecessary because CForth has already done it
+\   dcon-load  dcon-enable  ( maybe-set-cmos )
    \ dcon-enable leaves mode set to 69 - 40:antialias, 20:swizzle, 8:backlight on, 1:passthru off
 ;
 : dcon-power-on   ( -- )  1 h# 26 ec-cmd-b!  ;

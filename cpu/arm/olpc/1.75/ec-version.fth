@@ -1,4 +1,5 @@
 \ The EC microcode
+macro: EC_PLATFORM cl2
 macro: EC_VERSION 4_0_3_06
 
 \ Alternate command for getting EC microcode, for testing new versions.

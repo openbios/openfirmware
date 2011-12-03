@@ -241,7 +241,7 @@ audio-sram h# 3f80 + constant in-desc
 ;
 
 [ifdef] cl2-a1
-fload ${BP}/cpu/arm/olpc/1.75/alc5624.fth  \ Realtek ALC5624 CODEC
+fload ${BP}/cpu/arm/olpc/alc5624.fth  \ Realtek ALC5624 CODEC
 [else]
 d# 97 constant headphone-jack
 d# 96 constant external-mic
@@ -249,7 +249,7 @@ d# 96 constant external-mic
 : headphones-inserted?  ( -- flag )  headphone-jack pin-sense?  ;
 : microphone-inserted?  ( -- flag )  external-mic pin-sense?  ;
 
-fload ${BP}/cpu/arm/olpc/1.75/alc5631.fth  \ Realtek ALC5631Q CODEC
+fload ${BP}/cpu/arm/olpc/alc5631.fth  \ Realtek ALC5631Q CODEC
 [then]
    
 d# 48000 value sample-rate
@@ -583,7 +583,7 @@ fload ${BP}/forth/lib/isin.fth
 fload ${BP}/forth/lib/tones.fth
 fload ${BP}/dev/geode/ac97/selftest.fth
 
-false value force-internal-mic?  \ Can't be implemented on XO-1.75
+false value force-internal-mic?  \ Can't be implemented on OLPC boards
 2 value #channels
 
 : input-test-settings  ( -- )  ;

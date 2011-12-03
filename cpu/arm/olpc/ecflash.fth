@@ -7,7 +7,8 @@ h# 10000 value /ec-flash
 char 3 value expected-ec-version
 [else]
 h# 8000 value /ec-flash
-char 4 value expected-ec-version
+\+ olpc-cl2 char 4 value expected-ec-version
+\+ olpc-cl3 char 5 value expected-ec-version
 [then]
 
 : check-signature  ( adr -- )

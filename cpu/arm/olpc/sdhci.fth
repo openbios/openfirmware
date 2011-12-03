@@ -2,7 +2,7 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
 
 0 0  " d4280000"  " /"  begin-package
 
-   fload ${BP}/cpu/arm/olpc/1.75/sdregs.fth
+   fload ${BP}/cpu/arm/olpc/sdregs.fth
    fload ${BP}/dev/mmc/sdhci/sdhci.fth
 
    d# 1 to power-off-time  \ A2 and A3 have turn-off clamps
@@ -21,12 +21,12 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
    : gpio-power-off  ( -- )  d# 36 slot - gpio-clr  sdhci-card-power-off  ;
    ' gpio-power-off to card-power-off
 
-   new-device
-      1 encode-int " reg" property
-      fload ${BP}/dev/mmc/sdhci/sdmmc.fth
-      fload ${BP}/dev/mmc/sdhci/selftest.fth
-      " external" " slot-name" string-property
-   finish-device
+\+ olpc-cl2   new-device
+\+ olpc-cl2      1 encode-int " reg" property
+\+ olpc-cl2      fload ${BP}/dev/mmc/sdhci/sdmmc.fth
+\+ olpc-cl2      fload ${BP}/dev/mmc/sdhci/selftest.fth
+\+ olpc-cl2      " external" " slot-name" string-property
+\+ olpc-cl2   finish-device
 
    new-device
       2 encode-int " reg" property
