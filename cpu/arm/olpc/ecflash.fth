@@ -101,6 +101,8 @@ h# 8000 value /ec-flash
    load-base /ec-flash ofd @ fputs
    ofd @ fclose
 ;
+\+ olpc-cl2  : ec-platform$  ( -- adr len )  " 4"  ;
+\+ olpc-cl3  : ec-platform$  ( -- adr len )  " 5"  ;
 : ec-up-to-date?  ( img$ -- flag )
    \ If the new image has an invalid length, the old one is considered up to date
    dup /ec-flash <>  if
@@ -109,10 +111,10 @@ h# 8000 value /ec-flash
    + h# 100 - cscount                               ( version&date$ )
    \ If the new image has an invalid signature, the old one is considered up to date
    dup d# 25 <  if  2drop true exit  then           ( version&date$ )
-   bl left-parse-string " XO-EC" $= 0=  if  2drop true exit  then  ( version&date$ )
-   bl left-parse-string " 4" $= 0=  if  2drop true exit  then      ( version&date$ )
-   bl left-parse-string 2nip                                       ( version$ )
-   ec-name$  $caps-compare  0<=                                    ( flag )
+   bl left-parse-string " XO-EC" $= 0=  if  2drop true exit  then      ( version&date$ )
+   bl left-parse-string ec-platform$ $= 0=  if  2drop true exit  then  ( version&date$ )
+   bl left-parse-string 2nip                                           ( version$ )
+   ec-name$  $caps-compare  0<=                                        ( flag )
 ;
 
 : update-ec-flash  ( -- )
@@ -130,8 +132,10 @@ h# 8000 value /ec-flash
 
 : update-ec-flash?  ( -- flag )
    " ecimage.bin" find-drop-in  if   ( adr len )
-       2dup ec-up-to-date? 0=        ( adr len flag )
-       >r free-mem r>                ( flag )
+      2dup ec-up-to-date? 0=         ( adr len flag )
+      >r free-mem r>                 ( flag )
+   else                              ( )
+      false
    then
 ;
 
