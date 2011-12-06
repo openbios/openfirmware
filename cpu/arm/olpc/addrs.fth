@@ -15,6 +15,7 @@ h# fda0.0000 constant fw-mem-va
 h# fdc0.0000 constant fb-mem-va
 
 h# fe00.0000 constant io-va  \ We map IO (APB + AXI) space at this virtual address
+h# fe30.0000 constant io2-va \ Mapping area for AXI2 space
 
 [ifdef] virtual-mode
 h# f700.0000 constant fw-virt-base
