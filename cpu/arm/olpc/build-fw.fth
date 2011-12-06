@@ -361,6 +361,7 @@ fload ${BP}/cpu/arm/olpc/spcmd.fth
 fload ${BP}/cpu/arm/marvell/utmiphy.fth
 
 \+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/usb.fth
+\+ olpc-cl3 fload ${BP}/cpu/arm/mmp2/ulpiphy.fth
 \+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/usb.fth
 
 fload ${BP}/dev/olpc/mmp2camera/loadpkg.fth
@@ -505,7 +506,8 @@ hex
    false
 ;
 
-: rotate-button?  ( -- flag )  d# 15 gpio-pin@ 0=  ;
+\+ olpc-cl2 : rotate-button?  ( -- flag )  d# 15 gpio-pin@ 0=  ;
+\+ olpc-cl3 false value rotate-button?
 warning @  warning off 
 : init
 \ initial-heap add-memory
@@ -807,7 +809,7 @@ devalias fsdisk int:0
 fload ${BP}/ofw/gui/ofpong.fth
 fload ${BP}/cpu/x86/pc/olpc/life.fth
 
-" u:\boot\olpc.fth ext:\boot\olpc.fth int:\boot\olpc.fth ext:\zimage /prober /usb/ethernet /usb/wlan"
+" u:\boot\olpc.fth ext:\boot\olpc.fth int:\boot\olpc.fth ext:\zimage /prober /usb/ethernet /wlan"
    ' boot-device  set-config-string-default
 
 \needs ramdisk  " " d# 128 config-string ramdisk
@@ -906,7 +908,7 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
    disable-user-aborts
    console-start
 
-   read-game-keys
+\- olpc-cl3  read-game-keys
 
    factory-test? 0=  if  text-off  then
 
