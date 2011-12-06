@@ -20,7 +20,7 @@ purpose: Platform-specific USB elaborations
    : wake  ( -- )  ;
 end-package
 
-0 0  " f0001000"  " /" begin-package  \ USB Host Controller 1 - ULPI
+0 0  " f0003000"  " /" begin-package  \ USB Host Controller 1 - ULPI
    h# 200 constant /regs
    my-address my-space /regs reg
    : my-map-in  ( len -- adr )
@@ -44,6 +44,9 @@ end-package
 ;
 : reset-usb-hub  ( -- )
    d# 146 gpio-clr  d# 10 ms  d# 146 gpio-set  \ Resets ULPI hub
+   ulpi-clock-on
+   ulpi-clock-select
+   ulpi-on
 ;
 
 : init-usb  ( -- )
