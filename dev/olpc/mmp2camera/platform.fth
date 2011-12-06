@@ -6,20 +6,29 @@ hex
 
 : camera-smb-setup  ( -- )
    1 to smb-dly-us
-   d# 108 to smb-clock-gpio#
-   d# 109 to smb-data-gpio#
+\+ olpc-cl2   d# 108 to smb-clock-gpio#
+\+ olpc-cl2   d# 109 to smb-data-gpio#
+\+ olpc-cl3   d#   4 to smb-clock-gpio#
+\+ olpc-cl3   d#   5 to smb-data-gpio#
    h# 42 to smb-slave
 ;
 : ov@  ( reg -- data )  camera-smb-setup  smb-byte@  ;
 : ov!  ( data reg -- )  camera-smb-setup  smb-byte!  ;
 
-: reset-sensor  ( -- )  d# 102 gpio-clr  1 ms  d# 102 gpio-set  ;
+: reset-sensor  ( -- )
+\+ olpc-cl3   d#  10 gpio-clr  1 ms  d#  10 gpio-set
+\+ olpc-cl2   d# 102 gpio-clr  1 ms  d# 102 gpio-set
+;
 
 [ifdef] cl2-a1
 : sensor-power-on   ( -- )  d# 145 gpio-set  ;
 : sensor-power-off  ( -- )  d# 145 gpio-clr  ;
 [else]
-: sensor-power-on   ( -- )  d# 150 gpio-set  d# 144 gpio-clr  ;
+: sensor-power-on   ( -- )
+   d# 150 gpio-set
+\+ olpc-cl2  d# 144 gpio-clr
+\+ olpc-cl3  d#   9 gpio-clr
+;
 : sensor-power-off  ( -- )  ( d# 144 gpio-set )  d# 150 gpio-clr  ;  \ Leave low for Linux
 [then]
 
