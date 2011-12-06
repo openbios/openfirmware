@@ -6,12 +6,17 @@ h# 0030.0000 constant /sram          \ Size of SRAM
 
 h# d400.0000 constant apb-pa         \ Base of APB bus
 h# d420.0000 constant axi-pa         \ Base of AXI bus
+h# f000.0000 constant axi2-pa        \ Another AXI bus area
 
 h# e000.0000 constant audio-sram-pa  \ Base of Audio SRAM
 h# 0010.0000 constant /audio-sram    \ Size of Audio SRAM
 
 apb-pa constant io-pa                \ We use this as the base for most IO accesses
-h# 0040.0000 constant /io
+h# 0030.0000 constant /io
+
+axi2-pa constant io2-pa              \ Additional I/O space
+h# 0010.0000 constant /io2
+
 
 \ The following are offsets from io-pa
 \ AXI devices

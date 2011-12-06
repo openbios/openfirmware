@@ -25,10 +25,18 @@ hex
 : close  ( -- )  ;
 
 : map-in   ( phys size -- virt )
-   drop                                             ( phys )
+   drop                        ( phys )
    \ The display driver uses fb-mem-va directly instead of calling map-in
    \ dup fb-mem-va >physical =  if  drop fb-mem-va exit  then   ( phys )
-   io-pa -  io-va +
+   dup io2-pa u>=  if          ( phys )
+      io2-pa -  io2-va +       ( virt )
+      exit
+   then                        ( phys )
+   dup io-pa u>=  if           ( phys )
+      io-pa -  io-va +         ( virt )
+      exit
+   then                        ( phys )
+   \ Fall through to return virt == phys
 ;
 : map-out  ( virtual size -- )
    2drop

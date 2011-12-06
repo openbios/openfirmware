@@ -316,6 +316,12 @@ label init-map  ( -- )
    set r4,`io-va #`                     \ Virtual address
    bl  `map-sections`
 
+   set r1,`io2-pa #`                    \ Address of I/O
+   set r2,`/io2 #`                      \ Size of I/O region
+   set r3,#0xc02                        \ No caching or write buffering
+   set r4,`io2-va #`                    \ Virtual address
+   bl  `map-sections`
+
    mov     pc, r10
 end-code
 
