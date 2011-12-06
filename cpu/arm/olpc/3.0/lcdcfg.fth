@@ -34,7 +34,24 @@ alias height vdisp
 alias depth  bpp
 width >bytes constant /scanline  
 
-: init-xo-display  ;
 : bright!  ( level -- )  drop  ;
 : backlight-on  ( -- )  ;
 : backlight-off  ( -- )  ;
+: lcd-power-on  ( -- )
+   d# 138 gpio-set   \ LCDVCC_EN
+   d# 135 gpio-set   \ STBY#
+   d# 500 us
+   d# 130 gpio-set   \ LCD_RESET#
+   d# 129 gpio-set   \ EN_LCD_PWR
+   d# 50 ms          \ Frame time
+   d# 130 gpio-clr   \ LCD_RESET#  (pulse low)
+   d# 50 us          \ Pulse needs to be at least 50 us
+   d# 130 gpio-set   \ LCD_RESET#  (end of pulse)
+
+   d# 120 ms
+   backlight-on
+;
+: init-xo-display  ;  \ CForth has already turned it on
+
+: set-source  ( flag -- )  drop  ;  \ No DCON
+true constant vga?  \ No DCON, hence never frozen
