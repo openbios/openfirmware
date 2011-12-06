@@ -69,7 +69,11 @@ variable ptr
 h# 7fff constant touchscreen-max-x
 h# 7fff constant touchscreen-max-y
 
+: invert-x  ( x y -- x' y )  touchscreen-max-x rot - swap  ;
+: invert-y  ( x y -- x y' )  touchscreen-max-y swap -  ;
+
 : scale-xy  ( x y -- x' y' )
+   invert-x  invert-y
    swap screen-w touchscreen-max-x */
    swap screen-h touchscreen-max-y */
 ;

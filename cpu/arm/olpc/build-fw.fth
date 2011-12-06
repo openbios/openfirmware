@@ -438,7 +438,8 @@ fload ${BP}/cpu/arm/linux.fth
    " /usb" " reset-usb" execute-device-method drop
 ;
 
-d# 9999 to arm-linux-machine-type  \ Marvell Jasper
+\+ olpc-cl2 d#  9999 to arm-linux-machine-type  \ XO-1.75
+\+ olpc-cl3 d# 10000 to arm-linux-machine-type  \ XO-3
 
 \ Add a tag describing the linear frame buffer
 : mmp-fb-tag,  ( -- )
@@ -740,8 +741,8 @@ fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
 device-end
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
-\ fload ${BP}/cpu/arm/olpc/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
-fload ${BP}/cpu/arm/olpc/rm3150-touchscreen.fth    \ Touchscreen driver and diagnostic
+\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
+\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/rm3150-touchscreen.fth    \ Touchscreen driver and diagnostic
 fload ${BP}/cpu/arm/olpc/roller.fth     \ Accelerometer test
 
 \ fload ${BP}/cpu/arm/olpc/pinch.fth  \ Touchscreen gestures
