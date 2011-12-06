@@ -7,4 +7,4 @@ macro: EC_VERSION 4_0_3_05
 \ Temporarily uncomment the line and modify the path as necessary
 \ macro: GET_EC cp ~rsmith/olpc/ec/ec-code15/image/ecimage.bin ec.img
 \ macro: GET_EC wget -q http://dev.laptop.org/pub/ec/ec_test.img -O ec.img
-\ macro: GET_EC cp no_event.bin ec.img
+macro: GET_EC cp /wmb/Documents/OLPC/3.0/ecimage.bin ec.img
