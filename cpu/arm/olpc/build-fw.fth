@@ -300,8 +300,10 @@ devalias screen /display
    
 devalias keyboard /keyboard
 
-create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
-' 15x30pc to romfont
+\+ olpc-cl2 create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
+\+ olpc-cl2 ' 15x30pc to romfont
+\+ olpc-cl3 create cp881-16  " ${BP}/ofw/termemu/cp881-16.obf" $file,
+\+ olpc-cl3 ' cp881-16 to romfont
 
 fload ${BP}/cpu/arm/olpc/sdhci.fth
 \- cl2-a1 fload ${BP}/cpu/arm/olpc/emmc.fth
@@ -442,12 +444,13 @@ d# 9999 to arm-linux-machine-type  \ Marvell Jasper
 : mmp-fb-tag,  ( -- )
    8 tag-l,
    h# 54410008 tag-l, \ ATAG_VIDEOLFB
-   d# 1200 tag-w,     \ Width
-   d#  900 tag-w,     \ Height
-   d#   24 tag-w,     \ Depth
-   d# 1200 3 * tag-w, \ Pitch
-   fb-mem-va tag-l,   \ Base address
-   d# 1200 3 *  d# 900 *  tag-l,  \ Total size - perhaps could be larger
+   screen-wh over tag-w,            \ Width  ( width height )
+   dup tag-w,                       \ Height ( width height )
+   " depth" $call-screen dup tag-w, \ Depth  ( width height depth )
+   rot * 8 /  dup tag-w,            \ Pitch  ( height pitch )
+   fb-mem-va tag-l,                 \ Base address  ( height pitch )
+   *  tag-l,                        \ Total size - perhaps could be larger
+   \ The following assumes depth is 16 bpp
    5     tag-b,       \ Red size
    d# 11 tag-b,       \ Red position
    6     tag-b,       \ Green size
@@ -694,7 +697,8 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
    d# 18 gpio-pin@ 0=  if  h# 100 or  then  \ X
    d# 19 gpio-pin@ 0=  if  h#  01 or  then  \ Square
    d# 20 gpio-pin@ 0=  if  h#  40 or  then  \ Rotate
-[else]
+[then]
+[ifdef] olpc-cl2
 [ifdef] use_mmp2_keypad_control
    d# 15 gpio-pin@ 0=  if  button-rotate or  then   ( n )
    scan-keypad                              ( n keypad )
@@ -908,7 +912,7 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
    disable-user-aborts
    console-start
 
-\- olpc-cl3  read-game-keys
+   read-game-keys
 
    factory-test? 0=  if  text-off  then
 

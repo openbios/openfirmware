@@ -472,8 +472,8 @@ d# 600 d# 512 2value last-abs
       then                   ( x y )
       \ Expand the PT (0..999) to the screen width (1200)
       packet-type 2 =  if    ( x y )
-         swap d# 1200 d# 1000 */
-         swap d# 1200 d# 1000 */
+         swap  screen-wh drop  d# 1000 */
+         swap  screen-wh drop  d# 1000 */
       then                   ( x y )
    then                      ( x y )
 

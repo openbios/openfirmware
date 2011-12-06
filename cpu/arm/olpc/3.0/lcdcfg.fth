@@ -4,8 +4,6 @@ h# 00000700 value pmua-disp-clk-sel  \ PLL1 / 7 -> 113.86 MHz
 d#    8 value hsync  \ Sync width
 d# 1024 value hdisp  \ Display width
 d# 1344 value htotal \ Display + FP + Sync + BP
-\ d# 1200 value hdisp  \ Display width
-\ d# 1256 value htotal \ Display + FP + Sync + BP
 d#   24 value hbp    \ Back porch
 
 d#    3 value vsync  \ Sync width

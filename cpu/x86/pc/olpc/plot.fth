@@ -76,7 +76,7 @@ dend
 
 : setup-plot  ( -- )
    h# ffff set-fg  0 set-bg
-   d# 1200 d# 900 clear-plot
-   d# 1200 d# 900 d# 100 hgrid
-   d# 1200 d# 900 d# 100 vgrid
+   screen-wh clear-plot
+   screen-wh d# 100 hgrid
+   screen-wh d# 100 vgrid
 ;

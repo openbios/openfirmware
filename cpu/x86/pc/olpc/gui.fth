@@ -368,16 +368,21 @@ h# 32 buffer: icon-name
 0 0 2value next-dot-xy
 d# 463 d# 540 2constant progress-xy
 
+: ?adjust  ( x y -- x' y' )
+\ 88 is 1200 1024 - 2/ , 66 is 900 768 - 2/
+\+ olpc-cl3  swap d# 88 -  swap d# 66 -   ( x' y' )  \ Recenter for XO-3
+;
+: set-icon-xy  ( x y -- )  ?adjust  to icon-xy  ;
 : show-going  ( -- )
-   background-rgb  rgb>565  progress-xy  d# 500 d# 100  " fill-rectangle" $call-screen
-   d# 588 d# 638 to icon-xy  " bigdot" show-icon
+   background-rgb  rgb>565  progress-xy ?adjust d# 500 d# 100  " fill-rectangle" $call-screen
+   d# 588 d# 638 set-icon-xy  " bigdot" show-icon
    " vga?" $call-screen  0=  if  dcon-unfreeze dcon-freeze  then
 ;
 
 : show-no-power  ( -- )  \ chip, battery, overlaid sad face
-   d#  25 d# 772 to icon-xy " spi"     show-icon
-   d# 175 d# 772 to icon-xy " battery" show-icon
-   d# 175 d# 790 to icon-xy " sad"     show-icon
+   d#  25 d# 772 set-icon-xy " spi"     show-icon
+   d# 175 d# 772 set-icon-xy " battery" show-icon
+   d# 175 d# 790 set-icon-xy " sad"     show-icon
 ;
 
 d# 834 value bar-y
@@ -391,8 +396,8 @@ d# 150 value bar-x
 ;
 
 : show-reflash  ( -- )  \ bottom left corner, chip and progress dots
-   d# 25 d# 772 to icon-xy " spi" show-icon
-   d# 992 bar-x + bar-y to icon-xy " yellowdot" show-icon
+   d# 25 d# 772 set-icon-xy " spi" show-icon
+   d# 992 bar-x + bar-y set-icon-xy " yellowdot" show-icon
    read-dot
 ;
 
@@ -416,7 +421,7 @@ d# 150 value bar-x
 : show-x  ( -- )  " x" show-icon  ;
 : show-sad  ( -- )
    icon-xy
-   d# 552 d# 283 to icon-xy  " sad" show-icon
+   d# 552 d# 283 set-icon-xy  " sad" show-icon
    to icon-xy
 ;
 : show-lock    ( -- )  " lock" show-icon  ;
@@ -425,8 +430,8 @@ d# 150 value bar-x
 : show-minus   ( -- )  " minus" show-icon  ;
 : show-child  ( -- )
    " erase-screen" $call-screen
-   d# 552 d# 384 to icon-xy  " xogray" $show-opaque
-   progress-xy to next-icon-xy  \ For boot progress reports
+   d# 552 d# 384 set-icon-xy  " xogray" $show-opaque
+   progress-xy ?adjust to next-icon-xy  \ For boot progress reports
 ;
 
 0 [if]

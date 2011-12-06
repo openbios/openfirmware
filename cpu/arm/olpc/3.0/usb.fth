@@ -62,7 +62,10 @@ stand-init: Init USB Phy
 
 d# 350 config-int usb-delay  \ Milliseconds to wait before probing hub ports
 
-devalias u    /usb/disk
+devalias otg  /usb@d4208000       \ USB OTG (micro) connector
+devalias usba /usb@f0003000       \ USB-A connector
+devalias o    /usb@d4208000/disk  \ Disk on USB OTG (micro) connector
+devalias u    /usb@f0003000/disk  \ Disk on USB-A connector
 
 \ Like $show-devs, but ignores pagination keystrokes
 : $nopage-show-devs  ( nodename$ -- )

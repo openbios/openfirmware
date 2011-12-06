@@ -23,7 +23,9 @@ d# 4 to #mfgrows
 : battery-item  ( -- )  " /battery"   mfg-test-dev  ;
 : spiflash-item ( -- )  " /flash"     mfg-test-dev  ;
 : memory-item   ( -- )  " /memory"    mfg-test-dev  ;
-: usb-item      ( -- )  " /usb/hub"   mfg-test-dev  ;
+\+ olpc-cl2  : usb-item   ( -- )  " /usb/hub"   mfg-test-dev  ;
+\+ olpc-cl3  : otg-item   ( -- )  " otg"        mfg-test-dev  ;
+\+ olpc-cl3  : usb-item   ( -- )  " usba"       mfg-test-dev  ;
 : int-sd-item   ( -- )  " int:0"      mfg-test-dev  ;
 \- olpc-cl3 : ext-sd-item   ( -- )  " ext:0"      mfg-test-dev  ;
 : rtc-item      ( -- )  " /rtc"       mfg-test-dev  ;
@@ -73,8 +75,12 @@ d# 4 to #mfgrows
    " RTC (Real-Time Clock)"
    ['] rtc-item      clock.icon    2 4 install-icon
 
-   " USB ports"
+\+ olpc-cl2  " USB ports"
+\+ olpc-cl3  " USB-A port"
    ['] usb-item      usb.icon      3 0 install-icon
+
+\+ olpc-cl3  " USB OTG port"
+\+ olpc-cl3   ['] otg-item      usb.icon      3 1 install-icon
 
    \ These are last because they require user participation.
    \ The earlier tests are all included in automatic batch-mode.

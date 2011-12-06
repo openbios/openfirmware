@@ -24,7 +24,15 @@ h# ff h# ff h# ff rgb>565 value ready-color
 \needs screen-ih 0 value screen-ih
 0 value mouse-ih
 
-d# 1200 d# 900 2value max-xy
+: $call-screen  ( ??? adr len -- ??? )  screen-ih $call-method  ;
+: screen-execute  ( ?? xt -- ?? )  screen-ih package( execute )package  ;
+
+\ : screen-wh  ( -- x y )
+\    screen-ih package( screen-width screen-height )package
+\ ;
+: screen-wh  ( -- x y )  " dimensions" $call-screen  ;
+
+defer max-xy  ' screen-wh to max-xy
 : max-x  ( -- n )  max-xy drop  ;
 : max-y  ( -- n )  max-xy nip   ;
 
@@ -38,14 +46,6 @@ d# 1200 d# 900 2value max-xy
 : xy-  ( x1 y1 x2 y2  -- x3 y3 )
    >r swap r> - >r - r>
 ;
-
-: $call-screen  ( ??? adr len -- ??? )  screen-ih $call-method  ;
-: screen-execute  ( ?? xt -- ?? )  screen-ih package( execute )package  ;
-
-\ : screen-wh  ( -- x y )
-\    screen-ih package( screen-width screen-height )package
-\ ;
-: screen-wh  ( -- x y )  " dimensions" $call-screen  ;
 
 : (inset-xy)  ( x y -- x' y' )  screen-wh max-xy xy-  swap 2/ swap 2/  ;
 defer inset-xy		' (inset-xy) to inset-xy

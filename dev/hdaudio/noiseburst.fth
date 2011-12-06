@@ -527,10 +527,16 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
    loopback-threshold <
 ;
 
-d# 1200 constant #impulse-response
-#impulse-response /w* buffer: impulse-response
+0 value impulse-response
+: #impulse-response  ( -- samples )  screen-wh drop  ;
 
+: ?alloc-impulse-buf  ( -- )
+   impulse-response 0=  if
+      #impulse-response /w* alloc-mem  to impulse-response
+   then
+;
 : calc-sm-impulse  ( offset -- adr )  \ offset is 0 for left or 2 for right
+   ?alloc-impulse-buf
    pb +  rb  #samples                         ( adr1 adr2 #samples )
    #impulse-response 0  do
       3dup swap i wa+ swap stereo-mono-covar  ( adr1 adr2 #samples d.covar )
@@ -541,6 +547,7 @@ d# 1200 constant #impulse-response
    impulse-response     ( adr )
 ;
 : calc-stereo-impulse  ( offset -- adr )  \ offset is 0 for left or 2 for right
+   ?alloc-impulse-buf
    dup pb +  swap rb +  #samples              ( adr1 adr2 #samples )
    #impulse-response 0  do
       3dup swap i la+ swap stereo-covar       ( adr1 adr2 #samples d.covar )

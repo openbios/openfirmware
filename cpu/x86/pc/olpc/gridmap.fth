@@ -7,9 +7,19 @@ d# 24 d# 24 2value ulhc
 9 constant grid-w
 9 constant grid-h
 
-d# 128 value #cols
+d# 128 value #cols \ Good for 1200x900, may be changed
 d# 90 value #rows
+d# 26 constant status-line
+
 : max-grid  ( -- n )  #rows #cols *  ;
+: set-array-size  ( -- )
+   screen-wh  char-wh nip 2* -  grid-h -   ( width height )
+   grid-h / to #rows                       ( width )
+   dup grid-w / to #cols                   ( width )
+   grid-w #cols * - 2/                     ( x-offset )
+   grid-h to ulhc                          ( )
+   #rows 1+ grid-h *  char-wh nip / 1+ to status-line
+;
 
 \needs xy+ : xy+  ( x1 y1 x2 y2 -- x3 y3 )  rot + -rot  + swap  ;
 \needs xy* : xy*  ( x y w h -- x*w y*h )  rot *  >r  * r>  ;
@@ -19,6 +29,7 @@ d# 90 value #rows
 1 value scale-factor
 : scale-block#  ( eblock# -- )  scale-factor /  ;
 : set-grid-scale  ( #eblocks -- )
+   set-array-size
    d# 1000 1  do     ( #eblocks )
       dup i /  max-grid <=  if   ( #eblocks )
          drop                    ( )

@@ -72,8 +72,6 @@ h# ff h# ff     0  rgb>565 constant pending-color  \ yellow
     0 h# ff h# ff  rgb>565 constant strange-color  \ cyan
 h# e8 h# e8 h# e8  rgb>565 constant starting-color \ very light gray
 
-d# 26 constant status-line
-
 : gshow-init  ( #eblocks -- )
    suspend-logging
    dup set-grid-scale

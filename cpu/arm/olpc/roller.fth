@@ -80,8 +80,8 @@ d#  1 d# 80  a/b>fraction value acc-scale
 d# 20 constant ball-radius
 d# 40 constant ball-diameter
 
-d# 1200 ball-diameter - >fraction constant maxx
-d#  900 ball-diameter - >fraction constant maxy
+: maxx  ( -- n )  screen-wh drop  ball-diameter -  >fraction  ;
+: maxy  ( -- n )  screen-wh nip   ball-diameter -  >fraction  ;
 d#  400 >fraction constant maxz
 
 : 3swap  ( x1 y1 z1 x2 y2 z2 -- x2 y2 z2 x1 y1 z1 )  5 roll  5 roll  5 roll  ;

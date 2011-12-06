@@ -506,7 +506,7 @@ defer run-menu
 ;
 : setup-menu  ( -- )
    setup-graphics
-   ?open-mouse
+\  ?open-mouse
    cursor-off
    gui-alerts
 ;
