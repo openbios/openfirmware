@@ -8,7 +8,16 @@ h# 08 +utmi constant utmi-pll
 h# 0c +utmi constant utmi-tx
 h# 10 +utmi constant utmi-rx
 h# 14 +utmi constant utmi-ivref
-h# 18 +utmi constant utmi-t0
+h# 18 +utmi constant utmi-test0
+\ h# 1c +utmi constant utmi-test1
+\ h# 20 +utmi constant utmi-test2
+\ h# 24 +utmi constant utmi-id-grp
+\ h# 28 +utmi constant utmi-usb-int
+\ h# 2c +utmi constant utmi-dbg-ctl
+h# 30 +utmi constant utmi-ctl1
+\ h# 34 +utmi constant utmi-test3
+\ h# 38 +utmi constant utmi-test4
+\ h# 3c +utmi constant utmi-test5
 
 : wait-cal  ( spins -- )
    0  do
@@ -44,7 +53,7 @@ h# 0000.00a0 value rx-set   \            a
    \ Linux code does this, perhaps redundantly
    h# 1800.0000 utmi-ctrl io-set  \ INPKT_DELAY_SOF, PU_REF
 
-   h# 0000.8000 utmi-t0   io-clr  \ REG_FIFO_SQ_RST
+   h# 0000.8000 utmi-test0 io-clr \ REG_FIFO_SQ_RST
 
    \ Configure the PLLs
    pll-clr utmi-pll  io-clr  \ PLLCALI12, PLLVDD18, PLLVDD12, KVCO, ICP, FBDIV, REFDIV, 
@@ -72,3 +81,5 @@ h# 0000.00a0 value rx-set   \            a
    d# 1000 wait-cal
 \   ." UTMI calibration done" cr
 ;
+: enable-ulpi-phy  ( -- )  h# 100 utmi-ctl1 io-set  ;
+: select-ulpi-data  ( -- )  h# 200 utmi-ctl1 io-set  ;
