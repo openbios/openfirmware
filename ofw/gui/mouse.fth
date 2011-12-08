@@ -3,6 +3,8 @@ purpose: Mouse support for GUI
 
 headerless
 
+false value mouse-absolute?  \ True if coordinates are absolute
+
 \ Current mouse cursor position
 
 0 value xpos  0 value ypos
@@ -134,10 +136,12 @@ hex
 : remove-mouse-cursor  ( -- )
    hardware-cursor?  if  " cursor-off" $call-screen  exit  then
    mouse-ih 0=  if  exit  then
+   mouse-absolute?  if  exit  then
    xpos ypos  old-rect  put-cursor
 ;
 : draw-mouse-cursor  ( -- )
    mouse-ih 0=  if  exit  then
+   mouse-absolute?  if  exit  then
    hardware-cursor?  if
       xpos ypos " cursor-xy!" $call-screen
       exit
@@ -152,6 +156,7 @@ hex
 : clamp  ( n min max - m )  rot min max  ;
 
 : update-position  ( x y -- )
+   mouse-absolute?  if  to ypos  to xpos  exit  then
    2dup or 0=  if  2drop exit  then  \ Avoid flicker if there is no movement
 
    \ Minimize the time the cursor is down by doing computation in advance
@@ -184,6 +189,7 @@ headers
    close-mouse?  if
       mouse-ih close-dev
       0 to mouse-ih
+      false to mouse-absolute?
       hardware-cursor?  if
 	 false to hardware-cursor?
 	 " cursor-off" $call-screen
@@ -196,7 +202,13 @@ headers
       mouse-ih  0=  if
          " /mouse" open-dev to mouse-ih
       then
-      mouse-ih  if  alloc-mouse-cursor  then
+      mouse-ih  if
+         " absolute?" mouse-ih  ['] $call-method catch  if  ( x x x )
+            3drop  false
+         then                     ( absolute? )
+         to mouse-absolute?
+         mouse-absolute?  0=  if  alloc-mouse-cursor  then
+      then
    then
 ;
 : mouse-event?  ( -- false | x y buttons true )
