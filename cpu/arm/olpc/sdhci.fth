@@ -15,10 +15,19 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
    ' olpc-card-inserted? to card-inserted?
 
    \ Slot:power_GPIO - 1:35, 2:34, 3:33
-   : gpio-power-on  ( -- )  sdhci-card-power-on  d# 36 slot - gpio-set  ;
+   : gpio-power-on  ( -- )
+      sdhci-card-power-on
+\ The CL3 version below actually works for CL2 >= B1
+\+ olpc-cl2  d# 36 slot - gpio-set
+\+ olpc-cl3  slot 2 =  if  d# 34 gpio-set  then
+   ;
    ' gpio-power-on to card-power-on
 
-   : gpio-power-off  ( -- )  d# 36 slot - gpio-clr  sdhci-card-power-off  ;
+   : gpio-power-off  ( -- )
+\+ olpc-cl2  d# 36 slot - gpio-clr
+\+ olpc-cl3  slot 2 =  if  d# 34 gpio-clr  then
+      sdhci-card-power-off
+   ;
    ' gpio-power-off to card-power-off
 
 \+ olpc-cl2   new-device
