@@ -20,13 +20,15 @@ create test-colors16
 ;
 : .horizontal-bars16  ( -- )
    dimensions				( width height )
+   dup d# 16 / to bar-int		( height width )
    0  ?do				( width )
       i test-color16 0 i 3 pick bar-int fill-rect
    bar-int +loop  drop
 ;
 : .vertical-bars16  ( -- )
-   dimensions				( width height )
-   swap 0  ?do				( height )
+   dimensions swap			( height width )
+   dup d# 16 / to bar-int		( height width )
+   0  ?do				( height )
       i test-color16 i 0 bar-int 4 pick fill-rect
    bar-int +loop  drop
 ;
