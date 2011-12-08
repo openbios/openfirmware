@@ -453,6 +453,7 @@ h# 409 constant language  			\ Unicode id
    tuck di-speed!			( port dev )
 
    0 set-target				( port dev )	\ Address it as device 0
+   over reset-port                	( port dev )	\ Some devices want to be reset here
    dup set-address  if			( port dev )	\ Assign it usb addr dev
       ." Retrying with a delay" cr
       over reset-port  d# 5000 ms
