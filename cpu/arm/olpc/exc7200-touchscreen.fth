@@ -4,13 +4,37 @@ purpose: Driver and diagnostic for EETI EXC7200 Multitouch I2C Touchscreen
 0 0  " 4,8"  " /twsi" begin-package
 my-space encode-int  my-address encode-int encode+  " reg" property
 " touchscreen" name
+
+0 value screen-w
+0 value screen-h
+
 : open  ( -- okay? )
    my-unit " set-address" $call-parent  true
    \ Read once to prime the interrupt
    d# 10 " get" $call-parent  4drop 4drop 2drop
+   " dimensions" $call-screen  to screen-h  to screen-w
 ;
 : close  ( -- )  ;
-: get-touch?  ( -- false | x y z down? contact# true )
+
+h# 7fff constant touchscreen-max-x
+h# 7fff constant touchscreen-max-y
+
+: invert-x  ( x -- x' )  touchscreen-max-x swap -  ;
+: invert-y  ( y -- y' )  touchscreen-max-y swap -  ;
+
+: scale-x  ( x -- x' )
+   invert-x
+   screen-w touchscreen-max-x */
+;
+: scale-y  ( y -- y' )
+   invert-y
+   screen-h touchscreen-max-y */
+;
+
+\ Try to receive a mouse report packet.  If one arrives within
+\ 20 milliseconds, return true and the decoded information.
+\ Otherwise return false.
+: pad?  ( -- false | x y z down? contact# true )
    d# 99 gpio-pin@  if  false exit  then
    d# 10 " get" $call-parent    ( 4 flags xlo xhi ylo yhi zlo zhi 0 0 )
    2drop bwjoin >r  bwjoin >r  bwjoin >r   ( 4 flags  r: z y x )
@@ -21,12 +45,26 @@ my-space encode-int  my-address encode-int encode+  " reg" property
       r> r> r> 4drop false   exit          ( -- false )
    then                                    ( flags  r: z y x )
 
-   r> r> r> 3 roll                         ( x y z flags )
+   r>  scale-x                             ( flags  x'  r: z y )
+   r>  scale-y                             ( flags  x y'  r: z )
+
+   r> 3 roll                               ( x y z flags )
    dup 1 and 0<>                           ( x y z flags down? )
    swap 2 rshift  h# 1f and                ( x y z down? contact# )
    true                                    ( x y z down? contact# true )
 ;
-
+true value absolute?
+: stream-poll?  ( -- false | x y buttons true )
+   pad?  if               ( x y z down? contact# )
+      0=  if              ( x y z down? )
+	 nip 1 and  true  ( x y buttons true )
+      else                ( x y z down? )
+         4drop false      ( false )
+      then                ( false | x y buttons true )
+   else                   ( )
+      false               ( false )
+   then                   ( false | x y buttons true )
+;
 
 h# f800 constant red
 h# 07e0 constant green
@@ -40,10 +78,8 @@ h# 0000 constant black
 variable pixcolor
 
 h# 4 value y-offset
-0 value screen-w
-0 value screen-h
-0 value /line
-2 value /pixel
+\ 0 value /line
+\ 2 value /pixel
 
 
 variable ptr
@@ -64,30 +100,6 @@ variable ptr
       load-base  ptr @  over -
    then
    show-packets
-;
-
-h# 7fff constant touchscreen-max-x
-h# 7fff constant touchscreen-max-y
-
-: invert-x  ( x y -- x' y )  touchscreen-max-x rot - swap  ;
-: invert-y  ( x y -- x y' )  touchscreen-max-y swap -  ;
-
-: scale-xy  ( x y -- x' y' )
-   invert-x  invert-y
-   swap screen-w touchscreen-max-x */
-   swap screen-h touchscreen-max-y */
-;
-
-\ Try to receive a mouse report packet.  If one arrives within
-\ 20 milliseconds, return true and the decoded information.
-\ Otherwise return false.
-: pad?  ( -- false | x y z down? contact# true )
-   get-touch?   if            ( x dy buttons )
-      2>r >r scale-xy r> 2r>  ( x' y' z down? contact# )
-      true
-   else
-      false
-   then
 ;
 
 \ Display raw data from the device, stopping when a key is typed.
@@ -133,9 +145,10 @@ false value right-hit?
    then                                           ( x y )
 ;
 
+: targets?  ( -- flag )  true  ;  \ Used to be "final-test?"
+
 : track-init  ( -- )
-   " dimensions" $call-screen  to screen-h  to screen-w
-   screen-ih package( bytes/line )package  to /line
+\   screen-ih package( bytes/line )package  to /line
    load-base ptr !
 ;
 
@@ -147,13 +160,13 @@ false value right-hit?
 
 : background  ( -- )
    black  0 0  screen-w screen-h  fill-rectangle-noff
-   final-test?  if
+   targets?  if
       false to left-hit?
       false to right-hit?
       draw-left-target
       draw-right-target
    else
-      0 d# 27 at-xy  ." Touchscreen test.  Type a key to exit" cr
+      0 d# 27 at-xy  ." Touchscreen test.  Hit both targets to exit" cr
    then
 ;
 
@@ -185,7 +198,7 @@ false value right-hit?
 
 \    dup 5 and 5 =  if  background  load-base ptr !  then
 
-   final-test?  if                ( x y )
+   targets?  if                   ( x y )
       ?hit-target                 ( x y )
    then                           ( x y )
 
@@ -208,7 +221,7 @@ false value right-hit?
 
 false value selftest-failed?  \ Success/failure flag for final test mode
 : exit-test?  ( -- flag )
-   final-test?  if                    ( )
+   targets?  if                       ( )
       \ If the targets have been hit, we exit with successa
       left-hit? right-hit? and  if    ( )
          false to selftest-failed?    ( )
@@ -236,6 +249,8 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    then
 ;
 
+: flush-touchpad  ( -- )  begin  pad?  while  2drop 3drop  repeat  ;
+
 : selftest  ( -- error? )
    open  0=  if
       ." Touchscreen open failed"  true exit
@@ -248,7 +263,7 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    \ Being able to open the touchpad is good enough in SMT mode
    smt-test?  if  close false exit  then
 
-   final-test? 0=  if
+   targets? 0=  if
       ." Touchscreen test will start in 4 seconds" cr
       d# 4000 ms
    then
@@ -259,7 +274,7 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    begin  key?  while  key drop  repeat
 
    \ Consume already-queued trackpad events to prevent premature exit
-   begin  pad?  while  2drop 3drop  repeat
+   flush-touchpad
 
    background
    begin
@@ -267,10 +282,12 @@ false value selftest-failed?  \ Success/failure flag for final test mode
       if  track  then
    exit-test?  until
 
+   flush-touchpad
+
    close
    cursor-on
    page
-   final-test?  if  selftest-failed?  else  false  then
+   targets?  if  selftest-failed?  else  false  then
 ;
 
 
