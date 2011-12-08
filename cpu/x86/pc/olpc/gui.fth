@@ -372,6 +372,10 @@ d# 463 d# 540 2constant progress-xy
 \ 88 is 1200 1024 - 2/ , 66 is 900 768 - 2/
 \+ olpc-cl3  swap d# 88 -  swap d# 66 -   ( x' y' )  \ Recenter for XO-3
 ;
+: ?adjust-y  ( y -- y' )
+\ 132 is 900 768 -
+\+ olpc-cl3  d# 132 -   ( x' y' )  \ Adjustment in Y only for bottom-relative
+;
 : set-icon-xy  ( x y -- )  ?adjust  to icon-xy  ;
 : show-going  ( -- )
    background-rgb  rgb>565  progress-xy ?adjust d# 500 d# 100  " fill-rectangle" $call-screen
@@ -380,9 +384,10 @@ d# 463 d# 540 2constant progress-xy
 ;
 
 : show-no-power  ( -- )  \ chip, battery, overlaid sad face
-   d#  25 d# 772 set-icon-xy " spi"     show-icon
-   d# 175 d# 772 set-icon-xy " battery" show-icon
-   d# 175 d# 790 set-icon-xy " sad"     show-icon
+   \ Apply full Y adjustment for stuff at the bottom of the screen
+   d#  25 d# 772 ?adjust-y to icon-xy " spi"     show-icon
+   d# 175 d# 772 ?adjust-y to icon-xy " battery" show-icon
+   d# 175 d# 790 ?adjust-y to icon-xy " sad"     show-icon
 ;
 
 d# 834 value bar-y
