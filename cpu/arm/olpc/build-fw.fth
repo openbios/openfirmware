@@ -312,8 +312,9 @@ devalias int /sd/disk@3
 devalias ext /sd/disk@1
 devalias net /wlan  \ XXX should report-net in case of USB Ethernet
 
-fload ${BP}/dev/olpc/kb3700/spicmd.fth
-fload ${BP}/cpu/arm/olpc/spcmd.fth
+fload ${BP}/dev/olpc/kb3700/spicmd.fth           \ EC SPI Command Protocol
+
+\- olpc-cl3  fload ${BP}/cpu/arm/olpc/spcmd.fth   \ Security Processor communication protocol
 
 : wlan-reset  ( -- )  d# 58 gpio-clr  d# 20 ms  d# 58 gpio-set  ;
 
@@ -571,8 +572,8 @@ true value text-on?
 
 fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
 
-devalias keyboard /ap-sp/keyboard
-devalias mouse    /ap-sp/mouse
+\- olpc-cl3  devalias keyboard /ap-sp/keyboard
+\- olpc-cl3  devalias mouse    /ap-sp/mouse
 
 : console-start  ( -- )
    install-mux-io
@@ -729,6 +730,8 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 
 fload ${BP}/dev/logdev.fth
+
+[ifndef] olpc-cl3
 fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 dev /ap-sp/keyboard
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
@@ -739,9 +742,13 @@ stand-init: Keyboard
 dev /ap-sp/mouse
 fload ${BP}/dev/olpc/touchpad/syntpad.fth    \ Touchpad diagnostic
 device-end
+[then]
+
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
 \+ olpc-cl3 fload ${BP}/cpu/arm/olpc/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
+\+ olpc-cl3 fload ${BP}/dev/softkeyboard.fth                    \ On-screen keyboard
+\+ olpc-cl3 devalias mouse /touchscreen
 \+ olpc-cl2 fload ${BP}/cpu/arm/olpc/rm3150-touchscreen.fth    \ Touchscreen driver and diagnostic
 fload ${BP}/cpu/arm/olpc/roller.fth     \ Accelerometer test
 
@@ -813,6 +820,9 @@ devalias fsdisk int:0
 \ create pong-use-touchscreen
 fload ${BP}/ofw/gui/ofpong.fth
 fload ${BP}/cpu/x86/pc/olpc/life.fth
+
+d# 999 ' screen-#rows    set-config-int-default  \ Expand the terminal emulator to fill the screen
+d# 999 ' screen-#columns set-config-int-default  \ Expand the terminal emulator to fill the screen
 
 " u:\boot\olpc.fth ext:\boot\olpc.fth int:\boot\olpc.fth ext:\zimage /prober /usb/ethernet /wlan"
    ' boot-device  set-config-string-default
