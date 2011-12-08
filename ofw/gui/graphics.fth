@@ -114,6 +114,28 @@ headers
    )package
 ;
 
+: xy>screenadr   ( x y -- screenadr )
+   bytes/line *  swap pix*  +  frame-buffer-adr +
+;
+0 value char-fg  0 value char-bg
+: character-at-xy  ( char x y -- )
+   screen-ih package(
+   2>r                                        ( char  r: x y )
+   >font fontbytes  char-width char-height    ( 'font fontbytes w h  r: x y )
+   2r> xy>screenadr                           ( 'font fontbytes w h 'screen )
+   bytes/line  char-fg char-bg  ( font fontbytes w h 'screen bytes/line fg bg )
+   fb-paint                     ( )
+   )package
+;
+: type-at-xy  ( adr len x y -- )
+   2swap  bounds  ?do                          ( x y )
+      2dup i c@ -rot character-at-xy           ( x y )
+      screen-ih package( char-width )package   ( x y char-width )
+      rot + swap                               ( x' y )
+   loop                                        ( x y )
+   2drop                                       ( )
+;
+
 : getchar  ( -- byte )  key  ;
 
 \ use getchar or keyboard package read ( a n - actual ) to get input
