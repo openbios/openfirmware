@@ -8,6 +8,7 @@ icon: camera.icon   rom:camera.565
 icon: wifi.icon     rom:wifi.565
 icon: audio.icon    rom:audio.565
 \- olpc-cl3 icon: touchpad.icon rom:touchpad.565
+\+ olpc-cl3 icon: touchscreen.icon rom:touchpad.565
 icon: display.icon  rom:display.565
 \- olpc-cl3 icon: keyboard.icon rom:keyboard.565
 icon: timer.icon    rom:timer.565
@@ -34,7 +35,8 @@ d# 4 to #mfgrows
 : camera-item   ( -- )  " /camera"    mfg-test-dev  ;
 : wlan-item     ( -- )  " /wlan"      mfg-test-dev  ;
 : timer-item    ( -- )  " /timer"     mfg-test-dev  ;
-\- olpc-cl3 : touchpad-item ( -- )  " mouse"      mfg-test-dev  ;
+\- olpc-cl3 : touchpad-item ( -- )  " /touchpad"  mfg-test-dev  ;
+\+ olpc-cl3 : touchscreen-item ( -- )  " /touchscreen"  mfg-test-dev  ;
 \- olpc-cl3 : keyboard-item ( -- )  " keyboard"   mfg-test-dev  ;
 : switch-item   ( -- )  " /accelerometer" mfg-test-dev  " /switches"  mfg-test-dev  ;
 : leds-item     ( -- )  " /leds"      mfg-test-dev   ;
@@ -90,6 +92,9 @@ d# 4 to #mfgrows
 
 \- olpc-cl3    " Touchpad"
 \- olpc-cl3    ['] touchpad-item touchpad.icon 3 2 install-icon
+
+\+ olpc-cl3    " Touchscreen"
+\+ olpc-cl3    ['] touchscreen-item touchscreen.icon 3 2 install-icon
 
    " LEDs"
    ['] leds-item     leds.icon     3 3 install-icon
