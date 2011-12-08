@@ -16,6 +16,11 @@ purpose: Platform-specific USB elaborations
    : otg-set-host-mode  3 h# a8 ehci-reg!  ;  \ Force host mode
    ' otg-set-host-mode to set-host-mode
 
+   \ The Marvell EHCI can handle low and full speed devices directly,
+   \ without needing a UHCI or OHCI companion controller
+   ' make-port-node to handle-ls-device
+   ' make-port-node to handle-fs-device
+
    : sleep  ( -- )  true to first-open?  ;
    : wake  ( -- )  ;
 end-package
@@ -33,11 +38,17 @@ end-package
    fload ${BP}/dev/usb2/hcd/ehci/loadpkg.fth
 \  false to delay?  \ No need for a polling delay on this platform
 
+   \ The Marvell EHCI can handle low and full speed devices directly,
+   \ without needing a UHCI or OHCI companion controller
+   ' make-port-node to handle-ls-device
+   ' make-port-node to handle-fs-device
+
    : sleep  ( -- )  true to first-open?  ;
    : wake  ( -- )  ;
 end-package
 
-\ Turn on USB power after a delay, to ensure that USB devices are reset correctly on boot
+\ usb-power-on is unnecessary on initial boot, as CForth turns on the
+\ USB power during its GPIO setup.
 : usb-power-on  ( -- )
    d# 126 gpio-clr  \ OTG 5V on
    d# 127 gpio-clr  \ ULPI 5V on
@@ -56,7 +67,7 @@ end-package
 ;
 
 stand-init: Init USB Phy
-\  usb-power-on   \ The EC now controls the USB power
+\  usb-power-on   \ The USB power is turned on early, when CForth sets up GPIOs
    init-usb
 ;
 
@@ -118,15 +129,22 @@ true value first-usb-probe?
 alias p2 probe-usb
 
 0 value usb-keyboard-ih
+0 value otg-keyboard-ih
 
 : attach-usb-keyboard  ( -- )
    " usb-keyboard" expand-alias  if   ( devspec$ )
       drop " /usb"  comp  0=  if      ( )
          " usb-keyboard" open-dev to usb-keyboard-ih
          usb-keyboard-ih add-input
-         exit
       then
    else                               ( devspec$ )
+      2drop
+   then
+
+   " otg/keyboard" expand-alias  if   ( devspec$ )
+      open-dev to otg-keyboard-ih
+      otg-keyboard-ih add-input
+   else
       2drop
    then
 ;

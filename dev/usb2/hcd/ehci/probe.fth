@@ -4,13 +4,15 @@ purpose: EHCI USB Controller probe
 hex
 headers
 
+0 value port-speed
+
 : make-root-hub-node  ( port -- )
    \ Some devices (e.g. Lexar USB-to-SD) fail unless you get the cfg desc from device 0 first
    0 set-target	\ First address it as device 0	( port )
-   speed-high 0 di-speed!     \ Use high speed for getting the device descriptor
+   port-speed 0 di-speed!     \ Use high speed for getting the device descriptor
    dev-desc-buf h# 40 get-cfg-desc drop		( port )
 
-   speed-high					( port speed )
+   port-speed					( port speed )
 
    \ hub-port and hub-dev route USB 1.1 transactions through USB 2.0 hubs
    over get-hub20-port  get-hub20-dev		( port speed hub-port hub-dev )
@@ -21,22 +23,31 @@ headers
 
 0 instance value probe-error?  \ Back channel to selftest
 
+: make-port-node  ( port -- )
+   ['] make-root-hub-node catch  if
+      drop ." Failed to make root hub node for port " dup .d cr
+      true to probe-error?
+   then
+;
+defer handle-ls-device  ' disown-port to handle-ls-device
+defer handle-fs-device  ' disown-port to handle-fs-device
+
 : probe-root-hub-port  ( port -- )
    false to probe-error?			( port )
    dup disable-old-nodes			( port )
    dup portsc@ 1 and 0=  if  drop exit  then	( port ) \ No device detected
 
    dup portsc@ h# c00 and h# 400 =  if		\ A low speed device detected
-      dup disown-port				\ Disown the port
+      speed-low to port-speed
+      dup handle-ls-device			\ Process low-speed device
    else						\ Don't know what it is
       dup reset-port				\ Reset to find out
       dup portsc@ 4 and  0=  if			\ A full speed device detected
-	 dup disown-port			\ Disown the port
+         speed-full to port-speed
+	 dup handle-fs-device			\ Process full-speed device
       else					\ A high speed device detected
-         dup ['] make-root-hub-node catch  if	\ Process high speed device
-            drop ." Failed to make root hub node for port " dup .d cr
-            true to probe-error?
-         then
+         speed-high to port-speed
+         dup make-port-node			\ Process high-speed device
       then
    then                           ( port# )
    dup portsc@ swap portsc!       ( )		\ Clear connection change bit
