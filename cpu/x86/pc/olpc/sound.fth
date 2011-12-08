@@ -54,6 +54,7 @@ h# -9 constant default-volume
    close-audio
 ;
 
+[ifndef] olpc-cl3
 dev /keyboard
 0 value waiting-up?
 : olpc-check-abort  ( scan-code -- abort? )  \ an abort key pressed?
@@ -83,6 +84,7 @@ patch olpc-check-abort check-abort get-scan
 ;
 ' handle-volume?  to scan-handled?
 dend
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
