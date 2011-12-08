@@ -247,7 +247,10 @@ d# 97 constant headphone-jack
 d# 96 constant external-mic
 : pin-sense?  ( gpio# -- flag )  gpio-pin@  ;
 : headphones-inserted?  ( -- flag )  headphone-jack pin-sense?  ;
-: microphone-inserted?  ( -- flag )  external-mic pin-sense?  ;
+: microphone-inserted?  ( -- flag )
+   external-mic pin-sense?
+\+ olpc-cl3   0=
+;
 
 fload ${BP}/cpu/arm/olpc/alc5631.fth  \ Realtek ALC5631Q CODEC
 [then]
