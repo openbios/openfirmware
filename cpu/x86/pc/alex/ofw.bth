@@ -17,6 +17,7 @@ in: ${BP}/dev/usb2/device/mouse/build/usbmouse.fc
 in: ${BP}/dev/usb2/device/webcam/build/webcam.fc
 in: ${BP}/dev/pci/build/pcibridg.fc
 in: ${BP}/dev/ide/build/leghier.fc
+in: ${BP}/dev/ath9k/build/ar9382.fc
 in: testicons.bin
 
 build-now
@@ -43,6 +44,7 @@ elf-header /elf-header ofd @ fputs
 
    " ${BP}/dev/pci/build/pcibridg.fc"           " class060400"     $add-deflated-dropin
    " ${BP}/dev/ide/build/leghier.fc"            " class01018a"     $add-deflated-dropin
+   " ${BP}/dev/ath9k/build/ar9382.fc"           " pci168c,30"      $add-deflated-dropin
 
    " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"     $add-deflated-dropin
    " ${BP}/dev/usb2/hcd/uhci/build/uhci.fc"	" class0c0300"     $add-deflated-dropin
