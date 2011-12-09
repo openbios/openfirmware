@@ -491,7 +491,6 @@ d# 32 buffer: ek			\ Temporary rc4 key
    data >ptype c@ eapol-key =  and  if    \ EAPOL-key
       data >ver c@ to eapol-ver
       data >rcnt last-rcnt /rcnt comp 0>  if  \ A new eapol-key record
-         data >rcnt /rcnt cdump cr
          data >rcnt last-rcnt!            \ Update last replay counter
          process-eapol-key
       else
