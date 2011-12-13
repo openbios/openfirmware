@@ -249,7 +249,7 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    then
 ;
 
-: flush-touchpad  ( -- )  begin  pad?  while  2drop 3drop  repeat  ;
+: flush  ( -- )  begin  pad?  while  2drop 3drop  repeat  ;
 
 : selftest  ( -- error? )
    open  0=  if
@@ -274,7 +274,7 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    begin  key?  while  key drop  repeat
 
    \ Consume already-queued trackpad events to prevent premature exit
-   flush-touchpad
+   flush
 
    background
    begin
@@ -282,7 +282,7 @@ false value selftest-failed?  \ Success/failure flag for final test mode
       if  track  then
    exit-test?  until
 
-   flush-touchpad
+   flush
 
    close
    cursor-on
