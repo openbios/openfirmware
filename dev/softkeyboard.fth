@@ -1,6 +1,53 @@
 purpose: Interactive keyboard test shows which keys are pressed
 \ See license at end of file
 
+: bounded?  ( n  lower size -- flag )  bounds swap  within  ;
+
+: inside?  ( tx ty  x y  w h -- flag )
+   >r                     ( tx ty  x y  w  r: h )
+   swap >r                ( tx ty  x    w  r: h y )
+   rot  >r                ( tx     x    w  r: h y ty )
+   bounded?  if           (                r: h y ty )
+      r> r> r>  bounded?  ( flag )
+   else                   (                r: h y ty )
+      r> r> r>  3drop     ( )
+      false               ( flag )
+   then                   ( flag )
+;
+
+dev /touchscreen
+new-device
+
+" hotspot" device-name
+: open  ( -- okay? )  true  ;
+: close  ;
+
+0 0 instance 2value hit-xy
+0 0 instance 2value hit-wh
+: set-hotspot  ( x y w h -- )  to hit-wh  to hit-xy  ;
+: hit?  ( -- flag )
+   " pad?" $call-parent   0=  if   ( )
+      false exit                   ( -- false )
+   then                            ( pad-x,y,z down? contact# )
+   drop  if                        ( pad-x,y,z  )
+      drop  hit-xy hit-wh inside?  ( flag )
+   else                            ( pad-x,y,z  )
+      3drop  false                 ( false )
+   then                           ( flag )
+;
+: read  ( adr len -- actual | -1 )
+   0=  if  drop -1 exit  then     ( adr )
+   hit?  if                       ( adr )
+      carret swap c!  1           ( 1 )
+   else                           ( adr )
+      drop  -1                    ( -1 )
+   then                           ( 1 | -1 )
+;
+
+finish-device
+device-end
+
+
 dev /touchscreen
 new-device
 
@@ -31,7 +78,7 @@ d#  60 constant single-key-w
 d#  60 constant single-key-h
 d#  90 constant shift-key-w
 d# 460 constant space-key-w
-d# 340 constant top-row-offset
+d# 400 constant top-row-offset
 d#  34 constant button-w
 d#  34 constant button-h
 
@@ -99,12 +146,8 @@ d#  34 constant button-h
 
 : make-keys  ( -- )
    0 to #keys
-   top-key-row
-\   " "(1b)"
-\   " "(1b)" set-codes
-\   make-single-key
 
-   next-key-row
+   top-key-row
    " ~!@#$%^&*()_+"b"
    " '1234567890-="b" set-codes
    d# 13 0  do  make-single-key  loop
@@ -126,7 +169,7 @@ d#  34 constant button-h
    make-shift-key
    d# 10 0  do  make-single-key  loop
    make-shift-key
-\   make-single-key   \ Omit up arrow for now
+   make-single-key
 
    next-key-row
    " "(1b) "(878889)"
@@ -135,24 +178,11 @@ d#  34 constant button-h
    2 0  do  blank-single-key  loop
    make-space-key
    2 0  do  blank-single-key  loop
-\  3 0  do  make-single-key  loop  \ Omit arrows for now
+   3 0  do  make-single-key  loop
 
 \  make-buttons
 ;
 
-: bounded?  ( n  lower size -- flag )  bounds swap  within  ;
-
-: inside?  ( tx ty  x y  w h -- flag )
-   >r                     ( tx ty  x y  w  r: h )
-   swap >r                ( tx ty  x    w  r: h y )
-   rot  >r                ( tx     x    w  r: h y ty )
-   bounded?  if           (                r: h y ty )
-      r> r> r>  bounded?  ( flag )
-   else                   (                r: h y ty )
-      r> r> r>  3drop     ( )
-      false               ( flag )
-   then                   ( flag )
-;
 : >key-bounds  ( 'key -- x y w h )
    >r  r@ >key-x w@  r@ >key-y w@  r@ >key-w w@  r> >key-h w@
 ;
@@ -197,6 +227,10 @@ h# ffff constant kbd-bc
       h# 1b  of  " Esc"    r> string-label  endof
       h# 80  of  " Ctrl"   r> string-label  endof
       h# 81  of  "  Shift" r> string-label  endof
+      h# 82  of  "  Up"    r> string-label  endof
+      h# 83  of  " Left"   r> string-label  endof
+      h# 84  of  " Down"   r> string-label  endof
+      h# 85  of  " Right"  r> string-label  endof
       h# 0d  of  " Enter"  d# 35 d# 55 r> key-inset type-at-xy  endof
       ( default )  r> drop
    endcase
@@ -326,9 +360,9 @@ d# 1000 value long   \ Initial auto-repeat interval in ms
       else                  ( adr ascii contact# )
          3drop -1           ( -1 )
       then                  ( 1 | -1 )
-   else                     ( adr )
+   else                     ( adr contact# )
       \ No code value, so no need to auto-repeat
-      drop -1               ( -1 )
+      2drop -1              ( -1 )
    then                     ( 1 | -1 )
 ;
 
@@ -385,8 +419,17 @@ d# 1000 value long   \ Initial auto-repeat interval in ms
       release-key                 ( -1 )
    then                           ( 1 | -1 )
 ;
+
+0 [if]
 : poller  ( -- )
    begin  here 1 read 0> if  here c@ emit  then   ukey? until
+;
+[then]
+
+: erase-keyboard  ( color -- )
+   kbd-bc   0 top-row-offset               ( color x y )
+   " dimensions" $call-screen  2over xy-   ( color x y w h )
+   " fill-rectangle" $call-screen          ( )
 ;
 
 : draw-keyboard  ( -- )
@@ -394,15 +437,19 @@ d# 1000 value long   \ Initial auto-repeat interval in ms
    #keys 0  ?do  i key-up  loop
 ;
 
+variable buf
+: flush  ( -- )
+   begin  buf 1  read  0<  until
+;
+
 : open  ( -- okay? )
-   false exit
-\  save-background
    make-keys
    draw-keyboard
+   flush
    true
 ;
 : close  ( -- )
-\  restore-background
+   erase-keyboard
 ;
 
 finish-device
