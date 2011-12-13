@@ -290,17 +290,9 @@ fload ${BP}/dev/olpc/kb3700/battery.fth      \ Battery status reports
    
 load-base constant flash-buf
 : flash-vulnerable(  ( -- )
-   hdd-led-on
    ignore-power-button
 ;
 : )flash-vulnerable  ( -- )
-   hdd-led-off
-;
-: fs-vulnerable(  ( -- )
-   hdd-led-on
-;
-: )fs-vulnerable  ( -- )
-   hdd-led-off
 ;
 
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming

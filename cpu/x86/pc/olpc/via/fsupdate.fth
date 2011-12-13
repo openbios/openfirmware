@@ -67,7 +67,6 @@ vocabulary nand-commands
 also nand-commands definitions
 
 : zblocks:  ( "eblock-size" "#eblocks" ... -- )
-   fs-vulnerable(
    ?compare-spec-line
    get-hex# to /nand-block
    get-hex# to #image-eblocks
@@ -90,7 +89,6 @@ also nand-commands definitions
 \ Asynchronous writes
    " write-blocks-end" $call-nand   ( error? )
    " Write error" ?nand-abort
-   )fs-vulnerable
    release-inflater
    fexit
 ;
@@ -214,7 +212,6 @@ true value check-hash?
    dup written                              ( eblock# )
    show-written                             ( )
    show-temperature
-   hdd-led-toggle
 ;
 
 previous definitions

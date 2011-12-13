@@ -44,10 +44,8 @@ h# 8000 value /ec-flash
    dup load-base /flash-page comp       ( adr different? )
    if
       edi-open                          ( adr )
-      hdd-led-on                        ( adr )
       ec-flags-offset erase-page        ( adr )
       ec-flags-offset edi-program-page  ( )
-      hdd-led-off
       set-ec-reboot
       unreset-8051                      \ should not return
       ec-power-cycle
@@ -57,7 +55,6 @@ h# 8000 value /ec-flash
 ;
 : ignore-ec-flags  ( adr -- )  ec-flags-offset +  /flash-page  erase  ;
 : reflash-ec
-   hdd-led-on
 [ifdef] cl2-a1
    " enter-updater" $call-ec
    ." Erasing ..." cr  " erase-flash" $call-ec cr
@@ -75,7 +72,6 @@ h# 8000 value /ec-flash
    load-base  load-base /ec-flash +  /ec-flash  comp
    abort"  Miscompare!"
    cr
-   hdd-led-off
 [ifndef] cl2-a1
    ." Restarting EC and rebooting" cr
    set-ec-reboot

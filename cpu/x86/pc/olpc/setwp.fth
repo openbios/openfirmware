@@ -33,9 +33,7 @@ purpose: Changing manufacturing data - adding and deleting tags
 \ Set and clear the write-protect tag by copying, erasing, rewriting
 
 : (put-mfg-data)
-   hdd-led-on
    mfg-data-buf  mfg-data-end-offset mfg-data-offset  write-flash-range
-   hdd-led-off
 ;
 
 : ram-find-tag  ( name$ -- false | data$ true )
