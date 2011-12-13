@@ -48,7 +48,7 @@ warning on
 ;
 
 : mfg-test-result  ( error? -- )
-if               ( return-code )
+   if               ( return-code )
       ?dup  if                                         ( return-code )
          ??cr ." Selftest failed. Return code = " .d cr
          mfg-color-red sq-border!
@@ -75,15 +75,23 @@ if               ( return-code )
    cursor-off  scroller-off   gui-alerts  refresh
    flush-keyboard
 ;
-: mfg-test-dev  ( $ -- )
-   scroller-on
-   ??cr  ." Testing " 2dup type cr                ( $ )
+: (mfg-test-dev)  ( $ -- error? )
    2dup locate-device  if                         ( $ )
       ." Can't find device node " type cr  exit   ( -- )
    else                                           ( $ phandle )
       drop                                        ( $ )
    then                                           ( $ )
    " selftest" execute-device-method              ( error? )
+;
+: mfg-test-dev  ( $ -- )
+   scroller-on
+   ??cr  ." Testing " 2dup type cr                ( $ )
+   (mfg-test-dev)
+   mfg-test-result
+;
+: gfx-test-dev  ( $ -- )
+   (mfg-test-dev)
+   scroller-on
    mfg-test-result
 ;
 

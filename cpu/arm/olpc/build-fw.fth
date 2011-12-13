@@ -541,7 +541,6 @@ warning !
 \ so exiting from emacs doesn't invoke the diag menu.
 ' quit to user-interface
 fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
-fload ${BP}/cpu/arm/olpc/testitems.fth
 
 [ifdef] notyet
 fload ${BP}/cpu/x86/pc/olpc/via/bootmenu.fth
@@ -619,8 +618,6 @@ fload ${BP}/cpu/arm/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/strokes.fth
 fload ${BP}/cpu/x86/pc/olpc/plot.fth
-\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/testinstructions.fth
-\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
 
 fload ${BP}/cpu/arm/mmp2/dramrecal.fth
 
@@ -953,6 +950,10 @@ dev /client-services  patch noop visible enter  dend
 ;
 : ?text-on  ( -- )  key?  if  text-on visible  then  ;
 [then]
+
+fload ${BP}/cpu/arm/olpc/testitems.fth
+\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/testinstructions.fth
+\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
 
 fload ${BP}/cpu/arm/mmp2/clocks.fth
 

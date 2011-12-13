@@ -487,10 +487,11 @@ variable buf
 : open  ( -- okay? )
    make-keys
    draw-keyboard
-   flush
+   " flush" $call-parent
    true
 ;
 : close  ( -- )
+   flush
    erase-keyboard
 ;
 

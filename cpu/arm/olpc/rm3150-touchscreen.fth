@@ -32,10 +32,12 @@ d# 672 constant touchscreen-max-y
    touchscreen-present?  dup  if   ( okay? )
       0 1 ts-b!                    ( okay? )  \ Set to polled mode
    then                            ( okay? )
+   " dimensions" $call-screen  to screen-h  to screen-w
 ;
-: close  ( -- )
-   h# 82 1 ts-b!  \ Restore default interrupt mode
-;
+
+: dimensions  ( -- w h )  screen-w  screen-h  ;
+
+: #contacts  ( -- n )  d# 10  ;
 
 : pad-events  ( -- n*[ x.hi x.lo y.hi y.lo z ]  #contacts )
    d# 99 gpio-pin@  if  false exit  then
@@ -102,6 +104,8 @@ variable ptr
    then
 ;
 
+: flush  ( -- )  begin  d# 10 ms  pad?  while  2drop 3drop  repeat  ;
+
 \ Display raw data from the device, stopping when a key is typed.
 : show-pad  ( -- )
    begin
@@ -109,6 +113,11 @@ variable ptr
    key? until
 ;
 [then]
+
+: close  ( -- )
+\   flush
+   h# 82 1 ts-b!  \ Restore default interrupt mode
+;
 
 : button  ( color x -- )
    screen-h d# 50 -  d# 200  d# 30  fill-rectangle-noff
@@ -147,7 +156,6 @@ false value right-hit?
 ;
 
 : track-init  ( -- )
-   " dimensions" $call-screen  to screen-h  to screen-w
    screen-ih package( bytes/line )package  to /line
    load-base ptr !
 ;

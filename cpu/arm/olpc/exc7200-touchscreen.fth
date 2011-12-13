@@ -8,12 +8,9 @@ my-space encode-int  my-address encode-int encode+  " reg" property
 0 value screen-w
 0 value screen-h
 
-: open  ( -- okay? )
-   my-unit " set-address" $call-parent  true
-   \ Read once to prime the interrupt
-   d# 10 " get" $call-parent  4drop 4drop 2drop
-   " dimensions" $call-screen  to screen-h  to screen-w
-;
+: dimensions  ( -- w h )  screen-w  screen-h  ;
+
+: #contacts  ( -- n )  2  ;
 
 h# 7fff constant touchscreen-max-x
 h# 7fff constant touchscreen-max-y
@@ -248,7 +245,15 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    then
 ;
 
-: flush  ( -- )  begin  pad?  while  2drop 3drop  repeat  ;
+: flush  ( -- )  begin  d# 10 ms  pad?  while  2drop 3drop  repeat  ;
+
+: open  ( -- okay? )
+   my-unit " set-address" $call-parent  true
+   \ Read once to prime the interrupt
+   d# 10 " get" $call-parent  4drop 4drop 2drop
+   " dimensions" $call-screen  to screen-h  to screen-w
+   flush
+;
 
 : close  ( -- )  flush  ;
 

@@ -20,6 +20,10 @@ d# 15 to #mfgtests
 d# 5 to #mfgcols
 d# 4 to #mfgrows
 
+\+ olpc-cl3  : screen-kbd-scroller  ( -- )  blank-screen  open-screen-keyboard  ;
+\+ olpc-cl3  ' screen-kbd-scroller to scroller-on
+\+ olpc-cl3  ' close-screen-keyboard to scroller-off
+
 : cpu-item      ( -- )  " /cpu"       mfg-test-dev  ;
 : battery-item  ( -- )  " /battery"   mfg-test-dev  ;
 : spiflash-item ( -- )  " /flash"     mfg-test-dev  ;
@@ -30,14 +34,14 @@ d# 4 to #mfgrows
 : int-sd-item   ( -- )  " int:0"      mfg-test-dev  ;
 \- olpc-cl3 : ext-sd-item   ( -- )  " ext:0"      mfg-test-dev  ;
 : rtc-item      ( -- )  " /rtc"       mfg-test-dev  ;
-: display-item  ( -- )  " /display"   mfg-test-dev  ;
+: display-item  ( -- )  " /display"   gfx-test-dev  ;
 : audio-item    ( -- )  " /audio"     mfg-test-dev  ;
-: camera-item   ( -- )  " /camera"    mfg-test-dev  ;
+: camera-item   ( -- )  " /camera"    gfx-test-dev  ;
 : wlan-item     ( -- )  " /wlan"      mfg-test-dev  ;
 : timer-item    ( -- )  " /timer"     mfg-test-dev  ;
 \- olpc-cl3 : touchpad-item ( -- )  " /touchpad"  mfg-test-dev  ;
-\+ olpc-cl3 : touchscreen-item ( -- )  " /touchscreen"  mfg-test-dev  ;
-\- olpc-cl3 : keyboard-item ( -- )  " keyboard"   mfg-test-dev  ;
+\+ olpc-cl3 : touchscreen-item ( -- )  " /touchscreen"  gfx-test-dev  ;
+\- olpc-cl3 : keyboard-item ( -- )  " keyboard"   gfx-test-dev  ;
 : switch-item   ( -- )  " /accelerometer" mfg-test-dev  " /switches"  mfg-test-dev  ;
 : leds-item     ( -- )  " /leds"      mfg-test-dev   ;
 
