@@ -13,8 +13,13 @@ h# 07e0 constant mfg-color-green
 
 : clear-n-restore-scroller  ( -- )
    blank-screen
-   restore-scroller
+   restore-scroller-bg
 ;
+
+defer scroller-on
+defer scroller-off
+' clear-n-restore-scroller to scroller-on
+' noop to scroller-off
 
 : sq-border!  ( bg -- )  current-sq sq >border !  ;
 
@@ -36,7 +41,7 @@ warning on
       mouse-ih  if
          mouse-event?  if
             \ Ignore movement, act only on a button down event
-            nip nip  if  wait-buttons-up  refresh exit  then
+            nip nip  if  wait-buttons-up  exit  then
          then
       then
    again
@@ -67,11 +72,11 @@ if               ( return-code )
       flush-keyboard
       mfg-wait-return
    then
-   cursor-off  gui-alerts  refresh
+   cursor-off  scroller-off   gui-alerts  refresh
    flush-keyboard
 ;
 : mfg-test-dev  ( $ -- )
-   clear-n-restore-scroller                       ( $ )
+   scroller-on
    ??cr  ." Testing " 2dup type cr                ( $ )
    2dup locate-device  if                         ( $ )
       ." Can't find device node " type cr  exit   ( -- )
@@ -83,12 +88,12 @@ if               ( return-code )
 ;
 
 : all-tests-passed  ( -- )
-   restore-scroller
+   restore-scroller-bg
    clear-screen
    ." All automatic tests passed successfully." cr cr cr
    green-screen
    wait-return
-   cursor-off  gui-alerts  refresh
+   cursor-off  scroller-off  gui-alerts  refresh
    flush-keyboard
 ;
 
@@ -148,6 +153,7 @@ icon: quit.icon     rom:quit.565
    d# 128 to image-size
    d# 128 to icon-size
    cursor-off
+   scroller-off
 ;
 
 defer test-menu-items
@@ -175,7 +181,7 @@ defer test-menu-items
    ['] test-menu-items  ['] nest-menu catch  drop
    r> to run-menu
    false to diag-switch?
-   restore-scroller
+   restore-scroller-bg
 ;
 
 : autorun-from-gamekey  ( -- )

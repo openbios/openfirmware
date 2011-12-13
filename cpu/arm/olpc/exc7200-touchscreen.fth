@@ -14,7 +14,6 @@ my-space encode-int  my-address encode-int encode+  " reg" property
    d# 10 " get" $call-parent  4drop 4drop 2drop
    " dimensions" $call-screen  to screen-h  to screen-w
 ;
-: close  ( -- )  ;
 
 h# 7fff constant touchscreen-max-x
 h# 7fff constant touchscreen-max-y
@@ -250,6 +249,8 @@ false value selftest-failed?  \ Success/failure flag for final test mode
 ;
 
 : flush  ( -- )  begin  pad?  while  2drop 3drop  repeat  ;
+
+: close  ( -- )  flush  ;
 
 : selftest  ( -- error? )
    open  0=  if

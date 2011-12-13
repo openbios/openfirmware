@@ -24,7 +24,10 @@ new-device
 
 0 0 instance 2value hit-xy
 0 0 instance 2value hit-wh
-: set-hotspot  ( x y w h -- )  to hit-wh  to hit-xy  ;
+0 0 instance 2value the$
+0 0 instance 2value returning$
+
+: set-hotspot  ( x y w h $ -- )  ?save-string to the$  to hit-wh  to hit-xy  ;
 : hit?  ( -- flag )
    " pad?" $call-parent   0=  if   ( )
       false exit                   ( -- false )
@@ -33,15 +36,32 @@ new-device
       drop  hit-xy hit-wh inside?  ( flag )
    else                            ( pad-x,y,z  )
       3drop  false                 ( false )
-   then                           ( flag )
+   then                            ( flag )
 ;
 : read  ( adr len -- actual | -1 )
    0=  if  drop -1 exit  then     ( adr )
+
+   returning$  dup  if            ( adr  adr1 len1 )
+      over c@  -rot               ( adr char  adr1 len1 )
+      1 /string  to returning$    ( adr char  )
+      swap c!  1   exit           ( -- actual )
+   else                           ( adr  adr1 len1 )
+      2drop                       ( adr )  
+   then                           ( adr )  
+
    hit?  if                       ( adr )
-      carret swap c!  1           ( 1 )
-   else                           ( adr )
-      drop  -1                    ( -1 )
-   then                           ( 1 | -1 )
+      the$ to returning$          ( )
+   then                           ( adr )
+
+   returning$  dup  if            ( adr  adr1 len1 )
+      over c@  -rot               ( adr char  adr1 len1 )
+      1 /string  to returning$    ( adr char  )
+      swap c!  1   exit           ( -- actual )
+   else                           ( adr  adr1 len1 )
+      2drop                       ( adr )  
+   then                           ( adr )
+
+   drop -1
 ;
 
 finish-device
@@ -227,10 +247,10 @@ h# ffff constant kbd-bc
       h# 1b  of  " Esc"    r> string-label  endof
       h# 80  of  " Ctrl"   r> string-label  endof
       h# 81  of  "  Shift" r> string-label  endof
-      h# 82  of  "  Up"    r> string-label  endof
-      h# 83  of  " Left"   r> string-label  endof
-      h# 84  of  " Down"   r> string-label  endof
-      h# 85  of  " Right"  r> string-label  endof
+      h# 86  of  "  Up"    r> string-label  endof
+      h# 87  of  " Left"   r> string-label  endof
+      h# 88  of  " Down"   r> string-label  endof
+      h# 89  of  " Right"  r> string-label  endof
       h# 0d  of  " Enter"  d# 35 d# 55 r> key-inset type-at-xy  endof
       ( default )  r> drop
    endcase
@@ -263,32 +283,47 @@ h# ffff constant kbd-bc
    then
 ;
 
+0 0 instance 2value returning$
+1 instance buffer: the-char
+: return-string  ( adr len -- )  to returning$  ;
+: return-char  ( ascii -- )
+   the-char c!  the-char 1  return-string
+;
+
 0 value ctrl?
 0 value shift?
 
-: get-ascii?  ( key# -- false | ascii true )
-   key-adr                               ( 'key )
+: return-key#  ( key# -- )
+   key-adr                                             ( 'key )
    shift?  if  >key-code2  else  >key-code1  then  c@  ( code )
 
-   dup h# 80 >=  if                      ( code )
+   dup h# 80 >=  if                                    ( code )
       case
          h# 80  of  true to ctrl?   endof
          h# 81  of  true to shift?  endof
+         h# 82  of  " "(1b)[A" return-string  endof  \ Up
+         h# 83  of  " "(1b)[D" return-string  endof  \ Left
+         h# 84  of  " "(1b)[B" return-string  endof  \ Down
+         h# 85  of  " "(1b)[C" return-string  endof  \ Right
+         h# 86  of  " "(1b)[5~" return-string  endof \ PgUp
+         h# 87  of  " "(1b)[1~" return-string  endof \ Home
+         h# 88  of  " "(1b)[6~" return-string  endof \ PgDn
+         h# 89  of  " "(1b)[4~" return-string  endof \ End
          \ Rest are reserved
       endcase
-      false exit                         ( -- false )
+      exit                               ( -- )
    then                                  ( code )
 
    ctrl?  if                             ( code )
       dup h# 40  h# 7f  between  if      ( code )
-         h# 1f and  true                 ( ascii true )
+         h# 1f and  return-char          ( )
       else                               ( code )
-         drop false                      ( false )
-      then                               ( false | ascii true )
-      exit                               ( -- false | ascii true )
+         drop                            ( )
+      then                               ( )
+      exit
    then                                  ( code )
 
-   true
+   return-char                           ( )
 ;
 : cancel-shifts  ( key# -- )
    key-adr >key-code1 c@   ( code )
@@ -337,87 +372,94 @@ d# 1000 value long   \ Initial auto-repeat interval in ms
 : get-repeat  ( contact# -- time )  >contact >contact-time @  ;
 
 \ Records the contact and returns the key code if there is one
-: return-key-code  ( adr contact# key# -- -1 | 1 )
-   over long set-repeat     ( adr contact# key# )  \ Set repeat time
-   tuck set-contact-key#    ( adr key# )           \ Remember key
-   get-ascii?  if           ( adr ascii )
-      swap c!  1            ( 1 )
-   else                     ( adr )
-      \ There was no ASCII code - probably it was ctrl or shift -
-      \ so nothing to return.
-      drop -1               ( -1 )
-   then                     ( 1 | -1 )
+: return-key-code  ( contact# key# -- )
+   over long set-repeat     ( contact# key# )  \ Set repeat time
+   tuck set-contact-key#    ( key# )           \ Remember key
+   return-key#              ( )
 ;
 
 \ Called when a finger is still down in the same key area as before.
 \ Repeats the key code when the time is right.
-: ?repeated  ( adr contact# key# -- )
-   get-ascii?  if           ( adr contact# ascii )
-      swap dup get-repeat   ( adr ascii contact# time )
-      get-msecs - 0<=  if   ( adr ascii contact# )
-         short set-repeat   ( adr ascii )
-         swap c!  1         ( 1 )
-      else                  ( adr ascii contact# )
-         3drop -1           ( -1 )
-      then                  ( 1 | -1 )
-   else                     ( adr contact# )
-      \ No code value, so no need to auto-repeat
-      2drop -1              ( -1 )
-   then                     ( 1 | -1 )
+: ?repeated  ( contact# key# -- )
+   swap dup get-repeat   ( key# contact# time )
+   get-msecs - 0<=  if   ( key# contact# )
+      short set-repeat   ( key# )
+      return-key#        ( )
+   else                  ( key# contact# )
+      2drop              ( )
+   then                  ( )
 ;
 
-: press-key  ( adr x y contact# -- 1 | -1 )
-   -rot find-key?  if             ( adr contact# key# )
+: press-key  ( x y contact# -- )
+   -rot find-key?  if             ( contact# key# )
       \ The event happened in a key area
-      over get-contact-key#?  if  ( adr contact# key# old-key# )
+      over get-contact-key#?  if  ( contact# key# old-key# )
          \ Continued press
-         2dup =  if               ( adr contact# key# old-key# )
+         2dup =  if               ( contact# key# old-key# )
             \ Same - check for auto-repeat
-            drop                  ( adr contact# key# )
-            ?repeated             ( -1 | 1 )
-         else                     ( adr contact# key# old-key# )
+            drop                  ( contact# key# )
+            ?repeated             ( )
+         else                     ( contact# key# old-key# )
             \ Different - release old key and activate new one
-            key-up                ( adr contact# key# )
-            dup key-down          ( adr contact# key# )
-            return-key-code       ( -1 | 1 )
-         then                     ( -1 | 1 )
-      else                        ( adr contact# key# )
+            key-up                ( contact# key# )
+            dup key-down          ( contact# key# )
+            return-key-code       ( )
+         then                     ( )
+      else                        ( contact# key# )
          \ New keypress
-         dup key-down             ( adr contact# key# )
-         return-key-code          ( 1 )
+         dup key-down             ( contact# key# )
+         return-key-code          ( )
       then         
-   else                           ( adr contact# )
+   else                           ( contact# )
       \ The event happened outside a key area
-      dup get-contact-key#?  if   ( adr contact# old-key# )
+      dup get-contact-key#?  if   ( contact# old-key# )
          \ Moved out of key area - release key
-         key-up                   ( adr contact# )
-         cancel-contact           ( adr )
-         drop -1                  ( -1 )
-      else                        ( adr contact# )
+         key-up                   ( contact# )
+         cancel-contact           ( )
+      else                        ( contact# )
          \ Press in blank area with nothing down
-         2drop -1                 ( -1 )
-      then                        ( -1 )
-   then                           ( 1 | -1 )
+         drop                     ( )
+      then                        ( )
+   then                           ( )
 ;
 
-: release-key  ( adr x y contact# -- -1 )
-   dup get-contact-key#?  if  ( adr x y contact# key# )
-      key-up                  ( adr x y contact# )
-   then                       ( adr x y contact# )
-   cancel-contact             ( adr x y )
-   3drop -1                   ( -1 )
+: release-key  ( x y contact# -- )
+   dup get-contact-key#?  if  ( x y contact# key# )
+      key-up                  ( x y contact# )
+   then                       ( x y contact# )
+   cancel-contact             ( x y )
+   2drop                      ( )
 ;
 
 : read  ( adr len -- actual | -1)
    0=  if  drop -1 exit  then     ( adr )
+
+   returning$  dup  if            ( adr  adr1 len1 )
+      over c@  -rot               ( adr char  adr1 len1 )
+      1 /string  to returning$    ( adr char  )
+      swap c!  1   exit           ( -- actual )
+   else                           ( adr  adr1 len1 )
+      2drop                       ( adr )  
+   then                           ( adr )  
+
    " pad?" $call-parent   0=  if  ( adr )
       drop  -1 exit               ( -- -1 )
    then                           ( adr x y z down? contact# )
    rot drop  swap  if             ( adr x y contact# )
-      press-key                   ( 1 | -1 )
+      press-key                   ( adr )
    else                           ( adr x y contact# )
-      release-key                 ( -1 )
-   then                           ( 1 | -1 )
+      release-key                 ( adr )
+   then                           ( adr )
+
+   returning$  dup  if            ( adr  adr1 len1 )
+      over c@  -rot               ( adr char  adr1 len1 )
+      1 /string  to returning$    ( adr char  )
+      swap c!  1   exit           ( -- actual )
+   else                           ( adr  adr1 len1 )
+      2drop                       ( adr )  
+   then                           ( adr )
+
+   drop -1
 ;
 
 0 [if]

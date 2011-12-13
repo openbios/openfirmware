@@ -298,6 +298,8 @@ alias /pix* /w*
 : restore-scroller-bg   ( -- )  0 background  (restore-scroller)  ;
 : restore-scroller-white  ( -- )  0 f  (restore-scroller)  ;
 headers
+defer save-scroller   ' noop to save-scroller
+
 defer restore-scroller
 ' restore-scroller-bg to restore-scroller
 
@@ -505,6 +507,7 @@ defer run-menu
    ?open-screen  set-menu-colors
 ;
 : setup-menu  ( -- )
+   save-scroller
    setup-graphics
 \  ?open-mouse
    cursor-off

@@ -2,6 +2,8 @@ purpose: Common code for build OFW Forth dictionaries for OLPC ARM platforms
 \ See license at end of file
 
 hex
+: xrn $report-name my-self . cr ;
+\ ' xrn is include-hook
 \ ' $report-name is include-hook
 \ ' noop is include-hook
 
@@ -287,7 +289,7 @@ end-package
 
 devalias screen /display
    
-devalias keyboard /keyboard
+\- olpc-cl3 devalias keyboard /keyboard
 
 \+ olpc-cl2 create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
 \+ olpc-cl2 ' 15x30pc to romfont
@@ -899,6 +901,51 @@ dev /client-services  patch noop visible enter  dend
    game-key-mask =  if  protect-fw try-fs-update  then
 ;
 
+[ifdef] olpc-cl3
+0 value screen-kbd-ih
+: open-screen-keyboard  ( -- )
+   " /touchscreen/keyboard" open-dev to screen-kbd-ih
+   screen-kbd-ih  if
+      0 background  0 0  d# 1024 d# 400 set-text-region
+      screen-kbd-ih add-input
+   then
+;
+: close-screen-keyboard  ( -- )
+   screen-kbd-ih  if
+      screen-kbd-ih remove-input
+      screen-kbd-ih close-dev
+      0 to screen-kbd-ih
+   then
+;
+\ ' open-screen-keyboard to scroller-on
+\ ' close-screen-keyboard to scroller-off
+' close-screen-keyboard to save-scroller
+' open-screen-keyboard to restore-scroller
+
+: (go-hook)  ( -- )
+   [ ' go-hook behavior compile, ]
+   close-screen-keyboard
+;
+' (go-hook) to go-hook
+
+0 value screen-hot-ih
+: open-hotspot  ( -- )
+   " /touchscreen/hotspot" open-dev to screen-hot-ih
+   screen-hot-ih  if
+      d# 412 d# 284  d# 200 d# 200 " "(00)"  " set-hotspot" screen-hot-ih $call-method
+      screen-hot-ih add-input
+   then
+;
+: close-hotspot  ( -- )
+   screen-hot-ih  if
+      screen-hot-ih remove-input
+      screen-hot-ih close-dev
+      0 to screen-hot-ih
+   then
+;
+: ?text-on  ( -- )  key?  if  text-on visible  then  ;
+[then]
+
 fload ${BP}/cpu/arm/mmp2/clocks.fth
 
 : startup  ( -- )
@@ -932,6 +979,7 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 	 update-ec-flash
       then
    then
+\+ olpc-cl3  open-hotspot
 
    install-alarm
    ?sound
@@ -939,6 +987,7 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
    ?games
 
    ['] false to interrupt-auto-boot?
+\+ olpc-cl3  ?text-on
 [ifdef] probe-usb
    factory-test?  if  d# 1000 ms  then  \ Extra USB probe delay in the factory
    probe-usb
@@ -949,6 +998,7 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 
    interpreter-init
 
+\+ olpc-cl3  ?text-on
    ?diags
    ?fs-update
 
@@ -956,11 +1006,16 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
    unblock-exceptions
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
 
+\+ olpc-cl3  ?text-on
    ?usb-keyboard
 
    auto-banner?  if  banner  then
 
+\+ olpc-cl3  ?text-on
    auto-boot
+\+ olpc-cl3  close-hotspot
+
+\+ olpc-cl3  open-screen-keyboard  banner
 
    frozen? text-on? 0=  and  ( no-banner? )
    unfreeze visible cursor-on ( no-banner? )
@@ -993,6 +1048,10 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 ;
 
 tag-file @ fclose  tag-file off
+my-self [if]
+   ." WARNING: my-self is not 0" cr
+   bye
+[then]
 
 .( --- Saving fw.dic ...)
 " fw.dic" $save-forth cr
