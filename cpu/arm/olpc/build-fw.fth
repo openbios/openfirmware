@@ -722,8 +722,9 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 
 fload ${BP}/dev/logdev.fth
 
-[ifndef] olpc-cl3
 fload ${BP}/cpu/x86/pc/olpc/disptest.fth
+
+[ifndef] olpc-cl3
 dev /ap-sp/keyboard
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 device-end
