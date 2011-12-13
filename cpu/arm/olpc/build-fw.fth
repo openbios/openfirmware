@@ -170,9 +170,16 @@ fload ${BP}/cpu/arm/olpc/boardrev.fth        \ Board revision decoding
 
 false constant tethered?                     \ We only support reprogramming our own FLASH
 
+[ifdef] olpc-cl3
+: hdd-led-off     ( -- )  ;
+: hdd-led-on      ( -- )  ;
+: hdd-led-toggle  ( -- )  ;
+[then]
+[ifdef] olpc-cl2
 : hdd-led-off     ( -- )  d# 10 gpio-clr  ;
 : hdd-led-on      ( -- )  d# 10 gpio-set  ;
 : hdd-led-toggle  ( -- )  d# 10 gpio-pin@  if  hdd-led-off  else  hdd-led-on  then  ;
+[then]
 
 fload ${BP}/cpu/arm/olpc/bbedi.fth
 fload ${BP}/cpu/arm/olpc/edi.fth

@@ -10,13 +10,13 @@ purpose: Driver/selftest for OLPC XO-1.75 LEDs
 : selftest  ( -- )
     ." Flashing LEDs" cr
 
-   d# 10 0 do  ols-led-on d# 200 ms ols-led-off d# 200 ms  loop
-   ols-led-ec-control
-   ols-assy-mode-on
+\   d# 10 0 do  ols-led-on d# 200 ms ols-led-off d# 200 ms  loop
+\   ols-led-ec-control
+\   ols-assy-mode-on
 
    " /wlan:quiet" test-dev  " /wlan:quiet" test-dev  \ Twice for longer flashing
 
-   ols-assy-mode-off
+\   ols-assy-mode-off
 
    confirm-selftest?
 ;
