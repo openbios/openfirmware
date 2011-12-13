@@ -86,6 +86,8 @@ fload ${BP}/dev/olpc/kb3700/eccmdcom.fth  \ Common commands
 : ols-led-on          ( -- )  h# 57 ec-cmd  ;
 : ols-led-off         ( -- )  h# 58 ec-cmd  ;
 : ols-led-ec-control  ( -- )  h# 5b ec-cmd  ;
+: ols-assy-mode-on    ( -- )  h# 59 ec-cmd  ;
+: ols-assy-mode-off   ( -- )  h# 5a ec-cmd  ;
 
 : ec-min-pwr  ( -- )  h# 5d ec-cmd-w@ w->n  ;
 : ec-max-pwr  ( -- )  h# 5e ec-cmd-w@ w->n  ;
