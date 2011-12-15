@@ -5,6 +5,9 @@ purpose: Driver and diagnostic for Raydium RM-3150 Multitouch I2C Touchscreen
 my-space encode-int  my-address encode-int encode+  " reg" property
 " touchscreen" name
 
+0 value screen-w
+0 value screen-h
+
 : ts-b!  ( b reg# -- )  " smbus-b!" $call-parent  ;
 : ts-b@  ( reg# -- b )  " smbus-b@" $call-parent  ;
 
@@ -60,8 +63,6 @@ h# 0000 constant black
 variable pixcolor
 
 h# 4 value y-offset
-0 value screen-w
-0 value screen-h
 0 value /line
 2 value /pixel
 
