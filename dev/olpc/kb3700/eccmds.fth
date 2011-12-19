@@ -78,7 +78,7 @@ fload ${BP}/dev/olpc/kb3700/eccmdcom.fth  \ Common commands
 ;
 
 : ec-hash$  ( -- adr len )
-   0 d# 16 h# 55 do-ec-cmd-buf   ( adr )
+   0 d# 16 h# 64 do-ec-cmd-buf   ( adr )
    d# 16 cscount-max
 ;
 
