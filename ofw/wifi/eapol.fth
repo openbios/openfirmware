@@ -735,7 +735,11 @@ d# 32 buffer: ek			\ Temporary rc4 key
                    disable-rsn
                    disable-wep
                    endof
-      kt-wep   of  am-shared set-auth-mode
+      kt-wep   of  am-open set-auth-mode
+                   \ Open authentication is best for WEP because it prevents attacks
+                   \ on the authentication challenge that can lead to key recovery.
+	           \ If open authentication fails, the driver can retry the association
+	           \ attempt with shared key mode.
                    wifi-wep4$ wifi-wep3$ wifi-wep2$ wifi-wep1$ wifi-wep-idx set-wep
 		   disable-rsn
                    endof

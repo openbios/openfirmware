@@ -1404,6 +1404,12 @@ instance variable mesh-param
    #rates +xw				\ len
    common-rates #rates +x$		\ common supported data rates
 
+   ktype kt-wep =  if
+      h# 11f    +xw
+      2         +xw
+      auth-mode +xw
+   then
+
    \ RSN (WPA2)
    ktype kt-wpa2 =  if
       /x 				\ Save beginning offset
@@ -1443,7 +1449,15 @@ instance variable mesh-param
    finish-cmd outbuf-wait  if  false exit  then
 
    respbuf >fw-data 2 + le-w@ ?dup  if \ This is the IEEE Status Code
-      ." Failed to associate: " u. cr
+      dup d# 13 =  ktype kt-wep =  and  if  ( status )
+         \ Retry, toggling the WEP authentication between shared (1) and open (0)
+         1 auth-mode -  set-auth-mode                           ( status )
+         ?set-wep
+	 set-mac-control
+         drop                                                   ( )
+      else                                                      ( status )
+         ." Failed to associate: " u. cr                        ( )
+      then                                                      ( )
       false
    else
       respbuf >fw-data 4 + le-w@ to assoc-id
@@ -1471,7 +1485,7 @@ instance defer mesh-default-modes
    then                             ( ch ssid$ target-mac$ )
    ?set-wep				\ Set WEP keys again, if ktype is WEP
    set-mac-control
-   2dup authenticate                ( ch ssid$ target-mac$ )
+\  2dup authenticate                ( ch ssid$ target-mac$ )
    d# 10 0 do                       ( ch ssid$ target-mac$ )
       4 pick  4 pick  4 pick  4 pick  4 pick  ( ch ssid$ target-mac$  ch ssid$ target-mac$ )
       bss-type bss-type-managed =  if  (associate)  else  (join)  then  ( ch ssid$ target-mac$ ok? )
