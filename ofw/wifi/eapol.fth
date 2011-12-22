@@ -131,7 +131,12 @@ d# 32 constant /nonce
    randomize
    rn /n init-cnt$ mac-time$ snonce$ sha1-prf  
 ;
-: compute-snonce  ( -- )  snonce 8 + dup @ over 4 + @ 1 0 d+ 2 pick 4 + ! swap !  ;
+: compute-snonce  ( -- )
+   snonce 8 +  ( adr )
+   dup d@      ( adr d )
+   1.  d+      ( adr d' )
+   rot d!      ( )
+;
 
 \ =======================================================================
 \ Pairwise temporal keys (PTK)
@@ -199,7 +204,8 @@ d# 16 dup constant /mic   buffer: mic
 \ For TKIP,  mic = hmac-md5  (adr len)
 \ For AES,   mic = hmac-sha1 (adr len)
 : compute-mic  ( adr len ct -- )
-   >r 1 ptk >kck d# 16
+   >r                                   ( adr len r: ct )
+   1 ptk >kck d# 16                     ( adr len 1 'ptk-kck 16  r: ct )
    r> ct-tkip =  if  hmac-md5  else  hmac-sha1  then	( madr mlen )
    /mic min mic swap  move
 ;
@@ -359,7 +365,7 @@ d# 32 buffer: ek			\ Temporary rc4 key
    eapol-key   eapolbuf >ptype c!		\ EAPOL-key
    kt>dtype    eapolbuf >dtype c!		\ Descriptor type
    ctype-p ct>klen eapolbuf >klen be-w!		\ Key length
-   last-rcnt   eapolbuf >rcnt /rcnt move	\ Replay counter
+   last-rcnt@  eapolbuf >rcnt be-x!		\ Replay counter
 ;
 
 : resync-gtk  ( -- )
@@ -406,13 +412,17 @@ d# 32 buffer: ek			\ Temporary rc4 key
    eapolbuf /eapol-key send-eapol-msg 
 ;
 : 1/4-valid?  ( -- ok? )
-   data >dtype    c@ kt>dtype        <>  if  false exit  then  \ Descriptor type mismatch
-   data >klen  be-w@ ctype-p ct>klen <>  if  false exit  then  \ Bad key len
+   data >dtype    c@ kt>dtype        <>  if  " 1d" vtype false exit  then  \ Descriptor type mismatch
+   data >klen  be-w@ ctype-p ct>klen <>  if  " 1k" vtype false exit  then  \ Bad key len
    true
 ;
 : process-1/4  ( -- )
    " Process EAPOL-key message 1 of 4" vtype
-   eapol-state s1/4 <>  if  " Unexpected pairwise key message 1 of 4" vtype  then
+   data /eapol-key vdump
+   eapol-state s1/4 <>  if
+      " Unexpected pairwise key message 1 of 4" vtype
+\      ." Possible bad WPA password" cr  abort
+   then
    1/4-valid?  if
       data >ver c@ to eapol-ver
       data >knonce anonce$ move
@@ -420,10 +430,10 @@ d# 32 buffer: ek			\ Temporary rc4 key
    then
 ;
 : 3/4-valid?  ( -- ok? )
-   data >dtype    c@ kt>dtype        <>  if  false exit  then   \ Descriptor type mismatch
-   data >klen  be-w@ ctype-p ct>klen <>  if  false exit  then   \ Bad key len
-   data >knonce anonce /nonce comp       if  false exit  then   \ Nonce differ
-   data ctype-p mic-ok?              0=  if  false exit  then   \ Bad mic
+   data >dtype    c@ kt>dtype        <>  if  " 3d" vtype false exit  then   \ Descriptor type mismatch
+   data >klen  be-w@ ctype-p ct>klen <>  if  " 3k" vtype false exit  then   \ Bad key len
+   data >knonce anonce /nonce comp       if  " 3n" vtype false exit  then   \ Nonce differ
+   data ctype-p mic-ok?              0=  if  " 3m" vtype false exit  then   \ Bad mic
    data >kinfo be-w@ ki-encr-key and  if  data decrypt-parse-ie  else  true  then
 ;
 : process-3/4  ( -- )
@@ -450,9 +460,9 @@ d# 32 buffer: ek			\ Temporary rc4 key
    then
 ;
 : 1/2-valid?  ( -- ok? )
-   data >dtype    c@ kt>dtype        <>  if  false exit  then  \ Descriptor type mismatch
-   data >klen  be-w@ ctype-g ct>klen <>  if  false exit  then  \ Bad key len
-   data ctype-p mic-ok?              0=  if  false exit  then  \ Bad MIC
+   data >dtype    c@ kt>dtype        <>  if  " 2d" vtype false exit  then  \ Descriptor type mismatch
+   data >klen  be-w@ ctype-g ct>klen <>  if  " 2k" vtype false exit  then  \ Bad key len
+   data ctype-p mic-ok?              0=  if  " 2m" vtype false exit  then  \ Bad MIC
    data decrypt-gtk
 ;
 : process-1/2  ( -- )
@@ -490,8 +500,8 @@ d# 32 buffer: ek			\ Temporary rc4 key
    data >etype be-w@ eapol-type =         \ EAPOL frame
    data >ptype c@ eapol-key =  and  if    \ EAPOL-key
       data >ver c@ to eapol-ver
-      data >rcnt last-rcnt /rcnt comp 0>  if  \ A new eapol-key record
-         data >rcnt last-rcnt!            \ Update last replay counter
+      data >rcnt be-x@  last-rcnt@ d>  if  \ A new eapol-key record
+         data >rcnt be-x@  last-rcnt!      \ Update last replay counter
          process-eapol-key
       else
          " Same replay count; packet discarded" vtype
@@ -591,7 +601,7 @@ d# 32 buffer: ek			\ Temporary rc4 key
 : .bss-type  ( n -- )  1 =  if  ." Infrastructure"  else  ." Adhoc"  then  ;
 : .cap  ( cap -- )
    ."     Type: " dup 3 and  .bss-type cr
-   ."     WEP: " dup h# 10 and  .on/off
+   ."     Security: " dup h# 10 and  .on/off
    ."     Short preamble: " dup h# 20 and  .on/off
    ."     Packet binary convolution coding: " dup h# 40 and  .on/off
    ."     Channel agility: " dup h# 80 and  .on/off
@@ -865,8 +875,11 @@ d# 32 buffer: ek			\ Temporary rc4 key
    channel ssid$ target-mac$ associate 0=  if  false exit  then
    cr
    ktype=wpa?  if
-      do-key-handshakes
-      done?
+      ['] do-key-handshakes catch  if
+         false
+      else
+         done?
+      then
    else
       true
    then

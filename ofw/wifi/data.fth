@@ -153,7 +153,7 @@ d# 15 3 * dup constant /country-ie   buffer: country-ie-buf
    3 max country-ie-buf swap move                     ( )
 ;
 
-false instance value debug?
+false value debug?
 false instance value scan?
 
 0 instance value wifi			\ Current wifi-node
@@ -177,12 +177,12 @@ false instance value scan?
 : my-mac!      ( adr -- )      wifi >my-mac  /mac-adr move  ;
 : ssid$       ( -- $ )  wifi >ssid cscount  ;
 : ssid!       ( $ -- )  /ssid 1- min wifi >ssid dup /ssid erase swap move  ;
-: last-rcnt   ( -- adr )  wifi >last-rcnt  ;
-: last-rcnt!  ( adr -- )  wifi >last-rcnt /rcnt move  ;
-: last-rcnt++ ( -- )
-   wifi >last-rcnt 4 + dup be-l@ 1+ dup rot be-l!
-   0=  if  wifi >last-rcnt dup be-l@ 1+ swap be-l!  then
-;
+32\ : be-x!  ( d adr -- )  tuck be-l!  la1+ be-l!  ;
+32\ : be-x@  ( adr -- d )  dup la1+ be-l@  swap be-l@  ;
+: last-rcnt@  ( -- d )  wifi >last-rcnt be-x@  ;
+: last-rcnt!  ( d -- )  wifi >last-rcnt be-x!  ;
+
+: last-rcnt++ ( -- )  last-rcnt@ 1. d+ last-rcnt!  ;
 
 : init-wifi-node  ( mac$ -- )
    drop my-mac!
@@ -206,7 +206,7 @@ false instance value scan?
       swap insert-after
       init-wifi-node
    then
-   last-rcnt /rcnt ff fill
+   -1. last-rcnt!
 ;
 
 \ LICENSE_BEGIN
