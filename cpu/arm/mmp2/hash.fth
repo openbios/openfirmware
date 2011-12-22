@@ -18,7 +18,7 @@ h# 8101 constant dval
 
 h# 40 value /hash-block
 d# 20 value /hash-digest
-/hash-block 2* buffer: (hash-buf)
+0 value (hash-buf)
 : hash-buf  ( -- adr )  (hash-buf) /hash-block round-up  ;  \ Aligned
 0 value #hash-buf
 0 value #hashed
@@ -39,6 +39,10 @@ d# 20 value /hash-digest
    h# 291818 io!   \ Low word of total size
 ;
 : hash-init  ( -- )
+   (hash-buf) 0=  if
+      /hash-block 2* " /" " dma-alloc" execute-device-method drop
+      to (hash-buf)
+   then
    1 h# 290c00 io!  \ Select hash (0) for Accelerator A, crossing to direct DMA to it
    dma-stop
    8 hash-control!  \ Reset
