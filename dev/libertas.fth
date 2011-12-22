@@ -54,6 +54,8 @@ ds-not-ready value driver-state
 : set-driver-state    ( bit-mask -- )  driver-state or to driver-state  ;
 : reset-driver-state  ( bit-mask -- )  invert driver-state and to driver-state  ;
 
+: disconnected?  ( -- flag )  driver-state ds-disconnected and  0<>  ;
+
 \ bss-type values
 1 constant bss-type-managed
 2 constant bss-type-adhoc
