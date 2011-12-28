@@ -627,7 +627,7 @@ code halt  ( -- )  wfi   c;
 \+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/switches.fth \ Lid and ebook switches
 fload ${BP}/cpu/arm/mmp2/rtc.fth       \ Internal RTC, used for wakeups
 \+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/leds.fth     \ LEDs
-\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/3.0/leds.fth     \ LEDs
+\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/leds.fth     \ LEDs
 fload ${BP}/cpu/x86/pc/olpc/via/factory.fth  \ Manufacturing tools
 
 fload ${BP}/cpu/arm/olpc/accelerometer.fth
