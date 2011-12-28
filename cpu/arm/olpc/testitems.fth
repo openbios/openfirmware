@@ -39,7 +39,7 @@ d# 4 to #mfgrows
 : camera-item   ( -- )  " /camera"    gfx-test-dev  ;
 : wlan-item     ( -- )  " /wlan"      mfg-test-dev  ;
 : timer-item    ( -- )  " /timer"     mfg-test-dev  ;
-\- olpc-cl3 : touchpad-item ( -- )  " /touchpad"  mfg-test-dev  ;
+\- olpc-cl3 : touchpad-item ( -- )  " mouse"  mfg-test-dev  ;
 \+ olpc-cl3 : touchscreen-item ( -- )  " /touchscreen"  gfx-test-dev  ;
 \- olpc-cl3 : keyboard-item ( -- )  " keyboard"   gfx-test-dev  ;
 : switch-item   ( -- )  " /accelerometer" mfg-test-dev  " /switches"  mfg-test-dev  ;
