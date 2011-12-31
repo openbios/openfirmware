@@ -124,6 +124,11 @@ alias p2 probe-usb
    then
 ;
 
+: usb-quiet  ( -- )
+   detach-usb-keyboard
+   " /usb" " reset-usb" execute-device-method drop
+;
+
 : suspend-usb  ( -- )
    detach-usb-keyboard
    " /usb" " sleep" execute-device-method drop

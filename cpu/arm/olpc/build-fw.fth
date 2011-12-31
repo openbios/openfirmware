@@ -361,6 +361,8 @@ fload ${BP}/dev/olpc/kb3700/spicmd.fth           \ EC SPI Command Protocol
 
 fload ${BP}/cpu/arm/marvell/utmiphy.fth
 
+fload ${BP}/cpu/arm/linux.fth
+
 \+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/usb.fth
 \+ olpc-cl3 fload ${BP}/cpu/arm/mmp2/ulpiphy.fth
 \+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/usb.fth
@@ -424,18 +426,10 @@ warning off
 warning on
 [then]
 
-fload ${BP}/cpu/arm/linux.fth
-
 \ The bottom of extra-mem is the top of DMA memory.
 \ We give everything up to that address to Linux.
 : olpc-memory-limit  ( -- adr )  extra-mem-va >physical  ;
 ' olpc-memory-limit to memory-limit
-
-: usb-quiet  ( -- )
-   [ ' linux-hook behavior compile, ]    \ Chain to old behavior
-   unload-crypto
-   " /usb" " reset-usb" execute-device-method drop
-;
 
 \+ olpc-cl2 d#  9999 to arm-linux-machine-type  \ XO-1.75
 \+ olpc-cl3 d# 10000 to arm-linux-machine-type  \ XO-3
@@ -599,9 +593,10 @@ fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
    out-mux-ih close-dev
 ;
 : quiesce  ( -- )
+   usb-quiet
    teardown-mux-io
    timers-off
-   usb-quiet
+   unload-crypto
    close-ec
    \ Change the sleep state of EC_SPI_ACK from 1 (OFW value) to 0 (Linux value)
    d# 125 af@  h# 100 invert and  d# 125 af!
