@@ -830,6 +830,7 @@ code s>d  ( n -- d )
    psh       tos,sp
    mov       tos,tos,asr #0
 c;
+: u>d  ( n -- d )  0  ;
 code dnegate  ( d -- -d )
    pop       r0,sp
    rsbs      r0,r0,#0
@@ -891,6 +892,32 @@ c;
 
 : dmax  ( xd1 xd2 -- )  2over 2over d<  if  2swap  then  2drop  ;
 : dmin  ( xd1 xd2 -- )  2over 2over d<  0=  if  2swap  then  2drop  ;
+
+: m+    ( d1|ud1 n -- )  s>d  d+  ;
+: 2rot  ( d1 d2 d3 -- d2 d3 d1 )  2>r 2swap 2r> 2swap  ;
+: 2nip  ( $1 $2 -- $2 )  2swap 2drop  ;
+
+: drot  ( d1 d2 d3 -- d2 d3 d1 )  2>r 2swap 2r> 2swap  ;
+: -drot ( d1 d2 d3 -- d3 d1 d2 )  drot drot  ;
+: dinvert  ( d1 -- d2 )  swap invert  swap invert  ;
+
+: dlshift  ( d1 n -- d2 )
+   tuck lshift >r                           ( low n  r: high2 )
+   2dup bits/cell  swap - rshift  r> or >r  ( low n  r: high2' )
+   lshift r>                                ( d2 )
+;
+: drshift  ( d1 n -- d2 )
+   2dup rshift >r                           ( low high n  r: high2 )
+   tuck  bits/cell swap - lshift            ( low n low2  r: high2 )
+   -rot  rshift  or                         ( low2  r: high2 )
+   r>                                       ( d2 )
+;
+: d>>a  ( d1 n -- d2 )
+   2dup rshift >r                           ( low high n  r: high2 )
+   tuck  bits/cell swap - lshift            ( low n low2  r: high2 )
+   -rot  >>a  or                            ( low2  r: high2 )
+   r>                                       ( d2 )
+;
 
 code fill       ( adr cnt char -- )
    orr       r2,tos,tos,lsl #8 

@@ -96,7 +96,6 @@ fload ${BP}/cpu/arm/sqroot.fth
 fload ${BP}/cpu/arm/dodoesad.fth
 fload ${BP}/cpu/arm/version.fth
 
-fload ${BP}/forth/kernel/double.fth  \ ???
 fload ${BP}/forth/kernel/scan.fth
 
 fload ${BP}/cpu/arm/bitops.fth
