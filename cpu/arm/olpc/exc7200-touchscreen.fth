@@ -7,6 +7,8 @@ my-space encode-int  my-address encode-int encode+  " reg" property
 
 0 value screen-w
 0 value screen-h
+0 instance value invert-x?
+0 instance value invert-y?
 
 : dimensions  ( -- w h )  screen-w  screen-h  ;
 
@@ -19,11 +21,11 @@ h# 7fff constant touchscreen-max-y
 : invert-y  ( y -- y' )  touchscreen-max-y swap -  ;
 
 : scale-x  ( x -- x' )
-   invert-x
+   invert-x?  if  invert-x  then
    screen-w touchscreen-max-x */
 ;
 : scale-y  ( y -- y' )
-   invert-y
+   invert-y?  if  invert-y  then
    screen-h touchscreen-max-y */
 ;
 
@@ -252,6 +254,21 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    \ Read once to prime the interrupt
    d# 10 " get" $call-parent  4drop 4drop 2drop
    " dimensions" $call-screen  to screen-h  to screen-w
+
+   \ The "TI" tag controls the inverson of X and Y axes.
+   \ If the tag is missing, axes are not inverted.  If present
+   \ and the value contains either of the letters x or y, the
+   \ corresponding axis is inverted.  This is primarily for
+   \ development, using prototype touchscreens.
+   " TI" find-tag  if     ( adr len )
+      begin  dup  while   ( adr len )
+         over c@  upc  [char] x =  if  true to invert-x?  then
+         over c@  upc  [char] y =  if  true to invert-y?  then
+         1 /string        ( adr' len' )
+      repeat              ( adr len )
+      2drop               ( )
+   then                   ( )
+
    flush
 ;
 
