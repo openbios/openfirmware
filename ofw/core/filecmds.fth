@@ -295,8 +295,9 @@ public
 
 : $delete1  ( path$ -- )
    open-directory ?dup 0= abort" Can't open directory"      ( name$ dir-ih )
-   >r  " $delete!" r@ $call-method  abort" Can't delete file"  ( r: dir-ih ) 
-   r> close-dev   
+   >r  " $delete!" r@ $call-method  ( error?  r: dir-ih ) 
+   r> close-dev                     ( error? )
+   abort" Can't delete file"  
 ;
 ' $delete1 to _ofdelete
 
