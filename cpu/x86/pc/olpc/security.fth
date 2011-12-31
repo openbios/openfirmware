@@ -1075,20 +1075,20 @@ constant /rtc-signature
 0 0 2value nonce$
 0 0 2value rtcsig$
 : rtc-format-error  ( -- done? )
-   ." RTC Reset format error" ?lease-error-cr  true
+   " RTC Reset format error" ?lease-error-cr  true
 ;
 : check-rtc-key  ( data$ -- done? )  \ rtc01: SN currentrtc nonce newrtc sig0N: ...
    \ Isolate data from line
    newline left-parse-string 2nip              ( rem$ )
 
    bl left-parse-string  " rtc01:" $=  0=  if  ( rem$ )
-      ." Unknown format" ?lease-error-cr       ( rem$ )
+      " Unknown format" ?lease-error-cr        ( rem$ )
       2drop true exit                          ( -- true )
    then                                        ( rem$ )
 
    bl left-parse-string                        ( rem$ serial$ )
    my-sn$ $=  0=  if                           ( rem$ )
-\     ." Wrong serial number" ?lease-error-cr  ( rem$ )
+\     " Wrong serial number" ?lease-error-cr   ( rem$ )
       2drop false exit                         ( -- false )
    then                                        ( rem$ )
 
@@ -1106,7 +1106,7 @@ constant /rtc-signature
    rtcsig$  " sha256" signature-good?   if            ( )
       newrtc$ nonce$ currentrtc$  fix-rtc-timestamps  ( )
    else
-      ." Bad signature " ?lease-error-cr              ( )
+      " Bad signature " ?lease-error-cr               ( )
    then                                               ( )
    true                                               ( done? )
 ;
@@ -1116,9 +1116,9 @@ constant /rtc-signature
    show-dot
    null$ cn-buf place
    " rtcreset.sig" open-security?  if  exit  then   >r  ( r: ih )
-      "   RTCRESET found - " ?lease-debug
-      load-started
-      leasekey$ to pubkey$
+   "   RTCRESET found - " ?lease-debug
+   load-started
+   leasekey$ to pubkey$
    begin
       sec-line-buf /sec-line-max r@ read-line  if  ( actual -eof? )
          2drop  r> close-file drop  exit
@@ -1130,7 +1130,7 @@ constant /rtc-signature
    repeat                                          ( actual )
    drop                                            ( )
    "   No matching records" ?lease-error-cr        ( )
-   r> close-file drop  false                       ( false )
+   r> close-file drop                              ( )
 ;
 
 [ifdef] reflash-ec
