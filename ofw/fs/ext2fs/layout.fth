@@ -77,7 +77,7 @@
    dup if				( index block# )
       nip
    else
-      drop add-block			( index new-block# )
+      drop u.add-block			( index new-block# )
       dup rot r@ block swap la+ int! update	( new-block# )
    then					( block# )
    r> drop
@@ -89,7 +89,7 @@
    dup if				( index-low index-high block# )
       nip
    else
-      drop add-block			( index-low index-high new-block# )
+      drop u.add-block			( index-low index-high new-block# )
       dup rot r@ block swap la+ int! update	( index-low new-block# )
    then					( index-low block# )
    get-ind1				( adr )
@@ -102,7 +102,7 @@
    dup if				( index-low index-high block# )
       nip
    else
-      drop add-block			( index-low index-high new-block# )
+      drop u.add-block			( index-low index-high new-block# )
       dup rot r@ block swap la+ int! update	( index-low new-block# )
    then					( index-low block# )
    get-ind2				( adr )
@@ -114,13 +114,13 @@
    dup #direct-blocks <  if			( lblk# )
       dup get-direct ?dup  if  nip exit  then	( lblk# )
       
-      add-block dup rot >direct int! update  exit
+      u.add-block dup rot >direct int! update  exit
    then						( lblk# )
    #direct-blocks -				( lblk#' )
 
    dup #ind-blocks1 <  if			( lblk# )
       #direct-blocks    get-direct ?dup 0=  if	( lblk# )
-	 add-block  dup #direct-blocks put-direct
+	 u.add-block  dup #direct-blocks put-direct
       then					( lblk# block )
       get-ind1  exit
    then
@@ -128,7 +128,7 @@
 
    dup #ind-blocks2  <  if
       #direct-blocks 1+ get-direct ?dup 0=  if
-	 add-block  dup #direct-blocks 1+ put-direct
+	 u.add-block  dup #direct-blocks 1+ put-direct
       then					( lblk# block )
       get-ind2 exit
    then
@@ -136,7 +136,7 @@
 
    dup #ind-blocks3  <  if
       #direct-blocks 2+ get-direct ?dup 0=  if
-	 add-block  dup #direct-blocks 2+ put-direct
+	 u.add-block  dup #direct-blocks 2+ put-direct
       then					( lblk# block )
       get-ind3 exit
    then
@@ -147,10 +147,10 @@
 \ deletes
 
 \ this code is a bit tricky, in that after deleting a block,
-\ you must update the block which pointed to it.
+\ you must update the block that pointed to it.
 
 : del-blk0   ( a -- deleted? )
-   int@ dup 0= if  exit  then   free-block  true
+   int@ dup 0= if  exit  then   n.free-block  true
 ;
 : del-blk1   ( a -- deleted? )
    int@ dup 0= if  exit  then			( blk# )
@@ -158,7 +158,7 @@
    bsize 0 do					( blk# )
       dup block i + del-blk0 if  0 over block i + int! update  then
    4 +loop					( blk# )
-   free-block  true
+   n.free-block  true
 ;
 : del-blk2   ( a -- deleted? )
    int@ dup 0= if  exit  then			( blk# )
@@ -166,7 +166,7 @@
    bsize 0 do					( blk# )
       dup block i + del-blk1 if  0 over block i + int! update  then
    4 +loop					( blk# )
-   free-block  true
+   n.free-block  true
 ;
 : del-blk3   ( a -- deleted? )
    int@ dup 0= if  exit  then			( blk# )
@@ -174,7 +174,7 @@
    bsize 0 do					( blk# )
       dup block i + del-blk2 if  0 over block i + int! update  then
    4 +loop					( blk# )
-   free-block  true
+   n.free-block  true
 ;
 : delete-directs   ( -- )
    #direct-blocks 0 do
@@ -189,7 +189,7 @@
 ;
 
 : append-block   ( -- )
-   add-block						( block )
+   u.add-block						( block )
    dfile-size bsize um/mod nip  dup bsize um* dfile-size!	( block #blocks )
    1+ >pblk int! update
 ;
@@ -228,7 +228,7 @@
    then
 
    /gds do-alloc is gds
-   gds /gds gds-block# read-ublocks dup  if
+   gds /gds d.gds-block# d.read-ublocks dup  if
       gds         /gds          do-free
       super-block /super-block  do-free exit
    then

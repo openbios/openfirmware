@@ -36,17 +36,17 @@ defer int!    ( l adr -- )  ' be-l! to int!
 \    /block if   1024  6 +sbl lshift to /block  then  /block
 \ ;
 
-: ceiling   ( nom div -- n )   /mod swap if  1+  then  ;
+: ceiling   ( nom div -- n )     ;
 
 \ : total-inodes		( -- n )   0 +sbl  ;
-: total-blocks		( -- n )   1 +sbl  ;
-: total-free-blocks	( -- n )   3 +sbl  ;
+: d.total-blocks	( -- d )   1 +sbl  84 +sbl  ;
+: d.total-free-blocks	( -- d )   3 +sbl  86 +sbl  ;
 \ : total-free-inodes	( -- n )   4 +sbl  ;
 \ : total-free-blocks+!	( -- n )   3 +sbl  +  super-block  3 la+ int!  ;
 \ : total-free-inodes+!	( -- n )   4 +sbl  +  super-block  4 la+ int!  ;
-: total-free-blocks!	( -- n )   super-block  3 la+ int!  ;
+: d.total-free-blocks!	( d -- )   super-block  tuck 86 la+ int!  3 la+ int!  ;
 : total-free-inodes!	( -- n )   super-block  4 la+ int!  ;
-: #groups   ( -- n )   total-blocks bpg ceiling  ;
+: #groups   ( -- n )   d.total-blocks bpg um/mod swap  if  1+  then  ;
 
 : recover?  ( -- flag )  24 +sbl 4 and 0<>  ;
 
@@ -64,21 +64,21 @@ defer int!    ( l adr -- )  ' be-l! to int!
    \ Used to set partition-offset but now unnecessary as parent handles it
 ;
 
-: write-ublocks  ( adr len dev-block# -- error? )
-   ublock um* " seek" $call-parent ?dup  if  exit  then		( adr len )
+: d.write-ublocks  ( adr len d.dev-block# -- error? )
+   ublock du* " seek" $call-parent ?dup  if  exit  then		( adr len )
    tuck " write" $call-parent <>
 ;
 : put-super-block  ( -- error? )
-   super-block /super-block super-block# write-ublocks
+   super-block /super-block super-block# u>d d.write-ublocks
 ;
 
-: read-ublocks  ( adr len dev-block# -- error? )
-   ublock um* " seek" $call-parent ?dup  if  exit  then		( adr len )
+: d.read-ublocks  ( adr len dev-block# -- error? )
+   ublock du* " seek" $call-parent ?dup  if  exit  then		( adr len )
    tuck " read" $call-parent <>
 ;
 
 : get-super-block  ( -- error? )
-   super-block /super-block super-block# read-ublocks ?dup  if  exit  then
+   super-block /super-block super-block# u>d d.read-ublocks ?dup  if  exit  then
 
    ['] le-l@ to int@  ['] le-w@ to short@
    ['] le-l! to int!  ['] le-w! to short!
@@ -89,16 +89,20 @@ defer int!    ( l adr -- )  ' be-l! to int!
    magic fs-magic <>
 ;
 
-: gds-fs-block#  ( -- fs-block# )
-   datablock0 1+	( logical-block# )
+: d.gds-fs-block#  ( -- d.fs-block# )
+   datablock0 1+ u>d	( d.logical-block# )
 ;
-: gds-block#  ( -- dev-block# )
-   gds-fs-block#  bsize ublock / *		( dev-block# )
+: d.gds-block#  ( -- d.dev-block# )
+   d.gds-fs-block#  bsize ublock / du*		( dev-block# )
 ;
-: /gds  ( -- size )  #groups h# 20 *  ublock round-up  ;
-: group-desc  ( group# -- adr )  h# 20 *  gds +  ;
-: gpimin    ( group -- block# )   group-desc  2 la+ int@  ;
-: blkstofrags  ( #blocks -- #frags )  ;		\ XXX is this needed?
+: desc64?  ( -- flag )  h# 7f +sbw  0<>  ;
+: /gd  ( -- n )  h# 7f +sbw  ?dup 0=  if  h# 20  then  ;
+: /gds  ( -- size )  #groups /gd *  ublock round-up  ;
+: group-desc  ( group# -- adr )  /gd *  gds +  ;
+: d.gpimin    ( group -- d.block# )
+   group-desc  dup  2 la+ int@  ( adr block# )
+   desc64?  if  swap 9 la+ int@ else  nip 0  then  ( d.block# )
+;
 
 
 \ LICENSE_BEGIN

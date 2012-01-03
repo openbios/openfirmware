@@ -5,12 +5,15 @@ headers
 : 2literal   ( d -- )  swap  [compile] literal  [compile] literal  ; immediate
 
 : d0=   ( d -- flag )  or  0=  ;
+: d0<>  ( d -- flag )  or  0<>  ;
 : d0<   ( d -- flag )  nip 0<  ;
 : d=    ( d1 d2 -- flag )  d- d0=  ;
 : d<>   ( d1 d2 -- flag )  d=  0=  ;
 : du<   ( ud1 ud2 -- flag )  rot  swap  2dup <>  if  2swap  then  2drop u<  ;
 : d<    ( d1 d2 -- flag )  2 pick over = if drop nip u< else nip < nip then  ;
+: d>=   ( d1 d2 -- flag )  d< 0=  ;
 : d>    ( d1 d2 -- flag )  2swap d<  ;
+: d<=   ( d1 d2 -- flag )  2swap d< 0=  ;
 : dnegate  ( d -- -d )  0 0  2swap  d-  ;
 : dabs     ( d -- +d )  2dup  d0<  if  dnegate  then  ;
 

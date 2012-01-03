@@ -7,7 +7,7 @@ decimal
 
 external
 
-: free-bytes  ( -- d )  total-free-blocks bsize um*  ;
+: free-bytes  ( -- d )  d.total-free-blocks bsize du*  ;
 
 : $create   ( name$ -- error? )
    o# 100666 ($create)
@@ -18,10 +18,10 @@ external
 
    dirent-inode@ set-inode
 
-   add-block					( block# )
-   dfile-size h# 400. d+ dfile-size!		( block# )
-   dup direct0 int! update			( block# )
-   block bsize erase update  \  flush		( )
+   u.add-block					( u.block# )
+   dfile-size h# 400. d+ dfile-size!		( u.block# )
+   dup direct0 int! update			( u.block# )
+   u>d d.block bsize erase update  \  flush	( )
    inode# first-dirent  if  true exit  then	( )
    " ."  bsize	inode#	fill-dirent		( )
    " .." wd-inum  new-dirent			( error? )

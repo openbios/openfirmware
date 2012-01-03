@@ -132,7 +132,7 @@ constant /tag64
 ;
 
 : write-jblock  ( d.block# adr -- )
-   -rot drop write-fs-block     ( error? )
+   -rot d.write-fs-block     ( error? )
    if  ." Journal recovery write error" cr  abort  then
 ;
 

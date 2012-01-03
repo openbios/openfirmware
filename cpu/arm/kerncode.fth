@@ -813,11 +813,23 @@ code d<  ( d1 d2 -- f )
    sbcs      tos,r1,tos
    mov       tos,tos,asr #0
 c;
+code d>=  ( d1 d2 -- f )
+   ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
+   subs      r2,r2,r0
+   sbcs      tos,r1,tos
+   mvn       tos,tos,asr #0
+c;
 code d>  ( d1 d2 -- f )
    ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
    subs      r0,r0,r2
    sbcs      tos,tos,r1
    mov       tos,tos,asr #0
+c;
+code d<=  ( d1 d2 -- f )
+   ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
+   subs      r0,r0,r2
+   sbcs      tos,tos,r1
+   mvn       tos,tos,asr #0
 c;
 code du<  ( d1 d2 -- f )
    ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
@@ -862,6 +874,12 @@ code d0=  ( d -- f )
    orrs      r0,r0,tos
    mvneq     tos,#0
    movne     tos,#0
+c;
+code d0<>  ( d -- f )
+   pop       r0,sp
+   orrs      r0,r0,tos
+   mvnne     tos,#0
+   moveq     tos,#0
 c;
 code d0<  ( d -- f )
    inc       sp,1cell

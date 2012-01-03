@@ -13,7 +13,7 @@ false value bbug?
 
 struct	\ buffer
    /n field >dirty
-   /n field >blk#
+   2 /n * field >d.blk#
    \ /n field >device
    0 field >data
 constant /buf-hdr
@@ -23,21 +23,21 @@ constant /buf-hdr
 : >buffer   ( n -- adr )      >bufadr >data  ;
 : dirty?    ( n -- dirty? )   >bufadr >dirty @  ;
 : dirty!    ( dirty? n -- )   >bufadr >dirty !  ;
-: blk#      ( n -- blk# )     >bufadr >blk# @  ;
-: blk#!     ( blk# n -- )     >bufadr >blk# !  ;
+: d.blk#      ( n -- d.blk# )     >bufadr >d.blk# 2@  ;
+: d.blk#!     ( d.blk# n -- )     >bufadr >d.blk# 2!  ;
 
 create buf-table  #bufs allot
 
-: read-fs-block  ( adr fs-blk# -- error? )
-   bsize  swap logbsize lshift  read-ublocks
+: d.read-fs-block  ( adr d.fs-blk# -- error? )
+   bsize -rot  logbsize dlshift  d.read-ublocks
 ;
-: write-fs-block  ( adr fs-blk# -- error? )
-   bsize  swap logbsize lshift  write-ublocks
+: d.write-fs-block  ( adr d.fs-blk# -- error? )
+   bsize -rot  logbsize dlshift  d.write-ublocks
 ;
 
 : empty-buffers   ( -- )
    block-bufs /buffer #bufs * erase
-   #bufs 0 do  -1 i blk#!  loop
+   #bufs 0 do  -1. i d.blk#!  loop
    buf-table  #bufs 0 ?do  i 2dup + c!  loop  drop
 ;
 
@@ -65,46 +65,46 @@ create buf-table  #bufs allot
 : flush-buffer   ( buffer# -- )
    dup dirty? if			( buffer# )
       false over dirty!
-      dup >buffer  swap blk#		( buffer-adr block# )
-      dup gds-fs-block# <=  if
-         dup . ." attempt to corrupt superblock or group descriptor" abort
-      then
-      bbug? if ." W " dup . cr then
-      write-fs-block abort" write error "
+      dup >buffer  swap d.blk#		( buffer-adr d.block# )
+      2dup d.gds-fs-block# d<=  if      ( buffer-adr d.block# )
+         2dup d. ." attempt to corrupt superblock or group descriptor" abort
+      then                              ( buffer-adr d.block# )
+      bbug? if ." W " 2dup d. cr then   ( buffer-adr d.block# )
+      d.write-fs-block abort" write error "
    else
       drop
    then
 ;
 : flush   ( -- )   #bufs 0 ?do   i flush-buffer   loop  ;
 
-: (buffer)   ( block# -- buffer-adr in-buf? )
+: d.(buffer)   ( d.block# -- buffer-adr in-buf? )
    \ is the block already in a buffer?
-   0
-   begin					( block# buf# )
-      2dup blk# = if			\ found it
-	 nip  dup mru!  >buffer true exit
-      then
-      
-      1+ dup #bufs =
-   until  drop				\ not found	( block# )
+   #bufs 0  ?do				( d.block# )
+      2dup i d.blk# d=  if  \ found it	( d.block# )
+	 2drop  i mru!			( )
+         i >buffer true unloop exit	( -- buffer-adr true )
+      then				( d.block# )
+   loop					( d.block# )      
    
    \ free up the least-recently-used buffer
-   lru dup flush-buffer				( block# buf# )
+   lru dup flush-buffer			( d.block# buf# )
    
-   tuck blk#!   >buffer false			( buffer-adr )
+   dup >r  d.blk#!			( r: buf# )
+   r> >buffer false			( buffer-adr false )
 ;
 
-: buffer   ( block# -- a )	\ like block, but does no reads
-   (buffer) drop
+: d.buffer   ( d.block# -- a )	\ like block, but does no reads
+   d.(buffer) drop
 ;
-: block   ( block# -- a )
-   dup (buffer) if  nip exit  then		( block# buffer-adr )
-   
-   bbug? if ." r " over . cr then
-   dup rot read-fs-block abort" read error "	( buffer-adr )
-;
+: d.block   ( d.block# -- a )
+   2dup d.(buffer) if  nip nip exit  then		( d.block# buffer-adr )
 
-: bd   ( n -- )   block bsize dump  ;
+   bbug? if ." r " 2 pick over d. cr then		( d.block# buffer-adr )
+   dup 2swap d.read-fs-block abort" read error "	( buffer-adr )
+;
+: block  ( block# -- a )  u>d d.block  ;
+
+: d.bd   ( d -- )   d.block bsize dump  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

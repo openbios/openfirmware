@@ -7,15 +7,14 @@ decimal
 : set-inode  ( inode# -- )  to inode#  ;
 
 : ipb	( -- n )  bsize /inode /  ;
-: itob  ( i# -- offset block# )
+: d.itob  ( i# -- offset d.block# )
    1- ipg /mod		( rel-i# group )
-   gpimin  swap		( block# rel-i# )
-   ipb /mod		( gp-block# offset rel-blk# )
-   blkstofrags
-   rot +		( offset block# )
+   d.gpimin  2>r	( rel-i# r: d.iblock# )
+   ipb /mod		( offset rel-blk# r: d.iblock# )
+   u>d 2r> d+		( offset d.block# )
 ;
 
-: inode  ( i# -- adr )   itob block swap /inode * +  ;
+: inode  ( i# -- adr )   d.itob d.block swap /inode * +  ;
 : ind   ( n -- )  inode  /inode dump  ;
 : +i  ( n -- )  inode# inode +  ;
 : file-attr   ( -- attributes )  0 +i short@  ;
@@ -37,10 +36,36 @@ decimal
 : gid!        ( gid -- )        24 +i short!  update  ;
 : link-count  ( -- n )          26 +i short@  ;
 : link-count! ( n -- )          26 +i short!  update  ;
-: #blks-held  ( -- n )          28 +i int@  ;
-: #blks-held! ( n -- )          28 +i int!  update  ;
-: file-acl    ( -- n )         104 +i int@  ;
-: dir-acl     ( -- n )         108 +i int@  ;
+
+: d.#blks-held  ( -- d )
+   28 +i int@                                            ( n )
+   \ Should be contingent on sb-huge-files? as below, but the field
+   \ at 116 was reserved before, so it's going to be 0 without huge files
+   116 +i short@                                         ( d )
+\   sb-huge-files?  if  116 +i short@  else  u>d  then    ( d )
+[ifdef] inode-huge?
+   \ I'm not supporting the representation where the inode block
+   \ count is in file system blocks instead of 512-byte blocks,
+   \ because I can't figure out how it works in the Linux kernel.
+   \ I can see how it works when updating an inode, but I don't
+   \ see how it works with an already-created file.
+   inode-huge?  if  logbsize 9 - dlshift  then           ( d' )
+[then]
+;
+
+: d.#blks-held! ( d -- )
+[ifdef] inode-huge?
+   2dup h# 1.0000.0000.0000. d>=  if     ( d )
+      logbsize 9 - drshift               ( d' )
+      set-inode-huge                     ( d )
+   else                                  ( d )
+      clear-inode-huge                   ( d )
+   then                                  ( d )
+[then]
+   116 +i short!  28 +i int!  update     ( )
+;
+: d.file-acl    ( -- d )        104 +i int@  118 +i short@  ;
+\ : dir-acl     ( -- n )         108 +i int@  ;
 
 d# 12 constant #direct-blocks
 : direct0     ( -- adr )   40 +i  ;

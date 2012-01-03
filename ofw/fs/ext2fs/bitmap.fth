@@ -8,18 +8,74 @@ decimal
 0 instance value gd-modified?
 
 : gd-update   ( -- )   true to gd-modified?  ;
-: block-bitmap  ( group# -- block# )   group-desc     le-l@  ;
-: inode-bitmap  ( group# -- block# )   group-desc 4 + le-l@  ;
-: inode-table   ( group# -- block# )   group-desc 8 + le-l@  ;
-: free-blocks   ( group# -- n )    group-desc h# 0c + le-w@  ;
-: free-blocks+!  ( n group# -- )
-   group-desc h# 0c +
-   tuck le-w@ +  0 max  swap le-w!  gd-update
+: d.block-bitmap  ( group# -- d.block# )
+   group-desc  dup le-l@       ( adr n )
+   desc64?  if                 ( adr n )
+      swap h# 20 + le-l@       ( d.block# )
+   else                        ( adr n )
+      nip u>d                  ( d.block# )
+   then                        ( d.block# )
 ;
-: free-inodes   ( group# -- n )    group-desc h# 0e + le-w@  ;
+: d.inode-bitmap  ( group# -- d.block# )
+   group-desc  dup 4 + le-l@   ( adr n )
+   desc64?  if                 ( adr n )
+      swap h# 24 + le-l@       ( d.block# )
+   else                        ( adr n )
+      nip u>d                  ( d.block# )
+   then                        ( d.block# )
+;
+[ifdef] notdef
+: d.inode-table   ( group# -- d.block# )
+   group-desc  dup 8 + le-l@   ( adr n )
+   desc64?  if                 ( adr n )
+      swap h# 28 + le-l@       ( d.block# )
+   else                        ( adr n )
+      nip u>d                  ( d.block# )
+   then                        ( d.block# )
+;
+[then]
+: free-blocks@  ( group# -- n )
+   group-desc dup  h# 0c + le-w@       ( adr w )
+   desc64?  if                         ( adr w )
+      swap h# 2c + le-w@ wljoin        ( n )
+   else                                ( adr w )
+      nip                              ( n )
+   then                                ( n )
+;
+: free-blocks!  ( n group# -- )
+   group-desc >r            ( n     r: adr )
+   desc64?  if              ( n     r: adr )
+      lwsplit               ( lo hi r: adr )
+      r@ h# 2c + le-w!      ( lo    r: adr )
+   then                     ( n     r: adr )
+   r> h# 0c + le-w!         ( )
+;
+
+: free-blocks+!  ( n group# -- )
+   tuck free-blocks@ +  0 max   ( group# n' )
+   swap free-blocks!            ( )
+   gd-update                    ( )
+;
+: free-inodes@   ( group# -- n )
+   group-desc  dup  h# 0e + le-w@   ( adr lo )
+   desc64?  if                      ( adr lo )
+      swap h# 2e + le-w@ wljoin     ( n )
+   else                             ( adr lo )
+      nip                           ( n )
+   then                             ( n )
+;
+: free-inodes!  ( n group# -- )
+   group-desc >r            ( n     r: adr )
+   desc64?  if              ( n     r: adr )
+      lwsplit               ( lo hi r: adr )
+      r@ h# 2e + le-w!      ( lo    r: adr )
+   then                     ( n     r: adr )
+   r> h# 0e + le-w!         ( )
+;
 : free-inodes+!  ( n inode# -- )
-   group-desc h# 0e +
-   tuck le-w@ + swap le-w!  gd-update
+   tuck free-inodes@  +   ( group# n' )
+   swap free-inodes!      ( )
+   gd-update              ( )
 ;
 
 [ifdef] 386-assembler
@@ -64,8 +120,8 @@ create lowbits
 [then]
 
 \ Find the first clear bit in a bitmap, set it if found
-: first-free   ( len block# -- false | block#-in-group true )
-   block swap				( map len )
+: d.first-free   ( len d.block# -- false | block#-in-group true )
+   d.block swap				( map len )
 
    2dup  h# ff bskip  dup  0=  if	( map len 0 )
       3drop false exit
@@ -88,42 +144,69 @@ create lowbits
    swap
 ;
 
-: clear-bit?  ( bit# block# -- cleared? )
-   block  bitup				( mask adr' )
+: d.clear-bit?  ( bit# d.block# -- cleared? )
+   d.block  bitup			( mask adr' )
    tuck c@				( adr mask byte )
    2dup and  0=  if	\ Already free	( adr mask byte )
-      3drop  false  exit
+      3drop  false  exit		( -- false )
    then					( adr mask byte )
    swap invert and			( adr byte' )
    swap c!				( )
    update				( )
-   true
+   true					( true )
 ;
 
-: free-block      ( block# -- )
-   datablock0 - bpg /mod  		( bit# group# )
-   tuck block-bitmap 			( group# bit# block# )
-   clear-bit?  if			( group# )
-      1  swap  free-blocks+!
+: d.free-block      ( d.block# -- )
+   datablock0 u>d d- bpg um/mod		( bit# group# )
+   tuck d.block-bitmap 			( group# bit# d.block# )
+   d.clear-bit?  if			( group# )
+      1  swap  free-blocks+!		( )
    else					( group# )
-      drop
-   then
+      drop				( )
+   then					( )
 ;
+: n.free-block      ( block# -- )  u>d d.free-block  ;
 
-: alloc-block   ( -- block# )
+: d.alloc-block   ( -- d.block# )
    #groups 0  ?do			( )
-      i free-blocks  if			( )
+      i free-blocks@  if		( )
          bpg 3 rshift  bsize min	( len )	\ XXX stay in this block
-         i  block-bitmap  		( len block# )
-         first-free  if			( block#-in-group )
+         i  d.block-bitmap  		( len d.block# )
+         d.first-free  if		( block#-in-group )
             -1 i free-blocks+!		( block#-in-group )
-            i bpg *  +  datablock0 +	( block# )
-            dup buffer bsize erase update	( block# )
-            unloop exit
-         else
+	    u>d				( d.block#-in-group )
+	    i bpg um*  d+		( d.block#-offset )
+	    datablock0 u>d d+		( d.block# )
+            2dup d.buffer bsize erase update	( d.block# )
+            unloop exit			( -- d.block# )
+         else				( )
             \ The allocation bitmap disagrees with the free block count,
             \ so fix the free block count to prevent thrashing.
-            i free-blocks  negate  i free-blocks+!
+            i free-blocks@  negate  i free-blocks+!
+         then
+      then
+   loop
+   true abort" no free blocks found"
+;
+: u.alloc-block  ( -- n.block# )
+   #groups 0  ?do			( )
+      i 1+ bpg um*  datablock0 u>d d+	( d.end-block# )
+      h# 1.0000.0000. d>  abort" No free blocks found with 32-bit block number"  ( )
+
+      i free-blocks@  if		( )
+         bpg 3 rshift  bsize min	( len )	\ XXX stay in this block
+         i  d.block-bitmap  		( len d.block# )
+         d.first-free  if		( block#-in-group )
+            -1 i free-blocks+!		( block#-in-group )
+	    u>d				( d.block#-in-group )
+	    i bpg um*  d+		( d.block#-offset )
+	    datablock0 u>d d+		( d.block# )
+            2dup d.buffer bsize erase update	( d.block# )
+            drop  unloop exit			( -- n.block# )
+         else				( )
+            \ The allocation bitmap disagrees with the free block count,
+            \ so fix the free block count to prevent thrashing.
+            i free-blocks@  negate  i free-blocks+!
          then
       then
    loop
@@ -132,8 +215,8 @@ create lowbits
 
 : free-inode      ( inode# -- )
    1- ipg /mod 				( bit# group# )
-   tuck inode-bitmap			( group# bit# block# )
-   clear-bit?  if			( group# )
+   tuck d.inode-bitmap			( group# bit# d.block# )
+   d.clear-bit?  if			( group# )
       1  swap  free-inodes+!
    else					( group# )
       drop
@@ -143,8 +226,8 @@ create lowbits
 : alloc-inode   ( -- inode# )
    #groups 0 ?do
       ipg 3 rshift  bsize min		( len )		\ XXX stay in this block
-      i  inode-bitmap 			( len block# )
-      first-free  if			( inode#-in-group )
+      i  d.inode-bitmap 		( len d.block# )
+      d.first-free  if			( inode#-in-group )
          -1 i free-inodes+!		( inode#-in-group )
          i ipg * +  1+			( inode# )
          dup inode /inode erase update	( inode# )
@@ -155,10 +238,10 @@ create lowbits
 ;
 
 : update-sb   ( -- )
-   0  #groups 0 ?do  i free-inodes +  loop  total-free-inodes!
-   0  #groups 0 ?do  i free-blocks +  loop  total-free-blocks!
+   0   #groups 0  ?do  i free-inodes@      +  loop    total-free-inodes!
+   0.  #groups 0  ?do  i free-blocks@ u>d d+  loop  d.total-free-blocks!
    put-super-block abort" failed to update superblock "
-   gds /gds gds-block# write-ublocks abort" failed to update group descriptors "
+   gds /gds d.gds-block# d.write-ublocks abort" failed to update group descriptors "
 ;
 
 : update-gds   ( -- )
@@ -169,23 +252,27 @@ create lowbits
       \ the block bitmap number in the group descriptor.  If it is larger than
       \ the calculated block number, do the backup.
       #groups 1  do
-         i bpg *  gds-fs-block# +	( possible-gn )
-         dup  i block-bitmap <  if	( possible-gn )
-            block			( gdn-adr )
-            0 group-desc		( gdn-adr gd0-adr )
-            swap bsize move update	( )
-         else				( possible-gn )
-            drop			( )
-         then				( )
+         i bpg * u>d  d.gds-fs-block# d+	( d.possible-gn )
+         2dup  i d.block-bitmap d<  if		( d.possible-gn )
+            d.block				( gdn-adr )
+            0 group-desc			( gdn-adr gd0-adr )
+            swap bsize move update		( )
+         else					( d.possible-gn )
+            2drop				( )
+         then					( )
       loop
       false to gd-modified?
       update-sb
    then
 ;
 
-: add-block   ( -- block# )
-   #blks-held 2+ #blks-held!
-   alloc-block
+: d.add-block   ( -- d.block# )
+   d.#blks-held 2. d+ d.#blks-held!
+   d.alloc-block
+;
+: u.add-block   ( -- block# )
+   d.#blks-held 2. d+ d.#blks-held!
+   u.alloc-block
 ;
 
 \ LICENSE_BEGIN

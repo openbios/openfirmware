@@ -192,9 +192,9 @@ create dir-types
 : idelete   ( -- )
    \ Short symlinks hold no blocks, but have a string in the direct block list,
    \ so we must not interpret that string as a block list.
-   #blks-held  if  delete-blocks  then
+   d.#blks-held d0<>  if  delete-blocks  then
 
-   \ clear #blks-held, link-count, etc.
+   \ clear d.#blks-held, link-count, etc.
    0 +i  /inode  6 /l* /string erase
    
    \ delete inode, and set its deletion time.
@@ -257,8 +257,8 @@ create dir-types
 ;
 
 : linkpath   ( -- a )
-   file-acl  if  bsize 9 rshift  else  0  then     ( #acl-blocks )
-   #blks-held  <>  if	\ long symbolic link path
+   d.file-acl d0<>  if  bsize 9 rshift  else  0  then     ( #acl-blocks )
+   u>d  d.#blks-held  d<>  if	\ long symbolic link path
       direct0 int@ block
    else			\ short symbolic link path
       direct0
