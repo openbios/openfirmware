@@ -8,6 +8,7 @@ fload ${BP}/ofw/fs/ext2fs/sb.fth
 fload ${BP}/ofw/fs/ext2fs/blocks.fth
 fload ${BP}/ofw/fs/ext2fs/inode.fth
 fload ${BP}/ofw/fs/ext2fs/bitmap.fth
+fload ${BP}/ofw/fs/ext2fs/extent.fth
 fload ${BP}/ofw/fs/ext2fs/layout.fth
 fload ${BP}/ofw/fs/ext2fs/dir.fth
 fload ${BP}/ofw/fs/ext2fs/recovery.fth

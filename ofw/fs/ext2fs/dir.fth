@@ -4,7 +4,7 @@ purpose: Linux ext2fs file system directories
 decimal
 
 2 constant root-dir#
-0 instance value dir-block#
+0. instance 2value d.dir-block#
 0 instance value lblk#
 
 instance variable diroff
@@ -17,14 +17,17 @@ instance variable totoff
 0 instance value wf-inum  \ Inumber of file or directory found
 0 instance value wf-type  \ Type - 4 for directory, d# 10 for symlink, etc
 
+: find-dirblk  ( -- )
+   lblk# >d.pblk# 0= abort" EXT2 - missing directory block"  to d.dir-block#
+;
 : get-dirblk  ( -- end? )
    lblk# bsize um* dfile-size d< 0=  if  true exit  then
-   lblk# >pblk# to dir-block#
+   find-dirblk
    false
 ;
 
 \ **** Return the address of the current directory entry
-: dirent  ( -- adr )  dir-block# block diroff @ +  ;
+: dirent  ( -- adr )  d.dir-block# d.block diroff @ +  ;
 \ Dirent fields:
 \ 00.l inode
 \ 04.w offset to next dirent
@@ -87,10 +90,10 @@ instance variable totoff
 
 \ On entry:
 \   inode# refers to the directory block's inode
-\   dir-block# is the physical block number of the first directory block
+\   d.dir-block# is the physical block number of the first directory block
 \   diroff @ is 0
 \ On successful exit:
-\   dir-block# is the physical block number of the current directory block
+\   d.dir-block# is the physical block number of the current directory block
 \   diroff @ is the within-block offset of the new dirent
 : no-dir-space?  ( #needed -- true | offset-to-next false )
    begin						( #needed )
@@ -131,7 +134,7 @@ instance variable totoff
 ;
 : last-dirent   ( -- free-bytes )
    dfile-size bsize um/mod nip  swap 0= if  1-  then to lblk#	( )
-   lblk# >pblk# to dir-block#
+   find-dirblk
    (last-dirent) drop
    dirent-len@  dirent-reclen  -
 ;
@@ -293,10 +296,10 @@ d# 1024 constant /symlink   \ Max length of a symbolic link
 
 \ On entry:
 \   inode# is the inode of the directory file
-\   dir-block# is the physical block number of the first directory block
+\   d.dir-block# is the physical block number of the first directory block
 \   diroff @ and totoff @ are 0
 \ On successful exit:
-\   dir-block# is the physical block number of the current directory block
+\   d.dir-block# is the physical block number of the current directory block
 \   diroff @ is the within-block offset of the directory entry that matches name$
 \   totoff @ is the overall offset of the directory entry that matches name$
 

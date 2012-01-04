@@ -42,36 +42,42 @@
    swap la+ int@			( index-low block# )
    >ind2				( adr )
 ;
-: >pblk  ( logical-block# -- 0 | physical-block-adr )
+: >pblk-adr  ( logical-block# -- 0 | physical-block-adr )
    dup #direct-blocks <  if     ( lblk# )
-      >direct exit
+      >direct exit		( -- adr )
    then                         ( lblk# )
    #direct-blocks -             ( lblk#' )
 
    dup #ind-blocks1 <  if       ( lblk# )
-      #direct-blocks    get-direct >ind1  exit
+      #direct-blocks    get-direct >ind1  exit	( -- adr )
    then
    #ind-blocks1 -               ( lblk#' )
 
-   dup #ind-blocks2  <  if
-      #direct-blocks 1+ get-direct >ind2 exit
-   then
+   dup #ind-blocks2  <  if	( lblk# )
+      #direct-blocks 1+ get-direct >ind2 exit	( -- adr )
+   then				( lblk# )
    #ind-blocks2  -              ( lblk#' )
 
-   dup #ind-blocks3  <  if
-      #direct-blocks 2+ get-direct >ind3 exit
-   then
+   dup #ind-blocks3  <  if	( lblk# )
+      #direct-blocks 2+ get-direct >ind3 exit	( -- adr )
+   then				( lblk# )
 
-   drop 0
+   drop 0			( 0 )
 ;
-: >pblk#  ( logical-block# -- physical-block# )
-   >pblk dup 0=  if  exit  then   int@
+: >d.pblk#  ( logical-block# -- false | d.physical-block# true )
+   extent?  if                ( logical-block# )
+      extent->pblk# true exit ( -- d.physical-block# true )
+   then                       ( logical-block# )
+   >pblk-adr dup 0=  if       ( 0 )
+      exit                    ( -- false )
+   then                       ( adr )
+   int@ u>d  true             ( d.physical-block# true )
 ;
 
 
 \ writes: if any indir block is 0, allocate and return it.
 
-: get-ind1  ( index block# -- adr )
+: get-ind1  ( index ind1-block# -- block# )
    >r					( index ) ( r: ind3-block# )
    r@ block over la+ int@		( index block# )
    dup if				( index block# )
@@ -80,7 +86,7 @@
       drop u.add-block			( index new-block# )
       dup rot r@ block swap la+ int! update	( new-block# )
    then					( block# )
-   r> drop
+   r> drop				( block# )
 ;
 : get-ind2  ( index ind2-block# -- block# )
    >r					( index ) ( r: ind3-block# )
@@ -92,8 +98,8 @@
       drop u.add-block			( index-low index-high new-block# )
       dup rot r@ block swap la+ int! update	( index-low new-block# )
    then					( index-low block# )
-   get-ind1				( adr )
-   r> drop
+   get-ind1				( block# )
+   r> drop				( block# )
 ;
 : get-ind3  ( index ind3-block# -- block# )
    >r					( index ) ( r: ind3-block# )
@@ -105,43 +111,50 @@
       drop u.add-block			( index-low index-high new-block# )
       dup rot r@ block swap la+ int! update	( index-low new-block# )
    then					( index-low block# )
-   get-ind2				( adr )
-   r> drop
+   get-ind2				( block# )
+   r> drop				( block# )
 ;
 
 \ get-pblk# will allocate the block if necessary, used for writes
 : get-pblk#  ( logical-block# -- 0 | physical-block# )
    dup #direct-blocks <  if			( lblk# )
-      dup get-direct ?dup  if  nip exit  then	( lblk# )
+      dup get-direct ?dup  if			( lblk# pblk# )
+         nip exit				( -- pblk# )
+      then					( lblk# )
       
-      u.add-block dup rot >direct int! update  exit
+      u.add-block				( lblk# pblk# )
+      dup rot >direct int! update		( pblk# )
+      exit					( -- pblk# )
    then						( lblk# )
    #direct-blocks -				( lblk#' )
 
    dup #ind-blocks1 <  if			( lblk# )
       #direct-blocks    get-direct ?dup 0=  if	( lblk# )
-	 u.add-block  dup #direct-blocks put-direct
-      then					( lblk# block )
-      get-ind1  exit
-   then
+	 u.add-block				( lblk# ind1-pblk# )
+         dup #direct-blocks put-direct		( lblk# ind1-pblk# )
+      then					( lblk# ind1-pblk# )
+      get-ind1 exit				( -- pblk# )
+   then						( lblk# )
    #ind-blocks1 -				( lblk#' )
 
    dup #ind-blocks2  <  if
-      #direct-blocks 1+ get-direct ?dup 0=  if
-	 u.add-block  dup #direct-blocks 1+ put-direct
-      then					( lblk# block )
-      get-ind2 exit
-   then
-   #ind-blocks2  -              ( lblk#' )
+      #direct-blocks 1+ get-direct ?dup 0=  if	( lblk# )
+	 u.add-block				( lblk# ind2-pblk# )
+         dup #direct-blocks 1+ put-direct	( lblk# ind2-pblk# )
+      then					( lblk# ind2-pblk# )
+      get-ind2 exit				( -- pblk# )
+   then						( lblk# )
+   #ind-blocks2  -				( lblk#' )
 
-   dup #ind-blocks3  <  if
-      #direct-blocks 2+ get-direct ?dup 0=  if
-	 u.add-block  dup #direct-blocks 2+ put-direct
-      then					( lblk# block )
-      get-ind3 exit
-   then
+   dup #ind-blocks3  <  if			( lblk#' )
+      #direct-blocks 2+ get-direct ?dup 0=  if	( lblk# )
+	 u.add-block				( lblk# ind3-pblk# )
+         dup #direct-blocks 2+ put-direct	( lblk# ind3-pblk# )
+      then					( lblk# ind3-pblk# )
+      get-ind3 exit				( -- pblk# )
+   then						( lblk# )
 
-   drop 0
+   drop 0					( 0 )
 ;
 
 \ deletes
@@ -189,14 +202,14 @@
 ;
 
 : append-block   ( -- )
-   u.add-block						( block )
-   dfile-size bsize um/mod nip  dup bsize um* dfile-size!	( block #blocks )
-   1+ >pblk int! update
+   u.add-block							( pblk# )
+   dfile-size bsize um/mod nip  dup bsize um* dfile-size!	( pblk# #blocks )
+   1+ >pblk-adr int! update
 ;
 
 : read-file-block  ( adr lblk# -- )
-   >pblk#  ?dup  if      ( adr pblk# )
-      block swap bsize move
+   >d.pblk#  if          ( adr d.pblk# )
+      d.block swap bsize move
    else                  ( adr )
       bsize erase        ( )
    then
@@ -206,10 +219,13 @@
    0 swap  bsize bounds do  i l@ or  4 +loop  0=
 ;
 : write-file-block  ( adr lblk# -- )
-   over zeroed? if	\ see if it is already allocated (XXX later: deallocate it)
-      >pblk#   dup 0= if   2drop  exit  then
-   else			\ find or allocate physical block
-      get-pblk#			( adr pblk# )
+   \ see if it is already allocated (XXX later: deallocate it)
+   over zeroed? if              ( adr lblk# )
+      >d.pblk# 0=  if           ( adr )
+         drop  exit             ( -- )
+      then                      ( d.pblk# )
+   else			        ( adr lblk# )  \ find or allocate physical block
+      get-pblk#	u>d		( adr d.pblk# )
    then
 \ This interferes with journal recovery
 \  dup h# f8 < if  dup . ." attempt to destroy file system" cr abort  then

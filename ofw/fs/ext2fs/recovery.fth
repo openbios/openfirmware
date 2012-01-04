@@ -209,7 +209,7 @@ list: revoke-list
 
 listnode
    /n 2* field >o_block#
-   /n    field >o_pblock#
+   /n 2* field >o_pblock#
    /n    field >o_escaped?
 nodetype: overlay-node
 
@@ -229,19 +229,19 @@ list: overlay-list
 ;
 
 : j-read-file-block  ( adr lblk# -- )
-   >pblk#  ?dup  if               ( adr pblk# )
-      u>d find-overlay?  if       ( adr d.pblk# node )
+   >d.pblk#  if                   ( adr d.pblk# )
+      find-overlay?  if           ( adr d.pblk# node )
          nip nip                  ( adr node )
-         tuck >o_pblock# l@       ( node adr pblk# )
-         block over bsize move    ( node adr )
+         tuck >o_pblock# 2@       ( node adr d.pblk# )
+         d.block over bsize move  ( node adr )
          swap >o_escaped? l@  if  ( adr )
             jbd_magic swap be-l!  ( )
          else                     ( adr )
 	    drop                  ( )
 	 then                     ( )
       else                        ( adr d.pblk# node )
-         2drop                    ( adr pblk# )
-         block swap bsize move    ( )
+         drop                     ( adr d.pblk# )
+         d.block swap bsize move  ( )
       then                        ( )
    else                           ( adr )
       bsize erase                 ( )
@@ -252,7 +252,9 @@ list: overlay-list
 : set-overlay-node  ( escaped? log-blk# d.block# node -- )
    >r                               ( escaped? log-blk# d.block# r: node )
    r@ >o_block# 2!                  ( escaped? log-blk# r: node )
-   >pblk# r@ >o_pblock# l!          ( escaped? r: node )
+   >d.pblk#  0= abort" EXT3/4 bad block number in journal"
+                                    ( escaped? d.pblk# r: node )
+   r@ >o_pblock# 2!                 ( escaped? r: node )
    r> >o_escaped? l!                ( )
 ;
 : note-jblock  ( d.block# escaped? log-blk# -- )
