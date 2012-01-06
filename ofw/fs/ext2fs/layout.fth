@@ -195,6 +195,7 @@
    loop
 ;
 : delete-blocks   ( -- )
+   extent?  if  delete-extents exit  then
    delete-directs
    indirect1 del-blk1  if  0 indirect1 int! update  then
    indirect2 del-blk2  if  0 indirect2 int! update  then

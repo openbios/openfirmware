@@ -195,7 +195,9 @@ create dir-types
 : idelete   ( -- )
    \ Short symlinks hold no blocks, but have a string in the direct block list,
    \ so we must not interpret that string as a block list.
-   d.#blks-held d0<>  if  delete-blocks  then
+   d.#blks-held d0<>  if
+      extent?  if  delete-extents  else  delete-blocks  then
+   then
 
    \ clear d.#blks-held, link-count, etc.
    0 +i  /inode  6 /l* /string erase
