@@ -361,6 +361,7 @@ fload ${BP}/dev/olpc/kb3700/spicmd.fth           \ EC SPI Command Protocol
 
 fload ${BP}/cpu/arm/marvell/utmiphy.fth
 
+fload ${BP}/ofw/core/fdt.fth
 fload ${BP}/cpu/arm/linux.fth
 
 \+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/usb.fth

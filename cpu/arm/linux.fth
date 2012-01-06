@@ -89,16 +89,28 @@ defer ofw-tag, ' noop to ofw-tag,  \ Define externally if appropriate
    0 tag-l,    \ ATAG_NONE
 ;
 
+0 value use-fdt?
+: use-fdt  ( -- )  true to use-fdt?  ;
 
 : linux-fixup  ( -- )
 [ifdef] linux-logo  linux-logo  [then]
-   args-buf cscount set-parameters          ( )
+   use-fdt? 0=  if
+      args-buf cscount set-parameters          ( )
+   then
    disable-interrupts
 
    linux-base linux-base  (init-program)    \ Starting address, SP
    0 to r0
    arm-linux-machine-type to r1
+[ifdef] flatten-device-tree
+   use-fdt?  if
+      flatten-device-tree to r2
+   else
+      linux-params to r2
+   then
+[else]
    linux-params to r2
+[then]
    linux-hook
 ;
 
@@ -114,6 +126,9 @@ defer place-ramdisk
    tuck /ramdisk move                             ( new-ramdisk-adr )
 \  dup to linux-memtop
    to ramdisk-adr
+
+   ramdisk-adr " linux,initd-start"  chosen-int-property
+   ramdisk-adr /ramdisk +  " linux,initd-end"  chosen-int-property
 ;
 : $load-ramdisk  ( name$ -- )
    0 to /ramdisk                                  ( name$ )
