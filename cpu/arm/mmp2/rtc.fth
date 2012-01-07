@@ -58,8 +58,10 @@ alias test4 wakeup-loop
 ;
 dev /switches
 : selftest  ( -- error? )
-   s3-selftest  if  true exit  then
-   selftest  
+   final-test?  0=  if
+      s3-selftest  if  true exit  then
+   then
+   selftest
 ;
 device-end
 
