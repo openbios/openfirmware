@@ -26,7 +26,7 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
 ;
 [ifndef] edi-wait-b
 : edi-wait-b  ( -- b )  \ Wait for and receive EC response byte
-   d# 100 0  do 
+   d# 10000 0  do 
       spi-in h# 50 =  if
          spi-in           ( b )
          spi-cs-off       ( b )
