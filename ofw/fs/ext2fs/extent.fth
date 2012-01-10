@@ -1,7 +1,6 @@
 \ See license at end of file
 purpose: EXT4 extent handling
 
-d# 12 constant /extent-header
 d# 12 constant /extent-record
 
 struct
