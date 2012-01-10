@@ -39,7 +39,7 @@ h# 8000 value /ec-flash
 : set-ec-reboot  ( -- )  1 h# f018 edi-b!  ;
 : ?reflash-ec-flags  ( adr -- )
    use-edi-spi                          ( adr )
-   spi-start                            ( adr )  \ avoids holding EC in reset
+   edi-open-active                      ( adr )  \ avoids holding EC in reset
    load-base /flash-page ec-flags-offset edi-read-flash         ( adr )
    dup load-base /flash-page comp       ( adr different? )
    if

@@ -26,12 +26,20 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
 ;
 [ifndef] edi-wait-b
 : edi-wait-b  ( -- b )  \ Wait for and receive EC response byte
-   d# 10000 0  do 
-      spi-in h# 50 =  if
-         spi-in           ( b )
-         spi-cs-off       ( b )
-         unloop exit
-      then
+   d# 100 0  do
+      spi-in              ( d )
+      dup h# 5f <>  if    ( d )
+         dup h# 50 =  if  ( d )
+            drop
+            spi-in        ( b )
+            spi-cs-off    ( b )
+            unloop exit
+         then             ( d )
+         spi-cs-off       ( d )
+         h# ff =  abort" EDI byte in inactive"
+         true abort" EDI byte in confused"
+      then                ( d )
+      drop
    loop
    spi-cs-off
    true abort" EDI byte in timeout"
@@ -227,6 +235,10 @@ h# 7e80 constant ec-flags-offset
    trim-tune
    \ fast-edi-clock   \ Target speed up to 16 MHz
    \ reset
+;
+: edi-open-active  ( -- )
+   spi-start
+   ['] select-flash  catch  if  select-flash  then
 ;
 
 \ LICENSE_BEGIN
