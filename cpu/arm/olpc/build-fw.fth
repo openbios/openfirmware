@@ -647,6 +647,18 @@ warning @ warning off
 warning !
 device-end
 
+\ Add suspend resume test except in final
+dev /switches
+warning @ warning off
+: selftest  ( -- error? )
+   final-test?  0=  if
+      s3-selftest  if  true exit  then
+   then
+   selftest
+;
+warning !
+device-end
+
 \ When reprogramming this machine's SPI FLASH, rebooting the EC is unnecessary 
 : no-kbc-reboot  ['] noop to spi-reprogrammed  ;
 : kbc-on ;

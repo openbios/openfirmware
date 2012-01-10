@@ -56,14 +56,6 @@ alias test4 wakeup-loop
       ." OKAY"  cr drop  false                              ( error? )
    then                                                     ( error? )
 ;
-dev /switches
-: selftest  ( -- error? )
-   final-test?  0=  if
-      s3-selftest  if  true exit  then
-   then
-   selftest
-;
-device-end
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks
