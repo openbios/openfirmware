@@ -610,8 +610,9 @@ d#  25 ,   \  9 case-threshold-right
 d#  20 ,   \ 10 #loopback
 d#  70 ,   \ 11 loopback-threshold
 
+warning @ warning off
 fload ${BP}/dev/hdaudio/test.fth
-
+warning !
 
 end-package
 
