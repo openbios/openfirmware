@@ -285,12 +285,14 @@ external
 ;
 
 headers
+warning @ warning off
 : (end-extra)  ( -- )
    (end-extra)
    iso-in-itd 0=  if  exit  then
    end-iso-in
    free-iso
 ;
+warning !
 ' (end-extra) to end-extra
 
 [ifndef] notdef
