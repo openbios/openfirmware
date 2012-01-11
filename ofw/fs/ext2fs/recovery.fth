@@ -277,6 +277,7 @@ list: overlay-list
    then                                ( d.block# )
    2dup revoked?  if                   ( d.block# )
       2drop                            ( )
+      log-block++ drop                 ( )
    else                                ( d.block# )
       tagp >t_flags be-l@ 1 and        ( d.block# escaped? )
       j-read-only?  if                 ( d.block# escaped? )
@@ -411,18 +412,22 @@ list: overlay-list
    read-journal  if  exit  then
 
 ." Recovering from journal ... "
+   0 to end-transaction
 
-   0 ['] one-pass catch  if
+   0 ['] one-pass catch  ?dup  if
+      .error
       ." Journal scan failed" cr
       free-journal exit
    then
 
-   1 ['] one-pass catch  if
+   1 ['] one-pass catch  ?dup  if
+      .error
       ." Journal revoke failed" cr
       free-revoke-list  free-journal  exit
    then
 
-   2 ['] one-pass catch  if
+   2 ['] one-pass catch  ?dup  if
+      .error
       ." Journal replay failed" cr
       free-overlay-list free-revoke-list  free-journal  exit
    then

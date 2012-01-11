@@ -75,7 +75,18 @@ instance variable totoff
    swap c@                       ( adr len )
 ;
 
-: +link-count  ( increment -- )  link-count + link-count!  ;
+: +link-count  ( increment -- )
+   \ link-count = 1 means that the directory has more links than can
+   \ be represented in a 16-bit number
+   link-count 1 =  if  drop exit  then  \ Don't increment if already 1
+
+   \ If the incremented value exceeds the limit, store 1
+   \ We should also set the RO_COMPAT_DIR_NLINK bit in the superblock,
+   \ but we assume that OFW won't really be used to create enormous directories
+   link-count +  dup d# 65000 >=  if  drop 1  then  ( link-count )
+
+   link-count!
+;
 
 : new-inode    ( mode -- inode# )
    alloc-inode set-inode        ( mode )   \ alloc-inode erases the inode

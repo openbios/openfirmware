@@ -61,8 +61,8 @@ defer int!    ( l adr -- )  ' be-l! to int!
 \ Don't write to a disk that uses extensions we don't understand
 : unknown-extensions?   ( -- unsafe? )
    compat-flags   h# ffffffff invert and        \ Accept all compat extensions
-   incompat-flags h# 00000002 invert and  or    \ Incompatible - accept FILETYPE
-   ro-flags       h# 00000003 invert and  or    \ RO - accept SPARSE_SUPER and LARGE_FILE
+   incompat-flags h# 00000002 invert and  or    \ Incompatible - accept FILETYPE, EXTENTS, FLEX_BG
+   ro-flags       h# 00000073 invert and  or    \ RO - accept SPARSE_SUPER, LARGE_FILE, GDT_CSUM, DIR_NLINK, EXTRA_ISIZE
 ;
 : 'sb-uuid  ( -- adr )  super-block h# 68 +  ;
 variable le-group
