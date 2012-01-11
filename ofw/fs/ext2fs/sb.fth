@@ -50,11 +50,51 @@ defer int!    ( l adr -- )  ' be-l! to int!
 
 : recover?  ( -- flag )  24 +sbl 4 and 0<>  ;
 
+: compat-flags    ( -- mask )  23 +sbl  ;
+: incompat-flags  ( -- mask )  24 +sbl  ;
+: ro-flags        ( -- mask )  25 +sbl  ;
+
+: sb-64bit?    ( -- flag )  incompat-flags h# 80 and  0<>  ;
+: sb-extents?  ( -- flag )  incompat-flags h# 40 and  0<>  ;
+: sb-gd-csum?  ( -- flag )  ro-flags       h# 10 and  0<>  ;
+
 \ Don't write to a disk that uses extensions we don't understand
 : unknown-extensions?   ( -- unsafe? )
-   23 +sbl h# ffffffff invert and        \ Accept all compat extensions
-   24 +sbl h# 00000002 invert and  or    \ Incompatible - accept FILETYPE
-   25 +sbl h# 00000003 invert and  or    \ RO - accept SPARSE_SUPER and LARGE_FILE
+   compat-flags   h# ffffffff invert and        \ Accept all compat extensions
+   incompat-flags h# 00000002 invert and  or    \ Incompatible - accept FILETYPE
+   ro-flags       h# 00000003 invert and  or    \ RO - accept SPARSE_SUPER and LARGE_FILE
+;
+: 'sb-uuid  ( -- adr )  super-block h# 68 +  ;
+variable le-group
+: sb-desc-size  ( -- )  d# 127 +sbw  ;
+
+: sb-gd-csum  ( 'gd -- w )  h# 1e + le-w@  ;
+: sum-gd  ( group# 'gd -- sum )
+   h# ffff 'sb-uuid d# 16 ($crc16)           ( group# 'gd sum )
+   rot le-group le-l!  le-group /l ($crc16)  ( 'gd sum' )
+   over h# 1e ($crc16)                       ( 'gd sum' )
+   sb-64bit?  h# 20 sb-desc-size <  and  if  ( 'gd sum' )
+      swap sb-desc-size  h# 20 /string       ( sum adr len )
+      ($crc16)                               ( sum' )
+   else                                      ( 'gd sum' )
+      nip                                    ( sum' )
+   then                                      ( sum' )
+;
+: gd-csum-ok?  ( group# 'gd -- ok? )
+   sb-gd-csum?  if            ( group# 'gd )
+      tuck sum-gd             ( 'gd sum )
+      swap h# 1e + le-w@  <>  ( flag )
+   else                       ( group# 'gd )
+      2drop true              ( flag )
+   then                       ( flag )
+;
+: set-gd-csum  ( group# 'gd -- )
+   sb-gd-csum?  if            ( group# 'gd )
+      tuck sum-gd             ( 'gd sum )
+      swap h# 1e +  le-w!     ( )
+   else                       ( group# 'gd )
+      2drop                   ( )
+   then                       ( )
 ;
 
 : do-alloc  ( adr len -- )  " dma-alloc" $call-parent  ;
@@ -95,8 +135,8 @@ defer int!    ( l adr -- )  ' be-l! to int!
 : d.gds-block#  ( -- d.dev-block# )
    d.gds-fs-block#  bsize ublock / du*		( dev-block# )
 ;
-: desc64?  ( -- flag )  h# 7f +sbw  0<>  ;
-: /gd  ( -- n )  h# 7f +sbw  ?dup 0=  if  h# 20  then  ;
+: desc64?  ( -- flag )  sb-desc-size  0<>  ;
+: /gd  ( -- n )  sb-desc-size  ?dup 0=  if  h# 20  then  ;
 : /gds  ( -- size )  #groups /gd *  ublock round-up  ;
 : group-desc  ( group# -- adr )  /gd *  gds +  ;
 : d.gpimin    ( group -- d.block# )

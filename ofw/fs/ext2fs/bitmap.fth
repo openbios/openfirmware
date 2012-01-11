@@ -7,7 +7,10 @@ decimal
 
 0 instance value gd-modified?
 
-: gd-update   ( -- )   true to gd-modified?  ;
+: gd-update   ( block# -- )
+   dup group-desc set-gd-csum  ( )
+   true to gd-modified?        ( )
+;
 : d.block-bitmap  ( group# -- d.block# )
    group-desc  dup le-l@       ( adr n )
    desc64?  if                 ( adr n )
@@ -53,7 +56,7 @@ decimal
 
 : free-blocks+!  ( n group# -- )
    tuck free-blocks@ +  0 max   ( group# n' )
-   swap free-blocks!            ( )
+   over free-blocks!            ( group# 'gd )
    gd-update                    ( )
 ;
 : free-inodes@   ( group# -- n )
@@ -74,7 +77,7 @@ decimal
 ;
 : free-inodes+!  ( n inode# -- )
    tuck free-inodes@  +   ( group# n' )
-   swap free-inodes!      ( )
+   over free-inodes!      ( group# )
    gd-update              ( )
 ;
 
@@ -256,7 +259,8 @@ create lowbits
          2dup  i d.block-bitmap d<  if		( d.possible-gn )
             d.block				( gdn-adr )
             0 group-desc			( gdn-adr gd0-adr )
-            swap bsize move update		( )
+            swap bsize move                     ( )
+	    update		                ( )
          else					( d.possible-gn )
             2drop				( )
          then					( )
