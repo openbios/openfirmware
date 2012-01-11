@@ -226,11 +226,16 @@
          drop  exit             ( -- )
       then                      ( d.pblk# )
    else			        ( adr lblk# )  \ find or allocate physical block
-      get-pblk#	u>d		( adr d.pblk# )
+      extent?  if	        ( adr lblk# )
+         >d.pblk#  0= abort" EXT4: Allocating blocks inside extents not yet supported"
+				( adr d.pblk# )
+      else		        ( adr lblk# )
+         get-pblk# u>d		( adr d.pblk# )
+      then			( adr d.pblk# )
    then
 \ This interferes with journal recovery
 \  dup h# f8 < if  dup . ." attempt to destroy file system" cr abort  then
-   block bsize move update
+   d.block bsize move update
 ;
 
 
