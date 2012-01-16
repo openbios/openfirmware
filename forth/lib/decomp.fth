@@ -17,8 +17,6 @@
 \ own special compiling words, it will be easy to change the
 \ decompiler to include them.  This code is implementation
 \ dependant, and will not necessarily work on other Forth system.
-\ However, most of the  machine dependencies have been isolated into a
-\ separate file "decompiler.m.f".
 \ To invoke the decompiler, use the word SEE <name> where <name> is the
 \ name of a Forth word.  Alternatively,  (SEE) will decompile the word
 \ whose acf is on the stack.
@@ -111,7 +109,8 @@ headerless
 \ what kind of branch target it is (either a begin, for backward branches,
 \ a then, for forward branches, or an exit.
 
-40 /n* buffer: breaks
+80 /n* constant /breaks
+/breaks buffer: breaks
 variable end-breaks
 
 variable break-type  variable break-addr   variable where-break
@@ -185,7 +184,7 @@ variable extent  extent off
 : .$endcase  ( ip -- ip' )  indent .." $endcase" indent ta1+  ;
 
 : add-break  ( break-address break-type -- )
-   end-breaks @  breaks 40 /n* +  >=         ( adr,type full? )
+   end-breaks @  breaks /breaks +  >=        ( adr,type full? )
    abort" Decompiler internal table overlow" ( adr,type )
    end-breaks @ breaks >  if                 ( adr,type )
       over end-breaks @ /n 2* - >r r@ 2@     ( adr,type  adr prev-adr,type )
@@ -242,7 +241,7 @@ variable extent  extent off
 : scan-;code ( ip -- ip' | 0 )  does-ip?  0=  if  drop 0  then  ;
 : .;code    (s ip -- ip' )
    does-ip?  if
-      .." does> "
+      cr lmargin @ spaces ." does> "
    else
       0 lmargin ! indent .." ;code "  cr disassemble     0
    then
@@ -358,7 +357,7 @@ d# 36 constant #decomp-classes
 #decomp-classes 1+ case: .execution-class  ( ip index -- ip' )
    (  0 )     .inline                (  1 )     .?branch
    (  2 )     .branch                (  3 )     .loop
-   (  4 )     .+loop                 (  6 )     .do
+   (  4 )     .+loop                 (  5 )     .do
    (  6 )     .compile               (  7 )     .string
    (  8 )     .string                (  9 )     .;code
    ( 10 )     .unnest                ( 11 )     .string
