@@ -142,8 +142,8 @@ action: ( apf -- n )  la1+ @  ;
    place-cstr                                 ( adr )
 ;
 
-: rel!  ( adr1 adr2 -- )  tuck - swap !  ;
-: rel@  ( adr2 -- adr1 )  dup @ +  ;
+: rel!  ( adr1 adr2 -- )  tuck - swap unaligned-!  ;
+: rel@  ( adr2 -- adr1 )  dup unaligned-@ +  ;
 
 6 actions
 action: ( apf -- adr len )  cv-string@  ;
