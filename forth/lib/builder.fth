@@ -212,17 +212,18 @@ h# 256 buffer: s2
 also macros definitions
 : this  ( -- $ )  build-files $top  ;
 : dictionary  ( -- $ )  dictionary-files $top  ;
-: sv9fth    ( -- $ )  " ${HOSTDIR}/sv9fth"  ;
-: sparcfth  ( -- $ )  " ${HOSTDIR}/sparcfth"  ;
-: alphafth  ( -- $ )  " ${HOSTDIR}/alphafth"  ;
-: mipsfth   ( -- $ )  " ${HOSTDIR}/mipsfth"   ;
-: ppcforth  ( -- $ )  " ${HOSTDIR}/ppcforth"  ;
-: x86forth  ( -- $ )  " ${HOSTDIR}/x86forth"  ;
-: 68kforth  ( -- $ )  " ${HOSTDIR}/68kforth"  ;
-: armforth  ( -- $ )  " ${HOSTDIR}/armforth"  ;
-: cforth    ( -- $ )  " ${HOSTDIR}/cforth"  ;
-: builder   ( -- $ )  " ${HOSTDIR}/forth ${HOSTDIR}/../build/builder.dic"  ;
-: tokenize  ( -- $ )  " ${HOSTDIR}/forth ${HOSTDIR}/../build/builder.dic"  ;
+: sv9fth      ( -- $ )  " ${HOSTDIR}/sv9fth"  ;
+: sparcfth    ( -- $ )  " ${HOSTDIR}/sparcfth"  ;
+: alphafth    ( -- $ )  " ${HOSTDIR}/alphafth"  ;
+: mipsfth     ( -- $ )  " ${HOSTDIR}/mipsfth"   ;
+: ppcforth    ( -- $ )  " ${HOSTDIR}/ppcforth"  ;
+: x86forth    ( -- $ )  " ${HOSTDIR}/x86forth"  ;
+: 68kforth    ( -- $ )  " ${HOSTDIR}/68kforth"  ;
+: armforth    ( -- $ )  " ${HOSTDIR}/armforth"  ;
+: arm32rforth ( -- $ )  " ${HOSTDIR}/arm32rforth"  ;
+: cforth      ( -- $ )  " ${HOSTDIR}/cforth"  ;
+: builder     ( -- $ )  " ${HOSTDIR}/forth ${HOSTDIR}/../build/builder.dic"  ;
+: tokenize    ( -- $ )  " ${HOSTDIR}/forth ${HOSTDIR}/../build/builder.dic"  ;
 : output  ( -- $ )  target-names $top  ;
 previous definitions
 
