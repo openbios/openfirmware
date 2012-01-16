@@ -87,9 +87,9 @@ copyright: Use is subject to license terms.
 headerless
 \ Implementation factor
 : stack-params  ( stack -- adr limit current )
-   dup /user# + @ /n -      ( stack limit )
-   swap do-buffer           ( limit adr )
-   tuck @                   ( adr limit current )
+   dup  /user# + unaligned-@  /n -  ( stack limit )
+   swap do-buffer                   ( limit adr )
+   tuck @                           ( adr limit current )
 ;
 headers
 
