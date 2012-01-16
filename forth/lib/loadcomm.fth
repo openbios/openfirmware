@@ -15,9 +15,7 @@ fload ${BP}/forth/lib/filetool.fth		\ needed for dispose, savefort.fth
 fload ${BP}/forth/lib/romable.fth
 
 fload ${BP}/forth/lib/hidden.fth
-
 fload ${BP}/forth/kernel/hashcach.fth
-
 fload ${BP}/forth/lib/th.fth
 fload ${BP}/forth/lib/ansiterm.fth
 
@@ -42,6 +40,7 @@ fload ${BP}/forth/lib/suspend.fth
 fload ${BP}/forth/lib/util.fth
 fload ${BP}/forth/lib/format.fth
 
+fload ${BP}/forth/lib/substrin.fth
 fload ${BP}/forth/lib/stringar.fth
 fload ${BP}/forth/lib/strcase.fth
 
@@ -61,9 +60,8 @@ fload ${BP}/forth/lib/seechain.fth
 fload ${BP}/forth/lib/loadedit.fth		\ Command line editor module
 
 fload ${BP}/forth/lib/caller.fth
-
 fload ${BP}/forth/lib/callfind.fth
-fload ${BP}/forth/lib/substrin.fth
+
 fload ${BP}/forth/lib/sift.fth
 
 fload ${BP}/forth/lib/array.fth
