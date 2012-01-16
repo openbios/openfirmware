@@ -2,6 +2,8 @@
 purpose: bit array operations
 
 hex
+\ bit 0 of the array is bit 7 of byte 0
+
 : bitsetup  ( bit# array -- adr val bit# )
    over 3 >> + tuck c@ h# 80 rot 7 and >>
 ;
