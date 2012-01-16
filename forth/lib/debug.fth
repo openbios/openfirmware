@@ -109,6 +109,7 @@ defer restore-window   ' noop is restore-window
    ." R       RSTrace: Show contents of Forth return stack" cr
    ." S       See: Decompile definition being debugged" cr
    ." $       Display top of stack as adr,len text string" cr
+   ." \       Display Forth return stack as numbers (like the data stack)" cr
    ." Q       Quit: abandon execution of the debugged word" cr
 ;
 d# 24 constant cmd-column
@@ -133,20 +134,38 @@ headerless
 d# 72 constant /#buf
 /#buf buffer: #buf-save
 variable hld-save
+variable show-rstack  \ Show the return stack along with the data stack?
+variable hex-stack    \ Show the data stack in hex?
 : save#     ( -- )  #-buf /#buf -  #buf-save  d# 72 move    hld @  hld-save !  ;
 : restore#  ( -- )  #buf-save  #-buf /#buf -  d# 72 move    hld-save @  hld !  ;
+: (.rs  ( -- )
+   show-rstack @ 0=  if  exit  then
+   ." return-stack: "
+   push-hex
+   rp0 @ rp@ - /n /
+   6 do   \ It appears that skipping the first 6 entries on the stack skips the debug goo on the rs
+      rp@ i /n * + @ .
+   loop
+   pop-base
+;
 : (trace  ( -- )
    first-time?  if
       ??cr
       ip@  <ip @ =  if  ." : "  else  ." Inside "  then
       <ip @ find-cfa .name
+      0 show-rstack !
       false is first-time?
       rp@ is rp-mark
    then
    begin
       step? @  if  to-debug-window  then
       save#
-      cmd-column 2+ to-column  ." ( " .s ." )" cr   \ Show stack
+      cmd-column 2+ to-column
+      hex-stack @  if  push-hex  then
+      ." ( " .s    \ Show data stack
+      hex-stack @  if  pop-base  then
+      show-rstack @  if  (.rs  then   \ Show return stack
+      ." )" cr
       restore#
 
       ['] noop is indent
@@ -178,6 +197,8 @@ variable hld-save
             ascii <  of  ip@ ta1+ set-<ip  1 cnt !    false  endof
             ascii )  of  ip@ ip> !  1 cnt !           false  endof
             ascii *  of  ip@ find-cfa dup <ip !  'unnest ip> !  false  endof
+            ascii \  of  show-rstack @ 0= show-rstack ! false endof
+            ascii X  of  hex-stack @ 0= hex-stack !   false  endof
             ( default )  true swap
          endcase
       else
