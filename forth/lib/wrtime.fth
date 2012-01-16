@@ -1,7 +1,12 @@
 purpose: Timing using wrapper calls
 
+\ We may need to pass a static buffer to the wrapper to hold the
+\ results of gettimeofday().
+0 value timeval
+
 : get-usecs  ( -- d.usec )
-   d# 348 syscall retval 2@  ( usec sec )
+   timeval d# 348 syscall               ( timeval )
+   ?dup 0=  if  retval  then  2@        ( usec sec )
    d# 1,000,000 um*  rot 0  d+
 ;
 

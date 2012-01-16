@@ -55,6 +55,7 @@ which is part of the Forth image file.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 /* 
  * The following #includes and externs fix GCC warnings when compiled with
@@ -72,6 +73,10 @@ char *host_os = "Linux";
 #define SYS5 1
 #endif
 
+#ifdef __MACH__
+#define __unix__ 1
+#endif
+
 #ifdef WIN32
 #define ENV_DELIM  ';'
 #define HOST_LITTLE_ENDIAN
@@ -81,20 +86,11 @@ char *host_os = "Linux";
 #define ENV_DELIM  ':'
 #endif
 
-#ifdef MACOS
-#define DEF_FPATH ""
-#define DEF_PATH  ""
-#else
 #define DEF_FPATH ".:/usr/lib:/usr/local/lib/forth"
 #define DEF_PATH  ".:/usr/bin:/usr/local/bin"
 #define DEF_DIC   "builder.dic"		/* Default Forth image file */
 #define DEF_DICT  (512*1024L)		/* Default dictionary growth space */
-#endif
 
-#ifdef MACOS
-char *host_os = "macos";
-char *host_cpu = "powerpc";
-#endif
 
 #ifdef M68K
 char *host_cpu = "m68k";
@@ -105,6 +101,7 @@ char *host_cpu = "m68k";
 #if defined(__APPLE__)
 char *host_os = "Darwin";
 #define BSD 1
+#include <libkern/OSCacheControl.h>
 #endif
 
 #ifdef MIPS
@@ -165,11 +162,13 @@ char *host_cpu = "x86";
 
 #ifdef TARGET_POWERPC
 char *target_cpu = "powerpc";
-#ifndef LinuxPOWERPC
-#define TOCCALL
-#endif
 #define CPU_MAGIC 0x48000020
 #define START_OFFSET 8
+# ifdef LinuxPOWERPC
+#  define NOGLUE
+# else
+   extern   void	glue();
+# endif
 #endif
 
 #ifdef ARM
@@ -197,6 +196,13 @@ char *host_cpu = "x86";
 # endif
 #endif
 
+#ifdef __x86_64__
+char *host_cpu = "x86";
+# ifndef CKERNEL
+#  define HOST_LITTLE_ENDIAN
+# endif
+#endif
+
 #ifdef TARGET_X86
 char *target_cpu = "x86";
 #define CPU_MAGIC 0x4d503400
@@ -216,7 +222,7 @@ char *host_cpu = "x86";
 
 #ifdef __unix__
 # include <sys/mman.h>
-# include <limits.h>    /* for PAGESIZE */
+# include <limits.h>	/* for PAGESIZE */
 # ifndef PAGESIZE
 #  define PAGESIZE 4096
 # endif
@@ -229,11 +235,6 @@ char *host_cpu = "x86";
 # include <sys/param.h>
 #endif
 
-#ifdef MACOS
-# include <events.h>
-# include <files.h>
-# include <console.h>
-#endif
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -281,23 +282,15 @@ typedef long quadlet;
 
 #include <signal.h>
 
-#ifdef TARGET_POWERPC
-# ifdef LinuxPOWERPC
-#  define NOGLUE
-# else
-   extern   void	glue();
-# endif
-#endif
-
 #ifdef AIX
   extern   void	_sync_cache_range(char *, long);
 #endif
 
 #ifdef __unix__
-  INTERNAL void	exit_handler();
+  void	exit_handler();
 # ifdef BSD
-   INTERNAL void	cont_handler();
-   INTERNAL void	stop_handler();
+  INTERNAL void	cont_handler();
+  INTERNAL void	stop_handler();
 # endif
 #endif
 
@@ -325,12 +318,12 @@ typedef long quadlet;
 #endif
 
 /* externs from logger.c */
-extern char *rootname();
-extern char *basename();
-extern void log_output();
-extern void log_input();
-extern void log_command_line();
-extern void log_env();
+extern char *rootname(char *);
+extern char *basename(char *);
+extern void log_output(char *, long);
+extern void log_input(char *, int);
+extern void log_command_line(int, char **);
+extern void log_env(char *, char *);
 
 #if !defined(LinuxPOWERPC) && !defined(__APPLE__)
   extern int	read(), write();
@@ -339,7 +332,9 @@ extern void log_env();
 INTERNAL char *	substr();
 INTERNAL long	path_open();
 INTERNAL void	keymode();
+#ifdef SYS5
 INTERNAL void	keyqmode();
+#endif
 
 INTERNAL long 	f_open(), f_creat();
 INTERNAL long	f_close(), f_read(), f_write();
@@ -349,10 +344,11 @@ INTERNAL long	f_crstr();
 
 #if defined(PPCSIM) || defined (ARMSIM)
   /* These are not INTERNAL because the simulators use then */
-           long	c_key();
-           long	s_bye();
-           void	simulate();
-           void	restoremode();
+  long c_key();
+  long s_bye();
+  void restoremode();
+  void simulate(char *, char *, char *, long (**)(), char *, int, char **);
+  long find(long, int, long, char *);
 #else
   INTERNAL long	c_key();
   INTERNAL long	s_bye();
@@ -416,13 +412,17 @@ INTERNAL long c_setraw(), c_setbaud(), c_setparity(), c_setattr();
 INTERNAL long c_getattr(), c_drain();
 #endif
 
+/* Fend off unused argument warnings */
+#define UNUSED_ARGUMENT(x) (void)x
+
+long nop(void);
 long
-nop()
+nop(void)
 {
 	return(0L);
 }
 
-long ( (*functions[])()) = {
+long (*functions[])() = {
 /*	0	4	*/
 	c_key,	c_emit,
 
@@ -430,7 +430,7 @@ long ( (*functions[])()) = {
 	f_open,	f_creat,f_close,f_read,	f_write,f_ioctl,c_keyques,
 
 /*	36	40	44		48		*/
-        s_bye,	f_lseek,f_unlink,	fileques,
+	s_bye,	f_lseek,f_unlink,	fileques,
 
 /*	52	56		60	*/
 	c_type,	c_expect,	syserror,
@@ -504,37 +504,37 @@ long ( (*functions[])()) = {
 #include "win32fun.c"
 #include "jtagfun.c"
 #else
-	  /* Windows socket stuff 204 .. 264 */
-	  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,
+	/* Windows socket stuff 204 .. 264 */
+	0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,
 #endif
 
 #ifdef JTAG
 #include "jtagfun.c"
 #else
-	  /* 268 .. 344 */
-	  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,
+	/* 268 .. 344 */
+	0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,
 #endif
 
 #if defined(BSD) || defined(__linux__)
-	  /* 348 */
-	  s_timeofday,
+	/* 348 */
+	s_timeofday,
 #else
-	  0,
+	0,
 #endif
 
 #if defined(USE_TERMIOS)
-	  /* 352       356        360          364        368      372*/
-	  c_setraw, c_setbaud, c_setparity, c_getattr, c_setattr,  c_drain,
+	/* 352    356        360          364        368         372*/
+	c_setraw, c_setbaud, c_setparity, c_getattr, c_setattr,  c_drain,
 #else
-	  0,        0,         0,           0,         0,          0,
+	0,        0,         0,           0,         0,          0,
 #endif
 
-          /* 376       380      384		388 */
-          m_inflate,   m_map,   m_unmap,	s_ioperm,
+	/* 376       380      384	388 */
+	m_inflate,   m_map,   m_unmap,	s_ioperm,
 
 #ifdef USE_XCB
-          /* 392       396           400       404 */
-          open_window, close_window, rgbcolor, fill_rectangle,
+	/* 392       396           400       404 */
+	open_window, close_window, rgbcolor, fill_rectangle,
 #endif
 };
 /*
@@ -592,7 +592,7 @@ INTERNAL char *expand_name();
 extern char *emacs_main();
 char *fake_argv[] = { "micro-emacs" , "dontexit" , 0 };
 INTERNAL long
-emacs()
+emacs(void)
 {
 #ifdef EMACS
 	char *eret;
@@ -605,55 +605,57 @@ emacs()
 }
 
 #if defined(HOST_LITTLE_ENDIAN)
+long lbflip(long n);
 long
 lbflip(long n)
 {
-     long o;
-     o = (n>>24) &0xff;
-     o |= ((n>>16) & 0xff) << 8;
-     o |= ((n>>8) & 0xff) << 16;
-     o |= (n & 0xff) << 24;
-     return(o);
+	long o;
+	o = (n>>24) &0xff;
+	o |= ((n>>16) & 0xff) << 8;
+	o |= ((n>>8) & 0xff) << 16;
+	o |= (n & 0xff) << 24;
+	return(o);
 }
+void lbflips(long *adr, int len);
 void
 lbflips(long *adr, int len)
 {
-     while ((len -= sizeof(long)) >= 0) {
-	*adr = lbflip(*adr);
-	adr++;
-     }
+	while ((len -= sizeof(long)) >= 0) {
+		*adr = lbflip(*adr);
+		adr++;
+	}
 }
-
+void qlbflips(long *adr, char *bitmap, int len);
 void
 qlbflips(long *adr, char *bitmap, int len)
 {
-     int nbits = 0;
-     unsigned char residbits = 0;
+	int nbits = 0;
+	unsigned char residbits = 0;
 
-     while ((len -= sizeof(long)) >= 0) {
-	if (nbits == 0) {
-		nbits = 8;
-		residbits = *bitmap++;
+	while ((len -= sizeof(long)) >= 0) {
+		if (nbits == 0) {
+			nbits = 8;
+			residbits = *bitmap++;
+		}
+		if ((residbits & 0x80) == 0)
+			*adr = lbflip(*adr);
+		residbits <<= 1;
+		nbits -= 1;
+		adr++;
 	}
-	if ((residbits & 0x80) == 0)
-		*adr = lbflip(*adr);
-	residbits <<= 1;
-	nbits -= 1;
-	adr++;
-     }
 }
 #endif
 
 #ifdef TARGET_X86
 int bittest(char *table, int index) 
 {
-    int quot, remain ;
-    unsigned char pattern = 128 ;
+	int quot, remain ;
+	unsigned char pattern = 128 ;
 
-    quot = index /8 ;
-    remain = index %8 ;
+	quot = index /8 ;
+	remain = index %8 ;
 
-    return( ( table[quot] & (pattern>>remain) ) !=0 ) ;
+	return( ( table[quot] & (pattern>>remain) ) !=0 ) ;
 }
 
 	/* Header for PharLap flat 32-bit executable file */
@@ -695,66 +697,45 @@ int bittest(char *table, int index)
 char bpval[MAXPATHLEN];
 char hostdirval[MAXPATHLEN];
 
-char *
-remove_tail(s, p)
-	char *s, *p;
-{
-	if (p == s)
-		return(s);
-	--p;
-	*p = '\0';
-	while (p != s) {
-		--p;
-		if (*p == '\\' || *p == '/')
-			return(p+1);
-	}
-	return (s);
-}
-
+void set_bp(void);
 void
-set_bp()
+set_bp(void)
 {
-	char *p;
+	char here[MAXPATHLEN];
+	getcwd(here, MAXPATHLEN);
 	getcwd(bpval, MAXPATHLEN);
-	for (p = bpval + strlen(bpval); p != bpval; p = remove_tail(bpval,p)) {
-            if (strcmp(p, host_cpu) == 0) {
-                strcpy(hostdirval, bpval);
-                strcat(hostdirval, "/");
-                strcat(hostdirval, host_os);
-            }
-            if (strcmp(p, "forth") == 0
-                ||  strcmp(p, "cpu") == 0
-                ||  strcmp(p, "dev") == 0
-                ||  strcmp(p, "ofw") == 0) {
-                (void)remove_tail(bpval, p);
-                break;
-            }
+	while (access("ofw", F_OK)) {
+		chdir("..");
+		getcwd(bpval, MAXPATHLEN);
+		if (strcmp(bpval, "/") == 0) {
+			bpval[0] = '\0';
+			break;
+		}
 	}
+	chdir(here);
 }
 
-struct options {  char *dashopt; char *forthopt; } options[] =
+struct woptions {  char *dashopt; char *forthopt; } woptions[] =
 {
-	"-c",  "clean ",
-	"-d",  "prolix ",
-	"-q",  "quiet ",
-	"-v",  "verbose ",
-	"",    "",
+	{ "-c",  "clean " },
+	{ "-d",  "prolix " },
+	{ "-q",  "quiet " },
+	{ "-v",  "verbose " },
+	{ "",    "" },
 };
 
+int modify_command_line(int argc, char *argv[], char *targv[]);
 int
-modify_command_line(argc, argv, targv)
-	int argc;
-	char *argv[];
-	char *targv[];
+modify_command_line(int argc, char *argv[], char *targv[])
 {
 	int argn = 1;
 	static char dictname[MAXPATHLEN];
 	static char command[100];
-	struct options *o;
+	struct woptions *o;
 
 	*command = '\0';
 
-	for (o = options; *o->dashopt != '\0'; o++)
+	for (o = woptions; *o->dashopt != '\0'; o++)
 		if (argn < argc && strcmp(argv[argn], o->dashopt) == 0) {
 			strcat(command, o->forthopt);
 			++argn;
@@ -762,19 +743,19 @@ modify_command_line(argc, argv, targv)
 
 	strcpy(dictname, "${HOSTDIR}/../build/builder.dic");
 
-        if (argn < argc && strcmp(argv[argn], "-t") == 0) {
-            ++argn;
-            strcat(command, "tag ");
-        } else {
-            strcat(command, "build ");
-        }
+	if (argn < argc && strcmp(argv[argn], "-t") == 0) {
+		++argn;
+		strcat(command, "tag ");
+	} else {
+		strcat(command, "build ");
+	}
 
-        if (argn < argc) {
-            strcat(command, argv[argn]);
-        } else {
-            printf("No target name specified; executing builder in interactive mode\n");
-            strcpy(command, "interact");
-        }
+	if (argn < argc) {
+		strcat(command, argv[argn]);
+	} else {
+		printf("No target name specified; executing builder in interactive mode\n");
+		strcpy(command, "interact");
+	}
 
 	targv[0] = argv[0];
 	targv[1] = dictname;
@@ -784,9 +765,9 @@ modify_command_line(argc, argv, targv)
 	return(4);
 }
 
+char *strlower(char *str);
 char *
-strlower(str)
-	char *str;
+strlower(char *str)
 {
 	char c, *s;
 	for (s = str; (c = *s) != '\0'; s++)
@@ -797,9 +778,11 @@ strlower(str)
 }
 
 int
-main(argc, argv, envp)
-	int argc;
-	char **argv, *envp;
+main(int argc, char **argv
+#ifdef EMACS
+     , char **envp
+#endif
+	)
 {
 	char * loadaddr;
 	long f;
@@ -810,12 +793,7 @@ main(argc, argv, envp)
 #ifdef TARGET_X86
 	char *reloc_table ;
 	int delta_org, old_org, code_size ;
-	int code_wsize, cold_code, i ;
-#endif
-
-#ifdef MACOS
-	t_init();
-   	argc = ccommand(&argv);
+	int code_wsize, i ;
 #endif
 
 	/*
@@ -833,8 +811,7 @@ main(argc, argv, envp)
 	}
 
 	progname = argv[0];
-
-	log_command_line(progname, dictfile, f, argc, argv);
+	log_command_line(argc, argv);
 
 	set_bp();
 	if (strcmp(strlower(rootname(basename(progname))), "build") == 0) {
@@ -866,9 +843,9 @@ main(argc, argv, envp)
 	/* If there is no command line argument, use the default .exe file */
 	if( argc >= 1  &&
 	    (  (strcmp(substr(*argv,-4,4),".exe") == 0)
-	    || (strcmp(substr(*argv,-4,4),".dic") == 0)
-	    || (strcmp(substr(*argv,-4,4),".EXE") == 0)
-	    || (strcmp(substr(*argv,-4,4),".DIC") == 0) ) ) {
+	       || (strcmp(substr(*argv,-4,4),".dic") == 0)
+	       || (strcmp(substr(*argv,-4,4),".EXE") == 0)
+	       || (strcmp(substr(*argv,-4,4),".DIC") == 0) ) ) {
 		dictfile = *argv++;
 		argc--;
 	} else {
@@ -935,22 +912,22 @@ main(argc, argv, envp)
 	/* dictsize is the total amount of dictionary memory to allocate */
 
 	dictsize = imagesize +  extrasize; 
-        relsize  = (dictsize + 15) /16;     /* Space for relocation map */
+	relsize  = (dictsize + 15) /16;    /* Space for relocation map */
 
-        memsize = dictsize + relsize + PAGESIZE - 1;
+	memsize = dictsize + relsize + PAGESIZE - 1;
 
 	loadaddr = (char *)m_alloc(memsize);
 	if ((loadaddr == (char *) -1) || (loadaddr == (char *) 0)) {
 		error("forth: Can't get memory","");
 		exit(1);
 	}
-        loadaddr = (char *)(((long)loadaddr + (PAGESIZE-1)) & ~(PAGESIZE-1));
+	loadaddr = (char *)(((long)loadaddr + (PAGESIZE-1)) & ~(PAGESIZE-1));
 
-        // Make the dictionary memory executable
-        if (mprotect(loadaddr, dictsize + relsize, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
-            perror("forth: mprotect");
-            exit(1);
-        }
+	// Make the dictionary memory executable
+	if (mprotect(loadaddr, dictsize + relsize, PROT_READ | PROT_WRITE | PROT_EXEC) != 0) {
+		perror("forth: mprotect");
+		exit(1);
+	}
 
 	if( f_read(f, loadaddr, dictsize) <= 0) {
 		error("forth: Error reading dictionary file","");
@@ -974,21 +951,20 @@ main(argc, argv, envp)
 		memcpy(&loadaddr[dictsize], reloc_table, (code_size+15)/16);
 	}
 
-#else 
+#else  // TARGET_X86	
 
 # if defined(TARGET_POWERPC) && defined(HOST_LITTLE_ENDIAN)
 	lbflips((long *)&header, sizeof(header));
 # endif
 
-	if (header.h_magic != CPU_MAGIC) {
+	if ((unsigned int) header.h_magic != CPU_MAGIC) {
 		error("forth: Incorrect dictionary file header in ", dictfile);
-/* XXX */ printf("%x %x\n", CPU_MAGIC, (unsigned int) header.h_magic);
 		exit(1);
 	}
 
 	/* imagesize is the number of bytes to read from the file */
 	imagesize = header.h_tlen  + header.h_dlen
-	          + header.h_trlen + header.h_drlen;
+		+ header.h_trlen + header.h_drlen;
 
 	/*
 	 * Determine the dictionary growth size.
@@ -1005,6 +981,7 @@ main(argc, argv, envp)
 
 	dictsize = sizeof(header) + imagesize +  extrasize ; 
 	dictsize += 16;		/* Allow for alignment */
+	memsize = roundup(dictsize, PAGESIZE);
 
 # ifdef VERBOSE
 #  ifdef PPCSIM
@@ -1017,13 +994,16 @@ main(argc, argv, envp)
 #  endif
 # endif
 
-	loadaddr = (char *)m_alloc(dictsize);
+	loadaddr = (char *)m_alloc(memsize);
 	if ((loadaddr == (char *) -1) || (loadaddr == (char *) 0)) {
 		error("forth: Can't get memory","");
 		exit(1);
 	}
-
-        loadaddr = (char *)(((long)loadaddr + 15) & ~15);
+	if (((long)loadaddr & 15) != 0) {
+		printf("Why isn't loadaddr (%p) aligned?\n", loadaddr);
+		loadaddr = (char *)(((long)loadaddr + 15) & ~15);
+	}
+	memsize -= 16;  // Leave room for initial stack pointer
 	(void)memcpy(loadaddr, (char *)&header, sizeof(header));
 
 	if( f_read(f, loadaddr+sizeof(header), imagesize) != imagesize ) {
@@ -1037,10 +1017,10 @@ main(argc, argv, envp)
 	lbflips((long *)(loadaddr + sizeof(header) + header.h_tlen),
 		header.h_dlen);
 	qlbflips((long *)(loadaddr + sizeof(header)),
-	    loadaddr + sizeof(header) + header.h_tlen + header.h_dlen,
-	    header.h_tlen);
+		 loadaddr + sizeof(header) + header.h_tlen + header.h_dlen,
+		 header.h_tlen);
 # endif
-#endif
+#endif  // TARGET_X86	
 
 	keymode();
 
@@ -1066,62 +1046,80 @@ main(argc, argv, envp)
 	/*
 	 * Call the Forth interpreter as a subroutine.  If it returns,
 	 * exit with its return value as the status code.
+	 *
+	 * Each of the blocks below selects one form of target execution,
+	 * and each terminates the entire wrapper run upon completion.
+	 * Hence there should be no "else" or "elif" clauses after
+	 * this point.
 	 */
 
 #if defined(PPCSIM)
 	simulate(0L, loadaddr+sizeof(header)+START_OFFSET,
-		 loadaddr, functions, ((long)loadaddr+dictsize - 16) & ~15,
+		 loadaddr, functions, (char *)loadaddr + memsize,
 		 argc, argv, 1 /* 0=POWER, 1=PowerPC */);
-#elif defined(ARMSIM)
+	s_bye(0L);
+#endif
+
+#ifdef ARMSIM
 	simulate(0L, loadaddr, loadaddr, functions,
-         ((long)loadaddr+dictsize - 16) & ~15, argc, argv);
-#else
+		 (char *)loadaddr + memsize, argc, argv);
+	s_bye(0L);
+#endif
+	/*
+	 * Not a simulator.
+	 */
 	s_flushcache(loadaddr, dictsize);  /* We're about to execute data! */
-# ifdef TARGET_X86
+
+#ifdef TARGET_X86
 	{
 	int (*codep)();
 	/* There is a pointer to the startup code at offset 0x18 */
 	codep = (int (*)()) *(int *)(&loadaddr[0x18]);
 	if (old_org == -1)
 		codep = (int (*)())((int)codep + (int)loadaddr);
-	*(void **)(loadaddr+0x6) = fsyscall;    
+	*(void **)(loadaddr+0x6) = fsyscall;
 	*(short *)(&loadaddr[0x0a]) = 0;
-	*(long *)(&loadaddr[0x10]) = argc;                        
+	*(long *)(&loadaddr[0x10]) = argc;
 	*(char ***)(&loadaddr[0x14]) = (char **)((char *)&argv[0]); 
 	/* Far call to Forth */
 	(void)codep(0, &(loadaddr[dictsize]));
 	codep = (int (*)())(loadaddr + *(int *)(&loadaddr[0x0]));
 	s_bye(codep(0, 1, 2));
 	}
-# elif !defined(TOCCALL)
+#endif
 
-#  ifdef TARGET_POWERPC
-	s_bye((*(long (*) ())(loadaddr+sizeof(header)+START_OFFSET))
-		(loadaddr, ((char *)functions)+1, ((long)loadaddr+dictsize - 16) & ~15,
-		 argc, argv, 1));
-#  else
-	s_bye((*(long (*) ())(loadaddr+sizeof(header)+START_OFFSET))
-		(loadaddr, functions, ((long)loadaddr+dictsize - 16) & ~15,
-		 argc, argv));
-#  endif
+#ifdef TARGET_POWERPC
+# ifdef NOGLUE
+	{ long toc_entry[2]; int c;
+		toc_entry[1] = 0;
+		toc_entry[0] = ((long)loadaddr)+sizeof(header)+START_OFFSET;
 
-# elif defined(NOGLUE)
-	{ long toc_entry[2]; int c;        
-	    toc_entry[1] = 0;
-	    toc_entry[0] = ((long)loadaddr)+sizeof(header)+START_OFFSET;
-
-	    (*(void (*) ())toc_entry) (loadaddr, functions,
-		(long)loadaddr+dictsize, argc, argv, 0, 0);
-	    s_bye(0L);
+		(*(void (*) ())toc_entry) (loadaddr, functions,
+					   (long)loadaddr+memsize, argc, argv, 0, 0);
+		s_bye(0L);
 	}
 # else
-
-	glue(loadaddr, functions, (long)loadaddr+dictsize, argc, argv,
+	glue(loadaddr, functions, (long)loadaddr+memsize, argc, argv,
 		loadaddr+sizeof(header)+START_OFFSET);
 	s_bye(0L);
 # endif
 #endif
-    restoremode();
+
+	{
+	/*
+	 * XCode specific behavior: if your function has a prototype, the compiler
+	 * passes arguments in registers. Otherwise it pushes them on the stack.
+	 */
+	long (*func)(char *, long (*[])(), long, int, char **);
+	func = (*(long (*) ())(loadaddr+sizeof(header)+START_OFFSET));
+	printf("func %p (%p %p %lx %d %p)\n", func,
+	       (char *)-1, functions, (long)loadaddr + memsize, argc, argv);
+	fflush(stdout);
+	s_bye(func((char *)-1, functions, (long)loadaddr + memsize, argc, argv));
+	}
+
+	restoremode();
+	return 0;
 }
 
 /*
@@ -1129,8 +1127,7 @@ main(argc, argv, envp)
  * number represented by that digit string.  Otherwise returns -1.
  */
 int
-getnum(s)
-	register char *s;
+getnum(char *s)
 {
 	register int digit, n;
 
@@ -1145,24 +1142,21 @@ getnum(s)
 
 #ifdef BSD
 INTERNAL void
-stop_handler()
+stop_handler(void)
 {
 	restoremode();
 	kill(0,SIGSTOP);
 }
 INTERNAL void
-cont_handler()
+cont_handler(void)
 {
 	keymode();
 }
 #endif
 
 #ifdef AIX
-INTERNAL void
-exit_handler(sig, code, SCP)
-	int sig;
-	int code;
-	struct sigcontext *SCP;
+void
+exit_handler(int sig, int code, struct sigcontext *SCP)
 {
 	struct mstsave *state = &SCP->sc_jmpbuf.jmp_context;
 	int i, j;
@@ -1176,7 +1170,7 @@ exit_handler(sig, code, SCP)
 		 * Dump state for debugging
 		 */
 		printf("iar %08x instruction %08x\n", state->iar,
-		    *((int *)state->iar));
+		       *((int *)state->iar));
 		printf("msr %08x\t", state->msr);
 		printf("cr  %08x\t", state->cr);
 		printf("lr  %08x\t", state->lr);
@@ -1191,9 +1185,9 @@ exit_handler(sig, code, SCP)
 	kill(0,SIGQUIT);
 }
 #else
-INTERNAL void
-exit_handler(sig)
-	int sig;
+void exit_handler(int sig);
+void
+exit_handler(int sig)
 {
 #ifdef HAVE_PSIGNAL
 	psignal(sig, "forth");
@@ -1241,6 +1235,10 @@ s_ioperm(unsigned long  from,  unsigned long num, unsigned long on)
 #if defined(__linux__) && defined(__i386__)
   return (long)ioperm(from, num, (int)on);
 #else
+  UNUSED_ARGUMENT(from);
+  UNUSED_ARGUMENT(num);
+  UNUSED_ARGUMENT(on);
+
   return -1L;
 #endif
 }
@@ -1250,17 +1248,11 @@ s_ioperm(unsigned long  from,  unsigned long num, unsigned long on)
  * call to c_key().
  */
 INTERNAL long
-c_keyques()
+c_keyques(void)
 {
-#ifdef MACOS
-	EventRecord theEvent;
-
-	if (!isatty(fileno(stdin)))
-		return(0L);
-	fflush(stdout);
-	return((long) EventAvail( 0x0008, &theEvent ) );
-#else
-        unsigned char c[1];		/* place to read the character */
+#if defined(__unix__) && defined(SYS5) && (defined(__linux__) || !defined(IRIS))
+	unsigned char c[1];		/* place to read the character */
+#endif /* c is used in a couple of configurations */
 	int nchars = 0;
 
 	fflush(stdout);
@@ -1287,10 +1279,9 @@ c_keyques()
 		ioctl(0, FIONREAD, &nchars);
 #   endif
 #  endif
-# else
+# else  // Windows?
 	nchars = (long) (kbhit() ? 1 : 0);
 # endif
-#endif
 	return ((long)nchars);
 }
 
@@ -1314,19 +1305,18 @@ c_keyques()
 
 #if defined(WIN32) || defined(DOS)
 struct keymap { char scancode; char esc_char; } keymap[] = {
-    'H', 'A',  /* Up */
-    'P', 'B',  /* Down */
-    'G', 'H',  /* Home */
-    'O', 'K',  /* End */
-    'K', 'D',  /* Left */
-    'M', 'C',  /* Right */
-    'S', 'P',  /* Delete */
-    0, 0,
+	{ 'H', 'A'},  /* Up */
+	{ 'P', 'B'},  /* Down */
+	{ 'G', 'H'},  /* Home */
+	{ 'O', 'K'},  /* End */
+	{ 'K', 'D'},  /* Left */
+	{ 'M', 'C'},  /* Right */
+	{ 'S', 'P'},  /* Delete */
+	{ 0, 0},
 };
 
 INTERNAL unsigned char
-mapkeys(c)
-	register int c;
+mapkeys(int c)
 {
 	register struct keymap *p;
 
@@ -1339,8 +1329,9 @@ mapkeys(c)
 #endif
 
 /* Not INTERNAL because the PowerPC simulator uses it */
+long c_key(void);
 long
-c_key()
+c_key(void)
 {
 	register int c;
 
@@ -1360,7 +1351,7 @@ c_key()
 	keymode();
 
 	fflush(stdout);
-	if ((c = getc(stdin)) != EOF)
+	if ((c = getchar()) != EOF)
 		return(c);
 	
 	s_bye(0L);
@@ -1372,11 +1363,10 @@ c_key()
  * Send the character c to the output stream.
  */
 INTERNAL long
-c_emit(c)
-	long c;
+c_emit(long c)
 {
 	putchar((int)c);
-	fflush(stdout);
+	return (long) fflush(stdout);
 }
 
 /*
@@ -1387,17 +1377,16 @@ c_emit(c)
  * where input cannot be redirected away from the terminal, just return 0L.
  */
 INTERNAL long
-fileques()
+fileques(void)
 {
 #ifdef USE_STDIO
-#ifdef DEMON
+# ifdef DEMON
 	return(!fisatty(stdin));
-#else
+# else
 	return((long)0);
+# endif
 #endif
-#else
 	return(!isatty(fileno(stdin)));
-#endif
 }
 
 #ifdef USE_TERMIOS
@@ -1420,16 +1409,16 @@ struct sgttyb kstate;
 #define M_KEY  1
 #define M_LINE 2
 #define M_KEYQ 3
-static lmode = M_ORIG;
+static int lmode = M_ORIG;
 
 INTERNAL void
-initline() {
+initline(void) {
 	if (lmode != M_ORIG)
 		return;
 #ifdef USE_TERMIOS
-	tcgetattr(0, &ostate);              /* save old state        */
+	tcgetattr(0, &ostate);                  /* save old state        */
 
-	tcgetattr(0, &lstate);              /* base of line state    */
+	tcgetattr(0, &lstate);                  /* base of line state    */
 	lstate.c_iflag |= IXON|IXANY|IXOFF;     /* XON/XOFF              */
 	lstate.c_iflag |= ICRNL;                /* CR/NL munging         */
 
@@ -1486,7 +1475,7 @@ initline() {
 #endif
 }
 
-INTERNAL linemode()
+INTERNAL void linemode(void)
 {
 	initline();
 	if (lmode != M_LINE) {
@@ -1496,17 +1485,13 @@ INTERNAL linemode()
 #ifdef USE_TERMIOS
 		tcsetattr(0, TCSANOW, &lstate);
 #endif
-#ifdef MACOS
-		csetmode(C_ECHO, stdin);
-#endif
-
 		lmode = M_LINE;
 	}
 }
 
 #ifdef SYS5
 INTERNAL void
-keyqmode()
+keyqmode(void)
 {
 	initline();
 	if (lmode != M_KEYQ) {
@@ -1517,25 +1502,23 @@ keyqmode()
 #endif
 
 INTERNAL void
-keymode()
+keymode(void)
 {
 	initline();
 	if (lmode != M_KEY) {
 #ifdef USE_STTY
-	        ioctl(0, TCSETA, &kstate);
+		ioctl(0, TCSETA, &kstate);
 #endif
 #ifdef USE_TERMIOS
 		tcsetattr(0, TCSANOW, &kstate);
-#endif
-#ifdef MACOS
-		csetmode(C_RAW, stdin);
 #endif
 		lmode = M_KEY;
 	}
 }
 
+void restoremode(void);
 void
-restoremode()
+restoremode(void)
 {
 	initline();
 	if (lmode != M_ORIG) {
@@ -1587,91 +1570,90 @@ c_setraw(long fd) {
   sstate.c_cc[VMIN] = 0;		/* Poll for character	 */
   sstate.c_cc[VTIME] = 0;               /* No input delay        */
 
-  tcsetattr((int)fd, TCSANOW, &sstate);
+  return (long) tcsetattr((int)fd, TCSANOW, &sstate);
 }
 
 struct { int baud; int code; } baudcodes[] =
-{       0,        B0,       50,       B50,       75,       B75,
-      110,      B110,      134,      B134,      150,      B150,
-      200,      B200,      300,      B300,      600,      B600,
-     1200,     B1200,     1800,     B1800,     2400,     B2400,
-     4800,     B4800,     9600,     B9600,    19200,    B19200,
-    38400,    B38400,    57600,    B57600,   115200,   B115200,
+{ {      0,        B0}, {       50,       B50}, {       75,       B75},
+  {    110,      B110}, {      134,      B134}, {      150,      B150},
+  {    200,      B200}, {      300,      B300}, {      600,      B600},
+  {   1200,     B1200}, {     1800,     B1800}, {     2400,     B2400},
+  {   4800,     B4800}, {     9600,     B9600}, {    19200,    B19200},
+  {  38400,    B38400}, {    57600,    B57600}, {   115200,   B115200},
 #ifdef B230400
-   230400,   B230400,
+  { 230400,   B230400},
 
 #ifdef B4000000
-   460800,   B460800,   500000,   B500000,
-   576000,   B576000,   921600,   B921600,  1000000,  B1000000,
-  1152000,  B1152000,  1500000,  B1500000,  2000000,  B2000000,
-  2500000,  B2500000,  3000000,  B3000000,  3500000,  B3500000,
-  4000000,  B4000000,
+  { 460800,   B460800}, {   500000,   B500000},
+  { 576000,   B576000}, {   921600,   B921600}, {  1000000,  B1000000},
+  {1152000,  B1152000}, {  1500000,  B1500000}, {  2000000,  B2000000},
+  {2500000,  B2500000}, {  3000000,  B3000000}, {  3500000,  B3500000},
+  {4000000,  B4000000},
 #endif
 #endif
-       -1,        -1, 
+  {     -1,        -1}, 
 };
-
 
 INTERNAL long
 c_setbaud(long fd, long baud)
 {
-  struct termios sstate;
-  int i;
-  int baudcode;
+	struct termios sstate;
+	int i;
+	int baudcode;
 
-  baudcode = -1;
-  for (i = 0; baudcodes[i].baud != -1; i++) {
-    if (baudcodes[i].baud == baud) {
-      baudcode = baudcodes[i].code;
-      break;
-    }
-  }
-  if (baudcode == -1)
-    return -1L;
+	baudcode = -1;
+	for (i = 0; baudcodes[i].baud != -1; i++) {
+		if (baudcodes[i].baud == baud) {
+			baudcode = baudcodes[i].code;
+			break;
+		}
+	}
+	if (baudcode == -1)
+		return -1L;
 
-  tcgetattr((int)fd, &sstate);	        /* base of key state     */
-  cfsetospeed(&sstate, baudcode);
-  cfsetispeed(&sstate, baudcode);
+	tcgetattr((int)fd, &sstate);	        /* base of key state     */
+	cfsetospeed(&sstate, baudcode);
+	cfsetispeed(&sstate, baudcode);
 
-  return (long)tcsetattr((int)fd, TCSADRAIN, &sstate);
+	return (long)tcsetattr((int)fd, TCSADRAIN, &sstate);
 }
 
 INTERNAL long
 c_setparity(long fd, long odd)
 {
-  struct termios sstate;
+	struct termios sstate;
 
-  tcgetattr((int)fd, &sstate);	        /* base of key state     */
+	tcgetattr((int)fd, &sstate);	        /* base of key state     */
 
-  if (odd)
-    sstate.c_cflag |= PARODD;
-  else
-    sstate.c_cflag &= ~PARODD;
+	if (odd)
+		sstate.c_cflag |= PARODD;
+	else
+		sstate.c_cflag &= ~PARODD;
 
-  return (long)tcsetattr((int)fd, TCSADRAIN, &sstate);
+	return (long)tcsetattr((int)fd, TCSADRAIN, &sstate);
 }
 INTERNAL long
 c_getattr(long fd)
 {
-  static struct termios sstate;
+	static struct termios sstate;
 
-  if (tcgetattr((int)fd, &sstate) < 0)
-    return (-1L);
+	if (tcgetattr((int)fd, &sstate) < 0)
+		return (-1L);
 
-  return((long)&sstate);
+	return((long)&sstate);
 }
 
 INTERNAL long
 c_setattr(long fd, long sstate)
 {
-  return (long)tcsetattr((int)fd, TCSADRAIN, (struct termios *)sstate);
+	return (long)tcsetattr((int)fd, TCSADRAIN, (struct termios *)sstate);
 }
 
 INTERNAL long
 c_drain(long fd)
 {
-  tcdrain((int)fd);
-  return 0L;
+	tcdrain((int)fd);
+	return 0L;
 }
 #endif
 
@@ -1681,26 +1663,19 @@ c_drain(long fd)
  * The line terminator character is not stored in the buffer.
  */
 INTERNAL long
-c_expect(max, buffer)
-	register long max;
-	char * buffer;
+c_expect(long max, char *buffer)
 {
-	register int c = 0;
+	int c = 0;
 	register char *p = buffer;
 
 	linemode();
 
 	fflush(stdout);
-#ifdef MACOS
-	while (max  &&  (c = getc(stdin)) != '\n' ) {
-		if (c == EOF)  continue;
+	read(0, &c, 1);
+	while (max--  &&  c != '\n'  &&  c != EOF ) {
 		*p++ = c;
-		max--;
+		read(0, &c, 1);
 	}
-#else
-	while (max--  &&  (c = getc(stdin)) != '\n'  &&  c != EOF )
-		*p++ = c;
-#endif
 	keymode();
 	return ( (long)(p - buffer) );
 }
@@ -1709,21 +1684,20 @@ c_expect(max, buffer)
  * Send len characters from the buffer at addr to the output stream.
  */
 INTERNAL long
-c_type(len, addr)
-	long len;
-	register char * addr;
+c_type(long len, char *addr)
 {
 	while(len--)
 		putchar(*addr++);
+	return 0L;
 }
 
 /*
  * Sends an end-of-line sequence to the output stream.
  */
 INTERNAL long
-c_cr()
+c_cr(void)
 {
-	putchar('\n');
+	return (long) putchar('\n');
 }
 
 /*
@@ -1731,15 +1705,15 @@ c_cr()
  * a packed (leading count byte) string.
  */
 INTERNAL long
-f_crstr()
+f_crstr(void)
 {
 	return((long)"\1\n");
 }
 
 /* Not INTERNAL because the PowerPC simulator uses it */
+long s_bye(long code);
 long
-s_bye(code)
-	long code;
+s_bye(long code)
 {
 	restoremode();
 	fflush(stdout);
@@ -1751,8 +1725,7 @@ s_bye(code)
  * stream.
  */
 void
-error(str1,str2)
-	char *str1, *str2;
+error(char *str1, char *str2)
 {
 	write(2,str1,strlen(str1));
 	write(2,str2,strlen(str2));
@@ -1762,7 +1735,7 @@ error(str1,str2)
 
 /* Find the error code returned by the last failing system call. */
 INTERNAL long
-syserror()
+syserror(void)
 {
 #ifndef __unix__
 	extern int errno;
@@ -1774,8 +1747,7 @@ syserror()
 /* Display an error message */
 
 INTERNAL long
-pr_error(errnum)
-	long errnum;
+pr_error(long errnum)
 {
 #ifndef __unix__
 	extern int errno;
@@ -1783,6 +1755,7 @@ pr_error(errnum)
 	
 	errno = errnum;
 	perror("");
+	return 0L;
 }
 
 INTERNAL char *expand_name();
@@ -1807,9 +1780,7 @@ char *open_modes[] = {
 #endif
 
 INTERNAL long
-f_open(name, flag, mode)
-	char *name;
-	long flag, mode;
+f_open(char *name, long flag, long mode)
 {
 	char *expand_name();
 	char *sccs_get();
@@ -1840,9 +1811,7 @@ f_open(name, flag, mode)
 #include <sys/file.h>
 #endif
 INTERNAL long
-f_creat(name, mode)
-	char *name;
-	long mode;
+f_creat(char *name, long mode)
 {
 	int result;
 
@@ -1867,8 +1836,7 @@ f_creat(name, mode)
 }
 
 INTERNAL long
-f_mkdir(name)
-	char *name;
+f_mkdir(char *name)
 {
 #ifdef DEMON
 	return(-1);	/* XXX fixme */
@@ -1882,8 +1850,7 @@ f_mkdir(name)
 }
 
 INTERNAL long
-f_rmdir(name)
-	char *name;
+f_rmdir(char *name)
 {
 #ifdef DEMON
 	return(-1);	/* XXX fixme */
@@ -1893,9 +1860,7 @@ f_rmdir(name)
 }
 
 INTERNAL long
-f_read(fd, buf, cnt)
-	long fd, cnt;
-	char *buf;
+f_read(long fd, char *buf, long cnt)
 {
 #ifdef USE_STDIO
 	return((long)fread(buf, 1, cnt, (FILE *)fd));
@@ -1905,9 +1870,7 @@ f_read(fd, buf, cnt)
 }
 
 INTERNAL long
-f_write(fd, buf, cnt)
-	long fd, cnt;
-	char *buf;
+f_write(long fd, char *buf, long cnt)
 {
 #ifdef USE_STDIO
 	return((long)fwrite(buf, 1, cnt, (FILE *)fd));
@@ -1917,8 +1880,7 @@ f_write(fd, buf, cnt)
 }
 
 INTERNAL long
-f_close(fd)
-	long fd;
+f_close(long fd)
 {
 	long size;
 
@@ -1940,8 +1902,7 @@ f_close(fd)
 }
 
 INTERNAL long
-f_unlink(name)
-	char *name;
+f_unlink(char *name)
 {
 #ifdef DEMON
 	return((long)remove(expand_name(name)));
@@ -1951,8 +1912,7 @@ f_unlink(name)
 }
 
 INTERNAL long
-f_lseek(fd, offset, flag)
-	long fd, offset, flag;
+f_lseek(long fd, long offset, long flag)
 {
 #ifdef USE_STDIO
 	return(fseek((FILE *)fd, offset, (int)flag));
@@ -1962,33 +1922,36 @@ f_lseek(fd, offset, flag)
 }
 
 INTERNAL long
-f_ioctl(fd, code, buf)
-	long fd, code;
-	char *buf;
+f_ioctl(long fd, long code, char *buf)
 {
 #ifdef __unix__
 	return((long)ioctl((int)fd, (int)code, buf));
 #else
+	UNUSED_ARGUMENT(fd);
+	UNUSED_ARGUMENT(code);
+	UNUSED_ARGUMENT(buf);
+
 	return((long)-1);
 #endif
 }
 
 INTERNAL long
-s_signal(signo, adr)
-	long signo;
-	void (*adr)();
+s_signal(long signo, void (*adr)())
 {
 #ifndef WIN32
 	return((long)signal((int)signo, adr));
 #else
+	UNUSED_ARGUMENT(signo);
+	UNUSED_ARGUMENT(adr);
+
 	return(0L);
 #endif
 }
 
 /* Within the first blank-delimited field, translate / to \ */
+#if defined(WIN32) || defined(DOS)
 INTERNAL char *
-backslash(cmd)
-	char *cmd;
+backslash(char *cmd)
 {
 	static char cmdbuf[256];
 	char c, *newp;
@@ -2006,15 +1969,15 @@ backslash(cmd)
 	} while(c != '\0');
 	return(cmdbuf);
 }
+#endif /* WIN32 || DOS */
 
 INTERNAL long
-s_system(str)
-	char *str;
+s_system(char *str)
 {
 	int i;
 	char *cmd;
 
-        fflush(stdout);
+	fflush(stdout);
 	linemode();
 #if defined(WIN32) || defined(DOS)
 	/*
@@ -2038,9 +2001,9 @@ s_system(str)
  * this on strings that are known to be in temporary storage.
  * For now, this is only used on the result from backslash().
  */
+#if defined(WIN32) || defined(DOS)
 INTERNAL char *
-clean_dir(name)
-	char *name;
+clean_dir(char *name)
 {
 	int namelen;
 
@@ -2049,34 +2012,12 @@ clean_dir(name)
 		name[namelen - 1] = '\0';
 	return(name);
 }
+#endif /* WIN32 || DOS */
 
-#ifdef MACOS
-INTERNAL StringPtr
-pstr(str)
-    register char *str;
-{
-    static Str255 outstr;
-    register unsigned char *p;
-
-    for (p = &outstr[1]; *str; )
-        *p++ = *str++;
-    *outstr = p - outstr - 1;
-    return ((StringPtr)outstr);
-}
-#endif
 
 INTERNAL long
-s_chdir(str)
-	char *str;
+s_chdir(char *str)
 {
-#ifdef MACOS
-	WDPBRec pb;
-
-	pb.ioNamePtr = pstr(expand_name(str));
-	pb.ioVRefNum = 0;
-	pb.ioWDDirID = 0;
-	return( PBHSetVol(&pb, 0) );
-#else
 	char *name;
 #if defined(WIN32) || defined(DOS)
 	name = clean_dir(backslash(expand_name(str)));
@@ -2084,112 +2025,29 @@ s_chdir(str)
 	name = expand_name(str);
 #endif
 	return((long)chdir(name));
-#endif
-}
-
-#ifdef MACOS
-void
-prepend(a, b)
-    Str255 a;
-    char *b;
-{
-    char *p, *q;
-    int len;
-    
-    len = a[0];
-    for(p = b + strlen(b) + 1, q = p + len; p > b; )
-        *--q = *--p;
-    memcpy(b, &a[1], a[0]);
-}
-
-Str255 fname;
-long
-s_getwd(buf)
-    char *buf;
-{
-    static char wd_buf[256];
-    int volume, dirid;
-    WDPBRec pb;
-    CInfoPBRec cpb;
-    
-    wd_buf[0] = ':';
-    wd_buf[1] = '\0';
-    
-    /* Save the current working directory so we can get back */
-    pb.ioNamePtr = (StringPtr)fname;
-    PBHGetVol(&pb, 0);
-    dirid = pb.ioWDDirID;
-    volume = pb.ioWDVRefNum;
-
-    while (1) {
-        /* Get the working directory ID */
-        pb.ioNamePtr = (StringPtr)fname;
-        PBHGetVol(&pb, 0);
-
-        /* Find its name */
-        cpb.dirInfo.ioNamePtr = (StringPtr)fname;
-        cpb.dirInfo.ioDrDirID = pb.ioWDDirID;
-        cpb.dirInfo.ioVRefNum = pb.ioWDVRefNum;
-        cpb.dirInfo.ioFDirIndex = -1;
-        PBGetCatInfo(&cpb, 0);
-
-        prepend(fname, wd_buf);
-
-        /* cd to the parent directory */
-        pb.ioWDDirID = 0;
-        pb.ioVRefNum = 0;
-        pb.ioNamePtr = (StringPtr)"\p::";
-        if (PBHSetVol(&pb, 0) != noErr) /* Bail out when we reach the root */
-            break;
-
-        prepend("\p:", wd_buf);
-    }
-
-    /* Restore previous working directory */
-    pb.ioVRefNum = volume;
-    pb.ioWDDirID = dirid;
-    pb.ioNamePtr = 0;
-    PBHSetVol(&pb, 0);
-
-    return((long)wd_buf);
 }
 
 INTERNAL long
-s_getwd0()
-{
-    return(s_getwd((char *)0));
-}
-#else
-INTERNAL long
-s_getwd(buf)
-	char *buf;
+s_getwd(char *buf)
 {
 	return ((long)getcwd(buf, MAXPATHLEN));
 }
 
 INTERNAL long
-s_getwd0()
+s_getwd0(void)
 {
 	static char tmpbuf[MAXPATHLEN];
 
 	return ((long)getcwd(tmpbuf, MAXPATHLEN));
 }
-#endif
 
 INTERNAL long
-m_alloc(size)
-	long size;
+m_alloc(long size)
 {
 	char *mem;
 
 	size = (size+7) & ~7;
-/* XXX is this needed? */
-size += 0x80;
-#ifdef MACOS
-	mem = (char *)NewPtrSys(size);
-#else
 	mem = (char *)malloc((size_t)size);
-#endif
 	if (mem != NULL)
 		memset(mem, '\0', size);
 
@@ -2198,21 +2056,15 @@ size += 0x80;
 
 /* ARGSUSED */
 INTERNAL long
-m_free(size, adr)
-	long size;
-	char *adr;
+m_free(long size, char *adr)
 {
-#ifdef MACOS
-	DisposPtr(adr);
-#else
+	UNUSED_ARGUMENT(size);
 	free(adr);
-#endif
+	return 0L;
 }
 
 INTERNAL long
-m_realloc(size, adr)
-	long size;
-	char *adr;
+m_realloc(long size, char *adr)
 {
 	char *mem;
 
@@ -2223,16 +2075,14 @@ m_realloc(size, adr)
 
 #ifdef __unix__
 INTERNAL long
-m_sbrk(size)
-	long size;
+m_sbrk(long size)
 {
 	return((long)sbrk(size));
 }
 #endif
 
 INTERNAL long
-c_getenv(str)
-	char *str;
+c_getenv(char *str)
 {
 	return((long)getenv(str));
 }
@@ -2244,7 +2094,7 @@ c_getenv(str)
 #endif
 #endif
 INTERNAL long
-today()
+today(void)
 {
 	long tadd;
 	time(&tadd);
@@ -2252,7 +2102,7 @@ today()
 }
 
 INTERNAL long
-timez()
+timez(void)
 {
 #if defined(BSD)
 	static struct timeval t;
@@ -2283,20 +2133,22 @@ timez()
 
 #if defined(BSD) || defined(__linux__)
 INTERNAL long
-s_timeofday()
+s_timeofday(struct timeval *tvp)
 {
 	static struct timeval t;
 	static struct timezone tz;
 	extern int gettimeofday();
 
-	gettimeofday(&t, &tz);
-	return((long)&t);
+	if (tvp == 0)
+		tvp = &t;
+	gettimeofday(tvp, &tz);
+	return((long)tvp);
 }
 #endif
 
 /* Return a string representing the name of the time zone */
 INTERNAL long
-timezstr()
+timezstr(void)
 {
 	return((long)"");	/* Regulus doesn't seem to have this */
 }
@@ -2310,17 +2162,23 @@ timezstr()
 #endif
 
 INTERNAL long
-s_flushcache(adr, len)
-     char *adr;
-     long len;
+s_flushcache(char *adr, long len)
 {
+	UNUSED_ARGUMENT(adr);
+	UNUSED_ARGUMENT(len);
+
+#ifdef __APPLE__
+	sys_icache_invalidate((void *)adr, (size_t)len);
+	return 0L;
+#endif
 #if defined(__linux__) && defined(ARM) 
 	__clear_cache(adr, adr+len);
+	return 0L;
 #endif
-
 #if defined(__linux__) && defined(MIPS) 
-       extern int cacheflush(char *addr, int nbytes, int cache);
-       (void) cacheflush(adr, len, BCACHE);
+	extern int cacheflush(char *addr, int nbytes, int cache);
+	(void) cacheflush(adr, len, BCACHE);
+	return 0L;
 #endif
 #if defined(NetBSD) && defined(ARM)
 	struct arm32_sync_icache_args { void *addr; long len; } sysarch_args;
@@ -2328,18 +2186,23 @@ s_flushcache(adr, len)
 	sysarch_args.addr = (void *)adr;
 	sysarch_args.len = len;
 	sysarch(0, &sysarch_args);
+	return 0L;
 #endif
 #if defined(NetBSD) && defined(M68K)
 	m68k_sync_icache(adr, len);
+	return 0L;
 #endif
 #ifdef NeXT
 	asm("trap #2");
+	return 0L;
 #endif
 #ifdef WINNT
 	FlushInstructionCache(GetCurrentProcess(), adr, len);
+	return 0L;
 #endif
 #ifdef AIX
 	_sync_cache_range(adr, len);
+	return 0L;
 #endif
 #ifdef LinuxPOWERPC
 /*
@@ -2349,84 +2212,77 @@ s_flushcache(adr, len)
  */
 #define CACHEBLOCKSIZE 0x20
 #define CACHEALIGN(adr)  (void *)((long)(adr) & ~(CACHEBLOCKSIZE-1))
-    register void *block, *end;
-    
-    block = CACHEALIGN(adr);
-    end = CACHEALIGN(adr + len + (CACHEBLOCKSIZE-1));
-    while (block < end) {
-        asm("dcbst 0,%0; sync" : : "r" (block));
-        asm("icbi  0,%0; sync" : : "r" (block));
-        block += CACHEBLOCKSIZE;
-    }
+	register void *block, *end;
+	block = CACHEALIGN(adr);
+	end = CACHEALIGN(adr + len + (CACHEBLOCKSIZE-1));
+	while (block < end) {
+		asm("dcbst 0,%0; sync" : : "r" (block));
+		asm("icbi  0,%0; sync" : : "r" (block));
+		block += CACHEBLOCKSIZE;
+	}
 #endif
+	return 0L;
 }
 
 INTERNAL long
-m_deflate(outlen, outadr, inlen, inadr)
-     long outlen;
-     long outadr;
-     long inlen;
-     long inadr;
+m_deflate(long outlen, long outadr, long inlen, long inadr)
 {
-     /*
-      * Zlib compress() returns a buffer in zlib format (see RFC1950).
-      * The buffer is formatted as
-      *   Header[2]  Compressed_data[outlen-6] Adler32[4]
-      * Our inflate() routine expects gzip format (RFC1952):
-      *   Header[10] Compressed_data[outlen-6] CRC32[4] inlen[4]
-      * The conversion is simple so let's just do it here.
-      * Note the CRC32 and inlen fields are little-endian by spec.
-      * Note the overlapping copy requires memmove() or equivalent.
-      * Is the outbuf big enough to handle pathological cases?
-      */
-     unsigned char *outbuf = (unsigned char *)outadr;  /* type convenience */
-     unsigned long datalen;
-     unsigned char gzip_hdr[] = {
-        0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03
-     };
-     unsigned long crc = crc32(0, inadr, inlen);
-     int err = compress(outbuf, &outlen, (void *)inadr, inlen);
-     if (err) return 0;
+	/*
+	 * Zlib compress() returns a buffer in zlib format (see RFC1950).
+	 * The buffer is formatted as
+	 *   Header[2]  Compressed_data[outlen-6] Adler32[4]
+	 * Our inflate() routine expects gzip format (RFC1952):
+	 *   Header[10] Compressed_data[outlen-6] CRC32[4] inlen[4]
+	 * The conversion is simple so let's just do it here.
+	 * Note the CRC32 and inlen fields are little-endian by spec.
+	 * Note the overlapping copy requires memmove() or equivalent.
+	 * Is the outbuf big enough to handle pathological cases?
+	 */
+	unsigned char *outbuf = (unsigned char *)outadr;  /* type convenience */
+	unsigned long datalen;
+	unsigned char gzip_hdr[] = {
+		0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03
+	};
+	unsigned long crc = crc32(0, inadr, inlen);
+	int err = compress(outbuf, &outlen, (void *)inadr, inlen);
+	if (err) return 0;
 
-     datalen = outlen - 6;
-     memmove(&outbuf[10], &outbuf[2], datalen);
-     memmove(&outbuf[0], gzip_hdr, 10);
+	datalen = outlen - 6;
+	memmove(&outbuf[10], &outbuf[2], datalen);
+	memmove(&outbuf[0], gzip_hdr, 10);
 #ifndef HOST_LITTLE_ENDIAN
-     crc = lbflip(crc);
-     inlen = lbflip(inlen);
+	crc = lbflip(crc);
+	inlen = lbflip(inlen);
 #endif
-     /* The CRC and input length are little-endian, not necessarily aligned */
-     outbuf[10 + datalen] = crc & 0xff;
-     outbuf[11 + datalen] = (crc>>8) & 0xff;
-     outbuf[12 + datalen] = (crc>>16) & 0xff;
-     outbuf[13 + datalen] = (crc>>24) & 0xff;
-     outbuf[14 + datalen] = inlen & 0xff;
-     outbuf[15 + datalen] = (inlen>>8) & 0xff;
-     outbuf[16 + datalen] = (inlen>>16) & 0xff;
-     outbuf[17 + datalen] = (inlen>>24) & 0xff;
-     return (18 + datalen);
+	/* The CRC and input length are little-endian, not necessarily aligned */
+	outbuf[10 + datalen] = crc & 0xff;
+	outbuf[11 + datalen] = (crc>>8) & 0xff;
+	outbuf[12 + datalen] = (crc>>16) & 0xff;
+	outbuf[13 + datalen] = (crc>>24) & 0xff;
+	outbuf[14 + datalen] = inlen & 0xff;
+	outbuf[15 + datalen] = (inlen>>8) & 0xff;
+	outbuf[16 + datalen] = (inlen>>16) & 0xff;
+	outbuf[17 + datalen] = (inlen>>24) & 0xff;
+	return (18 + datalen);
 }
 
 INTERNAL long
-m_inflate(nohdr, outadr, inadr)
-     long nohdr;
-     long outadr;
-     long inadr;
+m_inflate(long nohdr, long outadr, long inadr)
 {
-     static char workspace[0x10000];
-     return((long)inflate(workspace, nohdr, (void *)outadr, (void *)inadr));
+	static char workspace[0x10000];
+	return((long)inflate(workspace, nohdr, (void *)outadr, (void *)inadr));
 }
 
 INTERNAL long
 m_map(long fd, long len, long off)
 {
-    return (long)mmap((void *)0, (size_t)len, PROT_READ|PROT_WRITE, MAP_SHARED, (int)fd, (off_t)off);
+	return (long)mmap((void *)0, (size_t)len, PROT_READ|PROT_WRITE, MAP_SHARED, (int)fd, (off_t)off);
 }
 
 INTERNAL long
 m_unmap(long len, long addr)
 {
-    return (long)munmap((void *)addr, (size_t)len);
+	return (long)munmap((void *)addr, (size_t)len);
 }
 
 /*
@@ -2434,127 +2290,106 @@ m_unmap(long len, long addr)
  * search path specified by the environment variable FTHPATH.
  * Returns file descriptor or -1 if not found
  */
-char    fnb[MAXPATHLEN];
+char fnb[MAXPATHLEN];
 INTERNAL long
-path_open(fn)
-register char *fn;
+path_open(char *fn)
 {
-    static char *path;
-    register char *dp;
-    int     fd;
-    register char  *lpath;
+	static char *path;
+	register char *dp;
+	int fd;
+	register char  *lpath;
 
-    if (fn == (char *)0)
-	return -1;
-    if (path == (char *)0) {
-	if (((path = getenv ("FTHPATH")) == (char *)0)
-	&&  ((path = getenv ("FPATH")) == (char *)0))	/* ksh uses FPATH ! */
-	    path = DEF_FPATH;
-    }
+	if (fn == (char *)0)
+		return -1;
+	if (path == (char *)0) {
+		if (((path = getenv ("FTHPATH")) == (char *)0)
+		    &&  ((path = getenv ("FPATH")) == (char *)0))	/* ksh uses FPATH ! */
+			path = DEF_FPATH;
+	}
 
-    lpath = path;
+	lpath = path;
 
-    /*
-     * Don't apply search path to filenames beginning
-     * with either a drive specification or a slash.
-     */
-    if ((strlen(fn) >= 2) && (fn[1] == ':'))
-	lpath = "";
-    if (*fn == '/' || *fn == '\\')
-	lpath = "";
-    do {
-	dp = fnb;
-	while (*lpath && *lpath != ENV_DELIM)
-	    *dp++ = *lpath++;
-	if (dp != fnb)
-	    *dp++ = '/';
-	strcpy (dp, fn);
-	if ((fd = open (fnb, _O_BINARY, 0)) >= 0)
-	    return(fd);
-    } while (*lpath++);
-    if ((fd = open (fn, _O_BINARY, 0)) >= 0)
-       return(fd);
-    return -1;
-}
-
-#ifdef MACOS
-INTERNAL int
-executable(filename)	/* True if file is executable */
-    char *filename;
-{
+	/*
+	 * Don't apply search path to filenames beginning
+	 * with either a drive specification or a slash.
+	 */
+	if ((strlen(fn) >= 2) && (fn[1] == ':'))
+		lpath = "";
+	if (*fn == '/' || *fn == '\\')
+		lpath = "";
+	do {
+		dp = fnb;
+		while (*lpath && *lpath != ENV_DELIM)
+			*dp++ = *lpath++;
+		if (dp != fnb)
+			*dp++ = '/';
+		strcpy (dp, fn);
+		if ((fd = open (fnb, _O_BINARY, 0)) >= 0)
+			return(fd);
+	} while (*lpath++);
+	if ((fd = open (fn, _O_BINARY, 0)) >= 0)
+		return(fd);
 	return -1;
 }
 
-INTERNAL long
-f_modtime(filename)	
-    long filename;
-{
-	return 0L;
-}
-#else
 INTERNAL int
-executable(filename)	/* True if file is executable */
-    char *filename;
+executable(char *filename)	/* True if file is executable */
 {
 #ifdef WIN32
-    return(1);
+	return(1);
 #else
-    struct stat stbuf;
+	struct stat stbuf;
 
-    return(   stat(expand_name(filename),&stbuf) == 0
-          && (stbuf.st_mode&S_IFMT) == S_IFREG
-	  &&  access(filename,1) == 0
-	  );
+	return(   stat(expand_name(filename),&stbuf) == 0
+		  && (stbuf.st_mode&S_IFMT) == S_IFREG
+		  &&  access(filename,1) == 0
+		);
 #endif
 }
 
 INTERNAL long
-f_modtime(filename)	/* True if file is executable */
-    long filename;
+f_modtime(long filename)	/* True if file is executable */
 {
-    struct stat stbuf;
+	struct stat stbuf;
 
-    if (stat(expand_name((char *)filename),&stbuf) != 0)
-	    return (0L);
-    return ((long)stbuf.st_mtime);
+	if (stat(expand_name((char *)filename),&stbuf) != 0)
+		return (0L);
+	return ((long)stbuf.st_mtime);
 }
-#endif
 
 /* Find fname for symbol table  */
 INTERNAL long
-pathname()
+pathname(void)
 {   
-    static char buf[256];
-    register char *cp, *cp2;
-    char *getenv();
+	static char buf[256];
+	register char *cp, *cp2;
+	char *getenv();
 
-    cp = getenv("PATH");
-    if(cp == NULL) cp=DEF_PATH;
-    if(*cp == ':' || *progname == '/') {
-        cp++;
-        if(executable(progname)) {
-            strcpy(buf, progname);
-            return((long)buf);
-        }
-    }
-    for(;*cp;) {
-            /* copy over current directory and then append progname */
-        for(cp2 = buf; (*cp) != '\0' && (*cp) != ':';)
-            *cp2++ = *cp++;
-        *cp2++ = '/';
-        strcpy(cp2, progname);
-        if(*cp) cp++;
-        if(!executable(buf)) continue;
-        return((long)buf);
-    }
-    strcpy(buf, progname);
-    return((long)buf);
+	cp = getenv("PATH");
+	if(cp == NULL) cp=DEF_PATH;
+	if(*cp == ':' || *progname == '/') {
+		cp++;
+		if(executable(progname)) {
+			strcpy(buf, progname);
+			return((long)buf);
+		}
+	}
+	for(;*cp;) {
+		/* copy over current directory and then append progname */
+		for(cp2 = buf; (*cp) != '\0' && (*cp) != ':';)
+			*cp2++ = *cp++;
+		*cp2++ = '/';
+		strcpy(cp2, progname);
+		if(*cp) cp++;
+		if(!executable(buf)) continue;
+		return((long)buf);
+	}
+	strcpy(buf, progname);
+	return((long)buf);
 }
 
 INTERNAL char *
-substr(str, pos, n)
-	char *str;
-	int pos, n;
+substr(char *str, int pos, int n)
 {
 	register int len = strlen(str);
 	static char outstr[128];
@@ -2568,7 +2403,7 @@ substr(str, pos, n)
 	if (pos + n - 1 > len) {
 		n = len + 1  - pos;
 		if (n < 0)
-		    n = 0;
+			n = 0;
 	}
 	strncpy(outstr, str + pos - 1, n);
 	outstr[n] = '\0';
@@ -2578,8 +2413,7 @@ substr(str, pos, n)
 #ifdef SCCS
 
 INTERNAL char *
-sccs_name(name)
-	char *name;
+sccs_name(char *name)
 {
 	static char sccsname[512];
 	char *p;
@@ -2611,8 +2445,7 @@ sccs_name(name)
  *    N   |  N   |    Error      (-1)
  */
 INTERNAL int
-isobsolete(name)
-	char *name;
+isobsolete(char *name)
 {
 	struct stat status, sccsstatus;
 	int file, sccsfile;
@@ -2634,8 +2467,7 @@ isobsolete(name)
 }
 
 INTERNAL char *
-sccs_get(name)
-	char *name;
+sccs_get(char *name)
 {
 	static char str[512];
 
@@ -2648,9 +2480,9 @@ sccs_get(name)
 
 #endif
 
+char *fetchenv(char *name);
 char *
-fetchenv(name)
-	char *name;
+fetchenv(char *name)
 {
 	if (*bpval != '\0' && strcmp(name, "BP") == 0)
 		return (bpval);
@@ -2659,117 +2491,59 @@ fetchenv(name)
 	return (getenv(name));
 }
 
-#ifdef MACOS
 INTERNAL char *
-expand_name(name)
-	char *name;
-{
-	char *fnamep;
-	char namebuf[256];
-
-	fnamep = name;
-
-	if (*fnamep == '$') {
-		/* See if the Envname is {BP} */
-		strcpy( namebuf, name );
-		namebuf[5] = '\0';
-		
-		if (strcmp( namebuf, "${BP}" ) != 0) {
-			printf("Environment Variables other than \"BP\" are not supported for MacOS.\n");
-			goto exit;
-		}
-
-		if (strlen( BP_path ) == 0) {
-			printf("Command line BP path was not set.\n");
-			goto exit;
-		}
-			
-		/* Prepend the path taken from the commandline in place of the environment variable spec */
-		strcpy(namebuf, BP_path);
-		strcat(namebuf, (const char *)&fnamep[5]);
-			
-		/* replace UNIX / with Mac :  and replace UNIX .. with Mac :: */
-		fnamep = namebuf;
-		while (*fnamep != '\0') {
-			if (*fnamep == '/')
-				*fnamep = ENV_DELIM;
-			fnamep++;
-		}
-		
-		/* Copy the expanded name back original string. */
-		strcpy(name, namebuf);
-	}
-	
-exit:
-	return (name);
-}
-#else
-INTERNAL char *
-expand_name(name)
-	char *name;
+expand_name(char *name)
 {
 	char envvar[64], *fnamep, *envp, paren, *fullp;
 	static char fullname[MAXPATHLEN];
 	int ndx = 0;
 
-        fullp = fullname;
+	fullp = fullname;
 	fullname[0] = '\0';
 
 	fnamep = name;
 
-        while (*fnamep) {
-            if (*fnamep == '$') {
-		fnamep++;
-		if (*fnamep == '{' || *fnamep == '(') {	// multi char env var
-                    if (*fnamep == '{')
-                        paren = '}';
-                    else
-                        paren = ')';
-                    fnamep++;
+	while (*fnamep) {
+		if (*fnamep == '$') {
+			fnamep++;
+			if (*fnamep == '{' || *fnamep == '(') {	// multi char env var
+				if (*fnamep == '{')
+					paren = '}';
+				else
+					paren = ')';
+				fnamep++;
 
-                    envvar[ndx++] = *(fnamep++);
+				envvar[ndx++] = *(fnamep++);
 
-                    while (*fnamep != paren && ndx < MAXPATHLEN && *fnamep != '\0') {
-                        envvar[ndx++] = *(fnamep++);
-                    }
-                    if (*fnamep == paren) {
-                        fnamep++;
-                    } else {
-                        ndx = 0;
-                        fnamep = name;
-                    }
-		} else		/* single char env. var. */
-                    envvar[ndx++] = *(fnamep++);
-		envvar[ndx] = '\0';
+				while (*fnamep != paren && ndx < MAXPATHLEN && *fnamep != '\0') {
+					envvar[ndx++] = *(fnamep++);
+				}
+				if (*fnamep == paren) {
+					fnamep++;
+				} else {
+					ndx = 0;
+					fnamep = name;
+				}
+			} else		/* single char env. var. */
+				envvar[ndx++] = *(fnamep++);
+			envvar[ndx] = '\0';
 
-		if (ndx > 0 && (envp = fetchenv(envvar)) != NULL) {
-                    log_env(envvar, envp);
-                    strcpy(fullp, envp);
-                    fullp += strlen(envp);
+			if (ndx > 0 && (envp = fetchenv(envvar)) != NULL) {
+				log_env(envvar, envp);
+				strcpy(fullp, envp);
+				fullp += strlen(envp);
+			} else {
+				printf("Can't find environment variable %s in %s\n", envvar,name);
+			}
+			ndx = 0;
 		} else {
-                    printf("Can't find environment variable %s in %s\n", envvar,name);
+			*fullp++ = *fnamep++;
 		}
-                ndx = 0;
-            } else {
-                *fullp++ = *fnamep++;
-            }
-        }
-        *fullp = '\0';
-        return (fullname);
-}
-#endif
-
-#ifdef MACOS
-long
-t_init() {
-	if (isatty(fileno(stdin))) {
-		console_options.pause_atexit = 0;
-		console_options.title = "\pForthmacs";
-		csetmode(C_RAW, stdin);
 	}
-    return (0);
+	*fullp = '\0';
+	return (fullname);
 }
-#endif
+
 
 // LICENSE_BEGIN
 // Copyright (c) 2006 FirmWorks

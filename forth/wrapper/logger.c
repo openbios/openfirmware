@@ -6,6 +6,10 @@
  * file depends.
  */
 
+#ifdef __MACH__
+#define __unix__ 1
+#endif
+
 #ifdef WIN32
 #include <windows.h>
 #endif
@@ -30,7 +34,11 @@
 #define MAXLINE 256
 char info[MAXLINE];		/* A place to create log records */
 
+/* Fend off unused argument warnings */
+#define UNUSED_ARGUMENT(x) (void)x
+
 /* Returns the portion of filename after the directories and volume names */
+char *basename(char *filename);
 char *basename(char *filename)
 {
     char c, *p;
@@ -45,6 +53,7 @@ char *basename(char *filename)
  * Returns the portion of 'filename' up to the last ".xxx" extension.
  * The returned string may be overwritten by subsequent calls to rootname.
  */
+char *rootname(char *filename);
 char *rootname(char *filename)
 {
     static char name[MAXPATHLEN];
@@ -71,6 +80,7 @@ list envvars = { NULL, NULL };	/* List of log records for env vars */
 list misc    = { NULL, NULL };	/* List of log records for other things */
 
 /* Adds the current info record to the end of 'list' */
+void record(list *list);
 void record(list *list)
 {
     node *new;
@@ -85,6 +95,7 @@ void record(list *list)
 }
 
 /* Finds a specific node in the list */
+node *findnode(list *list, char *s);
 node *findnode(list *list, char *s)
 {
     node *n;
@@ -99,6 +110,7 @@ node *findnode(list *list, char *s)
 }
 
 /* Writes the data from each node of 'list' to the 'logfile' */
+void fputlist(list *list, FILE *logfile);
 void fputlist(list *list, FILE *logfile)
 {
     node *n;
@@ -112,6 +124,7 @@ void fputlist(list *list, FILE *logfile)
  * of the log file is derived from filename by replacing its
  * extension with ".log".
  */
+void log_output(char *filename, long size);
 void log_output(char *filename, long size)
 {
     FILE *logfile;
@@ -149,6 +162,7 @@ void log_output(char *filename, long size)
  * The record is of the form:
  *   in: file-name file-modification-date file-size
  */
+void log_input(char *filename, int fd);
 void log_input(char *filename, int fd)
 {
 #ifdef USE_STDIO
@@ -184,6 +198,7 @@ void log_input(char *filename, int fd)
  * enclosed in " characters, with any embedded " characters escaped with \.
  * Otherwise return 'str' verbatim.
  */
+char *quotestr(char *str);
 char *quotestr(char *str)
 {
     char *p, *o;
@@ -222,12 +237,10 @@ char *quotestr(char *str)
 }
 
 /* Create log records telling the hostname, build time, and command line */
-void log_command_line(char *cmd, char *dictfile, int fd, int argc, char *argv[])
+void log_command_line(int argc, char *argv[]);
+void log_command_line(int argc, char *argv[])
 {
     int i;
-#ifdef notdef
-    struct stat stbuf;
-#endif
     char cwdbuf[MAXPATHLEN*2];
 
 #ifdef __unix__
@@ -249,24 +262,9 @@ void log_command_line(char *cmd, char *dictfile, int fd, int argc, char *argv[])
     (void) GetComputerName(hostname, &hostnamelen);
 #endif
 
-#ifdef MACOS
-    char *hostname = "some_Macintosh";
-#endif
 
 #ifdef USE_STDIO
     char *hostname = "some_machine";
-#endif
-
-
-#ifdef notdef
-    sprintf(info, "command: %s\n", cmd);
-    record(&misc);
-
-    fstat(fd,&stbuf);
-    /* ctime automatically appends a newline */
-    sprintf(info, "dictionary: %s  %ld  %lx  %s",
-	    dictfile, stbuf.st_size, stbuf.st_mtime, ctime(&stbuf.st_mtime));
-    record(&misc);
 #endif
 
     strcpy(info, "command:");
@@ -290,6 +288,7 @@ void log_command_line(char *cmd, char *dictfile, int fd, int argc, char *argv[])
  * already exists. The record is of the form:
  *   env: name value
  */
+void log_env(char *name, char *value);
 void log_env(char *name, char *value)
 {
     char matchbuf[40];
