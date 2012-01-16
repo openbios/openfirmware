@@ -32,12 +32,10 @@ create days/month
    swap 1-  swap 0  ?do  i days/month + c@ +  loop	( day-in-year )   
 ;
 
-\ 
 d# 365 constant d/y
-d/y d# 30 * \ Years from 1970 to 2000
-d#  7 +     \ Leap days from 1970 to 2000
-d# 31 +     \ Days in January 2000
-d# 28 +     \ Days in February 2000 (not a leap year)
+d/y d# 2 *  \ Days in the 2 years from 1970 to 1972
+d# 31 +     \ Days in January 1972
+d# 29 +     \ Days in February 1972 (a leap year)
 constant days-to-break
 
 : unix-seconds>   ( seconds -- s m h d m y )
@@ -45,13 +43,9 @@ constant days-to-break
    \ at the expense of breaking dates before 1970.
    d# 60 /mod  d# 60 /mod  d# 24 /mod	( s m h days )
 
-   \ Rotate the number space so that day 0 is March 1, 2000
-   \ That's convenient because it begins a 4 year + 1 day leap cycle
+   \ Rotate the number space so that day 0 is March 1, 1972,
+   \ the beginning of a 4 year + 1 day leap cycle
    days-to-break -
-
-   \ Adjust days before day 0 for the fact that 2000, unlike other
-   \ 0mod4 years, is not a leap year
-   dup 0<  if  1-  then	( s m h days' )
 
    \ Reduce modulo the number of days in a 4-year leap cycle
    \ This depends on floored division
@@ -77,11 +71,11 @@ constant days-to-break
       d# 12 -  r> 1+ >r	      		( s m h d month' r: year' )
    then			      		( s m h d month r: year )
 
-   r> d# 2000 +				( s m h d m y )
+   r> d# 1972 +				( s m h d m y )
 ;
 
 : >unix-seconds  ( s m h d m y -- seconds )	\ since 1970
-   d# 2000 - >r						( s m h d m  r: y' )
+   d# 1972 - >r						( s m h d m  r: y' )
 
    \ Move January and February to the end so the leap day is day number 365
    dup 3 <  if						( s m h d month' r: y )
@@ -98,12 +92,8 @@ constant days-to-break
    r> d/y * +						( s m h day-in-year year-days )
    +							( s m h days )
 
-   \ Adjust for the missing leap day in 2000
-   dup 0<  if  1+  then					( s m h days' )
-
    \ Adjust to 1970
    days-to-break +					( s m h days' )
-
 
    \ Changing the 3 *'s below to u*'s would "fix" the year 2038 problem
    \ at the expense of breaking dates before 1970.
