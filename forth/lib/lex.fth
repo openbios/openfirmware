@@ -4,6 +4,8 @@ purpose: lexical analysis primitive
 \ text$ means ( text-adr text-len )
 0 value delim
 
+\ lex scans text$ for each character in delim$
+\ when one is found, lex splits text$ at that delimiter and leaves
 : lex   ( text$ delim$ -- rem$ head$ delim true | text$ false )
    0 is delim
    2over bounds ?do				( text$ delim$ )
