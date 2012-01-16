@@ -1,8 +1,6 @@
 \ See license at end of file
 
 headers
-: +string  ( adr len -- adr len+1 )  1+  ;
-: -string  ( adr len -- adr+1 len-1 )  swap 1+  swap 1-  ;
 
 \ Splits a string into two halves before the first occurrence of
 \ a delimiter character.
