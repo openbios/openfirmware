@@ -5,7 +5,6 @@ decimal
 headerless
 
 d# 260 buffer: string2
-: save-string  ( pstr1 -- pstr2 )  string2 "copy string2  ;
 
 headers
 : $number  ( adr len -- true | n false )
@@ -13,6 +12,22 @@ headers
       0 of  true        endof
       1 of  false       endof
       2 of  drop false  endof
+   endcase
+;
+
+headerless
+
+\ A single to double helper.
+\ Sign extends the single if signed? is true
+: ?n>d  ( n signed? -- d )   if  s>d  else  0  then  ;
+
+headers
+: $dnumber  ( signed adr len -- true | d false )
+   $dnumber?       ( signed 0 | signed n 1 | signed d 2 )
+   case
+      0 of  drop        true     endof
+      1 of  swap ?n>d   false    endof
+      2 of  rot drop    false    endof
    endcase
 ;
 
