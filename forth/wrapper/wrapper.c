@@ -1016,10 +1016,10 @@ main(int argc, char **argv
 		error("forth: Can't get memory","");
 		exit(1);
 	}
-	if (((long)loadaddr & 15) != 0) {
-		printf("Why isn't loadaddr (%p) aligned?\n", loadaddr);
-		loadaddr = (char *)(((long)loadaddr + 15) & ~15);
-	}
+
+	/* Align loadaddr to 16-byte boundary; some mallocs align less stringently */
+	loadaddr = (char *)(((long)loadaddr + 15) & ~15);
+
 	memsize -= 16;  // Leave room for initial stack pointer
 	(void)memcpy(loadaddr, (char *)&header, sizeof(header));
 
