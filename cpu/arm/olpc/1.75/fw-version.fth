@@ -1,4 +1,4 @@
 \ The overall firmware revision
 macro: FW_PREFIX Q4
-macro: FW_MAJOR C
-macro: FW_MINOR 12
+macro: FW_MAJOR D
+macro: FW_MINOR 01
