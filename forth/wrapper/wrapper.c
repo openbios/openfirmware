@@ -697,6 +697,14 @@ int bittest(char *table, int index)
 char bpval[MAXPATHLEN];
 char hostdirval[MAXPATHLEN];
 
+/*
+ * Set psuedo-environment-variable values for
+ *   ${BP}        - The top of the OFW build tree
+ *   ${HOSTDIR}   - The directory containing the host wrapper program
+ * Internal management of these values (see fetchenv()) eliminates the
+ * need for an external shell script to set them, thus making the build
+ * system more portable to platforms without Unix-style shells.
+ */
 void set_bp(void);
 void
 set_bp(void)
@@ -704,7 +712,16 @@ set_bp(void)
 	char here[MAXPATHLEN];
 	getcwd(here, MAXPATHLEN);
 	getcwd(bpval, MAXPATHLEN);
-	while (access("ofw", F_OK)) {
+	while (1) {
+		if (access(host_cpu, F_OK) == 0) {
+			getcwd(hostdirval, MAXPATHLEN);
+			strcat(hostdirval, "/");
+			strcat(hostdirval, host_cpu);
+			strcat(hostdirval, "/");
+			strcat(hostdirval, host_os);
+		}
+		if (access("ofw", F_OK) == 0)
+			break;
 		chdir("..");
 		getcwd(bpval, MAXPATHLEN);
 		if (strcmp(bpval, "/") == 0) {
@@ -1105,6 +1122,7 @@ main(int argc, char **argv
 # endif
 #endif
 
+#ifdef __APPLE_CC__
 	{
 	/*
 	 * XCode specific behavior: if your function has a prototype, the compiler
@@ -1117,6 +1135,11 @@ main(int argc, char **argv
 	fflush(stdout);
 	s_bye(func((char *)-1, functions, (long)loadaddr + memsize, argc, argv));
 	}
+#endif
+
+	s_bye((*(long (*) ())(loadaddr+sizeof(header)+START_OFFSET))
+		(loadaddr, functions, ((long)loadaddr+dictsize - 16) & ~15,
+		 argc, argv));
 
 	restoremode();
 	return 0;
