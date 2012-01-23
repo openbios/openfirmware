@@ -1961,7 +1961,7 @@ nodetype: tcpnode
    \ size this dynamically based on the network interface characteristics
    \ (speed, buffering), but for now we don't have suitable information
    \ in the network interface device node.
-   d# 1024 8 *  to rbuf-len
+   d# 1024 4 *  to rbuf-len
    rbuf-len alloc-mem to rbuf-adr
    0 to rbuf-actual
 
