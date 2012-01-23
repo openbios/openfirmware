@@ -361,7 +361,10 @@ c;
 \ XXX we might need to set GPIOs 71 and 160 (ps2 clocks), and perhaps the dat lines too,
 \ for non-sleep-mode control - or maybe for sleep mode control as inputs.
 \ We also may need to enable falling edge detects.
-: disable-int40  ( -- )  d# 40 disable-interrupt  ;
+: disable-int40  ( -- )
+   d# 40 disable-interrupt
+   1  h# 29.00cc  io-set   \ Unmask the inter-processor communications interrupt
+;
 
 : gpio-wakeup?  ( gpio# -- flag )
    h# 019800 over 5 rshift la+ l@  ( gpio# mask )
@@ -639,11 +642,10 @@ end-string-array
 ;
 \ How to wakeup from SP:
 : setup-key-wakeup  ( -- )
-   d# 24 d# 16 do  h# b1 i af!  loop  \ Wake SP on game keys
-   h# b0 d# 15 af!    \ Wake SP on rotate key
-   h# 220 d#  71 af!  \ Wake SP on KBD CLK falling edge
-   h# 221 d# 160 af!  \ Wake SP on TPD CLK falling edge
-   h# 20.0000  h# 4c +mpmu  io-set  \ Keypress wakes SP
+   d# 24 d# 15 do  h# b0 i af!  loop  \ Wake SoC on game keys
+   h# 220 d#  71 af!  \ Wake SoC on KBD CLK falling edge
+   h# 221 d# 160 af!  \ Wake SoC on TPD CLK falling edge
+   h# 4  h# 4c +mpmu  io-set  \ Pin edge (GPIO per datasheet) wakes SoC
    ['] disable-int40 d# 40 interrupt-handler!
    d# 40 enable-interrupt  \ SP to PJ4 communications interrupt
    1  h# 29.00cc  io-clr   \ Unmask the inter-processor communications interrupt
