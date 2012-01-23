@@ -21,7 +21,7 @@ neptune.rom: FORCE build ../../../build/inflate.bin ${CLIENTPROGS}
 	@make -C ../../../build inflate.bin
 
 ${CLIENTDIR}/memtest86/memtest:
-	@make -C ${CLIENTDIR}/memtest86 memtest
+	@VARIANT=OLPCGEODE make -C ${CLIENTDIR}/memtest86 memtest
 
 build: ../../../${OS}/forth
 	@ln -sf ../../../${OS}/forth build

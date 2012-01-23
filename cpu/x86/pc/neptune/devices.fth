@@ -198,11 +198,6 @@ stand-init:  Keyboard overrides
 ;
 [then]
 
-fload ${BP}/forth/lib/pattern.fth	\ Text string pattern matching
-fload ${BP}/forth/lib/tofile.fth	\ to-file and append-to-file
-\ XXX remove the OS file commands from tools.dic
-fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
-
 fload ${BP}/cpu/x86/pc/olpc/cmos.fth     \ CMOS RAM indices are 1f..ff , above RTC
 
 devalias nand /nandflash
@@ -281,6 +276,11 @@ fload ${BP}/dev/isa/diaguart.fth	\ ISA COM port driver
 h# 3f8 is uart-base
 fload ${BP}/forth/lib/sysuart.fth	\ Use UART for key and emit
 
+0 value keyboard-ih
+0 value screen-ih
+
+fload ${BP}/ofw/core/muxdev.fth          \ I/O collection/distribution device
+
 [ifndef] save-flash
 : save-flash ;
 : restore-flash ;
@@ -313,8 +313,6 @@ fload ${BP}/cpu/x86/pc/neptune/chipinit.fth
 
 false config-int tft-mode?
 
-fload ${BP}/cpu/x86/fb16-ops.fth
-fload ${BP}/ofw/termemu/fb16.fth
 0 0  " 1,1"  " /pci" begin-package
    fload ${BP}/dev/geode/display/loadpkg.fth     \ Geode display
 

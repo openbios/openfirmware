@@ -6,7 +6,6 @@ in: ${BP}/cpu/x86/pc/neptune/build/romreset.di
 in: ${BP}/cpu/x86/pc/neptune/build/rmstart.img
 in: ${BP}/cpu/x86/pc/neptune/build/paging.di
 in: ${BP}/cpu/x86/pc/neptune/build/fw.dic
-in: ${BP}/dev/geode/nandflash/build/nandflash.fc
 in: ${BP}/dev/geode/ac97/build/ac97.fc
 in: ${BP}/dev/usb2/hcd/ohci/build/ohci.fc
 in: ${BP}/dev/usb2/hcd/ehci/build/ehci.fc
@@ -17,7 +16,7 @@ in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
 in: ${BP}/dev/pci/build/pcibridg.fc
 in: ${BP}/dev/dnet/build/dnet.fc
-\ in: ${BP}/clients/memtest86/memtest
+in: ${BP}/clients/memtest86/memtest
 in: vme.elf
 
 build-now
