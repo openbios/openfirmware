@@ -16,3 +16,23 @@ EOF
 sed -e "s,\${BP},${homedir}," $* | LC_ALL=C sort | uniq | cat tags.hdr - >tags
 rm tags.hdr
 
+# To use the tags file from EMACS:
+# a) Get vtags.el per http://www.gnu.org/software/vtags/ and arrange for it to be loaded
+# b) If you use gforth.el, modify it as follows:
+#
+#--- gforth.el.orig	2012-01-18 23:04:28.420686187 -1000
+#+++ gforth.el	2012-01-18 23:05:20.560177102 -1000
+#@@ -1125,6 +1126,4 @@
+#   (unless (or regexp-p next-p)
+#-    (setq tagname (concat "\\(^\\|\\s-+\\)\\(" (regexp-quote tagname) 
+#-			    "\\)\\s-*\x7f")))
+#-  (switch-to-buffer
+#-   (find-tag-noselect tagname next-p t)))
+#+    (setq tagname (concat tagname "\t")))
+#+    (find-tag tagname t))
+#
+# To tell EMACS which tags table to use,
+#   M-x customize-variable tags-table-list
+# Then, if use gforth.el, you can use M-. from a Forth mode buffer to find a tag.
+# In any case, you can use M-t from anywhere to find a tag, but the matching won't
+# be as precise as with M-. -- you may have to select from a disambiguation list.
