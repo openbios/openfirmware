@@ -31,13 +31,17 @@ code slow-next  ( high low -- )
    _flush_cache #) call
 c;
 
-\ Change all the next routines in the indicated range to perform the
-\ in-line next routine
+\ Fix the NEXT routine in the user area to use the non-debug code.
 code fast-next  ( high low -- )
    ax pop   ax pop
    _disable_cache #)  call
-   h# 9020ffad #  ax  mov		\ ax lods  0 [ax] jmp  nop
-   ax         0 [up]  mov
+
+\+ rel  h# 8bf801ad #  ax mov	ax 0 [up]  mov	\ ax lods  up w add
+\+ rel  h# fffb0118 #  ax mov	ax 4 [up]  mov	\ 0 [w] bx mov  up bx add
+\+ rel  h# 909090e3 #  ax mov	ax 8 [up]  mov	\ bx jmp  nop nop nop
+
+\- rel  h# 9020ffad #  ax mov	ax 0 [up]  mov	\ ax lods  0 [w] jmp  nop
+
    _flush_cache #)    call
 c;
 
@@ -45,7 +49,8 @@ label normal-next
    \ We have to expand the code for NEXT in-line here, because if
    \ we let the assembler macro do it, we'll end up with a jump right back
    \ to this routine
-   ax lods   0 [ax] jmp
+\+ rel  ax lods  up w add   0 [w] bx mov  up bx add   bx jmp
+\- rel  ax lods  0 [w] jmp
 end-code
 
 label debnext
@@ -62,26 +67,32 @@ label debnext
 	    ax  'user cnt         mov
 \            normal-next #)   ax   lea
 	    make-even 				\ word-align address
-            normal-next   dup #)   ax   lea
-            -4 allot  token, 			\ relocate address
+\- rel      normal-next   dup #)   ax   lea
+\- rel      -4 allot  token, 			\ relocate address
+
+\+ rel      normal-next origin -  #  ax  mov
+\+ rel      up ax add
 
             ax  'user debug-next  mov
+
             'user 'debug     w    mov
-            0 [w]                 jmp
+\+ rel      up w add  0 [w] bx mov  up bx add   bx jmp
+\- rel      0 [w]                 jmp
          then
       then
    then
    \ We have to expand the code for NEXT in-line here, because if
    \ we let the assembler macro do it, we'll end up with a jump right back
    \ to this routine
-   ax lods   0 [ax] jmp		\ Next
+\+ rel   ax lods  up w add   0 [w] bx mov  up bx add   bx jmp
+\- rel   ax lods   0 [w] jmp		\ Next
 end-code
 
 \ Fix the next routine to use the debug version
-: pnext   (s -- )  debnext debug-next a!  ;
+: pnext   (s -- )  debnext debug-next !  ;
 
 \ Turn off debugging
-: unbug   (s -- )  normal-next debug-next a!  ;
+: unbug   (s -- )  normal-next debug-next !  ;
 
 forth definitions
 unbug
