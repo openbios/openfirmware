@@ -112,6 +112,7 @@ fload ${BP}/forth/lib/crc32.fth	\ High-level portion of CRC calculation
 [ifdef] resident-packages
 
 \needs unix-seconds>  fload ${BP}/ofw/fs/unixtime.fth	\ Unix time calculation
+\needs ($crc16)       fload ${BP}/forth/lib/crc16.fth
 support-package: ext2-file-system
    fload ${BP}/ofw/fs/ext2fs/ext2fs.fth	\ Linux file system
 end-support-package
