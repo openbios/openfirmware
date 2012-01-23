@@ -59,7 +59,7 @@ variable meta-tag-file
    context link@ >r   current link@ >r   warning @ >r
    context link!  definitions
    warning off
-   tag-file @ >r  meta-tag-file @ tag-file !
+   tag-file @ >r  tag-file off
    $create
    r> tag-file !
    r> warning !   r> current link!   r> context link!

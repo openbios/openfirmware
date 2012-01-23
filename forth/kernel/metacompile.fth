@@ -374,7 +374,10 @@ variable flags-t
 : $header-t  (s name$ cf$ -- )   \ Make a header in the target area
    2>r
    2dup last-header$ 2!
+   tag-file @ >r  meta-tag-file @ tag-file !
+   2dup $tagout
    2dup $create-s                            \ symbol table entry
+   r> tag-file !
    \ Make header unless headerless
    make-header?  if  2dup $really-header-t  then
    \Tags  $header-t-hook
