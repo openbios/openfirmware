@@ -43,7 +43,7 @@ only forth also meta definitions
 \t16-t /w-t constant /user#-t
 \t32-t /l-t constant /user#-t
 
-user-size-t th 10000 + constant max-kernel-t
+user-size-t h# 20000 + constant max-kernel-t
 
 \ 32 bit host Forth compiling 32-bit target Forth
 : l->n-t ; immediate

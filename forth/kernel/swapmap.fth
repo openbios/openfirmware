@@ -4,7 +4,7 @@
 decimal
 
 only forth also meta also definitions
-h# 10000 constant max-kernel-t
+h# 20000 constant max-kernel-t
 
 \ The swap map has one bit for every 32-bit word, since we assume
 \ that relocated longwords must start on a 32-bit boundary
