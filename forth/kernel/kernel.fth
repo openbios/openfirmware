@@ -3021,13 +3021,17 @@ defer include-exit-hook  ' noop is include-exit-hook
 : $abort-include  ( error# filename$ -- )  2drop  throw  ;
 ' $abort-include is $open-error
 
-: included  ( adr len -- )
-   include-hook
+: (included)  ( adr len -- )
    r/o open-file  ?dup  if
       opened-filename 2@ $open-error
    then                 ( fid )
    include-file
-   include-exit-hook
+;
+: included  ( adr len -- )
+   include-hook          ( adr len )
+   ['] (included) catch  ( error# )
+   include-exit-hook     ( error# )
+   throw
 ;
 : including  ( "name" -- )  safe-parse-word included  ;
 : fl  ( "name" -- )  including  ;
