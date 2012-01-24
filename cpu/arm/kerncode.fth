@@ -286,7 +286,7 @@ code i  ( -- n )
 c;
 code ilimit  ( -- n )
    psh      tos,sp
-   ldr      tos,[rp],1cell
+   ldr      tos,[rp,1cell]
    inc      tos,#0x80000000
 c;
 code j  ( -- n )
@@ -297,7 +297,7 @@ code j  ( -- n )
 c;
 code jlimit  ( -- n )
    psh      tos,sp
-   ldr      tos,[rp],4cells
+   ldr      tos,[rp,4cells]
    inc      tos,#0x80000000
 c;
 
