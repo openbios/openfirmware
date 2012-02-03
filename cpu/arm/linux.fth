@@ -48,8 +48,8 @@ h# 10.0000 value linux-base
 defer fb-tag,  ' noop to fb-tag,   \ Define externally if appropriate
 defer ofw-tag, ' noop to ofw-tag,  \ Define externally if appropriate
 
-: set-parameters  ( cmdline$ -- )
-   linux-params to tag-adr
+: set-parameters  ( cmdline$ adr -- )
+   to tag-adr
 
    5           tag-l,    \ size   
    h# 54410001 tag-l,    \ ATAG_CORE
@@ -94,9 +94,9 @@ defer ofw-tag, ' noop to ofw-tag,  \ Define externally if appropriate
 
 : linux-fixup  ( -- )
 [ifdef] linux-logo  linux-logo  [then]
-   use-fdt? 0=  if
-      args-buf cscount set-parameters          ( )
-   then
+\   use-fdt? 0=  if
+\      args-buf cscount set-parameters          ( )
+\   then
    disable-interrupts
 
    linux-base linux-base  (init-program)    \ Starting address, SP
@@ -104,13 +104,12 @@ defer ofw-tag, ' noop to ofw-tag,  \ Define externally if appropriate
    arm-linux-machine-type to r1
 [ifdef] flatten-device-tree
    use-fdt?  if
-      flatten-device-tree to r2
+      linux-params h# 40000 flatten-device-tree
    else
-      linux-params to r2
+      args-buf cscount linux-params set-parameters
    then
-[else]
-   linux-params to r2
 [then]
+   linux-params to r2
    linux-hook
 ;
 
@@ -127,8 +126,8 @@ defer place-ramdisk
 \  dup to linux-memtop
    to ramdisk-adr
 
-   ramdisk-adr " linux,initd-start"  chosen-int-property
-   ramdisk-adr /ramdisk +  " linux,initd-end"  chosen-int-property
+   ramdisk-adr " linux,initrd-start"  chosen-int-property
+   ramdisk-adr /ramdisk +  " linux,initrd-end"  chosen-int-property
 ;
 : $load-ramdisk  ( name$ -- )
    0 to /ramdisk                                  ( name$ )

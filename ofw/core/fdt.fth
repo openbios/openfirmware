@@ -10,14 +10,11 @@ purpose: Construct a flattened device tree blob for Linux
 0 value fdt-strings
 0 value fdt-strings-ptr
 0 value fdt-strings-end
-h# 40000 value /fdt
+0 value /fdt
 
 0 value the-node
 
 : fdt-remaining  ( -- n )  fdt-end fdt-ptr -  ;
-: ?fdt-enough  ( n -- )
-   
-;
 
 : +fdt  ( n -- ptr )
    dup fdt-remaining >  abort" FDT buffer overflow"  ( n )
@@ -101,9 +98,8 @@ variable fdt-phandle
    2 fdt,      \ OF_DT_END_NODE
 ;
 
-: flatten-device-tree  ( -- adr )
-   /fdt alloc-mem /fdt-align round-up to fdt
-   fdt /fdt erase
+: flatten-device-tree  ( adr len -- )
+   to /fdt  to fdt
    fdt to fdt-ptr
    fdt /fdt + to fdt-end
 
@@ -166,6 +162,57 @@ variable fdt-phandle
 
    fdt
 ;
+
+: fdt@  ( offset -- l )  fdt + be-l@  ;
+: +fdt-ptr  ( n -- )  fdt-ptr + 4 round-up to fdt-ptr  ;
+: fdt@@  ( -- l )  fdt-ptr be-l@  /l +fdt-ptr  ;
+
+: fdt@$  ( -- adr len )
+   fdt-ptr cscount   ( adr len )
+   dup 1+ +fdt-ptr
+;
+: .fdt-value  ( value$ name$ -- )
+   " compatible"  $=  if  show-strings  exit  then
+
+   \ Test for unprintable characters
+   2dup -null text?  if   
+      to-display-column  -null  type  exit  
+   then   ( adr,len )
+
+   dup /n /mod  swap 0=  if         ( adr len #ints )
+      .ints   exit                  ( -- )
+   then                             ( adr,len #ints )
+   drop                             ( adr,len )
+
+   to-display-column  h# 10 min  cdump                             ( )
+;
+: .fdt-property  ( -- )
+   [ also hidden ] indent [ previous ]
+   fdt@@                                    ( value-length )
+   fdt@@ fdt-strings + cscount  2dup type   ( value-length name$ )
+   2>r  fdt-ptr over  2r>  .fdt-value       ( value-length )
+   +fdt-ptr                                 ( )
+;
+: .fdt-node  ( -- )
+   [ also hidden ] indent [ previous ]
+   fdt@$ type cr
+;
+
+: dump-fdt  ( -- )
+   0 fdt@ h# d00dfeed <> abort" FDT magic mismatch"
+   fdt  h# 0c fdt@ +  to fdt-strings
+   fdt h# 80 + to fdt-ptr
+   begin
+      fdt@@ case
+         1 of  .fdt-node 2 lmargin +!  endof
+         2 of  -2 lmargin +!  endof
+         3 of  .fdt-property  endof
+         9 of  exit  endof
+         ( -- ) ." Bogus DT tag " . cr exit
+      endcase
+   again
+;
+
 previous
 
 \ LICENSE_BEGIN
