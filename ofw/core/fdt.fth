@@ -198,7 +198,7 @@ variable fdt-phandle
    fdt@$ type cr
 ;
 
-: dump-fdt  ( -- )
+: .fdt  ( -- )
    0 fdt@ h# d00dfeed <> abort" FDT magic mismatch"
    fdt  h# 0c fdt@ +  to fdt-strings
    fdt h# 80 + to fdt-ptr
