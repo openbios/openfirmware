@@ -62,7 +62,7 @@ here ddr-recal - constant /ddr-recal
 create use-block           \ Block memory controller activity in low-level sleep code
 create use-self-refresh    \ Manually issue self-refresh enter/exit
 create use-drivers         \ Turn memory drivers off during sleep
-\ create use-phy-dll-reset \ Reset the PHY DLL upon wakeup
+create use-phy-dll-reset   \ Reset the PHY DLL upon wakeup
 create use-phy-dll-update  \ Update the PHY DLL upon wakeup
 create use-dram-dll-reset  \ Reset the DRAM DLL upon wakeup
 \ create use-delay2        \ Long delay upon wakeup
