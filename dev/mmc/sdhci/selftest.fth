@@ -102,7 +102,9 @@ external
 : selftest  ( -- error? )
    set-unit
 
-   wait-card?  if  true exit  then
+   wait-card?  if
+      external? 0= exit  \ Unpopulated external SD is not an error
+   then
 
    open 0=  if  ." Open SD card failed" cr true exit  then
    alloc-test-bufs
