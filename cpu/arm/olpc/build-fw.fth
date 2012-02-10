@@ -1060,7 +1060,7 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 : erom  " flash! ext:\new.rom" eval  ;
 : no-usb-delay  " dev /usb  false to delay?  dend"  evaluate  ;
 : null-fsdisk
-   " dev /null : write-blocks-start 3drop ; : write-blocks-finish ; dend" evaluate
+   " dev /null : write-blocks-start 3drop false ; : write-blocks-finish false ; dend" evaluate
    " devalias fsdisk //null" evaluate
 ;
 
