@@ -4,28 +4,78 @@
 
 #include "1275.h"
 
+#define ISUPPER(c) ((c) >= 'A' && (c) <= 'Z')
+#define TOLOWER(c) ((c) + 'a' - 'A')
+
 int
 strcmp(const char *s, const char *t)
 {
+	int diff = 0;
 	int i;
 
-	for (i = 0; s[i] == t[i]; ++i)
-		if (s[i] == '\0')
-			return (0);
-	return((int) (s[i] - t[i]));
+	for (i = 0; 1; ++i) {
+		diff = s[i] - t[i];
+		if (diff || s[i] == '\0')
+			break;
+	}
+	return(diff);
 }
 
 int
 strncmp(const char *s, const char *t, int len)
 {
+	int diff = 0;
 	int i;
 
-	for (i = 0; (s[i] == t[i]) && (i != len); ++i)
-		if (s[i] == '\0')
-			return (0);
-	if (i == len)
-		return(0);
-	return((int) (s[i] - t[i]));
+	for (i = 0; i != len; ++i) {
+		diff = s[i] - t[i];
+		if (diff || s[i] == '\0')
+			break;
+	}
+
+	return(diff);
+}
+
+int
+strcasecmp(const char *s, const char *t)
+{
+	char sc, tc;
+	int diff = 0;
+	int i;
+
+	for (i = 0; 1; i++) {
+		sc = s[i];
+		tc = t[i];
+		if (ISUPPER(sc))
+			sc = TOLOWER(sc);
+		if (ISUPPER(tc))
+			tc = TOLOWER(tc);
+		diff = sc - tc;
+		if (diff || sc == '\0')
+			break;
+	}
+	return diff;
+}
+
+int
+strncasecmp(const char *s, const char *t, int len)
+{
+	char sc, tc;
+	int diff = 0;
+	int i;
+
+	for (i=0; i < len; i++) {
+		sc = s[i];
+		if (ISUPPER(sc))
+			sc = TOLOWER(sc);
+		tc = t[i];
+		if (ISUPPER(tc))
+			tc = TOLOWER(tc);
+		diff = sc - tc;
+		if (diff || sc == '\0')
+			break;
+	}
+	return diff;
 }
 
 int
@@ -35,7 +85,7 @@ strlen(const char *s)
 
 	for (i = 0; s[i] != '\0'; ++i)
 		;
-	return((int) i);
+	return i;
 }
 
 int
@@ -45,7 +95,7 @@ strnlen(const char *s, int maxlen)
 
 	for (i = 0; i < maxlen && s[i] != '\0'; ++i)
 		;
-	return((int) i);
+	return i;
 }
 
 char *
@@ -55,7 +105,7 @@ strcpy(char *to, const char *from)
 
 	while (to[i] = from[i])
 		i += 1;
-	return(to);
+	return to;
 }
 
 char *
@@ -68,7 +118,7 @@ strncpy(char *to, const char *from, int maxlen)
 	   i += 1;
 	   maxlen--;
 	}
-	return(to);
+	return to;
 }
 
 char *
@@ -79,7 +129,7 @@ strcat(char *to, const char *from)
 	while (*to)
 		to += 1;
 	strcpy(to, from);
-	return (ret);
+	return ret;
 }
 
 char *
@@ -87,10 +137,10 @@ strchr(char *s, int c)
 {
 	while (*s) {
 		if (*s == c)
-			return (s);
+			return s;
 		++s;
 	}
-	return ((char *) 0);
+	return (char *) 0;
 }
 
 char *
@@ -111,7 +161,33 @@ strctok(char *s, const char sep)
 	}
 	temp = saved_str;
 	saved_str = s;
-	return(temp);
+	return temp;
+}
+
+char *
+strstr(const char *haystack, const char *needle)
+{
+	int len = strlen(needle);
+	char *s;
+
+	for (s = (char *)haystack; *s; s++)
+		if (strncmp(s, needle, len) == 0)
+			return s;
+
+	return NULL;
+}
+
+char *
+strcasestr(const char *haystack, const char *needle)
+{
+	int len = strlen(needle);
+	char *s;
+
+	for (s = (char *)haystack; *s; s++)
+		if (strncasecmp(s, needle, len) == 0)
+			return s;
+
+	return NULL;
 }
 
 const void *memchr(const void *s, int c, int len)
