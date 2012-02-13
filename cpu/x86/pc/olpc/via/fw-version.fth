@@ -1,3 +1,3 @@
 \ The overall firmware revision
-macro: FW_MAJOR B
-macro: FW_MINOR 24
+macro: FW_MAJOR C
+macro: FW_MINOR 01
