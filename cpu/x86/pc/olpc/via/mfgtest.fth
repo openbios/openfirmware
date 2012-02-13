@@ -123,6 +123,7 @@ warning on
    then
    cur-row  cur-col  install-icon
    cur-col++
+   #mfgtests++
 ;
 
 : mfg-test-autorunner  ( -- )  \ Unattended autorun of all tests

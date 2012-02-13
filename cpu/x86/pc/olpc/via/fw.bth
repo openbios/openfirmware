@@ -629,7 +629,7 @@ true                               ' client-symbols?  set-config-int-default
 : ?diags  ( -- )
    rocker-left game-key?  if
       protect-fw
-      text-on  " test-all" ['] eval guarded
+      text-on  ['] gamekey-auto-menu guarded
       ." Tests complete - powering off" cr  d# 5000 ms  power-off
    then
 ;
