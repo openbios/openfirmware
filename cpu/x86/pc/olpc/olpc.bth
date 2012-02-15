@@ -30,6 +30,7 @@ in: ${BP}/cpu/x86/pc/olpc/build/usb8388.bin
 in: ${BP}/dev/pci/build/pcibridg.fc
 in: ${BP}/cpu/x86/pc/olpc/build/dsdt.aml
 in: ${BP}/cpu/x86/pc/olpc/build/mcastnand.bin
+in: testicons.bin
 
 build-now
 
@@ -53,6 +54,10 @@ hex
    2dup u< abort" The ROM image is too large"
    ?do  h# ff ofd @ fputc  loop
 ;
+
+\ Tell the dropin manager to skip the area reserved for manufacturing data
+h# e0000 to reserved-start
+h# f0000 to reserved-end
 
 .( --- Saving as )
 " ${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
@@ -81,6 +86,22 @@ $new-file
 \   " ${BP}/cpu/x86/pc/olpc/build/multicast-nand/mcastnand.elf" " mcastnand"       $add-deflated-dropin
 \   " ${BP}/cpu/x86/pc/olpc/build/blaster.bin"   " blaster"         $add-deflated-dropin
 \   " ${BP}/cpu/x86/pc/olpc/build/cloner.bin"    " cloner"          $add-deflated-dropin
+   " testicons/play.565"        " play.565"     $add-deflated-dropin
+   " testicons/quit.565"        " quit.565"     $add-deflated-dropin
+   " testicons/cpu.565"         " cpu.565"      $add-deflated-dropin
+   " testicons/spi.565"         " spi.565"      $add-deflated-dropin
+   " testicons/ram.565"         " ram.565"      $add-deflated-dropin
+   " testicons/sdcard.565"      " sdcard.565"   $add-deflated-dropin
+   " testicons/keyboard.565"    " keyboard.565" $add-deflated-dropin
+   " testicons/display.565"     " display.565"  $add-deflated-dropin
+   " testicons/touchpad.565"    " touchpad.565" $add-deflated-dropin
+   " testicons/audio.565"       " audio.565"    $add-deflated-dropin
+   " testicons/usb.565"         " usb.565"      $add-deflated-dropin
+   " testicons/battery.565"     " battery.565"  $add-deflated-dropin
+   " testicons/camera.565"      " camera.565"   $add-deflated-dropin
+   " testicons/wifi.565"        " wifi.565"     $add-deflated-dropin
+   " testicons/clock.565"       " clock.565"    $add-deflated-dropin
+   " testicons/timer.565"       " timer.565"    $add-deflated-dropin
 
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
    " rmstart.img"    $add-file

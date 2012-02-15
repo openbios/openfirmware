@@ -304,9 +304,12 @@ true value user-mode?
 : .clock  ( -- )
    time&date .date space .time  ."  UTC" cr
 ;
-fload ${BP}/cpu/x86/pc/olpc/banner.fth
 
+fload ${BP}/cpu/x86/pc/olpc/banner.fth
 fload ${BP}/ofw/gui/loadmenu.fth
+fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
+fload ${BP}/cpu/x86/pc/olpc/testitems.fth
+
 false value smt-test?  false value final-test?
 fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 \ fload ${BP}/ofw/gui/insticon.fth
@@ -559,7 +562,7 @@ true                               ' client-symbols?  set-config-int-default
 : ?diags  ( -- )
    rocker-left game-key?  if
       protect-fw
-      text-on  " test-all" ['] eval guarded
+      text-on  ['] gamekey-auto-menu guarded
       ." Tests complete - powering off" cr  d# 5000 ms  power-off
    then
 ;
@@ -655,11 +658,6 @@ true                               ' client-symbols?  set-config-int-default
 fload ${BP}/cpu/x86/pc/olpc/charge.fth
 
 fload ${BP}/cpu/x86/pc/olpc/diskspeed.fth  \ Mass storage speed test
-
-\ #10778 disable menu
-warning @  warning off
-: menu ;
-warning !
 
 \ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
 also hidden also keys-forth definitions
