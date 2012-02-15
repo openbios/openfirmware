@@ -255,29 +255,6 @@ previous definitions
 
 headerless
 
-\ Boldness applies retroactively only to the foreground color; the
-\ current background color is unaffected.  However, setting the
-\ background color applies the current boldness state of the foreground
-\ color to the background color.  This gives a client program complete
-\ and independent control over the boldness of both the foreground and
-\ background colors (by judiciously sequencing the setting of colors
-\ and boldness), and preserves as much as practical the semi-IBM-PC
-\ semantics that ARC clients assume.  The semantics are not exactly the
-\ same as the PC, because the PC (actually ANSI.SYS) zaps the colors
-\ to dim white on black in response to CSI 0 m, and to black on dim
-\ white in response to CSI 7 m, while some ARC clients (in particular
-\ ARCINST.EXE) assume that CSI 0 m preserves the fundamental color scheme
-\ that is currently in effect.  Convoluted?  You bet!
-\
-\ The fact that this implementation of CSI 7 m and CSI 0 m do not force
-\ the colors back to black and white is also advantageous for programs
-\ that use these sequences for "standout-start ... standout-end", for
-\ which it is nice not to wantonly change the current color scheme.  It
-\ is also important that CSI 0 m does not immediately alter the boldness
-\ of the background color, because in the common case of a bright white
-\ background, that prevents CSI 7 m ... CSI 0 m from changing the background
-\ to dim white.
-
 : bold  ( -- mask )  foreground-color 8 and  ;
 : bold-on  ( -- )
    foreground-color 8 or  to foreground-color
@@ -285,7 +262,7 @@ headerless
 : bold-off  ( -- )
    foreground-color 8 invert and  to foreground-color
 ;
-: default-attributes  ( -- )  false to inverse?  bold-off  ;
+: default-attributes  ( -- )  false to inverse?  0 to foreground-color  ;
 : >color#  ( ansi-color-code -- palette# )
    10 mod  " "(00 04 02 06 01 05 03 07)" drop + c@
 ;
