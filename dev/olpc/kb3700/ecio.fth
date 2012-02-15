@@ -311,7 +311,7 @@ fload ${BP}/dev/olpc/kb3700/eccmdcom.fth
    ec-indexed-io-off?  if
       cr  red-letters
       ." Restarting to enable SPI FLASH writing.  Try again after the system restarts."
-      black-letters cr
+      cancel cr
       d# 5000 ms
       ec-ixio-reboot
    then

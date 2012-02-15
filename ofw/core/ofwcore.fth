@@ -3297,18 +3297,18 @@ defer hold-message
          ?dup  if
             red-letters
             ??cr ." Selftest failed. Return code = " .d cr
-            black-letters
+            cancel
             d# 10000                              ( delay-ms )
          else
             green-letters
             ." Okay" cr
-            black-letters
+            cancel
             d# 2000                               ( delay-ms )
          then                                     ( delay-ms )
       else
          red-letters
          ." Selftest failed due to abort"  cr
-         black-letters
+         cancel
          d# 10000                                 ( delay-ms )
       then                                        ( delay-ms )
       hold-message                                ( exit? )

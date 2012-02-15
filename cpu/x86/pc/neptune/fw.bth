@@ -432,7 +432,7 @@ fload ${BP}/cpu/x86/pc/neptune/versions.fth
    interpreter-init
    auto-boot
 
-   blue-letters ." Type 'help' for more information." black-letters
+   blue-letters ." Type 'help' for more information." cancel
    cr cr
 
    quit

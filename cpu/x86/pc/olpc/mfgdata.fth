@@ -86,7 +86,7 @@ purpose: Manufacturing data reader
       #out @ 3 +  rmargin @  >  if  exit? ?leave  then
       3 .tab  i c@  <# u# u# u#> type
    loop
-   black-letters
+   cancel
    r> d# 10 >  if  cr  then
    r> tabstops !  r> rmargin !  r> lmargin !
 ;

@@ -101,6 +101,7 @@ alias default-idle-state c2-idle
      green-letters (cr show-temperature  d# 1024 idle-ms
      black-letters (cr show-temperature  d# 1024 idle-ms
    key?  until
+   cancel
    cursor-on
 
    sleep-time @  d# 1000  acpi-time@ start-time @ -  */  ( %*10 )

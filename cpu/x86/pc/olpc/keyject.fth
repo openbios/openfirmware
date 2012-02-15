@@ -52,14 +52,14 @@ purpose: Inject additional keys into manufacturing data
          >r 2tuck  r> swap  move     ( valu$ keyname$ )
          green-letters
          ." Replaced " type cr       ( value$ )
-         black-letters
+         cancel
       else                           ( keyname$ value$ )
          2swap                       ( value$ keyname$ )
          2over 2over                 ( value$ keyname$ value$ keyname$ )
          ($add-tag)                  ( value$ keyname$ )
          green-letters
          ." Added " type cr          ( value$ )
-         black-letters
+         cancel
       then                           ( value$ )
       free-mem                       ( )
    else                              ( keyname$ )
@@ -79,7 +79,7 @@ purpose: Inject additional keys into manufacturing data
 
 : keyject-error  ( msg$ -- )
    cr
-   red-letters  ." Not injecting because:   "  type  cr  black-letters
+   red-letters  ." Not injecting because:   "  type  cr  cancel
    cr
    ." Will update firmware in 20 seconds" cr
    d# 20,000 ms
@@ -180,7 +180,7 @@ false value new-firmware?
 
 : ?keyject  ( -- )
    visible
-   green-letters  cr ." Security Key Injector" cr cr  black-letters
+   green-letters  cr ." Security Key Injector" cr cr  cancel
    \ Get the new firmware first, so any security checks use the old keys
    get-new-firmware
    do-keyject?  if

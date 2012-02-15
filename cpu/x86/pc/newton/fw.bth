@@ -301,7 +301,7 @@ warning !
    ." Open Firmware demonstration version by FirmWorks" cr
 
    ." See "
-   blue-letters ." http://wiki.laptop.org/go/Forth_Lessons" black-letters
+   blue-letters ." http://wiki.laptop.org/go/Forth_Lessons" cancel
    cr cr
    ." Type  menu  to run diagnostics" cr
 

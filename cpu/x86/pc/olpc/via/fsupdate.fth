@@ -23,14 +23,14 @@ purpose: Secure NAND updater
       red-letters
       ." WARNING: The file said highest block " #image-eblocks .d
       ." but wrote only as high as block " max-eblock# .d cr
-      black-letters
+      cancel
    then
    min-eblock# 0 <>  if
       cr
       red-letters
       ." WARNING: The file did not write a zero block, "
       ." but wrote only as low as block " min-eblock# .d cr
-      black-letters
+      cancel
    then
 ;
 

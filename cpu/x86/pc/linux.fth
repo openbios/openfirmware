@@ -305,7 +305,7 @@ warning !
    red-letters
    ." Debugging the Linux kernel requires a few patches to keep Linux from"  mcr
    ." overwriting the firmware debug vector."  mcr mcr
-   black-letters
+   cancel
 
    ." COMMAND   STACK EFFECT   DESCRIPTION" mcr
    ." .registers  ( -- )       Display registers" mcr

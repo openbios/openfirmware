@@ -376,7 +376,7 @@ fload ${BP}/cpu/x86/pc/biosload/memtest.fth
 
 [ifdef] linux-support
    ." See "
-   blue-letters ." http://www.firmworks.com/linux/demo.html" black-letters
+   blue-letters ." http://www.firmworks.com/linux/demo.html" cancel
    cr cr
 
    ." Type 'help-linux' to learn about Linux loading options" cr

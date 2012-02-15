@@ -431,7 +431,7 @@ end-string-array
 ;
 
 : examine-nand  ( -- )
-   0 status-line 1- at-xy  red-letters ." Arrows, fn Arrows to move, Esc to exit" black-letters cr
+   0 status-line 1- at-xy  red-letters ." Arrows, fn Arrows to move, Esc to exit" cancel cr
    #nand-pages nand-pages/block /  to nand-block-limit
    0 to current-block
    current-block highlight-block

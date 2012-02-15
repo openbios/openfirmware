@@ -422,7 +422,7 @@ defer selected-object  ' noop to selected-object
    idle
 ;
 : message-off  ( -- )  d# 2  d# 27  at-xy  kill-line  ;
-: message  ( adr len -- )  cursor-off  message-off  red-letters  type  black-letters  ;
+: message  ( adr len -- )  cursor-off  message-off  red-letters  type  cancel  ;
 
 : performed  ( -- )
    -1 to blink-state

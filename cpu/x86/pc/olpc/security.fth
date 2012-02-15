@@ -26,7 +26,7 @@ true value debug-security?
    debug-security?  if  type cr  else  2drop  then
 ;
 : ?lease-error-cr  ( msg$2 -- )
-   debug-security?  if  red-letters type black-letters cr  else  2drop  then
+   debug-security?  if  red-letters type cancel cr  else  2drop  then
 ;
 
 : fail-load  ( -- )
@@ -54,7 +54,7 @@ true value debug-security?
 ;
 
 : .security-failure  ( error$ -- )
-   visible  red-letters type black-letters cr
+   visible  red-letters type cancel cr
    show-sad
    security-failure
 ;
@@ -934,7 +934,7 @@ defer ec-reflash-off?  ' false to ec-reflash-off?
       red-letters
       ." Bad EC firmware image file - "  .error
       ." Continuing with old EC firmware" cr
-      black-letters
+      cancel
       exit
    then
 
@@ -945,7 +945,7 @@ defer ec-reflash-off?  ' false to ec-reflash-off?
       red-letters
       ." Unsafe to update EC firmware now - " .error
       ."  Continuing with old EC firmware" cr
-      black-letters
+      cancel
       exit
    then
 
@@ -983,7 +983,7 @@ defer ec-reflash-off?  ' false to ec-reflash-off?
       red-letters
       ." Bad firmware image file - "  .error
       ." Continuing with old firmware" cr
-      black-letters
+      cancel
       exit
    then
 
@@ -997,7 +997,7 @@ defer ec-reflash-off?  ' false to ec-reflash-off?
       show-no-power
       ." Unsafe to update firmware now - " .error
       ."  Continuing with old firmware" cr
-      black-letters
+      cancel
       exit
    then
 
@@ -1296,7 +1296,7 @@ alias ?ec-update noop immediate
 
    date-bad?  if
       \ This is not fatal, because we don't want a brick if the RTC battery fails
-      visible  red-letters ." Invalid system date" black-letters cr  show-sad
+      visible  red-letters ." Invalid system date" cancel cr  show-sad
       banner
    then
 

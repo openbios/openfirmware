@@ -94,10 +94,10 @@ d# 256 buffer: tempname-buf
 ;
 
 : .instructions  ( adr len -- )
-   cr blue-letters  type  black-letters  cr
+   cr blue-letters  type  cancel cr
 ;
 : .problem  ( adr len -- )
-   red-letters type  black-letters cr
+   red-letters type  cancel cr
 ;
 
 : scanner?  ( -- flag )

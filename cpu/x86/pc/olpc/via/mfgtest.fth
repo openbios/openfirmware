@@ -59,7 +59,7 @@ warning on
       else                                                   ( )
          green-letters
          ??cr ." Okay" cr
-         black-letters
+         cancel
          mfg-color-green sq-border!
          true to pass?
          d# 2000 hold-message drop

@@ -225,7 +225,7 @@ end-string-array
 ;
 
 : examine-nand  ( -- )
-   0 status-line 1- at-xy  red-letters ." Arrows, fn Arrows to move, Esc to exit" black-letters cr
+   0 status-line 1- at-xy  red-letters ." Arrows, fn Arrows to move, Esc to exit" cancel cr
    0 to current-block
    current-block highlight-block
    false to examine-done?

@@ -20,7 +20,7 @@ d# 8 constant temperature-threshold
    else                                            ( fail? )
       green-letters  ." OKAY"                      ( fail? )
    then                                            ( fail? )
-   black-letters
+   cancel
 ;
 warning off
 : selftest  ( -- error? )

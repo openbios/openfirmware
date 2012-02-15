@@ -476,7 +476,7 @@ alias s suspend
       auto-boot
    then
 
-   blue-letters ." Type 'help' for more information." black-letters
+   blue-letters ." Type 'help' for more information." cancel
    cr cr
 
    quit

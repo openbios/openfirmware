@@ -267,7 +267,7 @@ variable miss?
          h# aa  of
             0 d# 26 at-xy red-screen white-letters
             ." Unexpected touchpad reset"
-            white-screen black-letters
+            white-screen cancel
             cr
             start gs-only   false exit
          endof
