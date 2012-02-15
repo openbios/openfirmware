@@ -1,3 +1,8 @@
+purpose: Platform-specific layout of diagnostic GUI menu items
+
+d# 5 to #mfgcols
+d# 4 to #mfgrows
+
 icon: cpu.icon      rom:cpu.565
 icon: spi.icon      rom:spi.565
 icon: ram.icon      rom:ram.565
@@ -15,10 +20,6 @@ icon: timer.icon    rom:timer.565
 icon: clock.icon    rom:clock.565
 icon: ebook.icon    rom:ebook.565
 icon: leds.icon     rom:leds.565
-
-d# 15 to #mfgtests
-d# 5 to #mfgcols
-d# 4 to #mfgrows
 
 \+ olpc-cl3  : screen-kbd-scroller  ( -- )  blank-screen  open-screen-keyboard  ;
 \+ olpc-cl3  ' screen-kbd-scroller to scroller-on
@@ -46,64 +47,65 @@ d# 4 to #mfgrows
 : leds-item     ( -- )  " /leds"      mfg-test-dev   ;
 
 : olpc-test-menu-items  ( -- )
-   clear-menu
+   0 to #mfgtests
+   1 0 set-row-col
 
-\   " CPU"
-\   ['] cpu-item      cpu.icon      1 0 install-icon
+\  " CPU"
+\  ['] cpu-item      cpu.icon      add-icon
 
    " SPI Flash: Contains EC code, firmware, manufacturing data."
-   ['] spiflash-item    spi.icon      1 0 install-icon
+   ['] spiflash-item  spi.icon      add-icon
 
    " RAM chips"
-   ['] memory-item   ram.icon      1 1 install-icon
+   ['] memory-item    ram.icon      add-icon
 
    " Internal mass storage"
-   ['] int-sd-item   sdcard.icon   1 2 install-icon
+   ['] int-sd-item    sdcard.icon   add-icon
 
-\- olpc-cl3    " Plug-in SD card"
-\- olpc-cl3    ['] ext-sd-item   sdcard.icon   1 3 install-icon
+\- olpc-cl3  " Plug-in SD card"
+\- olpc-cl3  ['] ext-sd-item  sdcard.icon  add-icon
 
    " Wireless LAN"
-   ['] wlan-item     wifi.icon     1 4 install-icon
+   ['] wlan-item      wifi.icon     add-icon
 
    " Display"
-   ['] display-item  display.icon  2 0 install-icon
+   ['] display-item   display.icon  add-icon
 
    " Camera"
-   ['] camera-item   camera.icon   2 1 install-icon
+   ['] camera-item    camera.icon   add-icon
 
    " Audio: Speaker and microphone"
-   ['] audio-item    audio.icon    2 2 install-icon
+   ['] audio-item     audio.icon    add-icon
 
    " Battery"
-   ['] battery-item  battery.icon  2 3 install-icon
+   ['] battery-item   battery.icon  add-icon
 
    " RTC (Real-Time Clock)"
-   ['] rtc-item      clock.icon    2 4 install-icon
+   ['] rtc-item       clock.icon    add-icon
 
 \+ olpc-cl2  " USB ports"
 \+ olpc-cl3  " USB-A port"
-   ['] usb-item      usb.icon      3 0 install-icon
+   ['] usb-item       usb.icon      add-icon
 
 \+ olpc-cl3  " USB OTG port"
-\+ olpc-cl3   ['] otg-item      usb.icon      3 1 install-icon
+\+ olpc-cl3  ['] otg-item  usb.icon  add-icon
 
    \ These are last because they require user participation.
    \ The earlier tests are all included in automatic batch-mode.
 
-\- olpc-cl3    " Keyboard"
-\- olpc-cl3    ['] keyboard-item keyboard.icon 3 1 install-icon
+\- olpc-cl3  " Keyboard"
+\- olpc-cl3  ['] keyboard-item     keyboard.icon     add-icon
 
-\- olpc-cl3    " Touchpad"
-\- olpc-cl3    ['] touchpad-item touchpad.icon 3 2 install-icon
+\- olpc-cl3  " Touchpad"
+\- olpc-cl3  ['] touchpad-item     touchpad.icon     add-icon
 
-\+ olpc-cl3    " Touchscreen"
-\+ olpc-cl3    ['] touchscreen-item touchscreen.icon 3 2 install-icon
+\+ olpc-cl3  " Touchscreen"
+\+ olpc-cl3  ['] touchscreen-item  touchscreen.icon  add-icon
 
    " LEDs"
-   ['] leds-item     leds.icon     3 3 install-icon
+   ['] leds-item    leds.icon   add-icon
 
    " Switches and Accelerometer"
-   ['] switch-item   ebook.icon    3 4 install-icon
+   ['] switch-item  ebook.icon  add-icon
 ;
 ' olpc-test-menu-items to test-menu-items
