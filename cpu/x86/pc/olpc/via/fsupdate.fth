@@ -216,13 +216,13 @@ true value check-hash?
 
 previous definitions
 
-: fs-update  ( "devspec" -- )
+: $fs-update  ( file$ -- )
    load-crypto  abort" Can't load hash routines"
 
-   open-nand                           ( )
+   open-nand                           ( file$ )
 
-   false to secure-fsupdate?           ( )
-   safe-parse-word r/o open-file       ( fd error? )
+   false to secure-fsupdate?           ( file$ )
+   r/o open-file                       ( fd error? )
    " Can't open file" ?nand-abort      ( fd )
 
    linefeed over force-line-delimiter  ( fd )
@@ -238,6 +238,10 @@ previous definitions
    ?all-written
    close-nand-ihs
    )t-hms
+;
+
+: fs-update  ( "devspec" -- )
+   safe-parse-word $fs-update
 ;
 
 : do-fs-update  ( img$ -- )
