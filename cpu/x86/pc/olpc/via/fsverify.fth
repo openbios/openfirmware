@@ -7,12 +7,10 @@ also fs-verify-commands definitions
    get-hex# to /nand-block
    get-hex# to #image-eblocks
    open-nand
-   \   #image-eblocks  show-init
    /nand-block /nand-page / to nand-pages/block
 ;
 
 : zblocks-end:  ( -- )
-   \ XXX could check that everything else is erased ...
 ;
 
 \ This could be a no-op ...
@@ -22,12 +20,8 @@ also fs-verify-commands definitions
 ;
 
 : erase-all  ( -- )
-   \ XXX probably should set a flag saying that unspecified blocks are expected to be ff
 ;
 
-\ We simultaneously DMA one data buffer onto NAND while unpacking the
-\ next block of data into another. The buffers exchange roles after
-\ each block.
 load-base value data-buffer
 
 : verify-hash  ( hashname$ hash$ -- okay? )
@@ -48,28 +42,26 @@ load-base value data-buffer
    safe-parse-word                       ( eblock# hashname$ )
    safe-parse-word hex-decode            ( eblock# hashname$ [ hash$ ] err? )
    " Malformed hash string" ?nand-abort  ( eblock# hashname$ hash$ )
-                                        
+
    verify-hash                           ( eblock# okay? )
-\   if  show-written  else  show-bad  then   ( )
    swap .d  if  (cr  else  cr  then
 ;
 
 previous definitions
 
-: fs-verify  ( "devspec" -- )
-   load-crypto  abort" Can't load hash routines"
+: $fs-verify  ( file$ -- )
+   load-crypto  abort" Can't load hash routines"  ( file$ )
 
-   false to secure-fsupdate?
-   safe-parse-word r/o open-file       ( fd )
-   abort" Can't open file"             ( fd )
+   false to secure-fsupdate?                      ( file$ )
+   r/o open-file  abort" Can't open file"         ( fd )
 
-   file @                              ( fd fd' )
-   over file !  linefeed line-delimiter c!  ( fd fd' )
-   file !                              ( fd )
+   file @                                         ( fd fd' )
+   over file !  linefeed line-delimiter c!        ( fd fd' )
+   file !                                         ( fd )
 
    t-hms(
-   also fs-verify-commands   
-   ['] include-file catch  ?dup  if    ( x error )
+   also fs-verify-commands
+   ['] include-file catch  ?dup  if               ( x error )
       nip .error
    then
    previous
@@ -77,6 +69,11 @@ previous definitions
    close-nand-ihs
    )t-hms
 ;
+
+: fs-verify  ( "devspec" -- )
+   safe-parse-word $fs-verify
+;
+
 [then]
 
 \ dev screen  d# 5000 to burnin-time  dend
