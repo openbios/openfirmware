@@ -229,15 +229,14 @@ previous definitions
 
    t-hms(                              ( fd )
    also nand-commands                  ( fd )
-   ['] include-file catch  ?dup  if    ( x error )
-      nip .error
-   then                                ( )
-   previous definitions
+   ['] include-file catch              ( 0 | x error# )
+   previous
 
    show-done
    ?all-written
    close-nand-ihs
    )t-hms
+   throw                               ( )
 ;
 
 : fs-update  ( "devspec" -- )
