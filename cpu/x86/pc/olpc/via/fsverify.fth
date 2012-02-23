@@ -1,9 +1,12 @@
 \ Boot script for post-audit testing
 [ifndef] fs-verify
+false value fs-verify-quick?
 vocabulary fs-verify-commands
 also fs-verify-commands definitions
 
+false value data?
 : zblocks:  ( "eblock-size" "#eblocks" ... -- )
+   data? 0= " Not a zsp file" ?nand-abort
    get-hex# to /nand-block
    get-hex# to #image-eblocks
    open-nand
@@ -11,10 +14,12 @@ also fs-verify-commands definitions
 ;
 
 : zblocks-end:  ( -- )
+   false to data?
 ;
 
 \ This could be a no-op ...
 : data:  ( "filename" -- )
+   true to data?
    safe-parse-word fn-buf place
    " ${DN}${PN}\${CN}${FN}" expand$  image-name-buf place
 ;
@@ -31,6 +36,11 @@ load-base value data-buffer
    $=                                 ( okay? )
 ;
 
+: ?mismatch
+   cr
+   fs-verify-quick? " One block mismatch, remainder not checked" ?nand-abort
+;
+
 : zblock: ( "eblock#" "comprlen" "hashname" "hash-of-128KiB" -- )
    get-hex#                              ( eblock# )
 
@@ -44,7 +54,7 @@ load-base value data-buffer
    " Malformed hash string" ?nand-abort  ( eblock# hashname$ hash$ )
 
    verify-hash                           ( eblock# okay? )
-   swap .d  if  (cr  else  cr  then
+   swap .d  if  (cr  else  ?mismatch  then
 ;
 
 previous definitions
@@ -61,16 +71,21 @@ previous definitions
 
    t-hms(
    also fs-verify-commands
-   ['] include-file catch  ?dup  if               ( x error )
-      nip .error
-   then
+   ['] include-file catch                         ( 0 | x error# )
    previous
    show-done
    close-nand-ihs
    )t-hms
+   throw                                          ( )
 ;
 
-: fs-verify  ( "devspec" -- )
+: fs-verify  ( "fs.zsp" -- )  \ test blocks
+   false to fs-verify-quick?
+   safe-parse-word $fs-verify
+;
+
+: fs-verify-quick  ( "fs.zsp" -- )  \ test blocks until a mismatch
+   true to fs-verify-quick?
    safe-parse-word $fs-verify
 ;
 
