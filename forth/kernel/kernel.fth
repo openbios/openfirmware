@@ -2184,9 +2184,9 @@ headerless
    >bufaddr  bftop @  umin  bfcurrent !
 ;
 
-\ Buffer boundaries are transparant
+\ Buffer boundaries are transparent
 \ end-of-file conditions work correctly
-\ The actual delimiter encountered in stored in delimiter.
+\ The actual delimiter encountered is stored in delimiter.
 
 headers
 \ input-file contains the file descriptor which defines the input stream.
