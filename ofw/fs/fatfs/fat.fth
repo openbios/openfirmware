@@ -105,7 +105,7 @@ create "fat ," File Allocation Table"
          swap wa+ lew@
       endof
       fat32  of
-         swap la+ lel@
+         swap la+ lel@  h# 0fff.ffff and
       endof
    endcase
 ;
