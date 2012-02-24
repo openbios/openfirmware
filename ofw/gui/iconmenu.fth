@@ -474,7 +474,7 @@ headerless
 ;
 headers
 : wait-return  ( -- )
-   ." ... Press any key to return to the menu ... "
+   ." ... Press any key ... "
    cursor-off
    gui-alerts
    begin
