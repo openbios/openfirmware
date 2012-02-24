@@ -48,7 +48,7 @@ headers
    " slot-name" get-my-property  if
       false
    else
-      decode-string " external" $=
+      decode-string " external" $= nip nip
    then
 ;
 : .slot-name  ( -- )
