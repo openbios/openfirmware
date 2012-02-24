@@ -42,7 +42,7 @@ icon: leds.icon     rom:leds.565
 : timer-item    ( -- )  " /timer"     mfg-test-dev  ;
 \- olpc-cl3 : touchpad-item ( -- )  " mouse"  mfg-test-dev  ;
 \+ olpc-cl3 : touchscreen-item ( -- )  " /touchscreen"  gfx-test-dev  ;
-\- olpc-cl3 : keyboard-item ( -- )  " keyboard"   gfx-test-dev  ;
+\- olpc-cl3 : keyboard-item ( -- )  " keyboard"   mfg-test-dev  ;
 : switch-item   ( -- )  " /accelerometer" mfg-test-dev  " /switches"  mfg-test-dev  ;
 : leds-item     ( -- )  " /leds"      mfg-test-dev   ;
 
