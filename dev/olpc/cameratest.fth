@@ -8,9 +8,13 @@ d# 5,000 constant movie-time
 \ Thanks to Cortland Setlow (AKA Blaketh) for the autobrightness code
 \ and the full-screen + mirrored display.
 
+[ifdef] notdef
+\ This seemed like a good idea but in practice it was found to be confusing
 : autobright  ( -- )
    read-agc 3 + 3 rshift  h# f min  " bright!" " $call-screen" evaluate
 ;
+[then]
+
 : full-brightness  ( -- )  h# f " bright!" " $call-screen" evaluate  ;
 
 : timeout-read  ( adr len timeout -- actual )
@@ -40,14 +44,15 @@ d# 5,000 constant movie-time
    open 0=  if  true exit  then
    d# 300 ms
    start-display
-   unmirrored  resync                                   ( )
+   false set-mirrored  resync                           ( )
    shoot-still  ?dup  if  stop-display close exit  then	( error? )
    d# 1,000 ms
-   mirrored  resync  shoot-movie  full-brightness	( error? )
+   true set-mirrored  resync  shoot-movie  full-brightness	( error? )
    stop-display close					( error? )
    ?dup  0=  if  confirm-selftest?  then		( error? )
 ;
 
+[ifdef] notdef
 : xselftest  ( -- error? )
    open 0=  if  true exit  then
    h# 10 0 do
@@ -56,6 +61,7 @@ d# 5,000 constant movie-time
    loop
    0 close					( error? )
 ;
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks

@@ -57,8 +57,10 @@ VGA_WIDTH VGA_HEIGHT * 2* constant /dma-buf
 : ctlr-start  ( -- )  310 dup cl@ 1 or swap cl!  ;		\ Start the whole thing
 : ctlr-stop   ( -- )  310 dup cl@ 1 invert and swap cl!  ;	\ Stop the whole thing
 
+0 value use-ycrcb?
+
 : read-setup  ( -- )
-   camera-config
+   use-ycrcb? camera-config
    ctlr-config
    83 300 cl!				\ Clear pending interrupts
    1000.0000 200 cl!			\ Allow CAP0 end interrupt
@@ -104,7 +106,6 @@ VGA_WIDTH VGA_HEIGHT * 2* constant /dma-buf
    (init)
    power-up
    camera-smb-setup  smb-on
-   camera-init
 ;
 
 
@@ -154,7 +155,7 @@ external
 : open  ( -- flag )
    init
    my-args " yuv" $=  to use-ycrcb?
-   ov7670-detected? 0=  if  false exit  then
+   sensor-found? 0=  if  false exit  then
    alloc-dma-bufs
    read-setup
    true

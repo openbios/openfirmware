@@ -4,14 +4,16 @@ purpose: Platform specifics for OLPC camera connected to Marvell MMP2 CMOS Camer
 headers
 hex
 
+0 value camera-smb-slave
 : camera-smb-setup  ( -- )
    1 to smb-dly-us
 \+ olpc-cl2   d# 108 to smb-clock-gpio#
 \+ olpc-cl2   d# 109 to smb-data-gpio#
 \+ olpc-cl3   d#   4 to smb-clock-gpio#
 \+ olpc-cl3   d#   5 to smb-data-gpio#
-   h# 42 to smb-slave
+   camera-smb-slave to smb-slave
 ;
+: camera-smb-on  ( -- )  camera-smb-setup  smb-on  ;
 : ov@  ( reg -- data )  camera-smb-setup  smb-byte@  ;
 : ov!  ( data reg -- )  camera-smb-setup  smb-byte!  ;
 

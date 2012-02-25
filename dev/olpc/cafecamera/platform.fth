@@ -37,7 +37,8 @@ my-address my-space h# 200.0010 + encode-phys encode+
 \   4 my-w@  6 invert and  4 my-w!  \ No need to turn it off
 ;
 
-h# 42 2 << constant ov-sid
+h# 42 value camera-smb-slave
+: camera-smb-on  ( -- )  ;
 
 : clr-smb-intr  ( -- )  7.0000 30 cl!  ;
 : smbus-wait  ( -- )
@@ -45,9 +46,11 @@ h# 42 2 << constant ov-sid
    1 ms				\ 20 usec delay
 ;
 
+: set-slave  ( -- )  camera-smb-slave 2 lshift  87.fc01 or b8 cl!  ;	\ TWSI control 0: id, 8-bit, clk
+
 : ov@  ( reg -- data )
    clr-smb-intr
-   ov-sid 87.fc01 or b8 cl!	\ TWSI control 0: id, 8-bit, clk
+   set-slave
    bc cl@ drop			\ Force write
    d# 16 << 100.0000 or bc cl!	\ TWSI control 1: read, reg
    smbus-wait
@@ -56,7 +59,7 @@ h# 42 2 << constant ov-sid
 
 : ov!  ( data reg -- )
    clr-smb-intr
-   ov-sid 8.7fc01 or b8 cl!	\ TWSI control 0: id, 8-bit, clk
+   set-slave
    bc cl@ drop			\ Force write
    d# 16 << or bc cl!		\ TWSI control 1: read, reg
    2 ms

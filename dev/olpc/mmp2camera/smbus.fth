@@ -1,19 +1,22 @@
 4 value smb-dly-us
-: smb-dly  smb-dly-us us  ;
 
+0 value smb-clock-gpio#
 0 value smb-data-gpio#
-0 value smb-clk-gpio#
 
+: smb-dly  smb-dly-us us  ;
 : smb-data-hi  ( -- )  smb-data-gpio# gpio-set  smb-dly  ;
 : smb-data-lo  ( -- )  smb-data-gpio# gpio-clr  smb-dly  ;
-: smb-clk-hi  ( -- )  smb-clk-gpio# gpio-set  smb-dly  ;
-: smb-clk-lo  ( -- )  smb-clk-gpio# gpio-clr  smb-dly  ;
+: smb-clk-hi  ( -- )  smb-clock-gpio# gpio-set  smb-dly  ;
+: smb-clk-lo  ( -- )  smb-clock-gpio# gpio-clr  smb-dly  ;
 : smb-data@  ( -- flag )  smb-data-gpio# gpio-pin@  ;
-: smb-clk@  ( -- )  smb-clk-gpio#  gpio-pin@  ;
+: smb-clk@  ( -- flag )  smb-clock-gpio# gpio-pin@  ;
 : smb-off  ( -- )  smb-data-gpio# gpio-dir-in  ;
-: smb-on  ( -- )  smb-data-gpio# gpio-dir-out  smb-clk-gpio# gpio-dir-out  ;
+: smb-on  ( -- )  smb-data-gpio# gpio-dir-out  smb-clock-gpio# gpio-dir-out  ;
 : smb-data-dir-out  ( -- )  smb-data-gpio# gpio-dir-out  ;
 : smb-data-dir-in  ( -- )  smb-data-gpio# gpio-dir-in  ;
+
+: smb-start ( -- )  smb-clk-hi  smb-data-hi  smb-data-lo smb-clk-lo  ;
+: smb-stop  ( -- )  smb-clk-lo  smb-data-lo  smb-clk-hi  smb-data-hi  ;
 
 h# 3500 constant smb-clk-timeout-us
 \ Slave can flow control by holding CLK low temporarily
@@ -21,34 +24,33 @@ h# 3500 constant smb-clk-timeout-us
    smb-clk-timeout-us 0  do
       smb-clk@  if  smb-dly  unloop exit  then  1 us
    loop
+   smb-stop
    true abort" I2C clock stuck low"
 ;
 : smb-data-hi-w  ( -- )  smb-data-hi  smb-wait-clk-hi  ;
 
+[ifdef] notdef
 h# 3500 constant smb-data-timeout-us
 : smb-wait-data-hi  ( -- )
    smb-data-timeout-us 0  do
       smb-data@  if  unloop exit  then  1 us
    loop
+   smb-stop
    true abort" I2C data stuck low"
 ;
+[then]
 
 : smb-restart  ( -- )
    smb-clk-hi  smb-data-lo  smb-clk-lo
 ;
 
-: smb-start ( -- )  smb-clk-hi  smb-data-hi  smb-data-lo smb-clk-lo  ;
-: smb-stop  ( -- )  smb-clk-lo  smb-data-lo  smb-clk-hi  smb-data-hi  ;
-
 : smb-get-ack  ( -- )
    smb-data-dir-in
    smb-data-hi
    smb-clk-hi smb-wait-clk-hi  
-   smb-data@  \ drop		\ SCCB generates an don't care bit
-   if  smb-stop  smb-data-dir-out  true abort" I2c NAK" then
-   smb-clk-lo
-\   smb-wait-data-hi
-   smb-data-dir-out
+   smb-data@ cmb-clk-low       ( nak? )
+   smb-data-dir-out            ( nak? )
+   if  smb-stop  true abort" I2c NAK"  then
 ;
 : smb-bit  ( flag -- )
    if  smb-data-hi  else  smb-data-lo  then

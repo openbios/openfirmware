@@ -30,7 +30,11 @@ new-device
    [ifndef] seq@  : seq@  3c4 pc! 3c5 pc@  ;  [then]
    fload ${BP}/dev/olpc/viacamera/smbus.fth       \ Bit-banging SMBUS driver
    fload ${BP}/dev/olpc/viacamera/platform.fth
-   fload ${BP}/dev/olpc/ov7670.fth
+   fload ${BP}/dev/olpc/imagesensor.fth
+   warning @ warning off
+   fload ${BP}/dev/olpc/seti.fth
+   fload ${BP}/dev/olpc/ov7670.fth	\ Load last; most likely to be present
+   warning !
    fload ${BP}/cpu/x86/ycrcbtorgb.fth             \ Color space conversion
    fload ${BP}/dev/olpc/viacamera/camera.fth
    fload ${BP}/dev/olpc/cameratest.fth

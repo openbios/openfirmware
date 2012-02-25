@@ -46,6 +46,8 @@ h# 0000.0000 constant polarities
 h#    0.8000 constant ycrcb4:2:2-format  \ YCrCb input and output, 422 packed format (8000), no swapping
 h#        a0 constant rgb-format         \ RGB input (20) and output (80), no swapping
 
+0 value use-ycrcb?
+
 : setup-image  ( -- )
    VGA_WIDTH 2*  h# 24 cl!	\ 640*2 stride, UV stride in high bits = 0
 
@@ -69,7 +71,7 @@ h#        a0 constant rgb-format         \ RGB input (20) and output (80), no sw
 : ctlr-stop   ( -- )  h# 3c dup cl@  1 invert and  swap cl!  ;	\ Disable
 
 : read-setup  ( -- )
-   camera-config
+   use-ycrcb? camera-config
    ctlr-config
      \ Clear all interrupts
    interrupts-on          \ Enable frame done interrupts
@@ -97,12 +99,6 @@ h#        a0 constant rgb-format         \ RGB input (20) and output (80), no sw
    reset-sensor
    h# 40 cl@  h# 1000.0000 or  h# 40 cl!  \ Disable pads
    sensor-power-off
-;
-
-: init  ( -- )
-   power-on
-   camera-smb-setup  smb-on
-   camera-init
 ;
 
 
@@ -145,9 +141,9 @@ external
 
 : open  ( -- flag )
    my-address my-space  h# 1000  " map-in" $call-parent  to camera-base
-   init
+   power-on
+   sensor-found?  0=  if  false exit  then
    my-args " yuv" $=  to use-ycrcb?
-   ov7670-detected? 0=  if  false exit  then
    alloc-dma-bufs
    read-setup
    true

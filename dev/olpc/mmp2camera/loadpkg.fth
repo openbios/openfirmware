@@ -23,7 +23,11 @@
 [then]
 
    fload ${BP}/dev/olpc/mmp2camera/platform.fth
+   fload ${BP}/dev/olpc/imagesensor.fth
+   warning @ warning off
    fload ${BP}/dev/olpc/ov7670.fth
+   fload ${BP}/dev/olpc/seti.fth		\ Load last; most likely to be present
+   warning !
    fload ${BP}/dev/olpc/mmp2camera/ccic.fth
    fload ${BP}/dev/olpc/cameratest.fth
 end-package

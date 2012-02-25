@@ -1,26 +1,41 @@
 \ See license at end of file
 purpose: Omnivision OV7670 image sensor driver
 
-" OV7670" " sensor" string-property
-
 \ ============================= camera operations =============================
 
-\ Check for the expected value
-: ovc  ( val adr -- )
-   2dup ov@      ( val reg# val actual )
-   tuck <>  if   ( val reg# actual )
-      ." Bad camera I2C value at " swap 2 u.r  ( val actual )
-      ."  expected " swap 2 u.r  ."  got " 2 u.r  cr    ( )
-   else          ( val reg# actual )
-      3drop      ( )
-   then          ( )
+: set-hw  ( vstop vstart hstop hstart -- )
+   dup  3 >> 17 ov!			\ Horiz start high bits
+   over 3 >> 18 ov!			\ Horiz stop high bits
+   32 ov@ swap 7 and or swap 7 and 3 << or 10 ms 32 ov!	\ Horiz bottom bits
+
+   dup  2 >> 19 ov!			\ Vert start high bits
+   over 2 >> 1a ov!			\ Vert start high bits
+   03 ov@ swap 3 and or swap 3 and 2 << or 10 ms 03 ov!	\ Vert bottom bits
 ;
 
-0 value use-ycrcb?
+\ VGA RGB565
+: ov7670-rgb565  ( -- )
+   04 12 ov!			\ VGA, RGB565
+   00 8c ov!			\ No RGB444
+   00 04 ov!			\ Control 1: CCIR601 (H/VSYNC framing)
+   10 40 ov!			\ RGB565 output
+   38 14 ov!			\ 16x gain ceiling
+   b3 4f ov!			\ v-red
+   b3 50 ov!			\ v-green
+   00 51 ov!			\ v-blue
+   3d 52 ov!			\ u-red
+   a7 53 ov!			\ u-green
+   e4 54 ov!			\ u-blue
+   c0 3d ov!			\ Gamma enable, UV saturation auto adjust
 
-false value ov7670-detected?
+   \ OVT says that rewrite this works around a bug in 565 mode.
+   \ The symptom of the bug is red and green speckles in the image.
+   01 11 ov!			\ 30 fps def 80  !! Linux doesn't do this
+;
 
-: ((camera-init)  ( -- )
+: ov7670-config  ( ycrcb? -- )
+   >r                           ( r: ycrcb? )
+
    80 12 ov!  2 ms		\ reset (reads back different)
    01 11 ov!			\ 30 fps
    04 3a ov!			\ UYVY or VYUY
@@ -121,9 +136,60 @@ false value ov7670-detected?
    05 79 ov!  30 c8 ov!
    26 79 ov!
 
-   \ OVT says that rewrite this works around a bug in 565 mode.
-   \ The symptom of the bug is red and green speckles in the image.
-\   01 11 ov!			\ 30 fps def 80  !! Linux doesn't do this
+   ( r: ycrcb? )  r>  0=  if  ov7670-rgb565  then   ( )  \ Possibly switch to RGB mode
+
+   d# 490 d# 10 d# 14 d# 158 set-hw	\ VGA window info
+;
+
+: ov7670-set-mirrored  ( mirrored? -- )
+   h# 1e ov@  h# 20                     ( mirrored? reg-value bit )
+   rot  if  or  else  invert and  then  ( reg-value' )
+   h# 1e ov!
+;
+
+: probe-ov7670  ( -- found? )
+   h# 42 to camera-smb-slave    ( )   \ Omnivision SMB ID
+   camera-smb-on
+
+   \ Try to read a byte of the manufacturing ID.  If the read fails,
+   \ the device is not present or not responding.
+   h# 1d ['] ov@ catch  if      ( x )
+      drop                      ( )
+      false exit                ( -- false )
+   then                         ( id-low )
+
+   \ Otherwise there is something at that SMB address; verify that
+   \ it has the correct ID.
+
+   h# 1c ov@  h# 0b ov@  h# 0a ov@  bljoin h# 7673.7fa2 <>   if     \ ProdID.MfgID
+      false exit                ( -- false )
+   then                         ( )
+
+   " OV7670" " sensor" string-property
+
+   ['] ov7670-set-mirrored to set-mirrored
+   ['] ov7670-config       to camera-config
+   true
+;
+
+\ Chain of sensor recognizers
+: sensor-found?  ( -- flag )
+   probe-ov7670  if  true exit  then
+   sensor-found?
+;
+
+\ The rest is for debugging and testing
+[ifdef] notdef
+
+\ Check for the expected value
+: ovc  ( val adr -- )
+   2dup ov@      ( val reg# val actual )
+   tuck <>  if   ( val reg# actual )
+      ." Bad camera I2C value at " swap 2 u.r  ( val actual )
+      ."  expected " swap 2 u.r  ."  got " 2 u.r  cr    ( )
+   else          ( val reg# actual )
+      3drop      ( )
+   then          ( )
 ;
 
 : config-check  ( -- )
@@ -211,35 +277,6 @@ false value ov7670-detected?
    88 a4 ovc  00 96 ovc  30 97 ovc  20 98 ovc
    30 99 ovc  84 9a ovc  29 9b ovc  03 9c ovc
    5c 9d ovc  3f 9e ovc  04 78 ovc
-
-;
-
-: camera-init  ( -- )
-   false to ov7670-detected?
-   ((camera-init)
-   1d ov@ 1c ov@  bwjoin 7fa2 <>  if  exit  then	\ Manufacturing ID
-    b ov@  a ov@  bwjoin 7673 <>  if  exit  then	\ Product ID
-   true to ov7670-detected?
-;
-
-\ VGA RGB565
-: init-rgb565  ( -- )
-   04 12 ov!				\ VGA, RGB565
-   00 8c ov!				\ No RGB444
-   00 04 ov!				\ Control 1: CCIR601 (H/VSYNC framing)
-   10 40 ov!				\ RGB565 output
-   38 14 ov!				\ 16x gain ceiling
-   b3 4f ov!				\ v-red
-   b3 50 ov!				\ v-green
-   00 51 ov!				\ v-blue
-   3d 52 ov!				\ u-red
-   a7 53 ov!				\ u-green
-   e4 54 ov!				\ u-blue
-   c0 3d ov!				\ Gamma enable, UV saturation auto adjust
-
-   \ OVT says that rewrite this works around a bug in 565 mode.
-   \ The symptom of the bug is red and green speckles in the image.
-   01 11 ov!			\ 30 fps def 80  !! Linux doesn't do this
 ;
 
 : read-agc  ( -- n )
@@ -250,22 +287,6 @@ false value ov7670-detected?
    7 ov@  h# 3f and  d# 10 lshift
    h# 10 ov@  2 lshift  or
    4 ov@  3 and  or
-;
-
-: set-hw  ( vstop vstart hstop hstart -- )
-   dup  3 >> 17 ov!			\ Horiz start high bits
-   over 3 >> 18 ov!			\ Horiz stop high bits
-   32 ov@ swap 7 and or swap 7 and 3 << or 10 ms 32 ov!	\ Horiz bottom bits
-
-   dup  2 >> 19 ov!			\ Vert start high bits
-   over 2 >> 1a ov!			\ Vert start high bits
-   03 ov@ swap 3 and or swap 3 and 2 << or 10 ms 03 ov!	\ Vert bottom bits
-;
-
-: camera-config  ( -- )
-   ((camera-init)
-   use-ycrcb?  0=  if  init-rgb565  then
-   d# 490 d# 10 d# 14 d# 158 set-hw	\ VGA window info
 ;
 
 : dump-regs  ( run# -- )
@@ -283,9 +304,8 @@ false value ov7670-detected?
       cr
    h# 10 +loop
 ;
+[then]
 
-: mirrored  ( -- )  h# 1e ov@  h# 20 or  h# 1e ov!  ;
-: unmirrored  ( -- )  h# 1e ov@  h# 20 invert and  h# 1e ov!  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks

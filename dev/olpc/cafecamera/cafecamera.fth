@@ -65,7 +65,7 @@ VGA_WIDTH VGA_HEIGHT * 2* constant /dma-buf
 : ctlr-stop   ( -- )  3c dup cl@ 1 invert and swap cl!  ;	\ Stop the whole thing
 
 : read-setup  ( -- )
-   camera-config
+   true camera-config   \ Always use RGB
    ctlr-config
    3f 30 cl!				\ Clear pending interrupts
    ctlr-start
@@ -106,11 +106,6 @@ VGA_WIDTH VGA_HEIGHT * 2* constant /dma-buf
    0008.0000 315c cl!				\ Remove VDD
    5 ms
    40 dup cl@ 1000.0000 or swap cl!		\ power off
-;
-: init  ( -- )
-   (init)
-   power-up
-   camera-init
 ;
 
 
@@ -207,8 +202,9 @@ external
 
 : open  ( -- flag )
    map-regs
-   init
-   ov7670-detected? 0=  if  unmap-regs false exit  then
+   (init)
+   power-up
+   sensor-found? 0=  if  unmap-regs false exit  then
    alloc-dma-bufs
    read-setup
    true

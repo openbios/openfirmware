@@ -46,10 +46,8 @@ h# 3500 constant smb-data-timeout-us
 : smb-get-ack  ( -- )
    smb-data-hi
    smb-clk-hi smb-wait-clk-hi  
-   smb-data@  \ drop		\ SCCB generates an don't care bit
+   smb-data@ smb-clk-lo       ( nak? )
    if  smb-stop  true abort" I2c NAK" then
-   smb-clk-lo
-\   smb-wait-data-hi
 ;
 : smb-bit  ( flag -- )
    if  smb-data-hi  else  smb-data-lo  then

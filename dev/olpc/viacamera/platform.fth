@@ -11,10 +11,11 @@ h# 26 constant dcon-port
 : cl!  ( l adr -- )  " mmio-base" $call-parent + rl!  ;
 : cl@  ( adr -- l )  " mmio-base" $call-parent + rl@  ;
 
-h# 42 constant ov-sid
 h# 31 constant sccb-port
 
-: camera-smb-setup  ( -- )  sccb-port to smb-port  ov-sid to smb-slave  ;
+0 value camera-smb-slave
+: camera-smb-setup  ( -- )  sccb-port to smb-port  camera-smb-slave to smb-slave  ;
+: camera-smb-on  ( -- )  camera-smb-setup  smb-on  ;
 : ov@  ( reg -- data )  camera-smb-setup  smb-byte@  ;
 : ov!  ( data reg -- )  camera-smb-setup  smb-byte!  ;
 

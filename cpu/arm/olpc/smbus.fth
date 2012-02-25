@@ -15,40 +15,51 @@
 : smb-data-dir-out  ( -- )  smb-data-gpio# gpio-dir-out  ;
 : smb-data-dir-in  ( -- )  smb-data-gpio# gpio-dir-in  ;
 
+: smb-start ( -- )  smb-clk-hi  smb-data-hi  smb-data-lo smb-clk-lo  ;
+: smb-stop  ( -- )  smb-clk-lo  smb-data-lo  smb-clk-hi  smb-data-hi  ;
+
 h# 3500 constant smb-clk-timeout-us
 \ Slave can flow control by holding CLK low temporarily
 : smb-wait-clk-hi  ( -- )
    smb-clk-timeout-us 0  do
       smb-clk@  if  smb-dly  unloop exit  then  1 us
    loop
+   smb-stop
    true abort" I2C clock stuck low"
 ;
 : smb-data-hi-w  ( -- )  smb-data-hi  smb-wait-clk-hi  ;
 
+[ifdef] notdef
 h# 3500 constant smb-data-timeout-us
 : smb-wait-data-hi  ( -- )
    smb-data-timeout-us 0  do
       smb-data@  if  unloop exit  then  1 us
    loop
+   smb-stop
    true abort" I2C data stuck low"
 ;
+[then]
 
 : smb-restart  ( -- )
    smb-clk-hi  smb-data-lo  smb-clk-lo
 ;
 
-: smb-start ( -- )  smb-clk-hi  smb-data-hi  smb-data-lo smb-clk-lo  ;
-: smb-stop  ( -- )  smb-clk-lo  smb-data-lo  smb-clk-hi  smb-data-hi  ;
-
 : smb-get-ack  ( -- )
    smb-data-dir-in
    smb-data-hi
    smb-clk-hi smb-wait-clk-hi  
-   smb-data@  \ drop		\ SCCB generates an don't care bit
-   if  smb-stop  true abort" I2c NAK" then
-   smb-clk-lo
-\   smb-wait-data-hi
-   smb-data-dir-out
+   smb-data@           ( nak? )
+
+   smb-clk-lo          ( nak? )
+
+\ Empirically, the Omnivision image sensor sometimes fails to
+\ release the ACK until the next clock, so smb-wait-data-hi
+\ causes spurious failures.
+\  smb-wait-data-hi
+
+   smb-data-dir-out    ( nak? )
+
+   if  smb-stop  true abort" I2c NAK"  then
 ;
 : smb-bit  ( flag -- )
    if  smb-data-hi  else  smb-data-lo  then
