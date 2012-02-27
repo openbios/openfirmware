@@ -19,7 +19,9 @@
 ;
 : select-emmc  ( -- )
    h# c1 d# 113 af!  \ SD_CMD as GPIO
-   h# c1 d# 126 af!  \ SD_DATA2 as GPIO
+[ifndef] olpc-cl3    \ Leave at the initial setting for CL3
+   h# c0 d# 126 af!  \ SD_DATA2 as GPIO
+[then]
    h# c0 d# 127 af!  \ SD_DATA0 as GPIO
    h# c0 d# 130 af!  \ SD_DATA3 as GPIO
    h# c0 d# 135 af!  \ SD_DATA1 as GPIO
