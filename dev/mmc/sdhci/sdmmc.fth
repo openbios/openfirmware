@@ -36,7 +36,7 @@ external
 ;
 
 \ Asynchronous write. Completes on the next call to
-\ write-blocks-start, write-blocks-finish, or close.
+\ write-blocks-start, write-blocks-end, or close.
 \ (Don't do other read/write operations in between.)
 : write-blocks-start  ( adr block# #blocks -- error? )
    " fresh-write-blocks-start" $call-parent
