@@ -65,7 +65,7 @@ VGA_WIDTH VGA_HEIGHT * 2* constant /dma-buf
 : ctlr-stop   ( -- )  3c dup cl@ 1 invert and swap cl!  ;	\ Stop the whole thing
 
 : read-setup  ( -- )
-   true camera-config   \ Always use RGB
+   false camera-config			\ Always use RGB
    ctlr-config
    3f 30 cl!				\ Clear pending interrupts
    ctlr-start
