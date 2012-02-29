@@ -382,6 +382,8 @@ headers
    ps-size    alloc-mem is pssave
    rs-size    alloc-mem is rssave
 
+   clear-save-area
+
    1 catch-exception   \ Undefined instruction
 \  2 catch-exception   \ Software interrupt
    3 catch-exception   \ Prefetch abort
