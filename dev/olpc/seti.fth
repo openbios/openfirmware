@@ -303,9 +303,9 @@ hex
       drop                    ( )
       false exit              ( -- false )
    then                       ( regval )
-   drop  \ XXX Should compare with the SETi ID
+   h# 12 <>  if  false exit  then  ( )
 
-   " SETi-xxx" " sensor" string-property
+   " SETi,SIV120D" " sensor" string-property
 
    ['] seti-set-mirrored to set-mirrored
    ['] seti-config       to camera-config
