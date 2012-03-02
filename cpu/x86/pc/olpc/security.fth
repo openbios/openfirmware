@@ -193,18 +193,26 @@ previous definitions
 d# 256 constant /sig
 /sig buffer: sig-buf
 
-\ hex-decode decodes a hexadecimal signature string, storing it in
-\ binary form at sig-buf.  It returns the adr,len of the binary string.
+h# 10e constant /key
+/key buffer: key-buf
 
-: hex-decode  ( hex$ -- true | sig$ false )
-   sig-buf -rot                 ( adr hex$ )
-   bounds ?do                   ( adr )
-      i 2 push-hex $number pop-base  if  ( adr )
-         2drop true unloop exit
-      then                      ( adr n )
-      over c!  1+               ( adr' )
-   2 +loop                      ( adr )
-   sig-buf tuck -   false       ( sig$ false )
+\ $hex-decode decodes a hexadecimal signature string, storing it in
+\ binary form at adr, returning adr,len of the binary string and false.
+\ It returns true if hex$ is too long for the binary buffer length
+\ maxlen or if hex$ contains a non-hexadecimal character.
+
+: $hex-decode  ( hex$ adr maxlen -- true | binary$ false )
+   2* third <  if               ( hex$ adr )
+      3drop true exit           ( -- true )
+   then                         ( hex$ adr )
+   dup 2swap                    ( adr adr hex$ )
+   bounds ?do                   ( adr nextadr )
+      i 2 push-hex $number pop-base  if  ( adr nextadr )
+         2drop true unloop exit          ( -- true )
+      then                      ( adr nextadr n )
+      over c!  1+               ( adr nextadr' )
+   2 +loop                      ( adr nextadr )
+   over -   false               ( binary$ false )
 ;
 
 \ cut$ splits a string into an initial substring of length n
@@ -230,11 +238,8 @@ d# 256 constant /sig
    then                                ( rem$ )
    bl left-parse-string 2drop          ( rem$ )  \ Discard hash name
    bl left-parse-string 2nip           ( key$ )  \ Get key signature
-   /sig 2* min  hex-decode  if         ( key$ )
-      2drop true                       ( true )
-      exit
-   then                                ( binary-key$ )
-   false                               ( binary-key$ false )
+
+   key-buf /key $hex-decode            ( true | binary-key$ false )
 ;
 
 \ True if short$ matches the end of long$ 
@@ -472,13 +477,14 @@ d# 67 buffer: machine-id-buf
 
    \ Check that the keyid matches our pubkey
    bl left-parse-string              ( line$' keyid$ )
-   /sig 2* min  hex-decode  if       ( line$ )
+   key-buf /key $hex-decode  if      ( line$ )
       2drop false  exit              
-   then                              ( line$ binary-key$ )
+   then                              ( line$ binary-keyid$ )
 
    key-in-list?  0=  if              ( line$ )
       2drop false  exit
    then                              ( line$ )
+   \ Now thiskey$ contains the full key$ that was matched by keyid$
 
    \ Check that the signature occupies the rest of the line
    bl left-parse-string              ( line$' sig$ )
@@ -487,20 +493,17 @@ d# 67 buffer: machine-id-buf
       2drop false  exit
    then                              ( sig$ )
 
-   dup /sig 2* <>  if                ( sig$ )
-      2drop false exit
-   then                              ( sig$ )
-
-   hex-decode  if                    ( )
+   sig-buf /sig $hex-decode  if      ( )
       false exit
+   then                              ( binary-sig$ )
+
+   dup /sig <>  if                   ( binary-sig$ )
+      2drop false exit
    then                              ( binary-sig$ )
 
    \ Cryptographically verify the data against the signature
    2>r  0 signed-data$  2r>  thiskey$  exp-hashname$  signature-bad? 0=
 ;
-
-h# 10e constant /key
-/key buffer: keybuf
 
 0 0 2value sig02-key$
 
@@ -517,17 +520,14 @@ h# 10e constant /key
       \ Check that the keyid matches our pubkey, but only if it's
       \ the first one
       bl left-parse-string              ( line$' pubkey$ )
-      hex-decode  if                    ( line$ )
-         2drop false unloop exit
+
+      key-buf /key $hex-decode  if      ( line$ )
+         2drop false unloop exit        ( -- false )
       then                              ( line$ binary-key$ )
 
-      i  if                             ( line$ binary-key$ )
-         dup /key <>  if                ( line$ binary-key$ )
-            4drop false unloop exit
-         then                           ( line$ binary-key$ )
-         tuck  keybuf  swap move        ( line$ binary-keylen )
-         keybuf swap                    ( line$ binary-key$' )
-      else                              ( line$ binary-keyid$ )
+      dup /key <>  if                   ( line$ binary-keyid$ )
+         \ If the length is shorter than a full key, it's a keyid
+         \ which we look for in our key list
          key-in-list? 0=  if            ( line$ )
             2drop false unloop exit
          then                           ( line$ )
@@ -544,13 +544,13 @@ h# 10e constant /key
       \ Get the signature
       bl left-parse-string              ( line$ sig$)
 
-      dup /sig 2* <>  if                ( line$ sig$ )
-         4drop false unloop exit
-      then                              ( line sig$ )
-
-      hex-decode  if                    ( line$ )
-         2drop false unloop exit
+      sig-buf /sig $hex-decode  if      ( line$ )
+         2drop false unloop exit        ( -- false )
       then                              ( line$ binary-sig$ )
+
+      dup /sig <>  if                   ( line$ binary-sig$ )
+         4drop false unloop exit
+      then                              ( line binary-sig$ )
 
       2>r                               ( line$' r: binary-sig$ )
 
@@ -1347,6 +1347,19 @@ alias ?ec-update noop immediate
    " MD" find-tag  if  ." MD tag already exists" cr  2drop exit  then
    date-bad?  if  ." The RTC is not set correctly" cr  exit  then
    time&date >iso8601$  " md" $add-tag
+;
+
+\ The following is for compatibility with the script fsverify.fth .
+\ fs-verify only needs h#20 bytes, that being the length of a sha256 hash
+\ in binary form, but we give it h#100 as that is the previous length of
+\ hex-decode's buffer.  Since buffer: uses lazy allocation, we won't waste
+\ space unless compat-buf is actually used.
+
+h# 100 constant /compat-buf   \ Large enough for sha512
+/compat-buf buffer: compat-buf
+
+: hex-decode  ( hex$ -- true | binary$ false )
+   compat-buf /compat-buf $hex-decode
 ;
 
 \ LICENSE_BEGIN
