@@ -167,10 +167,14 @@ icon: quit.icon     rom:quit.565
 
 defer test-menu-items
 
-: full-menu  ( -- )
+: tiny-menu  ( -- )
    init-menu
    clear-menu
    test-menu-items
+;
+
+: full-menu  ( -- )
+   tiny-menu
 
    " Run all non-interactive tests. (Press a key between tests to stop.)"
    ['] play-item     play.icon     0 1 selected install-icon
@@ -183,11 +187,10 @@ defer test-menu-items
 ' noop to do-title
 
 : autorun-mfg-tests  ( -- )
-   init-menu
    ['] run-menu behavior >r
    ['] mfg-test-autorunner to run-menu   \ Run menu automatically
    true to diag-switch?
-   ['] test-menu-items  ['] nest-menu catch  drop
+   ['] tiny-menu ['] nest-menu catch  drop
    r> to run-menu
    false to diag-switch?
    restore-scroller-bg
