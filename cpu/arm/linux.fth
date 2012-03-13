@@ -89,7 +89,7 @@ defer ofw-tag, ' noop to ofw-tag,  \ Define externally if appropriate
    0 tag-l,    \ ATAG_NONE
 ;
 
-0 value use-fdt?
+true value use-fdt?
 : use-fdt  ( -- )  true to use-fdt?  ;
 
 : linux-fixup  ( -- )
