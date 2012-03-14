@@ -752,7 +752,6 @@ fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
 \+ olpc-cl3 fload ${BP}/cpu/arm/olpc/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
 \+ olpc-cl3 fload ${BP}/dev/softkeyboard.fth                    \ On-screen keyboard
-\+ olpc-cl3 devalias mouse /touchscreen
 \+ olpc-cl2 fload ${BP}/cpu/arm/olpc/rm3150-touchscreen.fth    \ Touchscreen driver and diagnostic
 fload ${BP}/cpu/arm/olpc/roller.fth     \ Accelerometer test
 

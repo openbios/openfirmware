@@ -155,7 +155,7 @@ icon: quit.icon     rom:quit.565
 : quit-item     ( -- )  menu-done  ;
 
 : init-menu  ( -- )
-   ?open-screen  ?open-mouse
+   ?open-screen  ?open-mouse  ?open-touchscreen
    #mfgrows to rows
    #mfgcols to cols
    d# 180 to sq-size

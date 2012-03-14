@@ -3,6 +3,8 @@ purpose: Mouse support for GUI
 
 headerless
 
+0 value mouse-ih
+
 false value mouse-absolute?  \ True if coordinates are absolute
 
 \ Current mouse cursor position
@@ -155,8 +157,9 @@ hex
 
 : clamp  ( n min max - m )  rot min max  ;
 
+: set-xy  ( x y -- )  to ypos  to xpos  ;
 : update-position  ( x y -- )
-   mouse-absolute?  if  to ypos  to xpos  exit  then
+   mouse-absolute?  if  set-xy  exit  then
    2dup or 0=  if  2drop exit  then  \ Avoid flicker if there is no movement
 
    \ Minimize the time the cursor is down by doing computation in advance
@@ -164,24 +167,9 @@ hex
    \ this optimization is probable unnoticeable, but it doesn't cost much.
    negate  ypos +  0  max-y cursor-h -  clamp      ( x y' )
    swap    xpos +  0  max-x cursor-w -  clamp      ( y' x')
-   to xpos  to ypos
+   swap set-xy
 ;
 
-: get-key-code  ( -- c | c 9b )
-   key  case
-      \ Distinguish between a bare ESC and an ESC-[ sequence
-      esc of
-         d# 10 ms  key?  if
-            key  [char] [ =  if  key csi  else  esc  then
-         else
-            esc
-         then
-      endof
-
-      csi of  key csi  endof
-      dup
-   endcase
-;
 headers
 
 0 value close-mouse?
@@ -213,6 +201,32 @@ headers
 ;
 : mouse-event?  ( -- false | x y buttons true )
    " stream-poll?" mouse-ih $call-method
+;
+
+0 value touchscreen-ih
+
+0 value close-touchscreen?
+
+: ?close-touchscreen  ( -- )
+   close-touchscreen?  if
+      touchscreen-ih close-dev
+      0 to touchscreen-ih
+      hardware-cursor?  if
+	 false to hardware-cursor?
+	 " cursor-off" $call-screen
+      then
+   then
+;
+: ?open-touchscreen  ( -- )
+   touchscreen-ih  0=  dup to close-touchscreen?  if
+      " touchscreen" open-dev is touchscreen-ih
+      touchscreen-ih  0=  if
+         " /touchscreen" open-dev to touchscreen-ih
+      then
+   then
+;
+: touchscreen-event?  ( -- false | x y buttons true )
+   " stream-poll?" touchscreen-ih $call-method
 ;
 
 \ LICENSE_BEGIN

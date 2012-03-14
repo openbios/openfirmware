@@ -3,31 +3,17 @@ purpose: Driver and diagnostic for EETI EXC7200 Multitouch I2C Touchscreen
 
 0 0  " 4,8"  " /twsi" begin-package
 my-space encode-int  my-address encode-int encode+  " reg" property
-" touchscreen" name
 
-0 value screen-w
-0 value screen-h
-0 instance value invert-x?
-0 instance value invert-y?
+\ XXX these are really platform-related, not touchscreen-related
+: targets?  ( -- flag )  true  ;  \ Used to be "final-test?"
+: .tsmsg  ( -- )  0 d# 27 at-xy  ." Touchscreen test.  Hit both targets to exit" cr  ;
 
-: dimensions  ( -- w h )  screen-w  screen-h  ;
+fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
 
-: #contacts  ( -- n )  2  ;
+h# 7fff to touchscreen-max-x
+h# 7fff to touchscreen-max-y
 
-h# 7fff constant touchscreen-max-x
-h# 7fff constant touchscreen-max-y
-
-: invert-x  ( x -- x' )  touchscreen-max-x swap -  ;
-: invert-y  ( y -- y' )  touchscreen-max-y swap -  ;
-
-: scale-x  ( x -- x' )
-   invert-x?  if  invert-x  then
-   screen-w touchscreen-max-x */
-;
-: scale-y  ( y -- y' )
-   invert-y?  if  invert-y  then
-   screen-h touchscreen-max-y */
-;
+2 to #contacts
 
 \ Try to receive a mouse report packet.  If one arrives within
 \ 20 milliseconds, return true and the decoded information.
@@ -43,15 +29,13 @@ h# 7fff constant touchscreen-max-y
       r> r> r> 4drop false   exit          ( -- false )
    then                                    ( flags  r: z y x )
 
-   r>  scale-x                             ( flags  x'  r: z y )
-   r>  scale-y                             ( flags  x y'  r: z )
+   r> r> scale-xy                          ( flags  x' y'  r: z )
 
    r> 3 roll                               ( x y z flags )
    dup 1 and 0<>                           ( x y z flags down? )
    swap 2 rshift  h# 1f and                ( x y z down? contact# )
    true                                    ( x y z down? contact# true )
 ;
-true value absolute?
 : stream-poll?  ( -- false | x y buttons true )
    pad?  if               ( x y z down? contact# )
       0=  if              ( x y z down? )
@@ -64,42 +48,6 @@ true value absolute?
    then                   ( false | x y buttons true )
 ;
 
-h# f800 constant red
-h# 07e0 constant green
-h# 001f constant blue
-h# ffe0 constant yellow
-h# f81f constant magenta
-h# 07ff constant cyan
-h# ffff constant white
-h# 0000 constant black
-
-variable pixcolor
-
-h# 4 value y-offset
-\ 0 value /line
-\ 2 value /pixel
-
-
-variable ptr
-
-\ The following code receives and decodes touchpad packets
-
-: show-packets  ( adr len -- )
-   push-hex
-   bounds  ?do
-      i 6  bounds  ?do  i c@  3 u.r  loop  cr
-   6 +loop
-   pop-base
-;
-: last-10  ( -- )
-   ptr @  load-base -  d# 60  >  if
-      ptr @  d# 60 -  d# 60
-   else
-      load-base  ptr @  over -
-   then
-   show-packets
-;
-
 \ Display raw data from the device, stopping when a key is typed.
 : show-pad  ( -- )
    begin
@@ -107,90 +55,10 @@ variable ptr
    key? until
 ;
 
-: button  ( color x -- )
-   screen-h d# 50 -  d# 200  d# 30  fill-rectangle-noff
-;
-d# 300 d# 300 2constant target-wh
-: left-target   ( -- x y w h )  0 0  target-wh  ;
-: right-target  ( -- x y w h )  screen-w screen-h  target-wh  xy-  target-wh  ;
-false value left-hit?
-false value right-hit?
-: inside?  ( mouse-x,y  x y w h -- flag )
-   >r >r         ( mouse-x mouse-y  x y  r: h w )
-   xy-           ( dx dy )
-   swap r> u<    ( dy x-inside? )
-   swap r> u<    ( x-inside? y-inside? )
-   and           ( flag )
-;
-
-: draw-left-target  ( -- )  green  left-target   fill-rectangle-noff  ;
-: draw-right-target ( -- )  red    right-target  fill-rectangle-noff  ;
-
-: ?hit-target  ( -- )
-   pixcolor @  cyan =   if  \ touch1              ( x y )
-      2dup  left-target  inside?  if              ( x y )
-         yellow left-target  fill-rectangle-noff  ( x y )
-         true to left-hit?                        ( x y )
-         exit
-      then                                        ( x y )
-   then                                           ( x y )
-   pixcolor @ yellow =  if  \ touch2              ( x y )
-      2dup  right-target  inside?  if             ( x y )
-         yellow right-target  fill-rectangle-noff ( x y )
-         true to right-hit?                       ( x y )
-         exit
-      then                                        ( x y )
-   then                                           ( x y )
-;
-
-: targets?  ( -- flag )  true  ;  \ Used to be "final-test?"
-
-: track-init  ( -- )
-\   screen-ih package( bytes/line )package  to /line
-   load-base ptr !
-;
-
-: dot  ( x y -- )
-   swap screen-w 3 - min  swap y-offset + screen-h 3 - min  ( x' y' )
-   pixcolor @  -rot   3 3                   ( color x y w h )
-   fill-rectangle-noff                      ( )
-;
-
-: background  ( -- )
-   black  0 0  screen-w screen-h  fill-rectangle-noff
-   targets?  if
-      false to left-hit?
-      false to right-hit?
-      draw-left-target
-      draw-right-target
-   else
-      0 d# 27 at-xy  ." Touchscreen test.  Hit both targets to exit" cr
-   then
-;
-
-: setcolor  ( contact# -- )
-   case
-      0  of  cyan    endof
-      1  of  yellow  endof
-      2  of  magenta endof
-      3  of  blue    endof
-      ( default )  white swap
-   endcase
-
-   pixcolor !         
-;
-0 value pressure
-
-: *3/5  ( n -- n' )  3 5 */  ;
-: dimmer  ( color -- color' )
-   565>rgb rot *3/5 rot *3/5 rot *3/5 rgb>565
-;
-
 : track  ( x y z down? contact# -- )
    setcolor                       ( x y z down? )
-   0=  if
-      pixcolor @  dup dimmer  " replace-color" $call-screen
-      3drop exit
+   0=  if                         ( x y z )
+      3drop  undot  exit          ( -- )
    then                           ( x y z )
    to pressure                    ( x y )
 
@@ -201,43 +69,6 @@ false value right-hit?
    then                           ( x y )
 
    dot
-;
-
-: handle-key  ( -- exit? )
-   key upc  case
-      [char] P  of
-         cursor-on
-         cr last-10
-         key drop
-         background
-         false
-      endof
-
-      ( key )  true swap
-   endcase
-;
-
-false value selftest-failed?  \ Success/failure flag for final test mode
-: exit-test?  ( -- flag )
-   targets?  if                       ( )
-      \ If the targets have been hit, we exit with successa
-      left-hit? right-hit? and  if    ( )
-         false to selftest-failed?    ( )
-         true                         ( flag )
-         exit
-      then                            ( )
-
-      \ Otherwise we give the tester a chance to bail out by typing a key,
-      \ thus indicating failure
-      key?  0=  if  false exit  then  ( )
-      key drop                        ( )
-      true to selftest-failed?        ( )
-      true                            ( flag )
-      exit
-   then                               ( )
-
-   \ If not final test mode, we only exit via a key - no targets
-   key?  if  handle-key  else  false  then  ( exit ? )
 ;
 : touchscreen-present?  ( -- flag )
    d# 10 " get" ['] $call-parent catch  if   ( x x x )
@@ -253,21 +84,8 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    my-unit " set-address" $call-parent  true
    \ Read once to prime the interrupt
    d# 10 " get" $call-parent  4drop 4drop 2drop
-   " dimensions" $call-screen  to screen-h  to screen-w
 
-   \ The "TI" tag controls the inverson of X and Y axes.
-   \ If the tag is missing, axes are not inverted.  If present
-   \ and the value contains either of the letters x or y, the
-   \ corresponding axis is inverted.  This is primarily for
-   \ development, using prototype touchscreens.
-   " TI" find-tag  if     ( adr len )
-      begin  dup  while   ( adr len )
-         over c@  upc  [char] x =  if  true to invert-x?  then
-         over c@  upc  [char] y =  if  true to invert-y?  then
-         1 /string        ( adr' len' )
-      repeat              ( adr len )
-      2drop               ( )
-   then                   ( )
+   set-geometry
 
    flush
 ;
@@ -291,7 +109,7 @@ false value selftest-failed?  \ Success/failure flag for final test mode
       d# 4000 ms
    then
 
-   cursor-off  track-init
+   cursor-off
 
    \ Consume already-queued keys to prevent premature exit
    begin  key?  while  key drop  repeat
@@ -312,7 +130,6 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    page
    targets?  if  selftest-failed?  else  false  then
 ;
-
 
 end-package
 

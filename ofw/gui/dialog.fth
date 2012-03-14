@@ -201,6 +201,21 @@ variable pgup?
    ['] selected?  find-node  nip       ( node )
    " next-enum" run-method             ( )
 ;
+: get-key-code  ( -- c | c 9b )
+   key  case
+      \ Distinguish between a bare ESC and an ESC-[ sequence
+      esc of
+         d# 10 ms  key?  if
+            key  [char] [ =  if  key csi  else  esc  then
+         else
+            esc
+         then
+      endof
+
+      csi of  key csi  endof
+      dup
+   endcase
+;
 : controls-key  ( list -- done? )
    key?  if
       >r

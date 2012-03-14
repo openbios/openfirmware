@@ -20,18 +20,6 @@ headerless
 \ keyboard input removes mouse cursor and moves mouse to selected square
 \ keyboard input (arrows) always moves to an occupied square
 
-\ need:
-\ put text into square
-
-\ have:
-\ fill-rectangle ( color x y w h - )	color is 0..255
-\ draw-rectangle ( address x y w h - )  address of 128x128 pixmap
-\ read-rectangle ( address x y w h - )
-\ move-mouse-cursor ( x y - )
-\ remove-mouse-cursor ( - )
-\ poll-mouse  ( -- x y buttons )
-\ get-event  ( #msecs -- false | x y buttons true )
-
 hex
 
 \ Icon layout parameters
@@ -424,11 +412,20 @@ headerless
    then                                           ( )
 ;
 
-: do-mouse  ( - )
+: do-mouse  ( -- )
    mouse-ih 0=  if  exit  then
    begin  mouse-event?  while         ( x y buttons )
-      remove-mouse-cursor
+      remove-mouse-cursor             ( x y buttons )
       -rot  update-position           ( buttons )
+      new-sq?
+      draw-mouse-cursor
+   repeat
+;
+: do-touchscreen  ( -- )
+   touchscreen-ih 0=  if  exit  then
+   begin  touchscreen-event?  while   ( x y buttons )
+      remove-mouse-cursor             ( x y buttons )
+      -rot  set-xy                    ( buttons )
       new-sq?
       draw-mouse-cursor
    repeat
@@ -496,7 +493,7 @@ defer run-menu
    draw-mouse-cursor
  
    false to done?
-   begin   do-mouse  do-key   done? until
+   begin   do-touchscreen  do-mouse  do-key   done? until
    false to done?
  
    remove-mouse-cursor
@@ -566,6 +563,7 @@ defer root-menu  ' noop to root-menu
 \ Install menu-or-quit in the "user-interface" defer word later,
 \ when a root menu is defined.
 headers
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

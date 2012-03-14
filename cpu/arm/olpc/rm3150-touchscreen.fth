@@ -3,16 +3,20 @@ purpose: Driver and diagnostic for Raydium RM-3150 Multitouch I2C Touchscreen
 
 0 0  " 4,60"  " /twsi" begin-package
 my-space encode-int  my-address encode-int encode+  " reg" property
-" touchscreen" name
 
-0 value screen-w
-0 value screen-h
+\ XXX these are really platform-related, not touchscreen-related
+: targets?  ( -- flag )  final-test?  ;
+: .tsmsg  ( -- )  0 d# 27 at-xy  ." Touchscreen test.  Type a key to exit" cr  ;
+
+fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
+
+d# 896 to touchscreen-max-x
+d# 672 to touchscreen-max-y
+
+d# 10 to #contacts
 
 : ts-b!  ( b reg# -- )  " smbus-b!" $call-parent  ;
 : ts-b@  ( reg# -- b )  " smbus-b@" $call-parent  ;
-
-d# 896 constant touchscreen-max-x
-d# 672 constant touchscreen-max-y
 
 : 4b>xy  ( x.hi x.lo  y.hi y.lo -- x y )  swap bwjoin >r  swap bwjoin r>  ;
 
@@ -35,227 +39,60 @@ d# 672 constant touchscreen-max-y
    touchscreen-present?  dup  if   ( okay? )
       0 1 ts-b!                    ( okay? )  \ Set to polled mode
    then                            ( okay? )
-   " dimensions" $call-screen  to screen-h  to screen-w
+   set-geometry
 ;
 
-: dimensions  ( -- w h )  screen-w  screen-h  ;
+: touched?  ( -- flag )  d# 99 gpio-pin@ 0=  ;
+: #touches  ( -- n )  h# 10 ts-b@   h# 7f and  ;
 
-: #contacts  ( -- n )  d# 10  ;
-
-: pad-events  ( -- n*[ x.hi x.lo y.hi y.lo z ]  #contacts )
-   d# 99 gpio-pin@  if  false exit  then
-   h# 10 ts-b@   h# 7f and  >r                        ( r: #contacts )
-   r@  if                                             ( r: #contacts )
-      h# 11 1  r@ 5 *  " smbus-out-in" $call-parent   ( n*[ x.hi x.lo y.hi y.lo z ]  r: #contacts )
-   then                                               ( n*[ x.hi x.lo y.hi y.lo z ]  r: #contacts )
-   r>                                                 ( n*[ x.hi x.lo y.hi y.lo z ]  #contacts )
+: pad-events  ( -- n*[ x.hi x.lo y.hi y.lo z ]  #touches )
+   touched? 0=  if  false exit  then
+   #touches >r  r@  if                                ( r: #touches )
+      h# 11 1  r@ 5 *  " smbus-out-in" $call-parent   ( n*[ x.hi x.lo y.hi y.lo z ]  r: #touches )
+   then                                               ( n*[ x.hi x.lo y.hi y.lo z ]  r: #touches )
+   r>                                                 ( n*[ x.hi x.lo y.hi y.lo z ]  #touches )
 ;
-
-h# f800 constant red
-h# 07e0 constant green
-h# 001f constant blue
-h# ffe0 constant yellow
-h# f81f constant magenta
-h# 07ff constant cyan
-h# ffff constant white
-h# 0000 constant black
-
-variable pixcolor
-
-h# 4 value y-offset
-0 value /line
-2 value /pixel
-
-
-variable ptr
-
-\ The following code receives and decodes touchpad packets
-
-: show-packets  ( adr len -- )
-   push-hex
-   bounds  ?do
-      i 6  bounds  ?do  i c@  3 u.r  loop  cr
-   6 +loop
-   pop-base
-;
-: last-10  ( -- )
-   ptr @  load-base -  d# 60  >  if
-      ptr @  d# 60 -  d# 60
-   else
-      load-base  ptr @  over -
-   then
-   show-packets
-;
-
-: scale-xy  ( x y -- x' y' )
-   swap screen-w touchscreen-max-x */
-   swap screen-h touchscreen-max-y */
-;
-
-0 [if]
-\ Try to receive a mouse report packet.  If one arrives within
-\ 20 milliseconds, return true and the decoded information.
-\ Otherwise return false.
-: pad?  ( -- false | x y z down? contact# true )
-   get-touch?   if            ( x dy buttons )
-      2>r >r scale-xy r> 2r>  ( x' y' z down? contact# )
-      true
-   else
-      false
-   then
-;
-
-: flush  ( -- )  begin  d# 10 ms  pad?  while  2drop 3drop  repeat  ;
-
-\ Display raw data from the device, stopping when a key is typed.
-: show-pad  ( -- )
-   begin
-      pad?  if  . . . . . cr  then
-   key? until
-;
-[then]
 
 : close  ( -- )
 \   flush
    h# 82 1 ts-b!  \ Restore default interrupt mode
 ;
 
-: button  ( color x -- )
-   screen-h d# 50 -  d# 200  d# 30  fill-rectangle-noff
-;
-d# 300 d# 300 2constant target-wh
-: left-target   ( -- x y w h )  0 0  target-wh  ;
-: right-target  ( -- x y w h )  screen-w screen-h  target-wh  xy-  target-wh  ;
-false value left-hit?
-false value right-hit?
-: inside?  ( mouse-x,y  x y w h -- flag )
-   >r >r         ( mouse-x mouse-y  x y  r: h w )
-   xy-           ( dx dy )
-   swap r> u<    ( dy x-inside? )
-   swap r> u<    ( x-inside? y-inside? )
-   and           ( flag )
-;
-
-: draw-left-target  ( -- )  green  left-target   fill-rectangle-noff  ;
-: draw-right-target ( -- )  red    right-target  fill-rectangle-noff  ;
-
-: ?hit-target  ( -- )
-   pixcolor @  cyan =   if  \ touch1              ( x y )
-      2dup  left-target  inside?  if              ( x y )
-         yellow left-target  fill-rectangle-noff  ( x y )
-         true to left-hit?                        ( x y )
-         exit
-      then                                        ( x y )
-   then                                           ( x y )
-   pixcolor @ yellow =  if  \ touch2              ( x y )
-      2dup  right-target  inside?  if             ( x y )
-         yellow right-target  fill-rectangle-noff ( x y )
-         true to right-hit?                       ( x y )
-         exit
-      then                                        ( x y )
-   then                                           ( x y )
-;
-
-: track-init  ( -- )
-   screen-ih package( bytes/line )package  to /line
-   load-base ptr !
-;
-
-: dot  ( x y -- )
-   swap screen-w 3 - min  swap y-offset + screen-h 3 - min  ( x' y' )
-   pixcolor @  -rot   3 3                   ( color x y w h )
-   fill-rectangle-noff                      ( )
-;
-
-: background  ( -- )
-   black  0 0  screen-w screen-h  fill-rectangle-noff
-   final-test?  if
-      false to left-hit?
-      false to right-hit?
-      draw-left-target
-      draw-right-target
-   else
-      0 d# 27 at-xy  ." Touchscreen test.  Type a key to exit" cr
-   then
-;
-
-: *3/5  ( n -- n' )  3 5 */  ;
-: dimmer  ( color -- color' )
-   565>rgb rot *3/5 rot *3/5 rot *3/5 rgb>565
-;
-
-: setcolor  ( contact# -- )
-   case
-      0  of  cyan    endof
-      1  of  yellow  endof
-      2  of  magenta endof
-      3  of  blue    endof
-      4  of  red     endof
-      5  of  green   endof
-      6  of  cyan    dimmer  endof
-      7  of  yellow  dimmer  endof
-      8  of  magenta dimmer  endof
-      9  of  blue    dimmer  endof
-  d# 10  of  red     dimmer  endof
-  d# 11  of  green   dimmer  endof
-      ( default )  white swap
-   endcase
-
-   pixcolor !         
-;
-0 value pressure
-
-: track-n  ( .. xhi xlo yhi ylo z  #contacts -- )
-   ?dup 0=  if  exit  then     ( .. xhi xlo yhi ylo z  #contacts -- )
+: track-n  ( .. xhi xlo yhi ylo z  #touches -- )
+   ?dup 0=  if  exit  then     ( .. xhi xlo yhi ylo z  #touches -- )
    1-  0  swap  do             ( .. xhi xlo yhi ylo z )
       i setcolor               ( .. xhi xlo yhi ylo z )
       to pressure              ( .. xhi xlo yhi ylo )
       4b>xy  scale-xy          ( .. x y )
 
-      final-test?  if          ( .. x y )
-         ?hit-target           ( .. x y )
-      then                     ( .. x y )
+      targets?  if  ?hit-target   then     ( .. x y )
+
       dot
    -1 +loop
 ;
 
-: handle-key  ( -- exit? )
-   key upc  case
-      [char] P  of
-         cursor-on
-         cr last-10
-         key drop
-         background
-         false
-      endof
-
-      ( key )  true swap
-   endcase
+0 0 2value last-xy
+false value last-down?
+: no-touch  ( -- false | x y buttons true )
+   last-down?  if
+      \ Return up event for last "mouse" position
+      false to last-down?
+      last-xy 0 true
+   else
+      false
+   then
 ;
-
-false value selftest-failed?  \ Success/failure flag for final test mode
-: exit-test?  ( -- flag )
-   final-test?  if                    ( )
-      \ If the targets have been hit, we exit with successa
-      left-hit? right-hit? and  if    ( )
-         false to selftest-failed?    ( )
-         true                         ( flag )
-         exit
-      then                            ( )
-
-      \ Otherwise we give the tester a chance to bail out by typing a key,
-      \ thus indicating failure
-      key?  0=  if  false exit  then  ( )
-      key drop                        ( )
-      true to selftest-failed?        ( )
-      true                            ( flag )
-      exit
-   then                               ( )
-
-   \ If not final test mode, we only exit via a key - no targets
-   key?  if  handle-key  else  false  then  ( exit ? )
+: touch  ( -- false | x y buttons true )
+   #touches  0=  if  false exit  then
+   h# 11 1 4  " smbus-out-in" $call-parent   ( x.hi x.lo y.hi y.lo )
+   4b>xy  scale-xy     ( x y )
+   2dup to last-xy     ( x y )
+   true to last-down?  ( x y )
+   1 true              ( x y buttons true )
 ;
-
+: stream-poll?  ( -- false | x y buttons true )
+   touched?  if  touch  else  no-touch  then
+;
 : discard-n  ( .. #events -- )   5 *  0  ?do  drop  loop  ;
 
 : selftest  ( -- error? )
@@ -272,7 +109,7 @@ false value selftest-failed?  \ Success/failure flag for final test mode
       d# 4000 ms
    then
 
-   cursor-off  track-init
+   cursor-off
 
    \ Consume already-queued keys to prevent premature exit
    begin  key?  while  key drop  repeat

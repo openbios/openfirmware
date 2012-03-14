@@ -22,7 +22,6 @@ h# ff h# ff h# ff rgb>565 value ready-color
 \ \\\\\\\\\\\\\\\\
 
 \needs screen-ih 0 value screen-ih
-0 value mouse-ih
 
 : $call-screen  ( ??? adr len -- ??? )  screen-ih $call-method  ;
 : screen-execute  ( ?? xt -- ?? )  screen-ih package( execute )package  ;
@@ -56,10 +55,6 @@ defer inset-xy		' (inset-xy) to inset-xy
    else
       inset
    then
-;
-
-: get-event  ( #msecs -- false | x y buttons true )
-   " get-event" mouse-ih $call-method
 ;
 
 : screen-color!  ( r g b color# -- )  " color!" $call-screen  ;

@@ -115,7 +115,7 @@ variable redraw-mouse-cursor?
          (key remove-mouse-cursor exit
       then
       mouse-ih  if
-         begin  10 get-event  while
+         begin  mouse-event?  while
             remove-mouse-cursor
             -rot update-position
             draw-mouse-cursor
