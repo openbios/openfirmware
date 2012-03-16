@@ -57,11 +57,6 @@ code timer2@  ( -- n )  \ 1 kHz
       cmps tos,r0
    = until
 c;
-[else]
-: timer0@  ( -- n )  1 h# 0140a4 io!  h# 0140a4 io@ drop h# 0140a4 io@  ;
-: timer1@  ( -- n )  1 h# 0140a8 io!  h# 0140a8 io@ drop h# 0140a8 io@  ;
-: timer2@  ( -- n )  1 h# 0140ac io!  h# 0140ac io@ drop h# 0140ac io@  ;
-[then]
 
 : timer0-status@  ( -- n )  h# 014034 io@  ;
 : timer1-status@  ( -- n )  h# 014038 io@  ;
