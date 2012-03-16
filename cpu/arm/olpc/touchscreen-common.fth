@@ -143,8 +143,6 @@ false value right-hit?
    pixcolor !         
 ;
 
-: handle-key  ( -- exit? )  true  ;
-
 false value selftest-failed?  \ Success/failure flag for final test mode
 : exit-test?  ( -- flag )
    targets?  if                       ( )
@@ -165,7 +163,7 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    then                               ( )
 
    \ If not final test mode, we only exit via a key - no targets
-   key?  if  handle-key  else  false  then  ( exit ? )
+   key?  dup  if  key drop  then      ( exit? )
 ;
 
 0 value pressure

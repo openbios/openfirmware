@@ -95,6 +95,9 @@ false value last-down?
 ;
 : discard-n  ( .. #events -- )   5 *  0  ?do  drop  loop  ;
 
+\ Needs 2 seconds of no-touch
+: calibrate  ( -- )  h# 20 0 ts-b!  ;
+
 : selftest  ( -- error? )
    open  0=  if
 \     ." Touchscreen open failed"  true exit
@@ -104,7 +107,12 @@ false value last-down?
    \ Being able to open the touchpad is good enough in SMT mode
    smt-test?  if  close false exit  then
 
-   final-test? 0=  if
+   calibrate   \ Needs 2 seconds of no-touch
+
+   targets?  if
+      ." Calibrating touchscreen" cr
+      d# 2000 ms
+   else
       ." Touchscreen test will start in 4 seconds" cr
       d# 4000 ms
    then
@@ -115,7 +123,10 @@ false value last-down?
    begin  key?  while  key drop  repeat
 
    \ Consume already-queued trackpad events to prevent premature exit
-   begin  pad-events  ?dup  while  discard-n  repeat
+   d# 100 0  do
+      pad-events  ?dup  0=  if  leave  then  ( .. #events )
+      discard-n                              ( )
+   loop
 
    background
    begin

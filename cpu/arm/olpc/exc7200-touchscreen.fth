@@ -53,6 +53,7 @@ h# 7fff to touchscreen-max-y
    begin
       pad?  if  . . . . . cr  then
    key? until
+   key drop
 ;
 
 : track  ( x y z down? contact# -- )
