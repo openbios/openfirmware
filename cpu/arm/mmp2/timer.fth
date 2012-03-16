@@ -21,37 +21,46 @@
    7 h# 84 timer!
 ;
 
-[ifdef] arm-assembler
+\ The first ldr usually returns stale data; the second one returns good data.
+\ Empirically, draining the write buffer does not help.
+\ Read-until-match doesn't work with the fast clock because it never matches.
 code timer0@  ( -- n )  \ 6.5 MHz
    psh  tos,sp
    set  r1,`h# 014000 +io #`
    mov  r0,#1
    str  r0,[r1,#0xa4]
-   mov  r0,r0
-   ldr  tos,[r1,#0x28]
+   ldr  tos,[r1,#0xa4]
+   ldr  tos,[r1,#0xa4]
 c;
 
+\ For the slower timers, we use the read-until-match technique.
+\ Apparently the freeze register doesn't update until the next
+\ clock tick, so using it doesn't work well for the slow clocks.
 code timer1@  ( -- n )  \ 32.768 kHz
    psh  tos,sp
    set  r1,`h# 014000 +io #`
-   mov  r0,#1
-   str  r0,[r1,#0xa8]
-   mov  r0,r0
    ldr  tos,[r1,#0x2c]
+   begin
+      mov  r0,tos
+      ldr  tos,[r1,#0x2c]
+      cmps tos,r0
+   = until
 c;
 
 code timer2@  ( -- n )  \ 1 kHz
    psh  tos,sp
    set  r1,`h# 014000 +io #`
-   mov  r0,#1
-   str  r0,[r1,#0xac]
-   mov  r0,r0
    ldr  tos,[r1,#0x30]
+   begin
+      mov  r0,tos
+      ldr  tos,[r1,#0x30]
+      cmps tos,r0
+   = until
 c;
 [else]
-: timer0@  ( -- n )  1 h# 0140a4 io!  h# 014028 io@  ;
-: timer1@  ( -- n )  1 h# 0140a8 io!  h# 01402c io@  ;
-: timer2@  ( -- n )  1 h# 0140ac io!  h# 014030 io@  ;
+: timer0@  ( -- n )  1 h# 0140a4 io!  h# 0140a4 io@ drop h# 0140a4 io@  ;
+: timer1@  ( -- n )  1 h# 0140a8 io!  h# 0140a8 io@ drop h# 0140a8 io@  ;
+: timer2@  ( -- n )  1 h# 0140ac io!  h# 0140ac io@ drop h# 0140ac io@  ;
 [then]
 
 : timer0-status@  ( -- n )  h# 014034 io@  ;
