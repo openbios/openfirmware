@@ -69,7 +69,7 @@ d# 20 value /hash-digest
       0 to #hash-buf
    then
 ;
-: hash-update  ( adr len -- adr' len' )
+: hash-update  ( adr len -- )
    dup #hashed + to #hashed                ( adr len )
    begin  dup   while                      ( adr len )
       2dup  /hash-block #hash-buf -  min   ( adr len adr this )

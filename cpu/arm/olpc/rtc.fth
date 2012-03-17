@@ -77,7 +77,7 @@ headers
    then
    get-time .date space .time cr
    get-time 2nip 2nip nip
-   d# 2011 < dup  if  ." Date in RTC is too early" cr  then
+   d# 2011 < dup  if  ." Date in RTC is too early" cr  then	( -- flag )
    close
 ;
 
