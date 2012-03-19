@@ -93,6 +93,41 @@ also nand-commands definitions
    fexit
 ;
 
+h# 1be. 2value pt  \ device byte offset to start of partition table
+h# 10 value /pe    \ size of a partition entry
+/pe buffer: pe     \ partition entry buffer
+
+: pe-seek   ( partition# -- )
+   1- /pe * 0 pt d+                  ( d.pos )
+   " seek" nandih $call-method drop  ( )
+;
+
+: pe-read   ( partition# -- )  pe-seek  pe /pe " read"  nandih $call-method drop  ;
+: pe-write  ( partition# -- )  pe-seek  pe /pe " write" nandih $call-method drop  ;
+
+: pe-start@   ( pe -- start )   pe h# 08 + le-l@  ;
+: pe-length@  ( pe -- length )  pe h# 0c + le-l@  ;
+: pe-length!  ( length pe -- )  pe h# 0c + le-l!  ;
+
+: pe-is-set?  ( partition# -- flag )   pe-read  pe-start@ pe-length@ or  ;
+
+: (resize:)  ( -- )
+   4 pe-is-set?  abort" partition 4 is non-zero"
+   3 pe-is-set?  abort" partition 3 is non-zero"
+   " size" nandih $call-method d# 512 um/mod swap drop
+                              ( d-end )
+   2 pe-read                  ( d-end )
+   pe-start@  dup >r          ( d-end p-start )  ( r: p-start )
+   pe-length@ + swap          ( p-end d-end )    ( r: p-start )
+   2dup > abort" partition ends beyond device size"
+   2dup < if                  ( p-end d-end )    ( r: p-start )
+      nip r> - pe-length!     ( )                ( r: )
+      2 pe-write              ( )                ( r: )
+   else                       ( p-end d-end )    ( r: p-start )
+      r> 3drop                ( )                ( r: )
+   then                       ( )                ( r: )
+;
+
 : data:  ( "filename" -- )
    safe-parse-word            ( filename$ )
    nb-zd-#sectors  -1 <>  if  ( filename$ )
@@ -241,6 +276,12 @@ previous definitions
 
 : fs-update  ( "devspec" -- )
    safe-parse-word $fs-update
+;
+
+: fs-resize  ( -- )
+   open-nand
+   [ also nand-commands ] (resize:) [ previous ]
+   close-nand
 ;
 
 : do-fs-update  ( img$ -- )
