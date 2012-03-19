@@ -488,13 +488,6 @@ alias s suspend
    " begin-select /display  3 my-space 4 + config-w! unselect" evaluate
 ;
 
-\ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
-also hidden also keys-forth definitions
-warning @  warning off
-: esc-o  key lastchar !  [""] esc-[ do-command  ;
-warning !
-previous previous definitions
-
 .( --- Saving fw.dic ...)
 " fw.dic" $save-forth cr
 

@@ -478,13 +478,6 @@ fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
    quit
 ;
 
-\ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
-also hidden also keys-forth definitions
-warning @  warning off
-: esc-o  key lastchar !  [""] esc-[ do-command  ;
-warning !
-previous previous definitions
-
 tag-file @ fclose  tag-file off
 
 .( --- Saving fw.dic ...)

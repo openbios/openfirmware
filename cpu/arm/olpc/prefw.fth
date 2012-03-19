@@ -218,13 +218,6 @@ end-support-package
 [then]
 devalias nfs net//obp-tftp:last//nfs
 
-\ This helps with TeraTerm, which sends ESC-O as the arrow key prefix
-also hidden also keys-forth definitions
-warning @  warning off
-: esc-o  key lastchar !  [""] esc-[ do-command  ;
-warning !
-previous previous definitions
-
 \ GUI
 false value gui-safeboot?
 

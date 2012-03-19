@@ -367,33 +367,8 @@ headers
    get-escaped-string compile-string
 ; immediate
 
-: [""]  \ word  (s Compile-time: -- )
-        (s Run-time: -- pstr )
-   compile (p")  safe-parse-word ",
-; immediate
-
-\ Obsolete
-: ["]   \ string"  (s -- str )
-   compile (p")    ,"
-; immediate
-
 : \  \ rest-of-line  (s -- )      \ skips rest of line
    -1 parse 2drop
-; immediate
-
-: compile-pstring  ( adr len -- )
-   state @  if
-      compile (p") ",
-   else
-      switch-string "temp npack
-   then
-;
-: ""   \ name  ( -- pstr )
-   safe-parse-word  compile-pstring
-; immediate
-
-: p"   \ string"  ( -- pstr )
-   get-escaped-string  compile-pstring
 ; immediate
 
 : c"   \ string"  ( -- pstr )
@@ -636,7 +611,6 @@ nuser show-aborts
    if  skipstr $abort  else  skipstr 2drop  then
 ;
 : ?throw  ( flag throw-code -- )  swap  if  throw  else  drop  then  ;
-: (p")  (s -- str-addr )  skipstr  ( addr len )  drop 1-  ;
 
 nuser 'lastacf         \ acf of latest definition
 : lastacf  ( -- acf )  'lastacf token@  ;

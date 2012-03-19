@@ -351,7 +351,7 @@ d# 36 constant #decomp-classes
    ( 14 ) [compile]  exit            ( 15 ) [compile]  (wlit)
    ( 16 ) [compile]  (')             ( 17 ) [compile]  (of)
    ( 18 ) [compile]  (endof)         ( 19 ) [compile]  (endcase)
-   ( 20 ) [compile]  (p")	     ( 21 ) [compile]  (is)
+   ( 20 ) [compile]  dummy	     ( 21 ) [compile]  (is)
    ( 22 ) [compile]  (dlit)          ( 23 ) [compile]  (llit)
    ( 24 ) [compile]  (n")            ( 25 ) [compile]  isdefer
    ( 26 ) [compile]  isuser          ( 27 ) [compile]  isvalue
@@ -372,7 +372,7 @@ d# 36 constant #decomp-classes
    ( 14 )     .unnest                ( 15 )     .wlit
    ( 16 )     .(')                   ( 17 )     .of
    ( 18 )     .endof                 ( 19 )     .endcase
-   ( 20 )     .string                ( 21 )     .is
+   ( 20 )     dummy                  ( 21 )     .is
    ( 22 )     .dlit                  ( 23 )     .llit
    ( 24 )     .nstring               ( 25 )     .is
    ( 26 )     .is                    ( 27 )     .is

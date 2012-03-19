@@ -2370,7 +2370,7 @@ headerless
 ;
 : (open-node)  ( -- )
    "open"  (apply-method)  0=  if          ( okay? )
-      close-chain  p" open failed" throw   ( )
+      close-chain  true abort" open failed" ( )
    then
 ;
 : open-node  ( -- ) recursive

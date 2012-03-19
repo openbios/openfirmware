@@ -40,8 +40,8 @@ defer not-found
 
 nuser lastchar		\ most-recently-typed character
 nuser beforechar	\ next most-recently-typed character
-: do-command  ( prefix-string -- )
-   name-buf "copy
+: do-command  ( prefix$ -- )
+   name-buf place
    name-buf lastchar @  add-char-to-name
    name-buf count  keys token@ search-wordlist  ( false | cfa true )
    if  catch drop  else  not-found  then
@@ -67,7 +67,7 @@ headerless
       lastchar @
       dup  bl     h# 7e  between
       swap h# a0  h# fe  between  or
-      if  lastchar @ printable-char  else  nullstring  do-command  then
+      if  lastchar @ printable-char  else  " "  do-command  then
       redisplay
    finished @  until
    close-display
@@ -182,8 +182,9 @@ keys-forth also definitions
 : ^x  finished on  ;		\ XXX for testing on systems where ^C is magic
 : ^y  yank  ;
 
-: ^{  key lastchar !  [""] esc- do-command  ;
-: esc-o  only forth also definitions  beep beep beep  ;
+: ^{  key lastchar !  " esc-" do-command  ;
+
+: esc-v  only forth also definitions  beep beep beep  ;  \ Reset search order
 : esc-h  erase-previous-word  ;
 : esc-d  erase-next-word  ;
 : esc-f  forward-word  ;
@@ -195,7 +196,8 @@ keys-forth also definitions
 : esc-del  erase-next-word  ;
 
 \ ANSI cursor keys
-: esc-[  key lastchar !  [""] esc-[ do-command  ;
+: esc-[  key lastchar !  " esc-[" do-command  ;
+: esc-o  key lastchar !  " esc-[" do-command  ;  \ TeraTerm uses esc-o as the arrow prefix
 : esc-[A previous-line  ;
 : esc-[B next-line  ;
 : esc-[C forward-character  ;
