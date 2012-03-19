@@ -369,12 +369,12 @@ headers
 
 : [""]  \ word  (s Compile-time: -- )
         (s Run-time: -- pstr )
-   compile ("s)  safe-parse-word ",
+   compile (p")  safe-parse-word ",
 ; immediate
 
 \ Obsolete
 : ["]   \ string"  (s -- str )
-   compile ("s)    ,"
+   compile (p")    ,"
 ; immediate
 
 : \  \ rest-of-line  (s -- )      \ skips rest of line
@@ -383,7 +383,7 @@ headers
 
 : compile-pstring  ( adr len -- )
    state @  if
-      compile ("s) ",
+      compile (p") ",
    else
       switch-string "temp npack
    then
@@ -636,7 +636,7 @@ nuser show-aborts
    if  skipstr $abort  else  skipstr 2drop  then
 ;
 : ?throw  ( flag throw-code -- )  swap  if  throw  else  drop  then  ;
-: ("s)  (s -- str-addr )  skipstr  ( addr len )  drop 1-  ;
+: (p")  (s -- str-addr )  skipstr  ( addr len )  drop 1-  ;
 
 nuser 'lastacf         \ acf of latest definition
 : lastacf  ( -- acf )  'lastacf token@  ;

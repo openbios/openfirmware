@@ -56,7 +56,7 @@ defer (see)
 hidden definitions
 headerless
 \ Like ." but goes to a new line if needed.
-: cr".  ( adr len -- )  dup ?line type  ;
+: cr".  ( adr len -- )  dup ?line magenta-letters type cancel  ;
 : .."   ( -- )  [compile] " compile cr".  ; immediate
 
 \ Positional case defining word
@@ -280,28 +280,38 @@ variable extent  extent off
    dup immediate?  if  .." [compile] "  then
 ;
 
-: put"          (s -- )  ascii " emit space  ;
+: put"          (s -- )  ascii " emit  space  ;
 
-: .cword        (s ip -- ip' )	\ Display run-time word, e.g. (is) sans '()'
-   dup token@ ?cr                     ( ip acf )
-   >name name>string                  ( ip adr len )
-   swap 1+ swap 2 -  type space       ( ip )	\ Remove parentheses
-   ta1+
+: cword-name  (s ip -- ip' $ name$ )
+   dup token@          ( ip acf )
+   >name name>string   ( ip name$ )
+   swap 1+ swap 2 -    ( ip name$' )  \ Remove parentheses
+   rot ta1+ -rot       ( ip' name$ )
+   2 pick count        ( ip name$ $ )
+   2swap               ( ip $ name$ )
 ;
+: .string-tail  ( $ name$ -- )
+   2 pick over +  3 + ?line    ( $ name$ )  \ Keep word and string on the same line
+   cr".  space                 ( $ )
+   red-letters type            ( )
+   .." "" "                    ( )
+;
+
+: pretty-n. ( n -- )  green-letters n. cancel ;
+: pretty-.  ( n -- )  green-letters  . cancel ;
+
 : .word         ( ip -- ip' )  dup token@ check-[compile] ?cr .name   ta1+  ;
 : skip-word     ( ip -- ip' )  ta1+  ;
-: .inline       ( ip -- ip' )  ta1+ dup unaligned-@  n.  na1+   ;
+: .inline       ( ip -- ip' )  ta1+ dup unaligned-@  pretty-n.  na1+   ;
 : skip-inline   ( ip -- ip' )  ta1+ na1+  ;
-: .wlit         ( ip -- ip' )  ta1+ dup unaligned-w@ 1- . wa1+  ;
+: .wlit         ( ip -- ip' )  ta1+ dup unaligned-w@ 1- pretty-. wa1+  ;
 : skip-wlit     ( ip -- ip' )  ta1+ wa1+  ;
-: .llit         ( ip -- ip' )  ta1+ dup unaligned-l@ 1- . la1+  ;
+: .llit         ( ip -- ip' )  ta1+ dup unaligned-l@ 1- pretty-. la1+  ;
 : skip-llit     ( ip -- ip' )  ta1+ la1+  ;
-: .dlit         ( ip -- ip' )  ta1+ dup d@ (d.) type  ." . "  2 na+  ;
+: .dlit         ( ip -- ip' )  ta1+ dup d@ (d.) green-letters type  ." . " cancel  2 na+  ;
 : skip-dlit     ( ip -- ip' )  ta1+ 2 na+  ;
 : skip-branch   ( ip -- ip' )  +branch  ;
-: .quote        ( ip -- ip' )  .word   .word   ;
-: skip-quote    ( ip -- ip' )  ta1+ ta1+  ;
-: .compile      ( ip -- ip' )  ." compile " ta1+ .word   ;
+: .compile      ( ip -- ip' )  .." compile " ta1+ .word   ;
 : skip-compile  ( ip -- ip' )  ta1+ ta1+  ;
 : skip-string   ( ip -- ip' )  ta1+ +str  ;
 : skip-nstring  ( ip -- ip' )  ta1+ +nstr  ;
@@ -309,11 +319,9 @@ variable extent  extent off
 headers
 : skip-(')      ( ip -- ip' )  ta1+ ta1+  ;
 headerless
-: .is           ( ip -- ip' )  ." to "  ta1+ dup token@ .name  ta1+ ;
-: .string-tail  ( ip -- ip' )  dup count type  +str  ;
-: .string       ( ip -- ip' )  .cword .string-tail  put"  ;
-: .pstring      ( ip -- ip' )  ?cr  ." p"  put"  ta1+ .string-tail  put"  ;
-: .nstring      ( ip -- ip' )  ?cr         put"  ta1+  dup ncount type  +nstr  put"  ;
+: .is           ( ip -- ip' )  .." to "  ta1+ dup token@ .name  ta1+ ;
+: .string       ( ip -- ip' )  cword-name              .string-tail +str   ;
+: .nstring      ( ip -- ip' )  ta1+  dup ncount " n""" .string-tail +nstr  ;
 
 \ Use this version of .branch if the structured conditional code is not used
 \ : .branch     ( ip -- ip' )  .word   dup <w@ .   /branch +   ;
@@ -325,7 +333,6 @@ headerless
       .." exit " ta1+
    then
 ;
-
 : dummy ;
 
 \ classify each word in a definition
@@ -344,7 +351,7 @@ d# 36 constant #decomp-classes
    ( 14 ) [compile]  exit            ( 15 ) [compile]  (wlit)
    ( 16 ) [compile]  (')             ( 17 ) [compile]  (of)
    ( 18 ) [compile]  (endof)         ( 19 ) [compile]  (endcase)
-   ( 20 ) [compile]  ("s)	     ( 21 ) [compile]  (is)
+   ( 20 ) [compile]  (p")	     ( 21 ) [compile]  (is)
    ( 22 ) [compile]  (dlit)          ( 23 ) [compile]  (llit)
    ( 24 ) [compile]  (n")            ( 25 ) [compile]  isdefer
    ( 26 ) [compile]  isuser          ( 27 ) [compile]  isvalue
@@ -365,7 +372,7 @@ d# 36 constant #decomp-classes
    ( 14 )     .unnest                ( 15 )     .wlit
    ( 16 )     .(')                   ( 17 )     .of
    ( 18 )     .endof                 ( 19 )     .endcase
-   ( 20 )     .pstring               ( 21 )     .is
+   ( 20 )     .string                ( 21 )     .is
    ( 22 )     .dlit                  ( 23 )     .llit
    ( 24 )     .nstring               ( 25 )     .is
    ( 26 )     .is                    ( 27 )     .is
@@ -447,36 +454,38 @@ hidden definitions
 
 : .immediate  ( acf -- )   immediate? if   .." immediate"   then   ;
 
-: .definer    ( acf definer-acf -- acf )  .name  dup .name  ;
+: .definer    ( acf definer-acf -- acf )
+   magenta-letters .name  dup blue-letters  .name  cancel
+;
 
 : dump-body  ( pfa -- )
    push-hex
-   dup @ n. 2 spaces  8 emit.ln
+   dup @ pretty-n. 2 spaces  8 emit.ln
    pop-base
 ;
 \ Display category of word
 : .:           ( acf definer -- )  .definer space space  >body  .pf   ;
-: .constant    ( acf definer -- )  over >data ?   .definer drop  ;
-: .2constant   ( acf definer -- )  over >data dup ?  na1+ ?  .definer drop  ;
+: .constant    ( acf definer -- )  over >data @ pretty-n.  .definer drop  ;
+: .2constant   ( acf definer -- )  over >data dup @ pretty-n.  na1+ @ pretty-n. .definer drop  ;
 : .vocabulary  ( acf definer -- )  .definer drop  ;
 : .code        ( acf definer -- )  .definer >code disassemble  ;
 : .variable    ( acf definer -- )
-   over >data n.   .definer   .." value = " >data ?
+   over >data n.   .definer   ." value = " >data @ pretty-n.
 ;
 : .create     ( acf definer -- )
-   over >body n.   .definer   .." value = " >body dump-body
+   over >body n.   .definer   ." value = " >body dump-body
 ;
 : .user        ( acf definer -- )
-   over >body ?   .definer   .."  value = "   >data  ?
+   over >body @ n.   .definer   ."  value = "   >data @ pretty-n.
 ;
 : .defer       ( acf definer -- )
-   .definer  .." is " cr  >data token@ (see)
+   .definer  ." is " cr  >data token@ (see)
 ;
 : .alias       ( acf definer -- )
    .definer >body token@ .name
 ;
 : .value      ( acf definer -- )
-   swap >data ? .definer
+   swap >data @ pretty-n. .definer
 ;
 
 
@@ -486,7 +495,6 @@ hidden definitions
 : .other   ( acf definer -- )
    .definer   >body ."    (Body: " dump-body ."  ) " cr
 ;
-
 
 \ Classify a word based on its acf
 alias  isalias  noop
