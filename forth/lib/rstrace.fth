@@ -28,16 +28,20 @@ headerless
       over na1+ @  reasonable-ip?  if         ( rs-adr n )
          \ The third entry is a reasonable IP so it could be a do loop frame
          \ Make sure it points just past a loop end
-         over na1+ @                          ( rs-adr n n2 )
-         ip>token  -1 na+  token@             ( rs-adr n xt )
-         dup ['] (loop) =  swap ['] (+loop) =  or  if  ( rs-adr n )
-            \ The two numbers span the +- boundary, so probably a do loop
-            ."    Do loop frame inside "
-            over na1+ @ ip>token .current-word ( rs-adr n )
-            over @                             ( rs-adr n n1 )
-            ."   i: "  tuck + .                ( rs-adr n1 )
-            ."   limit: "  minus0  + .         ( rs-adr )
-            2 na+ exit
+         over na1+ @  dup @ +                 ( rs-adr n n2 )
+         dup reasonable-ip?  if               ( rs-adr n adr )
+            ip>token  -1 na+  token@          ( rs-adr n xt )
+            dup ['] (loop) =  swap ['] (+loop) =  or  if  ( rs-adr n )
+               \ The two numbers span the +- boundary, so probably a do loop
+               ."    Do loop frame inside "
+               over na1+ @ ip>token .current-word ( rs-adr n )
+               over @                             ( rs-adr n n1 )
+               ."   i: "  tuck + .                ( rs-adr n1 )
+               ."   limit: "  minus0  + .         ( rs-adr )
+               2 na+ exit
+            then                               ( rs-adr n )
+         else                                  ( rs-adr n n2 )
+            drop                               ( rs-adr n )
          then                                  ( rs-adr n )
       then                                     ( rs-adr n )
    then                                        ( rs-adr n )
@@ -72,6 +76,67 @@ headerless
        exit?  if  2drop exit  then  ( end-adr adr )
     repeat                          ( end-adr adr )
     2drop
+;
+: skip-catch  ( rs-adr -- rs-adr' )  3 na+  ;
+: skip-do-or-n  ( rs-adr n -- rs-adr' )
+   over @ reasonable-ip?  0=  if              ( rs-adr n )
+      \ The second number is not an IP so it could be a do loop frame
+      over na1+ @  reasonable-ip?  if         ( rs-adr n )
+         \ The third entry is a reasonable IP so it could be a do loop frame
+         \ Make sure it points to an offset that points just past a loop end
+         over na1+ @  dup @ +                 ( rs-adr n n2 )
+         dup reasonable-ip?  if               ( rs-adr n adr )
+            ip>token  -1 na+  token@          ( rs-adr n xt )
+            dup ['] (loop) =  swap ['] (+loop) =  or  if  ( rs-adr n )
+               \ The two numbers span the +- boundary, so probably a do loop
+               drop                           ( rs-adr )
+               2 na+ exit                     ( -- rs-adr )
+            then                              ( rs-adr n )
+         else                                 ( rs-adr n n2 )
+            drop                              ( rs-adr n )
+         then                                 ( rs-adr n )
+      then                                    ( rs-adr n )
+   then                                       ( rs-adr n )
+   drop                                       ( rs-adr )
+;
+defer boring?
+: (boring?)  ( ip -- flag )  drop false  ;
+: rtraceword  ( rs-end rs-adr -- rs-end rs-adr' )
+   @+                          ( rs-end rs-adr' ip )
+   dup reasonable-ip?  0=  if  ( rs-end rs-adr ip )
+      skip-do-or-n exit        ( -- rs-end rs-adr )
+   then                        ( rs-end rs-adr )
+
+   dup in-catch?  if           ( rs-end rs-adr ip )
+      drop skip-catch          ( rs-end rs-adr' )
+      exit                     ( -- rs-end rs-adr' )
+   then                        ( rs-end rs-adr ip )
+
+   find-cfa                    ( rs-end rs-adr xt )
+
+   dup boring?  if             ( rs-end rs-adr xt )
+      drop exit                ( -- rs-end rs-adr )
+   then                        ( rs-end rs-adr xt )
+
+   dup ['] interpret-do-defined =  if  ( rs-end rs-adr xt )
+      \ Set rs-adr = rs-end so the caller will exit
+      2drop dup exit           ( -- rs-end rs-adr' )
+   then                        ( rs-end rs-adr xt )
+
+   >name name>string           ( rs-end rs-adr adr len )
+   dup #out @ +  rmargin @  >=  if  ( rs-end rs-adr adr len )
+      \ Set rs-adr = rs-end so the caller will exit
+      2drop ." ..."            ( rs-end rs-adr )
+      drop dup exit            ( -- rs-end rs-adr' )
+   then                        ( rs-end rs-adr adr len )
+
+   type space                  ( rs-end rs-adr )
+;
+: rslist  ( end-adr start-adr -- )
+   begin  2dup u>  while           ( end-adr adr )
+      rtraceword                   ( end-adr adr' )
+   repeat                          ( end-adr adr )
+   2drop
 ;
 headers
 forth definitions

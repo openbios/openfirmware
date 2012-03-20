@@ -38,6 +38,8 @@ variable step? step? on
 variable res
 headers
 false value first-time?
+d# 10 circular-stack: locations
+
 : (debug)       (s low-adr hi-adr -- )
    unbug   1 cnt !   ip> !   <ip !   pnext
    slow-next? @ 0=  if
@@ -119,11 +121,21 @@ d# 24 constant cmd-column
 : to-cmd-column  ( -- )  cmd-column to-column  ;
 
 0 value stack-line
-d# 50 constant stack-column
+d# 45 constant stack-column
 \ 0 0 2value result-loc
 0 value result-line
 0 value result-col
 : to-stack-location  ( -- )  stack-column stack-line at-xy  kill-line  ;
+: show-partial-stack  ( -- )
+   to-stack-location
+
+   ." \ "
+   depth 0<  if  ." Stack Underflow" sp0 @ sp!  exit  then
+   depth 0=  if  ." Empty"  exit  then
+   depth 4 >  if  ." .. "  then
+   depth  depth 5 - 0 max  ?do  depth i - 1- pick n.  loop
+;
+
 \ : save-result-loc  ( -- )  #out @ #line @ to result-loc  ;
 \ : to-result-loc  ( -- )  result-loc at-xy  ;
 : save-result-loc  ( -- )  #out @ to result-col   #line @ to result-line  ;
@@ -170,38 +182,51 @@ variable hex-stack    \ Show the data stack in hex?
          ip@  <ip @ =  if  ." : "  else  ." Inside "  then
          <ip @ find-cfa .name
       else
+         page
+         d# 78 rmargin !
+         ." Callers: "  rp0 @ rp@ na1+ rslist kill-line cr
+         \ XXX the following is wrong when popping up
+         ip@  <ip @ =  if  
+            #line @ is stack-line \ So the initial stack is displayed in the right place
+         then
+         d# 40 rmargin !
          ip@ debug-see
-         0 is stack-line \ So the initial stack is displayed in the right place
          cr
+\         ip@  <ip @ <>  if  
+\            ip@ ip>position  if   ( col row )
+\               swap 
+\               is stack-line
+\            then
+\            #line @ is stack-line \ So the initial stack is displayed in the right place
+ \        then
       then
       0 show-rstack !
       false is first-time?
       rp@ is rp-mark
    then
+
    begin
       step? @  if  to-debug-window  then
       save#
       scrolling-debug?  if
          cmd-column 2+ to-column
-      else
-         save-result-loc
-         to-stack-location
-      then
 
-      hex-stack @  if  push-hex  then
-      ." ( " .s    \ Show data stack
-      hex-stack @  if  pop-base  then
-      show-rstack @  if  (.rs  then   \ Show return stack
-      ." )"
-      restore#
+         hex-stack @  if  push-hex  then
+         ." ( " .s    \ Show data stack
+         hex-stack @  if  pop-base  then
+         show-rstack @  if  (.rs  then   \ Show return stack
+         ." )"
+         restore#
 
-      scrolling-debug?  if
          cr
          ['] noop is indent
          ip@ .token drop		  \ Show word name
          ['] (indent) is indent
          to-cmd-column
       else
+         save-result-loc
+         show-partial-stack
+        
          ip@ ip-set-cursor
          #line @ to stack-line
       then
@@ -233,6 +258,8 @@ variable hex-stack    \ Show the data stack in hex?
             ascii *  of  ip@ find-cfa dup <ip !  'unnest ip> !  false  endof
             ascii \  of  show-rstack @ 0= show-rstack ! false endof
             ascii X  of  hex-stack @ 0= hex-stack !   false  endof
+            ascii V  of  scrolling-debug? 0= to scrolling-debug?
+                         scrolling-debug? 0=  if  true to first-time?  then  false  endof
             ( default )  true swap
          endcase
       else

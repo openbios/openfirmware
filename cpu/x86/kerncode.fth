@@ -299,13 +299,7 @@ code unloop  (s -- )  3 /n* # rp add   c;
 \ Run time word for ?do
 code (?do)  (s l i -- )
    ax pop   bx pop   ax bx cmp  = if  bran1 #) jmp  then
-[ifdef] big-endian-t
-   bx push  ax push
-   ip dx mov    0 [ip] ax mov  ?bswap-ax  ax dx add   rp adec   dx 0 [rp] mov
-   ax pop   bx pop      \ i in ax  l in bx
-[else]
-   ip dx mov    0 [ip] dx add   rp adec   dx 0 [rp] mov
-[then]
+   rp adec   ip 0 [rp] mov
    ip ainc  80000000 # bx add   rp adec   bx 0 [rp] mov
    bx ax sub                    rp adec   ax 0 [rp] mov
 \ ??? how about sp rp xchg  ... dx push bx push ax push  sp rp xchg
@@ -313,17 +307,9 @@ c;
 
 \ Run time word for do
 code (do)  (s l i -- )
-[ifdef] big-endian-t
    ax pop   bx pop      \ i in ax  l in bx
+   rp adec   ip 0 [rp] mov
 
-   bx push  ax push
-   ip dx mov    0 [ip] ax mov  ?bswap-ax  ax dx add   rp adec   dx 0 [rp] mov
-   ax pop   bx pop      \ i in ax  l in bx
-[else]
-   ax pop   bx pop      \ i in ax  l in bx
-   
-   ip dx mov    0 [ip] dx add   rp adec   dx 0 [rp] mov
-[then]
    ip ainc  80000000 # bx add   rp adec   bx 0 [rp] mov
    bx ax sub                    rp adec   ax 0 [rp] mov
 \ ??? how about sp rp xchg  ... dx push bx push ax push  sp rp xchg
@@ -344,7 +330,13 @@ code jlimit  ( -- n )  4 /n* [rp] ax mov  80000000 # ax sub  1push  c;
 
 code (leave)  (s -- )
 mloclabel pleave
-   2 /n* [rp] ip mov   3 /n* # rp add
+   2 /n* [rp] ip mov
+[ifdef] big-endian-t
+   0 [ip] ax mov  ?bswap-ax  ax ip add   
+[else]
+   0 [ip] ip add  
+[then]
+   3 /n* # rp add
 c;
 
 code (?leave)  (s f -- )   ax pop   ax ax or   pleave jne   c;

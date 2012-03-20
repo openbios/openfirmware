@@ -4770,3 +4770,22 @@ headers
 [ifdef] do-autoload
 ' do-drop-in is do-autoload
 [then]
+
+also hidden
+: method-call?  ( ip -- flag )
+   dup ['] $call-self =  if  drop true exit  then  ( ip )
+   dup ['] $call-method =  if  drop true exit  then  ( ip )
+   dup ['] $call-parent =  if  drop true exit  then  ( ip )
+   dup ['] call-package =  if  drop true exit  then  ( ip )
+   dup ['] $vexecute    =  if  drop true exit  then  ( ip )
+   dup ['] $vexecute?   =  if  drop true exit  then  ( ip )
+   dup ['] $package-execute? =  if  drop true exit  then  ( ip )
+   dup ['] package-execute   =  if  drop true exit  then  ( ip )
+   dup ['] apply-method      =  if  drop true exit  then  ( ip )
+   dup ['] (apply-method)    =  if  drop true exit  then  ( ip )
+   dup ['] (execute-method)  =  if  drop true exit  then  ( ip )
+   dup ['] execute-device-method  =  if  drop true exit  then  ( ip )
+   drop false
+;
+' method-call? to boring?
+previous

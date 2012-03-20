@@ -528,7 +528,7 @@ hidden definitions
 : .:           ( acf definer -- )  .definer space space  >body  .pf   ;
 : debug-see    ( apf -- )
    page-mode? >r  no-page
-   d# 48 rmargin !  find-cfa ['] :  page  .:
+   find-cfa ['] :  .:
    r> is page-mode?
 ;
 : .constant    ( acf definer -- )  over >data @ pretty-.  .definer drop  ;
