@@ -40,10 +40,12 @@ defer dark   ' inverse-video is dark
 ;
 : page         ( -- )  0 0 at-xy  kill-screen  ;
 
-true [if]
+true value ansi-colors?
+
 headerless
 : color:  ( adr len "name" -- )
-   create ",  does> .esc[  count (type  [char] m (emit
+   create ",
+   does> ansi-colors? if  .esc[  count (type  [char] m (emit  else  drop  then
 ;
 headers
 " 0"    color: default-colors
@@ -66,7 +68,7 @@ headers
 " 45"   color: magenta-screen
 " 46"   color: cyan-screen
 " 47"   color: white-screen
-[then]
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
