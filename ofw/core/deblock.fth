@@ -205,7 +205,7 @@ headers
 : size  ( -- size.low size.high )
    deblock-fd  ['] dfsize catch  if  drop 0 0  then
 ;
-: position  ( -- offset.low offset.high -- )
+: position  ( -- offset.low offset.high )
    deblock-fd  ['] dftell catch  if  drop 0 0  then
 ;
 : seek   ( offset.low offset.high -- error? )
