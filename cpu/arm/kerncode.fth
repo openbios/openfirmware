@@ -235,7 +235,7 @@ code (loop)  ( -- )
 \rel  ldrvc   r0,[ip]
 \rel  addvc   ip,ip,r0
 \abs  ldrvc   ip,[ip]
-   ldrvc  pc,[ip],1cell
+   nxtvc
    inc    rp,3cells
    inc    ip,1cell
 c;
@@ -248,7 +248,7 @@ code (+loop)  ( n -- )
 \rel  ldrvc   r0,[ip]
 \rel  addvc   ip,ip,r0
 \abs  ldrvc   ip,[ip]
-   ldrvc   pc,[ip],1cell
+   nxtvc
    inc     rp,3cells
    inc     ip,1cell
 c;
@@ -270,7 +270,7 @@ code (?do)  ( l i -- )
 \rel  ldreq   r0,[ip]
 \rel  addeq   ip,ip,r0
 \abs  ldreq   ip,[ip]
-   ldreq   pc,[ip],1cell
+   nxteq
                 ( r: loop-end-offset l+0x8000 i-l-0x8000 )
    psh     ip,rp          \ save the do offset address
    inc     ip,1cell
@@ -312,7 +312,7 @@ c;
 code (?leave)  ( f -- )
    cmp     tos,#0
    pop     tos,sp
-   ldreq   pc,[ip],1cell
+   nxteq
    inc     rp,2cells     \ get rid of the loop indices
    ldr     ip,[rp],1cell
 \rel   ldr     r0,[ip]       \ branch
@@ -665,7 +665,7 @@ code pick   ( nm ... n1 n0 k -- nm ... n1 n0 nk )  ldr tos,[sp,tos,lsl #2]  c;
 \   ldmia     sp!,{r0,r2}
 \   mov       tos,#0
 \   cmp       r2,r0
-\   ldrlt     pc,[ip],1cell
+\   nxtlt
 \   cmp       r2,r1
 \   mvnle     tos,#0
 \ c;
@@ -935,6 +935,15 @@ c;
    tuck  bits/cell swap - lshift            ( low n low2  r: high2 )
    -rot  >>a  or                            ( low2  r: high2 )
    r>                                       ( d2 )
+;
+: du*  ( d1 u -- d2 )  \ Double result
+   tuck u* >r     ( d1.lo u r: d2.hi )
+   um*  r> +      ( d2 )
+;
+: du*t  ( ud.lo ud.hi u -- res.lo res.mid res.hi )  \ Triple result
+   tuck um*  2>r  ( ud.lo u          r: res.mid0 res.hi0 )
+   um*            ( res.lo res.mid1  r: res.mid0 res.hi0 )
+   0  2r> d+      ( res.lo res.mid res.hi )
 ;
 
 code fill       ( adr cnt char -- )

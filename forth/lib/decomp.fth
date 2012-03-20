@@ -54,9 +54,50 @@ only forth also hidden also forth definitions
 defer (see)
 
 hidden definitions
+d# 200 2* /n* constant /positions
+/positions buffer: positions
+0 value end-positions
+\ 0 value line-after-;
+
+: init-positions  ( -- )  positions is end-positions  ;
+: find-position  ( ip -- true | adr false )
+   end-positions positions  ?do   ( ip )
+      i 2@ nip                    ( ip that-ip )
+      over =  if                  ( ip )
+         drop i false             ( adr false )
+         unloop exit              ( adr false -- )
+      then                        ( ip )
+   2 /n* +loop                    ( ip )
+   drop true                      ( true )
+;
+0 value the-ip
+: add-position  ( ip -- )
+   the-ip find-position  if                        ( )
+      end-positions  positions /positions +  >=    ( flag )
+      abort" Decompiler position table overflow"   ( )
+      end-positions  dup 2 na+  is end-positions   ( adr )
+   then                                            ( adr )
+   #out @ #line @ wljoin  the-ip  rot 2!           ( )
+;
+: ip>position  ( ip -- true | #out #line false )
+   find-position  if    ( )
+      true              ( true )
+   else                 ( adr )
+      2@ drop lwsplit   ( #out #line )
+      false             ( #out #line false )
+   then                 ( true | #out #line false )
+;
+: ip-set-cursor  ( ip -- )
+   ip>position 0=  if  at-xy  then
+;
+
 headerless
 \ Like ." but goes to a new line if needed.
-: cr".  ( adr len -- )  dup ?line magenta-letters type cancel  ;
+: cr".  ( adr len -- )
+   dup ?line                    ( adr len )
+   add-position                 ( adr len )
+   magenta-letters type cancel  ( )
+;
 : .."   ( -- )  [compile] " compile cr".  ; immediate
 
 \ Positional case defining word
@@ -103,13 +144,14 @@ hidden definitions
 defer disassemble  ' nulldis is disassemble
 
 headerless
+
 \ Breaks is a list of places in a colon definition where control
 \ is transferred without there being a branch nearby.
 \ Each entry has two items: the address and a number which indicates
 \ what kind of branch target it is (either a begin, for backward branches,
 \ a then, for forward branches, or an exit.
 
-80 /n* constant /breaks
+d# 40 2* /n* constant /breaks
 /breaks buffer: breaks
 variable end-breaks
 
@@ -185,7 +227,7 @@ variable extent  extent off
 
 : add-break  ( break-address break-type -- )
    end-breaks @  breaks /breaks +  >=        ( adr,type full? )
-   abort" Decompiler internal table overlow" ( adr,type )
+   abort" Decompiler table overflow"         ( adr,type )
    end-breaks @ breaks >  if                 ( adr,type )
       over end-breaks @ /n 2* - >r r@ 2@     ( adr,type  adr prev-adr,type )
       ['] .endof  =  -rot  =  and  if        ( adr,type )
@@ -280,7 +322,7 @@ variable extent  extent off
    dup immediate?  if  .." [compile] "  then
 ;
 
-: put"          (s -- )  ascii " emit  space  ;
+: put"  (s -- )  ascii " emit  space  ;
 
 : cword-name  (s ip -- ip' $ name$ )
    dup token@          ( ip acf )
@@ -294,24 +336,41 @@ variable extent  extent off
    2 pick over +  3 + ?line    ( $ name$ )  \ Keep word and string on the same line
    cr".  space                 ( $ )
    red-letters type            ( )
-   .." "" "                    ( )
+   magenta-letters             ( )
+   ." "" "                     ( )
+   cancel                      ( )
 ;
 
-: pretty-n. ( n -- )  green-letters n. cancel ;
-: pretty-.  ( n -- )  green-letters  . cancel ;
+: pretty-. ( n -- )
+   base @ d# 10 =  if  (.)  else  (u.)  then   ( adr len )
+   dup ?line  add-position
+   green-letters type cancel  space
+;
 
-: .word         ( ip -- ip' )  dup token@ check-[compile] ?cr .name   ta1+  ;
+: .compiled  ( ip -- ip' )
+   dup token@ check-[compile]   ( ip xt )
+   >name name>string            ( ip adr len )
+   type space                   ( ip )
+   ta1+                         ( ip' )
+;
+: .word         ( ip -- ip' )
+   dup token@ check-[compile]   ( ip xt )
+   >name name>string            ( ip adr len )
+   dup ?line  add-position      ( ip adr len )
+   type space                   ( ip )
+   ta1+                         ( ip' )
+;
 : skip-word     ( ip -- ip' )  ta1+  ;
-: .inline       ( ip -- ip' )  ta1+ dup unaligned-@  pretty-n.  na1+   ;
+: .inline       ( ip -- ip' )  ta1+ dup unaligned-@  pretty-.  na1+   ;
 : skip-inline   ( ip -- ip' )  ta1+ na1+  ;
 : .wlit         ( ip -- ip' )  ta1+ dup unaligned-w@ 1- pretty-. wa1+  ;
 : skip-wlit     ( ip -- ip' )  ta1+ wa1+  ;
 : .llit         ( ip -- ip' )  ta1+ dup unaligned-l@ 1- pretty-. la1+  ;
 : skip-llit     ( ip -- ip' )  ta1+ la1+  ;
-: .dlit         ( ip -- ip' )  ta1+ dup d@ (d.) green-letters type  ." . " cancel  2 na+  ;
+: .dlit         ( ip -- ip' )  ta1+ dup d@ (d.) add-position green-letters type ." . " cancel  2 na+  ;
 : skip-dlit     ( ip -- ip' )  ta1+ 2 na+  ;
 : skip-branch   ( ip -- ip' )  +branch  ;
-: .compile      ( ip -- ip' )  .." compile " ta1+ .word   ;
+: .compile      ( ip -- ip' )  .." compile " ta1+ .compiled   ;
 : skip-compile  ( ip -- ip' )  ta1+ ta1+  ;
 : skip-string   ( ip -- ip' )  ta1+ +str  ;
 : skip-nstring  ( ip -- ip' )  ta1+ +nstr  ;
@@ -436,8 +495,10 @@ headers
 : .token  ( ip -- ip' )  dup token@ execution-class .execution-class  ;
 \ Decompile the parameter field of colon definition
 : .pf   ( apf -- )
+   init-positions                                     ( apf )
    dup scan-pf next-break 3 lmargin ! indent          ( apf )
    begin                                              ( adr )
+      dup is the-ip                                   ( adr )
       ?cr  break-addr @ over =  if                    ( adr )
 	 begin                                        ( adr )
 	    break-type @ execute                      ( adr )
@@ -460,23 +521,28 @@ hidden definitions
 
 : dump-body  ( pfa -- )
    push-hex
-   dup @ pretty-n. 2 spaces  8 emit.ln
+   dup @ pretty-. 2 spaces  8 emit.ln
    pop-base
 ;
 \ Display category of word
 : .:           ( acf definer -- )  .definer space space  >body  .pf   ;
-: .constant    ( acf definer -- )  over >data @ pretty-n.  .definer drop  ;
-: .2constant   ( acf definer -- )  over >data dup @ pretty-n.  na1+ @ pretty-n. .definer drop  ;
+: debug-see    ( apf -- )
+   page-mode? >r  no-page
+   d# 48 rmargin !  find-cfa ['] :  page  .:
+   r> is page-mode?
+;
+: .constant    ( acf definer -- )  over >data @ pretty-.  .definer drop  ;
+: .2constant   ( acf definer -- )  over >data dup @ pretty-.  na1+ @ pretty-. .definer drop  ;
 : .vocabulary  ( acf definer -- )  .definer drop  ;
 : .code        ( acf definer -- )  .definer >code disassemble  ;
 : .variable    ( acf definer -- )
-   over >data n.   .definer   ." value = " >data @ pretty-n.
+   over >data n.   .definer   ." value = " >data @ pretty-.
 ;
 : .create     ( acf definer -- )
    over >body n.   .definer   ." value = " >body dump-body
 ;
 : .user        ( acf definer -- )
-   over >body @ n.   .definer   ."  value = "   >data @ pretty-n.
+   over >body @ n.   .definer   ."  value = "   >data @ pretty-.
 ;
 : .defer       ( acf definer -- )
    .definer  ." is " cr  >data token@ (see)
@@ -485,7 +551,7 @@ hidden definitions
    .definer >body token@ .name
 ;
 : .value      ( acf definer -- )
-   swap >data @ pretty-n. .definer
+   swap >data @ pretty-. .definer
 ;
 
 
@@ -560,7 +626,7 @@ headerless
 
 \ top level of the decompiler SEE
 : ((see   ( acf -- )
-   td 64 rmargin !
+   d# 48 rmargin !
    dup dup definer dup   definition-class .definition-class
    .immediate
    ??cr

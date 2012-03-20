@@ -138,8 +138,12 @@ end-code
 \ if it happens to be near the end of a line.
 
 [ifdef] install-decomp
-: .action  ( ip -- ip' )  dup token@ .name ta1+ dup token@ .name ta1+  ;
 also hidden also
+: .action  ( ip -- ip' )
+   d# 15 ?line  \ Just a guess
+   dup token@ >name name>string cr". space ta1+
+   .compiled
+;
 ' to   ' .action  ' skip-(')  install-decomp
 ' addr ' .action  ' skip-(')  install-decomp
 previous previous

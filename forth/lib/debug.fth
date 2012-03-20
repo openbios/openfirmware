@@ -26,6 +26,8 @@
 
 only forth also definitions
 
+false value scrolling-debug?
+
 hex
 headerless
 variable slow-next?  slow-next? off
@@ -35,6 +37,7 @@ bug also definitions
 variable step? step? on
 variable res
 headers
+false value first-time?
 : (debug)       (s low-adr hi-adr -- )
    unbug   1 cnt !   ip> !   <ip !   pnext
    slow-next? @ 0=  if
@@ -42,6 +45,7 @@ headers
       slow-next? on
    then
    step? on
+   true is first-time?
 ;
 headerless
 : 'unnest   (s pfa -- pfa' )
@@ -51,7 +55,6 @@ headerless
    <ip !  <ip @  ip> @  u>=  if  <ip @  'unnest  ip> !  then
 ;
 
-false value first-time?
 headers
 \ Enter and leave the debugger
 forth definitions
@@ -60,7 +63,7 @@ forth definitions
    begin  dup defer?  while  behavior  repeat
 
    dup colon-cf?  0= abort" Not a colon definition"
-   >body dup 'unnest  (debug)  true is first-time?
+   >body dup 'unnest  (debug)
 ;
 \ Debug the caller
 : debug-me  (s -- )  ip@ find-cfa (debug  ;
@@ -113,8 +116,20 @@ defer restore-window   ' noop is restore-window
    ." Q       Quit: abandon execution of the debugged word" cr
 ;
 d# 24 constant cmd-column
-0 value rp-mark
 : to-cmd-column  ( -- )  cmd-column to-column  ;
+
+0 value stack-line
+d# 50 constant stack-column
+\ 0 0 2value result-loc
+0 value result-line
+0 value result-col
+: to-stack-location  ( -- )  stack-column stack-line at-xy  kill-line  ;
+\ : save-result-loc  ( -- )  #out @ #line @ to result-loc  ;
+\ : to-result-loc  ( -- )  result-loc at-xy  ;
+: save-result-loc  ( -- )  #out @ to result-col   #line @ to result-line  ;
+: to-result-loc  ( -- )  result-col result-line at-xy  ;
+
+0 value rp-mark
 
 \ set-package is a hook for Open Firmware.  When Open Firmware is loaded,
 \ set-package should be set to a word that sets the active package to the
@@ -150,9 +165,15 @@ variable hex-stack    \ Show the data stack in hex?
 ;
 : (trace  ( -- )
    first-time?  if
-      ??cr
-      ip@  <ip @ =  if  ." : "  else  ." Inside "  then
-      <ip @ find-cfa .name
+      scrolling-debug?  if
+         ??cr
+         ip@  <ip @ =  if  ." : "  else  ." Inside "  then
+         <ip @ find-cfa .name
+      else
+         ip@ debug-see
+         0 is stack-line \ So the initial stack is displayed in the right place
+         cr
+      then
       0 show-rstack !
       false is first-time?
       rp@ is rp-mark
@@ -160,24 +181,37 @@ variable hex-stack    \ Show the data stack in hex?
    begin
       step? @  if  to-debug-window  then
       save#
-      cmd-column 2+ to-column
+      scrolling-debug?  if
+         cmd-column 2+ to-column
+      else
+         save-result-loc
+         to-stack-location
+      then
+
       hex-stack @  if  push-hex  then
       ." ( " .s    \ Show data stack
       hex-stack @  if  pop-base  then
       show-rstack @  if  (.rs  then   \ Show return stack
-      ." )" cr
+      ." )"
       restore#
 
-      ['] noop is indent
-      ip@ .token drop		  \ Show word name
-      ['] (indent) is indent
-      to-cmd-column
+      scrolling-debug?  if
+         cr
+         ['] noop is indent
+         ip@ .token drop		  \ Show word name
+         ['] (indent) is indent
+         to-cmd-column
+      else
+         ip@ ip-set-cursor
+         #line @ to stack-line
+      then
 
       step? @  key? or  if
          step? on  res off
-         key dup bl <  if  drop bl  then  dup emit  upc
+         key dup bl <  if  drop bl  then
+         scrolling-debug?  if  dup emit  else  to-result-loc  then  upc
          restore-window
-         reset-page
+         scrolling-debug?  if  reset-page  then
          case
             ascii D  of  ip@ token@ executer  ['] (debug try endof \ Down
 	    ascii U  of  rp@ ['] up1 try                     endof \ Up
@@ -206,6 +240,7 @@ variable hex-stack    \ Show the data stack in hex?
       then
    until
    restore#
+   scrolling-debug? 0=  if  to-result-loc  then
    ip@ token@  dup ['] unnest =  swap ['] exit =  or  if
       cr  true is first-time?
    then
