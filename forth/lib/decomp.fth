@@ -309,7 +309,7 @@ variable extent  extent off
 
 : .do     ( ip -- ip' )  .." do    " +indent  +branch  ;
 : .?do    ( ip -- ip' )  .." ?do   " +indent  +branch  ;
-: .loop   ( ip -- ip' )  .." loop  " cr +branch  ;
+: .loop   ( ip -- ip' )  -indent .." loop  " cr +branch  ;
 : .+loop  ( ip -- ip' )  -indent .." +loop " cr +branch  ;
 : .of     ( ip -- ip' )  .." of   " +branch  ;
 : .$of    ( ip -- ip' )  .." $of  " +branch  ;
