@@ -99,8 +99,14 @@ headerless
    then                                       ( rs-adr n )
    drop                                       ( rs-adr )
 ;
+
+\ boring? is a hook for Open Firmware.  It recognizes words like
+\ $call-method that are essentially indirect calls.  Such words
+\ just clutter up the stack display and should be elided for clarity.
 defer boring?
 : (boring?)  ( ip -- flag )  drop false  ;
+' (boring?) is boring?
+
 : rtraceword  ( rs-end rs-adr -- rs-end rs-adr' )
    @+                          ( rs-end rs-adr' ip )
    dup reasonable-ip?  0=  if  ( rs-end rs-adr ip )
