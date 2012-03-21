@@ -37,8 +37,7 @@ bug also definitions
 variable step? step? on
 variable res
 headers
-false value first-time?
-d# 10 circular-stack: locations
+false value redisplay?
 
 : (debug)       (s low-adr hi-adr -- )
    unbug   1 cnt !   ip> !   <ip !   pnext
@@ -47,7 +46,7 @@ d# 10 circular-stack: locations
       slow-next? on
    then
    step? on
-   true is first-time?
+   true is redisplay?
 ;
 headerless
 : 'unnest   (s pfa -- pfa' )
@@ -116,6 +115,7 @@ defer restore-window   ' noop is restore-window
    ." $       Display top of stack as adr,len text string" cr
    ." \       Display Forth return stack as numbers (like the data stack)" cr
    ." Q       Quit: abandon execution of the debugged word" cr
+   ." V       Visual: toggle between 2-D and scrolling" cr
 ;
 d# 24 constant cmd-column
 : to-cmd-column  ( -- )  cmd-column to-column  ;
@@ -141,8 +141,6 @@ d# 45 constant stack-column
 : save-result-loc  ( -- )  #out @ to result-col   #line @ to result-line  ;
 : to-result-loc  ( -- )  result-col result-line at-xy  ;
 
-0 value rp-mark
-
 \ set-package is a hook for Open Firmware.  When Open Firmware is loaded,
 \ set-package should be set to a word that sets the active package to the
 \ package corresponding to the current instance.  set-package is called
@@ -165,72 +163,82 @@ variable show-rstack  \ Show the return stack along with the data stack?
 variable hex-stack    \ Show the data stack in hex?
 : save#     ( -- )  #-buf /#buf -  #buf-save  d# 72 move    hld @  hld-save !  ;
 : restore#  ( -- )  #buf-save  #-buf /#buf -  d# 72 move    hld-save @  hld !  ;
+0 value the-ip
+0 value the-rp
 : (.rs  ( -- )
    show-rstack @ 0=  if  exit  then
    ." return-stack: "
    push-hex
-   rp0 @ rp@ - /n /
-   6 do   \ It appears that skipping the first 6 entries on the stack skips the debug goo on the rs
-      rp@ i /n * + @ .
-   loop
+   \ Skip the debugger's footprint on the return stack
+   rp0 @  the-rp 5 na+  ?do  i @ .  /n +loop
    pop-base
 ;
-: (trace  ( -- )
-   first-time?  if
+: setup-scrolling-display  ( -- )
+   ??cr
+   the-ip  <ip @ =  if  ." : "  else  ." Inside "  then
+   <ip @ find-cfa .name
+;
+: setup-2d-display  ( -- )
+   page
+   d# 78 rmargin !
+   .debug-short-help
+   ." Callers: "  rp0 @ the-rp na1+ rslist kill-line cr
+   \ XXX the following is wrong when popping up
+   the-ip  <ip @ =  if  
+      #line @ is stack-line \ So the initial stack is displayed in the right place
+   then
+   d# 40 rmargin !
+   the-ip debug-see
+   cr
+   \ When popping up from an interior word, display the initial stack on
+   \ the line where the cursor will be.
+   the-ip  <ip @ <>  if  
+      the-ip ip>position  if   ( col row )
+         drop  is stack-line   ( )
+      then
+   then
+;
+: setup-debug-display  ( -- )
+   redisplay?  if
       scrolling-debug?  if
-         ??cr
-         ip@  <ip @ =  if  ." : "  else  ." Inside "  then
-         <ip @ find-cfa .name
+         setup-scrolling-display
       else
-         page
-         d# 78 rmargin !
-         ." Callers: "  rp0 @ rp@ na1+ rslist kill-line cr
-         \ XXX the following is wrong when popping up
-         ip@  <ip @ =  if  
-            #line @ is stack-line \ So the initial stack is displayed in the right place
-         then
-         d# 40 rmargin !
-         ip@ debug-see
-         cr
-\         ip@  <ip @ <>  if  
-\            ip@ ip>position  if   ( col row )
-\               swap 
-\               is stack-line
-\            then
-\            #line @ is stack-line \ So the initial stack is displayed in the right place
- \        then
+         setup-2d-display
       then
       0 show-rstack !
-      false is first-time?
-      rp@ is rp-mark
+      false is redisplay?
    then
+;
+: show-debug-stack  ( -- )
+   scrolling-debug?  if
+      save#
+      cmd-column 2+ to-column
 
+      hex-stack @  if  push-hex  then
+      ." ( " .s    \ Show data stack
+      hex-stack @  if  pop-base  then
+      show-rstack @  if  (.rs  then   \ Show return stack
+      ." )"
+      restore#
+
+      cr
+      ['] noop is indent
+      the-ip .token drop		  \ Show word name
+      ['] (indent) is indent
+      to-cmd-column
+   else
+      save-result-loc
+      show-partial-stack
+        
+      the-ip ip-set-cursor
+      #line @ to stack-line
+   then
+;
+: debug-interact  ( -- )
+   save#
    begin
       step? @  if  to-debug-window  then
-      save#
-      scrolling-debug?  if
-         cmd-column 2+ to-column
-
-         hex-stack @  if  push-hex  then
-         ." ( " .s    \ Show data stack
-         hex-stack @  if  pop-base  then
-         show-rstack @  if  (.rs  then   \ Show return stack
-         ." )"
-         restore#
-
-         cr
-         ['] noop is indent
-         ip@ .token drop		  \ Show word name
-         ['] (indent) is indent
-         to-cmd-column
-      else
-         save-result-loc
-         show-partial-stack
-        
-         ip@ ip-set-cursor
-         #line @ to stack-line
-      then
-
+      show-debug-stack
       step? @  key? or  if
          step? on  res off
          key dup bl <  if  drop bl  then
@@ -238,28 +246,35 @@ variable hex-stack    \ Show the data stack in hex?
          restore-window
          scrolling-debug?  if  reset-page  then
          case
-            ascii D  of  ip@ token@ executer  ['] (debug try endof \ Down
-	    ascii U  of  rp@ ['] up1 try                     endof \ Up
-            ascii C  of  step? @ 0= step? !           true   endof \ Continue
-            ascii F  of
+            ascii D  of  the-ip token@ executer  ['] (debug try endof \ Down
+	    ascii U  of  the-rp ['] up1 try                     endof \ Up
+            ascii C  of                                               \ Continue
+               step? @ 0= step? !              
+               step? @ 0=  if  true to scrolling-debug?  true to redisplay?  then
+               true
+            endof
+
+            ascii F  of						      \ Forth
                cr ." Type 'resume' to return to debugger" cr
                set-package  interact  unset-package   false
-            endof						   \ Forth
-            ascii G  of  debug-off  cr  exit                 endof \ Go
-            ascii H  of  cr .debug-long-help          false  endof \ Help
-            ascii R  of  cr rp0 @ rp@ na1+ (rstrace   false  endof \ RSTrace
-            ascii S  of  cr <ip @ body> (see)         false  endof \ See
-            ascii ?  of  cr .debug-short-help	      false  endof \ Short Help
+            endof
+            ascii G  of  debug-off  cr                 true   endof \ Go
+            ascii H  of  cr .debug-long-help           false  endof \ Help
+            ascii R  of  cr rp0 @ the-rp na1+ (rstrace false  endof \ RSTrace
+            ascii S  of  cr <ip @ body> (see)          false  endof \ See
+            ascii ?  of  cr .debug-short-help	       false  endof \ Short Help
             ascii $  of  space 2dup type cr to-cmd-column false endof \ String
             ascii Q  of  cr ." unbug" abort           true   endof \ Quit
-            ascii (  of  ip@ set-<ip                  false  endof
-            ascii <  of  ip@ ta1+ set-<ip  1 cnt !    false  endof
-            ascii )  of  ip@ ip> !  1 cnt !           false  endof
-            ascii *  of  ip@ find-cfa dup <ip !  'unnest ip> !  false  endof
-            ascii \  of  show-rstack @ 0= show-rstack ! false endof
-            ascii X  of  hex-stack @ 0= hex-stack !   false  endof
-            ascii V  of  scrolling-debug? 0= to scrolling-debug?
-                         scrolling-debug? 0=  if  true to first-time?  then  false  endof
+            ascii (  of  the-ip set-<ip                  false  endof
+            ascii <  of  the-ip ta1+ set-<ip  1 cnt !    false  endof
+            ascii )  of  the-ip ip> !  1 cnt !           false  endof
+            ascii *  of  the-ip find-cfa dup <ip !  'unnest ip> !  false  endof
+            ascii \  of  show-rstack @ 0= show-rstack !  false  endof  \ toggle return stack display
+            ascii X  of  hex-stack @ 0= hex-stack !      false  endof  \ toggle heX stack display
+            ascii V  of						\ toggle Visual (2D) mode
+               scrolling-debug? 0= to scrolling-debug?      
+               scrolling-debug? 0=  if  true to redisplay?  then  false
+            endof
             ( default )  true swap
          endcase
       else
@@ -267,11 +282,17 @@ variable hex-stack    \ Show the data stack in hex?
       then
    until
    restore#
-   scrolling-debug? 0=  if  to-result-loc  then
-   ip@ token@  dup ['] unnest =  swap ['] exit =  or  if
-      cr  true is first-time?
+;
+: (trace  ( -- )
+   ip@ to the-ip
+   rp@ to the-rp
+   setup-debug-display
+   debug-interact
+\   scrolling-debug? 0=  if  to-result-loc  then
+   the-ip token@  dup ['] unnest =  swap ['] exit =  or  if
+      cr  true is redisplay?
    then
-   pnext
+   slow-next? @  if  pnext  then
 ;
 ' (trace  'debug token!
 
