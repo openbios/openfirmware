@@ -54,7 +54,7 @@ only forth also hidden also forth definitions
 defer (see)
 
 hidden definitions
-d# 200 2* /n* constant /positions
+d# 300 2* /n* constant /positions
 /positions buffer: positions
 0 value end-positions
 \ 0 value line-after-;
@@ -70,14 +70,14 @@ d# 200 2* /n* constant /positions
    2 /n* +loop                    ( ip )
    drop true                      ( true )
 ;
-0 value the-ip
+0 value decompiler-ip
 : add-position  ( ip -- )
-   the-ip find-position  if                        ( )
+   decompiler-ip find-position  if                 ( )
       end-positions  positions /positions +  >=    ( flag )
       abort" Decompiler position table overflow"   ( )
       end-positions  dup 2 na+  is end-positions   ( adr )
    then                                            ( adr )
-   #out @ #line @ wljoin  the-ip  rot 2!           ( )
+   #out @ #line @ wljoin  decompiler-ip  rot 2!    ( )
 ;
 : ip>position  ( ip -- true | #out #line false )
    find-position  if    ( )
@@ -91,10 +91,20 @@ d# 200 2* /n* constant /positions
    ip>position 0=  if  at-xy  then
 ;
 
+headers
+defer indent
+: (indent)  ( -- )  lmargin @ #out @ - 0 max spaces  ;
+' (indent) is indent
+headerless
+
+: +indent  ( -- )   3 lmargin +!  cr  ;
+: -indent  ( -- )  ??cr -3 lmargin +!  ;
+\ : <indent  ( -- )  ??cr -3 lmargin +!  indent  3 lmargin +!   ;
+
 headerless
 \ Like ." but goes to a new line if needed.
 : cr".  ( adr len -- )
-   dup ?line                    ( adr len )
+   dup ?line  indent            ( adr len )
    add-position                 ( adr len )
    magenta-letters type cancel  ( )
 ;
@@ -198,21 +208,9 @@ variable break-type  variable break-addr   variable where-break
   then
 
 ;
-headers
-defer indent
-: (indent)  ( -- )
-  #out @ lmargin @ >  if  cr  then
-  lmargin @ #out @ - spaces
-;
-' (indent) is indent
-headerless
-
-: +indent  ( -- )   3 lmargin +!  indent  ;
-: -indent  ( -- )  -3 lmargin +!  indent  ;
-: <indent  ( -- )  -3 lmargin +!  indent  3 lmargin +!   ;
 
 : .begin  ( -- )  .." begin " +indent  ;
-: .then   ( -- )  -indent .." then  "  ;
+: .then   ( -- )  -indent .." then"  cr  ;
 
 \ Extent holds the largest known extent of the current word, as determined
 \ by branch targets seen so far.  This is used to decide if an exit should
@@ -220,10 +218,10 @@ headerless
 variable extent  extent off
 : +extent  ( possible-new-extent -- )  extent @ umax extent !  ;
 : +branch  ( ip-of-branch -- next-ip )  ta1+ /branch +  ;
-: .endof  ( ip -- ip' )  .." endof" indent +branch  ;
-: .endcase  ( ip -- ip' )  indent .." endcase" indent ta1+  ;
-: .$endof  ( ip -- ip' )  .." $endof" indent +branch  ;
-: .$endcase  ( ip -- ip' )  indent .." $endcase" indent ta1+  ;
+: .endof  ( ip -- ip' )  .." endof" cr +branch  ;
+: .endcase  ( ip -- ip' )  .." endcase" cr ta1+  ;
+: .$endof  ( ip -- ip' )  .." $endof" cr +branch  ;
+: .$endcase  ( ip -- ip' )  .." $endcase" cr ta1+  ;
 
 : add-break  ( break-address break-type -- )
    end-breaks @  breaks /breaks +  >=        ( adr,type full? )
@@ -283,36 +281,36 @@ variable extent  extent off
 : scan-;code ( ip -- ip' | 0 )  does-ip?  0=  if  drop 0  then  ;
 : .;code    (s ip -- ip' )
    does-ip?  if
-      cr lmargin @ spaces ." does> "
+      ??cr .." does> "
    else
-      0 lmargin ! indent .." ;code "  cr disassemble     0
+      ??cr 0 lmargin ! .." ;code "  cr disassemble     0
    then
 ;
 : .branch  ( ip -- ip' )
    dup forward-branch?  if
-      <indent .." else" indent
+      -indent .." else" +indent
    else
-      -indent .." repeat "
+      -indent .." repeat" cr
    then
    +branch
 ;
 : .?branch  ( ip -- ip' )
   dup forward-branch?  if
      dup while?  if
-        <indent .." while" indent
+        -indent .." while" +indent
      else
-        .." if    "  +indent
+        .." if"  +indent
      then
   else
-     -indent .." until "
+     -indent .." until " cr
   then
   +branch
 ;
 
 : .do     ( ip -- ip' )  .." do    " +indent  +branch  ;
 : .?do    ( ip -- ip' )  .." ?do   " +indent  +branch  ;
-: .loop   ( ip -- ip' )  -indent .." loop  " +branch  ;
-: .+loop  ( ip -- ip' )  -indent .." +loop " +branch  ;
+: .loop   ( ip -- ip' )  .." loop  " cr +branch  ;
+: .+loop  ( ip -- ip' )  -indent .." +loop " cr +branch  ;
 : .of     ( ip -- ip' )  .." of   " +branch  ;
 : .$of    ( ip -- ip' )  .." $of  " +branch  ;
 
@@ -343,8 +341,15 @@ variable extent  extent off
 
 : pretty-. ( n -- )
    base @ d# 10 =  if  (.)  else  (u.)  then   ( adr len )
-   dup ?line  add-position
-   green-letters type cancel  space
+   dup 3 + ?line  indent  add-position
+   green-letters 
+   base @ case
+      d# 10 of  ." d# "  endof
+      d# 16 of  ." h# "  endof
+      d#  8 of  ." o# "  endof
+      d#  2 of  ." b# "  endof
+   endcase
+   type cancel  space
 ;
 
 : .compiled  ( ip -- ip' )
@@ -354,6 +359,7 @@ variable extent  extent off
    ta1+                         ( ip' )
 ;
 : .word         ( ip -- ip' )
+   indent
    dup token@ check-[compile]   ( ip xt )
    >name name>string            ( ip adr len )
    dup ?line  add-position      ( ip adr len )
@@ -378,7 +384,7 @@ variable extent  extent off
 headers
 : skip-(')      ( ip -- ip' )  ta1+ ta1+  ;
 headerless
-: .is           ( ip -- ip' )  .." to "  ta1+ dup token@ .name  ta1+ ;
+: .is           ( ip -- ip' )  .." to "  ta1+ dup token@ .name  ta1+  ;
 : .string       ( ip -- ip' )  cword-name              .string-tail +str   ;
 : .nstring      ( ip -- ip' )  ta1+  dup ncount " n""" .string-tail +nstr  ;
 
@@ -387,7 +393,7 @@ headerless
 
 : .unnest     ( ip -- ip' )
    dup extent @ u>=  if
-      0 lmargin ! indent .." ; " drop   0
+      ??cr 0 lmargin ! .." ;" drop   0
    else
       .." exit " ta1+
    then
@@ -498,8 +504,9 @@ headers
    init-positions                                     ( apf )
    dup scan-pf next-break 3 lmargin ! indent          ( apf )
    begin                                              ( adr )
-      dup is the-ip                                   ( adr )
-      ?cr  break-addr @ over =  if                    ( adr )
+      dup is decompiler-ip                            ( adr )
+      ?cr                                             ( adr )
+      break-addr @ over =  if                         ( adr )
 	 begin                                        ( adr )
 	    break-type @ execute                      ( adr )
 	    next-break  break-addr @ over <>          ( adr done? )
@@ -525,7 +532,7 @@ hidden definitions
    pop-base
 ;
 \ Display category of word
-: .:           ( acf definer -- )  .definer space space  >body  .pf   ;
+: .:           ( acf definer -- )  .definer cr ( space space ) >body  .pf   ;
 : debug-see    ( apf -- )
    page-mode? >r  no-page
    find-cfa ['] :  .:
