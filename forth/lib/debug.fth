@@ -155,8 +155,11 @@ headerless
 : try  ( n acf -- okay? )
    catch  ?dup if  .error drop false  else  true  then
 ;
+defer resolve-method
+' noop to resolve-method
 : executer  ( xt -- xt' )
    dup ['] execute =  over ['] catch =  or  if  drop dup  then
+   resolve-method
 ;
 d# 72 constant /#buf
 /#buf buffer: #buf-save

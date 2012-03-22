@@ -4789,4 +4789,71 @@ also hidden
    drop false
 ;
 ' method-call? to indirect-call?
+
+create not-colon
+: ?not-colon  ( false | xt true -- xt ) 
+   0=  if  ['] not-colon  then
+;
+: resolve-ih-method  ( adr len ihandle -- xt )
+   dup 0=  if  3drop ['] not-colon exit  then         ( adr len ihandle )
+   package(  my-voc $find-word  )package  ?not-colon  ( xt )
+;
+: resolve-voc-method  ( adr len voc -- xt )
+   (search-wordlist)  ?not-colon
+;
+: resolve-ph-method  ( adr len ph -- xt )
+   phandle>voc resolve-voc-method
+;
+   
+: (resolve-method) ( xt -- xt' )
+   dup ['] $call-self =  if     ( [ adr len ] xt )
+      drop  2dup my-self        ( adr len ih )
+      resolve-ih-method exit    ( -- xt' )
+   then
+
+   dup ['] $call-method =  if   ( [ adr len ih ] xt )
+      drop  3dup                ( adr len ih )
+      resolve-ih-method exit    ( -- xt' )
+   then
+
+   dup ['] $call-parent =  if   ( [ adr len ] xt )
+      drop  2dup my-parent      ( adr len ih )
+      resolve-ih-method exit    ( -- xt' )
+   then                         ( xt )
+
+   dup ['] call-package =  if   ( [ xt ih ] xt )
+      drop over exit            ( -- xt' )
+   then
+
+   dup ['] $vexecute? =  if     ( [ adr len voc ] xt )
+      drop  3dup                ( adr len voc )
+      resolve-voc-method exit   ( -- xt )
+   then
+
+   dup ['] $vexecute =  if      ( [ adr len voc ] xt )
+      drop  3dup                ( adr len voc )
+      resolve-voc-method exit   ( -- xt )
+   then
+
+   dup ['] $package-execute? =  if  ( [ adr len ph ] xt )
+      drop  3dup                    ( adr len voc )
+      resolve-ph-method exit        ( -- xt )
+   then                             ( xt )
+
+   dup ['] package-execute =  if  ( [ adr len ] xt )
+      drop  2dup current-device   ( adr len voc )
+      resolve-ph-method exit      ( -- xt )
+   then                           ( xt )
+
+   dup ['] apply-method =  if     ( [ adr len ] xt )
+      drop  2dup my-voc           ( adr len voc )
+      resolve-voc-method exit     ( -- xt )
+   then                           ( xt )
+
+   dup ['] (apply-method) =  if   ( [ adr len ] xt )
+      drop  2dup my-voc           ( adr len voc )
+      resolve-voc-method exit     ( -- xt )
+   then                           ( xt )
+;
+also bug  ' (resolve-method) to resolve-method  previous
 previous
