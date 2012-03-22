@@ -75,26 +75,28 @@ forth definitions
 ;
 bug definitions
 headerless
-\ Go up the return stack until we find the return address left by our caller
-: caller-ip  ( rp -- ip )
-   begin
-      na1+ dup @  dup  in-dictionary?  if    ( rs-adr ip )
-         ip>token token@
-         dup ['] execute =  over defer? or  swap <ip @ body> =  or
-      else
-         drop false
-      then
-   until                                     ( rs-adr )
-   @ ip>token
-;
+\ Go up the return stack until we find an interesting caller
 : up1  ( rp -- )
-   caller-ip
-   dup find-cfa   ( ip cfa )
-   dup ['] catch = if  2drop exit  then
-   cr ." [ Up to " dup .name ." ]" cr  ( ip cfa )
-   over token@ .name                   ( ip cfa )
-   >body swap 'unnest (debug)
+   begin  na1+  dup rp0 @ <>  while          ( rs-adr )
+      dup @                                  ( rs-adr ip )
+      dup in-dictionary?  if                 ( rs-adr ip )
+         find-cfa  dup indirect-call?  if    ( rs-adr xt )
+            drop                             ( rs-adr )
+         else                                ( rs-adr xt )
+            nip                              ( rs-adr )
+            scrolling-debug?  if             ( xt )
+               cr ." [ Up to " dup .name ." ]" cr
+            then                             ( xt )
+            (debug                           ( )
+            exit                             ( -- )
+         then                                ( rs-adr )
+      else                                   ( rs-adr ip )
+         drop                                ( rs-adr )
+      then                                   ( rs-adr )
+   repeat                                    ( rs-adr )
+   drop                                      ( )
 ;
+
 defer to-debug-window  ' noop is to-debug-window
 defer restore-window   ' noop is restore-window
 : .debug-short-help  ( -- )
@@ -183,19 +185,12 @@ variable hex-stack    \ Show the data stack in hex?
    d# 78 rmargin !
    .debug-short-help
    ." Callers: "  rp0 @ the-rp na1+ rslist kill-line cr
-   \ XXX the following is wrong when popping up
-   the-ip  <ip @ =  if  
-      #line @ is stack-line \ So the initial stack is displayed in the right place
-   then
    d# 40 rmargin !
    the-ip debug-see
    cr
-   \ When popping up from an interior word, display the initial stack on
-   \ the line where the cursor will be.
-   the-ip  <ip @ <>  if  
-      the-ip ip>position  if   ( col row )
-         drop  is stack-line   ( )
-      then
+   \ Display the initial stack on the cursor line
+   the-ip ip>position  0=  if   ( col row )
+      is stack-line   drop      ( )
    then
 ;
 : setup-debug-display  ( -- )

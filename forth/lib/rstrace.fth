@@ -103,9 +103,9 @@ headerless
 \ boring? is a hook for Open Firmware.  It recognizes words like
 \ $call-method that are essentially indirect calls.  Such words
 \ just clutter up the stack display and should be elided for clarity.
-defer boring?
-: (boring?)  ( ip -- flag )  drop false  ;
-' (boring?) is boring?
+defer indirect-call?
+: (indirect-call?)  ( xt -- flag )  ['] catch =  ;
+' (indirect-call?) is indirect-call?
 
 : rtraceword  ( rs-end rs-adr -- rs-end rs-adr' )
    @+                          ( rs-end rs-adr' ip )
@@ -120,7 +120,7 @@ defer boring?
 
    find-cfa                    ( rs-end rs-adr xt )
 
-   dup boring?  if             ( rs-end rs-adr xt )
+   dup indirect-call?  if      ( rs-end rs-adr xt )
       drop exit                ( -- rs-end rs-adr )
    then                        ( rs-end rs-adr xt )
 

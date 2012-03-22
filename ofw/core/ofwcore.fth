@@ -4772,20 +4772,21 @@ headers
 [then]
 
 also hidden
-: method-call?  ( ip -- flag )
-   dup ['] $call-self =  if  drop true exit  then  ( ip )
-   dup ['] $call-method =  if  drop true exit  then  ( ip )
-   dup ['] $call-parent =  if  drop true exit  then  ( ip )
-   dup ['] call-package =  if  drop true exit  then  ( ip )
-   dup ['] $vexecute    =  if  drop true exit  then  ( ip )
-   dup ['] $vexecute?   =  if  drop true exit  then  ( ip )
-   dup ['] $package-execute? =  if  drop true exit  then  ( ip )
-   dup ['] package-execute   =  if  drop true exit  then  ( ip )
-   dup ['] apply-method      =  if  drop true exit  then  ( ip )
-   dup ['] (apply-method)    =  if  drop true exit  then  ( ip )
-   dup ['] (execute-method)  =  if  drop true exit  then  ( ip )
-   dup ['] execute-device-method  =  if  drop true exit  then  ( ip )
+: method-call?  ( xt -- flag )
+   dup (indirect-call?)  if  drop true exit  then  ( xt )
+   dup ['] $call-self =  if  drop true exit  then  ( xt )
+   dup ['] $call-method =  if  drop true exit  then  ( xt )
+   dup ['] $call-parent =  if  drop true exit  then  ( xt )
+   dup ['] call-package =  if  drop true exit  then  ( xt )
+   dup ['] $vexecute    =  if  drop true exit  then  ( xt )
+   dup ['] $vexecute?   =  if  drop true exit  then  ( xt )
+   dup ['] $package-execute? =  if  drop true exit  then  ( xt )
+   dup ['] package-execute   =  if  drop true exit  then  ( xt )
+   dup ['] apply-method      =  if  drop true exit  then  ( xt )
+   dup ['] (apply-method)    =  if  drop true exit  then  ( xt )
+   dup ['] (execute-method)  =  if  drop true exit  then  ( xt )
+   dup ['] execute-device-method  =  if  drop true exit  then  ( xt )
    drop false
 ;
-' method-call? to boring?
+' method-call? to indirect-call?
 previous
