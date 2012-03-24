@@ -33,6 +33,9 @@ purpose: endian-specific operators
 64\ : be-x@   ( a -- l )   dup la1+ be-l@ swap be-l@ lxjoin  ;
 64\ : le-x!   ( l a -- )   >r xlsplit r@ la1+ le-l! r> le-l!  ;
 64\ : be-x!   ( l a -- )   >r xlsplit r@ be-l! r> la1+ be-l!  ;
+64\ : le-x,   ( x -- )     here /x allot le-x!  ;
+64\ : be-x,   ( x -- )     here /x allot be-x!  ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 
