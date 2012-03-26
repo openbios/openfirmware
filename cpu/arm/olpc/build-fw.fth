@@ -492,6 +492,8 @@ false value secure?
 
 : protect-fw  ( -- )  secure?  if  flash-protect sec-trg  then  ;
 
+fload ${BP}/cpu/x86/pc/olpc/countdwn.fth	\ Startup countdown
+
 hex
 : i-key-wait  ( ms -- pressed? )
    cr ." Type 'i' to interrupt stand-init sequence" cr   ( ms )
