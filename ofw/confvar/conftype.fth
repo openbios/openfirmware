@@ -124,7 +124,7 @@ headerless
 ;
 
 headers
-: set-config-int-default  ( n xt -- )  >body la1+ unaligned-!  ;
+: set-config-int-default  ( n xt -- )  >body na1+ unaligned-!  ;
 
 6 actions
 action: ( apf -- n )  cv-int@  ;
@@ -132,7 +132,7 @@ action: ( n apf -- )  cv-int!  ;
 action: ( apf -- adr )  cv-adr drop  ;
 action: ( n apf -- adr len )  drop (.d)  ;
 action: ( adr len apf -- n )  drop $>number  ;
-action: ( apf -- n )  la1+ @  ;
+action: ( apf -- n )  na1+ @  ;
 
 : config-int  ( "name" default-value -- )  config-create use-actions   ,  ;
 : nodefault-int  ( "name" -- )  0 config-int nodefault  ;

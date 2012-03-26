@@ -155,8 +155,8 @@ variable fdt-phandle
 [ifdef] notdef
    \ This is redundant because the Linux kernel reserves the initrd explicitly,
    \ independent of the reserve map (and it reserves the device tree blob too).
-   " linux,initrd-start"  get-chosen-int  dup  fdt h# 40 +  be-l!  ( start )
-   " linux,initrd-end"    get-chosen-int  swap -                   ( length )
+   " linux,initrd-start"  get-chosen-cell  dup  fdt h# 40 +  be-l!  ( start )
+   " linux,initrd-end"    get-chosen-cell  swap -                   ( length )
    fdt h# 4c +  be-l!  ( start )
 [then]
 

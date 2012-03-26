@@ -28,13 +28,32 @@ purpose: endian-specific operators
 [then]
 
 : le-l,   ( l -- )     here /l allot le-l!  ;
+: be-l,   ( l -- )     here /l allot be-l!  ;
 
-64\ : le-x@   ( a -- l )   dup le-l@ swap la1+ le-l@ lxjoin  ;
-64\ : be-x@   ( a -- l )   dup la1+ be-l@ swap be-l@ lxjoin  ;
+[ifndef] /x
+8 constant /x
+[then]
+
+32\ : le-x@  ( adr -- d )  dup le-l@  swap la1+ le-l@  ;
+32\ : be-x@  ( adr -- d )  dup la1+ be-l@  swap be-l@  ;
+32\ : le-x!  ( d adr -- )  tuck la1+ le-l!  le-l!  ;
+32\ : be-x!  ( d adr -- )  tuck be-l!  la1+ be-l!  ;
+
+64\ : le-x@   ( a -- l )   dup le-l@  swap la1+ le-l@ lxjoin  ;
+64\ : be-x@   ( a -- l )   dup la1+ be-l@  swap be-l@ lxjoin  ;
 64\ : le-x!   ( l a -- )   >r xlsplit r@ la1+ le-l! r> le-l!  ;
 64\ : be-x!   ( l a -- )   >r xlsplit r@ be-l! r> la1+ be-l!  ;
-64\ : le-x,   ( x -- )     here /x allot le-x!  ;
-64\ : be-x,   ( x -- )     here /x allot be-x!  ;
+
+: le-x,   ( x -- )  here /x allot le-x!  ;
+: be-x,   ( x -- )  here /x allot be-x!  ;
+
+32\ alias be-n@ be-l@
+32\ alias be-n! be-l!
+32\ alias be-n, be-l,
+
+64\ alias be-n@ be-x@
+64\ alias be-n! be-x!
+64\ alias be-n, be-x,
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

@@ -664,6 +664,13 @@ headers
    over be-l@ >r  /l /string  r> l->n
 ;
 : get-encoded-int  ( adr len -- n )  drop be-l@  ;
+
+: encode-cell  ( n -- adr len )   here  swap be-n,  /n  ;
+
+: decode-cell  ( adr len -- adr' len' n )
+   over be-x@ >r  /x /string  r>
+;
+: get-encoded-cell  ( adr len -- n )  drop be-n@  ;
 headers
 
 \ From devtree.fth
@@ -2936,9 +2943,9 @@ headerless
 \ "chosen-variable" is a convenient way to report the contents of a
 \ variable in a "/chosen" property.  Example: stdout " stdout" chosen-variable
 5 actions
-action:  token@ execute @ encode-int over here - allot  ;   \ get
-action:  token@ execute >r get-encoded-int r> !   ;         \ set
-action:  token@ execute  ;                                  \ addr
+action:  token@ execute @ encode-cell over here - allot  ;   \ get
+action:  token@ execute >r get-encoded-cell r> !   ;         \ set
+action:  token@ execute  ;                                   \ addr
 action:  drop  ;
 action:  drop  ;
 
@@ -2951,9 +2958,9 @@ action:  drop  ;
 \ "chosen-value" is like chosen-variable, but with value semantics
 \ variable in a "/chosen" property.  Example: stdout " stdout" chosen-variable
 5 actions
-action:  token@ execute encode-int over here - allot  ;     \ get
-action:  token@ >r get-encoded-int r> 1 perform-action  ;   \ set
-action:  token@ 2 perform-action  ;                         \ addr
+action:  token@ execute encode-cell over here - allot  ;     \ get
+action:  token@ >r get-encoded-cell r> 1 perform-action  ;   \ set
+action:  token@ 2 perform-action  ;                          \ addr
 action:  drop  ;
 action:  drop  ;
 
@@ -3038,16 +3045,16 @@ nuser temp-char
    dup  if  ihandle>phandle =  else  2drop false  then
 ;
 
-: chosen-int-property  ( int name-str -- )
+: chosen-cell-property  ( n name-str -- )
    " /chosen" find-device
    \ XXX this eats up some space every time it's called ...
-   \ We really want an "set-encoded-int"
-      rot encode-int  2swap (property)
+   \ We really want "set-encoded-cell"
+      rot encode-cell  2swap (property)
    device-end
 ;
 : set-stdin  ( ihandle -- )
    stdin @  swap stdin !			( old-ihandle )
-   stdin @  " stdin" chosen-int-property
+   stdin @  " stdin" chosen-cell-property
 
    " install-abort" stdin @ $call-method	( old-ihandle )
    ?dup  if 					( old-ihandle )
@@ -3093,7 +3100,7 @@ variable termemu-#lines		\ For communication with terminal emulator
          -1			( unknown-#lines )
       else			( adr len )
          \ Report the value of the "#lines" property
-         get-encoded-int	( #lines )
+         get-encoded-cell	( #lines )
       then                      ( #lines )
    then                         ( #lines )
    stdout-#lines  !
@@ -3101,7 +3108,7 @@ variable termemu-#lines		\ For communication with terminal emulator
 : set-stdout  ( ihandle -- )
    stdout @  swap stdout !	( old-ihandle )
    ?close
-   stdout @  " stdout" chosen-int-property
+   stdout @  " stdout" chosen-cell-property
    report-#lines
 ;
 : output  ( pathname-adr,len -- )
@@ -4462,7 +4469,7 @@ headerless
    my-self  if                                       ( adr len )
       my-voc (push-package)                          ( adr len )
       " address" get-property  0=  if                ( adr len value-adr,len )
-         get-encoded-int  2 pick  =  if              ( adr len )
+         get-encoded-cell  2 pick  =  if             ( adr len )
             " address" delete-property               ( adr len )
          then                                        ( adr len )
       then                                           ( adr len )

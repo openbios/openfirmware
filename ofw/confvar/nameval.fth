@@ -268,8 +268,6 @@ stand-init:
    over -    ( cv-adr cv-len )
 ;
 
-: config-adr  ( apf -- adr )  l@ config-mem +  ;
-
 : (cv-flag@)  ( apf -- flag )  cv-adr  if  >cv$ $>flag  else  @ 0<>  then  ;
 : (cv-flag!)  ( flag apf -- )  2dup default-value? 2>r flag>$ 2r> put-env$  ;
 

@@ -177,8 +177,6 @@ false instance value scan?
 : my-mac!      ( adr -- )      wifi >my-mac  /mac-adr move  ;
 : ssid$       ( -- $ )  wifi >ssid cscount  ;
 : ssid!       ( $ -- )  /ssid 1- min wifi >ssid dup /ssid erase swap move  ;
-32\ : be-x!  ( d adr -- )  tuck be-l!  la1+ be-l!  ;
-32\ : be-x@  ( adr -- d )  dup la1+ be-l@  swap be-l@  ;
 : last-rcnt@  ( -- d )  wifi >last-rcnt be-x@  ;
 : last-rcnt!  ( d -- )  wifi >last-rcnt be-x!  ;
 

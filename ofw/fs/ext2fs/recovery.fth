@@ -354,7 +354,6 @@ list: overlay-list
    next-commit-id 1+ to next-commit-id
 ;
 
-: be-x@  ( adr -- d )  dup la1+ be-l@  swap be-l@  ;
 : do-revoke-block  ( -- )
    revoking?  0=  if  exit  then
 

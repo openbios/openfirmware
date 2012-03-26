@@ -13,8 +13,6 @@ transient  fload ${BP}/forth/lib/loclabel.fth     resident
 
 fload ${BP}/cpu/arm/decompm.fth
 
-: be-l,  ( l -- )  here 4 note-string  allot  be-l!  ;
-
 \needs $save-forth  transient  fload ${BP}/cpu/arm/savefort.fth  resident
 \ alias $save-forth $save-forth
 

@@ -126,8 +126,8 @@ defer place-ramdisk
 \  dup to linux-memtop
    to ramdisk-adr
 
-   ramdisk-adr " linux,initrd-start"  chosen-int-property
-   ramdisk-adr /ramdisk +  " linux,initrd-end"  chosen-int-property
+   ramdisk-adr " linux,initrd-start"  chosen-cell-property
+   ramdisk-adr /ramdisk +  " linux,initrd-end"  chosen-cell-property
 ;
 : $load-ramdisk  ( name$ -- )
    0 to /ramdisk                                  ( name$ )
