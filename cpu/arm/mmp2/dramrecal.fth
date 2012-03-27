@@ -461,7 +461,7 @@ c;
    drop  cr            ( )
 ;
 : .int35  ( -- )
-   ." INT5 - mask "  h# 174 icu@ .x
+   ." INT35 - mask "  h# 174 icu@ .x
    ." status " h# 15c icu@  dup  .x
    d#  0  " PJ_PerfMon" .ifbit
    d#  1 " L2_PA_ECC"   .ifbit
