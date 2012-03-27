@@ -58,7 +58,10 @@ label ddr-recal  ( r0: memctrl-va -- )
 end-code
 here ddr-recal - constant /ddr-recal
 
-\ create use-auto-mc-wake  \ Let the PMU automatically wake the memory controller
+create use-hw-s3
+[ifdef] use-hw-s3
+create use-auto-mc-wake  \ Let the PMU automatically wake the memory controller
+[then]
 create use-block           \ Block memory controller activity in low-level sleep code
 create use-self-refresh    \ Manually issue self-refresh enter/exit
 create use-drivers         \ Turn memory drivers off during sleep
@@ -844,7 +847,11 @@ end-string-array
 
    \ begin mmp2_cpu_do_idle()
    block-irqs                    ( )  \ Block IRQs - will be cleared by PMU
-   do-self-refresh               ( )
+[ifdef] use-hw-s3
+   wfi
+[else]
+   do-self-refresh
+[then]
 
    restore-run-state
    \ end mmp2_cpu_do_idle()
