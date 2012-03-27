@@ -412,20 +412,11 @@ headerless
    then                                           ( )
 ;
 
-: do-mouse  ( -- )
-   mouse-ih 0=  if  exit  then
-   begin  mouse-event?  while         ( x y buttons )
-      remove-mouse-cursor             ( x y buttons )
-      -rot  update-position           ( buttons )
-      new-sq?
-      draw-mouse-cursor
-   repeat
-;
-: do-touchscreen  ( -- )
-   touchscreen-ih 0=  if  exit  then
-   begin  touchscreen-event?  while   ( x y buttons )
-      remove-mouse-cursor             ( x y buttons )
-      -rot  set-xy                    ( buttons )
+: do-pointer  ( -- )
+   pointer? 0=  if  exit  then
+   begin  pointer-event?  while       ( x y absolute? buttons )
+      remove-mouse-cursor             ( x y absolute? buttons )
+      >r  update-position  r>         ( buttons )
       new-sq?
       draw-mouse-cursor
    repeat
@@ -464,8 +455,8 @@ headerless
 
 : wait-buttons-up  ( -- )
    begin
-      mouse-event?  if   ( x y buttons )
-	 nip nip  0=  if  exit  then
+      pointer-event?  if   ( x y buttons )
+	 nip nip nip  0=  if  exit  then
       then
    again
 ;
@@ -476,10 +467,10 @@ headers
    gui-alerts
    begin
       key?  if  key drop  refresh exit  then
-      mouse-ih  if
-         mouse-event?  if
+      pointer?  if
+         pointer-event?  if   ( x y absolute? buttons )
             \ Ignore movement, act only on a button down event
-            nip nip  if  wait-buttons-up  refresh exit  then
+            nip nip nip  if  wait-buttons-up  refresh exit  then
          then
       then
    again
@@ -493,7 +484,7 @@ defer run-menu
    draw-mouse-cursor
  
    false to done?
-   begin   do-touchscreen  do-mouse  do-key   done? until
+   begin   do-pointer  do-key   done? until
    false to done?
  
    remove-mouse-cursor
@@ -506,11 +497,11 @@ defer run-menu
 : setup-menu  ( -- )
    save-scroller
    setup-graphics
-\  ?open-mouse
+\  ?open-pointer
    cursor-off
    gui-alerts
 ;
-: unsetup-menu  ( -- )  ?close-mouse  restore-scroller  ;
+: unsetup-menu  ( -- )  ?close-pointer  restore-scroller  ;
 
 defer current-menu  ' clear to current-menu
 : set-menu  ( xt -- )  to current-menu  current-menu  ;

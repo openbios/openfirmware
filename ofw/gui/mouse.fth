@@ -3,9 +3,7 @@ purpose: Mouse support for GUI
 
 headerless
 
-0 value mouse-ih
-
-false value mouse-absolute?  \ True if coordinates are absolute
+defer pointer-cursor?  ' false to pointer-cursor?
 
 \ Current mouse cursor position
 
@@ -136,14 +134,12 @@ hex
 ;
 
 : remove-mouse-cursor  ( -- )
+   pointer-cursor? 0=  if  exit  then
    hardware-cursor?  if  " cursor-off" $call-screen  exit  then
-   mouse-ih 0=  if  exit  then
-   mouse-absolute?  if  exit  then
    xpos ypos  old-rect  put-cursor
 ;
 : draw-mouse-cursor  ( -- )
-   mouse-ih 0=  if  exit  then
-   mouse-absolute?  if  exit  then
+   pointer-cursor? 0=  if  exit  then
    hardware-cursor?  if
       xpos ypos " cursor-xy!" $call-screen
       exit
@@ -158,8 +154,8 @@ hex
 : clamp  ( n min max - m )  rot min max  ;
 
 : set-xy  ( x y -- )  to ypos  to xpos  ;
-: update-position  ( x y -- )
-   mouse-absolute?  if  set-xy  exit  then
+: update-position  ( x y absolute? -- )
+   if  set-xy  exit  then
    2dup or 0=  if  2drop exit  then  \ Avoid flicker if there is no movement
 
    \ Minimize the time the cursor is down by doing computation in advance
@@ -171,6 +167,13 @@ hex
 ;
 
 headers
+
+\ XXX this should be structured as a multiplexor node instead of
+\ having explicit mouse and touchscreen cases.
+
+0 value mouse-ih
+
+false value mouse-absolute?  \ True if coordinates are absolute
 
 0 value close-mouse?
 : ?close-mouse  ( -- )
@@ -227,6 +230,25 @@ headers
 ;
 : touchscreen-event?  ( -- false | x y buttons true )
    " stream-poll?" touchscreen-ih $call-method
+;
+
+: (pointer-cursor?)  ( -- flag )
+   mouse-ih  if  mouse-absolute? 0=  else  false  then
+;
+' (pointer-cursor?)  to pointer-cursor?
+
+: ?open-pointer  ( -- )  ?open-mouse ?open-touchscreen  ;
+: ?close-pointer  ( -- )  ?close-touchscreen ?close-mouse  ;
+
+: pointer?  ( -- flag )  mouse-ih 0<>  touchscreen-ih 0<>  or  ;
+: pointer-event?  ( -- false | x y absolute? buttons true )
+   mouse-event?  if   ( x y buttons )
+      mouse-absolute? swap  true  exit
+   then
+   touchscreen-event?   if
+      true swap  true exit
+   then
+   false
 ;
 
 \ LICENSE_BEGIN

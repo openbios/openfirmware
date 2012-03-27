@@ -299,12 +299,12 @@ variable pgup?
 ;
 
 : controls-mouse  ( list -- ?? flag )
-   mouse-ih 0=  if  drop false exit  then
+   pointer? 0=  if  drop false exit  then
    >r
    false to dialog-ready?
-   begin  mouse-event?  while         ( x y buttons )
-      remove-mouse-cursor             ( x y buttons )
-      -rot  update-position           ( buttons )
+   begin  pointer-event?  while       ( x y absolute? buttons )
+      remove-mouse-cursor             ( x y absolute? buttons )
+      >r  update-position  r>         ( buttons )
       r@ mouse-buttons                ( ?? )
       draw-mouse-cursor               ( ?? )
    repeat                             ( ?? )

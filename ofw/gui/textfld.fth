@@ -114,11 +114,11 @@ variable redraw-mouse-cursor?
          redraw-mouse-cursor? on
          (key remove-mouse-cursor exit
       then
-      mouse-ih  if
-         begin  mouse-event?  while
-            remove-mouse-cursor
-            -rot update-position
-            draw-mouse-cursor
+      pointer?  if
+         begin  pointer-event?  while  ( x y absolute? buttons )
+            remove-mouse-cursor        ( x y absolute? buttons )
+            >r  update-position  r>    ( buttons )
+            draw-mouse-cursor          ( buttons )
             interact-list edit-mouse-buttons  if  exit  then
          repeat
       then

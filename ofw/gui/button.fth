@@ -218,7 +218,7 @@ headerless
    def-alert-col-row alert-text-box  center-text  key drop  restore-rectangle
 ;
 : setup  ( -- )
-   ?open-screen  set-menu-colors  ?open-mouse
+   ?open-screen  set-menu-colors  ?open-pointer
    clear-menu install-menu cursor-off  refresh
 ;
 [then]
