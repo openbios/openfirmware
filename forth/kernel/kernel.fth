@@ -370,10 +370,6 @@ headers
 : \  \ rest-of-line  (s -- )      \ skips rest of line
    -1 parse 2drop
 ; immediate
-
-: c"   \ string"  ( -- pstr )
-   ascii " parse  compile-pstring
-; immediate
 [then]
 
 create nullstring 0 c, 0 c,
