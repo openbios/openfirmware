@@ -4,33 +4,34 @@
 
 #include "1275.h"
 
-extern void *malloc();
-VOID *
-zalloc(int size)
+void *
+zalloc(size_t size)
 {
-	VOID *vp;
+	void *vp;
 
-	vp = (void *)malloc(size);
+	vp = malloc(size);
 	memset(vp, size, 0);
 	return (vp);
 }
 
 char *
-get_str_prop(phandle node, char *key, allocflag alloc)
+get_str_prop(phandle node, const char *key, allocflag alloc)
 {
-	int len, res;
-	static char *priv_buf, priv_buf_len = 0;
+	ULONG len;
+	int res;
+	static char *priv_buf;
+	static ULONG priv_buf_len = 0;
 	char *cp;
 
 	len = OFGetproplen(node, key);
-	if (len == -1 || len == 0)
-		return((char *) 0);
-
 	/*
-	 * Leave room for a null terminator, on the off chance that the
-	 * property isn't null-terminated.
+	 * Properly encoded properties have a null terminator,
+	 * so if len == 1 we have a null string.
 	 */
-	len += 1;
+	if (len == -1 || len == 0 || len == 1) {
+		return((char *) 0);
+	}
+
 	if (alloc == ALLOC)
 		cp = (char *) zalloc(len);
 	else {
@@ -40,12 +41,11 @@ get_str_prop(phandle node, char *key, allocflag alloc)
 			priv_buf = (char *) zalloc(len);
 			priv_buf_len = len;
 		} else
-			memset(priv_buf, len, 0);
+			memset((void *)priv_buf, len, 0);
 		cp = priv_buf;
 	}
-	len -= 1;
 
-	res = OFGetprop(node, key, cp, len);
+	res = OFGetprop(node, key, (UCHAR *)cp, len);
 	if (res != len) {
 		fatal(
 		    "get_str_prop(node %x, key '%s', len %x) returned len %x\n",

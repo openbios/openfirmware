@@ -10,7 +10,7 @@ int level = 0;
 
 int Debug = 0;
 
-VOID
+void
 debug(int debug_level, char *fmt, ...)
 {
 	va_list args;

@@ -28,9 +28,7 @@
 
 #define MALLOC
 #include "malloc.h"
-#ifndef	NULL
-#define NULL	0
-#endif
+
 #ifdef debug
 # define ASSERT(p,q)	if (!(p)) fatal(q)
 #else
@@ -43,16 +41,18 @@
 */
 
 #define PAGE_SIZE (ULONG)0x1000
-#define ULONG unsigned long
 
-char *
-malloc(nbytes)
-	unsigned nbytes;
+static ULONG _log2(ULONG n);
+static void insque(struct qelem *, struct qelem *);
+static void remque(struct qelem *);
+
+void *
+malloc(size_t nbytes)
 {
         extern ULONG OFClaim();
-	register struct overhead *p, *q;
-	register int surplus;
-	register struct qelem *bucket;
+	struct overhead *p, *q;
+	int surplus;
+	struct qelem *bucket;
 	nbytes = ALIGN(nbytes, NALIGN) + sizeof(struct overhead);
 	bucket = &buckets[_log2(nbytes-1) + 1];	/* log2 rounded up */
 	for (p = NULL; bucket < &buckets[NBUCKETS]; bucket++) { 
@@ -68,7 +68,7 @@ not marked FREE found on Free List!\n");
 	}
 	if (p == NULL) {
 #ifdef USE_SBRK
-		register int i;
+		int i;
 		p = (struct overhead *)CURBRK;
 		if ((int)p == -1)
 			return(NULL);
@@ -80,7 +80,7 @@ not marked FREE found on Free List!\n");
 		q = (struct overhead *)CURBRK;
 		if ((int)q == -1)
 			return(NULL);
-		p->ov_length = (char *)q - (char *)p;
+		p->ov_length = (UCHAR *)q - (UCHAR *)p;
 		surplus = p->ov_length - nbytes;
 		/* add to end of adjacency chain */
 		ASSERT((FROMADJ(adjhead.q_back)) < p, "\nmalloc: Entry in \
@@ -110,7 +110,7 @@ adjacency chain found with address lower than Chain head!\n" );
 	}
 	if (surplus > sizeof(struct overhead)) {
 		/* if big enough, split it up */
-		q = (struct overhead *)( (char *)p + nbytes);
+		q = (struct overhead *)( (UCHAR *)p + nbytes);
 		q->ov_length = surplus;
 		p->ov_length = nbytes;
 		q->ov_magic = MAGIC_FREE;
@@ -120,14 +120,13 @@ adjacency chain found with address lower than Chain head!\n" );
 		insque(TOBUK(q),&buckets[_log2(surplus)]);
 	}
 	p->ov_magic = MAGIC_BUSY;
-	return((char*)p + sizeof(struct overhead));
+	return((void *)p + sizeof(struct overhead));
 }
 
 void
-free(mem)
-register char *mem;
+free(void *mem)
 {
-	register struct overhead *p, *q;
+	struct overhead *p, *q;
 	if (mem == NULL)
 		return;
 	p = (struct overhead *)(mem - sizeof(struct overhead));
@@ -142,14 +141,14 @@ register char *mem;
 a lower adjacent free area,\n addresses were found out of order!\n");
 		/* If lower segment can be merged */
 		if (   q->ov_magic == MAGIC_FREE
-		   && (char *)q + q->ov_length == (char *)p
+		   && (UCHAR *)q + q->ov_length == (UCHAR *)p
 		) {
 			/* remove lower address area from bucket chain */
 			remque(TOBUK(q));
 			/* remove upper address area from adjacency chain */
 			remque(TOADJ(p));
 			q->ov_length += p->ov_length;
-			p->ov_magic = NULL;
+			p->ov_magic = 0;
 			p = q;
 		}
 	}
@@ -159,20 +158,20 @@ a lower adjacent free area,\n addresses were found out of order!\n");
 		ASSERT(q > p, "\nfree: While trying to merge a free area with \
 a higher adjacent free area,\n addresses were found out of order!\n");
 		if ( 	q->ov_magic == MAGIC_FREE
-		   &&	(char *)p + p->ov_length == (char *)q
+		   &&	(UCHAR *)p + p->ov_length == (UCHAR *)q
 		) {
 			/* remove upper from bucket chain */
 			remque(TOBUK(q));
 			/* remove upper from adjacency chain */
 			remque(TOADJ(q));
 			p->ov_length += q->ov_length;
-			q->ov_magic = NULL;
+			q->ov_magic = 0;
 		}
 	}
 #ifdef USE_SBRK
 	if (	/* freed area is at end of memory */
 		endfree && adjhead.q_back == TOADJ(p)
-	    &&	(char*)p + p->ov_length == (char *)CURBRK
+	    &&	(UCHAR*)p + p->ov_length == (UCHAR *)CURBRK
 	) {
 		/* remove from end of adjacency chain */
 		remque(adjhead.q_back);
@@ -187,16 +186,16 @@ a higher adjacent free area,\n addresses were found out of order!\n");
 	return;
 }
 
-char *
-realloc(mem,nbytes)
-register char *mem; unsigned nbytes;
+void *
+realloc(void *old, size_t nbytes)
 {
-	register char *newmem;
-	register struct overhead *p, *q;
-	register int surplus;
+        UCHAR *mem = (UCHAR *)old;
+	UCHAR *newmem;
+	struct overhead *p, *q;
+	int surplus;
 	if (mem == NULL)
 		return(malloc(nbytes));
-	if(mem > (char*)FROMADJ(adjhead.q_back) + sizeof(struct overhead))
+	if (mem > (UCHAR *)FROMADJ(adjhead.q_back) + sizeof(struct overhead))
 		return(NULL);
 	
 	p = (struct overhead *)(mem - sizeof(struct overhead));
@@ -215,14 +214,14 @@ register char *mem; unsigned nbytes;
 #ifdef USE_SBRK
 			if (	/* freed area is at end of memory */
 				endfree && adjhead.q_back == TOADJ(p)
-			  &&	(char*)p + p->ov_length == (char *)CURBRK
+			  &&	(UCHAR*)p + p->ov_length == (UCHAR *)CURBRK
 			) {
 				/* release memory to system */
 				sbrk(-surplus);
 			} else
 #endif
 			{
-				q = (struct overhead *)( (char *)p + nbytes);
+				q = (struct overhead *)( (UCHAR *)p + nbytes);
 				q->ov_length = surplus;
 				q->ov_magic = MAGIC_FREE;
 				insque(TOADJ(q),TOADJ(p));
@@ -238,32 +237,30 @@ register char *mem; unsigned nbytes;
 	}
 	newmem = malloc(nbytes);
 	if (newmem != mem && newmem != NULL) {
-		register int n;
+		int n;
 		if (p->ov_magic == MAGIC_BUSY || p->ov_magic == MAGIC_FREE) {
 			n = p->ov_length - sizeof(struct overhead);
 			nbytes = (nbytes < n) ? nbytes : n ;
 		}
-		memcpy(newmem,mem,nbytes);
+		memcpy(newmem, mem, nbytes);
 	}
 	if (p->ov_magic == MAGIC_BUSY)
 		free(mem);
 	return(newmem);
 }
 
-_log2(n)
-register int n;
+static ULONG _log2(ULONG n)
 {
-	register int i = 0;
+	int i = 0;
 	while ((n >>= 1) > 0)
 		i++;
 	return(i);
 }
 
-void
-insque(item,queu)
-register struct qelem *item, *queu;
+static void
+insque(struct qelem *item, struct qelem *queu)
 {
-	register struct qelem *pueu;
+	struct qelem *pueu;
 	pueu = queu->q_forw;
 	item->q_forw = pueu;
 	item->q_back = queu;
@@ -271,11 +268,10 @@ register struct qelem *item, *queu;
 	pueu->q_back = item;
 }
 
-void
-remque(item)
-register struct qelem *item;
+static void
+remque(struct qelem *item)
 {
-	register struct qelem *queu, *pueu;
+	struct qelem *queu, *pueu;
 	pueu = item->q_forw;
 	queu = item->q_back;
 	queu->q_forw = pueu;

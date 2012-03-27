@@ -1,13 +1,23 @@
 // See license at end of file
 
-#include "types.h"
+// -----------------------------------------------------------------
+// Type definitions and miscellaneous data structures
 
-typedef long phandle;
-typedef long ihandle;
+#ifndef __1275_h__
+#define __1275_h__
+
+#define NULL   0
+
+typedef unsigned char UCHAR;
+typedef unsigned long ULONG;
+
+typedef ULONG cell_t ;
+typedef ULONG phandle;
+typedef ULONG ihandle;
 
 typedef struct {
-	long hi, lo;
-	long size;
+	ULONG hi, lo;
+	ULONG size;
 } reg;
 
 #ifdef	putchar
@@ -24,59 +34,72 @@ typedef enum {
 
 #define	new(t)	(t *)zalloc(sizeof(t));
 
-#ifdef SPRO
-typedef long long cell_t;
-#else
-typedef unsigned long cell_t ;
-#endif
-
-#ifdef CIF64
-#define LOW(index) ((index*2) + 1)
-#else
 #define LOW(index) (index)
-#endif
 
-extern int call_firmware(ULONG *);
-extern void warn(char *fmt, ...);
+// -----------------------------------------------------------------
+// External C library functions, and the like.
 
-#ifdef CIF64
-#define CIF_HANDLER_IN 6
-#else
+#include <stdlib.h>
+
+extern int   decode_int(UCHAR *);
+extern void  exit(int);
+extern void  fatal(char *fmt, ...);
+extern void  free(void *);
+extern cell_t get_cell_prop(phandle, char *);
+extern cell_t get_cell_prop_def(phandle, char *, cell_t);
+extern int   get_int_prop(phandle, char *);
+extern int   get_int_prop_def(phandle, char *, int);
+extern char *get_str_prop(phandle, const char *, allocflag);
+extern void *malloc(size_t);
+extern void  memcpy(void *, void *, size_t);
+extern void  memset(void *, int, size_t);
+extern int   memcmp(const void *, const void *, size_t);
+extern int   printf(char *fmt, ...);
+extern void  putchar(UCHAR);
+extern void *realloc(void *, size_t);
+extern void  warn(char *fmt, ...);
+extern void *zalloc(size_t);
+
+// -----------------------------------------------------------------
+// Open Firmware client interface calls.
+
 #define CIF_HANDLER_IN 3
-#endif
-
 extern int call_firmware(ULONG *);
-extern void warn(char *fmt, ...);
-int atoi(const char *s);
 
 void OFClose(ihandle id);
 phandle OFPeer(phandle device_id);
 phandle OFChild(phandle device_id);
 phandle OFParent(phandle device_id);
-long OFGetproplen(phandle device_id, char *name);
-long OFGetprop(phandle device_id, char *name, char *buf, ULONG buflen);
-long OFNextprop(phandle device_id, char *name, char *buf);
-long OFSetprop(phandle device_id, char *name, char *buf, ULONG buflen);
+long OFGetproplen(phandle device_id, const char *name);
+long OFGetprop(phandle device_id, const char *name, UCHAR *buf, ULONG buflen);
+long OFNextprop(phandle device_id, const char *name, UCHAR *buf);
+long OFSetprop(phandle device_id, const char *name, UCHAR *buf, ULONG buflen);
 phandle OFFinddevice(char *devicename);
 ihandle OFOpen(char *devicename);
 ihandle OFCreate(char *devicename);
 void OFClose(ihandle id);
-long OFRead(ihandle instance_id, char *addr, ULONG len);
-long OFWrite(ihandle instance_id, char *addr, ULONG len);
+long OFRead(ihandle instance_id, UCHAR *addr, ULONG len);
+long OFWrite(ihandle instance_id, UCHAR *addr, ULONG len);
 long OFSeek(ihandle instance_id, ULONG poshi, ULONG poslo);
-ULONG OFClaim(char *addr, ULONG size, ULONG align);
-VOID OFRelease(char *addr, ULONG size);
-long OFPackageToPath(phandle device_id, char *addr, ULONG buflen);
+ULONG OFClaim(UCHAR *addr, ULONG size, ULONG align);
+void OFRelease(UCHAR *addr, ULONG size);
+long OFPackageToPath(phandle device_id, UCHAR *addr, ULONG buflen);
 phandle OFInstanceToPackage(ihandle ih);
 long OFCallMethod(char *method, ihandle id, ULONG arg);
-long OFInterpret0(char *cmd);
-ULONG OFMilliseconds(VOID);
+long OFInterpret0(const char *cmd);
+ULONG OFMilliseconds(void);
 void (*OFSetCallback(void (*func)(void)))(void);
-long OFBoot(char *bootspec);
-VOID OFEnter(VOID);
-VOID OFExit(VOID);
+void OFBoot(char *bootspec);
+void OFEnter(void);
+#ifdef __GNUC__
+void OFExit(void) __attribute__((noreturn));
+#else
+void OFExit(void);
+#endif
 long OFCallMethodV(char *method, ihandle id, int nargs, int nrets, ...);
 long OFInterpretV(char *cmd, int nargs, int nrets, ...);
+
+#endif  // __1275_h__
 
 // LICENSE_BEGIN
 // Copyright (c) 2006 FirmWorks
@@ -101,3 +124,4 @@ long OFInterpretV(char *cmd, int nargs, int nrets, ...);
 // WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 // LICENSE_END
+

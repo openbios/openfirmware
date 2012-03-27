@@ -53,11 +53,7 @@ Abstract:
 phandle
 OFPeer(phandle device_id)
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"peer", 0,1, 0,1, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"peer",1,1,0,0};
-#endif
 	argarray[CIF_HANDLER_IN+LOW(0)] = device_id;
 	if (call_firmware(argarray) != 0)
 	{
@@ -69,11 +65,7 @@ OFPeer(phandle device_id)
 phandle
 OFChild(phandle device_id)
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"child", 0,1, 0,1, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"child",1,1,0,0};
-#endif
 	argarray[CIF_HANDLER_IN+LOW(0)] = device_id;
 	if (call_firmware(argarray) != 0)
 	{
@@ -85,11 +77,7 @@ OFChild(phandle device_id)
 phandle
 OFParent(phandle device_id)
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"parent", 0,1, 0,1, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"parent", 1,1,0,0};
-#endif
 	argarray[CIF_HANDLER_IN+LOW(0)] = device_id;
 	if (call_firmware(argarray) != 0)
 	{
@@ -101,14 +89,10 @@ OFParent(phandle device_id)
 long
 OFGetproplen(
     phandle device_id,
-    char *name
+    const char *name
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"getproplen", 0,2, 0,1, 0,0, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"getproplen", 2,1,0,0,0};
-#endif
 	argarray[CIF_HANDLER_IN+LOW(0)] = (long)device_id;
 	argarray[CIF_HANDLER_IN+LOW(1)] = (long)name;
 	if (call_firmware(argarray) != 0)
@@ -121,16 +105,12 @@ OFGetproplen(
 long
 OFGetprop(
     phandle device_id,
-    char *name,
-    char *buf,
+    const char *name,
+    UCHAR *buf,
     ULONG buflen
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"getprop", 0,4, 0,1, 0,0, 0,0, 0,0, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"getprop", 4,1,0,0,0,0,0};
-#endif
 	argarray[CIF_HANDLER_IN+LOW(0)] = (long)device_id;
 	argarray[CIF_HANDLER_IN+LOW(1)] = (long)name;
 	argarray[CIF_HANDLER_IN+LOW(2)] = (long)buf;
@@ -145,15 +125,11 @@ OFGetprop(
 long
 OFNextprop(
     phandle device_id,
-    char *name,
-    char *buf
+    const char *name,
+    UCHAR *buf
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"nextprop", 0,3, 0,1, 0,0, 0,0, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"nextprop", 3,1,0,0,0,0};
-#endif
 	argarray[CIF_HANDLER_IN+LOW(0)] = (long)device_id;
 	argarray[CIF_HANDLER_IN+LOW(1)] = (long)name;
 	argarray[CIF_HANDLER_IN+LOW(2)] = (long)buf;
@@ -167,16 +143,12 @@ OFNextprop(
 long
 OFSetprop(
     phandle device_id,
-    char *name,
-    char *buf,
+    const char *name,
+    UCHAR *buf,
     ULONG buflen
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"setprop", 0,4, 0,1, 0,0, 0,0, 0,0, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"setprop", 4,1,0,0,0,0,0};
-#endif
 	argarray[CIF_HANDLER_IN+LOW(0)] = (long)device_id;
 	argarray[CIF_HANDLER_IN+LOW(1)] = (long)name;
 	argarray[CIF_HANDLER_IN+LOW(2)] = (long)buf;
@@ -191,11 +163,7 @@ OFSetprop(
 phandle
 OFFinddevice( char *devicename)
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"finddevice", 0,1, 0,1, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"finddevice", 1,1,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (long)devicename;
 	if (call_firmware(argarray) != 0)
@@ -208,11 +176,7 @@ OFFinddevice( char *devicename)
 ihandle
 OFOpen( char *devicename)
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"open", 0,1, 0,1, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"open", 1,1,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (long)devicename;
 	if (call_firmware(argarray) != 0)
@@ -226,11 +190,7 @@ OFOpen( char *devicename)
 ihandle
 OFCreate( char *devicename)
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"firmworks,create", 0,1, 0,1, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"firmworks,create", 1,1,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (long)devicename;
 	if (call_firmware(argarray) != 0)
@@ -243,11 +203,7 @@ OFCreate( char *devicename)
 void
 OFClose(ihandle id)
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"close", 0,1, 0,1, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"close", 1,1,0,0};
-#endif
 	argarray[CIF_HANDLER_IN+LOW(0)] = (long)id;
 	if (call_firmware(argarray) != 0)
 	{
@@ -261,15 +217,11 @@ OFClose(ihandle id)
 long
 OFRead(
     ihandle instance_id,
-    char *addr,
+    UCHAR *addr,
     ULONG len
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"read", 0,3, 0,1, 0,0, 0,0, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"read", 3,1,0,0,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (long) instance_id;
 	argarray[CIF_HANDLER_IN+LOW(1)] = (cell_t)addr;
@@ -284,15 +236,11 @@ OFRead(
 long
 OFWrite(
     ihandle instance_id,
-    char *addr,
+    UCHAR *addr,
     ULONG len
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"write", 0,3, 0,1, 0,0, 0,0, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"write", 3,1,0,0,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (long) instance_id;
 	argarray[CIF_HANDLER_IN+LOW(1)] = (cell_t)addr;
@@ -311,11 +259,7 @@ OFSeek(
     ULONG poslo
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"seek", 0,3, 0,1, 0,0, 0,0, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"seek", 3,1,0,0,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (long) instance_id;
 	argarray[CIF_HANDLER_IN+LOW(1)] = poshi;
@@ -328,16 +272,12 @@ OFSeek(
 
 ULONG
 OFClaim(
-    char *addr,
+    UCHAR *addr,
     ULONG size,
     ULONG align
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"claim", 0,3, 0,1, 0,0, 0,0, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"claim", 3,1,0,0,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (cell_t)addr;
 	argarray[CIF_HANDLER_IN+LOW(1)] = size;
@@ -349,17 +289,13 @@ OFClaim(
 	return (argarray[CIF_HANDLER_IN+LOW(3)]);
 }
 
-VOID
+void
 OFRelease(
-    char *addr,
+    UCHAR *addr,
     ULONG size
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"release", 0,2, 0,0, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"release", 2,0,0,0};
-#endif
 	argarray[CIF_HANDLER_IN+LOW(0)] = (cell_t)addr;
 	argarray[CIF_HANDLER_IN+LOW(1)] = size;
 	call_firmware(argarray); 
@@ -368,15 +304,11 @@ OFRelease(
 long
 OFPackageToPath(
     phandle device_id,
-    char *addr,
+    UCHAR *addr,
     ULONG buflen
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"package-to-path", 0,3, 0,1, 0,0, 0,0, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"package-to-path", 3,1,0,0,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (cell_t)device_id;
 	argarray[CIF_HANDLER_IN+LOW(1)] = (cell_t)addr;
@@ -385,24 +317,20 @@ OFPackageToPath(
 	{
 		return (-1);
 	}
-	return ((LONG)argarray[CIF_HANDLER_IN+LOW(3)]);
+	return ((ULONG)argarray[CIF_HANDLER_IN+LOW(3)]);
 }
 
 phandle
 OFInstanceToPackage(ihandle ih)
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"instance-to-package", 0,1, 0,1, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"instance-to-package", 1,1,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (cell_t)ih;
 	if (call_firmware(argarray) != 0)
 	{
 		return (-1);
 	}
-	return ((LONG)argarray[CIF_HANDLER_IN+LOW(1)]);
+	return ((ULONG)argarray[CIF_HANDLER_IN+LOW(1)]);
 }
 
 long
@@ -412,11 +340,7 @@ OFCallMethod(
     ULONG arg
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"call-method", 0,3, 0,1, 0,0, 0,0, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"call-method", 3,1,0,0,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (cell_t)method;
 	argarray[CIF_HANDLER_IN+LOW(1)] = (cell_t)id;
@@ -425,7 +349,7 @@ OFCallMethod(
 	{
 		return (-1);
 	}
-	return ((LONG)argarray[CIF_HANDLER_IN+LOW(3)]);
+	return ((ULONG)argarray[CIF_HANDLER_IN+LOW(3)]);
 }
 
 #include <stdarg.h>
@@ -440,16 +364,11 @@ OFCallMethodV(
     ...
     )
 {
-#ifdef CIF64
-	ULONG argarray[(MAXARGS+6)*2] = { 0 };
-#else
 	cell_t argarray[MAXARGS+6] = { 0 };
-#endif
 	va_list ap;
 	int retval;
 	int *intp;
 	int argnum = 0;
-	unsigned long flags;
 
 	argarray[LOW(argnum++)] = (cell_t)"call-method";
 	argarray[LOW(argnum++)] = (cell_t)numargs+2;
@@ -480,21 +399,17 @@ OFCallMethodV(
 
 long
 OFInterpret0(
-    char *cmd
+    const char *cmd
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"interpret", 0,1, 0,1, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"interpret", 1,1,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (cell_t)cmd;
 	if (call_firmware(argarray) != 0)
 	{
 		return (-1);
 	}
-	return ((LONG)argarray[CIF_HANDLER_IN+LOW(1)]);
+	return ((ULONG)argarray[CIF_HANDLER_IN+LOW(1)]);
 }
 
 long
@@ -505,16 +420,11 @@ OFInterpretV(
     ...
     )
 {
-#ifdef CIF64
-	ULONG argarray[(MAXARGS+5)*2] = { 0 };
-#else
 	cell_t argarray[MAXARGS+5] = { 0 };
-#endif
 	va_list ap;
 	int retval;
 	int *intp;
 	int argnum = 0;
-	unsigned long flags;
 
 	argarray[LOW(argnum++)] = (cell_t)"interpret";
 	argarray[LOW(argnum++)] = (cell_t)numargs+1;
@@ -544,13 +454,9 @@ OFInterpretV(
 
 
 ULONG
-OFMilliseconds( VOID )
+OFMilliseconds( void )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"milliseconds", 0,0, 0,1, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"milliseconds", 0,1,0};
-#endif
 	if (call_firmware(argarray) != 0)
 	{
 		return (ULONG)0;
@@ -560,11 +466,7 @@ OFMilliseconds( VOID )
 
 void (*OFSetCallback(void (*func)(void)))(void)
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"set-callback", 0,1, 0,1, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"set-callback", 1,1,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (cell_t)func;
 	if (call_firmware(argarray) != 0)
@@ -574,43 +476,32 @@ void (*OFSetCallback(void (*func)(void)))(void)
 	return ((void (*)(void))argarray[CIF_HANDLER_IN+LOW(1)]);
 }
 
-long
+void
 OFBoot(
     char *bootspec
     )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"boot", 0,1, 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"boot", 1,0,0};
-#endif
 
 	argarray[CIF_HANDLER_IN+LOW(0)] = (cell_t)bootspec;
 	call_firmware(argarray);
 }
 
-VOID
-OFEnter( VOID )
+void
+OFEnter( void )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"enter", 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"enter", 0,0};
-#endif
 
 	call_firmware(argarray);
 }
 
-/* volatile VOID */
- VOID
-OFExit( VOID )
+/* volatile void */
+ void
+OFExit( void )
 {
-#ifdef CIF64
-	ULONG argarray[] = { 0,(ULONG)"exit", 0,0, 0,0};
-#else
 	cell_t argarray[] = { (cell_t)"exit", 0,0};
-#endif
 	call_firmware(argarray);
+	while (1);
 }
 
 // LICENSE_BEGIN

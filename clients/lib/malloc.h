@@ -4,6 +4,8 @@
  * A  "smarter" malloc				William L. Sebok
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
+#include "1275.h"
+
 #define	MAGIC_FREE	0x548a934c
 #define	MAGIC_BUSY	0xc139569a
 
@@ -26,30 +28,30 @@ struct overhead {
 char endfree = 0;
 struct qelem adjhead = { &adjhead, &adjhead };
 struct qelem buckets[NBUCKETS] = {
-	&buckets[0],  &buckets[0],
-	&buckets[1],  &buckets[1],
-	&buckets[2],  &buckets[2],
-	&buckets[3],  &buckets[3],
-	&buckets[4],  &buckets[4],
-	&buckets[5],  &buckets[5],
-	&buckets[6],  &buckets[6],
-	&buckets[7],  &buckets[7],
-	&buckets[8],  &buckets[8],
-	&buckets[9],  &buckets[9],
-	&buckets[10], &buckets[10],
-	&buckets[11], &buckets[11],
-	&buckets[12], &buckets[12],
-	&buckets[13], &buckets[13],
-	&buckets[14], &buckets[14],
-	&buckets[15], &buckets[15],
-	&buckets[16], &buckets[16],
-	&buckets[17], &buckets[17],
-	&buckets[18], &buckets[18],
-	&buckets[19], &buckets[19],
-	&buckets[20], &buckets[20],
-	&buckets[21], &buckets[21],
-	&buckets[22], &buckets[22],
-	&buckets[23], &buckets[23],
+	{ &buckets[0],  &buckets[0]  },
+	{ &buckets[1],  &buckets[1]  },
+	{ &buckets[2],  &buckets[2]  },
+	{ &buckets[3],  &buckets[3]  },
+	{ &buckets[4],  &buckets[4]  },
+	{ &buckets[5],  &buckets[5]  },
+	{ &buckets[6],  &buckets[6]  },
+	{ &buckets[7],  &buckets[7]  },
+	{ &buckets[8],  &buckets[8]  },
+	{ &buckets[9],  &buckets[9]  },
+	{ &buckets[10], &buckets[10] },
+	{ &buckets[11], &buckets[11] },
+	{ &buckets[12], &buckets[12] },
+	{ &buckets[13], &buckets[13] },
+	{ &buckets[14], &buckets[14] },
+	{ &buckets[15], &buckets[15] },
+	{ &buckets[16], &buckets[16] },
+	{ &buckets[17], &buckets[17] },
+	{ &buckets[18], &buckets[18] },
+	{ &buckets[19], &buckets[19] },
+	{ &buckets[20], &buckets[20] },
+	{ &buckets[21], &buckets[21] },
+	{ &buckets[22], &buckets[22] },
+	{ &buckets[23], &buckets[23] },
 };
 #else
 extern char endfree;
@@ -67,9 +69,6 @@ extern struct qelem adjhead, buckets[NBUCKETS];
 #ifndef CURBRK
 #define CURBRK	sbrk(0)
 #endif
-
-extern void insque(), remque();
-extern char *malloc(), *realloc();
 
 // LICENSE_BEGIN
 // Copyright (c) 2006 FirmWorks

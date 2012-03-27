@@ -16,7 +16,7 @@ memtol(const char *s, int len, char **endptr, int base)
 	int digit;
 	const char *send = s+len;
 
-	if (s != send && *s == '+' || *s == '-') {
+	if (s != send && (*s == '+' || *s == '-')) {
 		minus = *s == '-';
 		s++;
 	}
@@ -69,7 +69,7 @@ atoi(const char *s)
 	return (int)strtol(s, NULL, 10);
 }
 
-STATIC int
+static int
 printbase(ULONG x, int base, int fieldlen, char padchar, int upcase)
 {
 	static char lc_digits[] = "0123456789abcdef";
@@ -80,7 +80,7 @@ printbase(ULONG x, int base, int fieldlen, char padchar, int upcase)
 
 	memset(buf, 32, 0);
 
-	if (base == 10 && (LONG) x < 0) {
+	if (base == 10 && (long) x < 0) {
 		*s++ = '-';
 		x = -x;
 	}
@@ -92,7 +92,6 @@ printbase(ULONG x, int base, int fieldlen, char padchar, int upcase)
 		x /= base;
 	} while (x);
 
-cvtdone:
 	for (fieldlen -= (s-buf); fieldlen > 0; --fieldlen) {
 		putchar(padchar);
 		n++;
@@ -116,7 +115,7 @@ _printf(char *fmt, va_list args)
         unsigned long mask;
 	char padchar;
 
-	while (c = *fmt++) {
+	while ((c = *fmt++)) {
 		if (c != '%') {
 			putchar(c);
 			n++;
@@ -149,7 +148,7 @@ _printf(char *fmt, va_list args)
 				goto out;
                 }
                 while (c == 'h') {	// Mask for short modifier
-			if (mask = 0xffff)
+			if (mask == 0xffff)
 				mask = 0xff;
 			else
 				mask = 0xffff;
@@ -209,7 +208,7 @@ printf(char *fmt, ...)
 	return (i);
 }
 
-VOID
+void
 warn(char *fmt, ...)
 {
 	va_list args;
@@ -219,7 +218,7 @@ warn(char *fmt, ...)
 	va_end(args);
 }
 
-VOID
+void
 fatal(char *fmt, ...)
 {
 	va_list args;

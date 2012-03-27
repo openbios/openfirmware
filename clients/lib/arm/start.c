@@ -13,7 +13,11 @@ static int (*cif_handler)();
 extern void OFExit();
 
 void
+#ifdef __GNUC__
 _start(void *promptr)
+#else
+start(void *promptr)
+#endif
 {
     cif_handler = (int (*)()) promptr;
     ofw_setup();

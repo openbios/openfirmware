@@ -9,7 +9,6 @@ decode_reg(UCHAR *buf, int buflen)
 {
 	static reg staticreg;
 	reg *sregp;
-	int i;
 
 	if (buflen)
 		staticreg.hi = decode_int(buf);
@@ -24,11 +23,11 @@ reg *
 get_reg_prop(phandle node, char *key)
 {
 	int res;
-	char *buf;
+	UCHAR *buf;
 	reg *regp;
 	int len = OFGetproplen(node, key);
 
-	buf = (char *)malloc(len);
+	buf = (UCHAR *)malloc(len);
 	res = OFGetprop(node, key, buf, len);
 	if (res != len) {
 		fatal("get_reg_prop(node %x, key '%s', len %x) returned %x\n",

@@ -3,9 +3,7 @@
 /* For gcc, compile with -fno-builtin to suppress warnings */
 
 #include "1275.h"
-
-#define ISUPPER(c) ((c) >= 'A' && (c) <= 'Z')
-#define TOLOWER(c) ((c) + 'a' - 'A')
+#include "string.h"
 
 int
 strcmp(const char *s, const char *t)
@@ -22,7 +20,7 @@ strcmp(const char *s, const char *t)
 }
 
 int
-strncmp(const char *s, const char *t, int len)
+strncmp(const char *s, const char *t, size_t len)
 {
 	int diff = 0;
 	int i;
@@ -58,7 +56,7 @@ strcasecmp(const char *s, const char *t)
 }
 
 int
-strncasecmp(const char *s, const char *t, int len)
+strncasecmp(const char *s, const char *t, size_t len)
 {
 	char sc, tc;
 	int diff = 0;
@@ -89,7 +87,7 @@ strlen(const char *s)
 }
 
 int
-strnlen(const char *s, int maxlen)
+strnlen(const char *s, size_t maxlen)
 {
 	int i;
 
@@ -103,13 +101,13 @@ strcpy(char *to, const char *from)
 {
 	int i = 0;
 
-	while (to[i] = from[i])
+	while ((to[i] = from[i]))
 		i += 1;
 	return to;
 }
 
 char *
-strncpy(char *to, const char *from, int maxlen)
+strncpy(char *to, const char *from, size_t maxlen)
 {
 	int i = 0;
 
@@ -190,7 +188,7 @@ strcasestr(const char *haystack, const char *needle)
 	return NULL;
 }
 
-const void *memchr(const void *s, int c, int len)
+const void *memchr(const void *s, int c, size_t len)
 {
 	const unsigned char *p = s;
 	while (len--) {

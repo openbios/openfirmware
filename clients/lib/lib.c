@@ -3,13 +3,8 @@
 /* For gcc, compile with -fno-builtin to suppress warnings */
 
 #include "1275.h"
-
-extern void *malloc();
-extern char *get_str_prop();
-extern int  get_int_prop();
-extern int  get_int_prop_def();
-
 #include "stdio.h"
+#include "string.h"
 
 FILE _stdin  = { -1, 0, 0};
 FILE _stdout = { -1, 0, 0};
@@ -30,12 +25,13 @@ exit(int code)
   OFExit();
 }
 
-VOID
+void
 sleep(ULONG delay)
 {
-	delay = (delay * 1000) + OFMilliseconds();
-	while ((OFMilliseconds() - delay) < 0)
-		;
+    ULONG now = OFMilliseconds();
+    delay *= 1000;
+    while ((OFMilliseconds() - now) < delay)
+	;
 }
 
 /* files */
@@ -48,6 +44,7 @@ gethomedir()
   return(_homedir);
 }
 
+void
 parse_homedir(char *progname)
 {
   char *p, *q, c;
@@ -72,28 +69,31 @@ ofw_setup()
   static char *argv[10];
   phandle ph;
   char *argstr;
-  int i;
+  int i = 0;
+  extern int main(int, char**);
 
   if ((ph = OFFinddevice("/chosen")) == -1)
     abort() ;
-  stdin->id  = get_int_prop(ph, "stdin");
-  stdout->id = get_int_prop(ph, "stdout");
+  stdin->id  = get_cell_prop(ph, "stdin");
+  stdout->id = get_cell_prop(ph, "stdout");
 
   argv[0] = get_str_prop(ph, "bootpath", ALLOC);
+  if (argv[0] != NULL)
+    parse_homedir(argv[0]);
   argstr  = get_str_prop(ph, "bootargs", ALLOC);
-
-  for (i = 1; i < 10;) {
-    if (*argstr == '\0')
-      break;
-    argv[i++] = argstr;
-    while (*argstr != ' ' && *argstr != '\0')
-      ++argstr;
-    if (*argstr == '\0')
-      break;
-    *argstr++ = '\0';
+  if (argstr != NULL) {
+    for (i = 1; i < 10;) {
+      if (*argstr == '\0')
+        break;
+      argv[i++] = argstr;
+      while (*argstr != ' ' && *argstr != '\0')
+        ++argstr;
+      if (*argstr == '\0')
+        break;
+      *argstr++ = '\0';
+    }
   }
-  parse_homedir(argv[0]);
-  main(i, argv);
+  return main(i, argv);
 }
 
 FILE *
@@ -202,11 +202,11 @@ fgetc(FILE *fp)
 }
 
 int
-fclose (FILE *fp)
+fclose(FILE *fp)
 {
   fflush(fp);
   OFClose(fp->id);
-  free(fp);
+  free((UCHAR *)fp);
   return(0);
 }
 
@@ -216,10 +216,19 @@ getchar()
   return(fgetc(stdin));
 }
 
-VOID
-putchar(char c)
+void
+putchar(UCHAR c)
 {
   fputc(c, stdout);
+}
+
+int
+fputs(char *s, FILE *f)
+{
+  char c;
+  while ((c = *s++) != 0)
+    fputc(c, f);
+  return(0);
 }
 
 int
@@ -230,21 +239,12 @@ puts(char *s)
   return(0);
 }
 
-VOID
+void
 gets(char *buf)
 {
   while ((*buf = getchar()) != '\r')
     buf++;
   *buf = '\0';
-}
-
-int
-fputs(char *s, FILE *f)
-{
-  register char c;
-  while(c = *s++)
-    fputc(c, f);
-  return(0);
 }
 
 char *
@@ -260,23 +260,24 @@ fgets(char *buf, int n, FILE *f)
   return(buf);
 }
 
+int
 unlink(char *filename)
 {
   return(-1);
 /* XXX Implement me */
 }
 
-system(char *str)
+int
+system(const char *str)
 {
-  OFInterpret0(str);
+  return (int)OFInterpret0(str);
 }
 
 #define MAXENV 256
 char *
-getenv(char *str)
+getenv(const char *str)
 {
   phandle ph;
-  int res;
 
   if ((ph = OFFinddevice("/options")) == -1)
       return(NULL);

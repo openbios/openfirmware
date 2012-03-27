@@ -17,7 +17,7 @@ int
 get_int_prop(phandle node, char *key)
 {
 	int res;
-	char buf[sizeof(int)];
+	UCHAR buf[sizeof(int)];
 
 	res = OFGetprop(node, key, buf, sizeof(int));
 	if (res != sizeof(int)) {
@@ -34,7 +34,7 @@ int
 get_int_prop_def(phandle node, char *key, int defval)
 {
 	int res;
-	char buf[sizeof(int)];
+	UCHAR buf[sizeof(int)];
 
 	res = OFGetprop(node, key, buf, sizeof(int));
 	if (res != sizeof(int)) {
