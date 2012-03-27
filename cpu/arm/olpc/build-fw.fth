@@ -852,8 +852,6 @@ h# 10.0000      h# 8000 -      h# 4000 -      dictionary-size !
 
 fload ${BP}/cpu/arm/saverom.fth  \ Save the dictionary for standalone startup
 
-fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
-
 fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
 
 \ Because visible doesn't work sometimes when calling back from Linux
