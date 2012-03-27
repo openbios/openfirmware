@@ -188,7 +188,7 @@ strcasestr(const char *haystack, const char *needle)
 	return NULL;
 }
 
-const void *memchr(const void *s, int c, size_t len)
+void *memchr(const void *s, int c, size_t len)
 {
 	const unsigned char *p = s;
 	while (len--) {

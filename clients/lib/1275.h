@@ -42,21 +42,14 @@ typedef enum {
 #include <stdlib.h>
 
 extern int   decode_int(UCHAR *);
-extern void  exit(int);
 extern void  fatal(char *fmt, ...);
-extern void  free(void *);
 extern cell_t get_cell_prop(phandle, char *);
 extern cell_t get_cell_prop_def(phandle, char *, cell_t);
 extern int   get_int_prop(phandle, char *);
 extern int   get_int_prop_def(phandle, char *, int);
 extern char *get_str_prop(phandle, const char *, allocflag);
-extern void *malloc(size_t);
-extern void  memcpy(void *, void *, size_t);
-extern void  memset(void *, int, size_t);
-extern int   memcmp(const void *, const void *, size_t);
 extern int   printf(char *fmt, ...);
-extern void  putchar(UCHAR);
-extern void *realloc(void *, size_t);
+extern int   putchar(int);
 extern void  warn(char *fmt, ...);
 extern void *zalloc(size_t);
 

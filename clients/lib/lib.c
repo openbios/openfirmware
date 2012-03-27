@@ -129,23 +129,23 @@ ferror(FILE *fp)
 }
 
 int
-fputc(char c, FILE *fp)
+fputc(int c, FILE *fp)
 {
   if (fp->readonly)
     return -1;  // EOF
 
-  if (fp == stdout && c == '\n')
+  if (fp == stdout && (unsigned char)c == '\n')
     (void) fputc('\r', fp);
 
-  fp->buf[fp->bufc++] = c;
+  fp->buf[fp->bufc++] = (unsigned char)c;
   fp->dirty = 1;
 
-  if ((fp->bufc == 127) || (fp == stdout && c == '\n')) {
+  if ((fp->bufc == 127) || (fp == stdout && (unsigned char)c == '\n')) {
     OFWrite(fp->id, fp->buf, fp->bufc);
     fp->bufc = 0;
     fp->dirty = 0;
   }
-  return (int)c;
+  return (int)(unsigned char)c;
 }
 
 void
@@ -216,8 +216,8 @@ getchar()
   return(fgetc(stdin));
 }
 
-void
-putchar(UCHAR c)
+int
+putchar(int c)
 {
   fputc(c, stdout);
 }
