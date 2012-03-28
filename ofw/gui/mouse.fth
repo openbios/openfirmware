@@ -203,6 +203,7 @@ false value mouse-absolute?  \ True if coordinates are absolute
    then
 ;
 : mouse-event?  ( -- false | x y buttons true )
+   mouse-ih 0=  if  false exit  then
    " stream-poll?" mouse-ih $call-method
 ;
 
@@ -229,6 +230,7 @@ false value mouse-absolute?  \ True if coordinates are absolute
    then
 ;
 : touchscreen-event?  ( -- false | x y buttons true )
+   touchscreen-ih  0=  if  false exit  then
    " stream-poll?" touchscreen-ih $call-method
 ;
 
