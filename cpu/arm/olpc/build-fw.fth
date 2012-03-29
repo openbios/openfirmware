@@ -21,6 +21,9 @@ d# 26000000 to uart-clock-frequency
 
 fload ${BP}/forth/lib/sysuart.fth	\ Set console I/O vectors to UART
 
+: poll-tty  ( -- )  ubreak?  if  user-abort  then  ;  \ BREAK detection
+: install-abort  ( -- )  ['] poll-tty d# 100 alarm  ;
+
 0 value keyboard-ih
 
 fload ${BP}/ofw/core/muxdev.fth          \ I/O collection/distribution device
@@ -29,7 +32,7 @@ fload ${BP}/ofw/core/muxdev.fth          \ I/O collection/distribution device
 warning off
 : stand-init-io  ( -- )
    stand-init-io
-   inituarts  install-uart-io
+   inituarts  install-uart-io  install-abort
 ;
 warning on
 
