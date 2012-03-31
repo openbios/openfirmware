@@ -6,7 +6,7 @@
 ;
 : audio-quiet  ( -- )
    [ ' go-hook behavior compile, ]    \ Chain to old behavior
-   close-audio
+   free-wav close-audio
 ;
 ' audio-quiet to go-hook
 : xp-wait-audio  ( -- )
