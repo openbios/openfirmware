@@ -522,6 +522,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/blockfifo.fth
 ;
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
+fload ${BP}/cpu/x86/pc/olpc/via/fssave.fth
 devalias fsdisk int:0
 
 fload ${BP}/ofw/inet/sntp.fth
