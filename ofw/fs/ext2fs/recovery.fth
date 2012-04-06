@@ -175,8 +175,11 @@ list: revoke-list
 
 \ node is either the found one or the insertion point
 : find-revoked  ( d.block# -- d.block# node found? )
-   revoke-list ['] block#> find-node drop    ( d.block# node )
-   3dup >r_block# 2@ d=                      ( d.block# node )
+   revoke-list ['] block#> find-node  if    ( d.block# node )
+      3dup >r_block# 2@ d=                  ( d.block# node found? )
+   else                                     ( d.block# node )
+      false                                 ( d.block# node found? )
+   then                                     ( d.block# node found? )
 ;
 
 0 value next-commit-id
@@ -224,8 +227,11 @@ list: overlay-list
 
 \ node is either the found one or the insertion point
 : find-overlay?  ( d.block# -- d.block# node found? )
-   revoke-list ['] block#> find-node drop    ( d.block# node )
-   3dup >r_block# 2@ d=                      ( d.block# node )
+   overlay-list ['] block#> find-node  if    ( d.block# node )
+      3dup >r_block# 2@ d=                   ( d.block# node found? )
+   else                                      ( d.block# node )
+      false                                  ( d.block# node found? )
+   then                                      ( d.block# node found? )
 ;
 
 : j-read-file-block  ( adr lblk# -- )
