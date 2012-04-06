@@ -45,6 +45,11 @@
 \	for each node in the list.  Returns the node for which "acf"
 \	returned "true", and also the preceding node.  See the comments
 \	in the code for more information.
+\
+\ find-node?  ( ??? list acf -- ??? false | ??? node true )
+\	Searches the linked list "list", executing the procedure "acf"
+\	for each node in the list.  Returns the node and true if found,
+\	or false if not found.
 
 alias list: variable
 
@@ -57,6 +62,8 @@ alias listnode /n
 : node-length  ( nodetype -- len )  na1+ @  ;
 
 alias >next-node @     ( node-adr -- next-node-adr )
+
+: list-end?  ( node-adr -- flag )  >next-node @ 0=  ;
 
 \ Inserts "new-node" into a linked list after "prev-node" (and before
 \ the node which was the successor of "prev-node").
@@ -110,6 +117,14 @@ alias >next-node @     ( node-adr -- next-node-adr )
       execute                    ( ??? flag )         ( r: acf next this )
    until                         ( ??? )              ( r: acf next this )
    r> r> r> drop                 ( ??? prev-node this-node )
+;
+
+: find-node?  ( ??? list acf -- ??? false | ??? node true )
+   find-node ?dup  if   ( ??? prev-node this-node )
+      nip true          ( ??? node true )
+   else                 ( ??? prev-node )
+      drop false        ( ??? false )
+   then                 ( ??? false | ??? node true )
 ;
 
 \ Here's how "find-node" could be used to locate the insertion point

@@ -160,7 +160,8 @@ listnode
    /n    field >r_sequence
 nodetype: revoke-node
 
-list: revoke-list
+instance variable revoke-list
+revoke-list off
 
 : free-revoke-list  ( -- )
    begin  revoke-list >next-node  while  ( )
@@ -169,44 +170,40 @@ list: revoke-list
    repeat                                ( )
 ; 
 
-: block#>  ( d.block# 'node -- d.block# flag )
-   >r_block# 2@  2over d<
+\ Worker function for find-node?
+: block#=  ( d.block# 'node -- d.block# flag )
+   >r_block# 2@  2over d=
 ;
 
 \ node is either the found one or the insertion point
-: find-revoked  ( d.block# -- d.block# node found? )
-   revoke-list ['] block#> find-node  if    ( d.block# node )
-      3dup >r_block# 2@ d=                  ( d.block# node found? )
-   else                                     ( d.block# node )
-      false                                 ( d.block# node found? )
-   then                                     ( d.block# node found? )
+: find-revoked?  ( d.block# -- d.block# false | d.block# node found? )
+   revoke-list ['] block#= find-node?
 ;
 
 0 value next-commit-id
 
 : revoked?  ( d.block# -- revoked? )
-   find-revoked  if         ( d.block# node )
-      nip nip               ( node )
-      >r_sequence @         ( sequence# )
-      next-commit-id =      ( revoked? )
-   else                     ( d.block# node )
-      3drop  false          ( revoked? )
-   then                     ( revoked? )
+   find-revoked?  if       ( d.block# node )
+      nip nip              ( node )
+      >r_sequence @        ( sequence# )
+      next-commit-id =     ( revoked? )
+   else                    ( d.block# )
+      2drop  false         ( revoked? )
+   then                    ( revoked? )
 ;
 
 : set-revoke  ( d.block# -- )
-   find-revoked  if                                  ( d.block# node )
+   find-revoked?  if                                 ( d.block# node )
       nip nip                                        ( node )
       next-commit-id  over >r_sequence @  - 0>=  if  ( node )
 	 next-commit-id  over >r_sequence !          ( node )
       then                                           ( node )
       drop                                           ( )
-   else                                              ( d.block# node )
-      -rot                                           ( node d.block# )
-      revoke-node allocate-node >r                   ( node d.block# r: newnode )
-      r@ >r_block# 2!                                ( node r: newnode )
-      next-commit-id  r@ >r_sequence  !              ( node r: newnode )
-      r> swap insert-after                           ( )
+   else                                              ( d.block# )
+      revoke-node allocate-node >r                   ( d.block# r: newnode )
+      r@ >r_block# 2!                                ( r: newnode )
+      next-commit-id  r@ >r_sequence  !              ( r: newnode )
+      r> revoke-list insert-after                    ( )
    then                                              ( )
 ;
 
@@ -216,7 +213,8 @@ listnode
    /n    field >o_escaped?
 nodetype: overlay-node
 
-list: overlay-list
+instance variable overlay-list
+overlay-list off
 
 : free-overlay-list  ( -- )
    begin  overlay-list >next-node  while  ( )
@@ -225,13 +223,8 @@ list: overlay-list
    repeat                                 ( )
 ; 
 
-\ node is either the found one or the insertion point
-: find-overlay?  ( d.block# -- d.block# node found? )
-   overlay-list ['] block#> find-node  if    ( d.block# node )
-      3dup >r_block# 2@ d=                   ( d.block# node found? )
-   else                                      ( d.block# node )
-      false                                  ( d.block# node found? )
-   then                                      ( d.block# node found? )
+: find-overlay?  ( d.block# -- d.block# false | d.block# node true )
+   overlay-list ['] block#= find-node?
 ;
 
 : j-read-file-block  ( adr lblk# -- )
@@ -245,8 +238,7 @@ list: overlay-list
          else                     ( adr )
 	    drop                  ( )
 	 then                     ( )
-      else                        ( adr d.pblk# node )
-         drop                     ( adr d.pblk# )
+      else                        ( adr d.pblk# )
          d.block swap bsize move  ( )
       then                        ( )
    else                           ( adr )
@@ -266,11 +258,10 @@ list: overlay-list
 : note-jblock  ( d.block# escaped? log-blk# -- )
    2swap find-overlay?  if          ( escaped? log-blk# d.block# node )
       set-overlay-node              ( )
-   else                             ( escaped? log-blk# d.block# node )
-      >r                            ( escaped? log-blk# d.block# r: prev-node )
-      >r overlay-node allocate-node ( d.block# escaped? log-blk# newnode r: prevnode )
-      dup >r set-overlay-node       ( r: prevnode newnode )
-      r> r> insert-after            ( )
+   else                             ( escaped? log-blk# d.block# )
+      overlay-node allocate-node >r ( d.block# escaped? log-blk# r: newnode )
+      r@ set-overlay-node           ( r: newnode )
+      r> overlay-list insert-after  ( )
    then
 ;
 
@@ -408,6 +399,7 @@ list: overlay-list
    then
 ;
 : commit-journal  ( -- )
+   j-read-only?  if  exit  then
    jsb >s_sequence dup be-l@ 1+ swap be-l!
    0 jsb >s_start be-l!
    jsb 0 write-file-block
@@ -416,7 +408,10 @@ list: overlay-list
 : process-journal  ( -- )
    read-journal  if  exit  then
 
-." Recovering from journal ... "
+   ." Recovering from journal "
+   j-read-only?  if  ." (read-only)"  then
+   ." ... "
+
    0 to end-transaction
 
    0 ['] one-pass catch  ?dup  if
@@ -443,4 +438,3 @@ list: overlay-list
    free-journal
 cr
 ;
-\ XXX need to do free-overlay-list in close
