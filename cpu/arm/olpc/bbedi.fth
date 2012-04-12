@@ -103,7 +103,7 @@ c;
    loop                      ( b )
 ;   
 [else]
-code edi-out0  ( byte -- )
+code edi-out  ( byte -- )
    mov   r2,#8
    mov   r0,#0x200           \ MOSI mask
    set   r1,`h# 19100 +io #` \ GPIO register address
@@ -112,7 +112,9 @@ code edi-out0  ( byte -- )
       ands  r3,tos,#0x80   \ Test bit
 
       strne r0,[r1,#0x18]  \ Set MOSI if bit is non0
+      strne r0,[r1,#0x18]  \ Set MOSI if bit is non0  \ Twice for delay - setup time to CLK
       streq r0,[r1,#0x24]  \ Clr MOSI if bit is 0
+      streq r0,[r1,#0x24]  \ Clr MOSI if bit is 0  \ Twice for delay - setup time to CLK
 
       str   r4,[r1,#0x18]  \ Set CLK
       str   r4,[r1,#0x24]  \ Clr CLK
@@ -123,7 +125,7 @@ code edi-out0  ( byte -- )
 
    pop tos,sp
 c;
-code edi-out  ( byte -- )
+code edi-out1  ( byte -- )
    mov   r2,#8
    mov   r0,#0x200           \ MOSI mask
    set   r1,`h# 19100 +io #` \ GPIO register address
@@ -158,7 +160,7 @@ code edi-in  ( -- byte )
 
       \ This delay is necessary to let the MMP2 GPIO pin clock in the
       \ data value.  Without the delay, bit values get lost.
-      mov   r7,#0x160      \ Delay spins
+      mov   r7,#0x400      \ Delay spins
       begin
          decs r7,#1
       0= until
@@ -166,6 +168,11 @@ code edi-in  ( -- byte )
       ldr   r0,[r1]        \ Read pin register
       str   r0,[r3],#4
       str   r4,[r1,#0x24]  \ Clr CLK
+      mov   r7,#0x400      \ Delay spins
+      begin
+         decs r7,#1
+      0= until
+
       ands  r0,r0,#0x80    \ Test MISO bit
       incne tos,1          \ Set bit in byte
 
