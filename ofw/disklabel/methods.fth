@@ -200,12 +200,14 @@ headerless
       dup  0=  if  exit  then                ( adr len )
    then
 
+[ifdef] ufs-support
    \ If the first character is "a".."h", it's a UFS partition letter
    over c@ lcc  ascii a ascii h between  if  ( adr len )
       over c@  to ufs-partition              ( adr len )
       1 /string                              ( adr' len' )
       dup  0=  if  exit  then                ( adr len )
    then					     ( adr len )
+[then]
 ;
 : parse-partition  ( -- )
    null$ to filename  null$ to partition-name$  -1 to #part  0 to ufs-partition
