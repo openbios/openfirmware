@@ -1,11 +1,25 @@
 \ See license at end of file
 purpose: Driver for the MMP2 thermal sensor
 
+\ See also cforth:src/app/arm-xo-1.75/thermal.fth
 h# 013200 value thermal-base
+: room-temp@  ( -- n )  thermal-base io@  ;
+: room-temp!  ( n -- )  thermal-base io!  ;
+thermal-base h# 4 +  value wd-thresh
+: wd-thresh@  ( -- n )  wd-thresh io@  ;
+: wd-thresh!  ( n -- )  wd-thresh io!  ;
+\ thermal-base h# 8 +  value lo-thresh
+\ thermal-base h# c +  value hi-thresh
+thermal-base h# 10 +  value ts-ctrl
+: ts-ctrl!  ( n -- )  ts-ctrl io!  ;
+
 : init-thermal-sensor  ( -- )
    thermal-base io@ h# 400 and  if  exit  then
    7 h# 90 apbc!   3 h# 90 apbc!  \ Enable clocks to thermal sensor
-   h# 10000 thermal-base io!      \ Enable sensing
+   h# 10000 room-temp!            \ Enable sensing
+   d# 696 wd-thresh!              \ Set thermal watchdog threshold to 85C
+   h# 88 ts-ctrl!                 \ Clear thermal watchdog reset status
+                                  \ Set thermal watchdog reset enable
 ;
 
 \ thermal watchdog is enabled by CForth
@@ -45,10 +59,6 @@ main-pmu-pa h# 200 + constant wdtpcr
    b# 1000.0000 or
    wdtpcr io!
 ;
-
-thermal-base h# 4 +  value wd-thresh
-: wd-thresh@  ( -- n )  wd-thresh io@  ;
-: wd-thresh!  ( n -- )  wd-thresh io!  ;
 
 : .c  ( n -- )  (.) type ." C " ;
 

@@ -869,6 +869,7 @@ end-string-array
    timers-wake
    resume-usb
    enable-interrupts
+   init-thermal-sensor
 ;
 : strp  ( -- )  ec-rst-pwr  str  ec-max-pwr .d ." mW " soc .%  space  ;
 
