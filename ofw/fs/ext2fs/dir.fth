@@ -77,15 +77,25 @@ instance variable totoff
 
 : +link-count  ( increment -- )
    \ link-count = 1 means that the directory has more links than can
-   \ be represented in a 16-bit number
-   link-count 1 =  if  drop exit  then  \ Don't increment if already 1
+   \ be represented in a 16-bit number; don't increment in that case.
+   dir?  if                ( increment )
+      link-count 1 =  if   ( increment )
+         drop exit         ( -- )
+      then                 ( increment )
+   then                    ( increment )
+
+   link-count +            ( link-count' )
 
    \ If the incremented value exceeds the limit, store 1
    \ We should also set the RO_COMPAT_DIR_NLINK bit in the superblock,
-   \ but we assume that OFW won't really be used to create enormous directories
-   link-count +  dup d# 65000 >=  if  drop 1  then  ( link-count )
+   \ but we assume that OFW won't be used to create enormous directories
+   dir?  if                ( link-count )
+      dup d# 65000 >=  if  ( link-count )
+         drop 1            ( link-count' )
+      then                 ( link-count' )
+   then                    ( link-count )
 
-   link-count!
+   link-count!             ( )
 ;
 
 : new-inode    ( mode -- inode# )
