@@ -57,6 +57,7 @@ defer int!    ( l adr -- )  ' be-l! to int!
 : sb-64bit?    ( -- flag )  incompat-flags h# 80 and  0<>  ;
 : sb-extents?  ( -- flag )  incompat-flags h# 40 and  0<>  ;
 : sb-gd-csum?  ( -- flag )  ro-flags       h# 10 and  0<>  ;
+: sb-nlink?    ( -- flag )  ro-flags       h# 20 and  0<>  ;
 
 \ Don't write to a disk that uses extensions we don't understand
 : unknown-extensions?   ( -- unsafe? )

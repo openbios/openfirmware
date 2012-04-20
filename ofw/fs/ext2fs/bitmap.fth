@@ -75,10 +75,31 @@ decimal
    then                     ( n     r: adr )
    r> h# 0e + le-w!         ( )
 ;
-: free-inodes+!  ( n inode# -- )
+: free-inodes+!  ( n group# -- )
    tuck free-inodes@  +   ( group# n' )
    over free-inodes!      ( group# )
    gd-update              ( )
+;
+: used-dirs@   ( group# -- n )
+   group-desc  dup  h# 10 + le-w@   ( adr lo )
+   desc64?  if                      ( adr lo )
+      swap h# 30 + le-w@ wljoin     ( n )
+   else                             ( adr lo )
+      nip                           ( n )
+   then                             ( n )
+;
+: used-dirs!  ( n group# -- )
+   group-desc >r            ( n     r: adr )
+   desc64?  if              ( n     r: adr )
+      lwsplit               ( lo hi r: adr )
+      r@ h# 30 + le-w!      ( lo    r: adr )
+   then                     ( n     r: adr )
+   r> h# 10 + le-w!         ( )
+;
+: used-dirs+!  ( n group# -- )
+   tuck used-dirs@  +   ( group# n' )
+   over used-dirs!      ( group# )
+   gd-update            ( )
 ;
 
 [ifdef] 386-assembler

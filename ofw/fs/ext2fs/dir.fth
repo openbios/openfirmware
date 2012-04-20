@@ -78,7 +78,7 @@ instance variable totoff
 : +link-count  ( increment -- )
    \ link-count = 1 means that the directory has more links than can
    \ be represented in a 16-bit number; don't increment in that case.
-   dir?  if                ( increment )
+   dir? sb-nlink? and  if  ( increment )
       link-count 1 =  if   ( increment )
          drop exit         ( -- )
       then                 ( increment )
@@ -89,7 +89,7 @@ instance variable totoff
    \ If the incremented value exceeds the limit, store 1
    \ We should also set the RO_COMPAT_DIR_NLINK bit in the superblock,
    \ but we assume that OFW won't be used to create enormous directories
-   dir?  if                ( link-count )
+   dir? sb-nlink? and  if  ( link-count )
       dup d# 65000 >=  if  ( link-count )
          drop 1            ( link-count' )
       then                 ( link-count' )
@@ -106,6 +106,9 @@ instance variable totoff
    dup ctime!			( time ) \ set creation time
        mtime!			( )      \ set modification time
    0 link-count!		( )      \ link count will be incremented by new-dirent
+   dir?  if
+      1 inode# 1- ipg / used-dirs+!
+   then
    inode#			( inode# )
 ;
 
@@ -214,6 +217,10 @@ create dir-types
 
 \ Delete the currently selected inode. Does not affect the directory entry, if any.
 : idelete   ( -- )
+   dir? if
+      -1 inode# 1- ipg / used-dirs+!
+   then
+
    \ Short symlinks hold no blocks, but have a string in the direct block list,
    \ so we must not interpret that string as a block list.
    d.#blks-held d0<>  if
@@ -276,7 +283,7 @@ create dir-types
    new-inode		( name$ inode# )
 
    \ new-inode changed the value of inode#; we must restore it so
-   \ new-dirent can find info about the containing diretory 
+   \ new-dirent can find info about the containing directory
    wd-inum set-inode    ( name$ inode# )
 
    new-dirent		( error? )
