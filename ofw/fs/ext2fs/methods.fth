@@ -14,6 +14,11 @@ external
 ;
 
 : $mkdir   ( name$ -- error? )
+   dirent-vars 2>r 2>r                          ( name$ )
+   2dup $find-file                              ( name$ error? )
+   2r> 2r> restore-dirent                       ( name$ error? )
+   0=  if  2drop true exit  then                ( name$ )
+
    o# 40777 ($create) if  true exit  then
 
    dirent-inode@ set-inode
