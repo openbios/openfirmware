@@ -4,7 +4,8 @@ warning @ warning off
 : help  ( -- )
    blue-letters  ." INSTALLATION:" cancel  mcr
    \ ================================================================================
-   ."   update-nand u:\os.img  Install OS from USB drive to internal storage" mcr
+   ."   copy-nand u:\os.img    Install OS from USB drive to internal storage" mcr
+   ."   update-nand u:\os.img  Install a partitioned OS to internal storage" mcr
    ."   flash u:\q2f08.rom     Install firmware from USB drive" mcr
    blue-letters  ." DIRECTORY LISTING:" cancel  mcr
    ."   dir u:\                List USB drive root directory" mcr
