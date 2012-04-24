@@ -31,6 +31,7 @@ headers
    stop-mac
    end-bulk-in
    free-buf
+   stop-phy
 ;
 
 external
@@ -41,7 +42,7 @@ external
 
 : copy-packet  ( adr len -- len' )
    dup multi-packet?  if  4 +  then   ( adr len len' )
-   /outbuf >  if  ." USB Ethernet write packet too long" cr  stop-mac abort  then  ( adr len )
+   /outbuf >  if  ." USB Ethernet write packet too long" cr  stop-net abort  then  ( adr len )
 
    multi-packet?  if       ( adr len )
       dup wbsplit          ( adr len len.low len.high )
@@ -71,7 +72,7 @@ external
 \ The data format is:
 \  length.leword  ~length.leword  data  [ pad-to-even ]
 : extract-packet  ( -- data-adr len )
-   residue 4 <  if  ." Short residue from USB Ethernet" cr stop-mac  abort  then
+   residue 4 <  if  ." Short residue from USB Ethernet" cr stop-net  abort  then
 
    pkt-adr dup 4 +  swap >r
    r@ c@     r@ 1+  c@ bwjoin   ( data-adr length )
@@ -130,7 +131,7 @@ external
       0					( adr 0 )
    then					( adr ihandle|0 )
 
-   dup  0=  if  ." Can't open obp-tftp support package" stop-mac abort  then
+   dup  0=  if  ." Can't open obp-tftp support package" stop-net abort  then
 					( adr ihandle )
 
    >r
@@ -185,6 +186,7 @@ here test-packet - constant /tp
 
    link-up? 0=  if
       ." Network not connected." cr
+      stop-phy
       true exit
    then
 
