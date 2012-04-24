@@ -99,7 +99,7 @@ create buf-table  #bufs allot
 : d.block   ( d.block# -- a )
    2dup d.(buffer) if  nip nip exit  then		( d.block# buffer-adr )
 
-   bbug? if ." r " 2 pick over d. cr then		( d.block# buffer-adr )
+   bbug? if ." r " 2 pick 2 pick d. cr then		( d.block# buffer-adr )
    dup 2swap d.read-fs-block abort" read error "	( buffer-adr )
 ;
 : block  ( block# -- a )  u>d d.block  ;

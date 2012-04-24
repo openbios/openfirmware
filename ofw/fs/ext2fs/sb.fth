@@ -113,7 +113,7 @@ variable le-group
    super-block /super-block super-block# u>d d.write-ublocks
 ;
 
-: d.read-ublocks  ( adr len dev-block# -- error? )
+: d.read-ublocks  ( adr len d.dev-block# -- error? )
    ublock du* " seek" $call-parent ?dup  if  exit  then		( adr len )
    tuck " read" $call-parent <>
 ;
