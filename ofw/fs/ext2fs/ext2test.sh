@@ -105,8 +105,8 @@ echo "ok"
 # echo "ok"
 
 echo -n "create new partition ... "
-echo /sbin/parted --script -- ${DEVICE} mkpart primary ext2 0 ${END}
-/sbin/parted --script -- ${DEVICE} mkpart primary ext2 0 ${END} || true
+echo /sbin/parted --script -- ${DEVICE} mkpart primary ext2 1048576B ${END}
+/sbin/parted --script -- ${DEVICE} mkpart primary ext2 1048576B ${END} || true
 echo "ok"
 
 if [ -b ${DEVICE} ] ; then 
