@@ -71,7 +71,9 @@
    >pblk-adr dup 0=  if       ( 0 )
       exit                    ( -- false )
    then                       ( adr )
-   int@ u>d  true             ( d.physical-block# true )
+   int@ dup 0<>  if           ( u.physical-block# )
+      u>d true                ( -- d.physical-block# true )
+   then                       ( -- false ) \ there is no physical block
 ;
 
 
