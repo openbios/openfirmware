@@ -241,6 +241,8 @@ h# 88 value def-rx-ctl   \ SO (MAC ON) and AB (accept broadcast)
 ;
 
 : ax-start-phy  ( -- )
+   select-phy
+   ax-init-mii
    ax-auto-neg-wait
 ;
 : ax-promiscuous  ( -- )  rx-ctl@  1 or  rx-ctl!  ;
@@ -295,11 +297,9 @@ create bitrev3  0 c,  4 c,  2 c,  6 c,  1 c,  5 c,  3 c,  7 c,
 
    ax-toggle-gpio
    ax-get-phyid
-   select-phy
    ax-stop-mac
    ax-get-mac-address  2drop
    ax-set-ipg
-   ax-init-mii
 ;
 
 : ax-loopback{  ( -- )
