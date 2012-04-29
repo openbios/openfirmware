@@ -89,9 +89,12 @@ fload ${BP}/dev/olpc/kb3700/eccmdcom.fth  \ Common commands
 : ols-assy-mode-on    ( -- )  h# 59 ec-cmd  ;
 : ols-assy-mode-off   ( -- )  h# 5a ec-cmd  ;
 
-: ec-min-pwr  ( -- )  h# 5d ec-cmd-w@ w->n  ;
-: ec-max-pwr  ( -- )  h# 5e ec-cmd-w@ w->n  ;
-: ec-rst-pwr  ( -- )  h# 5f ec-cmd  ;
+: ec-min-pwr  ( -- n )  h# 5d ec-cmd-w@ w->n  ;
+: ec-max-pwr  ( -- n )  h# 5e ec-cmd-w@ w->n  ;
+: ec-rst-pwr  ( -- )    h# 5f ec-cmd  ;
+: ec-sus-pwr  ( -- n )  h# 6d ec-cmd-w@ w->n  ;
+
+: ec-hub-pwr  ( b -- ) h# 6e ec-cmd-b! ;
 
 
 [ifdef] notdef  \ These commands are awaiting documentation on their interfaces
