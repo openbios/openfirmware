@@ -171,8 +171,8 @@ headerless
 
 : l@+  ( adr -- l adr' )  dup l@  swap la1+  ;
 : sys-time&date  ( -- s m h d m y )
-   d# 64 syscall retval                     ( adr )
-   l@+ l@+ l@+ l@+ l@+ l@+ drop  d# 1900 +  ( s m h d m y )
+   d# 64 syscall retval                        ( adr )
+   l@+ l@+ l@+ l@+ l@+ 1+ l@+ drop  d# 1900 +  ( s m h d m y )
 ;
 
 : install-wrapper-alloc  ( -- )
