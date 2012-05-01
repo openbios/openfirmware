@@ -27,6 +27,7 @@ purpose: Access to game keys (buttons on front panel)
    then
 
    game-key@  dup to game-key-mask  if
+      clear-screen
       ." Release the game keys to continue" cr
       begin  d# 100 ms  game-key@ dup update-game-keys 0=  until
       0 7 at-xy
