@@ -81,4 +81,4 @@ armforth.trace: ${ARMTRACEOBJS}
 	${CC} ${LFLAGS} ${ARMTRACEOBJS}  -o $@
 
 clean:
-	@rm -f forth x86forth armforth *.o *~ inflate.bin
+	@rm -f forth x86forth armforth *.o *.lo *~ inflate.bin
