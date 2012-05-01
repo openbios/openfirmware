@@ -180,8 +180,6 @@ headers
 \ ,"  --> accept a "-terminated string and emplace it.
 \ "   --> accept a "-terminated string and leave addr len on the stack
 \ ""  --> accept a blank delimited string and leave it's address on the stac
-\ [""]--> accept a blank delimited string and emplace it.
-\         At run time, leave it's address on the stack
 
 \  The improvements allow control characters and 8-bit binary numbers to
 \  be embedded into string literals.  This is similar in principle to the

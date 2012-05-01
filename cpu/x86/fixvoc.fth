@@ -11,7 +11,7 @@ only forth meta also forth also definitions
 ;
 
 : fix-vocabularies  ( -- )
-   [""] <vocabulary>  also symbols  find   previous  ( acf true | str false )
+   " <vocabulary>"  also symbols  $find   previous  ( acf true | adr len false )
    0= abort" Can't find <vocabulary> in symbols"
    dup resolution@ >r               ( acf )  ( Return stack: <vocabulary>-adr )
    dup first-occurrence@                     ( acf occurrence )

@@ -259,7 +259,7 @@ only forth also meta also definitions
 \ compile a reference to it.  The STRING bar is stored within foo
 
 : compile-t  \ name  ( -- )
-   [compile] [""]  compile count  compile $compile-t
+   [compile] "  compile $compile-t
 ; immediate
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
