@@ -249,7 +249,6 @@ transition definitions
 : ."      host  compile-t (.")     ,"-t  target  ; immediate
 : abort"  host  compile-t (abort") ,"-t  target  ; immediate
 : "       host  compile-t (")      ,"-t  target  ; immediate
-: p"      host  compile-t ("s)     ,"-t  target  ; immediate
 
 \ Bogus 1024 constant b/buf
 
