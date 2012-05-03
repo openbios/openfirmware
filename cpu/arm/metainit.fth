@@ -15,7 +15,7 @@ hex
 warning off
 
 forth definitions
-: `  ( -- pstr-adr )  parse-word pad place  pad  ;
+: `  ( -- pstr-adr )  parse-word pad pack  ;
 
 variable >cld  >cld off                 \ helps forward referencing cold
 
