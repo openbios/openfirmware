@@ -15,7 +15,7 @@ hex
 warning off
 
 forth definitions
-: `   [compile] "" pad "copy pad ;
+: `  ( -- pstr-adr )  parse-word pad place  pad  ;
 
 variable >cld  >cld off                 \ helps forward referencing cold
 
