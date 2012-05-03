@@ -196,12 +196,15 @@ headerless
 
    ['] sys-sync-cache    is sync-cache
 ;
+: install-wrapper-env
+   ['] sys-$getenv is $getenv
+   ['] sys-time&date is time&date
+;
 : install-wrapper-io  ( -- )
    install-wrapper-alloc
    \ init-relocation goes here, for versions that need it
    install-wrapper-key
-   ['] sys-$getenv is $getenv
-   ['] sys-time&date is time&date
+   install-wrapper-env
 ;
 
 headers

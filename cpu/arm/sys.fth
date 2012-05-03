@@ -64,6 +64,7 @@ hex
    install-wrapper-alloc
    init-relocation
    install-wrapper-key
+   install-wrapper-env
 
    install-disk-io
    \ Don't poll the keyboard under Unix; block waiting for a key
