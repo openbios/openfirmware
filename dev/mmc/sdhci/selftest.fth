@@ -46,7 +46,7 @@ headers
 ;
 : external?  ( -- flag )
    " slot-name" get-my-property  if
-      false
+      true
    else
       decode-string " external" $= nip nip
    then
