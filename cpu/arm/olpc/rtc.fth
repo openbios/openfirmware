@@ -29,6 +29,8 @@ headers
 
    \ Ensure that the Clock Halt bit is off
    dup h# 80 and  if           ( value )
+      \ Clear century
+      h# 20 8 rtc!
       \ Turn off Clock Halt
       h# 7f and 0 rtc!         ( )
       \ Verify that it went off
