@@ -21,6 +21,15 @@ headerless
 
 headerless
 
+: ?clear
+   h# 3f rtc@  h# 3e rtc@  bwjoin  h# 55aa  <>  if
+      h# 20 8 rtc!                     \ century
+      h# 20 h# 10  do  0 i rtc!  loop  \ wipe cmos@ cmos! area
+      h# 55aa  wbsplit  h# 3e rtc!  h# 3f rtc!
+      ." RTC SRAM cleared" cr
+   then
+;
+
 headers
 : open  ( -- okay )
    0 ['] rtc@ catch  if        ( x )
@@ -29,8 +38,6 @@ headers
 
    \ Ensure that the Clock Halt bit is off
    dup h# 80 and  if           ( value )
-      \ Clear century
-      h# 20 8 rtc!
       \ Turn off Clock Halt
       h# 7f and 0 rtc!         ( )
       \ Verify that it went off
@@ -40,6 +47,7 @@ headers
    else                        ( value )
       drop true                ( true )
    then                        ( okay? )
+   ?clear
 ;
 : close  ( -- )
 ;
