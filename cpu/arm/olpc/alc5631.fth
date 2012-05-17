@@ -38,6 +38,8 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
 
    h# 1010 h# 38 codec!  \ Divisors; the values in this register don't seem to make much
    \ difference unless you set the divisors to very high values.
+
+   h# f73c h# 48 codec!  \ Increase the Class-D amp Over-Current Threshold per the datasheet
 ;
 : mic-bias-off  ( -- )  h# 000c h# 3b codec-clr  ;
 : mic-bias-on   ( -- )  h# 000c h# 3b codec-set  ;
