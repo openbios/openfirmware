@@ -74,6 +74,9 @@ dev /memory
 [then]
 ;
 
+: show-line  ( adr len -- )  (cr type  3 spaces  kill-line  ;
+' show-line to show-status
+
 [ifndef] 8u.h
 : 8u.h  ( n -- )  push-hex (.8) type pop-base  ;
 [then]
@@ -87,7 +90,13 @@ dev /memory
 [ifdef] virtual-mode
       2dup over swap 3 mmu-map		 ( rem$ chunk$ )
 [then]
-      memory-test-suite  if  2drop true exit  then	 ( rem$ )
+      memory-test-suite                  ( rem$ status )
+      0<>  if
+	 "     !!Failed!!" show-status  cr ( rem$ )
+	 2drop true exit
+      else
+         "     Succeeded" show-status  cr  ( rem$ )
+      then
    repeat  drop
    false
 ;
