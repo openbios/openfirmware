@@ -197,10 +197,6 @@ stand-init:  Keyboard overrides
 [then]
 
 fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
-fload ${BP}/forth/lib/pattern.fth	\ Text string pattern matching
-fload ${BP}/forth/lib/tofile.fth	\ to-file and append-to-file
-\ XXX remove the OS file commands from tools.dic
-fload ${BP}/ofw/core/filecmds.fth	\ File commands: dir, del, ren, etc.
 
 [ifdef] pseudo-nvram
 fload ${BP}/cpu/x86/pc/biosload/filenv.fth
