@@ -96,7 +96,6 @@ true value first-usb-probe?
 alias p2 probe-usb
 
 0 value usb-keyboard-ih
-0 value usb-serial-ih
 
 : attach-usb-keyboard  ( -- )
    " usb-keyboard" expand-alias  if   ( devspec$ )
@@ -118,34 +117,16 @@ alias p2 probe-usb
    then
 ;
 
-: attach-usb-serial  ( -- )
-   " /usb/serial" open-dev  ?dup  if
-      to usb-serial-ih
-      usb-serial-ih add-input
-   then
-;
-
-: detach-usb-serial  ( -- )
-   usb-serial-ih  if
-      usb-serial-ih remove-input
-      usb-serial-ih close-dev
-      0 to usb-serial-ih
-   then
-;
-
 : ?usb-keyboard  ( -- )
    attach-usb-keyboard
-   attach-usb-serial
 ;
 
 : usb-quiet  ( -- )
    detach-usb-keyboard
-   detach-usb-serial
    " /usb" " reset-usb" execute-device-method drop
 ;
 
 : suspend-usb  ( -- )
-   detach-usb-serial
    detach-usb-keyboard
    " /usb" " sleep" execute-device-method drop
 ;
@@ -161,7 +142,6 @@ alias p2 probe-usb
    then
    silent-probe-usb
    attach-usb-keyboard
-   attach-usb-serial
 ;
 
 \ Unlink every node whose phys.hi component matches port

@@ -74,9 +74,6 @@ alias p2 probe-usb2
 
 : ?usb-keyboard  ( -- )
    attach-usb-keyboard
-   " /usb/serial" open-dev  ?dup  if
-      add-input
-   then
 ;
 
 \ Unlink every node whose phys.hi component matches port

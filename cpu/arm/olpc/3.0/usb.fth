@@ -159,9 +159,6 @@ alias p2 probe-usb
 
 : ?usb-keyboard  ( -- )
    attach-usb-keyboard
-   " /usb/serial" open-dev  ?dup  if
-      add-input
-   then
 ;
 
 : usb-quiet  ( -- )
