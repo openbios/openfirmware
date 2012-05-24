@@ -653,6 +653,7 @@ true                               ' client-symbols?  set-config-int-default
 : qz
    " qz" $essid  " http:\\qz\" included  \ qa test bed scripting, james cameron
 ;
+: .os  " more int:\boot\olpc_build" eval  ;
 
 \ Fancy battery charge logger.
 fload ${BP}/cpu/x86/pc/olpc/charge.fth

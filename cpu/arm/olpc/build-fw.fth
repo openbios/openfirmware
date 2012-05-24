@@ -1058,6 +1058,7 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 : qz
    " qz" $essid  " http:\\qz\" included  \ qa test bed scripting, james cameron
 ;
+: .os  " more int:\boot\olpc_build" eval  ;
 : urom  " flash! u:\new.rom" eval  ;
 : uec   " flash-ec! u:\ecimage.bin" eval  ;
 : erom  " flash! ext:\new.rom" eval  ;
