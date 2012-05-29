@@ -72,17 +72,21 @@ variable ptr
    touchpad-id  h# ffff and  h# 0067 =
 ;
 
+variable mode  \ 0 - unknown  1 - GS  2 - PT  3 - mouse
+
 \ Ref: 5.2.10 (2-1) of Hybrid-GP2B-T-1.pdf
-: advanced-mode  ( -- )  stream-off stream-off stream-off stream-off  ;  \ 4 f5 commands
+: advanced-mode  ( -- )  stream-off stream-off stream-off stream-off  0 mode !  ;  \ 4 f5 commands
 
 \ Ref: 5.2.10 (2-2) of Hybrid-GP2B-T-1.pdf
-: mouse-mode  ( -- )  h# ff read2 drop drop  ;  \ Response is 0,aa
+: mouse-mode  ( -- )    \ Response is 0,aa
+   h# ff read2 drop drop
+   stream-mode  3 mode !
+;
 
 \ Send the common "three f2 commands" prefix.  "f2" is normally the
 \ "identify" command; the response (for a mouse-like device) is 0x00
 : alps-prefix  ( -- )  3 0  do  h# f2 read1 drop  loop  ;
 
-variable mode  \ 0 - unknown  1 - GS  2 - PT  3 - mouse
 0 instance value packet-type
 
 \ Ref: 5.2.10 (3) of Hybrid-GP2B-T-1.pdf
@@ -104,16 +108,16 @@ variable mode  \ 0 - unknown  1 - GS  2 - PT  3 - mouse
 : start  ( -- )
    setup
    olpc-touchpad?  if
-      0 mode !  advanced-mode stream-on
+      advanced-mode stream-on
    else
-      stream-mode  3 mode !
+      mouse-mode
    then
 ;
 
 \ Substitute "start" for "stream-mode" in the driver's open
 \ method, so we can use advance-mode for the ALPS touchpad.
 
-patch start stream-mode open
+patch mouse-mode stream-mode open
 
 
 \ I have been unable to get this to work.  The response is always
@@ -542,6 +546,8 @@ false value selftest-failed?  \ Success/failure flag for final test mode
       ['] pad? catch  ?dup  if  .error  close true exit  then
       if  track  then
    exit-test?  until
+
+   mouse-mode  \ Restore the standard mouse mode so the menu will work
 
    close
    cursor-on
