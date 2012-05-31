@@ -88,6 +88,26 @@ headers
 \ : led-on   ( -- )  h# 28 cb@  1 or  h# 28 cb!  ;
 \ : led-off  ( -- )  h# 28 cb@  1 invert and  h# 28 cb!  ;
 
+\ We leave the remove and insert interrupt enables on because the
+\ hardware has a bug that blocks the card detection status bits
+\ unless the interrupt enables are on.
+0 instance value intstat-count
+: intstat-on  ( -- )
+   intstat-count 0=  if
+      h# 00cb h# 34 cw!  \ normal interrupt status en reg
+      \ Enable: Remove, Insert, DMA Interrupt, Transfer Complete, CMD Complete
+      \ Disable: Card Interrupt, Read Ready, Write Ready, Block Gap
+      h# f1ff h# 36 cw!  \ error interrupt status en reg
+   then
+   intstat-count 1+ to intstat-count
+;
+: intstat-off  ( -- )
+   intstat-count 1- 0 max to intstat-count
+   intstat-count 0=  if
+      h# c0 h# 34 cl!     \ Remove, Insert on, others off
+   then
+;
+
 \ There is no need to use the debounced version (the 3.0000 bits).
 \ We poll for the card when the SDMMC driver opens, rather than
 \ sitting around waiting for insertion/removal events.
@@ -95,11 +115,13 @@ headers
 
 defer card-inserted?
 : sdhci-card-inserted?  ( -- flag )
+   intstat-on
    get-msecs d# 500 +   begin            ( time-limit )
       \ When the stable bit is set, we can believe the answer
       present-state@ h# 20000 and  if    ( time-limit )
          drop                            ( )
          present-state@ h# 10000 and 0<> ( flag )
+         intstat-off                     ( flag )
          exit                            ( -- flag )
       then                               ( time-limit )
       dup get-msecs -  0<                ( time-limit timeout? )
@@ -107,6 +129,7 @@ defer card-inserted?
    drop                                  ( )
    ." SD Card detect unstable!" cr       ( )
    false                                 ( flag )
+   intstat-off                           ( flag )
 ;
 ' sdhci-card-inserted? to card-inserted?
 : write-protected?  ( -- flag )
@@ -169,17 +192,6 @@ defer card-power-off
 ;
 
 : data-timeout!  ( n -- )  h# 2e cb!  ;
-
-\ We leave the remove and insert interrupt enables on because the
-\ hardware has a bug that blocks the card detection status bits
-\ unless the interrupt enables are on.
-: intstat-on  ( -- )
-   h# 00cb h# 34 cw!  \ normal interrupt status en reg
-            \ Enable: Remove, Insert, DMA Interrupt, Transfer Complete, CMD Complete
-            \ Disable: Card Interrupt, Read Ready, Write Ready, Block Gap
-   h# f1ff h# 36 cw!  \ error interrupt status en reg
-;
-: intstat-off  ( -- )  h# c0 h# 34 cl!  ;  \ Remove, Insert on, others off
 
 : setup-host  ( -- )
    reset-host
