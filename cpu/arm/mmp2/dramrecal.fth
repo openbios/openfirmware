@@ -286,10 +286,11 @@ c;
 \  h#    1b h#  68 pmua!         \ PMUA_WTM_CLK_RES_CTRL
    h#     9 h#  5c +pmua io-set  \ PMUA_USB_CLK_RES_CTRL
 ;
+: pll2?  ( -- flag )  h# 34 mpmu@ h# 100 and 0<>  ;
 : disable-mpmu-clks  ( -- )
-   h#      a010 h# 1024 mpmu!         \ MPMU_ACGR
-
-   h#      a010 h# 0024 mpmu!         \ MPMU_CGR_SP ???
+   pll2?  if  h# e010  else  h# a010  then    ( cgr-value )
+   dup h# 1024 mpmu!                  \ MPMU_CGR_PJ
+   h# 0024 mpmu!                      \ MPMU_CGR_SP
 
 \  h# 2000.0000 h#  414 +mpmu io-clr  \ MPMU_PLL2_CTRL1
    h# 8000.0000 h# 0040 +mpmu io-clr  \ MPMU_ISCCR1
