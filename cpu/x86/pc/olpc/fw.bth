@@ -479,7 +479,10 @@ true                               ' client-symbols?  set-config-int-default
 
 " dhcp" ' ip-address  set-config-string-default
 
-: c1-idle  ( -- )  interrupts-enabled?  if  halt  then  ;
+: lid?  ( -- flag )  h# 30 >hi gpio@  h# 400 and 0=  ;
+fload ${BP}/dev/olpc/lid.fth
+
+: c1-idle  ( -- )  interrupts-enabled?  if  halt  then  do-lid  ;
 ' c1-idle to stdin-idle
 
 : fast-boot?  ( -- flag )

@@ -28,42 +28,8 @@ variable sleep-time
    then
 ;
 
-: lid-down?  ( -- flag )  h# 48 acpi-l@ h# 80 and 0=  ;
-false value lid-already-down?
-0 value lid-down-time
-d# 10000 constant lid-shutdown-ms
-d#  2000 constant lid-warning-ms
-0 value lid-warned?
-
-: ?lid-shutdown  ( -- )
-   lid-down?  if
-      lid-already-down?  if
-         acpi-timer@ lid-down-time -  d# 3580 /  ( ms )
-
-         dup lid-warning-ms >=  lid-warned? 0=  and  if
-            ." Lid switch is active - Powering off in 8 seconds" cr
-            ." Type  lid-off  to disable this function" cr
-            true to lid-warned?
-         then                                    ( ms )
-
-         lid-shutdown-ms >=  if
-            ." Powering off after 10 seconds of lid down" cr
-            power-off
-         then
-      else
-         acpi-timer@ to lid-down-time
-         true to lid-already-down?
-      then
-   else
-      false to lid-already-down?
-      false to lid-warned?
-   then
-;
-
-defer do-lid
-: lid-on  ( -- )  ['] ?lid-shutdown to do-lid  ;
-: lid-off ( -- )  ['] noop to do-lid  ;
-lid-on
+: lid?  ( -- flag )  h# 48 acpi-l@ h# 80 and 0=  ;
+fload ${BP}/dev/olpc/lid.fth
 
 defer do-idle  ' noop to do-idle
 
