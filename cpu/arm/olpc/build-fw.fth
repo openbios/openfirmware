@@ -567,7 +567,7 @@ true value text-on?
    then
 ;
 
-fload ${BP}/cpu/x86/pc/olpc/via/banner.fth
+fload ${BP}/cpu/arm/olpc/banner.fth
 
 \- olpc-cl3  devalias keyboard /ap-sp/keyboard
 \- olpc-cl3  devalias mouse    /ap-sp/mouse

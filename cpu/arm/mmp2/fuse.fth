@@ -36,10 +36,11 @@ purpose: Display MMP2 fuse settings
 ;
 : .3bits  ( n -- n' )  dup 7 and .d  3 rshift  ;
 string-array freqs  ," 800" ," 910" ," 1001" ," ??? " end-string-array
-: .max-freq  ( n -- ) ."  Max Freq: " 3 and freqs count type   ;
+: rated-speed  ( -- n )  h# 28a4 fuse@  d# 14 rshift 3 and  ;
+: .max-freq  ( -- ) ."  Max Freq: " rated-speed freqs count type   ;
 : .block3-brief  ( -- )
    ." Block 3 - Voltages: "  h# 28a0 fuse@  5 0 do  .3bits  loop  2/  .3bits drop
-   h# 28a4 fuse@  d# 14 rshift .max-freq  cr
+   .max-freq  cr
 ;
 : .block3  ( -- )
    ." Block 3" cr
