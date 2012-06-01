@@ -27,17 +27,17 @@ d# 102943 constant pi
    2/         dup  to #cycle/2
    2/              to #cycle/4
 ;
+: u*/  ( u1 unum udenom -- u2 )   >r um* r> um/mod  nip  ;
 : set-period  ( cycle/4 -- )
    dup to #cycle/4       ( cycle/4 )
    2* dup to #cycle/2       ( cycle/2 )
    2* dup to #cycle            ( cycle )
    fs over / to freq           ( period )
-   pi swap /  fs *  to fstep   ( )
+   pi fs rot u*/ to fstep   ( )
 ;
 
 \ Multiply two fractional numbers where the scale factor is 2^15
-\ : times  ( n1 n2 -- n3 )  d# 32767 */  ;   \ Insignificantly more accurate, but slower
-: times  ( n1 n2 -- n3 )  *  d# 15 rshift   ;
+: times  ( n1 n2 -- n3 )  d# 32767 u*/  ;
 
 \ Computes  (1 - (theta^2 / divisor) * last)
 : sin-step  ( last divisor -- next )  thetasq  swap /  times  one min  one swap -  ;
@@ -48,7 +48,7 @@ d# 102943 constant pi
 \ 1 - (t^2/(1*2)) * (1 - (t^2/(3*4)) * (1 - (t^2/(5*6)) * (1 - (t^2/(7*8))))
 
 : icos  ( index -- frac )
-   fstep fs 2/  */  to theta
+   fstep fs 2/  u*/  to theta
    theta dup times  to thetasq
    one  d# 90 cos-step  d# 56 cos-step d# 30 cos-step  d# 12 cos-step  2 cos-step  one min
 ;
@@ -59,7 +59,7 @@ d# 102943 constant pi
 \ theta * (1 - (theta^2/(2*3)) * (1 - (theta^2/(4*5)) * (1 - (theta^2/(6*7)) * (1 - (theta^2/(8*9))))))
 \ This is good for the first quadrant only, i.e. 0 <= index <= fs / freq / 4
 : calc-sin  ( index -- frac )
-   fstep fs 2/  */  to theta
+   fstep fs 2/  u*/  to theta
    theta dup times to thetasq
    one  d# 72 sin-step d# 42 sin-step  d# 20 sin-step  6 sin-step  theta times  one min
 ;
