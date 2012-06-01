@@ -140,8 +140,10 @@ v2-compat: xdrtoint decode-int
 : 2+    2 + ;
 : 2-    2 - ;
 : <<a   << ;
-: */mod  >r * r> /mod ;
-: */     >r * r> /    ;
+\ These are not correct because the intermediate overflows.
+\ If you need these functions, write them explicitly using um* and um/mod
+\ : */mod  >r * r> /mod ;
+\ : */     >r * r> /    ;
 : xu>l        ( ux -- ul ) drop   ;                    \       64 -> 32
 : lu>x        ( ul -- ux ) 0      ;                    \ 32 -> 64
 
