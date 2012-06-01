@@ -32,7 +32,7 @@ d# 102943 constant pi
    2* dup to #cycle/2       ( cycle/2 )
    2* dup to #cycle            ( cycle )
    fs over / to freq           ( period )
-   pi fs rot */  to fstep      ( )
+   pi swap /  fs *  to fstep   ( )
 ;
 
 \ Multiply two fractional numbers where the scale factor is 2^15
