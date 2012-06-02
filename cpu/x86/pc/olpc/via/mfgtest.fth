@@ -31,6 +31,8 @@ warning off
 warning on
 
 0 value pass?
+0 value overall-fail?
+0 value stop?
 
 : mfg-wait-return  ( -- )
    ." ... Press any key to proceed ... "
@@ -52,7 +54,7 @@ warning on
       ?dup  if                                         ( return-code )
          ??cr ." Selftest failed. Return code = " .d cr
          mfg-color-red sq-border!
-         false to pass?
+         false to pass?  true to overall-fail?
          red-screen
          flush-keyboard
          mfg-wait-return
@@ -62,12 +64,12 @@ warning on
          cancel
          mfg-color-green sq-border!
          true to pass?
-         d# 2000 hold-message drop
+         d# 2000 hold-message  if  true to stop?  then
       then
    else
       ??cr ." Selftest failed due to abort"  cr
       mfg-color-red sq-border!
-      false to pass?
+      false to pass?  true to overall-fail?
       red-screen
       flush-keyboard
       mfg-wait-return
@@ -95,11 +97,16 @@ warning on
    mfg-test-result
 ;
 
-: all-tests-passed  ( -- )
+: overall  ( -- )
    restore-scroller-bg
    clear-screen
-   ." All automatic tests passed successfully." cr cr cr
-   green-screen
+   overall-fail?  if
+      ." Some tests failed." cr cr cr
+      red-screen
+   else
+      ." All automatic tests passed successfully." cr cr cr
+      green-screen
+   then
    wait-return
    cursor-off  scroller-off  gui-alerts  refresh
    flush-keyboard
@@ -140,6 +147,8 @@ icon: play.icon     rom:play.565
 icon: quit.icon     rom:quit.565
 
 : play-item     ( -- )   \ Interactive autorun of all tests
+   false to overall-fail?
+   false to stop?
    #mfgcols #mfgtests +  #mfgcols  ?do
       i set-current-sq
       refresh
@@ -147,12 +156,14 @@ icon: quit.icon     rom:quit.565
          d# 10 ms  key? if  unloop unloop exit  then
       loop
       run-menu-item
-      pass? 0= if  unloop exit  then
+      stop?  if unloop exit  then
    loop
-   all-tests-passed
+   0 3 rc>sq set-current-sq \ quit-item
+   overall
 ;
 
-: quit-item     ( -- )  menu-done  ;
+false value quit?
+: quit-item     ( -- )  true to quit?  menu-done  ;
 
 : init-menu  ( -- )
    ?open-screen  ?open-pointer
@@ -196,8 +207,8 @@ defer test-menu-items
    restore-scroller-bg
 ;
 
-: autorun-from-gamekey  ( -- )
-   default-selection set-current-sq refresh
+: pause-to-interact
+   refresh
    (cr kill-line
    0  d# 30  do
       i d# 10 mod 0=  if  (cr i d# 10 / .d  then
@@ -205,12 +216,25 @@ defer test-menu-items
       key?  or  if                     ( )
 	 drop                          ( )
 	 menu-interact                 ( )
+	 true to quit?
 	 unloop exit                   ( -- )
       then                             ( )
       d# 100 ms                        ( )
    -1 +loop
-   play-item
 ;
+
+: autorun-from-gamekey  ( -- )
+   false to quit?
+   default-selection set-current-sq
+   pause-to-interact
+   quit?  if  exit  then
+   play-item
+   stop?  if  menu-interact exit  then
+   quit?  if  exit  then
+   0 3 rc>sq set-current-sq \ quit-item
+   pause-to-interact
+;
+
 : gamekey-auto-menu  ( -- )
    ['] run-menu behavior >r
    ['] autorun-from-gamekey to run-menu   \ Run menu automatically after a timeout
