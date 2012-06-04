@@ -49,7 +49,7 @@ warning on
    again
 ;
 
-: mfg-test-result  ( error? -- )
+: mfg-test-result  ( return-code true | false -- )
    if               ( return-code )
       ?dup  if                                         ( return-code )
          ??cr ." Selftest failed. Return code = " .d cr
@@ -77,39 +77,24 @@ warning on
    cursor-off  scroller-off   gui-alerts  refresh
    flush-keyboard
 ;
-: (mfg-test-dev)  ( $ -- error? )
+: (mfg-test-dev)  ( $ -- return-code true | false )
    2dup locate-device  if                         ( $ )
       ." Can't find device node " type cr  exit   ( -- )
    else                                           ( $ phandle )
       drop                                        ( $ )
    then                                           ( $ )
-   " selftest" execute-device-method              ( error? )
+   " selftest" execute-device-method              ( return-code true | false )
 ;
 : mfg-test-dev  ( $ -- )
    scroller-on
    ??cr  ." Testing " 2dup type cr                ( $ )
-   (mfg-test-dev)
+   (mfg-test-dev)                                 ( return-code true | false )
    mfg-test-result
 ;
 : gfx-test-dev  ( $ -- )
-   (mfg-test-dev)
-   scroller-on
+   (mfg-test-dev)                                 ( return-code true | false )
+   scroller-on                                    ( return-code true | false )
    mfg-test-result
-;
-
-: overall  ( -- )
-   restore-scroller-bg
-   clear-screen
-   overall-fail?  if
-      ." Some tests failed." cr cr cr
-      red-screen
-   else
-      ." All automatic tests passed successfully." cr cr cr
-      green-screen
-   then
-   wait-return
-   cursor-off  scroller-off  gui-alerts  refresh
-   flush-keyboard
 ;
 
 0 value #mfgtests
@@ -158,8 +143,13 @@ icon: quit.icon     rom:quit.565
       run-menu-item
       stop?  if unloop exit  then
    loop
-   0 3 rc>sq set-current-sq \ quit-item
-   overall
+   overall-fail?  if
+      0 1  \ play-item
+   else
+      0 3  \ quit-item
+   then
+   set-default-selection
+   refresh
 ;
 
 false value quit?
@@ -231,8 +221,7 @@ defer test-menu-items
    play-item
    stop?  if  menu-interact exit  then
    quit?  if  exit  then
-   0 3 rc>sq set-current-sq \ quit-item
-   pause-to-interact
+   menu-interact
 ;
 
 : gamekey-auto-menu  ( -- )
