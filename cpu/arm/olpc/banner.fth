@@ -135,7 +135,7 @@ h# 40 buffer: partition-map
 ;
 
 : check-tags  ( -- )
-   " TS" find-tag  if  " SHIP" $=  if  exit  then
+   " TS" find-tag  ?-null  if  " SHIP" $=  if  exit  then
       red-letters
       ." WARNING!  TS tag is not SHIP"  cr
       cancel
