@@ -134,12 +134,21 @@ h# 40 buffer: partition-map
    .d  type ."  memory"                ( )
 ;
 
+: check-tags  ( -- )
+   " TS" find-tag  if  " SHIP" $=  if  exit  then
+      red-letters
+      ." WARNING!  TS tag is not SHIP"  cr
+      cancel
+   then
+;
+
 : (xbanner-basics)  ( -- )
    ?spaces  cpu-model type  ." , " .cpu-speed  ." , "   .memory-brief
    ." , " .storage
    ." , S/N "  " SN" find-tag  if  type  else  ." Unknown"  then  cr
    ?spaces  .rom  ."    " .ec  ."    " .clock
    check-internal-partitions
+   check-tags
 ;
 ' (xbanner-basics) to banner-basics
 
