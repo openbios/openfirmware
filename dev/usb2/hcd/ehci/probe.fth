@@ -60,6 +60,7 @@ defer handle-fs-device  ' disown-port to handle-fs-device
    then                                              ( #testable-ports )
 ;
 
+\ Port owned by usb 1.1 controller (2000) or device is present (1)
 : port-connected?  ( port# -- flag )  portsc@ h# 2001 and  ;
 : wait-connect  ( port# -- error? )
    begin                            ( port# )
@@ -153,27 +154,58 @@ defer set-host-mode  ' noop to set-host-mode
    open-count 0=  if  free-dma-buf unmap-regs  then
 ;
 
-: selftest  ( -- error? )
-   ehci-reg dup 0=  if  map-regs  then
+: .occupied  ( port -- )  ." USB 2.0 port " u. ."  in use" cr  ;
+: regs{  ( -- prev )  ehci-reg dup 0=  if  map-regs  then  ;
+: }regs  ( prev -- )  0=  if  unmap-regs  then  ;
 
+: fisheye  ( -- )
+   regs{
    #testable-ports  0  ?do
-      i port-connected?  if		\ Port owned by usb 1.1 controller (2000) or device is present (1)
-         ." USB 2.0 port " i u. ."  in use" cr
+      i port-connected?  if
+         i .occupied
       else
-         diagnostic-mode?  if
-            ." Please connect a device to USB port " i u. cr
-            i wait-connect  if  true unloop exit  then
-         else
-            ." Fisheye pattern out to USB 2.0 port " i u. cr
-            i test-port-begin
-            d# 2,000 ms
-            i test-port-end
-            0 i portsc!  i reset-port  i power-port
-         then
+         ." Fisheye pattern out to USB 2.0 port " i u. cr
+         i test-port-begin
+         d# 2,000 ms
+         i test-port-end
+         0 i portsc!  i reset-port  i power-port
       then
    loop
-   0=  if  unmap-regs  then
+   }regs
+;
+
+: thorough  ( -- error? )
+   #testable-ports  0  ?do
+      i port-connected?  if
+         i .occupied
+      else
+         ." Please connect a device to USB port " i u. cr
+         i wait-connect  if  true unloop exit  then
+      then
+   loop
    false
+;
+
+: sagacity  ( -- error? )
+   #testable-ports  0  ?do
+      ." USB port " i u. ." ... "
+      i port-connected?  if
+         i wait-connect  if  true unloop exit  then
+      else
+         ." Empty" cr
+      then
+   loop
+   false
+;
+
+: selftest  ( -- error? )
+   regs{                        ( prev )
+   diagnostic-mode?  if
+      thorough
+   else
+      sagacity
+   then                         ( prev error? )
+   swap }regs                   ( error? )
 ;
 
 headers
