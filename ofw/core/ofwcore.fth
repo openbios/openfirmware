@@ -2489,7 +2489,6 @@ headers
       else                             ( ??? )
          close-chain  true             ( ??? true )
       then                             ( false | ??? true )
-      device-end                       ( false | ??? true )
    r> push-device  )package            ( false | ??? true )
 ;
 
