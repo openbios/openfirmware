@@ -119,12 +119,10 @@ h# 40 buffer: partition-map
 ;
 
 : .cpu-speed  ( -- )
-   rated-speed  case
-      0 of  ." 800 MHz"  endof
-      1 of  ." 910 MHz"  endof
-            ." 1 GHz"
-   endcase
+   pj4-speed
+   dup d# 988 =  if ." 1 GHz" else .d ." MHz" then
 ;
+
 : .memory-brief  ( -- )
    memory-size dup d# 1024 / ?dup  if  ( mb gb )
       nip " GiB" rot                   ( gb$ gb )

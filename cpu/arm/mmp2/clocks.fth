@@ -38,6 +38,11 @@ purpose: Change the clock frequency
    h#      4000 h# 1024 +mpmu io-set  \ APMU_PLL2 in PMUM_CGR_PJ
    h#      4000 h#   24 +mpmu io-set  \ APMU_PLL2 in PMUM_CGR_SP
 ;
+: pll2-ungated?  ( -- flag )
+   h#      4000 h# 1024 +mpmu io@  and
+;
+: pll2-fbdiv  ( -- N )  h# 34 mpmu@ d# 10 rshift h# 1ff and  2+  ;
+: pll2-refdiv  ( -- M )  h# 34 mpmu@ d# 19 rshift h# 1f and  2+  ;
 
 : fccr@    ( -- n )  h# 05.0008 io@  ;
 : fccr!    ( n -- )  h# 05.0008 io!  ;
@@ -45,11 +50,18 @@ purpose: Change the clock frequency
    d# 29 lshift                               ( field )
    fccr@  h# e000.0000 invert and  or  fccr!  ( )
 ;
+: pj4-clksel@  ( -- n )
+   fccr@  h# e000.0000 and  d# 29 rshift
+;
+
 : sp-clksel  ( n -- )
    d# 26 lshift                               ( field )
    fccr@  h# 1c00.0000 invert and  or  fccr!  ( )
 ;
+
 : pj4-cc!  ( n -- )  h# 28.2804 io!  ;
+: pj4-cc@  ( -- n )  h# 28.2804 io@  ;
+: pj4-clkdiv  ( -- n )  pj4-cc@  h# 7  and  ;
 
 : sp-cc!     ( n -- )  h# 28.2800 io!  ;
 \                                     cfraaADXBpP
@@ -77,3 +89,14 @@ purpose: Change the clock frequency
 : pj4-910mhz ( -- )  set-pll2-910mhz 2 pj4-clksel  o# 21742201100 pj4-cc!  ;  \ A 266, D 400, XP 400, B 400, P 910
 : pj4-988mhz ( -- )  set-pll2-988mhz 2 pj4-clksel  o# 21742201100 pj4-cc!  ;  \ A 266, D 400, XP 400, B 400, P 988
 [then]
+
+: pj4-speed  ( -- frequency )
+   pj4-clksel@
+   case
+      0  of  d# 400,000,000 pj4-clkdiv 1+ /            endof  ( hz )
+      1  of  d# 800,000,000                            endof  ( hz )
+      2  of  d#  26,000,000 pll2-fbdiv pll2-refdiv */  endof  ( hz )
+   endcase
+   d# 1,000,000 /                                             ( mhz )
+;
+\ FIXME: should be a property clock-frequency of /cpu@0

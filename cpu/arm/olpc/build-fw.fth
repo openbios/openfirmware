@@ -567,6 +567,7 @@ true value text-on?
    then
 ;
 
+fload ${BP}/cpu/arm/mmp2/clocks.fth
 fload ${BP}/cpu/arm/olpc/banner.fth
 
 \- olpc-cl3  devalias keyboard /ap-sp/keyboard
@@ -965,8 +966,6 @@ dev /client-services  patch noop visible enter  dend
 fload ${BP}/cpu/arm/olpc/testitems.fth
 \+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/testinstructions.fth
 \+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
-
-fload ${BP}/cpu/arm/mmp2/clocks.fth
 
 : startup  ( -- )
    standalone?  0=  if  exit  then
