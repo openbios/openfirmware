@@ -1304,6 +1304,12 @@ alias ?ec-update noop immediate
 
    alternate?  if  " \boot-alt"  else  " \boot"  then  pn-buf place
 
+   key?  if
+      pending-char c@  h# 1b =  if
+         visible  red-letters ." Secured, continuing" cancel cr
+      then
+   then
+
    all-devices$ load-from-list  if  exit  then   \ Returns only if no images found
 
    " Boot failed" .security-failure
