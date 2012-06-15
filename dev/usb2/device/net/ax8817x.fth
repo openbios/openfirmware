@@ -179,11 +179,6 @@ h# 0013.0103 value ax-gpio		\ GPIO toggle values
    d# 10 ms  \ Just in case the link status bit isn't ready just yet
 ;
 
-: ax-stop-phy  ( -- )
-   ax88772?  if
-      h# 40 ax-sw-reset    \ Power off internal PHY, reset external one (08 == 0)
-   then
-;
 : select-phy  ( -- )
    ax88772?  if
       \ Linksys USB200M uses the built-in PHY, DLink DUB-E100 uses an external one
@@ -241,8 +236,6 @@ h# 88 value def-rx-ctl   \ SO (MAC ON) and AB (accept broadcast)
 ;
 
 : ax-start-phy  ( -- )
-   select-phy
-   ax-init-mii
    ax-auto-neg-wait
 ;
 : ax-promiscuous  ( -- )  rx-ctl@  1 or  rx-ctl!  ;
@@ -297,9 +290,11 @@ create bitrev3  0 c,  4 c,  2 c,  6 c,  1 c,  5 c,  3 c,  7 c,
 
    ax-toggle-gpio
    ax-get-phyid
+   select-phy
    ax-stop-mac
    ax-get-mac-address  2drop
    ax-set-ipg
+   ax-init-mii
 ;
 
 : ax-loopback{  ( -- )
@@ -321,7 +316,6 @@ create bitrev3  0 c,  4 c,  2 c,  6 c,  1 c,  5 c,  3 c,  7 c,
    ['] ax-link-up?  to link-up?
    ['] ax-start-mac to start-mac
    ['] ax-start-phy to start-phy
-   ['] ax-stop-phy  to stop-phy
    ['] ax-stop-mac  to stop-mac
    ['] ax-get-mac-address to get-mac-address
    ['] ax-mii@ to mii@

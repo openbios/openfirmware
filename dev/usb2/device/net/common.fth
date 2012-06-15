@@ -23,7 +23,6 @@ defer wrap-msg         ( adr len -- adr' len' )	' noop to wrap-msg
 defer unwrap-msg       ( adr len -- adr' len' )	' noop to unwrap-msg
 defer link-up?	       ( -- up? )		' true to link-up?
 defer start-phy        ( -- )			' noop to start-phy
-defer stop-phy         ( -- )                   ' noop to stop-phy
 defer start-mac        ( -- ) 			' noop to start-mac
 defer stop-mac         ( -- )			' noop to stop-mac
 defer mii{             ( -- )                   ' noop to mii{  \ Acquire
