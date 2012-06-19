@@ -391,30 +391,33 @@ h# 409 constant language  			\ Unicode id
 
 \ Executed in root hub node context
 : get-str-descriptors  ( -- )
-   language                                     ( lang )
-   dup d# 14 dev-desc@ v$-desc-buf get-string to /v$-desc-buf
-   dup d# 15 dev-desc@ d$-desc-buf get-string to /d$-desc-buf
-       d# 16 dev-desc@ s$-desc-buf get-string to /s$-desc-buf
+   language					( lang )
+   dup dev-desc-buf d# 14 + c@ v$-desc-buf get-string to /v$-desc-buf
+   dup dev-desc-buf d# 15 + c@ d$-desc-buf get-string to /d$-desc-buf
+       dev-desc-buf d# 16 + c@ s$-desc-buf get-string to /s$-desc-buf
 ;
 
 \ Executed in root hub node context
 : refresh-desc-bufs  ( dev -- )
    set-target
-   dev-desc-buf d# 18 get-dev-desc to /dev-desc-buf             \ Refresh dev-desc-buf
-   cfg-desc-buf     0 get-cfg-desc to /cfg-desc-buf             \ Refresh cfg-desc-buf
+   dev-desc-buf 12 get-dev-desc to /dev-desc-buf		\ Refresh dev-desc-buf
+   cfg-desc-buf  0 get-cfg-desc to /cfg-desc-buf		\ Refresh cfg-desc-buf
    get-str-descriptors
 ;
 
 \ Executed in root hub node context
-: get-initial-descriptors  ( -- )
-   \ Re-read the full device descriptor to pick up the vendor info
-   dev-desc-buf d# 18 get-dev-desc  drop                ( )
-   cfg-desc-buf     0 get-cfg-desc to /cfg-desc-buf     ( )
+: get-initial-descriptors  ( dev -- )
+   dev-desc-buf /pipe0 get-dev-desc  if		( dev )
+      dev-desc-buf 7 + c@ 0 rot di-maxpayload!	( )
+   else						( dev )
+      drop					( )
+   then						( )
+   cfg-desc-buf 0 get-cfg-desc to /cfg-desc-buf	( )
 ;
 
 \ Executed in hub node context (root hub or subordinate hub) - creates new child nodes via (make-device-node)
 : make-device-node  ( port dev -- )
-   " get-initial-descriptors" my-self $call-method	( port dev )
+   dup " get-initial-descriptors" my-self $call-method	( port dev )
    /cfg-desc-buf 0=  if  2drop  exit  then		( port dev )
    asso-class?  if  1  else  cfg-desc-buf 4 + c@  then  ( port dev #intf )
    0  ?do				                ( port dev )
@@ -440,16 +443,6 @@ h# 409 constant language  			\ Unicode id
    then                                         ( port )
 ;
 
-: get-initial-dev-desc  ( dev -- )
-   dev-desc-buf d# 18 erase                     ( dev )
-   dev-desc-buf d# 64 get-dev-desc  0=  if      ( dev )
-      dev-desc-buf /pipe0 get-dev-desc  0=  if  ( dev )
-         drop exit
-      then
-   then
-   7 dev-desc@ 0 rot di-maxpayload!             ( )
-;
-
 \ Executed in the root hub node context
 : setup-new-node  ( port speed hub-port hub-dev -- true | port dev xt false )
   \ Allocate device number
@@ -460,11 +453,7 @@ h# 409 constant language  			\ Unicode id
    tuck di-speed!			( port dev )
 
    0 set-target				( port dev )	\ Address it as device 0
-
-   \ Some devices (e.g. Lexar USB-to-SD and at least one USB FLASH drive) fail
-   \ on set-address unless you first read the device descriptor from address 0.
-   dup get-initial-dev-desc             ( port dev )
-
+   over reset-port                	( port dev )	\ Some devices want to be reset here
    dup set-address  if			( port dev )	\ Assign it usb addr dev
       ." Retrying with a delay" cr
       over reset-port  d# 5000 ms

@@ -7,16 +7,18 @@ headers
 0 value port-speed
 
 : make-root-hub-node  ( port -- )
+   \ Some devices (e.g. Lexar USB-to-SD) fail unless you get the cfg desc from device 0 first
    0 set-target	\ First address it as device 0	( port )
    port-speed 0 di-speed!     \ Use high speed for getting the device descriptor
-   dup reset-port				( port )
+   dev-desc-buf h# 40 get-cfg-desc drop		( port )
+
    port-speed					( port speed )
 
    \ hub-port and hub-dev route USB 1.1 transactions through USB 2.0 hubs
    over get-hub20-port  get-hub20-dev		( port speed hub-port hub-dev )
 
    \ Execute setup-new-node in root context and make-device-node in hub node context
-   setup-new-node  if  execute  then		( )
+   setup-new-node  if  execute  then	( )
 ;
 
 0 instance value probe-error?  \ Back channel to selftest
