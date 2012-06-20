@@ -392,26 +392,38 @@ h# 409 constant language  			\ Unicode id
 \ Executed in root hub node context
 : get-str-descriptors  ( -- )
    language					( lang )
-   dup dev-desc-buf d# 14 + c@ v$-desc-buf get-string to /v$-desc-buf
-   dup dev-desc-buf d# 15 + c@ d$-desc-buf get-string to /d$-desc-buf
-       dev-desc-buf d# 16 + c@ s$-desc-buf get-string to /s$-desc-buf
+   dup d# 14 dev-desc@ v$-desc-buf get-string to /v$-desc-buf
+   dup d# 15 dev-desc@ d$-desc-buf get-string to /d$-desc-buf
+       d# 16 dev-desc@ s$-desc-buf get-string to /s$-desc-buf
 ;
 
 \ Executed in root hub node context
 : refresh-desc-bufs  ( dev -- )
    set-target
-   dev-desc-buf 12 get-dev-desc to /dev-desc-buf		\ Refresh dev-desc-buf
-   cfg-desc-buf  0 get-cfg-desc to /cfg-desc-buf		\ Refresh cfg-desc-buf
+   dev-desc-buf d# 18 get-dev-desc to /dev-desc-buf		\ Refresh dev-desc-buf
+   cfg-desc-buf     0 get-cfg-desc to /cfg-desc-buf		\ Refresh cfg-desc-buf
    get-str-descriptors
+;
+
+: get-initial-dev-desc  ( dev -- )
+   dev-desc-buf d# 18 erase                     ( dev )
+
+   \ Until we know the size of the control endpoint, we must be
+   \ conservative about the transfer size.
+   dev-desc-buf /pipe0 get-dev-desc  if		( dev )
+      7 dev-desc@                               ( dev maxtransfer )
+      tuck  0 rot di-maxpayload!	        ( maxtransfer )
+      d# 18 >=  if                              ( )
+         dev-desc-buf d# 18 get-dev-desc drop   ( )
+      then                                      ( )
+   else						( dev )
+      drop					( )
+   then						( )
 ;
 
 \ Executed in root hub node context
 : get-initial-descriptors  ( dev -- )
-   dev-desc-buf /pipe0 get-dev-desc  if		( dev )
-      dev-desc-buf 7 + c@ 0 rot di-maxpayload!	( )
-   else						( dev )
-      drop					( )
-   then						( )
+   get-initial-dev-desc                         ( )
    cfg-desc-buf 0 get-cfg-desc to /cfg-desc-buf	( )
 ;
 
@@ -453,7 +465,15 @@ h# 409 constant language  			\ Unicode id
    tuck di-speed!			( port dev )
 
    0 set-target				( port dev )	\ Address it as device 0
-   over reset-port                	( port dev )	\ Some devices want to be reset here
+
+   \ Some devices (e.g. Lexar USB-to-SD and at least one USB FLASH drive) fail
+   \ on set-address unless you first read the device descriptor from address 0.
+   \ On other devices, this will fail, but it won't cause problems, and the
+   \ descriptor will be re-read later by make-device-node
+   dup get-initial-dev-desc             ( port dev )
+
+\  over reset-port                	( port dev )	\ Some devices want to be reset here
+
    dup set-address  if			( port dev )	\ Assign it usb addr dev
       ." Retrying with a delay" cr
       over reset-port  d# 5000 ms
