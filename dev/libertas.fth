@@ -1672,11 +1672,80 @@ d# 1600 constant /packet-buf
    respbuf .log
 ;
 
-: get-rssi  ( -- )
+: get-rssi  ( -- avg_nf avg_snr nf snr )
    2 h# 1f ( CMD_802_11_RSSI ) prepare-cmd
-   8 +xw			\ Value used for exp averaging
+   8 +xw \ number of beacons (N) to average the SNR and NF over
    outbuf-wait  drop
-   \ XXX What to do with the result?
+   \ cmd_ds_802_11_rssi, observed response
+   \ __le16 snr;      /* most recent SNR */
+   \ __le16 nf;       /* most recent noise floor */
+   \ __le16 avg_snr;  /* average SNR weighted by N from request */
+   \ __le16 avg_nf;   /* average noise floor weighted by N from request */
+   respbuf >fw-data >r
+   r@ 6 + le-w@ ( avg_nf )
+   r@ 4 + le-w@ ( avg_nf avg_snr )
+   r@ 2 + le-w@ ( avg_nf avg_snr nf )
+   r@     le-w@ ( avg_nf avg_snr nf snr )
+   r> drop
+;
+
+: rf-antenna  ( antenna action -- )
+   swap >r >r
+   4 h# 20 ( CMD_802_11_RF_ANTENNA ) prepare-cmd
+   r> +xw
+   r> +xw
+   outbuf-wait  drop
+;
+
+: set-antenna  ( rx tx -- )
+   2 ( ACT_SET_TX ) rf-antenna  ( rx )
+   1 ( ACT_SET_RX ) rf-antenna  ( )
+;
+
+: set-antenna-diversity  ( -- )
+   h# ffff 2 ( ACT_SET_TX ) rf-antenna
+   d# 1000 ms
+   h# ffff 1 ( ACT_SET_RX ) rf-antenna
+;
+
+: get-antenna  ( -- rx tx )
+   h# 0 4 ( ACT_GET_RX ) rf-antenna  respbuf >fw-data 2+ le-w@  ( rx )
+   h# 0 8 ( ACT_GET_TX ) rf-antenna  respbuf >fw-data 2+ le-w@  ( rx tx )
+;
+
+: .antenna
+   base @ decimal
+   get-rssi
+   ." snr:" 3 .r  ."  nf:" 3 .r  ."  avg_snr:" 3 .r  ."  avg_nf:" 3 .r
+   hex
+   get-antenna  swap  ."  rx:" 4 .r  ."  tx:" 4 .r
+   ."     "
+   base !
+;
+
+: test-antenna
+   ." keys: (0,1,2,l,r,d,q)" cr
+   begin
+      .antenna
+      key? if
+	 cr
+	 .antenna
+	 key
+	 case
+	    h# 71 ( q )   of  cr exit  endof
+	    h# 1b ( esc ) of  cr exit  endof
+	    h# 30 ( 0 )   of  ." rx/tx to 0/0"  0 0          set-antenna  endof
+	    h# 31 ( 1 )   of  ." rx/tx to 1/1"  1 1          set-antenna  endof
+	    h# 32 ( 2 )   of  ." rx/tx to 2/2"  2 2          set-antenna  endof
+	    h# 6c ( l )   of  ." rx/tx to 1/2"  1 2          set-antenna  endof
+	    h# 72 ( r )   of  ." rx/tx to 2/1"  2 1          set-antenna  endof
+	    h# 64 ( d )   of  ." diversity"  cr h# ffff dup  set-antenna  endof
+	 endcase
+      then
+      d# 100 ms
+      (cr
+      false
+   until
 ;
 
 : .hw-spec  ( -- )
