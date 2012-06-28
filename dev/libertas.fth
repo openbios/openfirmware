@@ -1674,18 +1674,13 @@ d# 1600 constant /packet-buf
 
 : get-rssi  ( -- avg_nf avg_snr nf snr )
    2 h# 1f ( CMD_802_11_RSSI ) prepare-cmd
-   8 +xw \ number of beacons (N) to average the SNR and NF over
+   d# 32 +xw \ number of beacons (N) to average the SNR and NF over
    outbuf-wait  drop
-   \ cmd_ds_802_11_rssi, observed response
-   \ __le16 snr;      /* most recent SNR */
-   \ __le16 nf;       /* most recent noise floor */
-   \ __le16 avg_snr;  /* average SNR weighted by N from request */
-   \ __le16 avg_nf;   /* average noise floor weighted by N from request */
    respbuf >fw-data >r
-   r@ 6 + le-w@ ( avg_nf )
-   r@ 4 + le-w@ ( avg_nf avg_snr )
-   r@ 2 + le-w@ ( avg_nf avg_snr nf )
-   r@     le-w@ ( avg_nf avg_snr nf snr )
+   r@ 6 + le-w@ negate  ( avg_nf )                      \ dBm
+   r@ 4 + le-w@         ( avg_nf avg_snr )              \ dB
+   r@ 2 + le-w@ negate  ( avg_nf avg_snr nf )           \ dBm
+   r@     le-w@         ( avg_nf avg_snr nf snr )       \ dB
    r> drop
 ;
 
@@ -1704,48 +1699,12 @@ d# 1600 constant /packet-buf
 
 : set-antenna-diversity  ( -- )
    h# ffff 2 ( ACT_SET_TX ) rf-antenna
-   d# 1000 ms
    h# ffff 1 ( ACT_SET_RX ) rf-antenna
 ;
 
 : get-antenna  ( -- rx tx )
    h# 0 4 ( ACT_GET_RX ) rf-antenna  respbuf >fw-data 2+ le-w@  ( rx )
    h# 0 8 ( ACT_GET_TX ) rf-antenna  respbuf >fw-data 2+ le-w@  ( rx tx )
-;
-
-: .antenna
-   base @ decimal
-   get-rssi
-   ." snr:" 3 .r  ."  nf:" 3 .r  ."  avg_snr:" 3 .r  ."  avg_nf:" 3 .r
-   hex
-   get-antenna  swap  ."  rx:" 4 .r  ."  tx:" 4 .r
-   ."     "
-   base !
-;
-
-: test-antenna
-   ." keys: (0,1,2,l,r,d,q)" cr
-   begin
-      .antenna
-      key? if
-	 cr
-	 .antenna
-	 key
-	 case
-	    h# 71 ( q )   of  cr exit  endof
-	    h# 1b ( esc ) of  cr exit  endof
-	    h# 30 ( 0 )   of  ." rx/tx to 0/0"  0 0          set-antenna  endof
-	    h# 31 ( 1 )   of  ." rx/tx to 1/1"  1 1          set-antenna  endof
-	    h# 32 ( 2 )   of  ." rx/tx to 2/2"  2 2          set-antenna  endof
-	    h# 6c ( l )   of  ." rx/tx to 1/2"  1 2          set-antenna  endof
-	    h# 72 ( r )   of  ." rx/tx to 2/1"  2 1          set-antenna  endof
-	    h# 64 ( d )   of  ." diversity"  cr h# ffff dup  set-antenna  endof
-	 endcase
-      then
-      d# 100 ms
-      (cr
-      false
-   until
 ;
 
 : .hw-spec  ( -- )
@@ -2226,6 +2185,58 @@ d# 1600 buffer: test-buf
 ;
 
 : scan-wifi  ( -- )  (scan-wifi) drop  ;
+
+: .rssi  ( snr nf -- )
+   2dup swap + ."  rssi" 4 .r           ( snr nf )
+   ."  snr" 3 .r  ."  nf" 4 .r          ( )
+;
+
+: .antenna  ( antenna -- )
+   dup h# ffff =  if  ."  d" drop exit  then    \ diversity (default)
+   dup h#  100 =  if  ."  ?" drop exit  then    \ occurs after 0/0
+   2 .r
+;
+
+: show-antenna  ( -- )
+   base @                               ( base )
+   get-rssi                             ( base avg_nf avg_snr nf snr )
+   decimal
+   ." now" .rssi                        ( base avg_nf avg_snr )
+   ."  avg" .rssi                       ( base )
+   get-antenna swap                     ( base tx rx )
+   hex
+   ."  rx" .antenna  ."  tx" .antenna   ( base )
+   ."  "
+   base !
+;
+
+: ta-scan  ( -- )
+   ." scan"  cr
+   (scan)                               ( adr len error? )
+   0=  if  drop .ssids cr  then         ( )
+;
+
+: test-antenna  ( -- )
+   ." keys: (0,1,2,l,r,d,a,s,q)" cr
+   begin
+      d# 100 ms  show-antenna  key?  if
+         cr  show-antenna  key
+         case
+            h# 71 ( q ) of  cr exit  endof
+            h# 1b       of  cr exit  endof
+            h# 30 ( 0 ) of  ." rx/tx to 0/0"  0 0 set-antenna            endof
+            h# 31 ( 1 ) of  ." rx/tx to 1/1"  1 1 set-antenna            endof
+            h# 32 ( 2 ) of  ." rx/tx to 2/2"  2 2 set-antenna            endof
+            h# 6c ( l ) of  ." rx/tx to 1/2"  1 2 set-antenna            endof
+            h# 72 ( r ) of  ." rx/tx to 2/1"  2 1 set-antenna            endof
+            h# 64 ( d ) of  ." diversity"     cr  set-antenna-diversity  endof
+            h# 61 ( a ) of  ." associate"     cr  close  open drop       endof
+            h# 73 ( s ) of  ta-scan  endof
+         endcase
+      then
+      (cr  false
+   until
+;
 
 : selftest  ( -- error? )  (scan-wifi)  ;
 

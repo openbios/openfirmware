@@ -117,6 +117,11 @@ alias ssid essid
    optional-arg-or-/$  ['] wifi-children scan-subtree
 ;
 
+: test-antenna  ( -- )
+   " /wlan" open-dev >r                 ( r: dev )
+   " test-antenna" r@ $call-method      ( r: dev )
+   r> close-dev                         ( )
+;
 
 0 [if]
 
