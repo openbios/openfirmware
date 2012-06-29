@@ -762,8 +762,13 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
 ;
 [then]
 
-defined? olpc-cl2  defined? olpc-cl4 or  [if]
+[ifdef] olpc-cl3
+: game-key@  ( -- n )
+   0
+;
+[then]
 
+[ifndef] game-key@
    [ifdef] use_mmp2_keypad_control
 : game-key@  ( -- n )
    0                                        ( n )
