@@ -60,7 +60,7 @@ device-end
 d# 81,000,000 to cpu-clock-speed	\ CPU clock in Hz
 
 : (cpu-arch  ( -- adr len )
-   " architecture" ['] root-node  get-package-property  drop
+   " architecture" root-phandle  get-package-property  drop
    get-encoded-string
 ;
 ' (cpu-arch to cpu-arch

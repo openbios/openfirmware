@@ -89,7 +89,7 @@ d# 308 constant /options-field
 : .nak-message  ( -- )  d# 56 find-option  if  -nulls type cr  then  ;
 
 : root-property  ( name$ -- true | value false )
-   ['] root-node get-package-property
+   root-phandle get-package-property
 ;
 
 \ Add a "vendor class" option if there is an "architecture" property
@@ -520,7 +520,7 @@ headerless
    \ we return the system architecture name in bootp-name-buf.
    bootp-name-buf count nip 0=  if  
       file-name-buf c@ 0=  if
-         " architecture" ['] root-node get-package-property 0=  if  ( prop$ )
+         " architecture" root-phandle get-package-property 0=  if  ( prop$ )
             get-encoded-string					    ( name$ )
             bootp-name-buf place				    ( )
          then

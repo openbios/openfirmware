@@ -682,6 +682,13 @@ headers
 
 defer voc>phandle ' noop to voc>phandle
 defer phandle>voc ' noop to phandle>voc
+defer dt-null     ' null to dt-null
+
+\ : : :  lastacf .name cr ;
+
+: rel-voc>phandle  ( voc -- ph )  origin -  ;  ' rel-voc>phandle to voc>phandle
+: rel-phandle>voc  ( ph -- voc )  origin +  ;  ' rel-phandle>voc to phandle>voc
+' 0 to dt-null
 
 \ TODO
 \ Don't use the system search order; use a private stack
@@ -689,9 +696,11 @@ defer phandle>voc ' noop to phandle>voc
 \ Change names back from "regprop" to "reg", etc.
 \ Either implement a true breadth-first search or don't specify it.
 
+: cdev drop context token@  voc>phandle  ;
+: devc drop phandle>voc  context token!  definitions  ;
 2 actions
-action: drop context token@  voc>phandle  ;
-action: drop phandle>voc  context token!  definitions  ;
+action: cdev ;
+action: devc ;
 create current-device  use-actions
 
 headerless
@@ -725,7 +734,7 @@ dup				\ The following fields will be "ualloc"ed
 constant /devnode-extra
 
 headers
-: >parent  ( node -- parent-node )  >voc-link  link@ voc>phandle  ;
+: >parent  ( node -- parent-node )  phandle>voc >voc-link  link@ voc>phandle  ;
 : parent-device  ( -- parent-node )  current-device >parent  ;
 
 : (select-package)  ( phandle -- )  phandle>voc execute  ;
@@ -739,8 +748,9 @@ headers
 : push-device  ( acf -- )  to current-device  ;
 
 : pop-device  ( -- )
-   parent-device                     ( parent-voc )
-   non-null?  if  push-device  then
+   parent-device                     ( parent-phandle )
+   dup dt-null <>  if  push-device  else  drop  then
+\    non-null?  if  push-device  then
 ;
 
 \ Each package instance has its own private data storage area.
@@ -1099,7 +1109,7 @@ headerless
 
 \ Internal factor used to implement first-child and next-child
 : set-child?  ( link-adr -- flag )
-   get-token?  if  push-device true  else  false  then
+   get-token?  if  voc>phandle push-device true  else  false  then
 ;
 
 \ Interface to searching code in breadth.fth:
@@ -1125,7 +1135,7 @@ headerless
    \ Allocate user (RAM) space for  properties, "last" field, children, peers
    /devnode-extra  unaligned-ualloc drop
 
-   lastacf  push-device           ( parent's-child-field )
+   lastacf voc>phandle push-device           ( parent's-child-field )
 ;
 : init-properties  ( -- )  (vocabulary)  lastacf 'properties token!  ;
 
@@ -1150,7 +1160,7 @@ partial-headers
 headerless
 : link-to-peer  ( parent's-child-field -- )
    dup token@ 'peer token!             ( parent's-child-field )
-   current-device  swap token!         ( )
+   current-device phandle>voc  swap token!         ( )
 ;
 : device-node?  ( voc -- flag )
    voc-link  begin  another-link?  while        ( voc link )
@@ -1187,7 +1197,7 @@ headerless
 
 headers
 : new-node  ( -- )
-   (vocabulary)  current-device link,  ( )  \ Up-link to parent device
+   (vocabulary)  current-device phandle>voc link,  ( )  \ Up-link to parent device
 
    \ Save parent linkage address on stack for later use
    'child                              ( parent's-child-field )
@@ -1266,10 +1276,11 @@ vocabulary root-node
    0 init-node
    allot-package-data
 device-end
+: root-phandle  ( -- ph )  ['] root-node voc>phandle  ;
 
-: root-device  ( -- )  only forth also  ['] root-node push-device  ;
+: root-device  ( -- )  only forth also  root-phandle push-device  ;
 
-: root-device?  ( -- flag )  parent-device null =  ;
+: root-device?  ( -- flag )  parent-device dt-null =  ;
 
 : finish-device  ( -- )  finish-package-data  pop-device  ;
 
@@ -1732,10 +1743,10 @@ h# 800 buffer: (alias-buf)
    \ The path starts at the root directory if the first character is "/";
    \ otherwise it starts at the current directory
    dup 1 >=  if                        ( str$ )
-      over c@  ascii /  =  if  1 /string  ['] root-node push-device  then
+      over c@  ascii /  =  if  1 /string  root-phandle push-device  then
    then                                ( str$ )
 
-   current-device null =  ?not-found
+   current-device dt-null =  ?not-found
    device-context?  0= ?not-found
    (find-device)
 ;
@@ -1939,7 +1950,7 @@ headers
    device-context?  if
       'child token@                   ( first-node )
       begin  non-null?  while         ( node )
-	 push-device                  ( )
+	 voc>phandle push-device      ( )
 	 .nodeid                      ( )
 	 'peer token@                 ( node' )
 	 pop-device
@@ -1970,7 +1981,7 @@ headers
 ;
 : .voc-name   ( a -- )
    dup device-node? if
-      current-device   swap context token! (pwd) space  
+      current-device phandle>voc  swap context token! (pwd) space  
       context token!
    else
       .name
@@ -2050,10 +2061,10 @@ copyright: Copyright 1990 Sun Microsystems, Inc.  All Rights Reserved
 \ transient
 headerless
 : relink-device  ( -- false )
-   current-device relink-voc  false
+   current-device phandle>voc relink-voc  false
 ;
 : relink-devices  ( -- )
-    ['] root-node push-package
+    root-phandle push-package
     ['] relink-device  (search-preorder)  drop
     pop-package
 ;
@@ -2076,7 +2087,7 @@ defer fm-hook  ( adr len phandle -- adr len phandle )
 ' noop is fm-hook
 
 : find-method  ( adr len phandle -- false | acf true )
-   fm-hook  (search-wordlist)
+   fm-hook  phandle>voc (search-wordlist)
 ;
 
 headerless
@@ -2098,7 +2109,7 @@ headerless
 headers
 : $call-self  ( adr len -- )
    my-self  if
-      my-voc  fm-hook  $find-word  if  execute  exit  then
+      my-voc  fm-hook phandle>voc $find-word  if  execute  exit  then
    then
    my-self to error-instance
    error-instance  if  my-voc  to error-package  then
@@ -2195,7 +2206,7 @@ headerless
 \ because we use "exit" to make the control flow easier.
 : (get-any)   ( adr len -- true | adr' len' false )
    begin  my-self   while            ( adr len )  \ Search up parent chain
-      my-voc  current token!         ( adr len )
+      my-voc phandle>voc current token!         ( adr len )
       2dup get-my-property  0=  if   ( adr len adr' len' )
          2swap 2drop false exit      ( adr' len' false )   \ Found
       then                           ( adr len )
@@ -2433,7 +2444,7 @@ headerless
    ?dup  if                                              ( path$ )
       \ Establish the initial parent
       also						 ( path$ )	
-      null to current-device                             ( path$ )
+      dt-null to current-device                          ( path$ )
       ['] (open-path) catch  dup  if  nip nip  then      ( error? )
       previous definitions                               ( error? )
       throw                                              ( )
@@ -2596,7 +2607,7 @@ headerless
 
 : (execute-phandle-method)  ( method-adr,len phandle -- ??? )
    0 to unit#-valid?              ( method-adr,len phandle )
-   dup >parent null open-parents  ( method-adr,len phandle )
+   dup >parent dt-null open-parents  ( method-adr,len phandle )
    push-device                    ( method-adr,len )
    " "  new-instance              ( method-adr,len )
    set-default-unit               ( method-adr,len )
@@ -2608,7 +2619,7 @@ headers
    0 package(                   ( phandle )
       current-device >r         ( phandle )
       0 to unit#-valid?         ( phandle )
-      null ['] open-parents catch  if  ( x x )
+      dt-null ['] open-parents catch  if  ( x x )
          2drop  0               ( 0 )
       else                      (   )
          my-self                ( ihandle )
@@ -2674,7 +2685,7 @@ headerless
 : my-parent-#size-cells  ( -- #size-cells )
    \ Root node has no parent, therefore the size of its parent's address
    \ space is meaningless
-   my-voc  ['] root-node =  if  0  exit  then
+   my-voc  root-phandle =  if  0  exit  then
 
    " #size-cells"    my-parent ihandle>phandle  ( adr len phandle )
    get-package-property  if  1  else  get-encoded-int  then
@@ -2756,6 +2767,9 @@ headerless
    >r >r >r  encode-phys  r> r> r> encode-reg  encode+
 ;
 headers
+: encode-phandle  ( name$ -- adr len )
+   locate-device abort" encode-phandle - Can't find package"  encode-int
+;
 
 \ From finddisp.fth
 purpose: 
@@ -2895,7 +2909,7 @@ headers
 
 also magic-device-types definitions
 : display  ( -- )
-   'fb-node token@ origin =  if  current-device 'fb-node token!  then
+   'fb-node token@ origin =  if  current-device phandle>voc  'fb-node token!  then
 ;
 previous definitions
 
@@ -2908,13 +2922,16 @@ defer client-services
 
 \ Create the standard system nodes
 
+hex
+\ debug devc
 root-device
    new-device				\ Node for software "library" packages
       " packages" device-name
 
-      new-device     current-device to client-services
+      new-device     current-device phandle>voc  to client-services
          " client-services" device-name
       finish-device
+
    finish-device
 
    new-device				\ Reports firmware run-time choices
@@ -3248,7 +3265,7 @@ headerless
 false value verbose-do-method?
 
 : do-method?  ( -- )
-   method-name 2@  current-device  (search-wordlist)  if  ( xt )
+   method-name 2@  current-device phandle>voc (search-wordlist)  if  ( xt )
       drop  pwd$                               ( path-adr,len )
       verbose-do-method?  if  2dup type cr  then
       method-name 2@  execute-device-method drop cr  (  )
@@ -3284,7 +3301,7 @@ defer hold-message
 ' (hold-message) to hold-message
 
 : most-tests  ( -- exit? )
-   " selftest"  current-device  (search-wordlist)  if   ( xt )
+   " selftest"  current-device phandle>voc (search-wordlist)  if   ( xt )
 
       drop                                              ( )
 
@@ -3520,8 +3537,14 @@ forth definitions
 : msize  ( adr -- count )  dbuf-data>  dbuf-size@  dbuf-data>  ;
 
 : >dbuf-header  ( adr -- 'dbuf )
-   dbuf-data>   ( 'dbuf )
-   dup dbuf-flag@ *dbuf-used* - abort" bad heap address."
+   dbuf-data>                ( 'dbuf )
+   dup dbuf-flag@ case       ( 'dbuf )
+      *dbuf-used* of  endof  ( 'dbuf )
+      *dbuf-free* of
+         true abort" Freeing or resizing already-free memory"
+      endof
+      true abort" bad heap address."
+   endcase                   ( 'dbuf )
 ;
 : free-memory  ( adr -- )
    >dbuf-header  merge-down link-with-free
@@ -4093,7 +4116,7 @@ headerless
 ;
 
 : setnode  ( nodeid | 0 -- )
-   dup 0=  if  drop ['] root-node  then  (push-package)
+   dup 0=  if  drop root-phandle then  (push-package)
 ;
 
 \ : copyout  ( buf adr len -- len )  >r swap r@ cmove r>  ;
@@ -4192,24 +4215,25 @@ caps @ caps off
    setnode                           ( )
    0  'child                         ( last-nodeid &next-nodeid )
    begin  get-token?  while          ( last-nodeid next-nodeid )
-      nip  dup (select-package)      ( next-nodeid )
+      nip  dup voc>phandle (select-package)      ( next-nodeid )
       'peer                          ( last-nodeid' &next-nodeid )
    repeat                            ( last-nodeid' )
    (pop-package)                     ( nodeid )
+   dup  if  voc>phandle  then
 ;
 
 : peer  ( phandle -- phandle' )
    dup 0=  if
-      drop ['] root-node exit
+      drop root-phandle exit
    then                              ( nodeid )
 
-   dup  ['] root-node =  if
+   dup  root-phandle  =  if
       drop 0  exit
    then                              ( nodeid )
 
    \ Select the first child of our parent
    dup >parent (push-package)        ( nodeid )
-   'child token@ (select-package)    ( nodeid )
+   'child token@ voc>phandle (select-package)    ( nodeid )
 
    dup current-device  =  if         ( nodeid )
       \ Argument node is first child of parent; return "no more nodes"
@@ -4217,7 +4241,7 @@ caps @ caps off
    else                              ( nodeid )
       \ Search for the node preceding the argument node
       begin                          ( nodeid )
-         'peer token@ 2dup  <>       ( nodeid next-nodeid flag )
+         'peer token@ voc>phandle 2dup  <>       ( nodeid next-nodeid flag )
       while                          ( nodeid next-nodeid )
          push-device                 ( nodeid )
       repeat                         ( nodeid )
@@ -4227,7 +4251,7 @@ caps @ caps off
 ;
 
 : parent  ( phandle -- phandle' )
-   dup ['] root-node =  if   ( root-phandle )
+   dup root-phandle  =  if   ( root-phandle )
       drop 0 exit                    ( 0 )
    then                              ( parent-phandle )
    >parent
@@ -4429,7 +4453,7 @@ headerless
 : (canon)  ( path$ -- )
    ?dup  if                                              ( path$ )
       \ Establish the initial parent
-      null to current-device                             ( path$ )
+      dt-null to current-device                             ( path$ )
       ?expand-alias                                      ( path$ )
       begin  canon-node  dup  0= until                   ( path$' )
       2drop                                              (  )
@@ -4802,7 +4826,7 @@ create not-colon
 ;
 : resolve-ih-method  ( adr len ihandle -- xt )
    dup 0=  if  3drop ['] not-colon exit  then         ( adr len ihandle )
-   package(  my-voc $find-word  )package  ?not-colon  ( xt )
+   package(  my-voc phandle>voc $find-word  )package  ?not-colon  ( xt )
 ;
 : resolve-voc-method  ( adr len voc -- xt )
    (search-wordlist)  ?not-colon
@@ -4847,17 +4871,17 @@ create not-colon
    then                             ( xt )
 
    dup ['] package-execute =  if  ( [ adr len ] xt )
-      drop  2dup current-device   ( adr len voc )
+      drop  2dup current-device   ( adr len phandle )
       resolve-ph-method exit      ( -- xt )
    then                           ( xt )
 
    dup ['] apply-method =  if     ( [ adr len ] xt )
-      drop  2dup my-voc           ( adr len voc )
+      drop  2dup my-voc phandle>voc          ( adr len voc )
       resolve-voc-method exit     ( -- xt )
    then                           ( xt )
 
    dup ['] (apply-method) =  if   ( [ adr len ] xt )
-      drop  2dup my-voc           ( adr len voc )
+      drop  2dup my-voc phandle>voc          ( adr len voc )
       resolve-voc-method exit     ( -- xt )
    then                           ( xt )
 ;

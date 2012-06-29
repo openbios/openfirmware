@@ -38,7 +38,7 @@ dev /
 device-end
 
 : (cpu-arch  ( -- adr len )
-   " architecture" ['] root-node  get-package-property  drop
+   " architecture" root-phandle  get-package-property  drop
    get-encoded-string
 ;
 ' (cpu-arch to cpu-arch

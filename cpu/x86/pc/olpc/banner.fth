@@ -19,7 +19,7 @@ headerless
 ;
 
 : .ec
-   " ec-name" ['] root-node  get-package-property  0=  if  ( adr len )
+   " ec-name" root-phandle  get-package-property  0=  if  ( adr len )
       get-encoded-string  ." EC Firmware "  type
    then
 ;

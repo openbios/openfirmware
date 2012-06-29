@@ -50,7 +50,7 @@ fload ${BP}/cpu/x86/initpgm.fth		\ Basic boot handler
 fload ${BP}/cpu/x86/msr.fth	        \ Access to machine specific registers
 
 : (cpu-arch  ( -- adr len )
-   " architecture" ['] root-node  get-package-property  drop
+   " architecture" root-phandle  get-package-property  drop
    get-encoded-string
 ;
 ' (cpu-arch to cpu-arch
