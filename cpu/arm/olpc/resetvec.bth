@@ -1,15 +1,10 @@
 \ See license at end of file
 purpose: Low-level startup code
 
-command: &builder &this
-build-now
-
 \ create debug-reset
 
 \needs start-assembling  fload ${BP}/cpu/arm/asmtools.fth
 \needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
-
-fload ${BP}/cpu/arm/olpc/1.75/config.fth
 
 hex
 
@@ -38,9 +33,7 @@ start-assembling
 label my-entry
 \ **** This is the primary entry point; it will contain a branch instruction
 \ that skips a few subroutines and lands at the startup sequence.  That
-\ branch instruction is patched in below.  The entry point for this module
-\ is in turn reached from a branch instruction at the beginning of the ROM,
-\ which is created by the file arch/dna/resetvec.bth
+\ branch instruction is patched in below.
    0 ,				\ To be patched later
 end-code
 
