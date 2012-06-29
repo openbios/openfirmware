@@ -104,6 +104,7 @@ true value use-fdt?
    arm-linux-machine-type to r1
 [ifdef] flatten-device-tree
    use-fdt?  if
+      load-base h# 40000 - to linux-params
       linux-params h# 40000 flatten-device-tree
    else
       args-buf cscount linux-params set-parameters

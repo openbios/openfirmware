@@ -1,4 +1,5 @@
    " uart" name
+   " mrvl,mmp-uart" +compatible
    my-space  h# 20  reg
 
    : write  ( adr len -- actual )

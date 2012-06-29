@@ -81,6 +81,9 @@ fload ${BP}/cpu/x86/pc/cpunode.fth  \ The PC CPU node is actually fairly generic
 ;
 
 
+fload ${BP}/cpu/arm/mmp2/pmua.fth
+fload ${BP}/cpu/arm/mmp2/apbc.fth
+fload ${BP}/cpu/arm/mmp2/irq.fth
 fload ${BP}/cpu/arm/mmp2/timer.fth
 fload ${BP}/cpu/arm/mmp2/twsi.fth
 fload ${BP}/cpu/arm/mmp2/mfpr.fth
@@ -98,12 +101,13 @@ warning @ warning off
 ;
 warning !
 
-fload ${BP}/cpu/arm/mmp2/irq.fth
-
 fload ${BP}/cpu/arm/mmp2/watchdog.fth	\ reset-all using watchdog timer
 
 0 0  " d4018000"  " /" begin-package  \ UART3
    fload ${BP}/cpu/arm/mmp2/uart.fth
+   " /apbc" encode-phandle d# 12 encode-int encode+ " clocks" property
+   d# 24 " interrupts" integer-property
+   1 " linux,unit#" integer-property
 end-package
 devalias com1 /uart
 : com1  " com1"  ;
@@ -111,6 +115,9 @@ devalias com1 /uart
 
 0 0  " d4030000"  " /" begin-package  \ UART1
    fload ${BP}/cpu/arm/mmp2/uart.fth
+   d# 27 " interrupts" integer-property
+   " /apbc" encode-phandle d# 10 encode-int encode+ " clocks" property
+   0 " linux,unit#" integer-property
 end-package
 devalias com2 /uart
 : com2  " com2"  ;
@@ -131,6 +138,8 @@ fload ${BP}/cpu/arm/mmp2/sspspi.fth        \ Synchronous Serial Port SPI interfa
 0 0  " d4035000"  " /" begin-package
    " flash" device-name
 
+   " /apbc" encode-phandle d# 19 encode-int encode+ " clocks" property
+   d# 0 " interrupts" integer-property
    h# 10.0000 value /device
    my-address my-space h# 100 reg
    fload ${BP}/dev/nonmmflash.fth
@@ -177,8 +186,7 @@ false constant tethered?                     \ We only support reprogramming our
 : hdd-led-off     ( -- )  ;
 : hdd-led-on      ( -- )  ;
 : hdd-led-toggle  ( -- )  ;
-[then]
-[ifdef] olpc-cl2
+[else]
 : hdd-led-off     ( -- )  d# 10 gpio-clr  ;
 : hdd-led-on      ( -- )  d# 10 gpio-set  ;
 : hdd-led-toggle  ( -- )  d# 10 gpio-pin@  if  hdd-led-off  else  hdd-led-on  then  ;
@@ -219,13 +227,33 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH prog
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
 ' ofw-fw-filename$ to fw-filename$
 
+0 0  " f0400000"  " /" begin-package
+   " vmeta" name
+   my-address my-space h# 1000 reg
+
+   " mrvl,mmp2-vmeta" +compatible
+
+   " /pmua" encode-phandle d# 10 encode-int encode+ " clocks" property
+   d# 26 " interrupts" integer-property
+end-package
+
 0 0  " d420b000"  " /" begin-package
    " display" name
-\+ olpc-cl2   fload ${BP}/cpu/arm/olpc/1.75/lcdcfg.fth
-\+ olpc-cl3   fload ${BP}/cpu/arm/olpc/3.0/lcdcfg.fth
+   my-address my-space h# 1000 reg
+
+   " /pmua" encode-phandle 1 encode-int encode+ " clocks" property
+   d# 41 " interrupts" integer-property
+
+[ifdef] olpc-cl3
+   fload ${BP}/cpu/arm/olpc/3.0/lcdcfg.fth
+[else]
+   fload ${BP}/cpu/arm/olpc/1.75/lcdcfg.fth
+[then]
 
    fload ${BP}/cpu/arm/olpc/lcd.fth
-\+ olpc-cl2   fload ${BP}/dev/olpc/dcon/mmp2dcon.fth        \ DCON control
+[ifndef] olpc-cl3
+   fload ${BP}/dev/olpc/dcon/mmp2dcon.fth        \ DCON control
+[then]
    defer convert-color ' noop to convert-color
    defer pixel*
    defer pixel+
@@ -299,18 +327,21 @@ end-package
 
 devalias screen /display
    
-\- olpc-cl3 devalias keyboard /keyboard
+[ifdef] olpc-cl3
+create cp881-16  " ${BP}/ofw/termemu/cp881-16.obf" $file,
+' cp881-16 to romfont
+[else]
+devalias keyboard /keyboard
 
-\+ olpc-cl2 create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
-\+ olpc-cl2 ' 15x30pc to romfont
-\+ olpc-cl3 create cp881-16  " ${BP}/ofw/termemu/cp881-16.obf" $file,
-\+ olpc-cl3 ' cp881-16 to romfont
+create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
+' 15x30pc to romfont
+[then]
 
 fload ${BP}/cpu/arm/olpc/sdhci.fth
 \- cl2-a1 fload ${BP}/cpu/arm/olpc/emmc.fth
 
-devalias int /sd/disk@3
-devalias ext /sd/disk@1
+devalias int /sd/sdhci@d4281000/disk
+devalias ext /sd/sdhci@d4280000/disk
 devalias net /wlan  \ XXX should report-net in case of USB Ethernet
 
 fload ${BP}/dev/olpc/kb3700/spicmd.fth           \ EC SPI Command Protocol
@@ -370,6 +401,7 @@ fload ${BP}/cpu/arm/linux.fth
 \+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/usb.fth
 \+ olpc-cl3 fload ${BP}/cpu/arm/mmp2/ulpiphy.fth
 \+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/usb.fth
+\+ olpc-cl4 fload ${BP}/cpu/arm/olpc/cl4/usb.fth
 
 fload ${BP}/dev/olpc/mmp2camera/loadpkg.fth
 
@@ -393,6 +425,7 @@ warning @ warning off
       board-revision " board-revision-int" integer-property
 \+ olpc-cl2  " olpc,xo-1.75" " compatible" string-property
 \+ olpc-cl3  " olpc,xo-3.0"  " compatible" string-property
+\+ olpc-cl4  " olpc,xo-cl4"  " compatible" string-property
 
       \ The "1-" removes the null byte
       " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
@@ -402,6 +435,11 @@ warning @ warning off
       ['] ec-name$  catch  0=  if  " ec-name" string-property  then
       ['] ec-date$  catch  0=  if  " ec-date" string-property  then
       ['] ec-user$  catch  0=  if  " ec-user" string-property  then
+      " /interrupt-controller" encode-phandle " interrupt-parent" property
+\      " /interrupt-controller"  find-package  if
+\         " interrupt-parent" integer-property
+\      then
+      0 0 " ranges" property
    dend
 
    " /openprom" find-device
@@ -420,6 +458,7 @@ stand-init: More memory
 
 fload ${BP}/cpu/arm/mmp2/thermal.fth
 fload ${BP}/cpu/arm/mmp2/fuse.fth
+fload ${BP}/cpu/arm/olpc/bsl.fth
 
 [ifndef] virtual-mode
 warning off
@@ -509,8 +548,12 @@ hex
    false
 ;
 
-\+ olpc-cl2 : rotate-button?  ( -- flag )  d# 15 gpio-pin@ 0=  ;
-\+ olpc-cl3 false value rotate-button?
+[ifdef] olpc-cl3
+false value rotate-button?
+[else]
+: rotate-button?  ( -- flag )  d# 15 gpio-pin@ 0=  ;
+[then]
+
 warning @  warning off 
 : init
 \ initial-heap add-memory
@@ -625,15 +668,23 @@ fload ${BP}/cpu/arm/mmp2/dramrecal.fth
 
 code halt  ( -- )  wfi   c;
 
-\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/switches.fth  \ Switches
 \+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/switches.fth \ Lid and ebook switches
+\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/switches.fth  \ Switches
+\+ olpc-cl4 fload ${BP}/cpu/arm/olpc/cl4/switches.fth  \ Lid and ebook switches
+
 fload ${BP}/cpu/arm/mmp2/rtc.fth       \ Internal RTC, used for wakeups
-\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/leds.fth     \ LEDs
+
 \+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/leds.fth     \ LEDs
+\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/leds.fth      \ LEDs
+\+ olpc-cl4 fload ${BP}/cpu/arm/olpc/cl4/leds.fth      \ LEDs
+
 fload ${BP}/cpu/x86/pc/olpc/via/factory.fth  \ Manufacturing tools
 
 fload ${BP}/cpu/arm/olpc/accelerometer.fth
-\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/compass.fth
+
+[ifndef] olpc-cl3
+fload ${BP}/cpu/arm/olpc/1.75/compass.fth
+[then]
 
 \ Suppress long memory test at final test stage
 dev /memory
@@ -700,17 +751,22 @@ stand-init: keypad
 
 fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
 
+[ifdef] cl2-a1
 : game-key@  ( -- n )
    0                                        ( n )
-[ifdef] cl2-a1
    d# 16 gpio-pin@ 0=  if  h#  80 or  then  \ O
    d# 17 gpio-pin@ 0=  if  h#  02 or  then  \ Check
    d# 18 gpio-pin@ 0=  if  h# 100 or  then  \ X
    d# 19 gpio-pin@ 0=  if  h#  01 or  then  \ Square
    d# 20 gpio-pin@ 0=  if  h#  40 or  then  \ Rotate
+;
 [then]
-[ifdef] olpc-cl2
-[ifdef] use_mmp2_keypad_control
+
+defined? olpc-cl2  defined? olpc-cl4 or  [if]
+
+   [ifdef] use_mmp2_keypad_control
+: game-key@  ( -- n )
+   0                                        ( n )
    d# 15 gpio-pin@ 0=  if  button-rotate or  then   ( n )
    scan-keypad                              ( n keypad )
    button-o       h# 01  keypad-bit         ( n' keypad )
@@ -722,7 +778,10 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
    rocker-down    h# 40  keypad-bit         ( n' keypad )
    rocker-left    h# 80  keypad-bit         ( n' keypad )
    drop                                     ( n )
-[else]
+;
+   [else]
+: game-key@  ( -- n )
+   0                                        ( n )
    d# 15 gpio-pin@ 0=  if  button-rotate  or  then
    d# 16 gpio-pin@ 0=  if  button-o       or  then
    d# 17 gpio-pin@ 0=  if  button-check   or  then
@@ -732,9 +791,10 @@ fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
    d# 21 gpio-pin@ 0=  if  rocker-right   or  then
    d# 22 gpio-pin@ 0=  if  rocker-down    or  then
    d# 23 gpio-pin@ 0=  if  rocker-left    or  then
-[then]
-[then]
 ;
+   [then]
+
+[then]
 
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 
@@ -756,9 +816,11 @@ device-end
 
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
+
+\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/rm3150-touchscreen.fth    \ Touchscreen driver and diagnostic
 \+ olpc-cl3 fload ${BP}/cpu/arm/olpc/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
 \+ olpc-cl3 fload ${BP}/dev/softkeyboard.fth                    \ On-screen keyboard
-\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/rm3150-touchscreen.fth    \ Touchscreen driver and diagnostic
+\+ olpc-cl4 fload ${BP}/cpu/arm/olpc/nn-touchscreen.fth        \ Touchscreen driver and diagnostic
 fload ${BP}/cpu/arm/olpc/roller.fth     \ Accelerometer test
 
 \ fload ${BP}/cpu/arm/olpc/pinch.fth  \ Touchscreen gestures
@@ -828,8 +890,7 @@ fload ${BP}/cpu/x86/pc/olpc/via/fssave.fth
 devalias fsdisk int:0
 
 \ create pong-use-touchscreen
-fload ${BP}/ofw/gui/ofpong.fth
-fload ${BP}/cpu/x86/pc/olpc/life.fth
+\ fload ${BP}/ofw/gui/ofpong.fth
 
 d# 999 ' screen-#rows    set-config-int-default  \ Expand the terminal emulator to fill the screen
 d# 999 ' screen-#columns set-config-int-default  \ Expand the terminal emulator to fill the screen
@@ -897,11 +958,7 @@ dev /client-services  patch noop visible enter  dend
 : ?games  ( -- )
    rocker-right game-key?  if
       protect-fw
-      time&date 5drop 1 and  if
-         ['] pong guarded
-      else
-         ['] life-demo guarded
-      then
+\      ['] pong guarded
       power-off
    then
 ;
@@ -964,8 +1021,9 @@ dev /client-services  patch noop visible enter  dend
 [then]
 
 fload ${BP}/cpu/arm/olpc/testitems.fth
-\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/testinstructions.fth
 \+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
+\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/testinstructions.fth
+\+ olpc-cl4 fload ${BP}/cpu/arm/olpc/cl4/testinstructions.fth
 
 : startup  ( -- )
    standalone?  0=  if  exit  then

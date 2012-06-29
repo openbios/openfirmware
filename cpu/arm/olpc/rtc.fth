@@ -1,7 +1,17 @@
 purpose: Driver for external IDT1338 RTC chip on XO-1.75
 
-0 0  " "  " /" begin-package
-" rtc" name
+0 0  " d4010000"  " /" begin-package
+   " rtc" name
+   " mrvl,mmp-rtc" +compatible
+   my-address my-space  h# 1000 reg
+
+   d# 1 encode-int  0 encode-int encode+ " interrupts" property
+   " /interrupt-controller/interrupt-controller@154" encode-phandle " interrupt-parent" property
+
+   " rtc 1Hz" encode-string " rtc alarm" encode-string  encode+ " interrupt-names" property
+
+         
+   " /apbc" encode-phandle 0 encode-int encode+ " clocks" property
 
 [ifdef] cl2-a1
 : set-address  ( -- )

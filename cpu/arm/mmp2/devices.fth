@@ -70,6 +70,7 @@ fload ${BP}/cpu/arm/mmp2/watchdog.fth	\ reset-all using watchdog timer
 
 0 0  " d4018000"  " /" begin-package  \ UART3
    fload ${BP}/cpu/arm/mmp2/uart.fth
+   d# 24 " interrupts" integer-property
 end-package
 devalias com1 /uart
 : com1  " com1"  ;

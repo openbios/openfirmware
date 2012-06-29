@@ -2,6 +2,9 @@
 " audio" name
 my-space h# 800 reg
 
+" /pmua" encode-phandle d# 20 encode-int encode+ " clocks" property
+d# 2 " interrupts" integer-property
+
 0 value sspa-base  \ E.g. h# 2a.0c00 +io
 0 value adma-base  \ E.g. h# 2a.0800 +io
 : sspa!  ( n offset -- )  sspa-base + rl!  ;  \ Write a register in SSPA1

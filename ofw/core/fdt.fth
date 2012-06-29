@@ -52,7 +52,6 @@ purpose: Construct a flattened device tree blob for Linux
    fdt-string,                                          ( offset )
 ;
 
-also client-services
 : flatten-path  ( -- )
    the-node phandle>devname       ( adr len )
    fdt$,  0 fdt-c,  4 fdt-align   ( )
@@ -176,7 +175,7 @@ variable fdt-phandle
 
    \ Test for unprintable characters
    2dup -null text?  if   
-      to-display-column  -null  type  exit  
+      to-display-column  -null  type cr exit  
    then   ( adr,len )
 
    dup /n /mod  swap 0=  if         ( adr len #ints )
@@ -212,8 +211,6 @@ variable fdt-phandle
       endcase
    again
 ;
-
-previous
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2012 FirmWorks

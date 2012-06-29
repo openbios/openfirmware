@@ -8,8 +8,9 @@ headerless
 " spi"     device-name
 
 0 0 encode-bytes
-   " Marvell,ssp-spi"  encode-string encode+
+   " mrvl,ssp-spi"  encode-string encode+
 " compatible" property
+   " /abpc" encode-phandle d# 19 encode-int encode+ " clocks" property
 
 my-address      my-space  h# 1000  encode-reg
 " reg" property

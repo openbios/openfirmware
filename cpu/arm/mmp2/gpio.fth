@@ -39,3 +39,42 @@ create gpio-offsets
 : >gpio-xmsk     ( gpio# -- mask pa )  >gpio-pin h# a8 +  ;
 : gpio-set-xmsk ( gpio# -- )  >gpio-xmsk tuck io@  or  swap io!  ;
 : gpio-clr-xmsk ( gpio# -- )  >gpio-xmsk tuck io@  swap invert and  swap io!  ;
+
+\ See <Linux> Documentation/devicetree/bindings/gpio/mrvl-gpio.txt
+0 0  " d4019000" " /" begin-package
+   " gpio" name
+
+   " mrvl,mmp-gpio" encode-string
+   " mrvl,pxa-gpio" encode-string encode+  " compatible" property
+
+   my-address my-space  h# 1000 reg
+
+   d# 49  encode-int  " interrupts" property
+   " gpio_mux"  " interrupt-names" string-property
+   " " " gpio-controller" property
+   3 " #gpio-cells" integer-property
+   " " " interrupt-controller" property
+   1 " #interrupt-cells" integer-property
+
+   " /apbc" encode-phandle d# 13 encode-int encode+ " clocks" property
+   " GPIO" " clock-names" string-property
+
+
+   1 " #address-cells" integer-property
+   1 " #size-cells" integer-property
+   : encode-unit  ( phys.. -- str )  push-hex (u.) pop-base  ;
+   : decode-unit  ( str -- phys.. )  push-hex  $number  if  0  then  pop-base  ;
+
+   : make-gpio-mux-node  ( offset -- )
+      new-device
+      " gpio" name
+      4 reg
+      finish-device
+   ;
+   h#  00 make-gpio-mux-node
+   h#  04 make-gpio-mux-node
+   h#  08 make-gpio-mux-node
+   h# 100 make-gpio-mux-node
+   h# 104 make-gpio-mux-node
+   h# 108 make-gpio-mux-node
+end-package

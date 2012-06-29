@@ -1,6 +1,8 @@
 " "  " d420a000" " /"  begin-package
    " camera" device-name
-   0 0 reg  \ A reg property makes "test-all" consider this device
+   my-address my-space  h# 800  reg
+   " /pmua" encode-phandle 2 encode-int encode+ " clocks" property
+   d# 42 " interrupts" integer-property
 
 0 [if]
    : alloc-capture-buffer  ( len -- vadr padr )

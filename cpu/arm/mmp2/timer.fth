@@ -188,3 +188,11 @@ lid-off
    do-lid
 ;
 ' safe-idle to stdin-idle
+
+0 0  " d4014000" " /" begin-package
+   " timer" name
+   " mrvl,mmp-timer" +compatible
+   my-address my-space  h# 100 reg
+   d# 13 " interrupts" integer-property
+   " /apbc" encode-phandle 9 encode-int encode+ " clocks" property
+end-package

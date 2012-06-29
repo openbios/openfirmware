@@ -35,6 +35,10 @@ my-address      my-space  h# 1000  encode-reg
 1 " #address-cells"  integer-property
 0 " #size-cells"     integer-property
 
+   d# 20 " interrupts" integer-property
+   " /apbc" encode-phandle d# 21 encode-int encode+ " clocks" property
+
+
 : encode-unit  ( phys -- adr len )  push-hex  (u.)  pop-base  ;
 : decode-unit  ( adr len -- phys )  push-hex  $number  if  0  then  pop-base  ;
 

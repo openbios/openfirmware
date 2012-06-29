@@ -24,6 +24,8 @@ headerless
 0 0 encode-bytes
    " olpc,ap-sp"  encode-string encode+
 " compatible" property
+   d# 40 " interrupts" integer-property
+   " /pmua" encode-phandle 8 encode-int encode+ " clocks" property
 
 my-address      my-space  h# 1000  encode-reg
 " reg" property
