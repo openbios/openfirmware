@@ -65,6 +65,15 @@ headers
    -rot  >>a  or                            ( low2  r: high2 )
    r>                                       ( d2 )
 ;
+: du*  ( d1 u -- d2 )  \ Double result
+   tuck u* >r     ( d1.lo u r: d2.hi )
+   um*  r> +      ( d2 )
+;
+: du*t  ( ud.lo ud.hi u -- res.lo res.mid res.hi )  \ Triple result
+   tuck um*  2>r  ( ud.lo u          r: res.mid0 res.hi0 )
+   um*            ( res.lo res.mid1  r: res.mid0 res.hi0 )
+   0  2r> d+      ( res.lo res.mid res.hi )
+;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

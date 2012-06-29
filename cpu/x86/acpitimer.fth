@@ -55,13 +55,8 @@ purpose: Timing functions using the ACPI timer
       1+ dup  to timer-high      ( timer.low timer.high' )
    then                          ( timer.low timer.high )
 ;
-: du*  ( ud.lo ud.hi u -- res.lo res.mid res.hi )  \ Ignores overflow to third cell
-   tuck  um*  2>r           ( ud.lo u      r: res.mid0 res.hi0 )
-   um*                      ( res.lo res.mid1  r: res.mid0 res.hi0 )
-   0  2r> d+                ( res.lo res.mid res.hi )
-;
 : acpi-ticks>usecs  ( d.ticks -- usec )
-   d# 50 du* drop      ( d.product )  \ The scale factor is 1000/3580 == 50/179
+   d# 50 du*           ( d.product )  \ The scale factor is 1000/3580 == 50/179
    d# 179 um/mod nip   ( usecs )
 ;
 

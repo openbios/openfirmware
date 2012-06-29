@@ -8,10 +8,6 @@
 32\ alias x- d-
 32\ alias xswap 2swap
 32\ : onex 1. ;
-: du*  ( d1 u -- d2 )
-    tuck u* >r     ( d1.lo u r: d2.hi )
-    um*  0 r> d+   ( d2 )
-;
 32\ : xu*d  ( x u -- d )  du*  ;
 64\ alias xu*d um*
 
