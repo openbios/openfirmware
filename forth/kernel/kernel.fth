@@ -1683,7 +1683,7 @@ headers
 \ searched while interpreting Forth code.
 
 decimal
-16 equ nvocs
+32 equ nvocs
 nvocs constant #vocs	\ The # of vocabularies that can be in the search path
 
 nvocs /token-t * ualloc-t user context   \ vocabulary searched first
