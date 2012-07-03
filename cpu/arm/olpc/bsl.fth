@@ -44,7 +44,7 @@ d# 152 constant bsl-rst-gpio#        \ SM_BELn, with GPIO152 as alternate functi
    uart-base >r  bsl-uart-base to uart-base  baud  h# 1b 3 uart!  r> to uart-base
 ;
 
-: send  ( char -- )  uart-base >r  bsl-uart-base to uart-base  uemit  r> to uart-base  ;
+: bsl-send  ( char -- )  uart-base >r  bsl-uart-base to uart-base  uemit  r> to uart-base  ;
 
 : receive?  ( -- false | char true )
    uart-base >r  bsl-uart-base to uart-base
@@ -122,7 +122,7 @@ d# 1000 constant timeout
 ;
 : bsl-sync  ( -- )
    d# 4  0  do
-      h# 80 send  ack?  if  unloop exit  then
+      h# 80 bsl-send  ack?  if  unloop exit  then
    loop
    true abort" BSL unresponsive"
 ;
@@ -131,7 +131,7 @@ d# 1000 constant timeout
 
 : +sum  ( w -- )  checksum xor to checksum ;
 : send-summed  ( w -- )
-   dup +sum  wbsplit swap send  send
+   dup +sum  wbsplit swap bsl-send  bsl-send
 ;
 : send-length  ( n -- )
    dup 1 and  abort" BSL odd length!"
@@ -153,7 +153,7 @@ d# 1000 constant timeout
    bounds  ?do  i le-w@ send-summed  /w +loop
 ;
 : )frame-no-ack  ( -- )
-   checksum h# ffff xor  wbsplit swap send send
+   checksum h# ffff xor  wbsplit swap bsl-send bsl-send
 ;
 : )frame  ( -- )
    )frame-no-ack
@@ -346,7 +346,6 @@ d# 50 buffer: binary-buf
    endcase
 ;
 
-d# 100 buffer: line-buf
 defer bsl-handle-line
 
 : set-bsl-file-format  ( -- )
@@ -365,16 +364,16 @@ defer bsl-handle-line
    0 ifd @ fseek
 ;
 
-d# 100 buffer: line-buf
+d# 100 buffer: bsl-line-buf
 : $flash-bsl  ( filename$ -- )
    $read-open           ( )
    set-bsl-file-format  ( )
    force-erase          ( )
    ." Programming" cr
    begin                ( )
-      line-buf d# 100 ifd @ read-line abort" Read line failed"
+      bsl-line-buf d# 100 ifd @ read-line abort" Read line failed"
    while                               ( len )
-      line-buf swap                    ( adr len )
+      bsl-line-buf swap                ( adr len )
       ['] bsl-handle-line  catch  ?dup  if  ( x x throw-code )
          ifd @ fclose  throw           ( ?? -- )
       then                             ( )
