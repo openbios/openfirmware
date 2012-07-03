@@ -47,7 +47,7 @@
 \ Says RESET - is CMD
 
 stand-init:
-   d# 56 gpio-pin@  if
+   boot-dev-gpio# gpio-pin@  if
       select-emmc
    else
       select-internal-sd
