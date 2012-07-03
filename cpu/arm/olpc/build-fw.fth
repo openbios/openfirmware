@@ -338,7 +338,12 @@ create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
 [then]
 
 fload ${BP}/cpu/arm/olpc/sdhci.fth
-\- cl2-a1 fload ${BP}/cpu/arm/olpc/emmc.fth
+
+[ifndef] cl2-a1
+: clx-touch?  ( -- )  board-revision h# 3a18 >=  ;
+: boot-dev-gpio#  ( -- n )  clx-touch?  if  2  else  d# 56  then  ;
+fload ${BP}/cpu/arm/olpc/emmc.fth
+[then]
 
 devalias int /sd/sdhci@d4281000/disk
 devalias ext /sd/sdhci@d4280000/disk
