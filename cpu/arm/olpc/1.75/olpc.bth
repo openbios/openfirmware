@@ -60,6 +60,8 @@ end-tim
 h# e.0000 to reserved-start
 h# f.0000 to reserved-end
 
+: $add-deflated-dropin 2dup type ."  - " $add-deflated-dropin ofd @ fsize .x cr  ;
+
 .( --- Saving as )
 " ${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
 2dup type cr  ( adr len )
@@ -75,6 +77,49 @@ $new-file
 \   " fw.img"   " firmware"  $add-dropin
    " resetvec.img"  " reset" $add-dropin
 
+   " sd8686_helper.bin"                          " helper_sd.bin" $add-deflated-dropin
+   " sd8686.bin"                                 " sd8686.bin"    $add-deflated-dropin
+
+   " verify.img"                                " verify"        $add-deflated-dropin
+
+   " sourceurl"   " sourceurl"                    $add-dropin
+
+   " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
+
+   " ec.img"                                     " ecimage.bin"    $add-deflated-dropin
+   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
+   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
+   " ${BP}/clients/emacs/arm/emacs"             " emacs"         $add-deflated-dropin
+
+   " nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
+   " nandblaster_tx.bin"   " nb_tx"    $add-deflated-dropin
+
+   \ icons for mfg test gui
+   " testicons/play.565"        " play.565"     $add-deflated-dropin
+   " testicons/quit.565"        " quit.565"     $add-deflated-dropin
+   " testicons/cpu.565"         " cpu.565"      $add-deflated-dropin
+   " testicons/spi.565"         " spi.565"      $add-deflated-dropin
+   " testicons/ram.565"         " ram.565"      $add-deflated-dropin
+   " testicons/sdcard.565"      " sdcard.565"   $add-deflated-dropin
+   " testicons/keyboard.565"    " keyboard.565" $add-deflated-dropin
+   " testicons/display.565"     " display.565"  $add-deflated-dropin
+   " testicons/touchpad.565"    " touchpad.565" $add-deflated-dropin
+   " testicons/audio.565"       " audio.565"    $add-deflated-dropin
+   " testicons/usb.565"         " usb.565"      $add-deflated-dropin
+   " testicons/battery.565"     " battery.565"  $add-deflated-dropin
+   " testicons/camera.565"      " camera.565"   $add-deflated-dropin
+   " testicons/wifi.565"        " wifi.565"     $add-deflated-dropin
+   " testicons/clock.565"       " clock.565"    $add-deflated-dropin
+   " testicons/timer.565"       " timer.565"    $add-deflated-dropin
+
+   " os.public"                                 " ospubkey"      $add-dropin \ Incompressible
+   " fw.public"                                 " fwpubkey"      $add-dropin \ Incompressible
+   " fs.public"                                 " fspubkey"      $add-dropin \ Incompressible
+   " lease.public"                              " leasepubkey"   $add-dropin \ Incompressible
+   " developer.public"                          " develpubkey"   $add-dropin \ Incompressible
+
+   " builton.fth"                       " probe-"          $add-dropin
+
 \   " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"      $add-deflated-dropin
    " ${BP}/dev/usb2/device/hub/build/hub.fc"     " usb,class9"      $add-deflated-dropin
    " ${BP}/dev/usb2/device/generic/build/generic.fc"  " usbdevice"  $add-deflated-dropin
@@ -84,18 +129,14 @@ $new-file
    " ${BP}/dev/usb2/device/serial/build/usbserial.fc" " usbserial"  $add-deflated-dropin
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
 
-   " sd8686_helper.bin"                          " helper_sd.bin" $add-deflated-dropin
-   " sd8686.bin"                                 " sd8686.bin"    $add-deflated-dropin
-
-   " builton.fth"                       " probe-"          $add-dropin
-
-0 [if]
-   " ${BP}/clients/emacs/x86/emacs"             " emacs"         $add-deflated-dropin
-   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
-   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
-[then]
+   " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
 
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
+
+   " ${BP}/cpu/x86/pc/olpc/images/bigx.di"      $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/bigcheck.di"  $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
 
 \    " ${BP}/cpu/x86/pc/olpc/images/warnings.565"  " warnings.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/lightdot.565"  " lightdot.565"  $add-deflated-dropin
@@ -116,50 +157,6 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wlan.565"      $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " int.565"       $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " ext.565"       $add-deflated-dropin
-
-   " verify.img"                                " verify"        $add-deflated-dropin
-   " os.public"                                 " ospubkey"      $add-dropin \ Incompressible
-   " fw.public"                                 " fwpubkey"      $add-dropin \ Incompressible
-   " fs.public"                                 " fspubkey"      $add-dropin \ Incompressible
-   " lease.public"                              " leasepubkey"   $add-dropin \ Incompressible
-   " developer.public"                          " develpubkey"   $add-dropin \ Incompressible
-
-   " sourceurl"   " sourceurl"                    $add-dropin
-
-   " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
-
-   \ icons for mfg test gui
-   " testicons/play.565"        " play.565"     $add-deflated-dropin
-   " testicons/quit.565"        " quit.565"     $add-deflated-dropin
-   " testicons/cpu.565"         " cpu.565"      $add-deflated-dropin
-   " testicons/spi.565"         " spi.565"      $add-deflated-dropin
-   " testicons/ram.565"         " ram.565"      $add-deflated-dropin
-   " testicons/sdcard.565"      " sdcard.565"   $add-deflated-dropin
-   " testicons/keyboard.565"    " keyboard.565" $add-deflated-dropin
-   " testicons/display.565"     " display.565"  $add-deflated-dropin
-   " testicons/touchpad.565"    " touchpad.565" $add-deflated-dropin
-   " testicons/audio.565"       " audio.565"    $add-deflated-dropin
-   " testicons/usb.565"         " usb.565"      $add-deflated-dropin
-   " testicons/battery.565"     " battery.565"  $add-deflated-dropin
-   " testicons/camera.565"      " camera.565"   $add-deflated-dropin
-   " testicons/wifi.565"        " wifi.565"     $add-deflated-dropin
-   " testicons/clock.565"       " clock.565"    $add-deflated-dropin
-   " testicons/timer.565"       " timer.565"    $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/bigx.di"      $add-file
-   " ${BP}/cpu/x86/pc/olpc/images/bigcheck.di"  $add-file
-   " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
-   " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
-
-   " nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
-   " nandblaster_tx.bin"   " nb_tx"    $add-deflated-dropin
-0 [if]
-   " ${BP}/cpu/x86/pc/olpc/images/tux.565"       " tux.565"        $add-deflated-dropin
-   " ${BP}/cpu/x86/pc/olpc/images/settings.565"  " settings.565"   $add-deflated-dropin
-[then]
-   " ec.img"                                     " ecimage.bin"    $add-deflated-dropin
-   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
-   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
-   " ${BP}/clients/emacs/arm/emacs"             " emacs"         $add-deflated-dropin
 
 .( Dropin top is )  ofd @ fsize  .x cr
 
