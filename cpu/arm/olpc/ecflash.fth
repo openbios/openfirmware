@@ -1,16 +1,6 @@
 \ See license at end of file
 purpose: Reflash the EC code
 
-
-[ifdef] cl2-a1
-h# 10000 value /ec-flash
-char 3 value expected-ec-version
-[else]
-h# 8000 value /ec-flash
-\+ olpc-cl2 char 4 value expected-ec-version
-\+ olpc-cl3 char 5 value expected-ec-version
-[then]
-
 : check-signature  ( adr -- )
    /ec-flash +  h# 100 -                                 ( adr' )
    dup  " XO-EC" comp abort" Bad signature in EC image"  ( adr )

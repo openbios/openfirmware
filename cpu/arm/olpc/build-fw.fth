@@ -197,6 +197,19 @@ fload ${BP}/cpu/arm/olpc/edi.fth
 
 load-base constant flash-buf
 
+
+[ifdef] cl2-a1
+h# 10000 value /ec-flash
+char 3 value expected-ec-version
+[else]
+h# 8000 value /ec-flash
+: clx-touch?  ( -- )  board-revision h# 3a18 >=  ;
+\+ olpc-cl2 : expected-ec-version  clx-touch?  if  [char] 6  else  [char] 4  then  ;
+\+ olpc-cl3 char 5 value expected-ec-version
+[then]
+
+[ifndef] cl2-a1
+[then]
 fload ${BP}/cpu/arm/olpc/ecflash.fth
 
 : ec-spi-reprogrammed   ( -- )
@@ -340,7 +353,6 @@ create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
 fload ${BP}/cpu/arm/olpc/sdhci.fth
 
 [ifndef] cl2-a1
-: clx-touch?  ( -- )  board-revision h# 3a18 >=  ;
 : boot-dev-gpio#  ( -- n )  clx-touch?  if  2  else  d# 56  then  ;
 fload ${BP}/cpu/arm/olpc/emmc.fth
 [then]
