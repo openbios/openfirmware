@@ -60,8 +60,6 @@ end-tim
 h# e.0000 to reserved-start
 h# f.0000 to reserved-end
 
-: $add-deflated-dropin 2dup type ."  - " $add-deflated-dropin ofd @ fsize .x cr  ;
-
 .( --- Saving as )
 " ${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
 2dup type cr  ( adr len )
