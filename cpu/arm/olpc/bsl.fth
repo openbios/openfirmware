@@ -3,7 +3,42 @@ purpose: Downloader for TI MSP430 BootStrap Loader (BSL) protocol
 
 \ devalias bsl /uart@NNNN:9600,8,e,1//bsl-protocol
 
-h# fe016000 value bsl-uart-base \ Virtual address of UART; set later
+
+\ These constants are correct for XO-1.75 and XO-CL4; they might
+\ need to be changed for different hardware.  See setup-gpios-hack
+
+h# 17000 +io constant bsl-uart-base  \ UART2
+
+d#  98 constant bsl-test-gpio#       \ GPIO98 is alternate function 0 (the default)
+d# 152 constant bsl-rst-gpio#        \ SM_BELn, with GPIO152 as alternate function 1
+
+\ This is platform-dependent
+
+: setup-gpios  ( -- )
+   3 d# 55 af!   3 d# 56 af!   \ Setup pins for UART2
+   0 bsl-test-gpio# af!        \ Set to GPIO function
+   1 bsl-rst-gpio#  af!        \ Set to GPIO function (AF0 is SM_BELn for this pin)
+;
+
+0 [if]
+\ This is for the test system on which this code was originally developed
+: setup-gpios-hack  ( -- )
+   \ On the test system, the BSL device is driven from the console UART,
+   \ not a dedicated UART, so we must disconnect that UART from the console mux
+   fallback-in-ih  ?dup  if  dup remove-input  close-dev  0 to fallback-in-ih   then
+   fallback-out-ih ?dup  if  dup remove-output close-dev  0 to fallback-out-ih  then
+
+   h# 16000 +io to bsl-uart-base   \ UART4
+
+   d# 115 to test-gpio#  \ Normally UART3 TXD, but repurposed as a GPIO
+   d# 116 to rst-gpio#   \ Normally UART3 RXD, but repurposed as a GPIO
+
+   0 bsl-test-gpio# af!  \ Set to GPIO function instead of UART3
+   0 bsl-rst-gpio#  af!  \ Set to GPIO function instead of UART3
+;
+[then]
+
+\ These are MMP2/3 dependent
 
 : bsl-baud  ( baud-rate -- )   \ 9600,8,e,1
    uart-base >r  bsl-uart-base to uart-base  baud  h# 1b 3 uart!  r> to uart-base
@@ -17,53 +52,41 @@ h# fe016000 value bsl-uart-base \ Virtual address of UART; set later
    r> to uart-base
 ;
 
-0 value rst-gpio#
-0 value test-gpio#
-\ : bsl-config-test  ( -- )
-: init-gpios
-   fallback-in-ih  ?dup  if  dup remove-input  close-dev  0 to fallback-in-ih   then
-   fallback-out-ih ?dup  if  dup remove-output close-dev  0 to fallback-out-ih  then
 
-   d# 115 to test-gpio#
-   d# 116 to rst-gpio#
-
-   test-gpio#   0 swap af!  
-   rst-gpio#    0 swap af!  
-;
+\ After this point the code is largely generic
 
 : bsl-open  ( -- )
-   init-gpios
+   setup-gpios
 
-   rst-gpio# gpio-clr
-   test-gpio# gpio-clr
-   rst-gpio# gpio-dir-out
-   test-gpio# gpio-dir-out
-   h# 16000 +io to bsl-uart-base   
+   bsl-rst-gpio# gpio-clr
+   bsl-test-gpio# gpio-clr
+   bsl-rst-gpio# gpio-dir-out
+   bsl-test-gpio# gpio-dir-out
 
    d# 9600 bsl-baud
 ;
 : bsl-close  ( -- )
-   rst-gpio# gpio-dir-in
-   test-gpio# gpio-dir-in
+   bsl-rst-gpio# gpio-dir-in
+   bsl-test-gpio# gpio-dir-in
 ;
 : msp430-off  ( -- )
-   rst-gpio# gpio-clr
-   test-gpio# gpio-clr
+   bsl-rst-gpio# gpio-clr
+   bsl-test-gpio# gpio-clr
 ;
 
 : dly  ( -- )  d# 10 ms  ;
 : start-bsl  ( -- )
    bsl-open
    d# 250 ms
-   test-gpio# gpio-set
+   bsl-test-gpio# gpio-set
    dly
-   test-gpio# gpio-clr
+   bsl-test-gpio# gpio-clr
    dly
-   test-gpio# gpio-set
+   bsl-test-gpio# gpio-set
    dly
-   rst-gpio# gpio-set
+   bsl-rst-gpio# gpio-set
    dly
-   test-gpio# gpio-clr
+   bsl-test-gpio# gpio-clr
 ;
 : flush-bsl  ( -- )  begin  receive?  while  drop  repeat  ;
 : rst-bsl  ( -- )  msp430-off  start-bsl  flush-bsl  ;
@@ -238,6 +261,16 @@ d# 250 constant /bsl-max-read
    r>  3drop
 ;
 
+: force-erase  ( -- )
+   ." Resetting/erasing" cr
+   rst-bsl
+   ['] 00-password catch drop
+   rst-bsl
+   ff-password
+;
+
+\ Decoder for TI TXT file format
+
 0 value next-address
 0 value line-#bytes
 d# 50 buffer: binary-buf
@@ -269,7 +302,7 @@ d# 50 buffer: binary-buf
    loop                       ( adr len )
    true abort" TI TXT Line too long!"
 ;
-: handle-line  ( adr len -- )
+: ti-txt-handle-line  ( adr len -- )
    dup 0=  if  2drop exit  then    ( adr len )
    over c@  case
       [char] @ of                  ( adr len )
@@ -282,25 +315,121 @@ d# 50 buffer: binary-buf
          -rot  program-bytes       ( char )
    endcase                         ( )
 ;
-: force-erase  ( -- )
-   ." Resetting/erasing" cr
-   rst-bsl
-   ['] 00-password catch drop
-   rst-bsl
-   ff-password
+
+\ Decoder for Intel HEX format file
+\needs parse-ihex-record fload ${BP}/forth/lib/intelhex.fth
+
+0 value ihex-hi-adr
+: ihex-handle-line  ( adr len -- )
+   dup 0=  if  2drop exit  then                ( adr len )
+   parse-ihex-record                           ( data-adr data-len offset type )
+   case
+      0 of   \ Data                            ( data-adr data-len offset )
+         ihex-hi-adr +  rx-data-block          ( )
+      endof
+      1 of   \ End of file                     ( data-adr data-len offset )
+         3drop                                 ( )
+      endof
+      2 of   \ Segment address                 ( data-adr data-len offset )
+         2drop le-w@ 4 lshift  to ihex-hi-adr  ( )
+      endof
+      3 of   \ Start segment address           ( data-adr data-len offset )
+         3drop
+      endof
+      4 of   \ Extended linear address         ( data-adr data-len offset )
+         2drop le-w@ d# 16 lshift  to ihex-hi-adr  ( )
+      endof
+      5 of   \ Start address                   ( data-adr data-len offset )
+         3drop
+      endof
+      ( default )  true abort" Bogus ihex record type"
+   endcase
 ;
+
 d# 100 buffer: line-buf
-: $bsl-ti-text-file  ( filename$ -- )
-   $read-open       ( )
-   force-erase      ( )
+defer bsl-handle-line
+
+: set-bsl-file-format  ( -- )
+   ifd @ fgetc  case
+      [char] : of
+         ['] ihex-handle-line  to bsl-handle-line
+      endof
+      [char] @ of
+         ['] ti-txt-handle-line  to bsl-handle-line
+      endof
+      ( default )
+      ifd @ fclose
+      true abort" Unsupported file format for BSL programming"
+   endcase
+
+   0 ifd @ fseek
+;
+
+d# 100 buffer: line-buf
+: $flash-bsl  ( filename$ -- )
+   $read-open           ( )
+   set-bsl-file-format  ( )
+   force-erase          ( )
    ." Programming" cr
-   begin            ( )
+   begin                ( )
       line-buf d# 100 ifd @ read-line abort" Read line failed"
-   while                          ( len )
-      line-buf swap handle-line   ( )
-   repeat                         ( len )
-   drop
-   ifd @ fclose   
+   while                               ( len )
+      line-buf swap                    ( adr len )
+      ['] bsl-handle-line  catch  ?dup  if  ( x x throw-code )
+         ifd @ fclose  throw           ( ?? -- )
+      then                             ( )
+   repeat                              ( len )
+   drop                                ( )
+   ifd @ fclose                        ( )
+;
+
+\ This is a destructive test in that it erases whatever firmware happens
+\ to already be in the device.
+
+
+h# 70 value /bsl-chunk
+/bsl-chunk buffer: bsl-buf
+: bsl-write  ( adr len device-adr -- )
+   to next-address             ( adr len )
+   begin  dup  while           ( adr len )
+      dup /bsl-chunk min       ( adr len thislen )
+      third over next-address rx-data-block  ( adr len thislen )
+      dup next-address + to next-address     ( adr len thislen )
+      /string                  ( adr' len' )
+   repeat                      ( adr 0 )
+   2drop                       ( )
+;
+: bsl-verify  ( adr len device-adr -- okay? )
+   to next-address                    ( adr len )
+   begin  dup  while                  ( adr len )
+      dup /bsl-chunk min              ( adr len thislen )
+      bsl-buf over next-address tx-data-block  ( adr len thislen )
+      third bsl-buf third  comp  if   ( adr len thislen )
+         3drop false exit             ( -- false )
+      then                            ( adr len thislen )
+      dup next-address + to next-address     ( adr len thislen )
+      /string                         ( adr' len' )
+   repeat                             ( adr 0 )
+   2drop                              ( )
+   true                               ( true )
+;
+h# 3000 constant /bsl-test-buf
+/bsl-test-buf buffer: bsl-test-buf
+0 value bsl-test-init?
+: bsl-test-data  ( -- adr len )
+   bsl-test-init? 0=  if
+      bsl-test-buf  /bsl-test-buf  bounds  ?do
+         random-long  i l!
+     /l +loop
+     true to bsl-test-init?
+   then
+   bsl-test-buf /bsl-test-buf
+;
+: test-msp430   ( -- )
+   ." Erasing ..." force-erase cr
+   ." Writing ..." bsl-test-data h# 8000 bsl-write  cr  ( )
+   ." Verifying ..."  bsl-test-data h# 8000 bsl-verify  cr  ( okay? )
+   if  ." FAILED!"  else  ." Good"  then  cr
 ;
 
 \ LICENSE_BEGIN
