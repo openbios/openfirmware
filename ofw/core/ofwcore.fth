@@ -2162,6 +2162,12 @@ headers
    (push-package)  get-property  (pop-package)
 ;
 
+: set-package-property  ( value$ name$ phandle -- )
+   current token@ >r  context token@ >r   (select-package)  ( value$ name$ )
+   (property)
+   r> context token!  r> current token!
+;
+
 \ Used when executing from an open package instance.  Finds a property
 \ associated with the current package.
 : get-my-property  ( adr len -- true | adr' len' false )

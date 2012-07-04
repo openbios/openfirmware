@@ -1048,27 +1048,12 @@ defer function-present?  ( phys.hi.func -- flag )
    then
 ;
 
-\ XXX In order to implement put-package-property with standard words,
-\ we would have to:
-\ a) Save my-self and set it to 0
-\ b) Get the package's "reg" property value with get-package-property
-\ c) Convert the first entry therein to a string of the form "@D,F"
-\ d) Pass that string to find-device to make that package the active package
-\ e) Create the property
-\ f) Restore my-self
-
-: put-package-property  ( value$ name$ phandle -- )
-   current token@ >r  context token@ >r   execute  ( value$ name$ )
-   (property)
-   r> context token!  r> current token!
-;
-
 0 value aa-adr
 0 value aa-len
 : init-aa-property  ( -- )  0 0 encode-bytes  to aa-len  to aa-adr  ;
 : finish-aa-property  ( phandle -- )
    aa-len  if
-      >r  aa-adr aa-len  " assigned-addresses"  r> put-package-property
+      >r  aa-adr aa-len  " assigned-addresses"  r> set-package-property
    else
       drop
    then
