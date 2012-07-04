@@ -204,7 +204,7 @@ char 3 value expected-ec-version
 [else]
 h# 8000 value /ec-flash
 : clx-touch?  ( -- )  board-revision h# 3a18 >=  ;
-\+ olpc-cl2 : expected-ec-version  clx-touch?  if  [char] 6  else  [char] 4  then  ;
+\+ olpc-cl2 char 4 value expected-ec-version
 \+ olpc-cl3 char 5 value expected-ec-version
 [then]
 
