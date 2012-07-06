@@ -41,7 +41,12 @@ d# 152 constant bsl-rst-gpio#        \ SM_BELn, with GPIO152 as alternate functi
 \ These are MMP2/3 dependent
 
 : bsl-baud  ( baud-rate -- )   \ 9600,8,e,1
-   uart-base >r  bsl-uart-base to uart-base  baud  h# 1b 3 uart!  r> to uart-base
+   uart-base >r                 ( baud-rate r: uart-base )
+   bsl-uart-base to uart-base
+   h# 13 h# 30 apbc!                                            \ enable the uart2 clocks
+   h# 40 1 uart!                                                \ uart unit enable
+   baud  h# 1b 3 uart!          ( r: uart-base )
+   r> to uart-base              ( )
 ;
 
 : bsl-send  ( char -- )  uart-base >r  bsl-uart-base to uart-base  uemit  r> to uart-base  ;
@@ -88,7 +93,16 @@ d# 152 constant bsl-rst-gpio#        \ SM_BELn, with GPIO152 as alternate functi
    dly
    bsl-test-gpio# gpio-clr
 ;
-: flush-bsl  ( -- )  begin  receive?  while  drop  repeat  ;
+
+: flush-bsl
+   get-msecs d# 2000 +                  ( limit )
+   begin
+      receive?  0=  if  exit  then      ( limit char )
+      drop  dup get-msecs - 0<          ( limit timeout? )
+   until
+   drop  true abort" BSL flush timeout"
+;
+
 : rst-bsl  ( -- )  msp430-off  start-bsl  flush-bsl  ;
 
 d# 1000 constant timeout
@@ -102,6 +116,7 @@ d# 1000 constant timeout
    until                      ( limit )
    drop  true abort" BSL data timeout"
 ;
+
 : ack?  ( -- okay? )
    get-msecs timeout +        ( limit )
    begin                      ( limit )
@@ -262,7 +277,6 @@ d# 250 constant /bsl-max-read
 ;
 
 : force-erase  ( -- )
-   ." Resetting/erasing" cr
    rst-bsl
    ['] 00-password catch drop
    rst-bsl
@@ -368,6 +382,7 @@ d# 100 buffer: bsl-line-buf
 : $flash-bsl  ( filename$ -- )
    $read-open           ( )
    set-bsl-file-format  ( )
+   ." Resetting/erasing" cr
    force-erase          ( )
    ." Programming" cr
    begin                ( )
@@ -428,7 +443,7 @@ h# 3000 constant /bsl-test-buf
    ." Erasing ..." force-erase cr
    ." Writing ..." bsl-test-data h# 8000 bsl-write  cr  ( )
    ." Verifying ..."  bsl-test-data h# 8000 bsl-verify  cr  ( okay? )
-   if  ." FAILED!"  else  ." Good"  then  cr
+   if  ." Good"  else  ." FAILED!"  then  cr
 ;
 
 \ LICENSE_BEGIN
