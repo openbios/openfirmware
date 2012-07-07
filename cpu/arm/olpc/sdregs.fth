@@ -4,11 +4,11 @@ h# 200 value /regs   \ SDHCI register block
 0 instance value slot
 0 instance value chip
 
-\ my-space /regs  reg
+my-space /regs  reg
 
 : map-regs  ( -- )
    chip  if  exit  then
-   slot  /regs " map-in" $call-parent
+   slot 1-  h# 800 *  my-space +  /regs " map-in" $call-parent
    to chip
 ;
 : unmap-regs  ( -- )

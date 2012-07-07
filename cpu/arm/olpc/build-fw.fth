@@ -357,8 +357,8 @@ fload ${BP}/cpu/arm/olpc/sdhci.fth
 fload ${BP}/cpu/arm/olpc/emmc.fth
 [then]
 
-devalias int /sd/sdhci@d4281000/disk
-devalias ext /sd/sdhci@d4280000/disk
+devalias int /sd/disk@3
+devalias ext /sd/disk@1
 devalias net /wlan  \ XXX should report-net in case of USB Ethernet
 
 fload ${BP}/dev/olpc/kb3700/spicmd.fth           \ EC SPI Command Protocol
