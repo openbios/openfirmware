@@ -9,6 +9,7 @@ defer linux-pre-hook  ' noop to linux-pre-hook
 
 0 value linux-memtop
 
+defer mapped-limit
 defer memory-limit
 \ Find the end of the largest piece of memory
 : (memory-limit)  ( -- limit )
@@ -32,6 +33,7 @@ defer memory-limit
    +                                 ( limit )
 ;
 ' (memory-limit) to memory-limit  \ Override by platform code if necessary
+' memory-limit to mapped-limit    \ Override by platform code if necessary
 
 \ see http://www.simtec.co.uk/products/SWLINUX/files/booting_article.html
 
@@ -92,6 +94,7 @@ defer ofw-tag, ' noop to ofw-tag,  \ Define externally if appropriate
 true value use-fdt?
 : use-fdt  ( -- )  true to use-fdt?  ;
 
+h# 10000 constant /fdt-max
 : linux-fixup  ( -- )
 [ifdef] linux-logo  linux-logo  [then]
 \   use-fdt? 0=  if
@@ -104,8 +107,8 @@ true value use-fdt?
    arm-linux-machine-type to r1
 [ifdef] flatten-device-tree
    use-fdt?  if
-      load-base h# 40000 - to linux-params
-      linux-params h# 40000 flatten-device-tree
+      ramdisk-adr ?dup 0=  if  mapped-limit  then  /fdt-max -  to linux-params
+      linux-params /fdt-max flatten-device-tree
    else
       args-buf cscount linux-params set-parameters
    then
@@ -122,7 +125,7 @@ defer place-ramdisk
 : linux-place-ramdisk  ( adr len -- )
    to /ramdisk                                    ( adr )
 
-   dup memory-limit  umin  /ramdisk -             ( adr new-ramdisk-adr )
+   mapped-limit  /ramdisk -                       ( adr new-ramdisk-adr )
    tuck /ramdisk move                             ( new-ramdisk-adr )
 \  dup to linux-memtop
    to ramdisk-adr

@@ -490,6 +490,8 @@ warning on
 \ We give everything up to that address to Linux.
 : olpc-memory-limit  ( -- adr )  extra-mem-va >physical  ;
 ' olpc-memory-limit to memory-limit
+: olpc-mapped-limit  ( -- adr )  dma-mem-va >physical  ;
+' olpc-mapped-limit to mapped-limit
 
 \+ olpc-cl2 d#  9999 to arm-linux-machine-type  \ XO-1.75
 \+ olpc-cl3 d# 10000 to arm-linux-machine-type  \ XO-3
