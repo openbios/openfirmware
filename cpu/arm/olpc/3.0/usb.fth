@@ -8,6 +8,9 @@ purpose: Platform-specific USB elaborations
       my-space swap  " map-in" $call-parent  h# 100 +  ( adr )
    ;
    : my-map-out  ( adr len -- )  swap h# 100 - swap " map-out" $call-parent  ;
+   " /pmua" encode-phandle 5 encode-int encode+ " clocks" property
+   d# 44 " interrupts" integer-property
+
    false constant has-dbgp-regs?
    false constant needs-dummy-qh?
    : grab-controller  ( config-adr -- error? )  drop false  ;
