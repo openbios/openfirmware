@@ -46,9 +46,11 @@ create mfpr-offsets                                         \  GPIOs
 
 : no-update,  ( -- )  8 w,  ;  \ 8 is a reserved bit; the code skips these
 : af@  ( gpio# -- function# )  gpio>mfpr io@  ;
-: af!  ( function# gpio# -- )  gpio>mfpr io!  ;
+: af!  ( function# gpio# -- )  gpio>mfpr io!@  ;
 
 : +edge-clr     ( n -- n' )  h#   40 or  ;
+: +very-slow    ( n -- n' )  h# 0000 or  ;
+: +slow         ( n -- n' )  h# 0800 or  ;
 : +medium       ( n -- n' )  h# 1000 or  ;
 : +fast         ( n -- n' )  h# 1800 or  ;
 : +twsi         ( n -- n' )  h#  400 or  ;

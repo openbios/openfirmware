@@ -4,6 +4,7 @@ purpose: Register access words for MMP2 registers used by many functional units
 : +io  ( offset -- va )  io-va +  ;
 : io!  ( value offset -- )  +io l!  ;
 : io@  ( offset -- value )  +io l@  ;
+: io!@  ( value offset -- )  tuck io! io@ drop  ;  \ For slow registers like MFPRs
 
 : +apbc  ( offset -- io-offset )  h# 01.5000 +  ;  \ APB Clock Unit
 : +pmua  ( offset -- io-offset )  h# 28.2800 +  ;  \ CPU Power Management Unit
