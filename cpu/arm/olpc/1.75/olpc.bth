@@ -129,8 +129,6 @@ $new-file
 
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
 
-   " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
-
    " ${BP}/cpu/x86/pc/olpc/images/bigx.di"      $add-file
    " ${BP}/cpu/x86/pc/olpc/images/bigcheck.di"  $add-file
    " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
