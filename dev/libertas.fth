@@ -1685,26 +1685,23 @@ d# 1600 constant /packet-buf
 ;
 
 : rf-antenna  ( antenna action -- )
-   swap >r >r
+   swap >r >r                                           ( r: antenna action )
    4 h# 20 ( CMD_802_11_RF_ANTENNA ) prepare-cmd
-   r> +xw
-   r> +xw
+   r> +xw                                               ( r: antenna )
+   r> +xw                                               ( )
    outbuf-wait  drop
 ;
 
-: set-antenna  ( rx tx -- )
-   2 ( ACT_SET_TX ) rf-antenna  ( rx )
+: set-antenna  ( antenna -- )
    1 ( ACT_SET_RX ) rf-antenna  ( )
 ;
 
 : set-antenna-diversity  ( -- )
-   h# ffff 2 ( ACT_SET_TX ) rf-antenna
    h# ffff 1 ( ACT_SET_RX ) rf-antenna
 ;
 
-: get-antenna  ( -- rx tx )
-   h# 0 4 ( ACT_GET_RX ) rf-antenna  respbuf >fw-data 2+ le-w@  ( rx )
-   h# 0 8 ( ACT_GET_TX ) rf-antenna  respbuf >fw-data 2+ le-w@  ( rx tx )
+: get-antenna  ( -- antenna )
+   h# 0 4 ( ACT_GET_RX ) rf-antenna  respbuf >fw-data 2+ le-w@  ( antenna )
 ;
 
 : .hw-spec  ( -- )
@@ -2203,9 +2200,9 @@ d# 1600 buffer: test-buf
    decimal
    ." now" .rssi                        ( base avg_nf avg_snr )
    ."  avg" .rssi                       ( base )
-   get-antenna swap                     ( base tx rx )
+   get-antenna                          ( base antenna )
    hex
-   ."  rx" .antenna  ."  tx" .antenna   ( base )
+   ."  ant" .antenna                    ( base )
    ."  "
    base !
 ;
@@ -2217,18 +2214,17 @@ d# 1600 buffer: test-buf
 ;
 
 : test-antenna  ( -- )
-   ." keys: (0,1,2,l,r,d,a,s,q)" cr
+   ." keys: (0,1,2,3,d,a,s,q)" cr
    begin
       d# 100 ms  show-antenna  key?  if
          cr  show-antenna  key
          case
             h# 71 ( q ) of  cr exit  endof
-            h# 1b       of  cr exit  endof
-            h# 30 ( 0 ) of  ." rx/tx to 0/0"  0 0 set-antenna            endof
-            h# 31 ( 1 ) of  ." rx/tx to 1/1"  1 1 set-antenna            endof
-            h# 32 ( 2 ) of  ." rx/tx to 2/2"  2 2 set-antenna            endof
-            h# 6c ( l ) of  ." rx/tx to 1/2"  1 2 set-antenna            endof
-            h# 72 ( r ) of  ." rx/tx to 2/1"  2 1 set-antenna            endof
+	    h# 1b       of  cr exit  endof
+            h# 30 ( 0 ) of  ." antenna to 0"  0  set-antenna             endof
+            h# 31 ( 1 ) of  ." antenna to 1"  1  set-antenna             endof
+            h# 32 ( 2 ) of  ." antenna to 2"  2  set-antenna             endof
+            h# 33 ( 3 ) of  ." antenna to 3"  3  set-antenna             endof
             h# 64 ( d ) of  ." diversity"     cr  set-antenna-diversity  endof
             h# 61 ( a ) of  ." associate"     cr  close  open drop       endof
             h# 73 ( s ) of  ta-scan  endof
