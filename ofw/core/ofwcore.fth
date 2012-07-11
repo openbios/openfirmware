@@ -745,7 +745,7 @@ headers
    (push-package)  definitions
 ;
 : pop-package  ( -- )  (pop-package) definitions  ;
-: push-device  ( acf -- )  to current-device  ;
+: push-device  ( phandle -- )  to current-device  ;
 
 : pop-device  ( -- )
    parent-device                     ( parent-phandle )
@@ -1292,13 +1292,14 @@ device-end
    root-device?  abort" Attempted to find the predecessor of the root package"
    pop-device                      (                    R: phandle )
    'child   begin                  ( link               R: phandle )
-      dup link@                    ( link phandle'      R: phandle )
-      dup r@ <>                    ( link phandle' flag R: phandle )
+      dup link@                    ( link voc'          R: phandle )
+      dup r@ phandle>voc <>        ( link voc'          flag R: phandle )
    while                           ( link phandle'      R: phandle )
-      push-device drop  'peer      ( link               R: phandle)
+      voc>phandle push-device      ( link               R: phandle)
+      drop  'peer                  ( link'              R: phandle)
    repeat                          ( link phandle'      R: phandle )
    r> 2drop                        ( link )
-   pop-package
+   pop-package                     ( link )
 ;
 : delete-package  ( phandle -- )
    dup next-package  swap previous-link link!
@@ -1948,12 +1949,12 @@ headers
 ;
 : ls  ( -- )
    device-context?  if
-      'child token@                   ( first-node )
-      begin  non-null?  while         ( node )
+      'child token@                   ( first-node-voc )
+      begin  non-null?  while         ( node-voc )
 	 voc>phandle push-device      ( )
 	 .nodeid                      ( )
-	 'peer token@                 ( node' )
-	 pop-device
+	 'peer token@                 ( node-voc' )
+	 pop-device                   ( )
       repeat                          ( )
    else
       .not-devtree
@@ -1961,12 +1962,12 @@ headers
 ;
 : delete-my-children  ( -- )
    device-context?  if
-      'child token@                   ( first-node )
-      begin  non-null?  while         ( node )
-	 dup push-device              ( node )
-	 'peer token@                 ( node peer )
-	 pop-device                   ( node peer )
-         swap delete-package          ( peer )
+      'child token@                   ( first-node-voc )
+      begin  non-null?  while         ( node-voc )
+	 voc>phandle dup push-device  ( node-phandle )
+	 'peer token@                 ( node-phandle peer-voc )
+	 pop-device                   ( node-phandle peer-voc )
+         swap delete-package          ( peer-voc )
       repeat                          ( )
    then
 ;
@@ -2162,6 +2163,7 @@ headers
    (push-package)  get-property  (pop-package)
 ;
 
+\ XXX - I think this could be implemented by   (push-package) (property) (pop-package)
 : set-package-property  ( value$ name$ phandle -- )
    current token@ >r  context token@ >r   (select-package)  ( value$ name$ )
    (property)
