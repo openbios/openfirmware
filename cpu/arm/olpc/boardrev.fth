@@ -4,7 +4,7 @@ purpose: Determine the board revision based on hardware and EC info
 0 value board-revision
 
 \ Constructs a string like "B4" or "preB4" or "postB4"
-: model-name$  ( -- model$ )
+: model-version$  ( -- model$ )
    board-revision  h# 10 /mod               ( minor major )
    swap  dup 8 =  if                        ( major minor )
       drop " "                              ( major prefix$ )

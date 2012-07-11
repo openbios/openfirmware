@@ -2,8 +2,8 @@
 " compass" name
 
 : set-compass-slave  ( -- )
-   4 to smb-clock-gpio#
-   5 to smb-data-gpio#
+   compass-scl-gpio# to smb-clock-gpio#
+   compass-sda-gpio# to smb-data-gpio#
    h# 3c to smb-slave
    smb-data-gpio# gpio-dir-out
 ;

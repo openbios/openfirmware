@@ -17,25 +17,15 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
    \ Slot:power_GPIO - 1:35, 2:34, 3:33
    : gpio-power-on  ( -- )
       sdhci-card-power-on
-\ The CL3 version below actually works for CL2 >= B1
-\+ olpc-cl2  d# 36 slot - gpio-set
-\+ olpc-cl3  slot 2 =  if  d# 34 gpio-set  then
+      slot 2 =  if  en-wlan-pwr-gpio# gpio-set  then
    ;
    ' gpio-power-on to card-power-on
 
    : gpio-power-off  ( -- )
-\+ olpc-cl2  d# 36 slot - gpio-clr
-\+ olpc-cl3  slot 2 =  if  d# 34 gpio-clr  then
+      slot 2 =  if  en-wlan-pwr-gpio# gpio-clr  then
       sdhci-card-power-off
    ;
    ' gpio-power-off to card-power-off
-
-\+ olpc-cl2   new-device
-\+ olpc-cl2      1 encode-int " reg" property
-\+ olpc-cl2      fload ${BP}/dev/mmc/sdhci/sdmmc.fth
-\+ olpc-cl2      fload ${BP}/dev/mmc/sdhci/selftest.fth
-\+ olpc-cl2      " external" " slot-name" string-property
-\+ olpc-cl2   finish-device
 
    new-device
       2 encode-int " reg" property

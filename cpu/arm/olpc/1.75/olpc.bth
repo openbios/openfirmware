@@ -162,7 +162,7 @@ $new-file
 /rom h# 40 - ofd @ fseek
 h# 10 buffer: signature
 signature h# 10 blank
-machine-signature count   signature         swap move
+signature$  signature  swap move
 " ${FW_VERSION}" expand$  signature     6 + swap move
 " ${FW_PREFIX}${FW_MAJOR}" expand$  signature d# 13 + swap move
 signature h# 10  ofd @ fputs

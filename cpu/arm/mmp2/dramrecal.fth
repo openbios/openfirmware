@@ -647,8 +647,10 @@ end-string-array
 \ How to wakeup from SP:
 : setup-key-wakeup  ( -- )
    d# 24 d# 15 do  h# b0 i af!  loop  \ Wake SoC on game keys
-   h# 220 d#  71 af!  \ Wake SoC on KBD CLK falling edge
-   h# 221 d# 160 af!  \ Wake SoC on TPD CLK falling edge
+[ifdef] soc-kbd-clk-gpio#
+   h# 220 soc-kbd-clk-gpio# af!  \ Wake SoC on KBD CLK falling edge
+   h# 221 soc-tpd-clk-gpio# af!  \ Wake SoC on TPD CLK falling edge
+[then]
    h# 4  h# 4c +mpmu  io-set  \ Pin edge (GPIO per datasheet) wakes SoC
    ['] disable-int40 d# 40 interrupt-handler!
    d# 40 enable-interrupt  \ SP to PJ4 communications interrupt
@@ -749,11 +751,16 @@ end-string-array
    \ end mmp2_pm_enter_lowpower_mode(state)
 ;
 
-: keyboard-power-on   ( -- )  d# 148 gpio-clr  ;
-: keyboard-power-off  ( -- )  d# 148 gpio-set  ;
-: wlan-power-on   ( -- )  d# 34 gpio-set  ;
-: wlan-power-off  ( -- )  d# 34 gpio-clr  h# 040 d# 34 af!  h# 040 d# 57 af!  h# 040 d# 58 af!  ;
-: wlan-stay-on  ( -- )  h# 140 d# 34 af!  h# 140 d# 57 af!  h# 140 d# 58 af!  ;
+[ifdef] soc-en-kbd-pwr-gpio#
+: keyboard-power-on   ( -- )  soc-en-kbd-pwr-gpio# gpio-clr  ;
+: keyboard-power-off  ( -- )  soc-en-kbd-pwr-gpio# gpio-set  ;
+[else]
+: keyboard-power-on   ( -- )  ;
+: keyboard-power-off  ( -- )  ;
+[then]
+: wlan-power-on   ( -- )  en-wlan-pwr-gpio# gpio-set  ;
+: wlan-power-off  ( -- )  en-wlan-pwr-gpio# gpio-clr  h# 040 en-wlan-pwr-gpio# af!  h# 040 wlan-pd-gpio# af!  h# 040 wlan-reset-gpio# af!  ;
+: wlan-stay-on  ( -- )  h# 140 en-wlan-pwr-gpio# af!  h# 140 wlan-pd-gpio# af!  h# 140 wlan-reset-gpio# af!  ;
 
 0 value sleep-mask
 : screen-sleep

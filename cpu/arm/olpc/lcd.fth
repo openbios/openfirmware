@@ -1,3 +1,48 @@
+purpose: Display driver for OLPC ARM/MMP platforms
+\ See license at end of file
+
+0 0  " d420b000"  " /" begin-package
+   " display" name
+   my-address my-space h# 1000 reg
+
+   " /pmua" encode-phandle 1 encode-int encode+ " clocks" property
+   d# 41 " interrupts" integer-property
+
+h# 40001102 value clkdiv  \ Display Clock 1 / 2 -> 56.93 MHz
+h# 00000700 value pmua-disp-clk-sel  \ PLL1 / 7 -> 113.86 MHz 
+
+d#    8 value hsync  \ Sync width
+d# 1200 value hdisp  \ Display width
+d# 1256 value htotal \ Display + FP + Sync + BP
+d#   24 value hbp    \ Back porch
+
+d#    3 value vsync  \ Sync width
+d#  900 value vdisp  \ Display width
+d#  912 value vtotal \ Display + FP + Sync + BP
+d#    5 value vbp    \ Back porch
+
+: hfp  ( -- n )  htotal hdisp -  hsync -  hbp -  ;  \ 24
+: vfp  ( -- n )  vtotal vdisp -  vsync -  vbp -  ;  \ 4
+
+2 value #lanes
+2 value bytes/pixel
+d# 16 value bpp
+
+0 [if]  \ 24bpp parameters
+3 to #lanes
+3 to bytes/pixel
+d# 24 to bpp
+[then]
+
+: >bytes   ( pixels -- chunks )  bytes/pixel *  ;
+: >chunks  ( pixels -- chunks )  >bytes #lanes /  ;
+
+alias width  hdisp
+alias height vdisp
+alias depth  bpp
+width >bytes constant /scanline  
+
+\ \+ olpc-cl3  fload ${BP}/cpu/arm/olpc/3.0/lcdcfg.fth
 
 : lcd@  ( offset -- l )  lcd-pa + io@  ;
 : lcd!  ( l offset -- )  lcd-pa + io!  ;
@@ -227,3 +272,113 @@ d# 256 constant /cursor
    saved-mode h# 190 lcd!
    cursor /cursor 0  cursor-sram-write
 ;
+
+   defer convert-color ' noop to convert-color
+   defer pixel*
+   defer pixel+
+   defer pixel!
+
+   : color!  ( r g b index -- )  4drop  ;
+   : color@  ( index -- r g b )  drop 0 0 0  ;
+
+   fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
+
+   depth d# 24 =  [if]
+      code 3a+  ( adr n -- n' )
+         pop  r0,sp
+         inc  tos,#3
+         add  tos,tos,r0
+      c;
+      code rgb888!  ( n adr -- )
+         pop   r0,sp
+         strb  r0,[tos]
+         mov   r0,r0,lsr #8
+         strb  r0,[tos,#1]
+         mov   r0,r0,lsr #8
+         strb  r0,[tos,#2]
+         pop   tos,sp
+      c;
+      ' 3* to pixel*
+      ' 3a+ to pixel+
+      ' rgb888! to pixel!
+      ' noop to convert-color
+   [else]
+      ' /w* to pixel*
+      ' wa+ to pixel+
+      ' w!  to pixel!
+      ' argb>565-pixel to convert-color
+   [then]
+
+   defer init-panel    ' noop to init-panel
+   defer bright!       ' drop to bright!
+   defer backlight-off ' noop to backlight-off
+   defer backlight-on  ' noop to backlight-on
+
+   : display-on
+      init-panel  \ Turns on DCON etc
+      frame-buffer-adr  hdisp vdisp * >bytes  h# ffffffff lfill
+      init-lcd
+   ;
+   : map-frame-buffer  ( -- )
+      \ We use fb-mem-va directly instead of calling map-in on the physical address
+      \ because the physical address changes with the total memory size.  The early
+      \ assembly language startup code establishes the mapping.
+      fb-mem-va to frame-buffer-adr
+   ;
+   " display"                      device-type
+   " ISO8859-1" encode-string    " character-set" property
+   0 0  encode-bytes  " iso6429-1983-colors"  property
+
+   \ Used as temporary storage for images by $get-image
+   : graphmem  ( -- adr )  dimensions * pixel*  fb-mem-va +  ;
+
+   : display-install  ( -- )
+      map-frame-buffer
+      display-on
+      default-font set-font
+      width  height                           ( width height )
+      over char-width / over char-height /    ( width height rows cols )
+      /scanline depth fb-install              ( )
+   ;
+
+   : display-remove  ( -- )  ;
+   : display-selftest  ( -- failed? )  false  ;
+
+   ' display-install  is-install
+   ' display-remove   is-remove
+   ' display-selftest is-selftest
+end-package
+
+devalias screen /display
+   
+[ifdef] use-small-font
+create cp881-16  " ${BP}/ofw/termemu/cp881-16.obf" $file,
+' cp881-16 to romfont
+[else]
+create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
+' 15x30pc to romfont
+[then]
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2010 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

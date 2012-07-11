@@ -20,12 +20,12 @@ h# 035000 value ssp-base  \ SSP1
    h# 07 ssp-sscr0 io!
    0 ssp-sscr1 io!
    h# 87 ssp-sscr0 io!   
-   d# 46 gpio-set
-   d# 46 gpio-dir-out
-   h# c0 d# 46 af!
+   spi-flash-cs-gpio# gpio-set
+   spi-flash-cs-gpio# gpio-dir-out
+   h# c0 spi-flash-cs-gpio# af!
 ;
-: ssp-spi-cs-on   ( -- )  d# 46 gpio-clr  ;
-: ssp-spi-cs-off  ( -- )  d# 46 gpio-set  ;
+: ssp-spi-cs-on   ( -- )  spi-flash-cs-gpio# gpio-clr  ;
+: ssp-spi-cs-off  ( -- )  spi-flash-cs-gpio# gpio-set  ;
 
 code ssp-spi-out-in  ( bo -- bi )
    set r0,`ssp-base +io #`

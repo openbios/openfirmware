@@ -74,7 +74,7 @@ defer spi-progress  ' drop to spi-progress  ( n -- )
 
    ." Got firmware version: "
    flash-buf h# f.ffc0 +  dup  h# 10  type cr  ( adr )
-   machine-signature count comp  abort" Wrong machine signature"
+   signature$ comp  abort" Wrong machine signature"
 
    ?crc
 
@@ -290,7 +290,7 @@ device-end
 : check-firmware-image  ( adr len -- adr len )
    dup /flash <>  abort" Wrong image length"      ( adr len )
    2dup +  h# 40 -                                ( adr len signature-adr )
-   machine-signature count comp  abort" Wrong machine signature"
+   signature$ comp  abort" Wrong machine signature"
                                                   ( adr len signature-adr )
    ." Firmware: " h# 10 type                      ( adr len )
    \ XXX add some more sanity checks

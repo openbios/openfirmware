@@ -56,7 +56,7 @@ headers
       h# 2000.0000 +loop  \ h# 2000.0000 depends on L1 #ways
    h# 20 +loop       \ h# 20 is L1 line size
 
-   h# 10000 0  do    \ Loop over sets - h# 10000 is L2 #sets
+   l2-#sets 0  do    \ Loop over sets
       0 0  do        \ Loop over ways
 	 i j + 2+ clean&flush-d$-entry-way  \ Operate on L2 cache (2+)
       h# 2000.0000 +loop  \ h# 2000.0000 depends on L2 #ways

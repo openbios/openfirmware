@@ -1,6 +1,8 @@
 \ See license at end of file
 purpose: Driver/selftest for OLPC lid and ebook switches
 
+\ The XO-3.0 has no switches, but we need the device node
+\ because the suspend/resume test gets added to that node later.
 0 0  " 0"  " /" begin-package
 " switches" device-name
 0 0 reg  \ So test-all will run the test

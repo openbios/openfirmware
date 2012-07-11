@@ -7,10 +7,8 @@ hex
 0 value camera-smb-slave
 : camera-smb-setup  ( -- )
    1 to smb-dly-us
-\+ olpc-cl2   d# 108 to smb-clock-gpio#
-\+ olpc-cl2   d# 109 to smb-data-gpio#
-\+ olpc-cl3   d#   4 to smb-clock-gpio#
-\+ olpc-cl3   d#   5 to smb-data-gpio#
+   cam-scl-gpio# to smb-clock-gpio#
+   cam-sda-gpio# to smb-data-gpio#
    camera-smb-slave to smb-slave
 ;
 : camera-smb-on  ( -- )  camera-smb-setup  smb-on  ;
@@ -18,20 +16,17 @@ hex
 : ov!  ( data reg -- )  camera-smb-setup  smb-byte!  ;
 
 : reset-sensor  ( -- )
-\+ olpc-cl3   d#  10 gpio-clr  1 ms  d#  10 gpio-set
-\+ olpc-cl2   d# 102 gpio-clr  1 ms  d# 102 gpio-set
+   cam-rst-gpio# gpio-clr  1 ms  cam-rst-gpio# gpio-set
 ;
 
-[ifdef] cl2-a1
-: sensor-power-on   ( -- )  d# 145 gpio-set  ;
-: sensor-power-off  ( -- )  d# 145 gpio-clr  ;
-[else]
 : sensor-power-on   ( -- )
-   d# 150 gpio-set
-\+ olpc-cl2  d# 144 gpio-clr
-\+ olpc-cl3  d#   9 gpio-clr
+   cam-pwr-gpio# gpio-set
+   cam-pwrdn-gpio# gpio-clr
 ;
-: sensor-power-off  ( -- )  ( d# 144 gpio-set )  d# 150 gpio-clr  ;  \ Leave low for Linux
+: sensor-power-off  ( -- )
+   ( cam-pwrdn-gpio# gpio-set )       \ Leave low for Linux
+   cam-pwr-gpio# gpio-clr
+;
 [then]
 
 \ CAM_HSYNC is on GPIO67, CAM_VSYNC is on GPIO68

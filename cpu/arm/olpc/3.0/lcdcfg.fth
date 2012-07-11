@@ -1,40 +1,20 @@
-h# 40001102 value clkdiv  \ Display Clock 1 / 2 -> 56.93 MHz
-h# 00000700 value pmua-disp-clk-sel  \ PLL1 / 7 -> 113.86 MHz 
+dev /display
 
-d#    8 value hsync  \ Sync width
-d# 1024 value hdisp  \ Display width
-d# 1344 value htotal \ Display + FP + Sync + BP
-d#   24 value hbp    \ Back porch
+d# 1024 to hdisp  \ Display width
+d# 1344 to htotal \ Display + FP + Sync + BP
 
-d#    3 value vsync  \ Sync width
-d#  768 value vdisp  \ Display width
-d#  806 value vtotal \ Display + FP + Sync + BP
-d#    5 value vbp    \ Back porch
+d#  768 to vdisp  \ Display width
+d#  806 to vtotal \ Display + FP + Sync + BP
 
-: hfp  ( -- n )  htotal hdisp -  hsync -  hbp -  ;  \ 24
-: vfp  ( -- n )  vtotal vdisp -  vsync -  vbp -  ;  \ 4
+: pwm-bright!  ( level -- )  d# 15 min  h# 11 *  h# 1a404 io!  ;
+' pwm-bright! to bright!
 
-0 [if]
-3 constant #lanes
-3 constant bytes/pixel
-d# 24 constant bpp
-[else]
-2 constant #lanes
-2 constant bytes/pixel
-d# 16 constant bpp
-[then]
+: pwm-backlight-on  ( -- )  d# 15 bright!  ;
+' pwm-backlight-on  to backlight-on
 
-: >bytes   ( pixels -- chunks )  bytes/pixel *  ;
-: >chunks  ( pixels -- chunks )  >bytes #lanes /  ;
+: pwm-backlight-off  ( -- )  0 bright!  ;
+' pwm-backlight-off  to backlight-off
 
-alias width  hdisp
-alias height vdisp
-alias depth  bpp
-width >bytes constant /scanline  
-
-: bright!  ( level -- )  d# 15 min  h# 11 *  h# 1a404 io!  ;
-: backlight-on  ( -- )  d# 15 bright!  ;
-: backlight-off  ( -- )  0 bright!  ;
 : setup-pwm2  ( -- )
    7 h# 1503c io!  3 h# 1503c io!  \ Turn on the PWM1 clock and release reset - PWM2 depends on it
    7 h# 15040 io!  3 h# 15040 io!  \ Turn on the PWM2 clock and release reset
@@ -62,7 +42,9 @@ width >bytes constant /scanline
    setup-pwm2
    backlight-on
 ;
-: init-xo-display  ( -- )   ;  \ CForth has already turned it on
+\  ' lcd-power-on to init-panel  \ Unnecessary as CForth has already done it
 
 : set-source  ( flag -- )  drop  ;  \ No DCON
 true constant vga?  \ No DCON, hence never frozen
+
+device-end

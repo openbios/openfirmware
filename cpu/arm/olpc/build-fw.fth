@@ -7,6 +7,25 @@ hex
 \ ' $report-name is include-hook
 \ ' noop is include-hook
 
+: init-stuff
+   acgr-clocks-on
+   init-timers
+   init-twsi
+;
+warning @ warning off
+: stand-init-io
+   stand-init-io
+   init-stuff
+;
+warning !
+
+dev /
+   model$  model
+   " OLPC" encode-string  " architecture" property
+\ The clock frequency of the root bus may be irrelevant, since the bus is internal to the SOC
+\    d# 1,000,000,000 " clock-frequency" integer-property
+device-end
+
 fload ${BP}/cpu/arm/olpc/fbnums.fth
 fload ${BP}/cpu/arm/olpc/fbmsg.fth
 
@@ -79,27 +98,6 @@ fload ${BP}/cpu/x86/pc/cpunode.fth  \ The PC CPU node is actually fairly generic
    " clock-frequency" rot get-package-property  if  0 exit  then  ( adr )
    decode-int nip nip  d# 1000000 /  
 ;
-
-
-fload ${BP}/cpu/arm/mmp2/pmua.fth
-fload ${BP}/cpu/arm/mmp2/apbc.fth
-fload ${BP}/cpu/arm/mmp2/irq.fth
-fload ${BP}/cpu/arm/mmp2/timer.fth
-fload ${BP}/cpu/arm/mmp2/twsi.fth
-fload ${BP}/cpu/arm/mmp2/mfpr.fth
-fload ${BP}/cpu/arm/mmp2/gpio.fth
-
-: init-stuff
-   acgr-clocks-on
-   init-timers
-   init-twsi
-;
-warning @ warning off
-: stand-init-io
-   stand-init-io
-   init-stuff
-;
-warning !
 
 fload ${BP}/cpu/arm/mmp2/watchdog.fth	\ reset-all using watchdog timer
 
@@ -182,34 +180,11 @@ fload ${BP}/cpu/arm/olpc/boardrev.fth        \ Board revision decoding
 
 false constant tethered?                     \ We only support reprogramming our own FLASH
 
-[ifdef] olpc-cl3
-: hdd-led-off     ( -- )  ;
-: hdd-led-on      ( -- )  ;
-: hdd-led-toggle  ( -- )  ;
-[else]
-: hdd-led-off     ( -- )  d# 10 gpio-clr  ;
-: hdd-led-on      ( -- )  d# 10 gpio-set  ;
-: hdd-led-toggle  ( -- )  d# 10 gpio-pin@  if  hdd-led-off  else  hdd-led-on  then  ;
-[then]
-
 fload ${BP}/cpu/arm/olpc/bbedi.fth
 fload ${BP}/cpu/arm/olpc/edi.fth
 
 load-base constant flash-buf
 
-
-[ifdef] cl2-a1
-h# 10000 value /ec-flash
-char 3 value expected-ec-version
-[else]
-h# 8000 value /ec-flash
-: clx-touch?  ( -- )  board-revision h# 3a18 >=  ;
-\+ olpc-cl2 char 4 value expected-ec-version
-\+ olpc-cl3 char 5 value expected-ec-version
-[then]
-
-[ifndef] cl2-a1
-[then]
 fload ${BP}/cpu/arm/olpc/ecflash.fth
 
 : ec-spi-reprogrammed   ( -- )
@@ -250,122 +225,23 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH prog
    d# 26 " interrupts" integer-property
 end-package
 
-0 0  " d420b000"  " /" begin-package
-   " display" name
-   my-address my-space h# 1000 reg
-
-   " /pmua" encode-phandle 1 encode-int encode+ " clocks" property
-   d# 41 " interrupts" integer-property
-
-[ifdef] olpc-cl3
-   fload ${BP}/cpu/arm/olpc/3.0/lcdcfg.fth
-[else]
-   fload ${BP}/cpu/arm/olpc/1.75/lcdcfg.fth
-[then]
-
-   fload ${BP}/cpu/arm/olpc/lcd.fth
-[ifndef] olpc-cl3
-   fload ${BP}/dev/olpc/dcon/mmp2dcon.fth        \ DCON control
-[then]
-   defer convert-color ' noop to convert-color
-   defer pixel*
-   defer pixel+
-   defer pixel!
-
-   : color!  ( r g b index -- )  4drop  ;
-   : color@  ( index -- r g b )  drop 0 0 0  ;
-
-   fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
-
-   depth d# 24 =  [if]
-      code 3a+  ( adr n -- n' )
-         pop  r0,sp
-         inc  tos,#3
-         add  tos,tos,r0
-      c;
-      code rgb888!  ( n adr -- )
-         pop   r0,sp
-         strb  r0,[tos]
-         mov   r0,r0,lsr #8
-         strb  r0,[tos,#1]
-         mov   r0,r0,lsr #8
-         strb  r0,[tos,#2]
-         pop   tos,sp
-      c;
-      ' 3* to pixel*
-      ' 3a+ to pixel+
-      ' rgb888! to pixel!
-      ' noop to convert-color
-   [else]
-      ' /w* to pixel*
-      ' wa+ to pixel+
-      ' w!  to pixel!
-      ' argb>565-pixel to convert-color
-   [then]
-
-   : display-on
-      init-xo-display  \ Turns on DCON etc
-      frame-buffer-adr  hdisp vdisp * >bytes  h# ffffffff lfill
-      init-lcd
-   ;
-   : map-frame-buffer  ( -- )
-      \ We use fb-mem-va directly instead of calling map-in on the physical address
-      \ because the physical address changes with the total memory size.  The early
-      \ assembly language startup code establishes the mapping.
-      fb-mem-va to frame-buffer-adr
-   ;
-   " display"                      device-type
-   " ISO8859-1" encode-string    " character-set" property
-   0 0  encode-bytes  " iso6429-1983-colors"  property
-
-   \ Used as temporary storage for images by $get-image
-   : graphmem  ( -- adr )  dimensions * pixel*  fb-mem-va +  ;
-
-   : display-install  ( -- )
-      map-frame-buffer
-      display-on
-      default-font set-font
-      width  height                           ( width height )
-      over char-width / over char-height /    ( width height rows cols )
-      /scanline depth fb-install              ( )
-   ;
-
-   : display-remove  ( -- )  ;
-   : display-selftest  ( -- failed? )  false  ;
-
-   ' display-install  is-install
-   ' display-remove   is-remove
-   ' display-selftest is-selftest
-end-package
-
-devalias screen /display
-   
-[ifdef] olpc-cl3
-create cp881-16  " ${BP}/ofw/termemu/cp881-16.obf" $file,
-' cp881-16 to romfont
-[else]
-devalias keyboard /keyboard
-
-create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
-' 15x30pc to romfont
-[then]
-
+fload ${BP}/cpu/arm/olpc/lcd.fth
 fload ${BP}/cpu/arm/olpc/sdhci.fth
 
-[ifndef] cl2-a1
-: boot-dev-gpio#  ( -- n )  clx-touch?  if  2  else  d# 56  then  ;
-fload ${BP}/cpu/arm/olpc/emmc.fth
-[then]
-
-devalias int /sd/disk@3
-devalias ext /sd/disk@1
-devalias net /wlan  \ XXX should report-net in case of USB Ethernet
+devalias net /wlan
 
 fload ${BP}/dev/olpc/kb3700/spicmd.fth           \ EC SPI Command Protocol
 
-\- olpc-cl3  fload ${BP}/cpu/arm/olpc/spcmd.fth   \ Security Processor communication protocol
+[ifdef] has-sp-kbd
+fload ${BP}/cpu/arm/olpc/spcmd.fth   \ Security Processor communication protocol
+devalias keyboard /ap-sp/keyboard
+devalias mouse    /ap-sp/mouse
+[then]
 
-: wlan-reset  ( -- )  d# 58 gpio-clr  d# 20 ms  d# 58 gpio-set  ;
+: wlan-reset  ( -- )  wlan-reset-gpio# gpio-clr  d# 20 ms  wlan-reset-gpio# gpio-set  ;
+
+fload ${BP}/ofw/core/fdt.fth
+fload ${BP}/cpu/arm/linux.fth
 
 \ Create the alias unless it already exists
 : $?devalias  ( alias$ value$ -- )
@@ -411,14 +287,7 @@ fload ${BP}/dev/olpc/kb3700/spicmd.fth           \ EC SPI Command Protocol
 ;
 
 fload ${BP}/cpu/arm/marvell/utmiphy.fth
-
-fload ${BP}/ofw/core/fdt.fth
-fload ${BP}/cpu/arm/linux.fth
-
-\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/usb.fth
-\+ olpc-cl3 fload ${BP}/cpu/arm/mmp2/ulpiphy.fth
-\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/usb.fth
-\+ olpc-cl4 fload ${BP}/cpu/arm/olpc/cl4/usb.fth
+fload ${BP}/cpu/arm/olpc/usb.fth
 
 fload ${BP}/dev/olpc/mmp2camera/loadpkg.fth
 
@@ -437,12 +306,10 @@ warning @ warning off
 : stand-init
    stand-init
    root-device
-      model-name$   2dup model     ( name$ )
+      model-version$   2dup model     ( name$ )
       " OLPC " encode-bytes  2swap encode-string  encode+  " banner-name" property
       board-revision " board-revision-int" integer-property
-\+ olpc-cl2  " olpc,xo-1.75" " compatible" string-property
-\+ olpc-cl3  " olpc,xo-3.0"  " compatible" string-property
-\+ olpc-cl4  " olpc,xo-cl4"  " compatible" string-property
+      compatible$  " compatible" string-property
 
       \ The "1-" removes the null byte
       " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
@@ -493,8 +360,7 @@ warning on
 : olpc-mapped-limit  ( -- adr )  dma-mem-va >physical  ;
 ' olpc-mapped-limit to mapped-limit
 
-\+ olpc-cl2 d#  9999 to arm-linux-machine-type  \ XO-1.75
-\+ olpc-cl3 d# 10000 to arm-linux-machine-type  \ XO-3
+machine-type to arm-linux-machine-type
 
 \ Add a tag describing the linear frame buffer
 : mmp-fb-tag,  ( -- )
@@ -542,8 +408,8 @@ warning on
 false to stand-init-debug?
 \ true to stand-init-debug?
 
-: sec-trg   ( -- )      d# 73 gpio-set  ;  \ rising edge latches SPI_WP# low
-: sec-trg?  ( -- bit )  d# 73 gpio-pin@  ;
+: sec-trg   ( -- )      sec-trg-gpio# gpio-set  ;  \ rising edge latches SPI_WP# low
+: sec-trg?  ( -- bit )  sec-trg-gpio# gpio-pin@  ;
 
 alias ec-indexed-io-off sec-trg
 alias ec-indexed-io-off? sec-trg?
@@ -567,11 +433,7 @@ hex
    false
 ;
 
-[ifdef] olpc-cl3
-false value rotate-button?
-[else]
-: rotate-button?  ( -- flag )  d# 15 gpio-pin@ 0=  ;
-[then]
+defer rotate-button?  ' false to rotate-button?
 
 warning @  warning off 
 : init
@@ -632,9 +494,6 @@ true value text-on?
 fload ${BP}/cpu/arm/mmp2/clocks.fth
 fload ${BP}/cpu/arm/olpc/banner.fth
 
-\- olpc-cl3  devalias keyboard /ap-sp/keyboard
-\- olpc-cl3  devalias mouse    /ap-sp/mouse
-
 : console-start  ( -- )
    install-mux-io
    cursor-off
@@ -687,53 +546,11 @@ fload ${BP}/cpu/arm/mmp2/dramrecal.fth
 
 code halt  ( -- )  wfi   c;
 
-\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/switches.fth \ Lid and ebook switches
-\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/switches.fth  \ Switches
-\+ olpc-cl4 fload ${BP}/cpu/arm/olpc/cl4/switches.fth  \ Lid and ebook switches
-
 fload ${BP}/cpu/arm/mmp2/rtc.fth       \ Internal RTC, used for wakeups
-
-\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/leds.fth     \ LEDs
-\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/leds.fth      \ LEDs
-\+ olpc-cl4 fload ${BP}/cpu/arm/olpc/cl4/leds.fth      \ LEDs
 
 fload ${BP}/cpu/x86/pc/olpc/via/factory.fth  \ Manufacturing tools
 
 fload ${BP}/cpu/arm/olpc/accelerometer.fth
-
-[ifndef] olpc-cl3
-fload ${BP}/cpu/arm/olpc/1.75/compass.fth
-[then]
-
-\ Suppress long memory test at final test stage
-dev /memory
-0 value old-diag-switch?
-: not-final-test?  ( -- flag )
-   final-test?   if  false exit  then
-   smt-test?  if  false exit  then
-   old-diag-switch?
-;
-warning @ warning off
-: selftest  ( -- error? )
-   diag-switch? to old-diag-switch?
-   not-final-test?  to diag-switch?
-   selftest
-   old-diag-switch? to diag-switch?
-;
-warning !
-device-end
-
-\ Add suspend resume test except in final
-dev /switches
-warning @ warning off
-: selftest  ( -- error? )
-   final-test?  0=  if
-      s3-selftest  if  true exit  then
-   then
-   selftest
-;
-warning !
-device-end
 
 \ When reprogramming this machine's SPI FLASH, rebooting the EC is unnecessary 
 : no-kbc-reboot  ['] noop to spi-reprogrammed  ;
@@ -749,76 +566,9 @@ device-end
    : close ;
 end-package
 
-\ it seems to be difficult to get SoC wakeups from the keypad controller,
-\ so we set them up as gpio, instead.
-[ifdef] use_mmp2_keypad_control
-fload ${BP}/cpu/arm/mmp2/keypad.fth
-[ifdef] notdef  \ CForth turns on the keypad; resetting it makes it not work
-stand-init: keypad
-   keypad-on
-   8 keypad-direct-mode
-;
-[then]
-: keypad-bit  ( n keypad out-mask key-mask -- n' keypad )
-   third invert  and  if    ( n keypad out-mask )
-      rot or swap           ( n' keypad )
-   else                     ( n keypad out-mask )
-      drop                  ( n keypad )
-   then                     ( n' keypad )
-;
-[then]
-
 fload ${BP}/cpu/x86/pc/olpc/gamekeynames.fth
 
-[ifdef] cl2-a1
-: game-key@  ( -- n )
-   0                                        ( n )
-   d# 16 gpio-pin@ 0=  if  h#  80 or  then  \ O
-   d# 17 gpio-pin@ 0=  if  h#  02 or  then  \ Check
-   d# 18 gpio-pin@ 0=  if  h# 100 or  then  \ X
-   d# 19 gpio-pin@ 0=  if  h#  01 or  then  \ Square
-   d# 20 gpio-pin@ 0=  if  h#  40 or  then  \ Rotate
-;
-[then]
-
-[ifdef] olpc-cl3
-: game-key@  ( -- n )
-   0
-;
-[then]
-
-[ifndef] game-key@
-   [ifdef] use_mmp2_keypad_control
-: game-key@  ( -- n )
-   0                                        ( n )
-   d# 15 gpio-pin@ 0=  if  button-rotate or  then   ( n )
-   scan-keypad                              ( n keypad )
-   button-o       h# 01  keypad-bit         ( n' keypad )
-   button-check   h# 02  keypad-bit         ( n' keypad )
-   button-x       h# 04  keypad-bit         ( n' keypad )
-   button-square  h# 08  keypad-bit         ( n' keypad )
-   rocker-up      h# 10  keypad-bit         ( n' keypad )
-   rocker-right   h# 20  keypad-bit         ( n' keypad )
-   rocker-down    h# 40  keypad-bit         ( n' keypad )
-   rocker-left    h# 80  keypad-bit         ( n' keypad )
-   drop                                     ( n )
-;
-   [else]
-: game-key@  ( -- n )
-   0                                        ( n )
-   d# 15 gpio-pin@ 0=  if  button-rotate  or  then
-   d# 16 gpio-pin@ 0=  if  button-o       or  then
-   d# 17 gpio-pin@ 0=  if  button-check   or  then
-   d# 18 gpio-pin@ 0=  if  button-x       or  then
-   d# 19 gpio-pin@ 0=  if  button-square  or  then
-   d# 20 gpio-pin@ 0=  if  rocker-up      or  then
-   d# 21 gpio-pin@ 0=  if  rocker-right   or  then
-   d# 22 gpio-pin@ 0=  if  rocker-down    or  then
-   d# 23 gpio-pin@ 0=  if  rocker-left    or  then
-;
-   [then]
-
-[then]
+defer game-key@  ' 0 to game-key@   \ Implementation will be loaded later
 
 fload ${BP}/cpu/x86/pc/olpc/gamekeys.fth
 
@@ -826,7 +576,7 @@ fload ${BP}/dev/logdev.fth
 
 fload ${BP}/cpu/x86/pc/olpc/disptest.fth
 
-[ifndef] olpc-cl3
+[ifdef] has-sp-kbd
 dev /ap-sp/keyboard
 fload ${BP}/dev/olpc/keyboard/selftest.fth   \ Keyboard diagnostic
 device-end
@@ -841,10 +591,9 @@ device-end
 fload ${BP}/cpu/x86/pc/olpc/gridmap.fth      \ Gridded display tools
 fload ${BP}/cpu/x86/pc/olpc/via/copynand.fth
 
-\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/rm3150-touchscreen.fth    \ Touchscreen driver and diagnostic
-\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/exc7200-touchscreen.fth    \ Touchscreen driver and diagnostic
-\+ olpc-cl3 fload ${BP}/dev/softkeyboard.fth                    \ On-screen keyboard
-\+ olpc-cl4 fload ${BP}/cpu/arm/olpc/nn-touchscreen.fth        \ Touchscreen driver and diagnostic
+\- use-screen-kbd devalias keyboard /keyboard
+\+ use-screen-kbd fload ${BP}/dev/softkeyboard.fth             \ On-screen keyboard
+
 fload ${BP}/cpu/arm/olpc/roller.fth     \ Accelerometer test
 
 \ fload ${BP}/cpu/arm/olpc/pinch.fth  \ Touchscreen gestures
@@ -999,7 +748,7 @@ dev /client-services  patch noop visible enter  dend
    game-key-mask =  if  protect-fw try-fs-update  then
 ;
 
-[ifdef] olpc-cl3
+[ifdef] use-screen-kbd
 0 value screen-kbd-ih
 : open-screen-keyboard  ( -- )
    " /touchscreen/keyboard" open-dev to screen-kbd-ih
@@ -1045,9 +794,6 @@ dev /client-services  patch noop visible enter  dend
 [then]
 
 fload ${BP}/cpu/arm/olpc/testitems.fth
-\+ olpc-cl2 fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
-\+ olpc-cl3 fload ${BP}/cpu/arm/olpc/3.0/testinstructions.fth
-\+ olpc-cl4 fload ${BP}/cpu/arm/olpc/cl4/testinstructions.fth
 
 : startup  ( -- )
    standalone?  0=  if  exit  then
@@ -1080,7 +826,7 @@ fload ${BP}/cpu/arm/olpc/testitems.fth
 	 update-ec-flash
       then
    then
-\+ olpc-cl3  open-hotspot
+\+ use-screen-kbd  open-hotspot
 
    install-alarm
    ?sound
@@ -1088,7 +834,7 @@ fload ${BP}/cpu/arm/olpc/testitems.fth
    ?games
 
    ['] false to interrupt-auto-boot?
-\+ olpc-cl3  ?text-on
+\+ use-screen-kbd  ?text-on
 [ifdef] probe-usb
    factory-test?  if  d# 1000 ms  then  \ Extra USB probe delay in the factory
    probe-usb
@@ -1099,7 +845,7 @@ fload ${BP}/cpu/arm/olpc/testitems.fth
 
    interpreter-init
 
-\+ olpc-cl3  ?text-on
+\+ use-screen-kbd  ?text-on
    ?diags
    ?fs-update
 
@@ -1107,16 +853,16 @@ fload ${BP}/cpu/arm/olpc/testitems.fth
    unblock-exceptions
    ['] (interrupt-auto-boot?) to interrupt-auto-boot?
 
-\+ olpc-cl3  ?text-on
+\+ use-screen-kbd  ?text-on
    ?usb-keyboard
 
    auto-banner?  if  banner  then
 
-\+ olpc-cl3  ?text-on
+\+ use-screen-kbd  ?text-on
    auto-boot
-\+ olpc-cl3  close-hotspot
+\+ use-screen-kbd  close-hotspot
 
-\+ olpc-cl3  open-screen-keyboard  banner
+\+ use-screen-kbd  open-screen-keyboard  banner
 
    frozen? text-on? 0=  and  ( no-banner? )
    unfreeze visible cursor-on ( no-banner? )
@@ -1148,19 +894,6 @@ fload ${BP}/cpu/arm/olpc/testitems.fth
    " dev /null : size 0 8 ; : write-blocks-start 3drop false ; : write-blocks-end false ; dend" evaluate
    " devalias fsdisk //null" evaluate
 ;
-
-tag-file @ fclose  tag-file off
-my-self [if]
-   ." WARNING: my-self is not 0" cr
-   bye
-[then]
-
-.( --- Saving fw.dic ...)
-" fw.dic" $save-forth cr
-
-fload ${BP}/cpu/arm/mmp2/rawboot.fth
-
-.( --- Saving fw.img --- )  cr " fw.img" $save-rom
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks

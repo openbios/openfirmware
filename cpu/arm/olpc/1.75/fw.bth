@@ -8,3 +8,39 @@ build-now
 " fw.tag" r/w create-file drop  tag-file !
 
 fload ${BP}/cpu/arm/olpc/build-fw.fth
+
+\ The internal SD card shares the host controller circuitry with
+\ the internal eMMC, so you can only use one at a time.  A GPIO
+\ chooses which one to use.  The intended usage is to "repair"
+\ boards with a broken eMMC chip by inserting a microSD and grounding
+\ the GPIO.
+
+: clx-touch?  ( -- )  board-revision h# 3a18 >=  ;
+: boot-dev-sel-gpio#  ( -- n )  clx-touch?  if  2  else  d# 56  then  ;
+
+fload ${BP}/cpu/arm/olpc/emmc.fth
+
+\ Device node for internal microSD
+dev /sd
+   new-device
+      1 encode-int " reg" property
+      fload ${BP}/dev/mmc/sdhci/sdmmc.fth
+      fload ${BP}/dev/mmc/sdhci/selftest.fth
+      " external" " slot-name" string-property
+   finish-device
+device-end
+
+devalias int /sd/disk@3
+devalias ext /sd/disk@1
+
+fload ${BP}/cpu/arm/olpc/1.75/lcdcfg.fth
+fload ${BP}/cpu/arm/olpc/1.75/usb.fth
+fload ${BP}/cpu/arm/olpc/rm3150-touchscreen.fth
+fload ${BP}/cpu/arm/olpc/1.75/compass.fth
+fload ${BP}/cpu/arm/olpc/1.75/switches.fth
+fload ${BP}/cpu/arm/olpc/1.75/leds.fth
+fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
+fload ${BP}/cpu/arm/olpc/gpio-gamekeys.fth
+fload ${BP}/cpu/arm/olpc/test-tweaks.fth
+
+fload ${BP}/cpu/arm/olpc/save-fw.fth

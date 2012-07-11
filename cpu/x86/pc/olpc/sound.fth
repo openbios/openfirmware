@@ -54,7 +54,7 @@ h# -9 constant default-volume
    close-audio
 ;
 
-[ifndef] olpc-cl3
+[ifndef] use-screen-kbd
 dev /keyboard
 0 value waiting-up?
 : olpc-check-abort  ( scan-code -- abort? )  \ an abort key pressed?

@@ -1,5 +1,5 @@
 \ See license at end of file
-purpose: Driver/selftest for OLPC XO-1.75 LEDs
+purpose: Driver/selftest for OLPC XO-3.0 LEDs
 
 0 0  " 0"  " /" begin-package
 0 0 reg  \ So test-all will run the test
@@ -8,15 +8,9 @@ purpose: Driver/selftest for OLPC XO-1.75 LEDs
 : close  ( -- )  ;
 
 : selftest  ( -- )
-    ." Flashing LEDs" cr
-
-\   d# 10 0 do  ols-led-on d# 200 ms ols-led-off d# 200 ms  loop
-\   ols-led-ec-control
-\   ols-assy-mode-on
+   ." Flashing LEDs" cr
 
    " /wlan:quiet" test-dev  " /wlan:quiet" test-dev  \ Twice for longer flashing
-
-\   ols-assy-mode-off
 
    confirm-selftest?
 ;

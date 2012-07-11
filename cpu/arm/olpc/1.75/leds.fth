@@ -7,8 +7,12 @@ purpose: Driver/selftest for OLPC XO-1.75 LEDs
 : open  ( -- okay? )  true  ;
 : close  ( -- )  ;
 
+: hdd-led-off     ( -- )  led-storage-gpio# gpio-clr  ;
+: hdd-led-on      ( -- )  led-storage-gpio# gpio-set  ;
+: hdd-led-toggle  ( -- )  led-storage-gpio# gpio-pin@  if  hdd-led-off  else  hdd-led-on  then  ;
+
 : selftest  ( -- )
-    ." Flashing LEDs" cr
+   ." Flashing LEDs" cr
 
    d# 10 0 do  ols-led-on d# 200 ms ols-led-off d# 200 ms  loop
    ols-led-ec-control

@@ -8,3 +8,16 @@ build-now
 " fw.tag" r/w create-file drop  tag-file !
 
 fload ${BP}/cpu/arm/olpc/build-fw.fth
+
+fload ${BP}/cpu/arm/olpc/emmc.fth
+devalias int /sd/disk@3
+
+fload ${BP}/cpu/arm/olpc/3.0/lcdcfg.fth
+fload ${BP}/cpu/arm/olpc/3.0/usb.fth
+fload ${BP}/cpu/arm/olpc/exc7200-touchscreen.fth
+fload ${BP}/cpu/arm/olpc/3.0/switches.fth
+fload ${BP}/cpu/arm/olpc/3.0/leds.fth
+fload ${BP}/cpu/arm/olpc/3.0/testinstructions.fth
+fload ${BP}/cpu/arm/olpc/test-tweaks.fth
+
+fload ${BP}/cpu/arm/olpc/save-fw.fth

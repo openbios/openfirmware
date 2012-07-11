@@ -39,15 +39,13 @@
    h# 18c2   d# 167 af!  \ eMMC_D3
    h# 18c2   d# 168 af!  \ eMMC_D1
 
-   d# 149 gpio-set     \ Release eMMC_RST#
+   emmc-rst-gpio# gpio-set     \ Release eMMC_RST#
 
-   d# 34 gpio-set  \ This is for the case where the eMMC power is rewired to the WLAN
+   en-wlan-pwr-gpio# gpio-set  \ This is for the case where the eMMC power is rewired to the WLAN
 ;
-\ Says COMM - is RST#
-\ Says RESET - is CMD
 
 stand-init:
-   boot-dev-gpio# gpio-pin@  if
+   boot-dev-sel-gpio# gpio-pin@  if
       select-emmc
    else
       select-internal-sd

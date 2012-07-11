@@ -44,16 +44,6 @@ h#  900.0000 constant 'dropins  \ Must agree with 'compressed in cforth/src/app/
 
 h#  20000 constant dropin-offset   \ Offset to dropin driver area in SPI FLASH
 
-[ifdef] use-flash-nvram
-h# d.0000 constant nvram-offset
-[then]
-
-h#  e.0000 constant mfg-data-offset     \ Offset to manufacturing data area in SPI FLASH
-h#  f.0000 constant mfg-data-end-offset \ Offset to end of manufacturing data area in SPI FLASH
-h#  f.ffd8 constant crc-offset
-
-h# 10.0000 constant /rom           \ Total size of SPI FLASH
-
 \ SRAM usage
 
 sram-pa  constant sram-va

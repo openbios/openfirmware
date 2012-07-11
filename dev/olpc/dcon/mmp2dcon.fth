@@ -51,13 +51,9 @@ stand-init:
 \ h# 8000 constant DM_SELFTEST
 
 : set-dcon-slave  ( -- )
-[ifdef] cl2-a1
-   d# 162 to smb-clock-gpio#
-   d# 163 to smb-data-gpio#
-[else]
-   d# 161 to smb-clock-gpio#
-   d# 110 to smb-data-gpio#
-[then]
+   dcon-scl-gpio# to smb-clock-gpio#
+   dcon-sda-gpio# to smb-data-gpio#
+
    h# 1a to smb-slave
 ;
 
@@ -66,17 +62,13 @@ stand-init:
 : dcon@  ( reg# -- word )  set-dcon-slave  smb-word@  ;
 : dcon!  ( word reg# -- )  set-dcon-slave  smb-word!  ;
 
-[ifdef] cl2-a1
-: dcon-load  ( -- )  d# 151 gpio-set  ;
-: dcon-unload  ( -- )  d# 151 gpio-clr  ;
-[else]
-: dcon-load  ( -- )  d# 142 gpio-set  ;
-: dcon-unload  ( -- )  d# 142 gpio-clr  ;
-[then]
+: dcon-load  ( -- )  dcon-load-gpio# gpio-set  ;
+: dcon-unload  ( -- )  dcon-load-gpio# gpio-clr  ;
+
 \ : dcon-blnk?  ( -- flag )  ;  \ Not hooked up
-: dcon-stat@  ( -- n )  h# 019100 io@ 4 rshift 3 and  ;
-: setup-dcon-irq  ( -- )  d# 124 dup gpio-set-fer  gpio-clr-edge  ;
-: dcon-irq?  ( -- flag )  d# 124 gpio-edge@  ;
+: dcon-stat@  ( -- n )  h# 019100 io@ 4 rshift 3 and  ;  \ GPIO 100..101
+: setup-dcon-irq  ( -- )  dcon-irq-gpio# dup gpio-set-fer  gpio-clr-edge  ;
+: dcon-irq?  ( -- flag )  dcon-irq-gpio# gpio-edge@  ;
 
 \ DCONSTAT values:  0 SCANINT  1 SCANINT_DCON  2 DISPLAYLOAD  3 MISSED
 
@@ -151,13 +143,16 @@ d# 905 value resumeline  \ Configurable; should be set from args
 : vsync!   ( sync -- )    7 dcon!  ;  \ def: h#  403 d# 4,3
 : timeout! ( to -- )      8 dcon!  ;  \ def: h# ffff
 : scanint! ( si -- )      9 dcon!  ;  \ def: h# 0000
-: bright!  ( level -- ) d# 10 dcon! ; \ def: h# xxxF
+: dcon-bright!  ( level -- ) d# 10 dcon! ; \ def: h# xxxF
+' dcon-bright!  to bright!
 : bright@  ( -- level ) d# 10 dcon@ ;
 : brighter  ( -- )  bright@ 1+  h# f min  bright!  ;
 : dimmer    ( -- )  bright@ 1-  0 max  bright!  ;
 
-: backlight-off  ( -- )  mode@  8 invert and  mode!  ;
-: backlight-on   ( -- )  mode@  8 or  mode!  ;
+: dcon-backlight-off  ( -- )  mode@  8 invert and  mode!  ;
+' dcon-backlight-off to backlight-off
+: dcon-backlight-on   ( -- )  mode@  8 or  mode!  ;
+' dcon-backlight-on to backlight-on
 
 \ Color swizzle, AA, no passthrough, backlight
 : set-color ( color? -- )
@@ -219,13 +214,15 @@ d# 905 value resumeline  \ Configurable; should be set from args
 
 : maybe-set-cmos  ( -- )  ;
 
-: init-xo-display  ( -- )
+: init-dcon  ( -- )
    smb-init
 
 \ Unnecessary because CForth has already done it
 \   dcon-load  dcon-enable  ( maybe-set-cmos )
    \ dcon-enable leaves mode set to 69 - 40:antialias, 20:swizzle, 8:backlight on, 1:passthru off
 ;
+' init-dcon to init-panel
+
 : dcon-power-on   ( -- )  1 h# 26 ec-cmd-b!  ;
 : dcon-power-off  ( -- )  0 h# 26 ec-cmd-b!  ;
 0 value saved-dcon-mode

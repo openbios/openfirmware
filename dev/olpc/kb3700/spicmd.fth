@@ -42,9 +42,6 @@ my-address      my-space  h# 1000  encode-reg
 : encode-unit  ( phys -- adr len )  push-hex  (u.)  pop-base  ;
 : decode-unit  ( adr len -- phys )  push-hex  $number  if  0  then  pop-base  ;
 
-d# 155 constant cmd-gpio#
-d# 125 constant ack-gpio#
-
 \ Channel#(port#) Meaning
 \ 0              Invalid
 \ 1              Switch to Command Mode
@@ -161,13 +158,13 @@ h# d4037000 value ssp-base  \ Default to SSP3
 false value debug?
 \ Set the direction on the ACK and CMD GPIOs
 : init-gpios  ( -- )
-   cmd-gpio# gpio-dir-out
-   ack-gpio# gpio-dir-out
+   ec-spi-cmd-gpio# gpio-dir-out
+   ec-spi-ack-gpio# gpio-dir-out
 ;
-: clr-cmd  ( -- )  cmd-gpio# gpio-clr  ;
-: set-cmd  ( -- )  cmd-gpio# gpio-set  ;
-: clr-ack  ( -- )  ack-gpio# gpio-clr  ;
-: set-ack  ( -- )  ack-gpio# gpio-set  ;
+: clr-cmd  ( -- )  ec-spi-cmd-gpio# gpio-clr  ;
+: set-cmd  ( -- )  ec-spi-cmd-gpio# gpio-set  ;
+: clr-ack  ( -- )  ec-spi-ack-gpio# gpio-clr  ;
+: set-ack  ( -- )  ec-spi-ack-gpio# gpio-set  ;
 : fast-ack  ( -- )  set-ack clr-ack  debug?  if  ." ACK " cr  then  ;
 : slow-ack  ( -- )  d# 10 ms  set-ack d# 10 ms  clr-ack  ;
 defer pulse-ack  ' fast-ack to pulse-ack

@@ -42,13 +42,6 @@ fload ${BP}/cpu/arm/mmp2/rootnode.fth	\ Root node mapping - physical mode
 fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
 fload ${BP}/ofw/core/availpm.fth	\ Available memory list
 
-dev /
-   " olpc,XO-1.75" model
-   " OLPC" encode-string  " architecture" property
-\ The clock frequency of the root bus may be irrelevant, since the bus is internal to the SOC
-\    d# 1,000,000,000 " clock-frequency" integer-property
-device-end
-
 : (cpu-arch  ( -- adr len )
    " architecture" root-phandle  get-package-property  drop
    get-encoded-string
@@ -228,6 +221,15 @@ true value user-mode?
 
 fload ${BP}/ofw/gui/loadmenu.fth
 \ fload ${BP}/ofw/gui/insticon.fth
+
+\ Marvell MMP low-level stuff
+fload ${BP}/cpu/arm/mmp2/pmua.fth
+fload ${BP}/cpu/arm/mmp2/apbc.fth
+fload ${BP}/cpu/arm/mmp2/irq.fth
+fload ${BP}/cpu/arm/mmp2/timer.fth
+fload ${BP}/cpu/arm/mmp2/twsi.fth
+fload ${BP}/cpu/arm/mmp2/mfpr.fth
+fload ${BP}/cpu/arm/mmp2/gpio.fth
 
 \ Uninstall the diag menu from the general user interface vector
 \ so exiting from emacs doesn't invoke the diag menu.

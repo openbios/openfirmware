@@ -227,8 +227,8 @@ audio-sram h# 3f80 + constant in-desc
 [then]
 
 \ Reset is unconnected on current boards
-\ : audio-reset  ( -- )  8 gpio-clr  ;
-\ : audio-unreset  ( -- )  8 gpio-set  ;
+\ : audio-reset  ( -- )  audio-reset-gpio# gpio-clr  ;
+\ : audio-unreset  ( -- )  audio-reset-gpio# gpio-set  ;
 : codec@  ( reg# -- w )  choose-smbus  1 2 twsi-get  swap bwjoin  ;
 : codec!  ( w reg# -- )  choose-smbus  >r wbsplit r> 3 twsi-out  ;
 : codec-i@  ( index# -- w )  h# 6a codec!  h# 6c codec@  ;
@@ -440,7 +440,7 @@ false value playing?
 ;
 : watch-dc  ( bias? -- )
    to mic-bias?
-   d# 143 gpio-set   \ DC input mode
+   mic-ac/dc-gpio# gpio-set   \ DC input mode
    h# 0400 h# 40 codec-clr
    open-in
    stereo  0 set-adc-gain  0 set-mic-gain
