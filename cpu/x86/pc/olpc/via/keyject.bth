@@ -20,6 +20,7 @@ in: ${BP}/dev/usb2/device/net/build/usbnet.fc
 in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
 in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
 in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
+in: ${BP}/dev/usb2/device/mouse/build/usbmouse.fc
 in: ${BP}/clients/memtest86/memtest
 in: ${BP}/clients/emacs/x86/emacs
 in: ${BP}/cpu/x86/pc/olpc/via/build/verify.img
@@ -60,6 +61,10 @@ hex
    ?do  h# ff ofd @ fputc  loop
 ;
 
+\ Tell the dropin manager to skip the area reserved for manufacturing data
+h# e0000 to reserved-start
+h# f0000 to reserved-end
+
 .( --- Saving as )
 " ${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
 2dup type cr  ( adr len )
@@ -70,12 +75,7 @@ $new-file
 
    dropin-base rom-pa -  pad-file
 
-[ifdef] coreboot-loaded
-   " romstart.di"           $add-file
-[else]
    " romreset.di"           $add-file
-[then]
-
    " resume.di"             $add-file
 
 \ Loads the set of drivers that is common to different output formats
@@ -90,7 +90,8 @@ $new-file
    " ${BP}/dev/usb2/device/hub/build/hub.fc"     " usb,class9"      $add-dropin
    " ${BP}/dev/usb2/device/generic/build/generic.fc"  " usbdevice"  $add-deflated-dropin
    " ${BP}/dev/usb2/device/net/build/usbnet.fc"       " usbnet"     $add-deflated-dropin
-   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc"  " usb,class3,1" $add-dropin
+   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc" " usb,class3,1,1" $add-deflated-dropin
+   " ${BP}/dev/usb2/device/mouse/build/usbmouse.fc"  " usb,class3,1,2" $add-deflated-dropin
    " ${BP}/dev/usb2/device/serial/build/usbserial.fc" " usbserial"  $add-deflated-dropin
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
 \  " mrv8686.bin" " mrv8686.bin"                                    $add-deflated-dropin
@@ -162,8 +163,9 @@ $new-file
 
    " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
 
-   " ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml"      " dsdt"            $add-deflated-dropin
-\  " ${BP}/cpu/x86/pc/olpc/via/build/ssdt.aml"      " ssdt"            $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/via/build/dsdt.aml"        " dsdt"            $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/via/build/dsdt-c2only.aml" " dsdt-c2only"     $add-deflated-dropin
+\  " ${BP}/cpu/x86/pc/olpc/via/build/ssdt.aml"        " ssdt"            $add-deflated-dropin
 
    \ icons for mfg test gui
    " testicons/play.565"        " play.565"     $add-deflated-dropin
@@ -190,6 +192,10 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/via/build/nandblaster_tx.bin" " nb_tx"      $add-deflated-dropin
 
+   " ${BP}/cpu/x86/pc/olpc/images/winlogo.565"   " winlogo.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/tux.565"       " tux.565"        $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/settings.565"  " settings.565"   $add-deflated-dropin
+
    " ${BP}/cpu/x86/pc/olpc/keyject.fth"          " probe+"          $add-deflated-dropin
    " /space/bios-crypto/build/k2.public"         " o1"              $add-dropin  \ Incompressible
    " /space/bios-crypto/build/k2.public"         " s1"              $add-dropin
@@ -199,11 +205,7 @@ $new-file
 
 .( Dropin top is )  ofd @ fsize  .x cr
 
-[ifdef] coreboot-loaded
-   /rom h# 10000 - pad-file	\ coreboot init image must be in last FLASH block
-   " coreboot.img"   $add-file
-[else]
-   /rom h# 10000 - pad-file	\ coreboot init image must be in last FLASH block
+\   /rom h# 10000 - pad-file	\ coreboot init image must be in last FLASH block
 \  " cforth.img"     $add-file  \ Small Forth that runs from cache
 
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
@@ -213,7 +215,7 @@ $new-file
 /rom h# 40 - ofd @ fseek
 h# 10 buffer: signature
 signature h# 10 blank
-" CL1"                    signature         swap move
+machine-signature count   signature         swap move
 " ${FW_VERSION}" expand$  signature     6 + swap move
 " Q3${FW_MAJOR}" expand$  signature d# 13 + swap move
 signature h# 10  ofd @ fputs
@@ -245,7 +247,6 @@ filebuf /rom ofd @ fgets /rom <> abort" Can't read back image"
 
 /rom h# 2c - ofd @ fseek
 crcbuf /l ofd @ fputs
-[then]
 
 ofd @ fclose
 
