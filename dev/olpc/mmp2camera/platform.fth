@@ -21,10 +21,14 @@ hex
 
 : sensor-power-on   ( -- )
    cam-pwr-gpio# gpio-set
+[ifdef] cam-pwrdn-gpio# 
    cam-pwrdn-gpio# gpio-clr
+[then]
 ;
 : sensor-power-off  ( -- )
+[ifdef] cam-pwrdn-gpio# 
    ( cam-pwrdn-gpio# gpio-set )       \ Leave low for Linux
+[then]
    cam-pwr-gpio# gpio-clr
 ;
 [then]
