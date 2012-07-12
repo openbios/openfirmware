@@ -794,7 +794,7 @@ dev /client-services  patch noop visible enter  dend
 : ?text-on  ( -- )  key?  if  text-on visible  then  ;
 [then]
 
-fload ${BP}/cpu/arm/olpc/testitems.fth
+fload ${BP}/cpu/arm/olpc/1.75/testitems.fth
 
 : startup  ( -- )
    standalone?  0=  if  exit  then
