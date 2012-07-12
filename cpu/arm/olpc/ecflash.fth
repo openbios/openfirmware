@@ -87,8 +87,6 @@ purpose: Reflash the EC code
    load-base /ec-flash ofd @ fputs
    ofd @ fclose
 ;
-\+ olpc-cl2  : ec-platform$  ( -- adr len )  " 4"  ;
-\+ olpc-cl3  : ec-platform$  ( -- adr len )  " 5"  ;
 : ec-up-to-date?  ( img$ -- flag )
    \ If the new image has an invalid length, the old one is considered up to date
    dup /ec-flash <>  if
@@ -100,7 +98,11 @@ purpose: Reflash the EC code
    bl left-parse-string " XO-EC" $= 0=  if  2drop true exit  then      ( version&date$ )
    bl left-parse-string ec-platform$ $= 0=  if  2drop true exit  then  ( version&date$ )
    bl left-parse-string 2nip                                           ( version$ )
-   ec-name$  $caps-compare  0<=                                        ( flag )
+   ['] ec-name$ catch  if                                              ( version$ )
+      2drop ." Can't get EC name" cr  true                             ( flag )
+   else                                                                ( version$ ec-name$ )
+      $caps-compare  0<=                                               ( flag )
+   then                                                                ( flag )
 ;
 
 : update-ec-flash  ( -- )
