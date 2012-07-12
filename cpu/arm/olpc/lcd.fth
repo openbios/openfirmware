@@ -42,8 +42,6 @@ alias height vdisp
 alias depth  bpp
 width >bytes constant /scanline  
 
-\ \+ olpc-cl3  fload ${BP}/cpu/arm/olpc/3.0/lcdcfg.fth
-
 : lcd@  ( offset -- l )  lcd-pa + io@  ;
 : lcd!  ( l offset -- )  lcd-pa + io!  ;
 
