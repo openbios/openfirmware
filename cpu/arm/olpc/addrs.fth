@@ -31,7 +31,7 @@ page-table-offset      constant stack-offset  \ Stack is below this
 \ fw-mem-pa page-table-offset + constant page-table-pa
 
 \ h# 0110.0000 constant def-load-base
-h# 0800.0000 constant def-load-base
+h# 0c00.0000 constant def-load-base
 
 \ The heap starts at RAMtop, which on this system is "fw-mem-pa /fw-mem +"
 

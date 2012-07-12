@@ -107,7 +107,7 @@ h# 10000 constant /fdt-max
    arm-linux-machine-type to r1
 [ifdef] flatten-device-tree
    use-fdt?  if
-      ramdisk-adr ?dup 0=  if  mapped-limit  then  /fdt-max -  to linux-params
+      ramdisk-adr ?dup 0=  if  load-base  then  /fdt-max -  to linux-params
       linux-params /fdt-max flatten-device-tree
    else
       args-buf cscount linux-params set-parameters
@@ -125,7 +125,7 @@ defer place-ramdisk
 : linux-place-ramdisk  ( adr len -- )
    to /ramdisk                                    ( adr )
 
-   mapped-limit  /ramdisk -                       ( adr new-ramdisk-adr )
+   load-base  /ramdisk -                          ( adr new-ramdisk-adr )
    tuck /ramdisk move                             ( new-ramdisk-adr )
 \  dup to linux-memtop
    to ramdisk-adr
