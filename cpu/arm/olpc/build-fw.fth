@@ -660,6 +660,7 @@ alias fast-hash crypto-hash   \ fast-hash uses acceleration when available
 fload ${BP}/cpu/x86/pc/olpc/via/fsupdate.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fsverify.fth
 fload ${BP}/cpu/x86/pc/olpc/via/fssave.fth
+fload ${BP}/cpu/x86/pc/olpc/via/fsload.fth
 devalias fsdisk int:0
 
 \ create pong-use-touchscreen
