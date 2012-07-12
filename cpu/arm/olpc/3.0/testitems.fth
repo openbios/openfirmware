@@ -12,30 +12,31 @@ icon: battery.icon  rom:battery.565
 icon: camera.icon   rom:camera.565
 icon: wifi.icon     rom:wifi.565
 icon: audio.icon    rom:audio.565
-icon: touchpad.icon rom:touchpad.565
+icon: touchscreen.icon rom:touchpad.565
 icon: display.icon  rom:display.565
-icon: keyboard.icon rom:keyboard.565
 icon: timer.icon    rom:timer.565
 icon: clock.icon    rom:clock.565
 icon: ebook.icon    rom:ebook.565
 icon: leds.icon     rom:leds.565
 
+: screen-kbd-scroller  ( -- )  blank-screen  open-screen-keyboard  ;
+' screen-kbd-scroller to scroller-on
+' close-screen-keyboard to scroller-off
 
 : cpu-item      ( -- )  " /cpu"       mfg-test-dev  ;
 : battery-item  ( -- )  " /battery"   mfg-test-dev  ;
 : spiflash-item ( -- )  " /flash"     mfg-test-dev  ;
 : memory-item   ( -- )  " /memory"    mfg-test-dev  ;
-: usb-item   ( -- )  " /usb/hub"   mfg-test-dev  ;
+: otg-item      ( -- )  " otg"        mfg-test-dev  ;
+: usb-item      ( -- )  " usba"       mfg-test-dev  ;
 : int-sd-item   ( -- )  " int:0"      mfg-test-dev  ;
-: ext-sd-item   ( -- )  " ext:0"      mfg-test-dev  ;
 : rtc-item      ( -- )  " /rtc"       mfg-test-dev  ;
 : display-item  ( -- )  " /display"   gfx-test-dev  ;
 : audio-item    ( -- )  " /audio"     mfg-test-dev  ;
 : camera-item   ( -- )  " /camera"    gfx-test-dev  ;
 : wlan-item     ( -- )  " /wlan"      mfg-test-dev  ;
 : timer-item    ( -- )  " /timer"     mfg-test-dev  ;
-: touchpad-item ( -- )  " mouse"  mfg-test-dev  ;
-: keyboard-item ( -- )  " keyboard"   mfg-test-dev  ;
+: touchscreen-item ( -- )  " /touchscreen"  gfx-test-dev  ;
 : switch-item   ( -- )  " /accelerometer" mfg-test-dev  " /switches"  mfg-test-dev  ;
 : leds-item     ( -- )  " /leds"      mfg-test-dev   ;
 
@@ -55,8 +56,6 @@ icon: leds.icon     rom:leds.565
    " Internal mass storage"
    ['] int-sd-item    sdcard.icon   add-icon
 
-   " Plug-in SD card"
-   ['] ext-sd-item  sdcard.icon  add-icon
 
    " Wireless LAN"
    ['] wlan-item      wifi.icon     add-icon
@@ -76,19 +75,17 @@ icon: leds.icon     rom:leds.565
    " RTC (Real-Time Clock)"
    ['] rtc-item       clock.icon    add-icon
 
-   " USB ports"
+   " USB-A port"
    ['] usb-item       usb.icon      add-icon
 
+   " USB OTG port"
+   ['] otg-item  usb.icon  add-icon
 
    \ These are last because they require user participation.
    \ The earlier tests are all included in automatic batch-mode.
 
-   " Keyboard"
-   ['] keyboard-item     keyboard.icon     add-icon
-
-   " Touchpad"
-   ['] touchpad-item     touchpad.icon     add-icon
-
+   " Touchscreen"
+   ['] touchscreen-item  touchscreen.icon  add-icon
 
    " LEDs"
    ['] leds-item    leds.icon   add-icon
