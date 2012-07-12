@@ -1,0 +1,41 @@
+purpose: Build OFW Forth dictionary for OLPC CL4
+\ See license at end of file
+
+dictionary: ${BP}/cpu/arm/olpc/cl4/build/prefw.dic
+command: &armforth &dictionary &this
+build-now
+
+" fw.tag" r/w create-file drop  tag-file !
+
+fload ${BP}/cpu/arm/olpc/build-fw.fth
+
+dev /sd
+   new-device
+   4 encode-int "reg" property
+   fload ${BP}/dev/mmc/sdhci/sdmmc.fth
+   fload ${BP}/dev/mmc/sdhci/selftest.fth
+   " internal" " slot-name" string-property
+   finish-device
+device-end
+
+devalias int     /sd/disk@3
+devalias ext     /sd/disk@2
+devalias int-sd  /sd/disk@5
+devalias emmc    /sd/disk@5
+
+stand-init:
+   boot-dev-sel-gpio# gpio-pin@  0=  if
+      " int" " /sd/disk@5"  $devalias
+   then
+;
+
+fload ${BP}/cpu/arm/olpc/1.75/lcdcfg.fth
+fload ${BP}/cpu/arm/olpc/1.75/usb.fth
+fload ${BP}/cpu/arm/olpc/nn-touchscreen.fth
+fload ${BP}/cpu/arm/olpc/cl4/switches.fth
+fload ${BP}/cpu/arm/olpc/cl4/leds.fth
+fload ${BP}/cpu/arm/olpc/cl4/testinstructions.fth
+fload ${BP}/cpu/arm/olpc/gpio-gamekeys.fth
+fload ${BP}/cpu/arm/olpc/test-tweaks.fth
+
+fload ${BP}/cpu/arm/olpc/save-fw.fth
