@@ -4,6 +4,12 @@
 macro: FW_MAJOR F
 macro: FW_MINOR 13
 
+\ Create a 2-character build/fw-suffix file to personalize your test builds
+" fw-suffix" $file-exists?  [if]
+   " fw-suffix" $read-file 2 min  " ${FW_MINOR}%s" expand$  sprintf
+   " FW_MINOR" $set-macro
+[then]
+
 \ The EC microcode
 macro: EC_VERSION 1_2_1
 
