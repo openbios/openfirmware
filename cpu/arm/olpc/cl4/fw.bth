@@ -11,7 +11,7 @@ fload ${BP}/cpu/arm/olpc/build-fw.fth
 
 dev /sd
    new-device
-   4 encode-int "reg" property
+   4 encode-int " reg" property
    fload ${BP}/dev/mmc/sdhci/sdmmc.fth
    fload ${BP}/dev/mmc/sdhci/selftest.fth
    " internal" " slot-name" string-property
