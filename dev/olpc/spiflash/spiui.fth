@@ -73,7 +73,7 @@ defer spi-progress  ' drop to spi-progress  ( n -- )
    /flash <> abort" Image file is the wrong length"
 
    ." Got firmware version: "
-   flash-buf h# f.ffc0 +  dup  h# 10  type cr  ( adr )
+   flash-buf signature-offset +  dup  h# 10  type cr  ( adr )
    signature$ comp  abort" Wrong machine signature"
 
    ?crc

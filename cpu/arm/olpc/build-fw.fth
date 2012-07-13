@@ -327,7 +327,7 @@ warning @ warning off
    dend
 
    " /openprom" find-device
-      flash-open  pad d# 16  2dup  h# fffc0  flash-read  ( adr len )
+      flash-open  pad d# 16  2dup  signature-offset  flash-read  ( adr len )
       " model" string-property
 
       " sourceurl" find-drop-in  if  " source-url" string-property  then

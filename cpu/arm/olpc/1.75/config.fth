@@ -17,6 +17,7 @@ h# d.0000 constant nvram-offset
 h#  e.0000 constant mfg-data-offset     \ Offset to manufacturing data area in SPI FLASH
 h#  f.0000 constant mfg-data-end-offset \ Offset to end of manufacturing data area in SPI FLASH
 h#  f.ffd8 constant crc-offset
+h#  f.ffc0 constant signature-offset
 
 h# 10.0000 constant /rom           \ Total size of SPI FLASH
 

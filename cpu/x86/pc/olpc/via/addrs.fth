@@ -111,6 +111,7 @@ h# d.0000 constant nvram-offset
 h# e.0000 constant mfg-data-offset     \ Offset to manufacturing data area in SPI FLASH
 h# f.0000 constant mfg-data-end-offset \ Offset to end of manufacturing data area in SPI FLASH
 h# f.ffd4 constant crc-offset
+h# f.ffc0 constant signature-offset
 
 fload ${BP}/cpu/x86/pc/virtaddr.fth
 

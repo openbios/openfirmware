@@ -11,8 +11,9 @@ fload ${BP}/cpu/arm/mmp2/hwaddrs.fth
 fload ${BP}/cpu/arm/olpc/addrs.fth
 
 h# 1f.0000 constant mfg-data-offset     \ Offset to manufacturing data area in SPI FLASH
-h# 10.0000 constant mfg-data-end-offset \ Offset to end of manufacturing data area in SPI FLASH
-h# 1e.ffd8 constant crc-offset
+h# 20.0000 constant mfg-data-end-offset \ Offset to end of manufacturing data area in SPI FLASH
+h# 1e.ffd0 constant crc-offset
+h# 1e.ffc0 constant signature-offset
 
 h# 20.0000 constant /rom           \ Total size of SPI FLASH
 
