@@ -50,6 +50,7 @@ create use-null-nvram  \ Don't store configuration variables
 \ create use-flash-nvram  \ Store configuration variables in firmware FLASH
 
 create machine-signature ," CL1"
+: signature$  machine-signature count  ;
 
 fload ${BP}/cpu/x86/pc/olpc/via/addrs.fth
 
