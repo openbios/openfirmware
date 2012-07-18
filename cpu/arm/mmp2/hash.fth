@@ -157,6 +157,7 @@ d# 20 constant /sha1-digest
 alias random random-long
 
 stand-init: Random number generator
+   h# 1b h# 68 pmua!   \ Ensure WTM clock is enabled
    init-entropy
 ;
 
