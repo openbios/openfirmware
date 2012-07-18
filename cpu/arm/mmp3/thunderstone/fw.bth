@@ -1,7 +1,7 @@
 purpose: Build Open Firmware for Marvell MMP3 Thunderstone reference board
 \ See license at end of file
 
-dictionary: ${BP}/cpu/arm/mmp3/thunderstone/prefw.dic
+dictionary: ${BP}/cpu/arm/mmp3/thunderstone/build/prefw.dic
 command: &armforth &dictionary &this
 build-now
 
