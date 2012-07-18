@@ -3,7 +3,9 @@ purpose: Block-method additions to subrange.fth device to make a RAMdisk device
 
 \ Define ramdisk-base before loading this file
 
+base @ hex
 0 0  ramdisk-base (u.)  " /" begin-package
+base !
 
 " ramdisk" device-name
 0 value /device  \ Range size, set later with set-size
