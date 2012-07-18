@@ -1,0 +1,530 @@
+purpose: Build Open Firmware for Marvell MMP3 Thunderstone reference board
+\ See license at end of file
+
+dictionary: ${BP}/cpu/arm/mmp3/thunderstone/prefw.dic
+command: &armforth &dictionary &this
+build-now
+
+" fw.tag" r/w create-file drop  tag-file !
+
+\ ' $report-name is include-hook
+  ' noop is include-hook
+
+dev /
+   " Marvell,Thunderstone" model
+   " Marvell,PXA2128" encode-string  " architecture" property
+   " mrvl,pxa2128" +compatible
+   " mrvl,thunderstone" +compatible
+\ The clock frequency of the root bus may be irrelevant, since the bus is internal to the SOC
+\    d# 1,000,000,000 " clock-frequency" integer-property
+device-end
+
+fload ${BP}/dev/omap/diaguart.fth	\ OMAP UART
+
+h# 18000 +io to uart-base		\ UART3 base address on MMP2
+\ h# 30000 +io to uart-base		\ UART1 base address on MMP2
+d# 26000000 to uart-clock-frequency
+
+\ CForth has already set up the serial port
+: inituarts  ( -- )  ;
+
+fload ${BP}/forth/lib/sysuart.fth	\ Set console I/O vectors to UART
+
+: poll-tty  ( -- )  ubreak?  if  user-abort  then  ;  \ BREAK detection
+: install-abort  ( -- )  ['] poll-tty d# 100 alarm  ;
+
+0 value keyboard-ih
+
+fload ${BP}/ofw/core/muxdev.fth          \ I/O collection/distribution device
+
+\ Install the simple UART driver from the standalone I/O init chain
+warning off
+: stand-init-io  ( -- )
+   stand-init-io
+   inituarts  install-uart-io  install-abort
+;
+warning on
+
+[ifdef] use-null-nvram
+\ For not storing configuration variable changes across reboots ...
+\ This is useful for "turnkey" systems where configurability would
+\ increase support costs.
+
+fload ${BP}/cpu/x86/pc/nullnv.fth
+stand-init: Null-NVRAM
+   " /null-nvram" open-dev  to nvram-node
+   ['] init-config-vars catch drop
+;
+[then]
+
+\ Create a pseudo-device that presents the dropin modules as a filesystem.
+fload ${BP}/ofw/fs/dropinfs.fth
+
+\ This devalias lets us say, for example, "dir rom:"
+devalias rom     /dropin-fs
+
+fload ${BP}/cpu/x86/pc/cpunode.fth  \ The PC CPU node is actually fairly generic
+
+: cpu-mhz  ( -- n )
+   " /cpu@0" find-package drop	( phandle )
+   " clock-frequency" rot get-package-property  if  0 exit  then  ( adr )
+   decode-int nip nip  d# 1000000 /  
+;
+
+fload ${BP}/cpu/arm/mmp3/thunderstone/boardtwsi.fth
+fload ${BP}/cpu/arm/mmp3/thunderstone/boardgpio.fth
+: init-stuff
+   set-camera-domain-voltage
+   acgr-clocks-on
+\   init-mfprs  \ Unnecessary, done in CForth
+   init-timers
+   init-twsi
+;
+warning @ warning off
+: stand-init-io
+   stand-init-io
+   init-stuff
+;
+warning !
+
+fload ${BP}/cpu/arm/mmp2/watchdog.fth	\ reset-all using watchdog timer
+
+0 0  " d4018000"  " /" begin-package  \ UART3
+   fload ${BP}/cpu/arm/mmp2/uart.fth
+   " /apbc" encode-phandle d# 12 encode-int encode+ " clocks" property
+   d# 24 " interrupts" integer-property
+   1 " linux,unit#" integer-property
+end-package
+devalias com1 /uart
+: com1  " com1"  ;
+' com1 is fallback-device   
+
+\ Create a RAMdisk node accessing the dropin modules
+h# 0900.0000 constant ramdisk-base  \ Must agree with 'compressed in CForth
+fload ${BP}/dev/ramdisk.fth
+dev /ramdisk  h# 10.0000. set-size  device-end
+devalias dropins /ramdisk
+
+0 0  " f0400000"  " /" begin-package
+   " vmeta" name
+   my-address my-space h# 1000 reg
+
+   " mrvl,mmp2-vmeta" +compatible
+
+   " /pmua" encode-phandle d# 10 encode-int encode+ " clocks" property
+   d# 26 " interrupts" integer-property
+end-package
+
+[ifdef] notyet
+0 0  " d420b000"  " /" begin-package
+   " display" name
+\ XXX need to turn on PLL3, see d.l.o:~dilinger/mmp3-snapshot-patches/mmp3/0170-ARM-mmp3/add-fb-device-support.patch
+   fload ${BP}/cpu/arm/mmp2/lcdcfg.fth
+   fload ${BP}/cpu/arm/mmp2/dsi.fth
+
+   fload ${BP}/cpu/arm/mmp2/lcd.fth
+
+   defer convert-color ' noop to convert-color
+   defer pixel*
+   defer pixel+
+   defer pixel!
+
+   : color!  ( r g b index -- )  4drop  ;
+   : color@  ( index -- r g b )  drop 0 0 0  ;
+
+   fload ${BP}/dev/video/common/rectangle16.fth     \ Rectangular graphics
+
+   depth d# 24 =  [if]
+      code 3a+  ( adr n -- n' )
+         pop  r0,sp
+         inc  tos,#3
+         add  tos,tos,r0
+      c;
+      code rgb888!  ( n adr -- )
+         pop   r0,sp
+         strb  r0,[tos]
+         mov   r0,r0,lsr #8
+         strb  r0,[tos,#1]
+         mov   r0,r0,lsr #8
+         strb  r0,[tos,#2]
+         pop   tos,sp
+      c;
+      ' 3* to pixel*
+      ' 3a+ to pixel+
+      ' rgb888! to pixel!
+      ' noop to convert-color
+   [else]
+      ' /w* to pixel*
+      ' wa+ to pixel+
+      ' w!  to pixel!
+      ' argb>565-pixel to convert-color
+   [then]
+
+   : display-on
+      frame-buffer-adr  hdisp vdisp * >bytes  h# ffffffff lfill
+      init-lcd
+   ;
+   : map-frame-buffer  ( -- )
+      \ We use fb-mem-va directly instead of calling map-in on the physical address
+      \ because the physical address changes with the total memory size.  The early
+      \ assembly language startup code establishes the mapping.
+      fb-mem-va to frame-buffer-adr
+   ;
+   " display"                      device-type
+   " ISO8859-1" encode-string    " character-set" property
+   0 0  encode-bytes  " iso6429-1983-colors"  property
+
+   \ Used as temporary storage for images by $get-image
+   : graphmem  ( -- adr )  dimensions * pixel*  fb-mem-va +  ;
+
+   : display-install  ( -- )
+      map-frame-buffer
+      display-on
+      default-font set-font
+      width  height                           ( width height )
+      over char-width / over char-height /    ( width height rows cols )
+      /scanline depth fb-install              ( )
+   ;
+
+   : display-remove  ( -- )  ;
+   : display-selftest  ( -- failed? )  false  ;
+
+   ' display-install  is-install
+   ' display-remove   is-remove
+   ' display-selftest is-selftest
+end-package
+
+devalias screen /display
+[then]
+   
+devalias keyboard /keyboard
+
+create cp881-16  " ${BP}/ofw/termemu/cp881-16.obf" $file,
+' cp881-16 to romfont
+
+fload ${BP}/cpu/arm/mmp3/thunderstone/sdhci.fth
+
+devalias ext /sd/disk@1
+
+fload ${BP}/ofw/core/fdt.fth
+fload ${BP}/cpu/arm/linux.fth
+
+\ Create the alias unless it already exists
+: $?devalias  ( alias$ value$ -- )
+   2over  not-alias?  if  $devalias exit  then  ( alias$ value$ alias$ )
+   2drop 4drop
+;
+
+: ?report-device  ( alias$ pathname$ -- )
+   2dup  locate-device  0=  if  ( alias$ pathname$ phandle )
+      drop                      ( alias$ pathname$ )
+      2over 2over $?devalias    ( alias$ pathname$ )
+   then                         ( alias$ pathname$ )
+   4drop                        ( )
+;
+
+: report-disk  ( -- )
+   " disk"  " /usb/disk" ?report-device
+;
+
+: report-keyboard  ( -- )
+   \ Prefer direct-attached
+   " usb-keyboard"  " /usb/keyboard" ?report-device  \ USB 2   (keyboard behind a hub)
+;
+
+\ If there is a USB ethernet adapter, use it as the default net device.
+\ We can't use ?report-device here because we already have net aliased
+\ to /wlan, and ?report-device won't override an existing alias.
+: report-net  ( -- )
+   " /usb/ethernet" 2dup locate-device  0=  if  ( name$ phandle )
+      drop                                      ( name$ )
+
+      \ Don't recreate the alias if it is already correct
+      " net" aliased?  if                       ( name$ existing-name$ )
+         2over $=  if                           ( name$ )
+            2drop exit                          ( -- )
+         then                                   ( name$ )
+      then                                      ( name$ )
+
+      " net" 2swap $devalias                    ( )
+   else                                         ( name$ )
+      2drop                                     ( )
+   then
+;
+
+fload ${BP}/cpu/arm/mmp3/thunderstone/usb.fth
+
+: bat-temp  ( -- n )  0  ;
+fload ${BP}/cpu/arm/mmp2/thermal.fth
+fload ${BP}/cpu/arm/mmp2/fuse.fth
+
+[ifndef] virtual-mode
+warning off
+: stand-init-io
+   stand-init-io
+   go-fast         \ From mmuon.fth
+;
+warning on
+[then]
+
+\ The bottom of extra-mem is the top of DMA memory.
+\ We give everything up to that address to Linux.
+: olpc-memory-limit  ( -- adr )  extra-mem-va >physical  ;
+' olpc-memory-limit to memory-limit
+
+h# 20.0000 to linux-params  \ The Jasper Linux kernel fails unless the params are between 0x20.0000 and 0x20.4000
+d# 99999 to arm-linux-machine-type
+
+\ Add a tag describing the linear frame buffer
+: mmp-fb-tag,  ( -- )
+   8 tag-l,
+   h# 54410008 tag-l, \ ATAG_VIDEOLFB
+   screen-wh over tag-w,            \ Width  ( width height )
+   dup tag-w,                       \ Height ( width height )
+   " depth" $call-screen dup tag-w, \ Depth  ( width height depth )
+   rot * 8 /  dup tag-w,            \ Pitch  ( height pitch )
+   fb-mem-va tag-l,                 \ Base address  ( height pitch )
+   *  tag-l,                        \ Total size - perhaps could be larger
+   \ The following assumes depth is 16 bpp
+   5     tag-b,       \ Red size
+   d# 11 tag-b,       \ Red position
+   6     tag-b,       \ Green size
+   d#  5 tag-b,       \ Green position
+   5     tag-b,       \ Blue size
+   d#  0 tag-b,       \ Blue position
+   0     tag-b,       \ Rsvd size
+   d# 16 tag-b,       \ Rsvd position
+;
+' mmp-fb-tag, to fb-tag,
+
+\ Add a tag describing the OFW callback
+3 constant MT_DEVICE_WC
+9 constant MT_MEMORY
+: (ofw-tag,)  ( -- )
+   4 2 * 3 +    tag-l,    \ size
+   h# 41000502  tag-l,    \ ATAG_MEM
+   cif-handler  tag-l,    \ Client interface handler callback address
+
+   \ Each of these groups is a struct map_desc as defined in arch/arm/include/asm/mach/
+   extra-mem-va dup                        tag-l,  \ VA of OFW memory
+   >physical pageshift rshift              tag-l,  \ Page frame number of OFW memory
+   fw-mem-va /fw-mem +  extra-mem-va -     tag-l,  \ Size of OFW memory
+   MT_MEMORY                               tag-l,  \ Mapping type of OFW memory
+
+   fb-mem-va dup                           tag-l,  \ VA of OFW Frame Buffer
+   >physical pageshift rshift              tag-l,  \ PA of OFW Frame Buffer
+   /fb-mem                                 tag-l,  \ Size of OFW memory
+   MT_DEVICE_WC                            tag-l,  \ Mapping type of OFW frame buffer
+;
+' (ofw-tag,) to ofw-tag,
+
+\ false to stand-init-debug?
+true to stand-init-debug?
+
+: protect-fw  ( -- )  ;
+
+hex
+: i-key-wait  ( ms -- pressed? )
+   cr ." Type 'i' to interrupt stand-init sequence" cr   ( ms )
+   0  do
+      ukey?  if
+         ukey upc ascii I  =  if  true unloop exit  then
+      then
+      d# 1000 us  \ 1000 us is more precise than 1 ms, which is often close to 2 ms
+   loop
+   false
+;
+
+warning @  warning off 
+: init
+\ initial-heap add-memory
+   init
+
+   standalone?  if
+      disable-interrupts
+      d# 1000  i-key-wait  if
+\        protect-fw
+         ." Interacting" cr  hex interact
+      then
+      \ Turn on USB power here to overlap the time with other startup actions
+      usb-power-on
+   then
+;
+warning !
+
+: (.firmware)  ( -- )
+   ." Open Firmware  "  .built  cr
+   ." Copyright 2010 FirmWorks  All Rights Reserved" cr
+;
+' (.firmware) to .firmware
+
+\ Uninstall the diag menu from the general user interface vector
+\ so exiting from emacs doesn't invoke the diag menu.
+' quit to user-interface
+
+: screen-#lines  ( -- n )
+   screen-ih 0=  if  default-#lines exit  then
+   screen-ih  package( #lines )package
+;
+' screen-#lines to lines/page
+
+true value text-on?
+: text-off  ( -- )
+   text-on?  if
+      screen-ih remove-output
+      false to text-on?
+   then
+;
+: text-on   ( -- )
+   text-on? 0=  if
+      screen-ih add-output
+\      cursor-on
+      true to text-on?
+   then
+;
+
+fload ${BP}/cpu/arm/mmp2/clocks.fth
+
+: console-start  ( -- )
+   install-mux-io
+\   cursor-off
+   true to text-on?
+
+   " //null" open-dev to null-ih  \ For text-off state
+;
+: keyboard-off  ( -- )
+   keyboard-ih  if
+      keyboard-ih remove-input
+      keyboard-ih close-dev
+      0 to keyboard-ih
+   then
+;
+
+: teardown-mux-io  ( -- )
+   install-uart-io
+   text-off
+   keyboard-off
+   fallback-out-ih remove-output
+   fallback-in-ih remove-input
+   stdin off
+   stdout off
+   in-mux-ih close-dev
+   out-mux-ih close-dev
+;
+: quiesce  ( -- )
+   usb-quiet
+   teardown-mux-io
+   timers-off
+   unload-crypto
+;
+
+\ This must precede the loading of gui.fth, which chains from linux-hook's behavior
+' quiesce to linux-hook
+
+\ fload ${BP}/cpu/arm/mmp2/dramrecal.fth
+
+code halt  ( -- )  wfi   c;
+
+\ fload ${BP}/cpu/arm/mmp2/rtc.fth       \ Internal RTC, used for wakeups
+
+fload ${BP}/dev/logdev.fth
+
+" u:\boot\olpc.fth ext:\boot\olpc.fth int:\boot\olpc.fth ext:\zimage /prober /usb/ethernet /usb/wlan"
+   ' boot-device  set-config-string-default
+
+\needs ramdisk  " " d# 128 config-string ramdisk
+" "   ' boot-file      set-config-string-default   \ Let the boot script set the cmdline
+
+\ Eliminate 4 second delay in install console for the case where
+\ there is no keyboard.  The delay is unnecessary because the screen
+\ does not go blank when the device is closed.
+patch drop ms install-console
+
+alias reboot bye
+
+alias crcgen drop  ( crc byte -- crc' )
+
+\ Dictionary growth size for the ARM Image Format header
+\ 1 section   before origin  section table
+h# 10.0000      h# 8000 -      h# 4000 -      dictionary-size !
+
+fload ${BP}/cpu/arm/saverom.fth  \ Save the dictionary for standalone startup
+
+fload ${BP}/ofw/core/countdwn.fth	\ Startup countdown
+
+: interpreter-init  ( -- )
+   hex
+   warning on
+   only forth also definitions
+
+\   install-alarm
+
+   page-mode
+   #line off
+
+\   .built cr
+;
+
+: startup  ( -- )
+   standalone?  0=  if  exit  then
+
+\  block-exceptions
+   no-page
+
+   console-start
+
+   " probe-" do-drop-in
+
+   ['] false to interrupt-auto-boot?
+[ifndef] probe-usb
+   probe-usb
+   report-disk
+   report-keyboard
+[else]  ." Not probing usb" cr
+[then]
+   " probe+" do-drop-in
+
+   interpreter-init
+\  unblock-exceptions
+   ['] (interrupt-auto-boot?) to interrupt-auto-boot?
+\  ?usb-keyboard
+   auto-banner?  if  banner  then
+
+   auto-boot
+
+   cr cr
+
+   quit
+;
+
+tag-file @ fclose  tag-file off
+
+.( --- Saving fw.dic ...)
+" fw.dic" $save-forth cr
+
+fload ${BP}/cpu/arm/mmp2/rawboot.fth
+.( --- Saving fw.img --- )  cr " fw.img" $save-rom
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2010 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
