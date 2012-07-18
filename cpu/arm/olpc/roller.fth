@@ -19,7 +19,7 @@ action: >user    ;
 
 d# 8 value #fraction-bits
 : fraction*  ( -- )  * #fraction-bits >>a  ;
-: 1/2  ( -- n )  1 #fraction-bits 1- lshift  ;
+: 1/2   ( -- n )  1 #fraction-bits 1- lshift  ;
 : >fraction  ( n -- fraction )  #fraction-bits lshift  ;
 : a/b>fraction  ( num denom -- fraction )  swap #fraction-bits lshift  swap /  ;
 
@@ -80,12 +80,28 @@ d#  1 d# 80  a/b>fraction value acc-scale
 d# 20 constant ball-radius
 d# 40 constant ball-diameter
 
-: maxx  ( -- n )  screen-wh drop  ball-diameter -  >fraction  ;
-: maxy  ( -- n )  screen-wh nip   ball-diameter -  >fraction  ;
+: maxx-raw  ( -- n )  screen-wh drop  ball-diameter -  ;
+: maxy-raw  ( -- n )  screen-wh nip   ball-diameter -  ;
+
+: maxx  ( -- n )  maxx-raw  >fraction  ;
+: maxy  ( -- n )  maxy-raw  >fraction  ;
 d#  400 >fraction constant maxz
 
 : 3swap  ( x1 y1 z1 x2 y2 z2 -- x2 y2 z2 x1 y1 z1 )  5 roll  5 roll  5 roll  ;
 : 3over  ( x1 y1 z1 x2 y2 z2 -- x2 y2 z2 x1 y1 z1 )  5 pick  5 pick  5 pick  ;
+
+\ This is a simple approximation for the magnitude of a 3-vector
+\ - largest component plus 1/3 the sum of the two smaller components.
+\ It works surprisingly well, especially since we use it to estimate
+\ drag, which is a complicated phenomenon for which the formula is
+\ only an approximation anyway.
+
+: xyz-magnitude  ( x y z -- magnitude )
+   rot abs rot abs rot abs
+   2dup >  if  swap  then      ( x min-y,z max-y,z )
+   rot 2dup >  if  swap  then  ( a b max )
+   -rot  + 3 /  +              ( magnitude )
+;
 
 [ifdef] notdef
 0 0 0 3value pos-b' \ New ball position
@@ -105,19 +121,6 @@ d#  400 >fraction constant maxz
 
    \ Compute new laptop velocity
    vel-l damping xyz*  xyz+  to vel-l  ( )
-;
-
-\ This is a simple approximation for the magnitude of a 3-vector
-\ - largest component plus 1/3 the sum of the two smaller components.
-\ It works surprisingly well, especially since we use it to estimate
-\ drag, which is a complicated phenomenon for which the formula is
-\ only an approximation anyway.
-
-: xyz-magnitude  ( x y z -- magnitude )
-   rot abs rot abs rot abs
-   2dup >  if  swap  then      ( x min-y,z max-y,z )
-   rot 2dup >  if  swap  then  ( a b max )
-   -rot  + 3 /  +              ( magnitude )
 ;
 
 \ This is a coupling coefficient between the net velocity (laptop - ball)
@@ -249,6 +252,93 @@ d# 20 >fraction constant small
    clear-drawing
    begin  ( update-laptop ) update-ball  d# 50 ms  key? until
    text-on
+;
+
+: filtered-acceleration  ( -- acc-x,y,z )
+   0 0 0 
+   d# 16 0 do  net-acceleration xyz+  loop
+   1 d# 16 a/b>fraction xyz*
+;
+
+d# 573 constant deg*10/rad
+d# 1460 value gravity
+: .decidegrees  ( degrees*10 -- )
+   dup abs d# 450 >  if   ( degrees*10 )
+      0<  if  ." <-45"  else  ." >45"  then
+   else
+      push-decimal
+      dup abs  <# u# [char] . hold u#s swap sign  u#> type
+      ."     "
+      pop-base
+   then
+;
+
+0 value xsq
+0 value gsq
+
+: arcsin-step  ( n -- n' )  deg*10/rad +  xsq gsq */  ;
+: arcsin*10  ( x -- degrees*10 )
+   dup dup * to xsq       ( x )
+   gravity dup * to gsq   ( x )
+   \ Starting with this bias instead of 0 helps with roundoff error,
+   \ so the result is good to within 0.1 degree up to 45 degrees.
+   d# 7500                ( x n )
+   arcsin-step d# 20 /    ( x n' )  \ x^5 / 5! term
+   arcsin-step d# 06 /    ( x n' )  \ x^3 / 3! term
+   deg*10/rad +           ( x n' )  \ x term
+   gravity */
+;
+
+: x-center  ( -- x )  screen-wh drop 2/  ;
+: y-center  ( -- y )  screen-wh nip 2/  ;
+
+: put-ball  ( x y z -- )  3dup pos-b redraw  to pos-b  ;
+: put-centered  ( offset-x offset-y z-size -- )
+   >r                   ( x y r: z )
+   swap  x-center +  0 max  maxx-raw min >fraction  ( y x' r: z )
+   swap  y-center +  0 max  maxy-raw min >fraction  ( x' y' r: z )
+   r> put-ball
+;
+
+: show-center-mark  ( -- )
+   0 set-fg  x-center ball-radius + y-center ball-radius +  d# 16  circleat
+;
+
+0 0 0 3value cal-xyz
+: update-angle  ( -- )
+   filtered-acceleration   ( acc-x,y,z )
+   cal-xyz xyz- drop       ( x' y' )
+   0 0 at-xy
+   ." Degrees X " over arcsin*10 .decidegrees     ."   Y " dup arcsin*10 .decidegrees  ( x' y' )
+   swap 2/  swap 2/
+   d# 0  put-centered
+   show-center-mark
+   \ ." X " rot 5 .r  ."   Y " swap 5 .r  ."  Z "  5 .r
+;
+
+: ?zero  ( -- )
+   rotate-button?  if
+      filtered-acceleration to cal-xyz
+      cal-xyz xyz-magnitude to gravity
+      0 1 at-xy ." Zeroing"
+      begin rotate-button? 0=  until
+      (cr ."        "
+   then
+;
+: clinometer  ( -- )
+   init-accelerometer
+   init-ball
+   cursor-off
+   clear-drawing
+   d# 40 0  at-xy  ." Rotate button zeroes"
+   begin
+      ?zero
+     ( update-laptop ) update-angle  d# 50 ms 
+   key? until
+   cursor-on
+;
+: level  ( -- )
+   clinometer
 ;
 
 \ LICENSE_BEGIN
