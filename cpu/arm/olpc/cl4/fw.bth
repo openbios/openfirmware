@@ -31,7 +31,7 @@ stand-init:
 
 fload ${BP}/cpu/arm/olpc/1.75/lcdcfg.fth
 fload ${BP}/cpu/arm/olpc/1.75/usb.fth
-fload ${BP}/cpu/arm/olpc/nn-touchscreen.fth
+\ fload ${BP}/cpu/arm/olpc/nn-touchscreen.fth
 fload ${BP}/cpu/arm/olpc/cl4/switches.fth
 fload ${BP}/cpu/arm/olpc/cl4/leds.fth
 fload ${BP}/cpu/arm/olpc/cl4/testitems.fth
