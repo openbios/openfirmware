@@ -229,8 +229,13 @@ label dramsize  ( -- r0: size-in-bytes )
    mov    r0,0
    mov    r1,0xd0000000    \ Memory controller base address
 
+\  ldr    r2,[r1,#0x00]    \ MMAP0 register
+\  and    r2,r2,#0xff      \ Revision
+\  cmps   r2,#0xNN         \ MMP3?
+\  >=     if
+
 [ifdef] mmp3
-   \ MMP3 memory controller
+   \ MMP3 memory controller - 2 banks, MMAP registers at 0x10 and 0x14
    ldr    r2,[r1,#0x10]    \ MMAP0 register
    ands   r3,r2,#1         \ Test CS_VALID
    movne  r3,#0x10000      \ Scale factor for memory size
@@ -261,7 +266,7 @@ label dramsize  ( -- r0: size-in-bytes )
    movne  r2,r2,lsr #27    \ Move AREA_LENGTH to LSB
    addne  r0,r0,r3,lsl r2  \ Compute bank size and add to accumulator
 [else]
-   \ MMP2 memory controller
+   \ MMP2 memory controller - 1 bank, MMAP registers at 0x100 and 0x110
    ldr    r2,[r1,#0x100]   \ MMAP0 register
    ands   r3,r2,#1         \ Test CS_VALID
    movne  r3,#0x10000      \ Scale factor for memory size

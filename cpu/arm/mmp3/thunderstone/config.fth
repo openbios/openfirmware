@@ -6,4 +6,4 @@ fload ${BP}/cpu/arm/mmp2/hwaddrs.fth
 
 create machine-signature ," TS0"
 
-h# 20000 constant l2-#sets
+fload ${BP}/cpu/arm/mmp3/soc-config.fth

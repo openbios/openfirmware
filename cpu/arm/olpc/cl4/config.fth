@@ -27,6 +27,6 @@ d# 10001 constant machine-type  \ Backwards compatibility with non-device-tree k
 char 5 constant expected-ec-version
 h# 10000 value /ec-flash
 
-h# 20000 constant l2-#sets
+fload ${BP}/cpu/arm/mmp3/soc-config.fth
 
 fload ${BP}/cpu/arm/olpc/cl4/gpiopins.fth

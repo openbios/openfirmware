@@ -113,7 +113,7 @@ label memcpy  ( r0: dst r1: src r2: n -- r0: dst )
 end-code
 
 \ Load some additional subroutines that are used by the startup code
-fload ${BP}/cpu/arm/mmp3/initmmu.fth	\ Setup the initial virtual address map
+fload ${BP}/cpu/arm/mmp2/initmmu.fth	\ Setup the initial virtual address map
 
 \ **** This is the main-line code for the initial startup sequence.
 \ It is reached from a branch instruction (which will be patched in later)
