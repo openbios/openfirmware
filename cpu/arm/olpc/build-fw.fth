@@ -31,8 +31,6 @@ fload ${BP}/cpu/arm/olpc/fbmsg.fth
 
 fload ${BP}/dev/omap/diaguart.fth	\ OMAP UART
 
-h# 18000 +io to uart-base		\ UART3 base address on MMP2
-\ h# 30000 +io to uart-base		\ UART1 base address on MMP2
 d# 26000000 to uart-clock-frequency
 
 \ CForth has already set up the serial port
@@ -105,8 +103,14 @@ fload ${BP}/cpu/arm/mmp2/watchdog.fth	\ reset-all using watchdog timer
    fload ${BP}/cpu/arm/mmp2/uart.fth
    " /apbc" encode-phandle d# 12 encode-int encode+ " clocks" property
    d# 24 " interrupts" integer-property
-   1 " linux,unit#" integer-property
 end-package
+
+0 0  " d4017000"  " /" begin-package  \ UART2
+   fload ${BP}/cpu/arm/mmp2/uart.fth
+   " /apbc" encode-phandle d# 11 encode-int encode+ " clocks" property
+   d# 28 " interrupts" integer-property
+end-package
+
 devalias com1 /uart
 : com1  " com1"  ;
 ' com1 is fallback-device   
@@ -115,10 +119,13 @@ devalias com1 /uart
    fload ${BP}/cpu/arm/mmp2/uart.fth
    d# 27 " interrupts" integer-property
    " /apbc" encode-phandle d# 10 encode-int encode+ " clocks" property
-   0 " linux,unit#" integer-property
 end-package
-devalias com2 /uart
-: com2  " com2"  ;
+
+0 0  " d4016000"  " /" begin-package  \ UART4
+   fload ${BP}/cpu/arm/mmp2/uart.fth
+   " /apbc" encode-phandle d# 32 encode-int encode+ " clocks" property
+   d# 46 " interrupts" integer-property
+end-package
 
 \needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
 
@@ -342,7 +349,9 @@ stand-init: More memory
 
 fload ${BP}/cpu/arm/mmp2/thermal.fth
 fload ${BP}/cpu/arm/mmp2/fuse.fth
+[ifdef] bsl-uart-base
 fload ${BP}/cpu/arm/olpc/bsl.fth
+[then]
 
 [ifndef] virtual-mode
 warning off
