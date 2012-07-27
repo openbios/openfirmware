@@ -4,20 +4,13 @@ purpose: Downloader for TI MSP430 BootStrap Loader (BSL) protocol
 \ devalias bsl /uart@NNNN:9600,8,e,1//bsl-protocol
 
 
-\ These constants are correct for XO-1.75 and XO-CL4; they might
-\ need to be changed for different hardware.  See setup-gpios-hack
-
-h# 17000 +io constant bsl-uart-base  \ UART2
-
-d#  98 constant bsl-test-gpio#       \ GPIO98 is alternate function 0 (the default)
-d# 152 constant bsl-rst-gpio#        \ SM_BELn, with GPIO152 as alternate function 1
-
 \ This is platform-dependent
 
 : setup-gpios  ( -- )
-   3 d# 55 af!   3 d# 56 af!   \ Setup pins for UART2
-   0 bsl-test-gpio# af!        \ Set to GPIO function
-   1 bsl-rst-gpio#  af!        \ Set to GPIO function (AF0 is SM_BELn for this pin)
+\ The pin setup should be done in CForth, but it's complicated by the fact that the touch-enabled CL2 uses GPIO 56 differently from the ordinary one
+[ifdef] olpc-cl2  3 d# 55 af!   3 d# 56 af!  [then]  \ Setup pins for UART2
+   0 touch-tck-gpio# af!       \ Set to GPIO function
+   1 touch-rst-gpio#  af!      \ Set to GPIO function (AF0 is SM_BELn for this pin)
 ;
 
 0 [if]
@@ -33,8 +26,8 @@ d# 152 constant bsl-rst-gpio#        \ SM_BELn, with GPIO152 as alternate functi
    d# 115 to test-gpio#  \ Normally UART3 TXD, but repurposed as a GPIO
    d# 116 to rst-gpio#   \ Normally UART3 RXD, but repurposed as a GPIO
 
-   0 bsl-test-gpio# af!  \ Set to GPIO function instead of UART3
-   0 bsl-rst-gpio#  af!  \ Set to GPIO function instead of UART3
+   0 touch-tck-gpio# af!  \ Set to GPIO function instead of UART3
+   0 touch-rst-gpio#  af!  \ Set to GPIO function instead of UART3
 ;
 [then]
 
@@ -43,8 +36,8 @@ d# 152 constant bsl-rst-gpio#        \ SM_BELn, with GPIO152 as alternate functi
 : bsl-baud  ( baud-rate -- )   \ 9600,8,e,1
    uart-base >r                 ( baud-rate r: uart-base )
    bsl-uart-base to uart-base
-   h# 13 h# 30 apbc!                                            \ enable the uart2 clocks
-   h# 40 1 uart!                                                \ uart unit enable
+   h# 13 bsl-uart-clock-offset apbc!      \ enable the uart2 clocks
+   h# 40 1 uart!                          \ uart unit enable
    baud  h# 1b 3 uart!          ( r: uart-base )
    r> to uart-base              ( )
 ;
@@ -63,35 +56,35 @@ d# 152 constant bsl-rst-gpio#        \ SM_BELn, with GPIO152 as alternate functi
 : bsl-open  ( -- )
    setup-gpios
 
-   bsl-rst-gpio# gpio-clr
-   bsl-test-gpio# gpio-clr
-   bsl-rst-gpio# gpio-dir-out
-   bsl-test-gpio# gpio-dir-out
+   touch-rst-gpio# gpio-clr
+   touch-tck-gpio# gpio-clr
+   touch-rst-gpio# gpio-dir-out
+   touch-tck-gpio# gpio-dir-out
 
    d# 9600 bsl-baud
 ;
 : bsl-close  ( -- )
-   bsl-rst-gpio# gpio-dir-in
-   bsl-test-gpio# gpio-dir-in
+   touch-rst-gpio# gpio-dir-in
+   touch-tck-gpio# gpio-dir-in
 ;
 : msp430-off  ( -- )
-   bsl-rst-gpio# gpio-clr
-   bsl-test-gpio# gpio-clr
+   touch-rst-gpio# gpio-clr
+   touch-tck-gpio# gpio-clr
 ;
 
 : dly  ( -- )  d# 10 ms  ;
 : start-bsl  ( -- )
    bsl-open
    d# 250 ms
-   bsl-test-gpio# gpio-set
+   touch-tck-gpio# gpio-set
    dly
-   bsl-test-gpio# gpio-clr
+   touch-tck-gpio# gpio-clr
    dly
-   bsl-test-gpio# gpio-set
+   touch-tck-gpio# gpio-set
    dly
-   bsl-rst-gpio# gpio-set
+   touch-rst-gpio# gpio-set
    dly
-   bsl-test-gpio# gpio-clr
+   touch-tck-gpio# gpio-clr
 ;
 
 : flush-bsl

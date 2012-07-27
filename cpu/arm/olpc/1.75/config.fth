@@ -31,6 +31,9 @@ d#  9999 constant machine-type  \ Backwards compatibility with non-device-tree k
 char 4 constant expected-ec-version
 h# 8000 value /ec-flash
 
-h# 10000 constant l2-#sets
+\ These constants are correct for XO-1.75 and XO-CL4; they might
+\ need to be changed for different hardware.  See setup-gpios-hack
+
+fload ${BP}/cpu/arm/mmp2/soc-config.fth
 
 fload ${BP}/cpu/arm/olpc/1.75/gpiopins.fth

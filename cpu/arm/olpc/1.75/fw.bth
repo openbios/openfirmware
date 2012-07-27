@@ -7,6 +7,9 @@ build-now
 
 " fw.tag" r/w create-file drop  tag-file !
 
+h# 17000 +io constant bsl-uart-base     \ UART2
+h# 30 constant bsl-uart-clock-offset    \ APBC_UART2_CLK_RST
+
 fload ${BP}/cpu/arm/olpc/build-fw.fth
 
 \ The internal SD card shares the host controller circuitry with
@@ -19,6 +22,26 @@ fload ${BP}/cpu/arm/olpc/build-fw.fth
 : boot-dev-sel-gpio#  ( -- n )  clx-touch?  if  2  else  d# 56  then  ;
 
 fload ${BP}/cpu/arm/olpc/emmc.fth
+
+\ Setup UART configuration 
+h# d4018000 to uart-base     \ UART3
+devalias com1 /uart@d4018000
+
+dev /uart@d4030000  \ UART1
+   0 " linux,unit#" integer-property
+device-end
+
+dev /uart@d4017000  \ UART2
+   " disabled" " status" string-property
+device-end
+
+dev /uart@d4018000  \ UART3
+   1 " linux,unit#" integer-property
+device-end
+
+dev /uart@d4016000  \ UART4
+   " disabled" " status" string-property
+device-end
 
 \ Device node for internal microSD
 dev /sd
