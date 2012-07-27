@@ -13,6 +13,41 @@ purpose: Access and FLASH programming for KB3731 EC via its "EDI" interface
 \  spi-out    ( byte -- ) - Send byte
 \  spi-in     ( -- byte ) - Receive byte
 
+0 value edi-chip-id
+: kb9010?  ( -- flag )  edi-chip-id 4 =  ;
+
+: efcfg    ( -- reg# )  kb9010?  if  h# fea0  else  h# fead  then  ;
+: efcmd    ( -- reg# )  kb9010?  if  h# fea7  else  h# feac  then  ;
+: efdat    ( -- reg# )  kb9010?  if  h# feaa  else  h# feab  then  ;
+: rst8051  ( -- reg# )  kb9010?  if  h# f010  else  h# ff14  then  ;
+
+\ Issues with .py code
+\ A14:A8 should be A15:A8 several places
+\ inconsistent use of handle vs gd.handle in edi_erase_chip
+
+\ KB9010 stuff...
+d# 59 d# 1024 * constant /kb9010-flash
+h# fe80 constant wdtcfg
+h# fe81 constant wdtpf
+h# fe82 constant wdt
+h# fea2 constant shccfg
+\ h# fea5 constant xbicfg \ Unused
+h# fea6 constant xbics
+\ h# feae constant efdatr \ Unused
+\ h# feaf constant emfburw
+h# feb2 constant xbiwp
+\ h# feb6 constant xbipump
+\ h# feb7 constant xbifm
+\ h# feb8 constant sbivr
+h# feb9 constant xbis
+h# ff0d constant clkcfg
+h# ff0f constant pllcfg
+h# ff1d constant ecsts
+h# ff1f constant pllcfg2
+h# ff14 constant pxcfg
+
+\ end KB9010 stuff...
+
 d# 128 constant /flash-page
 defer edi-progress  ' drop to edi-progress  ( n -- )
 
@@ -73,17 +108,23 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
 ;
 [then]
 : reset-8051  ( -- )  \ Reset 8-5
-   h# f010 edi-b@  1 or  h# f010 edi-b!
+   rst8051 edi-b@  1 or  rst8051 edi-b!
 ;
 : unreset-8051  ( -- )  \ Reset 8-5
-   h# f010 edi-b@  1 invert and  h# f010 edi-b!
+   rst8051 edi-b@  1 invert and  rst8051 edi-b!
    d# 2000 ms
 ;
 
 \ 0 in bit 0 selects masked ROM as code source for 8051, 1 selects FLASH
 \ The 8051 should be in reset mode when changing that bit.
+
 : select-flash  ( -- )  \ Setup for access to FLASH inside the EC
+   kb9010?  if  exit  then
    h# f011 edi-b@  1 or  h# f011 edi-b!
+;
+
+: edi-read-id  ( -- id )
+   spi-cs-on  h# 3e spi-out  0 spi-out  spi-in  spi-cs-off
 ;
 
 : probe-rdid  ( -- found? )  \ Verify that the EC is the one we think it is
@@ -95,12 +136,15 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
    1 invert and  h# 3730 =
 ;
 
+: finished?  ( b -- flag )
+   kb9010?  if  2 and 0=  else  h# 80 =  then
+;
 : wait-flash-busy  ( -- )  \ Wait for an erase/programming operation to complete
    get-msecs  h# 1000 +    ( limit )
    begin                   ( limit )
-      h# fea0 edi-b@       ( limit b )
-      h# 80 and  if        ( limit )
-         drop exit
+      efcfg edi-b@         ( limit b )
+      finished?  if        ( limit )
+         drop exit         ( -- )
       then                 ( limit )
       dup get-msecs - 0<=  ( limit timeout? )
    until                   ( limit )
@@ -108,11 +152,12 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
    true abort" EDI FLASH busy timeout"
 ;
 
-: flash-cmd  ( b -- )  h# fea7 edi-b!  ;
+: flash-cmd  ( b -- )  efcmd edi-b!  ;
 
 : set-offset  ( offset -- )
-   wbsplit                          ( offset-low offset-hi )
-   h# fea9 edi-b!  h# fea8 edi-b!   ( )
+   lbsplit drop                                   ( offset-low mid hi )
+   kb9010?  if  h# feaa edi-b!  else  drop  then  ( offset-low mid )
+   h# fea9 edi-b!  h# fea8 edi-b!                 ( )
 ;
 
 : erase-page  ( offset -- )
@@ -121,13 +166,18 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
    h# 20 flash-cmd     ( )
 ;
 
-: erase-chip  ( -- )  wait-flash-busy  h# 60 flash-cmd  wait-flash-busy  ;
+: erase-chip  ( -- )  
+   0 set-offset  \ New code does this (and does not wait-flash-busy)
+   wait-flash-busy  h# 60 flash-cmd  wait-flash-busy
+;
 
-: send-byte  ( b offset -- )  set-offset  h# feaa edi-b!  2 flash-cmd  ;
+: send-byte  ( b offset -- )  set-offset  efdat edi-b!  2 flash-cmd  ;
 
 : edi-program-page  ( adr offset -- )
    \ Clear HVPL
    wait-flash-busy  h# 80 flash-cmd  ( adr offset )
+
+   wait-flash-busy                ( adr offset )  \ Necessary?
 
    \ Fill the page buffer
    swap  /flash-page  bounds  do  ( offset )
@@ -138,7 +188,7 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
 
    \ Commit the buffer to the FLASH memory
    wait-flash-busy                ( )  \ Redundant wait?
-   h# 70 flash-cmd                ( )
+   h# 70 flash-cmd                ( )  \ Program page command
    wait-flash-busy                ( )
 ;
 h# 7e80 constant ec-flags-offset
@@ -162,11 +212,12 @@ h# 7e80 constant ec-flags-offset
       edi-next-b@ i c!            ( )
    loop                           ( )
 ;
+
 : trim@  ( offset -- b )
    set-offset
    h# 90 flash-cmd
    wait-flash-busy
-   h# feab edi-b@
+   efdat edi-b@   \ reg: efdat
 ;
 : trim-tune  ( -- )
 \   firmware-id  0=  if
@@ -226,13 +277,76 @@ h# 7e80 constant ec-flags-offset
       then
 \   then
 ;
+: set-chip-id  ( -- )
+   ['] edi-read-id  catch  if        ( )
+       edi-read-id                   ( id )
+   then                              ( id )
+   to edi-chip-id
+;
+: kb9010-init  ( -- )
+   h# 00 xbics  edi-b!
+   h# 00 xbiwp  edi-b! \ Clear XBI write protection
+   h# ff wdt    edi-b! \ Disable WDT
+   h# 00 wdtcfg edi-b!
+   h# 00 wdtpf  edi-b!
+   h# 00 shccfg edi-b! \ Disable SHC
+   h# 0c clkcfg edi-b! \ Set the 8051 to 32Mhz
+   h# 08 efcfg  edi-b! \ Enable the embedded flash cmd mode
+;
+base @ hex
+create special-row     1f0 w,  1f1 w,  1f2 w,  1f4 w,  1f5 w,  1f6 w,  1f3 w,
+create dest-regs      feb9 w, feb6 w, feb6 w, feb7 w, feb8 w, feb8 w, feb7 w,
+create source-bits      1f c,   0f c,   0f c,   0f c,   07 c,   1f c,   0f c,
+create dest-bits        1f c,   f0 c,   0f c,   0f c,   e0 c,   1f c,   f0 c,
+create shift-cnt         0 c,    4 c,    0 c,    0 c,    5 c,    0 c,    4 c,
+base !
+: kb9010-trimtune  ( -- )
+   h# 1ff trim@  0<>  if
+      7 0  do
+         special-row i wa+ w@  edi-b@         ( data )
+         source-bits i ca+ c@  or             ( field )
+         shift-cnt   i ca+ c@  lshift         ( field' )
+         dest-regs   i wa+ w@  edi-b@         ( field dest )
+         dest-bits   i ca+ c@  invert and or  ( dest' )
+         dest-regs   i wa+ w@  edi-b!         ( )
+      loop
+      wait-flash-busy
+   then
+   h# 80 trim@  h# 5a =  if
+      ecsts edi-b@                   ( old-ecsts )
+      dup 4 or  ecsts edi-b!         ( old-ecsts )  \ chipid is now pllcfg2
+
+      xbis edi-b@  h# 3f and               ( old-ecsts xbis-bits )
+      h# 81 edi-b@ 3 and  6 lshift or      ( old-ecsts xbis-value )
+      xbis edi-b!                          ( old-ecsts )
+
+      h# 82 edi-b@ h# f and 4 lshift       ( old-ecsts pll-high )
+      h# 83 edi-b@ h# f0 and 4 rshift or   ( old-ecsts pll-value )
+      pllcfg edi-b!                        ( old-ecsts )
+
+      pllcfg2 edi-b@ h# 3f and             ( old-ecsts pll2-bits )
+      h# 82 edi-b@ h# 30 and 2 lshift or   ( old-ecsts pll2-value )
+      pllcfg2 edi-b!                       ( old-ecsts )
+      
+      ecsts edi-b!                         ( )
+   then
+;
 : edi-open  ( -- )
    \ slow-edi-clock   \ Target speed between 1 and 2 MHz
    spi-start
+   
+   set-chip-id
+
    \ The first operation often fails so retry it
    ['] select-flash  catch  if  select-flash  then
    reset-8051
-   trim-tune
+
+   kb9010?  if
+      kb9010-init
+      kb9010-trimtune
+   else
+      trim-tune
+   then
    \ fast-edi-clock   \ Target speed up to 16 MHz
    \ reset
 ;
