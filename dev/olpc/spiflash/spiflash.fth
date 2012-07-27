@@ -199,6 +199,8 @@ h#   100 constant /spi-page     \ Largest write for page-oriented chips
    3drop
 ;
 
+: null-write  ( adr len offset -- )  3drop  ;
+
 \ This version is for SST parts, which use an auto-increment
 \ address command for fast writing.  The SST part does not
 \ require you to stop at 256-byte page boundaries.  The
@@ -306,12 +308,16 @@ defer write-spi-flash  ( adr len offset -- )
       h# 13  of  ['] common-write  endof
       h# 34  of  ['] common-write  endof
       h# bf  of  ['] sst-write     endof
-      h# 14  of
-         ." The SPI FLASH ID reads as 14.  This is due to an infrequent hardware problem."  cr
-         ." If you power cycle and try again, it will probably work the next time." cr
-         abort
-      endof
-      ( default )  true abort" Unsupported SPI FLASH ID"
+      h# 14  of  ['] common-write  endof     
+\ On some old board the ID would read as 14 when it should have been something else.
+\ On CL4, 14 is the expected ID.
+\         ." The SPI FLASH ID reads as 14.  This is due to an infrequent hardware problem."  cr
+\         ." If you power cycle and try again, it will probably work the next time." cr
+\         abort
+\      endof
+
+\      ( default )  true abort" Unsupported SPI FLASH ID"
+       ( default )  ." Bad SPI FLASH ID " dup . cr  ['] null-write swap
    endcase
    to write-spi-flash
    spi-unprotect
@@ -326,6 +332,7 @@ defer write-spi-flash  ( adr len offset -- )
    else
       spi-id#  case
          h# 13  of  ." type 13 - Spansion, Winbond, or ST"  endof
+         h# 14  of  ." type 14 - 2 MB"  endof
          h# 34  of  ." type 34 - Macronyx"  endof
       endcase
    then
