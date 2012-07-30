@@ -106,10 +106,15 @@ code edi-out  ( byte -- )
    begin
       ands  r3,tos,#0x80   \ Test bit
 
+[ifdef] olpc-cl4
+      strne r0,[r1,#0x18]  \ Set MOSI if bit is non0
+      streq r0,[r1,#0x24]  \ Clr MOSI if bit is 0
+[else]
       strne r0,[r1,#0x18]  \ Set MOSI if bit is non0
       strne r0,[r1,#0x18]  \ Set MOSI if bit is non0  \ Twice for delay - setup time to CLK
       streq r0,[r1,#0x24]  \ Clr MOSI if bit is 0
       streq r0,[r1,#0x24]  \ Clr MOSI if bit is 0  \ Twice for delay - setup time to CLK
+[then]
 
       str   r4,[r1,#0x18]  \ Set CLK
       str   r4,[r1,#0x24]  \ Clr CLK
