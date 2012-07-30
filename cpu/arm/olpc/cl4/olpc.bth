@@ -41,20 +41,18 @@ hex
 
 fload ${BP}/cpu/arm/marvell/tim.fth
 
-\ Marvel Trusted Image Module image creation script for
-\ XO-CL4 platform.
+\ Marvell Non-Trusted Image Module image creation script for XO-CL4 platform.
 
-tim: 00030400 0 OLPC PXA212x
-flash: SPI'10
-timh:  TIMH        0 d101f000
-\ Main Processor code loaded into DRAM
-image: OBMI      800 d101c000 ${BP}/cpu/arm/olpc/dummy.img
-\ Secure Processor code loaded into SRAM
-image: WTMI     1000 d1018000 shim.img
-image: CFTH     2000 d1000000 cforth.img
-reserved:
-  term:
-end-reserved
+tim: 00030400 0 THS'01 PXA212x
+  flash: SPI'10
+  timh:  TIMH        0 d101f000
+  image: OBMI     2000 d1000000 cforth.img
+  reserved:
+    \ Disable USB download/init by enabling the FFUART for download
+    \ This works around a PHY init erratum for the B0 chip
+    uart: 00004646 1
+    term:
+  end-reserved
 end-tim
 
 h# 20.0000 to reserved-start
