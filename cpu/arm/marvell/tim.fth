@@ -1,11 +1,17 @@
 : >hex  ( n -- n' )  d# 10 /mod h# 10 * +  ;
+
+0 value tim-version
+: tim-v3?  ( -- flag )  tim-version h# 00ffff00 and h# 00030400 =  ;
+
 : today>hex  ( -- n )
    today        ( day month year )
    d# 100 /mod  ( day month yr century )
    rot >hex >r  ( day yr century r: hex-month )
    rot >hex >r  ( yr century r: hex-month hex-day )
    >hex >r      ( yr r: hex-month hex-day hex-century )
-   >hex r> r> r> bljoin  ( n )
+   >hex r> r> r> 
+   tim-v3?  if  2swap  then
+   bljoin  ( n )
 ;
 
 0 value image-size
@@ -71,26 +77,29 @@
    ofd @ fclose
    image-adr image-size free-mem
 ;
-: tim:  \ version trusted ID Processor 
-   0 to last-image-adr
-   here to tim-adr
-   hex,
-   " TIMH" 4c,
-   hex,        \ Trusted
-\  hex,        \ Date
-   today>hex l,
-   get-word -4c,  \ OEM ID
-   get-word 2drop \ Processor
-;
-: flash:  \ id (e.g. NAN6)
-   5 0  do  -1 l,  loop
-
+: id,  ( -- )
    get-word                                   ( adr len )
    \ Convert trailing number to binary byte value - e.g. NAN'6 -> NAN(06)
    2dup [char] ' left-parse-string 2drop      ( adr len tail$ )
    push-decimal $number pop-base  abort" Bad number"  ( adr len n )
    nip  over 3 + c!  4                                ( adr 4 )
    4c,
+;
+: tim:  \ version trusted ID Processor 
+   0 to last-image-adr
+   here to tim-adr
+   get-hex dup l,  to tim-version
+   " TIMH" 4c,
+   hex,        \ Trusted
+\  hex,        \ Date
+   today>hex l,
+   id,            \ OEM ID
+   get-word 2drop \ Processor
+;
+: flash:  \ id (e.g. NAN6)
+   5 0  do  -1 l,  loop
+
+   id,
 
    here to #images-adr   0 l,
    here to #keys-adr     0 l,
@@ -112,12 +121,18 @@
    ifd @ fgets                 ( size read-size )
    over <> abort" Read failed" ( size )
    ifd @ fclose                ( size )
-\   h# 1000 round-up
-    h# 800 round-up
-\   4 round-up
+   \ Older BOOTROMs seem to want the size to be strongly aligned
+   tim-v3?  if  4  else  h# 800  then  round-up  ( size' )
 ;
 : place-hash  \ XXX need to implement non-null hash info
-   d# 10 0  do  0 l,  loop
+   tim-v3?  if
+      0 l,  \ Size to hash  (should be -1 but 0 is in the examples)
+      d# 20 l,  \ HashAlgorithmID - SHA-160
+      d# 16 0  do  0 l,  loop  \ Hash
+      0 l,   \ Partition number      
+   else
+      d# 10 0  do  0 l,  loop  \ Hash
+   then
 ;
 : +#images  ( -- )  #images-adr l@ 1+ #images-adr l!  ;
 : start-image  ( adr len -- )
@@ -168,6 +183,8 @@
    my-timh-adr  if
       here tim-adr -  my-timh-adr 4 la+ l!
       tim-adr  image-adr my-timh-adr 2 la+ l@ +   here tim-adr -  move
+   else
+      tim-adr  image-adr   here tim-adr -  move
    then
 ;
 : tbrx:   \ xferloc
@@ -197,5 +214,17 @@
 ;
 : cmcc:  \
    " CMCC" start-package
+;
+: usb:   \ Port# Enabled?
+   " "(00)USB" start-package hex, hex, end-package
+;
+: uart:   \ Port# Enabled?
+   " "UART" start-package hex, hex, end-package
+;
+: cmon:  \
+   " CMON" start-package end-package
+;
+: core:  \ number mapping
+   " CORE" start-package hex, hex, end-package
 ;
 : term:  " Term" start-package end-package  ;
