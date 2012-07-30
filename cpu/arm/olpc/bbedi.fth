@@ -1,16 +1,11 @@
 \ See license at end of file
 purpose: Bit-banged SPI bus driver for KB3731 EC "EDI" interface
 
-d# 103 constant edi-miso-gpio#
-d# 104 constant edi-cs-gpio#
-d# 105 constant edi-mosi-gpio#
-d# 106 constant edi-clk-gpio#
+: edi-cs-on   ( -- )  ec-edi-cs-gpio# gpio-clr  ;
+: edi-cs-off  ( -- )  ec-edi-cs-gpio# gpio-set  ;
 
-: edi-cs-on   ( -- )  edi-cs-gpio# gpio-clr  ;
-: edi-cs-off  ( -- )  edi-cs-gpio# gpio-set  ;
-
-: edi-clk-lo  ( -- )  edi-clk-gpio# gpio-clr  ;
-: edi-clk-hi  ( -- )  edi-clk-gpio# gpio-set  ;
+: edi-clk-lo  ( -- )  ec-edi-clk-gpio# gpio-clr  ;
+: edi-clk-hi  ( -- )  ec-edi-clk-gpio# gpio-set  ;
 
 0 [if]
 \ All this timing stuff is pointless because the GPIOs are so slow
@@ -60,7 +55,7 @@ c;
 
 [ifndef] edi-bit!
 : edi-bit!  ( flag -- )
-   edi-mosi-gpio#  swap  if  gpio-set  else  gpio-clr  then
+   ec-edi-mosi-gpio#  swap  if  gpio-set  else  gpio-clr  then
    edi-clk-hi
    edi-dly
    edi-clk-lo
@@ -71,13 +66,13 @@ c;
 [ifndef] edi-bit!
 : edi-bit!  ( flag -- )
    if
-      [ edi-mosi-gpio# >gpio-pin h# 18 + ] dliteral io!  \ Fast gpio-set
+      [ ec-edi-mosi-gpio# >gpio-pin h# 18 + ] dliteral io!  \ Fast gpio-set
    else
-      [ edi-mosi-gpio# >gpio-pin h# 24 + ] dliteral io!  \ Fast gpio-clr
+      [ ec-edi-mosi-gpio# >gpio-pin h# 24 + ] dliteral io!  \ Fast gpio-clr
    then
-   [ edi-clk-gpio# >gpio-pin h# 18 + ] dliteral io!  \ Fast gpio-set
+   [ ec-edi-clk-gpio# >gpio-pin h# 18 + ] dliteral io!  \ Fast gpio-set
 \   edi-dly
-   [ edi-clk-gpio# >gpio-pin h# 24 + ] dliteral io!  \ Fast gpio-set
+   [ ec-edi-clk-gpio# >gpio-pin h# 24 + ] dliteral io!  \ Fast gpio-set
 \   edi-dly
 ;
 [then]
@@ -92,7 +87,7 @@ c;
 : edi-bit@  ( -- flag )
    edi-clk-hi
    edi-dly
-   edi-miso-gpio# gpio-pin@
+   ec-edi-miso-gpio# gpio-pin@
    edi-clk-lo
    edi-dly
 ;
