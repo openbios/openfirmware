@@ -312,6 +312,9 @@ stand-init: RTC
 warning @ warning off
 : stand-init
    stand-init
+[ifdef] olpc-cl4
+." build-fw.fth: Skipping root node properties" cr exit
+[then]
    root-device
       model-version$   2dup model     ( name$ )
       " OLPC " encode-bytes  2swap encode-string  encode+  " banner-name" property
@@ -837,7 +840,11 @@ dev /client-services  patch noop visible enter  dend
 \+ use-screen-kbd  open-hotspot
 
    install-alarm
+[ifdef] olpc-clr
+   ." build-fw.fth: not sounding" cr
+[else]
    ?sound
+[then]
 
    ?games
 
@@ -845,7 +852,11 @@ dev /client-services  patch noop visible enter  dend
 \+ use-screen-kbd  ?text-on
 [ifdef] probe-usb
    factory-test?  if  d# 1000 ms  then  \ Extra USB probe delay in the factory
+[ifdef] olpc-cl4
+   ." build-fw.fth: not probing usb" cr
+[else]
    probe-usb
+[then]
    report-disk
    report-keyboard
 [then]
@@ -867,6 +878,9 @@ dev /client-services  patch noop visible enter  dend
    auto-banner?  if  banner  then
 
 \+ use-screen-kbd  ?text-on
+[ifdef] olpc-cl4
+   ." Quitting before auto-boot" cr  quit
+[then]
    auto-boot
 \+ use-screen-kbd  close-hotspot
 

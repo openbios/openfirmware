@@ -29,6 +29,9 @@ defer reset-usb-hub ' noop to reset-usb-hub
 : init-usb  ( -- )
    h# 9 h# 5c pmua!  \ Enable clock to USB block
    reset-usb-hub
+[ifdef] olpc-cl4
+   ." olpc/usb.fth: Skipping USB phy init!" cr  exit
+[then]
    init-usb-phy
 ;
 
