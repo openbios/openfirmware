@@ -10,12 +10,12 @@ create has-dcon
 fload ${BP}/cpu/arm/mmp2/hwaddrs.fth
 fload ${BP}/cpu/arm/olpc/addrs.fth
 
-h# 1f.0000 constant mfg-data-offset     \ Offset to manufacturing data area in SPI FLASH
-h# 20.0000 constant mfg-data-end-offset \ Offset to end of manufacturing data area in SPI FLASH
-h# 1e.ffd0 constant crc-offset
-h# 1e.ffc0 constant signature-offset
+h# 10.0000 constant /rom           \ Total size of SPI FLASH
 
-h# 20.0000 constant /rom           \ Total size of SPI FLASH
+/rom h# 1.0000 - constant mfg-data-offset     \ Offset to manufacturing data area in SPI FLASH
+/rom             constant mfg-data-end-offset \ Offset to end of manufacturing data area in SPI FLASH
+mfg-data-offset h# 30 - constant crc-offset        \ e.g. 1e.ffd0
+crc-offset      h# 10 - constant signature-offset  \ e.g. 1e.ffc0
 
 : signature$   " CL4"  ;
 : model$       " olpc,XO-CL4"  ;
