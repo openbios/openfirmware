@@ -290,7 +290,7 @@ previous definitions
 
    ['] noop to show-progress               ( adr len )
 
-   open-nand                               ( adr len )
+   ['] open-nand  catch  ?dup  if  .error  security-failure  then  ( adr len )
 
 \  clear-context  nand-commands
    t-hms(
@@ -309,7 +309,7 @@ previous definitions
 ;
 
 : fs-update-from-list  ( devlist$ -- )
-   load-crypto  if  visible  ." Crytpo load failed" cr  show-sad  security-failure   then
+   load-crypto  if  visible  ." Crypto load failed" cr  show-sad  security-failure   then
 
    visible                            ( devlist$ )
    begin  dup  while                  ( rem$ )
