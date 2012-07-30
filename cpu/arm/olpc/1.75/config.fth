@@ -29,7 +29,8 @@ h# 10.0000 constant /rom           \ Total size of SPI FLASH
 d#  9999 constant machine-type  \ Backwards compatibility with non-device-tree kernel
 
 char 4 constant expected-ec-version
-h# 8000 value /ec-flash
+h# 8000 constant /ec-flash
+h# 7e80 constant ec-flags-offset   \ don't program or verify this page
 
 \ These constants are correct for XO-1.75 and XO-CL4; they might
 \ need to be changed for different hardware.  See setup-gpios-hack

@@ -191,7 +191,7 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
    h# 70 flash-cmd                ( )  \ Program page command
    wait-flash-busy                ( )
 ;
-h# 7e80 constant ec-flags-offset
+
 : edi-program-flash  ( adr len offset -- )
    cr                                          ( adr len offset )
    swap  0  ?do                                ( adr offset )

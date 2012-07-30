@@ -25,7 +25,8 @@ h# 20.0000 constant /rom           \ Total size of SPI FLASH
 d# 10001 constant machine-type  \ Backwards compatibility with non-device-tree kernel
 
 char 5 constant expected-ec-version
-h# 10000 value /ec-flash
+h# ec00 constant /ec-flash
+h# eb80 constant ec-flags-offset   \ don't program or verify this page
 
 fload ${BP}/cpu/arm/mmp3/soc-config.fth
 
