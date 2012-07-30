@@ -16,10 +16,10 @@ purpose: Access and FLASH programming for KB3731 EC via its "EDI" interface
 0 value edi-chip-id
 : kb9010?  ( -- flag )  edi-chip-id 4 =  ;
 
-: efcfg    ( -- reg# )  kb9010?  if  h# fea0  else  h# fead  then  ;
-: efcmd    ( -- reg# )  kb9010?  if  h# fea7  else  h# feac  then  ;
-: efdat    ( -- reg# )  kb9010?  if  h# feaa  else  h# feab  then  ;
-: rst8051  ( -- reg# )  kb9010?  if  h# f010  else  h# ff14  then  ;
+: efcfg    ( -- reg# )  kb9010?  if  h# fead  else  h# fea0   then  ;
+: efcmd    ( -- reg# )  kb9010?  if  h# feac  else  h# fea7   then  ;
+: efdat    ( -- reg# )  kb9010?  if  h# feab  else  h# feaa   then  ;
+: rst8051  ( -- reg# )  kb9010?  if  h# ff14  else  h# f010   then  ;
 
 \ Issues with .py code
 \ A14:A8 should be A15:A8 several places
@@ -124,7 +124,7 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
 ;
 
 : edi-read-id  ( -- id )
-   spi-cs-on  h# 3e spi-out  0 spi-out  spi-in  spi-cs-off
+   spi-cs-on  h# 3e spi-out  spi-in  spi-cs-off
 ;
 
 : probe-rdid  ( -- found? )  \ Verify that the EC is the one we think it is
