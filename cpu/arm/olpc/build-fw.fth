@@ -840,7 +840,7 @@ dev /client-services  patch noop visible enter  dend
 \+ use-screen-kbd  open-hotspot
 
    install-alarm
-[ifdef] olpc-clr
+[ifdef] olpc-cl4
    ." build-fw.fth: not sounding" cr
 [else]
    ?sound
