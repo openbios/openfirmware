@@ -8,15 +8,17 @@
 
 h# 035000 value ssp-base  \ SSP1
 : ssp-sscr0  ( -- adr )  ssp-base  ;
-: ssp-sscr1  ( -- adr )  ssp-base  la1+  ;
-: ssp-sssr   ( -- adr )  ssp-base  2 la+  ;
-: ssp-ssdr   ( -- adr )  ssp-base  4 la+  ;
+: ssp-sscr1  ( -- adr )  ssp-base  4 +  ;
+: ssp-sssr   ( -- adr )  ssp-base  8 +  ;
+: ssp-ssdr   ( -- adr )  ssp-base  h# 10 +  ;
+: ssp-sspsp  ( -- adr )  ssp-base  h# 2c +  ;
 
 : ssp-spi-start  ( -- )
    \ Avoid reinitializing the device after the first time, as that
    \ seems to cause glitches that confuse the SPI FLASH chip
    ssp-sscr1 io@ 0=  if  exit  then
 
+   h# 01 ssp-sspsp io!
    h# 07 ssp-sscr0 io!
    0 ssp-sscr1 io!
    h# 87 ssp-sscr0 io!   
