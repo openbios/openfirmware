@@ -334,6 +334,9 @@ base !
 : edi-open  ( -- )
    \ slow-edi-clock   \ Target speed between 1 and 2 MHz
    spi-start
+
+   \ dummy read, to activate EDI
+   h# ff22 edi-b@ drop
    
    set-chip-id
 
