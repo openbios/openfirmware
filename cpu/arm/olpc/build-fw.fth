@@ -293,7 +293,11 @@ fload ${BP}/cpu/arm/linux.fth
    then
 ;
 
+[ifdef] mmp3
+fload ${BP}/cpu/arm/mmp3/usb2phy.fth
+[else]
 fload ${BP}/cpu/arm/marvell/utmiphy.fth
+[then]
 fload ${BP}/cpu/arm/olpc/usb.fth
 
 fload ${BP}/dev/olpc/mmp2camera/loadpkg.fth
