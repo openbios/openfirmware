@@ -43,7 +43,7 @@ fload ${BP}/cpu/arm/marvell/tim.fth
 
 \ Marvell Non-Trusted Image Module image creation script for XO-CL4 platform.
 
-tim: 00030400 0 THS'01 PXA212x
+tim: 00030400 0 OLPC PXA212x
   flash: SPI'10
   timh:  TIMH        0 d101f000
   image: OBMI     2000 d1000000 cforth.img
