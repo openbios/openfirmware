@@ -24,7 +24,7 @@ crc-offset      h# 10 - constant signature-offset  \ e.g. 1e.ffc0
 
 d# 10001 constant machine-type  \ Backwards compatibility with non-device-tree kernel
 
-char 5 constant expected-ec-version
+char 7 constant expected-ec-version
 h# ec00 constant /ec-flash
 h# eb80 constant ec-flags-offset   \ don't program or verify this page
 
