@@ -1,7 +1,7 @@
 : >hex  ( n -- n' )  d# 10 /mod h# 10 * +  ;
 
 0 value tim-version
-: tim-v3?  ( -- flag )  tim-version h# 00ffff00 and h# 00030400 =  ;
+: tim-v4?  ( -- flag )  tim-version h# 00ffff00 and h# 00030400 =  ;
 
 : today>hex  ( -- n )
    today        ( day month year )
@@ -10,7 +10,7 @@
    rot >hex >r  ( yr century r: hex-month hex-day )
    >hex >r      ( yr r: hex-month hex-day hex-century )
    >hex r> r> r> 
-   tim-v3?  if  2swap  then
+   tim-v4?  if  2swap  then
    bljoin  ( n )
 ;
 
@@ -129,10 +129,10 @@
    over <> abort" Read failed" ( size )
    ifd @ fclose                ( size )
    \ Older BOOTROMs seem to want the size to be strongly aligned
-   tim-v3?  if  4  else  h# 800  then  round-up  ( size' )
+   tim-v4?  if  4  else  h# 800  then  round-up  ( size' )
 ;
 : place-hash  \ XXX need to implement non-null hash info
-   tim-v3?  if
+   tim-v4?  if
       0 l,  \ Size to hash  (should be -1 but 0 is in the examples)
       d# 20 l,  \ HashAlgorithmID - SHA-160
       d# 16 0  do  0 l,  loop  \ Hash
