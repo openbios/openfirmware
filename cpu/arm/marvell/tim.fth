@@ -78,11 +78,18 @@
    image-adr image-size free-mem
 ;
 : id,  ( -- )
-   get-word                                   ( adr len )
-   \ Convert trailing number to binary byte value - e.g. NAN'6 -> NAN(06)
-   2dup [char] ' left-parse-string 2drop      ( adr len tail$ )
-   push-decimal $number pop-base  abort" Bad number"  ( adr len n )
-   nip  over 3 + c!  4                                ( adr 4 )
+   get-word                                     ( adr len )
+   \ The ID can either be a 4 bytes of ASCII, e.g. OLPC,
+   \ or 3 ASCII plus a decimal number, e.g. SPI'10
+   2dup [char] ' left-parse-string              ( adr len tail$ head$ )
+   nip  4 =  if                                 ( adr len tail$ )
+      \ No ' character in string; use verbatim
+      2drop
+   else                                         ( adr len tail$ )
+      \ Convert trailing number to binary byte value - e.g. NAN'6 -> NAN(06)
+      push-decimal $number pop-base  abort" Bad number"  ( adr len n )
+      nip  over 3 + c!  4                                ( adr 4 )
+   then
    4c,
 ;
 : tim:  \ version trusted ID Processor 
