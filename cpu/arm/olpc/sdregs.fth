@@ -8,7 +8,12 @@ my-space /regs  reg
 
 : map-regs  ( -- )
    chip  if  exit  then
-   slot 1-  h# 800 *  my-space +  /regs " map-in" $call-parent
+   slot 5 =  if
+      h# d421.7000
+   else
+      slot 1-  h# 800 *  my-space +
+   then
+   /regs " map-in" $call-parent
    to chip
 ;
 : unmap-regs  ( -- )
