@@ -17,12 +17,22 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
    \ Slot:power_GPIO - 1:35, 2:34, 3:33
    : gpio-power-on  ( -- )
       sdhci-card-power-on
+[ifdef] en-emmc-pwr-gpio#
+      slot 3 =  if  en-emmc-pwr-gpio# gpio-clr  then
+[then]
+[ifdef] en-wlan-pwr-gpio#
       slot 2 =  if  en-wlan-pwr-gpio# gpio-set  then
+[then]
    ;
    ' gpio-power-on to card-power-on
 
    : gpio-power-off  ( -- )
+[ifdef] en-emmc-pwr-gpio#
+      slot 3 =  if  en-emmc-pwr-gpio# gpio-set  then
+[then]
+[ifdef] en-wlan-pwr-gpio#
       slot 2 =  if  en-wlan-pwr-gpio# gpio-clr  then
+[then]
       sdhci-card-power-off
    ;
    ' gpio-power-off to card-power-off

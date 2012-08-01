@@ -760,9 +760,9 @@ false value avoid-high-speed?
 
       \ Ideally, the width selection would be done by using CMD19 to test the bus
       hc-supports-8-bit?  if
-         mmc-8-bit  8-bit
+         mmc-8-bit  1 ms  8-bit
       else
-         mmc-4-bit  4-bit
+         mmc-4-bit  1 ms  4-bit
       then
 
       \ Ideally, we should set the speed class/power consumption - but the devices
