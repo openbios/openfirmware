@@ -41,10 +41,8 @@ purpose: Init USB2 Phy in Marvell SoC
 \  h# d00  h# 100 +pmua  io-set   \ Select 26 MHz VCXO clock
    h# 000  h# 100 +pmua  io-set   \ Select crystal
 
-\  h# 3fff pll-reg0 io-clr \ REFDIV_MASK_B0 3e00, FBDIV_MASK_B0 01ff
-\  h# 1af0 pll-reg0 io-set \ 0xd << 9      , 0xf0 << 0
 \  h# ca60 is the value to use for a 25 MHz crystal
-   h# daf0 pll-reg0 io-set \ 0xd << 9      , 0xf0 << 0
+   h# daf0 pll-reg0 io!    \ REFDIV: 0xd << 9, FBDIV: 0xf0 << 0
 
    h# 3000 reserve-reg0 io! \ Program PLLVDD12 per Marvell email
 
