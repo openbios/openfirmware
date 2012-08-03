@@ -14,6 +14,7 @@ purpose: Register access words for MMP2 registers used by many functional units
 
 : io-set  ( mask offset -- )  dup io@  rot or  swap io!  ;
 : io-clr  ( mask offset -- )  dup io@  rot invert and  swap io!  ;
+: io-fld  ( clr-mask set-mask offset -- )  >r r@ io@  rot invert and  or  r> io!  ;
 
 : icu@  ( offset -- value )  +icu io@  ;
 : icu!  ( value offset -- )  +icu io!  ;
@@ -23,6 +24,10 @@ purpose: Register access words for MMP2 registers used by many functional units
 
 : pmua@  ( offset -- l )  +pmua io@  ;
 : pmua!  ( l offset -- )  +pmua io!  ;
+
+: pmua-set  ( bits reg# -- )  +pmua io-set  ;
+: pmua-clr  ( bits reg# -- )  +pmua io-clr  ;
+: pmua-fld  ( clr set reg# -- )  +pmua io-fld  ;
 
 : apbc@  ( offset -- l )  +apbc io@  ;
 : apbc!  ( l offset -- )  +apbc io!  ;
