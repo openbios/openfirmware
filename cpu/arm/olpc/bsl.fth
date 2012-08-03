@@ -3,11 +3,54 @@ purpose: Downloader for TI MSP430 BootStrap Loader (BSL) protocol
 
 \ devalias bsl /uart@NNNN:9600,8,e,1//bsl-protocol
 
+\ the MSP430 BSL has the annoying trait that it will self-erase if
+\  an incorrect password is used to access its restricted functions. 
+\  worse, the self-erase includes the factory-supplied calibration
+\  values.  happily, if a specific interrupt vector (at address
+\  0xffde) is set to null, using a bad password won't cause an
+\  erase.  but that still leaves us with the inability to program
+\  the flash.
+\
+\  there are several cases to consider:
+\
+\      - a fresh, blank chip, with calibration data.
+\          the password for this chip is all-ff.
+\      - a programmed chip, with calibration data.
+\          the password for this chip is supplied by neonode.
+\      - a mishandled chip:  blank, with no calibration data
+\          the password for this chip is all-ff.
+\
+\  when programming, _always_ finish by writing 0000 to 0xffde. 
+\  this ensures that a subsequent bad password will preserve
+\  calibration data.  neonode has already said that their firmware
+\  will set that value to 0, but this ensures it for any image
+\  written.
+\
+\  to erase the chip, and leave it accessible for programming:
+\
+\      send an all-ff password,
+\      if nak'd, send the neonode password.
+\      if nak'd, send the all-ff password (again, in case erase has occurred)
+\      if nak'd, we're hosed, give up.
+\
+\      \ we were acked (one of those passwords worked)
+\      send the 'erase main' command
+\      write 0000 to ffde
+\
+\      if the calibration data is missing (i.e., all-ff),
+\          program and run a calibration program, which should
+\                write new calibration values
+\          send the 'erase main' command
+\
+\      program the new image
+
 
 \ This is platform-dependent
 
 : setup-gpios  ( -- )
-\ The pin setup should be done in CForth, but it's complicated by the fact that the touch-enabled CL2 uses GPIO 56 differently from the ordinary one
+\ The pin setup should be done in CForth, but it's complicated by
+\ the fact that the touch-enabled CL2 uses GPIO 56 differently from
+\ the ordinary one
 [ifdef] olpc-cl2  3 d# 55 af!   3 d# 56 af!  [then]  \ Setup pins for UART2
    0 touch-tck-gpio# af!       \ Set to GPIO function
    1 touch-rst-gpio#  af!      \ Set to GPIO function (AF0 is SM_BELn for this pin)
@@ -90,7 +133,7 @@ purpose: Downloader for TI MSP430 BootStrap Loader (BSL) protocol
 : flush-bsl
    get-msecs d# 2000 +                  ( limit )
    begin
-      receive?  0=  if  exit  then      ( limit char )
+      receive?  0=  if drop exit  then      ( limit char )
       drop  dup get-msecs - 0<          ( limit timeout? )
    until
    drop  true abort" BSL flush timeout"
@@ -119,7 +162,7 @@ d# 1000 constant timeout
                drop true exit ( -- true )
             endof
             h# a0  of         ( limit )
-               ." NAK!"
+               \ ." NAK!"
                drop false exit
             endof
          endcase
@@ -180,16 +223,24 @@ d# 1000 constant timeout
    dup  h# 10 frame(     ( adr len )
    send-xx send-xx       ( adr len )
    send-data             ( )
-   )frame
+   )frame-no-ack
 ;
+
+   
 : ff-password  ( -- )
-   " "(ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff)"
+   " "(ff ff ff ff  ff ff ff ff  ff ff ff ff  ff ff ff ff  ff ff ff ff  ff ff ff ff  ff ff ff ff  ff ff ff ff)"
    rx-password
 ;
 : 00-password  ( -- )
-   " "(00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ff)"
+   " "(00 00 00 00  00 00 00 00  00 00 00 00  00 00 00 00  00 00 00 00  00 00 00 00  00 00 00 00  00 00 00 00)"
    rx-password
 ;
+
+: neo-password  ( -- )
+   " "(30 fe 30 fe  00 fe 04 fe  30 fe 08 fe  0c fe 10 fe  14 fe 18 fe  1c fe 30 fe  20 fe 24 fe  28 fe 2c fe)"
+   rx-password
+;
+
 : (erase)   ( device-adr code -- )
    swap                  ( device-adr code )
    0  h# 16 frame(       ( code device-adr )
@@ -198,8 +249,18 @@ d# 1000 constant timeout
    )frame
 ;
 : erase-segment  ( device-adr -- )  h# a502 (erase)  ;
-: erase-main  ( device-adr -- )  h# a504 (erase)  ;
+: erase-main  ( -- )  h# 8000 h# a504 (erase)  ;
+: erase-info  ( -- )  h# 1000 h# a504 (erase)  ;
 : mass-erase  ( -- )  0 h# a506 (erase)  ;
+
+: erase-check ( device-adr len -- )
+   swap               ( len device-adr )
+   0 h# 1c frame(     ( len device-adr )
+   send-summed        ( len )
+   send-summed
+   )frame-no-ack
+;
+   
 : change-baud-rate  ( d3 d2 d1 -- )
    0  h# 20 frame(          ( d3 d2 d1 )
    swap bwjoin send-summed  ( d3 )
@@ -269,11 +330,37 @@ d# 250 constant /bsl-max-read
    r>  3drop
 ;
 
+: null-ffde!  ( -- )
+   " "(00 00)" h# ffde rx-data-block
+;
+
+: calibration-missing  ( -- missing? )
+    h# 1000 h# 100 erase-check ack?
+;
+
+: do-calibration  ( -- )
+   \ erase-info
+   \ FIXME
+;
+
 : force-erase  ( -- )
    rst-bsl
-   ['] 00-password catch drop
-   rst-bsl
-   ff-password
+   ff-password ack? dup 0= if
+	drop
+	neo-password ack? dup 0= if
+	    drop
+	    ff-password ack? dup 0= if
+		drop
+		." BSL is locked" exit
+	    then
+	then
+   then
+   erase-main
+   null-ffde!
+
+   calibration-missing if
+	do-calibration null-ffde!
+   then
 ;
 
 \ Decoder for TI TXT file format
@@ -310,7 +397,7 @@ d# 50 buffer: binary-buf
    true abort" TI TXT Line too long!"
 ;
 : ti-txt-handle-line  ( adr len -- )
-   dup 0=  if  2drop exit  then    ( adr len )
+   dup 0=  if  2drop cr exit  then    ( adr len )
    over c@  case
       [char] @ of                  ( adr len )
          1 /string  hex-number to next-address
@@ -328,11 +415,17 @@ d# 50 buffer: binary-buf
 
 0 value ihex-hi-adr
 : ihex-handle-line  ( adr len -- )
-   dup 0=  if  2drop exit  then                ( adr len )
+   dup 0=  if  2drop cr exit  then                ( adr len )
+   \ 2dup type cr
    parse-ihex-record                           ( data-adr data-len offset type )
    case
       0 of   \ Data                            ( data-adr data-len offset )
-         ihex-hi-adr +  rx-data-block          ( )
+         ihex-hi-adr +                         ( data-adr dat-len absaddr )
+	 \ the BSL protocol needs even lengths, so
+	 \ force the record length to even
+	 \ (yes, this may program write garbage to the extra byte.)
+         swap dup 1 and if 1 + then swap       ( data-adr evenlen absaddr )
+         rx-data-block                         ( )
       endof
       1 of   \ End of file                     ( data-adr data-len offset )
          3drop                                 ( )
