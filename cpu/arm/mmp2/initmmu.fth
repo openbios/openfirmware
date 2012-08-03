@@ -369,6 +369,7 @@ label init-map  ( -- )
    set r3,#0xc02                        \ No caching or write buffering
    set r4,`mmp3-audio-va #`             \ Virtual address
    bl  `map-sections`
+[then]
 
    mov     pc, r10
 end-code
