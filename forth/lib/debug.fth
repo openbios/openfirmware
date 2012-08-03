@@ -126,17 +126,27 @@ d# 24 constant cmd-column
 0 value stack-line
 d# 45 constant stack-column
 \ 0 0 2value result-loc
+0 0 2value full-stack-xy
 0 value result-line
 0 value result-col
 : to-stack-location  ( -- )  stack-column stack-line at-xy  kill-line  ;
+: show-full-stack  ( -- )
+   full-stack-xy at-xy kill-line
+   depth 0<  if  ." Stack Underflow"   exit  then  \ Don't clear stack here
+   depth 0=  if  ." Empty"  exit  then
+   depth 7 >  if  ." .. "  then
+   depth  depth 7 - 0 max  ?do  depth i - 1- pick n.  loop
+;
 : show-partial-stack  ( -- )
+   show-full-stack
+
    to-stack-location
 
    ." \ "
    depth 0<  if  ." Stack Underflow" sp0 @ sp!  exit  then
    depth 0=  if  ." Empty"  exit  then
-   depth 4 >  if  ." .. "  then
-   depth  depth 5 - 0 max  ?do  depth i - 1- pick n.  loop
+   depth 3 >  if  ." .. "  then
+   depth  depth 4 - 0 max  ?do  depth i - 1- pick n.  loop
 ;
 
 \ : save-result-loc  ( -- )  #out @ #line @ to result-loc  ;
@@ -191,6 +201,7 @@ variable hex-stack    \ Show the data stack in hex?
    d# 70 rmargin !
    ." Callers: "  rp0 @ the-rp na1+ rslist kill-line cr
    d# 40 rmargin !
+   ." Stack: " #out @ #line @ to full-stack-xy  cr  \ For stack
    the-ip debug-see
    cr
    \ Display the initial stack on the cursor line
