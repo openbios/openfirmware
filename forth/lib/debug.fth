@@ -118,6 +118,7 @@ defer restore-window   ' noop is restore-window
    ." \       Display Forth return stack as numbers (like the data stack)" cr
    ." Q       Quit: abandon execution of the debugged word" cr
    ." V       Visual: toggle between 2-D and scrolling" cr
+   ." L       Visual: redisplay" cr
 ;
 d# 24 constant cmd-column
 : to-cmd-column  ( -- )  cmd-column to-column  ;
@@ -141,7 +142,7 @@ d# 45 constant stack-column
 \ : save-result-loc  ( -- )  #out @ #line @ to result-loc  ;
 \ : to-result-loc  ( -- )  result-loc at-xy  ;
 : save-result-loc  ( -- )  #out @ to result-col   #line @ to result-line  ;
-: to-result-loc  ( -- )  result-col result-line at-xy  ;
+: to-result-loc  ( -- )  result-col result-line 2dup at-xy  #line !  #out !  ;
 
 \ set-package is a hook for Open Firmware.  When Open Firmware is loaded,
 \ set-package should be set to a word that sets the active package to the
@@ -187,6 +188,7 @@ variable hex-stack    \ Show the data stack in hex?
    page
    d# 78 rmargin !
    .debug-short-help
+   d# 70 rmargin !
    ." Callers: "  rp0 @ the-rp na1+ rslist kill-line cr
    d# 40 rmargin !
    the-ip debug-see
@@ -235,6 +237,7 @@ variable hex-stack    \ Show the data stack in hex?
 : debug-interact  ( -- )
    save#
    begin
+      setup-debug-display
       step? @  if  to-debug-window  then
       show-debug-stack
       step? @  key? or  if
@@ -269,6 +272,7 @@ variable hex-stack    \ Show the data stack in hex?
             ascii *  of  the-ip find-cfa dup <ip !  'unnest ip> !  false  endof
             ascii \  of  show-rstack @ 0= show-rstack !  false  endof  \ toggle return stack display
             ascii X  of  hex-stack @ 0= hex-stack !      false  endof  \ toggle heX stack display
+            ascii L  of  true to redisplay?              false  endof  \ Redisplay
             ascii V  of						\ toggle Visual (2D) mode
                scrolling-debug? 0= to scrolling-debug?      
                scrolling-debug? 0=  if  true to redisplay?  then  false
@@ -284,7 +288,6 @@ variable hex-stack    \ Show the data stack in hex?
 : (trace  ( -- )
    ip@ to the-ip
    rp@ to the-rp
-   setup-debug-display
    debug-interact
 \   scrolling-debug? 0=  if  to-result-loc  then
    the-ip token@  dup ['] unnest =  swap ['] exit =  or  if
