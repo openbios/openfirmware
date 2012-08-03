@@ -23,7 +23,7 @@ h# 1e4 +pmua constant isld-dspa-ctrl
 h# 240 +pmua constant audio-sram-pwr
 [then]
 
-: audio-clock!     ( -- )  audio-clk pmua!  ;
+: audio-clock!     ( -- )  audio-clk io!  ;
 : audio-clock-off  ( -- )
    0 h# 38 sspa!
    0 audio-clock!
