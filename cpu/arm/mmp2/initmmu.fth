@@ -344,10 +344,12 @@ label init-map  ( -- )
    set r3,#0xc02                        \ No caching or write buffering
    bl  `map-sections-v=p`
 
+[ifdef] /audio-sram-map
    set r1,`audio-sram-pa #`             \ Address of Audio SRAM
-   set r2,`/audio-sram #`               \ Size of audio SRAM
+   set r2,`/audio-sram-map #`           \ Map size of audio SRAM
    set r3,#0xc02                        \ No caching or write buffering
    bl  `map-sections-v=p`
+[then]
 
    set r1,`io-pa #`                     \ Address of I/O
    set r2,`/io #`                       \ Size of I/O region
@@ -359,6 +361,13 @@ label init-map  ( -- )
    set r2,`/io2 #`                      \ Size of I/O region
    set r3,#0xc02                        \ No caching or write buffering
    set r4,`io2-va #`                    \ Virtual address
+   bl  `map-sections`
+
+[ifdef] mmp3-audio-pa
+   set r1,`mmp3-audio-pa #`             \ Address of I/O
+   set r2,`/mmp3-audio #`               \ Size of I/O region
+   set r3,#0xc02                        \ No caching or write buffering
+   set r4,`mmp3-audio-va #`             \ Virtual address
    bl  `map-sections`
 
    mov     pc, r10

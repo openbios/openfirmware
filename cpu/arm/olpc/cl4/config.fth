@@ -7,6 +7,7 @@ create use-elf
 create has-sp-kbd
 create has-dcon
 
+fload ${BP}/cpu/arm/mmp3/soc-config.fth
 fload ${BP}/cpu/arm/mmp2/hwaddrs.fth
 fload ${BP}/cpu/arm/olpc/addrs.fth
 
@@ -27,7 +28,5 @@ d# 10001 constant machine-type  \ Backwards compatibility with non-device-tree k
 char 7 constant expected-ec-version
 h# ec00 constant /ec-flash
 h# eb80 constant ec-flags-offset   \ don't program or verify this page
-
-fload ${BP}/cpu/arm/mmp3/soc-config.fth
 
 fload ${BP}/cpu/arm/olpc/cl4/gpiopins.fth

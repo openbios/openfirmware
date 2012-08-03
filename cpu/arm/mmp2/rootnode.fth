@@ -36,6 +36,13 @@ hex
       io-pa -  io-va +         ( virt )
       exit
    then                        ( phys )
+[ifdef] mmp3-audio-pa
+   dup mmp3-audio-pa u>=  if   ( phys )
+      mmp3-audio-pa -          ( offset )
+      mmp3-audio-va +          ( virt )
+      exit
+   then
+[then]
    \ Fall through to return virt == phys
 ;
 : map-out  ( virtual size -- )

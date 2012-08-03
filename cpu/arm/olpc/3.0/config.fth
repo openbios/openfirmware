@@ -6,6 +6,7 @@ create use-elf
 create use-screen-kbd
 create use-small-font
 
+fload ${BP}/cpu/arm/mmp2/soc-config.fth
 fload ${BP}/cpu/arm/mmp2/hwaddrs.fth
 fload ${BP}/cpu/arm/olpc/addrs.fth
 
@@ -31,7 +32,5 @@ char 4 constant expected-ec-version
 h# 8000 value /ec-flash
 
 h# 18000 constant console-uart-base
-
-fload ${BP}/cpu/arm/mmp2/soc-config.fth
 
 fload ${BP}/cpu/arm/olpc/3.0/gpiopins.fth

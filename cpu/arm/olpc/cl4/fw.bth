@@ -12,7 +12,7 @@ h# 88 constant bsl-uart-clock-offset    \ APBC_UART4_CLK_RST
 
 fload ${BP}/cpu/arm/olpc/build-fw.fth
 
-true to stand-init-debug?
+\ true to stand-init-debug?
 
 \ Setup UART configuration 
 h# d4017000 to uart-base     \ UART2

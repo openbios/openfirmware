@@ -1,4 +1,8 @@
+[ifdef] olpc-cl4
+0 0  " c0ffd800"  " /" begin-package
+[else]
 0 0  " d42a0800"  " /" begin-package
+[then]
 " audio" name
 my-space h# 800 reg
 
@@ -12,7 +16,14 @@ d# 2 " interrupts" integer-property
 : adma!  ( n offset -- )  adma-base + rl!  ;
 : adma@  ( offset -- n )  adma-base + rl@  ;
 
-: audio-clock!  ( -- )  h# 10c pmua!  ;
+h# 10c +pmua constant audio-clk
+[ifdef] mmp3
+h# 164 +pmua constant audio-dsa
+h# 1e4 +pmua constant isld-dspa-ctrl
+h# 240 +pmua constant audio-sram-pwr
+[then]
+
+: audio-clock!     ( -- )  audio-clk pmua!  ;
 : audio-clock-off  ( -- )
    0 h# 38 sspa!
    0 audio-clock!
@@ -31,43 +42,76 @@ d# 2 " interrupts" integer-property
    true
 ;
 
-: audio-clock-on  ( -- error? )
-   h# 600 audio-clock!  d# 10 us  \ Enable
-   h# 610 audio-clock!  d# 10 us  \ Release reset
-   h# 710 audio-clock!  d# 10 us  \ Enable
-   h# 712 audio-clock!  d# 10 us  \ Release reset
+: dly  d# 10 us  ;
 
-[ifdef] setup-audio-pll
-   start-audio-pll  if  true exit  then
+\ Discrepancies - ms vs us, double-enabling of AXI
+: audio-island-on  ( -- )
+[ifdef] mmp3
+   h# 200  audio-clk  io-set  dly  \ Power switch on
+   h# 400  audio-clk  io-set  dly  \ Power switch more on
+   1  audio-sram-pwr  io-set  dly  \ Audio SRAM on
+   2  audio-sram-pwr  io-set  dly  \ Audio SRAM more on
+   4  audio-sram-pwr  io-set  dly  \ Audio core on
+   8  audio-sram-pwr  io-set  dly  \ Audio core more on
+   h# 100  audio-clk  io-set  dly  \ Disable isolation
 
-   \ Bits 14:9 set the divisor from SYSCLK to BITCLK.  The setting below
-   \ is d# 8, which gives BITCLK = 1.536 MHz.  That's 32x 48000, just enough
-   \ for two (stereo) 16-bit samples.
-   \ The 80 bit is 0, choosing the AudioPLL instead of the I2SCLK
-   h#  1103 h# 34 sspa!  \ SSPA_AUD_CTRL0
+   4  audio-clk io-set           \ Start audio SRAM redundancy repair
+   begin  4 audio-clk io@  4 and 0=  until  \ And wait until done
+
+   \ Bring audio island out of reset
+   1 audio-dsa io-set
+   4 audio-dsa io-set
+   1 audio-dsa io-set
+
+   \ Enable dummy clocks to the SRAMs
+   h# 10 isld-dspa-ctrl io-set  d# 250 us  h# 10 isld-dspa-ctrl io-clr
+
+   \ Enable the AXI/APB clocks to the Audio island prior to programming island registers
+   2 audio-dsa io-set
+   8 audio-dsa io-set
 [else]
-   \ This section of the code uses I2SCLK instead of the Audio PLL.  Marvell
-   \ says that I2SCLK is prone to jitter so the Audio PLL is preferred.
-
-   \  * 10 / 27 gives about 147.456
-   \ The M/N divisor gets 199.33 MHz (Figure 283 - clock tree - in Datasheet)
-   \ But the M/N divisors always have an implicit /2 (section 7.3.7 in datasheet),
-   \ so the input frequency is 99.67 with respect to NOM (sic) and DENOM.
-   \ we want 12.288 MHz SYSCLK.  99.67 * 9 / 73 = 12.2876 so 50 ppm error.
-   d# 9 d# 15 lshift d# 73 or h# d000.0000 or  h# 40 mpmu!
-
-\  The manual says that bit 5 enables I2SCLK to SSPA1, but empirically, bit 21 seems to do it
-\  h# 1024 mpmu@  h# 20 or  h# 1024 mpmu!  \ Enable 12S clock out to SSPA1
-   h# 1024 mpmu@  h# 20.0000 or  h# 1024 mpmu!  \ Enable 12S clock out to SSPA1
-
-   h# 10800 h# 38 sspa!
-
-   \ Bits 14:9 set the divisor from SYSCLK to BITCLK.  The setting below
-   \ is d# 8, which gives BITCLK = 1.536 MHz.  That's 32x 48000, just enough
-   \ for two (stereo) 16-bit samples.
-   \ The 80 bit is 1, choosing the I2SCLK instead of the AudioPLL
-   h#  1183 h# 34 sspa!  \ SSPA_AUD_CTRL0
+   h# 600 audio-clock!  dly  \ Enable
+   h# 610 audio-clock!  dly  \ Release reset
+   h# 710 audio-clock!  dly  \ Enable
+   h# 712 audio-clock!  dly  \ Release reset
 [then]
+;
+
+false value use-audio-pll?
+: audio-clock-on  ( -- error? )
+   audio-island-on
+
+   use-audio-pll?  if
+      start-audio-pll  if  true exit  then
+
+      \ Bits 14:9 set the divisor from SYSCLK to BITCLK.  The setting below
+      \ is d# 8, which gives BITCLK = 1.536 MHz.  That's 32x 48000, just enough
+      \ for two (stereo) 16-bit samples.
+      \ The 80 bit is 0, choosing the AudioPLL instead of the I2SCLK
+      h#  1103 h# 34 sspa!  \ SSPA_AUD_CTRL0
+   else
+      \ This section of the code uses I2SCLK instead of the Audio PLL.  Marvell
+      \ says that I2SCLK is prone to jitter so the Audio PLL is preferred.
+
+      \  * 10 / 27 gives about 147.456
+      \ The M/N divisor gets 199.33 MHz (Figure 283 - clock tree - in Datasheet)
+      \ But the M/N divisors always have an implicit /2 (section 7.3.7 in datasheet),
+      \ so the input frequency is 99.67 with respect to NOM (sic) and DENOM.
+      \ we want 12.288 MHz SYSCLK.  99.67 * 9 / 73 = 12.2876 so 50 ppm error.
+      d# 9 d# 15 lshift d# 73 or h# d000.0000 or  h# 40 mpmu!
+
+      \ The manual says that bit 5 enables I2SCLK to SSPA1, but empirically, bit 21 seems to do it
+      \ That is true on both MMP2 and MMP3
+      h# 20.0000  h# 1024 +mpmu  io-set  \ Enable 12S clock out to SSPA1
+
+      h# 10800 h# 38 sspa!
+
+      \ Bits 14:9 set the divisor from SYSCLK to BITCLK.  The setting below
+      \ is d# 8, which gives BITCLK = 1.536 MHz.  That's 32x 48000, just enough
+      \ for two (stereo) 16-bit samples.
+      \ The 80 bit is 1, choosing the I2SCLK instead of the AudioPLL
+      h#  1183 h# 34 sspa!  \ SSPA_AUD_CTRL0
+   then
    false
 ;
 
@@ -150,12 +194,11 @@ d# 2 " interrupts" integer-property
 : slave-tx  ( -- )  h# 8c sspa@  h# 8000.0001 or  h# 8c sspa!  ;  \ Slave, on
 : disable-sspa-tx  ( -- )  h# 8c sspa@  h# 8000.0004 or  h# 4.0001 invert and  h# 8c sspa!  ;
 
-h# e000.0000 constant audio-sram
 h# fc0 constant /audio-buf
-audio-sram           constant out-bufs
-audio-sram h# 1f80 + constant out-desc
-audio-sram h# 2000 + constant in-bufs
-audio-sram h# 3f80 + constant in-desc
+audio-sram-va           constant out-bufs
+audio-sram-va h# 1f80 + constant out-desc
+audio-sram-va h# 2000 + constant in-bufs
+audio-sram-va h# 3f80 + constant in-desc
 
 \ Descriptor format:
 \ Byte count
@@ -246,7 +289,7 @@ audio-sram h# 3f80 + constant in-desc
 [ifdef] cl2-a1
 fload ${BP}/cpu/arm/olpc/alc5624.fth  \ Realtek ALC5624 CODEC
 [else]
-d# 97 constant headphone-jack
+hp-plug-gpio# constant headphone-jack
 d# 96 constant external-mic
 : pin-sense?  ( gpio# -- flag )  gpio-pin@  ;
 : headphones-inserted?  ( -- flag )  headphone-jack pin-sense?  ;

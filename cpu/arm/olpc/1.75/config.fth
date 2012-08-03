@@ -7,6 +7,7 @@ create use-elf
 create has-sp-kbd
 create has-dcon
 
+fload ${BP}/cpu/arm/mmp2/soc-config.fth
 fload ${BP}/cpu/arm/mmp2/hwaddrs.fth
 fload ${BP}/cpu/arm/olpc/addrs.fth
 
@@ -34,7 +35,5 @@ h# 7e80 constant ec-flags-offset   \ don't program or verify this page
 
 \ These constants are correct for XO-1.75 and XO-CL4; they might
 \ need to be changed for different hardware.  See setup-gpios-hack
-
-fload ${BP}/cpu/arm/mmp2/soc-config.fth
 
 fload ${BP}/cpu/arm/olpc/1.75/gpiopins.fth

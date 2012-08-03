@@ -17,6 +17,9 @@ h# fdc0.0000 constant fb-mem-va
 h# fe00.0000 constant io-va  \ We map IO (APB + AXI) space at this virtual address
 h# fe30.0000 constant io2-va \ Mapping area for AXI2 space
 
+h# fe40.0000 constant mmp3-audio-va \ Used only if mmp3-audio-pa is defined
+: audio-sram-va  ( -- )  audio-sram-pa  ;
+
 [ifdef] virtual-mode
 h# f700.0000 constant fw-virt-base
 h# 0100.0000 constant fw-virt-size  \ 16 megs of mapping space

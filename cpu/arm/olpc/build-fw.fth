@@ -841,11 +841,7 @@ dev /client-services  patch noop visible enter  dend
 \+ use-screen-kbd  open-hotspot
 
    install-alarm
-[ifdef] olpc-cl4
-   ." build-fw.fth: not sounding" cr
-[else]
    ?sound
-[then]
 
    ?games
 
@@ -876,7 +872,7 @@ dev /client-services  patch noop visible enter  dend
 
 \+ use-screen-kbd  ?text-on
 [ifdef] olpc-cl4
-   ." Quitting before auto-boot" cr  quit
+   ." Quitting before auto-boot" cr  visible banner  quit
 [then]
    auto-boot
 \+ use-screen-kbd  close-hotspot
