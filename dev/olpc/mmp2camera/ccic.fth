@@ -79,7 +79,51 @@ h#        a0 constant rgb-format         \ RGB input (20) and output (80), no sw
    0 to next-buf
 ;
 
+[ifdef] mmp3
+: isp-island-power-on 
+   \ set ISP regs to the default value
+   0 h#  50 pmua!
+   0 h# 1fc pmua!
+
+   \ Turn on the CCIC/ISP power switch
+   h# 200 h# 1fc pmua!
+   d# 10 ms
+   h# 600 h# 1fc pmua!
+   d# 10 ms
+   \ Disable isp isolation\n"
+   h# 700 h# 1fc pmua!
+
+   \ Start memory redundacy repair
+   4 h# 224 pmua-set   \ PMUA_ISP_CLK_RES_CTRL
+   begin  d# 10 ms h# 224 pmua@  4 and  0=  until
+	
+   \ Enable dummy clocks to the SRAMS
+   h# 10 h# 1e0 pmua-set   \ PMUA_ISLD_CI_PDWN_CTRL
+   d# 200 ms
+   h# 10 h# 1e0 pmua-clr
+
+   \ Enable ISP clocks here if you want to use the ISP
+   \ 8 h# 224 pmua-set  \ Enable AXI clock in PMUA_ISP_CLK_RES_CTRL
+   \ h# f00 h# 200 h# 224 pmua-fld \ Clock divider
+   \ h#  c0 h#  40 h# 224 pmua-fld \ CLock source
+   \ h# 10 h# 224 pmua-set
+
+   \ enable CCIC clocks
+   h# 8238 h# 50 pmua-set
+	
+   \ Deassert ISP clocks here if you want to use the ISP
+   \ XXX should these be pmua-clr ?
+   \ 1 h# 224 pmua-set  \ AXI reset
+   \ 2 h# 224 pmua-set  \ ISP SW reset
+   \ h# 10000 h# 50 pmua-set  \ CCIC1 AXI Arbiter reset
+   
+   \ De-assert CCIC Resets
+   h# 10107 h# 50 pmua-set \ XXX change to 107
+;
+[then]
 : power-on  ( -- )
+   [ifdef] mmp3  isp-island-power-on  [then]
+
    \ Enable clocks
    h# 3f h# 28 pmua!  \ Clock gating - AHB, Internal PIXCLK, AXI clock always on
    h# 0003.805b h# 50 pmua!  \ PMUA clock config for CCIC - /1, PLL1/16, AXI arb, AXI, perip on
