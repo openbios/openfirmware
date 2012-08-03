@@ -290,7 +290,7 @@ audio-sram-va h# 3f80 + constant in-desc
 fload ${BP}/cpu/arm/olpc/alc5624.fth  \ Realtek ALC5624 CODEC
 [else]
 hp-plug-gpio# constant headphone-jack
-d# 96 constant external-mic
+mic-plug-gpio# constant external-mic
 : pin-sense?  ( gpio# -- flag )  gpio-pin@  ;
 : headphones-inserted?  ( -- flag )  headphone-jack pin-sense?  ;
 : microphone-inserted?  ( -- flag )
