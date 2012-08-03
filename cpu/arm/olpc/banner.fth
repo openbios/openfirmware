@@ -65,9 +65,6 @@ h# 40 buffer: partition-map
 ;
 
 : .storage  ( -- )
-[ifdef] olpc-cl4
-." olpc/banner.fth: Skipping .storage" cr exit
-[then]
    internal-disk-present? 0=  if ( )
       get-internal-disk-info     ( )
    then

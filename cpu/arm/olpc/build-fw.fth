@@ -871,9 +871,6 @@ dev /client-services  patch noop visible enter  dend
    auto-banner?  if  banner  then
 
 \+ use-screen-kbd  ?text-on
-[ifdef] olpc-cl4
-   ." Quitting before auto-boot" cr  visible banner  quit
-[then]
    auto-boot
 \+ use-screen-kbd  close-hotspot
 
