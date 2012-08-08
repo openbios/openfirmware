@@ -180,20 +180,27 @@ bbu_ICR_IUE bbu_ICR_SCLE or value cr-set   \ bits to maintain as set
 ;      
 
 \     baseadr   clk irq mux? fast? unit#
-\ h# d4011000     1   7 false true     N make-twsi-node  \ TWSI1
+  h# d4011000     1   7 false true     2 make-twsi-node  \ TWSI1
 \ h# d4031000     2   0 true  true     N make-twsi-node  \ TWSI2
 \ h# d4032000     3   1 true  true     N make-twsi-node  \ TWSI3
   h# d4033000     4   2 true  true     0 make-twsi-node  \ TWSI4
 \ h# d4038000 d# 30   3 true  true     N make-twsi-node  \ TWSI5
   h# d4034000 d# 31   4 true  true     1 make-twsi-node  \ TWSI6
 
-0 0  " 30" " /i2c@d4033000" begin-package  \ TWSI
+
+0 0  " 34" " /i2c@d4011000" begin-package  \ TWSI1
+   " audio-codec" name
+   " realtek,alc5631" +compatible
+   my-address my-space 1 reg
+end-package
+
+0 0  " 30" " /i2c@d4033000" begin-package  \ TWSI4
    " touchscreen" name
    " raydium_ts" +compatible
    my-address my-space 1 reg
 end-package
 
-0 0  " 19" " /i2c@d4034000" begin-package
+0 0  " 19" " /i2c@d4034000" begin-package  \ TWSI6
    " accelerometer" name
    " lis3lv02d" +compatible
    my-address my-space 1 reg
