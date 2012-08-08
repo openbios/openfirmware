@@ -62,6 +62,7 @@ d#  14 constant hdmi-hp-det-gpio#
 d#  12 constant touch-hd-gpio#
 d# 139 constant touch-tck-gpio#
 d#  98 constant touch-rst-gpio#
+d#  99 constant touch-scr-gpio#
 
 d#   3 constant soc-sel-gpio#
 
