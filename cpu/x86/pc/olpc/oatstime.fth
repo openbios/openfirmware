@@ -4,6 +4,9 @@
 \ Set this to the name or IP address of the deployment's OATS server
 : server$  " 192.168.200.57"  ;  \ DNS name or IP address
 
+\ Set this to the HTTP/1.1 name-based virtual host name of the OATS server
+: host$  " antitheft.laptop.org"  ;
+
 \ Replace this key with a deployment-specific one
 create oats-pubkey
  " "(30 82 01 0a 02 82 01 01 00 cf 2c 9a 49 81 a9 dd)" $,
@@ -306,7 +309,7 @@ dend
    server$ " set-server" $call-http
    d# 80 " connect" $call-http  0=  abort" Can't connect to server"
    " POST /antitheft/1/ HTTP/1.1" http-write-line
-   " Host: antitheft.laptop.org" http-write-line
+   host$ " Host: %s" sprintf http-write-line
    " Content-Type: application/x-www-form-urlencoded" http-write-line
    dup " Content-Length: %d" sprintf http-write-line         ( msg$ )
    " " http-write-line                                       ( msg$ )
@@ -341,7 +344,7 @@ h# 10000 buffer: oats-buf
    d#  0 d# 59 numfield  >r                  ( rem$  r: y m d h m )
    d#  0 d# 59 numfield  >r                  ( rem$  r: y m d h m s )
 
-   1 cut$  " Z" $= 0= abort" Expecting T in time"  ( rem$  r: y m d h m s )
+   1 cut$  " Z" $= 0= abort" Expecting Z in time"  ( rem$  r: y m d h m s )
    0<> abort" Junk after time"  drop             ( r: y m d h m s )
    r> r> r> r> r> r>
 ;
