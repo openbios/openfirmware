@@ -158,7 +158,7 @@ previous
 ;
 
 : fs-update-from-list  ( devlist$ -- )
-   load-crypto  if  visible  ." Crytpo load failed" cr  show-sad  security-failure   then
+   load-crypto  if  visible  ." Crypto load failed" cr  show-sad  security-failure   then
 
    visible                            ( devlist$ )
    begin  dup  while                  ( rem$ )
