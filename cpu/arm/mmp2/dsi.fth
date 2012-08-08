@@ -6,10 +6,10 @@ h# 0050 constant pmua_ccic_clk_res_ctrl_offset      \ CCIC Clock/Reset Control R
 : pmua!  ( n offset -- )  pmua-pa + io!  ;
 
 : dsi-twsi!  ( l reg# -- )
-   >r  lbsplit  swap 2swap swap  r> wbsplit  6  twsi-write
+   >r  lbsplit  swap 2swap swap  r> wbsplit  6  twsi-out
 ; 
 : dsi-twsi-w!  ( w reg# -- )
-   >r  wbsplit  swap  r> wbsplit  4  twsi-write
+   >r  wbsplit  swap  r> wbsplit  4  twsi-out
 ; 
 : dsi-twsi@  ( reg# -- l )  wbsplit 2 4 twsi-get  bljoin  ;
 : dsi-twsi-w@  ( reg# -- w )  wbsplit 2 2 twsi-get  bwjoin  ;

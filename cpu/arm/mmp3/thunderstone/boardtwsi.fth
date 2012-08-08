@@ -68,13 +68,13 @@ purpose: Board-specific details of TWSI-connected devices
 
 : init-pals  ( -- )
    h# b0 4 set-twsi-target  \ Set PS parameters address
-   0 1 twsi-write     \ clear interrupt settings
+   0 1 twsi-out             \ clear interrupt settings
 
    h# 22 4 set-twsi-target  \ Device init address
-   h# 10 1 twsi-write \ Init device
+   h# 10 1 twsi-out         \ Init device
 
    h# 20 4 set-twsi-target  \ Ambient Light Sensor address
-   2 1 twsi-write     \ Enable ALS in most sensitive mode, 16-bit data
+   2 1 twsi-out             \ Enable ALS in most sensitive mode, 16-bit data
 ;
 : als@  ( -- n )
    h# 22 4 set-twsi-target  \ Ambient Light Sensor LSB address
