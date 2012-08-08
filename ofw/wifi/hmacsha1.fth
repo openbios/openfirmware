@@ -36,27 +36,28 @@ d# 64 constant /keypad
       sha1-tkey /sha1-digest		( key$ )
    then
 ;
+[ifndef] sha1-n
+: sha1-n  ( datan$..data1$ n -- digest$ )
+   sha1-init
+   0  ?do  sha1-update  loop
+   sha1-final
+   sha1-digest /sha1-digest		( digest$ )
+;
+[then]
 : hmac-sha1  ( datan$..data1$ n key$ -- digest$ )
-   ?sha1-reset-key			( datan$..data1$ n key$' )
-   2dup key>keypad >r >r		( datan$..data1$ n )  ( R: key$ )
+   ?sha1-reset-key 2>r			( datan$..data1$ n )  ( R: key$' )
 
    \ sha1-idigest = SHA1(K XOR ipad, text)
-   keypad h# 36 xor-keypad		( datan$..data1$ n )  ( R: key$ )
-   sha1-init				( datan$..data1$ n )  ( R: key$ )
-   keypad /keypad sha1-update		( datan$..data1$ n )  ( R: key$ )
-   0  ?do  sha1-update  loop		( )  ( R: key$ )
-   sha1-final				( )  ( R: key$ )
-   sha1-digest sha1-idigest /sha1-digest move	( )  ( R: key$ )
+   2r@ key>keypad			( datan$..data1$ n )  ( R: key$ )
+   keypad h# 36 xor-keypad		( datan$..data1$ n )
 
-   \ sha1-digest = SHA1(K XOR opad, sha1-idigest)
-   r> r> key>keypad			( )
+   keypad /keypad  rot 1+  sha1-n	( digest$ )	      ( R: key$ )
+   sha1-idigest swap move		( )		      ( R: key$ )
+
+   2r> key>keypad			( )
    keypad h# 5c xor-keypad
-   sha1-init
-   keypad /keypad sha1-update
-   sha1-idigest /sha1-digest sha1-update
-   sha1-final
 
-   sha1-digest /sha1-digest		( digest$ )
+   sha1-idigest /sha1-digest  keypad /keypad  2  sha1-n	( digest$ )
 ;
 
 \ ----------------------------------------------------------------------------
@@ -74,8 +75,8 @@ d# 64 constant /keypad
 /sha1-digest buffer: temp			\ Last digest
 /sha1-digest buffer: temp2			\ Current digest
 : (pbkdf2-sha1)  ( passphrase$ ssid$ -- )
-   2over >r >r					( passphrase$ ssid$ )  ( R: passphrase$ )
-   pbkdf2-cnt-buf 4 2swap 2 r> r> hmac-sha1	( passphrase$ digest$ )
+   2over 2>r					( passphrase$ ssid$ )  ( R: passphrase$ )
+   pbkdf2-cnt-buf 4 2swap 2 2r> hmac-sha1	( passphrase$ digest$ )
    temp2 swap move				( passphrase$ )
    d# 4096 1  do
       sha1-digest temp /sha1-digest move	( passphrase$ )
@@ -89,8 +90,8 @@ d# 64 constant /keypad
    0 to pbkdf2-cnt
    begin  dup 0>  while			( passphrase$ ssid$ psk$ )
       pbkdf2-cnt++		 	( passphrase$ ssid$ psk$ )
-      >r >r 2over 2over (pbkdf2-sha1)	( passphrase$ ssid$ )  ( R: psk$ )
-      r> r> 2dup /sha1-digest min sha1-digest -rot move	( passphrase$ ssid$ psk$ )
+      2>r 2over 2over (pbkdf2-sha1)	( passphrase$ ssid$ )  ( R: psk$ )
+      2r> 2dup /sha1-digest min sha1-digest -rot move	( passphrase$ ssid$ psk$ )
       /sha1-digest /string		( passphrase$ ssid$ psk$' )
    repeat  2drop 2drop 2drop		( )
 ;
@@ -101,15 +102,14 @@ create prf-cnt 0 c,
 : sha1-prf  ( key$ label$ data$ result$ -- )
    0 prf-cnt c!
    begin  dup 0>  while			( key$ label$ data$ result$ )
-      >r >r 		 		( key$ label$ data$ )  ( R: result$ )
+      2>r 		 		( key$ label$ data$ )  ( R: result$ )
       prf-cnt 1 2over zero$		( key$ label$ data$ cnt$ data$ zero$ )  ( R: result$ )
       9 pick 9 pick 4			( key$ label$ data$ cnt$ data$ zero$ label$ n )  ( R: result$ )
       d# 14 pick d# 14 pick hmac-sha1	( key$ label$ data$ digest$ )  ( R: result$ )
-      r> r> 2swap 2over rot min move	( key$ label$ data$ result$ )
+      2r> 2swap 2over rot min move	( key$ label$ data$ result$ )
       /sha1-digest /string		( key$ label$ data$ result$' )
       prf-cnt c@ 1+ prf-cnt c!		( key$ label$ data$ result$ )
    repeat  2drop 2drop 2drop 2drop	( )
-  
 ;
 
 

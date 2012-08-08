@@ -150,8 +150,9 @@ fload ${BP}/forth/lib/selstr.fth
 
 fload ${BP}/cpu/arm/mmp2/socregs.fth   \ MMP2 registers used by many functional units
 
-fload ${BP}/cpu/arm/mmp2/hash.fth      \ Hashes - SHA1, SHA-256, MD5
+fload ${BP}/cpu/arm/mmp2/random.fth    \ Random numbers
 fload ${BP}/cpu/x86/pc/olpc/crypto.fth \ Cryptographic image validation
+fload ${BP}/cpu/arm/olpc/swhash.fth    \ Hashes - SHA1, SHA-256, MD5
 fload ${BP}/cpu/x86/pc/olpc/lzip.fth   \ Access zip images from memory
 
 fload ${BP}/ofw/inet/loadtcp.fth

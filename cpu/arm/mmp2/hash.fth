@@ -1,6 +1,7 @@
 \ See license at end of file
 purpose: Hashes (MD5, SHA1, SHA-256) using Marvell hardware acceleration
 
+[ifdef] use-mmp2-hashes
 h# 8101 constant dval
 : dma>hash  ( adr len -- )
    4 round-up  2 rshift  h# 29080c io!    ( adr )
@@ -119,47 +120,7 @@ d# 20 constant /sha1-digest
 : sha1-init   use-sha1 hash-init  ;
 : sha1-update hash-update  ;
 : sha1-final hash-final drop to sha1-digest  ;
-
-: ebg-set  ( n -- )  h# 292c00 io@  or  h# 292c00 io!  ;
-: ebg-clr  ( n -- )  invert  h# 292c00 io@  and  h# 292c00 io!  ;
-
-0 [if]
-\ This is the procedure recommended by the datasheet, but it doesn't work
-: init-entropy-digital  ( -- )
-\   h# ffffffff ebg-clr   \ All off
-   h# 00008000 ebg-set   \ Digital entropy mode
-   h# 00000400 ebg-clr   \ RNG reset
-   h# 00000200 ebg-set   \ Bias power up
-   d# 400 us
-   h# 00000100 ebg-set   \ Fast OSC enable
-   h# 00000080 ebg-set   \ Slow OSC enable
-   h# 02000000 ebg-set   \ Downsampling ratio
-   h# 00110000 ebg-set   \ Slow OSC divider
-   h# 00000400 ebg-set   \ RNG unreset
-   h# 00000040 ebg-set   \ Post processor enable
-   h# 00001000 ebg-set
-;
-[else]
-\ This procedure works
-: init-entropy  ( -- )  \ Using digital method
-   h# 21117c0 h# 292c00 io!
-;
 [then]
-
-: random-short  ( -- w )
-   begin  h# 292c04 io@  dup 0>=  while  drop  repeat
-   h# ffff and
-;
-: random-byte  ( -- b )  random-short 2/ h# ff and  ;
-: random-long  ( -- l )
-   random-short random-short wljoin
-;
-alias random random-long
-
-stand-init: Random number generator
-   h# 1b h# 68 pmua!   \ Ensure WTM clock is enabled
-   init-entropy
-;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
