@@ -31,7 +31,7 @@ create mfpr-offsets                                         \  GPIOs
    224 w, 228 w, 22C w, 230 w, 234 w, 238 w, 23C w, 240 w,  \ 144->151
    248 w, 24C w, 254 w, 258 w, 14C w, 150 w, 154 w, 158 w,  \ 152->159
    250 w, 210 w, 20C w, 208 w, 204 w, 1EC w, 1E8 w, 1E4 w,  \ 160->167
-   1E0 w,                                                   \ 168
+   1E0 w, 2BC w, 2C0 w, 2C8 w,                              \ 168->171
 
 : gpio>mfpr  ( gpio# -- mfpr-pa )
    mfpr-offsets swap wa+ w@
@@ -40,7 +40,7 @@ create mfpr-offsets                                         \  GPIOs
 
 : dump-mfprs  ( -- )
    base @
-   d# 169 0 do  decimal i 3 u.r space  i gpio>mfpr io@ 4 hex u.r cr  loop
+   d# 172 0 do  decimal i 3 u.r space  i gpio>mfpr io@ 4 hex u.r cr  loop
    base !
 ;
 
