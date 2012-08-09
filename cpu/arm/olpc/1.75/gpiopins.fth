@@ -66,3 +66,4 @@ d#  17 constant check-gpio#
 d#  14 constant touch-hd-gpio#
 d#  98 constant touch-tck-gpio#
 d# 152 constant touch-rst-gpio#
+d#  99 constant touch-scr-gpio#
