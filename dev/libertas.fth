@@ -2194,6 +2194,12 @@ d# 1600 buffer: test-buf
    2 .r
 ;
 
+: .bpp-antenna  ( antenna -- )
+   dup h# 30 =  if ."  1" drop exit  then
+   dup h# 70 =  if ."  2" drop exit  then
+   2 .r
+;
+
 : show-antenna  ( -- )
    base @                               ( base )
    get-rssi                             ( base avg_nf avg_snr nf snr )
@@ -2203,7 +2209,10 @@ d# 1600 buffer: test-buf
    get-antenna                          ( base antenna )
    hex
    ."  ant" .antenna                    ( base )
-   ."  "
+   ."  rx "
+   h# 3f bbp-reg@ .bpp-antenna
+   ."  tx "
+   h# 40 bbp-reg@ .bpp-antenna
    base !
 ;
 
