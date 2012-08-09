@@ -317,15 +317,15 @@ base !
       dup 4 or  ecsts edi-b!         ( old-ecsts )  \ chipid is now pllcfg2
 
       xbis edi-b@  h# 3f and               ( old-ecsts xbis-bits )
-      h# 81 edi-b@ 3 and  6 lshift or      ( old-ecsts xbis-value )
+      h# 81 trim@ 3 and  6 lshift or       ( old-ecsts xbis-value )
       xbis edi-b!                          ( old-ecsts )
 
-      h# 82 edi-b@ h# f and 4 lshift       ( old-ecsts pll-high )
-      h# 83 edi-b@ h# f0 and 4 rshift or   ( old-ecsts pll-value )
+      h# 82 trim@ h# f and 4 lshift        ( old-ecsts pll-high )
+      h# 83 trim@ h# f0 and 4 rshift or    ( old-ecsts pll-value )
       pllcfg edi-b!                        ( old-ecsts )
 
       pllcfg2 edi-b@ h# 3f and             ( old-ecsts pll2-bits )
-      h# 82 edi-b@ h# 30 and 2 lshift or   ( old-ecsts pll2-value )
+      h# 82 trim@ h# 30 and 2 lshift or    ( old-ecsts pll2-value )
       pllcfg2 edi-b!                       ( old-ecsts )
       
       ecsts edi-b!                         ( )
