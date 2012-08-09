@@ -51,9 +51,12 @@ purpose: Downloader for TI MSP430 BootStrap Loader (BSL) protocol
 \ The pin setup should be done in CForth, but it's complicated by
 \ the fact that the touch-enabled CL2 uses GPIO 56 differently from
 \ the ordinary one
-[ifdef] olpc-cl2  3 d# 55 af!   3 d# 56 af!  [then]  \ Setup pins for UART2
+[ifdef] olpc-cl2
+   3 d# 55 af!                 \ Setup pins for UART2
+   3 d# 56 af!
    0 touch-tck-gpio# af!       \ Set to GPIO function
    1 touch-rst-gpio#  af!      \ Set to GPIO function (AF0 is SM_BELn for this pin)
+[then]
 ;
 
 0 [if]
