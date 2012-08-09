@@ -19,6 +19,9 @@ h# 9c000 constant verify-stack
    true to crypto-loaded?
    false
 ;
+stand-init: Crypto
+   load-crypto drop
+;
 : unload-crypto  ( -- )
    crypto-loaded?  0=  if  exit  then
    verify-base /verify mem-release
