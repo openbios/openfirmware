@@ -38,6 +38,13 @@ h# d4282800 h# 1000 reg
 " ISP"      +string \ 22
 " EPD"      +string \ 23
 " APB2"     +string \ 24
+" SPMI"     +string \ 25
+" EPD"      +string \ 26
+" USB3SS"   +string \ 27
+" SDH4"     +string \ 28
+" DSA"      +string \ 29
+" TPIU"     +string \ 30
+" ISP"      +string \ 31
 " clock-output-names" property
 
 : +int  encode-int encode+ ;
@@ -69,6 +76,15 @@ h# 110 +int  h#    1b +int  h#   1b +int  d#           0 +int  \ 21 DISPLAY2
 h# 120 +int  h#    3f +int  h#   3f +int  d#           0 +int  \ 22 ISP
 h# 124 +int  h#    1b +int  h#   1b +int  d#           0 +int  \ 23 EPD
 h# 134 +int  h#    12 +int  h#   12 +int  d#           0 +int  \ 24 APB2
+[ifdef] mmp3
+h# 140 +int  h#    1b +int  h#   1b +int  d#           0 +int  \ 25 SPMI - XXX may need to set clock divisor bits
+h# 144 +int  h#   21b +int  h#  21b +int  d#           0 +int  \ 26 EPD
+h# 148 +int  h#     9 +int  h#    9 +int  d#           0 +int  \ 27 USB3SS
+h# 15c +int  h#    1b +int  h#   1b +int  d#           0 +int  \ 28 SDH4
+h# 164 +int  h#     f +int  h#    f +int  d#           0 +int  \ 29 DSA xx
+h# 18c +int  h#    12 +int  h#   12 +int  d#           0 +int  \ 30 TPIU
+h# 224 +int  h#    1b +int  h#   1b +int  d#           0 +int  \ 31 ISP Need to do the redundancy dance
+[then]
 " clock-enable-registers" property
 
 end-package
