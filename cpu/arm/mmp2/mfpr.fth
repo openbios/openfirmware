@@ -31,7 +31,11 @@ create mfpr-offsets                                         \  GPIOs
    224 w, 228 w, 22C w, 230 w, 234 w, 238 w, 23C w, 240 w,  \ 144->151
    248 w, 24C w, 254 w, 258 w, 14C w, 150 w, 154 w, 158 w,  \ 152->159
    250 w, 210 w, 20C w, 208 w, 204 w, 1EC w, 1E8 w, 1E4 w,  \ 160->167
-   1E0 w, 2BC w, 2C0 w, 2C8 w,                              \ 168->171
+   1E0 w,                                                   \ 168
+[ifdef] mmp3
+          2BC w, 2C0 w, 2C8 w,                              \ 169->171
+[then]
+here mfpr-offsets - /w /  constant #mfprs
 
 : gpio>mfpr  ( gpio# -- mfpr-pa )
    mfpr-offsets swap wa+ w@
@@ -40,7 +44,7 @@ create mfpr-offsets                                         \  GPIOs
 
 : dump-mfprs  ( -- )
    base @
-   d# 172 0 do  decimal i 3 u.r space  i gpio>mfpr io@ 4 hex u.r cr  loop
+   #mfprs 0 do  decimal i 3 u.r space  i gpio>mfpr io@ 4 hex u.r cr  loop
    base !
 ;
 
@@ -115,7 +119,10 @@ create mfpr-offsets                                         \  GPIOs
       d# 166        h# 1e8 +mfpr
       d# 167        h# 1e4 +mfpr
       d# 168        h# 1e0 +mfpr
+[ifdef] mmp3
+      d# 169 d# 170 h# 2c0 +mfpr-range  \ PXA2128 only
       d# 171        h# 2c8 +mfpr        \ PXA2128 only
+[then]
       h# 15b h# 15c h# 140 +mfpr-range  \ MFPR_PIN_TWSI1_SCL - MFPR_PIN_TWSI1_SDA
       h# 15d h# 15e h# 2bc +mfpr-range  \ MFPR_PIN_TWSI4_SCL - MFPR_PIN_TWSI4_SDA
       h# 159        h# 2c4 +mfpr        \ MFPR_PIN_PMIC_INT
