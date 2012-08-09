@@ -151,6 +151,13 @@ bbu_ICR_IUE bbu_ICR_SCLE or value cr-set   \ bits to maintain as set
    1-  0  ?do  dup c@  0 twsi-putbyte  1+  loop   ( adr' )
    c@ bbu_ICR_STOP twsi-putbyte                   ( )
 ;
+: twsi-read  ( adr len -- )
+   dup 0=  if  2drop exit  then       ( adr len )
+   slave-address 1 or twsi-start      ( adr len )
+
+   1-  0  ?do  0 twsi-getbyte  over c!  1+  loop   ( adr' )
+   bbu_ICR_STOP bbu_ICR_ACKNAK or twsi-getbyte swap c!  ( )
+;
 
 : twsi-b@  ( reg -- byte )  1 1 twsi-get  ;
 : twsi-b!  ( byte reg -- )  2 twsi-out  ;
