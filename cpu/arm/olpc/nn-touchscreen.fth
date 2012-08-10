@@ -10,15 +10,19 @@ my-space encode-int  my-address encode-int encode+  " reg" property
 
 fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
 
+: set-gpios
+   touch-rst-gpio# dup gpio-set gpio-dir-out
+   touch-tck-gpio# dup gpio-clr gpio-dir-out
+;
 : reset  ( -- )  touch-rst-gpio# dup gpio-clr gpio-set  d# 250 ms  ;
-: no-data?  ( -- false | true )  touch-scr-gpio# gpio-pin@  ;
+: no-data?  ( -- no-data? )  touch-scr-gpio# gpio-pin@  ;
 
 d# 250 constant /packet
 /packet buffer: packet
 0 value packet-size
 
-: in?  ( -- false | true )
-   no-data?  if  false  then
+: in?  ( -- got-data? )
+   no-data?  if  false exit  then
 
    packet 2  " twsi-read" $call-parent          ( )
    packet 1+ c@                                 ( size )
@@ -69,6 +73,7 @@ defer process
 
 : open  ( -- okay? )
    my-unit " set-address" $call-parent
+   set-gpios
    no-data?  if  reset  then
    no-data?  if  false exit  then
    ['] configure  catch  if  false exit  then
