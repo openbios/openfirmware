@@ -24,20 +24,20 @@ d# 250 constant /packet
 : in?  ( -- got-data? )
    no-data?  if  false exit  then
 
-   packet 2  " twsi-read" $call-parent          ( )
+   packet 2  twsi-read                          ( )
    packet 1+ c@                                 ( size )
    dup 2+ to packet-size                        ( size )
 
-   packet 2+ swap  " twsi-read" $call-parent    ( )
+   packet 2+ swap  twsi-read                    ( )
    true
 ;
 
-: out  ( byte ... bytes# -- )  " twsi-out" $call-parent  ;
+: out  ( byte ... bytes# -- )  twsi-out  ;
 
 defer process
 ' noop to process
 
-: expect  ( id msecs -- )
+: anticipate  ( id msecs -- )
    get-msecs +                          ( id limit )
    begin
       in?  if
@@ -50,32 +50,34 @@ defer process
    2drop                                ( )
 ;
 
-: read-boot-complete  ( -- )  h# 07 d# 10 expect  ;
+: read-boot-complete  ( -- )  h# 07 d# 20 anticipate  ;
 
-: initialise  ( -- )  h# ee h# 01 h# 01  3 out  h# 01 d# 10 expect  ;
+: initialise  ( -- )  h# ee h# 01 h# 01  3 out  h# 01 d# 20 anticipate  ;
 
 : set-resolution  ( -- )
    set-geometry
    h# ee h# 05 h# 02  screen-w wbsplit  screen-h wbsplit  7 out
-   h# 02 d# 10 expect
+   h# 02 d# 20 anticipate
 ;
 
 : start  ( -- )  h# ee h# 01 h# 04  3 out  ;
 
-: deactivate  ( -- )  h# ee h# 01 h# 00  3 out  h# 00 d# 10 expect  ;
+: deactivate  ( -- )  h# ee h# 01 h# 00  3 out  h# 00 d# 20 anticipate  ;
 
 : configure  ( -- )
-   read-boot-complete
    initialise
    set-resolution
    start
 ;
 
 : open  ( -- okay? )
-   my-unit " set-address" $call-parent
+   my-unit set-twsi-target
    set-gpios
-   no-data?  if  reset  then
-   no-data?  if  false exit  then
+   no-data?  if
+      reset
+      no-data?  if  false exit  then
+      read-boot-complete
+   then
    ['] configure  catch  if  false exit  then
    true
 ;
@@ -102,6 +104,8 @@ defer process
    open  0=  if
       ." No touchscreen present" cr  false exit
    then
+
+   ." dumping events from touchscreen controller, press a key to stop" cr
 
    \ FIXME: graphically show data on screen until key
    begin
