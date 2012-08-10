@@ -2194,10 +2194,22 @@ d# 1600 buffer: test-buf
    2 .r
 ;
 
-: .bpp-antenna  ( antenna -- )
-   dup h# 30 =  if ."  1" drop exit  then
-   dup h# 70 =  if ."  2" drop exit  then
-   2 .r
+: .rx-antenna  ( antenna -- )
+   6 rshift
+   case
+      b# 00  of  ."  0"  endof
+      b# 01  of  ."  1"  endof
+      b# 10  of  ."  d"  endof
+   endcase
+;
+
+: .tx-antenna  ( antenna -- )
+   6 rshift
+   case
+      b# 00  of  ."  0"  endof
+      b# 01  of  ."  1"  endof
+      b# 10  of  ."  r"  endof
+   endcase
 ;
 
 : show-antenna  ( -- )
@@ -2209,10 +2221,8 @@ d# 1600 buffer: test-buf
    get-antenna                          ( base antenna )
    hex
    ."  ant" .antenna                    ( base )
-   ."  rx "
-   h# 3f bbp-reg@ .bpp-antenna
-   ."  tx "
-   h# 40 bbp-reg@ .bpp-antenna
+   ."  rx "  h# 3f bbp-reg@ .rx-antenna
+   ."  tx "  h# 40 bbp-reg@ .tx-antenna
    base !
 ;
 
