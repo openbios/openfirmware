@@ -26,7 +26,11 @@ purpose: Reflash the EC code
    load-base swap ?ec-image-valid
 ;
 \ Tells the EC to auto-restart after power cycling
-: set-ec-reboot  ( -- )  1 h# f018 edi-b!  ;
+: set-ec-reboot  ( -- )
+  1
+  kb9010? if h# ff01 else h# f018 then
+  edi-b!
+;
 : ?reflash-ec-flags  ( adr -- )
    use-edi-spi                          ( adr )
    edi-open-active                      ( adr )  \ avoids holding EC in reset
