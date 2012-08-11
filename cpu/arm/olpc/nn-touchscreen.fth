@@ -17,18 +17,18 @@ fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
 : reset  ( -- )  touch-rst-gpio# dup gpio-clr gpio-set  d# 250 ms  ;
 : no-data?  ( -- no-data? )  touch-scr-gpio# gpio-pin@  ;
 
-d# 250 constant /packet
-/packet buffer: packet
-0 value packet-size
+d# 250 constant /pbuf
+0 value pbuf
+0 value plen
 
 : in?  ( -- got-data? )
    no-data?  if  false exit  then
 
-   packet 2  twsi-read                          ( )
-   packet 1+ c@                                 ( size )
-   dup 2+ to packet-size                        ( size )
+   pbuf 2  twsi-read                            ( )
+   pbuf 1+ c@                                   ( len )
+   dup 2+ to plen                               ( len )
 
-   packet 2+ swap  twsi-read                    ( )
+   pbuf 2+ swap  twsi-read                      ( )
    true
 ;
 
@@ -42,7 +42,7 @@ defer process
    begin
       in?  if
          process
-         over packet 2+ c@              ( id limit received-id )
+         over pbuf 2+ c@                ( id limit received-id )
          =  if  2drop exit  then
       then                              ( id limit )
       dup get-msecs -  0<               ( id limit timeout? )
@@ -52,17 +52,17 @@ defer process
 
 : read-boot-complete  ( -- )  h# 07 d# 20 anticipate  ;
 
-: initialise  ( -- )  h# ee h# 01 h# 01  3 out  h# 01 d# 20 anticipate  ;
+: initialise  ( -- )  h# 01 h# 01 h# ee  3 out  h# 01 d# 20 anticipate  ;
 
 : set-resolution  ( -- )
    set-geometry
-   h# ee h# 05 h# 02  screen-w wbsplit  screen-h wbsplit  7 out
+   screen-h wbsplit swap  screen-w wbsplit swap  h# 02 h# 05 h# ee  7 out
    h# 02 d# 20 anticipate
 ;
 
-: start  ( -- )  h# ee h# 01 h# 04  3 out  ;
+: start  ( -- )  h# 04 h# 01 h# ee  3 out  ;
 
-: deactivate  ( -- )  h# ee h# 01 h# 00  3 out  h# 00 d# 20 anticipate  ;
+: deactivate  ( -- )  h# 00 h# 01 h# ee  3 out  h# 00 d# 20 anticipate  ;
 
 : configure  ( -- )
    initialise
@@ -71,26 +71,28 @@ defer process
 ;
 
 : open  ( -- okay? )
+   /pbuf alloc-mem to pbuf
    my-unit set-twsi-target
    set-gpios
    no-data?  if
       reset
-      no-data?  if  false exit  then
+      no-data?  if  pbuf /pbuf free-mem  false exit  then
       read-boot-complete
    then
-   ['] configure  catch  if  false exit  then
+   ['] configure  catch  if  pbuf /pbuf free-mem  false exit  then
    true
 ;
 
 : close
    deactivate
+   pbuf /pbuf free-mem
 ;
 
 : stream-poll?  ( -- false | x y buttons true )
    in?  if
-      packet 2+ c@ h# 04 = if
-         packet 4 + w@  packet 6 + w@   ( x y )
-         packet 8 + c@  3 and  0=       ( x y down? )
+      pbuf 2+ c@ h# 04 = if
+         pbuf 4 + w@  pbuf 6 + w@       ( x y )
+         pbuf 8 + c@  3 and  0=         ( x y down? )
          true                           ( x y buttons true )
       else
          false
@@ -110,7 +112,7 @@ defer process
    \ FIXME: graphically show data on screen until key
    begin
       in?  if
-         ." rx: " packet packet-size  bounds  do
+         ." rx: "  pbuf plen  bounds  do
             i c@  0 <# # # #> type space
          loop  cr
       then
