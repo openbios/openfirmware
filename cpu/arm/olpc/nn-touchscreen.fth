@@ -10,6 +10,10 @@ my-space encode-int  my-address encode-int encode+  " reg" property
 
 fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
 
+[ifndef] 2u.x
+: 2u.x  base @ >r hex  0 <# # # #> type  r> base !  ;
+[then]
+
 : set-gpios
    touch-rst-gpio# dup gpio-set gpio-dir-out
    touch-tck-gpio# dup gpio-clr gpio-dir-out
@@ -32,16 +36,10 @@ d# 250 constant /pbuf
    true
 ;
 
-: out  ( byte ... bytes# -- )  twsi-out  ;
-
-defer process
-' noop to process
-
 : anticipate  ( id msecs -- )
    get-msecs +                          ( id limit )
    begin
       in?  if
-         process
          over pbuf 2+ c@                ( id limit received-id )
          =  if  2drop exit  then
       then                              ( id limit )
@@ -52,17 +50,17 @@ defer process
 
 : read-boot-complete  ( -- )  h# 07 d# 20 anticipate  ;
 
-: initialise  ( -- )  h# 01 h# 01 h# ee  3 out  h# 01 d# 20 anticipate  ;
+: initialise  ( -- )  h# 01 h# 01 h# ee  3 twsi-out  h# 01 d# 20 anticipate  ;
 
 : set-resolution  ( -- )
    set-geometry
-   screen-h wbsplit swap  screen-w wbsplit swap  h# 02 h# 05 h# ee  7 out
+   screen-h wbsplit swap  screen-w wbsplit swap  h# 02 h# 05 h# ee  7 twsi-out
    h# 02 d# 20 anticipate
 ;
 
-: start  ( -- )  h# 04 h# 01 h# ee  3 out  ;
+: start  ( -- )  h# 04 h# 01 h# ee  3 twsi-out  ;
 
-: deactivate  ( -- )  h# 00 h# 01 h# ee  3 out  h# 00 d# 20 anticipate  ;
+: deactivate  ( -- )  h# 00 h# 01 h# ee  3 twsi-out  h# 00 d# 20 anticipate  ;
 
 : configure  ( -- )
    initialise
@@ -102,9 +100,85 @@ defer process
    then
 ;
 
-: selftest
+
+0 value faults
+: fault  faults 1+ to faults  ;
+
+: .bits  ( addr low high -- addr )
+   ." ( "  swap  do					( addr )
+      i over bittest  if
+	 i .  fault
+      then
+   loop  ." )" cr					( addr )
+   \ FIXME: express failed devices in terms of IR PCB component names.
+;
+
+: test-os-axis  ( axis -- )
+   h# 21 h# 02 h# ee  4 twsi-out
+   h# 21 d# 30 anticipate
+   pbuf 2+ c@ h# 21 <> abort" o s bad response"
+
+   pbuf 3 + c@  if h# 0a else h# 0e then  >r            ( r:nleds )
+   pbuf 4 +                                             ( r:nleds array )
+
+   \ bit array layout: | open_pd   | short_pd  | short_led  | open_led   |
+   \ subarray widths:  | npds bits | npds bits | nleds bits | nleds bits |
+   \ npds = nleds+1
+
+   \                    0               npds
+   ." open_pd="         0               r@ 1+           .bits
+   \                    npds            npds*2
+   ." short_pd="        r@ 1+           r@ 1+ 2*        .bits
+   \                    npds*2          npds*2+nleds
+   ." short_led="       r@ 1+ 2*        dup r@ +        .bits
+   \                    npds*2+nleds    npds*2+nleds*2
+   ." open_led="        r@ 1+ 2* r@ +   dup r@ +        .bits
+   r> drop drop                                         ( )
+   cr
+;
+
+: test-os
+   0 test-os-axis
+   1 test-os-axis
+;
+
+: test-fss-axis  ( axis -- )
+   d# 64 swap h# 0f h# 03 h# ee  5 twsi-out
+   h# 0f d# 20 anticipate
+   pbuf 2+ c@ h# 0f <> abort" fss bad response"
+   push-decimal
+   pbuf 4 + c@ 0  do   ( )
+      pbuf 5 + i + c@
+      dup 0=  if  fault  then
+      4 .r space
+      i d# 10 mod d# 9 =  if  cr  then
+   loop  cr
+   pop-base
+   \ FIXME: using a light guide, characterise a low signal level,
+   \ detect, and fail self test
+   \ FIXME: express failed signals in terms of IR PCB component names.
+;
+
+: test-fss
+   ." Signals X Axis" cr  0 test-fss-axis
+   ." Signals Y Axis" cr  1 test-fss-axis
+;
+
+: selftest  ( -- error? )
+
+   \ skip test during SMT, as the IR PCB is required for controller to
+   \ respond, issue being worked with Neonode 2012-08.
+   smt-test?  if  false  exit  then
+
    open  0=  if
       ." No touchscreen present" cr  false exit
+   then
+
+   diagnostic-mode?  if
+      0 to faults
+      test-os
+      test-fss
+      faults  if  true  exit  then
    then
 
    ." dumping events from touchscreen controller, press a key to stop" cr
@@ -113,7 +187,7 @@ defer process
    begin
       in?  if
          ." rx: "  pbuf plen  bounds  do
-            i c@  0 <# # # #> type space
+            i c@  2u.x  space
          loop  cr
       then
       key?
