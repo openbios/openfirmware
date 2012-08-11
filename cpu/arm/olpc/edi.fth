@@ -20,6 +20,7 @@ purpose: Access and FLASH programming for KB3731 EC via its "EDI" interface
 : efcmd    ( -- reg# )  kb9010?  if  h# feac  else  h# fea7   then  ;
 : efdat    ( -- reg# )  kb9010?  if  h# feab  else  h# feaa   then  ;
 : rst8051  ( -- reg# )  kb9010?  if  h# ff14  else  h# f010   then  ;
+: ecreboot ( -- reg# )  kb9010?  if  h# ff01  else  h# f018   then  ;
 
 \ Issues with .py code
 \ A14:A8 should be A15:A8 several places
