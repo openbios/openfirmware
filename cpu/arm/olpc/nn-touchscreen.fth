@@ -117,51 +117,57 @@ d# 250 constant /pbuf
 : .bits  ( addr low high -- addr )
    ." ( "  swap  do                                     ( addr )
       i over bittest  if
-         i .  fault
+         i .d  fault
       then
    loop  ." )" cr                                       ( addr )
-   \ FIXME: express failed devices in terms of IR PCB component names.
 ;
+
+: 4sp  ."     "  ;
+
+: 8sp  ."         "  ;
 
 : test-os-axis  ( axis -- )
    h# 21 h# 02 h# ee  4 twsi-out
    h# 21 d# 30 anticipate
-   pbuf 2+ c@ h# 21 <> abort" o s bad response"
+   pbuf 2+ c@ h# 21 <> abort" bad response"
 
    pbuf 3 + c@  if h# 0a else h# 0e then  >r            ( r:nleds )
-   pbuf 4 +                                             ( r:nleds array )
+   pbuf 5 +                                             ( r:nleds array )
 
    \ bit array layout: | open_pd   | short_pd  | short_led  | open_led   |
    \ subarray widths:  | npds bits | npds bits | nleds bits | nleds bits |
    \ npds = nleds+1
 
-   \                    0               npds
-   ." open_pd="         0               r@ 1+           .bits
-   \                    npds            npds*2
-   ." short_pd="        r@ 1+           r@ 1+ 2*        .bits
-   \                    npds*2          npds*2+nleds
-   ." short_led="       r@ 1+ 2*        dup r@ +        .bits
-   \                    npds*2+nleds    npds*2+nleds*2
-   ." open_led="        r@ 1+ 2* r@ +   dup r@ +        .bits
+   \ FIXME: express failed devices in terms of IR PCB component names.
+   \                         0               npds
+   8sp  ." open_pd="         0               r@ 1+           .bits
+   \                         npds            npds*2
+   8sp  ." short_pd="        r@ 1+           r@ 1+ 2*        .bits
+   \                         npds*2          npds*2+nleds
+   8sp  ." short_led="       r@ 1+ 2*        dup r@ +        .bits
+   \                         npds*2+nleds    npds*2+nleds*2
+   8sp  ." open_led="        r@ 1+ 2* r@ +   dup r@ +        .bits
    r> drop drop                                         ( )
    cr
 ;
 
 : test-os
-   0 test-os-axis
-   1 test-os-axis
+   ." Open and Short" cr
+   4sp ." X Axis" cr  0 test-os-axis
+   4sp ." Y Axis" cr  1 test-os-axis
 ;
 
 : test-fss-axis  ( axis -- )
    d# 64 swap h# 0f h# 03 h# ee  5 twsi-out
    h# 0f d# 20 anticipate
-   pbuf 2+ c@ h# 0f <> abort" fss bad response"
+   pbuf 2+ c@ h# 0f <> abort" bad response"
+   8sp
    push-decimal
    pbuf 4 + c@ 0  do   ( )
       pbuf 5 + i + c@
       dup 0=  if  fault  then
       4 .r space
-      i d# 10 mod d# 9 =  if  cr  then
+      i d# 10 mod d# 9 =  if  cr 8sp  then
    loop  cr
    pop-base
    \ FIXME: using a light guide, characterise a low signal level,
@@ -170,8 +176,29 @@ d# 250 constant /pbuf
 ;
 
 : test-fss
-   ." Signals X Axis" cr  0 test-fss-axis
-   ." Signals Y Axis" cr  1 test-fss-axis
+   ." Fixed Signal Strength" cr
+   4sp ." X Axis" cr  0 test-fss-axis
+   4sp ." Y Axis" cr  1 test-fss-axis
+;
+
+: test-ls-axis  ( axis -- )
+   h# 0d h# 02 h# ee  4 twsi-out
+   h# 0d d# 200 anticipate
+   pbuf 2+ c@ h# 0d <> abort" bad response"
+
+   8sp
+   pbuf 4 + c@  >r					( r:nsigs )
+   pbuf 5 +                                             ( r:nsigs array )
+   0 r@ 1+ .bits					( r:nsigs array )
+   r> drop drop                                         ( )
+   cr
+   \ FIXME: express low signals in terms of IR PCB component names.
+;
+
+: test-ls
+   ." Low Signals" cr
+   4sp ." X Axis" cr  0 test-ls-axis
+   4sp ." Y Axis" cr  1 test-ls-axis
 ;
 
 : selftest  ( -- error? )
@@ -188,6 +215,7 @@ d# 250 constant /pbuf
       0 to faults
       test-os
       test-fss
+      test-ls
       faults  if  true  exit  then
    then
 
