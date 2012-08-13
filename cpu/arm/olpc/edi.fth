@@ -72,7 +72,9 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
             unloop exit
          then             ( d )
          spi-cs-off       ( d )
-         h# ff =  abort" EDI byte in inactive"
+	 \ The setup in the CL4 has can also report zeros when inactive.
+         2dup h# ff = 00 = or abort" EDI byte in inactive"
+	 ." Unknown EDI byte in response: " .h cr
          true abort" EDI byte in confused"
       then                ( d )
       drop
@@ -336,8 +338,8 @@ base !
    \ slow-edi-clock   \ Target speed between 1 and 2 MHz
    spi-start
 
-   \ dummy read, to activate EDI
-   h# ff22 edi-b@ drop
+   \ dummy read, to activate EDI and can fail so ignore the fail
+   h# ff22 ['] edi-b@ catch if noop else drop then
    
    set-chip-id
 
