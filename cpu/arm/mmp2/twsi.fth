@@ -198,6 +198,7 @@ bbu_ICR_IUE bbu_ICR_SCLE or value cr-set   \ bits to maintain as set
 0 0  " 34" " /i2c@d4011000" begin-package  \ TWSI1
    " audio-codec" name
    " realtek,alc5631" +compatible
+   " realtek,rt5631" +compatible
    my-address my-space 1 reg
 end-package
 
