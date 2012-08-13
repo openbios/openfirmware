@@ -18,10 +18,10 @@ purpose: Access and FLASH programming for KB3731 EC via its "EDI" interface
 
 : efcfg    ( -- reg# )  kb9010?  if  h# fead  else  h# fea0   then  ;
 : efcmd    ( -- reg# )  kb9010?  if  h# feac  else  h# fea7   then  ;
-: efdat    ( -- reg# )  kb9010?  if  h# feab  else  h# feaa   then  ;
+: efdat    ( -- reg# )  kb9010?  if  h# feab  else  h# feaa   then  ; \ io3731 has different read and write regs
+h# feab constant efdat-in
 : rst8051  ( -- reg# )  kb9010?  if  h# ff14  else  h# f010   then  ;
 : ecreboot ( -- reg# )  kb9010?  if  h# ff01  else  h# f018   then  ;
-
 \ Issues with .py code
 \ A14:A8 should be A15:A8 several places
 \ inconsistent use of handle vs gd.handle in edi_erase_chip
@@ -140,7 +140,7 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
 ;
 
 : finished?  ( b -- flag )
-   kb9010?  if  2 and 0=  else  h# 80 =  then
+   kb9010?  if  2 and 0=  else h# 80 and h# 80 =  then
 ;
 : wait-flash-busy  ( -- )  \ Wait for an erase/programming operation to complete
    get-msecs  h# 1000 +    ( limit )
@@ -220,8 +220,9 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
    set-offset
    h# 90 flash-cmd
    wait-flash-busy
-   efdat edi-b@   \ reg: efdat
+   efdat-in edi-b@   \ reg: efdat
 ;
+
 : trim-tune  ( -- )
 \   firmware-id  0=  if
       \ Read trim data and write to register (for ENE macros)
@@ -334,13 +335,19 @@ base !
       ecsts edi-b!                         ( )
    then
 ;
+
+\ Does a dummy ready and throws away the result.
+\ required to get the EDI interface enabled
+: edi-start ( -- )
+   h# ff22 ['] edi-b@ catch if noop else drop then
+;
+
 : edi-open  ( -- )
    \ slow-edi-clock   \ Target speed between 1 and 2 MHz
    spi-start
 
-   \ dummy read, to activate EDI and can fail so ignore the fail
-   h# ff22 ['] edi-b@ catch if noop else drop then
-   
+   edi-start
+
    set-chip-id
 
    \ The first operation often fails so retry it
