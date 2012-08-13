@@ -24,6 +24,7 @@ fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
 d# 250 constant /pbuf
 0 value pbuf
 0 value plen
+0 value configure?
 
 : in?  ( -- got-data? )
    no-data?  if  false exit  then
@@ -33,6 +34,10 @@ d# 250 constant /pbuf
    dup 2+ to plen                               ( len )
 
    pbuf 2+ swap  twsi-read                      ( )
+
+   pbuf 2+ c@ h# 07 =  pbuf 3 + c@ 0=  and  if  ( )
+      true to configure?
+   then
    true
 ;
 
@@ -60,12 +65,18 @@ d# 250 constant /pbuf
 
 : start  ( -- )  h# 04 h# 01 h# ee  3 twsi-out  ;
 
-: deactivate  ( -- )  h# 00 h# 01 h# ee  3 twsi-out  h# 00 d# 20 anticipate  ;
+: deactivate  ( -- )
+   h# 00 h# 01 h# ee  3 twsi-out  h# 00 d# 20 anticipate
+   true to configure?
+;
 
 : configure  ( -- )
-   initialise
-   set-resolution
-   start
+   configure?  if
+      initialise
+      set-resolution
+      start
+      false to configure?
+   then
 ;
 
 : open  ( -- okay? )
@@ -92,12 +103,11 @@ d# 250 constant /pbuf
          pbuf 4 + w@  pbuf 6 + w@       ( x y )
          pbuf 8 + c@  3 and  0=         ( x y down? )
          true                           ( x y buttons true )
-      else
-         false
+         exit
       then
-   else
-      false
    then
+   configure
+   false
 ;
 
 
@@ -105,11 +115,11 @@ d# 250 constant /pbuf
 : fault  faults 1+ to faults  ;
 
 : .bits  ( addr low high -- addr )
-   ." ( "  swap  do					( addr )
+   ." ( "  swap  do                                     ( addr )
       i over bittest  if
-	 i .  fault
+         i .  fault
       then
-   loop  ." )" cr					( addr )
+   loop  ." )" cr                                       ( addr )
    \ FIXME: express failed devices in terms of IR PCB component names.
 ;
 
