@@ -450,6 +450,7 @@ headers
 ;
 : mmc-switch  ( arg -- )    \ CMD6 for MMC - no data
    h# 061b 0 cmd  response  h# 80 and  if  ." MMC SWITCH_ERROR" cr  then
+   2 wait  \ This command appears to have a transfer-complete
 ;
 
 : deselect-card  ( -- )   0   h# 0700 0 cmd  ;  \ CMD7 - with null RCA
@@ -458,6 +459,7 @@ headers
    \ Unlike Version 1.00, version 2.00 of the SD Host Controller
    \ Specification says that Transfer Complete is set after R1b
    \ commands, so we must clear that bit if it is set.
+   d# 16 ms   \ Give the operation time to complete
    isr@ isr!
 ;
 
@@ -760,9 +762,9 @@ false value avoid-high-speed?
 
       \ Ideally, the width selection would be done by using CMD19 to test the bus
       hc-supports-8-bit?  if
-         mmc-8-bit  1 ms  8-bit
+         mmc-8-bit  8-bit
       else
-         mmc-4-bit  1 ms  4-bit
+         mmc-4-bit  4-bit
       then
 
       \ Ideally, we should set the speed class/power consumption - but the devices
@@ -1061,9 +1063,12 @@ external
    then      
 ;
 
+: wait-dat  ( -- )  d# 10 ms  begin  2 ms present-state@  4 and  0= until  ;
+
 \ Wait for completion
 : r/w-blocks-end  ( in? -- error? )
    drop
+   wait-dat
    wait-dma-done
    intstat-on  wait-write-done  intstat-off
 ;
@@ -1092,6 +1097,8 @@ external
    false                                ( error? )
 ;
 : fresh-write-blocks-start  ( addr block# #blocks -- error? )
+   intstat-on
+   wait-dat
    false true r/w-blocks-start
 ;
 
