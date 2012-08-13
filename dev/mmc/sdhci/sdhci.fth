@@ -26,7 +26,7 @@ h# 200 constant /block  \ 512 bytes
 defer ?mv8686-quirk  ' noop to ?mv8686-quirk
 
 external
-: set-address  ( rca slot -- )  to slot  to rca  map-regs  ;
+: set-address  ( rca base-addr -- )  set-slot-address  to rca  map-regs  ;
 : get-address  ( -- rca )       rca  ;
 : decode-unit  ( addr len -- lun )  push-hex  $number  if  0  then  pop-base  ;
 : encode-unit  ( lun -- adr len )   push-hex (u.) pop-base  ;
@@ -894,7 +894,7 @@ d# 250 value power-off-time
 : power-up-card  ( -- false | retry? true )
    intstat-on
    card-power-off
-   slot 1 = if power-off-time else d# 20 then
+   power-off-time
    ms
    card-power-on  d# 40 ms  \ This delay is just a guess (20 was barely too slow for a Via board)
    card-inserted?  0=  if  card-power-off  intstat-off  false true exit  then   

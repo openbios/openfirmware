@@ -1,19 +1,13 @@
 h# 200 value /regs   \ SDHCI register block
 1 value #slots
 
-0 instance value slot
+0 instance value base-addr
 0 instance value chip
 
-my-space /regs  reg
-
+: set-slot-address  ( slot-address -- )  to base-addr  ;
 : map-regs  ( -- )
    chip  if  exit  then
-   slot 5 =  if
-      h# d421.7000
-   else
-      slot 1-  h# 800 *  my-space +
-   then
-   /regs " map-in" $call-parent
+   base-addr /regs " map-in" $call-parent
    to chip
 ;
 : unmap-regs  ( -- )

@@ -27,6 +27,7 @@ make-reg
 : my-w@  ( offset -- w )  my-space + " config-w@" $call-parent  ;
 : my-w!  ( w offset -- )  my-space + " config-w!" $call-parent  ;
 
+: set-slot-address  ( slot-address -- )  to slot  ;
 : map-regs  ( -- )
    chip  if  exit  then
    0 0 h# 0200.0010 slot 1- 4 * + my-space +  /regs " map-in" $call-parent
