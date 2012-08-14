@@ -38,6 +38,9 @@ my-address      my-space  h# 1000  encode-reg
    d# 20 " interrupts" integer-property
    " /apbc" encode-phandle d# 21 encode-int encode+ " clocks" property
 
+   ec-spi-ack-gpio# 1  " ack-gpios"  gpio-property
+   ec-spi-cmd-gpio# 1  " cmd-gpios"  gpio-property
+   ec-spi-int-gpio# 1  " int-gpios"  gpio-property
 
 : encode-unit  ( phys -- adr len )  push-hex  (u.)  pop-base  ;
 : decode-unit  ( adr len -- phys )  push-hex  $number  if  0  then  pop-base  ;
