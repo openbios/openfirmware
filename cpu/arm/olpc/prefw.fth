@@ -228,9 +228,9 @@ fload ${BP}/cpu/arm/mmp2/pmua.fth
 fload ${BP}/cpu/arm/mmp2/apbc.fth
 fload ${BP}/cpu/arm/mmp2/irq.fth
 fload ${BP}/cpu/arm/mmp2/timer.fth
+fload ${BP}/cpu/arm/mmp2/gpio.fth
 fload ${BP}/cpu/arm/mmp2/twsi.fth
 fload ${BP}/cpu/arm/mmp2/mfpr.fth
-fload ${BP}/cpu/arm/mmp2/gpio.fth
 
 \ Uninstall the diag menu from the general user interface vector
 \ so exiting from emacs doesn't invoke the diag menu.

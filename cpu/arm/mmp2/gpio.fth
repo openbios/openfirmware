@@ -77,3 +77,12 @@ create gpio-offsets
    h# 104 make-gpio-mux-node
    h# 108 make-gpio-mux-node
 end-package
+
+: gpio-prop ( $gpioname low? gpionum -- )
+   " /gpio"  encode-phandle        ( $gpioname low? gpionum propval$ )
+   rot    encode-int encode+         ( $gpioname low? propval$' )
+   rot    encode-int encode+         ( $gpioname propval$' )
+   2swap property
+;
+
+
