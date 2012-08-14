@@ -202,11 +202,23 @@ bbu_ICR_IUE bbu_ICR_SCLE or value cr-set   \ bits to maintain as set
    my-address my-space 1 reg
 end-package
 
+[ifdef] soon-olpc-cl2  \ this breaks cl4-a1 boards, which ofw calls cl2.
 0 0  " 30" " /i2c@d4033000" begin-package  \ TWSI4
    " touchscreen" name
    " raydium_ts" +compatible
    my-address my-space 1 reg
 end-package
+[else]
+0 0  " 50" " /i2c@d4033000" begin-package  \ TWSI4
+   " touchscreen" name
+   " zforce" +compatible
+   my-address my-space 1 reg
+   " reset-gpio" 1  d# 98  gpio-prop
+   " test-gpio"  1  d# 139 gpio-prop
+   " hd-gpio"    1  d# 12  gpio-prop
+   " dr-gpio"    1  d# 99  gpio-prop
+end-package
+[then]
 
 0 0  " 19" " /i2c@d4034000" begin-package  \ TWSI6
    " accelerometer" name
