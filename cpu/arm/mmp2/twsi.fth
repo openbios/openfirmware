@@ -213,10 +213,10 @@ end-package
    " touchscreen" name
    " zforce" +compatible
    my-address my-space 1 reg
-   touch-rst-gpio# 1  " reset-gpio" gpio-property
-   touch-tck-gpio# 1  " test-gpio"  gpio-property
-   touch-hd-gpio#  1  " hd-gpio"    gpio-property
-   touch-int-gpio# 1  " dr-gpio"    gpio-property
+   touch-rst-gpio# 1  " reset-gpios" gpio-property
+   touch-tck-gpio# 1  " test-gpios"  gpio-property
+   touch-hd-gpio#  1  " hd-gpios"    gpio-property
+   touch-int-gpio# 1  " dr-gpios"    gpio-property
 end-package
 [then]
 
