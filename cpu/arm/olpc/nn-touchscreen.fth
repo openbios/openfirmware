@@ -19,7 +19,7 @@ fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
    touch-tck-gpio# dup gpio-clr gpio-dir-out
 ;
 : reset  ( -- )  touch-rst-gpio# dup gpio-clr gpio-set  d# 250 ms  ;
-: no-data?  ( -- no-data? )  touch-scr-gpio# gpio-pin@  ;
+: no-data?  ( -- no-data? )  touch-int-gpio# gpio-pin@  ;
 
 d# 250 constant /pbuf
 0 value pbuf

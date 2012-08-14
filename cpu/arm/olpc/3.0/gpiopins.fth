@@ -9,6 +9,7 @@ d#   9 constant cam-pwrdn-gpio#
 
 d#  46 constant spi-flash-cs-gpio#
 
+d# 154 constant ec-spi-int-gpio#
 d# 155 constant ec-spi-cmd-gpio#
 d# 125 constant ec-spi-ack-gpio#
 

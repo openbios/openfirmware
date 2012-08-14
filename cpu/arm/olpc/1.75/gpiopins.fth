@@ -8,6 +8,7 @@ d# 150 constant cam-pwr-gpio#
 
 d#  46 constant spi-flash-cs-gpio#
 
+d# 154 constant ec-spi-int-gpio#
 d# 155 constant ec-spi-cmd-gpio#
 d# 125 constant ec-spi-ack-gpio#
 
@@ -66,4 +67,4 @@ d#  17 constant check-gpio#
 d#  14 constant touch-hd-gpio#
 d#  98 constant touch-tck-gpio#
 d# 152 constant touch-rst-gpio#
-d#  99 constant touch-scr-gpio#
+d#  99 constant touch-int-gpio#
