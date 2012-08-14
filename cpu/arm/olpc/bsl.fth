@@ -1,6 +1,15 @@
 \ See license at end of file
 purpose: Downloader for TI MSP430 BootStrap Loader (BSL) protocol
 
+
+\ TODO:
+\  friendlier programming interface ( "ok flash-bsl u:\file.hex")
+\  progress indicator during programming
+\  print, perhaps in red, the msp430 password after programming,
+\     iff the password doesn't match all-ff or the known neonode password.
+\  save calibration data in mfg tag, in case it's lost.
+\  create msp430 recalibrator programmer
+
 \ devalias bsl /uart@NNNN:9600,8,e,1//bsl-protocol
 
 \ the MSP430 BSL has the annoying trait that it will self-erase if
