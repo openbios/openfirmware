@@ -3,11 +3,12 @@ purpose: Driver/selftest for OLPC lid and ebook switches
 
 0 0  " 0"  " /" begin-package
 
-" olpc,xo1.75-switch" +compatible
-d# ebook-mode-gpio# 1 " ebook-gpios" gpio-property
-d# lid-switch-gpio# 1 " lid-gpios"   gpio-property
-
 " switches" device-name
+
+" olpc,xo1.75-switch" +compatible
+ebook-mode-gpio# 1 " ebook-gpios" gpio-property
+lid-switch-gpio# 1 " lid-gpios"   gpio-property
+
 0 0 reg  \ So test-all will run the test
 : open  ( -- okay? )  true  ;
 : close  ( -- )  ;
