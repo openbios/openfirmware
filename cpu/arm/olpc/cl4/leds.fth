@@ -3,7 +3,16 @@ purpose: Driver/selftest for OLPC XO-1.75 LEDs
 
 0 0  " 0"  " /" begin-package
 0 0 reg  \ So test-all will run the test
+
+" gpio-leds" +compatible
 " leds" device-name
+
+new-device
+  " storage-led" device-name
+  " mmc-block" " linux,default-trigger" string-property
+  led-storage-gpio#  0  " gpios" gpio-property
+finish-device
+
 : open  ( -- okay? )  true  ;
 : close  ( -- )  ;
 
