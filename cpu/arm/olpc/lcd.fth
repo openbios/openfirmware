@@ -5,6 +5,9 @@ purpose: Display driver for OLPC ARM/MMP platforms
    " display" name
    my-address my-space h# 1000 reg
 
+   " mrvl,pxa168fb" +compatible
+
+   " LCDCLK" " clock-names" string-property
    " /pmua" encode-phandle 1 encode-int encode+ " clocks" property
    d# 41 " interrupts" integer-property
 

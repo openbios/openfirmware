@@ -10,14 +10,30 @@ also forth definitions
 previous definitions
 
 new-device
-" dcon" device-name
-" olpc,xo1-dcon" +compatible
-" olpc,xo1.75-dcon" +compatible
+   " dcon" device-name
+   " mrvl,dumb-panel" +compatible
+   " olpc,xo1-dcon" +compatible
+   " olpc,xo1.75-dcon" +compatible
+
+   " OLPC DCON panel" model
+   : +i  encode-int encode+  ;
+
+   decimal
+   0 0 encode-bytes
+   \ xres,  yres, refresh,       clockhz,  left, right,  top, bottom, hsync, vsync, flags, widthmm, heightmm 
+   1200 +i 900 +i    50 +i  56,930,000 +i  24 +i  26 +i  5 +i    4 +i  6 +i    3 +i   0 +i   152 +i   115 +i
+   hex
+   " linux,timing-modes" property
+
+   " 1200x900@50"  " linux,mode-names" string-property
+
+   h# 2000000d " lcd-dumb-ctrl-regval" integer-property
+   h# 08001100 " lcd-pn-ctrl0-regval" integer-property
 finish-device
 
 stand-init:
    has-dcon-ram?  0=  if
-      " /dcon? find-device
+      " /dcon" find-device
       0 0 " no-freeze" property
       device-end
    then
