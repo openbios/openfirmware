@@ -195,13 +195,14 @@ load-base constant flash-buf
 fload ${BP}/cpu/arm/olpc/ecflash.fth
 
 : ec-spi-reprogrammed   ( -- )
-   edi-spi-start
+   use-edi-spi  spi-start
    set-ec-reboot
    unreset-8051
+   use-ssp-spi
 ;
 
 : ignore-power-button  ( -- )
-   edi-spi-start
+   use-edi-spi
    edi-open-active
    ['] reset-8051 catch if
       ['] reset-8051 catch if ." Write Protected EC" cr then

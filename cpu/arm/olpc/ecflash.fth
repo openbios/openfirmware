@@ -66,6 +66,7 @@ purpose: Reflash the EC code
    ." Restarting EC and rebooting" cr
    set-ec-reboot
    unreset-8051
+   use-ssp-spi
 [then]
    ec-power-cycle
 ;
@@ -79,6 +80,7 @@ purpose: Reflash the EC code
 [else]
    use-edi-spi  edi-open
    flash-buf /ec-flash 0 edi-read-flash
+   use-ssp-spi
 [then]
 ;
 : save-ec-flash  ( "name" -- )
