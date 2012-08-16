@@ -14,6 +14,10 @@ dev /sd  \ MMC1 - External SD
       \ Active low
       " /gpio" encode-phandle  d# 31 encode-int encode+  1 encode-int encode+  " cd-gpios"  property
 
+      \ MMP3 
+      0 0  " wp-inverted" property
+      : write-protected?  ( -- flag )  write-protected? 0=  ;
+
       new-device
          fload ${BP}/dev/mmc/sdhci/sdmmc.fth
          fload ${BP}/dev/mmc/sdhci/selftest.fth
