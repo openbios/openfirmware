@@ -7,97 +7,7 @@ purpose: Bit-banged SPI bus driver for KB3731 EC "EDI" interface
 : edi-clk-lo  ( -- )  ec-edi-clk-gpio# gpio-clr  ;
 : edi-clk-hi  ( -- )  ec-edi-clk-gpio# gpio-set  ;
 
-0 [if]
-\ All this timing stuff is pointless because the GPIOs are so slow
-\ that the problem is to make the clock go fast enough to satisfy
-\ the initial connection speed requirement.
-
-\ We need to run at between 1 and 2 MHz for the initial connection,
-\ and then we can go faster, up to 16 Mhz.
-\ The half-cycle period for 1-2 MHz is between 250 ns and 500 ns.
-\ Timer0 runs at 6.5 MHz so each tick is about 150 ns.
-\ Two ticks is 300 ns, three is 450 ns.
-code spins  ( count -- )
-   cmp     tos,#0
-   <>  if
-      begin
-         subs    tos,tos,#1
-      0= until
-   then
-   pop     tos,sp 
-c;
-
-d# 150 value edi-dly-spins
-: edi-dly  ( -- )  edi-dly-spins spins  ;
-
-\ CPU clock is 800 Mhz, so 1.25 ns/clock
-\ spins is 2 clocks/spin, so 2.5 ns/spin
-\ Slow clock must be between 1 and 2 MHz, so period is between 1000 and 500 ns.
-\ edi-dly is a half cycle, so edi-dly for slow clock is between 500 and 250 ns.
-\ So we need between 200 and 100 spins for slow edi-dly
-\ Fast clock can be up to 16 Mhz, so full-cycle period of 62.5 ns, half-cycle
-\ period of >= 31.25 ns, so >= 12.5 spins at 2.5. ns/spin.
-
-: slow-edi-clock  ( -- )  d# 150 to edi-dly-spins  ;
-: fast-edi-clock  ( -- )  d# 13 to edi-dly-spins  ;
-
-code edi-bit!  ( flag -- )
-   mov   r0,#0x200
-   set   r1,`h# 19100 +io #`
-   cmp   tos,#0
-   streq r0,[r1,#0x24]  \ Clr MOSI if flag is 0
-   strne r0,[r1,#0x18]  \ Set MOSI if flag is non0
-   mov   r0,#0x400
-   str   r0,[r1,#0x18]  \ Set CLK
-   str   r0,[r1,#0x24]  \ Clr CLK
-   pop tos,sp
-c;
-
-[ifndef] edi-bit!
-: edi-bit!  ( flag -- )
-   ec-edi-mosi-gpio#  swap  if  gpio-set  else  gpio-clr  then
-   edi-clk-hi
-   edi-dly
-   edi-clk-lo
-   edi-dly
-;
-[then]
-
-[ifndef] edi-bit!
-: edi-bit!  ( flag -- )
-   if
-      [ ec-edi-mosi-gpio# >gpio-pin h# 18 + ] dliteral io!  \ Fast gpio-set
-   else
-      [ ec-edi-mosi-gpio# >gpio-pin h# 24 + ] dliteral io!  \ Fast gpio-clr
-   then
-   [ ec-edi-clk-gpio# >gpio-pin h# 18 + ] dliteral io!  \ Fast gpio-set
-\   edi-dly
-   [ ec-edi-clk-gpio# >gpio-pin h# 24 + ] dliteral io!  \ Fast gpio-set
-\   edi-dly
-;
-[then]
-
-: edi-out  ( b -- )
-   8 0  do                   ( b )
-      dup h# 80 and edi-bit! ( b )
-      2*                     ( b' )
-   loop                      ( b )
-   drop                      ( )
-;   
-: edi-bit@  ( -- flag )
-   edi-clk-hi
-   edi-dly
-   ec-edi-miso-gpio# gpio-pin@
-   edi-clk-lo
-   edi-dly
-;
-: edi-in-h  ( b -- )
-   0                         ( b )
-   8 0  do                   ( b )
-      2* edi-bit@ 1 and or   ( b' )
-   loop                      ( b )
-;   
-[else]
+\ This must be done in code to satisfy the stringent timing requirements of the EDI hardware
 code edi-out  ( byte -- )
    mov   r2,#8
    mov   r0,#0x200           \ MOSI mask
@@ -117,27 +27,6 @@ code edi-out  ( byte -- )
 [then]
 
       str   r4,[r1,#0x18]  \ Set CLK
-      str   r4,[r1,#0x24]  \ Clr CLK
-
-      add   tos,tos,tos    \ Left shift TOS      
-   decs r2,1
-   0= until
-
-   pop tos,sp
-c;
-code edi-out1  ( byte -- )
-   mov   r2,#8
-   mov   r0,#0x200           \ MOSI mask
-   set   r1,`h# 19100 +io #` \ GPIO register address
-   mov   r4,#0x400           \ CLK mask
-   mov   r5,#0x600           \ CLK and MOSI mask
-   begin
-      ands  r3,tos,#0x80   \ Test bit
-
-      strne r5,[r1,#0x18]  \ Set MOSI and CLK in the same operation if bit is non0
-      streq r0,[r1,#0x24]  \ Clr MOSI
-      streq r4,[r1,#0x18]  \ Set CLK
-
       str   r4,[r1,#0x24]  \ Clr CLK
 
       add   tos,tos,tos    \ Left shift TOS      
@@ -179,9 +68,6 @@ code edi-in  ( -- byte )
    decs r2,1
    0= until
 c;
-
-[then]
-
 
 : edi-spi-start  ( -- )
    ['] edi-in      to spi-in
