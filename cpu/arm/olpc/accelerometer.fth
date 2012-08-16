@@ -2,6 +2,7 @@ hex
 0 0  " "  " /twsi" begin-package
 " accelerometer" name
 
+\ reg is set dynamically by probing to find which chip is present
 \ my-address my-space encode-phys  " reg" property
 
 \ This is for the stand-alone accelerometers LIS3DHTR and LIS33DETR
@@ -149,7 +150,7 @@ defer lis-selftest
       d# 400,000 to bus-speed
       d#  50 to min-x  d#  50 to min-y  d#  50 to min-z
       d# 150 to max-x  d# 150 to max-y  d# 450 to max-z
-      h# 32 6 encode-phys " reg" property
+      h# 19 6 encode-phys " reg" property
       ['] lis3dhtr-selftest to lis-selftest
    else
       accelerometer-off
@@ -158,7 +159,7 @@ defer lis-selftest
       d#  25,000 to bus-speed
       d#  20 to min-x  d#  20 to min-y  d#  20 to min-z
       d# 400 to max-x  d# 400 to max-y  d# 400 to max-z
-      h# 3a 6 encode-phys " reg" property
+      h# 1d 6 encode-phys " reg" property
       ['] lis33de-selftest to lis-selftest
    then
 ;

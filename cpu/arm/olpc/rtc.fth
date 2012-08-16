@@ -22,7 +22,7 @@ purpose: Driver for external IDT1338 RTC chip on XO-1.75
 : rtc@  ( reg# -- byte )  set-address  smb-byte@  ;
 : rtc!  ( byte reg# -- )  set-address  smb-byte!  ;
 [else]
-: set-address  ( -- )   h# d0 2 set-twsi-target  ;
+: set-address  ( -- )   h# 68 2 set-twsi-target  ;
 : rtc@  ( reg# -- byte )  set-address  twsi-b@  ;
 : rtc!  ( byte reg# -- )  set-address  twsi-b!  ;
 [then]

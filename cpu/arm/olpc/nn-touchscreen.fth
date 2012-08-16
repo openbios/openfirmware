@@ -1,7 +1,7 @@
 \ See license at end of file
 purpose: Driver and diagnostic for Neonode zForce MultiSensing I2C Touchscreen
 
-0 0  " 4,a0"  " /twsi" begin-package
+0 0  " 4,50"  " /twsi" begin-package
 my-space encode-int  my-address encode-int encode+  " reg" property
 
 \ XXX these are really platform-related, not touchscreen-related

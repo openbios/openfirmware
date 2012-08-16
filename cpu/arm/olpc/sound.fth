@@ -264,9 +264,9 @@ audio-sram-va h# 3f80 + constant in-desc
 ;
 
 [ifdef] cl2-a1
-: choose-smbus  ( -- )  h# 30 1 set-twsi-target  ;
+: choose-smbus  ( -- )  h# 18 1 set-twsi-target  ;
 [else]
-: choose-smbus  ( -- )  h# 34 1 set-twsi-target  ;
+: choose-smbus  ( -- )  h# 1a 1 set-twsi-target  ;
 [then]
 
 \ Reset is unconnected on current boards

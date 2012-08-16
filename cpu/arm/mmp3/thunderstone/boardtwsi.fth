@@ -8,7 +8,7 @@ purpose: Board-specific details of TWSI-connected devices
 \ 5 TC358762 MIPI bridge 16, TM-1210 or TM1414 touchscreen 40
 \ 6 HDMI DDC EDID a0
 
-: select-touch-panel  ( -- )  h# 40 5 set-twsi-target  ;
+: select-touch-panel  ( -- )  h# 20 5 set-twsi-target  ;
 : touch-panel-type  ( -- n )  select-touch-panel  h# bd twsi-b@  ;
 : get-tm1414-data  ( -- x y finger-mask )
    select-touch-panel                                   ( )
@@ -29,7 +29,7 @@ purpose: Board-specific details of TWSI-connected devices
 ;
 
 : compass@  ( -- x y z temp id )
-   h# 3c 4 set-twsi-target
+   h# 1e 4 set-twsi-target
    0 0 twsi-b!      \ Config register A
    h# 50 1 twsi-b!  \ Config register B
    0 2 twsi-b!      \ Mode register
@@ -40,7 +40,7 @@ purpose: Board-specific details of TWSI-connected devices
    h# a twsi-b@  9 twsi-b@  bwjoin  ( x y z temp id )
 ;
 
-: select-pmic  ( -- )  h# 78 1 set-twsi-target  ;
+: select-pmic  ( -- )  h# 3c 1 set-twsi-target  ;
 
 : accel-power-on  ( -- )  \ LDO8 - vout is 36, ctl is 34
    select-pmic
@@ -52,7 +52,7 @@ purpose: Board-specific details of TWSI-connected devices
    h# 1e h# 34 twsi-b!
 ;
 : accel@  ( -- x y z temp id )
-   h# 70 4 set-twsi-target
+   h# 38 4 set-twsi-target
 
    2 twsi-b@ 6 rshift     ( x-low )
    3 twsi-b@ 2 lshift or  ( x )
@@ -67,24 +67,24 @@ purpose: Board-specific details of TWSI-connected devices
 ;
 
 : init-pals  ( -- )
-   h# b0 4 set-twsi-target  \ Set PS parameters address
+   h# 58 4 set-twsi-target  \ Set PS parameters address
    0 1 twsi-out             \ clear interrupt settings
 
-   h# 22 4 set-twsi-target  \ Device init address
+   h# 11 4 set-twsi-target  \ Device init address
    h# 10 1 twsi-out         \ Init device
 
-   h# 20 4 set-twsi-target  \ Ambient Light Sensor address
+   h# 10 4 set-twsi-target  \ Ambient Light Sensor address
    2 1 twsi-out             \ Enable ALS in most sensitive mode, 16-bit data
 ;
 : als@  ( -- n )
-   h# 22 4 set-twsi-target  \ Ambient Light Sensor LSB address
+   h# 11 4 set-twsi-target  \ Ambient Light Sensor LSB address
    0 1 twsi-get            ( low )
-   h# 20 4 set-twsi-target  \ Ambient Light Sensor MSB address
+   h# 10 4 set-twsi-target  \ Ambient Light Sensor MSB address
    0 1 twsi-get  bwjoin   ( n )
 ;
 
 : proximity@  ( -- byte )
-   h# b0 4 set-twsi-target  \ Proximity Sensor address
+   h# 58 4 set-twsi-target  \ Proximity Sensor address
    0 1 twsi-get            ( byte )
 ;
 
@@ -128,7 +128,7 @@ purpose: Board-specific details of TWSI-connected devices
 ;
 : twsi-bcd@   ( reg# -- binary )  twsi-b@ bcd>  ;
 : get-rtc  ( -- )
-   h# d0 1 set-twsi-target
+   h# 68 1 set-twsi-target
 
 \   3 twsi-b@   ( dow )
 \   
@@ -142,7 +142,7 @@ purpose: Board-specific details of TWSI-connected devices
 ;
 
 : core-voltage!  ( mv -- )
-   h# c0 1 set-twsi-target  \ MAX8649 power management IC
+   h# 60 1 set-twsi-target  \ MAX8649 power management IC
 
    d# 750 umax  d# 1350 umin   \ Clipped voltage
    d# 750 -  d# 10 /      ( offset-in-mv/10 )
@@ -150,7 +150,7 @@ purpose: Board-specific details of TWSI-connected devices
    2 twsi-b!
 ;
 : core-voltage@  ( -- mv )
-   h# c0 1 set-twsi-target  \ MAX8649 power management IC
+   h# 60 1 set-twsi-target  \ MAX8649 power management IC
    2 twsi-b@     ( code )
    h# 7f and     ( offset-mv/10 )
    d# 10 *       ( offset-mv )

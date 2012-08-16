@@ -4,7 +4,7 @@
 : set-compass-slave  ( -- )
    compass-scl-gpio# to smb-clock-gpio#
    compass-sda-gpio# to smb-data-gpio#
-   h# 3c to smb-slave
+   h# 1e to smb-slave
    smb-data-gpio# gpio-dir-out
 ;
 : smb-init    ( -- )  set-compass-slave  smb-on  smb-pulses  ;
@@ -35,11 +35,11 @@ end-package
 0 0  " "  " /" begin-package
 " combo-accelerometer" name
 
-\ : set-sensor-slave  ( -- )  h# 30 6 set-twsi-target  ;
+\ : set-sensor-slave  ( -- )  h# 18 6 set-twsi-target  ;
 : set-sensor-slave  ( -- )
    4 to smb-clock-gpio#
    5 to smb-data-gpio#
-   h# 30 to smb-slave
+   h# 18 to smb-slave
    smb-data-gpio# gpio-dir-out
 ;
 

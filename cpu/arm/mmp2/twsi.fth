@@ -42,7 +42,7 @@ h# 04 c,  h# 08 c,  h# 0c c,  h# 10 c,  h# 7c c,  h# 80 c,
 ;
 : set-twsi-target  ( slave channel -- )  \ Channel numbers range from 1 to 6
    set-twsi-channel
-   to slave-address
+   2* to slave-address
 ;
 
 \       Bit defines
@@ -195,7 +195,7 @@ bbu_ICR_IUE bbu_ICR_SCLE or value cr-set   \ bits to maintain as set
   h# d4034000 d# 31   4 true  true     1 make-twsi-node  \ TWSI6
 
 
-0 0  " 34" " /i2c@d4011000" begin-package  \ TWSI1
+0 0  " 1a" " /i2c@d4011000" begin-package  \ TWSI1
    " audio-codec" name
    " realtek,alc5631" +compatible
    " realtek,rt5631" +compatible
