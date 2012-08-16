@@ -78,10 +78,38 @@ create gpio-offsets
    h# 108 make-gpio-mux-node
 end-package
 
+: encode-gpio  ( propval$ gpio# low? -- propval$' )
+   >r >r                            ( propval$  r: low? gpio# )
+   " /gpio" encode-phandle encode+  ( propval$' r: low? gpio# )
+   r> encode-int encode+            ( propval$' r: low? )
+   r> encode-int encode+            ( propval$' )
+;
+
 : gpio-property  ( gpionum low? gpioname$ -- )
-   2>r swap                     ( low? gpionum           r: gpioname$ )
-   " /gpio"  encode-phandle     ( low? gpionum propval$  r: gpioname$ )
-   rot encode-int encode+       ( low? propval$'         r: gpioname$ )
-   rot encode-int encode+       ( propval$'              r: gpioname$ )
+   2>r  2>r                     ( r: gpioname$ gpionum low? )
+   0 0 encode-bytes             ( propval$  r: gpioname$ gpionum low? )
+   2r> encode-gpio              ( propval$' r: gpioname$ )
    2r> property                 ( )
 ;
+
+dev /
+   new-device
+      " camera-i2c" device-name
+      " i2c-gpio" +compatible
+    
+      0 0 encode-bytes
+         cam-sda-gpio# 0 encode-gpio
+         cam-scl-gpio# 0 encode-gpio
+      " gpios" property
+   finish-device
+
+   new-device
+      " dcon-i2c" device-name
+      " i2c-gpio" +compatible
+
+      0 0 encode-bytes
+         dcon-sda-gpio# 0 encode-gpio
+         dcon-scl-gpio# 0 encode-gpio
+      " gpios" property
+   finish-device
+device-end

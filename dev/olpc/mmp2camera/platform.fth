@@ -4,6 +4,8 @@ purpose: Platform specifics for OLPC camera connected to Marvell MMP2 CMOS Camer
 headers
 hex
 
+" /camera-i2c" encode-phandle  " i2c-parent" property
+
 0 value camera-smb-slave
 : camera-smb-setup  ( -- )
    1 to smb-dly-us

@@ -18,6 +18,21 @@ new-device
    " OLPC DCON panel" model
    : +i  encode-int encode+  ;
 
+   0 0 encode-bytes
+   dcon-stat0-gpio# 0 encode-gpio
+   dcon-stat1-gpio# 0 encode-gpio
+   dcon-load-gpio#  0 encode-gpio
+   dcon-irq-gpio#   0 encode-gpio
+   " gpios" property
+
+   " stat0" encode-string
+   " stat1" encode-string encode+
+   " load"  encode-string encode+
+   " irq"   encode-string encode+
+   " gpio-names" property
+
+   " /dcon-i2c" encode-phandle  " i2c-parent" property
+
    decimal
    0 0 encode-bytes
    \ xres,  yres, refresh,       clockhz,  left, right,  top, bottom, hsync, vsync, flags, widthmm, heightmm 
