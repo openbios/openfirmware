@@ -1,6 +1,13 @@
 \ See license at end of file
 purpose: Init USB2 Phy in Marvell SoC
 
+0 0   " d4207000"  " /" begin-package
+
+" usb2-phy" device-name
+
+my-address my-space h# 100 reg
+" mrvl,mmp3-usb2phy" +compatible
+   
 : +usb2  ( offset -- offset' )  h# 20.7000 +  ;
 
   h# 04 +usb2 constant pll-reg0
@@ -36,7 +43,7 @@ purpose: Init USB2 Phy in Marvell SoC
    ." PLL calibrate timeout" cr
 ;
 
-: init-usb-phy  ( -- )
+: init  ( -- )
    h# f00  h# 100 +pmua  io-clr
 \  h# d00  h# 100 +pmua  io-set   \ Select 26 MHz VCXO clock
    h# 000  h# 100 +pmua  io-set   \ Select crystal
@@ -85,3 +92,8 @@ purpose: Init USB2 Phy in Marvell SoC
 
    d# 100 wait-cal
 ;
+
+: open  ( -- true )  true  ;
+: close  ;
+
+end-package

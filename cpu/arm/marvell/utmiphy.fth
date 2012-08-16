@@ -1,6 +1,13 @@
 \ See license at end of file
 purpose: Init UTMI USB Phy in Marvell SoC
 
+0 0   " d4207000"  " /" begin-package
+
+" usb2-phy" device-name
+
+my-address my-space h# 100 reg
+" mrvl,mmp2-utmiphy" +compatible
+   
 : +utmi  ( offset -- offset' )  h# 20.7000 +  ;
 
 h# 04 +utmi constant utmi-ctrl
@@ -36,7 +43,7 @@ h# 00c9.4000 value tx-set   \       3           4           5
 h# 0000.00f0 value rx-clr   \ RX_SQ_THRESH
 h# 0000.00a0 value rx-set   \            a
 
-: init-usb-phy  ( -- )
+: init  ( -- )
 [ifdef] notdef
    ." Interacting before USB PHY init." cr
    ." Change pll-set, tx-set, rx-set as desired then type 'resume'" cr
@@ -83,3 +90,8 @@ h# 0000.00a0 value rx-set   \            a
 ;
 : enable-ulpi-phy  ( -- )  h# 100 utmi-ctl1 io-set  ;
 : select-ulpi-data  ( -- )  h# 200 utmi-ctl1 io-set  ;
+
+: open  ( -- true )  true  ;
+: close  ;
+
+end-package

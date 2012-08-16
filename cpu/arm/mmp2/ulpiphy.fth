@@ -1,6 +1,10 @@
 \ See license at end of file
 purpose: Access to miscellaneous control/enable registers for the ULPI PHY portion of the USB SPH controller
 
+0 0   " d4207000"  " /" begin-package
+
+" mrvl,mmp2-ulpiphy" +compatible
+
 h# 3800 io2-va + constant usbsph-misc-va
 : usbsph-misc@  ( -- n )  usbsph-misc-va     4 + l@  ;
 : usbsph-misc!  ( n -- )  usbsph-misc-va     4 + l!  ;
@@ -12,6 +16,17 @@ h# 3800 io2-va + constant usbsph-misc-va
 : ulpi-resume-interrupt-on  ( -- )  2 usbsph-int!  ;
 : ulpi-clock-on  ( -- )  usbsph-ctrl@ 1 or usbsph-ctrl!  ;
 : ulpi-clock-select  ( -- )  usbsph-ctrl@ h# 400 or usbsph-ctrl!  ;
+
+: init  ( -- )
+   ulpi-clock-on
+   ulpi-clock-select
+   ulpi-on
+;
+
+: open  ( -- true )  true  ;
+: close  ;
+
+end-package
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks

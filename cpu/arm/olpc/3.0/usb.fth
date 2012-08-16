@@ -17,6 +17,16 @@ fload ${BP}/cpu/arm/mmp2/ulpiphy.fth
       my-space swap  " map-in" $call-parent  h# 100 +  ( adr )
    ;
    : my-map-out  ( adr len -- )  swap h# 100 - swap " map-out" $call-parent  ;
+   " /pmua" encode-phandle d# 18 encode-int encode+ " clocks" property
+   d# 34 " interrupts" integer-property
+
+   " mrvl,mmp3-fsic" +compatible
+
+   " host" " dr_mode"  string-property
+   " ulpi" " phy_type" string_property
+
+   " /usb-phy" encode-phandle " transceiver" property
+
    false constant has-dbgp-regs?
    false constant needs-dummy-qh?
    : grab-controller  ( config-adr -- error? )  drop false  ;
@@ -42,9 +52,7 @@ end-package
 
 : (reset-usb-hub)  ( -- )
    d# 146 gpio-clr  d# 10 ms  d# 146 gpio-set  \ Resets ULPI hub
-   ulpi-clock-on
-   ulpi-clock-select
-   ulpi-on
+   " /usb2-phy" " init" execute-device-method
 ;
 ' (reset-usb-hub) to reset-usb-hub
 

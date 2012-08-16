@@ -11,6 +11,14 @@ purpose: USB features common to most OLPC ARM platforms
    " /pmua" encode-phandle 5 encode-int encode+ " clocks" property
    d# 44 " interrupts" integer-property
 
+   " mrvl,pxa-u2oehci"  +compatible
+   " mrvl,mmp3-u2oehci" +compatible
+
+   " host" " dr_mode"  string-property
+   " utmi" " phy_type" string-property
+
+   " /usb2-phy" encode-phandle " transceiver" property
+
    false constant has-dbgp-regs?
    false constant needs-dummy-qh?
    : grab-controller  ( config-adr -- error? )  drop false  ;
@@ -29,7 +37,7 @@ defer reset-usb-hub ' noop to reset-usb-hub
 : init-usb  ( -- )
    h# 9 h# 5c pmua!  \ Enable clock to USB block
    reset-usb-hub
-   init-usb-phy
+   " /usb2-phy" " init" execute-device-method drop
 ;
 
 stand-init: Init USB Phy
