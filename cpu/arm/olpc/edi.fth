@@ -335,23 +335,23 @@ base !
       ecsts edi-b!                         ( )
    then
 ;
-
-\ Does a dummy ready and throws away the result.
-\ required to get the EDI interface enabled
-: edi-start ( -- )
-   h# ff22 ['] edi-b@ catch if noop else drop then
-;
-
-: edi-open  ( -- )
-   \ slow-edi-clock   \ Target speed between 1 and 2 MHz
+\ This is used to start EDI from routines where you do not want to
+\ put the EC into reset.  ie the mfg tag reading routines
+: edi-open-active  ( -- )
    spi-start
 
-   edi-start
+   \ Does a dummy ready and throws away the result.
+   \ required to get the EDI interface enabled
+   h# ff22 ['] edi-b@ catch if noop else drop then
 
    set-chip-id
 
-   \ The first operation often fails so retry it
-   ['] select-flash  catch  if  select-flash  then
+   select-flash
+;
+\ Full EDI startup sequece.  Used when you want to reprogram the EC.
+: edi-open  ( -- )
+   edi-open-active
+
    reset-8051
 
    kb9010?  if
@@ -360,14 +360,7 @@ base !
    else
       trim-tune
    then
-   \ fast-edi-clock   \ Target speed up to 16 MHz
-   \ reset
 ;
-: edi-open-active  ( -- )
-   spi-start
-   ['] select-flash  catch  if  select-flash  then
-;
-
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks
 \ 

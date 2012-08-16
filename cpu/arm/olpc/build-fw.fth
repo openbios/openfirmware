@@ -202,6 +202,7 @@ fload ${BP}/cpu/arm/olpc/ecflash.fth
 
 : ignore-power-button  ( -- )
    edi-spi-start
+   edi-open-active
    ['] reset-8051 catch if
       ['] reset-8051 catch if ." Write Protected EC" cr then
    then
