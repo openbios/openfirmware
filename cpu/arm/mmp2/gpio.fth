@@ -96,6 +96,13 @@ dev /
    new-device
       " camera-i2c" device-name
       " i2c-gpio" +compatible
+      1 " #address-cells" integer-property
+      1 " #size-cells" integer-property
+      : encode-unit  ( phys.. -- str )  push-hex (u.) pop-base  ;
+      : decode-unit  ( str -- phys.. )  push-hex  $number  if  0  then  pop-base  ;
+      : open  ( -- flag )  true  ;
+      : close  ( -- )  ;
+      
     
       0 0 encode-bytes
          cam-sda-gpio# 0 encode-gpio
@@ -106,6 +113,12 @@ dev /
    new-device
       " dcon-i2c" device-name
       " i2c-gpio" +compatible
+      1 " #address-cells" integer-property
+      1 " #size-cells" integer-property
+      : encode-unit  ( phys.. -- str )  push-hex (u.) pop-base  ;
+      : decode-unit  ( str -- phys.. )  push-hex  $number  if  0  then  pop-base  ;
+      : open  ( -- flag )  true  ;
+      : close  ( -- )  ;
 
       0 0 encode-bytes
          dcon-sda-gpio# 0 encode-gpio
