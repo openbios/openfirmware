@@ -13,9 +13,8 @@ d# 5,000 constant movie-time
 : autobright  ( -- )
    read-agc 3 + 3 rshift  h# f min  " bright!" " $call-screen" evaluate
 ;
-[then]
-
 : full-brightness  ( -- )  h# f " bright!" " $call-screen" evaluate  ;
+[then]
 
 : timeout-read  ( adr len timeout -- actual )
    >r 0 -rot r>  0  ?do			( actual adr len )
@@ -47,7 +46,7 @@ d# 5,000 constant movie-time
    false set-mirrored  resync                           ( )
    shoot-still  ?dup  if  stop-display close exit  then	( error? )
    d# 1,000 ms
-   true set-mirrored  resync  shoot-movie  full-brightness	( error? )
+   true set-mirrored  resync  shoot-movie  ( full-brightness )	( error? )
    stop-display close					( error? )
    ?dup  0=  if  confirm-selftest?  then		( error? )
 ;
