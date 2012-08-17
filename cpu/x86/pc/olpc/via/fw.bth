@@ -359,6 +359,9 @@ true value text-on?
 
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 
+\ The DCON methods are in the screen node on this system
+: $call-dcon  ( ... -- ... )   screen-ih $call-method  ;
+
 fload ${BP}/cpu/x86/pc/olpc/via/help.fth     \ Help for common user tasks
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/via/suspend.fth  \ Suspend/resume setup

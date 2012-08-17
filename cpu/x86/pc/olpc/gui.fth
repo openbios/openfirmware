@@ -355,9 +355,9 @@ h# 32 buffer: icon-name
    $show                                ( )
 ;
 
-: frozen?  ( -- flag )  " vga?" $call-screen 0=  ;
-: dcon-freeze    ( -- )  0 " set-source" $call-screen d# 30 ms  ;
-: dcon-unfreeze  ( -- )  1 " set-source" $call-screen d# 30 ms  ;
+: frozen?  ( -- flag )  " vga?" $call-dcon 0=  ;
+: dcon-freeze    ( -- )  0 " set-source" $call-dcon d# 30 ms  ;
+: dcon-unfreeze  ( -- )  1 " set-source" $call-dcon d# 30 ms  ;
 
 \ === Stuff moved from security.fth ===
 
@@ -380,7 +380,7 @@ d# 463 d# 540 2constant progress-xy
 : show-going  ( -- )
    background-rgb  rgb>565  progress-xy ?adjust d# 500 d# 100  " fill-rectangle" $call-screen
    d# 588 d# 638 set-icon-xy  " bigdot" show-icon
-   " vga?" $call-screen  0=  if  dcon-unfreeze dcon-freeze  then
+   frozen?  if  dcon-unfreeze dcon-freeze  then
 ;
 
 : show-no-power  ( -- )  \ chip, battery, overlaid sad face

@@ -41,6 +41,9 @@ fload ${BP}/forth/lib/sysuart.fth	\ Set console I/O vectors to UART
 : poll-tty  ( -- )  ubreak?  if  user-abort  then  ;  \ BREAK detection
 : install-abort  ( -- )  ['] poll-tty d# 100 alarm  ;
 
+0 value dcon-ih
+: $call-dcon  ( ... -- ... )   dcon-ih $call-method  ;
+
 0 value keyboard-ih
 
 fload ${BP}/ofw/core/muxdev.fth          \ I/O collection/distribution device
@@ -171,9 +174,7 @@ fload ${BP}/dev/olpc/kb3700/eccmds.fth
 ' stand-power-off to power-off
 
 : olpc-reset-all  ( -- )
-   " screen" " dcon-off" ['] execute-device-method catch if
-      2drop 2drop
-   then
+   " dcon-off" $call-dcon
    ec-power-cycle
    begin  wfi  again
 ;
@@ -510,6 +511,7 @@ fload ${BP}/cpu/arm/mmp2/clocks.fth
 fload ${BP}/cpu/arm/olpc/banner.fth
 
 : console-start  ( -- )
+   " /dcon" open-dev to dcon-ih
    install-mux-io
    cursor-off
    true to text-on?

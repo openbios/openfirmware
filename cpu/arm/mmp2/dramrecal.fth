@@ -767,7 +767,7 @@ end-string-array
    sleep-mask 1 and  if            \ DCON power down
       dcon-freeze
    else
-      " dcon-suspend" $call-screen
+      " dcon-suspend" $call-dcon
    then
    " sleep" $call-screen
    " set-ack" $call-ec
@@ -793,7 +793,7 @@ end-string-array
    sleep-mask 1 and  if            \ DCON power up
       dcon-unfreeze
    else
-      " dcon-resume" $call-screen
+      " dcon-resume" $call-dcon
    then
 ;
 

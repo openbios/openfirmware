@@ -305,6 +305,9 @@ true value user-mode?
    time&date .date space .time  ."  UTC" cr
 ;
 
+\ The DCON methods are in the screen node on this system
+: $call-dcon  ( ... -- ... )   screen-ih $call-method  ;
+
 fload ${BP}/cpu/x86/pc/olpc/banner.fth
 fload ${BP}/ofw/gui/loadmenu.fth
 fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
