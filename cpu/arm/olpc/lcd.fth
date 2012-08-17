@@ -319,9 +319,11 @@ d# 256 constant /cursor
    [then]
 
    defer init-panel    ' noop to init-panel
-   defer bright!       ' drop to bright!
-   defer backlight-off ' noop to backlight-off
-   defer backlight-on  ' noop to backlight-on
+
+   \ XXX we really should bounce these through the panel node(s)
+   : bright!  " bright!" $call-dcon  ;
+   : backlight-off  " backlight-off" $call-dcon  ;
+   : backlight-on   " backlight-on" $call-dcon  ;
 
    : display-on
       init-panel  \ Turns on DCON etc

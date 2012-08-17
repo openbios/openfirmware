@@ -1,58 +1,30 @@
 \ See license at end of file
-\ " dcon" device-name
 
-also forth definitions
 : has-dcon-ram?  ( -- flag )
    board-revision h# 1b18 =  if  true exit  then
    board-revision h# 1b48 >=  if  true exit  then
    false
 ;
-previous definitions
 
-new-device
-   " dcon" device-name
-   " mrvl,dumb-panel" +compatible
-   " olpc,xo1-dcon" +compatible
-   " olpc,xo1.75-dcon" +compatible
+0 0  " 1a"  " /dcon-i2c" begin-package
 
-   " OLPC DCON panel" model
-   : +i  encode-int encode+  ;
+" dcon" device-name
+" olpc,xo1-dcon" +compatible
+" olpc,xo1.75-dcon" +compatible
+h# 1a 1 reg
 
-   0 0 encode-bytes
-   dcon-stat0-gpio# 0 encode-gpio
-   dcon-stat1-gpio# 0 encode-gpio
-   dcon-load-gpio#  0 encode-gpio
-   dcon-irq-gpio#   0 encode-gpio
-   " gpios" property
+0 0 encode-bytes
+dcon-stat0-gpio# 0 encode-gpio
+dcon-stat1-gpio# 0 encode-gpio
+dcon-load-gpio#  0 encode-gpio
+dcon-irq-gpio#   0 encode-gpio
+" gpios" property
 
-   " stat0" encode-string
-   " stat1" encode-string encode+
-   " load"  encode-string encode+
-   " irq"   encode-string encode+
-   " gpio-names" property
-
-   " /dcon-i2c" encode-phandle  " i2c-parent" property
-
-   decimal
-   0 0 encode-bytes
-   \ xres,  yres, refresh,       clockhz,  left, right,  top, bottom, hsync, vsync, flags, widthmm, heightmm 
-   1200 +i 900 +i    50 +i  56,930,000 +i  24 +i  26 +i  5 +i    4 +i  6 +i    3 +i   0 +i   152 +i   115 +i
-   hex
-   " linux,timing-modes" property
-
-   " 1200x900@50"  " linux,mode-names" string-property
-
-   h# 2000000d " lcd-dumb-ctrl-regval" integer-property
-   h# 08001100 " lcd-pn-ctrl0-regval" integer-property
-finish-device
-
-stand-init:
-   has-dcon-ram?  0=  if
-      " /dcon" find-device
-      0 0 " no-freeze" property
-      device-end
-   then
-;
+" stat0" encode-string
+" stat1" encode-string encode+
+" load"  encode-string encode+
+" irq"   encode-string encode+
+" gpio-names" property
 
 \ DCON internal registers, accessed via I2C
 \ 0 constant DCON_ID
@@ -89,6 +61,7 @@ stand-init:
 ;
 
 : smb-init    ( -- )  set-dcon-slave  smb-on  smb-pulses  ;
+: smb-reset   ( -- )  smb-stop 1 ms  smb-off  1 ms  smb-on   ;
 
 : dcon@  ( reg# -- word )  set-dcon-slave  smb-word@  ;
 : dcon!  ( word reg# -- )  set-dcon-slave  smb-word!  ;
@@ -161,7 +134,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
 \ gx_configure_tft(info);
 
 : try-dcon!  ( w reg# -- )
-   ['] dcon!  catch  if  2drop  smb-stop 1 ms  smb-off  1 ms  smb-on  then
+   ['] dcon!  catch  if  2drop  smb-reset  then
 ;
 
 : mode@    ( -- mode )    1 dcon@  ;
@@ -174,16 +147,22 @@ d# 905 value resumeline  \ Configurable; should be set from args
 : vsync!   ( sync -- )    7 dcon!  ;  \ def: h#  403 d# 4,3
 : timeout! ( to -- )      8 dcon!  ;  \ def: h# ffff
 : scanint! ( si -- )      9 dcon!  ;  \ def: h# 0000
+[ifdef] old-way
 : dcon-bright!  ( level -- ) d# 10 dcon! ; \ def: h# xxxF
 ' dcon-bright!  to bright!
-: bright@  ( -- level ) d# 10 dcon@ ;
-: brighter  ( -- )  bright@ 1+  h# f min  bright!  ;
-: dimmer    ( -- )  bright@ 1-  0 max  bright!  ;
-
 : dcon-backlight-off  ( -- )  mode@  8 invert and  mode!  ;
 ' dcon-backlight-off to backlight-off
 : dcon-backlight-on   ( -- )  mode@  8 or  mode!  ;
 ' dcon-backlight-on to backlight-on
+[else]
+: bright!  ( level -- ) d# 10 dcon! ; \ def: h# xxxF
+: backlight-off  ( -- )  mode@  8 invert and  mode!  ;
+: backlight-on   ( -- )  mode@  8 or  mode!  ;
+[then]
+
+: bright@  ( -- level ) d# 10 dcon@ ;
+: brighter  ( -- )  bright@ 1+  h# f min  bright!  ;
+: dimmer    ( -- )  bright@ 1-  0 max  bright!  ;
 
 \ Color swizzle, AA, no passthrough, backlight
 : set-color ( color? -- )
@@ -232,19 +211,11 @@ d# 905 value resumeline  \ Configurable; should be set from args
    h# f bright!
 ;
 
-: video-save
-   0 set-source  \ Freeze image
-;
-
-: video-restore
-   smb-init
-   1 set-source  \ Unfreeze image
-;
-
 0 value dcon-found?
 
 : maybe-set-cmos  ( -- )  ;
 
+[ifdef] old-way
 : init-dcon  ( -- )
    smb-init
 
@@ -253,6 +224,15 @@ d# 905 value resumeline  \ Configurable; should be set from args
    \ dcon-enable leaves mode set to 69 - 40:antialias, 20:swizzle, 8:backlight on, 1:passthru off
 ;
 ' init-dcon to init-panel
+[else]
+: open  ( -- flag )
+   smb-init
+\ Unnecessary because CForth has already done it
+\   dcon-load  dcon-enable  ( maybe-set-cmos )
+   \ dcon-enable leaves mode set to 69 - 40:antialias, 20:swizzle, 8:backlight on, 1:passthru off
+   true
+;
+[then]
 
 : dcon-power-on   ( -- )  1 h# 26 ec-cmd-b!  ;
 : dcon-power-off  ( -- )  0 h# 26 ec-cmd-b!  ;
@@ -273,6 +253,16 @@ d# 905 value resumeline  \ Configurable; should be set from args
    dcon-setup  if  exit  then
    saved-dcon-mode  mode!
    saved-brightness bright!
+;
+
+end-package
+
+stand-init:
+   has-dcon-ram?  0=  if
+      " /dcon" find-device
+      0 0 " no-freeze" property
+      device-end
+   then
 ;
 
 \ LICENSE_BEGIN
