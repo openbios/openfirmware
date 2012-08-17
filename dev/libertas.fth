@@ -1692,12 +1692,18 @@ d# 1600 constant /packet-buf
    outbuf-wait  drop
 ;
 
+\ When changing from antenna diversity to single antenna,
+\ issue ACT_SET_TX before ACT_SET_RX.
 : set-antenna  ( antenna -- )
-   1 ( ACT_SET_RX ) rf-antenna  ( )
+   dup 2 ( ACT_SET_TX ) rf-antenna      ( antenna )
+   1 ( ACT_SET_RX ) rf-antenna          ( )
 ;
 
+\ When changing from single antenna to antenna diversity,
+\ issue ACT_SET_RX before ACT_SET_TX.
 : set-antenna-diversity  ( -- )
    h# ffff 1 ( ACT_SET_RX ) rf-antenna
+   h# ffff 2 ( ACT_SET_TX ) rf-antenna
 ;
 
 : get-antenna  ( -- antenna )
@@ -2197,18 +2203,20 @@ d# 1600 buffer: test-buf
 : .rx-antenna  ( antenna -- )
    6 rshift
    case
-      b# 00  of  ."  0"  endof
-      b# 01  of  ."  1"  endof
-      b# 10  of  ."  d"  endof
+      b# 00  of  ." 0"  endof
+      b# 01  of  ." 1"  endof
+      b# 10  of  ." d"  endof  \ diversity
+      b# 11  of  ." ?"  endof
    endcase
 ;
 
 : .tx-antenna  ( antenna -- )
    6 rshift
    case
-      b# 00  of  ."  0"  endof
-      b# 01  of  ."  1"  endof
-      b# 10  of  ."  r"  endof
+      b# 00  of  ." 0"  endof
+      b# 01  of  ." 1"  endof
+      b# 10  of  ." r"  endof  \ same antenna as receive antenna
+      b# 11  of  ." ?"  endof
    endcase
 ;
 
@@ -2221,8 +2229,8 @@ d# 1600 buffer: test-buf
    get-antenna                          ( base antenna )
    hex
    ."  ant" .antenna                    ( base )
-   ."  rx "  h# 3f bbp-reg@ .rx-antenna
-   ."  tx "  h# 40 bbp-reg@ .tx-antenna
+   ."  rx "  h# 3f bbp-reg@ .rx-antenna ( base )
+   ."  tx "  h# 40 bbp-reg@ .tx-antenna ( base )
    base !
 ;
 
@@ -2236,16 +2244,16 @@ d# 1600 buffer: test-buf
    ." keys: (0,1,2,3,d,a,s,q)" cr
    begin
       d# 100 ms  show-antenna  key?  if
-         cr  show-antenna  key
+         cr  key
          case
-            h# 71 ( q ) of  cr exit  endof
-	    h# 1b       of  cr exit  endof
-            h# 30 ( 0 ) of  ." antenna to 0"  0  set-antenna             endof
-            h# 31 ( 1 ) of  ." antenna to 1"  1  set-antenna             endof
-            h# 32 ( 2 ) of  ." antenna to 2"  2  set-antenna             endof
-            h# 33 ( 3 ) of  ." antenna to 3"  3  set-antenna             endof
-            h# 64 ( d ) of  ." diversity"     cr  set-antenna-diversity  endof
-            h# 61 ( a ) of  ." associate"     cr  close  open drop       endof
+            h# 71 ( q ) of  ." quit"  exit  endof
+            h# 1b       of  exit  endof
+            h# 30 ( 0 ) of  ." antenna to 0 "  0  set-antenna  cr  endof
+            h# 31 ( 1 ) of  ." antenna to 1 "  1  set-antenna  cr  endof
+            h# 32 ( 2 ) of  ." antenna to 2 "  2  set-antenna  cr  endof
+            h# 33 ( 3 ) of  ." antenna to 3 "  3  set-antenna  cr  endof
+            h# 64 ( d ) of  ." diversity "  set-antenna-diversity  cr  endof
+            h# 61 ( a ) of  ." associate "  close  open drop  endof
             h# 73 ( s ) of  ta-scan  endof
          endcase
       then
