@@ -2203,8 +2203,8 @@ d# 1600 buffer: test-buf
 : .rx-antenna  ( antenna -- )
    6 rshift
    case
-      b# 00  of  ." 0"  endof
-      b# 01  of  ." 1"  endof
+      b# 00  of  ." 1"  endof
+      b# 01  of  ." 2"  endof
       b# 10  of  ." d"  endof  \ diversity
       b# 11  of  ." ?"  endof
    endcase
@@ -2213,8 +2213,8 @@ d# 1600 buffer: test-buf
 : .tx-antenna  ( antenna -- )
    6 rshift
    case
-      b# 00  of  ." 0"  endof
-      b# 01  of  ." 1"  endof
+      b# 00  of  ." 1"  endof
+      b# 01  of  ." 2"  endof
       b# 10  of  ." r"  endof  \ same antenna as receive antenna
       b# 11  of  ." ?"  endof
    endcase
