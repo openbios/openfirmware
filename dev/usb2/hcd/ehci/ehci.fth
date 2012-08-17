@@ -3,7 +3,7 @@ purpose: Driver for EHCI USB Controller
 
 " ehci" encode-string " device_type" property
 
-" usb-ehci" +compatible
+" usb-ehci" " compatible" string-property
 
 hex
 headers
