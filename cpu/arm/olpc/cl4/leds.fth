@@ -1,6 +1,11 @@
 \ See license at end of file
 purpose: Driver/selftest for OLPC XO-1.75 LEDs
 
+0 0  " "  " /" begin-package
+   " ols" device-name
+   " olpc,xo-light-sensor" +compatible
+end-package
+
 0 0  " 0"  " /" begin-package
 0 0 reg  \ So test-all will run the test
 
