@@ -1,4 +1,4 @@
-purpose: Driver for external IDT1338 RTC chip on XO-1.75
+purpose: Driver for MMP internal RTC block
 
 0 0  " d4010000"  " /" begin-package
    " rtc" name
