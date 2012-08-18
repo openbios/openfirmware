@@ -294,7 +294,7 @@ hex
 ;
 
 : probe-seti  ( -- found? )
-   h# 66 to camera-smb-slave  ( )
+   h# 33 to camera-smb-slave  ( )
    camera-smb-on              ( )
 
    \ Try to read a byte of the manufacturing ID.  If the read fails,

@@ -4,7 +4,7 @@
 : set-compass-slave  ( -- )
    compass-scl-gpio# to smb-clock-gpio#
    compass-sda-gpio# to smb-data-gpio#
-   h# 1e to smb-slave
+   h# 0f to smb-slave
    smb-data-gpio# gpio-dir-out
 ;
 : smb-init    ( -- )  set-compass-slave  smb-on  smb-pulses  ;
@@ -39,7 +39,7 @@ end-package
 : set-sensor-slave  ( -- )
    4 to smb-clock-gpio#
    5 to smb-data-gpio#
-   h# 18 to smb-slave
+   h# 0c to smb-slave
    smb-data-gpio# gpio-dir-out
 ;
 

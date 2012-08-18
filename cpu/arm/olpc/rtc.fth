@@ -17,7 +17,7 @@ purpose: Driver for external IDT1338 RTC chip on XO-1.75
 : set-address  ( -- )
    rtc-scl-gpio# to smb-clock-gpio#
    rtc-sda-gpio# to smb-data-gpio#
-   h# d0 to smb-slave
+   h# 68 to smb-slave
 ;
 : rtc@  ( reg# -- byte )  set-address  smb-byte@  ;
 : rtc!  ( byte reg# -- )  set-address  smb-byte!  ;

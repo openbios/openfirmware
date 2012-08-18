@@ -37,7 +37,7 @@ my-address my-space h# 200.0010 + encode-phys encode+
 \   4 my-w@  6 invert and  4 my-w!  \ No need to turn it off
 ;
 
-h# 42 value camera-smb-slave
+h# 21 value camera-smb-slave
 : camera-smb-on  ( -- )  ;
 
 : clr-smb-intr  ( -- )  7.0000 30 cl!  ;
@@ -46,7 +46,7 @@ h# 42 value camera-smb-slave
    1 ms				\ 20 usec delay
 ;
 
-: set-slave  ( -- )  camera-smb-slave 2 lshift  87.fc01 or b8 cl!  ;	\ TWSI control 0: id, 8-bit, clk
+: set-slave  ( -- )  camera-smb-slave 2* 2 lshift  87.fc01 or b8 cl!  ;	\ TWSI control 0: id, 8-bit, clk
 
 : ov@  ( reg -- data )
    clr-smb-intr

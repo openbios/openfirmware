@@ -6,12 +6,12 @@
    false
 ;
 
-0 0  " 1a"  " /dcon-i2c" begin-package
+0 0  " 0d"  " /dcon-i2c" begin-package
 
 " dcon" device-name
 " olpc,xo1-dcon" +compatible
 " olpc,xo1.75-dcon" +compatible
-h# 1a 1 reg
+my-space 1 reg
 
 0 0 encode-bytes
 dcon-stat0-gpio# 0 encode-gpio
@@ -57,7 +57,7 @@ dcon-irq-gpio#   0 encode-gpio
    dcon-scl-gpio# to smb-clock-gpio#
    dcon-sda-gpio# to smb-data-gpio#
 
-   h# 1a to smb-slave
+   h# 0d to smb-slave
 ;
 
 : smb-init    ( -- )  set-dcon-slave  smb-on  smb-pulses  ;

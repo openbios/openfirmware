@@ -2,7 +2,7 @@
 purpose: Platform specifics for OLPC Camera on XO-1.5
 
 h# 26 constant dcon-port
-: dcon-setup  ( -- )  dcon-port to smb-port  h# 1a to smb-slave  ;
+: dcon-setup  ( -- )  dcon-port to smb-port  h# 0d to smb-slave  ;
 : smb-init    ( -- )  dcon-setup  smb-on  smb-pulses  ;
 
 : dcon@  ( reg# -- word )  dcon-setup  smb-word@  ;

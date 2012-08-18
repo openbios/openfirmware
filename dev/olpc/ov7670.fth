@@ -148,7 +148,7 @@ purpose: Omnivision OV7670 image sensor driver
 ;
 
 : probe-ov7670  ( -- found? )
-   h# 42 to camera-smb-slave    ( )   \ Omnivision SMB ID
+   h# 21 to camera-smb-slave    ( )   \ Omnivision SMB ID
    camera-smb-on
 
    \ Try to read a byte of the manufacturing ID.  If the read fails,

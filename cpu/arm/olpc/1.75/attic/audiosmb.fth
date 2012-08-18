@@ -72,7 +72,7 @@ h# 3500 constant smb-data-timeout-us
 ;
 
 0 value smb-slave
-: smb-addr  ( lowbit -- )  smb-slave or  smb-byte  ;
+: smb-addr  ( lowbit -- )  smb-slave 2* or  smb-byte  ;
 
 : smb-byte!  ( byte reg# -- )
    smb-start
@@ -115,7 +115,7 @@ h# 3500 constant smb-data-timeout-us
    d# 32 0  do  smb-clk-lo smb-clk-hi  loop
 ;
 
-: set-dcon-slave  ( -- )  h# 1a to smb-slave  ;
+: set-dcon-slave  ( -- )  h# 0d to smb-slave  ;
 : smb-init    ( -- )  set-dcon-slave  smb-on  smb-pulses  ;
 
 : dcon@  ( reg# -- word )  set-dcon-slave  smb-word@  ;
