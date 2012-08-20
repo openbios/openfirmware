@@ -8,6 +8,11 @@ purpose: Secure NAND updater
    push-hex $number pop-base  " Bad number" ?nand-abort
 ;
 
+: get-dhex#  ( -- d )
+   0 safe-parse-word
+   push-hex $dnumber pop-base  " Bad number" ?nand-abort
+;
+
 0 value min-eblock#
 0 value max-eblock#
 
@@ -145,6 +150,13 @@ h# 10 value /pe    \ size of a partition entry
    true to secure-fsupdate?
 ;
 
+0 2value file-bytes
+: size:  ( "bytes" -- )
+   get-dhex#                              ( d.size )
+   file-bytes d<>                         ( invalid? )
+   " Inconsistent size of zdata file" ?nand-abort
+;
+
 : erase-all  ( -- )
    #image-eblocks show-writing
 ;
@@ -259,6 +271,9 @@ previous definitions
    false to secure-fsupdate?           ( file$ )
    r/o open-file                       ( fd error? )
    " Can't open file" ?nand-abort      ( fd )
+   dup file-size                       ( fd [size.d] error? )
+   " Can't size file" ?nand-abort      ( fd size.d )
+   [ also nand-commands ] to file-bytes [ previous ]
 
    linefeed over force-line-delimiter  ( fd )
 
