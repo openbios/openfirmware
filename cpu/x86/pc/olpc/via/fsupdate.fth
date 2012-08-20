@@ -152,6 +152,7 @@ h# 10 value /pe    \ size of a partition entry
 
 0 2value file-bytes
 : size:  ( "bytes" -- )
+   ?compare-spec-line
    get-dhex#                              ( d.size )
    file-bytes d<>                         ( invalid? )
    " Inconsistent size of zdata file" ?nand-abort
@@ -306,6 +307,8 @@ previous definitions
    ['] noop to show-progress               ( adr len )
 
    ['] open-nand  catch  ?dup  if  .error  security-failure  then  ( adr len )
+
+   [ also nand-commands ] dup s>d to file-bytes [ previous ]
 
 \  clear-context  nand-commands
    t-hms(
