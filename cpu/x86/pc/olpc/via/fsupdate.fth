@@ -133,6 +133,7 @@ h# 10 value /pe    \ size of a partition entry
    then                       ( )                ( r: )
 ;
 
+0 2value file-bytes
 : data:  ( "filename" -- )
    safe-parse-word            ( filename$ )
    nb-zd-#sectors  -1 <>  if  ( filename$ )
@@ -146,11 +147,11 @@ h# 10 value /pe    \ size of a partition entry
       drop ." Can't open " image-name$ type cr
       true " " ?nand-abort
    then  to filefd            ( )
+   filefd file-size " Can't size file" ?nand-abort  to file-bytes
    linefeed filefd force-line-delimiter
    true to secure-fsupdate?
 ;
 
-0 2value file-bytes
 : size:  ( "bytes" -- )
    ?compare-spec-line
    get-dhex#                              ( d.size )
@@ -307,8 +308,6 @@ previous definitions
    ['] noop to show-progress               ( adr len )
 
    ['] open-nand  catch  ?dup  if  .error  security-failure  then  ( adr len )
-
-   [ also nand-commands ] dup s>d to file-bytes [ previous ]
 
 \  clear-context  nand-commands
    t-hms(
