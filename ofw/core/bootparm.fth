@@ -56,11 +56,11 @@ copyright: Use is subject to license terms.
 headers
 \needs load-base 0  config-int load-base	\ The default value can be changed later
 
-variable file-size
-: loaded  ( -- adr len )  load-base file-size @  ;
+variable load-size
+: loaded  ( -- adr len )  load-base load-size @  ;
 
 headerless
-: !load-size  ( len -- )  file-size !  ;
+: !load-size  ( len -- )  load-size !  ;
 
 d# 1024 buffer: path-buf
 headers

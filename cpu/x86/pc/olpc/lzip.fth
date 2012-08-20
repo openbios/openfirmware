@@ -21,7 +21,7 @@ external
 : open  ( -- flag )
    0 to seek-ptr                                    ( )
    load-base to base-adr                            ( )
-   file-size @ to image-size                        ( )
+   load-size @ to image-size                        ( )
    my-args  dup  if                                 ( adr len )
       " zip-file-system"  find-package  0=  if      ( adr len ph )
          2drop false exit

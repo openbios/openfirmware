@@ -187,9 +187,9 @@ alias cpoke c!
 alias wpoke w!
 alias lpoke l!
 0 value load-base
-variable file-size
-: loaded load-base file-size @  ;
-: !load-size  file-size !  ;
+variable load-size
+: loaded load-base load-size @  ;
+: !load-size  load-size !  ;
 defer ?inflate-loaded  ' noop is ?inflate-loaded
 alias external noop
 
