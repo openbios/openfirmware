@@ -56,7 +56,7 @@ h# 240 +pmua constant audio-sram-pwr
    h# 100  audio-clk  io-set  dly  \ Disable isolation
 
    4  audio-clk io-set           \ Start audio SRAM redundancy repair
-   begin  4 audio-clk io@  4 and 0=  until  \ And wait until done
+   begin  audio-clk io@  4 and 0=  until  \ And wait until done
 
    \ Bring audio island out of reset
    1 audio-dsa io-set
