@@ -1,6 +1,19 @@
 \ See license at end of file
 purpose: Driver for MMP2 internal RTC
 
+0 0  " d4010000"  " /" begin-package
+   " rtc" name
+   " mrvl,mmp-rtc" +compatible
+   my-address my-space  h# 1000 reg
+
+   d# 1 encode-int  0 encode-int encode+ " interrupts" property
+   " /interrupt-controller/interrupt-controller@154" encode-phandle " interrupt-parent" property
+
+   " rtc 1Hz" encode-string " rtc alarm" encode-string  encode+ " interrupt-names" property
+         
+   " /apbc" encode-phandle 0 encode-int encode+ " clocks" property
+end-package
+
 \ Interrupt 5 combines two interrupt inputs, RTC INT (bit 1) and RTC ALARM (bit 0)
 : int5-mask  ( -- offset )  h# 16c +icu  ;
 : int5-status@  ( -- value )  h# 154 icu@  ;

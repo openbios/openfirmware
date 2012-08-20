@@ -195,13 +195,6 @@ bbu_ICR_IUE bbu_ICR_SCLE or value cr-set   \ bits to maintain as set
   h# d4034000 d# 31   4 true  true     4 make-twsi-node  \ TWSI6
 
 
-0 0  " 1a" " /i2c@d4011000" begin-package  \ TWSI1
-   " audio-codec" name
-   " realtek,alc5631" +compatible
-   " realtek,rt5631" +compatible
-   my-address my-space 1 reg
-end-package
-
 [ifdef] soon-olpc-cl2  \ this breaks cl4-a1 boards, which ofw calls cl2.
 0 0  " 30" " /i2c@d4033000" begin-package  \ TWSI4
    " touchscreen" name
@@ -223,12 +216,6 @@ end-package
 0 0  " 19" " /i2c@d4034000" begin-package  \ TWSI6
    " accelerometer" name
    " lis3lv02d" +compatible
-   my-address my-space 1 reg
-end-package
-
-0 0  " 68" " /i2c@d4031000" begin-package  \ TWSI2
-   " rtc" name
-   " idt,idt1338-rtc" +compatible
    my-address my-space 1 reg
 end-package
 

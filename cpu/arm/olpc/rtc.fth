@@ -1,17 +1,9 @@
-purpose: Driver for MMP internal RTC block
+purpose: Driver for external IDT1388 RTC chip on XO-1.75
 
-0 0  " d4010000"  " /" begin-package
+0 0  " 68" " /i2c@d4031000" begin-package  \ TWSI2
    " rtc" name
-   " mrvl,mmp-rtc" +compatible
-   my-address my-space  h# 1000 reg
-
-   d# 1 encode-int  0 encode-int encode+ " interrupts" property
-   " /interrupt-controller/interrupt-controller@154" encode-phandle " interrupt-parent" property
-
-   " rtc 1Hz" encode-string " rtc alarm" encode-string  encode+ " interrupt-names" property
-
-         
-   " /apbc" encode-phandle 0 encode-int encode+ " clocks" property
+   " idt,idt1338-rtc" +compatible
+   my-address my-space 1 reg
 
 [ifdef] cl2-a1
 : set-address  ( -- )
@@ -26,8 +18,6 @@ purpose: Driver for MMP internal RTC block
 : rtc@  ( reg# -- byte )  set-address  twsi-b@  ;
 : rtc!  ( byte reg# -- )  set-address  twsi-b!  ;
 [then]
-
-headerless
 
 headerless
 
