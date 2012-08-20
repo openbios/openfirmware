@@ -92,10 +92,16 @@ headers
 \ hardware has a bug that blocks the card detection status bits
 \ unless the interrupt enables are on.
 0 instance value intstat-count
+: xfer-int-on  ( -- )  h# 34 cw@  2 or  h# 34 cw!  ;
+: xfer-int-off ( -- )  h# 34 cw@  2 invert and  h# 34 cw!  ;
+
 : intstat-on  ( -- )
    intstat-count 0=  if
-      h# 00cb h# 34 cw!  \ normal interrupt status en reg
-      \ Enable: Remove, Insert, DMA Interrupt, Transfer Complete, CMD Complete
+      \ Enable: Remove, Insert, DMA Interrupt, CMD Complete
+      \ Transfer complete is handled separately because some host controllers
+      \ (e.g. Marvell MMP3) set it spuriously during commands that shouldn't set it.
+      h# 00c9 h# 34 cw!  \ normal interrupt status en reg
+
       \ Disable: Card Interrupt, Read Ready, Write Ready, Block Gap
       h# f1ff h# 36 cw!  \ error interrupt status en reg
    then
@@ -218,6 +224,7 @@ defer card-power-off
    true  " dma-map-in" $call-parent  ( padr )        \ Prepare DMA buffer
    dup to dma-padr                   ( padr )        \ Remember for later
    0 cl!                                             \ Set address
+   xfer-int-on
 ;
 
 : dma-setup  ( #blocks adr -- )
@@ -374,6 +381,10 @@ defer card-power-off
 
 : cmd  ( arg cmd mode -- )
    debug?  if  ." CMD: " over 4 u.r space   then
+
+   \ R1B-class commands have an implied data transfer phase
+   over h# ff and  h# 1b  =  if  xfer-int-on  then
+
    over add-cmd
    wait-ready
    h# c cw!              ( arg cmd )  \ Mode
@@ -451,6 +462,7 @@ headers
 : mmc-switch  ( arg -- )    \ CMD6 for MMC - no data
    h# 061b 0 cmd  response  h# 80 and  if  ." MMC SWITCH_ERROR" cr  then
    2 wait  \ This command appears to have a transfer-complete
+   xfer-int-off
 ;
 
 : deselect-card  ( -- )   0   h# 0700 0 cmd  ;  \ CMD7 - with null RCA
@@ -461,6 +473,7 @@ headers
    \ commands, so we must clear that bit if it is set.
    d# 16 ms   \ Give the operation time to complete
    isr@ isr!
+   xfer-int-off
 ;
 
 : send-if-cond  ( -- )  h# 1aa h# 081a 0 cmd  ( response h# 1aa <>  if  ." Error"  then )   ;  \ CMD8 R7 (SD)
@@ -1063,12 +1076,9 @@ external
    then      
 ;
 
-: wait-dat  ( -- )  d# 10 ms  begin  2 ms present-state@  4 and  0= until  ;
-
 \ Wait for completion
 : r/w-blocks-end  ( in? -- error? )
    drop
-   wait-dat
    wait-dma-done
    intstat-on  wait-write-done  intstat-off
 ;
@@ -1080,11 +1090,18 @@ external
 
 : r/w-blocks-start  ( addr block# #blocks in? fresh? -- error? )
    wait-dma-done    ( addr block# #blocks fresh? in? )
+
+   \ wait-write-done used to be after dma-setup in an attempt to overlap
+   \ work with waiting time, but that doesn't work now that dma-setup
+   \ enables transfer interrupts, which can happen spuriously during
+   \ wait-write-done on some host controllers.
+   wait-write-done  if  3drop  2drop true exit  then  ( addr block# #blocks fresh? in? )
+
    2 pick 0=  if  3drop 2drop  false  exit   then  \ Prevents hangs
    intstat-on       ( addr block# #blocks fresh? in? )
    2 pick >r >r >r  ( addr block# #blocks r: #blocks fresh? in? )
    rot dma-setup    ( block#              r: #blocks fresh? in? )
-   wait-write-done  if  drop  r> r> r> 3drop true exit  then  ( block# )
+
    address-shift lshift  r>  if         ( block# r: #blocks fresh? )
       r> drop                           ( block# r: #blocks )
       r> issue-read                     ( )
@@ -1097,8 +1114,6 @@ external
    false                                ( error? )
 ;
 : fresh-write-blocks-start  ( addr block# #blocks -- error? )
-   intstat-on
-   wait-dat
    false true r/w-blocks-start
 ;
 
