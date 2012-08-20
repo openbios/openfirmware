@@ -313,7 +313,7 @@ d# 32 is playback-volume
 fload ${BP}/cpu/arm/olpc/sound.fth
 fload ${BP}/cpu/arm/olpc/rtc.fth
 stand-init: RTC
-   " /rtc" open-dev  clock-node !
+   " /i2c@d4031000/rtc" open-dev  clock-node !
 ;
 
 warning @ warning off
