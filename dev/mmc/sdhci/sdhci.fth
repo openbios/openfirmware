@@ -974,6 +974,7 @@ external
          \ ." Trying to reset data lines" cr
          card-clock-off
          card-power-off
+         intstat-off
          d# 500 ms
          setup-host
 
