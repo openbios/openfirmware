@@ -94,6 +94,12 @@ defer ofw-tag, ' noop to ofw-tag,  \ Define externally if appropriate
 true value use-fdt?
 : use-fdt  ( -- )  true to use-fdt?  ;
 
+: make-usable-property  ( -- )
+   " /memory" find-device
+   0 encode-int  linux-memtop encode-int encode+  " linux,usable-memory" property
+   device-end
+;
+
 h# 10000 constant /fdt-max
 : linux-fixup  ( -- )
 [ifdef] linux-logo  linux-logo  [then]
@@ -107,6 +113,7 @@ h# 10000 constant /fdt-max
    arm-linux-machine-type to r1
 [ifdef] flatten-device-tree
    use-fdt?  if
+      make-usable-property
       ramdisk-adr ?dup 0=  if  load-base  then  /fdt-max -  to linux-params
       linux-params /fdt-max flatten-device-tree
    else
