@@ -38,7 +38,7 @@ h# 0c00.0000 constant def-load-base
 
 \ The heap starts at RAMtop, which on this system is "fw-mem-pa /fw-mem +"
 
-h#  10.0000 constant heap-size
+h#  0c.0000 constant heap-size
 heap-size constant initial-heap-size
 
 \ RAM address where the Security Processor code places the subset of the dropin module
