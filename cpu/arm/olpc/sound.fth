@@ -1,10 +1,58 @@
-[ifdef] olpc-cl4
-0 0  " c0ffd800"  " /" begin-package
-[else]
-0 0  " d42a0800"  " /" begin-package
-[then]
+0 0  " 1a" " /i2c@d4011000" begin-package  \ TWSI1
+   " audio-codec" name
+   " realtek,alc5631" +compatible
+   " realtek,rt5631" +compatible
+   my-address my-space 1 reg
+   " rt5631-hifi" " dai-name" string-property  \ snd_soc_dai_link.codec_dai_name
+end-package
+
+: +audio  ( offset -- address )
+   [ifdef] mmp3  h# c0ffd000  [else]  h# d42a0000  [then]  +
+;
+
+dev /
+new-device
+   " adma" device-name
+   h# 800 +audio  h# 100 reg
+   d# 47 " interrupts" integer-property
+   current-device  ( adma0-ph )
+finish-device
+
+new-device
+   " adma" device-name
+   h# 900 +audio  h# 100 reg
+   d# 48 " interrupts" integer-property
+   current-device  ( adma0-ph adma1-ph )
+finish-device
+
+new-device
+   " asram" device-name
+   audio-sram-pa /audio-sram reg
+
+   \ We call this the platform driver, a single point that collects
+   \ the Audio DMA resources
+   " mrvl,mmp-pcm-audio" +compatible   \ snd_soc_dai_link.cpu_dai_of_node
+
+   ( adma0-ph adma1-ph )
+   encode-int rot encode-int encode+  " adma-nodes" property
+finish-device
+
+new-device
+   " sspa" name
+   h# d00 +audio  h# 100 reg
+
+   " mrvl,mmp-sspa-dai" +compatible
+
+   " /pmua" encode-phandle d# 20 encode-int encode+ " clocks" property
+   d# 3 " interrupts" integer-property
+finish-device
+
+new-device
+
 " audio" name
-my-space h# 800 reg
+h# c00 +audio  h# 100 reg
+
+" mrvl,mmp-sspa-dai" +compatible
 
 " /pmua" encode-phandle d# 20 encode-int encode+ " clocks" property
 d# 2 " interrupts" integer-property
@@ -606,14 +654,15 @@ h# 20000 constant tlen
 : (close)
 \ Reinstate audio-clock-off when Linux turns on its own clock
 \   audio-clock-off
-   adma-base h# 800 " map-out" $call-parent
+   adma-base h# 100 " map-out" $call-parent
+   sspa-base h# 100 " map-out" $call-parent
    0 to adma-base  0 to sspa-base
 ;
 0 value open-count
 : open  ( -- flag )
    open-count 0=  if
-      my-space h# 800 " map-in" $call-parent to adma-base
-      adma-base h# 400 + to sspa-base
+      my-unit h# 400 -  h# 100 " map-in" $call-parent to adma-base
+      my-unit           h# 100 " map-in" $call-parent to sspa-base
       audio-clock-on  if  (close) false exit  then
       init-codec
    then
@@ -660,7 +709,9 @@ warning @ warning off
 fload ${BP}/dev/hdaudio/test.fth
 warning !
 
-end-package
+finish-device
+
+device-end
 
 : (watch-dc)  ( bias? -- )
    " /audio" open-dev >r          ( bias? r: ihandle )
@@ -670,6 +721,32 @@ end-package
 : watch-dc-biased  ( -- )  true  (watch-dc)  ;
 : watch-dc-unbiased  ( -- )  false  (watch-dc)  ;
 
+
+0 0 " "  " /"  begin-package
+   " audio-complex" device-name
+   " olpc,mmp-audio" +compatible
+
+   \ The name that was hardcoded in the Linux driver was OLPC XO-1.75
+   " OLPC XO" " model" string-property
+
+   : +string  encode-string encode+  ;
+
+   0 0 encode-bytes
+      " Headphone Jack" +string " HPOL"     +string
+      " Headphone Jack" +string " HPOR"     +string
+      " MIC2"           +string " Mic Jack" +string
+   " audio-routing" property
+
+   " /audio-codec"  encode-phandle  " codec-node"    property
+   " /audio"        encode-phandle  " cpu-dai-node"  property
+   " /asram"        encode-phandle  " platform-node" property
+
+   \ SND_SOC_DAIFTM_xxx:
+   \ 4000 is ..CBS_CFS - the codec is the slave for clk and FRM
+   \ 0100 is ..NB_NF   - non-inverted BCLK and FRM
+   \ 0001 is ..I2S     - standard I2S bit positions
+   h# 4101  " dai-format" encode-int
+end-package
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks
