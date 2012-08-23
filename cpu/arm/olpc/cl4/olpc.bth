@@ -148,8 +148,8 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
    " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
 
-   " nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
-   " nandblaster_tx.bin"   " nb_tx"    $add-deflated-dropin
+\   " nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
+\   " nandblaster_tx.bin"   " nb_tx"    $add-deflated-dropin
 
    " ec.img"                                    " ecimage.bin"   $add-deflated-dropin
    " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
