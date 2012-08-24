@@ -354,7 +354,11 @@ stand-init: More memory
    extra-mem-va /extra-mem add-memory
 ;
 
+[ifdef] mmp3
+fload ${BP}/cpu/arm/mmp3/thermal.fth
+[else]
 fload ${BP}/cpu/arm/mmp2/thermal.fth
+[then]
 fload ${BP}/cpu/arm/mmp2/fuse.fth
 [ifdef] bsl-uart-base
 fload ${BP}/cpu/arm/olpc/bsl.fth
