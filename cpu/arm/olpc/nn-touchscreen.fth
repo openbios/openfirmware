@@ -8,7 +8,9 @@ my-space encode-int  my-address encode-int encode+  " reg" property
 : targets?  ( -- flag )  final-test?  ;
 : .tsmsg  ( -- )  0 d# 27 at-xy  ." Touchscreen test.  Type a key to exit" cr  ;
 
+[ifndef] set-geometry
 fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
+[then]
 
 [ifndef] 2u.x
 : 2u.x  base @ >r hex  0 <# # # #> type  r> base !  ;
@@ -25,6 +27,9 @@ d# 250 constant /pbuf
 0 value pbuf
 0 value plen
 0 value configure?
+
+: pbuf-alloc  /pbuf alloc-mem to pbuf  ;
+: pbuf-free  pbuf /pbuf free-mem  ;
 
 : in?  ( -- got-data? )
    no-data?  if  false exit  then
@@ -80,21 +85,30 @@ d# 250 constant /pbuf
 ;
 
 : open  ( -- okay? )
-   /pbuf alloc-mem to pbuf
+   pbuf-alloc
    my-unit set-twsi-target
    set-gpios
    no-data?  if
       reset
-      no-data?  if  pbuf /pbuf free-mem  false exit  then
+      no-data?  if
+	 ." no response to reset" cr
+	 pbuf-free  false  exit
+      then
    then
-   read-boot-complete
-   ['] configure  catch  if  pbuf /pbuf free-mem  false exit  then
+   ['] read-boot-complete  catch  if
+      ." no response on bus" cr
+      pbuf-free  false  exit
+   then
+   ['] configure  catch  if
+      ." failed to configure" cr
+      pbuf-free  false  exit
+   then
    true
 ;
 
 : close
    deactivate
-   pbuf /pbuf free-mem
+   pbuf-free
 ;
 
 : stream-poll?  ( -- false | x y buttons true )
