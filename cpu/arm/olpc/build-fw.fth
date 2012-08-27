@@ -170,14 +170,11 @@ fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
 
 fload ${BP}/dev/olpc/kb3700/eccmds.fth
-: stand-power-off  ( -- )  ec-power-off  begin wfi again  ;
+: dcon-off  " dcon-off" $call-dcon  ;
+: stand-power-off  ( -- )  dcon-off ec-power-off  begin wfi again  ;
 ' stand-power-off to power-off
 
-: olpc-reset-all  ( -- )
-   " dcon-off" $call-dcon
-   ec-power-cycle
-   begin  wfi  again
-;
+: olpc-reset-all  ( -- )  dcon-off ec-power-cycle  begin wfi again  ;
 ' olpc-reset-all to reset-all
 stand-init:
    ['] reset-all to bye
