@@ -1,8 +1,14 @@
 " "  " d420a000" " /"  begin-package
    " camera" device-name
+   " marvell,mmpcam" +compatible
    my-address my-space  h# 800  reg
    " /pmua" encode-phandle 2 encode-int encode+ " clocks" property
    d# 42 " interrupts" integer-property
+
+   0 0 encode-bytes
+      cam-pwr-gpio# 0 encode-gpio
+      cam-rst-gpio# 0 encode-gpio
+   " gpios" property
 
 0 [if]
    : alloc-capture-buffer  ( len -- vadr padr )
