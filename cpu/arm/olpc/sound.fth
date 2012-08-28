@@ -10,18 +10,36 @@ end-package
    [ifdef] mmp3  h# c0ffd000  [else]  h# d42a0000  [then]  +
 ;
 
+\ "mav" stands for M(DMA), A(DMA), V(DMA), distinct from
+\ the 16 "peripheral" PDMA channels.
+\ The number space for mmp-mav-dma-channels is as follows:
+\  0: MDMA0
+\  1: MDMA1
+\  2: ADMA1_CH0 (out)
+\  3: ADMA1_CH1 (in)
+\  4: ADMA2_CH0 (out)
+\  5: ADMA2_CH1 (in)
+\  6: VDMA1_CH0
+\  7: VDMA1_CH1
+\ That's consistent with the enumeration mmp_tdma_type in
+\ Linux:arch/arm/mach-mmp/include/mach/mmp_dma.h
+\ and also reflects the bit numbering (+16) in the various
+\ DMA IRQ status and mask registers, e.g. ICU_DMA_IRQ1_STATUS
+
 dev /
 new-device
    " adma" device-name
    h# 800 +audio  h# 100 reg
-   d# 47 " interrupts" integer-property
+   3 encode-int 2 encode-int encode+ " mmp-mav-dma-channels" property
+   " marvell,mmp-audio-dma" +compatible
    current-device  ( adma0-ph )
 finish-device
 
 new-device
    " adma" device-name
    h# 900 +audio  h# 100 reg
-   d# 48 " interrupts" integer-property
+   5 encode-int 4 encode-int encode+ " mmp-mav-dma-channels" property
+   " marvell,mmp-audio-dma" +compatible
    current-device  ( adma0-ph adma1-ph )
 finish-device
 
@@ -31,7 +49,7 @@ new-device
 
    \ We call this the platform driver, a single point that collects
    \ the Audio DMA resources
-   " mrvl,mmp-pcm-audio" +compatible   \ snd_soc_dai_link.cpu_dai_of_node
+   " marvell,mmp-pcm-audio" +compatible   \ snd_soc_dai_link.cpu_dai_of_node
 
    ( adma0-ph adma1-ph )
    encode-int rot encode-int encode+  " adma-nodes" property
@@ -41,7 +59,7 @@ new-device
    " sspa" name
    h# d00 +audio  h# 100 reg
 
-   " mrvl,mmp-sspa-dai" +compatible
+   " marvell,mmp-sspa-dai" +compatible
 
    " /pmua" encode-phandle d# 20 encode-int encode+ " clocks" property
    d# 3 " interrupts" integer-property
@@ -52,7 +70,7 @@ new-device
 " audio" name
 h# c00 +audio  h# 100 reg
 
-" mrvl,mmp-sspa-dai" +compatible
+" marvell,mmp-sspa-dai" +compatible
 
 " /pmua" encode-phandle d# 20 encode-int encode+ " clocks" property
 d# 2 " interrupts" integer-property
