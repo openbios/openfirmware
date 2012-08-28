@@ -1,6 +1,6 @@
 \ The overall firmware revision
 macro: FW_MAJOR C
-macro: FW_MINOR 08
+macro: FW_MINOR 09
 
 \ Create a 2-character build/fw-suffix file to personalize your test builds
 " fw-suffix" $file-exists?  [if]
