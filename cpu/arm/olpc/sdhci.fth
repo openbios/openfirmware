@@ -87,6 +87,7 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
 [then]
 
       fload ${BP}/dev/mmc/sdhci/slot.fth
+      : write-protected?  false  ;
       new-device
          fload ${BP}/dev/mmc/sdhci/sdmmc.fth
          fload ${BP}/dev/mmc/sdhci/selftest.fth
