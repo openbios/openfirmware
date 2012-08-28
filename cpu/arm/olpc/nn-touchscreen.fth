@@ -17,7 +17,7 @@ fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
 [then]
 
 : set-gpios
-[ifndef] mmp3
+[ifdef] mmp2
    0 1e2bc io!@ \ TWSI4_SCL to GPIO[169]
    0 1e2c0 io!@ \ TWSI4_SDA to GPIO[170]
 [then]
