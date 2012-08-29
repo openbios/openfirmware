@@ -861,6 +861,7 @@ dev /client-services  patch noop visible enter  dend
    report-disk
    report-keyboard
 [then]
+[ifdef] probe-image-sensor  probe-image-sensor  [then]
    " probe+" do-drop-in
 
    interpreter-init
