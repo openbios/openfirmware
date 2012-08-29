@@ -47,12 +47,6 @@ d# 510 w, \ 1111
    swap h# f and wa+ w@
 ;
 
-h# 03.b000 value tsense
-
-: +ts  ( offset -- io-offset )  tsense swap la+  ;
-: ts@  ( offset -- l )  +ts io@  ;
-: ts!  ( l offset -- )  +ts io!  ;
-
 : ts-clock  ( offset -- )
    7 over apbc!  3 swap apbc!   ( n )
 ;
@@ -64,8 +58,32 @@ h# 03.b000 value tsense
    h# a0 ts-clock
 ;
 
-: ts-start  ( n -- )
-   dup ts@  h# 4000.0000 or  swap ts!
+h# 03.b000 value tsense  \ p2021
+
+: +ts  ( offset -- io-offset )  tsense swap la+  ;
+: ts@  ( offset -- l )  +ts io@  ;
+: ts!  ( l offset -- )  +ts io!  ;
+
+\ last system reset was caused by thermal sensor?
+\ : tsr?  ( -- flag )  h# 0028 mpmu@  h# 10  and  ;  \ p282
+\ : tsr?  ( -- flag )  h# 1028 mpmu@  h# 10  and  ;  \ p311
+
+\ last thermal sensor watchdog reset was caused by THSENS1 unit?
+\ (polarity differs from documentation)
+\ : thsens1?  ( -- flag )  h# 00a4 mpmu@  h# 10  and  ;  \ p345
+
+\ thsens1 is requesting interrupt service?  (true if auto run enabled)
+\ : thsens1-int?  ( -- flag )  h# 00a4 mpmu@  h#  1  and  ;  \ p346
+
+\ thermal sensor interrupt is masked?  (normally true)
+\ : thsens1-int-masked?  h# 180 icu@  800 and  ;  \ p700
+\ : thsens1-int-status?  h# 188 icu@  800 and  ;  \ p702
+
+\ thermal sensor watchdog to system reset enable  (normally already set)
+\ : wdtr?  h# 200 mpmu@ 1 7 lshift and 0=  ;  \ p302
+
+: ts-auto-read  ( n -- )  \ undocumented
+   dup ts@  h# 20.0000 or  swap ts!
 ;
 
 : ts-wait  ( n -- )
@@ -80,8 +98,7 @@ h# 03.b000 value tsense
 
 : ts-read  ( n -- gc )
    dup ts-wait          ( n )
-   dup ts@              ( n gc )
-   swap ts-start        ( gc )
+   ts@                  ( gc )
 ;
 
 : ts-range-low  ( n -- )
@@ -92,33 +109,28 @@ h# 03.b000 value tsense
    dup ts@  h# 0800.0000 invert and  swap ts!
 ;
 
+: ts-watchdog-enable  ( n -- )
+   dup ts@  h# 0400.0300 or  swap ts!  \ 85-87.5C
+;
+
 : init-thermal-sensor  ( -- )
    ts-clocks
-   3 0 do  i ts-range-low  i ts-start  loop
+   0 ts-range-high
+   0 ts-watchdog-enable
+   1 ts-range-low
+   2 ts-range-low
+   3 0 do  i ts-auto-read  loop
 ;
 
-\ switch the sensors out of low range - does not work
-[ifdef] notyet
-: hot
-   ts-clocks
-   3 0 do  i ts-range-high  i ts-start  loop
-;
-[then]
-
-\ read and average the three sensors
+\ read and average the two sensors on lowrange duty
 : cpu-temperature  ( -- celcius )
-   0 ts-read  gc>c
    1 ts-read  gc>c
    2 ts-read  gc>c
-   + + d# 30 /
+   + d# 20 /
 ;
 
 : ?thermal  ( -- )
-   cpu-temperature d# 70 > abort " CPU too hot"
-   \ FIXME: choose an appropriate limit, because
-   \ - the sample unit easily reaches 61C,
-   \ - using the low range we can't see greater than 61C, and
-   \ - the high range doesn't actually work.
+   0 ts-read  gc>c  d# 850 > abort " CPU too hot"
 ;
 
 : .c.c  ( n -- )  0 <# # [char] . hold #s #> type ." C " ;
@@ -129,9 +141,9 @@ h# 03.b000 value tsense
    push-decimal
    time&date >unix-seconds .
    ." sensors: "
-   0 ts@  gc>c  .c.c  \ innermost?
-   1 ts@  gc>c  .c.c
-   2 ts@  gc>c  .c.c  \ outermost?
+   0 ts@  dup h# f and 0=  if  drop ." <80C "  else  gc>c  .c.c  then
+   1 ts@  gc>c  .c.c  \ FIXME: show <n and >n too here
+   2 ts@  gc>c  .c.c
    ." cpu: "  cpu-temperature  .c
    ." battery: "  bat-temp  .c
    pop-base
@@ -142,6 +154,74 @@ h# 03.b000 value tsense
       .thermal cr d# 1000 ms key?
    until key drop cr
 ;
+
+\ .thermal 0 ts@ f and . d# 1000 ms cr many
+
+string-array tsense-regx-bits
+   ," 31=reserved"
+   ," 30=start"
+   ," 29=status"
+   ," 28=over_int"
+   ," 27=lowrange"
+   ," 26=en_wdog"
+   ," 25=temp_int"
+   ," 24=en_over_int"
+   ," 23=en_temp_int"
+   ," 22=reserved"
+   ," 21=auto_read_en"
+end-string-array
+
+: .tc  ( n -- )
+   dup .
+   push-decimal
+   gc>c .c.c
+   pop-base
+;
+
+: .tsense  ( n -- )
+   dup . cr 4 spaces
+   d# 11 0 do
+      dup i lshift h# 8000.0000 and if
+         i tsense-regx-bits count type space
+      then
+   loop cr
+   \ dup d# 12 rshift h# 7ff and dup if 4 spaces ." reserved=" . cr else drop then
+   4 spaces dup 8 rshift h# f and ." wdog_tshld=" .tc cr
+   4 spaces dup 4 rshift h# f and ." int_tshld=" .tc cr
+   4 spaces dup          h# f and ." temp_value=" .tc cr
+   drop
+;
+
+: .ts
+   0 ts@ ." tsense_reg[0]=" .tsense
+   1 ts@ ." tsense_reg[1]=" .tsense
+   2 ts@ ." tsense_reg[2]=" .tsense
+;
+
+: test-thermal
+   ." press against heat spreader and press a key once temperature is low"
+   watch-thermal
+   h# 200 mpmu@ 1 7 lshift and 0=  if
+      ." THRSENS_WDTR_EN was not set" cr
+      h# 200 mpmu@ 1 7 lshift or h# 200 mpmu!
+   then
+   0 ts@
+   1 d# 27 lshift or  \ set the lowrange bit
+   h# 0020.0000 or    \ set the autorun bit (undocumented)
+   h# 0400.0000 or    \ set the watchdog enable bit
+   h# b h# f and d# 8 lshift or       \ set the watchdog temperature (58-60.5C)
+   b# 0101.1111.1010.0000.0000.1111.1111.0000
+   and \ always write zero to reserved bits
+   0 ts!
+   ." thermal watchdog enabled" cr
+   watch-thermal
+;
+
+: force-thermal-watchdog
+   h# 200 mpmu@ 1 7 lshift or h# 200 mpmu! \ thrsens_wdtr_en
+   h# 0c20.0000 h# 03.b000 io! \ lowrange, en_wdog, auto_read_en, wdog_tshld 26C
+;
+
 
 [ifdef] notyet \ FIXME
 : test-thermal
