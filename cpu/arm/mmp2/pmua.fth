@@ -121,42 +121,76 @@ h# 210 +int  h#    1b +int  h#   1b +int  d#           0 +int  \ 32 FASTENET
 [then]
 " clock-enable-registers" property
 
-[ifdef] notdef
-   " clock-enable-registers" get-property  if  ( on? clock# )
-      2drop exit          ( -- )
-   then                   ( on? clock# propval$ )
-
-   \ Offset into clock-enable-registers array
-   rot  h# 10 *           ( on? propval$ offset )
-   2dup  <=  if           ( on? propval$ offset )
-      4drop exit          ( -- )
-   then                   ( on? propval-adr$ offset )
-   /string                ( on? propval-adr$' )
-   
-   \ Get register offset
-   decode-int >r          ( on? propval-adr$'           r: reg-offset )
-
-   \ Apply the clear mask to the register value
-   decode-int invert      ( on? propval-adr$' clr-mask  r: reg-offset )
-   r@ pmua@ and           ( on? propval-adr$' regval    r: reg-offset )
-   -rot                   ( on? regval propval-adr$     r: reg-offset )
-
-   \ Apply the set mask if the clock is being turned on
-   3 roll  if             ( regval propval-adr$         r: reg-offset )
-      get-encoded-int or  ( regval'                     r: reg-offset )
-   else                   ( regval propval-adr$         r: reg-offset )
-      2drop               ( regval                      r: reg-offset )
-   then                   ( regval                      r: reg-offset )
-
-   \ Write back the modified register value
-   r> pmua!               ( )
-[then]
-
 : generic-on/off  ( on? clock# -- )
    get-reg&masks  if  drop exit  then  ( on? set-mask clr-mask reg )
    >r  r@ pmua@  and                   ( on? set-mask regval   r: reg )
    rot  if  or  else  nip  then        ( regval'  r: reg )
    r> pmua!
+;
+
+h# 10c constant audio-clk
+
+[ifdef] mmp3
+h# 164 constant audio-dsa
+h# 1e4 constant isld-dspa-ctrl
+h# 240 constant audio-sram-pwr
+[then]
+
+\ Discrepancies - ms vs us, double-enabling of AXI
+: dly  d# 10 us  ;
+
+: audio-island-on  ( -- )
+[ifdef] mmp3
+   h# 200  audio-clk  pmua-set  dly  \ Power switch on
+   h# 400  audio-clk  pmua-set  dly  \ Power switch more on
+   1  audio-sram-pwr  pmua-set  dly  \ Audio SRAM on
+   2  audio-sram-pwr  pmua-set  dly  \ Audio SRAM more on
+   4  audio-sram-pwr  pmua-set  dly  \ Audio core on
+   8  audio-sram-pwr  pmua-set  dly  \ Audio core more on
+   h# 100  audio-clk  pmua-set  dly  \ Disable isolation
+
+   4  audio-clk pmua-set           \ Start audio SRAM redundancy repair
+   begin  audio-clk pmua@  4 and 0=  until  \ And wait until done
+
+   \ Bring audio island out of reset
+   1 audio-dsa pmua-set
+   4 audio-dsa pmua-set
+   1 audio-dsa pmua-set
+
+   \ Enable dummy clocks to the SRAMs
+   h# 10 isld-dspa-ctrl pmua-set  d# 250 us  h# 10 isld-dspa-ctrl pmua-clr
+
+   \ Enable the AXI/APB clocks to the Audio island prior to programming island registers
+   2 audio-dsa pmua-set
+   8 audio-dsa pmua-set
+[else]
+   h# 600  audio-clk  pmua!  dly  \ Turn on power
+   h# 610  audio-clk  pmua!  dly  \ Enable clock
+   h# 710  audio-clk  pmua!  dly  \ Disable isolation
+   h# 712  audio-clk  pmua!  dly  \ Release reset
+[then]
+;
+
+: audio-island-off  ( -- )
+[ifdef] true
+[ifdef] mmp3
+   h#   a  audio-dsa       pmua-clr  \ Disable AXI and APB clocks
+   h#   5  audio-dsa       pmua-clr  \ Put AXI and APB clocks in reset
+   h# 100  audio-clk       pmua-clr  \ Enable isolation
+   h#   c  audio-sram-pwr  pmua-clr  \ Audio core off
+   h#   3  audio-sram-pwr  pmua-clr  \ Audio SRAM off
+   h# 600  audio-clk       pmua-clr  \ Enable isolation
+[else]
+   h# 710  audio-clk  pmua!  \ Set peripheral reset
+   h# 610  audio-clk  pmua!  \ Enable isolation
+   h# 600  audio-clk  pmua!  \ Disable clock
+   h# 000  audio-clk  pmua!  \ Turn off power
+[then]
+[then]
+   0 audio-clk pmua!
+;
+: audio-on/off  ( on? -- )
+   if  audio-island-on  else  audio-island-off  then
 ;
 
 [ifdef] mmp3
@@ -230,6 +264,10 @@ h# 210 +int  h#    1b +int  h#   1b +int  d#           0 +int  \ 32 FASTENET
    dup 2  =  if     \ CCIC         ( on? clock# )
       drop  ccic-on/off  exit      ( -- )
    then                            ( on? clock# )
+
+   dup d# 20 =  if   \ AUDIO       ( on? clock# )
+      drop  audio-on/off  exit     ( -- )
+   then
 
    generic-on/off
 ;

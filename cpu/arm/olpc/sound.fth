@@ -82,17 +82,9 @@ d# 2 " interrupts" integer-property
 : adma!  ( n offset -- )  adma-base + rl!  ;
 : adma@  ( offset -- n )  adma-base + rl@  ;
 
-h# 10c +pmua constant audio-clk
-[ifdef] mmp3
-h# 164 +pmua constant audio-dsa
-h# 1e4 +pmua constant isld-dspa-ctrl
-h# 240 +pmua constant audio-sram-pwr
-[then]
-
-: audio-clock!     ( -- )  audio-clk io!  ;
 : audio-clock-off  ( -- )
    0 h# 38 sspa!
-   0 audio-clock!
+   my-clock-off
 ;
 : start-audio-pll  ( -- error? )
    \ For VCXO=26 MHz, OCLK=12.2880 MHz
@@ -110,42 +102,9 @@ h# 240 +pmua constant audio-sram-pwr
 
 : dly  d# 10 us  ;
 
-\ Discrepancies - ms vs us, double-enabling of AXI
-: audio-island-on  ( -- )
-[ifdef] mmp3
-   h# 200  audio-clk  io-set  dly  \ Power switch on
-   h# 400  audio-clk  io-set  dly  \ Power switch more on
-   1  audio-sram-pwr  io-set  dly  \ Audio SRAM on
-   2  audio-sram-pwr  io-set  dly  \ Audio SRAM more on
-   4  audio-sram-pwr  io-set  dly  \ Audio core on
-   8  audio-sram-pwr  io-set  dly  \ Audio core more on
-   h# 100  audio-clk  io-set  dly  \ Disable isolation
-
-   4  audio-clk io-set           \ Start audio SRAM redundancy repair
-   begin  audio-clk io@  4 and 0=  until  \ And wait until done
-
-   \ Bring audio island out of reset
-   1 audio-dsa io-set
-   4 audio-dsa io-set
-   1 audio-dsa io-set
-
-   \ Enable dummy clocks to the SRAMs
-   h# 10 isld-dspa-ctrl io-set  d# 250 us  h# 10 isld-dspa-ctrl io-clr
-
-   \ Enable the AXI/APB clocks to the Audio island prior to programming island registers
-   2 audio-dsa io-set
-   8 audio-dsa io-set
-[else]
-   h# 600 audio-clock!  dly  \ Enable
-   h# 610 audio-clock!  dly  \ Release reset
-   h# 710 audio-clock!  dly  \ Enable
-   h# 712 audio-clock!  dly  \ Release reset
-[then]
-;
-
 false value use-audio-pll?
 : audio-clock-on  ( -- error? )
-   audio-island-on
+   my-clock-on
 
    use-audio-pll?  if
       start-audio-pll  if  true exit  then
