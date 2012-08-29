@@ -96,6 +96,7 @@ purpose: Change the clock frequency
       0  of  d# 400,000,000 pj4-clkdiv 1+ /            endof  ( hz )
       1  of  d# 800,000,000                            endof  ( hz )
       2  of  d#  26,000,000 pll2-fbdiv pll2-refdiv */  endof  ( hz )
+      3  of  d# 1,067,000,000                          endof  ( hz )
    endcase
    d# 1,000,000 /                                             ( mhz )
 ;
