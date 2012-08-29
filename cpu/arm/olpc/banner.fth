@@ -143,7 +143,7 @@ h# 40 buffer: partition-map
 : (xbanner-basics)  ( -- )
    ?spaces  cpu-model type  ." , " .cpu-speed  ." , "   .memory-brief
    ." , " .storage
-   ." , S/N "  " SN" find-tag  if  type  else  ." Unknown"  then  cr
+   ." , S/N "  " SN" find-tag  if  ?-null type  else  ." Unknown"  then  cr
    ?spaces  .rom  ."    " .ec  ."    " .clock
    check-internal-partitions
    check-tags
