@@ -102,6 +102,9 @@ fload ${BP}/cpu/x86/pc/cpunode.fth  \ The PC CPU node is actually fairly generic
 
 fload ${BP}/cpu/arm/mmp2/watchdog.fth	\ reset-all using watchdog timer
 
+fload ${BP}/cpu/arm/olpc/gpio-i2c.fth
+fload ${BP}/cpu/arm/olpc/twsi-i2c.fth
+
 0 0  " d4018000"  " /" begin-package  \ UART3
    fload ${BP}/cpu/arm/mmp2/uart.fth
    " /apbc" encode-phandle d# 12 encode-int encode+ " clocks" property
