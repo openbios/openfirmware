@@ -82,7 +82,7 @@ h# d4282800 h# 1000 reg
 h# 048 +int  h#    19 +int  h#   19 +int  d#           0 +int  \ 0 IRE
 h# 04c +int  h# fffff +int  h#  71b +int  d# 400,000,000 +int  \ 1 DISPLAY1
 h# 050 +int  h#    3f +int  h#   3f +int  d#           0 +int  \ 2 CCIC
-h# 054 +int  h#    1b +int  h#   1b +int  d# 200,000,000 +int  \ 3 SDH1
+h# 054 +int  h#    1b +int  h#  41b +int  d# 200,000,000 +int  \ 3 SDH1
 h# 058 +int  h#    1b +int  h#   1b +int  d# 200,000,000 +int  \ 4 SDH2
 h# 05c +int  h#    09 +int  h#   09 +int  d# 480,000,000 +int  \ 5 USB
 h# 060 +int  h#   1ff +int  h#   bf +int  d# 100,000,000 +int  \ 6 NF
