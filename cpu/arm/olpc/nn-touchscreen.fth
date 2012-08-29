@@ -4,6 +4,17 @@ purpose: Driver and diagnostic for Neonode zForce MultiSensing I2C Touchscreen
 0 0  " 4,50"  " /twsi" begin-package
 my-space encode-int  my-address encode-int encode+  " reg" property
 
+create nn-os            \ open short test
+create nn-fll           \ forced led levels test
+create nn-version       \ version display
+
+\ create nn-fss           \ optional fixed signal strength test
+\ create nn-ls            \ optional low signals test
+
+\ create nn-components    \ isolate test results to failed component identifier
+
+\ create nn-ir-pcb-rev-b  \ support for revision b of the ir pcb assembly
+
 \ XXX these are really platform-related, not touchscreen-related
 : targets?  ( -- flag )  final-test?  ;
 : .tsmsg  ( -- )  0 d# 27 at-xy  ." Touchscreen test.  Type a key to exit" cr  ;
@@ -64,6 +75,8 @@ d# 250 constant /pbuf
    until                                ( id limit )
    2drop                                ( )
 ;
+
+
 
 : read-boot-complete  ( -- )  h# 07 d# 0 anticipate  ;
 
@@ -132,6 +145,17 @@ d# 250 constant /pbuf
 ;
 
 
+
+0 value faults
+: fault  faults 1+ to faults  ;
+
+: 4sp  ."     "  ;
+
+: 8sp  ."         "  ;
+
+
+
+[ifdef] nn-version \ version display
 : (.version)  ( addr -- )
    dup c@  over 1+ c@  bwjoin           ( addr version )
    (.) type
@@ -154,14 +178,11 @@ d# 250 constant /pbuf
    .version
    cr
 ;
+[then]
 
 
-0 value faults
-: fault  faults 1+ to faults  ;
 
-: 4sp  ."     "  ;
-
-: 8sp  ."         "  ;
+[ifdef] nn-os \ open short test
 
 [ifdef] nn-components
 \ optional decoding of component identifiers
@@ -352,6 +373,11 @@ d# 48 constant /y-os
    4sp ." X Axis" cr  0 test-os-axis
    4sp ." Y Axis" cr  1 test-os-axis
 ;
+[then]
+
+
+
+[ifdef] nn-fss \ fixed signal strength test
 
 [ifdef] nn-components
 d# 11 constant x-ir-0 \ first X axis IR component identifier
@@ -383,8 +409,6 @@ d# 1 value fss-min
    \ Y axis, IR11 PD12, IR11 PD11, IR10 PD11 ... IR1 PD1
    \ X axis, IR12 PD13, IR12 PD14, IR13 PD14 ... IR26 PD28
 [then]
-   \ FIXME: using a light guide, characterise a low signal level,
-   \ detect, and fail self test
 ;
 
 : test-fss
@@ -392,6 +416,9 @@ d# 1 value fss-min
    4sp ." X Axis" cr  0 test-fss-axis
    4sp ." Y Axis" cr  1 test-fss-axis
 ;
+[then]
+
+
 
 [ifdef] nn-ls \ low signals test
 : test-ls-axis  ( axis -- )
@@ -424,6 +451,8 @@ d# 1 value fss-min
 ;
 [then]
 
+
+
 [ifdef] nn-fll \ forced LED levels test
 : test-fll-signal  ( signal# signal-value led-level -- )
    dup 0= if
@@ -442,7 +471,11 @@ d# 1 value fss-min
       cr
       exit
    then
-   2drop ." pass on axis signal " .d cr
+   \ 2drop ." pass on axis signal " .d cr
+   3drop
+[ifdef] nn-components
+   \ FIXME: express forced led levels faults in terms of IR PCB component names.
+[then]
 ;
 
 : test-fll-axis  ( axis -- )
@@ -464,6 +497,8 @@ d# 1 value fss-min
 ;
 [then]
 
+
+
 : press  ( line$ -- )
    type
    ." , press a key"
@@ -474,32 +509,7 @@ d# 1 value fss-min
 : connect  " Connect IR PCB" press  ;
 : disconnect  " Disconnect IR PCB" press  ;
 
-: selftest  ( -- error? )
-
-   smt-test?  if
-      hold-reset  connect
-      0 to faults
-      open  if  test-os  else  fault  then
-      hold-reset  disconnect
-      faults  exit
-   then
-
-   open  0=  if
-      ." No touchscreen present" cr  false exit
-   then
-
-   diagnostic-mode?  if
-      0 to faults
-      test-version
-      test-os
-      test-fss
-      faults  if  close  true  exit  then
-   then
-
-   ." dumping events from touchscreen controller, press a key to stop" cr
-
-   \ FIXME: graphically show data on screen until key
-   \ ... waiting for revision B of IR PCB
+: dump-events
    begin
       in?  if
          ." rx: "  pbuf plen  bounds  do
@@ -509,6 +519,54 @@ d# 1 value fss-min
       key?
    until
    key drop
+;
+
+: selftest  ( -- error? )
+
+   0 to faults
+
+   test-station h#  1 =  test-station h# 11 =  or  if  \ IR PCB SMT and MB SMT
+      hold-reset  connect
+      open  if  test-os  else  fault  then
+      hold-reset  disconnect
+      faults  exit
+   then
+
+   test-station h# 12 =  if  \ IR PCB ASSY
+      hold-reset  connect
+      open  if  test-fll  else  fault  then
+      hold-reset  disconnect
+      faults  exit
+   then
+[ifdef] nn-ir-pcb-rev-b
+   test-station h#  2 =  if  \ MB ASSY
+      open  if  test-finger-down-each-edge  else  fault  then
+      faults  exit
+   then
+[then]
+
+   \ MB FINAL
+   \ MB SHIP
+   open  0=  if
+      ." No touchscreen present" cr  false exit
+   then
+
+   diagnostic-mode?  if
+      0 to faults
+      [ifdef] nn-version  test-version  [then]
+      [ifdef] nn-os       test-os       [then]
+      [ifdef] nn-fss      test-fss      [then]
+      [ifdef] nn-fll      test-fll      [then]
+      faults  if  close  true  exit  then
+   then
+
+[ifdef] nn-ir-pcb-rev-b
+   \ FIXME: graphically show data on screen until key
+   \ ... waiting for revision B of IR PCB
+[else]
+   ." dumping events from touchscreen controller, press a key to stop" cr
+   dump-events
+[then]
 
    close false
 ;
