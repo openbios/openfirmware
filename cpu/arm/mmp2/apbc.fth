@@ -89,4 +89,11 @@ h# 90 +int  h# 77 +int  h#  3 +int  d# 26,000,000 +int  \ 34 THSENS1
 h# 94 +int  h#  7 +int  h#  3 +int  d# 26,000,000 +int  \ 35 CORESIGHT
 " clock-enable-registers" property
 
+: on/off  ( on? clock# -- )
+   get-reg&masks  if  drop exit  then  ( on? set-mask clr-mask reg )
+   >r  r@ apbc@  and                   ( on? set-mask regval   r: reg )
+   rot  if  or  else  nip  then        ( regval'  r: reg )
+   r> apbc!
+;
+
 end-package
