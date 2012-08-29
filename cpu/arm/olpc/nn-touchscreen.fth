@@ -525,7 +525,7 @@ d# 1 value fss-min
 
    0 to faults
 
-   test-station h#  1 =  test-station h# 11 =  or  if  \ IR PCB SMT and MB SMT
+   test-station h# 11 =  if  \ IR PCB SMT
       hold-reset  connect
       open  if  test-os  else  fault  then
       hold-reset  disconnect
@@ -538,6 +538,14 @@ d# 1 value fss-min
       hold-reset  disconnect
       faults  exit
    then
+
+   test-station h#  1 =  if  \ MB SMT
+      open  0=  if  true exit  then
+      test-version
+      close
+      false  exit
+   then
+
 [ifdef] nn-ir-pcb-rev-b
    test-station h#  2 =  if  \ MB ASSY
       open  if  test-finger-down-each-edge  else  fault  then
