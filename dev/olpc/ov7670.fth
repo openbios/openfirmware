@@ -166,6 +166,7 @@ purpose: Omnivision OV7670 image sensor driver
    then                         ( )
 
    " OV7670" " sensor" string-property
+   " omnivision,ov7670" camera-smb-slave set-sensor-properties
 
    ['] ov7670-set-mirrored to set-mirrored
    ['] ov7670-config       to camera-config

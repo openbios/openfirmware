@@ -10,6 +10,8 @@
       cam-rst-gpio# 0 encode-gpio
    " gpios" property
 
+   " /image-sensor" encode-phandle  " image-sensor" property
+
 0 [if]
    : alloc-capture-buffer  ( len -- vadr padr )
       \ XXX need map-in if we should use virtual mode
