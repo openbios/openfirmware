@@ -17,14 +17,15 @@ fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
 [then]
 
 : set-gpios
-[ifdef] mmp2
-   0 1e2bc io!@ \ TWSI4_SCL to GPIO[169]
-   0 1e2c0 io!@ \ TWSI4_SDA to GPIO[170]
+[ifdef] olpc-cl2
+   0 1e2bc io!@ \ TWSI4_SCL
+   0 1e2c0 io!@ \ TWSI4_SDA \ FIXME: discover why this is set to 5 on power up
 [then]
    touch-rst-gpio# dup gpio-set gpio-dir-out
    touch-tck-gpio# dup gpio-clr gpio-dir-out
 ;
 : reset  ( -- )  touch-rst-gpio# dup gpio-clr gpio-set  d# 250 ms  ;
+: hold-reset  ( -- )  touch-rst-gpio# gpio-clr  ;
 : no-data?  ( -- no-data? )  touch-int-gpio# gpio-pin@  ;
 
 d# 250 constant /pbuf
@@ -50,6 +51,8 @@ d# 250 constant /pbuf
    true
 ;
 
+\ read incoming packets, ignoring those that don't match, until either
+\ one matches, or a timeout occurs.
 : anticipate  ( id msecs -- )
    get-msecs +                          ( id limit )
    begin
@@ -390,6 +393,7 @@ d# 1 value fss-min
    4sp ." Y Axis" cr  1 test-fss-axis
 ;
 
+[ifdef] nn-ls \ low signals test
 : test-ls-axis  ( axis -- )
    h# 0d h# 02 h# ee  4 twsi-out
    h# 0d d# 200 anticipate
@@ -418,12 +422,67 @@ d# 1 value fss-min
    4sp ." X Axis" cr  0 test-ls-axis
    4sp ." Y Axis" cr  1 test-ls-axis
 ;
+[then]
+
+[ifdef] nn-fll \ forced LED levels test
+: test-fll-signal  ( signal# signal-value led-level -- )
+   dup 0= if
+      fault
+      rot ." fail on axis signal " .d
+      ." with LED level " .d ." (too strong) "
+      ." signal level " .d
+      cr
+      exit
+   then
+   dup h# c > if
+      fault
+      rot ." fail on axis signal " .d
+      ." with LED level " .d ." (too weak) "
+      ." signal level " .d
+      cr
+      exit
+   then
+   2drop ." pass on axis signal " .d cr
+;
+
+: test-fll-axis  ( axis -- )
+   h# 20 h# 02 h# ee  4 twsi-out
+   h# 1c d# 200 anticipate
+   pbuf plen cdump cr
+   pbuf 4 + c@  2/  0  do
+      i pbuf 5 + over 3 * + >r ( i r:frag )
+      2* dup  r@ 1+ c@  r@ c@ 4 rshift h# f and  test-fll-signal
+      1+      r@ 2+ c@  r@ c@          h# f and  test-fll-signal
+      r> drop ( )
+   loop
+;
+
+: test-fll
+   ." Forced LED Levels" cr
+   4sp ." X Axis" cr  0 test-fll-axis
+   4sp ." Y Axis" cr  1 test-fll-axis
+;
+[then]
+
+: press  ( line$ -- )
+   type
+   ." , press a key"
+   key drop
+   cr
+;
+
+: connect  " Connect IR PCB" press  ;
+: disconnect  " Disconnect IR PCB" press  ;
 
 : selftest  ( -- error? )
 
-   \ skip test during SMT, as the IR PCB is required for controller to
-   \ respond, issue being worked with Neonode 2012-08.
-   smt-test?  if  false  exit  then
+   smt-test?  if
+      hold-reset  connect
+      0 to faults
+      open  if  test-os  else  fault  then
+      hold-reset  disconnect
+      faults  exit
+   then
 
    open  0=  if
       ." No touchscreen present" cr  false exit
@@ -434,13 +493,13 @@ d# 1 value fss-min
       test-version
       test-os
       test-fss
-      test-ls
-      faults  if  true  exit  then
+      faults  if  close  true  exit  then
    then
 
    ." dumping events from touchscreen controller, press a key to stop" cr
 
    \ FIXME: graphically show data on screen until key
+   \ ... waiting for revision B of IR PCB
    begin
       in?  if
          ." rx: "  pbuf plen  bounds  do
