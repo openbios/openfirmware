@@ -4,7 +4,6 @@ purpose: Downloader for TI MSP430 BootStrap Loader (BSL) protocol
 
 \ TODO:
 \  friendlier programming interface ( "ok flash-bsl u:\file.hex")
-\  progress indicator during programming
 \  print, perhaps in red, the msp430 password after programming,
 \     iff the password doesn't match all-ff or the known neonode password.
 \  save calibration data in mfg tag, in case it's lost.
@@ -484,6 +483,7 @@ d# 100 buffer: bsl-line-buf
    force-erase          ( )
    ." Programming" cr
    begin                ( )
+      [char] . emit
       bsl-line-buf d# 100 ifd @ read-line abort" Read line failed"
    while                               ( len )
       bsl-line-buf swap                ( adr len )
@@ -495,6 +495,7 @@ d# 100 buffer: bsl-line-buf
    ifd @ fclose                        ( )
 ;
 
+[ifdef] bsl-destructive-test
 \ This is a destructive test in that it erases whatever firmware happens
 \ to already be in the device.
 
@@ -543,6 +544,7 @@ h# 3000 constant /bsl-test-buf
    ." Verifying ..."  bsl-test-data h# 8000 bsl-verify  cr  ( okay? )
    if  ." Good"  else  ." FAILED!"  then  cr
 ;
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2012 FirmWorks
