@@ -116,7 +116,7 @@ h# 03.b000 value tsense  \ p2021
 : init-thermal-sensor  ( -- )
    ts-clocks
    0 ts-range-high
-   0 ts-watchdog-enable
+   \ 0 ts-watchdog-enable \ WDT reset will cause system hang, per errata 472630
    1 ts-range-low
    2 ts-range-low
    3 0 do  i ts-auto-read  loop
@@ -205,21 +205,21 @@ end-string-array
       ." THRSENS_WDTR_EN was not set" cr
       h# 200 mpmu@ 1 7 lshift or h# 200 mpmu!
    then
-   0 ts@
+   1 ts@
    1 d# 27 lshift or  \ set the lowrange bit
    h# 0020.0000 or    \ set the autorun bit (undocumented)
    h# 0400.0000 or    \ set the watchdog enable bit
    h# b h# f and d# 8 lshift or       \ set the watchdog temperature (58-60.5C)
    b# 0101.1111.1010.0000.0000.1111.1111.0000
    and \ always write zero to reserved bits
-   0 ts!
+   1 ts!
    ." thermal watchdog enabled" cr
    watch-thermal
 ;
 
 : force-thermal-watchdog
    h# 200 mpmu@ 1 7 lshift or h# 200 mpmu! \ thrsens_wdtr_en
-   h# 0c20.0000 h# 03.b000 io! \ lowrange, en_wdog, auto_read_en, wdog_tshld 26C
+   h# 0c20.0000 h# 03.b004 io! \ lowrange, en_wdog, auto_read_en, wdog_tshld 26C
 ;
 
 
