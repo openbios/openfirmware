@@ -2,7 +2,7 @@
 purpose: Driver for MMP2 internal RTC
 
 0 0  " d4010000"  " /" begin-package
-   " rtc" name
+   " wakeup-rtc" name
    " mrvl,mmp-rtc" +compatible
    my-address my-space  h# 1000 reg
 
