@@ -1,10 +1,16 @@
-0 0  " 1a" " /i2c@d4011000" begin-package  \ TWSI1
+dev /i2c@d4011000
+new-device
    " audio-codec" name
    " realtek,alc5631" +compatible
    " realtek,rt5631" +compatible
-   my-address my-space 1 reg
+   h# 1a 1 reg
    " rt5631-hifi" " dai-name" string-property  \ snd_soc_dai_link.codec_dai_name
-end-package
+   : open  ( -- true )     my-unit " set-address" $call-parent  true  ;
+   : close  ( -- )  ;
+   : codec@  ( reg# -- w )  1 2 " bytes-out-in" $call-parent  swap bwjoin  ;
+   : codec!  ( w reg# -- )  >r wbsplit r>  3 " bytes-out" $call-parent  ;
+finish-device
+device-end
 
 : +audio  ( offset -- address )
    [ifdef] mmp3  h# c0ffd000  [else]  h# d42a0000  [then]  +
@@ -288,17 +294,15 @@ audio-sram-va h# 3f80 + constant in-desc
    my-in-desc 3 la+ l@ to my-in-desc
 ;
 
-[ifdef] cl2-a1
-: choose-smbus  ( -- )  h# 18 1 set-twsi-target  ;
-[else]
-: choose-smbus  ( -- )  h# 1a 1 set-twsi-target  ;
-[then]
-
 \ Reset is unconnected on current boards
 \ : audio-reset  ( -- )  audio-reset-gpio# gpio-clr  ;
 \ : audio-unreset  ( -- )  audio-reset-gpio# gpio-set  ;
-: codec@  ( reg# -- w )  choose-smbus  1 2 twsi-get  swap bwjoin  ;
-: codec!  ( w reg# -- )  choose-smbus  >r wbsplit r> 3 twsi-out  ;
+0 value codec-ih
+: $call-codec  ( ? -- ? )  codec-ih $call-method  ;
+
+: codec@  ( reg# -- w )  " codec@" $call-codec  ;
+: codec!  ( w reg# -- )  " codec!" $call-codec  ;
+
 : codec-i@  ( index# -- w )  h# 6a codec!  h# 6c codec@  ;
 : codec-i!  ( w index# -- )  h# 6a codec!  h# 6c codec!  ;
 
@@ -635,12 +639,15 @@ h# 20000 constant tlen
    sspa-base h# 100 " map-out" $call-parent
    0 to adma-base  0 to sspa-base
 ;
+
 0 value open-count
 : open  ( -- flag )
    open-count 0=  if
       my-unit h# 400 -  h# 100 " map-in" $call-parent to adma-base
       my-unit           h# 100 " map-in" $call-parent to sspa-base
       audio-clock-on  if  (close) false exit  then
+      " /audio-codec" open-dev to codec-ih
+      codec-ih 0=  if  (close) false exit  then
       init-codec
    then
    open-count 1+ to open-count
@@ -649,6 +656,7 @@ h# 20000 constant tlen
 : close  ( -- )
    open-count 1 =  if
       uninstall-playback-alarm  codec-off
+      codec-ih close-dev
       (close)
    then
    open-count 1- 0 max to open-count

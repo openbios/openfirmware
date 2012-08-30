@@ -1,9 +1,10 @@
 purpose: Driver for external IDT1388 RTC chip on XO-1.75
 
-0 0  " 68" " /i2c@d4031000" begin-package  \ TWSI2
+dev /i2c@d4031000  \ TWSI2
+new-device
    " rtc" name
    " idt,idt1338-rtc" +compatible
-   my-address my-space 1 reg
+   h# 68 1 reg
 
 [ifdef] cl2-a1
 : set-address  ( -- )
@@ -91,4 +92,5 @@ headers
    close
 ;
 
-end-package
+finish-device
+device-end

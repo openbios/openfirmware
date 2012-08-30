@@ -232,6 +232,8 @@ fload ${BP}/cpu/arm/mmp2/gpio.fth
 fload ${BP}/cpu/arm/mmp2/twsi.fth
 fload ${BP}/cpu/arm/mmp2/mfpr.fth
 
+fload ${BP}/cpu/arm/mmp2/twsi-package.fth
+
 \ Uninstall the diag menu from the general user interface vector
 \ so exiting from emacs doesn't invoke the diag menu.
 ' quit to user-interface

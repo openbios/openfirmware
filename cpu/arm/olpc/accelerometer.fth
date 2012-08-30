@@ -1,15 +1,16 @@
-hex
-0 0  " "  " /twsi" begin-package
+dev /i2c@d4034000  \ TWSI6
+new-device
+
 " accelerometer" name
+" lis3lv02d" +compatible
 
 \ reg is set dynamically by probing to find which chip is present
-\ my-address my-space encode-phys  " reg" property
 
 \ This is for the stand-alone accelerometers LIS3DHTR and LIS33DETR
 
 \ We could call this just once in open if we had a TWSI parent node
-: acc-reg@  ( reg# -- b )  1 1 " smbus-out-in" $call-parent  ;
-: acc-reg!  ( b reg# -- )  2 0 " smbus-out-in" $call-parent  ;
+: acc-reg@  ( reg# -- b )  " byte@" $call-parent  ;
+: acc-reg!  ( b reg# -- )  " byte!" $call-parent  ;
 : ctl1!  ( b -- )  h# 20 acc-reg!  ;
 : ctl4!  ( b -- )  h# 23 acc-reg!  ;
 : accelerometer-on  ( -- )  h# 47 ctl1!  ;
@@ -17,7 +18,7 @@ hex
 : wext  ( b -- n )  dup h# 8000 and  if  h# ffff0000 or  then  ;
 : acceleration@  ( -- x y z )
    begin  h# 27 acc-reg@  h# 08 and  until  \ wait for data available
-   h# 0a8 1 6 " smbus-out-in" $call-parent ( xl xh yl yh zl zh )
+   h# 0a8 1 6 " bytes-out-in" $call-parent ( xl xh yl yh zl zh )
    bwjoin wext 5 >>a     ( xl xh yl yh z )
    >r                    ( xl xh yl yh     r: z )
    bwjoin wext 5 >>a     ( xl xh y         r: z )
@@ -142,7 +143,7 @@ defer lis-selftest
 ;
 
 : probe  ( -- )
-   h# 3a 6 " set-address" $call-parent
+   h# 1d " set-address" $call-parent
    d# 25,000 " set-bus-speed" $call-parent \ XO-1.75 B1 lacks pullups SCL SDA
    ['] accelerometer-on catch  if
       \ The attempt to talk at the old address failed, so we assume the new chip
@@ -150,7 +151,7 @@ defer lis-selftest
       d# 400,000 to bus-speed
       d#  50 to min-x  d#  50 to min-y  d#  50 to min-z
       d# 150 to max-x  d# 150 to max-y  d# 450 to max-z
-      h# 19 6 encode-phys " reg" property
+      h# 19 1 reg
       ['] lis3dhtr-selftest to lis-selftest
    else
       accelerometer-off
@@ -159,12 +160,13 @@ defer lis-selftest
       d#  25,000 to bus-speed
       d#  20 to min-x  d#  20 to min-y  d#  20 to min-z
       d# 400 to max-x  d# 400 to max-y  d# 400 to max-z
-      h# 1d 6 encode-phys " reg" property
+      h# 1d 1 reg
       ['] lis33de-selftest to lis-selftest
    then
 ;
 
-end-package
+finish-device
+device-end
 
 stand-init: Accelerometer
    " /accelerometer" " probe" execute-device-method drop
