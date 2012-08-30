@@ -45,6 +45,9 @@ h# d4015000 h# 1000 reg
 " RIPC"      +string  \ 33
 " THSENS1"   +string  \ 34
 " CORESIGHT" +string  \ 35
+" THSENS2"   +string  \ 36
+" THSENS3"   +string  \ 37
+" THSENS4"   +string  \ 38
 " clock-output-names" property
 
 : +int  encode-int encode+ ;
@@ -87,6 +90,9 @@ h# 88 +int  h# 77 +int  h# 13 +int  d# 26,000,000 +int  \ 32 UART4
 h# 8c +int  h# 77 +int  h#  3 +int  d# 26,000,000 +int  \ 33 RIPC
 h# 90 +int  h# 77 +int  h#  3 +int  d# 26,000,000 +int  \ 34 THSENS1
 h# 94 +int  h#  7 +int  h#  3 +int  d# 26,000,000 +int  \ 35 CORESIGHT
+h# 98 +int  h# 77 +int  h#  3 +int  d# 26,000,000 +int  \ 36 THSENS2
+h# 9c +int  h# 77 +int  h#  3 +int  d# 26,000,000 +int  \ 37 THSENS3
+h# a0 +int  h# 77 +int  h#  3 +int  d# 26,000,000 +int  \ 38 THSENS4
 " clock-enable-registers" property
 
 : on/off  ( on? clock# -- )
