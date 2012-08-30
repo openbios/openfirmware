@@ -10,7 +10,6 @@ hex
 : init-stuff
    acgr-clocks-on
    init-timers
-   init-twsi
 ;
 warning @ warning off
 : stand-init-io

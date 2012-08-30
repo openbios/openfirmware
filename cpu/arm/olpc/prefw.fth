@@ -229,7 +229,6 @@ fload ${BP}/cpu/arm/mmp2/apbc.fth
 fload ${BP}/cpu/arm/mmp2/irq.fth
 fload ${BP}/cpu/arm/mmp2/timer.fth
 fload ${BP}/cpu/arm/mmp2/gpio.fth
-fload ${BP}/cpu/arm/mmp2/twsi.fth
 fload ${BP}/cpu/arm/mmp2/mfpr.fth
 
 fload ${BP}/cpu/arm/mmp2/twsi-package.fth
