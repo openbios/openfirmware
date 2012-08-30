@@ -9,8 +9,8 @@ new-device
 \ This is for the stand-alone accelerometers LIS3DHTR and LIS33DETR
 
 \ We could call this just once in open if we had a TWSI parent node
-: acc-reg@  ( reg# -- b )  " byte@" $call-parent  ;
-: acc-reg!  ( b reg# -- )  " byte!" $call-parent  ;
+: acc-reg@  ( reg# -- b )  " reg-b@" $call-parent  ;
+: acc-reg!  ( b reg# -- )  " reg-b!" $call-parent  ;
 : ctl1!  ( b -- )  h# 20 acc-reg!  ;
 : ctl4!  ( b -- )  h# 23 acc-reg!  ;
 : accelerometer-on  ( -- )  h# 47 ctl1!  ;

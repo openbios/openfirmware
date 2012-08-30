@@ -136,8 +136,8 @@ external
    bbu_ICR_STOP twsi-putbyte          ( )
 ;
 
-: byte@  ( reg -- byte )  1 1 bytes-out-in  ;
-: byte!  ( byte reg -- )  2 bytes-out  ;
+: reg-b@  ( reg -- byte )  1 1 bytes-out-in  ;
+: reg-b!  ( byte reg -- )  2 bytes-out  ;
 
 : set-bus-standard  cr-set  h# 18000 invert and              to cr-set  ;
 : set-bus-fast      cr-set  h# 18000 invert and  h# 8000 or  to cr-set  ;

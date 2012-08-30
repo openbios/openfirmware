@@ -57,8 +57,8 @@ h# 1000 reg                                        ( )
 
 : get  ( #bytes -- bytes ... )  0 swap  bytes-out-in  ;
 
-: byte@  ( -- )  " byte@" $call-twsi  ;
-: byte!  ( -- )  " byte!" $call-twsi  ;
+: reg-b@  ( reg# -- b )  " reg-b@" $call-twsi  ;
+: reg-b!  ( b reg# -- )  " reg-b!" $call-twsi  ;
 : bytes-out  ( byte .. #bytes -- )  " bytes-out" $call-twsi  ;
 
 \ Useful range is 25K .. 400K - 100K and 400K are typical

@@ -2,23 +2,13 @@ purpose: Driver for external IDT1388 RTC chip on XO-1.75
 
 dev /i2c@d4031000  \ TWSI2
 new-device
-   " rtc" name
-   " idt,idt1338-rtc" +compatible
-   h# 68 1 reg
 
-[ifdef] cl2-a1
-: set-address  ( -- )
-   rtc-scl-gpio# to smb-clock-gpio#
-   rtc-sda-gpio# to smb-data-gpio#
-   h# 68 to smb-slave
-;
-: rtc@  ( reg# -- byte )  set-address  smb-byte@  ;
-: rtc!  ( byte reg# -- )  set-address  smb-byte!  ;
-[else]
-: set-address  ( -- )   h# 68 2 set-twsi-target  ;
-: rtc@  ( reg# -- byte )  set-address  twsi-b@  ;
-: rtc!  ( byte reg# -- )  set-address  twsi-b!  ;
-[then]
+" rtc" name
+" idt,idt1338-rtc" +compatible
+h# 68 1 reg
+
+: rtc@  ( reg# -- byte )  " reg-b@" $call-parent  ;
+: rtc!  ( byte reg# -- )  " reg-b!" $call-parent  ;
 
 headerless
 
@@ -33,6 +23,8 @@ headerless
 
 headers
 : open  ( -- okay )
+   my-unit " set-address" $call-parent
+
    0 ['] rtc@ catch  if        ( x )
       drop false  exit         ( -- false )
    then                        ( value )
@@ -58,12 +50,7 @@ headerless
 : >bcd  ( binary -- bcd )  d# 10 /mod  4 << +  ;
 
 : bcd-time&date  ( -- s m h d m y century )
-   set-address
-[ifdef] cl2-a1
-   9 0 smb-read-n  ( s m h dow d m y control c )
-[else]
-   0 1 9 twsi-get  ( s m h dow d m y control c )
-[then]
+   0 1 9 " bytes-out-in" $call-parent  ( s m h dow d m y control c )
    nip             ( s m h dow d m y c )
    4 roll drop     ( s m h d m y c )
 ;
