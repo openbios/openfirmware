@@ -1,8 +1,19 @@
 \ See license at end of file
 purpose: Driver and diagnostic for Neonode zForce MultiSensing I2C Touchscreen
 
-0 0  " 4,50"  " /twsi" begin-package
-my-space encode-int  my-address encode-int encode+  " reg" property
+dev /i2c@d4033000
+new-device
+
+h# 50 1 reg
+
+" zforce" +compatible
+touch-rst-gpio# 1  " reset-gpios" gpio-property
+touch-tck-gpio# 1  " test-gpios"  gpio-property
+touch-hd-gpio#  1  " hd-gpios"    gpio-property
+touch-int-gpio# 1  " dr-gpios"    gpio-property
+
+: read-bytes  ( adr len -- )  " read-bytes"  $call-parent  ;
+: bytes-out  ( byte .. #bytes -- )  " bytes-out"  $call-parent  ;
 
 create nn-os            \ open short test
 create nn-fll           \ forced led levels test
@@ -50,11 +61,11 @@ d# 250 constant /pbuf
 : in?  ( -- got-data? )
    no-data?  if  false exit  then
 
-   pbuf 2  twsi-read                            ( )
+   pbuf 2  read-bytes                           ( )
    pbuf 1+ c@                                   ( len )
    dup 2+ to plen                               ( len )
 
-   pbuf 2+ swap  twsi-read                      ( )
+   pbuf 2+ swap  read-bytes                     ( )
 
    pbuf 2+ c@ h# 07 =  pbuf 3 + c@ 0=  and  if  ( )
       true to configure?
@@ -80,18 +91,18 @@ d# 250 constant /pbuf
 
 : read-boot-complete  ( -- )  h# 07 d# 0 anticipate  ;
 
-: initialise  ( -- )  h# 01 h# 01 h# ee  3 twsi-out  h# 01 d# 20 anticipate  ;
+: initialise  ( -- )  h# 01 h# 01 h# ee  3 bytes-out  h# 01 d# 20 anticipate  ;
 
 : set-resolution  ( -- )
    set-geometry
-   screen-h wbsplit swap  screen-w wbsplit swap  h# 02 h# 05 h# ee  7 twsi-out
+   screen-h wbsplit swap  screen-w wbsplit swap  h# 02 h# 05 h# ee  7 bytes-out
    h# 02 d# 20 anticipate
 ;
 
-: start  ( -- )  h# 04 h# 01 h# ee  3 twsi-out  ;
+: start  ( -- )  h# 04 h# 01 h# ee  3 bytes-out  ;
 
 : deactivate  ( -- )
-   h# 00 h# 01 h# ee  3 twsi-out  h# 00 d# 20 anticipate
+   h# 00 h# 01 h# ee  3 bytes-out  h# 00 d# 20 anticipate
    true to configure?
 ;
 
@@ -106,7 +117,7 @@ d# 250 constant /pbuf
 
 : open  ( -- okay? )
    pbuf-alloc
-   my-unit set-twsi-target
+   my-unit " set-address" $call-parent
    set-gpios
    no-data?  if
       reset
@@ -174,7 +185,7 @@ d# 250 constant /pbuf
 ;
 
 : test-version  ( -- )
-   h# 1e h# 01 h# ee  3 twsi-out
+   h# 1e h# 01 h# ee  3 bytes-out
    h# 1e d# 30 anticipate
 
    .version
@@ -334,7 +345,7 @@ d# 64 constant /x-os
 d# 48 constant /y-os
 
 : test-os-axis  ( axis -- )
-   h# 21 h# 02 h# ee  4 twsi-out
+   h# 21 h# 02 h# ee  4 bytes-out
    h# 21 d# 30 anticipate
    pbuf 2+ c@ h# 21 <> abort" bad response"
 
@@ -394,7 +405,7 @@ d#  1 constant y-up
 d# 1 value fss-min
 
 : test-fss-axis  ( axis -- )
-   d# 64 swap h# 0f h# 03 h# ee  5 twsi-out
+   d# 64 swap h# 0f h# 03 h# ee  5 bytes-out
    h# 0f d# 20 anticipate
    pbuf 2+ c@ h# 0f <> abort" bad response"
    8sp
@@ -424,7 +435,7 @@ d# 1 value fss-min
 
 [ifdef] nn-ls \ low signals test
 : test-ls-axis  ( axis -- )
-   h# 0d h# 02 h# ee  4 twsi-out
+   h# 0d h# 02 h# ee  4 bytes-out
    h# 0d d# 200 anticipate
    pbuf 2+ c@ h# 0d <> abort" bad response"
 
@@ -481,7 +492,7 @@ d# 1 value fss-min
 ;
 
 : test-fll-axis  ( axis -- )
-   h# 20 h# 02 h# ee  4 twsi-out
+   h# 20 h# 02 h# ee  4 bytes-out
    h# 1c d# 200 anticipate
    pbuf plen cdump cr
    pbuf 4 + c@  2/  0  do
@@ -590,7 +601,8 @@ d# 1 value fss-min
    close false
 ;
 
-end-package
+finish-device
+device-end
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2012 FirmWorks

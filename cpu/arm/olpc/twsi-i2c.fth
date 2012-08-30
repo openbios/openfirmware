@@ -11,22 +11,11 @@ purpose: Device tree nodes for board-specific I2C buses implemented by TWSI hard
   h# d4034000 d# 31   4 true  true     4 make-twsi-node  \ TWSI6
 
 [ifdef] soon-olpc-cl2  \ this breaks cl4-a1 boards, which ofw calls cl2.
-0 0  " 30" " /i2c@d4033000" begin-package  \ TWSI4
-   " touchscreen" name
-   " raydium_ts" +compatible
-   my-address my-space 1 reg
-end-package
-[else]
 dev /i2c@d4033000  \ TWSI4
 new-device
-   h# 50 1 reg
+   h# 30 1 reg
    " touchscreen" name
-   " zforce" +compatible
-   my-address my-space 1 reg
-   touch-rst-gpio# 1  " reset-gpios" gpio-property
-   touch-tck-gpio# 1  " test-gpios"  gpio-property
-   touch-hd-gpio#  1  " hd-gpios"    gpio-property
-   touch-int-gpio# 1  " dr-gpios"    gpio-property
+   " raydium_ts" +compatible
 finish-device
 device-end
 [then]
