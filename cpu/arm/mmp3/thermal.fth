@@ -1,6 +1,30 @@
 \ See license at end of file
 purpose: Driver for the MMP3 thermal sensor
 
+0 0  " d403b000"  " /" begin-package
+   " thermal" name
+   " marvell,mmp3-thermal" +compatible
+   my-address my-space  h# 1000 reg
+
+   d# 11 encode-int " interrupts" property
+   " /interrupt-controller/interrupt-controller@188" encode-phandle " interrupt-parent" property
+
+   " /apbc" encode-phandle 
+	34 encode-int encode+
+   " /apbc" encode-phandle encode+
+	36 encode-int encode+
+   " /apbc" encode-phandle encode+
+	37 encode-int encode+
+   " /apbc" encode-phandle encode+
+	38 encode-int encode+ " clocks" property
+
+   " THSENS1" encode-string
+   " THSENS2" encode-string encode+
+   " THSENS3" encode-string encode+
+   " THSENS4" encode-string encode+ " clock-names" property
+
+end-package
+
 \ FIXME: characterise the observations using an IR thermometer,
 \ because the datasheet and the registers manual disagree on
 \ interpretation of these gray code values.
