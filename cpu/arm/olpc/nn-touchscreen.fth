@@ -133,8 +133,10 @@ d# 250 constant /pbuf
 
 : stream-poll?  ( -- false | x y buttons true )
    in?  if
+      \ FIXME: only handles one subpacket
       pbuf 2+ c@ h# 04 = if
-         pbuf 4 + w@  pbuf 6 + w@       ( x y )
+         screen-w pbuf 4 + w@ -         ( x )
+         pbuf 6 + w@                    ( x y )
          pbuf 8 + c@  3 and  0=         ( x y down? )
          true                           ( x y buttons true )
          exit
@@ -521,6 +523,16 @@ d# 1 value fss-min
    key drop
 ;
 
+: scribble
+   cursor-off
+   background
+   begin
+      stream-poll?  if  drop  dot  then
+   key? until
+   cursor-on
+   \ FIXME: tune the event frequency with set scanning frequency request
+;
+
 : selftest  ( -- error? )
 
    0 to faults
@@ -569,8 +581,7 @@ d# 1 value fss-min
    then
 
 [ifdef] nn-ir-pcb-rev-b
-   \ FIXME: graphically show data on screen until key
-   \ ... waiting for revision B of IR PCB
+   scribble
 [else]
    ." dumping events from touchscreen controller, press a key to stop" cr
    dump-events
