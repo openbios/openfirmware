@@ -356,21 +356,27 @@ d# 250 constant /bsl-max-read
 
 : force-erase  ( -- )
    rst-bsl
-   ff-password ack? dup 0= if
-	drop
-	neo-password ack? dup 0= if
-	    drop
-	    ff-password ack? dup 0= if
-		drop
-		." BSL is locked" exit
-	    then
-	then
-   then
+   ff-password ack? dup 0= if           ( ff? )
+      drop                              ( )
+      neo-password ack? dup 0= if       ( neo? )
+         drop                           ( )
+         ff-password ack? dup 0= if     ( ff-neo-ff? )
+            drop                        ( )
+            ." BSL is locked" exit      ( )
+         else                           ( ff-neo-ff? )
+            drop                        ( )
+         then                           ( )
+      else                              ( neo? )
+         drop                           ( )
+      then                              ( )
+   else                                 ( ff? )
+      drop                              ( )
+   then                                 ( )
    erase-main
    null-ffde!
 
    calibration-missing if
-	do-calibration null-ffde!
+      do-calibration null-ffde!
    then
 ;
 
