@@ -53,18 +53,11 @@ dcon-irq-gpio#   0 encode-gpio
 \ h# 4000 constant DM_DEBUG
 \ h# 8000 constant DM_SELFTEST
 
-: set-dcon-slave  ( -- )
-   dcon-scl-gpio# to smb-clock-gpio#
-   dcon-sda-gpio# to smb-data-gpio#
+: bus-init  ( -- )  " bus-init" $call-parent  ;
+: bus-reset  ( -- )  " bus-reset" $call-parent  ;
 
-   h# 0d to smb-slave
-;
-
-: smb-init    ( -- )  set-dcon-slave  smb-on  smb-pulses  ;
-: smb-reset   ( -- )  smb-stop 1 ms  smb-off  1 ms  smb-on   ;
-
-: dcon@  ( reg# -- word )  set-dcon-slave  smb-word@  ;
-: dcon!  ( word reg# -- )  set-dcon-slave  smb-word!  ;
+: dcon@  ( reg# -- word )  " reg-w@" $call-parent  ;
+: dcon!  ( word reg# -- )  " reg-w!" $call-parent  ;
 
 : dcon-load  ( -- )  dcon-load-gpio# gpio-set  ;
 : dcon-unload  ( -- )  dcon-load-gpio# gpio-clr  ;
@@ -134,7 +127,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
 \ gx_configure_tft(info);
 
 : try-dcon!  ( w reg# -- )
-   ['] dcon!  catch  if  2drop  smb-reset  then
+   ['] dcon!  catch  if  2drop  bus-reset  then
 ;
 
 : mode@    ( -- mode )    1 dcon@  ;
@@ -171,14 +164,14 @@ d# 905 value resumeline  \ Configurable; should be set from args
 ;
 
 \ Setup so it can be called by execute-device-method
-: dcon-off  ( -- )  smb-init  h# 12 ['] mode!  catch  if  drop  then  ;
+: dcon-off  ( -- )  bus-init  h# 12 ['] mode!  catch  if  drop  then  ;
 
 : dcon2?  ( -- flag )
    5 0  do
       0 ['] dcon@ catch  0=  if    ( x )
          h# dc02 =  unloop exit
       then                         ( x )
-      drop   d# 50 ms  smb-init    ( )
+      drop   d# 50 ms  bus-init    ( )
    loop
    false
 ;
@@ -217,7 +210,7 @@ d# 905 value resumeline  \ Configurable; should be set from args
 
 [ifdef] old-way
 : init-dcon  ( -- )
-   smb-init
+   bus-init
 
 \ Unnecessary because CForth has already done it
 \   dcon-load  dcon-enable  ( maybe-set-cmos )
@@ -226,7 +219,8 @@ d# 905 value resumeline  \ Configurable; should be set from args
 ' init-dcon to init-panel
 [else]
 : open  ( -- flag )
-   smb-init
+   my-unit " set-address" $call-parent
+   bus-init
 \ Unnecessary because CForth has already done it
 \   dcon-load  dcon-enable  ( maybe-set-cmos )
    \ dcon-enable leaves mode set to 69 - 40:antialias, 20:swizzle, 8:backlight on, 1:passthru off

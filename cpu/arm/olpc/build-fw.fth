@@ -101,6 +101,8 @@ fload ${BP}/cpu/x86/pc/cpunode.fth  \ The PC CPU node is actually fairly generic
 
 fload ${BP}/cpu/arm/mmp2/watchdog.fth	\ reset-all using watchdog timer
 
+fload ${BP}/cpu/arm/olpc/smbus.fth         \ Bit-banged SMBUS (I2C) using GPIOs
+
 fload ${BP}/cpu/arm/olpc/gpio-i2c.fth
 fload ${BP}/cpu/arm/olpc/twsi-i2c.fth
 
@@ -133,8 +135,6 @@ end-package
 end-package
 
 \needs md5init  fload ${BP}/ofw/ppp/md5.fth                \ MD5 hash
-
-fload ${BP}/cpu/arm/olpc/smbus.fth         \ Bit-banged SMBUS (I2C) using GPIOs
 
 fload ${BP}/dev/olpc/spiflash/flashif.fth  \ Generic FLASH interface
 

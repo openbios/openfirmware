@@ -36,13 +36,25 @@ dev /
       1 " #size-cells" integer-property
       : encode-unit  ( phys.. -- str )  push-hex (u.) pop-base  ;
       : decode-unit  ( str -- phys.. )  push-hex  $number  if  0  then  pop-base  ;
-      : open  ( -- flag )  true  ;
-      : close  ( -- )  ;
       
       0 0 encode-bytes
          cam-sda-gpio# 0 encode-gpio
           cam-scl-gpio# 0 encode-gpio
       " gpios" property
+
+      0 instance value slave-address
+      : set-address  ( slave -- )  to slave-address  ;
+      : smb-setup
+         1 to smb-dly-us cam-scl-gpio# to smb-clock-gpio#
+         cam-sda-gpio# to smb-data-gpio#
+         slave-address to smb-slave
+      ;
+      \ Since this I2C bus is dedicated to the DCON, we save space by
+      \ implementing only the methods that the DCON uses
+      : reg-b@  ( reg# -- b )  smb-setup smb-byte@  ;
+      : reg-b!  ( b reg# -- )  smb-setup smb-byte!  ;
+      : open  ( -- flag )  true  ;
+      : close  ( -- )  ;
 
       new-device
          " image-sensor" device-name    
@@ -56,7 +68,6 @@ dev /
             cam-pwr-gpio# 0 encode-gpio
             cam-rst-gpio# 0 encode-gpio
          " gpios" property
-
       finish-device
    finish-device
 
@@ -67,12 +78,30 @@ dev /
       1 " #size-cells" integer-property
       : encode-unit  ( phys.. -- str )  push-hex (u.) pop-base  ;
       : decode-unit  ( str -- phys.. )  push-hex  $number  if  0  then  pop-base  ;
-      : open  ( -- flag )  true  ;
-      : close  ( -- )  ;
 
       0 0 encode-bytes
          dcon-sda-gpio# 0 encode-gpio
          dcon-scl-gpio# 0 encode-gpio
       " gpios" property
+
+      0 instance value slave-address
+      : set-address  ( slave -- )  to slave-address  ;
+      : smb-setup  ( -- )
+         dcon-scl-gpio# to smb-clock-gpio#
+         dcon-sda-gpio# to smb-data-gpio#
+         slave-address to smb-slave
+      ;
+
+      \ Since this I2C bus is dedicated to the DCON, we save space by
+      \ implementing only the methods that the DCON uses
+
+      : reg-w@  ( reg# -- w )  smb-setup smb-word@  ;
+      : reg-w!  ( w reg# -- )  smb-setup smb-word!  ;
+
+      : bus-reset  ( -- )  smb-setup smb-stop 1 ms  smb-off  1 ms  smb-on  ;
+      : bus-init  ( -- )  smb-setup  smb-on  smb-pulses  ;
+
+      : open  ( -- flag )  true  ;
+      : close  ( -- )  ;
    finish-device
 device-end
