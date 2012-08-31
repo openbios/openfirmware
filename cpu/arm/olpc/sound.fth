@@ -7,8 +7,8 @@ new-device
    " rt5631-hifi" " dai-name" string-property  \ snd_soc_dai_link.codec_dai_name
    : open  ( -- true )     my-unit " set-address" $call-parent  true  ;
    : close  ( -- )  ;
-   : codec@  ( reg# -- w )  1 2 " bytes-out-in" $call-parent  swap bwjoin  ;
-   : codec!  ( w reg# -- )  >r wbsplit r>  3 " bytes-out" $call-parent  ;
+   : codec@  ( reg# -- w )  " reg-w@" $call-parent  ;
+   : codec!  ( w reg# -- )  " reg-w!" $call-parent  ;
 finish-device
 device-end
 

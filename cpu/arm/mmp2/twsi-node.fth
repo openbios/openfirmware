@@ -59,6 +59,8 @@ h# 1000 reg                                        ( )
 
 : reg-b@  ( reg# -- b )  " reg-b@" $call-twsi  ;
 : reg-b!  ( b reg# -- )  " reg-b!" $call-twsi  ;
+: reg-w@  ( reg# -- b )  " reg-w@" $call-twsi  ;
+: reg-w!  ( b reg# -- )  " reg-w!" $call-twsi  ;
 : bytes-out  ( byte .. #bytes -- )  " bytes-out" $call-twsi  ;
 
 \ Useful range is 25K .. 400K - 100K and 400K are typical

@@ -139,6 +139,9 @@ external
 : reg-b@  ( reg -- byte )  1 1 bytes-out-in  ;
 : reg-b!  ( byte reg -- )  2 bytes-out  ;
 
+: reg-w@  ( reg -- word )  1 2 bytes-out-in  swap bwjoin  ;
+: reg-w!  ( word reg -- )  >r wbsplit r> 3 bytes-out  ;
+
 : set-bus-standard  cr-set  h# 18000 invert and              to cr-set  ;
 : set-bus-fast      cr-set  h# 18000 invert and  h# 8000 or  to cr-set  ;
 
