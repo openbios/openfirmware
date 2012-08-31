@@ -30,7 +30,11 @@ previous definitions
 0 0  " "  " /" begin-package
 " pmua" name
 " mrvl,pxa-apmu" +compatible
-" mrvl,mmp2-apmu" +compatible
+[ifdef] mmp3
+" marvell,mmp3-apmu" +compatible
+[else]
+" marvell,mmp2-apmu" +compatible
+[then]
 
 h# d4282800 h# 1000 reg
 1 " #clock-cells" integer-property
@@ -153,9 +157,9 @@ h# 240 constant audio-sram-pwr
    begin  audio-clk pmua@  4 and 0=  until  \ And wait until done
 
    \ Bring audio island out of reset
-   1 audio-dsa pmua-set
-   4 audio-dsa pmua-set
-   1 audio-dsa pmua-set
+   1 audio-dsa pmua-set		\ Unreset AXI
+   4 audio-dsa pmua-set		\ Unreset APB
+   1 audio-dsa pmua-set		\ Unreset AXI (redundant?)
 
    \ Enable dummy clocks to the SRAMs
    h# 10 isld-dspa-ctrl pmua-set  d# 250 us  h# 10 isld-dspa-ctrl pmua-clr
@@ -179,7 +183,7 @@ h# 240 constant audio-sram-pwr
    h# 100  audio-clk       pmua-clr  \ Enable isolation
    h#   c  audio-sram-pwr  pmua-clr  \ Audio core off
    h#   3  audio-sram-pwr  pmua-clr  \ Audio SRAM off
-   h# 600  audio-clk       pmua-clr  \ Enable isolation
+   h# 600  audio-clk       pmua-clr  \ Power switch off
 [else]
    h# 710  audio-clk  pmua!  \ Set peripheral reset
    h# 610  audio-clk  pmua!  \ Enable isolation

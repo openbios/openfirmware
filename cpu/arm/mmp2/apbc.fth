@@ -1,7 +1,11 @@
 0 0  " "  " /" begin-package
 " apbc" name
 " mrvl,pxa-apbc" +compatible
-" mrvl,mmp2-apbc" +compatible
+[ifdef] mmp3
+" marvell,mmp3-apbc" +compatible
+[else]
+" marvell,mmp2-apbc" +compatible
+[then]
 
 h# d4015000 h# 1000 reg
 1 " #clock-cells" integer-property
