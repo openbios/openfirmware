@@ -56,6 +56,7 @@ h# 1000 reg                                        ( )
 : bytes-out-in  ( out ... #outs #ins -- in ... )  " bytes-out-in" $call-twsi   ;
 
 : get  ( #bytes -- bytes ... )  0 swap  bytes-out-in  ;
+: read-bytes  ( adr len -- )  " read-bytes" $call-twsi  ;
 
 : reg-b@  ( reg# -- b )  " reg-b@" $call-twsi  ;
 : reg-b!  ( b reg# -- )  " reg-b!" $call-twsi  ;

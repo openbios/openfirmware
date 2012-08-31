@@ -534,47 +534,73 @@ d# 1 value fss-min
    key drop
 ;
 
-: scribble
-   cursor-off
-   background
+: (scribble)
    begin
-      stream-poll?  if  drop  dot  then
-   key? until
+      in?  if
+         pbuf 2+ c@  h# 04 =  if                \ touch notification event
+            pbuf 3 + c@  0 do                   \ per subpacket loop
+               pbuf 4 + i 9 * + >r              (       r:addr )
+               screen-w r@ w@ -                 ( x     r:addr )
+               r@ wa1+ w@                       ( x y   r:addr )
+               r> 4 + c@  2 rshift setcolor     ( x y          )
+               dot
+            loop
+         then
+      then
+   exit-test?  until
+;
+
+: scribble
+   configure
+   \ FIXME: tune with set scanning frequency request
+   cursor-off
+   consume
+   begin  in?  0=  until
+   background
+   (scribble)
    cursor-on
-   \ FIXME: tune the event frequency with set scanning frequency request
+   page
+;
+
+: ir-pcb-smt  ( -- error? )
+   hold-reset  connect
+   open  if  test-os  else  fault  then
+   hold-reset  disconnect
+   faults
+;
+
+: ir-pcb-assy  ( -- error? )
+   hold-reset  connect
+   open  if  test-fll  else  fault  then
+   hold-reset  disconnect
+   faults
+;
+
+: mb-smt  ( -- error? )
+   open  0=  if  true exit  then
+   test-version
+   close
+   false
+;
+
+: mb-assy  ( -- error? )
+[ifdef] nn-ir-pcb-rev-b
+   open  0=  if true exit  then
+   test-finger-down-each-edge
+   faults
+[then]
 ;
 
 : selftest  ( -- error? )
 
    0 to faults
 
-   test-station h# 11 =  if  \ IR PCB SMT
-      hold-reset  connect
-      open  if  test-os  else  fault  then
-      hold-reset  disconnect
-      faults  exit
-   then
-
-   test-station h# 12 =  if  \ IR PCB ASSY
-      hold-reset  connect
-      open  if  test-fll  else  fault  then
-      hold-reset  disconnect
-      faults  exit
-   then
-
-   test-station h#  1 =  if  \ MB SMT
-      open  0=  if  true exit  then
-      test-version
-      close
-      false  exit
-   then
-
-[ifdef] nn-ir-pcb-rev-b
-   test-station h#  2 =  if  \ MB ASSY
-      open  if  test-finger-down-each-edge  else  fault  then
-      faults  exit
-   then
-[then]
+   test-station case
+      h#  1 =  of  mb-smt  exit  endof
+      h#  2 =  of  mb-assy  exit  endof
+      h# 11 =  of  ir-pcb-smt  exit  endof
+      h# 12 =  of  ir-pcb-assy  exit  endof
+   endcase
 
    \ MB FINAL
    \ MB SHIP

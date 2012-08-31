@@ -166,6 +166,10 @@ false value selftest-failed?  \ Success/failure flag for final test mode
    key?  dup  if  key drop  then      ( exit? )
 ;
 
+: consume
+   begin  key?  while  key drop  repeat
+;
+
 0 value pressure
 
 \ LICENSE_BEGIN

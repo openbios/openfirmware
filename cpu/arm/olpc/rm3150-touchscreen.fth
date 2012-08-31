@@ -120,7 +120,7 @@ false value last-down?
    cursor-off
 
    \ Consume already-queued keys to prevent premature exit
-   begin  key?  while  key drop  repeat
+   consume
 
    \ Consume already-queued trackpad events to prevent premature exit
    d# 100 0  do
