@@ -49,8 +49,8 @@ dev /
          cam-sda-gpio# to smb-data-gpio#
          slave-address to smb-slave
       ;
-      \ Since this I2C bus is dedicated to the DCON, we save space by
-      \ implementing only the methods that the DCON uses
+      \ Since this I2C bus is dedicated to the camera sensor, we save space by
+      \ implementing only the methods that the sensor uses
       : reg-b@  ( reg# -- b )  smb-setup smb-byte@  ;
       : reg-b!  ( b reg# -- )  smb-setup smb-byte!  ;
       : open  ( -- flag )  true  ;
