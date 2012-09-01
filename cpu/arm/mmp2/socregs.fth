@@ -22,6 +22,9 @@ purpose: Register access words for MMP2 registers used by many functional units
 : mpmu@  ( offset -- l )  +mpmu io@  ;
 : mpmu!  ( l offset -- )  +mpmu io!  ;
 
+: mpmu-set  ( bits reg# -- )  +mpmu io-set  ;
+: mpmu-clr  ( bits reg# -- )  +mpmu io-clr  ;
+
 : pmua@  ( offset -- l )  +pmua io@  ;
 : pmua!  ( l offset -- )  +pmua io!  ;
 

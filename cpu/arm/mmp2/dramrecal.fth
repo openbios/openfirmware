@@ -1,5 +1,5 @@
 \ See license at end of file
-purpose: Recalibrate DDR3 DRAM
+purpose: Recalibrate DDR3 DRAM (SoC-specific low-level power management factors)
 
 \ DDR3 DRAM requires periodic recalibration to cope with parameter drift from
 \ temperature variation.  The recalibration below affects both the DLL and
@@ -189,14 +189,7 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
 end-code
 here ddr-self-refresh - constant /ddr-self-refresh
 
-memctrl-pa constant memctrl-va
-
 : ddr-code-to-sram  ( -- )
-   memctrl-pa h# c02 or  memctrl-va map-section  \ Map the memory controller
-
-\ sram is already mapped by initmmu.fth
-\  sram-pa    h# c0e or  sram-va    map-section  \ Make the code cacheable
-
    ddr-recal 'ddr-recal /ddr-recal move
    'ddr-recal /ddr-recal sync-cache
 
@@ -227,124 +220,6 @@ code do-self-refresh  ( -- )
    mov pc,r1
 c;
 
-: apbc-clr-rst  ( offset -- )  4  swap +apbc  io-clr  ;
-: apbc-set-rst  ( offset -- )  4  swap +apbc  io-set  ;
-
-: disable-apbc-clks  ( -- )
-   \ 3 h# 38 +apbc io-clr   \ GPIO
-   3 h# 74 +apbc io-clr   \ MPMU
-   3 h# 78 +apbc io-clr   \ IPC
-   3 h# 90 +apbc io-clr   \ THSENS1
-
-   \ h# 38 apbc-set-rst
-   \ h# 74 apbc-set-rst   \ MPMU  - resetting this kills TIMER2, used by the SP PS/2
-   h# 78 apbc-set-rst   \ IPC
-   h# 90 apbc-set-rst   \ THSENS1
-;
-: enable-apbc-clks  ( -- )
-   \ 3 h# 38 +apbc io-set   \ GPIO
-   3 h# 74 +apbc io-set   \ MPMU
-   3 h# 78 +apbc io-set   \ IPC
-   3 h# 90 +apbc io-set   \ THSENS1
-
-   \ h# 38 apbc-clr-rst
-   h# 74 apbc-clr-rst   \ MPMU
-   h# 78 apbc-clr-rst   \ IPC
-   h# 90 apbc-clr-rst   \ THSENS1
-;
-: disable-scu-clks  ( -- )
-   0 h# 64 +scu io!  \ SCU_AXIFAB_CKGT_CTRL0  - Close AXI fabric clock gate
-   0 h# 68 +scu io!  \ SCU_AXIFAB_CKGT_CTRL1
-   h# f0 h# 1c +scu io-set  \ SCU_MCB_CONF
-;
-: enable-scu-clks  ( -- )
-   h# 3003003 h# 64 +scu io!  \ SCU_AXIFAB_CKGT_CTRL0  - Open AXI fabric clock gate
-   h# 0303030 h# 68 +scu io!  \ SCU_AXIFAB_CKGT_CTRL1
-   h# f0 h# 1c +scu io-clr    \ SCU_MCB_CONF
-;
-: disable-apmu-clks  ( -- )
-   h#    1b h#  54 +pmua io-clr  \ PMUA_SDH0_CLK_RES_CTRL
-   h#    1b h#  58 +pmua io-clr  \ PMUA_SDH1_CLK_RES_CTRL
-   h#    1b h#  e8 +pmua io-clr  \ PMUA_SDH2_CLK_RES_CTRL
-   h#    1b h#  d4 +pmua io-clr  \ PMUA_SMC_CLK_RES_CTRL
-   h#    3f h#  60 +pmua io-clr  \ PMUA_NF_CLK_RES_CTRL
-   h#    3f h#  d8 +pmua io-clr  \ PMUA_MSPRO_CLK_RES_CTRL - XO does not use MSPRO
-   h#    12 h# 10c +pmua io-clr  \ PMUA_AUDIO_CLK_RES_CTRL
-   h# 1fffd h#  dc +pmua io-clr  \ PMUA_GLB_CLK_RES_CTRL
-\  0        h#  68 pmua!         \ PMUA_WTM_CLK_RES_CTRL
-   h#     9 h#  5c +pmua io-clr  \ PMUA_USB_CLK_RES_CTRL
-;
-: enable-apmu-clks  ( -- )
-   h#    1b h#  54 +pmua io-set  \ PMUA_SDH0_CLK_RES_CTRL
-   h#    1b h#  58 +pmua io-set  \ PMUA_SDH1_CLK_RES_CTRL
-   h#    1b h#  e8 +pmua io-set  \ PMUA_SDH2_CLK_RES_CTRL
-   h#    1b h#  d4 +pmua io-set  \ PMUA_SMC_CLK_RES_CTRL \ ??? what is this and why is it on?
-   h#    3f h#  60 +pmua io-set  \ PMUA_NF_CLK_RES_CTRL \ Should this be on?
-\  h#    3f h#  d8 +pmua io-set  \ PMUA_MSPRO_CLK_RES_CTRL
-   h#    12 h# 10c +pmua io-set  \ PMUA_AUDIO_CLK_RES_CTRL
-   h# 1fffd h#  dc +pmua io-set  \ PMUA_GLB_CLK_RES_CTRL
-\  h#    1b h#  68 pmua!         \ PMUA_WTM_CLK_RES_CTRL
-   h#     9 h#  5c +pmua io-set  \ PMUA_USB_CLK_RES_CTRL
-;
-: pll2?  ( -- flag )  h# 34 mpmu@ h# 100 and 0<>  ;
-: disable-mpmu-clks  ( -- )
-   pll2?  if  h# e010  else  h# a010  then    ( cgr-value )
-   dup h# 1024 mpmu!                  \ MPMU_CGR_PJ
-   h# 0024 mpmu!                      \ MPMU_CGR_SP
-
-\  h# 2000.0000 h#  414 +mpmu io-clr  \ MPMU_PLL2_CTRL1
-   h# 8000.0000 h# 0040 +mpmu io-clr  \ MPMU_ISCCR1
-   h# 8000.0000 h# 0044 +mpmu io-clr  \ MPMU_ISCCR2
-;
-: enable-mpmu-clks  ( -- )
-   h# dffe.fffe h# 1024 mpmu!         \ MPMU_ACGR
-\  h# 2000.0000 h# 0414 +mpmu io-set  \ MPMU_PLL2_CTRL1
-   h# 8000.0000 h# 0040 +mpmu io-set  \ MPMU_ISCCR1
-   h# 8000.0000 h# 0044 +mpmu io-set  \ MPMU_ISCCR2
-;
-: disable-twsi-clks  ( -- )
-   \ set RST in APBC_TWSIx_CLK_RST registers
-
-[ifdef] notdef
-   \ just disable TWSI1 clk rather than reset it since it's needed to access PMIC onkey
-   \ when system is waken up from low power mode */
-   0 4 +apbc io!   \ Disable TWSI1 clock
-[else]
-   h# 04 apbc-set-rst  \ TWSI1
-[then]
-   h# 08 apbc-set-rst  \ TWSI2
-   h# 0c apbc-set-rst  \ TWSI3
-   h# 10 apbc-set-rst  \ TWSI4
-   h# 7c apbc-set-rst  \ TWSI5
-   h# 80 apbc-set-rst  \ TWSI6
-;
-: enable-twsi-clks  ( -- )
-[ifdef] notdef
-   3 4 +apbc io!   \ Enable TWSI1 clock
-[else]
-   h# 04 apbc-clr-rst  \ TWSI1
-[then]
-   h# 08 apbc-clr-rst  \ TWSI2
-   h# 0c apbc-clr-rst  \ TWSI3
-   h# 10 apbc-clr-rst  \ TWSI4
-   h# 7c apbc-clr-rst  \ TWSI5
-   h# 80 apbc-clr-rst  \ TWSI6
-;
-: disable-clks  ( -- )
-   disable-twsi-clks
-   disable-apbc-clks
-   disable-scu-clks
-   disable-apmu-clks
-   disable-mpmu-clks
-;
-: enable-clks  ( -- )
-   enable-mpmu-clks
-   enable-apmu-clks
-   enable-scu-clks
-   enable-apbc-clks
-   enable-twsi-clks
-;
-
 \ Wakeup ports - from datasheet page 718
 \ WAKEUP0: CAWAKE (MIPI-HSI wakeup)
 \ WAKEUP1: Audio Island
@@ -361,301 +236,6 @@ c;
    h# ff08.7fff   ( mask )  \ Enable all wakeup ports
 ;
 : block-irqs  ( -- )  1 h# 110 +icu io!  ;
-
-\ XXX we might need to set GPIOs 71 and 160 (ps2 clocks), and perhaps the dat lines too,
-\ for non-sleep-mode control - or maybe for sleep mode control as inputs.
-\ We also may need to enable falling edge detects.
-: disable-int40  ( -- )
-   d# 40 disable-interrupt
-   1  h# 29.00cc  io-set   \ Unmask the inter-processor communications interrupt
-;
-
-: gpio-wakeup?  ( gpio# -- flag )
-   h# 019800 over 5 rshift la+ l@  ( gpio# mask )
-   swap h# 1f and                  ( mask bit# )
-   1 swap lshift  and  0<>         ( flag )
-;
-
-: .masked  ( irq# -- )
-   dup /l* h# 10c + icu@  ( irq# masked )
-   1 and  if              ( irq# )
-      ." IRQ" .d ." is masked off" cr
-   else                   ( irq# )
-      drop                ( )
-   then                   ( )
-;
-: .selected  ( irq# -- )
-   dup /l* h# 100 + icu@  ( irq# n )
-   dup h# 40 and  if      ( irq# n )
-      ." IRQ" swap .d     ( n )
-      ." selected INT" h# 3f and .d  cr  ( )
-   else                   ( irq# n )
-      2drop               ( )
-   then                   ( )
-;
-: (.pending)  ( d -- )
-   ." pending INTs: "                      ( d )
-   d# 64 0  do                             ( d )
-      over 1 and  if  i .d  then           ( d )
-      d2/                                  ( d' )
-   loop                                    ( d )
-   2drop                                   ( )
-;
-: .pending  ( irq# -- )
-   dup 2* /l* h# 130 +  dup icu@  swap la1+ icu@   ( irq# d )
-   2dup d0=  if                                    ( irq# d )
-      3drop                                        ( )
-   else                                            ( irq# d )
-      ." IRQ " rot .d   (.pending)  cr             ( )
-   then                                            ( )
-;
-
-: bit?  ( n bit# -- n flag )  1 swap lshift over and  0<>  ;
-: .ifbit  ( n bit# msg$ -- n )
-   2>r  bit?  if       ( n r: msg$ )
-      2r> type  space  ( n )
-   else                ( n r: msg$ )
-      2r> 2drop        ( n )
-   then                ( n )
-;
-: .enabled-ints  ( -- )
-   d# 64 0  do                           ( )
-      i /l* icu@  dup h# 70 and  if      ( n )
-         ." INT" i .d ." -> IRQ"         ( n )
-         4 " 0" .ifbit                   ( n )
-         5 " 1" .ifbit                   ( n )
-         6 " 2" .ifbit                   ( n )
-         ."  Pri " h# f and .d  cr       ( )
-      else                               ( n )
-         drop                            ( )
-      then                               ( )
-   loop                                  ( )
-;
-: .int4  ( -- )
-   ." INT4 - mask "  h# 168 icu@ .x
-   ." status " h# 150 icu@ dup .x
-   0   " USB " .ifbit
-   1   " PMIC" .ifbit
-   drop  cr
-;
-: .int5  ( -- )
-   ." INT5 - mask "  h# 16c icu@ .x
-   ." status " h# 154 icu@  dup .x
-   0   " RTC " .ifbit
-   1   " RTC_Alarm" .ifbit
-   drop cr
-;
-: .int9  ( -- )
-   ." INT9 - mask "  h# 17c icu@ .x
-   ." status " h# 180 icu@  dup .x
-   0   " Keypad " .ifbit
-   1   " Rotary " .ifbit
-   2   " Trackball" .ifbit
-   drop cr
-;
-: .int17  ( -- )
-   ." INT17 - mask " h# 170 icu@ .x
-   ." status " h# 158 icu@  dup .x  ( n )
-   7 2 do              ( n )
-      dup 1 and  if    ( n )
-	." TWSI" i .d  ( n )
-      then             ( n )
-      u2/              ( n' )
-   loop                ( n )
-   drop  cr            ( )
-;
-: .int35  ( -- )
-   ." INT35 - mask "  h# 174 icu@ .x
-   ." status " h# 15c icu@  dup  .x
-   d#  0  " PJ_PerfMon" .ifbit
-   d#  1 " L2_PA_ECC"   .ifbit
-   d#  2 " L2_ECC"      .ifbit
-   d#  3 " L2_UECC"     .ifbit
-   d#  4 " DDR"         .ifbit
-   d#  5 " Fabric0"     .ifbit
-   d#  6 " Fabric1"     .ifbit
-   d#  7 " Fabric2"     .ifbit
-   d#  9 " Thermal"     .ifbit
-   d# 10 " MainPMU"     .ifbit
-   d# 11 " WDT2"        .ifbit
-   d# 12 " CoreSight"   .ifbit
-   d# 13 " PJ_Commtx"   .ifbit
-   d# 14 " PJ_Commrx"   .ifbit
-   drop
-   cr
-;
-: .int51  ( -- )
-   ." INT51 - mask " h# 178 icu@ .x
-   ." status " h# 160 icu@  dup  .x
-   0 " HSI_CAWAKE1 "  .ifbit
-   1 " MIPI_HSI1"     .ifbit
-   drop cr
-;
-: .int55  ( -- )
-   ." INT55 - mask " h# 184 icu@ .x
-   ." status " h# 188 icu@  dup  .x
-   0 " HSI_CAWAKE0 "  .ifbit
-   1 " MIPI_HSI0"     .ifbit
-   drop cr
-;
-
-: .fiq  ( -- )
-   h# 304 icu@  if  ." FIQ is masked off"  cr  then
-   h# 300 icu@  dup  h# 40 and  if  ." FIQ selected INT: " h# 3f and .d cr  else  drop  then
-   h# 310 icu@  h# 314 icu@  2dup d0=  if  ( d )
-      2drop                                ( )
-   else                                    ( d )
-      ." FIQ " (.pending) cr               ( )
-   then                                    ( )
-;
-  
-: .icu  ( -- )
-   .enabled-ints
-   3 0 do  i .masked  i .selected  i .pending  loop
-   \ XXX should handle DMA interrupts too
-   .fiq
-   .int4  .int5  .int9  .int17  .int35  .int51  .int55
-;
-string-array wakeup-bit-names
-   ," WU0 "
-   ," WU1 "
-   ," WU2 "
-   ," WU3 "
-   ," WU4 "
-   ," WU5 "
-   ," WU6 "
-   ," WU7 "
-   ," TIMER_1_1 "
-   ," TIMER_1_2 "
-   ," TIMER_1_3 "
-   ," MSP_INS "
-   ," AUDIO "
-   ," WDT1 "
-   ," TIMER_2_1 "
-   ," TIMER_2_2 "
-   ," TIMER_2_3 "
-   ," RTC_ALARM "
-   ," WDT2 "
-   ," ROTARY "
-   ," TRACKBALL "
-   ," KEYPRESS "
-   ," SDH3_CARD "
-   ," SDH1_CARD "
-   ," FULL_IDLE "
-   ," ASYNC_INT "
-   ," SSP1_SRDY "
-   ," CAWAKE "
-   ," resv28 "
-   ," SSP3_SRDY "
-   ," ALL_WU "
-   ," resv31 "
-end-string-array
-
-string-array wakeup-mask-names
-   ," WU0 "
-   ," WU1 "
-   ," WU2 "
-   ," WU3 "
-   ," WU4 "
-   ," WU5 "
-   ," WU6 "
-   ," WU7 "
-   ," TIMER_1_1 "
-   ," TIMER_1_2 "
-   ," TIMER_1_3 "
-   ," "
-   ," "
-   ," "
-   ," TIMER_2_1 "
-   ," TIMER_2_2 "
-   ," TIMER_2_3 "
-   ," RTC_ALARM "
-   ," WDT2 "
-   ," ROTARY "
-   ," TRACKBALL "
-   ," KEYPRESS "
-   ," SDH3_CARD "
-   ," SDH1_CARD "
-   ," FULL_IDLE "
-   ," ASYNC_INT "
-   ," WDT1 "
-   ," SSP3_SRDY "
-   ," SSP1_SRDY "
-   ," CAWAKE "
-   ," MSP_INS "
-   ," resv31 "
-end-string-array
-
-: .active-wakeups  ( -- )
-   ." Wakeups: "
-   h# 1048 mpmu@    ( n )
-   d# 31 0  do      ( n )
-      dup 1 and  if  i wakeup-bit-names count type  then  ( n )
-      u2/           ( n' )
-   loop             ( n )
-   drop cr          ( )
-;
-: .wakeup-mask  ( -- )
-   ." Enabled wakeups: "
-   h# 4c mpmu@  h# 104c or   ( n )
-   d# 31 0  do               ( n )
-      dup 1 and  if  i wakeup-mask-names count type  then  ( n )
-      u2/                    ( n' )
-   loop                      ( n )
-   drop cr                   ( )
-;
-: .edges  ( -- )
-   ." Wakeup edges: "           ( )
-   d# 6 0  do                   ( )
-      h# 19800 i la+ io@        ( n )
-      d# 32  0  do              ( n )
-         dup 1 and  if          ( n )
-	    j d# 32 *  i +  .d  ( n )
-         then                   ( n )
-         u2/                    ( n' )
-      loop                      ( n )
-      drop                      ( )
-   loop                         ( )
-   cr                           ( )
-;
-: .edge-enables  ( -- )
-   ." Enabled edges: "
-   d# 160  0  do
-      i af@ dup  h# 70 and  h# 40 <>   if  ( n )
-         dup h# 10 and  if  ." R"  then    ( n )
-         dup h# 20 and  if  ." F"  then    ( n )
-         dup h# 40 and  if  ." C"  then    ( n )
-	 i .d                              ( n )
-      then                                 ( n )
-      drop                                 ( )
-   loop
-;
-: .wakeup  ( -- )   .active-wakeups  .wakeup-mask  .edges .edge-enables  ;
-
-: .irqstat  ( -- )  h# 148 h# 130 do  i icu@ .  4 +loop   ;
-\ !!! The problem right now is that I have woken from keyboard, but the interrupt is still asserted
-\ So perhaps the interrupt handler didn't fire
-: rotate-wakeup? ( -- flag )  d#  15 gpio-wakeup?   ;
-: kbd-wakeup?    ( -- flag )  d#  71 gpio-wakeup?   ;
-: tpd-wakeup?    ( -- flag )  d# 160 gpio-wakeup?   ;
-\ We need to do this in the SP interrupt handler
-: clear-wakeup  ( gpio# -- )
-   dup af@                 ( gpio# value )
-   2dup h# 40 or swap af!  ( gpio# value )
-   swap af!
-;
-\ How to wakeup from SP:
-: setup-key-wakeup  ( -- )
-   d# 24 d# 15 do  h# b0 i af!  loop  \ Wake SoC on game keys
-[ifdef] soc-kbd-clk-gpio#
-   h# 220 soc-kbd-clk-gpio# af!  \ Wake SoC on KBD CLK falling edge
-   h# 221 soc-tpd-clk-gpio# af!  \ Wake SoC on TPD CLK falling edge
-[then]
-   h# 4  h# 4c +mpmu  io-set  \ Pin edge (GPIO per datasheet) wakes SoC
-   ['] disable-int40 d# 40 interrupt-handler!
-   d# 40 enable-interrupt  \ SP to PJ4 communications interrupt
-   1  h# 29.00cc  io-clr   \ Unmask the inter-processor communications interrupt
-;
 
 : breadcrumb  ( n -- )  h# d000.0110 l!  ;
 
@@ -749,137 +329,31 @@ end-string-array
    h# 1000 mpmu!                   ( )             \ Set APCR register
 
    \ end mmp2_pm_enter_lowpower_mode(state)
-;
+   h# 000c.0000 h# 8c +pmua io-set  \ Power down CoreSight SRAM
 
-[ifdef] soc-en-kbd-pwr-gpio#
-: keyboard-power-on   ( -- )  soc-en-kbd-pwr-gpio# gpio-clr  ;
-: keyboard-power-off  ( -- )  soc-en-kbd-pwr-gpio# gpio-set  ;
-[else]
-: keyboard-power-on   ( -- )  ;
-: keyboard-power-off  ( -- )  ;
-[then]
-: wlan-power-on   ( -- )  en-wlan-pwr-gpio# gpio-set  ;
-: wlan-power-off  ( -- )  en-wlan-pwr-gpio# gpio-clr  h# 040 en-wlan-pwr-gpio# af!  h# 040 wlan-pd-gpio# af!  h# 040 wlan-reset-gpio# af!  ;
-: wlan-stay-on  ( -- )  h# 140 en-wlan-pwr-gpio# af!  h# 140 wlan-pd-gpio# af!  h# 140 wlan-reset-gpio# af!  ;
-
-0 value sleep-mask
-: screen-sleep
-   sleep-mask 1 and  if            \ DCON power down
-      dcon-freeze
-   else
-      " dcon-suspend" $call-dcon
-   then
-   " sleep" $call-screen
-   " set-ack" $call-ec
-
-   \ 0 h# 54 pmua!  \ Kill the SDIO 0 clocks - insignificant savings
-   \ 0 h# 58 pmua!  \ Kill the SDIO 1 clocks - insignificant savings
-   sleep-mask 2 and  0=  if  keyboard-power-off  then  \ Should save about 17 mW
-   sleep-mask 4 and  if
-      wlan-stay-on
-   else
-      " /wlan" " sleep" execute-device-method drop
-      wlan-power-off
-   then  \ saves 100 mW
-;
-: screen-wake  ( -- )
-   sleep-mask 4 and  0=  if
-      wlan-power-on
-      " /wlan" " wake" execute-device-method drop
-   then
-   sleep-mask 2 and  0=  if  keyboard-power-on   then 
-   " clr-ack" $call-ec
-   " wake" $call-screen
-   sleep-mask 1 and  if            \ DCON power up
-      dcon-unfreeze
-   else
-      " dcon-resume" $call-dcon
-   then
-;
-
-: stdin-idle-on   ['] safe-idle to stdin-idle  d# 15 enable-interrupt  ;
-: stdin-idle-off  ['] noop to stdin-idle  ( install-uart-io ) d# 15 disable-interrupt  ;
-
-: timers-sleep  ( -- )
-   0 h# 14048 io!    \ Disable interrupts from the tick timer
-   7 h# 1407c io!    \ Clear any pending interrupts
-   h# f disable-interrupt  \ Block timer interrupt
-;
-: timers-wake ( -- )
-   1 h# 14048 io!    \ Enable interrupts from the tick timer
-   7 h# 1407c io!    \ Clear any pending interrupts
-   h# f enable-interrupt  \ Unblock timer interrupt
-   reschedule-tick
+   block-irqs
 ;
 
 : power-islands-off  ( -- )
+   \ TODO - need to power down sram/l2$
+   \ mmp2_cpu_disable_l2(0);
+   \ outer_cache.flush_range(0, -1ul);
+
+[ifdef] use-gpio
+   3 gpio-dir-out
+[then]
    0 h# 10c pmua!   \ Turn off audio power island
 ;
 : power-islands-on  ( -- )
    h# 712 h# 10c pmua!   \ Turn on audio power island
 ;
-
-: str  ( -- )
-[ifdef] use-gpio
-   3 gpio-dir-out
-[then]
-
-   disable-interrupts
-   suspend-usb
-   timers-sleep
-
-   screen-sleep
-   stdin-idle-off
-   5 h# 38 mpmu!    \ Use 32 kHz clock instead of VCXO for slow clock
-
-\ OLPC: Unmask main PMU interrupt - don't know if this is necessary
-\   h# 400 h# 174 +icu io-clr
-\   d# 35 enable-interrupt
-
-\ The PMIC_INT line is unconnected on XO-1.75.  Normally it would come from the EC,
-\ presumably for the purpose of waking on a keystroke.
-\  4 enable-interrupt   \ Route PMIC interrupt to PJ4 IRQ
-\  2 h# 168 +icu io-clr \ Enable PMIC interrupt
-
-   setup-sleep-state
-
-   h# 000c.0000 h# 8c +pmua io-set  \ Power down CoreSight SRAM
-
-   \ TODO - need to power down sram/l2$
-   \ mmp2_cpu_disable_l2(0);
-   \ outer_cache.flush_range(0, -1ul);
-
-   power-islands-off
-
-   disable-clks
-
-   \ begin mmp2_cpu_do_idle()
-   block-irqs                    ( )  \ Block IRQs - will be cleared by PMU
-[ifdef] use-hw-s3
+: do-wfi  ( -- )
+   [ifdef] use-hw-s3
    wfi
 [else]
    do-self-refresh
 [then]
-
-   restore-run-state
-   \ end mmp2_cpu_do_idle()
-
-   enable-clks
-
-   power-islands-on
-
-   \ mmp2_cpu_enable_l2(0);
-
-   \ idle_cfg &= (~PMUA_MOH_SRAM_PWRDWN);
-   stdin-idle-on
-
-   screen-wake
-   timers-wake
-   resume-usb
-   enable-interrupts
-   init-thermal-sensor
 ;
-: strp  ( -- )  ec-rst-pwr  str  ec-max-pwr .d ." mW " soc .%  space  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2011 FirmWorks

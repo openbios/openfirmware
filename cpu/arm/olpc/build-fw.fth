@@ -562,7 +562,16 @@ fload ${BP}/cpu/x86/pc/olpc/gui.fth
 fload ${BP}/cpu/x86/pc/olpc/strokes.fth
 fload ${BP}/cpu/x86/pc/olpc/plot.fth
 
+fload ${BP}/cpu/arm/mmp2/showirqs.fth
+fload ${BP}/cpu/arm/mmp2/wakeups.fth
+
+[ifdef] mmp3
+fload ${BP}/cpu/arm/mmp3/dramtable.fth
+[then]
+[ifdef] mmp2
 fload ${BP}/cpu/arm/mmp2/dramrecal.fth
+[then]
+fload ${BP}/cpu/arm/olpc/suspend.fth
 
 code halt  ( -- )  wfi   c;
 
