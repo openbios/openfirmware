@@ -358,6 +358,11 @@ label init-map  ( -- )
    set r3,#0xc02                        \ No caching or write buffering
    bl  `map-sections-v=p`
 
+   set r1,`memctrl-pa #`                \ Address of memory controller
+   set r2,`/io #`                       \ Size of I/O region
+   set r3,#0xc02                        \ No caching or write buffering
+   bl  `map-sections-v=p`
+
 [ifdef] /audio-sram-map
    set r1,`audio-sram-pa #`             \ Address of Audio SRAM
    set r2,`/audio-sram-map #`           \ Map size of audio SRAM
