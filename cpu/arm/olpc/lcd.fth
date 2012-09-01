@@ -269,16 +269,13 @@ defer foo ' noop to foo
 ;
 d# 256 constant /cursor
 /cursor buffer: cursor
-0 value saved-mode
 : sleep  ( -- )
    cursor /cursor 0  cursor-sram-read
-   h# 190 lcd@ to saved-mode
    0 h# 190 lcd!
    lcd-clocks-off
 ;
 : wake  ( -- )
-   lcd-clocks-on
-   saved-mode h# 190 lcd!
+   init-lcd
    cursor /cursor 0  cursor-sram-write
 ;
 
