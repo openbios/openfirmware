@@ -236,35 +236,49 @@ label dramsize  ( -- r0: size-in-bytes )
 
 [ifdef] mmp3
    \ MMP3 memory controller - 2 banks, MMAP registers at 0x10 and 0x14
-   ldr    r2,[r1,#0x10]    \ MMAP0 register
-   ands   r3,r2,#1         \ Test CS_VALID
-   movne  r3,#0x10000      \ Scale factor for memory size
-   movne  r2,r2,lsl #11    \ Clear high bits above AREA_LENGTH field
-   movne  r2,r2,lsr #27    \ Move AREA_LENGTH to LSB
-   addne  r0,r0,r3,lsl r2  \ Compute bank size and add to accumulator
 
-   ldr    r2,[r1,#0x14]    \ MMAP1 register
-   ands   r3,r2,#1         \ Test CS_VALID
-   movne  r3,#0x10000      \ Scale factor for memory size
-   movne  r2,r2,lsl #11    \ Clear high bits above AREA_LENGTH field
-   movne  r2,r2,lsr #27    \ Move AREA_LENGTH to LSB
-   addne  r0,r0,r3,lsl r2  \ Compute bank size and add to accumulator
+   \ Don't access a memory controller whose clock is in reset; it will hang
+   set    r2, #0xd428286c  \ PMUA_BUS_CLK_RES_CTRL
+   ldr    r2,[r2]          \ Register value
+   tst    r2,#0x1          \ MC_RST bit
+   0<> if
 
-   add    r1,r1,#0x10000   \ Memory controller base address d0010000
+      ldr    r2,[r1,#0x10]    \ MMAP0 register
+      ands   r3,r2,#1         \ Test CS_VALID
+      movne  r3,#0x10000      \ Scale factor for memory size
+      movne  r2,r2,lsl #11    \ Clear high bits above AREA_LENGTH field
+      movne  r2,r2,lsr #27    \ Move AREA_LENGTH to LSB
+      addne  r0,r0,r3,lsl r2  \ Compute bank size and add to accumulator
 
-   ldr    r2,[r1,#0x10]    \ MMAP0 register
-   ands   r3,r2,#1         \ Test CS_VALID
-   movne  r3,#0x10000      \ Scale factor for memory size
-   movne  r2,r2,lsl #11    \ Clear high bits above AREA_LENGTH field
-   movne  r2,r2,lsr #27    \ Move AREA_LENGTH to LSB
-   addne  r0,r0,r3,lsl r2  \ Compute bank size and add to accumulator
+      ldr    r2,[r1,#0x14]    \ MMAP1 register
+      ands   r3,r2,#1         \ Test CS_VALID
+      movne  r3,#0x10000      \ Scale factor for memory size
+      movne  r2,r2,lsl #11    \ Clear high bits above AREA_LENGTH field
+      movne  r2,r2,lsr #27    \ Move AREA_LENGTH to LSB
+      addne  r0,r0,r3,lsl r2  \ Compute bank size and add to accumulator
+   then
 
-   ldr    r2,[r1,#0x14]    \ MMAP1 register
-   ands   r3,r2,#1         \ Test CS_VALID
-   movne  r3,#0x10000      \ Scale factor for memory size
-   movne  r2,r2,lsl #11    \ Clear high bits above AREA_LENGTH field
-   movne  r2,r2,lsr #27    \ Move AREA_LENGTH to LSB
-   addne  r0,r0,r3,lsl r2  \ Compute bank size and add to accumulator
+   \ Don't access a memory controller whose clock is in reset; it will hang
+   set    r2, #0xd428286c  \ PMUA_BUS_CLK_RES_CTRL
+   ldr    r2,[r2]          \ Register value
+   tst    r2,#0x2          \ MC2_RST bit
+   0<> if
+      add    r1,r1,#0x10000   \ Memory controller base address d0010000
+
+      ldr    r2,[r1,#0x10]    \ MMAP0 register
+      ands   r3,r2,#1         \ Test CS_VALID
+      movne  r3,#0x10000      \ Scale factor for memory size
+      movne  r2,r2,lsl #11    \ Clear high bits above AREA_LENGTH field
+      movne  r2,r2,lsr #27    \ Move AREA_LENGTH to LSB
+      addne  r0,r0,r3,lsl r2  \ Compute bank size and add to accumulator
+
+      ldr    r2,[r1,#0x14]    \ MMAP1 register
+      ands   r3,r2,#1         \ Test CS_VALID
+      movne  r3,#0x10000      \ Scale factor for memory size
+      movne  r2,r2,lsl #11    \ Clear high bits above AREA_LENGTH field
+      movne  r2,r2,lsr #27    \ Move AREA_LENGTH to LSB
+      addne  r0,r0,r3,lsl r2  \ Compute bank size and add to accumulator
+   then
 [else]
    \ MMP2 memory controller - 1 bank, MMAP registers at 0x100 and 0x110
    ldr    r2,[r1,#0x100]   \ MMAP0 register
