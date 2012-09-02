@@ -54,6 +54,12 @@ end-package
 ;
 alias test4 wakeup-loop
 
+d# -250 constant suspend-power-limit
+[ifdef] mmp3
+   .( mmp2/rtc.fth: Temporarily increasing suspend-power-limit) cr
+   d# -400 to suspend-power-limit
+[then]
+
 : s3-selftest  ( -- error? )
    \ The general failure mode here is that it won't wake up, so
    \ it's hard to return a real error code.  We just have to rely
@@ -62,7 +68,7 @@ alias test4 wakeup-loop
    ." Sleeping for 3 seconds .. "  d# 1000 ms
    ec-rst-pwr ['] cancel-alarm 3 rtc-wake  str  ec-max-pwr  ( power )
    \ Negative power is consumed from battery, positive is supplied to battery
-   dup  d# -250 <  if                                       ( power )
+   dup  suspend-power-limit <  if                           ( power )
       ." System used too much power during suspend - "  negate .d ." mW" cr  ( )
       true                                                  ( error? )
    else                                                     ( power )
