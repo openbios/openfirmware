@@ -566,7 +566,7 @@ fload ${BP}/cpu/arm/mmp2/showirqs.fth
 fload ${BP}/cpu/arm/mmp2/wakeups.fth
 
 [ifdef] mmp3
-fload ${BP}/cpu/arm/mmp3/dramtable.fth
+fload ${BP}/cpu/arm/mmp3/dramrecal.fth
 [then]
 [ifdef] mmp2
 fload ${BP}/cpu/arm/mmp2/dramrecal.fth
