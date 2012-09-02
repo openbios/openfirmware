@@ -17,7 +17,6 @@ warning !
 device-end
 
 \ Add suspend resume test except in final
-[ifndef] mmp3   \ Pending MMP3 suspend/resume implementation
 dev /switches
 warning @ warning off
 : selftest  ( -- error? )
@@ -28,4 +27,3 @@ warning @ warning off
 ;
 warning !
 device-end
-[then]
