@@ -26,9 +26,14 @@ create nn-version       \ version display
 
 \ create nn-ir-pcb-rev-b  \ support for revision b of the ir pcb assembly
 
+d# 15 value xleds
+d# 11 value yleds
+
 \ XXX these are really platform-related, not touchscreen-related
 : targets?  ( -- flag )  final-test?  ;
-: .tsmsg  ( -- )  0 d# 27 at-xy  ." Touchscreen test.  Type a key to exit" cr  ;
+: (.tsmsg)  ( -- )  0 d# 27 at-xy  ." Touchscreen test.  Type a key to exit" cr  ;
+defer .tsmsg
+' (.tsmsg) to .tsmsg
 
 [ifndef] set-geometry
 fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
@@ -534,7 +539,12 @@ d# 1 value fss-min
    key drop
 ;
 
-: (scribble)
+defer (ev)  ( x y -- )  \ touch event handler for tests
+' noop to (ev)
+0 value remaining
+
+: ev  ( handler -- )
+   to (ev)
    begin
       in?  if
          pbuf 2+ c@  h# 04 =  if                \ touch notification event
@@ -543,24 +553,142 @@ d# 1 value fss-min
                screen-w r@ w@ -                 ( x     r:addr )
                r@ wa1+ w@                       ( x y   r:addr )
                r> 4 + c@  2 rshift setcolor     ( x y          )
-               dot
+               (ev)                             ( )
             loop
          then
       then
-   exit-test?  until
+      key?  dup  if  key drop  then             ( key? )
+      remaining 0=  or                          ( exit? )
+      \ FIXME: add 30-second timeout
+   until
 ;
 
-: scribble
+: ev(
    configure
-   \ FIXME: tune with set scanning frequency request
    cursor-off
    consume
    begin  in?  0=  until
    background
-   (scribble)
+   -1 to remaining
+;
+
+: )ev
    cursor-on
    page
+   ['] (.tsmsg) to .tsmsg
 ;
+
+
+: scribble
+   ev(  ['] dot  ev  )ev
+;
+
+
+0 value dx
+0 value dy
+
+xleds yleds *  constant /boxen
+create boxen  /boxen  allot  \ non-zero means box is expected to be hit
+
+: 0boxen  ( -- )  boxen /boxen erase  ;
+: >boxen  ( bx by -- addr )  yleds * +
+   dup /boxen > if debug-me then
+   boxen +  ;
+
+: dxdy  ( xleds yleds -- )
+   0boxen
+   screen-h swap / to dy
+   screen-w swap / to dx
+   0 to remaining
+;
+
+: bxby>xy  ( bx by -- x y )
+   swap dx * swap dy *
+;
+
+: xy>bxby  ( x y -- bx by )
+   swap dx / swap dy /
+;
+
+: box  ( bx by colour -- )
+   -rot ( colour bx by )
+   bxby>xy ( colour x y )
+   dx dy ( colour x y w h )
+   fill-rectangle-noff
+;
+
+: hit  ( bx by -- )
+   2dup >boxen dup c@  if               ( bx by >boxen )
+      0 swap c!                         ( bx by )
+      remaining 1- to remaining         ( bx by )
+      green box                         ( )
+   else                                 ( bx by >boxen )
+      drop 2drop                        ( )
+   then                                 ( )
+;
+
+: unhit  ( bx by -- )
+   remaining 1+ to remaining
+   2dup >boxen 1 swap c!                ( bx by )
+   red box                              ( )
+;
+
+: unhit-all  ( -- )
+   xleds 0 do
+      yleds 0 do
+	 j i unhit
+      loop
+   loop
+;
+
+: prep
+   xleds yleds dxdy
+   unhit-all
+;
+
+: hit-xy  ( x y -- )
+   screen-h mod swap screen-w mod swap  \ coerce stupid coordinates seen
+   xy>bxby hit
+;
+
+: boxes
+   ev(  prep  ['] hit-xy  ev  )ev
+;
+
+
+: .ta  ( -- )  d# 32 d#  4 at-xy  ."  Top Axis Test  " cr  ;
+: .ba  ( -- )  d# 32 d# 25 at-xy  ."  Bottom Axis Test " cr  ;
+: .la  ( -- )  d#  8 d# 14 at-xy  ."  Left Axis Test " cr  ;
+: .ra  ( -- )  d# 55 d# 14 at-xy  ."  Right Axis Test " cr  ;
+
+: ta0  ( -- )  xleds yleds dxdy     xleds 0     do  i 0         unhit  loop  ;
+: ba0  ( -- )  xleds 1+ yleds dxdy  xleds 1+ 0  do  i yleds 1-  unhit  loop  ;
+: la0  ( -- )  xleds yleds dxdy     yleds 0     do  0 i         unhit  loop  ;
+: ra0  ( -- )  xleds yleds 1+ dxdy  yleds 1+ 0  do  xleds 1- i  unhit  loop  ;
+
+: (ta)  ( x y -- )  dup  dy >=             if  2drop exit  then  hit-xy  ;
+: (ba)  ( x y -- )  dup  screen-h dy - <=  if  2drop exit  then  hit-xy  ;
+: (la)  ( x y -- )  over dx >=             if  2drop exit  then  hit-xy  ;
+: (ra)  ( x y -- )  over screen-w dx - <=  if  2drop exit  then  hit-xy  ;
+
+\ translate a premature keyboard exit into a fault
+: r-fault?  ( -- )  remaining  if  fault  then  ;
+
+: ta  ['] .ta to .tsmsg  ev(  ta0  ['] (ta) ev  )ev  r-fault?  ;
+: ba  ['] .ba to .tsmsg  ev(  ba0  ['] (ba) ev  )ev  r-fault?  ;
+: la  ['] .la to .tsmsg  ev(  la0  ['] (la) ev  )ev  r-fault?  ;
+: ra  ['] .ra to .tsmsg  ev(  ra0  ['] (ra) ev  )ev  r-fault?  ;
+
+: test-adjacent-axes
+   get-msecs 3 and  \ pick random corner
+   case
+      0  of  ta ra  exit  endof
+      1  of  ra ba  exit  endof
+      2  of  ba la  exit  endof
+      3  of  la ta  exit  endof
+   endcase
+;
+
 
 : ir-pcb-smt  ( -- error? )
    hold-reset  connect
@@ -571,7 +699,12 @@ d# 1 value fss-min
 
 : ir-pcb-assy  ( -- error? )
    hold-reset  connect
-   open  if  test-fll  else  fault  then
+   open  if
+      test-fll
+      faults 0=  if  test-adjacent-axes  then
+   else
+      fault
+   then
    hold-reset  disconnect
    faults
 ;
@@ -584,12 +717,9 @@ d# 1 value fss-min
 ;
 
 : mb-assy  ( -- error? )
-[ifdef] nn-ir-pcb-rev-b
    open  0=  if true exit  then
-   test-finger-down-each-edge
+   test-adjacent-axes
    faults
-[then]
-   true
 ;
 
 : selftest  ( -- error? )
@@ -618,12 +748,7 @@ d# 1 value fss-min
       faults  if  close  true  exit  then
    then
 
-[ifdef] nn-ir-pcb-rev-b
    scribble
-[else]
-   ." dumping events from touchscreen controller, press a key to stop" cr
-   dump-events
-[then]
 
    close false
 ;
