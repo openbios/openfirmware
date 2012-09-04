@@ -186,7 +186,7 @@ d# 250 constant /pbuf
       (.version) 2+
       [char] . emit
    loop                                 ( addr )
-   (.version)                       ( )
+   (.version) drop                      ( )
 ;
 
 : test-version  ( -- )
@@ -544,6 +544,7 @@ defer (ev)  ( x y -- )  \ touch event handler for tests
 
 : ev  ( handler -- )
    to (ev)
+   get-msecs d# 30000 +                         ( to )
    begin
       in?  if
          pbuf 2+ c@  h# 04 =  if                \ touch notification event
@@ -555,11 +556,12 @@ defer (ev)  ( x y -- )  \ touch event handler for tests
                (ev)                             ( )
             loop
          then
-      then
-      key?  dup  if  key drop  then             ( key? )
-      remaining 0=  or                          ( exit? )
-      \ FIXME: add 30-second timeout
-   until
+      then                                      ( to )
+      dup get-msecs -  0<                       ( to timeout? )
+      dup  if  fault  then                      ( to timeout? )
+      key?  dup  if  key drop  then             ( to timeout? key? )
+      or remaining 0=  or                       ( to exit? )
+   until drop                                   ( )
 ;
 
 : ev(
@@ -754,6 +756,27 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 
 finish-device
 device-end
+
+: test-touchscreen  ( -- error? )
+   " /touchscreen" " selftest" execute-device-method if
+      throw
+   then
+;
+
+: test-pass-or-fail  ( function -- error? )
+   catch  if
+      show-fail
+   else
+      show-pass
+   then
+;
+
+: test-ir-pcb-assy  ( -- error? )
+   test-station  h# 12 to test-station                  ( test-station )
+   ['] test-touchscreen test-pass-or-fail               ( test-station error? )
+   swap  to test-station                                ( error? )
+;
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2012 FirmWorks
