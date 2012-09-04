@@ -241,12 +241,6 @@ devalias net /wlan
 
 fload ${BP}/dev/olpc/kb3700/spicmd.fth           \ EC SPI Command Protocol
 
-[ifdef] has-sp-kbd
-fload ${BP}/cpu/arm/olpc/spcmd.fth   \ Security Processor communication protocol
-devalias keyboard /ap-sp/keyboard
-devalias mouse    /ap-sp/mouse
-[then]
-
 : wlan-reset  ( -- )  wlan-reset-gpio# gpio-clr  d# 20 ms  wlan-reset-gpio# gpio-set  ;
 
 fload ${BP}/ofw/core/fdt.fth
@@ -301,6 +295,15 @@ fload ${BP}/cpu/arm/mmp3/usb2phy.fth
 fload ${BP}/cpu/arm/marvell/utmiphy.fth
 [then]
 fload ${BP}/cpu/arm/olpc/usb.fth
+
+[ifdef] has-sp-kbd
+\ Load this after the USB driver so the ambiguous pathname /keyboard will
+\ resolve to /ap-sp/keyboard instead of /usb/keyboard after a USB keyboard
+\ has been attached.  Manufacturing test scripts need that behavior.
+fload ${BP}/cpu/arm/olpc/spcmd.fth   \ Security Processor communication protocol
+devalias keyboard /ap-sp/keyboard
+devalias mouse    /ap-sp/mouse
+[then]
 
 fload ${BP}/dev/olpc/mmp2camera/loadpkg.fth
 
