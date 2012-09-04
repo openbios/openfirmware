@@ -499,7 +499,6 @@ d# 1 value fss-min
 : test-fll-axis  ( axis -- )
    h# 20 h# 02 h# ee  4 bytes-out
    h# 1c d# 200 anticipate
-   pbuf plen cdump cr
    pbuf 4 + c@  2/  0  do
       i pbuf 5 + over 3 * + >r ( i r:frag )
       2* dup  r@ 1+ c@  r@ c@ 4 rshift h# f and  test-fll-signal
