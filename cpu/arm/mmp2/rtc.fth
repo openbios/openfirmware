@@ -57,7 +57,7 @@ alias test4 wakeup-loop
 d# -250 constant suspend-power-limit
 [ifdef] mmp3
    .( mmp2/rtc.fth: Temporarily increasing suspend-power-limit) cr
-   d# -400 to suspend-power-limit
+   d# -500 to suspend-power-limit
 [then]
 
 : s3-selftest  ( -- error? )
