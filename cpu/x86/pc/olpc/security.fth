@@ -443,12 +443,15 @@ d# 67 buffer: machine-id-buf
 ;
 0 value bundle-suffix
 : bundle-present?  ( fn$ -- flag )
-   \ Try the unadorned name first
-   fn-buf place
+   \ unadorned names not supported from XO-4 onwards
+   bundle-suffix 4 < if
+      \ Try the unadorned name first
+      fn-buf place
 
-   bundle-name$  .trying
-   ['] (boot-read) catch  0=  if  true exit  then   ( x x )
-   2drop                                            ( )
+      bundle-name$  .trying
+      ['] (boot-read) catch  0=  if  true exit  then   ( x x )
+      2drop                                            ( )
+   then
 
    \ Unadorned name not present; try again with architecture-dependent numeric suffix
    bundle-suffix push-decimal (.) pop-base   ( adr len )
