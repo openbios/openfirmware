@@ -87,13 +87,6 @@ h# 40 buffer: partition-map
       red-letters
       ." WARNING!  OS image larger than internal storage device!"  cr
       cancel
-      exit
-   then
-
-   internal-partition-end d# 1,000,000,000. d+   internal-disk-size  d<  if
-      red-letters
-      ." WARNING!  OS image much smaller than internal storage device"  cr
-      cancel
    then
 ;
 
