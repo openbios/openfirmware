@@ -80,8 +80,8 @@ d# 64 " mrvl,intc-nr-irqs" integer-property
    h# 158 h# 170 d# 17     5 make-mux-node \ intcmux17 - TWSI2,3,4,5,6
    h# 1c4 h# 1ac d# 18     3 make-mux-node \ intcmux18 - Res, HSI_INT_2, MOLTRES_NGIC_1
    h# 1c8 h# 1b0 d# 30     2 make-mux-node \ intcmux30 - ISP_DMA, DXO_ISP
-   h# 15c h# 174 d# 35 d# 31 make-mux-node \ intcmux35 - MOLTRES_(various)  (differens from MMP2)
-   h# 1cc h# 1bf d# 42     2 make-mux-node \ intcmux42 - CCIC2, CCIC1
+   h# 15c h# 174 d# 35 d# 31 make-mux-node \ intcmux35 - MOLTRES_(various)  (different from MMP2)
+   h# 1cc h# 1b4 d# 42     2 make-mux-node \ intcmux42 - CCIC2, CCIC1
    h# 160 h# 178 d# 51     2 make-mux-node \ intcmux51 - SSP1_SRDY, SSP3_SRDY
    h# 184 h# 17c d# 55     4 make-mux-node \ intcmux55 - MMC5, res, res, HSI_INT_1
    h# 188 h# 188 d# 55 d# 20 make-mux-node \ intcmux57 - (various)
