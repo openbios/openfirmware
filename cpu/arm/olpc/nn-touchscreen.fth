@@ -16,8 +16,9 @@ touch-int-gpio# 1  " dr-gpios"    gpio-property
 : bytes-out  ( byte .. #bytes -- )  " bytes-out"  $call-parent  ;
 
 create nn-os            \ open short test
-create nn-fll           \ forced led levels test
+create nn-fll           \ forced LED levels test
 create nn-version       \ version display
+create nn-watch-fll     \ forced LED levels test, graphical variant
 
 \ create nn-fss           \ optional fixed signal strength test
 \ create nn-ls            \ optional low signals test
@@ -42,6 +43,8 @@ fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
 [ifndef] 2u.x
 : 2u.x  base @ >r hex  0 <# # # #> type  r> base !  ;
 [then]
+
+: x>x'  ( x -- x' )  screen-w swap -  ;  \ reverse x coordinate
 
 : set-gpios
 [ifdef] olpc-cl2
@@ -151,7 +154,7 @@ d# 250 constant /pbuf
    in?  if
       \ FIXME: only handles one subpacket
       pbuf 2+ c@ h# 04 = if
-         screen-w pbuf 4 + w@ -         ( x )
+         pbuf 4 + w@  x>x'              ( x )
          pbuf 6 + w@                    ( x y )
          pbuf 8 + c@  3 and  0=         ( x y down? )
          true                           ( x y buttons true )
@@ -496,9 +499,13 @@ d# 1 value fss-min
 [then]
 ;
 
-: test-fll-axis  ( axis -- )
+: (fll)  ( axis# -- )
    h# 20 h# 02 h# ee  4 bytes-out
    h# 1c d# 200 anticipate
+;
+
+: test-fll-axis  ( axis -- )
+   (fll)
    pbuf 4 + c@  2/  0  do
       i pbuf 5 + over 3 * + >r ( i r:frag )
       2* dup  r@ 1+ c@  r@ c@ 4 rshift h# f and  test-fll-signal
@@ -512,6 +519,86 @@ d# 1 value fss-min
    4sp ." X Axis" cr  0 test-fll-axis
    4sp ." Y Axis" cr  1 test-fll-axis
 ;
+[then]
+
+
+
+[ifdef] nn-watch-fll \ forced LED levels test, graphical variant
+
+
+d# 30 value r \ size of blocks
+d# 1200 2/ r 2/ - value yx \ the y axis' stable x coordinate
+d#  900 2/ r 2/ - value xy \ the x axis' stable y coordinate
+
+: bigdot  ( x y -- )
+   pixcolor @  -rot   r r                   ( color x y w h )
+   fill-rectangle-noff                      ( )
+;
+
+: signal>colour  ( signal-value -- colour )
+   d# 3 rshift dup d# 5 lshift over d# 11 lshift or or
+;
+
+: ys>xy  ( signal# -- x y )
+   yx swap                              ( x signal# )
+   screen-h yleds 2* / *                ( x y )
+   r 2/ +                               ( x y )
+;
+
+: xs>xy  ( signal# -- x y )
+   2+ screen-w xleds 2* / * r -         ( x )
+   x>x'                                 ( x' )
+   r 2/ +
+   xy                                   ( x y )
+;
+
+: big>little  ( x y -- x' y' )
+   r 2/ + 3 -  swap
+   r 2/ + 2 -  swap
+;
+
+0 value axis#
+: watch-fll-signal  ( signal# signal-value led-level -- )
+   >r                                   ( signal# signal-value  r: led-level )
+   signal>colour pixcolor !             ( signal#  r: led-level )
+   axis# if                             ( signal#  r: led-level ) \ y
+      ys>xy
+   else                                 ( signal#  r: led-level ) \ x
+      xs>xy
+   then                                 ( x y  r: led-level )
+   2dup bigdot                          ( x y  r: led-level )
+   r>                                   ( x y led-level )
+   h# c > if                            ( x y )
+      white pixcolor !                  ( x y )
+      big>little                        ( x' y' )
+      dot                               ( )
+   else
+      2drop
+   then                                 ( )
+;
+
+: watch-fll-axis  ( axis# -- )
+   dup to axis#                         ( axis# )
+   (fll)
+   pbuf 4 + c@  2/  0  do
+      i pbuf 5 + over 3 * + >r          ( i r:frag )
+      2* dup  r@ 1+ c@  r@ c@ 4 rshift h# f and  watch-fll-signal
+      1+      r@ 2+ c@  r@ c@          h# f and  watch-fll-signal
+      r> drop                           ( )
+   loop
+;
+
+: watch-fll
+   black 0 0 screen-w screen-h fill-rectangle-noff
+   begin
+      0 watch-fll-axis
+      1 watch-fll-axis  key?
+   until
+   key drop
+   page
+;
+
+
 [then]
 
 
@@ -550,7 +637,7 @@ defer (ev)  ( x y -- )  \ touch event handler for tests
          pbuf 2+ c@  h# 04 =  if                \ touch notification event
             pbuf 3 + c@  0 do                   \ per subpacket loop
                pbuf 4 + i 9 * + >r              (       r:addr )
-               screen-w r@ w@ -                 ( x     r:addr )
+               r@ w@ x>x'                       ( x     r:addr )
                r@ wa1+ w@                       ( x y   r:addr )
                r> 4 + c@  2 rshift setcolor     ( x y          )
                (ev)                             ( )
