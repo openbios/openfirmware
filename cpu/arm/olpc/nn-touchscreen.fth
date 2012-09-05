@@ -691,6 +691,11 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 ;
 
 
+: lg-tooling  ( -- error? )
+   open  if  test-os  test-fll  else  fault  then
+   faults
+;
+
 : ir-pcb-smt  ( -- error? )
    hold-reset  connect
    open  if  test-os  else  fault  then
@@ -732,6 +737,7 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
       h#  2  of  mb-assy  exit  endof
       h# 11  of  ir-pcb-smt  exit  endof
       h# 12  of  ir-pcb-assy  exit  endof
+      h# 13  of  lg-tooling  exit  endof
    endcase
 
    \ MB FINAL
@@ -765,18 +771,21 @@ device-end
 
 : test-pass-or-fail  ( function -- error? )
    catch  if
-      show-fail
+      show-fail  true
    else
-      show-pass
+      show-pass  false
    then
 ;
 
-: test-ir-pcb-assy  ( -- error? )
-   test-station  h# 12 to test-station                  ( test-station )
+\ touch screen (test by) test station
+: tsts  ( test-station -- error? )
+   test-station  swap to test-station                   ( test-station )
    ['] test-touchscreen test-pass-or-fail               ( test-station error? )
    swap  to test-station                                ( error? )
 ;
 
+: test-ir-pcb-assy  ( -- error? )  h# 12 tsts  ;
+: test-lightguide   ( -- error? )  h# 13 tsts  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2012 FirmWorks
