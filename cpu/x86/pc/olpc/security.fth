@@ -892,7 +892,7 @@ warning !
    pop-base
 ;
 : (fw-version)  ( base-adr -- n )
-   signature-offset + 7 + ((fw-version))
+   h# f.ffc7 +  ((fw-version))
 ;
 
 \ Returns an integer that is derived from a base-36 decoding
@@ -904,7 +904,7 @@ warning !
 
 : firmware-up-to-date?  ( img$ -- flag )
    /flash <>  if  show-x  " Invalid Firmware image" .security-failure  then  ( adr )
-   (fw-version)                     ( file-version# )
+   h# f.ffc7 + ((fw-version))       ( file-version# )
    ofw-version-int                  ( file-version# rom-version# )
    u<=
 ;
