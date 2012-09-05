@@ -1161,6 +1161,10 @@ alias ?ec-update noop immediate
 [then]
 
 : ?fw-update  ( -- )
+[ifdef] olpc-cl4
+   \ skip check for OLPC A2 boards
+   board-revision h# 4a28 <=  if  exit  then
+[then]
    null$ cn-buf place
    " bootfw" bundle-present?  if
       "   FW found - " ?lease-debug
