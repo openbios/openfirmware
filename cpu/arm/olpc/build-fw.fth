@@ -666,7 +666,7 @@ d# 6500 constant ms-factor
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/guardrtc.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
-2 to bundle-suffix
+[ifdef] olpc-cl4  4  [else]  2  [then]  to bundle-suffix
 
 stand-init: xid
    h# 83 cmos@  dup 1+  h# 83 cmos!   ( n )
