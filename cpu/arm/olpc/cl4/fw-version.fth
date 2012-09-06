@@ -8,3 +8,4 @@ macro: FW_MINOR 13
    " fw-suffix" $read-file 2 min  " ${FW_MINOR}%s" expand$  sprintf
    " FW_MINOR" $set-macro
 [then]
+
