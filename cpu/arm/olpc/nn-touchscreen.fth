@@ -18,7 +18,7 @@ touch-int-gpio# 1  " dr-gpios"    gpio-property
 create nn-os            \ open short test
 create nn-fll           \ forced LED levels test
 create nn-version       \ version display
-create nn-watch-fll     \ forced LED levels test, graphical variant
+create nn-watch         \ graphical signal tests
 
 \ create nn-fss           \ optional fixed signal strength test
 \ create nn-ls            \ optional low signals test
@@ -523,7 +523,7 @@ d# 1 value fss-min
 
 
 
-[ifdef] nn-watch-fll \ forced LED levels test, graphical variant
+[ifdef] nn-watch \ graphical signal tests
 
 
 d# 30 value r \ size of blocks
@@ -535,7 +535,7 @@ d#  900 2/ r 2/ - value xy \ the x axis' stable y coordinate
    fill-rectangle-noff                      ( )
 ;
 
-: signal>colour  ( signal-value -- colour )
+: level>colour  ( signal-value -- colour )
    d# 3 rshift dup d# 5 lshift over d# 11 lshift or or
 ;
 
@@ -558,23 +558,33 @@ d#  900 2/ r 2/ - value xy \ the x axis' stable y coordinate
 ;
 
 0 value axis#
-: watch-fll-signal  ( signal# signal-value led-level -- )
-   >r                                   ( signal# signal-value  r: led-level )
-   signal>colour pixcolor !             ( signal#  r: led-level )
-   axis# if                             ( signal#  r: led-level ) \ y
+
+: draw-signal  ( signal# level -- x y )
+   level>colour pixcolor !              ( signal# )
+   axis# if                             ( signal# ) \ y
       ys>xy
-   else                                 ( signal#  r: led-level ) \ x
+   else                                 ( signal# ) \ x
       xs>xy
-   then                                 ( x y  r: led-level )
-   2dup bigdot                          ( x y  r: led-level )
-   r>                                   ( x y led-level )
-   h# c > if                            ( x y )
+   then                                 ( x y  )
+   2dup bigdot                          ( x y  )
+;
+
+: ?draw-fail  ( x y flag? -- )
+   if                                   ( x y )
       white pixcolor !                  ( x y )
       big>little                        ( x' y' )
       dot                               ( )
    else
       2drop
    then                                 ( )
+;
+
+
+: watch-fll-signal  ( signal# signal-value led-level -- )
+   >r                                   ( signal# signal-value  r: led-level )
+   draw-signal                          ( x y  r: led-level )
+   r>                                   ( x y led-level )
+   h# c > ?draw-fail                    ( )
 ;
 
 : watch-fll-axis  ( axis# -- )
@@ -588,8 +598,12 @@ d#  900 2/ r 2/ - value xy \ the x axis' stable y coordinate
    loop
 ;
 
-: watch-fll
+: empty
    black 0 0 screen-w screen-h fill-rectangle-noff
+;
+
+: watch-fll
+   empty
    begin
       0 watch-fll-axis
       1 watch-fll-axis  key?
@@ -598,6 +612,37 @@ d#  900 2/ r 2/ - value xy \ the x axis' stable y coordinate
    page
 ;
 
+
+
+: watch-fss-signal  ( signal# level -- )
+   dup >r                               ( signal# level  r: level )
+   draw-signal                          ( x y  r: level )
+   r>                                   ( x y level )
+   1 < ?draw-fail                       ( )
+;
+
+d# 64 value fs \ fixed signal strength
+
+: watch-fss-axis  ( axis# -- )
+   dup to axis#                         ( axis# )
+   fs swap h# 0f h# 03 h# ee  5 bytes-out
+   h# 0f d# 20 anticipate
+
+   pbuf 4 + c@ 0  do                    ( )
+      i pbuf 5 + over + c@              ( signal# level )
+      watch-fss-signal                  ( )
+   loop
+;
+
+: watch-fss
+   empty
+   begin
+      0 watch-fss-axis
+      1 watch-fss-axis  key?
+   until
+   key drop
+   page
+;
 
 [then]
 
