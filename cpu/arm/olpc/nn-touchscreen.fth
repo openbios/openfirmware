@@ -111,6 +111,10 @@ d# 250 constant /pbuf
 
 : deactivate  ( -- )
    h# 00 h# 01 h# ee  3 bytes-out  h# 00 d# 20 anticipate
+;
+
+: deconfigure  ( -- )
+   deactivate
    true to configure?
 ;
 
@@ -130,8 +134,8 @@ d# 250 constant /pbuf
    no-data?  if
       reset
       no-data?  if
-	 ." no response to reset" cr
-	 pbuf-free  false  exit
+         ." no response to reset" cr
+         pbuf-free  false  exit
       then
    then
    ['] read-boot-complete  catch  if
@@ -146,8 +150,13 @@ d# 250 constant /pbuf
 ;
 
 : close
-   deactivate
+   deconfigure
    pbuf-free
+;
+
+: flush
+   deconfigure
+   configure
 ;
 
 : stream-poll?  ( -- false | x y buttons true )
@@ -213,135 +222,135 @@ d# 250 constant /pbuf
 \ a trailing ? means this combination is untested
 string-array x-os
 
-    ," PD13 open?"	\ 01 00 00 00 00 00 00 00
-    ," PD14 open?"	\ 02 00 00 00 00 00 00 00
-    ," PD15 open?"	\ 04 00 00 00 00 00 00 00
-    ," PD16 open?"	\ 08 00 00 00 00 00 00 00
-    ," PD17 open?"	\ 10 00 00 00 00 00 00 00
-    ," PD18 open?"	\ 20 00 00 00 00 00 00 00
-    ," PD19 open?"	\ 40 00 00 00 00 00 00 00
-    ," PD20 open?"	\ 80 00 00 00 00 00 00 00
+    ," PD13 open?"      \ 01 00 00 00 00 00 00 00
+    ," PD14 open?"      \ 02 00 00 00 00 00 00 00
+    ," PD15 open?"      \ 04 00 00 00 00 00 00 00
+    ," PD16 open?"      \ 08 00 00 00 00 00 00 00
+    ," PD17 open?"      \ 10 00 00 00 00 00 00 00
+    ," PD18 open?"      \ 20 00 00 00 00 00 00 00
+    ," PD19 open?"      \ 40 00 00 00 00 00 00 00
+    ," PD20 open?"      \ 80 00 00 00 00 00 00 00
 
-    ," PD21 open?"	\ 00 01 00 00 00 00 00 00
-    ," PD22 open?"	\ 00 02 00 00 00 00 00 00
-    ," PD23 open?"	\ 00 04 00 00 00 00 00 00
-    ," PD24 open?"	\ 00 08 00 00 00 00 00 00
-    ," PD25 open?"	\ 00 10 00 00 00 00 00 00
-    ," PD26 open?"	\ 00 20 00 00 00 00 00 00
-    ," PD27 open?"	\ 00 40 00 00 00 00 00 00
-    ," PD28 open?"	\ 00 80 00 00 00 00 00 00
+    ," PD21 open?"      \ 00 01 00 00 00 00 00 00
+    ," PD22 open?"      \ 00 02 00 00 00 00 00 00
+    ," PD23 open?"      \ 00 04 00 00 00 00 00 00
+    ," PD24 open?"      \ 00 08 00 00 00 00 00 00
+    ," PD25 open?"      \ 00 10 00 00 00 00 00 00
+    ," PD26 open?"      \ 00 20 00 00 00 00 00 00
+    ," PD27 open?"      \ 00 40 00 00 00 00 00 00
+    ," PD28 open?"      \ 00 80 00 00 00 00 00 00
 
-    ," PD13 short"	\ 00 00 01 00 00 00 00 00
-    ," PD14 short"	\ 00 00 02 00 00 00 00 00
-    ," PD15 short"	\ 00 00 04 00 00 00 00 00
-    ," PD16 short"	\ 00 00 08 00 00 00 00 00
-    ," PD17 short"	\ 00 00 10 00 00 00 00 00
-    ," PD18 short"	\ 00 00 20 00 00 00 00 00
-    ," PD19 short"	\ 00 00 40 00 00 00 00 00
-    ," PD20 short"	\ 00 00 80 00 00 00 00 00
+    ," PD13 short"      \ 00 00 01 00 00 00 00 00
+    ," PD14 short"      \ 00 00 02 00 00 00 00 00
+    ," PD15 short"      \ 00 00 04 00 00 00 00 00
+    ," PD16 short"      \ 00 00 08 00 00 00 00 00
+    ," PD17 short"      \ 00 00 10 00 00 00 00 00
+    ," PD18 short"      \ 00 00 20 00 00 00 00 00
+    ," PD19 short"      \ 00 00 40 00 00 00 00 00
+    ," PD20 short"      \ 00 00 80 00 00 00 00 00
 
-    ," PD21 short"	\ 00 00 00 01 00 00 00 00
-    ," PD22 short"	\ 00 00 00 02 00 00 00 00
-    ," PD23 short"	\ 00 00 00 04 00 00 00 00
-    ," PD24 short"	\ 00 00 00 08 00 00 00 00
-    ," PD25 short"	\ 00 00 00 10 00 00 00 00
-    ," PD26 short"	\ 00 00 00 20 00 00 00 00
-    ," PD27 short"	\ 00 00 00 40 00 00 00 00
-    ," PD28 short"	\ 00 00 00 80 00 00 00 00
+    ," PD21 short"      \ 00 00 00 01 00 00 00 00
+    ," PD22 short"      \ 00 00 00 02 00 00 00 00
+    ," PD23 short"      \ 00 00 00 04 00 00 00 00
+    ," PD24 short"      \ 00 00 00 08 00 00 00 00
+    ," PD25 short"      \ 00 00 00 10 00 00 00 00
+    ," PD26 short"      \ 00 00 00 20 00 00 00 00
+    ," PD27 short"      \ 00 00 00 40 00 00 00 00
+    ," PD28 short"      \ 00 00 00 80 00 00 00 00
 
-    ," IR12 short"	\ 00 00 00 00 01 00 00 00
-    ," IR13 short"	\ 00 00 00 00 02 00 00 00
-    ," IR14 short"	\ 00 00 00 00 04 00 00 00
-    ," IR15 short"	\ 00 00 00 00 08 00 00 00
-    ," IR16 short"	\ 00 00 00 00 10 00 00 00
-    ," IR17 short"	\ 00 00 00 00 20 00 00 00
-    ," IR18 short"	\ 00 00 00 00 40 00 00 00
-    ," IR19 short"	\ 00 00 00 00 80 00 00 00
+    ," IR12 short"      \ 00 00 00 00 01 00 00 00
+    ," IR13 short"      \ 00 00 00 00 02 00 00 00
+    ," IR14 short"      \ 00 00 00 00 04 00 00 00
+    ," IR15 short"      \ 00 00 00 00 08 00 00 00
+    ," IR16 short"      \ 00 00 00 00 10 00 00 00
+    ," IR17 short"      \ 00 00 00 00 20 00 00 00
+    ," IR18 short"      \ 00 00 00 00 40 00 00 00
+    ," IR19 short"      \ 00 00 00 00 80 00 00 00
 
-    ," IR20 short"	\ 00 00 00 00 00 01 00 00
-    ," IR21 short"	\ 00 00 00 00 00 02 00 00
-    ," IR22 short"	\ 00 00 00 00 00 04 00 00
-    ," IR23 short"	\ 00 00 00 00 00 08 00 00
-    ," IR24 short"	\ 00 00 00 00 00 10 00 00
-    ," IR25 short"	\ 00 00 00 00 00 20 00 00
-    ," IR26 short"	\ 00 00 00 00 00 40 00 00
-    ," reserved?"	\ 00 00 00 00 00 80 00 00
+    ," IR20 short"      \ 00 00 00 00 00 01 00 00
+    ," IR21 short"      \ 00 00 00 00 00 02 00 00
+    ," IR22 short"      \ 00 00 00 00 00 04 00 00
+    ," IR23 short"      \ 00 00 00 00 00 08 00 00
+    ," IR24 short"      \ 00 00 00 00 00 10 00 00
+    ," IR25 short"      \ 00 00 00 00 00 20 00 00
+    ," IR26 short"      \ 00 00 00 00 00 40 00 00
+    ," reserved?"       \ 00 00 00 00 00 80 00 00
 
-    ," IR12 open?"	\ 00 00 00 00 00 00 01 00
-    ," IR13 open?"	\ 00 00 00 00 00 00 02 00
-    ," IR14 open?"	\ 00 00 00 00 00 00 04 00
-    ," IR15 open?"	\ 00 00 00 00 00 00 08 00
-    ," IR16 open?"	\ 00 00 00 00 00 00 10 00
-    ," IR17 open?"	\ 00 00 00 00 00 00 20 00
-    ," IR18 open?"	\ 00 00 00 00 00 00 40 00
-    ," IR19 open?"	\ 00 00 00 00 00 00 80 00
+    ," IR12 open?"      \ 00 00 00 00 00 00 01 00
+    ," IR13 open?"      \ 00 00 00 00 00 00 02 00
+    ," IR14 open?"      \ 00 00 00 00 00 00 04 00
+    ," IR15 open?"      \ 00 00 00 00 00 00 08 00
+    ," IR16 open?"      \ 00 00 00 00 00 00 10 00
+    ," IR17 open?"      \ 00 00 00 00 00 00 20 00
+    ," IR18 open?"      \ 00 00 00 00 00 00 40 00
+    ," IR19 open?"      \ 00 00 00 00 00 00 80 00
 
-    ," IR20 open?"	\ 00 00 00 00 00 00 00 01
-    ," IR21 open?"	\ 00 00 00 00 00 00 00 02
-    ," IR22 open?"	\ 00 00 00 00 00 00 00 04
-    ," IR23 open?"	\ 00 00 00 00 00 00 00 08
-    ," IR24 open?"	\ 00 00 00 00 00 00 00 10
-    ," IR25 open?"	\ 00 00 00 00 00 00 00 20
-    ," IR26 open?"	\ 00 00 00 00 00 00 00 40
-    ," reserved?"	\ 00 00 00 00 00 00 00 80
+    ," IR20 open?"      \ 00 00 00 00 00 00 00 01
+    ," IR21 open?"      \ 00 00 00 00 00 00 00 02
+    ," IR22 open?"      \ 00 00 00 00 00 00 00 04
+    ," IR23 open?"      \ 00 00 00 00 00 00 00 08
+    ," IR24 open?"      \ 00 00 00 00 00 00 00 10
+    ," IR25 open?"      \ 00 00 00 00 00 00 00 20
+    ," IR26 open?"      \ 00 00 00 00 00 00 00 40
+    ," reserved?"       \ 00 00 00 00 00 00 00 80
 
 end-string-array
 
 string-array y-os
 
-    ," PD4 open?"	\ 01 00 00 00 00 00
-    ," PD3 open?"	\ 02 00 00 00 00 00
-    ," PD2 open?"	\ 04 00 00 00 00 00
-    ," PD1 open?"	\ 08 00 00 00 00 00
-    ," PD12 open?"	\ 10 00 00 00 00 00
-    ," PD11 open?"	\ 20 00 00 00 00 00
-    ," PD10 open?"	\ 40 00 00 00 00 00
-    ," PD9 open?"	\ 80 00 00 00 00 00
+    ," PD4 open?"       \ 01 00 00 00 00 00
+    ," PD3 open?"       \ 02 00 00 00 00 00
+    ," PD2 open?"       \ 04 00 00 00 00 00
+    ," PD1 open?"       \ 08 00 00 00 00 00
+    ," PD12 open?"      \ 10 00 00 00 00 00
+    ," PD11 open?"      \ 20 00 00 00 00 00
+    ," PD10 open?"      \ 40 00 00 00 00 00
+    ," PD9 open?"       \ 80 00 00 00 00 00
 
-    ," PD8 open?"	\ 00 01 00 00 00 00
-    ," PD7 open?"	\ 00 02 00 00 00 00
-    ," PD6 open?"	\ 00 04 00 00 00 00
-    ," PD5 open?"	\ 00 08 00 00 00 00
-    ," PD12 short"	\ 00 10 00 00 00 00
-    ," PD11 short"	\ 00 20 00 00 00 00
-    ," PD10 short"	\ 00 40 00 00 00 00
-    ," PD9 short"	\ 00 80 00 00 00 00
+    ," PD8 open?"       \ 00 01 00 00 00 00
+    ," PD7 open?"       \ 00 02 00 00 00 00
+    ," PD6 open?"       \ 00 04 00 00 00 00
+    ," PD5 open?"       \ 00 08 00 00 00 00
+    ," PD12 short"      \ 00 10 00 00 00 00
+    ," PD11 short"      \ 00 20 00 00 00 00
+    ," PD10 short"      \ 00 40 00 00 00 00
+    ," PD9 short"       \ 00 80 00 00 00 00
 
-    ," PD8 short"	\ 00 00 01 00 00 00
-    ," PD7 short"	\ 00 00 02 00 00 00
-    ," PD6 short"	\ 00 00 04 00 00 00
-    ," PD5 short"	\ 00 00 08 00 00 00
-    ," PD4 short"	\ 00 00 10 00 00 00
-    ," PD3 short"	\ 00 00 20 00 00 00
-    ," PD2 short"	\ 00 00 40 00 00 00
-    ," PD1 short"	\ 00 00 80 00 00 00
+    ," PD8 short"       \ 00 00 01 00 00 00
+    ," PD7 short"       \ 00 00 02 00 00 00
+    ," PD6 short"       \ 00 00 04 00 00 00
+    ," PD5 short"       \ 00 00 08 00 00 00
+    ," PD4 short"       \ 00 00 10 00 00 00
+    ," PD3 short"       \ 00 00 20 00 00 00
+    ," PD2 short"       \ 00 00 40 00 00 00
+    ," PD1 short"       \ 00 00 80 00 00 00
 
-    ," IR11 short"	\ 00 00 00 01 00 00
-    ," IR10 short"	\ 00 00 00 02 00 00
-    ," IR9 short"	\ 00 00 00 04 00 00
-    ," IR8 short"	\ 00 00 00 08 00 00
-    ," IR7 short"	\ 00 00 00 10 00 00
-    ," IR6 short"	\ 00 00 00 20 00 00
-    ," IR5 short"	\ 00 00 00 40 00 00
-    ," IR4 short"	\ 00 00 00 80 00 00
+    ," IR11 short"      \ 00 00 00 01 00 00
+    ," IR10 short"      \ 00 00 00 02 00 00
+    ," IR9 short"       \ 00 00 00 04 00 00
+    ," IR8 short"       \ 00 00 00 08 00 00
+    ," IR7 short"       \ 00 00 00 10 00 00
+    ," IR6 short"       \ 00 00 00 20 00 00
+    ," IR5 short"       \ 00 00 00 40 00 00
+    ," IR4 short"       \ 00 00 00 80 00 00
 
-    ," IR3 short"	\ 00 00 00 00 01 00
-    ," IR2 short"	\ 00 00 00 00 02 00
-    ," IR1 short"	\ 00 00 00 00 04 00
-    ," reserved?"	\ 00 00 00 00 08 00
-    ," reserved?"	\ 00 00 00 00 10 00
-    ," IR11 open?"	\ 00 00 00 00 20 00
-    ," IR10 open?"	\ 00 00 00 00 40 00
-    ," IR9 open?"	\ 00 00 00 00 80 00
+    ," IR3 short"       \ 00 00 00 00 01 00
+    ," IR2 short"       \ 00 00 00 00 02 00
+    ," IR1 short"       \ 00 00 00 00 04 00
+    ," reserved?"       \ 00 00 00 00 08 00
+    ," reserved?"       \ 00 00 00 00 10 00
+    ," IR11 open?"      \ 00 00 00 00 20 00
+    ," IR10 open?"      \ 00 00 00 00 40 00
+    ," IR9 open?"       \ 00 00 00 00 80 00
 
-    ," IR8 open?"	\ 00 00 00 00 00 01
-    ," IR7 open?"	\ 00 00 00 00 00 02
-    ," IR6 open?"	\ 00 00 00 00 00 04
-    ," IR5 open?"	\ 00 00 00 00 00 08
-    ," IR4 open?"	\ 00 00 00 00 00 10
-    ," IR3 open?"	\ 00 00 00 00 00 20
-    ," IR2 open?"	\ 00 00 00 00 00 40
-    ," IR1 open?"	\ 00 00 00 00 00 80
+    ," IR8 open?"       \ 00 00 00 00 00 01
+    ," IR7 open?"       \ 00 00 00 00 00 02
+    ," IR6 open?"       \ 00 00 00 00 00 04
+    ," IR5 open?"       \ 00 00 00 00 00 08
+    ," IR4 open?"       \ 00 00 00 00 00 10
+    ," IR3 open?"       \ 00 00 00 00 00 20
+    ," IR2 open?"       \ 00 00 00 00 00 40
+    ," IR1 open?"       \ 00 00 00 00 00 80
 
 end-string-array
 
@@ -362,30 +371,30 @@ d# 48 constant /y-os
    pbuf 3 + c@  if
       pbuf 4 + c@  h# 16  <> abort" bad signals y"
       [ifdef] nn-components
-	 ['] y-os to our-os
+         ['] y-os to our-os
       [then]
       /y-os                             ( addr bits# )
    else
       pbuf 4 + c@  h# 1e  <> abort" bad signals x"
       [ifdef] nn-components
-	 ['] x-os to our-os
+         ['] x-os to our-os
       [then]
       /x-os                             ( addr bits# )
    then
 
-   0 do					( addr )
-      dup c@				( addr byte )
-      i 8 mod				( addr byte bit# )
-      rshift 1 and  if			( addr )
-	 8sp
-	 [ifdef] nn-components
-	    i our-os count type
-	 [then]
-	 ."  ( bit " i .d ." )" cr
-	 fault
-      then				( addr )
-      i 8 mod  7 =  if  1+  then	( addr' )
-   loop drop				( )
+   0 do                                 ( addr )
+      dup c@                            ( addr byte )
+      i 8 mod                           ( addr byte bit# )
+      rshift 1 and  if                  ( addr )
+         8sp
+         [ifdef] nn-components
+            i our-os count type
+         [then]
+         ."  ( bit " i .d ." )" cr
+         fault
+      then                              ( addr )
+      i 8 mod  7 =  if  1+  then        ( addr' )
+   loop drop                            ( )
    cr
 ;
 
@@ -454,8 +463,8 @@ d# 1 value fss-min
       dup c@                    ( addr byte )
       i 8 mod                   ( addr byte bit# )
       rshift 1 and  if          ( addr )
-	 i .d
-	 fault
+         i .d
+         fault
       then
       i 8 mod                   ( addr rem )
       7 =  if  1+  then         ( addr' )
@@ -476,6 +485,7 @@ d# 1 value fss-min
 
 [ifdef] nn-fll \ forced LED levels test
 : test-fll-signal  ( signal# signal-value led-level -- )
+[ifdef] nn-too-strong-is-fatal
    dup 0= if
       fault
       rot ." fail on axis signal " .d
@@ -484,6 +494,7 @@ d# 1 value fss-min
       cr
       exit
    then
+[then]
    dup h# c > if
       fault
       rot ." fail on axis signal " .d
@@ -626,7 +637,7 @@ d# 64 value fs \ fixed signal strength
 : watch-fss-axis  ( axis# -- )
    dup to axis#                         ( axis# )
    fs swap h# 0f h# 03 h# ee  5 bytes-out
-   h# 0f d# 20 anticipate
+   h# 0f d# 200 anticipate
 
    pbuf 4 + c@ 0  do                    ( )
       i pbuf 5 + over + c@              ( signal# level )
@@ -684,8 +695,13 @@ defer (ev)  ( x y -- )  \ touch event handler for tests
                pbuf 4 + i 9 * + >r              (       r:addr )
                r@ w@ x>x'                       ( x     r:addr )
                r@ wa1+ w@                       ( x y   r:addr )
-               r> 4 + c@  2 rshift setcolor     ( x y          )
-               (ev)                             ( )
+               r> 4 + c@                        ( x y id-state         )
+               dup 2 rshift setcolor            ( x y id-state         )
+               3 and 2 <> if                    ( x y )
+                  (ev)                          ( ) \ not an up event
+               else
+                  2drop                         ( ) \ an up event
+               then
             loop
          then
       then                                      ( to )
@@ -700,7 +716,7 @@ defer (ev)  ( x y -- )  \ touch event handler for tests
    configure
    cursor-off
    consume
-   begin  in?  0=  until
+   flush
    background
    -1 to remaining
 ;
@@ -724,7 +740,7 @@ xleds yleds *  constant /boxen
 create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 
 : 0boxen  ( -- )  boxen /boxen erase  ;
-: >boxen  ( bx by -- addr )  yleds * +
+: >boxen  ( bx by -- addr )  xleds * +
    dup /boxen > if debug-me then
    boxen +  ;
 
@@ -744,9 +760,9 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 ;
 
 : box  ( bx by colour -- )
-   -rot ( colour bx by )
-   bxby>xy ( colour x y )
-   dx dy ( colour x y w h )
+   -rot                                 ( colour bx by )
+   bxby>xy                              ( colour x y )
+   dx dy                                ( colour x y w h )
    fill-rectangle-noff
 ;
 
@@ -769,7 +785,7 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 : unhit-all  ( -- )
    xleds 0 do
       yleds 0 do
-	 j i unhit
+         j i unhit
       loop
    loop
 ;
@@ -813,12 +829,16 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 : ra  ['] .ra to .tsmsg  ev(  ra0  ['] (ra) ev  )ev  r-fault?  ;
 
 : test-adjacent-axes
-   get-msecs 3 and  \ pick random corner
+   get-msecs 7 and  \ pick random corner
    case
       0  of  ta ra  exit  endof
       1  of  ra ba  exit  endof
       2  of  ba la  exit  endof
       3  of  la ta  exit  endof
+      4  of  ra ta  exit  endof
+      5  of  ba ra  exit  endof
+      6  of  la ba  exit  endof
+      7  of  ta la  exit  endof
    endcase
 ;
 
