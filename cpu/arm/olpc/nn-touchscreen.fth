@@ -736,13 +736,11 @@ defer (ev)  ( x y -- )  \ touch event handler for tests
 0 value dx
 0 value dy
 
-xleds yleds *  constant /boxen
+xleds 1+ yleds 1+ *  constant /boxen
 create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 
 : 0boxen  ( -- )  boxen /boxen erase  ;
-: >boxen  ( bx by -- addr )  xleds * +
-   dup /boxen > if debug-me then
-   boxen +  ;
+: >boxen  ( bx by -- addr )  xleds * +  boxen +  ;
 
 : dxdy  ( xleds yleds -- )
    0boxen
