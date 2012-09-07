@@ -485,7 +485,6 @@ d# 1 value fss-min
 
 [ifdef] nn-fll \ forced LED levels test
 : test-fll-signal  ( signal# signal-value led-level -- )
-[ifdef] nn-too-strong-is-fatal
    dup 0= if
       fault
       rot ." fail on axis signal " .d
@@ -494,7 +493,6 @@ d# 1 value fss-min
       cr
       exit
    then
-[then]
    dup h# c > if
       fault
       rot ." fail on axis signal " .d
