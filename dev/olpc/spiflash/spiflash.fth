@@ -308,7 +308,8 @@ defer write-spi-flash  ( adr len offset -- )
       h# 13  of  ['] common-write  endof
       h# 34  of  ['] common-write  endof
       h# bf  of  ['] sst-write     endof
-      h# 14  of  ['] common-write  endof     
+      h# 14  of  ['] common-write  endof
+      h# 35  of  ['] common-write  endof
 \ On some old board the ID would read as 14 when it should have been something else.
 \ On CL4, 14 is the expected ID.
 \         ." The SPI FLASH ID reads as 14.  This is due to an infrequent hardware problem."  cr
