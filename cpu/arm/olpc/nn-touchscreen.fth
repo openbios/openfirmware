@@ -544,9 +544,14 @@ d#  900 2/ r 2/ - value xy \ the x axis' stable y coordinate
    fill-rectangle-noff                      ( )
 ;
 
-: level>colour  ( signal-value -- colour )
-   d# 3 rshift dup d# 5 lshift over d# 11 lshift or or
+: >grey  ( level -- colour )  dup dup rgb>565  ;
+
+: >pseudo  ( level -- colour )  \ a red-yellow-green pseudocolour bar
+   d# 256 over -  2*  d# 255 min  swap  2*  d# 255 min  0  rgb>565
 ;
+
+defer level>rgb
+' >pseudo is level>rgb
 
 : ys>xy  ( signal# -- x y )
    yx swap                              ( x signal# )
@@ -569,7 +574,7 @@ d#  900 2/ r 2/ - value xy \ the x axis' stable y coordinate
 0 value axis#
 
 : draw-signal  ( signal# level -- x y )
-   level>colour pixcolor !              ( signal# )
+   level>rgb pixcolor !                 ( signal# )
    axis# if                             ( signal# ) \ y
       ys>xy
    else                                 ( signal# ) \ x
