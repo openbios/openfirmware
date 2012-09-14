@@ -268,7 +268,7 @@ d# -10 constant default-headphone-volume    \ -10 dB - range is -46.5 to 0
 \ : adc-unmute-outmix  ( -- )   h# 8080 h# 14 codec-clr  ;
 
 \ The useful one is outmix-unmute-dac
-: outmix-mute-all  ( -- )   h# ff00 dup h# 1a codec!  h# 1c codec!  ;
+: outmix-mute-all  ( -- )   h# ffc0 dup h# 1a codec!  h# 1c codec!  ;
 : outmix-mute-mic  ( -- )   h# 1000 dup h# 1a codec-set  h# 1c codec-set  ;
 : outmix-unmute-mic  ( -- )   h# 1000 dup h# 1a codec-clr  h# 1c codec-clr  ;
 : outmix-mute-dac  ( -- )   h# 2000 dup h# 1a codec-set  h# 1c codec-set  ;
