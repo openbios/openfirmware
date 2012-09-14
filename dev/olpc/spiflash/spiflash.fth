@@ -297,6 +297,9 @@ defer write-spi-flash  ( adr len offset -- )
 \ those commands.  The AB command seems to be supported by all
 \ of them, so it's a good starting point.
 
+: 2mb-flash  ( -- )  h# 20.0000 to /flash  ;
+: 1mb-flash  ( -- )  h# 10.0000 to /flash  ;
+
 0 value spi-id#
 : spi-identify  ( -- )
    ab-id to spi-id#
@@ -305,11 +308,11 @@ defer write-spi-flash  ( adr len offset -- )
    \ a common page-write part or the SST part with its
    \ unique auto-increment address writing scheme.
    spi-id# case
-      h# 13  of  ['] common-write  endof
-      h# 34  of  ['] common-write  endof
-      h# bf  of  ['] sst-write     endof
-      h# 14  of  ['] common-write  endof
-      h# 35  of  ['] common-write  endof
+      h# 13  of  ['] common-write  1mb-flash  endof
+      h# 34  of  ['] common-write  1mb-flash  endof
+      h# bf  of  ['] sst-write     1mb-flash  endof
+      h# 14  of  ['] common-write  1mb-flash  endof
+      h# 35  of  ['] common-write  2mb-flash  endof
 \ On some old board the ID would read as 14 when it should have been something else.
 \ On CL4, 14 is the expected ID.
 \         ." The SPI FLASH ID reads as 14.  This is due to an infrequent hardware problem."  cr
@@ -335,6 +338,7 @@ defer write-spi-flash  ( adr len offset -- )
          h# 13  of  ." type 13 - Spansion, Winbond, or ST"  endof
          h# 14  of  ." type 14 - 2 MB"  endof
          h# 34  of  ." type 34 - Macronyx"  endof
+         h# 35  of  ." type 35 - 2 MB"  endof
       endcase
    then
 ;
@@ -364,7 +368,7 @@ defer write-spi-flash  ( adr len offset -- )
    ['] erase-spi-block         to flash-erase-block
    ['] spi-protect             to flash-protect
    use-spi-flash-read          \ Might be overridden
-   h# 10.0000  to /flash
+   [ifdef] /rom  /rom  [else] h# 10.0000  [then]  to /flash
    /spi-eblock to /flash-block
 ;
 use-spi-flash

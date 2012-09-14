@@ -13,10 +13,10 @@ fload ${BP}/cpu/arm/olpc/addrs.fth
 
 h# 10.0000 constant /rom           \ Total size of SPI FLASH
 
-/rom h# 1.0000 - constant mfg-data-offset     \ Offset to manufacturing data area in SPI FLASH
-/rom             constant mfg-data-end-offset \ Offset to end of manufacturing data area in SPI FLASH
-mfg-data-offset h# 30 - constant crc-offset        \ e.g. 1e.ffd0
-crc-offset      h# 10 - constant signature-offset  \ e.g. 1e.ffc0
+: mfg-data-offset  /rom h# 1.0000 - ;      \ Offset to start of manufacturing data area in SPI FLASH
+: mfg-data-end-offset  /rom  ;             \ Offset to end of manufacturing data area in SPI FLASH
+: crc-offset  mfg-data-offset h# 30 - ;    \ e.g. 1e.ffd0
+: signature-offset  crc-offset  h# 10 - ;  \ e.g. 1e.ffc0
 
 : signature$   " CL4"  ;
 : model$       " olpc,XO-CL4"  ;
