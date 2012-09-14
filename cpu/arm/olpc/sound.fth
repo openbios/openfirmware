@@ -33,6 +33,29 @@ device-end
 \ DMA IRQ status and mask registers, e.g. ICU_DMA_IRQ1_STATUS
 
 dev /
+1 [if]
+new-device
+   " adma" device-name
+   h# 900 +audio  h# 100 reg
+   5 encode-int 4 encode-int encode+ " mmp-mav-dma-channels" property
+   " marvell,mmp-audio-dma" +compatible
+   " disabled" " status" string-property
+   current-device  ( adma1-ph )
+finish-device
+
+new-device
+   ( adma1-ph )  encode-int  " adma-node" property
+   " pcm" device-name
+   1 0 reg
+
+   \ This binds to the platform driver, a single point that collects
+   \ the Audio DMA resources
+   " marvell,mmp-pcm-audio" +compatible   \ snd_soc_dai_link.cpu_dai_of_node
+   " disabled" " status" string-property
+
+finish-device
+[then]
+
 new-device
    " adma" device-name
    h# 800 +audio  h# 100 reg
@@ -42,23 +65,21 @@ new-device
 finish-device
 
 new-device
-   " adma" device-name
-   h# 900 +audio  h# 100 reg
-   5 encode-int 4 encode-int encode+ " mmp-mav-dma-channels" property
-   " marvell,mmp-audio-dma" +compatible
-   current-device  ( adma0-ph adma1-ph )
+   ( adma0-ph )  encode-int  " adma-node" property
+   " pcm" device-name
+   0 0 reg
+
+   \ This binds to the platform driver, a single point that collects
+   \ the Audio DMA resources
+   " marvell,mmp-pcm-audio" +compatible   \ snd_soc_dai_link.cpu_dai_of_node
+
 finish-device
 
 new-device
    " asram" device-name
    audio-sram-pa /audio-sram reg
 
-   \ We call this the platform driver, a single point that collects
-   \ the Audio DMA resources
-   " marvell,mmp-pcm-audio" +compatible   \ snd_soc_dai_link.cpu_dai_of_node
-
-   ( adma0-ph adma1-ph )
-   encode-int rot encode-int encode+  " adma-nodes" property
+   " marvell,mmp-asram" +compatible
 finish-device
 
 new-device
@@ -66,6 +87,10 @@ new-device
    h# d00 +audio  h# 100 reg
 
    " marvell,mmp-sspa-dai" +compatible
+[ifdef] mmp2 " marvell,mmp3-sspa-dai" +compatible  [then]
+[ifdef] mmp3 " marvell,mmp3-sspa-dai" +compatible  [then]
+
+   " unused" " status" string-property
 
    " /pmua" encode-phandle d# 20 encode-int encode+ " clocks" property
    d# 3 " interrupts" integer-property
@@ -77,6 +102,8 @@ new-device
 h# c00 +audio  h# 100 reg
 
 " marvell,mmp-sspa-dai" +compatible
+[ifdef] mmp2 " marvell,mmp3-sspa-dai" +compatible  [then]
+[ifdef] mmp3 " marvell,mmp3-sspa-dai" +compatible  [then]
 
 " /pmua" encode-phandle d# 20 encode-int encode+ " clocks" property
 d# 2 " interrupts" integer-property
@@ -94,7 +121,9 @@ d# 2 " interrupts" integer-property
 ;
 : start-audio-pll  ( -- error? )
    \ For VCXO=26 MHz, OCLK=12.2880 MHz
-   h# 200d.a189 h# 38 sspa!  \ DIV_OCLK_MODULO=010 FRACT=00da1 ENA_DITHER=1 ICP=0 DIV_FBCCLK=01 DIV_MCLK=0 PU=1
+   \ MMP2: DIV_OCLK_MODULO=010 FRACT=00da1 ENA_DITHER=1 ICP=0 DIV_FBCCLK=01 DIV_MCLK=0 PU=1
+   \ MMP2: DIV_OCLK_MODULO=010 FRACT=00da1 ENA_DITHER=1 ICP=0 DIV_FBCCLK=01 DIV_MCLK=011 PU=1
+   [ifdef] mmp3 h# a00d.a18d [else] h# 200d.a189  [then]   h# 38 sspa!
    h# 0000.0801 h# 3c sspa!  \ CLK_SEL=1 (AudioPLL) DIV_OCLK_PATTERN=01
    d# 50 0  do
       h# 3c sspa@  h# 10000 and  if
@@ -108,7 +137,7 @@ d# 2 " interrupts" integer-property
 
 : dly  d# 10 us  ;
 
-false value use-audio-pll?
+true value use-audio-pll?
 : audio-clock-on  ( -- error? )
    my-clock-on
 
@@ -135,7 +164,7 @@ false value use-audio-pll?
       \ That is true on both MMP2 and MMP3
       h# 20.0000  h# 1024 +mpmu  io-set  \ Enable 12S clock out to SSPA1
 
-      h# 10800 h# 38 sspa!
+      \ h# 10800 h# 38 sspa!  \ Appears unnecessary; not sure what it does
 
       \ Bits 14:9 set the divisor from SYSCLK to BITCLK.  The setting below
       \ is d# 8, which gives BITCLK = 1.536 MHz.  That's 32x 48000, just enough
@@ -709,7 +738,15 @@ device-end
 
 0 0 " "  " /"  begin-package
    " audio-complex" device-name
-   " olpc,mmp-audio" +compatible
+[ifdef] olpc-cl4
+   " olpc,xo4-audio" +compatible
+[then]
+[ifdef] olpc-cl3
+   " olpc,xo3-audio" +compatible
+[then]
+[ifdef] olpc-cl2
+   " olpc,xo1.75-audio" +compatible
+[then]
 
    \ The name that was hardcoded in the Linux driver was OLPC XO-1.75
    " OLPC XO" " model" string-property
@@ -722,9 +759,13 @@ device-end
       " MIC2"           +string " Mic Jack" +string
    " audio-routing" property
 
+   " rt5631"        " dai-link-name"  string-property
+   " rt5631"       " stream-name"     string-property
+   " rt5631-hifi"  " codec-dai-name"  string-property
+
    " /audio-codec"  encode-phandle  " codec-node"    property
    " /audio"        encode-phandle  " cpu-dai-node"  property
-   " /asram"        encode-phandle  " platform-node" property
+   " /pcm"          encode-phandle  " platform-node" property
 
    \ SND_SOC_DAIFTM_xxx:
    \ 4000 is ..CBS_CFS - the codec is the slave for clk and FRM
