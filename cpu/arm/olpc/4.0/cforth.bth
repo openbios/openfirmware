@@ -1,0 +1,7 @@
+purpose: Fetch and compile CForth for the Security Processor
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/arm/olpc/4.0/cforth-version.fth
+fload ${BP}/cpu/arm/olpc/build-cforth.fth

@@ -1,0 +1,13 @@
+purpose: Build OFW Forth dictionary for OLPC XO-4
+\ See license at end of file
+
+dictionary: ${BP}/cpu/arm/build/basefw.dic
+command: &armforth &dictionary &this
+build-now
+
+\ This line must be in this file instead of in prefw.fth so the definitions
+\ in config.fth will be tagged.
+" prefw.tag" r/w create-file drop  tag-file !
+
+fload ${BP}/cpu/arm/olpc/4.0/config.fth
+fload ${BP}/cpu/arm/olpc/prefw.fth

@@ -1,0 +1,29 @@
+purpose: Build OFW Forth dictionary for OLPC XO-4
+\ See license at end of file
+
+dictionary: ${BP}/cpu/arm/olpc/4.0/build/prefw.dic
+command: &armforth &dictionary &this
+build-now
+
+" fw.tag" r/w create-file drop  tag-file !
+
+h# 16000 +io constant bsl-uart-base     \ UART4
+h# 88 constant bsl-uart-clock-offset    \ APBC_UART4_CLK_RST
+
+fload ${BP}/cpu/arm/olpc/build-fw.fth
+
+\ true to stand-init-debug?
+
+fload ${BP}/cpu/arm/olpc/cl4/uart.fth
+fload ${BP}/cpu/arm/olpc/cl4/sdhci.fth
+fload ${BP}/cpu/arm/olpc/1.75/lcdcfg.fth
+fload ${BP}/cpu/arm/olpc/cl4/usb.fth
+fload ${BP}/cpu/arm/olpc/nn-touchscreen.fth
+fload ${BP}/cpu/arm/olpc/cl4/switches.fth
+fload ${BP}/cpu/arm/olpc/cl4/leds.fth
+fload ${BP}/cpu/arm/olpc/cl4/testitems.fth
+fload ${BP}/cpu/arm/olpc/cl4/testinstructions.fth
+fload ${BP}/cpu/arm/olpc/gpio-gamekeys.fth
+fload ${BP}/cpu/arm/olpc/test-tweaks.fth
+
+fload ${BP}/cpu/arm/olpc/save-fw.fth

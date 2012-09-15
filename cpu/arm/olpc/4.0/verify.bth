@@ -1,0 +1,7 @@
+purpose: Fetch the Crypto code and keys
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/arm/olpc/4.0/crypto-version.fth
+fload ${BP}/cpu/arm/olpc/build-crypto.fth

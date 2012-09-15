@@ -1,0 +1,7 @@
+purpose: Build script for low-level startup code
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/arm/olpc/4.0/config.fth
+fload ${BP}/cpu/arm/olpc/resetvec.fth

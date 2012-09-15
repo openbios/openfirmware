@@ -1,0 +1,7 @@
+purpose: Fetch and compile the multicast NAND reflash program
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/arm/olpc/4.0/mcnand-version.fth
+fload ${BP}/cpu/arm/olpc/build-mcnand.fth

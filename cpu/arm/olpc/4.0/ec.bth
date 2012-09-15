@@ -1,0 +1,7 @@
+purpose: Fetch the EC (Embedded Controller, i.e. KB3700) microcode
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/arm/olpc/4.0/ec-version.fth
+fload ${BP}/cpu/arm/olpc/fetch-ec.fth
