@@ -70,24 +70,9 @@ defer spi-progress  ' drop to spi-progress  ( n -- )
 ;
 
 [ifndef] 2meg  h# 20.0000 constant 2meg  [then]
-: +1m  ( offset -- offset' )  1meg +  ;
-
-\ This is for upgrading an XO-4 with a 2 MiB FLASH part from
-\ a 1 MiB installed OFW image to a 2 MiB OFW image.
-\ After flash-open, /flash is the size of the physical SPI FLASH device.
-\ On exit, /flash is the size of the image, i.e. the amount to program.
-\ /rom is the size of the image that is currently running.
-: ?upgrade-to-2mb  ( len -- len )
-   flash-open   \ Sets /flash according to the device installed
-   dup 2meg =  /rom 1meg =  and  /flash 2meg =  and  if
-      signature-offset +1m to signature-offset
-      mfg-data-offset  +1m to mfg-data-offset
-      crc-offset +1m to crc-offset
-   then
-;
 
 : ?image-valid   ( len -- )
-   flash-open   \ Sets /flash according to the device installed
+   flash-open   \ Sets /flash to the size of the SPI FLASH device
    /flash <> abort" Image file is the wrong length"
 
    ." Got firmware version: "
