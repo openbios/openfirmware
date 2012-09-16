@@ -207,7 +207,7 @@ defer place-ramdisk
       h# 22c +lp l@                               ( adr ramdisk-limit )
       ?dup  if  1+  else  h# 8000.0000  then      ( adr ramdisk-limit )
 
-      memory-limit  umin  /ramdisk -              ( adr new-ramdisk-adr )
+      memory-limit  umin  /ramdisk - 4 round-down ( adr new-ramdisk-adr )
       tuck /ramdisk move                          ( new-ramdisk-adr )
       dup
    then                                           ( ramdisk-adr memtop )
