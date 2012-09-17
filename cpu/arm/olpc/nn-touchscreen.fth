@@ -450,6 +450,58 @@ d# 1 value fss-min
 
 
 
+[ifdef] nn-fss-all \ fixed signal strength test, all power levels
+
+: test-fss-axis-all  ( axis power -- )
+   swap h# 0f h# 03 h# ee  5 bytes-out
+   h# 0f d# 20 anticipate
+   pbuf 4 + c@ 0  do   ( )
+      pbuf 5 + i + c@
+      .d
+   loop  cr
+;
+
+: test-fss-all
+   41 0 do ." x " i .d 0 i test-fss-axis-all loop
+   41 0 do ." y " i .d 1 i test-fss-axis-all loop
+;
+
+: >scaled  ( x y -- x' y' )
+   d# 3750 * d# 1000 /  d# 900 swap -
+   swap d# 1850 * d# 100 / swap
+;
+
+: >pseudo  ( level -- colour )  \ a red-yellow-green pseudocolour bar
+   d# 256 over -  2*  d# 255 min  swap  2*  d# 255 min  0  rgb>565
+;
+
+: (plot-response)  ( power axis -- )
+   over >r                          ( power axis  r: power )
+   h# 0f h# 03 h# ee  5 bytes-out   ( r: power )
+   h# 0f d# 20 anticipate
+   r>                               ( power)
+   pbuf 4 + c@ 0  do   ( power )
+      pbuf 5 + i + c@  ( power signal )
+      over swap        ( power x y )
+      >scaled
+
+      i 4 lshift >pseudo  -rot   9 9                   ( color x y w h )
+      fill-rectangle-noff                      ( )
+   loop ( power )
+   drop
+;
+
+: plot-response
+   black 0 0 screen-w screen-h fill-rectangle-noff
+   41 1 do i 0 (plot-response) loop
+   41 1 do i 1 (plot-response) loop
+   key drop
+;
+
+[then]
+
+
+
 [ifdef] nn-ls \ low signals test
 : test-ls-axis  ( axis -- )
    h# 0d h# 02 h# ee  4 bytes-out
