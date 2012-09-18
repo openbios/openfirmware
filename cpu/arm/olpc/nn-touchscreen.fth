@@ -22,10 +22,9 @@ create nn-watch         \ graphical signal tests
 
 \ create nn-fss           \ optional fixed signal strength test
 \ create nn-ls            \ optional low signals test
+\ create nn-fss-all       \ fixed signal strength test, all power levels
 
 \ create nn-components    \ isolate test results to failed component identifier
-
-\ create nn-ir-pcb-rev-b  \ support for revision b of the ir pcb assembly
 
 d# 15 value xleds
 d# 11 value yleds
@@ -455,10 +454,12 @@ d# 1 value fss-min
 : test-fss-axis-all  ( axis power -- )
    swap h# 0f h# 03 h# ee  5 bytes-out
    h# 0f d# 20 anticipate
-   pbuf 4 + c@ 0  do   ( )
-      pbuf 5 + i + c@
-      .d
-   loop  cr
+   pbuf 2+ c@ h# 0f = if
+      pbuf 4 + c@ 0  do   ( )
+         pbuf 5 + i + c@
+         .d
+      loop  cr
+   then
 ;
 
 : test-fss-all
@@ -480,14 +481,16 @@ d# 1 value fss-min
    h# 0f h# 03 h# ee  5 bytes-out   ( r: power )
    h# 0f d# 20 anticipate
    r>                               ( power)
-   pbuf 4 + c@ 0  do   ( power )
-      pbuf 5 + i + c@  ( power signal )
-      over swap        ( power x y )
-      >scaled
+   pbuf 2+ c@ h# 0f = if
+      pbuf 4 + c@ 0  do             ( power )
+         pbuf 5 + i + c@            ( power signal )
+         over swap                  ( power x y )
+         >scaled
 
-      i 4 lshift >pseudo  -rot   9 9                   ( color x y w h )
-      fill-rectangle-noff                      ( )
-   loop ( power )
+         i 4 lshift >pseudo  -rot   9 9  ( color x y w h )
+         fill-rectangle-noff             ( )
+      loop                          ( power )
+   then                             ( power )
    drop
 ;
 
@@ -693,11 +696,12 @@ d# 64 value fs \ fixed signal strength
    dup to axis#                         ( axis# )
    fs swap h# 0f h# 03 h# ee  5 bytes-out
    h# 0f d# 200 anticipate
-
-   pbuf 4 + c@ 0  do                    ( )
-      i pbuf 5 + over + c@              ( signal# level )
-      watch-fss-signal                  ( )
-   loop
+   pbuf 2+ c@ h# 0f = if
+      pbuf 4 + c@ 0  do                 ( )
+         i pbuf 5 + over + c@           ( signal# level )
+         watch-fss-signal               ( )
+      loop
+   then
 ;
 
 : watch-fss
