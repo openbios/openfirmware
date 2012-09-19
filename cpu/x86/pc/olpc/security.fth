@@ -886,13 +886,17 @@ warning !
    fw#buf 4 + c@  bl  =  if  [char] 0 fw#buf 4 + c!  then
    base @ >r  d# 36 base !
    fw#buf 5 $number  if
-      show-x
-      " Invalid firmware version number"  .security-failure
+      secure?  if
+         show-x
+         " Invalid firmware version number"  .security-failure
+      else
+	 0
+      then
    then
    pop-base
 ;
 : (fw-version)  ( base-adr -- n )
-   h# f.ffc7 +  ((fw-version))
+   signature-offset +  7 +  ((fw-version))
 ;
 
 \ Returns an integer that is derived from a base-36 decoding
@@ -904,8 +908,8 @@ warning !
 
 : firmware-up-to-date?  ( img$ -- flag )
    /flash <>  if  show-x  " Invalid Firmware image" .security-failure  then  ( adr )
-   h# f.ffc7 + ((fw-version))       ( file-version# )
-   ofw-version-int                  ( file-version# rom-version# )
+   signature-offset + 7 + ((fw-version))   ( file-version# )
+   ofw-version-int                         ( file-version# rom-version# )
    u<=
 ;
 
@@ -1023,6 +1027,20 @@ defer ec-reflash-off?  ' false to ec-reflash-off?
    reflash      \ Should power-off and reboot
    show-x
    " Reflash returned, unexpectedly" .security-failure
+;
+
+\ Check for new firmware.  Used by /boot/olpc.fth.
+\ Before calling, set dn-buf to the device, e.g. " int:"
+\ and pn-buf to the path, e.g. " \boot"
+: ?ofw-reflash  ( -- )
+   \ It is okay to overwrite cn-buf here, as ?ofw-reflash is used for non-secure
+   \ boot from olpc.fth.  cn-buf is used for the secure boot path.
+   null$ cn-buf place
+   " bootfw" bundle-present?  if
+      img$  firmware-up-to-date?  0=  if
+         img$ do-firmware-update
+      then
+   then
 ;
 
 \ Turn off indexed I/O unless the OS is signed with the firmware
