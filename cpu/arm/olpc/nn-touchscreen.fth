@@ -467,6 +467,55 @@ d# 1 value fss-min
    41 0 do ." y " i .d 1 i test-fss-axis-all loop
 ;
 
+[then]
+
+
+
+0 [if] \ fixed signal strength test, averaged, all power levels
+
+d# 100 value n  \ number of tests to average
+
+xleds yleds max 2* constant /sums
+create sums
+/sums 4 * allot
+: 0sums  sums /sums 4 * erase  ;
+
+: rc-signal  ( n -- )
+   dup /sums > abort" sum index too large"
+   pbuf 5 + over + c@   ( n signal )
+   swap 4 * sums +      ( signal address )
+   dup @                ( signal address sum )
+   rot + swap !         ( )
+;
+
+: rc-sample  ( axis power -- )
+   swap h# 0f h# 03 h# ee  5 bytes-out
+   h# 0f d# 20 anticipate
+   pbuf 2+ c@ h# 0f = if
+      pbuf 4 + c@ 0  do         ( )
+	 i rc-signal
+      loop
+   then
+;
+
+: rc-axis  ( axis power -- )
+   0sums                                                ( axis power )
+   n 0  do  2dup rc-sample  loop                        ( axis power )
+   2drop                                                ( )
+   pbuf 4 + c@ 0  do  i 4 * sums + @ n / .d  loop cr    ( )
+;
+
+: rc
+   41 0 do ." x " i .d 0 i rc-axis loop
+   41 0 do ." y " i .d 1 i rc-axis loop
+;
+
+[then]
+
+
+
+0 [if] \ fixed signal strength test, all power levels, as a response curve
+
 : >scaled  ( x y -- x' y' )
    d# 3750 * d# 1000 /  d# 900 swap -
    swap d# 1850 * d# 100 / swap
@@ -743,10 +792,11 @@ d# 64 value fs \ fixed signal strength
 defer (ev)  ( x y -- )  \ touch event handler for tests
 ' noop to (ev)
 0 value remaining
+d# 30000 value test-timeout
 
 : ev  ( handler -- )
    to (ev)
-   get-msecs d# 30000 +                         ( to )
+   get-msecs test-timeout +                     ( to )
    begin
       in?  if
          pbuf 2+ c@  h# 04 =  if                \ touch notification event
@@ -964,6 +1014,7 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
       faults  if  close  true  exit  then
    then
 
+   test-station 6 =  if  d# 86400.000 to test-timeout  then
    scribble
 
    close false
