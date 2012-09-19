@@ -184,6 +184,18 @@ d# 250 constant /pbuf
 
 
 
+: test-response  ( -- )
+   6 0  do
+      h# 40 h# 0 h# 0f 3 h# ee 5 bytes-out \ fss full level
+      0 pbuf 2+ c!
+      h# 0f d# 30 anticipate
+      pbuf 2+ c@ dup 0= abort" no response to fss"
+      h# 0f <> abort" bad response to fss"
+   loop
+;
+
+
+
 [ifdef] nn-version \ version display
 : (.version)  ( addr -- )
    dup c@  over 1+ c@  bwjoin           ( addr version )
@@ -192,7 +204,6 @@ d# 250 constant /pbuf
 
 : .version  ( addr -- )
    pbuf 2+ c@ h# 1e <> abort" bad response"
-   ." Neonode zForce Touch Driver firmware version "
    pbuf 3 +  3 0  do                    ( addr )
       (.version) 2+
       [char] . emit
@@ -200,13 +211,18 @@ d# 250 constant /pbuf
    (.version) drop                      ( )
 ;
 
-: test-version  ( -- )
+: (version)  ( -- )
    h# 1e h# 01 h# ee  3 bytes-out
    h# 1e d# 30 anticipate
+;
 
+: test-version  ( -- )
+   (version)
+   ." Neonode zForce Touch Driver firmware version "
    .version
    cr
 ;
+
 [then]
 
 
@@ -1014,6 +1030,7 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
       faults  if  close  true  exit  then
    then
 
+   test-response
    test-station 6 =  if  d# 86400.000 to test-timeout  then
    scribble
 
