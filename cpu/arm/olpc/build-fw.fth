@@ -513,6 +513,27 @@ true value text-on?
    then
 ;
 
+\ idt1338 rtc and ram address map
+\     00 -> 0f  rtc
+\     10 -> 3f  cmos
+
+: >rtc  ( index -- rtc-address )  h# 3f and  h# 10 +  ;
+
+: cmos@  ( index -- data )
+   >rtc " rtc@" clock-node @  ( index adr len ih )
+   ['] $call-method catch  if  4drop 0  then
+;
+: cmos!  ( data index -- )
+   >rtc " rtc!" clock-node @  ( data index adr len ih )
+   ['] $call-method catch  if  2drop 3drop  then
+;
+
+\ cmos address map
+\     80 audio volume
+\     81 audio volume
+\     82 alternate boot
+\     83 xid
+
 fload ${BP}/cpu/arm/mmp2/clocks.fth
 fload ${BP}/cpu/arm/olpc/banner.fth
 
@@ -639,29 +660,8 @@ defer rm-go-hook  \ Not used, but makes security happy
 : tsc@  ( -- d.ticks )  timer0@ u>d  ;
 d# 6500 constant ms-factor
 
-\ idt1338 rtc and ram address map
-\     00 -> 0f  rtc
-\     10 -> 3f  cmos
-
-: >rtc  ( index -- rtc-address )  h# 3f and  h# 10 +  ;
-
-: cmos@  ( index -- data )
-   >rtc " rtc@" clock-node @  ( index adr len ih )
-   ['] $call-method catch  if  4drop 0  then
-;
-: cmos!  ( data index -- )
-   >rtc " rtc!" clock-node @  ( data index adr len ih )
-   ['] $call-method catch  if  2drop 3drop  then
-;
-
-\ cmos address map
-\     80 audio volume
-\     81 audio volume
-\     82 alternate boot
-\     83 xid
-
-: dimmer  ( -- )  screen-ih  if  " dimmer" screen-ih $call-method  then  ;
-: brighter  ( -- )  screen-ih  if  " brighter" screen-ih $call-method  then  ;
+: dimmer  ( -- )  dcon-ih  if  " dimmer" dcon-ih $call-method  then  ;
+: brighter  ( -- )  dcon-ih  if  " brighter" dcon-ih $call-method  then  ;
 
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/guardrtc.fth
