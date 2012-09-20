@@ -202,8 +202,7 @@ d# 250 constant /pbuf
    (.) type
 ;
 
-: .version  ( addr -- )
-   pbuf 2+ c@ h# 1e <> abort" bad response"
+: .version  ( -- )
    pbuf 3 +  3 0  do                    ( addr )
       (.version) 2+
       [char] . emit
@@ -214,6 +213,7 @@ d# 250 constant /pbuf
 : (version)  ( -- )
    h# 1e h# 01 h# ee  3 bytes-out
    h# 1e d# 30 anticipate
+   pbuf 2+ c@ h# 1e <> abort" bad response"
 ;
 
 : test-version  ( -- )
@@ -221,6 +221,11 @@ d# 250 constant /pbuf
    ." Neonode zForce Touch Driver firmware version "
    .version
    cr
+;
+
+: get-version  ( -- version.d )
+   (version)
+   pbuf 9 + le-w@  pbuf 7 + le-w@ wljoin  pbuf 5 + le-w@ pbuf 3 + le-w@ wljoin
 ;
 
 [then]
