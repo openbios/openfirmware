@@ -134,13 +134,15 @@ h# 03.b000 value tsense  \ p2021
 ;
 
 : ts-watchdog-enable  ( n -- )
-   dup ts@  h# 0400.0300 or  swap ts!  \ 85-87.5C
+   dup ts@  h# 0400.0d00 or  swap ts!  \ 100.5C
 ;
 
 : init-thermal-sensor  ( -- )
    ts-clocks
    0 ts-range-high
-   \ 0 ts-watchdog-enable \ WDT reset will cause system hang, per errata 472630
+   0 ts-watchdog-enable
+   \ WDT reset will cause system hang, per errata 472630,
+   \ but on XO-4 A2 and XO-4 B1 is detected by EC
    1 ts-range-low
    2 ts-range-low
    3 0 do  i ts-auto-read  loop
