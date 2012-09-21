@@ -189,6 +189,8 @@ label ddr-self-refresh  ( r0:memctrl-va -- )
 end-code
 here ddr-self-refresh - constant /ddr-self-refresh
 
+memctrl-pa constant memctrl-va \ Identity mapped
+
 : ddr-code-to-sram  ( -- )
    ddr-recal 'ddr-recal /ddr-recal move
    'ddr-recal /ddr-recal sync-cache
