@@ -40,7 +40,12 @@ headers
    else                        ( value )
       drop true                ( true )
    then                        ( okay? )
+
+   \ manage legacy RTC CMOS usage
    ?clear
+
+   \ enable 32kHz clock output
+   h# b3 7 rtc!
 ;
 : close  ( -- )
 ;

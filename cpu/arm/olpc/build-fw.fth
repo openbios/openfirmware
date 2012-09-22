@@ -316,6 +316,8 @@ fload ${BP}/cpu/arm/olpc/sound.fth
 fload ${BP}/cpu/arm/olpc/rtc.fth
 stand-init: RTC
    " /i2c@d4031000/rtc" open-dev  clock-node !
+   \ use RTC 32kHz clock as SoC external slow clock
+   h# 38 mpmu@ 1 or h# 38 mpmu!
 ;
 
 warning @ warning off
