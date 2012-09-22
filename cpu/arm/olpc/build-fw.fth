@@ -150,7 +150,7 @@ fload ${BP}/cpu/arm/mmp2/sspspi.fth        \ Synchronous Serial Port SPI interfa
 
    " /apbc" encode-phandle d# 19 encode-int encode+ " clocks" property
    d# 0 " interrupts" integer-property
-   h# 10.0000 value /device
+   /rom value /device
    my-address my-space h# 100 reg
    fload ${BP}/dev/nonmmflash.fth
 end-package
@@ -160,7 +160,7 @@ end-package
 0 0  " 20000"  " /flash" begin-package
    " dropins" device-name
 
-   h# e0000 constant /device
+   /rom h# 20000 - constant /device
    fload ${BP}/dev/subrange.fth
 end-package
 
