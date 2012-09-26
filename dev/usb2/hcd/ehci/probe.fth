@@ -74,8 +74,8 @@ defer handle-fs-device  ' disown-port to handle-fs-device
    repeat                           ( port# )
    ." Device connected - probing ... "
    probe-setup                      ( port# )
-   dup probe-root-hub-port          ( port# )
-   probe-teardown                   ( port# )
+   probe-root-hub-port              ( )
+   probe-teardown                   ( )
    probe-error?                     ( error? )
    dup  if  ." Failed" else  ." Done"  then  cr  ( error? )
 ;
