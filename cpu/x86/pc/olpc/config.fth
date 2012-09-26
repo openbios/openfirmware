@@ -2,6 +2,7 @@
 purpose: Establish configuration definitions
 
 create olpc             \ OLPC-specific build
+create olpc-cl1
 
 \ --- The environment that "boots" us ---
 \ - Image Format - Example Media - previous stage bootloader

@@ -72,7 +72,9 @@ defer spi-progress  ' drop to spi-progress  ( n -- )
 [ifndef] 2meg  h# 20.0000 constant 2meg  [then]
 
 : ?image-valid   ( len -- )
+[ifndef] olpc-cl1
    flash-open   \ Sets /flash to the size of the SPI FLASH device
+[then]
    /flash <> abort" Image file is the wrong length"
 
    ." Got firmware version: "
