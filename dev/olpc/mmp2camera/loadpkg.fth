@@ -47,3 +47,6 @@
    fload ${BP}/dev/olpc/mmp2camera/ccic.fth
    fload ${BP}/dev/olpc/cameratest.fth
 end-package
+: probe-image-sensor  ( -- )
+   " /camera" open-dev close-dev
+;

@@ -12,21 +12,18 @@ defer set-mirrored   ( mirrored? -- )
 : sensor-found?  ( -- flag )
    false
 ;
+
 : set-sensor-properties  ( name$ i2c-addr -- )
    my-self >r  0 to my-self
-   " /image-sensor" find-device  ( name$ i2c-addr )
-      " reg" get-property  if    ( name$ i2c-addr )
-         1 reg                   ( name$ )
-         +compatible             ( )
-      else                       ( name$ i2c-addr regval$ )
-         2drop 3drop             ( )
-      then
-   device-end
+   " /image-sensor" find-package  if       ( name$ i2c-addr phandle )
+      " reg" rot get-package-property  if  ( name$ i2c-addr )
+         1 reg                             ( name$ )
+         encode-string  " compatible" property
+      else                                 ( name$ i2c-addr regval$ )
+         2drop 3drop                       ( )
+      then                                 ( )
+   else                                    ( name$ i2c-addr )
+      3drop                                ( )
+   then                                    ( )
    r> to my-self
 ;
-
-also forth definitions
-: probe-image-sensor  ( -- )
-   " /camera" open-dev close-dev
-;
-previous definitions
