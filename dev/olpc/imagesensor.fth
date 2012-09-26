@@ -14,7 +14,6 @@ defer set-mirrored   ( mirrored? -- )
 ;
 
 : set-sensor-properties  ( name$ i2c-addr -- )
-   my-self >r  0 to my-self
    " /image-sensor" find-package  if       ( name$ i2c-addr phandle )
       " reg" rot get-package-property  if  ( name$ i2c-addr )
          1 reg                             ( name$ )
@@ -25,5 +24,4 @@ defer set-mirrored   ( mirrored? -- )
    else                                    ( name$ i2c-addr )
       3drop                                ( )
    then                                    ( )
-   r> to my-self
 ;
