@@ -904,16 +904,43 @@ action:  >instance-data token!  ;
 action:  >instance-data token@  ;
 
 headerless
+: instance-defer  ( -- )
+   create-cf  ['] crash /token  ( value data-size )
+   use-actions  value#,
+;
 : (defer)  ( -- )
    instance?  if
-      create-cf  ['] crash /token  ( value data-size )
-      use-actions  value#,
+      instance-defer
    else
-     defer-cf  ['] crash /token    ( value data-size )
-     user#,
+      defer-cf  ['] crash /token   ( value data-size )
+      user#,
    then                            ( value adr )
    token!
 ; patch (defer) noop defer
+
+\ Extend debugger to handle instance defers
+: (resolve-instance-defers)  ( xt -- xt' )
+   begin
+      dup defer?  if                             ( xt )
+	 behavior                                ( xt' )
+      else                                       ( xt )
+         dup definer ['] instance-defer  =  if   ( xt )
+            2 perform-action                     ( xt' )
+	 else                                    ( xt )
+	    exit
+         then
+      then
+   again
+;
+' (resolve-instance-defers) to resolve-defers
+
+\ Extend decompiler to handle instance defers
+: .instance-defer  ( xt definer -- )
+   .definer  ." is " cr   ( xt )
+   2 perform-action       ( xt' )
+   (see)
+;
+' instance-defer  ' .instance-defer  install-decomp-definer
 
 headers
 \ Instance values that are automatically created for every package instance.

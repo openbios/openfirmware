@@ -588,22 +588,36 @@ d# 10 tassociative: word-types
 : cf,  \ name  ( -- )  \ Compile name's code field
    ' token,
 ;
-d# 11 tassociative: definition-class
+d# 12 constant #definition-classes
+#definition-classes tassociative: definition-class
    ( 0 )   cf,  :          ( 1 )   cf,  constant
    ( 2 )   cf,  variable   ( 3 )   cf,  user
    ( 4 )   cf,  defer      ( 5 )   cf,  create
    ( 6 )   cf,  vocabulary ( 7 )   cf,  alias
    ( 8 )   cf,  value      ( 9 )   cf,  2constant
-   ( 10)   cf,  code
+   ( 10)   cf,  code       ( 11 )  cf,  dummy
 
-d# 12  case: .definition-class
+#definition-classes 1+ case: .definition-class
    ( 0 )   .:              ( 1 )   .constant
    ( 2 )   .variable       ( 3 )   .user
    ( 4 )   .defer          ( 5 )   .create
    ( 6 )   .vocabulary     ( 7 )   .alias
    ( 8 )   .value          ( 9 )   .2constant
-   ( 10)   .code           ( 11)   .other
+   ( 10)   .code           ( 11)   dummy
+   ( 12)   .other
 ;
+
+headers
+also forth definitions
+: install-decomp-definer  ( definer-acf display-acf -- )
+   ['] dummy ['] .definition-class (patch
+   ['] dummy ['] definition-class >body na1+
+	       dup [ #definition-classes ] literal ta+ tsearch
+   drop token!
+;
+previous definitions
+headerless
+
 
 : does/;code-xt?  ( xt -- flag )
    dup  ['] (does>) =  swap  ['] (;code) =  or

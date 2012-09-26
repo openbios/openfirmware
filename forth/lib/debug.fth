@@ -60,8 +60,15 @@ headers
 \ Enter and leave the debugger
 forth definitions
 : defer?  ( acf -- flag )  word-type  ['] key word-type =  ;
-: (debug  ( acf -- )
+
+defer resolve-defers
+: (resolve-defers)  ( xt -- xt' )
    begin  dup defer?  while  behavior  repeat
+;
+' (resolve-defers)  to resolve-defers
+
+: (debug  ( acf -- )
+   resolve-defers
 
    dup colon-cf?  0= abort" Not a colon definition"
    >body dup 'unnest  (debug)
