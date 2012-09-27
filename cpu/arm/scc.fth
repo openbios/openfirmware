@@ -66,8 +66,11 @@ code clean&flush-l2$-entry    ( va -- )  mcr p15,1,tos,cr7,cr15,1  pop tos,sp  c
 code clean&flush-l2$-way      ( ws -- )  mcr p15,1,tos,cr7,cr15,2  pop tos,sp  c;
 code clean&flush-l2$-pa       ( pa -- )  mcr p15,1,tos,cr7,cr15,3  pop tos,sp  c;
 
+\ L2 Cache Extra Features Register
 \ Bit 24 is L2 prefetch disable, bit 23 is L2 ECC enable
-code l2$-efr  ( n -- )  mcr p15,1,tos,cr15,cr1,0  pop tos,sp  c;  
+\ Bit 8 (undocumented) enables write-coalescing
+code l2$-efr!  ( n -- )              mcr p15,1,tos,cr15,cr1,0  pop tos,sp  c;  
+code l2$-efr@  ( -- n )  psh tos,sp  mrc p15,1,tos,cr15,cr1,0  c;
 
 code l2$-lockdown-way   ( bits -- )  mcr p15,1,tos,cr15,cr10,7  pop tos,sp  c;
 
