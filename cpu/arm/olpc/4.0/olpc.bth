@@ -6,6 +6,7 @@ in: ${BP}/cpu/arm/olpc/4.0/build/fw.img
 in: ${BP}/cpu/arm/olpc/4.0/build/resetvec.img
 in: ${BP}/cpu/arm/olpc/4.0/build/mcastnand.bin
 in: sd8686.bin
+in: mv8787.bin
 in: verify.img
 in: ${BP}/dev/usb2/device/hub/build/hub.fc
 in: ${BP}/dev/usb2/device/generic/build/generic.fc
@@ -84,7 +85,7 @@ $new-file
 
    " sd8686_helper.bin"                          " helper_sd.bin" $add-deflated-dropin
    " sd8686.bin"                                 " sd8686.bin"    $add-deflated-dropin
-\  " mv8787.bin"                                 " mv8787.bin"    $add-deflated-dropin
+   " mv8787.bin"                                 " mv8787.bin"    $add-deflated-dropin
 
    " builton.fth"                       " probe-"          $add-dropin
 

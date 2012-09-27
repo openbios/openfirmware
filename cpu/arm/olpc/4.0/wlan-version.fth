@@ -5,6 +5,8 @@ macro: WLAN_SUBDIR thinfirm/
 macro: WLAN_PREFIX lbtf_sdio-
 macro: WLAN_VERSION 9.0.7.p2
 
+macro: WLAN_8787_VERSION dd7193bc187a5182a6236cb6337699d2229c54b0
+
 \ Non-thin version
 \ macro: WLAN_SUBDIR
 \ macro: WLAN_PREFIX sd8686-
