@@ -1,4 +1,4 @@
-purpose: Marvel 8686 firmware loader
+purpose: Marvel SDIO WLAN module firmware loader
 \ See license at end of file
 
 
@@ -21,10 +21,7 @@ fw-blksz 2 * 4 - constant /fw-tx
 0 value fw-tx-len
 0 value dn-retry
 
-: fw-dn-blksz  ( -- blksz )
-   h# 10 1 sdio-reg@
-   h# 11 1 sdio-reg@  bwjoin
-;
+: fw-dn-blksz  ( -- blksz )  host-f1-rd-base-0-reg 1 sdio-reg-w@  ;
 : wait-for-fw-dn-blksz  ( -- blksz )
    \ Wait for the first non-zero value
    d# 5000 0  do  fw-dn-blksz dup  ?leave  drop  loop
@@ -33,7 +30,7 @@ fw-blksz 2 * 4 - constant /fw-tx
 
 : fw-download-ok?  ( -- flag )
    false d# 100 0  do
-      sdio-scratch@  FIRMWARE_READY =  if  drop true leave  then
+      sdio-fw-status@  FIRMWARE_READY =  if  drop true leave  then
       d# 10 ms
    loop
 ;
@@ -46,7 +43,7 @@ fw-blksz 2 * 4 - constant /fw-tx
       fw-len dn-idx - fw-tx-len min		( len )
       fw-adr dn-idx + outbuf 2 pick move	( len )
       outbuf over sdio-fw! <>  if
-         4 3 1 sdio-reg!			\ FN1 CFG = write iomem fail
+         4 config-reg 1 sdio-reg!		\ FN1 CFG = write iomem fail
       then
       sdio-poll-dl-ready 0=  if  ." Download fw died" cr true exit  then
       fw-dn-blksz ?dup 0=  if  false exit  then
@@ -65,7 +62,7 @@ fw-blksz 2 * 4 - constant /fw-tx
 : fw-image-ok?  ( adr len -- flag )  2drop true  ;
 
 : download-fw  ( adr len -- error? )
-   2dup fw-image-ok? 0=  if  ." Bad WLAN firmware image" cr  true exit  then
+   2dup fw-image-ok? 0=  if  ." Bad WLAN firmware image" cr  true exit  then  ( adr len )
 
    wait-for-fw-dn-blksz
    ?dup 0=  if  ." Failed to get firmware download block size" cr 2drop true exit  then
@@ -75,7 +72,10 @@ fw-blksz 2 * 4 - constant /fw-tx
 
    fw-download-ok? 0=  if  true exit  then
 
-   3 4 1 sdio-reg!                 \ Enable host interrupt mask
+   3 host-int-mask-reg 1 sdio-reg!      \ Enable upload (1) and download (2)
+   mv8787?  if
+      2 config-reg 1 sdio-reg!             \ Host power up
+   then
    false
 ;
 
@@ -97,26 +97,30 @@ fw-blksz 2 * 4 - constant /fw-tx
 ;
 
 : download-helper  ( adr len -- error? )
-   sdio-scratch@ FIRMWARE_READY =  if  " Firmware downloaded" vtype 2drop true exit  then
+   sdio-fw-status@ FIRMWARE_READY =  if  " Firmware downloaded" vtype 2drop true exit  then
    2dup fw-image-ok? 0=  if  ." Bad WLAN helper image" cr true exit  then
    (download-helper)
 ;
 
-: load-8686-fw  ( -- error? )
-   wlan-helper find-fw dup  if  ( adr len )
-      download-helper  if  true exit  then
-   else                         ( adr len )
-      2drop                     ( )
-   then                         ( )
+: load-sdio-fw  ( -- error? )
+   helper?  if
+      wlan-helper find-fw dup  if  ( adr len )
+         2dup download-helper      ( adr len error? )
+         -rot free-mem             ( error? )
+	 if  true exit  then       ( )
+      else                         ( adr len )
+         2drop                     ( )
+      then                         ( )
+   then
 
    wlan-fw find-fw dup  if  ( adr len )
-     download-fw            ( error? )
+      2dup download-fw      ( adr len error? )
+      -rot free-mem         ( error? )
    else                     ( adr len )
-     2drop  false           ( error? )
+      2drop  true           ( error? )
    then                     ( error? )
 ;
-' load-8686-fw to load-all-fw
-
+' load-sdio-fw to load-all-fw
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

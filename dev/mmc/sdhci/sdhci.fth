@@ -930,9 +930,13 @@ d# 250 value power-off-time
    false
 ;
 
+\ To dynamically probe, get the number of functions from bits 30..28 of OCR
+0 instance value sdio-ocr  \ Contains info about voltages and functions
+
 : set-sdio-voltage  ( -- )
    0 io-send-op-cond                       \ Cmd 5: get card voltage
-   h# ff.ffff and io-send-op-cond drop     \ Cmd 5: set card voltage
+   h# ff.ffff and io-send-op-cond          \ Cmd 5: set card voltage
+   to sdio-ocr
 ;
 
 external
@@ -1021,6 +1025,83 @@ external
 \  unmap-regs
 ;
 
+: .io-state  ( flags & 30 -- )
+   case
+      h# 00  of  ." card disabled; "  endof
+      h# 10  of  ." CMD state; "      endof
+      h# 20  of  ." data transfer; "  endof
+      h# 30  of  ." reserved; "       endof
+   endcase
+;
+\ The following are CMD52 (SDIO) variants
+\ Flags: 80:CRC_ERROR  40:ILLEGAL_COMMAND  30:IO_STATE (see spec)
+\        08:ERROR  04:reserved  02:INVALID_FUNCTION#  01:OUT_OF_RANGE
+
+h# cf constant SDIO_FLAG_MASK
+
+: .sdio-flags  ( flags -- )
+   dup SDIO_FLAG_MASK and 0=  if  drop exit  then
+   ." IO_RW_DIRECT response = "
+   dup h# 80 and  if  ." CRC error; "            then
+   dup h# 40 and  if  ." illegal command; "      then
+   dup h# 30 and      .io-state
+   dup h# 08 and  if  ." error; "                then
+   dup h# 02 and  if  ." invalid function; "     then
+   dup h# 01 and  if  ." argument out of range"  then
+   cr
+;
+
+: sdio-reg@  ( reg# func# -- b )  io-b@  .sdio-flags  ;
+: sdio-reg!  ( b reg# func# -- )  io-b!  .sdio-flags  ;
+
+\ Can fetch a tuple list from this offset in function 0
+: sdio-cis-ptr  ( function# -- reg# )
+   h# 100 * 9 +  3 bounds do  i 0 sdio-reg@  loop  0 bljoin
+;
+
+: cis@+  ( offset -- offset' byte )  dup 1+  swap 0 sdio-reg@  ;
+: skip-tuple  ( offset -- offset' )
+   cis@+  0  ?do  cis@+  drop  loop  ( code offset' )
+;
+
+0 instance value sdio-card-id
+: parse-funcid  ( offset -- offset' )
+   cis@+ drop            ( offset )  \ Skip length
+   cis@+ >r  cis@+ >r  cis@+ >r  cis@+ >r  ( offset  r: ven.low,high prod.low,high )
+   r> r> swap bwjoin  r> r> swap bwjoin    ( offset product vendor )
+   wljoin to sdio-card-id                  ( vendor.product )
+;
+
+0 value sdio-card-blocksize
+0 value sdio-card-speed
+: parse-funce  ( offset -- offset' )
+   cis@+ drop     ( offset' )  \ Skip length
+   cis@+ 0=  if   ( offset' )  \ Function 0
+      cis@+ >r  cis@+  r> swap bwjoin  to sdio-card-blocksize  ( offset' )
+      cis@+ to sdio-card-speed      
+   else           ( offset )   \ Not function 0
+      2-          ( offset' )  \ Back up to length
+      skip-tuple  ( offset' )  \ Skip it
+   then           ( offset )
+;
+
+: parse-tuples  ( function# -- )
+   sdio-cis-ptr  begin         ( offset )
+      cis@+                    ( offset' tuple-code )
+      dup h# ff <>
+   while                       ( offset tuple-code )
+      \ Another potentially interesting tuples si h# 15 from which
+      \ you can get strings naming the product.
+      case
+	 h# 20  of  parse-funcid  endof
+         h# 22  of  parse-funce   endof
+         ( default: offset code )
+         swap  skip-tuple  swap
+      endcase
+   repeat                      ( offset tuple-code )
+   2drop
+;
+
 : attach-sdio-card  ( -- okay? )
    setup-host
    power-up-sdio-card  if         ( retry? )
@@ -1045,8 +1126,11 @@ external
    select-card       \ Cmd 7 - Select
    set-timeout
    4-bit
-   22 7 0 io-b!      \ Cmd 52 - Set 4-bit bus width and ECSI bit
-   h# cf and 0=
+   d# 22 7 0 io-b!    \ Cmd 52 - Set 4-bit bus width and ECSI bit
+   h# cf and 0=   ( okay? )
+   dup  if
+      0 parse-tuples  \ Get the card ID and other info
+   then
 ;
 
 : detach-sdio-card  ( -- )
@@ -1129,7 +1213,7 @@ external
    2dup tuck 1- + swap / to io-#blocks   ( reg# function# inc? addr len blksz r: in? )
    4 pick write-blksz          ( reg# function# inc? addr len r: in? )
    iodma-setup                 ( reg# function# inc? r: in? )
-   wait-write-done  if  -1 exit  then
+   wait-write-done  if  r> 2drop 2drop  -1 exit  then
    r>  if                      ( reg# function# inc? )
       io-read-blocks
    else

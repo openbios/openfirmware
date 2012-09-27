@@ -51,6 +51,7 @@ d# 2048 value /inbuf    \ Power of 2 larger than max-frame-size
 
 ds-not-ready value driver-state
 
+: driver-is-not-ready ( -- )   ds-not-ready to driver-state  ;
 : set-driver-state    ( bit-mask -- )  driver-state or to driver-state  ;
 : reset-driver-state  ( bit-mask -- )  invert driver-state and to driver-state  ;
 
@@ -155,7 +156,7 @@ struct
    2 field >fw-seq
    2 field >fw-result
 dup constant /fw-cmd
-dup 4 - constant /fw-cmd-hdr	\ Command header len (less /fw-transport)
+dup /fw-transport - constant /fw-cmd-hdr	\ Command header len (less /fw-transport)
    0 field >fw-data		\ Command payload starts here
 drop
 
@@ -207,6 +208,22 @@ dup constant /tx-hdr-no-mesh
    0 field >tx-pkt
 constant /tx-hdr
 
+struct
+   /fw-transport +
+   1 field >tx14-bsstype
+   1 field >tx14-bss#
+   2 field >tx14-len
+   2 field >tx14-offset
+   2 field >tx14-type
+   4 field >tx14-ctrl
+   1 field >tx14-priority
+   1 field >tx14-pwr
+   1 field >tx14-delay		\ in 2ms
+   1+
+   0 field >tx14-pkt
+constant /tx14-hdr
+
+
 0 constant tx-ctrl		\ Tx rates, etc
 : set-tx-ctrl  ( n -- )  to tx-ctrl  ;
 
@@ -216,32 +233,47 @@ h# 20000 constant TX_WDS
 
 : mesh-on?  ( -- flag )  tx-ctrl TX_WDS and 0<>  ;
 
-: (wrap-msg-thin)  ( adr len dst-mac-adr -- adr' len' )
-   outbuf  /tx-hdr  erase			( adr len dst-mac-adr )
-         outbuf >tx-mac  /mac-adr  move		( adr len )
+: wrap-802.11  ( adr len -- adr' len' )
+   outbuf  /tx-hdr  erase			( adr len )
+   over 4 +  outbuf >tx-mac  /mac-adr  move	( adr len )
    dup   outbuf >tx-len  le-w!			( adr len )
    tuck  outbuf >tx-pkt-no-mesh  swap  move		( len )
 
-   /tx-hdr-no-mesh 4 -  outbuf >tx-offset le-l!	( len )  \ Offset from >tx-ctrl field
+   /tx-hdr-no-mesh /fw-transport -  outbuf >tx-offset le-l!	( len )  \ Offset from >tx-stat field
    tx-ctrl        outbuf >tx-ctrl   le-l!	( len )
 
    outbuf  swap /tx-hdr-no-mesh +		( adr' len' )
 ;
-: (wrap-msg)  ( adr len dst-mac-adr -- adr' len' )
-   outbuf  /tx-hdr  erase			( adr len dst-mac-adr )
-         outbuf >tx-mac  /mac-adr  move		( adr len )
+
+: wrap-v9  ( adr len -- adr' len' )
+   outbuf  /tx-hdr  erase			( adr len )
+   over  outbuf >tx-mac  /mac-adr  move		( adr len )
    dup   outbuf >tx-len  le-w!			( adr len )
    tuck  outbuf >tx-pkt  swap  move		( len )
 
-   /tx-hdr 4 - outbuf >tx-offset le-l!	( len )  \ Offset from >tx-ctrl field
+   /tx-hdr /fw-transport - outbuf >tx-offset le-l!	( len )  \ Offset from >tx-stat field
    tx-ctrl        outbuf >tx-ctrl   le-l!	( len )
 
    mesh-on?  if  1 outbuf >tx-mesh-ttl c!  then	( len )
 
    outbuf  swap /tx-hdr +			( adr' len' )
 ;
-: wrap-802.11  ( adr len -- adr' len' )  over 4 +  (wrap-msg-thin)  ;
-: wrap-msg  ( adr len -- adr' len' )  over (wrap-msg)  ;
+
+: wrap-v14  ( adr len -- adr' len' )
+   \ Erasing sets the following fields to 0:
+   \ >tx14-bsstype (0=STA), >tx14-bss# (BSS#=0), >tx14-type (0=802.3)
+   \ >tx14-pri (PRI=0), >tx14-flags, >tx14-delay
+   outbuf  /tx14-hdr  erase			( adr len )
+
+   dup   outbuf >tx14-len  le-w!		( adr len )
+   tuck  outbuf >tx14-pkt  swap  move		( len )
+
+   /tx14-hdr /fw-transport - outbuf >tx14-offset le-w!	( len )  \ Offset from >tx14-bsstype field
+   tx-ctrl       outbuf >tx14-ctrl   le-l!	( len )
+
+   outbuf  swap /tx14-hdr +			( adr' len' )
+;
+instance defer wrap-ethernet
 
 \ =========================================================================
 \ Receive Packet Descriptor
@@ -275,6 +307,24 @@ struct
 d# 22 +  \ Size of an Ethernet header with SNAP
 constant /rx-min
 
+struct
+   /fw-transport +
+   1 field >rx14-bsstype
+   1 field >rx14-bss#
+   2 field >rx14-len
+   2 field >rx14-offset
+   2 field >rx14-type  \ 2:ethernet 3:802.3 w/ LLC+SNAP 5:802.11 e6:AMSDU e7:BAR ef:debug
+   2 field >rx14-seq
+   1 field >rx14-pri
+   1 field >rx14-rate
+   1 field >rx14-snr
+   1 field >rx14-nf
+   1 field >rx14-ht
+   1 +
+\ d# 14 +  \ Size of an Ethernet header
+\ d# 22 +  \ Size of an Ethernet header with SNAP
+constant /rx14-min
+
 \ >rx-stat constants
 1 constant rx-stat-ok
 2 constant rx-stat-multicast
@@ -297,11 +347,16 @@ constant /rx-min
    drop
 ;
 
-: unwrap-pkt  ( adr len -- data-adr data-len )
-   /rx-min <  if  drop 0 0  then	\ Invalid packet: too small
+: unwrap-v9  ( adr len -- data-adr data-len false | true )
+   over .rx-desc				( adr len )
+   over >rx-stat le-w@ rx-stat-ok <>  if	( adr len )
+      2drop true exit				( -- true )
+   then						( adr len )
+
+   /rx-min <  if  drop  true exit  then		( adr )  \ Invalid packet: too small
 
    \ Go to the payload, skipping the descriptor header
-   dup  dup >rx-offset le-l@ + la1+	( adr data-adr )
+   dup  dup >rx-offset le-l@ + /fw-transport +	( adr data-adr )
    swap >rx-len le-w@			( data-adr data-len )
 
    \ Remove snap header by moving the MAC addresses up
@@ -310,15 +365,39 @@ constant /rx-min
       over  dup 8 +  d# 12  move	( data-adr data-len )
       8 /string				( adr' len' )
    then
+   false
 ;
+: unwrap-v14  ( adr len -- data-adr data-len )
+   /rx14-min <  if  drop true exit  then	( adr )	\ Invalid packet: too small
+
+   \ Go to the payload, skipping the descriptor header
+   >r							( r: adr )
+   r@  r@ >rx14-offset le-w@ +  /fw-transport +		( data-adr r: adr )
+   r@ >rx14-len le-w@					( data-adr data-len  r: adr )
+
+   r> >rx14-type c@  case				( data-adr data-len )
+      2  of  endof   \ Ethernet				( data-adr data-len )
+      3  of		\ 802.3 with LLC + SNAP		( data-adr data-len )
+   \ Remove snap header by moving the MAC addresses up
+   \ That's faster than moving the contents down
+         over d# 14 + snap-header comp 0=  if		( data-adr data-len )
+            over  dup 8 +  d# 12  move			( data-adr data-len )
+            8 /string					( adr' len' )
+         then
+      endof
+      ( default )					( adr len type )
+         ." libertas.fth: Frame type not supported" cr
+         3drop true exit
+   endcase
+   false
+;
+instance defer unwrap-ethernet
 
 : process-data  ( adr len -- )
    2dup vdump				( adr len )
-   over .rx-desc			( adr len )
 
-   over >rx-stat le-w@ rx-stat-ok <>  if  2drop exit  then
-
-   unwrap-pkt  to /data  to data	( )
+   unwrap-ethernet  if  exit  then	( adr' len' )
+   to /data  to data			( )
 
    true to got-data?	\ do-process-eapol may unset this
 
@@ -407,6 +486,8 @@ constant /rx-min
       0076  of  ." CMD_802_11_RATE_ADAPT_RATESET"	endof
       007f  of  ." CMD_TX_RATE_QUERY"			endof
       00a5  of  ." CMD_SET_BOOT2_VER"			endof  \ Thin firmware only
+      00a9  of  ." CMD_FUNC_INIT"                       endof  \ Multifunction versions
+      00aa  of  ." CMD_FUNC_SHUTDOWN"                   endof
       00b0  of  ." CMD_802_11_BEACON_CTRL"		endof  \ Thin firmware only
       00cb  of  ." CMD_802_11_BEACON_SET"		endof  \ Thin firmware only
       00cc  of  ." CMD_802_11_SET_MODE"			endof  \ Thin firmware only
@@ -483,12 +564,15 @@ true value got-indicator?
       h# 0e  of  " Unicast MIC error" .event  process-pmic-failure  endof
       h# 0e  of  " WM awake" .event  endof \ n
       h# 11  of  " HWAC - adhoc BCN lost" .event  endof
+      h# 17  of  endof   \ Suppress:  " WMM status change" .event  endof  \ XXX supposed to issue CMD_WMM_GET_STATUS
       h# 19  of  " RSSI low" .event  endof
       h# 1a  of  " SNR low" .event  endof
       h# 1b  of  " Max fail" .event  endof
       h# 1c  of  " RSSI high" .event  endof
       h# 1d  of  " SNR high" .event  endof
       h# 23  of  endof  \ Suppress this; the user doesn't need to see it
+      h# 2b  of  endof  \ Suppress this; the user doesn't need to see it
+\      h# 2b  of  " Port release" .event  endof
       \ h# 23  of  ." Mesh auto-started"  endof
       h# 30  of   endof  \ Handle this silently
 \      h# 30  of  " Firmware ready" .event  endof
@@ -515,7 +599,7 @@ true value got-indicator?
 
 : check-for-rx  ( -- )
    got-packet?  if		( error | buf len 0 )
-      0= if  process-rx	 then	( )
+      0= if  2dup vdump process-rx	 then	( )
       recycle-packet		( )
    then				( )
 ;
@@ -603,13 +687,13 @@ true value got-indicator?
 
 : reset-wlan  ( -- )
    " wlan-reset" evaluate
-   ds-not-ready to driver-state
+   driver-is-not-ready
    reset-host-bus
 ;
 : sleep  ( -- )  reset-wlan  ;
 : wake  ( -- )  ;
 
-: marvel-get-hw-spec  ( -- true | adr false )
+: get-hw-spec  ( -- true | adr false )
    d# 38 h# 03 ( CMD_GET_HW_SPEC ) prepare-cmd
    outbuf-out  ?dup  if  true exit  then
    resp-wait-tiny to resp-wait
@@ -618,13 +702,37 @@ true value got-indicator?
    respbuf >fw-data  false
 ;
 
-\ The purpose of this is to work around a problem that I don't fully understand.
-\ For some reason, when you reopen the device without re-downloading the
-\ firmware, the first command silently fails - you don't get a response.
-\ This is a "throwaway" command to handle that case without a long timeout
-\ or a warning message.
+: set-fw-params  ( -- )
+   get-hw-spec  0=  if   ( adr )
 
-: nonce-cmd  ( -- )  marvel-get-hw-spec  0=  if  drop  then  ;
+      \ The 4-byte FWReleaseNumber field starts at offset d# 18.
+      \ Firmware version 2.3.4.p1 is represented in that field
+      \ as 04 03 02 01, i.e. the first three bytes are little-endian,
+      \ and the final byte is the "p-number".  The "MSB" at offset
+      \ d# 20 reflects the major version number, corresponding to
+      \ the "v-number" of the firmware interface document.
+
+      d# 20 + c@  d# 14 >=  if
+         ['] wrap-v14   to wrap-ethernet
+         ['] unwrap-v14 to unwrap-ethernet
+      else
+         ['] wrap-v9   to wrap-ethernet
+         ['] unwrap-v9 to unwrap-ethernet
+      then
+   then
+;
+
+\ This is necessary for multifunction devices like 8688 and 8787 that have
+\ extra functions like BlueTooth in addition to WiFi
+: init-function  ( -- )
+   0 h# a9 ( CMD_FUNC_INIT ) prepare-cmd
+   outbuf-wait  if  exit  then
+;
+
+: shutdown-function  ( -- )
+   0 h# aa ( CMD_FUNC_SHUTDOWN ) prepare-cmd
+   outbuf-wait  if  exit  then
+;
 
 \ =========================================================================
 \ MAC address
@@ -870,6 +978,14 @@ external
 : mac-off  ( -- )
    0 to mac-ctrl  set-mac-control  3 to mac-ctrl
 ;
+
+: reconfig-tx-buffer  ( bufsize -- )  \ mwifiex
+   3  h# d9 ( RECONFIGURE_TX_BUFF )  prepare-cmd
+   ACTION_SET +xw
+   ( bufsize ) +xw
+   outbuf-wait drop
+;
+
 headers
 
 \ =========================================================================
@@ -1661,7 +1777,7 @@ d# 1600 constant /packet-buf
 
 \ This is a heavy-handed way to force the device back into baseline state
 \ The recipe above is nicer.
-\   ds-not-ready  to driver-state  \ Forces firmware reload on next open
+\   driver-is-not-ready            \ Forces firmware reload on next open
 \   reset-host-bus                 \ Primes module to accept new firmware
 \   false to ap-mode?
 ;
@@ -1711,8 +1827,8 @@ d# 1600 constant /packet-buf
 ;
 
 : .hw-spec  ( -- )
-   marvel-get-hw-spec  if
-      ." marvel-get-hw-spec command failed" cr
+   get-hw-spec  if
+      ." get-hw-spec command failed" cr
    else
       ." HW interface version: " dup le-w@ u. cr
       ." HW version: " dup 2 + le-w@ u. cr
@@ -1901,6 +2017,7 @@ headers
       then
       ds-ready to driver-state
    then
+   multifunction?  if  init-function  then
    ?make-mac-address-property
 ;
 
@@ -1932,11 +2049,12 @@ false instance value quiet?
    " " set-ssid  \ Instance buffers aren't necessarily initially 0
    opencount @ 0=  if
       init-buf
+      driver-is-not-ready
       /inbuf /outbuf setup-bus-io  if  free-buf false exit  then
       ?load-fw  if  release-bus-resources free-buf false exit  then
+      set-fw-params
       my-args " supplicant" $open-package to supplicant-ih
       supplicant-ih 0=  if  release-bus-resources free-buf false exit  then
-      nonce-cmd
       force-open?  if
          ds-disconnected reset-driver-state
       else
@@ -1965,7 +2083,9 @@ false instance value quiet?
       stop-nic
       mac-off
       supplicant-ih ?dup  if  close-package 0 to supplicant-ih  then
+      multifunction?  if  shutdown-function  then
       release-bus-resources
+      driver-is-not-ready
    then
 ;
 
@@ -1973,7 +2093,7 @@ false instance value quiet?
 \ Used by the /supplicant support package to perform key handshaking.
 : write-force  ( adr len -- actual )
    tuck					( actual adr len )
-   wrap-msg				( actual adr' len' )
+   wrap-ethernet			( actual adr' len' )
    data-out                             ( actual )
 ;
 

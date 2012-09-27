@@ -2,8 +2,13 @@
 
 0 " #address-cells" integer-property
 0 " #size-cells" integer-property
-: open  true  ;
-: close  ;
+: open  
+   [ifdef] my-clock-on  my-clock-on  [then]
+   true
+;
+: close
+   [ifdef] my-clock-off  my-clock-off  [then]
+;
 
 : r/w-blocks " r/w-blocks" $call-parent  ;
 : erase-blocks  " erase-blocks" $call-parent  ;
@@ -27,3 +32,7 @@
 : io-b@  " io-b@" $call-parent  ;
 : io-b!  " io-b!" $call-parent  ;
 : io-b!@  " io-b!@" $call-parent  ;
+: sdio-reg@  " sdio-reg@" $call-parent  ;
+: sdio-reg!  " sdio-reg!" $call-parent  ;
+: sdio-card-id  " sdio-card-id" $call-parent  ;
+: sdio-card-blocksize  " sdio-card-blocksize" $call-parent  ;

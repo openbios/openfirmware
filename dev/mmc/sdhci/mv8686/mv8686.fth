@@ -4,12 +4,6 @@ purpose: Transport interface for Marvel 8686 wireless ethernet driver
 headers
 hex
 
-" mv8686" encode-string  " module-type" property
-
-\ This really depends on the firmware that we load, but we don't want
-\ to load the firmware in advance, so we hardcode this, assuming that
-\ the firmware we include with OFW has both thin and fullmac capability.
-0 0 encode-bytes  " thin" property
 0 0 encode-bytes  " fullmac" property
 
 \ =======================================================================
@@ -19,7 +13,7 @@ hex
 \ =======================================================================
 
 : wlan-fw  ( -- $ )
-   " wlan-fw" " $getenv" evaluate  if  " rom:sd8686.bin"  then  
+   " wlan-fw" " $getenv" evaluate  if  default-fw$  then
 ;
 : wlan-helper  ( -- $ )
    " wlan-helper" " $getenv" evaluate  if  " rom:helper_sd.bin"  then
@@ -76,11 +70,8 @@ constant /fw-transport
 
 : release-bus-resources  ( -- )  drain-queue detach-card  ;
 
-0 value card-attached?
-
 : ?attach-card  ( -- ok? )
-   card-attached?  if  true exit  then
-   attach-card  dup to card-attached?   ( ok? )
+   attach-card  if  set-version 0=  else  false  then
 ;
 
 : make-my-properties  ( -- )
@@ -91,13 +82,13 @@ constant /fw-transport
 : setup-bus-io  ( /inbuf /outbuf -- error? )
    2drop
    init-queue
-   ?attach-card 0=  if  ." Fail to attach card" cr true exit  then
+   ?attach-card 0=  if  ." Failed to attach card" cr true exit  then
    make-my-properties
    init-device
    false
 ;
 
-: reset-host-bus  ( -- )  false to card-attached?  ;
+: reset-host-bus  ( -- )  ;
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks
