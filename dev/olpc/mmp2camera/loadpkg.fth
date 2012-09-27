@@ -40,6 +40,20 @@
 
    fload ${BP}/dev/olpc/mmp2camera/platform.fth
    fload ${BP}/dev/olpc/imagesensor.fth
+
+   : set-sensor-properties  ( name$ i2c-addr -- )
+      my-self >r  0 to my-self
+      " /image-sensor" find-device  ( name$ i2c-addr )
+      " reg" get-property  if       ( name$ i2c-addr )
+         1 reg                      ( name$ )
+         +compatible                ( )
+      else                          ( name$ i2c-addr regval$ )
+         2drop 3drop                ( )
+      then
+      device-end
+      r> to my-self
+   ;
+
    warning @ warning off
    fload ${BP}/dev/olpc/ov7670.fth
    fload ${BP}/dev/olpc/seti.fth		\ Load last; most likely to be present
