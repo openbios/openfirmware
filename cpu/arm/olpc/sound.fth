@@ -87,7 +87,7 @@ new-device
    h# d00 +audio  h# 100 reg
 
    " marvell,mmp-sspa-dai" +compatible
-[ifdef] mmp2 " marvell,mmp3-sspa-dai" +compatible  [then]
+[ifdef] mmp2 " marvell,mmp2-sspa-dai" +compatible  [then]
 [ifdef] mmp3 " marvell,mmp3-sspa-dai" +compatible  [then]
 
    " unused" " status" string-property
@@ -102,7 +102,7 @@ new-device
 h# c00 +audio  h# 100 reg
 
 " marvell,mmp-sspa-dai" +compatible
-[ifdef] mmp2 " marvell,mmp3-sspa-dai" +compatible  [then]
+[ifdef] mmp2 " marvell,mmp2-sspa-dai" +compatible  [then]
 [ifdef] mmp3 " marvell,mmp3-sspa-dai" +compatible  [then]
 
 " /pmua" encode-phandle d# 20 encode-int encode+ " clocks" property
