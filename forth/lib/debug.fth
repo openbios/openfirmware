@@ -37,7 +37,9 @@ bug also definitions
 variable step? step? on
 variable res
 headers
-false value redisplay?
+
+-1 value displayed-xt
+: force-redisplay  ( -- )  -1 to displayed-xt  ;
 
 : (debug)       (s low-adr hi-adr -- )
    unbug   1 cnt !   ip> !   <ip !   pnext
@@ -46,8 +48,9 @@ false value redisplay?
       slow-next? on
    then
    step? on
-   true is redisplay?
+   force-redisplay
 ;
+
 headerless
 : 'unnest   (s pfa -- pfa' )
    begin   dup ta1+  swap  token@ ['] unnest =  until
@@ -188,6 +191,8 @@ variable hex-stack    \ Show the data stack in hex?
 : restore#  ( -- )  #buf-save  #-buf /#buf -  d# 72 move    hld-save @  hld !  ;
 0 value the-ip
 0 value the-rp
+: redisplay?  ( -- flag )  displayed-xt  the-ip find-cfa <>  ;
+
 : (.rs  ( -- )
    show-rstack @ 0=  if  exit  then
    ." return-stack: "
@@ -210,6 +215,7 @@ variable hex-stack    \ Show the data stack in hex?
    d# 40 rmargin !
    ." Stack: " #out @ #line @ to full-stack-xy  cr  \ For stack
    the-ip debug-see
+   the-ip find-cfa to displayed-xt
    cr
    \ Display the initial stack on the cursor line
    the-ip ip>position  0=  if   ( col row )
@@ -224,7 +230,6 @@ variable hex-stack    \ Show the data stack in hex?
          setup-2d-display
       then
       0 show-rstack !
-      false is redisplay?
    then
 ;
 : show-debug-stack  ( -- )
@@ -269,7 +274,7 @@ variable hex-stack    \ Show the data stack in hex?
 	    ascii U  of  the-rp ['] up1 try                     endof \ Up
             ascii C  of                                               \ Continue
                step? @ 0= step? !              
-               step? @ 0=  if  true to scrolling-debug?  true to redisplay?  then
+               step? @ 0=  if  true to scrolling-debug?  force-redisplay  then
                true
             endof
 
@@ -290,10 +295,10 @@ variable hex-stack    \ Show the data stack in hex?
             ascii *  of  the-ip find-cfa dup <ip !  'unnest ip> !  false  endof
             ascii \  of  show-rstack @ 0= show-rstack !  false  endof  \ toggle return stack display
             ascii X  of  hex-stack @ 0= hex-stack !      false  endof  \ toggle heX stack display
-            ascii L  of  true to redisplay?              false  endof  \ Redisplay
+            ascii L  of  force-redisplay                 false  endof  \ Redisplay
             ascii V  of						\ toggle Visual (2D) mode
                scrolling-debug? 0= to scrolling-debug?      
-               scrolling-debug? 0=  if  true to redisplay?  then  false
+               scrolling-debug? 0=  if  force-redisplay  then  false
             endof
             ( default )  true swap
          endcase
@@ -309,7 +314,7 @@ variable hex-stack    \ Show the data stack in hex?
    debug-interact
 \   scrolling-debug? 0=  if  to-result-loc  then
    the-ip token@  dup ['] unnest =  swap ['] exit =  or  if
-      cr  true is redisplay?
+      cr  force-redisplay
    then
    slow-next? @  if  pnext  then
 ;
@@ -325,7 +330,7 @@ only forth bug also forth definitions
    (debug
 ;
 : debugging  ( -- )  ' .debug-short-help  dup (debug  execute  ;
-: resume    (s -- )  true is exit-interact?  pnext  ;
+: resume    (s -- )  true is exit-interact?  force-redisplay  pnext  ;
 : stepping  (s -- )  step? on  ;
 : tracing   (s -- )  step? off ;
 
