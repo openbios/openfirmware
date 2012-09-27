@@ -12,6 +12,11 @@ purpose: Device tree nodes for board-specific I2C buses implemented by TWSI hard
 \ h# d4038000 d# 30   3 true  true  N fload ${BP}/cpu/arm/mmp2/twsi-node.fth  \ TWSI5
   h# d4034000 d# 31   4 true  true  4 fload ${BP}/cpu/arm/mmp2/twsi-node.fth  \ TWSI6
 
+devalias i2c2 /i2c@d4011000
+devalias i2c3 /i2c@d4031000
+devalias i2c5 /i2c@d4033000
+devalias i2c4 /i2c@d4034000
+
 [ifdef] soon-olpc-cl2  \ this breaks cl4-a1 boards, which ofw calls cl2.
 dev /i2c@d4033000  \ TWSI4
 new-device
