@@ -79,8 +79,8 @@ headers
 
 : find-fw  ( $ -- adr len )
    over " rom:" comp  if
-      " boot-read" evaluate		\ Not a dropin
-      " loaded" evaluate
+      \ Not a dropin
+      " $read-file" evaluate  if  null$  then  ( adr len )
    else
       4 - swap 4 + swap " find-drop-in" evaluate  0=  if  null$  then
    then
