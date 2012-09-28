@@ -12,6 +12,8 @@ purpose: USB features common to most OLPC ARM platforms
    " /pmua" encode-phandle 5 encode-int encode+ " clocks" property
    d# 44 " interrupts" integer-property
 
+   usb-hub-reset-gpio# 1  " usb-hub-reset-gpios" gpio-property
+
    " host" " dr_mode"  string-property
    " utmi" " phy_type" string-property
 
