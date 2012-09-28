@@ -8,6 +8,7 @@ purpose: USB features common to most OLPC ARM platforms
       my-space swap  " map-in" $call-parent  h# 100 +  ( adr )
    ;
    : my-map-out  ( adr len -- )  swap h# 100 - swap " map-out" $call-parent  ;
+   " USBPHYCLK" " clock-names" string-property
    " /pmua" encode-phandle 5 encode-int encode+ " clocks" property
    d# 44 " interrupts" integer-property
 
