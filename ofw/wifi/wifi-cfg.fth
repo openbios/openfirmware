@@ -99,8 +99,8 @@ defer default-ssids  ( -- $ )  ' null$ to default-ssids
 alias wifi essid
 alias ssid essid
 
-: wep  ( "wep" -- )  parse-word  $wep  ;
-: wpa  ( "psk" -- )  parse-word  $wpa  ;
+: wep  ( "wep" -- )  0 parse  $wep  ;
+: wpa  ( "psk" -- )  0 parse  $wpa  ;
 
 \ =====================================================================
 \ Scan wireless networks
