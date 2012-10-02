@@ -104,9 +104,5 @@ end-package
 devalias mmc1 /sd/sdhci@d4280800
 
 stand-init: SDHC clocks
-   h# 41b h# 282854 io!   \ SD0 (external SD) clocks, plus set master clock divisor
-   h#  1b h# 282858 io!   \ SD1 (WLAN) clocks
-   h#  1b h# 2828e8 io!   \ SD2 (internal microSD) clocks
-   h# 70a h# 200104 io!  \ Clock gating
-   h# 70a h# 201104 io!  \ Clock gating
+   h# 400 h# 54 pmua!    \ Master SDH clock divisor
 ;
