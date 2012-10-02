@@ -5,7 +5,11 @@ macro: WLAN_SUBDIR thinfirm/
 macro: WLAN_PREFIX lbtf_sdio-
 macro: WLAN_VERSION 9.0.7.p2
 
-macro: WLAN_8787_VERSION dd7193bc187a5182a6236cb6337699d2229c54b0
+\ dd7193bc is 14.66.09.p96 .  The OFW driver doesn't work with it yet
+\ macro: WLAN_8787_VERSION dd7193bc187a5182a6236cb6337699d2229c54b0
+
+\ 7a28e074 is 14.66.09.p80
+macro: WLAN_8787_VERSION 7a28e074
 
 \ Non-thin version
 \ macro: WLAN_SUBDIR
