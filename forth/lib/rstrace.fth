@@ -22,29 +22,32 @@ headerless
    ."    Catch frame - SP: " @+ .  ."   my-self: "  @+ .  ."   handler: "  @+ .
 ;
 1 bits/cell 1- lshift constant minus0
+: loop-end?  ( adr -- flag )
+   dup reasonable-ip?  0=  if    ( adr )
+      drop false exit            ( -- false )
+   then                          ( adr )
+   dup @ +                       ( adr' )
+   dup reasonable-ip?  0=  if    ( adr )
+      drop false exit            ( -- false )
+   then                          ( adr )
+   ip>token  -1 na+  token@      ( xt )
+   dup ['] (loop) =  swap ['] (+loop) =  or  ( flag )
+;
+
 : .do-or-n  ( rs-adr n -- rs-adr' )
    over @ reasonable-ip?  0=  if              ( rs-adr n )
       \ The second number is not an IP so it could be a do loop frame
-      over na1+ @  reasonable-ip?  if         ( rs-adr n )
-         \ The third entry is a reasonable IP so it could be a do loop frame
-         \ Make sure it points just past a loop end
-         over na1+ @  dup @ +                 ( rs-adr n n2 )
-         dup reasonable-ip?  if               ( rs-adr n adr )
-            ip>token  -1 na+  token@          ( rs-adr n xt )
-            dup ['] (loop) =  swap ['] (+loop) =  or  if  ( rs-adr n )
-               \ The two numbers span the +- boundary, so probably a do loop
-               ."    Do loop frame inside "
-               over na1+ @ ip>token .current-word ( rs-adr n )
-               over @                             ( rs-adr n n1 )
-               ."   i: "  tuck + .                ( rs-adr n1 )
-               ."   limit: "  minus0  + .         ( rs-adr )
-               2 na+ exit
-            then                               ( rs-adr n )
-         else                                  ( rs-adr n n2 )
-            drop                               ( rs-adr n )
-         then                                  ( rs-adr n )
-      then                                     ( rs-adr n )
-   then                                        ( rs-adr n )
+      over na1+ @                             ( rs-adr n n2 )
+      dup loop-end?  if                       ( rs-adr n n2 )
+         ."    Do loop frame inside "
+         ip>token .current-word               ( rs-adr n )
+         over @                               ( rs-adr n n1 )
+         ."   i: "  tuck + .                  ( rs-adr n1 )
+         ."   limit: "  minus0  + .           ( rs-adr )
+         2 na+ exit                           ( -- rs-adr' )
+      then                                    ( rs-adr n n2 )
+      drop                                    ( rs-adr n )
+   then                                       ( rs-adr n )
    9 u.r
 ;
 : .traceline  ( ipaddr -- )
