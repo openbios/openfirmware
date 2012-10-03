@@ -52,6 +52,7 @@ create use-null-nvram  \ Don't store configuration variables
 
 create machine-signature ," CL1"
 : signature$  machine-signature count  ;
+: bundle-suffix$  ( -- adr len )  " 1"  ;
 
 fload ${BP}/cpu/x86/pc/olpc/via/addrs.fth
 

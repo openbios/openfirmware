@@ -441,27 +441,21 @@ d# 67 buffer: machine-id-buf
 : .trying  ( name$ -- name$ )
    " Trying " ?lease-debug  2dup ?lease-debug-cr
 ;
-0 value bundle-suffix
-: bundle-present?  ( fn$ -- flag )
-   fn-buf place
 
-   \ unadorned names not supported from XO-4 onwards
-   bundle-suffix 4 < if
-      \ Try the unadorned name first
-      bundle-name$  .trying
-      ['] (boot-read) catch  0=  if  true exit  then   ( x x )
-      2drop                                            ( )
-   then
-
-   \ Unadorned name not present; try again with architecture-dependent numeric suffix
-   bundle-suffix push-decimal (.) pop-base   ( adr len )
-   fn-buf $cat                               ( )
-
+: $try-name  ( basename$ suffix$ -- found? )
+   2swap fn-buf place  fn-buf $cat
    bundle-name$  .trying
-   ['] (boot-read) catch  0=  if  true exit  then   ( x x )
-   2drop                                            ( )
+   ['] (boot-read) catch  if  2drop false  else  true  then
+;
 
-   false
+: bundle-present?  ( fn$ -- found? )
+   \ Try first with architecture-dependent numeric suffix
+   2dup bundle-suffix$ $try-name  if   ( fn$ )
+      2drop true exit                  ( -- true )
+   then                                ( fn$ )
+
+   \ Failing that, try the unadorned name
+   " "  $try-name
 ;
 
 \ exp-hashname$ remembers the most recently used hashname to guard against
