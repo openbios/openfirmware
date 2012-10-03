@@ -31,6 +31,20 @@ headers
       r> 1+ >r
    again
 ;
+
+\ This version is faster (due to bscan being a code word) and arguably more convenient than sindex
+: $sindex  ( small$ big$ -- rem$ )
+   2 pick 0=  if  4drop 0  then  \ Null string is initial substring of anything
+   3 pick c@  >r                 ( small$ big$  r: firstchar )
+   begin  r@  bscan  dup while   ( small$ rem$  r: firstchar )
+      4dup substring?  if        ( small$ rem$  r: firstchar )
+         2swap r> 3drop  exit    ( -- rem$ )
+      then                       ( small$ rem$  r: firstchar )
+      1 /string                  ( small$ rem$'  r: firstchar )
+   repeat                        ( small$ rem$  r: firstchar )
+   2swap r> 3drop                ( rem$ )
+;
+
 only forth also definitions
 
 \ LICENSE_BEGIN

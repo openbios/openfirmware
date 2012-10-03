@@ -31,5 +31,6 @@ fload ${BP}/cpu/arm/olpc/1.75/testitems.fth
 fload ${BP}/cpu/arm/olpc/1.75/testinstructions.fth
 fload ${BP}/cpu/arm/olpc/gpio-gamekeys.fth
 fload ${BP}/cpu/arm/olpc/test-tweaks.fth
+fload ${BP}/cpu/arm/olpc/1.75/dtcompat.fth
 
 fload ${BP}/cpu/arm/olpc/save-fw.fth
