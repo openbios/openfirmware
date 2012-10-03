@@ -20,7 +20,11 @@ instance defer rx-ready?  ( -- len )
 instance defer get-ctrl-port  ( -- port# )
 instance defer get-write-port  ( -- port# )
 
-0 0 2value default-fw$
+\ FCode doesn't have 2value so we do it this way
+0 value fw-adr
+0 value fw-len
+: default-fw$  ( -- adr len )  fw-adr fw-len  ;
+: set-default-fw$  ( adr len -- )  to fw-len  to fw-adr  ;
 
 0 value ioport
 d# 256 constant blksz			\ Block size for data tx/rx
@@ -90,7 +94,7 @@ h# 78 constant ioport-reg
     ['] 0 to get-ctrl-port
     ['] 0 to get-write-port
 
-    " rom:sd8686.bin" to default-fw$
+    " rom:sd8686.bin" set-default-fw$
     " mv8686" ?set-module-property
 
     \ This really depends on the firmware that we load, but we don't want
@@ -173,7 +177,7 @@ h# 78 constant ioport-reg
     ['] mv8787-rx-ready? to rx-ready?
     ['] mv8787-get-ctrl-port  to get-ctrl-port
     ['] mv8787-get-write-port  to get-write-port
-    " rom:mv8787.bin" to default-fw$
+    " rom:mv8787.bin" set-default-fw$
     " mv8787" ?set-module-property
     false to helper?
     true to multifunction?
