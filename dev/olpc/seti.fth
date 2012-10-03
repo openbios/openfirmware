@@ -306,7 +306,9 @@ hex
    h# 12 <>  if  false exit  then  ( )
 
    " SETi,SIV120D" " sensor" string-property
+[ifdef] set-sensor-properties
    " seti,siv120d" camera-smb-slave set-sensor-properties
+[then]
 
    ['] seti-set-mirrored to set-mirrored
    ['] seti-config       to camera-config
