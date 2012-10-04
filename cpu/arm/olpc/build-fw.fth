@@ -172,7 +172,7 @@ fload ${BP}/cpu/x86/pc/olpc/mfgdata.fth      \ Manufacturing data
 fload ${BP}/cpu/x86/pc/olpc/mfgtree.fth      \ Manufacturing data in device tree
 
 fload ${BP}/dev/olpc/kb3700/eccmds.fth
-: dcon-off  " dcon-off" $call-dcon  ;
+: dcon-off  ( -- )  dcon-if  if  " dcon-off" $call-dcon  then  ;
 : stand-power-off  ( -- )  dcon-off ec-power-off  begin wfi again  ;
 ' stand-power-off to power-off
 
