@@ -40,13 +40,14 @@ end-package
    5 enable-interrupt                  ( )
 ;
 : wake1  ( -- )  ['] cancel-alarm 1 rtc-wake  ;
+: wake2  ( -- )  ['] cancel-alarm 2 rtc-wake  ;
 : alarm-in-3  ( -- )  ['] take-alarm 3 rtc-wake  ;
 : wakeup-loop  ( -- )
    d# 1000000 0 do
       0 d# 13 at-xy  i .d
       5 0  do
          cr i .
-         wake1  strp
+         wake2  strp
          d# 500 ms
          key? if unloop unloop exit  then
       loop

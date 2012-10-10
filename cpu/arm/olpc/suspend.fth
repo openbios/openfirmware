@@ -215,4 +215,4 @@ purpose: Common uspend/resume code for OLPC XO ARM plaforms
    platform-on
 ;
 
-: strp  ( -- )  ec-rst-pwr  str  ec-max-pwr .d ." mW " soc .%  space  ;
+: strp  ( -- )  ec-rst-pwr  str  ec-sus-pwr .d ." mW " soc .%  space  ;
