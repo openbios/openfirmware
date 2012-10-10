@@ -39,6 +39,10 @@ new-device
    h# 900 +audio  h# 100 reg
    5 encode-int 4 encode-int encode+ " mmp-mav-dma-channels" property
    " marvell,mmp-audio-dma" +compatible
+
+   " /interrupt-controller@128" encode-phandle  " interrupt-parent" property
+   d# 20 encode-int  d# 21 encode-int encode+  " interrupts" property
+
    " disabled" " status" string-property
    current-device  ( adma1-ph )
 finish-device
@@ -61,6 +65,10 @@ new-device
    h# 800 +audio  h# 100 reg
    3 encode-int 2 encode-int encode+ " mmp-mav-dma-channels" property
    " marvell,mmp-audio-dma" +compatible
+
+   " /interrupt-controller@128" encode-phandle  " interrupt-parent" property
+   d# 18 encode-int  d# 19 encode-int encode+  " interrupts" property
+
    current-device  ( adma0-ph )
 finish-device
 

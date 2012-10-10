@@ -95,6 +95,7 @@ d# 64 " mrvl,intc-nr-irqs" integer-property
    h# 160 h# 178 d# 51     2 make-mux-node \ intcmux51 - HSI_CAWAKE(1?), MIPI_HSI_INT1
    h# 188 h# 184 d# 55     2 make-mux-node \ intcmux55 - HSA_CAWAKE(0?), MIPI_HSI_INT0
 [then]
+   h# 128 h# 11c d# 48 d# 24 make-mux-node \ DMA mux - 16 PDMA, 4 ADMA, 2 VDMA channels
 
 0 [if]
 new-device
