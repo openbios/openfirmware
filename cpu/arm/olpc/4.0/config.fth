@@ -29,6 +29,7 @@ d# 10001 constant machine-type  \ Backwards compatibility with non-device-tree k
 
 char 7 constant expected-ec-version
 h# ec00 constant /ec-flash
+d#    1 constant ec-scale
 h# eb80 constant ec-flags-offset   \ don't program or verify this page
 
 fload ${BP}/cpu/arm/olpc/cl4/gpiopins.fth

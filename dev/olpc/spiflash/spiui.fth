@@ -11,7 +11,7 @@ h# 4000 constant /chunk   \ Convenient sized piece for progress reports
 defer spi-progress  ' drop to spi-progress  ( n -- )
 
 : .progress  ( offset -- )
-   5 rshift  dup spi-progress  h# 400 + spi-progress
+   flash-scale rshift  dup spi-progress  h# 400 + spi-progress
 ;
 
 : write-flash-range  ( adr end-offset start-offset -- )

@@ -30,7 +30,8 @@ h# 10.0000 constant /rom           \ Total size of SPI FLASH
 d# 10000 constant machine-type  \ Backwards compatibility with non-device-tree kernel
 
 char 4 constant expected-ec-version
-h# 8000 value /ec-flash
+h# 8000 constant /ec-flash
+d#    0 constant ec-scale
 
 h# 18000 constant console-uart-base
 

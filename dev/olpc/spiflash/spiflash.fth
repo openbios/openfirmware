@@ -297,8 +297,9 @@ defer write-spi-flash  ( adr len offset -- )
 \ those commands.  The AB command seems to be supported by all
 \ of them, so it's a good starting point.
 
-: 2mb-flash  ( -- )  h# 20.0000 to /flash  ;
-: 1mb-flash  ( -- )  h# 10.0000 to /flash  ;
+0 value flash-scale
+: 2mb-flash  ( -- )  h# 20.0000 to /flash  6 to flash-scale  ;
+: 1mb-flash  ( -- )  h# 10.0000 to /flash  5 to flash-scale  ;
 
 0 value spi-id#
 : spi-identify  ( -- )
