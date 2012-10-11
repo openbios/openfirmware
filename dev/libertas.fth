@@ -646,7 +646,8 @@ true value got-indicator?
    ."  802.11"
    dup h# 400 and  if  ." a"  then
    dup h# 100 and  if  ." b"  then
-   dup h# 200 and  if  ." g"  then  ." ;"
+   dup h# 200 and  if  ." g"  then
+   dup h# 800 and  if  ." n"  then  ." ;"
    dup h#   1 and  if  ."  WPA;" then
    dup h#   2 and  if  ."  PS;" then
    dup h#   8 and  if  ."  EEPROM does not exit;"  then
