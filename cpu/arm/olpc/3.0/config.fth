@@ -31,7 +31,6 @@ d# 10000 constant machine-type  \ Backwards compatibility with non-device-tree k
 
 char 4 constant expected-ec-version
 h# 8000 constant /ec-flash
-d#    0 constant ec-scale
 
 h# 18000 constant console-uart-base
 

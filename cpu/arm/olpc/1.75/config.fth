@@ -32,7 +32,6 @@ d#  9999 constant machine-type  \ Backwards compatibility with non-device-tree k
 
 char 4 constant expected-ec-version
 h# 8000 constant /ec-flash
-d#    0 constant ec-scale
 h# 7e80 constant ec-flags-offset   \ don't program or verify this page
 
 \ These constants are correct for XO-1.75 and XO-CL4; they might

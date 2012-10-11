@@ -30,7 +30,6 @@ d#  9999 constant machine-type  \ Backwards compatibility with non-device-tree k
 
 char 3 constant expected-ec-version
 h# 10000 constant /ec-flash
-d#     1 constant ec-scale
 
 h# 10000 constant l2-#sets
 

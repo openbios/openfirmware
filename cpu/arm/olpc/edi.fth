@@ -195,6 +195,11 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
    wait-flash-busy                ( )
 ;
 
+: .edi-progress  ( n -- )
+   /ec-flash h# 8000 >  if  1  else  0  then  rshift    ( dot# )
+   edi-progress                                         ( )
+;
+
 : edi-program-flash  ( adr len offset -- )
    cr                                          ( adr len offset )
    swap  0  ?do                                ( adr offset )
@@ -203,7 +208,7 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
          dup i + erase-page                    ( adr offset )
          over i +  over i +  edi-program-page  ( adr offset )
       then                                     ( adr offset )
-      i ec-scale rshift edi-progress           ( adr offset )
+      i .edi-progress                          ( adr offset )
    /flash-page +loop                           ( adr offset )
    2drop                                       ( )
 ;
