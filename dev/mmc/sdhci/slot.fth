@@ -2,12 +2,22 @@
 
 0 " #address-cells" integer-property
 0 " #size-cells" integer-property
+[ifdef] my-clock-on
+0 value open-count
+[then]
+
 : open  
-   [ifdef] my-clock-on  my-clock-on  [then]
+[ifdef] my-clock-on
+   open-count 0=  if  my-clock-on  then
+   open-count 1+ to open-count
+[then]
    true
 ;
 : close
-   [ifdef] my-clock-off  my-clock-off  [then]
+[ifdef] my-clock-off
+   open-count 1 =  if  my-clock-off  then
+   open-count 1- 0 max  to open-count
+[then]
 ;
 
 : r/w-blocks " r/w-blocks" $call-parent  ;
