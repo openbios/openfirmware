@@ -651,7 +651,7 @@ true value got-indicator?
    dup h#   2 and  if  ."  PS;" then
    dup h#   8 and  if  ."  EEPROM does not exit;"  then
    dup h#  30 and  case
-                      h# 00  of  ."  TX antanna 0;"  endof
+                      h# 00  of  ."  TX antenna 0;"  endof
                       h# 10  of  ."  TX antenna 1;"  endof
                       ( default )  ."  TX diversity; "
                    endcase
@@ -792,6 +792,16 @@ true value got-indicator?
    respbuf >fw-data 4 + le-l@
 ;
 
+0 [if]
+: reg-access!  ( n reg cmd -- )
+   8 swap prepare-cmd
+   ACTION_SET +xw
+   ( n reg ) +xw
+   ( n ) +xl
+   outbuf-wait drop
+;
+[then]
+
 : bbp-reg@  ( reg -- n )
    1a ( CMD_BBP_REG_ACCESS ) reg-access@  h# ff and
 ;
@@ -801,6 +811,18 @@ true value got-indicator?
 : mac-reg@  ( reg -- n )
    19 ( CMD_MAC_REG_ACCESS ) reg-access@
 ;
+0 [if]
+: bbp-reg!  ( n reg -- )
+   1a ( CMD_BBP_REG_ACCESS ) reg-access!
+;
+: rf-reg!  ( n reg -- )
+   1b ( CMD_RF_REG_ACCESS ) reg-access!
+;
+: mac-reg!  ( n reg -- )
+   19 ( CMD_MAC_REG_ACCESS ) reg-access!
+;
+[then]
+
 : eeprom-l@  ( idx -- n )
    a 59 ( CMD_EEPROM_ACCESS ) prepare-cmd
    ACTION_GET +xw
@@ -2314,10 +2336,20 @@ d# 1600 buffer: test-buf
    ."  snr" 3 .r  ."  nf" 4 .r          ( )
 ;
 
+: show-rssi  ( -- )
+   get-rssi                             ( base avg_nf avg_snr nf snr )
+   ." now" .rssi                        ( base avg_nf avg_snr )
+   ."  avg" .rssi                       ( base )
+;
+
 : .antenna  ( antenna -- )
    dup h# ffff =  if  ."  d" drop exit  then    \ diversity (default)
    dup h#  100 =  if  ."  ?" drop exit  then    \ occurs after 0/0
    2 .r
+;
+
+: show-antenna
+   get-antenna  ."  ant" .antenna
 ;
 
 : .rx-antenna  ( antenna -- )
@@ -2340,18 +2372,32 @@ d# 1600 buffer: test-buf
    endcase
 ;
 
-: show-antenna  ( -- )
-   base @                               ( base )
-   get-rssi                             ( base avg_nf avg_snr nf snr )
-   decimal
-   ." now" .rssi                        ( base avg_nf avg_snr )
-   ."  avg" .rssi                       ( base )
-   get-antenna                          ( base antenna )
-   hex
-   ."  ant" .antenna                    ( base )
-   ."  rx "  h# 3f bbp-reg@ .rx-antenna ( base )
-   ."  tx "  h# 40 bbp-reg@ .tx-antenna ( base )
-   base !
+: show-antenna-bbp  ( -- )
+   ."  rx "  h# 3f bbp-reg@ .rx-antenna
+   ."  tx "  h# 40 bbp-reg@ .tx-antenna
+;
+
+0 value #antennae
+: ta-init  ( -- )
+   get-hw-spec  0=  if  d# 16 + le-w@  to #antennae  then
+   #antennae
+   case
+      d# 1  of  ." keys: (a,s,q)"  endof
+      d# 2  of  ." keys: (0,1,2,3,d,a,s,q)"  endof
+   endcase
+   cr
+;
+
+: ta-show  ( -- )
+   base @                       ( base )
+   decimal                      ( base )
+   show-rssi                    ( base )
+   #antennae d# 1 <> if         ( base )
+      hex                       ( base )
+      show-antenna              ( base )
+      show-antenna-bbp          ( base )
+   then                         ( base )
+   base !                       ( )
 ;
 
 : ta-scan  ( -- )
@@ -2360,20 +2406,37 @@ d# 1600 buffer: test-buf
    0=  if  drop .ssids cr  then         ( )
 ;
 
+: ta-n  ( n -- )
+   #antennae d# 2 =  if
+      ." antenna to" dup .
+      set-antenna cr
+   else
+      drop
+   then
+;
+
+: ta-d
+   #antennae d# 2 = if
+      ." diversity "  set-antenna-diversity  cr
+   then
+;
+
+: ta-a  ." associate "  close  open drop  ;
+
 : test-antenna  ( -- )
-   ." keys: (0,1,2,3,d,a,s,q)" cr
+   ta-init
    begin
-      d# 100 ms  show-antenna  key?  if
+      d# 100 ms  ta-show  key?  if
          cr  key
          case
             h# 71 ( q ) of  ." quit"  exit  endof
-            h# 1b       of  exit  endof
-            h# 30 ( 0 ) of  ." antenna to 0 "  0  set-antenna  cr  endof
-            h# 31 ( 1 ) of  ." antenna to 1 "  1  set-antenna  cr  endof
-            h# 32 ( 2 ) of  ." antenna to 2 "  2  set-antenna  cr  endof
-            h# 33 ( 3 ) of  ." antenna to 3 "  3  set-antenna  cr  endof
-            h# 64 ( d ) of  ." diversity "  set-antenna-diversity  cr  endof
-            h# 61 ( a ) of  ." associate "  close  open drop  endof
+            h# 1b       of  exit     endof
+            h# 30 ( 0 ) of  0 ta-n   endof
+            h# 31 ( 1 ) of  1 ta-n   endof
+            h# 32 ( 2 ) of  2 ta-n   endof
+            h# 33 ( 3 ) of  3 ta-n   endof
+            h# 64 ( d ) of  ta-d     endof
+            h# 61 ( a ) of  ta-a     endof
             h# 73 ( s ) of  ta-scan  endof
          endcase
       then
