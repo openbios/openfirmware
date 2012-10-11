@@ -2282,11 +2282,16 @@ d# 1600 buffer: test-buf
 
 : reset  ( -- flag )  reset-nic  ;
 
+: do-disassociate  ( -- )
+   " target-mac$" $call-supplicant disassociate
+;
+
+\ adr len  is the result of (scan) - a list of APs and their characteristics
 : test-association  ( adr len -- error? )
-   " OLPCOFW" " select-ssid?" $call-supplicant  if
-      " (do-associate)" $call-supplicant  if
+   " OLPCOFW" " select-ssid?" $call-supplicant  if   ( )
+      " (do-associate)" $call-supplicant  if         ( )
 	 \ Success
-         " target-mac$" $call-supplicant disassociate
+         do-disassociate
          " true to ssid-reset?" ['] evaluate catch  if  2drop  then
 	 false
       else
@@ -2331,6 +2336,11 @@ d# 1600 buffer: test-buf
 ;
 
 : scan-wifi  ( -- )  (scan-wifi) drop  ;
+
+: reassociate  ( -- )
+   do-disassociate
+   do-associate  if  ." succeeded"  else  ." failed"  then  cr
+;
 
 : .rssi  ( snr nf -- )
    2dup swap + ."  rssi" 4 .r           ( snr nf )
@@ -2422,7 +2432,7 @@ d# 1600 buffer: test-buf
    then
 ;
 
-: ta-a  ." associate "  close  open drop  ;
+: ta-a  ." associate "  reassociate  ;
 
 : test-antenna  ( -- )
    ta-init
