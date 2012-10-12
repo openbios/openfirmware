@@ -793,7 +793,7 @@ true value got-indicator?
    respbuf >fw-data 4 + le-l@
 ;
 
-0 [if]
+[ifdef] notdef
 : reg-access!  ( n reg cmd -- )
    8 swap prepare-cmd
    ACTION_SET +xw
@@ -812,7 +812,7 @@ true value got-indicator?
 : mac-reg@  ( reg -- n )
    19 ( CMD_MAC_REG_ACCESS ) reg-access@
 ;
-0 [if]
+[ifdef] notdef
 : bbp-reg!  ( n reg -- )
    1a ( CMD_BBP_REG_ACCESS ) reg-access!
 ;
