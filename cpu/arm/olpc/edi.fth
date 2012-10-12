@@ -50,7 +50,7 @@ h# ff14 constant pxcfg
 \ end KB9010 stuff...
 
 d# 128 constant /flash-page
-defer edi-progress  ' drop to edi-progress  ( n -- )
+defer edi-progress  ' 2drop to edi-progress  ( offset size -- )
 
 : edi-cmd,adr  ( offset cmd -- )   \ Send command plus 3 address bytes
    spi-cs-on     ( offset cmd )
@@ -195,11 +195,6 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
    wait-flash-busy                ( )
 ;
 
-: .edi-progress  ( n -- )
-   /ec-flash h# 8000 >  if  1  else  0  then  rshift    ( dot# )
-   edi-progress                                         ( )
-;
-
 : edi-program-flash  ( adr len offset -- )
    cr                                          ( adr len offset )
    swap  0  ?do                                ( adr offset )
@@ -208,7 +203,7 @@ defer edi-progress  ' drop to edi-progress  ( n -- )
          dup i + erase-page                    ( adr offset )
          over i +  over i +  edi-program-page  ( adr offset )
       then                                     ( adr offset )
-      i .edi-progress                          ( adr offset )
+      i /ec-flash  edi-progress                ( adr offset )
    /flash-page +loop                           ( adr offset )
    2drop                                       ( )
 ;

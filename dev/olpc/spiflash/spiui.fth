@@ -8,12 +8,7 @@ purpose: User interface for reflashing SPI FLASH parts
 
 h# 4000 constant /chunk   \ Convenient sized piece for progress reports
 
-defer spi-progress  ' drop to spi-progress  ( n -- )
-
-: .progress  ( offset -- )
-   /flash h# 10.0000 >  if  6  else  5  then  rshift    ( dot# )
-   dup spi-progress  h# 400 + spi-progress              ( )
-;
+defer spi-progress  ' 2drop to spi-progress  ( offset size -- )
 
 : write-flash-range  ( adr end-offset start-offset -- )
    ." Writing" cr
@@ -31,7 +26,7 @@ defer spi-progress  ' drop to spi-progress  ( n -- )
          i flash-erase-block
          dup  /flash-block  i  flash-write  ( adr )
       then
-      i .progress                           ( adr )
+      i /flash  spi-progress                ( adr )
       /flash-block +                        ( adr' )
    /flash-block +loop                       ( adr )
    cr  drop           ( )
@@ -196,7 +191,7 @@ defer spi-progress  ' drop to spi-progress  ( n -- )
 [then]
 
    \ Don't write the block containing the manufacturing data
-   mfg-data-offset .progress
+   mfg-data-offset /flash  spi-progress
 
    flash-buf mfg-data-end-offset +   /flash  mfg-data-end-offset  write-flash-range  \ Write last part
 ;
@@ -221,7 +216,7 @@ defer spi-progress  ' drop to spi-progress  ( n -- )
          write-firmware
          verify-firmware
       then
-      /flash .progress
+      /flash dup  spi-progress
       flash-write-disable
    else
       .verify-msg

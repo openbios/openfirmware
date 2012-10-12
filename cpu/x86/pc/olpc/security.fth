@@ -1006,7 +1006,7 @@ defer ec-reflash-off?  ' false to ec-reflash-off?
 
    ec-indexed-io-off?  if
       visible
-      show-reflash
+      jots
       ." Restarting to enable SPI FLASH writing."  cr
       d# 3000 ms
       ec-ixio-reboot
@@ -1016,8 +1016,7 @@ defer ec-reflash-off?  ' false to ec-reflash-off?
    \ Latch alternate? flag for next startup
    alternate?  if  [char] A h# 82 cmos!  then
 
-   show-reflash
-   ['] show-reflash-dot to spi-progress
+   jots  ['] jot to spi-progress
    reflash      \ Should power-off and reboot
    show-x
    " Reflash returned, unexpectedly" .security-failure

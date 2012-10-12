@@ -853,8 +853,7 @@ dev /client-services  patch noop visible enter  dend
 	 ." Skipping EC reflash, not enough power" cr
 	 d# 1000 ms
       else
-	 show-reflash
-	 ['] show-reflash-dot to edi-progress
+	 jots  ['] jot to edi-progress
 	 update-ec-flash
       then
    then

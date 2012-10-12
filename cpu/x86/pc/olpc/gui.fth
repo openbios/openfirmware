@@ -390,9 +390,13 @@ d# 463 d# 540 2constant progress-xy
    d# 175 d# 790 ?adjust-y to icon-xy " sad"     show-icon
 ;
 
-d# 834 value bar-y
+d# 32 value #dots
+d# 820 value bar-y
 d# 150 value bar-x
+d# 1200 d# 26 - value bar-x-last
 0 value dot-adr
+0 value dot-spacing
+0 value last-dot#
 
 : read-dot  ( -- )  \ rom: is unavailable during reflash
    0 to dot-adr  0 0 to icon-xy         ( )
@@ -400,26 +404,34 @@ d# 150 value bar-x
    prep-565  4drop  to dot-adr          ( )
 ;
 
-: show-reflash  ( -- )  \ bottom left corner, chip and progress dots
+: jots  ( -- )  \ bottom left corner, chip and progress dots
    d# 25 d# 772 set-icon-xy " spi" show-icon
-   d# 992 bar-x + bar-y set-icon-xy " yellowdot" show-icon
+   bar-x-last bar-y set-icon-xy " yellowdot" show-icon
    read-dot
+   -1 to last-dot#
+   bar-x-last bar-x - #dots / to dot-spacing
 ;
 
-: show-reflash-dot  ( n -- )  \ n to vary h# 0 to h# 8000
-   dup h# 400 mod 0=  if                   ( n )
-      dot-adr 0=  if  drop exit  then      ( n )
-      dot-adr swap h# 20 /  bar-x + bar-y  ( adr x y )
-      image-width image-height             ( adr x y w h )
-      " draw-transparent-rectangle" $call-screen
+: jot  ( offset size -- )
+   dot-adr 0=  if  2drop exit  then                     ( offset size )
+   #dots swap */                                        ( dot# )
+   dup last-dot# <>  if                                 ( dot# )
+      dup to last-dot#                                  ( dot# )
+      dot-adr swap                                      ( adr dot# )
+      dot-spacing *  bar-x + bar-y                      ( adr x y )
+      image-width image-height                          ( adr x y w h )
+      " draw-transparent-rectangle" $call-screen        ( )
    else
       drop
    then
 ;
 
 0 [if]
-: test-reflash-dot
-   page show-reflash  t( h# 8000 0 do  i show-reflash-dot  h# 80 +loop )t
+: test-jots-flash  \ XO-4 B1 13ms
+   page jots t( /flash 0 do  i /flash jot /flash-page +loop )t
+;
+: test-jots-ec  \ XO-4 B1 3ms
+   page jots t( /ec-flash 0 do  i /ec-flash jot /flash-page +loop )t
 ;
 [then]
 
