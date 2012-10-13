@@ -657,6 +657,30 @@ code lskip  ( adr len lvalue -- residue )
    2 # cx shl  cx push
 c;
 
+\ Find the first occurence of bvalue, returning the residual string
+code bscan  ( adr1 len1 char -- adr' len' )
+   si dx mov
+   cld
+   bx pop                  \ bx: char
+   cx pop                  \ cx: count
+   si pop                  \ si: adr
+   cx cx or  0<>  if
+      begin
+         al lods
+         bl al cmp
+      loopne
+      =  if                
+         si dec si push    ( adr' )
+         cx inc cx push    ( adr' len' )
+         dx si mov
+         next
+      then
+   then
+   si push                 ( adr' )
+   cx push                 ( adr' len' )
+   dx si mov
+c;
+
 code noop (s -- )  c;
 
 code n->l (s n.unsigned -- l ) c;
