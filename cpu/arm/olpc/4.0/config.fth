@@ -23,7 +23,7 @@ h# 20.0000 constant /rom           \ Total size of SPI FLASH
 : model$       " olpc,XO-4.0"  ;
 : compatible$  " olpc,xo-cl4"  ;
 : ec-platform$  ( -- adr len )  " 7"  ;
-: bundle-suffix$  ( -- adr len )  " 5"  ;
+: bundle-suffix$  ( -- adr len )  " 4"  ;
 
 d# 10001 constant machine-type  \ Backwards compatibility with non-device-tree kernel
 
