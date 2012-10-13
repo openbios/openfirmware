@@ -72,6 +72,7 @@ vocabulary nand-commands
 also nand-commands definitions
 
 : zblocks:  ( "eblock-size" "#eblocks" ... -- )
+   load-base to data-buffer
    ?compare-spec-line
    get-hex# to /nand-block
    get-hex# to #image-eblocks
@@ -84,8 +85,7 @@ also nand-commands definitions
    \ Separate the two buffers by enough space for both the compressed
    \ and uncompressed copies of the data.  4x is overkill, but there
    \ is plenty of space at load-base
-   load-base to dma-buffer
-   load-base /nand-block 4 * + to data-buffer
+   load-base /nand-block 4 * + to dma-buffer
    /nand-block /nand-page / to nand-pages/block
    t-update  \ Handle possible timer rollover
 ;
