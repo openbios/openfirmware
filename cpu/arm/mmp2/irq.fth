@@ -5,7 +5,12 @@ purpose: Interrupt controller node for Marvell MMP2 (PXA688)
 
 " interrupt-controller" device-name
 \ my-address my-space h# 400 reg
+[ifdef] mmp3
+  h# d4282000 encode-int  h# 1000 encode-int encode+
+  h# d4284000 encode-int encode+  h# 100 encode-int encode+  " reg" property
+[else]
 my-address my-space h# 1000 reg
+[then]
 
 0 value base-adr
 d# 64 constant #levels
@@ -46,6 +51,8 @@ d# 64 constant #levels
 : close  ( -- )  ;
 
 " mrvl,mmp2-intc" " compatible" string-property
+[ifdef] mmp3  " mrvl,mmp3-intc" +compatible   [then]
+
 1 " #address-cells" integer-property
 1 " #size-cells" integer-property
 : encode-unit  ( phys.. -- str )  push-hex (u.) pop-base  ;
@@ -96,100 +103,6 @@ d# 64 " mrvl,intc-nr-irqs" integer-property
    h# 188 h# 184 d# 55     2 make-mux-node \ intcmux55 - HSA_CAWAKE(0?), MIPI_HSI_INT0
 [then]
    h# 128 h# 11c d# 48 d# 24 make-mux-node \ DMA mux - 16 PDMA, 4 ADMA, 2 VDMA channels
-
-0 [if]
-new-device
-  " interrupt-controller" name
-  " mrvl,mmp2-mux-intc" +compatible
-
-  0 0
-  h# 150 encode-int encode+  4 encode-int encode+  
-  h# 168 encode-int encode+  4 encode-int encode+  " reg" property
-  \  h# 150 " mrvl,intc-status" integer-property
-  \  h# 168 " mrvl,intc-mask" integer-property
-
-  4 " interrupts" integer-property
-  d# 2 " mrvl,intc-nr-irqs" integer-property
-  \ 0: USB_CHARGER 1: PMIC
-finish-device
-  
-new-device
-  " interrupt-controller" name
-  " mrvl,mmp2-mux-intc" +compatible
-
-  0 0
-  h# 154 encode-int encode+  4 encode-int encode+  
-  h# 16c encode-int encode+  4 encode-int encode+  " reg" property
-
-  5 " interrupts" integer-property
-  d# 2 " mrvl,intc-numbers" integer-property
-  d# 1 " mrvl,clr-mfp-irq" integer-property
-  \ 0: RTC_ALARM 1: RTC
-finish-device
-
-new-device
-  " interrupt-controller" name
-
-  " mrvl,mmp2-mux-intc" +compatible
-
-  0 0
-  h# 180 encode-int encode+  4 encode-int encode+  
-  h# 17c encode-int encode+  4 encode-int encode+  " reg" property
-
-  d# 9 " interrupts" integer-property
-  d# 3 " mrvl,intc-numbers" integer-property
-  \ 0:KPC (keypad) 1:ROT (rotary) 2: TBALL (trackball)
-  \  h# 15c " mrvl,intc-status" integer-property
-  \  h# 174 " mrvl,intc-mask" integer-property
-finish-device
-
-new-device
-  " interrupt-controller" name
-  " mrvl,mmp2-mux-intc" +compatible
-
-  0 0
-  h# 158 encode-int encode+  4 encode-int encode+  
-  h# 170 encode-int encode+  4 encode-int encode+  " reg" property
-
-  d# 17 " interrupts" integer-property
-  d# 5 " mrvl,intc-numbers" integer-property
-  \ 0: TWSI2 1: TWSI3 2: TWSI4 3: TWSI5 4: TWSI6
-finish-device
-
-new-device
-  " interrupt-controller" name
-
-  " mrvl,mmp2-mux-intc" +compatible
-
-  0 0
-  h# 15c encode-int encode+  4 encode-int encode+  
-  h# 174 encode-int encode+  4 encode-int encode+  " reg" property
-  \  h# 15c " mrvl,intc-status" integer-property
-  \  h# 174 " mrvl,intc-mask" integer-property
-
-  d# 35 " interrupts" integer-property
-  d# 15 " mrvl,intc-numbers" integer-property
-  \ 0: PERF 1: L2_PA_ECC 2: L2_ECC 3: L2_UECC 4: DDR
-  \ 5: FABRIC0_TO 6: FABRIC1_TO 7: FABRIC2_TO  8: resv 9: THERMAL
-  \ 10: MAIN_PMU 11: WDT2 12: CORESIGHT 13: COMMTX 14: COMMRX
-finish-device
-
-new-device
-  " interrupt-controller" name
-  0 0 " interrupt-controller" property
-  " mrvl,mmp2-mux-intc" +compatible
-
-  0 0
-  h# 160 encode-int encode+  4 encode-int encode+  
-  h# 178 encode-int encode+  4 encode-int encode+  " reg" property
-
-  d# 51 " interrupts" integer-property
-  d# 2 " mrvl,intc-numbers" integer-property
-  \ 0:HSI_CAWAKE 1:MIPI_HSI_INT1
-  \  h# 15c " mrvl,intc-status" integer-property
-  \  h# 174 " mrvl,intc-mask" integer-property
-finish-device
-[then]
 
 end-package
 
