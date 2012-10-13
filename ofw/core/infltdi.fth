@@ -51,12 +51,27 @@ defer release-inflater
 ;
 ' try-inflate to ?inflate
 
-: (?inflate-loaded)  ( -- )
-   load-base  " "(1f8b08)"  comp 0=  if
-      load-base  loaded +  tuck  inflate  !load-size  ( infl-adr )
-      loaded move                                     ( )
+\ Inflates the image at adr len if it is compressed.
+\ The uncompressed image is placed after the compressed image in memory,
+\ so sufficient space must be available there.  In practice, this
+\ usually means that adr should be in the region beginning at load-base .
+
+: $inflated?  ( adr len -- adr' len' true | adr len false )
+   over " "(1f8b08)"  comp 0=  if    ( adr len )
+      over +  4 round-up  tuck       ( adr+len adr adr+len )
+      inflate  true                  ( adr' len' true )
+   else                              ( adr len )
+      false                          ( adr len false )
    then
 ;
+: (?inflate-loaded)  ( -- )
+   loaded $inflated?  if       ( adr len )
+      !load-size  loaded move  ( )
+   else                        ( adr len )
+      2drop                    ( )
+   then
+;
+
 ' (?inflate-loaded) to ?inflate-loaded
 headers
 \ LICENSE_BEGIN

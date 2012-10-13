@@ -796,7 +796,7 @@ d# 8192 constant /sec-line-max
       "   RD found - " ?lease-debug
       img$  sig$  sha-valid?  if
          show-unlock
-         img$ place-ramdisk
+         img$ $inflated? drop  place-ramdisk
          exit
       else
          show-unlock
