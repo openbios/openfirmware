@@ -72,7 +72,6 @@ vocabulary nand-commands
 also nand-commands definitions
 
 : zblocks:  ( "eblock-size" "#eblocks" ... -- )
-   load-base to data-buffer
    ?compare-spec-line
    get-hex# to /nand-block
    get-hex# to #image-eblocks
@@ -269,6 +268,7 @@ previous definitions
    load-crypto  abort" Can't load hash routines"
 
    open-nand                           ( file$ )
+   load-base to data-buffer
 
    false to secure-fsupdate?           ( file$ )
    r/o open-file                       ( fd error? )
@@ -308,6 +308,7 @@ previous definitions
    ['] noop to show-progress               ( adr len )
 
    ['] open-nand  catch  ?dup  if  .error  security-failure  then  ( adr len )
+   load-base to data-buffer
 
 \  clear-context  nand-commands
    t-hms(
