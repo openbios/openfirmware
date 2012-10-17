@@ -330,10 +330,21 @@ variable extent  extent off
    2 pick count        ( ip name$ $ )
    2swap               ( ip $ name$ )
 ;
+
+: type#  ( $ -- )  \ render control characters as green #
+   bounds ?do
+      i c@ dup h# 20 < if
+	 drop green-letters ." #" red-letters
+      else
+	 emit
+      then
+   loop
+;
+
 : .string-tail  ( $ name$ -- )
    2 pick over +  3 + ?line    ( $ name$ )  \ Keep word and string on the same line
    cr".  space                 ( $ )
-   red-letters type            ( )
+   red-letters type#           ( )
    magenta-letters             ( )
    ." "" "                     ( )
    cancel                      ( )
