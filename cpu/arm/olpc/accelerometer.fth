@@ -109,7 +109,7 @@ d# 450 value max-z
    error?  if  accelerometer-off  true exit  then
    false
 ;
-: lis3dhtr-selftest  ( -- )
+: lis3dhtr-selftest  ( -- error? )
    \ Use the device's selftest function to force a change in one direction
    delay                     ( )
    average-acceleration@     ( x y z )
