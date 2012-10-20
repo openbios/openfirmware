@@ -67,7 +67,7 @@ d# -250 constant suspend-power-limit
    \ on the operator.
    ." Testing suspend/resume"  cr
    ." Sleeping for 3 seconds .. "  d# 1000 ms
-   ec-rst-pwr ['] cancel-alarm 3 rtc-wake  str  ec-max-pwr  ( power )
+   ec-rst-pwr ['] cancel-alarm 3 rtc-wake  str  ec-sus-pwr  ( power )
    \ Negative power is consumed from battery, positive is supplied to battery
    dup  suspend-power-limit <  if                           ( power )
       ." System used too much power during suspend - "  negate .d ." mW" cr  ( )
