@@ -338,7 +338,7 @@ d# 500 constant scan-threshold
    restart-scan-response
    ." Scanning channel: " dup idx>ch .d ." ..." cr
    re-set-channel (scan-ch)
-   scanbuf .ssids
+   scanbuf /tsbuf .ssids
 ;
 : scan-ch-2GHz  ( -- )  d# 11 0  do  i scan-ch  loop  ;
 : scan-ch-5GHz-1  ( -- )  d# 18 d# 14  do  i scan-ch  loop  ;

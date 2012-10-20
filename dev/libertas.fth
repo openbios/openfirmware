@@ -19,7 +19,7 @@ hex
 : supplicant-associate   ( -- flag )  " do-associate" $call-supplicant  ;
 : supplicant-process-eapol  ( adr len -- )  " process-eapol" $call-supplicant  ;
 : .scan  ( adr -- )  " .scan" $call-supplicant  ;
-: .ssids  ( adr -- )  " .ssids" $call-supplicant  ;
+: .ssids  ( adr len -- )  " .ssids" $call-supplicant  ;
 
 defer load-all-fw  ( -- error? )   ' false to load-all-fw
 defer ?process-eapol		['] 2drop to ?process-eapol
@@ -485,6 +485,7 @@ instance defer unwrap-ethernet
       0075  of  ." CMD_802_11_SUBSCRIBE_EVENT"		endof
       0076  of  ." CMD_802_11_RATE_ADAPT_RATESET"	endof
       007f  of  ." CMD_TX_RATE_QUERY"			endof
+      00a4  of  ." CMD_802_11_RSSI_INFO"		endof
       00a5  of  ." CMD_SET_BOOT2_VER"			endof  \ Thin firmware only
       00a9  of  ." CMD_FUNC_INIT"                       endof  \ Multifunction versions
       00aa  of  ." CMD_FUNC_SHUTDOWN"                   endof
@@ -1811,6 +1812,31 @@ d# 1600 constant /packet-buf
    respbuf .log
 ;
 
+0 [if]
+: set-rssi-v14  ( nbcn ndata -- )
+   swap >r >r                                           ( r: antenna action )
+   6 h# a4 ( CMD_802_11_RSSI_INFO ) prepare-cmd
+   1 +xw \ ACT_SET
+   r> +xw \ Ndata
+   r> +xw \ Nbcn
+   outbuf-wait  drop
+;
+
+: get-rssi-v14  ( -- avg_nf avg_snr nf snr )
+   6 h# a4 ( CMD_802_11_RSSI_INFO ) prepare-cmd
+   0 +xw \ ACT_GET
+   0 +xw \ Ndata
+   0 +xw \ Nbcn
+   outbuf-wait  drop
+   respbuf >fw-data >r
+   r@ h# 14 + le-w@ w->n ( avg_nf )                     \ dBm
+   r@ h# 12 + le-w@ w->n ( avg_nf avg_rssi )            \ dBm
+   r@ h# 10 + le-w@ w->n ( avg_nf avg_rssi nf )         \ dBm
+   r@ h# 0e + le-w@ w->n ( avg_nf avg_rssi nf rssi )    \ dBm
+   r> drop
+;
+[then]
+
 : get-rssi  ( -- avg_nf avg_snr nf snr )
    2 h# 1f ( CMD_802_11_RSSI ) prepare-cmd
    d# 32 +xw \ number of beacons (N) to average the SNR and NF over
@@ -2326,7 +2352,7 @@ d# 1600 buffer: test-buf
          quiet?  if           ( adr len )
             2drop false       ( error? )
          else
-            over .ssids       ( adr len )
+            2dup .ssids       ( adr len )
             test-association  ( error? )
          then                 ( error? )
       then
@@ -2414,7 +2440,7 @@ d# 1600 buffer: test-buf
 : ta-scan  ( -- )
    ." scan"  cr
    (scan)                               ( adr len error? )
-   0=  if  drop .ssids cr  then         ( )
+   0=  if  .ssids cr  then              ( )
 ;
 
 : ta-n  ( n -- )

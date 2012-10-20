@@ -641,7 +641,11 @@ d# 32 buffer: ek			\ Temporary rc4 key
    endcase
 ;
 
+0 value scanbuf-end
+
 : .ap-ssid  ( adr -- )
+   dup le-w@ over + 2 + scanbuf-end >=  if  drop exit  then
+
    ." RSSI: " dup 8 + c@ .d 
    dup le-w@ swap 2 + swap d# 19 /string	( adr' len' )
    begin  dup 0>  while			( adr len )
@@ -650,14 +654,22 @@ d# 32 buffer: ek			\ Temporary rc4 key
    repeat  2drop			( )
 ;
 
-: .ssids  ( adr -- )
-   dup 3 +				( 'ap )
+: .ssids  ( adr len -- )
+   over + to scanbuf-end		( adr )
+
+   dup le-w@				( adr size )
+   over + scanbuf-end >=  if
+      ." scan truncated" cr
+   then					( adr )
+
+   dup 3 +				( adr 'ap )
    swap 2 + c@				( 'ap #ap )
    0  ?do				( 'ap )
       dup .ap-ssid  cr			( 'ap )
       dup le-w@ + 2 +			( 'ap' )
+      dup scanbuf-end >=  if  drop unloop exit  then
    loop  drop				( )
-;   
+;
 
 : #ssids  ( adr -- n )  2 + c@	;
 
