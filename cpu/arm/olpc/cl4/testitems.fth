@@ -21,24 +21,25 @@ icon: ebook.icon    rom:ebook.565
 icon: leds.icon     rom:leds.565
 
 
-: cpu-item      ( -- )  " /cpu"       mfg-test-dev  ;
-: battery-item  ( -- )  " /battery"   mfg-test-dev  ;
-: spiflash-item ( -- )  " /flash"     mfg-test-dev  ;
-: memory-item   ( -- )  " /memory"    mfg-test-dev  ;
-: usb-item   ( -- )  " /usb/hub"   mfg-test-dev  ;
-: int-sd-item   ( -- )  " int:0"      mfg-test-dev  ;
-: ext-sd-item   ( -- )  " ext:0"      mfg-test-dev  ;
-: rtc-item      ( -- )  " /rtc"       mfg-test-dev  ;
-: display-item  ( -- )  " /display"   gfx-test-dev  ;
-: audio-item    ( -- )  " /audio"     mfg-test-dev  ;
-: camera-item   ( -- )  " /camera"    gfx-test-dev  ;
-: wlan-item     ( -- )  " /wlan"      mfg-test-dev  ;
-: timer-item    ( -- )  " /timer"     mfg-test-dev  ;
-: touch-item    ( -- )  " /touchscreen" mfg-test-dev
-                        " mouse"      mfg-test-dev  ;
-: keyboard-item ( -- )  " keyboard"   mfg-test-dev  ;
-: switch-item   ( -- )  " /accelerometer" mfg-test-dev  " /switches"  mfg-test-dev  ;
-: leds-item     ( -- )  " /leds"      mfg-test-dev   ;
+: cpu-item      ( -- )  " /cpu"           mfg-test-dev  ;
+: battery-item  ( -- )  " /battery"       mfg-test-dev  ;
+: spiflash-item ( -- )  " /flash"         mfg-test-dev  ;
+: memory-item   ( -- )  " /memory"        mfg-test-dev  ;
+: usb-item      ( -- )  " /usb/hub"       mfg-test-dev  ;
+: int-sd-item   ( -- )  " int:0"          mfg-test-dev  ;
+: ext-sd-item   ( -- )  " ext:0"          mfg-test-dev  ;
+: rtc-item      ( -- )  " /rtc"           mfg-test-dev  ;
+: display-item  ( -- )  " /display"       gfx-test-dev  ;
+: audio-item    ( -- )  " /audio"         mfg-test-dev  ;
+: camera-item   ( -- )  " /camera"        gfx-test-dev  ;
+: wlan-item     ( -- )  " /wlan"          mfg-test-dev  ;
+: timer-item    ( -- )  " /timer"         mfg-test-dev  ;
+: touch-item    ( -- )  " /touchscreen"   mfg-test-dev
+                        " mouse"          mfg-test-dev  ;
+: keyboard-item ( -- )  " keyboard"       mfg-test-dev  ;
+: switch-item   ( -- )  " /accelerometer" mfg-test-dev
+                        " /switches"      mfg-test-dev  ;
+: leds-item     ( -- )  " /leds"          mfg-test-dev   ;
 
 : olpc-test-menu-items  ( -- )
    0 to #mfgtests
