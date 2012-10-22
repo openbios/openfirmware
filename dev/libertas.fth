@@ -1812,7 +1812,7 @@ d# 1600 constant /packet-buf
    respbuf .log
 ;
 
-0 [if]
+[ifdef] notdef
 : set-rssi-v14  ( nbcn ndata -- )
    swap >r >r                                           ( r: antenna action )
    6 h# a4 ( CMD_802_11_RSSI_INFO ) prepare-cmd
