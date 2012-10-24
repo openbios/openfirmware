@@ -69,6 +69,7 @@
          \ speed code to the old engineering sample code for 1001 MHz
          \ and reboot to switch to the higher speed
          rated-speed 0=  if
+            ." Reprogramming speed code and SW version" cr
             es-speed-1g d# 14 lshift 0 0 1  0 0 0 0   3 pgm-fuses2
             bye
          then
@@ -79,6 +80,7 @@
          \ batch of 200 chips whose speed code was reprogrammed
          \ using a different procedure.
          rated-speed 2 =  if
+            ." Reprogramming SW version only" cr
             0 0 0 1  0 0 0 0   3 pgm-fuses2
          then
       then
