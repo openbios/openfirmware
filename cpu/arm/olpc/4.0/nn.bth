@@ -1,0 +1,7 @@
+purpose: Fetch the Neonode touchscreen firmware
+
+command: &builder &this
+build-now
+
+fload ${BP}/cpu/arm/olpc/4.0/nn-version.fth
+fload ${BP}/cpu/arm/olpc/fetch-nn.fth

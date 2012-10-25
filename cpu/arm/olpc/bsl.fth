@@ -222,7 +222,9 @@ d# 1000 constant timeout
    ack?  0=  abort" BSL - no ACK!"
 ;
 
+defer bsl-progress  ' 2drop is bsl-progress  ( offset size -- )
 : rx-data-block  ( adr len device-adr -- )
+   dup h# 8000 - h# 8000 bsl-progress
    over  h# 12 frame(     ( adr len device-adr )
    send-summed            ( adr len )   \ device address
    dup send-summed        ( adr len )   \ data length
