@@ -2,7 +2,7 @@ purpose: Construct the Open Firmware module collection
 
 command: &builder &this
 in: ${BP}/cpu/arm/olpc/4.0/build/ec.img
-in: ${BP}/cpu/arm/olpc/4.0/build/nn.img
+\ in: ${BP}/cpu/arm/olpc/4.0/build/nn.hex
 in: ${BP}/cpu/arm/olpc/4.0/build/fw.img
 in: ${BP}/cpu/arm/olpc/4.0/build/resetvec.img
 in: ${BP}/cpu/arm/olpc/4.0/build/mcastnand.bin
@@ -155,7 +155,7 @@ $new-file
    " nandblaster_tx.bin"   " nb_tx"    $add-deflated-dropin
 
    " ec.img"                                    " ecimage.bin"   $add-deflated-dropin
-   " nn.hex"                                    " nn.hex"        $add-deflated-dropin
+\   " nn.hex"                                    " nn.hex"        $add-deflated-dropin
    " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
    " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
    " ${BP}/clients/emacs/arm/emacs"             " emacs"         $add-deflated-dropin

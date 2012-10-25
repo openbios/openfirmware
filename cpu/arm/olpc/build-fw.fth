@@ -366,7 +366,7 @@ fload ${BP}/cpu/arm/mmp2/thermal.fth
 fload ${BP}/cpu/arm/mmp2/fuse.fth
 [ifdef] bsl-uart-base
 fload ${BP}/cpu/arm/olpc/bsl.fth
-fload ${BP}/cpu/arm/olpc/nnflash.fth
+\ fload ${BP}/cpu/arm/olpc/nnflash.fth
 [then]
 
 [ifndef] virtual-mode
@@ -859,15 +859,19 @@ dev /client-services  patch noop visible enter  dend
       then
    then
 [ifdef] update-nn-flash?
-   update-nn-flash?  if
-      ['] ?enough-power catch  ?dup  if  ( error )
-         show-no-power
-         .error
-         ." Skipping NN reflash, not enough power" cr
-         d# 1000 ms
-      else
-         jots  ['] jot to bsl-progress
-         update-nn-flash
+   ['] update-nn-flash?  catch  ?dup if  ( error )
+      .error
+   else
+      if
+         ['] ?enough-power catch  ?dup  if  ( error )
+            show-no-power
+            .error
+            ." Skipping NN reflash, not enough power" cr
+            d# 1000 ms
+         else
+            jots  ['] jot to bsl-progress
+            update-nn-flash
+         then
       then
    then
 [then]
