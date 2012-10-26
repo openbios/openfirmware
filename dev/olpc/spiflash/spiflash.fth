@@ -303,26 +303,20 @@ defer write-spi-flash  ( adr len offset -- )
 0 value spi-id#
 : spi-identify  ( -- )
    ab-id to spi-id#
-   \ ST, Spansion, and WinBond all identify as 13
-   \ For now, we only need to distinguish between if it's
-   \ a common page-write part or the SST part with its
-   \ unique auto-increment address writing scheme.
    spi-id# case
+      \ ST, Spansion, and WinBond
       h# 13  of  ['] common-write  1mb-flash  endof
-      h# 34  of  ['] common-write  1mb-flash  endof
+      h# 34  of  ['] common-write  1mb-flash
+         jedec-id h# 3425c2 =  if  2mb-flash  then  \ MXIC 25E8035
+      endof
+      \ the SST part with its unique auto-increment address writing scheme
       h# bf  of  ['] sst-write     1mb-flash  endof
-      h# 14  of  ['] common-write  1mb-flash  endof
-      h# 35  of  ['] common-write  2mb-flash  endof
-\ On some old board the ID would read as 14 when it should have been something else.
-\ On CL4, 14 is the expected ID.
-\         ." The SPI FLASH ID reads as 14.  This is due to an infrequent hardware problem."  cr
-\         ." If you power cycle and try again, it will probably work the next time." cr
-\         abort
-\      endof
-
-\      ( default )  true abort" Unsupported SPI FLASH ID"
-       ( default )  ." Bad SPI FLASH ID " dup . cr  ['] null-write swap
-   endcase
+      h# 14  of  ['] common-write  1mb-flash
+         jedec-id h# 1540c8 =  if  2mb-flash  then  \ XO-4 B1
+      endof
+      h# 35  of  ['] common-write  2mb-flash  endof  \ W25Q16CV 3525c2
+      ( default )  ." Bad SPI FLASH ID " dup . cr  ['] null-write swap
+   endcase                                      ( writer )
    to write-spi-flash
    spi-unprotect
 ;
@@ -336,7 +330,7 @@ defer write-spi-flash  ( adr len offset -- )
    else
       spi-id#  case
          h# 13  of  ." type 13 - Spansion, Winbond, or ST"  endof
-         h# 14  of  ." type 14 - 2 MB"  endof
+         h# 14  of  ." type 14"  endof
          h# 34  of  ." type 34 - Macronyx"  endof
          h# 35  of  ." type 35 - 2 MB"  endof
       endcase
