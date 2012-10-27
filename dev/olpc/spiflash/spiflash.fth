@@ -307,7 +307,7 @@ defer write-spi-flash  ( adr len offset -- )
       \ ST, Spansion, and WinBond
       h# 13  of  ['] common-write  1mb-flash  endof
       h# 34  of  ['] common-write  1mb-flash
-         jedec-id h# 3425c2 =  if  2mb-flash  then  \ MXIC 25E8035
+         \ jedec-id h# 3425c2 =  if  2mb-flash  then  \ MXIC 25E8035
       endof
       \ the SST part with its unique auto-increment address writing scheme
       h# bf  of  ['] sst-write     1mb-flash  endof
