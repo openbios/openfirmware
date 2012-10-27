@@ -173,9 +173,9 @@ h# ff h# ff h# ff rgb>565 constant white-color
 ;
 : wait  ( -- )
    hold-time
-   0 set-source \ Freeze image
+   dcon-freeze
    hold-time
-   1 set-source \ Unfreeze image
+   dcon-unfreeze
    hold-time2
 ;
 
