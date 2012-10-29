@@ -307,12 +307,15 @@ defer write-spi-flash  ( adr len offset -- )
       \ ST, Spansion, and WinBond
       h# 13  of  ['] common-write  1mb-flash  endof
       h# 34  of  ['] common-write  1mb-flash
-         \ jedec-id h# 3425c2 =  if  2mb-flash  then  \ MXIC 25E8035
+         \ jedec-id h# 3425c2 =  if  1mb-flash  then  \ MXIC 25E8035
       endof
       \ the SST part with its unique auto-increment address writing scheme
       h# bf  of  ['] sst-write     1mb-flash  endof
       h# 14  of  ['] common-write  1mb-flash
          jedec-id h# 1540c8 =  if  2mb-flash  then  \ XO-4 B1
+      endof
+      h# 15  of  ['] common-write  1mb-flash
+         jedec-id h# 1525c2 =  if  2mb-flash  then  \ MXIC25L1635E
       endof
       h# 35  of  ['] common-write  2mb-flash  endof  \ W25Q16CV 3525c2
       ( default )  ." Bad SPI FLASH ID " dup . cr  ['] null-write swap
@@ -331,6 +334,7 @@ defer write-spi-flash  ( adr len offset -- )
       spi-id#  case
          h# 13  of  ." type 13 - Spansion, Winbond, or ST"  endof
          h# 14  of  ." type 14"  endof
+         h# 15  of  ." type 15 - MXIC25L1635E"  endof
          h# 34  of  ." type 34 - Macronyx"  endof
          h# 35  of  ." type 35 - 2 MB"  endof
       endcase
