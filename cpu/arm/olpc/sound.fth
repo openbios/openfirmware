@@ -759,6 +759,8 @@ device-end
    \ The name that was hardcoded in the Linux driver was OLPC XO-1.75
    " OLPC XO" " model" string-property
 
+   0 0 reg  \ So linux will assign a static device name
+
    : +string  encode-string encode+  ;
 
    0 0 encode-bytes

@@ -4,6 +4,7 @@ purpose: Driver/selftest for OLPC XO-1.75 LEDs
 0 0  " "  " /" begin-package
    " ols" device-name
    " olpc,xo-light-sensor" +compatible
+   0 0 reg  \ So linux will assign a static device name
 end-package
 
 0 0  " 0"  " /" begin-package

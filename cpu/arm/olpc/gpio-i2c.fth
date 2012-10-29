@@ -34,6 +34,9 @@ dev /
       " i2c-gpio" +compatible
       1 " #address-cells" integer-property
       1 " #size-cells" integer-property
+
+      0 0 reg  \ So linux will assign a static device name
+
       : encode-unit  ( phys.. -- str )  push-hex (u.) pop-base  ;
       : decode-unit  ( str -- phys.. )  push-hex  $number  if  0  then  pop-base  ;
       
@@ -76,6 +79,9 @@ dev /
       " i2c-gpio" +compatible
       1 " #address-cells" integer-property
       1 " #size-cells" integer-property
+
+      0 0 reg  \ So linux will assign a static device name
+
       : encode-unit  ( phys.. -- str )  push-hex (u.) pop-base  ;
       : decode-unit  ( str -- phys.. )  push-hex  $number  if  0  then  pop-base  ;
 
