@@ -230,7 +230,7 @@ external
          base @ >r decimal                              ( list$' dev#$ )
          $number  if  0  then                           ( list$' port# )
          r> base !                                      ( list$ port# )
-         (hub-selftest)  if  drop true exit  then       ( list$ )
+         (hub-selftest)  if  2drop true exit  then      ( list$ )
       repeat                                            ( list$ )
       2drop                                             ( )
    then                                                 ( )
