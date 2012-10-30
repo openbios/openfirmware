@@ -679,6 +679,10 @@ stand-init: xid
 : pre-setup-for-linux  ( -- )
    [ ' linux-pre-hook behavior compile, ]    \ Chain to old behavior
    sound-end
+[ifdef] mmp3
+   \ XXX Delete this when Linux is ready to turn on the audio island
+   " audio-island-on" " /pmua" execute-device-method drop
+[then]
 ;
 ' pre-setup-for-linux to linux-pre-hook
 
