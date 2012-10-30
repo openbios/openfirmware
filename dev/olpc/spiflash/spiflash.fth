@@ -316,7 +316,7 @@ defer write-spi-flash  ( adr len offset -- )
 	 ['] common-write  1mb-flash
          jedec-id# h# 1520c2 =  if  2mb-flash  " MX25L1605D"   to spi-id$  then
          jedec-id# h# 1540c8 =  if  2mb-flash  " GD25Q16B"     to spi-id$  then
-         jedec-id# h# 1540ef =  if  2mb-flash  " W25Q16CVSSIG" to spi-id$  then
+         jedec-id# h# 1540ef =  if  2mb-flash  " W25Q16"       to spi-id$  then
       endof
       h# 25  of
 	 ['] common-write  1mb-flash
