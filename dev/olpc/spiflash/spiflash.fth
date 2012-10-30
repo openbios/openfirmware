@@ -279,7 +279,7 @@ defer write-spi-flash  ( adr len offset -- )
    r> rot free-mem                    ( mismatch? )
 ;
 
-: jedec-id  ( -- b3b2b1)
+: jedec-id  ( -- b3b2b1 )
    h# 9f spi-cmd spi-in spi-in spi-in  spi-cs-off  ( b1 b2 b3 )
    0 bljoin
 ;
@@ -301,23 +301,41 @@ defer write-spi-flash  ( adr len offset -- )
 : 1mb-flash  ( -- )  h# 10.0000 to /flash  ;
 
 0 value spi-id#
+0 value jedec-id#
+0 0 2value spi-id$
 : spi-identify  ( -- )
    ab-id to spi-id#
+   jedec-id to jedec-id#
+   " Unknown" to spi-id$
    spi-id# case
-      \ ST, Spansion, and WinBond
-      h# 13  of  ['] common-write  1mb-flash  endof
-      h# 34  of  ['] common-write  1mb-flash
-         \ jedec-id h# 3425c2 =  if  1mb-flash  then  \ MXIC 25E8035
+      h# 13  of
+	 ['] common-write  1mb-flash
+	 " Spansion, Winbond, or ST" to spi-id$
+      endof
+      h# 14  of
+	 ['] common-write  1mb-flash
+         jedec-id# h# 1520c2 =  if  2mb-flash  " MX25L1605D"   to spi-id$  then
+         jedec-id# h# 1540c8 =  if  2mb-flash  " GD25Q16B"     to spi-id$  then
+         jedec-id# h# 1540ef =  if  2mb-flash  " W25Q16CVSSIG" to spi-id$  then
+      endof
+      h# 25  of
+	 ['] common-write  1mb-flash
+         jedec-id# h# 1525c2 =  if  2mb-flash  " MX25L1635E"   to spi-id$  then
+      endof
+      h# 34  of
+	 ['] common-write  1mb-flash
+         " Macronyx" to spi-id$
+         jedec-id# h# 3425c2 =  if  1mb-flash  " MX25E8035"    to spi-id$  then
+      endof
+      h# 35  of
+	 ['] common-write  2mb-flash
+         jedec-id# h# 3525c2 =  if  2mb-flash  " MX25U1635E"    to spi-id$  then
       endof
       \ the SST part with its unique auto-increment address writing scheme
-      h# bf  of  ['] sst-write     1mb-flash  endof
-      h# 14  of  ['] common-write  1mb-flash
-         jedec-id h# 1540c8 =  if  2mb-flash  then  \ XO-4 B1
+      h# bf  of
+	 ['] sst-write     1mb-flash
+	 " SST" to spi-id$
       endof
-      h# 25  of  ['] common-write  1mb-flash
-         jedec-id h# 1525c2 =  if  2mb-flash  then  \ MX25L1635E
-      endof
-      h# 35  of  ['] common-write  2mb-flash  endof  \ W25Q16CV 3525c2
       ( default )  ." Bad SPI FLASH ID " dup . cr  ['] null-write swap
    endcase                                      ( writer )
    to write-spi-flash
@@ -327,18 +345,10 @@ defer write-spi-flash  ( adr len offset -- )
 \ Display a message telling what kind of part was found
 
 : .spi-id  ( -- )
-   ." SPI FLASH is "
-   ['] write-spi-flash behavior  ['] sst-write  =  if
-      ." SST"
-   else
-      spi-id#  case
-         h# 13  of  ." type 13 - Spansion, Winbond, or ST"  endof
-         h# 14  of  ." type 14"  endof
-         h# 25  of  ." type 25 - MX25L1635E"  endof
-         h# 34  of  ." type 34 - Macronyx"  endof
-         h# 35  of  ." type 35 - 2 MB"  endof
-      endcase
-   then
+   ." SPI FLASH is type "
+   spi-id# 2 .r [char] . emit jedec-id# 6 .r
+   ." , " spi-id$ type
+   ." , " /flash h# 100000 / .d ." MB."
 ;
 
 : spi-flash-open  ( -- )
