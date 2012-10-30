@@ -314,8 +314,8 @@ defer write-spi-flash  ( adr len offset -- )
       h# 14  of  ['] common-write  1mb-flash
          jedec-id h# 1540c8 =  if  2mb-flash  then  \ XO-4 B1
       endof
-      h# 15  of  ['] common-write  1mb-flash
-         jedec-id h# 1525c2 =  if  2mb-flash  then  \ MXIC25L1635E
+      h# 25  of  ['] common-write  1mb-flash
+         jedec-id h# 1525c2 =  if  2mb-flash  then  \ MX25L1635E
       endof
       h# 35  of  ['] common-write  2mb-flash  endof  \ W25Q16CV 3525c2
       ( default )  ." Bad SPI FLASH ID " dup . cr  ['] null-write swap
