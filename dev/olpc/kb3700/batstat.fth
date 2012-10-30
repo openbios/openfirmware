@@ -1,10 +1,10 @@
 : wextend  ( w -- n )  dup h# 8000 and  if  h# ffff.0000 or  then  ;
-\ Base unit for temperature is 1/256 degrees C
-: >degrees-c 7 rshift 1+ 2/  ;  \ Round to nearest degree 
+\ Base unit for temperature is .125 degrees C
+: >milli-degrees-c 125 * 5 rshift ;
 : uvolt@ bat-voltage@ d# 9760 d# 32 */ ;
 : cur@ bat-current@ wextend  d# 15625 d# 120 */ ;
-: pcb-temp ambient-temp@ >degrees-c  ;
-: bat-temp bat-temp@ >degrees-c  ;
+\ : pcb-temp ambient-temp@ >milli-degrees-c  ;
+: bat-temp bat-temp@ >milli-degrees-c  ;
 : soc     bat-soc@  ;
 
 string-array bat-causes
@@ -79,6 +79,13 @@ end-string-array
    if ." MPPT" then
 ;
 
+: .bat-temp
+   push-decimal
+   bat-temp
+   dup abs d# 50 + d# 100 /  <# u# [char] . hold u#s swap sign u#> type
+   pop-base
+;
+
 : .%  ( n -- )  push-decimal  <# [char] % hold u# u#s u#>  type  pop-base  ;
 : .bat  ( -- )
    bat-status@  ( stat )
@@ -93,7 +100,7 @@ end-string-array
       soc .%   ."  "
       uvolt@  .milli  ." V "
       cur@  .milli  ." A "
-      bat-temp 2.d ." C "
+      .bat-temp ." C "
       dup 2 and  if  ." full "  then
       dup 4 and  if  ." low "  then
       dup 8 and  if  ." error "  then
