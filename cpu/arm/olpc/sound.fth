@@ -670,8 +670,7 @@ h# 20000 constant tlen
    d# 48000 set-sample-rate
 ;
 : (close)
-\ Reinstate audio-clock-off when Linux turns on its own clock
-\   audio-clock-off
+   audio-clock-off
    adma-base h# 100 " map-out" $call-parent
    sspa-base h# 100 " map-out" $call-parent
    0 to adma-base  0 to sspa-base
