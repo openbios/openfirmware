@@ -334,7 +334,7 @@ defer write-spi-flash  ( adr len offset -- )
       spi-id#  case
          h# 13  of  ." type 13 - Spansion, Winbond, or ST"  endof
          h# 14  of  ." type 14"  endof
-         h# 15  of  ." type 15 - MXIC25L1635E"  endof
+         h# 25  of  ." type 25 - MX25L1635E"  endof
          h# 34  of  ." type 34 - Macronyx"  endof
          h# 35  of  ." type 35 - 2 MB"  endof
       endcase
