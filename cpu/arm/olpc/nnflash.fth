@@ -17,7 +17,7 @@ purpose: Reflash a Neonode touchscreen controller
 : flash-nn! ( "filename" -- )  safe-parse-word                 reflash-nn  ;
 : nn-up-to-date?  ( file$ -- flag )
    2drop  h# 0000.0000.0000.0006.  \ FIXME: get version from file
-   get-touchscreen-version
+   get-touchscreen-version   \ 20ms first time, 270ms subsequent
    d<=
 ;
 

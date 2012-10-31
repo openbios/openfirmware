@@ -17,7 +17,6 @@ touch-int-gpio# 1  " dr-gpios"    gpio-property
 
 create nn-os            \ open short test
 create nn-fll           \ forced LED levels test
-create nn-version       \ version display
 create nn-watch         \ graphical signal tests
 
 create nn-fss           \ optional fixed signal strength test
@@ -28,6 +27,17 @@ create nn-components    \ isolate test results to failed component identifier
 
 d# 15 value xleds
 d# 11 value yleds
+
+0. 2value version#
+: get-version  ( -- version.d )  version#  ;
+
+: (.)'  ( version-segment.w -- )  (.) type  [char] . emit  ;
+
+: .version  ( version.d -- )  lwsplit (.)' (.)'  lwsplit (.)' (.)'  ;
+
+: show-version  ( -- )
+   ." Neonode zForce Touch Driver firmware version "  version# .version  cr
+;
 
 \ XXX these are really platform-related, not touchscreen-related
 : targets?  ( -- flag )  final-test?  ;
@@ -43,7 +53,9 @@ fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
 : 2u.x  base @ >r hex  0 <# # # #> type  r> base !  ;
 [then]
 
-: x>x'  ( x -- x' )  screen-w swap -  ;  \ reverse x coordinate
+defer x>x'  ' noop to x>x'
+: (x>x')  ( x -- x' )  screen-w swap -  ;  \ reverse x coordinate
+: set-reverse-x  ['] (x>x') to x>x'  ;
 
 : set-gpios
 [ifdef] olpc-cl2
@@ -55,11 +67,7 @@ fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
 ;
 
 \ Neonode requested 250 ms
-\ we observe for 0.0.0.5
-\ less than 38 ms yields no response to reset,
-\ 40 ms yields 100 ms overall version check, and
-\ 45 ms yields 84 ms overall version check.
-: reset  ( -- )  touch-rst-gpio# dup gpio-clr gpio-set  d# 50 ms  ;
+: reset  ( -- )  touch-rst-gpio# dup gpio-clr gpio-set  d# 250 ms  ;
 : hold-reset  ( -- )  touch-rst-gpio# gpio-clr  ;
 : no-data?  ( -- no-data? )  touch-int-gpio# gpio-pin@  ;
 
@@ -104,6 +112,13 @@ d# 250 constant /pbuf
 
 : read-boot-complete  ( -- )  h# 07 d# 0 anticipate  ;
 
+: read-version
+   h# 1e h# 01 h# ee  3 bytes-out  h# 1e d# 100 anticipate
+   pbuf 2+ c@ h# 1e <> abort" bad response"
+   pbuf 9 + le-w@  pbuf 7 + le-w@ wljoin  pbuf 5 + le-w@ pbuf 3 + le-w@ wljoin
+   to version#
+;
+
 : initialise  ( -- )  h# 01 h# 01 h# ee  3 bytes-out  h# 01 d# 20 anticipate  ;
 
 : set-resolution  ( -- )
@@ -125,6 +140,8 @@ d# 250 constant /pbuf
 
 : configure  ( -- )
    configure?  if
+      read-version
+      version# h# 6. d<  if  set-reverse-x  then
       initialise
       set-resolution
       start
@@ -199,42 +216,6 @@ d# 250 constant /pbuf
       h# 0f <> abort" bad response to fss"
    loop
 ;
-
-
-
-[ifdef] nn-version \ version display
-: (.version)  ( addr -- )
-   dup c@  over 1+ c@  bwjoin           ( addr version )
-   (.) type
-;
-
-: .version  ( -- )
-   pbuf 3 +  3 0  do                    ( addr )
-      (.version) 2+
-      [char] . emit
-   loop                                 ( addr )
-   (.version) drop                      ( )
-;
-
-: (version)  ( -- )
-   h# 1e h# 01 h# ee  3 bytes-out
-   h# 1e d# 30 anticipate
-   pbuf 2+ c@ h# 1e <> abort" bad response"
-;
-
-: test-version  ( -- )
-   (version)
-   ." Neonode zForce Touch Driver firmware version "
-   .version
-   cr
-;
-
-: get-version  ( -- version.d )
-   (version)
-   pbuf 9 + le-w@  pbuf 7 + le-w@ wljoin  pbuf 5 + le-w@ pbuf 3 + le-w@ wljoin
-;
-
-[then]
 
 
 
@@ -1003,7 +984,7 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 
 : mb-smt  ( -- error? )
    open  0=  if  true exit  then
-   test-version
+   show-version
    close
    false
 ;
@@ -1034,7 +1015,7 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 
    diagnostic-mode?  if
       0 to faults
-      [ifdef] nn-version  test-version  [then]
+      show-version
       [ifdef] nn-os       test-os       [then]
       [ifdef] nn-fss      test-fss      [then]
       [ifdef] nn-fll      test-fll      [then]
