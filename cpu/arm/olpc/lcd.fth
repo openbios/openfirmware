@@ -355,6 +355,10 @@ d# 256 constant /cursor
    ' display-install  is-install
    ' display-remove   is-remove
    ' display-selftest is-selftest
+
+[ifdef] mmp3
+fload ${BP}/cpu/arm/mmp3/hdmi.fth
+[then]
 end-package
 
 devalias screen /display
@@ -366,6 +370,7 @@ create cp881-16  " ${BP}/ofw/termemu/cp881-16.obf" $file,
 create 15x30pc  " ${BP}/ofw/termemu/15x30pc.psf" $file,
 ' 15x30pc to romfont
 [then]
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
