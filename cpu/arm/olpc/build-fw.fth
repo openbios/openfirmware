@@ -366,7 +366,7 @@ fload ${BP}/cpu/arm/mmp2/thermal.fth
 fload ${BP}/cpu/arm/mmp2/fuse.fth
 [ifdef] bsl-uart-base
 fload ${BP}/cpu/arm/olpc/bsl.fth
-\ fload ${BP}/cpu/arm/olpc/nnflash.fth
+fload ${BP}/cpu/arm/olpc/nnflash.fth
 [then]
 
 [ifndef] virtual-mode

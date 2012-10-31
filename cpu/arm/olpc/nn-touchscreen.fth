@@ -20,11 +20,11 @@ create nn-fll           \ forced LED levels test
 create nn-version       \ version display
 create nn-watch         \ graphical signal tests
 
-\ create nn-fss           \ optional fixed signal strength test
+create nn-fss           \ optional fixed signal strength test
 \ create nn-ls            \ optional low signals test
-\ create nn-fss-all       \ fixed signal strength test, all power levels
+create nn-fss-all       \ fixed signal strength test, all power levels
 
-\ create nn-components    \ isolate test results to failed component identifier
+create nn-components    \ isolate test results to failed component identifier
 
 d# 15 value xleds
 d# 11 value yleds
@@ -53,7 +53,13 @@ fload ${BP}/cpu/arm/olpc/touchscreen-common.fth
    touch-rst-gpio# dup gpio-set gpio-dir-out
    touch-tck-gpio# dup gpio-clr gpio-dir-out
 ;
-: reset  ( -- )  touch-rst-gpio# dup gpio-clr gpio-set  d# 250 ms  ;
+
+\ Neonode requested 250 ms
+\ we observe for 0.0.0.5
+\ less than 38 ms yields no response to reset,
+\ 40 ms yields 100 ms overall version check, and
+\ 45 ms yields 84 ms overall version check.
+: reset  ( -- )  touch-rst-gpio# dup gpio-clr gpio-set  d# 50 ms  ;
 : hold-reset  ( -- )  touch-rst-gpio# gpio-clr  ;
 : no-data?  ( -- no-data? )  touch-int-gpio# gpio-pin@  ;
 
