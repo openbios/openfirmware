@@ -672,9 +672,10 @@ defer level>rgb
 ;
 
 : xs>xy  ( signal# -- x y )
-   2+ screen-w xleds 2* / * r -         ( x )
-   x>x'                                 ( x' )
+   screen-w xleds 2* / *                ( x )
    r 2/ +
+   x>x'                                 ( x' )
+   d# 10 -
    xy                                   ( x y )
 ;
 
@@ -761,14 +762,30 @@ d# 64 value fs \ fixed signal strength
    then
 ;
 
+: watch-fss-sig  ( )
+   d# 50 d# 18 at-xy ."  signal strength: " fs .d
+   d# 50 d# 20 at-xy ."  d  down "
+   d# 50 d# 21 at-xy ."  u  up   "
+   d# 50 d# 22 at-xy ."  q  quit "
+;
+
+: watch-fss-key  ( stop-flag key -- stop-flag' )
+   case
+      h# 1b     of  drop true  endof
+      [char] q  of  drop true  endof
+      [char] u  of  fs 2* d# 64 min  to fs  watch-fss-sig  endof
+      [char] d  of  fs 2/  d# 1 max  to fs  watch-fss-sig  endof
+   endcase
+;
+
 : watch-fss
-   empty
-   begin
+   watch-fss-sig  empty  watch-fss-sig  false
+   begin					( stop-flag )
       0 watch-fss-axis
-      1 watch-fss-axis  key?
+      1 watch-fss-axis  key?  if  key watch-fss-key  then
+      dup
    until
-   key drop
-   page
+   drop page
 ;
 
 [then]
