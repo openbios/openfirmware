@@ -225,11 +225,11 @@ hex
 : select-3d   ( -- )  pll-cfg0@ 1 invert and pll-cfg0!  ;
 
 \ Tune these for best eye diagram
-5 value damp  1 value eamp  0 value cp
-0 value ajd   1 value svtx  h# c value idrv  
+6 value damp  2 value eamp  0 value cp
+0 value ajd   1 value svtx  8 value idrv  
 
 : setup-phy  ( freq -- )
-   drop                     \ We may need to retune the phy for different frequencies
+   d# 148 =  if  9  else  8  then  to idrv
 
    select-phy
 
@@ -323,34 +323,6 @@ hex
 \ : dither!  ( n -- )  h# a0 lcd!  ;
 \ : dither-table!  ( n -- )  h# a4 lcd!  ;
 
-[ifdef] notdef
-: tv-clear   ( reg# -- )  0 swap lcd!  ;
-: tv-unused-clear  ( -- )
-   h# 00 tv-clear  h# 04 tv-clear  h# 08 tv-clear  \ Y0, U0, V0 start address
-   h# 10 tv-clear  h# 14 tv-clear  h# 18 tv-clear  \ Y1, U1, V1 start address
-   h# 20 tv-clear  h# 24 tv-clear                  \ Y+C pitch, U+V pitch
-   h# 28 tv-clear                                  \ Video starting point on screen
-   h# 2c tv-clear  h# 30 tv-clear                  \ Video source size, dest size
-   h# 38 tv-clear                                  \ Graphic frame 1 start address
-   0 0 tv-gfx-offset!
-   0 0 tv-cursor-pos!
-   h# 68 tv-clear  h# 6c tv-clear                  \ Cursor color 1, 2
-   h# 70 tv-clear  h# 74 tv-clear  h# 78 tv-clear  \ Y, U, V color keys 
-;
-: tv-enable  ( -- )  h# 5140 tv-dma-ctrl0!  ;
-: tv-misc  ( -- )
-   tv-unused-clear
-   h# 283eff00 tv-dma-ctrl1!
-   h# 00ff1001 tv-tvif!
-   h# 60010005 tv-divider!
-;
-: tv-base-res!  ( hres vres -- )
-   over bytes/pixel *  tv-pitch!       ( hres vres )
-   2dup tv-gfx-dst-res!                ( hres vres )
-   tv-active!                          ( )
-;
-[then]
-
 d# 16 value tv-bpp
 : init-tv-graphics  ( -- )
    init-tv-clock
@@ -367,8 +339,7 @@ d# 16 value tv-bpp
 
    7    d#  9 -bits  \ Turn off YUV422PACK, YVYU422P, UYVY422P
 
-   1 	d# 12 -bits  \ RGBswap
-\  1 	d# 12 +bits  \ RGBswap
+   1 	d# 12 +bits  \ RGBswap (RGB, not BGR)
 	     	
    1    d# 27 +bits  \ DMA AXI arbiter enable
    tv-dma-ctrl0!
