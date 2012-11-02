@@ -16,6 +16,12 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
    h# 0000 h# 2c codec!     \ SPOxMIX -> SPKRMUX, HPOVOL -> HPMUX
 ;
 
+h# 8001 value serial-mode
+: left-justified  h# 8001 to serial-mode  ;
+: i2s    h# 8000 to serial-mode  ;
+: pcm-a  h# 8002 to serial-mode  ;
+: pcm-b  h# 8003 to serial-mode  ;
+
 : codec-on  ( -- )
    0 0 codec!  \ Reset
 
@@ -25,7 +31,7 @@ purpose: Driver for Realtek ALC5631Q audio CODEC chip
 
    set-routing
 
-   h# 8001 h# 34 codec!  \ Slave mode, 16 bits, left justified, exchange L and R on playback
+   serial-mode h# 34 codec!  \ Slave mode, 16 bits, left justified, exchange L and R on playback
 
    \ The speaker gain ratio must be <= the ratio of SPKVDD to AVDD.
    \ In our system, SPKVDD is 5V and AVDD is 3.3V, so we need a gain ratio <= 1.51 .
