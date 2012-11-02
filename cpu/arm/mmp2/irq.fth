@@ -91,7 +91,7 @@ d# 64 " mrvl,intc-nr-irqs" integer-property
    h# 1cc h# 1b4 d# 42     2 make-mux-node \ intcmux42 - CCIC2, CCIC1
    h# 160 h# 178 d# 51     2 make-mux-node \ intcmux51 - SSP1_SRDY, SSP3_SRDY
    h# 184 h# 17c d# 55     4 make-mux-node \ intcmux55 - MMC5, res, res, HSI_INT_1
-   h# 188 h# 188 d# 55 d# 20 make-mux-node \ intcmux57 - (various)
+   h# 188 h# 180 d# 57 d# 20 make-mux-node \ intcmux57 - (various)
    h# 1d0 h# 1b8 d# 58     5 make-mux-node \ intcmux58 - MSP_CARD, KERMIT_INT_0, KERMIT_INT_1, res, HSI_INT_0
 [else]
    h# 150 h# 168     4     2 make-mux-node \ intcmux4 - USB_CHARGER, PMIC
