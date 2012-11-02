@@ -21,21 +21,54 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
    ;
    ' olpc-card-inserted? to card-inserted?
 
+[ifdef] olpc-cl4
+also forth definitions
+: isolate-mmc3-pins  ( gpio# #gpios -- )
+   bounds  do
+      i af@ 7 invert and 1 or  i af!
+      i gpio-dir-out  i gpio-clr
+   loop
+;
+: connect-mmc3-pins  ( gpio# #gpios -- )
+   bounds  do
+      i af@ 7 invert and 2 or  i af!
+   loop
+;
+: isolate-emmc  ( -- )      
+   d# 108 4 isolate-mmc3-pins
+   d# 161 4 isolate-mmc3-pins
+   d# 145 2 isolate-mmc3-pins
+;
+: connect-emmc  ( -- )      
+   d# 108 4 connect-mmc3-pins
+   d# 161 4 connect-mmc3-pins
+   d# 145 2 connect-mmc3-pins
+;
+previous definitions
+[then]
+
    \ Base-addr:power_GPIO - 1:35, 2:34, 3:33
    : gpio-power-on  ( -- )
       sdhci-card-power-on
 [ifdef] en-emmc-pwr-gpio#
-      base-addr h# d428.1000 =  if  en-emmc-pwr-gpio# gpio-clr  then
+      base-addr h# d428.1000 =  if
+         [ifdef] connect-emmc  connect-emmc  [then]
+         en-emmc-pwr-gpio# gpio-clr
+      then
 [then]
 [ifdef] en-wlan-pwr-gpio#
       base-addr h# d428.0800 =  if  en-wlan-pwr-gpio# gpio-set  then
+[then]
 [then]
    ;
    ' gpio-power-on to card-power-on
 
    : gpio-power-off  ( -- )
 [ifdef] en-emmc-pwr-gpio#
-      base-addr h# d428.1000 =  if  en-emmc-pwr-gpio# gpio-set  then
+      base-addr h# d428.1000 =  if
+         en-emmc-pwr-gpio# gpio-set
+         [ifdef] isolate-emmc isolate-emmc  [then]
+      then
 [then]
 [ifdef] en-wlan-pwr-gpio#
       base-addr h# d428.0800 =  if  en-wlan-pwr-gpio# gpio-clr  then
