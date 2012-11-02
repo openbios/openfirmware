@@ -158,7 +158,7 @@ create wakeup-masks  \ Bits in MPMU+0 and MPMU+1000, indexed by wakeup port numb
 
 : port>bit  ( port# -- )  wakeup-masks swap na+ @  ;
 
-: pcr!       ( value -- )  dup h# 00 mpmu!  h# 1000 mpmu!  ;
+: pcr!       ( value -- )  dup h# 00 mpmu!  h# 7fff invert and  h# 1000 mpmu!  ;
 : pcr-set    ( mask -- )  dup h# 00 mpmu-set  h# 1000 mpmu-set  ;
 : pcr-clr    ( mask -- )  dup h# 00 mpmu-clr  h# 1000 mpmu-clr  ;
 : wucrm-set  ( mask -- )  dup h# 4c mpmu-set  h# 104c mpmu-set  ;
@@ -232,23 +232,23 @@ code mp-on
 c;
 : wakeup-irqs-on  ( -- )
 \ 2f is high priority (f), directed to PJ (20)
-\  h# 2f  h# 82010 io!  \ IRQ  4 - PMIC
-   h# 2f  h# 82014 io!  \ IRQ  5 - RTC
-\  h# 2f  h# 820c4 io!  \ IRQ 49 - GPIO
+\  h# 2f  h# 10 icu!  \ IRQ  4 - PMIC
+   h# 2f  h# 14 icu!  \ IRQ  5 - RTC
+\  h# 2f  h# c4 icu!  \ IRQ 49 - GPIO
 ;
 : wakeup-irqs-off  ( -- )
-\  h#  0  h# 82010 io!  \ IRQ  4 - PMIC
-   h#  0  h# 82014 io!  \ IRQ  5 - RTC
-\  h#  0  h# 820c4 io!  \ IRQ 49 - GPIO
+\  h#  0  h# 10 icu!  \ IRQ  4 - PMIC
+   h#  0  h# 14 icu!  \ IRQ  5 - RTC
+\  h#  0  h# c4 icu!  \ IRQ 49 - GPIO
 ;
 : global-irqs-off  ( -- )
    \ disable global irq of ICU for MP1, MP2, MM
-   1 h# 82110 io!  \ ICU_GBL_IRQ1_MSK
-   1 h# 82114 io!  \ ICU_GBL_IRQ2_MSK
-   1 h# 8410c io!  \ ICU_GBL_IRQ3_MSK
-   1 h# 84110 io!  \ ICU_GBL_IRQ4_MSK
-   1 h# 84114 io!  \ ICU_GBL_IRQ5_MSK
-   1 h# 84190 io!  \ ICU_GBL_IRQ6_MSK
+   1 h#  110 icu!  \ ICU_GBL_IRQ1_MSK
+   1 h#  114 icu!  \ ICU_GBL_IRQ2_MSK
+   1 h# 210c icu!  \ ICU_GBL_IRQ3_MSK
+   1 h# 2110 icu!  \ ICU_GBL_IRQ4_MSK
+   1 h# 2114 icu!  \ ICU_GBL_IRQ5_MSK
+   1 h# 2190 icu!  \ ICU_GBL_IRQ6_MSK
 ;
 
 0 value apcr
@@ -260,7 +260,7 @@ c;
    h# 1000 mpmu@ to apcr
 
    deep-sleep-on
-   rtc-wakeup-on
+\  rtc-wakeup-on  \ Unnecessary; alarm-in-3 does it
 
    h# 462 set-idle   \ D2_L2_PWD
 
@@ -270,7 +270,9 @@ c;
    \ I don't think we need this because L2 is off
    \ h# 8000 cc4-set  \ workaround: keep SL2 power on
 
-   wakeup-irqs-on
+\  wakeup-irqs-on  \ Unnecessary; alarm-in-3 does it
+
+   global-irqs-off
 
    flush-cache-all
    \ outer-flush-all
@@ -286,8 +288,6 @@ c;
 
    \ I don't think we need this because L2 is off
    \ h# 8000 cc4-clr  \ workaround: keep SL2 power on
-
-   global-irqs-off
 
    apcr  h# 1000 mpmu!
 
