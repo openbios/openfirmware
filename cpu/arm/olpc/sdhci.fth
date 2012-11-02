@@ -12,7 +12,7 @@ purpose: Load file for SDHCI (Secure Digital Host Controller Interface)
    1 " #address-cells" integer-property
    1 " #size-cells" integer-property
 
-   d# 1 to power-off-time  \ A2 and A3 have turn-off clamps
+   d# 30 to power-off-time   \ Time for the voltage to decay
 \   true to avoid-high-speed?
 
    hex

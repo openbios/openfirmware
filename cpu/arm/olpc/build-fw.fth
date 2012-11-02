@@ -580,6 +580,14 @@ fload ${BP}/cpu/arm/olpc/banner.fth
 \ This must precede the loading of gui.fth, which chains from linux-hook's behavior
 ' quiesce to linux-hook
 
+[ifdef] olpc-cl4
+: linux-hook-emmc  ( -- )
+   [ ' linux-hook behavior compile, ]  \ Chain to old behavior
+   connect-emmc
+;
+' linux-hook-emmc to linux-hook
+[then]
+
 \ This must be defined after spiui.fth, otherwise spiui will choose some wrong code
 : rom-pa  ( -- adr )  mfg-data-buf mfg-data-offset -  ;  \ Fake out setwp.fth
 fload ${BP}/cpu/x86/pc/olpc/setwp.fth
