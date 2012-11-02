@@ -110,7 +110,12 @@ d# 250 constant /pbuf
 
 
 
-: read-boot-complete  ( -- )  h# 07 d# 0 anticipate  ;
+: read-boot-complete  ( -- )
+   0 pbuf 2+ c!
+   h# 07 d# 0 anticipate
+   pbuf 2+ c@ h# 07 <> abort" bad response"
+   pbuf 3 + c@  h# e0 = abort" missing IR PCB"
+;
 
 : read-version
    h# 1e h# 01 h# ee  3 bytes-out  h# 1e d# 100 anticipate
@@ -160,11 +165,13 @@ d# 250 constant /pbuf
          pbuf-free  false  exit
       then
    then
-   ['] read-boot-complete  catch  if
-      ." no response on bus" cr
+   ['] read-boot-complete  catch  ?dup  if
+      .error
+      ." failed to boot" cr
       pbuf-free  false  exit
    then
-   ['] configure  catch  if
+   ['] configure  catch  ?dup  if
+      .error
       ." failed to configure" cr
       pbuf-free  false  exit
    then
