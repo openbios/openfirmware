@@ -11,7 +11,7 @@ purpose: Setup keyboard wakeups and display the state of the wakeup machinery
 
 \ How to wakeup from SP:
 : setup-key-wakeup  ( -- )
-   d# 24 d# 15 do  h# b0 i af!  loop  \ Wake SoC on game keys
+   rotate-gpio# 8 bounds do  h# b0 i af!  loop  \ Wake SoC on game keys
 [ifdef] soc-kbd-clk-gpio#
    h# 220 soc-kbd-clk-gpio# af!  \ Wake SoC on KBD CLK falling edge
    h# 221 soc-tpd-clk-gpio# af!  \ Wake SoC on TPD CLK falling edge
@@ -30,7 +30,7 @@ purpose: Setup keyboard wakeups and display the state of the wakeup machinery
 ;
 
 : gpio-wakeup?  ( gpio# -- flag )
-   h# 019800 over 5 rshift la+ l@  ( gpio# mask )
+   h# 019800 over 5 rshift la+ io@ ( gpio# mask )
    swap h# 1f and                  ( mask bit# )
    1 swap lshift  and  0<>         ( flag )
 ;
@@ -38,8 +38,8 @@ purpose: Setup keyboard wakeups and display the state of the wakeup machinery
 \ !!! The problem right now is that I have woken from keyboard, but the interrupt is still asserted
 \ So perhaps the interrupt handler didn't fire
 : rotate-wakeup? ( -- flag )  d#  15 gpio-wakeup?   ;
-: kbd-wakeup?    ( -- flag )  d#  71 gpio-wakeup?   ;
-: tpd-wakeup?    ( -- flag )  d# 160 gpio-wakeup?   ;
+: kbd-wakeup?    ( -- flag )  soc-kbd-clk-gpio# gpio-wakeup?   ;
+: tpd-wakeup?    ( -- flag )  soc-tpd-clk-gpio# gpio-wakeup?   ;
 
 string-array wakeup-bit-names
    ," WU0 "
