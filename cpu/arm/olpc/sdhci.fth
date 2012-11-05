@@ -107,7 +107,7 @@ previous definitions
       8 encode-int " bus-width" property
       " sdhci-pxav3" +compatible
       " mrvl,pxav3-mmc" +compatible
-      d# 31 encode-int " clk-delay-cycles" property
+      d# 15 encode-int " clk-delay-cycles" property
       d# 53 " interrupts" integer-property
 
       " /pmua" encode-phandle d# 14 encode-int encode+ " clocks" property

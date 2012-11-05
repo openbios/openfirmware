@@ -4,7 +4,7 @@ dev /sd  \ MMC1 - External SD
       8 encode-int " bus-width" property
       " sdhci-pxav3" +compatible
       " mrvl,pxav3-mmc" +compatible
-      d# 31 encode-int " clk-delay-cycles" property
+      d# 15 encode-int " clk-delay-cycles" property
       fload ${BP}/dev/mmc/sdhci/slot.fth
       d# 39 " interrupts" integer-property
 
@@ -33,7 +33,7 @@ dev /sd  \ MMC5 - internal micro-SD
       8 encode-int " bus-width" property
       " sdhci-pxav3" +compatible
       " mrvl,pxav3-mmc" +compatible
-      d# 31 encode-int " clk-delay-cycles" property
+      d# 15 encode-int " clk-delay-cycles" property
       fload ${BP}/dev/mmc/sdhci/slot.fth
       " /interrupt-controller/interrupt-controller@184" encode-phandle " interrupt-parent" property
       d# 0 " interrupts" integer-property
