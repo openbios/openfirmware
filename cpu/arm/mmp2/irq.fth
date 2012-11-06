@@ -50,7 +50,7 @@ d# 64 constant #levels
 ;
 : close  ( -- )  ;
 
-" mrvl,mmp2-intc" " compatible" string-property
+[ifdef] mmp2  " mrvl,mmp2-intc" +compatible   [then]
 [ifdef] mmp3  " mrvl,mmp3-intc" +compatible   [then]
 
 1 " #address-cells" integer-property
