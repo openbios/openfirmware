@@ -303,46 +303,87 @@ defer write-spi-flash  ( adr len offset -- )
 0 value spi-id#
 0 value jedec-id#
 0 0 2value spi-id$
+
+: (.spi-id)  ( -- )
+   push-hex
+   spi-id# 2 .r [char] . emit jedec-id# 6 .r
+   pop-base
+;
+
+create jedec-spi-table
+   \ JEDEC-ID    /flash          Name
+
+   \ XO-4
+   h# 1540c8 ,  h# 20.0000 ,  ," GD25Q16B"    \ GigaDevice 3V3
+   h# 1560c8 ,  h# 20.0000 ,  ," GD25LQ16"    \ GigaDevice 1V8
+   h# 1540ef ,  h# 20.0000 ,  ," W25Q16"      \ Winbond 3V3
+   h# 1520c2 ,  h# 20.0000 ,  ," MX25L1606E"  \ Macronix 3V3 also MX25L1605D which is EOL (CS# rise time problem)
+   h# 1524c2 ,  h# 20.0000 ,  ," MX25L1633E"  \ Macronix 3V3 (this is the preferred Macronyx part)
+   h# 1525c2 ,  h# 20.0000 ,  ," MX25L1635E"  \ Macronix 1V8 (CS# rise time problem)
+   h# 3525c2 ,  h# 20.0000 ,  ," MX25U1635E"  \ Macronix 1V8
+
+   \ XO-1.75 and XO-3 and XO-4 A2
+   h# 3425c2 ,  h# 10.0000 ,  ," MX25U8035"   \ Macronix 3V3
+
+   \ XO-1 and XO-1.5
+   h# 1430ef ,  h# 10.0000 ,  ," WX25X80"     \ Winbond  (AB-ID is 13)
+   h# 130201 ,  h# 10.0000 ,  ," S25FL008A"   \ Spansion (AB-ID is 13)
+   h# 8e25bf ,  h# 10.0000 ,  ," SST25VF080B" \ SST      (AB-ID is bf)
+   \ ST M25P80 does not support the JEDEC ID command (AB-ID is 13)
+
+   0 ,   \ End of list
+
+\ I don't think this table will ever be used, because the only part
+\ that was actually shipped on XO-1 and XO-1.5 was Winbond WX25X80
+create ab-spi-table
+   \   AB-ID     /flash          Name
+   h#     13 ,  h# 10.0000 ,  ," Spansion, Winbond, or ST"
+   h#     bf ,  h# 10.0000 ,  ," SST"
+
+\ An infrequent HW error on XO-1 B1 used to falsely report 14 instead of 13
+\  h#     14 ,  h# 10.0000 ,  ," Unknown"
+
+   0 ,   \ End of list
+
+create unknown-spi-flash
+   \ /flash      Name
+   10.0000 ,  ," Unknown"
+
+: search-spi-table  ( value table-adr -- true | entry-adr false )
+   begin  dup @  while       ( value adr )
+      2dup @ =  if           ( value adr )
+         nip  na1+           ( entry-adr )
+         false exit          ( entry-adr false )
+      then                   ( value adr )
+      2 na+ +str             ( value adr' )
+   repeat                    ( value adr )
+   2drop true                ( true )
+;
+
 : spi-identify  ( -- )
    ab-id to spi-id#
    jedec-id to jedec-id#
-   " Unknown" to spi-id$
-   spi-id# case
-      h# 13  of
-	 ['] common-write  1mb-flash
-	 " Spansion, Winbond, or ST" to spi-id$
-      endof
-      h# 14  of
-	 ['] common-write  1mb-flash
-         jedec-id# h# 1520c2 =  if  2mb-flash  " MX25L1605D"   to spi-id$  then
-         jedec-id# h# 1540c8 =  if  2mb-flash  " GD25Q16B"     to spi-id$  then
-         jedec-id# h# 1540ef =  if  2mb-flash  " W25Q16"       to spi-id$  then
-      endof
-      h# 24  of
-         ['] common-write  2mb-flash
-         jedec-id# h# 1524c2 =  if  2mb-flash  " MX25L1633E"   to spi-id$  then
-      endof
-      h# 25  of
-	 ['] common-write  1mb-flash
-         jedec-id# h# 1525c2 =  if  2mb-flash  " MX25L1635E"   to spi-id$  then
-      endof
-      h# 34  of
-	 ['] common-write  1mb-flash
-         " Macronyx" to spi-id$
-         jedec-id# h# 3425c2 =  if  1mb-flash  " MX25E8035"    to spi-id$  then
-      endof
-      h# 35  of
-	 ['] common-write  2mb-flash
-         jedec-id# h# 3525c2 =  if  2mb-flash  " MX25U1635E"    to spi-id$  then
-      endof
-      \ the SST part with its unique auto-increment address writing scheme
-      h# bf  of
-	 ['] sst-write     1mb-flash
-	 " SST" to spi-id$
-      endof
-      ( default )  ." Bad SPI FLASH ID " dup . cr  ['] null-write swap
-   endcase                                      ( writer )
-   to write-spi-flash
+
+   ['] common-write to write-spi-flash  \ The usual case
+
+   \ Special case for an uncommon part
+   spi-id# h# bf =  if  ['] sst-write to write-spi-flash  then
+
+   jedec-id#  jedec-spi-table  search-spi-table  if   ( )
+      \ If we don't find it in the JEDEC ID table, fall back to the AB ID table
+
+      ab-id  ab-spi-table  search-spi-table  if       ( )
+         \ If we still don't find it, complain and disable writes
+
+         ." Unsupported SPI FLASH ID " (.spi-id) cr
+	 ['] null-write to write-spi-flash
+         
+         unknown-spi-flash     ( entry-adr )
+      then                     ( entry-adr )
+   then                        ( entry-adr )
+   dup @ to /flash             ( entry-adr' )
+   na1+ count  to spi-id$      ( )
+   
    spi-unprotect
 ;
 
@@ -350,7 +391,7 @@ defer write-spi-flash  ( adr len offset -- )
 
 : .spi-id  ( -- )
    ." SPI FLASH is type "
-   spi-id# 2 .r [char] . emit jedec-id# 6 .r
+   (.spi-id)
    ." , " spi-id$ type
    ." , " /flash h# 100000 / .d ." MB."
 ;
