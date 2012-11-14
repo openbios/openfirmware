@@ -1,6 +1,8 @@
 \ See license at end of file
 purpose: MMP3 HDMI driver
 
+: hdmi-present?  ( -- flag )   hdmi-hp-det-gpio# gpio-pin@ 0=  ;
+
 : +hdmi  h# 20bc00 +  ;
 : hdmi!  +hdmi io!  ;
 : hdmi@  +hdmi io@  ;
