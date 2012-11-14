@@ -7,9 +7,6 @@ build-now
 
 " fw.tag" r/w create-file drop  tag-file !
 
-h# 17000 +io constant bsl-uart-base     \ UART2
-h# 30 constant bsl-uart-clock-offset    \ APBC_UART2_CLK_RST
-
 fload ${BP}/cpu/arm/olpc/build-fw.fth
 
 \ The internal SD card shares the host controller circuitry with
