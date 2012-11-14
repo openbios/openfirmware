@@ -30,7 +30,10 @@ variable ylim  variable ymin
    screen-height wave-height 2* -  pitch*  frame-buffer-adr +
 ;
 
-: wave0  ( -- )  screen-height wave-height -  ;
+0 value wave#
+: set-wave#  ( n -- )  to wave#  ;
+
+: wave0  ( -- )  screen-height wave# 2* 1+  wave-height *  -  ;
 
 : clear-waveform  ( -- )
    bg

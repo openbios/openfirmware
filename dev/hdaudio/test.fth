@@ -95,18 +95,25 @@ purpose: Manufacturing testing
    $call-analyzer                    ( )
    " prepare-signal" $call-analyzer  ( pb /pb rb /rb )
    \ First shorter run lets the input channel settle
-   2over 4 /  2over 4 /  out-in      ( pb /pb rb /rb )
+\   2over 4 /  2over 4 /  out-in      ( pb /pb rb /rb )
    out-in                            ( )
-   " analyze-signal" $call-analyzer  ( okay? )
+   " analyze-signal" $call-analyzer  ( error? )
 ;
+: .test-error  ( error? -- error? )
+    dup 1 and  if   ." Left channel failure" cr  then
+    dup 2 and  if   ." Right channel failure" cr  then
+;
+
 false value plot?  \ Set to true to plot the impulse response, for debugging
 : plot-impulse  ( adr -- )
    d# 600              ( adr #samples )
-   " 0 set-fg  h# ffffffff set-bg single-drawing clear-drawing wave" evaluate
-   key ascii d = if debug-me then
+   " 0 set-fg  h# ffffffff set-bg single-drawing ( clear-drawing ) wave" evaluate
+\   key ascii d = if debug-me then
 ;
+: plot-impulse0  ( adr -- )   0 " set-wave#" $call-screen plot-impulse  ;
+: plot-impulse1  ( adr -- )   1 " set-wave#" $call-screen plot-impulse  ;
 
-: test-with-case  ( -- )
+: test-with-case  ( -- error? )
 \   " setup-case" $call-analyzer
 \   xxx - this needs to use the internal speakers and mic even though the loopback cable is attached
    true to force-speakers?  true to force-internal-mic?
@@ -114,11 +121,11 @@ false value plot?  \ Set to true to plot the impulse response, for debugging
    input-test-settings  mono
    output-test-settings  case-test-volume set-volume
    ." Testing internal speakers and microphone" cr
-   " setup-case" test-common
+   " setup-case" test-common  .test-error
    false to force-speakers?  false to force-internal-mic?
    plot?  if
-      0 " calc-sm-impulse" $call-analyzer  plot-impulse
-      2 " calc-sm-impulse" $call-analyzer  plot-impulse
+      0 " calc-sm-impulse" $call-analyzer  plot-impulse0
+      2 " calc-sm-impulse" $call-analyzer  plot-impulse1
    then
 ;
 : test-with-fixture  ( -- error? )
@@ -127,22 +134,41 @@ false value plot?  \ Set to true to plot the impulse response, for debugging
    input-test-settings  mono
    output-test-settings  fixture-test-volume set-volume  \ -23 prevents obvious visible clipping
    ." Testing internal speakers and microphone with fixture" cr
-   " setup-fixture" test-common
+   " setup-fixture" test-common  .test-error
    false to force-speakers?  false to force-internal-mic?
    plot?  if
-      0 " calc-sm-impulse" $call-analyzer  plot-impulse
-      2 " calc-sm-impulse" $call-analyzer  plot-impulse
+      0 " calc-sm-impulse" $call-analyzer  plot-impulse0
+      2 " calc-sm-impulse" $call-analyzer  plot-impulse1
    then
+;
+true value allow-swapping?
+: ?try-swapped   ( error? -- error?' )
+   allow-swapping?  0=  if  exit  then   ( error? )
+   dup  if                               ( error? )
+       " swap-lr-pb" $call-analyzer      ( error? )
+       " analyze-signal" $call-analyzer  ( error? swapped-error? )
+       " unswap-lr-pb" $call-analyzer    ( error? swapped-error? )
+       0=  if                            ( error? )
+          \ If swapping left and right "fixes" the problem, we
+          \ don't report an error.  This works around a hard-to-fix
+          \ random channel-swapping problem with Marvell MMP3.
+          ." Channel swap!" cr           ( error? )
+          drop false                     ( 0 )
+       then                              ( error? )
+   then                                  ( error? )
 ;
 : test-with-loopback  ( -- error? )
    mic-bias-off
    input-test-settings   stereo
    output-test-settings  loopback-test-volume set-volume
    ." Testing headphone and microphone jacks with loopback cable" cr
-   " setup-loopback" test-common
+   " setup-loopback" test-common         ( error? )
+   ?try-swapped
+   .test-error
+
    plot?  if
-      0 " calc-stereo-impulse" $call-analyzer  plot-impulse
-      2 " calc-stereo-impulse" $call-analyzer  plot-impulse
+      0 " calc-stereo-impulse" $call-analyzer  plot-impulse0
+      2 " calc-stereo-impulse" $call-analyzer  plot-impulse1
    then
 ;
 

@@ -219,6 +219,7 @@ true value use-audio-pll?
 ;
 : master-rx  ( -- )  h# 0c sspa@  h# 8004.0001 or  h# 0c sspa!  ;  \ Master, on
 : slave-rx  ( -- )  h# 0c sspa@  h# 8000.0001 or  h# 0c sspa!  ;  \ Slave, on
+: flush-rx  ( -- )  h# 0c sspa@  h# 8000.0004 or  h# 0c sspa!  ;  \ Hit the flush bit
 : disable-sspa-rx  ( -- )  h# 0c sspa@  h# 8000.0004 or  h# 4.0001 invert and    h# 0c sspa!  ;
 
 : reset-tx  ( -- )  h# 8000.0002 h# 8c sspa!  ;
@@ -260,6 +261,7 @@ true value use-audio-pll?
 ;
 : master-tx  ( -- )  h# 8c sspa@  h# 8004.0001 or  h# 8c sspa!  ;  \ Master, on
 : slave-tx  ( -- )  h# 8c sspa@  h# 8000.0001 or  h# 8c sspa!  ;  \ Slave, on
+: flush-tx  ( -- )  h# 8c sspa@  h# 8000.0004 or  h# 8c sspa!  ;  \ Hit the flush bit
 : disable-sspa-tx  ( -- )  h# 8c sspa@  h# 8000.0004 or  h# 4.0001 invert and  h# 8c sspa!  ;
 
 h# fc0 constant /audio-buf
@@ -289,9 +291,14 @@ audio-sram-va h# 3f80 + constant in-desc
    out-desc  h# 30 adma!   \ Link to first descriptor
    out-desc to my-out-desc
 ;
+
+0 value use-packmod?
+
 : start-out-ring  ( -- )
    1 h# 80 adma!           \ Enable DMA completion interrupts
-   h# 0081.3020   h# 40 adma! \ 16 bits, pack, fetch next, enable, chain, hold dest, inc src
+   h# 0080.3020   \ 16 bits, fetch next, enable, chain, hold dest, inc src
+   use-packmod?  if  h# 1.0000 or   then
+   h# 40 adma!
 ;
 : stop-out-ring  ( -- )  h# 100000 h# 40 adma!  0 h# 80 adma!  ;
 
@@ -304,17 +311,43 @@ audio-sram-va h# 3f80 + constant in-desc
 : start-in-ring  ( -- )
    1 h# 84 adma!           \ Enable DMA completion interrupts
 \   h# 0081.3008   h# 44 adma! \ 16 bits, pack, fetch next, enable, chain, inc dest, hold src
-   h# 00a1.31c8   h# 44 adma! \ 16 bits, pack, fetch next, enable, chain, burst32, inc dest, hold src
+
+   h# 00a0.31c8  \ 16 bits, fetch next, enable, chain, burst32, inc dest, hold src
+   use-packmod?  if  h# 1.0000 or  then
+   h# 44 adma!
 ;
 : stop-in-ring  ( -- )  h# 100000 h# 44 adma!  0 h# 84 adma!  ;
 
+: unpack-move  ( src dst packed-len -- )
+   1 rshift  0  ?do       ( src dst )
+      over i wa+ w@       ( src dst sample )
+      over i la+ wa1+ w!  ( src dst )
+   loop                   ( src dst )
+   2drop                  ( )
+;
+
+: pack-move  ( src dst packed-len -- )
+   1 rshift  0  ?do       ( src dst )
+      over i la+ wa1+ w@  ( src dst sample )
+      over i wa+ w!       ( src dst )
+   loop                   ( src dst )
+   2drop                  ( )
+;
+
 : copy-out  ( -- )
-   my-out-desc >r                        ( r: desc )
-   out-len /audio-buf min                ( this-len r: desc )
-   dup r@ l!                             ( this-len r: desc )
-   out-adr  r@ la1+ l@  third  move      ( this-len r: desc )
-   out-adr  over +  to out-adr           ( this-len r: desc )
-   out-len  swap -  to out-len           ( r: desc )
+   my-out-desc >r                          ( r: desc )
+   use-packmod?  if
+      out-len /audio-buf min                  ( this-packed-len r: desc )
+      dup r@ l!                               ( this-packed-len r: desc )
+      out-adr  r@ la1+ l@  third  move        ( this-packed-len r: desc )
+   else
+      out-len  /audio-buf 2/  min             ( this-packed-len r: desc )
+      dup 2* r@ l!                            ( this-packed-len r: desc )
+      out-adr  r@ la1+ l@  third  unpack-move ( this-packed-len r: desc )
+   then
+
+   out-adr  over +  to out-adr             ( this-packed-len r: desc )
+   out-len  swap -  to out-len             ( r: desc )
    out-len  if
       r> 3 la+ l@  to my-out-desc
    else
@@ -323,11 +356,16 @@ audio-sram-va h# 3f80 + constant in-desc
 ;
 
 : copy-in  ( -- )
-   in-len /audio-buf min                       ( this-len )
-   my-in-desc 2 la+ l@  in-adr  third  move    ( this-len )
-   in-adr  over +  to in-adr                   ( this-len )
-   in-len  over -  to in-len                   ( this-len )
-   drop                                        ( )
+   use-packmod?  if
+      in-len /audio-buf min                          ( this-packed-len )
+      my-in-desc 2 la+ l@  in-adr  third  move       ( this-packed-len )
+   else
+      in-len  /audio-buf 2/ min                      ( this-packed-len )
+      my-in-desc 2 la+ l@  in-adr  third  pack-move  ( this-packed-len )
+   then
+   in-adr  over +  to in-adr                      ( this-packed-len )
+   in-len  over -  to in-len                      ( this-packed-len )
+   drop                                           ( )
    my-in-desc 3 la+ l@ to my-in-desc
 ;
 
@@ -567,7 +605,17 @@ false value playing?
       in-adr0 i la+ w@   in-adr0 i wa+ w!
    loop
 ;
-: out-in  ( out-adr out-len in-adr in-len -- )
+code startit  ( sspa-adr -- ) 
+   set r0,#0x80f101f1
+   set r1,#0x80f501f1
+   str r0,[tos,#0x8c]
+   str r1,[tos,#0x0c]
+   pop tos,sp
+c;
+: startoutin  ( -- )  disable-interrupts  sspa-base startit  enable-interrupts  ;
+: xstartoutin  ( -- )  slave-tx master-rx  ;
+
+: out-in0  ( out-adr out-len in-adr in-len -- )
    open-out-in
 
    to in-len0  to in-adr0      ( out-adr out-len )
@@ -578,7 +626,7 @@ false value playing?
 
    \ Resetting the clock at this point seems to prevent intermittent channel
    \ reversal on reception.
-   audio-clock-on drop         ( ) \ This will mess up any frequency settings
+\   audio-clock-on drop         ( ) \ This will mess up any frequency settings
 
    setup-sspa-tx               ( )
    setup-sspa-rx               ( )
@@ -591,7 +639,53 @@ false value playing?
    start-in-ring               ( )
    start-out-ring              ( )
 
+   xstartoutin
+\   slave-tx                    ( )
+\   master-rx                   ( )  \ Now the clock is on
+
+   true to playing?
+
+   begin  in-len playing? or  while  ( )
+      in-ready?  if  copy-in  then   ( )
+      playing?  if  ?end-playing  then   ( )
+   repeat                      ( )
+   disable-sspa-rx             ( )
+   disable-sspa-tx             ( )
+
+   stop-in-ring
+   stop-out-ring
+
+   reset-rx
+   reset-tx
+
+   close-out-in
+   mono?  if  collapse-in  then  ( )
+;
+
+: out-in1  ( out-adr out-len in-adr in-len -- )
+   open-out-in
+
+   to in-len0  to in-adr0      ( out-adr out-len )
+   to out-len  to out-adr      ( )
+
+   in-adr0 to in-adr           ( )
+   in-len0  mono?  if  2*  then  to in-len     
+
+   \ Resetting the clock at this point seems to prevent intermittent channel
+   \ reversal on reception.
+\   audio-clock-on drop         ( ) \ This will mess up any frequency settings
+
+   make-out-ring               ( )
+   copy-out                    ( )  \ Prefill the first Tx buffer
+   out-len  if  copy-out  then ( )  \ Prefill the second Tx buffer
+
+   setup-sspa-rx               ( )
+   make-in-ring                ( )
+   start-in-ring               ( )
    master-rx                   ( )  \ Now the clock is on
+
+   start-out-ring              ( )
+   setup-sspa-tx               ( )
    slave-tx                    ( )
 
    true to playing?
@@ -612,6 +706,87 @@ false value playing?
    close-out-in
    mono?  if  collapse-in  then  ( )
 ;
+
+d# 20 value audio-dly
+: out-in2  ( out-adr out-len in-adr in-len -- )
+   open-out-in
+
+   to in-len0  to in-adr0      ( out-adr out-len )
+   to out-len  to out-adr      ( )
+
+   in-adr0 to in-adr           ( )
+   in-len0  mono?  if  2*  then  to in-len     
+
+   \ Resetting the clock at this point seems to prevent intermittent channel
+   \ reversal on reception.
+\   audio-clock-on drop         ( ) \ This will mess up any frequency settings
+
+   setup-sspa-tx               ( )
+   setup-sspa-rx               ( )
+
+   make-in-ring                ( )
+   make-out-ring               ( )
+   copy-out                    ( )  \ Prefill the first Tx buffer
+   out-len  if  copy-out  then ( )  \ Prefill the second Tx buffer
+
+   xstartoutin
+
+   audio-dly us
+   flush-rx
+   flush-tx
+   start-in-ring               ( )
+   start-out-ring              ( )
+
+
+   true to playing?
+
+   begin  in-len playing? or  while  ( )
+      in-ready?  if  copy-in  then   ( )
+      playing?  if  ?end-playing  then   ( )
+   repeat                      ( )
+   disable-sspa-rx             ( )
+   disable-sspa-tx             ( )
+
+   stop-in-ring
+   stop-out-ring
+
+   reset-rx
+   reset-tx
+
+   close-out-in
+   mono?  if  collapse-in  then  ( )
+;
+
+defer out-in  ' out-in0 to out-in
+
+0 [if]
+working recipe:  only one out-in in test-common
+out-in2
+disable-interrupts before audio-clock-on and enable after reset-rx
+dly 73 us
+read and discard rx fifo depth before flush-rx
+
+also works with dly 10 us
+reliably swaps with dly 1 us
+swaps with dly 5
+swap with dly 7
+not swap with dly 8
+
+Hmmm, maybe the basic issue is the double out-in in test-common -
+Try out-in0 using one out-in
+Try out-in2 without read/discard fifo depth using one out-in
+
+Swap alternates every 10 or so us, flipping at about 8 or 9 mod 10
+An extra 2 samples appear ever 10 or so us, at about 1 or 2 mod 10
+
+04 us is stable with swapping
+14 us is stable with no swapping
+
+If you remove flush-rx from fr  ( : fr 1c sspa@ foo !  flush-rx ; )
+swapping always happens - 04, 14, 24 us all swap
+   This is because when you flush-rx with fifo depth 2, 6, a, etc,
+   that loses an odd number of channel samples
+[then]
 
 0 [if]  \ Interactive test words for out-in
 h# 20000 constant tlen
@@ -729,6 +904,25 @@ d#  70 ,   \ 11 loopback-threshold
 warning @ warning off
 fload ${BP}/dev/hdaudio/test.fth
 warning !
+
+: wro  
+   wlan-reset-gpio# gpio-dir-in  \ So it doesn't fight the cross-wire
+;
+: input-normal  ( -- )
+   \ Reconnect pin 36 to WLAN_RESET#
+   wlan-reset-gpio# af@ 7 invert and  wlan-reset-gpio# af!
+
+   \ Reconnect pin 26 back to SSPA1 I2S_DATA_IN
+   d# 28 af@  7 invert and  1 or  d# 28 af!
+;
+: input-from-lrclk  ( -- )
+   \ Move pin 26 from SSPA1 I2S_DATA_IN to SSPA2 I2S_DATA_IN
+   \ so it doesn't conflict with pin 36.
+   d# 28 af@  7 invert and  3 or  d# 28 af!
+
+   \ Connect pin 36 to SSPA1 I2S_DATA_IN
+   wlan-reset-gpio# af@ 7 invert and  2 or  wlan-reset-gpio# af!
+;
 
 finish-device
 

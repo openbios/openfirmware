@@ -126,6 +126,14 @@ here tone-freqs - /n /  constant #tones
 : copy-left-to-right  ( adr len -- )
    bounds  ?do  i w@  i wa1+ w!  /l +loop
 ;
+: copy-pack  ( adr len -- )
+   0 ?do              ( adr )
+      dup i + w@      ( adr w )
+      dup wljoin      ( adr l )
+      over i 2/ + l!  ( adr )
+   8 +loop            ( adr )
+   drop               ( )
+;
 
 \ The recording data format is stereo, but usually there is only one mic.
 \ Depending on the CODEC used, the right channel of the recording is either
@@ -140,16 +148,18 @@ here tone-freqs - /n /  constant #tones
    d# -3 set-volume  play
 ;
 
+0 value skip-sweep?
 : selftest  ( -- error? )
    open 0=  if  ." Failed to open /audio" cr true exit  then
    wav-test
    record-len la1+  " dma-alloc" $call-parent to record-base
-   sweep-test
+   skip-sweep? 0=  if  sweep-test  then
    mic-test
    record-base record-len la1+  " dma-free" $call-parent
    close
    false
 ;
+alias st1 selftest
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

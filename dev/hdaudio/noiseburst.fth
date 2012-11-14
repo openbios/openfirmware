@@ -308,7 +308,7 @@ c;
       i      <w@ 2 pick - h# 7fff min  h# -7fff max  i      w!
       i wa1+ <w@ over   - h# 7fff min  h# -7fff max  i wa1+ w!
    /l +loop           ( mean )
-   drop               ( )
+   2drop              ( )
 ;
 : lose-6db  ( adr len -- )
    bounds  ?do            ( )
@@ -447,6 +447,9 @@ h# 40000 value /pb  \ Stereo - 10000 is okay for fixture, 40000 is better for ca
 h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for case, 
 : rb  load-base  1meg +  ;
 
+: pb+ pb wa1+  ;
+: rb+ rb wa1+  ;
+
 : d..  ( -- )  <# # # # # ascii . hold # # # # ascii . hold #s #> type space  ;
 : find-max-mono  ( -- )
    pb        rb   /pb 2 / h# 100 -  d# 160 d# 120  mono-covar-max .d   max-covar d..
@@ -459,10 +462,28 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
 ;
 
 : #samples  ( -- n )  /pb 4 / h# 100 -  ;
-: left-range   ( -- stereo-adr mono-adr #points )  pb      rb  #samples  ;
-: right-range  ( -- stereo-adr mono-adr #points )  pb wa1+ rb  #samples  ;
-: left-stereo-range   ( -- stereo-adr mono-adr #points )  pb      rb        #samples  ;
-: right-stereo-range  ( -- stereo-adr mono-adr #points )  pb wa1+ rb  wa1+  #samples  ;
+
+defer mono-rb  ' rb  to mono-rb
+
+defer left-rb  ' rb  to left-rb
+defer right-rb ' rb+ to right-rb
+
+defer left-pb  ' pb  to left-pb
+defer right-pb ' pb+ to right-pb
+
+: swap-lr-pb  ( -- )
+   ['] pb  to right-pb
+   ['] pb+ to left-pb
+;
+: unswap-lr-pb  ( -- )
+   ['] pb  to left-pb
+   ['] pb+ to right-pb
+;
+
+: left-range   ( -- stereo-adr mono-adr #points )  left-pb   mono-rb  #samples  ;
+: right-range  ( -- stereo-adr mono-adr #points )  right-pb  mono-rb  #samples  ;
+: left-stereo-range   ( -- stereo-adr mono-adr #points )  left-pb    left-rb   #samples  ;
+: right-stereo-range  ( -- stereo-adr mono-adr #points )  right-pb   right-rb  #samples  ;
 
 : fixture-analyze-left  ( -- )
    left-range  d# 146 d# 141 sm-covar-sum  dnegate
@@ -537,8 +558,8 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
 ;
 : calc-sm-impulse  ( offset -- adr )  \ offset is 0 for left or 2 for right
    ?alloc-impulse-buf
-   pb +  rb  #samples                         ( adr1 adr2 #samples )
-   #impulse-response 0  do
+   if  right-range  else  left-range  then    ( adr1 adr2 #samples )
+   #impulse-response 0  do                    ( adr1 adr2 #samples )
       3dup swap i wa+ swap stereo-mono-covar  ( adr1 adr2 #samples d.covar )
       d# 500,000,000 m/mod nip                ( adr1 adr2 #samples n.covar )
       impulse-response i wa+ w!               ( adr1 adr2 #samples )
@@ -547,9 +568,9 @@ h# 21000 value /rb  \ Mono (stereo for loopback)  - 8100 for fixture, 21000 for 
    impulse-response     ( adr )
 ;
 : calc-stereo-impulse  ( offset -- adr )  \ offset is 0 for left or 2 for right
-   ?alloc-impulse-buf
-   dup pb +  swap rb +  #samples              ( adr1 adr2 #samples )
-   #impulse-response 0  do
+   ?alloc-impulse-buf                         ( offset )
+   if  right-stereo-range  else  left-stereo-range  then  ( adr1 adr2 #samples )
+   #impulse-response 0  do                    ( adr1 adr2 #samples )
       3dup swap i la+ swap stereo-covar       ( adr1 adr2 #samples d.covar )
       d#  50,000,000 m/mod nip                ( adr1 adr2 #samples n.covar )
       impulse-response i wa+ w!               ( adr1 adr2 #samples )
@@ -575,7 +596,12 @@ fload ${BP}/forth/lib/tones.fth
 
 \ This version puts the tone first into the left channel for
 \ half the time, then into the right channel for the remainder
+
+\ This version puts a tone at one frequency in the left channel
+\ and a tone at twice that frequency in the right channel
+
 : make-2tones  ( adr len freq sample-rate -- )
+   2over erase          ( adr len freq sample-rate )
    2dup set-freq        ( adr len freq sample-rate )
 
    3 pick  make-cycle  drop    ( adr len freq sample-rate )
@@ -607,19 +633,17 @@ fload ${BP}/forth/lib/tones.fth
    pb wa1+ /pb -stereo-wmean
    pb /pb lose-6db
    pb /pb  rb /rb
-   disable-interrupts
+\   disable-interrupts
 ;
 : analyze-signal  ( -- error? )
-   enable-interrupts
+\   enable-interrupts
    rb /rb fix-dc
    false                        ( error? )
    analyze-left  if             ( error? )
-      ." Left channel failure" cr
       1+
    then
 
    analyze-right  if
-      ." Right channel failure" cr
       2+
    then
 ;
