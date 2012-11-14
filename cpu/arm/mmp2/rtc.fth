@@ -20,7 +20,12 @@ end-package
 
 : enable-rtc  ( -- )  h# 81 0 apbc!  ;  \ Turn on the clock for the internal RTC
 : enable-rtc-wakeup  ( -- )
-   h# 2.0010  h# 104c +mpmu  io-set
+   h# 2.0010  h# 104c +mpmu  io-set  \ Unmask wakeup 4 (10) and RTC (20000) in PMUM_WUCRM_PJ
+
+   \ Disabling a wakeup decoder in either PCR register disables that wakeup,
+   \ so we must clear the bit in both registers to allow it.
+   h# 4.0000  h# 1000 +mpmu  io-clr  \ Unmask wakeup 4 decoder in PMUM_PCR_PJ
+   h# 4.0000  h#    0 +mpmu  io-clr  \ Unmask wakeup 4 decoder in PMUM_PCR_SP
 ;
 : soc-rtc@  ( offset -- value )  h# 01.0000 + io@  ;
 : soc-rtc!  ( value offset -- value )  h# 01.0000 + io!  ;

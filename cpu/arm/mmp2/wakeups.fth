@@ -1,6 +1,29 @@
 \ See license at end of file
 purpose: Setup keyboard wakeups and display the state of the wakeup machinery
 
+0 [if]
+: pcr-clr    ( mask -- )  dup h# 00 mpmu-clr  h# 1000 mpmu-clr  ;
+
+create wakeup-masks  \ Bits in MPMU+0 and MPMU+1000, indexed by wakeup port number
+   h# 0080.0000 ,  h# 0040.0000 ,  h# 0020.0000 ,  h# 0010.0000 ,
+   h# 0004.0000 ,  h# 0002.0000 ,  h# 0001.0000 ,  h# 0000.8000 ,
+
+: port>bit  ( port# -- )  wakeup-masks swap na+ @  ;
+
+: wucrm-set  ( mask -- )  dup h# 4c mpmu-set  h# 104c mpmu-set  ;
+
+\ We enable the wakeup port in both the SP and PJ registers, thus avoiding
+\ any ambiguity about whether the bits are ORed or ANDed
+: wakeup-port-on  ( port# -- )
+   dup port>bit   pcr-clr
+   1 swap lshift  wucrm-set
+;
+: rtc-wakeup-on  ( -- )
+   h# 2.0000 wucrm-set
+   4 wakeup-port-on
+;
+[then]
+
 \ XXX we might need to set GPIOs 71 and 160 (ps2 clocks), and perhaps the dat lines too,
 \ for non-sleep-mode control - or maybe for sleep mode control as inputs.
 \ We also may need to enable falling edge detects.

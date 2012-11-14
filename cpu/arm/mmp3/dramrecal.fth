@@ -128,6 +128,12 @@ purpose: SoC-specific low-level power management factors
 : cc4-set  ( mask -- )  h# 248 pmua-set  ;
 : cc4-clr  ( mask -- )  h# 248 pmua-clr  ;
 
+\ PXA2128_Registers_Manual_revF.pdf says to always write 0 to bits [14:0]
+\ of MPMU+0x1000, but, empirically, that prevents deep sleep.  Apparently
+\ bits [14:13] are legacy bits like in MPMU+0x0
+: pcr!       ( value -- )  dup h# 00 mpmu!  h# 1000 mpmu!  ;
+: pcr-set    ( mask -- )  dup h# 00 mpmu-set  h# 1000 mpmu-set  ;
+
 0 [if]
 : pj-c1  ( -- )
    h# 62 idle-cfg-clr  \ light sleep after WFI
@@ -152,26 +158,15 @@ purpose: SoC-specific low-level power management factors
 ;
 [then]
 
-create wakeup-masks  \ Bits in MPMU+0 and MPMU+1000, indexed by wakeup port number
-   h# 0080.0000 ,  h# 0040.0000 ,  h# 0020.0000 ,  h# 0010.0000 ,
-   h# 0004.0000 ,  h# 0002.0000 ,  h# 0001.0000 ,  h# 0000.8000 ,
-
-: port>bit  ( port# -- )  wakeup-masks swap na+ @  ;
-
-: pcr!       ( value -- )  dup h# 00 mpmu!  h# 7fff invert and  h# 1000 mpmu!  ;
-: pcr-set    ( mask -- )  dup h# 00 mpmu-set  h# 1000 mpmu-set  ;
-: pcr-clr    ( mask -- )  dup h# 00 mpmu-clr  h# 1000 mpmu-clr  ;
-: wucrm-set  ( mask -- )  dup h# 4c mpmu-set  h# 104c mpmu-set  ;
-
-\ We enable the wakeup port in both the SP and PJ registers, thus avoiding
-\ any ambiguity about whether the bits are ORed or ANDed
-: wakeup-port-on  ( port# -- )
-   dup port>bit   pcr-clr
-   1 swap lshift  wucrm-set
-;
+0 value apcr
 : deep-sleep-on  ( -- )
-   \ Start with all wakeup ports masked off, enable specific ones later
-   h# beffe000 pcr!   \ AXISD, SPLEN, SPSD, DDRCORSD, APBSD, RSVD, VCXOSD, MSASLPEN, UDR_POWER_OFF_EN  \ Step 11
+   h# 1000 mpmu@ to apcr
+
+   \ Wakeup ports will be handler at a higher level
+   h# be086000 pcr-set    \ AXISD, SPLEN, SPSD, DDRCORSD, APBSD, RSVD, VCXOSD, MSASLPEN, UDR_POWER_OFF_EN  \ Step 11
+;
+: deep-sleep-off  ( -- )
+   apcr  h# 1000 mpmu!
 ;
 
 \ D2_L2_PWD           462
@@ -182,10 +177,6 @@ create wakeup-masks  \ Bits in MPMU+0 and MPMU+1000, indexed by wakeup port numb
    h# e2 and                    ( mask' )     \ Mask with 62 for other cores
    idle-cfg@ h# 0def.fc1d and   ( mask kept )
    or  idle-cfg!                ( )
-;
-: rtc-wakeup-on  ( -- )
-   h# 2.0000 wucrm-set
-   4 wakeup-port-on
 ;
 code outer-flush-all  ( -- )
 c;
@@ -251,16 +242,12 @@ c;
    1 h# 2190 icu!  \ ICU_GBL_IRQ6_MSK
 ;
 
-0 value apcr
 : setup-sleep-state  ( -- )
    sp-c1-on
 
    make-ddr3-recal-tables
    
-   h# 1000 mpmu@ to apcr
-
    deep-sleep-on
-\  rtc-wakeup-on  \ Unnecessary; alarm-in-3 does it
 
    h# 462 set-idle   \ D2_L2_PWD
 
@@ -269,8 +256,6 @@ c;
 
    \ I don't think we need this because L2 is off
    \ h# 8000 cc4-set  \ workaround: keep SL2 power on
-
-\  wakeup-irqs-on  \ Unnecessary; alarm-in-3 does it
 
    global-irqs-off
 
@@ -281,15 +266,13 @@ c;
    \ mp-off
 ;
 : restore-run-state  ( -- )
-   wakeup-irqs-off
-
    \  fw-on
    \  mp-on
 
    \ I don't think we need this because L2 is off
    \ h# 8000 cc4-clr  \ workaround: keep SL2 power on
 
-   apcr  h# 1000 mpmu!
+   deep-sleep-off
 
    h# 8000.0000 idle-cfg-set  \ Workaround: restore AT clock
 
