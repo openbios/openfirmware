@@ -76,7 +76,7 @@ d# 25,000 value bus-speed
 \ The numbers are in units of "1LSB = 1mg", 1000 unit = 1 gravity.
 
 d#   80 value min-x
-d#   80 value min-y
+d#   20 value min-y
 d#   80 value min-z
 d# 1700 value max-x
 d# 1700 value max-y
@@ -132,12 +132,14 @@ d# 1100 dup * constant gsq-max   \ 1.1 gravity squared
    delay                     ( )
    average-acceleration@     ( x y z )
 
+[ifdef] notyet
    \ Check that the magnitude of the acceleration vector is about 1 G
    3dup not1g?  if           ( x y z )
       3drop                  ( )
       ." Acceleration is not 1 gravity" cr   ( )
       true exit              ( -- error? )
    then                      ( x y z )
+[then]
 
    \ Use the device's selftest function to force a change in one direction
    h# 0a ctl4!               ( x y z )     \ High res, Selftest mode 0
@@ -177,7 +179,7 @@ defer lis-selftest
       \ The attempt to talk at the old address failed, so we assume the new chip
       \ Support for new LIS3DHTR chip
       d# 400,000 to bus-speed
-      d#   80 to min-x  d#   80 to min-y  d#   80 to min-z
+      d#   80 to min-x  d#   20 to min-y  d#   80 to min-z
       d# 1700 to max-x  d# 1700 to max-y  d# 1400 to max-z
       h# 19 1 reg
       ['] lis3dhtr-selftest to lis-selftest
