@@ -87,6 +87,16 @@ label caches-on
 
    mcr  p15, 0, r0, cr7, cr5, 6        \ Flush branch target cache
 
+[ifdef] mmp3
+   \ This erratum is not listed in PJ4B-MP.ARMv7-ErrataRev-18.pdf
+   \ but we found this workaround in the qseven Linux kernel source.
+   \ It fixes a problem we were seeing with Python (trac #12164) so
+   \ I am including it in OFW just in case.
+   mcr  p15,1,r0,cr15,cr1,1            \ Workaround for PJ4B Errata 6409
+   bic  r0,r0,#0x04                    \ Disable static branch prediction
+   mrc  p15,1,r0,cr15,cr1,1
+[then]
+
    mrc p15,0,r0,cr1,cr0,0              \ Read control register
    orr r0,r0,#0x1000                   \ ICache on
    orr r0,r0,#0x0800                   \ Branch prediction on
