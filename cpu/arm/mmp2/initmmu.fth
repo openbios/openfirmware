@@ -92,9 +92,9 @@ label caches-on
    \ but we found this workaround in the qseven Linux kernel source.
    \ It fixes a problem we were seeing with Python (trac #12164) so
    \ I am including it in OFW just in case.
-   mcr  p15,1,r0,cr15,cr1,1            \ Workaround for PJ4B Errata 6409
+   mrc  p15,1,r0,cr15,cr1,1            \ Workaround for PJ4B Errata 6409
    bic  r0,r0,#0x04                    \ Disable static branch prediction
-   mrc  p15,1,r0,cr15,cr1,1
+   mcr  p15,1,r0,cr15,cr1,1
 [then]
 
    mrc p15,0,r0,cr1,cr0,0              \ Read control register
