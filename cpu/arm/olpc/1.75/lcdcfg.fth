@@ -19,7 +19,6 @@ new-device
    " OLPC DCON panel" model
    : +i  encode-int encode+  ;
 
-    h# 20001102 " set-clock-divider-regval" integer-property
     d# 4324096 " max-fb-size" integer-property
 
    decimal
@@ -32,7 +31,9 @@ new-device
    " 1200x900@50"  " linux,mode-names" string-property
 
    h# 2000000d " lcd-dumb-ctrl-regval" integer-property
-   h# 08001100 " lcd-pn-ctrl0-regval" integer-property
+   h# 08001100 " lcd-pn-ctrl0-regval"  integer-property
+   clkdiv      " clock-divider-regval" integer-property  \ Depends on MMP2 vs MMP3
+
 finish-device
 device-end   
 
