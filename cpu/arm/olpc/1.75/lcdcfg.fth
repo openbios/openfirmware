@@ -1,3 +1,16 @@
+h# d102.0000 constant video-sram-pa  \ Base of Video SRAM
+h#    1.0000 constant /video-sram
+
+dev /
+new-device
+   " vsram" device-name
+   video-sram-pa /video-sram reg
+
+   " marvell,mmp-vsram" +compatible
+   d# 64 " granularity" integer-property
+finish-device
+device-end
+
 dev /display
 new-device
    " panel" device-name
@@ -5,6 +18,9 @@ new-device
 
    " OLPC DCON panel" model
    : +i  encode-int encode+  ;
+
+    h# 20001102 " set-clock-divider-regval" integer-property
+    d# 4324096 " max-fb-size" integer-property
 
    decimal
    0 0 encode-bytes
