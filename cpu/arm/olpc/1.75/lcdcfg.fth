@@ -32,7 +32,11 @@ new-device
 
    h# 2000000d " lcd-dumb-ctrl-regval" integer-property
    h# 08001100 " lcd-pn-ctrl0-regval"  integer-property
-   clkdiv      " clock-divider-regval" integer-property  \ Depends on MMP2 vs MMP3
+
+\ In MMP3, the SCLK_SOURCE_SELECT field moved from bit 30 to bit 29,
+\ so the high nibble changed from 4 (MMP2) to 2 (MMP3) for the same
+\ field value 1.
+[ifdef] mmp3  h# 20001102  [else]  h# 40001102  [then]  " clock-divider-regval" integer-property
 
 finish-device
 device-end   

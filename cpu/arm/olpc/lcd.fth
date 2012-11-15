@@ -11,15 +11,11 @@ purpose: Display driver for OLPC ARM/MMP platforms
    " /pmua" encode-phandle 1 encode-int encode+ " clocks" property
    d# 41 " interrupts" integer-property
 
-[ifdef] olpc-cl4
-\ This value has the same effect as the value below.  The
-\ difference is that the SCLK_SOURCE_SELECT field added a
-\ low-order bit (bit 29), so the high nibble changed from
-\ 2 to 4 even though the field value is still 1.
-h# 20001102 value clkdiv  \ Display Clock 1 / 2 -> 56.93 MHz
-[else]
-h# 40001102 value clkdiv  \ Display Clock 1 / 2 -> 56.93 MHz
-[then]
+\ In MMP3, the SCLK_SOURCE_SELECT field moved from bit 30 to bit 29,
+\ so the high nibble changed from 4 (MMP2) to 2 (MMP3) for the same
+\ field value 1.
+[ifdef] mmp3  h# 20001102  [else]  h# 40001102  [then]  value clkdiv  \ Display Clock 1 / 2 -> 56.93 MHz
+
 h# 00000700 value pmua-disp-clk-sel  \ PLL1 / 7 -> 113.86 MHz 
 
 d#    8 value hsync  \ Sync width
