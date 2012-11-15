@@ -13,6 +13,8 @@ dev /sd  \ MMC1 - External SD
       d# 40 encode-int  1 encode-int encode+  " power-delay-ms" property
       \ Active low
       " /gpio" encode-phandle  d# 31 encode-int encode+  1 encode-int encode+  " cd-gpios"  property
+      \ Active low
+      " /gpio" encode-phandle  sd-pwroff-gpio# encode-int encode+  1 encode-int encode+  " power-gpios" property
 
       \ MMP3 
       0 0  " wp-inverted" property

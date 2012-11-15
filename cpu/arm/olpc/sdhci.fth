@@ -59,6 +59,8 @@ previous definitions
 [ifdef] en-wlan-pwr-gpio#
       base-addr h# d428.0800 =  if  en-wlan-pwr-gpio# gpio-set  then
 [then]
+[ifdef] sd-pwroff-gpio#
+      base-addr h# d428.0000 =  if  sd-pwroff-gpio# gpio-clr  then
 [then]
    ;
    ' gpio-power-on to card-power-on
@@ -72,6 +74,9 @@ previous definitions
 [then]
 [ifdef] en-wlan-pwr-gpio#
       base-addr h# d428.0800 =  if  en-wlan-pwr-gpio# gpio-clr  then
+[then]
+[ifdef] sd-pwroff-gpio#
+      base-addr h# d428.0000 =  if  sd-pwroff-gpio# gpio-set  then
 [then]
       sdhci-card-power-off
    ;
