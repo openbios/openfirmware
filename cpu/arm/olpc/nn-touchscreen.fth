@@ -116,13 +116,13 @@ d# 250 constant /pbuf
 : read-boot-complete  ( -- )
    0 pbuf 2+ c!
    h# 07 d# 0 anticipate
-   pbuf 2+ c@ h# 07 <> abort" bad response"
+   pbuf 2+ c@ h# 07 <> abort" response other than boot complete"
    pbuf 3 + c@  h# e0 = abort" missing IR PCB"
 ;
 
 : read-version
    h# 1e h# 01 h# ee  3 bytes-out  h# 1e d# 100 anticipate
-   pbuf 2+ c@ h# 1e <> abort" bad response"
+   pbuf 2+ c@ h# 1e <> abort" response other than status"
    pbuf 9 + le-w@  pbuf 7 + le-w@ wljoin  pbuf 5 + le-w@ pbuf 3 + le-w@ wljoin
    to version#
 ;
@@ -223,9 +223,9 @@ d# 250 constant /pbuf
    6 0  do
       h# 40 h# 0 h# 0f 3 h# ee 5 bytes-out \ fss full level
       0 pbuf 2+ c!
-      h# 0f d# 30 anticipate
-      pbuf 2+ c@ dup 0= abort" no response to fss"
-      h# 0f <> abort" bad response to fss"
+      h# 0f d# 130 anticipate
+      pbuf 2+ c@ dup 0= abort" missing response after fixed signal strength"
+      h# 0f <> abort" response other than fixed signal strength"
    loop
 ;
 
@@ -383,7 +383,7 @@ d# 48 constant /y-os
 : test-os-axis  ( axis -- )
    h# 21 h# 02 h# ee  4 bytes-out
    h# 21 d# 30 anticipate
-   pbuf 2+ c@ h# 21 <> abort" bad response"
+   pbuf 2+ c@ h# 21 <> abort" response other than open short"
 
    pbuf d#  5 +                         ( addr )
 
@@ -443,7 +443,7 @@ d# 1 value fss-min
 : test-fss-axis  ( axis -- )
    d# 64 swap h# 0f h# 03 h# ee  5 bytes-out
    h# 0f d# 20 anticipate
-   pbuf 2+ c@ h# 0f <> abort" bad response"
+   pbuf 2+ c@ h# 0f <> abort" response other than fixed signal strength"
    8sp
    push-decimal
    pbuf 4 + c@ 0  do   ( )
@@ -578,7 +578,7 @@ create sums
 : test-ls-axis  ( axis -- )
    h# 0d h# 02 h# ee  4 bytes-out
    h# 0d d# 200 anticipate
-   pbuf 2+ c@ h# 0d <> abort" bad response"
+   pbuf 2+ c@ h# 0d <> abort" response other than low signals"
 
    8sp
    pbuf 5 +                     ( addr )
@@ -1038,7 +1038,8 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 
    \ MB FINAL
    \ MB SHIP
-   open  0=  if
+   ['] open  catch  ?dup  if
+      .error
       ." No touchscreen present" cr  false exit
    then
 
@@ -1051,9 +1052,9 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
       faults  if  close  true  exit  then
    then
 
-   test-response
+   ['] test-response  guarded
    test-station 6 =  if  d# 86400.000 to test-timeout  then
-   scribble
+   ['] scribble  guarded
 
    close false
 ;

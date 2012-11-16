@@ -44,11 +44,7 @@ purpose: Reflash a Neonode touchscreen controller
 : flash-nn! ( "filename" -- )  safe-parse-word                 reflash-nn  ;
 
 : update-nn-flash  ( -- )
-   nn-image$  2dup nn-up-to-date?  if
-      2drop
-   else
-      reflash-nn
-   then
+   nn-image$  reflash-nn
 ;
 
 : update-nn-flash?  ( -- flag )
