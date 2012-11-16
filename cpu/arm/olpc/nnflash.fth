@@ -54,7 +54,7 @@ purpose: Reflash a Neonode touchscreen controller
 : update-nn-flash?  ( -- flag )
    \ XO-4 B1 have clear lightguides incompatible with later versions
    \ of touchscreen firmware.
-   \ (disabled temporarily so that automatic update can be tested)
+   \ (disabled temporarily so that automatic update can be tested) 
    \ board-revision h# 4b20  <  if  false exit  then
    nn-image$  nn-up-to-date?  0=
 ;

@@ -108,6 +108,9 @@ d# 250 constant /pbuf
    2drop                                ( )
 ;
 
+: flush-input  ( -- )
+   0 0 anticipate
+;
 
 
 : read-boot-complete  ( -- )
@@ -135,7 +138,7 @@ d# 250 constant /pbuf
 : start  ( -- )  h# 04 h# 01 h# ee  3 bytes-out  ;
 
 : deactivate  ( -- )
-   h# 00 h# 01 h# ee  3 bytes-out  h# 00 d# 20 anticipate
+   h# 00 h# 01 h# ee  3 bytes-out  h# 00 d# 60 anticipate
 ;
 
 : deconfigure  ( -- )
@@ -164,11 +167,13 @@ d# 250 constant /pbuf
          ." no response to reset" cr
          pbuf-free  false  exit
       then
-   then
-   ['] read-boot-complete  catch  ?dup  if
-      .error
-      ." failed to boot" cr
-      pbuf-free  false  exit
+      ['] read-boot-complete  catch  ?dup  if
+         .error
+         ." failed to boot" cr
+         pbuf-free  false  exit
+      then
+   else
+      flush-input
    then
    ['] configure  catch  ?dup  if
       .error
