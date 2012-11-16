@@ -75,9 +75,9 @@ d# 25,000 value bus-speed
 \ X:80..1700  Y:80..1700  Z:80..1400.
 \ The numbers are in units of "1LSB = 1mg", 1000 unit = 1 gravity.
 
-d#   80 value min-x
-d#   20 value min-y
-d#   80 value min-z
+d#   60 value min-x
+d#   60 value min-y
+d#   40 value min-z
 d# 1700 value max-x
 d# 1700 value max-y
 d# 1400 value max-z
@@ -179,7 +179,7 @@ defer lis-selftest
       \ The attempt to talk at the old address failed, so we assume the new chip
       \ Support for new LIS3DHTR chip
       d# 400,000 to bus-speed
-      d#   80 to min-x  d#   20 to min-y  d#   80 to min-z
+      d#   60 to min-x  d#   60 to min-y  d#   40 to min-z
       d# 1700 to max-x  d# 1700 to max-y  d# 1400 to max-z
       h# 19 1 reg
       ['] lis3dhtr-selftest to lis-selftest
