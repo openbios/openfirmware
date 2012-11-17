@@ -382,7 +382,7 @@ d# 48 constant /y-os
 
 : test-os-axis  ( axis -- )
    h# 21 h# 02 h# ee  4 bytes-out
-   h# 21 d# 30 anticipate
+   h# 21 d# 60 anticipate
    pbuf 2+ c@ h# 21 <> abort" response other than open short"
 
    pbuf d#  5 +                         ( addr )
@@ -442,7 +442,7 @@ d# 1 value fss-min
 
 : test-fss-axis  ( axis -- )
    d# 64 swap h# 0f h# 03 h# ee  5 bytes-out
-   h# 0f d# 20 anticipate
+   h# 0f d# 60 anticipate
    pbuf 2+ c@ h# 0f <> abort" response other than fixed signal strength"
    8sp
    push-decimal
@@ -473,7 +473,7 @@ d# 1 value fss-min
 
 : test-fss-axis-all  ( axis power -- )
    swap h# 0f h# 03 h# ee  5 bytes-out
-   h# 0f d# 20 anticipate
+   h# 0f d# 60 anticipate
    pbuf 2+ c@ h# 0f = if
       pbuf 4 + c@ 0  do   ( )
          pbuf 5 + i + c@
