@@ -861,13 +861,13 @@ dev /client-services  patch noop visible enter  dend
 
    update-ec-flash?  if
       ['] ?enough-power catch  ?dup  if  ( error )
-	 show-no-power
-	 .error
-	 ." Skipping EC reflash, not enough power" cr
-	 d# 1000 ms
+         show-no-power
+         .error
+         ." Skipping EC reflash, not enough power" cr
+         d# 1000 ms
       else
-	 jots  ['] jot to edi-progress
-	 update-ec-flash
+         jots-ec  ['] jot to edi-progress
+         update-ec-flash
       then
    then
 [ifdef] update-nn-flash?
@@ -881,7 +881,7 @@ dev /client-services  patch noop visible enter  dend
             ." Skipping NN reflash, not enough power" cr
             d# 1000 ms
          else
-            jots  ['] jot to bsl-progress
+            jots-nn  ['] jot to bsl-progress
             update-nn-flash
          then
       then

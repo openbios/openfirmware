@@ -404,14 +404,6 @@ d# 1200 d# 26 - value bar-x-last
    prep-565  4drop  to dot-adr          ( )
 ;
 
-: jots  ( -- )  \ bottom left corner, chip and progress dots
-   d# 25 d# 772 set-icon-xy " spi" show-icon
-   bar-x-last bar-y set-icon-xy " yellowdot" show-icon
-   read-dot
-   -1 to last-dot#
-   bar-x-last bar-x - #dots / to dot-spacing
-;
-
 : jot  ( offset size -- )
    dot-adr 0=  if  2drop exit  then                     ( offset size )
    #dots swap */                                        ( dot# )
@@ -425,6 +417,29 @@ d# 1200 d# 26 - value bar-x-last
       drop
    then
 ;
+
+: jots-init
+   d# 25 d# 772 set-icon-xy " spi" show-icon
+   -1 to last-dot#
+   bar-x-last bar-x - #dots / to dot-spacing
+;
+
+: jots-bracket  ( icon$ -- )
+   d#  20 d# 800 set-icon-xy 2dup show-icon \ left and above
+   d#  20 d# 857 set-icon-xy 2dup show-icon \ left and below
+   d# 120 d# 857 set-icon-xy 2dup show-icon \ right and below
+   d# 120 d# 800 set-icon-xy      show-icon \ right and above
+;
+
+: jots-prep  ( -- )
+   bar-x-last bar-y set-icon-xy " yellowdot" show-icon
+   read-dot
+;
+
+\ bottom left corner, chip and progress dots
+: jots     jots-init                             jots-prep  ;
+: jots-nn  jots-init       " plus" jots-bracket  jots-prep  ;
+: jots-ec  jots-init  " yellowdot" jots-bracket  jots-prep  ;
 
 0 [if]
 : test-jots-flash  \ XO-4 B1 13ms
