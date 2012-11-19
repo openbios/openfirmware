@@ -107,6 +107,7 @@ end-string-array
       dup h# 20 and  if  ." charging "  then
       dup h# 40 and  if  ." discharging "  then
       dup h# 80 and  if  ." trickle  "  then
+      dup h# 100 and  if  ." cooling "  then
    else
       ." No battery "
    then
