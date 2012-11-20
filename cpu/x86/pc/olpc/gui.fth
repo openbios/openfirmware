@@ -356,8 +356,8 @@ h# 32 buffer: icon-name
 ;
 
 : frozen?  ( -- flag )  " vga?" $call-dcon 0=  ;
-: dcon-freeze    ( -- )  0 " set-source" $call-dcon d# 30 ms  ;
-: dcon-unfreeze  ( -- )  1 " set-source" $call-dcon d# 30 ms  ;
+: dcon-freeze    ( -- )  " dcon-freeze" $call-dcon d# 30 ms  ;
+: dcon-unfreeze  ( -- )  " dcon-unfreeze" $call-dcon d# 30 ms  ;
 
 \ === Stuff moved from security.fth ===
 

@@ -126,6 +126,8 @@ d# 905 value resumeline  \ Configurable; should be set from args
       repeat                            ( )
    then
 ;
+: dcon-freeze  ( -- )  0 set-source  ;
+: dcon-unfreeze  ( -- )  1 set-source  ;
 
 \ gx_configure_tft(info);
 
