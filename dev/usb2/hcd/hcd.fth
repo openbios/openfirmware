@@ -116,12 +116,15 @@ headers
 \    " rm-usb-children" $find  if  execute  else  3drop  then
 \ ;
 
+false instance value fisheye?
+
 : parse-my-args  ( -- )
    my-args
    begin  dup  while
       ascii , left-parse-string   ( rem$' opt$ )
       2dup " debug"   $=  if  debug-on          then
       2dup " noprobe" $=  if  true to noprobe?  then
+      2dup " fisheye" $=  if  true to fisheye?  then
       2drop               ( rem$ )
    repeat                 ( rem$ )
    2drop                  ( )

@@ -84,9 +84,10 @@ external
 
 : power-usb-ports  ( -- )  ;
 
+: port-changed?  ( port# -- flag )  portsc@ 2 and 0<>  ;
 : ports-changed?  ( -- flag )
    #ports 0  ?do
-      i portsc@ 2 and  if  true unloop exit  then
+      i port-changed?  if  true unloop exit  then
    loop
    false
 ;
@@ -95,7 +96,7 @@ external
    probe-setup
 
    #ports 0  ?do			        \ For each port
-      i portsc@ 2 and  if			\ Connection changed
+      i port-changed?  if			\ Connection changed
 \         i rm-obsolete-children			\ Remove obsolete device nodes
          i probe-root-hub-port			\ Probe it
       else
@@ -154,58 +155,36 @@ defer set-host-mode  ' noop to set-host-mode
    open-count 0=  if  free-dma-buf unmap-regs  then
 ;
 
-: .occupied  ( port -- )  ." USB 2.0 port " u. ."  in use" cr  ;
 : regs{  ( -- prev )  ehci-reg dup 0=  if  map-regs  then  ;
 : }regs  ( prev -- )  0=  if  unmap-regs  then  ;
 
-: fisheye  ( -- )
-   regs{
-   #testable-ports  0  ?do
-      i port-connected?  if
-         i .occupied
-      else
-         ." Fisheye pattern out to USB 2.0 port " i u. cr
-         i test-port-begin
-         d# 2,000 ms
-         i test-port-end
-         0 i portsc!  i reset-port  i power-port
-      then
-   loop
-   }regs
-;
-
-: thorough  ( -- error? )
-   #testable-ports  0  ?do
-      i port-connected?  if
-         i .occupied
-      else
-         ." Please connect a device to USB port " i u. cr
-         i wait-connect  if  true unloop exit  then
-      then
-   loop
-   false
-;
-
-: sagacity  ( -- error? )
-   #testable-ports  0  ?do
-      ." USB port " i u. ." ... "
-      i port-connected?  if
-         i wait-connect  if  true unloop exit  then
-      else
-         ." Empty" cr
-      then
-   loop
-   false
-;
-
 : selftest  ( -- error? )
-   regs{                        ( prev )
-   diagnostic-mode?  if
-      thorough
-   else
-      sagacity
-   then                         ( prev error? )
-   swap }regs                   ( error? )
+   open 0=  if  true exit  then
+   #testable-ports  0  ?do
+      ." USB port " i u. ." : "
+      i port-connected?  if
+         ." In use - "
+         i .usb-device cr
+      else
+         diagnostic-mode?  if
+            ." Please connect a device" cr
+            i wait-connect  if  true unloop exit  then
+            i .usb-device cr
+         else
+            fisheye?  if
+               ." Fisheye pattern" cr
+               i test-port-begin
+               d# 2,000 ms
+               i test-port-end
+               0 i portsc!  i reset-port  i power-port
+            else
+               ." Empty" cr
+            then
+         then
+      then
+   loop
+   false
+   close
 ;
 
 headers

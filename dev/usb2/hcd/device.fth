@@ -357,6 +357,46 @@ defer make-dev-property-hook  ( speed dev port -- )
    drop                                          ( )
 ;
 
+: find-port-node  ( port -- true | phandle false)
+   my-self ihandle>phandle child                 ( port phandle )
+   begin  ?dup  while                            ( port phandle )
+      " reg" 2 pick get-package-property 0=  if  ( port phandle adr len )
+         decode-int  nip nip                     ( port phandle port1 )
+         2 pick  =  if                           ( port phandle )
+            \ Check if the node has been disabled
+            " assigned-address"                  ( port phandle propname$ )
+            2 pick  get-package-property 0=  if  ( port phandle adr len )
+               decode-int  nip nip               ( port phandle assigned-address )
+               -1 <>  if                         ( port phandle )
+                  nip false exit
+               then
+            then                                 ( port phandle )
+         then                                    ( port phandle )
+      then                                       ( port phandle )
+      peer                                       ( port phandle' )
+   repeat                                        ( port )
+   drop                                          ( )
+   true
+;
+
+: .phandle-property  ( phandle prop-name$ -- )
+   rot get-package-property 0=  if    ( adr len )
+      decode-string type  2drop
+   then
+;
+: .usb-device  ( port -- )
+   find-port-node  if
+      ." Can't find device node for USB port!" cr
+   else                                      ( phandle )
+      dup " device_type" .phandle-property   ( phandle )
+      ." ,"
+      dup " vendor$" .phandle-property       ( phandle )
+      ." ,"
+      dup " device$" .phandle-property       ( phandle )
+      drop                                   ( )
+   then
+;
+
 : (make-device-node)  ( dev port intf -- )
    swap                              ( dev intf port )
    3dup  reuse-old-node?  if         ( dev intf port )
