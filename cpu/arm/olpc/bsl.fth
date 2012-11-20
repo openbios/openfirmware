@@ -86,6 +86,14 @@ purpose: Downloader for TI MSP430 BootStrap Loader (BSL) protocol
 [then]
 
 \ These are MMP2/3 dependent
+\ Section 1.4 of TI slau319c.pdf says to wait 1.2 ms after receiving a
+\ character from MSP430 BSL prior to sending a new character.
+0 value bsl-time
+: set-bsl-time  ( -- )
+   \ MMP2 Timer 0 runs at 6.5 MHz so 1.2 ms is 1200 * 13 / 2 ticks
+   timer0@  [ d# 1200 d# 13 2 */ ] literal +  to bsl-time
+;
+: wait-send  ( -- )  begin  timer0@ bsl-time - 0>=  until  ;
 
 : bsl-baud  ( baud-rate -- )   \ 9600,8,e,1
    uart-base >r                 ( baud-rate r: uart-base )
@@ -96,11 +104,14 @@ purpose: Downloader for TI MSP430 BootStrap Loader (BSL) protocol
    r> to uart-base              ( )
 ;
 
-: bsl-send  ( char -- )  uart-base >r  bsl-uart-base to uart-base  uemit  r> to uart-base  ;
+: bsl-send  ( char -- )
+   wait-send
+   uart-base >r  bsl-uart-base to uart-base  uemit  r> to uart-base
+;
 
 : receive?  ( -- false | char true )
    uart-base >r  bsl-uart-base to uart-base
-   ukey?  if  ukey true  else  false  then
+   ukey?  if  ukey true  set-bsl-time  else  false  then
    r> to uart-base
 ;
 
@@ -116,6 +127,7 @@ purpose: Downloader for TI MSP430 BootStrap Loader (BSL) protocol
    touch-tck-gpio# gpio-dir-out
 
    d# 9600 bsl-baud
+   set-bsl-time
 ;
 : bsl-close  ( -- )
    touch-rst-gpio# gpio-dir-in
@@ -144,7 +156,7 @@ purpose: Downloader for TI MSP430 BootStrap Loader (BSL) protocol
 : flush-bsl
    get-msecs d# 2000 +                  ( limit )
    begin
-      receive?  0=  if drop exit  then      ( limit char )
+      receive?  0=  if drop exit then      ( limit char )
       drop  dup get-msecs - 0<          ( limit timeout? )
    until
    drop  true abort" BSL flush timeout"
@@ -224,7 +236,6 @@ d# 1000 constant timeout
 
 defer bsl-progress  ' 2drop is bsl-progress  ( offset size -- )
 : rx-data-block  ( adr len device-adr -- )
-   dup h# 8000 - h# 8000 bsl-progress
    over  h# 12 frame(     ( adr len device-adr )
    send-summed            ( adr len )   \ device address
    dup send-summed        ( adr len )   \ data length
@@ -491,6 +502,7 @@ d# 100 buffer: bsl-line-buf
    force-erase          ( )
    ." Programming" cr
    begin                ( )
+      ifd @ ftell  ifd @ fsize  bsl-progress
       [char] . emit
       bsl-line-buf d# 100 ifd @ read-line abort" Read line failed"
    while                               ( len )
