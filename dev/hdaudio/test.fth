@@ -110,6 +110,7 @@ false value plot?  \ Set to true to plot the impulse response, for debugging
    " 0 set-fg  h# ffffffff set-bg single-drawing ( clear-drawing ) wave" evaluate
 \   key ascii d = if debug-me then
 ;
+[ifndef] $call-screen  : $call-screen  " $call-screen" evaluate  ;  [then]
 : plot-impulse0  ( adr -- )   0 " set-wave#" $call-screen plot-impulse  ;
 : plot-impulse1  ( adr -- )   1 " set-wave#" $call-screen plot-impulse  ;
 
