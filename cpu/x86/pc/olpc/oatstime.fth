@@ -316,6 +316,11 @@ dend
    http-write
    " flush-writes" $call-http
 ;
+[ifndef] random-long
+variable rn
+: random-long  rn @  d# 1103515245 *  d# 12345 +   h# 7FFFFFFF and  dup rn !  ;
+time&date >unix-seconds get-msecs xor rn !
+[then]
 0 value the-nonce
 : oats-msg$  ( -- msg$ )
    random-long abs  dup to the-nonce   ( nonce )
