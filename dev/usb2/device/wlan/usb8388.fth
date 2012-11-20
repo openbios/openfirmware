@@ -4,6 +4,8 @@ purpose: USB transport interface for Marvel USB 8388 wireless ethernet driver
 headers
 hex
 
+false constant multifunction?
+
 \ Used by cmd-out below and also by firmware download routine
 : packet-out  ( adr len -- error? )
    " send-out" $call-parent  ( qtd )
