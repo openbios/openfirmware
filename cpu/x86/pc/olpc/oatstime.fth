@@ -316,14 +316,16 @@ dend
    http-write
    " flush-writes" $call-http
 ;
-[ifndef] random-long
-variable rn
-: random-long  rn @  d# 1103515245 *  d# 12345 +   h# 7FFFFFFF and  dup rn !  ;
-time&date >unix-seconds get-msecs xor rn !
+
+[ifdef] random
+alias nonce-int random-long
+[else]
+: nonce-int  ( -- n )  time&date >unix-seconds get-msecs xor  ;
 [then]
+
 0 value the-nonce
 : oats-msg$  ( -- msg$ )
-   random-long abs  dup to the-nonce   ( nonce )
+   nonce-int abs  dup to the-nonce   ( nonce )
    " SN" find-tag 0= abort" Machine has no serial number" ?-null  ( nonce sn$ )
    " serialnum=%s&version=1&nonce=%d" sprintf
 ;
