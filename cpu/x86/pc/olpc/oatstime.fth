@@ -317,7 +317,7 @@ dend
    " flush-writes" $call-http
 ;
 
-[ifdef] random
+[ifdef] random-long
 alias nonce-int random-long
 [else]
 : nonce-int  ( -- n )  time&date >unix-seconds get-msecs xor  ;
