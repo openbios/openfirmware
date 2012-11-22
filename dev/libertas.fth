@@ -2445,7 +2445,7 @@ d# 1600 buffer: test-buf
 
 : ta-n  ( n -- )
    #antennae d# 2 =  if
-      ." antenna to" dup .
+      ." antenna to " dup .
       set-antenna cr
    else
       drop
