@@ -26,18 +26,34 @@ finish-device
 : hdd-led-on      ( -- )  led-storage-gpio# gpio-set  ;
 : hdd-led-toggle  ( -- )  led-storage-gpio# gpio-pin@  if  hdd-led-off  else  hdd-led-on  then  ;
 
-: selftest  ( -- )
-    ." Flashing LEDs" cr
-
-   d# 10 0 do  ols-led-on d# 200 ms ols-led-off d# 200 ms  loop
+: (cycle)
+   ols-led-on
+   d# 100 ms
+   hdd-led-on
+   " /wlan:quiet" test-dev
+   d# 100 ms
+   ols-led-off
    ols-led-ec-control
    ols-assy-mode-on
-
-   " /wlan:quiet" test-dev  " /wlan:quiet" test-dev  \ Twice for longer flashing
-
-   d# 20 0 do  hdd-led-on d# 100 ms hdd-led-off d# 100 ms  loop
+   d# 100 ms
+   hdd-led-off
    ols-assy-mode-off
+   d# 100 ms
+;
 
+: (selftest)
+   get-msecs d# 10000 +                 ( limit )
+   begin
+      (cycle)
+      key?  if  drop exit  then
+      dup get-msecs -  0<               ( limit timeout? )
+   until                                ( limit )
+   drop                                 ( )
+;
+
+: selftest  ( -- error? )
+   ." Testing LEDs" cr
+   (selftest)
    confirm-selftest?
 ;
 
