@@ -2879,9 +2879,9 @@ h# 100 buffer: pwd-buf
    pwd-buf pack count    ( adr',len )
 ;
 
-: make-node-alias  ( nodeid name-str -- )
+: make-node-alias  ( voc name-str -- )
    current-device >r  ( nodeid name-str )
-   rot push-device    ( name-str )
+   rot voc>phandle push-device    ( name-str )
    pwd$               ( name-str expansion-str )
    r> push-device     ( name-str expansion-str )
    $devalias          (  )
