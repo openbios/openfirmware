@@ -407,15 +407,12 @@ d# 1200 d# 26 - value bar-x-last
 : jot  ( offset size -- )
    dot-adr 0=  if  2drop exit  then                     ( offset size )
    #dots swap */                                        ( dot# )
-   dup last-dot# <>  if                                 ( dot# )
-      dup to last-dot#                                  ( dot# )
-      dot-adr swap                                      ( adr dot# )
-      dot-spacing *  bar-x + bar-y                      ( adr x y )
-      image-width image-height                          ( adr x y w h )
-      " draw-transparent-rectangle" $call-screen        ( )
-   else
-      drop
-   then
+   dup  last-dot#  ?do                                  ( dot# )
+      dot-adr i 1+ dot-spacing *  bar-x + bar-y         ( dot# adr x y )
+      image-width image-height                          ( dot# adr x y w h )
+      " draw-transparent-rectangle" $call-screen        ( dot# )
+   loop                                                 ( dot# )
+   to last-dot#
 ;
 
 : jots-init
