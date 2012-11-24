@@ -110,4 +110,56 @@ dev /
       : open  ( -- flag )  true  ;
       : close  ( -- )  ;
    finish-device
+
+[ifdef] hdmi-sda-gpio#
+   new-device
+      " hdmi-i2c" device-name
+      " i2c-gpio" +compatible
+      1 " #address-cells" integer-property
+      1 " #size-cells" integer-property
+      : encode-unit  ( phys.. -- str )  push-hex (u.) pop-base  ;
+      : decode-unit  ( str -- phys.. )  push-hex  $number  if  0  then  pop-base  ;
+      
+      0 0 encode-bytes
+         hdmi-sda-gpio# 0 encode-gpio
+         hdmi-scl-gpio# 0 encode-gpio
+      " gpios" property
+
+      h# 50 instance value slave-address
+      : set-address  ( slave -- )  to slave-address  ;
+      : smb-setup
+         1 to smb-dly-us hdmi-scl-gpio# to smb-clock-gpio#
+         hdmi-sda-gpio# to smb-data-gpio#
+         slave-address to smb-slave
+      ;
+      \ Since this I2C bus is dedicated to HDMI, we save space by
+      \ implementing only the methods that HDMI DDC uses
+      : reg-b@  ( reg# -- b )  smb-setup smb-byte@  ;
+      : reg-b!  ( b reg# -- )  smb-setup smb-byte!  ;
+      : i2c-read  ( adr len reg# -- )  smb-setup smb-read  ;
+      : open  ( -- flag )  true  ;
+      : close  ( -- )  ;
+
+      new-device
+         " hdmi-ddc" device-name    
+         h# 50 1 reg
+         : close  ( -- )  ;
+         h# 100 buffer: hdmi-edid
+
+         : get-edid  ( -- adr len )
+            hdmi-edid h# 100 0  " i2c-read" $call-parent
+            hdmi-edid h# 100
+         ;
+         : open  ( -- okay? )
+            my-unit " set-address" $call-parent
+            hdmi-edid h# 100 0  " i2c-read" ['] $call-parent catch  if
+               2drop 3drop false
+            else
+               true
+            then
+         ;
+         : edid$  ( -- adr len )  hdmi-edid h# 100  ;
+      finish-device
+   finish-device
+[then]
 device-end
