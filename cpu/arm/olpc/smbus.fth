@@ -128,6 +128,29 @@ h# 3500 constant smb-data-timeout-us
    smb-stop                ( )
 ;
 
+: smb-read  ( adr len reg# -- )
+   over  0=  if  3drop exit  then   ( adr len reg# )
+   smb-start              ( adr len reg# )
+   0 smb-addr             ( adr len reg# )
+   smb-byte               ( adr len )
+   smb-stop smb-start	\ SCCB bus needs a stop and a start for the second phase
+   1 smb-addr             ( adr len )
+   2dup  bounds  ?do      ( adr len )
+      0 smb-byte-in i c!  ( adr len )
+   loop                   ( adr len )
+   1 smb-byte-in  -rot    ( byte adr len )
+   1- + c!                ( )
+   smb-stop               ( )
+;   
+
+: smb-write  ( adr len reg# -- )
+   smb-start               ( adr len reg# )
+   0 smb-addr              ( adr len reg# )
+   smb-byte                ( adr len )
+   bounds  ?do  i c@ smb-byte  loop  ( )
+   smb-stop                ( )
+;
+
 : smb-word!  ( word reg# -- )
    smb-start
    0 smb-addr          ( word reg# )
