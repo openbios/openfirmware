@@ -131,7 +131,7 @@ d# 256 buffer: ramdisk-buf
 defer load-ramdisk
 defer place-ramdisk
 : linux-place-ramdisk  ( adr len -- )
-   aligned  to /ramdisk                           ( adr )
+   to /ramdisk                                    ( adr )
 
    load-base  /ramdisk - 4 round-down             ( adr new-ramdisk-adr )
    tuck /ramdisk move                             ( new-ramdisk-adr )
