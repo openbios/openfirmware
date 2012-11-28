@@ -1,6 +1,6 @@
 : wextend  ( w -- n )  dup h# 8000 and  if  h# ffff.0000 or  then  ;
 \ Base unit for temperature is .125 degrees C
-: >milli-degrees-c 125 * 5 rshift ;
+: >milli-degrees-c d# 125 * 5 rshift ;
 : uvolt@ bat-voltage@ d# 9760 d# 32 */ ;
 : cur@ bat-current@ wextend  d# 15625 d# 120 */ ;
 \ : pcb-temp ambient-temp@ >milli-degrees-c  ;
