@@ -25,5 +25,6 @@ fload ${BP}/cpu/arm/olpc/cl4/testitems.fth
 fload ${BP}/cpu/arm/olpc/cl4/testinstructions.fth
 fload ${BP}/cpu/arm/olpc/gpio-gamekeys.fth
 fload ${BP}/cpu/arm/olpc/test-tweaks.fth
+fload ${BP}/dev/edid.fth
 
 fload ${BP}/cpu/arm/olpc/save-fw.fth
