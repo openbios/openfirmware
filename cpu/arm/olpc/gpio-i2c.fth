@@ -42,7 +42,7 @@ dev /
       
       0 0 encode-bytes
          cam-sda-gpio# 0 encode-gpio
-          cam-scl-gpio# 0 encode-gpio
+         cam-scl-gpio# 0 encode-gpio
       " gpios" property
 
       0 instance value slave-address
@@ -144,22 +144,59 @@ dev /
          " hdmi-ddc" device-name    
          h# 50 1 reg
          : close  ( -- )  ;
-         h# 100 buffer: hdmi-edid
+         h# 80 constant /edid-chunk
+         0 value edid
+         0 value /edid
 
-         : get-edid  ( -- adr len )
-            hdmi-edid h# 100 0  " i2c-read" $call-parent
-            hdmi-edid h# 100
+         : release-edid  ( -- )  
+            edid /edid free-mem    ( )
+            0 to /edid  0 to edid  ( )
          ;
+
          : open  ( -- okay? )
             my-unit " set-address" $call-parent
-            hdmi-edid h# 100 0  " i2c-read" ['] $call-parent catch  if
-               2drop 3drop false
-            else
-               true
+            /edid-chunk to /edid
+            /edid alloc-mem to edid
+
+            edid /edid 0  " i2c-read" ['] $call-parent catch  if  ( x x x x x )
+               2drop 3drop                          ( )
+               release-edid  false  exit            ( -- false )
             then
+
+            \ Basic sanity check to make sure it's an EDID
+            edid  " "(00ffffffffffff00)" comp  if   ( )
+               release-edid  false  exit            ( -- false )
+            then
+
+            \ We could (should) do a checksum here...
+
+            \ If there are no extensions, exit now, successfully
+            edid d# 126 + c@  dup 0= over h# ff = or  if  ( #exts )
+               drop true exit                       ( -- true )
+            then                                    ( #exts )
+
+            \ Otherwise make the buffer larger to accomodate the extensions ...
+            1+ /edid-chunk * to /edid               ( )
+            edid /edid  resize-memory  if           ( adr' )
+               drop                                 ( )
+               0 to /edid  0 to edid                ( )
+               false exit                           ( )
+            then                                    ( adr )
+            to edid                                 ( )
+
+            \ ... and read the extensions
+            edid /edid /edid-chunk /string  /edid-chunk   ( adr len offset )
+            " i2c-read" ['] $call-parent catch  if  ( x x x x x )
+               2drop 3drop                          ( )
+               release-edid  false  exit            ( -- false )
+            then
+
+            true
          ;
-         : edid$  ( -- adr len )  hdmi-edid h# 100  ;
+         : edid$  ( -- adr len )  edid /edid  ;
       finish-device
    finish-device
 [then]
 device-end
+
+devalias i2c6 /hdmi-i2c
