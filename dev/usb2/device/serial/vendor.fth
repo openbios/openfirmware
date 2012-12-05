@@ -7,6 +7,10 @@ create uart-generic-list  here
 	525 w, 127a w,		\ Ajays USB 2.0 Debug Cable
 here swap - constant /uart-generic-list
 
+create uart-ftdi-list  here
+	403 w, 6001 w,          \ FT232
+here swap - constant /uart-ftdi-list
+
 create uart-pl2303-list  here
 	557 w, 2008 w,		\ ATEN, IOGear
 	67b w, 2303 w,		\ PL2303
@@ -33,6 +37,9 @@ here swap - constant /uart-belkin-list
    uart-generic-list /uart-generic-list  find-vendor-product?
 ;
 
+: uart-ftdi?  ( vid pid -- flag )
+   uart-ftdi-list /uart-ftdi-list  find-vendor-product?
+;
 
 : uart-pl2303?  ( vid pid -- flag )
    uart-pl2303-list /uart-pl2303-list  find-vendor-product?
@@ -47,7 +54,8 @@ here swap - constant /uart-belkin-list
 ;
 
 : usb-uart?  ( vid pid -- flag )
-   2dup uart-pl2303?  if  2drop true exit  then
+   2dup uart-ftdi?     if  2drop true  exit  then
+   2dup uart-pl2303?   if  2drop true  exit  then
 \ Not debugged yet...
 \   2dup uart-mct?     if  2drop true exit  then
    2dup uart-belkin?   if  2drop true  exit  then

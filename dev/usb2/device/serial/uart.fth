@@ -11,8 +11,6 @@ headers
 
 variable refcount  0 refcount !
 
-: /string  ( adr len cnt -- adr' len' )  tuck - -rot + swap  ;
-
 \ Don't do this until someone calls read.  That makes the device
 \ work as a console, with separate input and output instances
 0 value read-started?
@@ -32,21 +30,7 @@ external
 \ no more characters are immediately available.
 : read  ( adr len -- #read )   \ -2 for none available right now
    ?start-reading
-   rpoll
-   dup  0=  if  nip exit  then                   ( adr len )
-   read-q deque?  0=  if                         ( adr len )
-      2drop                                      ( )
-      lost-carrier?  if  -1  false to lost-carrier?  else  -2  then
-                                                 ( -2:none | -1:down )
-      exit
-   then                                          ( adr len char )
-   over >r                                       ( adr len char r: len )
-   begin                                         ( adr len char r: len )
-      2 pick c!                                  ( adr len r: len )
-      1 /string                                  ( adr' len' )
-      dup 0=  if  2drop r> exit  then            ( adr' len' )
-   read-q deque? 0=  until                       ( adr len r: len )
-   nip r> swap -                                 ( actual )
+   read-bytes
 ;
 
 : write  ( adr len -- actual )  dup  if  write-bytes  else  nip  then  ;

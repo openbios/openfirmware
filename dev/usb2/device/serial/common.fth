@@ -107,6 +107,29 @@ constant /qstruct
 ;
 ' generic-rpoll to rpoll
 
+[ifndef] /string
+: /string  ( adr len cnt -- adr' len' )  tuck - -rot + swap  ;
+[then]
+
+: generic-read-bytes  ( adr len -- #read )  \ -2 for none available right now
+   rpoll
+   dup  0=  if  nip exit  then                   ( adr len )
+   read-q deque?  0=  if                         ( adr len )
+      2drop                                      ( )
+      lost-carrier?  if  -1  false to lost-carrier?  else  -2  then
+                                                 ( -2:none | -1:down )
+      exit
+   then                                          ( adr len char )
+   over >r                                       ( adr len char r: len )
+   begin                                         ( adr len char r: len )
+      2 pick c!                                  ( adr len r: len )
+      1 /string                                  ( adr' len' )
+      dup 0=  if  2drop r> exit  then            ( adr' len' )
+   read-q deque? 0=  until                       ( adr len r: len )
+   nip r> swap -                                 ( actual )
+;
+' generic-read-bytes to read-bytes
+
 : generic-write-bytes  ( adr len -- actual )
    swap >r			( len )  ( R: adr )
    /outbuf /mod			( rem #loop )
