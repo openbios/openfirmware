@@ -7,7 +7,7 @@ purpose: EC commands that are the same for all XO versions
 : bat-acr@       ( -- w )  h# 12 ec-cmd-w@  ;
 : bat-temp@      ( -- w )  h# 13 ec-cmd-w@  ;
 : ambient-temp@  ( -- w )  h# 14 ec-cmd-w@  ;
-: bat-status@    ( -- b )  h# 15 ec-cmd-b@  ;
+: bat-status8@   ( -- b )  h# 15 ec-cmd-b@  ;
 : bat-soc@       ( -- b )  h# 16 ec-cmd-b@  ;
 
 : ec-abnormal@   ( -- b )  h# 1f ec-cmd-b@  ;
@@ -23,6 +23,15 @@ purpose: EC commands that are the same for all XO versions
 : mppt-off       ( -- )    h# 40 ec-cmd  ;
 : mppt-on        ( -- )    h# 41 ec-cmd  ;
 : vin@           ( -- b )  h# 42 ec-cmd-w@  ;
+: bat-status16@  ( -- w )  h# 70 ec-cmd-w@  ;
+
+defer bat-status@
+' bat-status8@  is bat-status@
+
+[ifdef] olpc-xo4
+' bat-status16@  is bat-status@
+[then]
+
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
