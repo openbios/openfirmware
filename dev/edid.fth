@@ -141,21 +141,21 @@ end-string-array
 
 \ Audio sample rates
 : .cea-freqs  ( n -- )
-   peel-bit  if   ." 32"  then  ?.+
-   peel-bit  if   ." 44"  then  ?.+
-   peel-bit  if   ." 48"  then  ?.+
-   peel-bit  if   ." 88"  then  ?.+
-   peel-bit  if   ." 96"  then  ?.+
-   peel-bit  if  ." 176"  then  ?.+
-   peel-bit  if  ." 192"  then  drop
-   ." kHz"
+   peel-bit  if   ." 32"  ?.+  then
+   peel-bit  if   ." 44"  ?.+  then
+   peel-bit  if   ." 48"  ?.+  then
+   peel-bit  if   ." 88"  ?.+  then
+   peel-bit  if   ." 96"  ?.+  then
+   peel-bit  if  ." 176"  ?.+  then
+   peel-bit  if  ." 192"       then
+   ." kHz"  drop
 ;
 \ Audio sample widths
 : .cea-bits  ( n -- )
-   peel-bit  if  ." 16"  then  ?.+
-   peel-bit  if  ." 20"  then  ?.+
-   peel-bit  if  ." 24"  then  drop
-   ." bits"
+   peel-bit  if  ." 16"  ?.+  then
+   peel-bit  if  ." 20"  ?.+  then
+   peel-bit  if  ." 24"       then
+   ." bits"  drop
 ;
 
 string-array format-names
@@ -284,13 +284,13 @@ false value 1080p-native?
 \ rest is history.
 : .cea-speaker  ( offset size -- )
    drop cea@
-   peel-bit  if  " Front_L+R "         then  \ Stereo
-   peel-bit  if  " LFE "               then  \ Subwoofer   makes 2.1
-   peel-bit  if  " Front_Center "      then  \ Center fill makes 3.1
-   peel-bit  if  " Rear_L+R "          then  \ Ambience    makes 5.1
-   peel-bit  if  " Rear_Center "       then  \ 7.1 ...
-   peel-bit  if  " Front_Center_L+R "  then  \ How many speakers do they want to sell you?
-   peel-bit  if  " Rear_Center_L+R "   then  \ How can you live without twelve speakers?
+   peel-bit  if  ." Front_L+R "         then  \ Stereo
+   peel-bit  if  ." LFE "               then  \ Subwoofer   makes 2.1
+   peel-bit  if  ." Front_Center "      then  \ Center fill makes 3.1
+   peel-bit  if  ." Rear_L+R "          then  \ Ambience    makes 5.1
+   peel-bit  if  ." Rear_Center "       then  \ 7.1 ...
+   peel-bit  if  ." Front_Center_L+R "  then  \ How many speakers do they want to sell you?
+   peel-bit  if  ." Rear_Center_L+R "   then  \ How can you live without twelve speakers?
    drop
 ;
 
