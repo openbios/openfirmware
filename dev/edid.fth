@@ -254,17 +254,21 @@ string-array short-names
  ( 63 ) ," 1080p120"   \ 16:9        1920x1080p @ 119.88/120Hz
 end-string-array
 
+false value 1080p-support?
 false value 1080p-native?
+false value 720p-native?
 : .cea-video  ( offset size -- )
-   false to 1080p-native?
+   false to 720p-native?  false to 1080p-native?    false to 1080p-support?
    ." CEA/HDMI Modes: "
    bounds  ?do
       i cea@                            ( code )
       dup h# 80 and  if                 ( code )
           ." *" h# 7f and               ( index )
+          dup d#  4 =  if  true  to  720p-native?  then
           dup d# 16 =  if  true  to 1080p-native?  then
       then                              ( index )
-      short-names count type space              ( )
+      dup d# 16 =  if  true to 1080p-support?  then
+      short-names count type space      ( )
    loop
    cr
 ;
@@ -342,7 +346,8 @@ false value 1080p-native?
     loop
 ;
 : dump-edid  ( adr len -- )
-   drop  to the-edid
+   0=  if  drop exit  then   ( adr )
+   to the-edid
    the-edid  " "(00ffffffffffff00)" comp  if
       ." Not an EDID" cr
       exit
@@ -352,19 +357,35 @@ false value 1080p-native?
    .dtds
    .extensions
 ;
-: .hdmi  ( -- )
+\ Wait for an HDMI monitor to be connected
+: wait-hdmi  ( -- )
    " hdmi-present?"  $call-screen 0=  if
       ." Connect an HDMI monitor ..."
       begin  " hdmi-present?" $call-screen  until
       cr
    then
+;
+: get-hdmi-edid  ( -- adr len )
    " /hdmi-ddc" open-dev  dup  if    ( ih )
       " edid$" 2 pick $call-method   ( ih adr len )
       rot close-dev                  ( adr len )
-      dump-edid
+   else
+      " "
    then
+;
+: choose-hdmi-resolution  ( -- )
    ." Turning on monitor at "
-   1080p-native?  if  ." 1080p" 1080p  else  ." 720p"  720p  then  cr
+   1080p-native?   if   ." 1080p" 1080p   else   \ First choice
+   720p-native?    if   ." 720p"   720p   else   \ Second choice
+   1080p-support?  if   ." 1080p" 1080p   else   \ No native, use 1080p if supported
+      ." 720p"   720p   ."  (guess)"             \ Fallback
+   then then then
+   cr
+;
+: .hdmi  ( -- )
+   wait-hdmi
+   get-hdmi-edid dump-edid
+   choose-hdmi-resolution
 ;
 
 \ LICENSE_BEGIN
