@@ -34,8 +34,14 @@ icon: leds.icon     rom:leds.565
 : camera-item   ( -- )  " /camera"        gfx-test-dev  ;
 : wlan-item     ( -- )  " /wlan"          mfg-test-dev  ;
 : timer-item    ( -- )  " /timer"         mfg-test-dev  ;
-: touch-item    ( -- )  " /touchscreen"   mfg-test-dev
-                        " mouse"          mfg-test-dev  ;
+: touch-item    ( -- )
+   ?close-touchscreen
+   ?close-mouse
+   " /touchscreen"   mfg-test-dev
+   " mouse"          mfg-test-dev
+   ?open-mouse
+   ?open-touchscreen
+;
 : keyboard-item ( -- )  " keyboard"       mfg-test-dev  ;
 : switch-item   ( -- )  " /accelerometer" mfg-test-dev
                         " /switches"      mfg-test-dev  ;

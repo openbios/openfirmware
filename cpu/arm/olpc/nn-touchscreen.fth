@@ -157,35 +157,43 @@ d# 250 constant /pbuf
    then
 ;
 
+variable refcount  0 refcount !
+
 : open  ( -- okay? )
-   pbuf-alloc
    my-unit " set-address" $call-parent
-   set-gpios
-   no-data?  if
-      reset
+   refcount @ 0=  if
+      pbuf-alloc
+      set-gpios
       no-data?  if
-         ." no response to reset" cr
-         pbuf-free  false  exit
+         reset
+         no-data?  if
+            ." no response to reset" cr
+            pbuf-free  false  exit
+         then
+         ['] read-boot-complete  catch  ?dup  if
+            .error
+            ." failed to boot" cr
+            pbuf-free  false  exit
+         then
+      else
+         flush-input
       then
-      ['] read-boot-complete  catch  ?dup  if
+      ['] configure  catch  ?dup  if
          .error
-         ." failed to boot" cr
+         ." failed to configure" cr
          pbuf-free  false  exit
       then
-   else
-      flush-input
    then
-   ['] configure  catch  ?dup  if
-      .error
-      ." failed to configure" cr
-      pbuf-free  false  exit
-   then
+   refcount @ 1+  refcount !
    true
 ;
 
 : close
-   deconfigure
-   pbuf-free
+   refcount @ 1-  0 max  refcount !
+   refcount @ 0=  if
+      deconfigure
+      pbuf-free
+   then
 ;
 
 : flush
@@ -194,6 +202,7 @@ d# 250 constant /pbuf
 ;
 
 : stream-poll?  ( -- false | x y buttons true )
+   0 pbuf 2+ c!
    in?  if
       \ FIXME: only handles one subpacket
       pbuf 2+ c@ h# 04 = if
@@ -1041,7 +1050,8 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
    ['] open  catch  ?dup  if
       .error
       ." No touchscreen present" cr  false exit
-   then
+   then                         ( okay? )
+   0=  if  false exit  then
 
    diagnostic-mode?  if
       0 to faults
