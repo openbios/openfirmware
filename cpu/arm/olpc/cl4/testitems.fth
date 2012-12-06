@@ -43,8 +43,12 @@ icon: leds.icon     rom:leds.565
    ?open-touchscreen
 ;
 : keyboard-item ( -- )  " keyboard"       mfg-test-dev  ;
-: switch-item   ( -- )  " /accelerometer" mfg-test-dev
-                        " /switches"      mfg-test-dev  ;
+: switch-item   ( -- )
+   " /accelerometer" mfg-test-dev
+   ?close-mouse
+   " /switches"      mfg-test-dev
+   ?open-mouse
+;
 : leds-item     ( -- )  " /leds"          mfg-test-dev   ;
 
 : olpc-test-menu-items  ( -- )
