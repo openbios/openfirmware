@@ -56,7 +56,7 @@ d# 8 value #fraction-bits
 : get-acceleration  ( -- x y z )
    " acceleration@" accel-ih $call-method  xyz>fraction
 ;
-: init-accelerometer  ( -- )
+: open-accelerometer  ( -- )
    accel-ih  if  exit  then
    " /accelerometer" open-dev to accel-ih
    accel-ih 0= abort" Can't open accelerometer"
@@ -69,6 +69,9 @@ d# 8 value #fraction-bits
    get-acceleration xyz+  ( x' y' z' )
    1 4 a/b>fraction xyz*  to acc-0
 [then]
+;
+: close-accelerometer  ( -- )
+   accel-ih close-dev  0 to accel-ih
 ;
 
 \ This is a damping factor for the velocity - essentially a frictional force
@@ -246,12 +249,13 @@ d# 20 >fraction constant small
    0 0 0 to vel-b  ( 0 0 0 to vel-l )
 ;
 : roller  ( -- )
-   init-accelerometer
+   open-accelerometer
    init-ball
    text-off
    clear-drawing
    begin  ( update-laptop ) update-ball  d# 50 ms  key? until
    text-on
+   close-accelerometer
 ;
 
 : filtered-acceleration  ( -- acc-x,y,z )
@@ -326,7 +330,7 @@ d# 1460 value gravity
    then
 ;
 : clinometer  ( -- )
-   init-accelerometer
+   open-accelerometer
    init-ball
    cursor-off
    clear-drawing
@@ -336,6 +340,7 @@ d# 1460 value gravity
      ( update-laptop ) update-angle  d# 50 ms 
    key? until
    cursor-on
+   close-accelerometer
 ;
 : level  ( -- )
    clinometer
