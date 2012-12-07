@@ -30,7 +30,7 @@ d# 10 constant #ec-retries
 : ec-cmd-w!  ( w cmd -- )   >r wbsplit 2 0 r> do-ec-cmd  ;
 : ec-cmd-l!  ( l cmd -- )   >r lbsplit 4 0 r> do-ec-cmd  ;
 
-fload ${BP}/dev/olpc/kb3700/eccmdcom.fth  \ Common commands 
+fload ${BP}/dev/olpc/kb3700/eccmdcom.fth  \ Common commands
 
 \ Commands that are different for XO-1.75
 : board-id@      ( -- n )  h# 19 ec-cmd-w@  ;
@@ -111,6 +111,26 @@ fload ${BP}/dev/olpc/kb3700/eccmdcom.fth  \ Common commands
 #define CMD_RESET_EC_SOFT                0x4d
 #define CMD_ENABLE_MOUSE                 0x4f
 [then]
+
+\ Commands that are different for XO-4
+
+: bat-status16@  ( -- w )  h# 70 ec-cmd-w@  ;
+[ifdef] olpc-xo4
+' bat-status16@  is bat-status@
+[then]
+
+\ until EC 0.3.04 and earlier are purged from prototype population,
+\ choose command based on API version reported by EC.
+: bat-status@'  ( -- w )
+   ec-api-ver@  5 <  if
+      ['] bat-status8@
+   else
+      ['] bat-status16@
+   then
+   is bat-status@
+   bat-status@
+;
+' bat-status@'  is bat-status@
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks

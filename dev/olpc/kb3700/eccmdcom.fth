@@ -23,15 +23,9 @@ purpose: EC commands that are the same for all XO versions
 : mppt-off       ( -- )    h# 40 ec-cmd  ;
 : mppt-on        ( -- )    h# 41 ec-cmd  ;
 : vin@           ( -- b )  h# 42 ec-cmd-w@  ;
-: bat-status16@  ( -- w )  h# 70 ec-cmd-w@  ;
 
-defer bat-status@
+defer bat-status@  ( -- w )
 ' bat-status8@  is bat-status@
-
-[ifdef] olpc-xo4
-' bat-status16@  is bat-status@
-[then]
-
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
