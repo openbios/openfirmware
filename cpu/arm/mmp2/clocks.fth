@@ -41,8 +41,18 @@ purpose: Change the clock frequency
 : pll2-ungated?  ( -- flag )
    h#      4000 h# 1024 +mpmu io@  and
 ;
-: pll2-fbdiv  ( -- N )  h# 34 mpmu@ d# 10 rshift h# 1ff and  2+  ;
-: pll2-refdiv  ( -- M )  h# 34 mpmu@ d# 19 rshift h# 1f and  2+  ;
+: pll2-fbdiv  ( -- N )
+   h# 34 mpmu@ d# 10 rshift h# 1ff and
+[ifdef] olpc-cl2
+   2+
+[then]
+;
+: pll2-refdiv  ( -- M )
+   h# 34 mpmu@ d# 19 rshift h# 1f and
+[ifdef] olpc-cl2
+   2+
+[then]
+;
 
 : fccr@    ( -- n )  h# 05.0008 io@  ;
 : fccr!    ( n -- )  h# 05.0008 io!  ;
@@ -95,7 +105,12 @@ purpose: Change the clock frequency
    case
       0  of  d# 400,000,000 pj4-clkdiv 1+ /            endof  ( hz )
       1  of  d# 800,000,000                            endof  ( hz )
+[ifdef] olpc-cl2
       2  of  d#  26,000,000 pll2-fbdiv pll2-refdiv */  endof  ( hz )
+[then]
+[ifdef] olpc-cl4
+      2  of  d#  13,000,000 pll2-fbdiv pll2-refdiv */  endof  ( hz )
+[then]
       3  of  d# 1,063,000,000                          endof  ( hz )
    endcase
    d# 1,000,000 /                                             ( mhz )
