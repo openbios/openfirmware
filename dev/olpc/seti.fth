@@ -13,7 +13,7 @@ hex
    34 10 ov!
    27 11 ov!
    21 12 ov!
-   c6 16 ov!
+   ce 16 ov!
    aa 17 ov!
 
    00 20 ov!         \ P_BNKT
@@ -23,11 +23,11 @@ hex
 
    \ AE
    01 00 ov!
-   14 11 ov!         \ 6fps at lowlux
+   04 11 ov!         \ Keep 30fps at lowlux (14 for 6fps)
    78 12 ov!         \ D65 target 0x74
    78 13 ov!         \ CWF target 0x74
    78 14 ov!         \ A target   0x74
-   08 1E ov!         \ ini gain  0x08
+   04 1E ov!         \ ini gain   0x04
    7d 34 ov!
    60 40 ov!         \ Max x8
 
@@ -107,8 +107,8 @@ hex
    \ IDP
    03 00 ov!
    ff 10 ov!
-   1d 11 ov!
-   cb 12 ov!
+   1d 11 ov!         \ Change PIXDATA on falling edge of clock for better timing
+   3d 12 ov!         \ YUV422 setting; changed later if RGB565
    04 14 ov!         \ don't change
 
    \ DPCNR
@@ -283,7 +283,7 @@ hex
                  
    ( r: ycrcb? )  r>  0=  if    ( )
       03 00 ov!  \ IDP
-      cb 12 ov!  \ RGB565 setting (same as yCrCb setting?)
+      cb 12 ov!  \ RGB565 setting
    then
 ;
 
