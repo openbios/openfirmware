@@ -829,10 +829,25 @@ true value got-indicator?
    a 59 ( CMD_EEPROM_ACCESS ) prepare-cmd
    ACTION_GET +xw
    ( idx ) +xw
-   4 +xw
+   4 +xw \ maximum h# 10
    outbuf-wait  if  0 exit  then
    respbuf >fw-data 6 + le-l@
 ;
+
+[ifdef] notdef
+   : eeprom-dump
+      400 0 do
+	 i 8 .r ." :  "
+	 a 59 ( CMD_EEPROM_ACCESS ) prepare-cmd
+	 ACTION_GET +xw \ Action
+	 i +xw \ Offset
+	 10 +xw \ Byte Count
+	 outbuf-wait  if  unloop exit  then
+	 respbuf >fw-data 6 +
+	 dup 8 cdump space 8 + 8 cdump cr
+      10 +loop
+   ;
+[then]
 
 \ =========================================================================
 \ Miscellaneous control settings
