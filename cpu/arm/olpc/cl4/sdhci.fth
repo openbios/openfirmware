@@ -7,6 +7,7 @@ dev /sd  \ MMC1 - External SD
       d# 15 encode-int " clk-delay-cycles" property
       fload ${BP}/dev/mmc/sdhci/slot.fth
       d# 39 " interrupts" integer-property
+      0 0 encode-bytes  " no-1-8-v" property
 
       " /pmua" encode-phandle 3 encode-int encode+ " clocks" property
       " PXA-SDHCLK" " clock-names" string-property
