@@ -24,7 +24,7 @@ hex
 
    \ AE
    01 00 ov!
-   14 11 ov!         \ (04) 30fps at lowlux; (14) 6fps at lowlux
+   04 11 ov!         \ Keep (04) 30fps at lowlux; (14) 6fps at lowlux
    78 12 ov!         \ D65 target 0x74
    78 13 ov!         \ CWF target 0x74
    78 14 ov!         \ A target   0x74
