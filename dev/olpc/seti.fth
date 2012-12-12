@@ -20,7 +20,7 @@ hex
    00 20 ov!         \ P_BNKT
    01 21 ov!         \ P_HBNKT
    01 22 ov!         \ P_ROWFIL
-   01 23 ov!         \ P_VBNKT
+   65 23 ov!         \ P_VBNKT - 01 for 30 fps, 65 for 25 fps
 
    \ AE
    01 00 ov!
@@ -29,7 +29,7 @@ hex
    78 13 ov!         \ CWF target 0x74
    78 14 ov!         \ A target   0x74
    04 1E ov!         \ ini gain   0x04
-   7d 34 ov!
+   96 34 ov!         \ STST - 7d for 30 fps, 96 for 25 FPS
    60 40 ov!         \ Max x8
 
    d4 70 ov!         \ anti-sat on
