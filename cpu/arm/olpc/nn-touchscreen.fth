@@ -70,6 +70,7 @@ defer x>x'  ' noop to x>x'
 : reset  ( -- )  touch-rst-gpio# dup gpio-clr gpio-set  d# 250 ms  ;
 : hold-reset  ( -- )  touch-rst-gpio# gpio-clr  ;
 : no-data?  ( -- no-data? )  touch-int-gpio# gpio-pin@  ;
+: absent?  ( -- flag )  touch-hd-gpio# gpio-pin@  0=  ;
 
 d# 250 constant /pbuf
 0 value pbuf
@@ -160,6 +161,7 @@ d# 250 constant /pbuf
 variable refcount  0 refcount !
 
 : open  ( -- okay? )
+   absent?  if  ." no touchscreen expected" cr  false exit  then
    my-unit " set-address" $call-parent
    refcount @ 0=  if
       pbuf-alloc
@@ -1034,6 +1036,7 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 ;
 
 : selftest  ( -- error? )
+   absent?  if  ." No touchscreen expected" cr  false exit  then
 
    0 to faults
 
