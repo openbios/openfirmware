@@ -246,7 +246,10 @@ d# 1000 value ping-gap
 ;
 
 : $ping  ( ip$ -- )
-   open-net  " $set-host" $call-net
+   open-net
+   " $set-host" ['] $call-net catch  ?dup  if  ( x x errno )
+      .error 2drop  close-net  exit
+   then
    /ping-max " allocate-ip" $call-net to ping-packet
    try-pings
    ping-packet /ping-max " free-ip" $call-net
