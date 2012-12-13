@@ -21,10 +21,10 @@ instance defer get-ctrl-port  ( -- port# )
 instance defer get-write-port  ( -- port# )
 
 \ FCode doesn't have 2value so we do it this way
-0 value fw-adr
-0 value fw-len
-: default-fw$  ( -- adr len )  fw-adr fw-len  ;
-: set-default-fw$  ( adr len -- )  to fw-len  to fw-adr  ;
+0 value fw-name-adr
+0 value fw-name-len
+: default-fw$  ( -- adr len )  fw-name-adr fw-name-len  ;
+: set-default-fw$  ( adr len -- )  to fw-name-len  to fw-name-adr  ;
 
 0 value ioport
 d# 256 constant blksz			\ Block size for data tx/rx
@@ -226,11 +226,14 @@ h# 78 constant ioport-reg
       \ Set host interrupt reset to "read to clear"
       host-int-rsr-reg 1 sdio-reg@  h# 3f or  host-int-rsr-reg 1 sdio-reg!
 
-\     3  host-int-mask-reg 1 sdio-reg!  \ Enable upload (1) and download (2)
-
       \ Set Dnld/upld to "auto reset"
       card-misc-cfg-reg 1 sdio-reg@   h# 10 or  card-misc-cfg-reg 1 sdio-reg!
    then
+   \ Newer revisions of the 8787 firmware empirically require that this
+   \ be enabled early, before firmware download.  Older versions, and
+   \ 8686 firmware, appear to be content with it either here or after
+   \ firmware startup.
+   3  host-int-mask-reg 1 sdio-reg!  \ Enable upload (1) and download (2)
 ;
 
 : sdio-blocks@  ( adr len -- actual )

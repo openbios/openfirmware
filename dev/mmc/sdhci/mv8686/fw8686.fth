@@ -72,7 +72,6 @@ fw-blksz 2 * 4 - constant /fw-tx
 
    fw-download-ok? 0=  if  true exit  then
 
-   3 host-int-mask-reg 1 sdio-reg!      \ Enable upload (1) and download (2)
    mv8787?  if
       2 config-reg 1 sdio-reg!             \ Host power up
    then
