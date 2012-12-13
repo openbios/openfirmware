@@ -25,7 +25,7 @@ purpose: Changing manufacturing data - adding and deleting tags
    " U#" find-tag 0=  abort" No U# tag; enabling security would brick me." 2drop
    wp-loc$  " ww"  $=  0=  abort" No ww tag"
    spi-start  spi-identify
-   " wp"  h# efffe  write-spi-flash
+   " wp"  mfg-data-end-offset 2-  write-spi-flash
    wp-loc$ " wp"  $=  if  ." Succeeded" cr  then
    spi-reprogrammed
 ;
