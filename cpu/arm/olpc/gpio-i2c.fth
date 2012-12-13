@@ -114,6 +114,7 @@ dev /
 [ifdef] hdmi-sda-gpio#
    new-device
       " hdmi-i2c" device-name
+      0 0 reg
       " i2c-gpio" +compatible
       1 " #address-cells" integer-property
       1 " #size-cells" integer-property
@@ -143,6 +144,7 @@ dev /
       new-device
          " hdmi-ddc" device-name    
          h# 50 1 reg
+         " eeprom" +compatible
          : close  ( -- )  ;
          h# 80 constant /edid-chunk
          0 value edid
