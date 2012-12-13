@@ -1,6 +1,26 @@
 \ See license at end of file
 purpose: MMP3 HDMI driver
 
+   new-device
+      " hdmi" device-name
+
+      " mrvl,pxa688-hdmi" +compatible
+      0 0 encode-bytes
+         hdmi-hp-det-gpio# 0 encode-gpio
+      " gpios" property
+      " /hdmi-i2c" encode-phandle " ddc-i2c-bus" property
+
+      : +i  encode-int encode+  ;
+      h# 60010005 " clock-divider-regval" integer-property
+      decimal
+      0 0 encode-bytes
+      \ xres,  yres, refresh,       clockhz,  left, right,  top, bottom, hsync, vsync, flags, widthmm, heightmm
+      1280 +i 720 +i    60 +i  74,250,000 +i  110 +i  220 +i  5 +i    20 +i  40 +i    5 +i   1 +i   0 +i   0 +i
+      hex
+      " linux,timing-modes" property
+      " 1280x720@60"  " linux,mode-names" string-property
+   finish-device
+
 : hdmi-present?  ( -- flag )   hdmi-hp-det-gpio# gpio-pin@ 0=  ;
 
 : +hdmi  h# 20bc00 +  ;
