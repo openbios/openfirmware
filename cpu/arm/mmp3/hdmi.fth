@@ -10,6 +10,8 @@ purpose: MMP3 HDMI driver
       " gpios" property
       " /hdmi-i2c" encode-phandle " ddc-i2c-bus" property
 
+      " HDMI" model
+
       : +i  encode-int encode+  ;
       h# 60010005 " clock-divider-regval" integer-property
       decimal
