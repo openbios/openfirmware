@@ -19,8 +19,6 @@ new-device
    " OLPC DCON panel" model
    : +i  encode-int encode+  ;
 
-    d# 4324096 " max-fb-size" integer-property
-
    decimal
    0 0 encode-bytes
    \ xres,  yres, refresh,       clockhz,  left, right,  top, bottom, hsync, vsync, flags, widthmm, heightmm 
@@ -39,7 +37,7 @@ new-device
 [ifdef] mmp3  h# 20001102  [else]  h# 40001102  [then]  " clock-divider-regval" integer-property
 
 finish-device
-device-end   
+device-end
 
 [ifdef] has-dcon
 fload ${BP}/dev/olpc/dcon/mmp2dcon.fth        \ DCON control
