@@ -159,7 +159,7 @@ end-string-array
 ;
 
 string-array format-names
-( 0 )  ," "
+( 0 )  ," Reserved0"
 ( 1 )  ," LPCM"
 ( 2 )  ," AC-3"
 ( 3 )  ," MPEG1"
@@ -174,12 +174,14 @@ string-array format-names
 ( 12 ) ," TrueHD"
 ( 13 ) ," DST"
 ( 14 ) ," WMA"
+( 15 ) ," Format15"
 end-string-array
 
 : .cea-audio  ( offset size -- )
    ." Audio: "
    bounds  ?do
-      i cea@ format-names count type ." ,"
+      i cea@ dup 3 rshift h# f and format-names count type ." ,"  ( byte )
+      7 and 1+ .d ." channels,"
       i 1+ cea@ .cea-freqs ." @"
       i 2+ cea@ .cea-bits  space
    3 +loop
