@@ -80,14 +80,12 @@ false value locked?		  \ Interrupt lockout for get-scan
 ;
 
 : deque?  ( channel# -- false | entry true )
-   lock
-   select-queue  if  unlock false exit  then
+   select-queue  if  false exit  then
    head @  tail @  <>  if
       q head @ ca+ c@   head inc-q-ptr  true
    else
       false
    then
-   unlock
 ;
 
 0 value reg-base
