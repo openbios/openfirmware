@@ -59,6 +59,20 @@ dcon-irq-gpio#   0 encode-gpio
 : dcon@  ( reg# -- word )  " reg-w@" $call-parent  ;
 : dcon!  ( word reg# -- )  " reg-w!" $call-parent  ;
 
+: mode@    ( -- mode )    1 dcon@  ;
+: mode!    ( mode -- )    1 dcon!  ;
+: hres!    ( hres -- )    2 dcon!  ;  \ def: h#  458 d# 1200
+: htotal!  ( htotal -- )  3 dcon!  ;  \ def: h#  4e8 d# 1256
+: hsync!   ( sync -- )    4 dcon!  ;  \ def: h# 1808 d# 24,8
+: vres!    ( vres -- )    5 dcon!  ;  \ def: h#  340 d# 900
+: vtotal!  ( htotal -- )  6 dcon!  ;  \ def: h#  390 d# 912
+: vsync!   ( sync -- )    7 dcon!  ;  \ def: h#  403 d# 4,3
+: timeout! ( to -- )      8 dcon!  ;  \ def: h# ffff
+: scanint! ( si -- )      9 dcon!  ;  \ def: h# 0000
+
+: scanint-on   ( -- )  mode@  h# 100 or  mode!  ;
+: scanint-off  ( -- )  mode@  h# 100 invert and  mode!  ;
+
 : dcon-load  ( -- )  dcon-load-gpio# gpio-set  ;
 : dcon-unload  ( -- )  dcon-load-gpio# gpio-clr  ;
 
@@ -72,12 +86,30 @@ dcon-irq-gpio#   0 encode-gpio
 1 value vga? \ VGA
 0 value color? \ COLOUR
 
-d# 905 value resumeline  \ Configurable; should be set from args
-
-: wait-output  ( -- )  d# 40 ms  ;
-
+d# 850 value resumeline
 : mark-time  ( -- start-time )  get-msecs  ;
 : delta-ms  ( start-time -- elapsed-ms )  mark-time  swap -   ;
+
+: wait-output  ( -- )
+   mark-time                                            ( start-time )
+   resumeline scanint!  setup-dcon-irq  scanint-on      ( )
+   begin                                                ( start-time )
+      dcon-irq?  if                                     ( start-time )
+         setup-dcon-irq                                 ( start-time )
+         begin                                          ( start-time )
+            dcon-irq?  if                               ( start-time )
+               drop scanint-off exit                    ( )
+            then                                        ( start-time )
+            dup delta-ms  d# 100 >                      ( start-time )
+         until                                          ( start-time )
+      then                                              ( start-time )
+      dup delta-ms  d# 100 >                            ( start-time reached? )
+   until                                                ( start-time )
+   drop                                                 ( )
+   ." Timeout leaving DCON mode" cr                     ( )
+   scanint-off                                          ( )
+;
+
 : wait-dcon-mode  ( -- retry? )
    mark-time                            ( start-time )
    begin                                ( start-time )
@@ -103,23 +135,22 @@ d# 905 value resumeline  \ Configurable; should be set from args
    dup vga? =  if  drop exit  then  ( source )
    dup to vga?                      ( source )
    if
-\      unblank-display
-      d# 50 ms
-      wait-output
-      dcon-load  \ Put the DCON in VGA-refreshed mode
-      d# 25 ms   \ Ensure that that DCON sees the DCONLOAD high
-\      display-on
+      wait-output               \ Wait for the DCON to reach the scan line
+      " wake" $call-screen      \ Enable video signal from SoC
+      d# 5 ms
+      dcon-load                 \ Put the DCON in VGA-refreshed mode
+      d# 25 ms                  \ Ensure that that DCON sees the DCONLOAD high
    else
       has-dcon-ram?  if
          begin                             ( )
             setup-dcon-irq
             dcon-unload  \ Put the DCON in self-refresh mode
             wait-dcon-mode                 ( retry? )
-            \        display-off           ( retry? )
          while                             ( )
             \ We got a false ack from the DCON so start over from LOAD state
             dcon-load  d# 25 ms            ( )
          repeat                            ( )
+         " sleep" $call-screen
       then
    then
 ;
@@ -132,16 +163,6 @@ d# 905 value resumeline  \ Configurable; should be set from args
    ['] dcon!  catch  if  2drop  bus-reset  then
 ;
 
-: mode@    ( -- mode )    1 dcon@  ;
-: mode!    ( mode -- )    1 dcon!  ;
-: hres!    ( hres -- )    2 dcon!  ;  \ def: h#  458 d# 1200
-: htotal!  ( htotal -- )  3 dcon!  ;  \ def: h#  4e8 d# 1256
-: hsync!   ( sync -- )    4 dcon!  ;  \ def: h# 1808 d# 24,8
-: vres!    ( vres -- )    5 dcon!  ;  \ def: h#  340 d# 900
-: vtotal!  ( htotal -- )  6 dcon!  ;  \ def: h#  390 d# 912
-: vsync!   ( sync -- )    7 dcon!  ;  \ def: h#  403 d# 4,3
-: timeout! ( to -- )      8 dcon!  ;  \ def: h# ffff
-: scanint! ( si -- )      9 dcon!  ;  \ def: h# 0000
 [ifdef] old-way
 : dcon-bright!  ( level -- ) d# 10 dcon! ; \ def: h# xxxF
 ' dcon-bright!  to bright!
@@ -260,6 +281,16 @@ stand-init:
       device-end
    then
 ;
+
+[ifdef] notdef
+: test-dcon-freeze-glitch
+   screen-ih remove-output
+   " gvsr" $call-screen
+   begin  dcon-freeze  dcon-unfreeze  key?  until  key drop
+   screen-ih add-output
+   page
+;
+[then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
