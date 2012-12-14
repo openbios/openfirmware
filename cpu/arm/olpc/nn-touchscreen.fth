@@ -109,16 +109,23 @@ d# 250 constant /pbuf
    2drop                                ( )
 ;
 
-: flush-input  ( -- )
-   0 0 anticipate
+: ?missing
+   pbuf 3 + c@  h# e0 = abort" missing IR PCB"
 ;
 
+: flush-input  ( -- )
+   begin
+      0 0 anticipate
+      pbuf 2+ c@  h# 07 =  if  ?missing  then
+      no-data?
+   until
+;
 
 : read-boot-complete  ( -- )
    0 pbuf 2+ c!
    h# 07 d# 0 anticipate
    pbuf 2+ c@ h# 07 <> abort" response other than boot complete"
-   pbuf 3 + c@  h# e0 = abort" missing IR PCB"
+   ?missing
 ;
 
 : read-version
@@ -1001,11 +1008,13 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 : lg-tooling  ( -- error? )
    open  if  test-os  test-fll  else  fault  then
    faults
+   close
 ;
 
 : ir-pcb-smt  ( -- error? )
    hold-reset  connect
    open  if  test-os  else  fault  then
+   close
    hold-reset  disconnect
    faults
 ;
@@ -1018,6 +1027,7 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
    else
       fault
    then
+   close
    hold-reset  disconnect
    faults
 ;
@@ -1032,6 +1042,7 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 : mb-assy  ( -- error? )
    open  0=  if true exit  then
    test-adjacent-axes
+   close
    faults
 ;
 
