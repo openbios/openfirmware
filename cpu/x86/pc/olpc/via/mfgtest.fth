@@ -202,7 +202,8 @@ defer test-menu-items
    (cr kill-line
    0  d# 30  do
       i d# 10 mod 0=  if  (cr i d# 10 / .d  then
-      mouse-event?  dup  if  nip nip nip  then  ( moused? )
+      touchscreen-event?  dup  if  nip nip nip  then  ( touched? )
+      mouse-event?  dup  if  nip nip nip  then  or  ( touched-or-moused? )
       key?  or  if                     ( )
 	 drop                          ( )
 	 menu-interact                 ( )
