@@ -70,7 +70,12 @@ defer x>x'  ' noop to x>x'
 : reset  ( -- )  touch-rst-gpio# dup gpio-clr gpio-set  d# 250 ms  ;
 : hold-reset  ( -- )  touch-rst-gpio# gpio-clr  ;
 : no-data?  ( -- no-data? )  touch-int-gpio# gpio-pin@  ;
-: absent?  ( -- flag )  touch-hd-gpio# gpio-pin@  0=  ;
+: absent?  ( -- flag )
+   touch-hd-gpio# af@  +pull-dn  touch-hd-gpio# af!
+   1 ms
+   touch-hd-gpio# gpio-pin@
+   touch-hd-gpio# af@  0 +pull-dn invert and  touch-hd-gpio# af!
+;
 
 d# 250 constant /pbuf
 0 value pbuf
