@@ -111,7 +111,21 @@ d# 250 constant /pbuf
       then                              ( id limit )
       dup get-msecs -  0<               ( id limit timeout? )
    until                                ( id limit )
-   2drop                                ( )
+   drop                                 ( id )
+   ." timeout waiting for " 2u.x cr     ( )
+   r> rstrace >r
+   pbuf /pbuf erase
+;
+
+: ?id-abort  ( id $message -- )
+   rot  pbuf 2+ c@  <>  if
+      pbuf plen cdump
+      r> rstrace >r
+      cr
+      $abort
+   else
+      2drop
+   then
 ;
 
 : ?missing
@@ -120,22 +134,24 @@ d# 250 constant /pbuf
 
 : flush-input  ( -- )
    begin
-      0 0 anticipate
-      pbuf 2+ c@  h# 07 =  if  ?missing  then
+      in?  if
+         pbuf 2+ c@  h# 07 =  if  ?missing  then
+      then
       no-data?
    until
 ;
 
 : read-boot-complete  ( -- )
-   0 pbuf 2+ c!
-   h# 07 d# 0 anticipate
-   pbuf 2+ c@ h# 07 <> abort" response other than boot complete"
-   ?missing
+   in?  if
+      h# 07 " response other than boot complete" ?id-abort
+      ?missing
+   then
 ;
+
 
 : read-version
    h# 1e h# 01 h# ee  3 bytes-out  h# 1e d# 100 anticipate
-   pbuf 2+ c@ h# 1e <> abort" response other than status"
+   h# 1e " response other than status" ?id-abort
    pbuf 9 + le-w@  pbuf 7 + le-w@ wljoin  pbuf 5 + le-w@ pbuf 3 + le-w@ wljoin
    to version#
 ;
@@ -151,12 +167,14 @@ d# 250 constant /pbuf
 : start  ( -- )  h# 04 h# 01 h# ee  3 bytes-out  ;
 
 : deactivate  ( -- )
-   h# 00 h# 01 h# ee  3 bytes-out  h# 00 d# 60 anticipate
+   h# 00 h# 01 h# ee  3 bytes-out  h# 00 d# 100 anticipate
 ;
 
 : deconfigure  ( -- )
-   deactivate
-   true to configure?
+   configure?  0=  if
+      deactivate
+      true to configure?
+   then
 ;
 
 : configure  ( -- )
@@ -216,7 +234,6 @@ variable refcount  0 refcount !
 ;
 
 : stream-poll?  ( -- false | x y buttons true )
-   0 pbuf 2+ c!
    in?  if
       \ FIXME: only handles one subpacket
       pbuf 2+ c@ h# 04 = if
@@ -245,7 +262,6 @@ variable refcount  0 refcount !
 : test-response  ( -- )
    6 0  do
       h# 40 h# 0 h# 0f 3 h# ee 5 bytes-out \ fss full level
-      0 pbuf 2+ c!
       h# 0f d# 130 anticipate
       pbuf 2+ c@ dup 0= abort" missing response after fixed signal strength"
       h# 0f <> abort" response other than fixed signal strength"
@@ -405,8 +421,8 @@ d# 48 constant /y-os
 
 : test-os-axis  ( axis -- )
    h# 21 h# 02 h# ee  4 bytes-out
-   h# 21 d# 60 anticipate
-   pbuf 2+ c@ h# 21 <> abort" response other than open short"
+   h# 21 d# 100 anticipate
+   h# 21 " response other than open short" ?id-abort
 
    pbuf d#  5 +                         ( addr )
 
@@ -466,7 +482,7 @@ d# 1 value fss-min
 : test-fss-axis  ( axis -- )
    d# 64 swap h# 0f h# 03 h# ee  5 bytes-out
    h# 0f d# 60 anticipate
-   pbuf 2+ c@ h# 0f <> abort" response other than fixed signal strength"
+   h# 0f " response other than fixed signal strength" ?id-abort
    8sp
    push-decimal
    pbuf 4 + c@ 0  do   ( )
@@ -601,7 +617,7 @@ create sums
 : test-ls-axis  ( axis -- )
    h# 0d h# 02 h# ee  4 bytes-out
    h# 0d d# 200 anticipate
-   pbuf 2+ c@ h# 0d <> abort" response other than low signals"
+   h# 0d " response other than low signals" ?id-abort
 
    8sp
    pbuf 5 +                     ( addr )
@@ -1010,15 +1026,25 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 ;
 
 
+: (lg-tooling)  test-os  test-fll  ;
+
 : lg-tooling  ( -- error? )
-   open  if  test-os  test-fll  else  fault  then
+   open  if
+      ['] (lg-tooling)  catch  ?dup  if  .error  fault  then
+   else
+      fault
+   then
    faults
    close
 ;
 
 : ir-pcb-smt  ( -- error? )
    hold-reset  connect
-   open  if  test-os  else  fault  then
+   open  if
+      ['] test-os catch  ?dup  if  .error  fault  then
+   else
+      fault
+   then
    close
    hold-reset  disconnect
    faults
@@ -1027,8 +1053,10 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 : ir-pcb-assy  ( -- error? )
    hold-reset  connect
    open  if
-      test-fll
-      faults 0=  if  test-adjacent-axes  then
+      ['] test-fll  catch  ?dup  if  .error  fault  then
+      faults 0=  if
+         ['] test-adjacent-axes  catch  ?dup  if  .error  fault  then
+      then
    else
       fault
    then
@@ -1039,14 +1067,14 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 
 : mb-smt  ( -- error? )
    open  0=  if  true exit  then
-   show-version
+   ['] show-version  catch  ?dup  if  .error  fault  then
    close
-   false
+   faults
 ;
 
 : mb-assy  ( -- error? )
    open  0=  if true exit  then
-   test-adjacent-axes
+   ['] test-adjacent-axes  catch  ?dup  if  .error fault  then
    close
    faults
 ;
