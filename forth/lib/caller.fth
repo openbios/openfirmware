@@ -5,7 +5,7 @@
 \				.current-word displays the name of that
 \				definition.
 
-\ .caller  ( -- )		Displays the colon definition name as in
+\ .caller  ( ip -- )		Displays the colon definition name as in
 \				.current-word, and also the address "ip"
 
 decimal
