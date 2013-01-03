@@ -31,7 +31,9 @@ d# 11 value yleds
 0. 2value version#
 : get-version  ( -- version.d )  version#  ;
 
-: (.)'  ( version-segment.w -- )  (.) type  [char] . emit  ;
+: (.)'  ( version-segment.w -- )
+   push-decimal  (.)  type  [char] . emit  pop-base
+;
 
 : .version  ( version.d -- )  lwsplit (.)' (.)'  lwsplit (.)' (.)'  ;
 
@@ -71,10 +73,11 @@ defer x>x'  ' noop to x>x'
 : hold-reset  ( -- )  touch-rst-gpio# gpio-clr  ;
 : no-data?  ( -- no-data? )  touch-int-gpio# gpio-pin@  ;
 : absent?  ( -- flag )
-   touch-hd-gpio# af@  +pull-dn  touch-hd-gpio# af!
-   1 ms
-   touch-hd-gpio# gpio-pin@
-   touch-hd-gpio# af@  0 +pull-dn invert and  touch-hd-gpio# af!
+   board-revision h# 4b20  >=  if
+      touch-hd-gpio# gpio-pin@  0=
+   else
+      false
+   then
 ;
 
 d# 250 constant /pbuf
