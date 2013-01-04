@@ -82,7 +82,7 @@ $new-file
 
    " sourceurl"   " sourceurl"                    $add-dropin
 
-   " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/Beep-Beep-800Hz-8k.wav"  " splash"   $add-deflated-dropin
 
    " ec.img"                                     " ecimage.bin"    $add-deflated-dropin
    " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin

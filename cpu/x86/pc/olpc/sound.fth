@@ -28,12 +28,21 @@ h# -9 constant default-volume
 : softer  ( -- )  -2 +volume  ;
 : louder  ( -- )   2 +volume  ;
 
+" int:\boot\jingle.wav"  d# 128 config-string jingle
+: sound-name$  ( -- adr len )
+   jingle $file-exists?  if
+      jingle
+   else
+      " rom:splash"
+   then
+;
+
 : sound  ( -- )
    get-saved-volume  d# -50 <=  if  exit  then
    playback-volume >r  get-saved-volume to playback-volume
    ['] load-started behavior  >r
    ['] noop to load-started
-   " rom:splash" ['] $play-wav catch  if  2drop  then
+   sound-name$ ['] $play-wav catch  if  2drop  then
    r> to load-started
    r> to playback-volume
 ;
