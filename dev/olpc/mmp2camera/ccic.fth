@@ -142,7 +142,7 @@ external
 : open  ( -- flag )
    my-address my-space  h# 1000  " map-in" $call-parent  to camera-base
    power-on
-   sensor-found?  0=  if  false exit  then
+   sensor-found?  0=  if  power-off false exit  then
    my-args " yuv" $=  to use-ycrcb?
    alloc-dma-bufs
    read-setup
