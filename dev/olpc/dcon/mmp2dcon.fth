@@ -87,12 +87,13 @@ dcon-irq-gpio#   0 encode-gpio
 0 value color? \ COLOUR
 
 d# 850 value resumeline
+: scanint-set  resumeline scanint!  ;
 : mark-time  ( -- start-time )  get-msecs  ;
 : delta-ms  ( start-time -- elapsed-ms )  mark-time  swap -   ;
 
 : wait-output  ( -- )
    mark-time                                            ( start-time )
-   resumeline scanint!  setup-dcon-irq  scanint-on      ( )
+   setup-dcon-irq  scanint-on                           ( )
    begin                                                ( start-time )
       dcon-irq?  if                                     ( start-time )
          setup-dcon-irq                                 ( start-time )
@@ -137,7 +138,7 @@ d# 850 value resumeline
    if
       wait-output               \ Wait for the DCON to reach the scan line
       " wake" $call-screen      \ Enable video signal from SoC
-      d# 5 ms
+      d# 25 ms
       dcon-load                 \ Put the DCON in VGA-refreshed mode
       d# 25 ms                  \ Ensure that that DCON sees the DCONLOAD high
    else
@@ -219,6 +220,7 @@ d# 850 value resumeline
    h# 0101  h# 42 dcon!
 
    h# 12 mode!
+   scanint-set
    false
 ;
 : dcon-enable  ( -- )
@@ -247,6 +249,7 @@ d# 850 value resumeline
 \ Unnecessary because CForth has already done it
 \   dcon-load  dcon-enable  ( maybe-set-cmos )
    \ dcon-enable leaves mode set to 69 - 40:antialias, 20:swizzle, 8:backlight on, 1:passthru off
+   scanint-set
    true
 ;
 [then]
