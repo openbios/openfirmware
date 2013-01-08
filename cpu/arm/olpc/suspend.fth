@@ -132,11 +132,11 @@ purpose: Common uspend/resume code for OLPC XO ARM plaforms
 0 value sleep-mask
 : screen-sleep
    sleep-mask 1 and  if            \ DCON power down
-      dcon-freeze
+      dcon-screen-freeze
    else
       " dcon-suspend" $call-dcon
+      " sleep" $call-screen
    then
-   " sleep" $call-screen
    " set-ack" $call-ec
 
    \ 0 h# 54 pmua!  \ Kill the SDIO 0 clocks - insignificant savings
@@ -156,10 +156,10 @@ purpose: Common uspend/resume code for OLPC XO ARM plaforms
    then
    sleep-mask 2 and  0=  if  keyboard-power-on   then 
    " clr-ack" $call-ec
-   " wake" $call-screen
    sleep-mask 1 and  if            \ DCON power up
-      dcon-unfreeze
+      dcon-screen-unfreeze
    else
+      " wake" $call-screen
       " dcon-resume" $call-dcon
    then
 ;

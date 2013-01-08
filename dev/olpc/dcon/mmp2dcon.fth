@@ -136,9 +136,6 @@ d# 850 value resumeline
    dup vga? =  if  drop exit  then  ( source )
    dup to vga?                      ( source )
    if
-      wait-output               \ Wait for the DCON to reach the scan line
-      " wake" $call-screen      \ Enable video signal from SoC
-      d# 25 ms
       dcon-load                 \ Put the DCON in VGA-refreshed mode
       d# 25 ms                  \ Ensure that that DCON sees the DCONLOAD high
    else
@@ -151,12 +148,24 @@ d# 850 value resumeline
             \ We got a false ack from the DCON so start over from LOAD state
             dcon-load  d# 25 ms            ( )
          repeat                            ( )
-         " sleep" $call-screen
+         d# 25 ms
       then
    then
 ;
 : dcon-freeze  ( -- )  0 set-source  ;
 : dcon-unfreeze  ( -- )  1 set-source  ;
+
+: screen-freeze  ( -- )
+   dcon-freeze
+   " sleep" $call-screen
+;
+
+: screen-unfreeze ( -- )
+   wait-output                  \ Wait for the DCON to reach the scan line
+   " wake" $call-screen         \ Enable video signal from SoC
+   d# 42 ms                     \ Synchronisation delay determined empirically
+   dcon-unfreeze
+;
 
 \ gx_configure_tft(info);
 
@@ -285,15 +294,20 @@ stand-init:
    then
 ;
 
-[ifdef] notdef
+\ [ifdef] notdef
 : test-dcon-freeze-glitch
-   screen-ih remove-output
+   invisible
    " gvsr" $call-screen
-   begin  dcon-freeze  dcon-unfreeze  key?  until  key drop
-   screen-ih add-output
+   begin
+      " screen-freeze" $call-dcon
+      d# 25 ms
+      " screen-unfreeze" $call-dcon
+      key?
+   until  key drop
+   visible
    page
 ;
-[then]
+\ [then]
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks
