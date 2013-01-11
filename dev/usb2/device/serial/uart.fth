@@ -60,6 +60,7 @@ external
       rts-dtr-off
       end-bulk-in
       free-buf
+      false to read-started?
    then
 ;
 
