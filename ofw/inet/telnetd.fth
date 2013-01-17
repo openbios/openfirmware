@@ -208,17 +208,15 @@ false value debug-options?
 end-support-package
 
 
-0 value old-in
-0 value old-out
 0 value telnet-ih
 
 defer getchar-hook  ' = to getchar-hook
 patch getchar-hook =  stdin-getchar
 
 : exit-telnet  ( -- )
+   telnet-ih remove-output
+   telnet-ih remove-input
    telnet-ih close-dev
-   old-out stdout !
-   old-in  stdin !
    ['] = to getchar-hook
 ;
 
@@ -237,8 +235,9 @@ devalias telnetd  tcp//telnet:verbose
 : telnetd  ( -- )
    " telnetd" open-dev dup 0= abort" Can't open telnet"  ( ih )
    to telnet-ih
-   stdin @ to old-in  stdout @ to old-out
-   telnet-ih dup stdin !  stdout !
+   telnet-ih add-output
+   telnet-ih add-input
+   \ hint: use " screen-ih remove-output " to speed up your telnet output
    ['] ?telnet-closed to getchar-hook
 ;
 \ LICENSE_BEGIN
