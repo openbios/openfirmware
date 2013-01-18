@@ -235,6 +235,9 @@ fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH prog
 end-package
 
 fload ${BP}/cpu/arm/olpc/lcd.fth
+[ifdef] mmp3
+fload ${BP}/cpu/arm/mmp3/galcore.fth
+[then]
 fload ${BP}/cpu/arm/olpc/sdhci.fth
 
 devalias net /wlan
