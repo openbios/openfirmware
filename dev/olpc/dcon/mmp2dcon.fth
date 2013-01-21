@@ -87,6 +87,15 @@ dcon-irq-gpio#   0 encode-gpio
 0 value color? \ COLOUR
 
 d# 850 value resumeline
+: set-resumeline  ( -- )
+   pj4-speed case
+      d#  800 of  d# 840 to resumeline  endof
+      d#  988 of  d# 845 to resumeline  endof
+      d# 1063 of  d# 845 to resumeline  endof
+      d# 1196 of  d# 848 to resumeline  endof
+   endcase
+;
+
 : scanint-set  resumeline scanint!  ;
 : mark-time  ( -- start-time )  get-msecs  ;
 : delta-ms  ( start-time -- elapsed-ms )  mark-time  swap -   ;
@@ -253,6 +262,7 @@ d# 850 value resumeline
 ' init-dcon to init-panel
 [else]
 : open  ( -- flag )
+   set-resumeline
    my-unit " set-address" $call-parent
    bus-init
 \ Unnecessary because CForth has already done it
