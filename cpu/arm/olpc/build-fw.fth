@@ -521,9 +521,11 @@ true value text-on?
 
 \ idt1338 rtc and ram address map
 \     00 -> 0f  rtc
-\     10 -> 3f  cmos
+\     10 -> 3d  cmos
+\     3e -> 3f  driver magic number
 
 : >rtc  ( index -- rtc-address )  h# 3f and  h# 10 +  ;
+\ : rtc>  ( rtc-address -- index )  h# 10 - h# 80 or  ;
 
 : cmos@  ( index -- data )
    >rtc " rtc@" clock-node @  ( index adr len ih )
@@ -539,6 +541,8 @@ true value text-on?
 \     81 audio volume
 \     82 alternate boot
 \     83 xid
+\     80 -> 8f (erased by driver when magic number wrong)
+\     84 -> ad (unallocated)
 
 fload ${BP}/cpu/arm/mmp2/clocks.fth
 fload ${BP}/cpu/arm/olpc/banner.fth
@@ -958,6 +962,11 @@ dev /client-services  patch noop visible enter  dend
 : null-fsdisk
    " dev /null : size 0 8 ; : write-blocks-start 3drop false ; : write-blocks-end false ; dend" evaluate
    " devalias fsdisk //null" evaluate
+;
+stand-init: wifi
+   " NN" find-tag  if  ?-null  $essid  then
+   " EP" find-tag  if  ?-null  $wep    then
+   " PA" find-tag  if  ?-null  $wpa    then
 ;
 
 \ LICENSE_BEGIN
