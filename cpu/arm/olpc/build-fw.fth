@@ -965,8 +965,7 @@ dev /client-services  patch noop visible enter  dend
 ;
 stand-init: wifi
    " NN" find-tag  if  ?-null  $essid  then
-   " EP" find-tag  if  ?-null  $wep    then
-   " PA" find-tag  if  ?-null  $wpa    then
+   " PP" find-tag  if  ?-null  $wpa    then
 ;
 
 \ LICENSE_BEGIN
