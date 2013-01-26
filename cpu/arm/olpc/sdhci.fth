@@ -100,8 +100,8 @@ previous definitions
       " /gpio" encode-phandle  en-wlan-pwr-gpio# encode-int encode+  0 encode-int encode+  " power-gpios" property
 [then]
 [ifdef] wlan-reset-gpio#
-      \ Active high
-      " /gpio" encode-phandle  wlan-reset-gpio# encode-int encode+  0 encode-int encode+  " reset-gpios" property
+      \ Active low
+      " /gpio" encode-phandle  wlan-reset-gpio# encode-int encode+  1 encode-int encode+  " reset-gpios" property
 [then]
 
       fload ${BP}/dev/mmc/sdhci/slot.fth
