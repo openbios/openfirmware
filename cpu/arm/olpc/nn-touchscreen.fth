@@ -1088,7 +1088,7 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
    0 to faults
 
    test-station case
-      \ h#  1  of  mb-smt  exit  endof
+      h#  1  of  mb-smt  exit  endof
       h#  2  of  mb-assy  exit  endof
       h# 11  of  ir-pcb-smt  exit  endof
       h# 12  of  ir-pcb-assy  exit  endof
