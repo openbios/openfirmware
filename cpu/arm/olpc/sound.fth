@@ -442,8 +442,8 @@ defer playback-alarm
 ;
 : uninstall-playback-alarm   ( -- )
    alarmed?  if
-      ['] playback-alarm d#  0 alarm
       false to alarmed?
+      ['] playback-alarm d#  0 alarm
    then
 ;
 
@@ -498,8 +498,8 @@ false value playing?
    out-len  if  copy-out  then  \ Prefill the second buffer
    start-out-ring
    master-tx
-   install-playback-alarm
    true to playing?
+   install-playback-alarm
 ;
 
 : audio-out  ( adr len -- actual )  tuck start-audio-out  ;
