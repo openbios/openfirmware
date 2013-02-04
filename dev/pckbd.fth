@@ -55,7 +55,7 @@ variable tail  0 tail !
 /q dup buffer: q
 1-     value   q-end
 
-: init-q  ( -- )  0 head !  0 tail !   /q 1- to q-end  ;
+: init-q  ( -- )  0 head !  0 tail !  q drop  /q 1- to q-end  ;
 : inc-q-ptr  ( pointer-addr -- )
    dup @ q-end >=  if  0 swap !  else  /c swap +!  then
 ;

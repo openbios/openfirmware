@@ -67,7 +67,10 @@ variable    tail  0  tail !		\ Index into q
 					\ examined by getkey (to application)
 /qe         buffer:  null-entry		\ Buffer to hold a null entry
 
-: init-q  ( -- )  0 head !  0 tail !   #qe 1- to q-end  ;
+: init-q  ( -- )
+   0 head !  0 tail !   q drop  #qe 1- to q-end
+   last-entry drop  new-entry drop  cur-entry drop  null-entry drop
+;
 : inc-q-ptr  ( pointer-addr -- )
    dup @ q-end >=  if  0 swap !  else  1 swap +!  then
 ;
@@ -370,6 +373,7 @@ external
 
 : open  ( -- flag )
    kbd-refcount @  if  1 +refcnt true exit  then
+   init-q
    init-kbd-buf
    setup-hardware?  if
       free-kbd-buf

@@ -49,21 +49,21 @@ d# 64 constant /q
 #queues /n* buffer: heads  : head  ( -- adr )  heads queue# na+  ;
 #queues /n* buffer: tails  : tail  ( -- adr )  tails queue# na+  ;
 
-#queues /q * buffer: qs    : q  ( adr -- )  qs queue# /q * +  ;
+#queues /q * buffer: qs    : q  ( -- adr )  qs queue# /q * +  ;
 
 /q 1- value   q-end
 
 : init-queues  ( -- )
    #queues  0  do
       i to queue#
-      0 head !  0 tail !   /q 1- to q-end
+      0 head !  0 tail !   q drop  /q 1- to q-end
    loop
 ;
 : inc-q-ptr  ( pointer-addr -- )
    dup @ q-end >=  if  0 swap !  else  /c swap +!  then
 ;
 
-false value locked?		  \ Interrupt lockout for get-scan
+false value locked?		  \ Interrupt lockout for get-data?
 
 : lock    ( -- )  true  to locked?  ;
 : unlock  ( -- )  false to locked?  ;
@@ -125,6 +125,7 @@ false value locked?		  \ Interrupt lockout for get-scan
 0 value open-count
 : open  ( -- flag )
    open-count  0=  if
+      init-queues
       my-address my-space  h# 1000  " map-in" $call-parent  is reg-base
       data? 0=  if  send-rdy  then
    then
