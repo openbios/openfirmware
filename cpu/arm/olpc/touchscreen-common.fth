@@ -111,8 +111,12 @@ false value right-hit?
 
 : undot  ( -- )  pixcolor @  dup dimmer  " replace-color" $call-screen  ;
 
-: background  ( -- )
+: blacken  ( -- )
    black  0 0  screen-w screen-h  fill-rectangle-noff
+;
+
+: background  ( -- )
+   blacken
    targets?  if
       false to left-hit?
       false to right-hit?

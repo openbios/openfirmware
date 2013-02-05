@@ -905,7 +905,7 @@ d# 30000 value test-timeout
    cursor-off
    consume
    flush
-   background
+   blacken
    -1 to remaining
 ;
 
