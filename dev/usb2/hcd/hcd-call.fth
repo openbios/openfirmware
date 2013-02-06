@@ -10,6 +10,10 @@ external
 : dma-alloc    ( size -- virt )              " dma-alloc" $call-parent    ;
 : dma-free     ( virt size -- )              " dma-free" $call-parent     ;
 
+: locked?  ( -- flag )
+   " locked?" $call-parent
+;
+
 \ Probing support
 : set-target  ( device -- )
    " set-target" $call-parent

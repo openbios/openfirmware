@@ -60,6 +60,7 @@ external
    debug?  if  ." begin-intr-in" cr  then
    intr-in-qh  if  4drop exit  then		\ Already started
 
+   lock
    to intr-in-interval
    dup to intr-in-pipe
    intr-in-timeout process-intr-args
@@ -70,10 +71,12 @@ external
 
    \ Start intr in transaction
    intr-in-qh intr-in-interval insert-intr-qh
+   unlock
 ;
 
 : intr-in?  ( -- actual usberr )
    intr-in-qh 0=  if  0 USB_ERR_INV_OP exit  then
+   lock
    clear-usb-error
    process-hc-status
    intr-in-qh dup pull-qhtds
@@ -85,6 +88,7 @@ external
    else
       0 usb-error					( actual usberr )
    then
+   unlock
 ;
 
 headers
@@ -104,22 +108,26 @@ external
    debug?  if  ." restart-intr-in" cr  then
    intr-in-qh 0=  if  exit  then
 
+   lock
    \ Setup TD again
    intr-in-td restart-intr-in-td
 
    \ Setup QH again
    intr-in-td >td-phys l@ intr-in-qh >hcqh-elem le-l!
    intr-in-qh push-qhtds
+   unlock
 ;
 
 : end-intr-in  ( -- )
    debug?  if  ." end-intr-in" cr  then
    intr-in-qh 0=  if  exit  then
 
+   lock
    intr-in-td intr-in-qh >qh-#tds l@ fixup-intr-in-data
    intr-in-td map-out-buf
    intr-in-qh dup  remove-qh  free-qhtds
    0 to intr-in-qh  0 to intr-in-td
+   unlock
 ;
 
 headers

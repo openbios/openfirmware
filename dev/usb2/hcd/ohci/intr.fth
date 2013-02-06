@@ -61,6 +61,7 @@ external
 : begin-intr-in  ( buf len pipe interval -- )
    debug?  if  ." begin-intr-in" cr  then
    intr-in-ed  if  4drop exit  then		\ Already started
+   lock
    #intr-in++
 
    to intr-in-interval
@@ -74,10 +75,12 @@ external
    \ Start intr transaction
    intr-in-ed dup fill-intr-in-ed
    insert-in-intr
+   unlock
 ;
 
 : intr-in?  ( -- actual usberr )
    intr-in-ed 0=  if  0 USB_ERR_INV_OP exit  then
+   lock
    clear-usb-error				( )
    process-hc-status				( )
    intr-in-ed dup pull-edtds			( ed )
@@ -93,6 +96,7 @@ external
    else
       0	usb-error				( actual usberr )
    then
+   unlock
 ;
 
 headers
@@ -111,6 +115,7 @@ headers
 external
 : restart-intr-in  ( -- )
    intr-in-ed 0=  if  exit  then
+   lock
    intr-in-ed ed-set-skip
 
    \ Setup TD again
@@ -120,15 +125,18 @@ external
    intr-in-td >td-phys l@ intr-in-data@ or intr-in-ed >hced-tdhead le-l!
    intr-in-ed dup push-edtds
    ed-unset-skip
+   unlock
 ;
 
 : end-intr-in  ( -- )
    debug?  if  ." end-intr-in" cr  then
    intr-in-ed 0=  if  exit  then
+   lock
    #intr-in--
    intr-in-td map-out-cbp
    intr-in-ed remove-my-intr
    0 to intr-in-ed  0 to intr-in-td
+   unlock
 ;
 
 headers

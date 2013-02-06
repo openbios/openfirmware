@@ -111,6 +111,7 @@ external
 
 : bulk-in?  ( -- actual usberr )
    bulk-in-qh 0=  if  0 USB_ERR_INV_OP exit  then
+   lock
    clear-usb-error
    process-hc-status
    bulk-in-qh dup pull-qhtds                            ( bulk-in-qh )
@@ -129,6 +130,7 @@ external
    over  if
       bulk-in-td dup >td-buf l@ swap >td-pbuf l@ 2 pick dma-pull
    then
+   unlock
 ;
 
 headers
@@ -170,6 +172,7 @@ external
 
 : bulk-in  ( buf len pipe -- actual usberr )
    debug?  if  ." bulk-in" cr  then
+   lock
    dup to bulk-in-pipe
    bulk-in-timeout process-bulk-args
    alloc-bulk-qhtds  to my-td  to my-qh
@@ -197,10 +200,12 @@ external
    my-td dup map-out-buf			( actual usberr qh td )
    my-#tds fixup-bulk-in-data			( actual usberr qh )
    dup  remove-qh  free-qhtds			( actual usberr )
+   unlock
 ;
 
 : bulk-out  ( buf len pipe -- usberr )
    debug?  if  ." bulk-out" cr  then
+   lock
    dup to bulk-out-pipe
    bulk-out-timeout process-bulk-args
    alloc-bulk-qhtds  to my-td  to my-qh
@@ -219,6 +224,7 @@ external
    my-td dup map-out-buf			( actual usberr qh td )
    my-#tds fixup-bulk-out-data			( actual usberr qh )
    dup  remove-qh  free-qhtds			( actual usberr )
+   unlock
 ;
 
 headers

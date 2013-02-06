@@ -421,6 +421,7 @@ external
 ;
 
 : bulk-in?  ( -- actual usberr )
+   lock
    bulk-in-ready?  if		( usberr | buf actual 0 )
       ?dup  if			( usberr )
          0 swap			( actual usberr )
@@ -432,6 +433,7 @@ external
    else				( )
       0 0			( actual usberr )
    then
+   unlock
 ;
 
 : restart-bulk-in  ( -- )
@@ -460,6 +462,7 @@ external
 ;
 : bulk-in  ( buf len pipe -- actual usberr )
    debug?  if  ." bulk-in" cr  then
+   lock
    dup to bulk-in-pipe
    process-bulk-args
    ?alloc-bulk-qhqtds  to my-bulk-qtd  to  my-bulk-qh
@@ -480,16 +483,19 @@ external
    my-bulk-qtd map-out-bptrs			( actual usberr )
    my-bulk-qh dup fixup-bulk-in-data		( actual usberr qh )
    remove-qh					( actual usberr )
+   unlock
 ;
 
 0 instance value bulk-out-busy?
 : done-bulk-out  ( -- error? )
+   lock
    \ Process results
    my-bulk-qh done-error?		( usberr )
    my-bulk-qtd map-out-bptrs		( usberr )
    my-bulk-qh fixup-bulk-out-data	( usberr )
    my-bulk-qh remove-qh			( usberr )
    false to bulk-out-busy?		( usberr )
+   unlock
 ;
 : start-bulk-out  ( buf len pipe -- usberr )
    bulk-out-busy?  if			( buf len pipe )
@@ -497,6 +503,7 @@ external
    then					( buf len pipe )
 
    debug?  if  ." bulk-out" cr  then
+   lock
    dup to bulk-out-pipe			( buf len pipe )
    process-bulk-args			( )
    ?alloc-bulk-qhqtds  to my-bulk-qtd  to my-bulk-qh	( )
@@ -507,6 +514,7 @@ external
    TD_PID_OUT start-bulk-transaction	( )
    true to bulk-out-busy?		( )
    0					( usberr )
+   unlock
 ;
 : bulk-out  ( buf len pipe -- usberr )
    start-bulk-out drop done-bulk-out

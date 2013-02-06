@@ -51,6 +51,7 @@ external
    debug?  if  ." begin-intr-in" cr  then
    intr-in-qh  if  4drop exit  then		\ Already started
 
+   lock
    to intr-in-interval
    dup to intr-in-pipe
    process-intr-args
@@ -63,10 +64,12 @@ external
    \ Start intr in transaction
    intr-in-qh pt-intr fill-qh
    intr-in-qh my-speed intr-in-interval insert-intr-qh
+   unlock
 ;
 
 : intr-in?  ( -- actual usberr )
    intr-in-qh 0=  if  0 USB_ERR_INV_OP exit  then  ( )
+   lock
    clear-usb-error                   ( )
    \ Ironically, we can't use Interrupt-On-Completion for interrupt pipes,
    \ because when a bulk or control transaction is performed with IOC, the
@@ -91,6 +94,7 @@ external
       usb-error                      ( actual usberr )
       intr-in-qh fixup-intr-in-data  ( actual usberr )
    then                              ( actual usberr )
+   unlock
 ;
 
 headers
@@ -111,6 +115,7 @@ external
 : restart-intr-in  ( -- )
    intr-in-qh 0=  if  exit  then
 
+   lock
    \ Setup qTD again
    intr-in-qtd restart-intr-in-qtd
 
@@ -119,15 +124,18 @@ external
    intr-in-qh >hcqh-endp-char dup le-l@ QH_TD_TOGGLE invert and swap le-l!
    intr-in-qtd >qtd-phys l@ intr-in-qh >hcqh-overlay >hcqtd-next le-l!
    intr-in-qh push-qhqtds
+   unlock
 ;
 
 : end-intr-in  ( -- )
    debug?  if  ." end-intr-in" cr  then
    intr-in-qh 0=  if  exit  then
+   lock
    intr-in-qh dup fixup-intr-in-data
    intr-in-qtd map-out-bptrs
    dup remove-intr-qh  free-qh
    0 to intr-in-qh  0 to intr-in-qtd
+   unlock
 ;
 
 headers

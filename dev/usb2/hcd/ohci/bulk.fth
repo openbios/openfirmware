@@ -124,6 +124,7 @@ external
 
 : bulk-in?  ( -- actual usberr )
    bulk-in-ed 0=  if  0 USB_ERR_INV_OP exit  then
+   lock
    clear-usb-error				( )
    process-hc-status				( )
    bulk-in-ed dup pull-edtds			( ed )
@@ -139,6 +140,7 @@ external
    else
       0	usb-error				( actual usberr )
    then
+   unlock
 ;
 
 headers
@@ -157,6 +159,7 @@ headers
 external
 : restart-bulk-in  ( -- )
    debug?  if  ." restart-bulk-in" cr  then
+   lock
    bulk-in-ed 0=  if  exit  then
    bulk-in-ed ed-set-skip
 
@@ -168,18 +171,22 @@ external
    bulk-in-ed dup push-edtds
    ed-unset-skip
    enable-bulk
+   unlock
 ;
 
 : end-bulk-in  ( -- )
    debug?  if  ." end-bulk-in" cr  then
+   lock
    bulk-in-ed 0=  if  exit  then
    bulk-in-td map-out-cbp
    bulk-in-ed remove-my-bulk
    0 to bulk-in-ed  0 to bulk-in-td
+   unlock
 ;
 
 : bulk-in  ( buf len pipe -- actual usberr )
    debug?  if  ." bulk-in" cr  then
+   lock
    dup to bulk-in-pipe
    bulk-in-timeout process-bulk-args		( )
    alloc-bulk-edtds to my-td to my-ed		( )
@@ -206,10 +213,12 @@ external
    my-td map-out-cbp				( actual usberr ed )
    my-ed dup fixup-bulk-in-data			( actual usberr ed )
    remove-my-bulk				( actual usberr )
+   unlock
 ;
 
 : bulk-out  ( buf len pipe -- usberr )
    debug?  if  ." bulk-out" cr  then
+   lock
    dup to bulk-out-pipe
    bulk-out-timeout process-bulk-args
    alloc-bulk-edtds to my-td to my-ed
@@ -227,6 +236,7 @@ external
    my-td map-out-cbp
    my-ed dup fixup-bulk-out-data
    remove-my-bulk
+   unlock
 ;
 
 headers

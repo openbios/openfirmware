@@ -77,6 +77,7 @@ h# 0300 constant REPORT_FEATURE
 : end-scan  ( -- )  end-intr-in  ;
 
 : get-data?  ( adr len -- actual )
+   locked?  if  nip nip 0 exit  then  \ bulk or interrupt methods are active
    intr-in?  if  nip nip restart-intr-in exit  then	\ USB error; restart
    ?dup  if				( adr len actual )
       min tuck kbd-buf -rot move	( actual )

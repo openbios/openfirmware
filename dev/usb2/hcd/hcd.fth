@@ -54,6 +54,10 @@ false instance value noprobe?
    then
 ;
 
+0 value locked?  \ Interrupt lockout for USB keyboard get-data?
+: lock    ( -- )  true  to locked?  ;
+: unlock  ( -- )  false to locked?  ;
+
 \ ---------------------------------------------------------------------------
 \ Common routines
 \ ---------------------------------------------------------------------------
