@@ -52,7 +52,7 @@ max#queued /packet-max * constant /ring
 ;
 
 : enque-buffer  ( handle -- )
-   advance  dup next-get <>  if  to next-put  then
+   advance  dup next-get <>  if  to next-put  else  drop  then
 ;
 
 : get-queued?  ( -- false | adr len true )
