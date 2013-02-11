@@ -133,7 +133,7 @@ warning !
    2>r >r                                   ( adr len  r: name$ expanded-len )
 
    \ Calculate expected ending position
-   dup  ofd @ ftell +                         ( adr len pos )
+   dup  ofd @ ftell h# 20 + +                   ( adr len pos )
 
    \ Encroaches upon manufacturing data area?  If so, enumerate as a dropin.
    reserved-start h# 20 -  reserved-end  within  if
