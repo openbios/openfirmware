@@ -15,7 +15,8 @@ headerless
    talign		\ ... in case dp is misaligned
 
    aborted? @  if
-      aborted? off  hex cr  ." Keyboard interrupt" cr  .go-message   exit
+      aborted? off  true to already-go?
+      hex cr  ." Keyboard interrupt" cr .go-message exit
    then
 
    [ also hidden ] (.exception) [ previous ]
