@@ -7,6 +7,8 @@ purpose: Telnet server - allows external systems to telnet to the firmware
 
 support-package: telnet
 false value debug-options?
+false value verbose?
+false value listening?
 
 : (read)  ( adr len -- actual )  " read" $call-parent  ;
 : (write)  ( adr len -- actual )  " write" $call-parent  ;
@@ -130,7 +132,7 @@ false value debug-options?
 \ Remove the linefeed in a cr-lf pair.
 \ The Windows telnet client sends CR-LF per the Telnet NVT spec.
 \ The Linux telnet client just sends CR.
-0 value last-was-cr?
+false value last-was-cr?
 
 : do-lf  ( adr len -- adr' len' )
    last-was-cr?  if  swallow  else  1 /string  then
@@ -148,12 +150,41 @@ false value debug-options?
    repeat                                      ( adr end-adr 0 )
    drop swap -                                 ( len' )
 ;
-: read  ( adr len -- actual )
-   over swap  (read)              ( adr actual )
-   dup 0<  if  nip exit  then     ( adr actual )
-   process-escapes                ( actual' )
+
+: .his-ip-addr  ( -- )
+   " his-ip-addr" $call-parent .ipaddr
 ;
-: write  ( adr len -- actual )
+
+: accept?  ( -- connected? )
+   d# 23 " accept" $call-parent  0=  if  false exit  then
+
+   verbose?  if  ." telnetd: connection from "  .his-ip-addr cr  then
+
+   3 send-do            \ You suppress go-ahead
+   0 send-do            \ Be binary
+   1 send-will          \ I will echo
+   false to listening?
+   false to last-was-cr?
+   true
+;
+
+: disconnect  ( -- )
+   " disconnect" $call-parent
+   verbose?  if  ." telnetd: connection closed by " .his-ip-addr cr  then
+   true to listening?
+;
+
+: read  ( adr len -- actual|-1|-2 )
+   listening?  if  accept? drop  2drop  -2  exit  then
+   over swap  (read)                            ( adr actual )
+   dup case                                     ( adr actual )
+      -1  of  disconnect  nip exit  endof
+      -2  of              nip exit  endof
+   endcase
+   process-escapes                              ( actual' )
+;
+: write  ( adr len -- actual|-1 )
+   listening?  if 2drop  -1  exit  then
    tuck  begin                ( len adr len )
       #iac split-string       ( len head$ tail$ )
    dup while                  ( len head$ tail$ )
@@ -165,42 +196,17 @@ false value debug-options?
    2drop (write) drop         ( len )
 ;
 
-0 instance value verbose?
-
 : open  ( -- flag )
+   true to listening?
    my-args " verbose" $=  to verbose?
 
    verbose?  if
       ." telnet://"  " my-ip-addr" $call-parent .ipaddr  cr
    then
 
-   begin  d# 23 " accept" $call-parent  until
+   begin  accept?  until
 
    verbose?  if  ." Connected" cr  then
-
-   3 send-do		\ You suppress go-ahead
-   0 send-do		\ Be binary
-   1 send-will		\ I will echo
-
-   get-msecs        ( time )
-   begin
-      get-msecs over d# 300 +  -  0<
-   while
-      the-byte h# 10 (read)  dup  0<  if          ( msecs count )
-         \ Bail out if the connection closed
-         -1 =  if  drop false exit  then
-
-         \ The other alternative is -2, meaning no bytes available.
-         \ In that case, we'll eventually time out.
-      else                                        ( msecs count )
-         \ Keep advancing the timeout while bytes are still coming in
-         the-byte swap process-escapes drop      ( msecs )
-         drop get-msecs
-      then
-   repeat
-   drop
-
-   false to last-was-cr?
 
    true
 ;
@@ -210,24 +216,15 @@ end-support-package
 
 0 value telnet-ih
 
-defer getchar-hook  ' = to getchar-hook
-patch getchar-hook =  stdin-getchar
-
 : exit-telnet  ( -- )
-   telnet-ih remove-output
-   telnet-ih remove-input
-   telnet-ih close-dev
-   ['] = to getchar-hook
-;
+   telnet-ih  0=  if  exit  then
 
-: ?telnet-closed  ( read-return 1 -- flag )
-   over  -1 =  if              ( -1 1 )
-      exit-telnet              ( -1 1 )
-      carret pending-char c!   ( 1 1 ) 
-      ." Connection closed" \ cr
-      2drop true exit
-   then                        ( read-return 1 )
-   =
+   " verbose?" telnet-ih $call-method   ( verbose? )
+   telnet-ih remove-output              ( verbose? )
+   telnet-ih remove-input               ( verbose? )
+   telnet-ih close-dev                  ( verbose? )
+   0 to telnet-ih                       ( verbose? )
+   if  ." telnetd: off" cr  then        ( )
 ;
 
 devalias telnetd  tcp//telnet:verbose
@@ -238,7 +235,6 @@ devalias telnetd  tcp//telnet:verbose
    telnet-ih add-output
    telnet-ih add-input
    \ hint: use " screen-ih remove-output " to speed up your telnet output
-   ['] ?telnet-closed to getchar-hook
 ;
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
