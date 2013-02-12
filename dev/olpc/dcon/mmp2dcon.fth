@@ -100,6 +100,7 @@ d# 850 value resumeline
 : mark-time  ( -- start-time )  get-msecs  ;
 : delta-ms  ( start-time -- elapsed-ms )  mark-time  swap -   ;
 
+defer dcon-unjam
 : wait-output  ( -- )
    mark-time                                            ( start-time )
    setup-dcon-irq  scanint-on                           ( )
@@ -116,8 +117,8 @@ d# 850 value resumeline
       dup delta-ms  d# 100 >                            ( start-time reached? )
    until                                                ( start-time )
    drop                                                 ( )
-   ." Timeout leaving DCON mode" cr                     ( )
    scanint-off                                          ( )
+   dcon-unjam
 ;
 
 : wait-dcon-mode  ( -- retry? )
@@ -136,8 +137,7 @@ d# 850 value resumeline
       dup delta-ms  d# 100 >            ( start-time reached? )    \ 100 ms timeout
    until                                ( start-time )
    drop
-   ." Timeout entering DCON mode" cr
-   \ We say false here because we don't want to retry; it probably won't succeed
+   dcon-unjam
    false
 ;
 
@@ -293,6 +293,8 @@ d# 850 value resumeline
    saved-dcon-mode  mode!
    saved-brightness bright!
 ;
+: (dcon-unjam)  dcon-suspend  d# 10 ms  dcon-resume  ;
+' (dcon-unjam)  to dcon-unjam
 
 end-package
 
