@@ -1,4 +1,4 @@
-\ The EC microcode 
+\ The EC microcode
 macro: EC_PLATFORM cl4
 macro: EC_VERSION 7_0_3_11
 

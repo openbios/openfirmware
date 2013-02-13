@@ -654,17 +654,10 @@ fload ${BP}/dev/olpc/lid.fth
    quit
 ;
 
-: newrom  " flash! http:\\192.168.200.200\new.rom" eval  ;
-: urom  " flash! u:\new.rom" eval  ;
-: qz
-   " qz" $essid  " http:\\qz\" included  \ qa test bed scripting, james cameron
-;
-: .os  " more int:\boot\olpc_build" eval  ;
-
-\ Fancy battery charge logger.
-fload ${BP}/cpu/x86/pc/olpc/charge.fth
-
+: enable-serial ;
+fload ${BP}/cpu/x86/pc/olpc/charge.fth     \ Fancy battery charge logger
 fload ${BP}/cpu/x86/pc/olpc/diskspeed.fth  \ Mass storage speed test
+fload ${BP}/cpu/x86/pc/olpc/apt.fth        \ Common developer utilities
 
 tag-file @ fclose  tag-file off
 

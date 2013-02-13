@@ -945,28 +945,8 @@ dev /client-services  patch noop visible enter  dend
    quit
 ;
 
-: newrom
-   " flash! http:\\192.168.200.200\new.rom" eval
-;
-: newec
-   " flash-ec http:\\192.168.200.200\ecimage.bin" eval
-;
-: qz
-   " qz" $essid  " http:\\qz\" included  \ qa test bed scripting, james cameron
-;
-: .os  " more int:\boot\olpc_build" eval  ;
-: urom  " flash! u:\new.rom" eval  ;
-: uec   " flash-ec! u:\ecimage.bin" eval  ;
-: erom  " flash! ext:\new.rom" eval  ;
-: no-usb-delay  " dev /usb  false to delay?  dend"  evaluate  ;
-: null-fsdisk
-   " dev /null : size 0 8 ; : write-blocks-start 3drop false ; : write-blocks-end false ; dend" evaluate
-   " devalias fsdisk //null" evaluate
-;
-stand-init: wifi
-   " NN" find-tag  if  ?-null  $essid  then
-   " PP" find-tag  if  ?-null  $wpa    then
-;
+: enable-serial ;
+fload ${BP}/cpu/x86/pc/olpc/apt.fth        \ Common developer utilities
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2010 FirmWorks

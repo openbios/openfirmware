@@ -741,25 +741,9 @@ true                               ' client-symbols?  set-config-int-default
    fallback-out-ih  ?dup  if  remove-output  then
 ;
 
-: newrom
-   enable-serial
-   " flash! http:\\192.168.200.200\new.rom" eval
-;
-: urom  enable-serial " flash! u:\new.rom" eval  ;
-: qz
-   " qz" $essid  " http:\\qz\" included  \ qa test bed scripting, james cameron
-;
-: .os  " more int:\boot\olpc_build" eval  ;
-: no-usb-delay  " dev /usb  false to delay?  dend"  evaluate  ;
-: null-fsdisk
-   " dev /null : size 0 8 ; : write-blocks-start 3drop false ; : write-blocks-end false ; dend" evaluate
-   " devalias fsdisk //null" evaluate
-;
-
-\ Fancy battery charge logger.
-fload ${BP}/cpu/x86/pc/olpc/charge.fth
-
+fload ${BP}/cpu/x86/pc/olpc/charge.fth     \ Fancy battery charge logger
 fload ${BP}/cpu/x86/pc/olpc/diskspeed.fth  \ Mass storage speed test
+fload ${BP}/cpu/x86/pc/olpc/apt.fth        \ Common developer utilities
 
 tag-file @ fclose  tag-file off
 
