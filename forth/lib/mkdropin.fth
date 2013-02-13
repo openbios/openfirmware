@@ -130,13 +130,13 @@ warning !
    dup 4 round-up swap  ?do  1 ofd @ fputc  loop   ( )
 ;
 : write-dropin  ( adr len expanded-len name-str -- )
-   2>r >r                                   ( adr len  r: name$ expanded-len )
+   2>r >r                                     ( adr len  r: name$ expanded-len )
 
-   \ Calculate expected ending position
-   dup  ofd @ ftell h# 20 + +                   ( adr len pos )
+   \ Calculate expected ending file position
+   ofd @ ftell  over  4 round-up +  h# 20 +   ( adr len pos )
 
    \ Encroaches upon manufacturing data area?  If so, enumerate as a dropin.
-   reserved-start h# 20 -  reserved-end  within  if
+   reserved-start  reserved-end  within  if
       \ Calculate size of a dropin covering reserved area
       reserved-end ofd @ ftell -  h# 20 -     ( adr len reslen )
       \ Allocate memory for it
