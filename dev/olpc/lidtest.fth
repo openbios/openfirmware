@@ -1,24 +1,37 @@
 \ See license at end of file
-purpose: Driver/selftest for OLPC lid and ebook switches
+purpose: selftest for OLPC lid and ebook switches
 
-0 0  " 0"  " /" begin-package
-" switches" device-name
+: open  ( -- okay? )  true  ;
+: close  ( -- )  ;
+: ?key-abort  ( -- )  key?  if  key esc =  abort" Aborted"  then  ;
+: wait-not-lid  ( -- )
+   ." Deactivate lid switch" cr
+   begin  ?key-abort  lid? 0=  until
+;
+: wait-lid  ( -- )
+   ." Activate lid switch" cr
+   begin  ?key-abort  lid? until
+;
+: wait-not-ebook  ( -- )
+   ." Deactivate ebook switch" cr
+   begin  ?key-abort  ebook? 0=  until
+;
+: wait-ebook  ( -- )
+   ." Activate ebook switch" cr
+   begin  ?key-abort  ebook? until
+;
 
-" olpc,xo1.75-switch" +compatible
-ebook-mode-gpio# 1 " ebook-gpios" gpio-property
-lid-switch-gpio# 1 " lid-gpios"   gpio-property
+: all-switch-states  ( -- )
+   lid?  if  wait-not-lid  else  wait-lid  then
+   ebook?  if  wait-not-ebook  else  wait-ebook  then
+;
 
-0 0 reg  \ So test-all will run the test
-
-: lid?    ( -- flag )  lid-switch-gpio# gpio-pin@  0=  ;
-: ebook?  ( -- flag )  ebook-mode-gpio# gpio-pin@  0=  ;
-
-fload ${BP}/dev/olpc/lidtest.fth
-fload ${BP}/dev/olpc/lid.fth
-end-package
+: selftest  ( -- error? )
+   ['] all-switch-states catch
+;
 
 \ LICENSE_BEGIN
-\ Copyright (c) 2011 FirmWorks
+\ Copyright (c) 2013 FirmWorks
 \ 
 \ Permission is hereby granted, free of charge, to any person obtaining
 \ a copy of this software and associated documentation files (the

@@ -10,38 +10,11 @@ ebook-mode-gpio# 1 " ebook-gpios" gpio-property
 lid-switch-gpio# 1 " lid-gpios"   gpio-property
 
 0 0 reg  \ So test-all will run the test
-: open  ( -- okay? )  true  ;
-: close  ( -- )  ;
-: lid?    ( -- flag )  d# 129 gpio-pin@  0=  ;
-: ebook?  ( -- flag )  d# 130 gpio-pin@  0=  ;
 
-: ?key-abort  ( -- )  key?  if  key esc =  abort" Aborted"  then  ;
-: wait-not-lid  ( -- )
-   ." Deactivate lid switch" cr
-   begin  ?key-abort  lid? 0=  until
-;
-: wait-lid  ( -- )
-   ." Activate lid switch" cr
-   begin  ?key-abort  lid? until
-;
-: wait-not-ebook  ( -- )
-   ." Deactivate ebook switch" cr
-   begin  ?key-abort  ebook? 0=  until
-;
-: wait-ebook  ( -- )
-   ." Activate ebook switch" cr
-   begin  ?key-abort  ebook? until
-;
+: lid?    ( -- flag )  lid-switch-gpio# gpio-pin@  0=  ;
+: ebook?  ( -- flag )  ebook-mode-gpio# gpio-pin@  0=  ;
 
-: all-switch-states  ( -- )
-   lid?  if  wait-not-lid  else  wait-lid  then
-   ebook?  if  wait-not-ebook  else  wait-ebook  then
-;
-
-: selftest  ( -- error? )
-   ['] all-switch-states catch
-;
-
+fload ${BP}/dev/olpc/lidtest.fth
 fload ${BP}/dev/olpc/lid.fth
 end-package
 
