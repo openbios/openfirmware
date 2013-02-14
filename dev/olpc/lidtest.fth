@@ -45,6 +45,10 @@ purpose: selftest for OLPC lid and ebook switches
    pltd  wait-not-ebook  ty
 ;
 
+[ifndef] factory-test?
+: factory-test?  false  ;
+[then]
+
 : selftest  ( -- error? )
    factory-test?  if
       ['] all-switch-states catch
