@@ -3,31 +3,54 @@ purpose: selftest for OLPC lid and ebook switches
 
 : open  ( -- okay? )  true  ;
 : close  ( -- )  ;
+
 : ?key-abort  ( -- )  key?  if  key esc =  abort" Aborted"  then  ;
-: wait-not-lid  ( -- )
-   ." Deactivate lid switch" cr
-   begin  ?key-abort  lid? 0=  until
-;
-: wait-lid  ( -- )
-   ." Activate lid switch" cr
-   begin  ?key-abort  lid? until
-;
-: wait-not-ebook  ( -- )
-   ." Deactivate ebook switch" cr
-   begin  ?key-abort  ebook? 0=  until
-;
-: wait-ebook  ( -- )
-   ." Activate ebook switch" cr
-   begin  ?key-abort  ebook? until
-;
+
+: wait-not-lid    ( -- )  begin  ?key-abort  lid? 0=    until  ;
+: wait-lid        ( -- )  begin  ?key-abort  lid?       until  ;
+: wait-not-ebook  ( -- )  begin  ?key-abort  ebook? 0=  until  ;
+: wait-ebook      ( -- )  begin  ?key-abort  ebook?     until  ;
 
 : all-switch-states  ( -- )
-   lid?  if  wait-not-lid  else  wait-lid  then
-   ebook?  if  wait-not-ebook  else  wait-ebook  then
+   lid?  if
+      ." Deactivate lid switch" cr
+      wait-not-lid
+   else
+      ." Activate lid switch" cr
+      wait-lid
+   then
+   ebook?  if
+      ." Deactivate ebook switch" cr
+      wait-not-ebook
+   else
+      ." Activate ebook switch" cr
+      wait-ebook
+   then
+;
+
+: ty    ." Thank you."  cr cr  ;
+: pltd  ." Please lift the display and rotate it to face you."  cr  ;
+
+: field-switch-states  ( -- )
+   cr
+   ebook?  if  pltd  wait-not-ebook  ty  then
+
+   lid?  if  ." Please open the lid."  cr  wait-not-lid  ty  then
+
+   ." Please close the lid and then open it."  cr
+   wait-lid  d# 1000 ms  wait-not-lid  ty
+
+   ." Please rotate the lid to face away, and close it face up."  cr
+   wait-ebook  d# 1000 ms  ty
+   pltd  wait-not-ebook  ty
 ;
 
 : selftest  ( -- error? )
-   ['] all-switch-states catch
+   factory-test?  if
+      ['] all-switch-states catch
+   else
+      ['] field-switch-states catch
+   then
 ;
 
 \ LICENSE_BEGIN
