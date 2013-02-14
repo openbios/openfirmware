@@ -173,9 +173,9 @@ h# ff h# ff h# ff rgb>565 constant white-color
 ;
 : wait  ( -- )
    hold-time
-   dcon-screen-freeze
+   [ifdef] dcon-screen-freeze  dcon-screen-freeze  [then]
    hold-time
-   dcon-screen-unfreeze
+   [ifdef] dcon-screen-unfreeze  dcon-screen-unfreeze  [then]
    hold-time2
 ;
 
