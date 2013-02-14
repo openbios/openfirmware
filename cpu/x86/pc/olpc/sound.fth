@@ -28,13 +28,20 @@ h# -9 constant default-volume
 : softer  ( -- )  -2 +volume  ;
 : louder  ( -- )   2 +volume  ;
 
-" int:\boot\jingle.wav"  d# 128 config-string jingle
-: sound-name$  ( -- adr len )
-   jingle $file-exists?  if
-      jingle
-   else
-      " rom:splash"
-   then
+: sound-int?  ( -- error? )
+   " int:\boot\jingle.wav" ['] $play-wav catch  dup if nip nip then
+;
+
+: sound-rom?  ( -- error? )
+   " rom:splash" ['] $play-wav catch  dup if nip nip then
+;
+
+: (sound)
+   [ifdef] jffs2-support
+   sound-rom?  drop  \ jffs2 is very slow to mount
+   [else]
+   sound-int?  if  sound-rom?  drop  then
+   [then]
 ;
 
 : sound  ( -- )
@@ -42,7 +49,7 @@ h# -9 constant default-volume
    playback-volume >r  get-saved-volume to playback-volume
    ['] load-started behavior  >r
    ['] noop to load-started
-   sound-name$ ['] $play-wav catch  if  2drop  then
+   (sound)
    r> to load-started
    r> to playback-volume
 ;
