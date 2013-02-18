@@ -105,6 +105,8 @@ d# 256 buffer: ssid
 : ssid$  ( -- $ )  ssid /ssid  ;
 
 0 value channel
+0 value 802.11n?                \ Hardware is 802.11n capable
+: channel-is-5ghz?  ( chan# -- )  d# 14 >  ;
 
 d# 80 buffer: wpa-ie		\ WPA IE saved for EAPOL phases
 0 value /wpa-ie
@@ -707,6 +709,11 @@ true value got-indicator?
 : set-fw-params  ( -- )
    get-hw-spec  0=  if   ( adr )
 
+      \ is 802.11n capable?
+      dup d# 34 + le-l@ h# 800 and  if
+         true to 802.11n?
+      then ( adr )
+
       \ The 4-byte FWReleaseNumber field starts at offset d# 18.
       \ Firmware version 2.3.4.p1 is represented in that field
       \ as 04 03 02 01, i.e. the first three bytes are little-endian,
@@ -1138,19 +1145,16 @@ d# 34 instance buffer: scan-ssid
 
 h# 7ffe instance value channel-mask
 
-: +chan-list-tlv  ( -- )
+: +chan-tlv  ( channel# -- )
    h# 101 +xw
-   0 +xw  'x >r       ( r: 'payload )
-   #channels 1+  1  do
-      1 i lshift  channel-mask  and  if
-         0 +xb            \ Radio type
-         i +xb            \ Channel #
-         scan-type +xb    \ Scan type - 0:active  or  1:passive
-         d# 100 +xw       \ Min scan time
-         d# 100 +xw       \ Max scan time
-      then
-   loop
-   'x r@ -  r> 2- le-w!
+   0 +xw  'x >r                                 ( channel#  r: payload' )
+   dup channel-is-5ghz?  if 1 else 0 then       ( channel# band# )
+   +xb                          \ Band #
+   +xb                          \ Channel #
+   scan-type +xb                \ Scan type - 0:active  or  1:passive
+   d# 100 +xw                   \ Min scan time
+   d# 100 +xw                   \ Max scan time ( r: payload' )
+   'x r@ -  r> 2- le-w!                         ( )
 ;
 
 : +probes-tlv  ( -- )
@@ -1167,19 +1171,32 @@ h# 7ffe instance value channel-mask
    then
 ;
 
-: (scan)  ( -- error? | adr len 0 )
+: (scan)  ( chan -- error? | adr len 0 )
+
+   \ forge success for 2.4 ghz channels disabled in the channel-mask
+   dup channel-is-5ghz?  0=  if                 ( chan )
+      1 over lshift channel-mask and  0=  if    ( chan )
+         drop respbuf 0 0 exit
+      then
+   then                                         ( chan )
+
+   \ forge success for 5 ghz channels if the device lacks support
+   dup channel-is-5ghz?  802.11n?  0=  and  if
+      drop respbuf 0 0 exit
+   then
+
    6 ( CMD_802_11_SCAN ) start-cmd
    resp-wait-long to resp-wait
 
    BSS_ANY +xb
    6 +xerase           \ BSS ID
 
-   +chan-list-tlv
+   +chan-tlv
    +probes-tlv
    +ssid-tlv
 
-   finish-cmd outbuf-wait  dup  0=  if 	       ( error? )
-      respbuf /respbuf /fw-cmd /string  rot    ( adr len 0 )
+   finish-cmd outbuf-wait  dup  0=  if          ( error? )
+      respbuf /respbuf /fw-cmd /string  rot     ( adr len 0 )
    then
 ;
 
@@ -1200,14 +1217,21 @@ external
    d# 32 min  scan-ssid pack drop
 ;
 
-: scan  ( adr len -- actual )
-\   (scan)
-   begin  (scan)  dup 1 =  while  drop d# 1000 ms  repeat  \ Retry while busy
-   if  2drop 0 exit  then               ( adr len scan-adr scan-len )
-   rot min >r                           ( adr scan-adr r: len )
-   swap r@ move			        ( r: len )
-   r>
+: scan  ( adr len chan -- actual )
+   dup channel-is-5ghz?  802.11n?  0=  and  if  3drop 0 exit  then
+   >r                           ( adr len r: chan )
+   begin
+      r@ (scan)  dup 1 =
+   while
+      drop d# 1000 ms           \ retry while busy
+   repeat                       ( adr len scan-adr scan-len err? r: chan )
+   r> drop                      ( adr len scan-adr scan-len err? )
+   if  2drop 0 exit  then       ( adr len scan-adr scan-len )
+   rot min >r                   ( adr scan-adr r: actual )
+   swap r@ move                 ( r: actual )
+   r>                           ( actual )
 ;
+
 headers
 
 \ =========================================================================
@@ -1550,7 +1574,7 @@ instance variable mesh-param
    \ DS param
    3      +xw				\ element ID = DS param set
    1      +xw				\ len
-   ( ch ) +xb				\ channel
+   dup    +xb				\ channel
 
    \ CF param
    4 +xw				\ element ID = CF param set
@@ -1598,6 +1622,9 @@ instance variable mesh-param
       ( cap ) +xw			\ WPA capabilities
       /x save-wpa-ie			\ Save IE in wpa-ie
    then
+
+   \ associating with a 5 GHz channel requires the band to be specified
+   802.11n?  if  +chan-tlv  else  drop  then   ( )
 
    \ XXX power (optional)
    \ XXX supported channels set (802.11h only)
@@ -2327,56 +2354,20 @@ d# 1600 buffer: test-buf
    " target-mac$" $call-supplicant disassociate
 ;
 
-\ adr len  is the result of (scan) - a list of APs and their characteristics
-: test-association  ( adr len -- error? )
-   " OLPCOFW" " select-ssid?" $call-supplicant  if   ( )
-      " (do-associate)" $call-supplicant  if         ( )
-	 \ Success
-         do-disassociate
-         " true to ssid-reset?" ['] evaluate catch  if  2drop  then
-	 false
-      else
-	 true
-      then
-   else
-      \ There is no OLPCOFW access point, so we don't try associating
-      false
-   then
-;
-
 : (scan-wifi)  ( -- error? )
    true to force-open?
    open
    false to force-open?
    0=  if  ." Can't open Marvell wireless" cr true close  exit  then
-
-   (scan)  if
-      ." Failed to scan" true cr
-   else    ( adr len )
-\     drop .scan false
-      diagnostic-mode?  if  ( adr len )
-         drop 2+ c@  if     ( )
-            false
-         else
-            ." ERROR: No access points seen" cr
-            true
-         then
-      else                    ( adr len )
-	 \ Quiet mode is for the benefit of the LEDs test, so we can flash
-         \ the WLAN LEDS without distracting messages appearing on the screen
-         quiet?  if           ( adr len )
-            2drop false       ( error? )
-         else
-            2dup .ssids       ( adr len )
-            test-association  ( error? )
-         then                 ( error? )
-      then
-   then
-
+   " scan-all" $call-supplicant  ( error? )
    close
 ;
 
 : scan-wifi  ( -- )  (scan-wifi) drop  ;
+
+: led-blink  ( -- )
+   d# 6  (scan)  0=  if 2drop then
+;
 
 : reassociate  ( -- )
    do-disassociate
@@ -2454,8 +2445,7 @@ d# 1600 buffer: test-buf
 
 : ta-scan  ( -- )
    ." scan"  cr
-   (scan)                               ( adr len error? )
-   0=  if  .ssids cr  then              ( )
+   (scan-all) drop
 ;
 
 : ta-n  ( n -- )

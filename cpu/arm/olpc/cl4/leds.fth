@@ -30,7 +30,7 @@ finish-device
    ols-led-on
    d# 100 ms
    hdd-led-on
-   " /wlan:quiet" test-dev
+   " led-blink" $call-wlan
    d# 100 ms
    ols-led-off
    ols-led-ec-control
@@ -42,13 +42,16 @@ finish-device
 ;
 
 : (selftest)
+   0 to wlan-ih
+   " /wlan:force" open-dev ?dup  if  to wlan-ih  then
    get-msecs d# 10000 +                 ( limit )
    begin
       (cycle)
-      key?  if  drop exit  then
+      key?  if  drop  wlan-ih close-dev  exit  then
       dup get-msecs -  0<               ( limit timeout? )
    until                                ( limit )
    drop                                 ( )
+   wlan-ih close-dev
 ;
 
 : selftest  ( -- error? )

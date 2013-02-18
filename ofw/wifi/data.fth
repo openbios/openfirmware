@@ -8,7 +8,7 @@ purpose: Supplicant data and environment data
 : wpa-ie$   ( -- adr len )  " wpa-ie$" $call-parent  ;
 : write-force  ( adr len -- actual )  " write-force" $call-parent  ;
 : read-force   ( adr len -- actual )  " read-force"  $call-parent  ;
-: scan   ( adr len -- actual )  " scan"  $call-parent  ;
+: scan  ( adr len chan -- actual )  " scan"  $call-parent  ;
 : enable-rsn   ( -- )  " enable-rsn"  $call-parent drop  ;
 : disable-rsn  ( -- )  " disable-rsn" $call-parent drop  ;
 : disable-wep  ( -- )  " disable-wep" $call-parent drop  ;

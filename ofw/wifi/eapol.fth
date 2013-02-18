@@ -922,19 +922,62 @@ d# 32 buffer: ek			\ Temporary rc4 key
    ssid$ (select-ssid?)                  ( found? )
 ;
 
+create scan-order
+   d#  6 c, d#  1 c, d# 11 c,
+
+   d#  2 c, d#  3 c, d#  4 c, d#  5 c, d#  7 c, d#  8 c,
+   d#  9 c, d# 10 c, d# 12 c, d# 13 c, d# 14 c,
+
+   d# 36 c, d# 40 c, d# 44 c, d# 48 c,
+   d# 52 c, d# 56 c, d# 60 c, d# 64 c,
+
+   d# 100 c, d# 104 c, d# 108 c,
+   d# 112 c, d# 116 c, d# 132 c, d# 136 c,
+
+   d# 140 c, d# 149 c, d# 153 c,
+   d# 157 c, d# 161 c, d# 165 c,
+here scan-order - constant /scan-order
+
+: test-association  ( adr len -- error? )
+   " OLPCOFW" select-ssid?  if
+      (do-associate)  if
+         target-mac$ " disassociate" $call-parent
+         true to ssid-reset?
+      then
+   then
+;
+
+: scan-all  ( -- error? )
+   scan-order /scan-order bounds do           ( )
+      scanbuf /buf  i c@                      ( adr len chan )
+      scan  dup if                            ( actual )
+         scanbuf swap                         ( adr len )
+         2dup .ssids                          ( adr len )
+         test-association
+      else                                    ( actual )
+         drop unloop true exit
+      then
+   loop
+   false
+;
+
 : scan-ssid?  ( ssid$ -- found? )
    dup 0=  if  2drop false exit  then         ( ssid$ )
    ssid!                                      ( )
    ssid$  " set-ssid" $call-parent            ( )
    ??cr ." Scan for: " ssid$ type space       ( )
-   scanbuf /buf scan  if                      ( )
-      debug?  if  scanbuf .scan  then         ( )
-      ssid$ (select-ssid?)                    ( found? )
-      dup  if  ." found"  else  ." failed"  then  cr
-   else                                       ( )
-      ." not found"  cr  false                ( found? )
-   then                                       ( found? )
+
+   scan-order /scan-order bounds do           ( )
+      scanbuf /buf  i c@                      ( adr len chan )
+      scan  if                                ( )
+         debug?  if  scanbuf .scan  then      ( )
+         ssid$ (select-ssid?)                 ( found? )
+         if  ." found"  cr unloop true exit  then
+      then
+   loop
+   ." not found"  cr  false                  ( found? )
 ;
+
 : try-scan  ( -- okay? )
    wifi-ssid$  scan-ssid?  if  true exit  then
    default-ssids  begin  dup  while   ( rem$ )
