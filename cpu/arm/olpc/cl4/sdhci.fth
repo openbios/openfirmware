@@ -41,6 +41,11 @@ dev /sd  \ MMC5 - internal micro-SD
       " /interrupt-controller/interrupt-controller@184" encode-phandle " interrupt-parent" property
       d# 0 " interrupts" integer-property
 
+      \ The media is considered non-removable (at run-time) since the slot is
+      \ only accessible on the motherboard, and a heatsink must be removed to
+      \ access it.
+      0 0 " non-removable" property
+
       " /pmua" encode-phandle d# 27 encode-int encode+ " clocks" property
       " PXA-SDHCLK" " clock-names" string-property
       d# 40 encode-int  1 encode-int encode+  " power-delay-ms" property
