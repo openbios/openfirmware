@@ -906,6 +906,7 @@ d# 30000 value test-timeout
    consume
    flush
    blacken
+   .tsmsg
    -1 to remaining
 ;
 
