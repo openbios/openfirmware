@@ -950,12 +950,14 @@ here scan-order - constant /scan-order
 : scan-all  ( -- error? )
    scan-order /scan-order bounds do           ( )
       scanbuf /buf  i c@                      ( adr len chan )
-      scan  dup if                            ( actual )
-         scanbuf swap                         ( adr len )
-         2dup .ssids                          ( adr len )
-         test-association
-      else                                    ( actual )
-         drop unloop true exit
+      scan  if                                ( actual )
+         ?dup  if                             ( actual )
+            scanbuf swap                      ( adr actual )
+            2dup .ssids                       ( adr actual )
+            test-association
+         then
+      else                                    ( )
+         unloop true exit
       then
    loop
    false
@@ -969,13 +971,17 @@ here scan-order - constant /scan-order
 
    scan-order /scan-order bounds do           ( )
       scanbuf /buf  i c@                      ( adr len chan )
-      scan  if                                ( )
-         debug?  if  scanbuf .scan  then      ( )
-         ssid$ (select-ssid?)                 ( found? )
-         if  ." found"  cr unloop true exit  then
+      scan  if                                ( actual )
+         if                                   ( )
+            debug?  if  scanbuf .scan  then   ( )
+            ssid$ (select-ssid?)              ( found? )
+            if
+               ." found"  cr unloop true exit
+            then                              ( )
+         then
       then
    loop
-   ." not found"  cr  false                  ( found? )
+   ." not found"  cr  false                   ( found? )
 ;
 
 : try-scan  ( -- okay? )

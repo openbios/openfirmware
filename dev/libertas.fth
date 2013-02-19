@@ -1217,8 +1217,7 @@ external
    d# 32 min  scan-ssid pack drop
 ;
 
-: scan  ( adr len chan -- actual )
-   dup channel-is-5ghz?  802.11n?  0=  and  if  3drop 0 exit  then
+: scan  ( adr len chan -- false | actual true )
    >r                           ( adr len r: chan )
    begin
       r@ (scan)  dup 1 =
@@ -1226,10 +1225,11 @@ external
       drop d# 1000 ms           \ retry while busy
    repeat                       ( adr len scan-adr scan-len err? r: chan )
    r> drop                      ( adr len scan-adr scan-len err? )
-   if  2drop 0 exit  then       ( adr len scan-adr scan-len )
+   if  4drop false exit  then   ( adr len scan-adr scan-len )
    rot min >r                   ( adr scan-adr r: actual )
    swap r@ move                 ( r: actual )
    r>                           ( actual )
+   true
 ;
 
 headers
@@ -2445,7 +2445,7 @@ d# 1600 buffer: test-buf
 
 : ta-scan  ( -- )
    ." scan"  cr
-   (scan-all) drop
+   " scan-all" $call-supplicant drop
 ;
 
 : ta-n  ( n -- )
