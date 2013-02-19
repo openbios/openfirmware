@@ -143,11 +143,16 @@ icon: quit.icon     rom:quit.565
       run-menu-item
       stop?  if unloop exit  then
    loop
-   overall-fail?  if
+   page  overall-fail?  if
       0 1  \ play-item
+      show-fail
+      ." "(1b)"[;15HSome hardware tests failed. Please review red boxes."
    else
       0 3  \ quit-item
+      show-pass
+      ." "(1b)"[;28HAll hardware tests passed."
    then
+   begin key? while key drop repeat  key drop
    set-default-selection
    refresh
 ;

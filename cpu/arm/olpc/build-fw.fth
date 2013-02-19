@@ -492,11 +492,6 @@ warning !
 \ Uninstall the diag menu from the general user interface vector
 \ so exiting from emacs doesn't invoke the diag menu.
 ' quit to user-interface
-fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
-
-[ifdef] notyet
-fload ${BP}/cpu/x86/pc/olpc/via/bootmenu.fth
-[then]
 
 : screen-#lines  ( -- n )
    screen-ih 0=  if  default-#lines exit  then
@@ -601,6 +596,7 @@ fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 
 fload ${BP}/cpu/arm/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
+fload ${BP}/cpu/x86/pc/olpc/via/mfgtest.fth
 fload ${BP}/cpu/x86/pc/olpc/strokes.fth
 fload ${BP}/cpu/x86/pc/olpc/plot.fth
 
