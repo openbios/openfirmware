@@ -193,6 +193,23 @@ device-end
    console-io
 ;
 
+: add-console  ( ih -- )
+   dup add-output  add-input
+;
+
+: remove-console  ( ih -- )
+   dup remove-output  remove-input
+;
+
+: omit  ( "command" -- )  \ do a command to added consoles only
+   screen-ih remove-output
+   fallback-out-ih remove-output
+   0 parse ['] evaluate catch
+   fallback-out-ih add-output
+   screen-ih add-output
+   throw
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks
 \ 
