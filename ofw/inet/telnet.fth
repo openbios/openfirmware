@@ -111,8 +111,22 @@ variable tcp-in
       telnet-out
    repeat
 ;
-: $telnet  ( hostname$ -- )  d# 23  open-tcp-connection  (telnet)  close-tcp  ;
-: telnet  ( "hostname" -- )  safe-parse-word $telnet  ;
+: $telnet  ( host$ port# -- )
+   open-tcp-connection
+   ." telnet: connected" cr
+   (telnet)
+   close-tcp
+   ." telnet: disconnected" cr
+;
+: telnet  ( "host" ["port"] -- )
+   safe-parse-word                                      ( host$ )
+   parse-word dup if                                    ( host$ port$ )
+      push-decimal $number pop-base abort" Bad port"    ( host$ port# )
+   else
+      2drop d# 23
+   then                                                 ( host$ port# )
+   $telnet
+;
 
 hex
 \ LICENSE_BEGIN

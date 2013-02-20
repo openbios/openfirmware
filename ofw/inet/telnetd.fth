@@ -5,10 +5,13 @@ purpose: Telnet server - allows external systems to telnet to the firmware
 \ use telnet on the remote host to connect to the firmware system.
 \ When done, execute "exit-telnet" or just close the connection.
 
+\needs telnet fload ${BP}/ofw/inet/telnet.fth \ for protocol constants
+
 support-package: telnet
-false value debug-options?
+false value debug-options?      \ display telnet option negotiation
 false value verbose?
-false value listening?
+false value passive?            \ package is not to try accept or connect
+false value listening?          \ package is to try accept
 
 : (read)  ( adr len -- actual )  " read" $call-parent  ;
 : (write)  ( adr len -- actual )  " write" $call-parent  ;
@@ -49,17 +52,17 @@ false value listening?
 
 
 : send-option  ( option request -- )  #iac putbyte  putbyte  putbyte  ;
-: send-will    ( option -- )   " WILL" .sent  d# 251 send-option  ;
-: send-wont    ( option -- )   " WONT" .sent  d# 252 send-option  ;
-: send-do      ( option -- )   " DO"   .sent  d# 253 send-option  ;
-: send-dont    ( option -- )   " DONT" .sent  d# 254 send-option  ;
+: send-will    ( option -- )   " WILL" .sent  #will send-option  ;
+: send-wont    ( option -- )   " WONT" .sent  #wont send-option  ;
+: send-do      ( option -- )   " DO"   .sent  #do   send-option  ;
+: send-dont    ( option -- )   " DONT" .sent  #dont send-option  ;
 
 : will  ( rem$ -- rem$' )
    next-cmd-byte  " WILL" .got
    dup  case
 \ Since we have already sent "do binary", there is no need to re-ack it
 \     0  of  send-do   endof
-      0  of  drop      endof	\ Suppress go-ahead
+      0  of  drop      endof	\ Suppress binary
 
 \ Since we have already sent "do suppressGA", there is no need to re-ack it
 \     3  of  send-do   endof	\ Suppress go-ahead
@@ -120,11 +123,11 @@ false value listening?
       d# 247  of  control h reinsert   endof    \ erase character
       d# 248  of  control u reinsert   endof    \ erase line
       d# 249  of                       endof    \ go-ahead
-      d# 250  of  subnegotiate         endof
-      d# 251  of  will                 endof
-      d# 252  of  wont                 endof
-      d# 253  of  tdo                  endof
-      d# 254  of  dont                 endof
+      #sb     of  subnegotiate         endof
+      #will   of  will                 endof
+      #wont   of  wont                 endof
+      #do     of  tdo                  endof
+      #dont   of  dont                 endof
       #iac    of  #iac reinsert        endof
    endcase
 ;
@@ -155,14 +158,27 @@ false value last-was-cr?
    " his-ip-addr" $call-parent .ipaddr
 ;
 
+: negotiate  ( -- )
+   3 send-do            \ You suppress go-ahead
+   0 send-do            \ Be binary
+   1 send-will          \ I will echo
+;
+
 : accept?  ( -- connected? )
    d# 23 " accept" $call-parent  0=  if  false exit  then
 
    verbose?  if  ." telnetd: connection from "  .his-ip-addr cr  then
+   negotiate
+   false to listening?
+   false to last-was-cr?
+   true
+;
 
-   3 send-do            \ You suppress go-ahead
-   0 send-do            \ Be binary
-   1 send-will          \ I will echo
+: connect?  ( $host port# -- connected? )
+   >r " $set-host" $call-parent r> ( port )
+   " connect" $call-parent  0=  if  false exit  then ( )
+
+   negotiate
    false to listening?
    false to last-was-cr?
    true
@@ -175,7 +191,7 @@ false value last-was-cr?
 ;
 
 : read  ( adr len -- actual|-1|-2 )
-   listening?  if  accept? drop  2drop  -2  exit  then
+   listening?  passive?  0=  and  if  accept? drop  2drop  -2  exit  then
    over swap  (read)                            ( adr actual )
    dup case                                     ( adr actual )
       -1  of  disconnect  nip exit  endof
@@ -196,9 +212,18 @@ false value last-was-cr?
    2drop (write) drop         ( len )
 ;
 
+: parse-args  ( $ -- )
+   begin  ?dup  while
+      ascii , left-parse-string
+      2dup " verbose" $=  if  true to verbose?  then
+           " passive" $=  if  true to passive?  then
+   repeat drop
+;
+
 : open  ( -- flag )
    true to listening?
-   my-args " verbose" $=  to verbose?
+   my-args parse-args
+   passive?  if  true exit  then
 
    verbose?  if
       ." telnet://"  " my-ip-addr" $call-parent .ipaddr  cr
@@ -206,36 +231,39 @@ false value last-was-cr?
 
    begin  accept?  until
 
-   verbose?  if  ." Connected" cr  then
-
    true
 ;
 : close  ( -- )  ;
 end-support-package
 
-
 0 value telnet-ih
+
+: mux    ( -- )  telnet-ih " add-console"    evaluate  ;
+: demux  ( -- )  telnet-ih " remove-console" evaluate  ;
+
+: open-telnet  ( name$ -- )
+   open-dev dup 0= abort" Can't open telnet"  ( ih )
+   to telnet-ih
+;
+
+: close-telnet
+   telnet-ih close-dev
+   0 to telnet-ih
+;
 
 : exit-telnet  ( -- )
    telnet-ih  0=  if  exit  then
 
    " verbose?" telnet-ih $call-method   ( verbose? )
-   telnet-ih remove-output              ( verbose? )
-   telnet-ih remove-input               ( verbose? )
-   telnet-ih close-dev                  ( verbose? )
-   0 to telnet-ih                       ( verbose? )
+   demux
+   close-telnet                         ( verbose? )
    if  ." telnetd: off" cr  then        ( )
 ;
 
-devalias telnetd  tcp//telnet:verbose
-
 : telnetd  ( -- )
-   " telnetd" open-dev dup 0= abort" Can't open telnet"  ( ih )
-   to telnet-ih
-   telnet-ih add-output
-   telnet-ih add-input
-   \ hint: use " screen-ih remove-output " to speed up your telnet output
+   " tcp//telnet:verbose" open-telnet  mux  banner
 ;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks
 \ 

@@ -20,10 +20,8 @@ fload ${BP}/ofw/inet/tcpapp.fth
 fload ${BP}/ofw/inet/finger.fth
 fload ${BP}/ofw/inet/telnet.fth
 fload ${BP}/ofw/inet/loadmail.fth
-
-warning @ warning off
-autoload: telnetd  defines: telnetd
-warning !
+fload ${BP}/ofw/inet/telnetd.fth
+fload ${BP}/ofw/inet/rdc.fth
 
 also forth definitions
 " "  d# 64  config-string  http-proxy
