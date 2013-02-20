@@ -132,11 +132,12 @@ false value mem-fail?
 device-end
 
 : memtest  ( -- )
-   true to diag-switch?
+   diag-switch? >r  true to diag-switch?
    1  begin                       ( pass# )
       ." Pass " dup .d  cr  1+    ( pass# )
       " /memory" test-dev         ( pass# )
    key? until                     ( pass# )
    key drop                       ( pass# )
    drop                           ( )
+   r> to diag-switch?
 ;
