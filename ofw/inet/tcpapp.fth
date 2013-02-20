@@ -14,8 +14,9 @@ purpose: TCP application convenience words
    dup  if  " $set-host" $call-tcp  else  2drop  then
 ;
 : tcp-connect  ( port# -- )
-   " connect" $call-tcp  0= abort" Connection refused
+   " connect" $call-tcp  0= abort" Connection refused"
 ;
+: tcp-accept  ( port# -- )  begin  dup " accept" $call-tcp  until  drop  ;
 : tcp-disconnect  ( -- )  " disconnect" $call-tcp  ;
 : open-tcp-connection  ( hostname$ port# -- )
    open-tcp  -rot set-tcp-server  tcp-connect
