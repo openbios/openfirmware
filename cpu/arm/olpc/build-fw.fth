@@ -942,6 +942,7 @@ dev /client-services  patch noop visible enter  dend
 ;
 
 : enable-serial ;
+fload ${BP}/cpu/x86/pc/olpc/terminal.fth   \ Serial terminal emulator
 fload ${BP}/cpu/x86/pc/olpc/apt.fth        \ Common developer utilities
 
 \ LICENSE_BEGIN
