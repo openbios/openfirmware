@@ -942,6 +942,7 @@ h# cc18 value packet-types
    true
 ;
 : close  ( -- )
+   disable-scanning
    outbuf h# 200 " free-buffer" $call-parent
 ;
 : selftest  ( -- error? )
