@@ -1090,7 +1090,7 @@ h# cf constant SDIO_FLAG_MASK
       cis@+                    ( offset' tuple-code )
       dup h# ff <>
    while                       ( offset tuple-code )
-      \ Another potentially interesting tuples si h# 15 from which
+      \ Another potentially interesting tuple is h# 15 from which
       \ you can get strings naming the product.
       case
 	 h# 20  of  parse-funcid  endof

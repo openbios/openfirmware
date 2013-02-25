@@ -124,14 +124,14 @@ false instance value force-open?
 : read-force  ( adr len -- actual )
    got-packet?  0=  if  		( adr len )
       2drop  -2  exit
-   then                                 ( adr len [ error | buf actual 0 ] )
+   then                                 ( adr len [ error | buf actual type 0 ] )
 
    if	\ receive error			( adr len )
       recycle-packet			( adr len )
       2drop  -1  exit
-   then					( adr len buf actual )
+   then					( adr len buf actual type )
 
-   false to got-data?			( adr len buf actual )
+   false to got-data?			( adr len buf actual type )
    process-rx				( adr len )
    recycle-packet			( adr len )
 

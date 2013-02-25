@@ -42,34 +42,45 @@ h# bead.c0de constant TYPE_USB_DATA
 h# beef.face constant TYPE_USB_INDICATION
 
 : cmd-out  ( adr len -- error? )
+   /fw-transport negate /string                 ( adr' len' )
    TYPE_USB_REQUEST 2 pick >fw-transport le-l!	( adr len )
    2dup vdump 					( adr len )
    packet-out					( error? )
 ;
 
 : data-out  ( adr len -- )
+   /fw-transport negate /string                 ( adr' len' )
    TYPE_USB_DATA 2 pick >fw-transport le-l!	( adr len )
    packet-out-async
 ;
 
-\ Translate the USB/8388 type codes into more abstract codes, which
-\ happen to be the codes used by the 8686
-: packet-type  ( adr -- type )
-   >fw-transport le-l@  case
+\ Translate the USB/8388 type codes into uniform code numbers
+: decode-header  ( buf len -- dadr dlen type )
+   over le-l@ >r                   ( buf len  r: usb-type )
+   /fw-transport /string           ( dadr dlen  r: usb-type )
+   r>  case                        
       TYPE_USB_REQUEST     of  0  endof
       TYPE_USB_DATA        of  1  endof
       TYPE_USB_INDICATION  of  2  endof
-   endcase
+   endcase                         ( dadr dlen type )
 ;
 
-: got-packet?  ( -- false | error true | buf len 0 true )  bulk-in-ready?  ;
+: got-packet?  ( -- false | error true | buf len type 0 true )
+   bulk-in-ready?  if           ( error | buf len 0 )
+      ?dup 0=   if              ( dadr dlen )
+         decode-header  0       ( dadr dlen type 0 )
+      then                      ( error | buf len 0 )
+   else                         ( )
+      false                     ( false )
+   then    ( false | error true | buf len 0 true )
+;
 : recycle-packet  ( -- )  restart-bulk-in  ;
 
 : end-out-ring  ( -- )  " end-out-ring" $call-parent  ;
 
 : set-parent-channel  ( -- )  set-device  device set-target  ;
 
-: setup-bus-io  ( /inbuf /outbuf -- error? )
+: setup-bus-io  ( -- error? )
    reset?  if
       configuration set-config  if
          ." Failed to set USB configuration for wireless" cr
@@ -77,14 +88,14 @@ h# beef.face constant TYPE_USB_INDICATION
       then
       bulk-in-pipe bulk-out-pipe reset-bulk-toggles
    then
-   4 bulk-out-pipe " begin-out-ring" $call-parent   ( /inbuf )
-   h# 40 bulk-in-pipe  " begin-in-ring"  $call-parent
+   d# 2048     4 bulk-out-pipe " begin-out-ring" $call-parent
+   d# 2048 h# 40 bulk-in-pipe  " begin-in-ring"  $call-parent
    false
 ;
 
 : release-bus-resources  ( -- )  end-bulk-in end-out-ring  ;
 
-: reset-host-bus  ( -- )  ;
+: reset-host-bus  ( -- )  " wlan-reset" evaluate  ;
 
 0 value vid
 0 value pid
@@ -97,6 +108,8 @@ h# beef.face constant TYPE_USB_INDICATION
 ;
 
 init
+XXX need open and close methods and open needs to call setup-bus-io
+XXX need alloc-buffer and free-buffer method
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks

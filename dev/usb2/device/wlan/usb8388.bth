@@ -13,9 +13,9 @@ FCode-version2
 fload ${BP}/dev/usb2/device/common.fth		\ USB device driver common routines
 fload ${BP}/dev/usb2/device/wlan/common.fth	\ Ethernet common variables and routines
 fload ${BP}/dev/usb2/device/wlan/usb8388.fth	\ USB I/O interface for Marvell 8388
+fload ${BP}/dev/usb2/device/wlan/fw8388.fth	\ Marvell firmware download for USB
 fload ${BP}/dev/libertas.fth			\ Marvell "Libertas" common code
 \ fload ${BP}/dev/usb2/device/wlan/wlan.fth	\ External interface methods
-fload ${BP}/dev/usb2/device/wlan/fw8388.fth	\ Marvell firmware download for USB
 
 end0
 

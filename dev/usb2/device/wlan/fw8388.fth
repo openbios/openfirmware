@@ -84,11 +84,11 @@ constant /dl-sync
 
 : wait-cmd-fw-dl-ack  ( -- acked? )
    d# 100 0  do			( )
-      got-packet?  if		( error | buf len 0 )
+      got-packet?  if		( error | buf len type 0 )
          if			( )
             false		( acked? )
-         else			( buf len )
-            cmd-fw-dl-ok?	( acked? )
+         else			( buf len type )
+            drop cmd-fw-dl-ok?	( acked? )
          then			( acked? )
          recycle-packet         ( acked? )
          unloop exit
@@ -99,12 +99,12 @@ constant /dl-sync
 ;
 
 : download-fw-init  ( -- )
-   outbuf /boot-cmd erase
-   boot-magic outbuf >boot-magic le-l!
-   cmd-fw-dl  outbuf >boot-cmd   c!
+   fw-buf /boot-cmd erase
+   boot-magic fw-buf >boot-magic le-l!
+   cmd-fw-dl  fw-buf >boot-cmd   c!
 
    5 0  do
-      outbuf /boot-cmd packet-out drop
+      fw-buf /boot-cmd packet-out drop
       wait-cmd-fw-dl-ack  if  leave  then
    loop
 ;
@@ -118,8 +118,8 @@ constant /dl-sync
 
 : wait-fw-dl-ack  ( -- )
    d# 500 0  do				( )
-      got-packet?  if			( error | buf len 0 )
-         0= if  process-dl-resp  then	( )
+      got-packet?  if			( error | buf len tupe 0 )
+         0= if  drop process-dl-resp  then	( )
          recycle-packet			( )
          leave
       then				( )
@@ -130,11 +130,11 @@ constant /dl-sync
 : (download-fw)  ( adr len -- )
    bounds  begin		( end start )
       dl-seq++				\ Increment sequence number
-      dup outbuf /dl-header move	\ Move header to outbuf
-      dl-seq outbuf >dl-seq le-l!	\ Add sequence number to outbuf
-      dup /dl-header + outbuf >dl-data 2 pick >dl-len le-l@ dup >r move
-					\ Move payload to outbuf
-      outbuf r@ /dl-header + 4 + packet-out drop
+      dup fw-buf /dl-header move	\ Move header to outbuf
+      dl-seq fw-buf >dl-seq le-l!	\ Add sequence number to outbuf
+      dup /dl-header + fw-buf >dl-data 2 pick >dl-len le-l@ dup >r move
+					\ Move payload to fw-buf
+      fw-buf r@ /dl-header + 4 + packet-out drop
 					\ Send command
       wait-fw-dl-ack			\ Wait for ACK
       r> + /dl-header +			\ Advance pointer
@@ -179,12 +179,12 @@ constant /dl-sync
    false
 ;
 
-: load-8388-fw  ( -- error? )
+: load-all-fw  ( -- error? )
+   d# 2048 dma-alloc to fw-buf   
    wlan-fw find-fw  ( adr len )
    dup  if  download-fw  else  2drop true  then
+   fw-buf d# 2048 dma-free
 ;
-
-' load-8388-fw to load-all-fw
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2007 FirmWorks

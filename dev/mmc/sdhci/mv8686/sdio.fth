@@ -4,14 +4,16 @@ purpose: SDIO interface
 hex
 headers
 
-: sdio-reg@  ( reg# function# -- value )  " sdio-reg@" $call-parent  ;
-: sdio-reg!  ( value reg# function# -- )  " sdio-reg!" $call-parent  ;
-: sdio-reg-w@  ( reg# function# -- w.value )
-   2dup sdio-reg@  -rot      ( low  reg# function# )
-   swap 1+ swap  sdio-reg@   ( low high )
-   bwjoin                    ( w.value )
+0 instance value function#
+0 instance value rx-shift
+
+: sdio-b@  ( reg# function# -- value )  function# " sdio-reg@" $call-parent  ;
+: sdio-b!  ( value reg# function# -- )  function# " sdio-reg!" $call-parent  ;
+: sdio-w@  ( reg# -- w.value )
+   dup sdio-b@        ( reg# low  )
+   swap 1+ sdio-b@    ( low high )
+   bwjoin             ( w.value )
 ;
-: sdio-w@  ( reg# -- w.value )  1 sdio-reg-w@  ;
 
 false instance value multifunction?
 false instance value helper?
@@ -26,7 +28,7 @@ instance defer get-write-port  ( -- port# )
 : default-fw$  ( -- adr len )  fw-name-adr fw-name-len  ;
 : set-default-fw$  ( adr len -- )  to fw-name-len  to fw-name-adr  ;
 
-0 value ioport
+0 instance value ioport
 d# 256 constant blksz			\ Block size for data tx/rx
 d# 256 constant fw-blksz
 
@@ -50,8 +52,8 @@ h# 40 constant host-f1-rd-base-0-reg
 h# 6c constant card-misc-cfg-reg
 h# 60 constant card-fw-status0-reg
 \ h# 61 constant card-fw-status1-reg
-\ h# 62 constant card-rx-len-reg
-\ h# 63 constant card-rx-unit-reg
+h# 62 constant card-rx-len-reg
+h# 63 constant card-rx-unit-reg
 h# 78 constant ioport-reg
 
 : ?set-module-property  ( adr len -- )
@@ -67,9 +69,9 @@ h# 78 constant ioport-reg
 ;
 
 : mv8686-rx-ready?  ( -- len )
-   host-intstatus-reg 1 sdio-reg@
+   host-intstatus-reg sdio-b@
    dup 0=  if  exit  then
-   dup invert 3 and host-intstatus-reg 1 sdio-reg!  \ Clear UP_LD bit
+   dup invert 3 and host-intstatus-reg sdio-b!  \ Clear UP_LD bit
    1 and  if
       sdio-fw-status@
    else
@@ -106,15 +108,32 @@ h# 78 constant ioport-reg
        2drop
     then
 ;
+
 0 instance value rx-port#
 0 instance value wr-bitmap
 0 instance value rd-bitmap
+: bt-update-bitmaps  ( -- len )
+   card-status-reg sdio-b@
+   dup  1 and  if  1 to wr-bitmap  then
+   2 and   if  1 to rd-bitmap  then
+;
+: mv8787-bt-rx-ready?  ( -- len )
+   rd-bitmap  if                                ( )
+      0 to rd-bitmap                            ( )
+      card-rx-len-reg sdio-b@  rx-shift lshift  ( len )
+      \ XXX round up to multiple of blocksize ?  Maybe sdhci already does it
+   else                                         ( )
+      bt-update-bitmaps                         ( )
+      0                                         ( len )
+   then                                         ( len )
+;
+
 : update-bitmaps  ( -- )
-   host-intstatus-reg 1 sdio-reg@
+   host-intstatus-reg sdio-b@
    dup 2 and  if  wr-bitmap-reg sdio-w@ to wr-bitmap  then
    1 and  if  rd-bitmap-reg sdio-w@ to rd-bitmap  then
 ;
-: mv8787-rx-ready?  ( -- len )
+: mv8787-wlan-rx-ready?  ( -- len )
    rd-bitmap  dup  if          ( bitmap )
       d# 16 0  do              ( bitmap )
 	 dup 1 and  if         ( bitmap )
@@ -128,6 +147,9 @@ h# 78 constant ioport-reg
    else                        ( 0 )
       update-bitmaps           ( 0 )
    then
+;
+: mv8787-rx-ready?  ( -- len )
+   function# 1 =  if  mv8787-wlan-rx-ready?  else  mv8787-bt-rx-ready?  then
 ;
 
 : mv8787-get-ctrl-port  ( -- n )
@@ -168,8 +190,8 @@ h# 78 constant ioport-reg
     h# 6c to card-misc-cfg-reg
     h# 60 to card-fw-status0-reg
 \   h# 61 to card-fw-status1-reg
-\   h# 62 to card-rx-len-reg
-\   h# 63 to card-rx-unit-reg
+    h# 62 to card-rx-len-reg
+    h# 63 to card-rx-unit-reg
     h# 78 to ioport-reg
     d# 256 to blksz
     d# 256 to fw-blksz
@@ -183,6 +205,8 @@ h# 78 constant ioport-reg
     true to multifunction?
 ;
 
+: set-block-size  ( n -- )  to blksz  ;
+
 : set-version  ( -- error? )
    " sdio-card-id" $call-parent  case
       h# 02df9103  of  use-mv8686 false  endof
@@ -195,14 +219,13 @@ h# 78 constant ioport-reg
 
 : roundup-blksz  ( n -- n' )  blksz 1- + blksz / blksz *  ;
 
-: set-address  ( rca slot -- )  " set-address" $call-parent  ;
 : get-address  ( -- rca )       " get-address" $call-parent  ;
 : attach-card  ( -- ok?  )  " attach-sdio-card" $call-parent  ;
 : detach-card  ( -- )       " detach-sdio-card" $call-parent  ;
 
 : sdio-poll-dl-ready  ( -- ready? )
    false d# 100 0  do
-      card-status-reg 1 sdio-reg@
+      card-status-reg sdio-b@
       h# 9 tuck and =  if  drop true leave  then
       d# 100 usec
    loop
@@ -210,47 +233,51 @@ h# 78 constant ioport-reg
 ;
 
 : sdio-fw!  ( adr len -- actual )
-   >r >r ioport 1 true r> r> fw-blksz false " r/w-ioblocks" $call-parent
+   >r >r ioport function# true r> r> fw-blksz false " r/w-ioblocks" $call-parent
 ;
 
-: init-device  ( -- )
-   ioport-reg 3 bounds  do  i 1 sdio-reg@  loop		\ Read the IO port
+: init-function  ( function# -- )
+   0 to function#                ( function# )
+
+   1 over lshift      2 sdio-b!	 ( function# ) \ Enable IO function
+   1 over lshift 1 or 4 sdio-b!	 ( function# ) \ Enable interrupts for function and card
+
+   7 sdio-b@  h# 20 or  7 sdio-b!  ( function# )	\ Enable async interrupt mode
+
+   to function#
+
+   ioport-reg 3 bounds  do  i sdio-b@  loop		\ Read the IO port
    0 bljoin to ioport
-
-   7 0 sdio-reg@  h# 20 or  7 0 sdio-reg!	\ Enable async interrupt mode
-
-   2 2 0 sdio-reg!	\ Enable IO function 1 (2 = 1 << 1)
-   3 4 0 sdio-reg!	\ Enable interrupts (1) for function 1 (1 << 1)
 
    mv8787?  if
       \ Set host interrupt reset to "read to clear"
-      host-int-rsr-reg 1 sdio-reg@  h# 3f or  host-int-rsr-reg 1 sdio-reg!
+      host-int-rsr-reg sdio-b@  h# 3f or  host-int-rsr-reg sdio-b!
 
       \ Set Dnld/upld to "auto reset"
-      card-misc-cfg-reg 1 sdio-reg@   h# 10 or  card-misc-cfg-reg 1 sdio-reg!
+      card-misc-cfg-reg sdio-b@   h# 10 or  card-misc-cfg-reg sdio-b!
    then
    \ Newer revisions of the 8787 firmware empirically require that this
    \ be enabled early, before firmware download.  Older versions, and
    \ 8686 firmware, appear to be content with it either here or after
    \ firmware startup.
-   3  host-int-mask-reg 1 sdio-reg!  \ Enable upload (1) and download (2)
+   3  host-int-mask-reg sdio-b!  \ Enable upload (1) and download (2)
 ;
 
 : sdio-blocks@  ( adr len -- actual )
    >r >r
-   rx-port# ioport +  1 true  r> r>  blksz true  " r/w-ioblocks" $call-parent  ( actual )
+   rx-port# ioport +  function# true  r> r>  blksz true  " r/w-ioblocks" $call-parent  ( actual )
 ;
 
 \ : sdio-blocks!  ( adr len -- actual )
-\    >r >r x-get-write-port ioport + 1 true r> r> blksz false " r/w-ioblocks" $call-parent
+\    >r >r x-get-write-port ioport + function# true r> r> blksz false " r/w-ioblocks" $call-parent
 \ ;
 
-\ 1 is the function number
 : (sdio-blocks!)  ( adr len port# -- actual )
-   ioport +  -rot    ( port#  adr len )
-   1 true  2swap     ( port#  function# inc?  adr len )
+   ioport +  -rot          ( port#  adr len )
+   function# true  2swap   ( port#  function# inc?  adr len )
    blksz false " r/w-ioblocks" $call-parent
 ;
+: sdio-blocks!  ( adr len -- actual )  0 (sdio-blocks!)  ;
 
 \ 0 is the control port number
 : packet-out  ( adr len -- error? )  tuck  get-ctrl-port  (sdio-blocks!)  <>  ;

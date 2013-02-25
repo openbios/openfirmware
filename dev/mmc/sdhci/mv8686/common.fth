@@ -28,10 +28,6 @@ false instance value debug?
 ;
 : /string  ( adr len cnt -- adr+n len-n )  tuck - -rot + swap  ;
 
-create mac-adr 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c,
-6 constant /mac-adr
-: mac-adr$  ( -- adr len )  mac-adr /mac-adr  ;
-
 : null$  ( -- adr len )  " "  ;
 
 \ Big endian operations
@@ -57,25 +53,6 @@ create mac-adr 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c,
 : vdump  ( adr len -- )  debug?  if  " dump"  evaluate  else  2drop  then  ;
 : vldump ( adr len -- )  debug?  if  " ldump" evaluate  else  2drop  then  ;
 : vtype  ( adr len -- )  debug?  if  type cr  else  2drop  then  ;
-
-
-defer link-up?	       ( -- up? )		' true to link-up?
-defer reset-nic        ( -- )			' noop to reset-nic
-defer start-nic        ( -- )			' noop to start-nic
-defer stop-nic         ( -- )			' noop to stop-nic
-
-external
-defer get-mac-address  ( -- adr len )		' mac-adr$ to get-mac-address
-headers
-
-: max-frame-size  ( -- size )  d# 1514  ;
-
-: property-or-abort  ( name$ -- n )
-   2dup get-my-property  if          ( name$ )
-      ." Can't find property " type cr  stop-nic abort
-   then                              ( name$ value$ )
-   2swap 2drop  decode-int  nip nip  ( n )
-;
 
 : find-fw  ( $ -- adr len )
    over " rom:" comp  if

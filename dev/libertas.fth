@@ -4,6 +4,22 @@ purpose: Marvel "Libertas" wireless network driver common code
 headers
 hex
 
+false instance value debug?
+
+: debug-on  ( -- )  true to debug?  ;
+: vdump  ( adr len -- )  debug?  if  " dump"  evaluate  else  2drop  then  ;
+
+create mac-adr 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c, 0 c,
+6 constant /mac-adr
+: mac-adr$  ( -- adr len )  mac-adr /mac-adr  ;
+
+: max-frame-size  ( -- size )  d# 1514  ;
+
+external
+defer get-mac-address  ( -- adr len )		' mac-adr$ to get-mac-address
+headers
+
+
 \ **************** WPA and WPA2 are not functional yet ******************
 
 \ =======================================================================
@@ -21,7 +37,6 @@ hex
 : .scan  ( adr -- )  " .scan" $call-supplicant  ;
 : .ssids  ( adr len -- )  " .ssids" $call-supplicant  ;
 
-defer load-all-fw  ( -- error? )   ' false to load-all-fw
 defer ?process-eapol		['] 2drop to ?process-eapol
 
 0 value outbuf
@@ -32,10 +47,10 @@ d# 2048 value /inbuf    \ Power of 2 larger than max-frame-size
                         \ Override as necessary
 
 : init-buf  ( -- )
-   outbuf 0=  if  /outbuf dma-alloc to outbuf  then
+   outbuf 0=  if  /outbuf " alloc-buffer" $call-parent to outbuf  then
 ;
 : free-buf  ( -- )
-   outbuf  if  outbuf /outbuf dma-free  0 to outbuf  then
+   outbuf  if  outbuf /outbuf " free-buffer" $call-parent  0 to outbuf  then
 ;
 
 \ =======================================================================
@@ -143,27 +158,24 @@ external
 : set-auth-mode  ( amode -- )  to auth-mode  ;
 headers
 
-: marvel-link-up?  ( -- flag )  driver-state ds-ready >  ;
-
-' marvel-link-up? to link-up?
+: link-up?  ( -- flag )  driver-state ds-ready >  ;
 
 \ =========================================================================
 \ Firmware Command
 \ =========================================================================
 
 struct
-   /fw-transport +
    2 field >fw-cmd		\ Start of command header
    2 field >fw-len
    2 field >fw-seq
    2 field >fw-result
 dup constant /fw-cmd
-dup /fw-transport - constant /fw-cmd-hdr	\ Command header len (less /fw-transport)
+dup constant /fw-cmd-hdr	\ Command header len (less /fw-transport)
    0 field >fw-data		\ Command payload starts here
 drop
 
 : outbuf-out  ( -- error? )
-   outbuf  dup >fw-len le-w@ /fw-transport +  cmd-out
+   outbuf  dup >fw-len le-w@ " cmd-out" $call-parent
 ;
 
 
@@ -191,7 +203,6 @@ resp-wait-short instance value resp-wait
 \ =========================================================================
 
 struct
-   /fw-transport +
    4 field >tx-stat
    4 field >tx-ctrl
    4 field >tx-offset
@@ -211,7 +222,6 @@ dup constant /tx-hdr-no-mesh
 constant /tx-hdr
 
 struct
-   /fw-transport +
    1 field >tx14-bsstype
    1 field >tx14-bss#
    2 field >tx14-len
@@ -241,7 +251,7 @@ h# 20000 constant TX_WDS
    dup   outbuf >tx-len  le-w!			( adr len )
    tuck  outbuf >tx-pkt-no-mesh  swap  move		( len )
 
-   /tx-hdr-no-mesh /fw-transport -  outbuf >tx-offset le-l!	( len )  \ Offset from >tx-stat field
+   /tx-hdr-no-mesh outbuf >tx-offset le-l!	( len )  \ Offset from >tx-stat field
    tx-ctrl        outbuf >tx-ctrl   le-l!	( len )
 
    outbuf  swap /tx-hdr-no-mesh +		( adr' len' )
@@ -253,7 +263,7 @@ h# 20000 constant TX_WDS
    dup   outbuf >tx-len  le-w!			( adr len )
    tuck  outbuf >tx-pkt  swap  move		( len )
 
-   /tx-hdr /fw-transport - outbuf >tx-offset le-l!	( len )  \ Offset from >tx-stat field
+   /tx-hdr outbuf >tx-offset le-l!		( len )  \ Offset from >tx-stat field
    tx-ctrl        outbuf >tx-ctrl   le-l!	( len )
 
    mesh-on?  if  1 outbuf >tx-mesh-ttl c!  then	( len )
@@ -270,7 +280,7 @@ h# 20000 constant TX_WDS
    dup   outbuf >tx14-len  le-w!		( adr len )
    tuck  outbuf >tx14-pkt  swap  move		( len )
 
-   /tx14-hdr /fw-transport - outbuf >tx14-offset le-w!	( len )  \ Offset from >tx14-bsstype field
+   /tx14-hdr outbuf >tx14-offset le-w!		( len )  \ Offset from >tx14-bsstype field
    tx-ctrl       outbuf >tx14-ctrl   le-l!	( len )
 
    outbuf  swap /tx14-hdr +			( adr' len' )
@@ -287,7 +297,6 @@ true instance value got-data?
 
 \ Receive packet descriptor
 struct
-   /fw-transport +
    2 field >rx-stat
    1 field >rx-snr
    1 field >rx-ctrl
@@ -310,7 +319,6 @@ d# 22 +  \ Size of an Ethernet header with SNAP
 constant /rx-min
 
 struct
-   /fw-transport +
    1 field >rx14-bsstype
    1 field >rx14-bss#
    2 field >rx14-len
@@ -358,7 +366,7 @@ constant /rx14-min
    /rx-min <  if  drop  true exit  then		( adr )  \ Invalid packet: too small
 
    \ Go to the payload, skipping the descriptor header
-   dup  dup >rx-offset le-l@ + /fw-transport +	( adr data-adr )
+   dup  dup >rx-offset le-l@ +		( adr data-adr )
    swap >rx-len le-w@			( data-adr data-len )
 
    \ Remove snap header by moving the MAC addresses up
@@ -374,7 +382,7 @@ constant /rx14-min
 
    \ Go to the payload, skipping the descriptor header
    >r							( r: adr )
-   r@  r@ >rx14-offset le-w@ +  /fw-transport +		( data-adr r: adr )
+   r@  r@ >rx14-offset le-w@ +  			( data-adr r: adr )
    r@ >rx14-len le-w@					( data-adr data-len  r: adr )
 
    r> >rx14-type c@  case				( data-adr data-len )
@@ -505,7 +513,7 @@ instance defer unwrap-ethernet
    dup .cmd                              ( len cmd )
    resp-wait-short to resp-wait          ( len cmd )
    outbuf /outbuf erase                  ( len cmd )
-   outbuf /fw-transport + to x  0 to /x  ( len cmd )
+   outbuf to x  0 to /x                  ( len cmd )
    ( len cmd )      +xw    \ fw-cmd      ( len )
    /fw-cmd-hdr +    +xw	   \ fw-len 	 ( )  
    fw-seq++         +xw    \ fw-seq      ( )
@@ -530,9 +538,9 @@ true value got-indicator?
 0 instance value backlog
 0 value debug-tx-feedback?
 : process-ind  ( adr len -- )
-   drop
-   true to got-indicator?
-   4 + le-l@  dup to last-event
+   drop                              ( adr )
+   true to got-indicator?            ( adr )
+   le-l@  dup to last-event          ( event-code )
    dup h# 10000 u>=  if              ( event-code )
       \ TX feedback from thin firmware
       backlog 1- 0 max  to backlog   ( event-code )
@@ -590,9 +598,8 @@ true value got-indicator?
    true to got-response?	( )
 ;
 
-: process-rx  ( adr len -- )
-   over packet-type  case
-      \ Encoding must agree with packet-type
+: process-rx  ( adr len type -- )
+   case
       0  of  process-request  endof	\ Response & request
       1  of  process-data     endof	\ Data
       2  of  process-ind      endof	\ Indication
@@ -601,9 +608,9 @@ true value got-indicator?
 ;
 
 : check-for-rx  ( -- )
-   got-packet?  if		( error | buf len 0 )
-      0= if  2dup vdump process-rx	 then	( )
-      recycle-packet		( )
+   " got-packet?" $call-parent  if	( error | buf len type 0 )
+      0= if  process-rx  then	( )
+      " recycle-packet" $call-parent		( )
    then				( )
 ;
 
@@ -690,9 +697,8 @@ true value got-indicator?
 \ =========================================================================
 
 : reset-wlan  ( -- )
-   " wlan-reset" evaluate
    driver-is-not-ready
-   reset-host-bus
+   " reset-host-bus" $call-parent
 ;
 : sleep  ( -- )  reset-wlan  ;
 : wake  ( -- )  ;
@@ -1692,7 +1698,6 @@ headers
 : ?reassociate  ( -- )
    driver-state ds-disconnected and  if  do-associate drop  then
 ;
-' ?reassociate to start-nic
 
 : disassociate  ( mac$ -- )
    dup 2+ h# 26 ( CMD_802_11_DISASSOCIATE ) prepare-cmd
@@ -1794,7 +1799,7 @@ d# 1600 constant /packet-buf
    mac-adr$  mac-adr$  broadcast-mac$  0  h# c0  set-802.11-header
    h# 0002  0 +pkt-data  le-w!  \ Reason code: auth no longer valid
    packet-buf  /802.11-header 2 +   wrap-802.11    ( adr len )
-   data-out
+   " data-out" $call-parent
    r> set-tx-ctrl
 ;
 
@@ -2100,18 +2105,6 @@ headers
    ?make-mac-address-property drop
 ;
 
-: ?load-fw  ( -- error? )
-   driver-state ds-not-ready =  if
-      load-all-fw  if
-         ." Failed to download firmware" cr
-         true exit
-      then
-      ds-ready to driver-state
-   then
-   multifunction?  if  init-function  then
-   ?make-mac-address-property
-;
-
 false instance value use-promiscuous?
 
 external
@@ -2134,15 +2127,18 @@ false instance value quiet?
    repeat drop
 ;
 
+\ Maybe handle this in parent's close method
+: release-bus-resources  ( -- )  " release-bus-resources" $call-parent  ;
+
 : open  ( -- ok? )
    my-args parse-args
-   set-parent-channel
    " " set-ssid  \ Instance buffers aren't necessarily initially 0
+   my-space " set-address" $call-parent \ Set SDIO function number if necessary
    opencount @ 0=  if
       init-buf
-      driver-is-not-ready
-      /inbuf /outbuf setup-bus-io  if  free-buf false exit  then
-      ?load-fw  if  release-bus-resources free-buf false exit  then
+      ds-ready to driver-state
+      " multifunction?" $call-parent  if  init-function  then
+      ?make-mac-address-property  if  release-bus-resources free-buf false exit  then
       set-fw-params
       my-args " supplicant" $open-package to supplicant-ih
       supplicant-ih 0=  if  release-bus-resources free-buf false exit  then
@@ -2152,7 +2148,7 @@ false instance value quiet?
          link-up? 0=  if
             do-associate 0=  if  free-buf false exit  then
          then
-         start-nic
+         ?reassociate
       then
    then
    force-open?  0=  if
@@ -2171,10 +2167,9 @@ false instance value quiet?
       mesh-stop drop
       link-up?  if  target-mac$ deauthenticate  then
       ['] 2drop to ?process-eapol
-      stop-nic
       mac-off
       supplicant-ih ?dup  if  close-package 0 to supplicant-ih  then
-      multifunction?  if  shutdown-function  then
+      " multifunction?" $call-parent  if  shutdown-function  then
       release-bus-resources
       driver-is-not-ready
    then
@@ -2185,20 +2180,20 @@ false instance value quiet?
 : write-force  ( adr len -- actual )
    tuck					( actual adr len )
    wrap-ethernet			( actual adr' len' )
-   data-out                             ( actual )
+   " data-out" $call-parent             ( actual )
 ;
 
 : read-force  ( adr len -- actual )
-   got-packet?  0=  if  		( adr len )
+   " got-packet?" $call-parent  0=  if	( adr len )
       2drop  -2  exit
-   then                                 ( adr len [ error | buf actual 0 ] )
+   then                                 ( adr len [ error | buf actual type 0 ] )
 
    if	\ receive error			( adr len )
-      recycle-packet			( adr len )
+      " recycle-packet" $call-parent	( adr len )
       2drop  -1  exit
-   then					( adr len buf actual )
+   then					( adr len buf actual type )
 
-   false to got-data?			( adr len buf actual )
+   false to got-data?			( adr len buf actual type )
    process-rx				( adr len )
 
    got-data?  if			( adr len )
@@ -2207,7 +2202,7 @@ false instance value quiet?
       2drop -2				\ No data
    then					( actual )
 
-   recycle-packet			( actual )
+   " recycle-packet" $call-parent	( actual )
 ;
 
 0 instance value /packet
@@ -2240,7 +2235,7 @@ false instance value quiet?
    " "(01 08 02 04 0b 16 0c 12 18 24 32 04 30 48 e0 ec)"   ( tags-adr tags-len )
    tuck   6 +pkt-data  swap  move                          ( tags-size )
    packet-buf  swap /802.11-header +  6 +   wrap-802.11    ( adr len )
-   data-out
+   " data-out" $call-parent
 ;
 
 : authenticate-reply  ( -- )
@@ -2250,7 +2245,7 @@ false instance value quiet?
    0          4 +pkt-data  le-w!   \ Status - okay
    
    packet-buf  /802.11-header 6 +   wrap-802.11    ( adr len )
-   data-out
+   " data-out" $call-parent
 ;
 
 defer handle-data  ' noop is handle-data
@@ -2297,7 +2292,7 @@ defer handle-data  ' noop is handle-data
    packet-buf  swap /802.11-header +  6 +  wrap-802.11  ( len padr plen )
    begin  backlog 8 >=  while  process-mgmt-frame  repeat
    backlog 1+ to backlog
-   data-out                                             ( len )
+   " data-out" " $call-parent                           ( len )
    throttle
 ;
 
@@ -2339,7 +2334,7 @@ d# 1600 buffer: test-buf
       0					( adr 0 )
    then					( adr ihandle|0 )
 
-   dup  0=  if  ." Can't open obp-tftp support package" stop-nic abort  then
+   dup  0=  if  ." Can't open obp-tftp support package" abort  then
 					( adr ihandle )
 
    >r
@@ -2348,7 +2343,7 @@ d# 1600 buffer: test-buf
    throw
 ;
 
-: reset  ( -- flag )  reset-nic  ;
+: reset  ( -- flag )  true  ;
 
 : do-disassociate  ( -- )
    " target-mac$" $call-supplicant disassociate
