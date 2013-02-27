@@ -170,7 +170,7 @@ d# 250 constant /pbuf
 : start  ( -- )  h# 04 h# 01 h# ee  3 bytes-out  ;
 
 : deactivate  ( -- )
-   h# 00 h# 01 h# ee  3 bytes-out  h# 00 d# 100 anticipate
+   h# 00 h# 01 h# ee  3 bytes-out  h# 00 d# 200 anticipate
 ;
 
 : deconfigure  ( -- )
