@@ -199,8 +199,12 @@ false value uart-console-off?  \ did we turn our uart console off?
 0 value serial-ih
 
 : usb-open  ( -- )
-   " /usb/serial" open-dev dup 0= abort" can't open USB serial adapter"
-   to serial-ih
+   " /usb/serial" open-dev ?dup if  to serial-ih  exit  then
+[ifdef] olpc-cl1
+   " /usb@f,4/serial" open-dev ?dup if  to serial-ih  exit  then
+   " /usb@f,5/serial" open-dev ?dup if  to serial-ih  exit  then
+[then]
+   true abort" can't open USB serial adapter"
 ;
 
 : usb-close  ( -- )
@@ -313,6 +317,7 @@ previous definitions  also serial-terminal
 
 : serial  serial{  {serial}  }serial  ;
 
+[ifdef] log-ih
 : serial-log  ( "filename" -- )
    serial{
    safe-parse-word $create-file to log-ih
@@ -322,6 +327,7 @@ previous definitions  also serial-terminal
    log-ih close-dev
    }serial
 ;
+[then]
 
 : use-uart  use-uart  ;
 : use-usb   use-usb   ;
