@@ -265,13 +265,22 @@ defer foo ' noop to foo
 ;
 d# 256 constant /cursor
 /cursor buffer: cursor
+0 0 2value saved-cursor-wh
+0 0 2value saved-cursor-fgbg
+
 : sleep  ( -- )
    cursor /cursor 0  cursor-sram-read
+   cursor-wh@ to saved-cursor-wh
+   cursor-fgbg@ to saved-cursor-fgbg
    0 h# 190 lcd!
    lcd-clocks-off
 ;
 : wake  ( -- )
    init-lcd
+   enable-cursor-writes
+   cursor-2bpp-mode
+   saved-cursor-fgbg cursor-fgbg!
+   saved-cursor-wh cursor-wh!
    cursor /cursor 0  cursor-sram-write
 ;
 
