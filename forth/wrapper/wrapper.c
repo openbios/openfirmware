@@ -56,6 +56,7 @@ which is part of the Forth image file.
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/mman.h>
 
 /* 
  * The following #includes and externs fix GCC warnings when compiled with
@@ -1011,7 +1012,12 @@ main(int argc, char **argv
 #  endif
 # endif
 
+#if defined(__linux__) && defined(ARM)
+	/* This is a hack to make sure loadaddr is page-aligned for mprotect() in s_flushcache() */
+	loadaddr = (char *)sbrk(memsize);
+#else
 	loadaddr = (char *)m_alloc(memsize);
+#endif
 	if ((loadaddr == (char *) -1) || (loadaddr == (char *) 0)) {
 		error("forth: Can't get memory","");
 		exit(1);
@@ -2195,6 +2201,7 @@ s_flushcache(char *adr, long len)
 	return 0L;
 #endif
 #if defined(__linux__) && defined(ARM) 
+	mprotect(adr, len, PROT_READ | PROT_WRITE | PROT_EXEC);
 	__clear_cache(adr, adr+len);
 	return 0L;
 #endif
