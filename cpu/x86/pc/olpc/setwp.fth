@@ -64,18 +64,20 @@ purpose: Changing manufacturing data - adding and deleting tags
    ec-flags-buf /flash-page erase
    ec-flags-buf set-cp
    ec-flags-buf set-ap
-   ec-flags-buf ?reflash-ec-flags
+   ec-flags-buf ?reflash-ec-flags  \ may not return
 ;
 [else]
 : ?sync-ec  ;
 [then]
 
 \ Write mfg data from RAM to FLASH
+true value commit-tag
+: tags(  false to commit-tag  ;
+: )tags  ?sync-ec  spi-reprogrammed  ;
 : put-mfg-data  ( -- )
    spi-start spi-identify
    (put-mfg-data)
-   ?sync-ec
-   spi-reprogrammed
+   commit-tag  if  )tags  then
 ;
 
 \ Find RAM address of tag, given FLASH address
