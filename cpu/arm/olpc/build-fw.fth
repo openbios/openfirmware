@@ -860,6 +860,7 @@ dev /client-services  patch noop visible enter  dend
 
    " probe-" do-drop-in
 
+   [ifdef] unused-cores-off  unused-cores-off  [then]
    show-child
 
    update-ec-flash?  if

@@ -281,6 +281,13 @@ c;
 
 alias do-wfi wfi
 
+: unused-cores-off
+   e320f003 0 instruction!
+   2000.0062 200 pmua!
+   2000.0062 204 pmua!
+   150 pmua@ 0600.0000 or 150 pmua!
+;
+
 \ LICENSE_BEGIN
 \ Copyright (c) 2012 FirmWorks
 \ 
