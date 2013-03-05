@@ -71,13 +71,13 @@ purpose: Changing manufacturing data - adding and deleting tags
 [then]
 
 \ Write mfg data from RAM to FLASH
-true value commit-tag
-: tags(  false to commit-tag  ;
+true value autocommit?
+: tags(  false to autocommit?  ;
 : )tags  ?sync-ec  spi-reprogrammed  ;
 : put-mfg-data  ( -- )
    spi-start spi-identify
    (put-mfg-data)
-   commit-tag  if  )tags  then
+   autocommit?  if  )tags  then
 ;
 
 \ Find RAM address of tag, given FLASH address
