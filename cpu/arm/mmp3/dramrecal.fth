@@ -281,11 +281,11 @@ c;
 
 alias do-wfi wfi
 
-: unused-cores-off
-   h# e320f003 0 instruction!
-   h# 2000.0062 h# 200 pmua!
-   h# 2000.0062 h# 204 pmua!
-   h# 150 pmua@ h# 0600.0000 or h# 150 pmua!
+: unused-cores-off  ( -- )
+   h# e320f003 0 instruction!  \ Put WFI instruction in reset vector
+   h# 2000.0062 h# 200 pmua!   \ PMUA_PJ_IDLE_CFG2 - mpcore2 deep sleep on WFI
+   h# 2000.0062 h# 204 pmua!   \ PMUA_PJ_IDLE_CFG3 - mmcore deep sleep on WFI
+   h# 150 pmua@ h# 0600.0000 or h# 150 pmua!  \ PMUA_CC2_PJ - unreset mpcore2 & mmcore
 ;
 
 \ LICENSE_BEGIN
