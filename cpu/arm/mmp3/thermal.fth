@@ -133,19 +133,30 @@ h# 03.b000 value tsense  \ p2021
    dup ts@  h# 0800.0000 invert and  swap ts!
 ;
 
-: ts-watchdog-enable  ( n -- )
-   dup ts@  h# 0400.0d00 or  swap ts!  \ 100.5C
+h# 0400.0d00 value ts-watchdog-mask  \ 100.5C
+: ts-watchdog-on  ( n -- )
+   dup ts@  ts-watchdog-mask  or  swap ts!
+;
+
+: ts-watchdog-off  ( n -- )
+   dup ts@  ts-watchdog-mask  invert and  swap ts!
 ;
 
 : init-thermal-sensor  ( -- )
    ts-clocks
    0 ts-range-high
-   0 ts-watchdog-enable
-   \ WDT reset will cause system hang, per errata 472630,
-   \ but on XO-4 A2 and XO-4 B1 is detected by EC
+   0 ts-watchdog-on
+   \ WDT reset causes SoC hang, per errata 472630, on XO-4 A2 and B1,
+   \ but is detected and handled by EC
    1 ts-range-low
    2 ts-range-low
    3 0 do  i ts-auto-read  loop
+;
+
+\ for testing, swing our normally highrange sensor back to lowrange
+: 0ts-low
+   0 ts-watchdog-off
+   0 ts-range-low
 ;
 
 \ read and average the two sensors on lowrange duty
@@ -171,7 +182,7 @@ h# 03.b000 value tsense  \ p2021
    1 ts@  gc>c  .c.c  \ FIXME: show <n and >n too here
    2 ts@  gc>c  .c.c
    ." cpu: "  cpu-temperature  .c
-   ." battery: "  bat-temp  .c
+   ." battery: "  .bat-temp  ." C "
    pop-base
 ;
 
@@ -211,7 +222,6 @@ end-string-array
          i tsense-regx-bits count type space
       then
    loop cr
-   \ dup d# 12 rshift h# 7ff and dup if 4 spaces ." reserved=" . cr else drop then
    4 spaces dup 8 rshift h# f and ." wdog_tshld=" .tc cr
    4 spaces dup 4 rshift h# f and ." int_tshld=" .tc cr
    4 spaces dup          h# f and ." temp_value=" .tc cr
@@ -247,27 +257,6 @@ end-string-array
    h# 200 mpmu@ 1 7 lshift or h# 200 mpmu! \ thrsens_wdtr_en
    h# 0c20.0000 h# 03.b004 io! \ lowrange, en_wdog, auto_read_en, wdog_tshld 26C
 ;
-
-
-[ifdef] notyet \ FIXME
-: test-thermal
-   .thermal cr
-
-   \ save the threshold set by cforth
-   thermal-base 4 + io@ >r
-
-   \ temporarily set the threshold close to current value
-   thermal-base io@  h# 3ff and  8 +  wd-thresh!
-
-   begin
-      (cr .thermal kill-line d# 500 ms key?
-   until key drop cr
-
-   \ restore the threshold
-   r> wd-thresh!
-   .thermal cr
-;
-[then]
 
 stand-init: Thermal sensor
    init-thermal-sensor
