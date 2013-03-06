@@ -13,6 +13,7 @@ fload ${BP}/dev/mmc/sdhci/mv8686/fw8686.fth	\ Marvell firmware download for SDIO
 new-device
 1 to my-space
 my-space 1 reg
+fload ${BP}/dev/mmc/sdhci/mv8686/libertas-interface.fth		\ Marvell "Libertas" common code
 fload ${BP}/dev/libertas.fth			\ Marvell "Libertas" common code
 finish-device
 

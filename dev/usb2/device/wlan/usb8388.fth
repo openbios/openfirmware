@@ -70,6 +70,7 @@ h# beef.face constant TYPE_USB_INDICATION
       ?dup 0=   if              ( dadr dlen )
          decode-header  0       ( dadr dlen type 0 )
       then                      ( error | buf len 0 )
+      true
    else                         ( )
       false                     ( false )
    then    ( false | error true | buf len 0 true )
@@ -95,7 +96,8 @@ h# beef.face constant TYPE_USB_INDICATION
 
 : release-bus-resources  ( -- )  end-bulk-in end-out-ring  ;
 
-: reset-host-bus  ( -- )  " wlan-reset" evaluate  ;
+false value fw-loaded?
+: reset-host-bus  ( -- )  " wlan-reset" evaluate  false to fw-loaded?  ;
 
 0 value vid
 0 value pid
@@ -108,8 +110,13 @@ h# beef.face constant TYPE_USB_INDICATION
 ;
 
 init
-XXX need open and close methods and open needs to call setup-bus-io
-XXX need alloc-buffer and free-buffer method
+
+: open  ( -- okay? )  setup-bus-io 0=  ;
+: close  ( -- )  ;
+: alloc-buffer  ( len -- adr )  /fw-transport +  dma-alloc  /fw-transport +  ;
+: free-buffer  ( adr len -- )  /fw-transport negate /string  dma-free  ;
+
+defer setup-transport  ( -- error? )  ' true to setup-transport
 
 \ LICENSE_BEGIN
 \ Copyright (c) 2009 FirmWorks

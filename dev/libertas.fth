@@ -47,10 +47,10 @@ d# 2048 value /inbuf    \ Power of 2 larger than max-frame-size
                         \ Override as necessary
 
 : init-buf  ( -- )
-   outbuf 0=  if  /outbuf " alloc-buffer" $call-parent to outbuf  then
+   outbuf 0=  if  /outbuf alloc-buffer to outbuf  then
 ;
 : free-buf  ( -- )
-   outbuf  if  outbuf /outbuf " free-buffer" $call-parent  0 to outbuf  then
+   outbuf  if  outbuf /outbuf free-buffer  0 to outbuf  then
 ;
 
 \ =======================================================================
@@ -175,7 +175,7 @@ dup constant /fw-cmd-hdr	\ Command header len (less /fw-transport)
 drop
 
 : outbuf-out  ( -- error? )
-   outbuf  dup >fw-len le-w@ " cmd-out" $call-parent
+   outbuf  dup >fw-len le-w@ cmd-out
 ;
 
 
@@ -608,9 +608,9 @@ true value got-indicator?
 ;
 
 : check-for-rx  ( -- )
-   " got-packet?" $call-parent  if	( error | buf len type 0 )
+   got-packet?  if	( error | buf len type 0 )
       0= if  process-rx  then	( )
-      " recycle-packet" $call-parent		( )
+      recycle-packet		( )
    then				( )
 ;
 
@@ -697,8 +697,10 @@ true value got-indicator?
 \ =========================================================================
 
 : reset-wlan  ( -- )
+\   XXX wlan-reset evaluate
+
    driver-is-not-ready
-   " reset-host-bus" $call-parent
+   reset-host-bus
 ;
 : sleep  ( -- )  reset-wlan  ;
 : wake  ( -- )  ;
@@ -712,8 +714,15 @@ true value got-indicator?
    respbuf >fw-data  false
 ;
 
+\ Sometimes get-hw-spec fails the first time after
+\ the driver is reopened with the firmware still active.
+\ This has been seen with the 8388 USB version.
+: retry-get-hw-spec  ( -- true | adr false )
+   get-hw-spec  dup if  drop get-hw-spec  then
+;
+
 : set-fw-params  ( -- )
-   get-hw-spec  0=  if   ( adr )
+   retry-get-hw-spec  0=  if   ( adr )
 
       \ is 802.11n capable?
       dup d# 34 + le-l@ h# 800 and  if
@@ -1231,7 +1240,7 @@ external
       drop d# 1000 ms           \ retry while busy
    repeat                       ( adr len scan-adr scan-len err? r: chan )
    r> drop                      ( adr len scan-adr scan-len err? )
-   if  4drop false exit  then   ( adr len scan-adr scan-len )
+   if  2drop 2drop false exit  then   ( adr len scan-adr scan-len )
    rot min >r                   ( adr scan-adr r: actual )
    swap r@ move                 ( r: actual )
    r>                           ( actual )
@@ -1799,7 +1808,7 @@ d# 1600 constant /packet-buf
    mac-adr$  mac-adr$  broadcast-mac$  0  h# c0  set-802.11-header
    h# 0002  0 +pkt-data  le-w!  \ Reason code: auth no longer valid
    packet-buf  /802.11-header 2 +   wrap-802.11    ( adr len )
-   " data-out" $call-parent
+   data-out
    r> set-tx-ctrl
 ;
 
@@ -2127,17 +2136,15 @@ false instance value quiet?
    repeat drop
 ;
 
-\ Maybe handle this in parent's close method
-: release-bus-resources  ( -- )  " release-bus-resources" $call-parent  ;
-
 : open  ( -- ok? )
    my-args parse-args
+   set-parent-channel
    " " set-ssid  \ Instance buffers aren't necessarily initially 0
-   my-space " set-address" $call-parent \ Set SDIO function number if necessary
    opencount @ 0=  if
       init-buf
+      setup-transport  if  free-buf false exit  then
       ds-ready to driver-state
-      " multifunction?" $call-parent  if  init-function  then
+      multifunction?  if  init-function  then
       ?make-mac-address-property  if  release-bus-resources free-buf false exit  then
       set-fw-params
       my-args " supplicant" $open-package to supplicant-ih
@@ -2169,7 +2176,7 @@ false instance value quiet?
       ['] 2drop to ?process-eapol
       mac-off
       supplicant-ih ?dup  if  close-package 0 to supplicant-ih  then
-      " multifunction?" $call-parent  if  shutdown-function  then
+      multifunction?  if  shutdown-function  then
       release-bus-resources
       driver-is-not-ready
    then
@@ -2180,16 +2187,16 @@ false instance value quiet?
 : write-force  ( adr len -- actual )
    tuck					( actual adr len )
    wrap-ethernet			( actual adr' len' )
-   " data-out" $call-parent             ( actual )
+   data-out                             ( actual )
 ;
 
 : read-force  ( adr len -- actual )
-   " got-packet?" $call-parent  0=  if	( adr len )
+   got-packet? 0=  if			( adr len )
       2drop  -2  exit
    then                                 ( adr len [ error | buf actual type 0 ] )
 
    if	\ receive error			( adr len )
-      " recycle-packet" $call-parent	( adr len )
+      recycle-packet			( adr len )
       2drop  -1  exit
    then					( adr len buf actual type )
 
@@ -2202,7 +2209,7 @@ false instance value quiet?
       2drop -2				\ No data
    then					( actual )
 
-   " recycle-packet" $call-parent	( actual )
+   recycle-packet			( actual )
 ;
 
 0 instance value /packet
@@ -2235,7 +2242,7 @@ false instance value quiet?
    " "(01 08 02 04 0b 16 0c 12 18 24 32 04 30 48 e0 ec)"   ( tags-adr tags-len )
    tuck   6 +pkt-data  swap  move                          ( tags-size )
    packet-buf  swap /802.11-header +  6 +   wrap-802.11    ( adr len )
-   " data-out" $call-parent
+   data-out
 ;
 
 : authenticate-reply  ( -- )
@@ -2245,7 +2252,7 @@ false instance value quiet?
    0          4 +pkt-data  le-w!   \ Status - okay
    
    packet-buf  /802.11-header 6 +   wrap-802.11    ( adr len )
-   " data-out" $call-parent
+   data-out
 ;
 
 defer handle-data  ' noop is handle-data
@@ -2292,7 +2299,7 @@ defer handle-data  ' noop is handle-data
    packet-buf  swap /802.11-header +  6 +  wrap-802.11  ( len padr plen )
    begin  backlog 8 >=  while  process-mgmt-frame  repeat
    backlog 1+ to backlog
-   " data-out" " $call-parent                           ( len )
+   data-out                                             ( len )
    throttle
 ;
 
