@@ -16,10 +16,3 @@ my-space 1 reg
 fload ${BP}/dev/mmc/sdhci/mv8686/libertas-interface.fth		\ Marvell "Libertas" common code
 fload ${BP}/dev/libertas.fth			\ Marvell "Libertas" common code
 finish-device
-
-new-device
-2 to my-space
-my-space 1 reg
-" bluetooth" name
-fload ${BP}/dev/bluetooth/marvell-hci.fth	\ Bluetooth driver
-finish-device
