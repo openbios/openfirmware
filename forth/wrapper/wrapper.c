@@ -2201,6 +2201,13 @@ s_flushcache(char *adr, long len)
 	return 0L;
 #endif
 #if defined(__linux__) && defined(ARM) 
+	/* There is another way to achieve the goal of making the */
+	/* dictionary executable.  You can add "-Wl,-z,execstack" */
+	/* to the cc command line or add "-z execstack" to the ld */
+	/* command line.  mprotect() is perhaps more precise, making */
+	/* only the dictionary executable while leaving the stack */
+	/* protected, although that is probably pointless since */
+	/* the whole point of this program is code injection. */
 	mprotect(adr, len, PROT_READ | PROT_WRITE | PROT_EXEC);
 	__clear_cache(adr, adr+len);
 	return 0L;
