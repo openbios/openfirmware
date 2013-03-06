@@ -1,18 +1,13 @@
+\ See license at end of file
+purpose: Driver for Marvell Bluetooth Host Controller (HCI)
 
-\ h# 00 constant config-reg                  \ 03 for 8688
-\ h# 02 constant host-int-mask-reg           \ 04 for 8688
-\ h# 03 constant host-intstatus-reg          \ 05 for 8688
-\ h# 30 constant card-status-reg             \ 20 for 8688
-\ h# 40 constant sq-read-base-addr-a0-reg   \ 10 for 8688
-\ h# 41 constant sq-read-base-addr-a1-reg   \ 11 for 8688
-\ h# 5c constant card-revision-reg	   \ ?? for 8688
-\ h# 60 constant card-fw-status0-reg	   \ 40 for 8688
-\ h# 61 constant card-fw-status1-reg	   \ 41 for 8688
-\ h# 62 constant card-rx-len-reg		   \ 42 for 8688
-\ h# 63 constant card-rx-unit-reg    	   \ 43 for 8688
-\ h# 78 constant ioport0-reg		   \ 00 for 8688
-\ h# 79 constant ioport1-reg		   \ 01 for 8688
-\ h# 7a constant ioport2-reg		   \ 02 for 8688
+\ At present, this driver is only useful for diagnostic purposes,
+\ primarily supporting inquiry and scan.  Infrastructure for other
+\ HCI commands is present, but the overall structure for pairing
+\ devices and using them is not there.
+
+\ Most of this is generic to all Bluetooth HCIs;
+\ only a tiny fraction is Marvell-specific
 
 h# 200 value SDIO_BLOCK_SIZE
 
@@ -55,7 +50,7 @@ h# 00 UNUSED
    cdump cr
 ; h# 01 set-event
 
-: inquiry-result            \ b.nresp { bdaddr b.pscan-rep-mode b.pscan-period-mode b.pscan-mode b.dev-class[3] w.clock-offset }
+: inquiry-result       \ b.nresp { bdaddr b.pscan-rep-mode b.pscan-period-mode b.pscan-mode b.dev-class[3] w.clock-offset }
    cdump cr
 ; h# 02 set-event
 
@@ -979,3 +974,27 @@ previous definitions
 \ Major: Computer 100, Phone 200, LAN AP 300, AV 400, Peripheral 500, Imaging 600, Wearable 700, Toy 800, Misc 000, Uncategorized 1f00
 \ Minor: major-dependent, e.g. 204 is cell phone
 \ P2030 phone:  51 04 8c 68 30 2c  Class: 5a0204
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2013 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
