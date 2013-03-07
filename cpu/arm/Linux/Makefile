@@ -2,7 +2,8 @@
 
 BP=../../..
 
-CFLAGS = -O -DARM -mlittle-endian
+CFLAGS = -O -DARM
+# -mlittle-endian
 
 WRTAIL = forth/wrapper
 WRDIR = ${BP}/${WRTAIL}
@@ -13,7 +14,7 @@ ZIPOBJS = adler32.o compress.o crc32.o deflate.o inflate.o trees.o zutil.o
 
 OBJS = wrapper.o logger.o ${ZIPOBJS}
 
-all: forth inflate.bin
+all: forth ../build/inflate.bin
 
 # Use forth when you just need to run Forth but don't care what
 # native instruction set it is on.
@@ -30,13 +31,13 @@ armforth: ${OBJS}
 armforth.static: ${OBJS}
 	${CC} ${CFLAGS} ${LFLAGS} -static -o $@  ${OBJS}
 
-inflate.lo: ${ZIPDIR}/inflate.c
+xinflate.lo: ${ZIPDIR}/inflate.c
 	${CC} -c ${CFLAGS} -O $< -o $@
 
-inflate.o: inflate.lo
+xinflate.o: xinflate.lo
 	${LD} -T inflate.ld $< -o $@
 
-../build/inflate.bin: inflate.o
+../build/inflate.bin: xinflate.o
 	objcopy -O binary $< $@
 
 %.o: ${WRDIR}/%.c
