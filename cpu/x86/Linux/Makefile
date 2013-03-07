@@ -43,13 +43,13 @@ forth: ${OBJS}
 	${CC} ${MFLAGS} -o $@ ${OBJS} ${LIBS}
 	@ln -sf forth x86forth
 
-inflate.lo: ${ZIPDIR}/inflate.c
+xinflate.lo: ${ZIPDIR}/inflate.c
 	${CC} -c ${MFLAGS} -Wall -fno-stack-protector -ffreestanding -D_FORTIFY_SOURCE=0 -DNEED_BCOPY -O3 -fpic $< -o $@
 
-inflate.o: inflate.lo
+xinflate.o: xinflate.lo
 	${LD} -melf_i386 -T inflate.ld $< -o $@
 
-../build/inflate.bin: inflate.o
+../build/inflate.bin: xinflate.o
 	objcopy -O binary $< $@
 
 %.o: ${WRDIR}/%.c
