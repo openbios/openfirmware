@@ -916,10 +916,187 @@ d# 30000 value test-timeout
    ['] (.tsmsg) to .tsmsg
 ;
 
+\ Nonlinearity test
+
+d# 2000 constant #pts-max
+
+#pts-max /w* value /buf
+0 value xbuf
+0 value ybuf
+0 value #pts
+
+: alloc-bufs ( -- )
+   /buf alloc-mem to xbuf
+   /buf alloc-mem to ybuf
+   0 to #pts
+;
+
+: free-bufs ( -- )
+   xbuf /buf free-mem
+   ybuf /buf free-mem
+   0 to #pts
+;
+
+: +w@  ( adr index -- w )  wa+ w@  ;
+: +w!  ( w adr index -- )  wa+ w!  ;
+
+: add-pt  ( w.x w.y -- )  
+   #pts #pts-max u<  if
+      ybuf #pts +w! 
+      xbuf #pts +w! 
+      #pts 1+ to #pts
+   else
+      2drop
+   then
+;
+
+: list-pts ( -- )
+   #pts 0  ?do
+      i .  ." : "   xbuf i +w@ .  ybuf i +w@ .  cr
+   loop
+;
+
+: sum-over ( buf size -- sum )
+   0 -rot  /w* bounds  ?do   ( sum )
+      i w@ +                 ( sum' )
+   /w +loop                  ( sum )
+; 
+
+\ Maximum values, assuming max-x = 1200, max-y = 900, #pts = 2000
+\ max-x2  = 1200   * 1200 =     1,440,000
+\ max-xy  = 1200   *  900 =     1,080,000
+\ max-Sx  = 1200   * 2000 =     2,400,000
+\ max-Sy  =  900   * 2000 =     1,800,000
+\ max-Sx2 = max-x2 * 2000 = 2,880,000,000
+\ max-Sxy = max-xy * 2000 = 2,160,000,000
+
+\ The max value for the denominator  Sx2 - (Sx)2/n  occurs when
+\ half the samples are 0 and the other half are max-x
+\ max-denom = max-Sx2 / 4 =   720,000,000
+
+\ A similar argument applies to the numerator, except that it
+\ can be either negative or positive.  But its maximum absolute
+\ value is of the same order of magnitude as max-denom
+
+\ calculate the sum over x^2 (a double int)
+\ The maximum value is max-x * max-x * #pts
+\ For max-x = 1200 and #pts = 2000, max-Sx2 is 2,880,000,000
+: sum-x2  ( -- Sx2 )
+   0  #pts 0  ?do  ( Sx2 )
+      xbuf i +w@   ( Sx2 x )
+      dup u* +     ( Sx2' )
+   loop            ( Sx2 )
+;
+
+\ calculate the sum over xy (a double int)
+: sum-xy  ( -- Sxy )
+   0  #pts 0  ?do   ( S )
+      xbuf i +w@    ( S x )
+      ybuf i +w@    ( S x y )
+      u* +          ( S' )
+   loop             ( S )
+;
+
+0 value sum-x
+0 value sum-y
+: linear-least-squares  ( -- intercept num den )
+   xbuf #pts sum-over to sum-x
+   ybuf #pts sum-over to sum-y
+
+   \ Slope numerator: SUM(xy) - (SUM(x)*SUM(y) / #pts)
+
+   \ Sx max is #pts * xmax
+   \ Sy max is #pts * ymax
+   \ (Sx * Sy)/#pts max is xmax * ymax * #pts
+   sum-x sum-y #pts */               ( Sx*Sy/#pts )
+   sum-xy swap  -                    ( num )
+
+   \ Slope denominator:  SUM(x^2) - (SUM(x)^2 / #pts)
+   sum-x sum-x #pts */               ( num Sx*Sx/#pts )
+   sum-x2 swap  -                    ( num den )
+   \ Avoid division by 0
+   dup 0=  if  1+  then              ( num den )
+
+   \ Calculate the intercept
+   2dup  sum-x #pts /  -rot */       ( num den  slope*Sx )
+
+   sum-y #pts /                      ( num den  slope*Sx mean-y )
+   swap -   -rot                     ( intercept  num den )
+;
+
+: do-point  ( x y -- )   2dup add-pt  dot  ;
+
+\ draw line across screen from left to right
+: line-in-x  ( intercept num den -- )
+   screen-w 0  do                 ( intercept num den )
+      3dup  i -rot  */  +         ( intercept num den point-y )
+      dup 1 screen-h within  if   ( intercept num den point-y )
+         i swap  dot              ( intercept num den )
+      else                        ( intercept num den point-y )
+         drop                     ( intercept num den )
+      then                        ( intercept num den )
+   loop                           ( intercept num den )
+   3drop                          ( )
+;
+\ draw line from top to bottom of screen
+: line-in-y  ( intercept num den -- )
+   swap rot                       ( den num intercept )
+   screen-h 0  do                 ( den num intercept )
+      3dup  i swap -              ( den num intercept den num y-b )
+      -rot */                     ( den num intercept point-x )
+      dup 1 screen-w within  if   ( den num intercept point-y )
+         i  dot                   ( den num intercept )
+      else                        ( den num intercept point-y )
+         drop                     ( den num intercept )
+      then                        ( den num intercept )
+   loop                           ( den num intercept )
+   3drop                          ( )
+;
+: draw-line  ( intercept num den color -- )
+   pixcolor !                     ( intercept num den )
+   2 pick abs  2 pick abs  >  if  line-in-y  else  line-in-x  then
+;
+
+0 value err2
+: nonlinearity  ( intercept num den -- mean-sq-nonlinearity )
+   0 to err2             ( intercept num den )
+   #pts  0  ?do          ( intercept num den )
+      3dup               ( intercept num den  intercept num den )
+      xbuf i +w@         ( intercept num den  intercept num den  x )
+      -rot */  +         ( intercept num den  predicted-y )
+      ybuf i +w@ -       ( intercept num den  error )
+      dup *              ( intercept num den  error^2 )
+      err2 +  to err2    ( intercept num den  )
+   loop                  ( intercept num den )
+   3drop                 ( )
+   err2 #pts /           ( Serror2/#pts )
+;
+
+\ TODO:
+\ 1) Message and retry if slope and intercept not approximately correct
+\    slope can be checked with
+\       ( num den ) h# 10000 -rot */ LOW HIGH within
+\       ( expected slope is negative , so LOW and HIGH are negative )
+\ 2) Establish threshold for nonlinearity and fail if exceeded
+\ 3) Perhaps integrate the nonlinearity test with the targets test?
 
 : scribble
-   ev(  ['] dot  ev  )ev
+   alloc-bufs
+   ev(
+      0 d# 27 at-xy  ." Follow the line.  Type a key to exit" cr
+      screen-h 6 -   screen-h negate  screen-w  blue  draw-line
+      ['] do-point ev  
+      linear-least-squares  ( intercept num den )
+      3dup red draw-line    ( intercept num den )
+      ." Nonlinearity: "  nonlinearity .d  cr
+      d# 5000 ms
+   )ev
+   free-bufs
 ;
+
+\ : scribble
+\    ev(  ['] dot  ev  )ev
+\ ;
 
 
 0 value dx
