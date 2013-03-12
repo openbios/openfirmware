@@ -900,6 +900,8 @@ d# 30000 value test-timeout
    until drop                                   ( )
 ;
 
+d#  50 value #skip  \ Number of initial points to ignore for line
+0 value skipping?   \ Current skip count
 : ev(
    configure
    cursor-off
@@ -908,6 +910,7 @@ d# 30000 value test-timeout
    blacken
    .tsmsg
    -1 to remaining
+   #skip to skipping?
 ;
 
 : )ev
@@ -940,7 +943,7 @@ d# 2000 constant #pts-max
 : +w@  ( adr index -- w )  wa+ w@  ;
 : +w!  ( w adr index -- )  wa+ w!  ;
 
-: add-pt  ( w.x w.y -- )  
+: add-pt  ( w.x w.y -- )
    #pts #pts-max u<  if
       ybuf #pts +w! 
       xbuf #pts +w! 
@@ -1024,7 +1027,10 @@ d# 2000 constant #pts-max
    swap -   -rot                     ( intercept  num den )
 ;
 
-: do-point  ( x y -- )   2dup add-pt  dot  ;
+: do-point  ( x y -- )
+   skipping?  ?dup  if  1- to skipping?  2drop exit  then
+   2dup add-pt  dot
+;
 
 \ draw line across screen from left to right
 : line-in-x  ( intercept num den -- )
@@ -1044,7 +1050,7 @@ d# 2000 constant #pts-max
    screen-h 0  do                 ( den num intercept )
       3dup  i swap -              ( den num intercept den num y-b )
       -rot */                     ( den num intercept point-x )
-      dup 1 screen-w within  if   ( den num intercept point-y )
+      dup 1 screen-w within  if   ( den num intercept point-x )
          i  dot                   ( den num intercept )
       else                        ( den num intercept point-y )
          drop                     ( den num intercept )
@@ -1058,6 +1064,7 @@ d# 2000 constant #pts-max
 ;
 
 0 value err2
+0 [if]
 : nonlinearity  ( intercept num den -- mean-sq-nonlinearity )
    0 to err2             ( intercept num den )
    #pts  0  ?do          ( intercept num den )
@@ -1071,6 +1078,66 @@ d# 2000 constant #pts-max
    3drop                 ( )
    err2 #pts /           ( Serror2/#pts )
 ;
+[then]
+
+0 value this-#pts
+: short-nonlinearity  ( intercept num den index #pts -- mean-sq-nonlinearity )
+   dup to this-#pts      ( intercept num den index #pts )
+   0 to err2             ( intercept num den index #pts )
+   bounds  ?do           ( intercept num den )
+      3dup               ( intercept num den  intercept num den )
+      xbuf i +w@         ( intercept num den  intercept num den  x )
+      -rot */  +         ( intercept num den  predicted-y )
+      ybuf i +w@ -       ( intercept num den  error )
+      dup *              ( intercept num den  error^2 )
+      err2 +  to err2    ( intercept num den  )
+   loop                  ( intercept num den )
+   3drop                 ( )
+   err2 this-#pts /      ( Serror2/#pts )
+;
+
+: overall-nonlinearity  ( intercept num den -- mean-sq )
+   0 #pts short-nonlinearity
+;
+
+0 value nl-max  0 value nl-loc
+d#  60 value nl-span
+d#  30 value nl-stride
+: max-nonlinearity  ( intercept num den -- nl )
+   0 to nl-max                      ( intercept num den )
+   0 to nl-loc
+   #pts 0  do                       ( intercept num den )
+      i nl-span +  #pts >  ?leave   ( intercept num den )
+      3dup  i nl-span short-nonlinearity  ( intercept num den nl )
+      dup nl-max >  if              ( intercept num den nl )
+         to nl-max  i to nl-loc     ( intercept num den )
+      else                          ( intercept num den nl )
+	 drop                       ( intercept num den )
+      then                          ( intercept num den )
+   nl-stride +loop                  ( intercept num den )
+   3drop nl-max                     ( nl )
+;
+: color-nl  ( color -- )
+   pixcolor !
+   nl-loc nl-span  bounds  ?do
+      xbuf i +w@  ybuf i +w@  dot
+   loop
+;
+: erase-remainder  ( -- )
+   #pts 0  do
+      i  nl-loc dup nl-span + within  0=  if
+         black pixcolor !
+         xbuf i +w@  ybuf i +w@  dot
+      then
+   loop
+;
+: show-nonlinearity ( -- )
+   erase-remainder
+   d# 8 0  do
+      yellow  color-nl  d# 500 ms
+      magenta color-nl  d# 500 ms
+   loop
+;
 
 \ TODO:
 \ 1) Message and retry if slope and intercept not approximately correct
@@ -1082,14 +1149,19 @@ d# 2000 constant #pts-max
 
 : scribble
    alloc-bufs
-   ev(
-      0 d# 27 at-xy  ." Follow the line.  Type a key to exit" cr
-      screen-h 6 -   screen-h negate  screen-w  blue  draw-line
-      ['] do-point ev  
+      begin  ev(
+         0 to #pts
+         0 d# 27 at-xy  ."  Follow the line.  Type a key to exit " cr
+         screen-h 6 -   screen-h negate  screen-w  blue  draw-line
+         ['] do-point ev  
+      #pts d# 500 <  while
+         0 d# 27 at-xy  ."  Too few points.  Draw the line slowly" cr
+	 d# 2000 ms
+      repeat
       linear-least-squares  ( intercept num den )
       3dup red draw-line    ( intercept num den )
-      ." Nonlinearity: "  nonlinearity .d  cr
-      d# 5000 ms
+      ." Nonlinearity: "  max-nonlinearity .d  cr
+      show-nonlinearity
    )ev
    free-bufs
 ;
