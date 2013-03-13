@@ -70,11 +70,6 @@ icon: leds.icon     rom:leds.565
    " Plug-in SD card"
    ['] ext-sd-item  sdcard.icon  add-icon
 
-   test-station 4 = if
-      " Touchscreen and Touchpad"
-      ['] touch-item     touchpad.icon     add-icon
-   then
-
    " Wireless LAN"
    ['] wlan-item      wifi.icon     add-icon
 
@@ -103,10 +98,8 @@ icon: leds.icon     rom:leds.565
    " Keyboard"
    ['] keyboard-item     keyboard.icon     add-icon
 
-   test-station 4 <>  if
-      " Touchscreen and Touchpad"
-      ['] touch-item     touchpad.icon     add-icon
-   then
+   " Touchscreen and Touchpad"
+   ['] touch-item     touchpad.icon     add-icon
 
    " LEDs"
    ['] leds-item    leds.icon   add-icon
