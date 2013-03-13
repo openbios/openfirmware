@@ -900,8 +900,6 @@ d# 30000 value test-timeout
    until drop                                   ( )
 ;
 
-d#  50 value #skip  \ Number of initial points to ignore for line
-0 value skipping?   \ Current skip count
 : ev(
    configure
    cursor-off
@@ -910,7 +908,6 @@ d#  50 value #skip  \ Number of initial points to ignore for line
    blacken
    .tsmsg
    -1 to remaining
-   #skip to skipping?
 ;
 
 : )ev
@@ -925,12 +922,47 @@ d#  50 value #skip  \ Number of initial points to ignore for line
 
 \ Nonlinearity test
 
+d#  50 value #skip  \ Number of initial points to ignore for line
+0 value skipping?   \ Current skip count
+0 value starting?
+
 d# 2000 constant #pts-max
 
 #pts-max /w* value /buf
 0 value xbuf
 0 value ybuf
 0 value #pts
+
+h# 80 value target-size
+
+: draw-start  ( colour -- )
+   0 screen-h target-size -  target-size dup  fill-rectangle-noff
+;
+
+: draw-stop  ( colour -- )
+   screen-w target-size - 0  target-size dup  fill-rectangle-noff
+;
+
+: in-start?  ( x y -- flag )
+   screen-h target-size - screen-h between
+   swap
+   0 target-size between
+   and
+   dup if  blue draw-start  then
+;
+
+: in-stop?  ( x y -- flag )
+   0 target-size between
+   swap
+   screen-w target-size - screen-w between
+   and
+   dup if  blue draw-stop  then
+;
+
+: draw-targets  ( -- )
+   green  draw-start
+   red    draw-stop
+;
 
 : alloc-bufs ( -- )
    /buf alloc-mem to xbuf
@@ -1031,8 +1063,13 @@ d# 2000 constant #pts-max
    swap -   -rot                     ( intercept  num den )
 ;
 
+
 : do-point  ( x y -- )
    skipping?  ?dup  if  1- to skipping?  2drop exit  then
+   starting?  if
+      2dup in-start?  if  false to starting?  else  2drop exit  then
+   then
+   2dup in-stop?   if  0 to remaining  2drop exit  then
    2dup add-pt  dot
 ;
 
@@ -1105,8 +1142,9 @@ d# 2000 constant #pts-max
 ;
 
 0 value nl-max  0 value nl-loc
-d#  60 value nl-span
-d#  30 value nl-stride
+d# 160 value nl-span
+d#  10 value nl-stride
+d#  40 value nl-threshold
 : max-nonlinearity  ( intercept num den -- nl )
    0 to nl-max                      ( intercept num den )
    0 to nl-loc
@@ -1142,30 +1180,51 @@ d#  30 value nl-stride
       magenta color-nl  d# 500 ms
    loop
 ;
+: at-5pm  d# 30 d# 27 at-xy  ." "(1b)[K"  ;
+: .tsmsg-drag
+   at-5pm  ."  Drag between targets."  cr
+;
+: .tsmsg-few
+   at-5pm  ."  Too few points.  Draw the line slowly.    "  cr
+;
 
 \ TODO:
 \ 1) Message and retry if slope and intercept not approximately correct
 \    slope can be checked with
 \       ( num den ) h# 10000 -rot */ LOW HIGH within
 \       ( expected slope is negative , so LOW and HIGH are negative )
-\ 2) Establish threshold for nonlinearity and fail if exceeded
 \ 3) Perhaps integrate the nonlinearity test with the targets test?
 
+: ((test-nonlinearity))
+   ['] .tsmsg-drag to .tsmsg
+   begin  ev(
+      draw-targets
+      0 to #pts
+      #skip to skipping?
+      true to starting?
+      ['] do-point ev
+   #pts d# 400 <  while
+      .tsmsg-few  ['] .tsmsg-few to .tsmsg
+      d# 1000 ms
+   repeat
+;
+
+: (test-nonlinearity)  ( -- nonlinearity )
+   ((test-nonlinearity))
+   linear-least-squares                    ( intercept num den )
+   3dup red draw-line                      ( intercept num den )
+   max-nonlinearity                        ( nonlinearity )
+   at-5pm dup ."  Nonlinearity: "  .d  cr  ( nonlinearity )
+   show-nonlinearity                       ( nonlinearity )
+;
+
 : test-nonlinearity
+   d# 86400.000 to test-timeout
    alloc-bufs
-      begin  ev(
-         0 to #pts
-         0 d# 27 at-xy  ."  Follow the line.  Type a key to exit " cr
-         screen-h 6 -   screen-h negate  screen-w  blue  draw-line
-         ['] do-point ev  
-      #pts d# 500 <  while
-         0 d# 27 at-xy  ."  Too few points.  Draw the line slowly" cr
-	 d# 2000 ms
-      repeat
-      linear-least-squares  ( intercept num den )
-      3dup red draw-line    ( intercept num den )
-      ." Nonlinearity: "  max-nonlinearity .d  cr
-      show-nonlinearity
+   begin
+      (test-nonlinearity)
+      nl-threshold <=
+   until
    )ev
    free-bufs
 ;
@@ -1334,7 +1393,6 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
 
 : mb-final  ( -- error? )
    open  0=  if true exit  then
-   d# 86400.000 to test-timeout
    ['] test-nonlinearity  catch  ?dup  if  .error fault  then
    close
    faults
@@ -1348,7 +1406,7 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
    test-station case
       h#  1  of  mb-smt  exit  endof
       h#  2  of  mb-assy  exit  endof
-      h#  4  of  mb-final  exit  endof
+      h#  4  of  mb-smt  exit  endof
       h# 11  of  ir-pcb-smt  exit  endof
       h# 12  of  ir-pcb-assy  exit  endof
       h# 13  of  lg-tooling  exit  endof
