@@ -919,6 +919,10 @@ d#  50 value #skip  \ Number of initial points to ignore for line
    ['] (.tsmsg) to .tsmsg
 ;
 
+: scribble
+   ev(  ['] dot  ev  )ev
+;
+
 \ Nonlinearity test
 
 d# 2000 constant #pts-max
@@ -1147,7 +1151,7 @@ d#  30 value nl-stride
 \ 2) Establish threshold for nonlinearity and fail if exceeded
 \ 3) Perhaps integrate the nonlinearity test with the targets test?
 
-: scribble
+: test-nonlinearity
    alloc-bufs
       begin  ev(
          0 to #pts
@@ -1165,10 +1169,6 @@ d#  30 value nl-stride
    )ev
    free-bufs
 ;
-
-\ : scribble
-\    ev(  ['] dot  ev  )ev
-\ ;
 
 
 0 value dx
@@ -1332,6 +1332,14 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
    faults
 ;
 
+: mb-final  ( -- error? )
+   open  0=  if true exit  then
+   d# 86400.000 to test-timeout
+   ['] test-nonlinearity  catch  ?dup  if  .error fault  then
+   close
+   faults
+;
+
 : selftest  ( -- error? )
    absent?  if  ." No touchscreen expected" cr  false exit  then
 
@@ -1340,7 +1348,7 @@ create boxen  /boxen  allot  \ non-zero means box is expected to be hit
    test-station case
       h#  1  of  mb-smt  exit  endof
       h#  2  of  mb-assy  exit  endof
-      h#  4  of  mb-assy  exit  endof
+      h#  4  of  mb-final  exit  endof
       h# 11  of  ir-pcb-smt  exit  endof
       h# 12  of  ir-pcb-assy  exit  endof
       h# 13  of  lg-tooling  exit  endof
