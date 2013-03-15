@@ -145,11 +145,11 @@ icon: quit.icon     rom:quit.565
    loop
    page  overall-fail?  if
       0 1  \ play-item
-      show-fail
+      [ifdef] show-fail  show-fail  [then]
       ." "(1b)"[;15HSome hardware tests failed. Please review red boxes."
    else
       0 3  \ quit-item
-      show-pass
+      [ifdef] show-pass  show-pass  [then]
       ." "(1b)"[;28HAll hardware tests passed."
    then
    begin key? while key drop repeat  key drop
