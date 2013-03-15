@@ -14,7 +14,10 @@ headerless
 
 : ?clear
    h# 3f rtc@  h# 3e rtc@  bwjoin  h# 55aa  <>  if
-      h# 20 8 rtc!                     \ century
+      h# 20 h#  8 rtc!                 \ century
+      h# 13 h#  9 rtc!                 \ year
+      h#  1 h#  8 rtc!                 \ month
+      h#  1 h#  7 rtc!                 \ day
       h# 20 h# 10  do  0 i rtc!  loop  \ wipe cmos@ cmos! area
       h# 55aa  wbsplit  h# 3e rtc!  h# 3f rtc!
       ." RTC SRAM cleared" cr

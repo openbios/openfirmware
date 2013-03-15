@@ -88,6 +88,13 @@ h# 80 constant battery-error-bit
    cr  
    then
 ;
+: reinit
+   h# 20 h# 1a rtc!
+   h# 13 h#  9 rtc!
+   h#  1 h#  8 rtc!
+   h#  1 h#  7 rtc!
+   ." RTC cleared" cr
+;
 true value first-open?
 headers
 : open  ( -- true )
@@ -96,7 +103,7 @@ headers
       rega-mode d# 10 rtc!
       regb-mode d# 11 rtc!
       \ If the battery is bad, display a message, but go open the device anyway
-      check-battery battery-message drop
+      check-battery battery-message  if  reinit  then
       false to first-open?
    then
    true
