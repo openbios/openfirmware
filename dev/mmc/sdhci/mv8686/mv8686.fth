@@ -33,9 +33,9 @@ constant /fw-transport
 
 : cmd-out  ( adr len -- error? )
    /fw-transport negate /string         ( adr' len' )
-   read-poll                            ( len )
-   2dup swap >fw-plen le-w!             ( len )
-   CMD_TYPE_CMD 2 pick >fw-type le-w!   ( len )
+   read-poll                            ( adr len )
+   2dup swap >fw-plen le-w!             ( adr len )
+   CMD_TYPE_CMD 2 pick >fw-type le-w!   ( adr len )
    packet-out				( error? )
 ;
 
@@ -109,7 +109,7 @@ constant /fw-transport
    false
 ;
 
-: alloc-buffer  ( len -- adr )  /fw-transport +  dma-alloc  ;
+: alloc-buffer  ( len -- adr )  /fw-transport +  dma-alloc  /fw-transport +  ;
 : free-buffer  ( adr len -- )  /fw-transport negate /string  dma-free  ;
 
 \ LICENSE_BEGIN
