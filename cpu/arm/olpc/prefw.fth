@@ -221,7 +221,6 @@ false value fru-test?
 true value user-mode?
 
 fload ${BP}/ofw/gui/loadmenu.fth
-\ fload ${BP}/ofw/gui/insticon.fth
 
 \ Marvell MMP low-level stuff
 fload ${BP}/cpu/arm/mmp2/pmua.fth

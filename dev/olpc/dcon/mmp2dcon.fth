@@ -164,12 +164,12 @@ defer dcon-unjam
 : dcon-freeze  ( -- )  0 set-source  ;
 : dcon-unfreeze  ( -- )  1 set-source  ;
 
-: screen-freeze  ( -- )
+: video-save  ( -- )
    dcon-freeze
    " sleep" $call-screen
 ;
 
-: screen-unfreeze ( -- )
+: video-restore  ( -- )
    wait-output                  \ Wait for the DCON to reach the scan line
    " wake" $call-screen         \ Enable video signal from SoC
    d# 42 ms                     \ Synchronisation delay determined empirically
@@ -311,9 +311,9 @@ stand-init:
    invisible
    " gvsr" $call-screen
    begin
-      " screen-freeze" $call-dcon
+      " video-save" $call-dcon
       d# 25 ms
-      " screen-unfreeze" $call-dcon
+      " video-restore" $call-dcon
       key?
    until  key drop
    visible
