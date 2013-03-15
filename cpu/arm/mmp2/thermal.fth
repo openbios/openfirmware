@@ -68,7 +68,7 @@ main-pmu-pa h# 200 + constant wdtpcr
    ." limit: "  wd-thresh@  h# 3ff and  .
    ." sensor: "  thermal-base io@  h# 3ff and  .
    ." cpu: "  cpu-temperature  .c
-   ." battery: "  bat-temp  .c
+   ." battery: "  .bat-temp  ." C "
    pop-base
 ;
 
