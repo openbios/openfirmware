@@ -38,10 +38,10 @@ purpose: selftest for OLPC lid and ebook switches
    lid?  if  ." Please open the lid."  cr  wait-not-lid  ty  then
 
    ." Please close the lid and then open it."  cr
-   wait-lid  d# 1000 ms  wait-not-lid  ty
+   wait-lid  d# 100 ms  wait-not-lid  ty
 
    ." Please rotate the lid to face away, and close it face up."  cr
-   wait-ebook  d# 1000 ms  ty
+   wait-ebook  d# 100 ms  ty
    pltd  wait-not-ebook  ty
 ;
 
