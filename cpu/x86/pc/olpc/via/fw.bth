@@ -743,6 +743,7 @@ true                               ' client-symbols?  set-config-int-default
 
 fload ${BP}/cpu/x86/pc/olpc/charge.fth     \ Fancy battery charge logger
 fload ${BP}/cpu/x86/pc/olpc/diskspeed.fth  \ Mass storage speed test
+fload ${BP}/cpu/x86/pc/olpc/terminal.fth   \ Serial terminal emulator
 fload ${BP}/cpu/x86/pc/olpc/apt.fth        \ Common developer utilities
 
 tag-file @ fclose  tag-file off

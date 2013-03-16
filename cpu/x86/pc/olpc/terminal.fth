@@ -182,6 +182,20 @@ false value uart-console-off?  \ did we turn our uart console off?
    until                               ( adr len' )
 ;
 
+\
+\ FIXME: XO-1, seen only once, ukey? did stop returning true, and ukey
+\ therefore hung waiting for ukey?
+\
+\ condition was cleared by  0 uart@  despite ukey? returning false
+\
+\ when it occurs again, try looking at fifo error summary bit, and
+\ line status reg, and consider comment from 16550.fth:
+\
+\ "I have seen conditions where a UART will report, via an interrupt,
+\ that a character is available, but the line status register won't
+\ report it."
+\
+
 : use-uart
    uart-console-off
    ['] uart-open   to  serial-open
@@ -200,10 +214,13 @@ false value uart-console-off?  \ did we turn our uart console off?
 
 : usb-open  ( -- )
    " /usb/serial" open-dev ?dup if  to serial-ih  exit  then
-[ifdef] olpc-cl1
-   " /usb@f,4/serial" open-dev ?dup if  to serial-ih  exit  then
-   " /usb@f,5/serial" open-dev ?dup if  to serial-ih  exit  then
-[then]
+   [ifdef] olpc-cl1
+      \ XO-1.5
+      " /usb@10/serial" open-dev ?dup if  to serial-ih  exit  then
+      \ XO-1
+      " /usb@f,4/serial" open-dev ?dup if  to serial-ih  exit  then
+      " /usb@f,5/serial" open-dev ?dup if  to serial-ih  exit  then
+   [then]
    true abort" can't open USB serial adapter"
 ;
 
