@@ -116,7 +116,7 @@ d# 250 constant /pbuf
    until                                ( id limit )
    drop                                 ( id )
    ." timeout waiting for " 2u.x cr     ( )
-   r> rstrace >r
+   \ r> rstrace >r
    pbuf /pbuf erase
 ;
 
