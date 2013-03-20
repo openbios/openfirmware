@@ -7,6 +7,7 @@ purpose: Reprogram SPI FLASH from another XO-1.5
 \ The commands are:
 \    ok clone                   \ Copies this machine's FLASH to the dead one
 \    ok recover disk:\file.rom  \ Copies a ROM file to the dead one
+\    ok excavate disk:\the.rom  \ Reads the dead ROM and writes to a file
 
 : (tethered-flash)  ( -- )
    use-bb-spi
@@ -23,3 +24,11 @@ purpose: Reprogram SPI FLASH from another XO-1.5
 ;
 
 : recover  ( "filename" -- )  get-file (tethered-flash)  ;
+
+: excavate  ( "filename" -- )
+   use-bb-spi
+   flash-write-enable
+   read-flash
+   flash-write-disable
+   use-local-ec
+;
