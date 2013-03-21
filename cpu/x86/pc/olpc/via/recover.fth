@@ -32,3 +32,13 @@ purpose: Reprogram SPI FLASH from another XO-1.5
    flash-write-disable
    use-local-ec
 ;
+
+: use-layout-xo-4
+   h# 20.0000 to /flash
+   /flash h# 1.0000 - to mfg-data-offset
+   /flash to mfg-data-end-offset
+   mfg-data-offset h# 30 - to crc-offset
+   mfg-data-offset h# 40 - to signature-offset
+   " "(03)"CL4" machine-signature swap cmove
+   \ ." WARNING: do not use local SPI FLASH access without reboot" cr
+;
