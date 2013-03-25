@@ -5,6 +5,7 @@ hex
 code scc-id@            ( -- n )   psh tos,sp  mrc p15,0,tos,cr0,cr0,0  c;
 code cache-type@        ( -- n )   psh tos,sp  mrc p15,0,tos,cr0,cr0,1  c;
 code tlb-type@          ( -- n )   psh tos,sp  mrc p15,0,tos,cr0,cr0,3  c;
+code mp-id@             ( -- n )   psh tos,sp  mrc p15,0,tos,cr0,cr0,5  c;
 code control@           ( -- n )   psh tos,sp  mrc p15,0,tos,cr1,cr0,0  c;
 code aux-control@       ( -- n )   psh tos,sp  mrc p15,0,tos,cr1,cr0,1  c;
 code coprocessor-access@ ( -- n )  psh tos,sp  mrc p15,0,tos,cr1,cr0,2  c;
