@@ -401,6 +401,11 @@ alias [if]     [if]
 alias [then]   [then]
 alias [else]   [else]
 
+\ These next three are useful for testing
+alias interact interact
+alias resume   resume
+alias bye      bye
+
 tokenizer definitions
 
 \ Init search path during execution
