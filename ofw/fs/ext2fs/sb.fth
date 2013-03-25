@@ -54,6 +54,7 @@ defer int!    ( l adr -- )  ' be-l! to int!
 : incompat-flags  ( -- mask )  24 +sbl  ;
 : ro-flags        ( -- mask )  25 +sbl  ;
 
+: sb-filetype? ( -- flag )  incompat-flags 2 and  0<>  ;
 : sb-64bit?    ( -- flag )  incompat-flags h# 80 and  0<>  ;
 : sb-extents?  ( -- flag )  incompat-flags h# 40 and  0<>  ;
 : sb-gd-csum?  ( -- flag )  ro-flags       h# 10 and  0<>  ;
