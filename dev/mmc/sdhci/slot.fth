@@ -35,6 +35,7 @@
 : /block  " /block" $call-parent  ;
 : write-protected?  " write-protected?" $call-parent  ;
 : card-inserted?  " card-inserted?" $call-parent  ;
+: ext-csd!  " ext-csd!" $call-parent  ;
 
 : attach-sdio-card  " attach-sdio-card" $call-parent  ;
 : detach-sdio-card  " detach-sdio-card" $call-parent  ;
