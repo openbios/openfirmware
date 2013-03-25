@@ -148,14 +148,20 @@ here tone-freqs - /n /  constant #tones
    d# -3 set-volume  play
 ;
 
+: alloc-test-buf  ( -- )
+   record-len la1+  " dma-alloc" $call-parent to record-base
+;
+: free-test-buf  ( -- )
+   record-base record-len la1+  " dma-free" $call-parent
+;
 0 value skip-sweep?
 : selftest  ( -- error? )
    open 0=  if  ." Failed to open /audio" cr true exit  then
    wav-test
-   record-len la1+  " dma-alloc" $call-parent to record-base
+   alloc-test-buf
    skip-sweep? 0=  if  sweep-test  then
    mic-test
-   record-base record-len la1+  " dma-free" $call-parent
+   free-test-buf
    close
    false
 ;
