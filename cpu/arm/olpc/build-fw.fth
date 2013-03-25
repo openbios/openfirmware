@@ -741,6 +741,15 @@ h# 10.0000      h# 8000 -      h# 4000 -      dictionary-size !
 
 fload ${BP}/cpu/arm/saverom.fth  \ Save the dictionary for standalone startup
 
+fload ${BP}/forth/lib/lfsr.fth
+0 value lfsr-state
+: init-audio-noise  ( -- )
+   random-long to lfsr-state
+   \ Use a polynomial with a 32-bit period
+   lfsr-polynomials d# 32 na+ @ to lfsr-poly
+;
+: audio-noise  ( -- n )  lfsr-state lfsr-step dup to lfsr-state  ;
+
 fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
 
 \ Because visible doesn't work sometimes when calling back from Linux

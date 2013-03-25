@@ -620,14 +620,18 @@ fload ${BP}/forth/lib/tones.fth
 [then]
 
 : prepare-signal  ( -- out-adr, len in-adr,len )
+   init-audio-noise
+   \ Doing the noise 16 bits at a time does a better job
+   \ of decorrelating the channels compared to storing
+   \ a 32-bit "random" number
 [ifdef] debug-analyzer?
    debug-analyzer?  if
       pb /pb  d# 1000  d# 48000 make-2tones
    else
-      pb /pb bounds  do  random-long  i l!  /l +loop
+      pb /pb bounds  do  audio-noise  i w!  /w +loop
    then
 [else]
-   pb /pb bounds  do  random-long  i l!  /l +loop
+   pb /pb bounds  do  audio-noise  i w!  /w +loop
 [then]
    pb      /pb -stereo-wmean
    pb wa1+ /pb -stereo-wmean

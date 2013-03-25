@@ -479,6 +479,8 @@ fload ${BP}/cpu/x86/pc/saveabs.fth
 fload ${BP}/forth/lib/selstr.fth
 
 fload ${BP}/cpu/x86/pc/olpc/via/padlock.fth   \ Via security engine
+alias init-audio-noise noop
+alias audio-noise random-long
 fload ${BP}/dev/hdaudio/noiseburst.fth  \ audio-test support package
 
 fload ${BP}/ofw/inet/loadtcp.fth

@@ -227,6 +227,7 @@ true value allow-swapping?
 : automatic-test  ( -- )
    analysis-parameters " set-analysis-parameters" $call-analyzer
    acoustic-test
+   [ifdef] reset-audio reset-audio [then]
    loopback-test
 ;
 : selftest  ( -- error? )

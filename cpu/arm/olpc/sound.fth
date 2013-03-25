@@ -182,6 +182,14 @@ true value use-audio-pll?
    then
    false
 ;
+\ This is a grotesque workaround for a hardware problem.  The audio
+\ subsystem (SSPA + ADMA) works reasonably reliably right after the
+\ audio island is powered on, but subsequent tries tend to get
+\ confused about which channel is which, and possibly about the
+\ initial SSPA FIFO contents.  Resetting between test phases makes
+\ the test work more reliably.  Attempts to get help from the vendor,
+\ over a long period of time, were unsuccessful.
+: reset-audio  ( -- )  audio-clock-off  d# 50 ms audio-clock-on drop  ;
 
 : reset-rx  ( -- )  h# 8000.0002 h# 0c sspa!  ;
 
