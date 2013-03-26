@@ -42,3 +42,13 @@ purpose: Reprogram SPI FLASH from another XO-1.5
    " "(03)"CL4" machine-signature swap cmove
    \ ." WARNING: do not use local SPI FLASH access without reboot" cr
 ;
+
+\ write only the CForth image to SPI FLASH, leaving Open Firmware alone
+: recover-cforth  ( "filename" -- )
+   use-bb-spi
+   $read-open flash-buf h# 2.0000 ifd @ fgets ifd @ fclose
+   flash-write-enable
+   flash-buf h# 2.0000 0 write-flash-range
+   flash-write-disable
+   use-local-ec
+;
