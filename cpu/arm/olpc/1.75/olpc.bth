@@ -93,6 +93,11 @@ $new-file
    " nandblaster_tx.bin"   " nb_tx"    $add-deflated-dropin
 
    \ icons for mfg test gui
+   " ${BP}/cpu/x86/pc/olpc/images/bigx.di"      $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/bigcheck.di"  $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
+
    " testicons/play.565"        " play.565"     $add-deflated-dropin
    " testicons/quit.565"        " quit.565"     $add-deflated-dropin
    " testicons/cpu.565"         " cpu.565"      $add-deflated-dropin
@@ -128,11 +133,6 @@ $new-file
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
 
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
-
-   " ${BP}/cpu/x86/pc/olpc/images/bigx.di"      $add-file
-   " ${BP}/cpu/x86/pc/olpc/images/bigcheck.di"  $add-file
-   " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
-   " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
 
 \    " ${BP}/cpu/x86/pc/olpc/images/warnings.565"  " warnings.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/lightdot.565"  " lightdot.565"  $add-deflated-dropin
