@@ -12,12 +12,20 @@ h# 68 1 reg
 
 headerless
 
+: reinit
+   h# 20 h#  8 rtc! \ century
+   h# 13 h#  6 rtc! \ year
+   h#  1 h#  5 rtc! \ month
+   h#  1 h#  4 rtc! \ day of month
+   h#  2 h#  3 rtc! \ day of week, monday
+   h#  0 h#  2 rtc! \ hours
+   h#  0 h#  1 rtc! \ minutes
+   h#  0 h#  0 rtc! \ seconds
+   ." RTC cleared" cr
+;
+
 : ?clear
    h# 3f rtc@  h# 3e rtc@  bwjoin  h# 55aa  <>  if
-      h# 20 h#  8 rtc!                 \ century
-      h# 13 h#  9 rtc!                 \ year
-      h#  1 h#  8 rtc!                 \ month
-      h#  1 h#  7 rtc!                 \ day
       h# 20 h# 10  do  0 i rtc!  loop  \ wipe cmos@ cmos! area
       h# 55aa  wbsplit  h# 3e rtc!  h# 3f rtc!
       ." RTC SRAM cleared" cr
@@ -44,6 +52,12 @@ headers
       drop true                ( true )
    then                        ( okay? )
 
+   \ check and clear the oscillator stop flag
+   7 rtc@ h# 20 and  if
+      reinit
+      7 rtc@ h# 20 invert and 7 rtc!
+   then
+
    \ manage legacy RTC CMOS usage
    ?clear
 
@@ -69,6 +83,7 @@ headers
    bcd-time&date  >r >r >r >r >r >r
    bcd>  r> bcd>  r> bcd>  r> bcd>  r> bcd>  r> bcd>  r> bcd> ( s m h d m y c )
 
+   d# 20 max
    d# 100 * +  		\ Merge century with year
 ;
 : set-time  ( s m h d m y -- )

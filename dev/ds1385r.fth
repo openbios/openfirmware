@@ -89,10 +89,14 @@ h# 80 constant battery-error-bit
    then
 ;
 : reinit
-   h# 20 h# 1a rtc!
-   h# 13 h#  9 rtc!
-   h#  1 h#  8 rtc!
-   h#  1 h#  7 rtc!
+   h# 20 h# 1a rtc! \ century
+   h# 13 h#  9 rtc! \ year
+   h#  1 h#  8 rtc! \ month
+   h#  1 h#  7 rtc! \ day of the month
+   h#  2 h#  6 rtc! \ day of week, monday
+   h#  0 h#  4 rtc! \ hours
+   h#  0 h#  2 rtc! \ minutes
+   h#  0 h#  0 rtc! \ seconds
    ." RTC cleared" cr
 ;
 true value first-open?
@@ -137,13 +141,7 @@ headers
    bcd-time&date  >r >r >r >r >r >r
    bcd>  r> bcd>  r> bcd>  r> bcd>  r> bcd>  r> bcd>  r> bcd> ( s m h d m y c )
 
-   \ We allow the century byte to force the year to 20xx, but not to force
-   \ it to 19xx, because that would cause a problem when the century
-   \ rolls over.
-   dup  d# 20 <>  if
-      drop  dup d# 94 <  if  d# 20  else  d# 19  then
-   then
-
+   d# 20 max
    d# 100 * +  		\ Merge century with year
 ;
 : set-time  ( s m h d m y -- )
