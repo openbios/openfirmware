@@ -107,6 +107,7 @@ previous definitions
       fload ${BP}/dev/mmc/sdhci/slot.fth
       new-device
          fload ${BP}/dev/mmc/sdhci/mv8686/loadpkg.fth
+         fload ${BP}/dev/mmc/sdhci/mv8686/bluetooth-pkg.fth
       finish-device
    finish-device
 
