@@ -1166,9 +1166,10 @@ h# 7ffe instance value channel-mask
    dup channel-is-5ghz?  if 1 else 0 then       ( channel# band# )
    +xb                          \ Band #
    +xb                          \ Channel #
-   scan-type +xb                \ Scan type - 0:active  or  1:passive
-   d# 100 +xw                   \ Min scan time
-   d# 100 +xw                   \ Max scan time ( r: payload' )
+   scan-type dup +xb            \ Scan type - 0:active  or  1:passive
+   if  d# 30  else  d# 110  then
+   dup +xw                      \ Min scan time
+   +xw                          \ Max scan time ( r: payload' )
    'x r@ -  r> 2- le-w!                         ( )
 ;
 
