@@ -12,7 +12,18 @@ h# 68 1 reg
 
 headerless
 
-: reinit
+\ if the oscillator stop flag is set the RTC counter and RTC SRAM
+\ contents cannot be trusted.
+
+: stopped?  ( -- stopped? )  \ check the oscillator stop flag
+   7 rtc@ h# 20 and
+;
+
+: unstop  ( -- )  \ clear the oscillator stop flag
+   7 rtc@ h# 20 invert and 7 rtc!
+;
+
+: reinit  \ reinitialise the RTC counter
    h# 20 h#  8 rtc! \ century
    h# 13 h#  6 rtc! \ year
    h#  1 h#  5 rtc! \ month
@@ -24,15 +35,28 @@ headerless
    ." RTC cleared" cr
 ;
 
-: ?clear
-   h# 3f rtc@  h# 3e rtc@  bwjoin  h# 55aa  <>  if
-      h# 20 h# 10  do  0 i rtc!  loop  \ wipe cmos@ cmos! area
-      h# 55aa  wbsplit  h# 3e rtc!  h# 3f rtc!
-      ." RTC SRAM cleared" cr
-   then
+h# 55aa value sram-marker  \ our magic marker for RTC SRAM
+
+: sram-corrupt?  ( -- corrupt? )  \ is the RTC SRAM corrupt?
+   h# 3f rtc@  h# 3e rtc@  bwjoin  sram-marker  <>
+;
+
+: sram-reinit  ( -- )  \ reinitialise the RTC SRAM
+   h# 20 h# 10  do  0 i rtc!  loop  \ wipe cmos@ cmos! area
+   sram-marker  wbsplit  h# 3e rtc!  h# 3f rtc!
+   ." RTC SRAM cleared" cr
 ;
 
 headers
+: verify  ( -- )  \ check RTC for loss of data and reinitialise if so
+   stopped?  if
+      \ RTC says data is lost
+      [ifndef] olpc-cl2  reinit  [then]  \ requested by Daniel Drake
+      unstop
+   then
+   sram-corrupt?  if  sram-reinit  reinit  then
+;
+
 : open  ( -- okay )
    my-unit " set-address" $call-parent
 
@@ -51,15 +75,6 @@ headers
    else                        ( value )
       drop true                ( true )
    then                        ( okay? )
-
-   \ check and clear the oscillator stop flag
-   7 rtc@ h# 20 and  if
-      reinit
-      7 rtc@ h# 20 invert and 7 rtc!
-   then
-
-   \ manage legacy RTC CMOS usage
-   ?clear
 
    \ enable 32kHz clock output
    h# b3 7 rtc!

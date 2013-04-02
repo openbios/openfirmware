@@ -221,6 +221,12 @@ fload ${BP}/cpu/arm/olpc/ecflash.fth
 
 fload ${BP}/dev/olpc/spiflash/spiui.fth      \ User interface for SPI FLASH programming
 \ fload ${BP}/dev/olpc/spiflash/recover.fth    \ XO-to-XO SPI FLASH recovery
+
+\ This must be defined after spiui.fth,
+\ otherwise spiui will choose some wrong code
+: rom-pa  ( -- adr )  mfg-data-buf mfg-data-offset -  ;  \ Fake out setwp.fth
+fload ${BP}/cpu/x86/pc/olpc/setwp.fth
+
 : ofw-fw-filename$  " disk:\boot\olpc.rom"  ;
 ' ofw-fw-filename$ to fw-filename$
 
@@ -321,6 +327,16 @@ stand-init: RTC
    " /i2c@d4031000/rtc" open-dev  clock-node !
    \ use RTC 32kHz clock as SoC external slow clock
    h# 38 mpmu@ 1 or h# 38 mpmu!
+   \ if the clock valid tag is absent, clear the stop flag and add the tag
+   " cv" find-tag  0=  if
+      ." RTC oscillator stop flag one-off wipe (no cv tag)" cr
+      " unstop" clock-node @ $call-method
+      " "(00)" " cv" $add-tag \ a reboot expected here
+      begin wfi again
+   then
+   2drop
+   \ check the clock stop flag and reinit if necessary
+   " verify" clock-node @ $call-method
 ;
 
 warning @ warning off
@@ -589,10 +605,6 @@ fload ${BP}/cpu/arm/olpc/banner.fth
 ;
 ' linux-hook-emmc to linux-hook
 [then]
-
-\ This must be defined after spiui.fth, otherwise spiui will choose some wrong code
-: rom-pa  ( -- adr )  mfg-data-buf mfg-data-offset -  ;  \ Fake out setwp.fth
-fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 
 fload ${BP}/cpu/arm/olpc/help.fth
 fload ${BP}/cpu/x86/pc/olpc/gui.fth
