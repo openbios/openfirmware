@@ -232,11 +232,12 @@ fload ${BP}/cpu/x86/pc/olpc/setwp.fth
 
 0 0  " f0400000"  " /" begin-package
    " vmeta" name
-   my-address my-space h# 1000 reg
+   my-address my-space h# 400000 reg
 
    " mrvl,mmp2-vmeta" +compatible
 
    " /pmua" encode-phandle d# 10 encode-int encode+ " clocks" property
+   " VMETACLK" " clock-names" string-property
    d# 26 " interrupts" integer-property
 end-package
 
