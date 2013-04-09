@@ -238,7 +238,9 @@ variable dir-cl  cl#eof dir-cl !
    \ Set the directory entry address; exit if set-dirent fails
    search-offset @ search-cl @ search-dev @ set-dirent if  2 exit  then
 
-   de_attributes c@  h# f =  if  0 exit  then
+   de_attributes c@  h# f =  if  0 exit  then  \ ignore a VFAT long file name
+
+   de_attributes c@  at_vollab and  if  0 exit  then  \ ignore a volume label
 
    de_name c@  case
       0      of     1   endof \ No more valid entries
