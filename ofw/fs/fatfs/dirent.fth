@@ -54,8 +54,8 @@ constant /dirent
 ;
 
 : file-size  ( -- #bytes )  de_length lel@ ;
-: file-date  ( -- sec min hour )  de_date lew@ >dmy  ;
-: file-time  ( -- day month year )  de_time lew@ >hms  ;
+: file-date  ( -- day month year )  de_date lew@ >dmy  ;
+: file-time  ( -- sec min hour )  de_time lew@ >hms  ;
 : file-attributes  ( -- bitmask )  de_attributes c@ ;
 
 : file-cluster!  ( cluster# -- )
