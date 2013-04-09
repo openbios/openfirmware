@@ -70,6 +70,8 @@ also forth definitions
    start-capture
 ;
 
+: stop-capture  stop-capture  ;
+
 : .capture  ( -- )
    capture-file if
       ." Capture enabled: " #captured . ." packet(s) captured." cr
