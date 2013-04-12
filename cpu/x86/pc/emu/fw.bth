@@ -306,8 +306,18 @@ previous previous definitions
 
    ." Open Firmware demonstration version by FirmWorks (info@firmworks.com)" cr
 
+   auto-boot
+
    quit
 ;
+
+: qemu-power-off  ( -- )
+   h# 1001 h# 80000b40 config-l!
+   h# 80000b80 config-b@
+   1 or h# 80000b80 config-b!
+   h# 2000 h# 1004 pw!
+;
+' qemu-power-off to power-off
 
 [ifdef] use-watch-all
 fload ${BP}/cpu/x86/pc/watchall.fth
