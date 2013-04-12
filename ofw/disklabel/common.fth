@@ -19,6 +19,9 @@ h# ee constant gpt-type
 
 0 instance value sector-offset
 
+: sector-alloc  ( -- )  /sector alloc-mem to sector-buf  ;
+: sector-free  ( -- )  sector-buf /sector free-mem  ;
+
 \ For ISO-9660 CD-ROMs, ISO-9660 flash or hard drives, and GPT
 : read-hw-sector  ( sector# -- )
    sector-offset +  /sector um*  " seek" $call-parent  abort" Seek failed"
