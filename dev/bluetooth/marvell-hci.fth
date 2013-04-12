@@ -786,7 +786,7 @@ d# 1000 instance value bt-timeout
    cmd(
    giac +x$          \ General Inquiry LAC
    d# 4 +xb          \ 4 * 1.28 seconds
-   d# 16 +xb         \ #responses
+   d# 255 +xb        \ #responses
    h# 401 )cmd
    wait-cmd-status
 ;
