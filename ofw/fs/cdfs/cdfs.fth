@@ -143,6 +143,7 @@ instance variable totoff	\ Total offset into the directory
 
 : lookup  ( adr len -- not-found? )
    canonical-name
+   2dup upper
    begin
       another-file?
    while
