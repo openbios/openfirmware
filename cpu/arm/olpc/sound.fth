@@ -81,6 +81,25 @@ new-device
    \ the Audio DMA resources
    " marvell,mmp-pcm-audio" +compatible   \ snd_soc_dai_link.cpu_dai_of_node
 
+[ifdef] mmp3
+   \ Our asram node (below) declares that /audio-sram bytes of SRAM
+   \ are assigned to the audio function.  We divide that here, roughly
+   \ half to playback and half to recording.
+
+   \ Even though we choose big buffers, we do leave a little bit of
+   \ free space for the DMA engine which also needs to use a bit of
+   \ the SRAM area for DMA descriptors. Therefore we choose 62kb for
+   \ each buffer, leaving 4kb available for DMA descriptors.
+
+   \ For the max period size, we don't have any justification other
+   \ than 2048 is the value we've been using all along.
+
+   /audio-sram-pcm encode-int
+   /audio-sram-mps encode-int encode+
+   /audio-sram-pcm encode-int encode+
+   /audio-sram-mps encode-int encode+
+   " marvell,buffer-sizes" property
+[then]
 finish-device
 
 new-device
