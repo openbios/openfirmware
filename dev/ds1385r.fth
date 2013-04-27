@@ -88,6 +88,30 @@ h# 80 constant battery-error-bit
    cr  
    then
 ;
+\ : $?lost  ( flag head$ -- flag )
+\    2 pick  if  ." RTC amnesia - " type cr  else  2drop  then
+\ ;
+: amnesia?  ( -- flag )
+   0 rtc@ h# 59 >                       \ " seconds" $?lost
+   2 rtc@ h# 59 >                       \ " minutes" $?lost
+   or
+   4 rtc@ h# 23 >                       \ " hours" $?lost
+   or
+   6 rtc@ h# 10 =                       \ " day of week" $?lost
+   or
+   7 rtc@ dup 0= swap h# 31 > or        \ " day of month" $?lost
+   or
+   8 rtc@ dup 0= swap h# 12 > or        \ " month" $?lost
+   or
+   9 rtc@ h# 99 >                       \ " year high" $?lost
+   or
+   9 rtc@ h# 13 <                       \ " year low" $?lost
+   or
+   h# 1a rtc@ h# 20 <>                  \ " century" $?lost
+   or
+   d# 10 rtc@ h# 70 and rega-mode h# 70 and <>  \ " divider" $?lost
+   or
+;
 : reinit
    h# 20 h# 1a rtc! \ century
    h# 13 h#  9 rtc! \ year
@@ -104,6 +128,7 @@ headers
 : open  ( -- true )
    my-unit  2  " map-in" $call-parent  is rtc-adr
    first-open?  if
+      amnesia?  if  reinit  then
       rega-mode d# 10 rtc!
       regb-mode d# 11 rtc!
       \ If the battery is bad, display a message, but go open the device anyway
