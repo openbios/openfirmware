@@ -3,6 +3,7 @@ purpose: Establish configuration definitions
 
 create olpc             \ OLPC-specific build
 create olpc-cl1
+create olpc-xo-1.5
 
 create compute-timings
 \ create demo-board

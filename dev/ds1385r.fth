@@ -88,6 +88,7 @@ h# 80 constant battery-error-bit
    cr  
    then
 ;
+[ifdef] olpc-xo-1.5
 \ : $?lost  ( flag head$ -- flag )
 \    2 pick  if  ." RTC amnesia - " type cr  else  2drop  then
 \ ;
@@ -112,6 +113,7 @@ h# 80 constant battery-error-bit
    d# 10 rtc@ h# 70 and rega-mode h# 70 and <>  \ " divider" $?lost
    or
 ;
+[then]
 : reinit
    h# 20 h# 1a rtc! \ century
    h# 13 h#  9 rtc! \ year
@@ -128,7 +130,9 @@ headers
 : open  ( -- true )
    my-unit  2  " map-in" $call-parent  is rtc-adr
    first-open?  if
-      amnesia?  if  reinit  then
+      [ifdef] olpc-xo-1.5
+         amnesia?  if  reinit  then
+      [then]
       rega-mode d# 10 rtc!
       regb-mode d# 11 rtc!
       \ If the battery is bad, display a message, but go open the device anyway
