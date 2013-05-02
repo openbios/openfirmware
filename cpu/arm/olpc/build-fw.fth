@@ -552,7 +552,7 @@ true value text-on?
 \     80 audio volume
 \     81 audio volume
 \     82 alternate boot
-\     83 xid
+\     83 nfs rpc xid
 \     80 -> 8f (erased by driver when magic number wrong)
 \     84 -> ad (unallocated)
 
