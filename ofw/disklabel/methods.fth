@@ -155,7 +155,7 @@ headerless
 : select-file  ( -- )
    filename nip 0=  if  exit  then
 
-   choose-file-system  find-package  0=  if  exit  then  ( phandle )
+   choose-file-system  find-package  0=  if  abort  then  ( phandle )
    filename rot  interpose
 ;
 
