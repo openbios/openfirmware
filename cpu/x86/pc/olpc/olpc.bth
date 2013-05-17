@@ -102,6 +102,7 @@ $new-file
    " testicons/wifi.565"        " wifi.565"     $add-deflated-dropin
    " testicons/clock.565"       " clock.565"    $add-deflated-dropin
    " testicons/timer.565"       " timer.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
 
    /rom h# 400 - pad-file	\ rmstart image must start 0x400 from end
    " rmstart.img"    $add-file

@@ -17,6 +17,7 @@ icon: display.icon  rom:display.565
 icon: keyboard.icon rom:keyboard.565
 icon: timer.icon    rom:timer.565
 icon: clock.icon    rom:clock.565
+icon: ebook.icon    rom:ebook.565
 
 : cpu-item      ( -- )  " /cpu"       mfg-test-dev  ;
 : battery-item  ( -- )  " /battery"   mfg-test-dev  ;
@@ -32,6 +33,7 @@ icon: clock.icon    rom:clock.565
 : timer-item    ( -- )  " /timer"     mfg-test-dev  ;
 : touchpad-item ( -- )  " /8042/mouse"     mfg-test-dev  ;
 : keyboard-item ( -- )  " /8042/keyboard"  mfg-test-dev  ;
+: switch-item   ( -- )  " /switches"  mfg-test-dev  ;
 
 : olpc-test-menu-items  ( -- )
    0 to #mfgtests
@@ -78,6 +80,9 @@ icon: clock.icon    rom:clock.565
 
    " Touchpad"
    ['] touchpad-item touchpad.icon  add-icon
+   
+   " Switches"
+   ['] switch-item   ebook.icon     add-icon
 
 ;
 ' olpc-test-menu-items to test-menu-items
