@@ -337,7 +337,9 @@ previous definitions  also serial-terminal
 [ifdef] log-ih
 : serial-log  ( "filename" -- )
    serial{
-   safe-parse-word $create-file to log-ih
+   safe-parse-word
+   2dup ['] $delete  catch  if  2drop  then
+   $create-file to log-ih
    log-ih add-output
    {serial}
    log-ih remove-output

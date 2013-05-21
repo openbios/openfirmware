@@ -145,6 +145,7 @@ defer spi-progress  ' 2drop to spi-progress  ( offset size -- )
 : save-mfg-data  ( -- )
    flash-open
    make-sn-name                               ( name$ )
+   2dup ['] $delete  catch  if  2drop  then   ( name$ )
    ." Creating " 2dup type cr                 ( name$ )
    $create-file                               ( ihandle )
    dup 0= abort" Can't create file"   >r      ( r: ihandle )
