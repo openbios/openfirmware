@@ -8,8 +8,8 @@ purpose: Common code for fetching and building the WLAN microcode
 " ${GET_WLAN}" expand$  nip  [if]
    " ${GET_WLAN}" expand$ $sh
 [else]
-
-" wget -q -O mv8787.bin 'http://git.marvell.com/?p=mwifiex-firmware.git;a=blob_plain;f=mrvl/sd8787_uapsta.bin;hb=${WLAN_8787_VERSION}'"  expand$ $sh
+   " wget -q -O mv8787.bin http://dev.laptop.org/pub/firmware/mwifiex/mv8787-${WLAN_8787_VERSION}.bin"  expand$ $sh
+[then]
 
 \ This forces the creation of a .log file, so we don't re-fetch
 writing mv8787.version
