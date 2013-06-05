@@ -354,8 +354,7 @@ warning @ warning off
       model-name$   2dup model     ( name$ )
       " OLPC " encode-bytes  2swap encode-string  encode+  " banner-name" property
       board-revision " board-revision-int" integer-property
-      \ The "1-" removes the null byte
-      " SN" find-tag  if  1-  else  " Unknown"  then  " serial-number" string-property
+      " SN" find-tag  if  ?-null  else  " Unknown"  then  " serial-number" string-property
       8 ec-cmd-b@ dup " ec-version" integer-property
 
       \ EC code API 56 and greater changes the version numbering
