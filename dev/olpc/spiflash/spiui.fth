@@ -120,11 +120,7 @@ defer spi-progress  ' 2drop to spi-progress  ( offset size -- )
 [ifdef] $call-method
 : make-sn-name  ( -- filename$ )
    " SN" find-tag 0=  abort" No serial number in mfg data"  ( sn$ )
-   dup  if                   ( sn$ )
-      2dup + 1- c@ 0=  if    ( sn$ )
-         1-                  ( sn$' )    \ Remove Null
-      then                   ( sn$ )
-   then                      ( sn$ )
+   ?-null                    ( sn$' )    \ Remove Null
    d# 11 over -  dup 0>  if  ( sn$' #excess )
       /string                ( sn$' )  \ Keep last 11 characters
    else                      ( sn$' #excess )
