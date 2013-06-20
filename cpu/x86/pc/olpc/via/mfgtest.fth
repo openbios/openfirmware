@@ -119,7 +119,7 @@ warning on
 ;
 
 : (mfg-test)  ( n -- )
-   i set-current-sq
+   set-current-sq
    refresh
    d# 1000 ms
    run-menu-item
