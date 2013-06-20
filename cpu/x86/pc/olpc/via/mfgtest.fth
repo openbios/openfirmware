@@ -118,15 +118,31 @@ warning on
    #mfgtests++
 ;
 
+: (mfg-test)  ( n -- )
+   i set-current-sq
+   refresh
+   d# 1000 ms
+   run-menu-item
+;
+
 : mfg-test-autorunner  ( -- )  \ Unattended autorun of all tests
    #mfgcols #mfgtests +  #mfgcols  ?do
-      i set-current-sq
-      refresh
-      d# 1000 ms
-      run-menu-item
+      i (mfg-test)
       pass? 0= ?leave
    loop
 ;
+
+[ifdef] notdef  \ to be used by factory in final.fth
+: mfg-test-runner  ( -- )  \ Attended autorun, each test retried until pass
+   #mfgcols #mfgtests +  #mfgcols  ?do
+      begin
+         i (mfg-test)
+         pass?
+      until
+   loop
+;
+patch mfg-test-runner mfg-test-autorunner autorun-mfg-tests
+[then]
 
 icon: play.icon     rom:play.565
 icon: quit.icon     rom:quit.565
