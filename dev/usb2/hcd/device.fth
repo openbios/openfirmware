@@ -386,7 +386,7 @@ defer make-dev-property-hook  ( speed dev port -- )
 ;
 : .usb-device  ( port -- )
    find-port-node  if
-      ." Can't find device node for USB port!" cr
+      ." Can't find device node for USB port!" cr abort
    else                                      ( phandle )
       dup " device_type" .phandle-property   ( phandle )
       ." ,"

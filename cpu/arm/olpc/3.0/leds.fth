@@ -7,7 +7,7 @@ purpose: Driver/selftest for OLPC XO-3.0 LEDs
 : open  ( -- okay? )  true  ;
 : close  ( -- )  ;
 
-: selftest  ( -- )
+: selftest  ( -- error? )
    ." Flashing LEDs" cr
 
    " /wlan:quiet" test-dev  " /wlan:quiet" test-dev  \ Twice for longer flashing

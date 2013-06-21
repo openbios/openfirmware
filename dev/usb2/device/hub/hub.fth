@@ -53,9 +53,11 @@ headers
       reprobe-hub-xt execute
    then
 ;
-: selftest  ( -- )
+: selftest  ( -- error? )
    ['] hub-id catch 0=  if
-      hub-selftest-xt execute
+      hub-selftest-xt catch if true then
+   else
+      true
    then
 ;
 

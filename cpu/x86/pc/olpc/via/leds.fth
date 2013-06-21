@@ -6,7 +6,7 @@ purpose: Driver/selftest for OLPC XO-1.5 LEDs
 " leds" device-name
 : open  ( -- okay? )  true  ;
 : close  ( -- )  ;
-: selftest  ( -- )
+: selftest  ( -- error? )
    ." Flashing LEDs" cr
    " /wlan" test-dev  " /wlan" test-dev  \ Twice for longer flashing
    d# 20 0 do  hdd-led-on d# 100 ms hdd-led-off d# 100 ms  loop

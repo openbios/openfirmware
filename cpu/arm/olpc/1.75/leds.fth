@@ -26,7 +26,7 @@ finish-device
 : hdd-led-on      ( -- )  led-storage-gpio# gpio-set  ;
 : hdd-led-toggle  ( -- )  led-storage-gpio# gpio-pin@  if  hdd-led-off  else  hdd-led-on  then  ;
 
-: selftest  ( -- )
+: selftest  ( -- error? )
    ." Flashing LEDs" cr
 
    d# 10 0 do  ols-led-on d# 200 ms ols-led-off d# 200 ms  loop
@@ -38,7 +38,7 @@ finish-device
    d# 20 0 do  hdd-led-on d# 100 ms hdd-led-off d# 100 ms  loop
    ols-assy-mode-off
 
-   confirm-selftest?
+   confirm-selftest?  ( error? )
 ;
 
 end-package

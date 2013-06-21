@@ -243,7 +243,7 @@ external
    then                                                 ( )
 
    \ Maybe need to reset the entire hub here
-   false                                        ( false )
+   false                                                ( false )
 ;
 : hub-selftest-xt  ( -- xt )  ['] hub-selftest  ;
 
