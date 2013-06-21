@@ -80,12 +80,12 @@ create pll-table
   decimal
 \  0     1           2     3    4       5
 \  f  post      offset    fb  ref    kvco
-  25 ,   3 ,  h# 11c47 ,  39 ,  0 ,  h# 4 ,
-  27 ,   3 ,  h# 12d03 ,  42 ,  0 ,  h# 4 , 
-  54 ,   2 ,  h# 12d02 ,  42 ,  0 ,  h# 4 , 
-  74 ,   2 ,  h# 0084b ,  57 ,  0 ,  h# 4 ,
- 108 ,   1 ,  h# 12d03 ,  42 ,  0 ,  h# 4 , 
- 148 ,   1 ,  h# 0084b ,  57 ,  0 ,  h# 4 ,
+  25 ,   3 ,  h# 0171d ,  39 ,  0 ,  h# 2 ,
+  27 ,   3 ,  h# 02710 ,  42 ,  0 ,  h# 2 , 
+  54 ,   2 ,  h# 02710 ,  42 ,  0 ,  h# 2 , 
+  74 ,   2 ,  h# 107e8 ,  57 ,  0 ,  h# 4 ,
+ 108 ,   1 ,  h# 0247d ,  42 ,  0 ,  h# 2 , 
+ 148 ,   1 ,  h# 107e8 ,  57 ,  0 ,  h# 4 ,
   -1 ,
 hex
 
@@ -133,7 +133,9 @@ hex
    1             d# 23 +bits   \ EN_HDMI
    r@ 2 na+ @    d#  4 +bits   \ FREQ_OFFSET_INNER
    pll-mode      d#  3 +bits   \ MODE
-   pll-cfg1!
+   dup pll-cfg1!               ( n )
+   1             d# 22 +bits   \ load FREQ_OFFSET_INNER
+   pll-cfg1!                   ( )
 
    0                           \ FREQ_OFFSET_ADJ
    pll-cfg2!
