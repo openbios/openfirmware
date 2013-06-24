@@ -103,7 +103,13 @@ external
    set-unit
 
    wait-card?  if
-      external? 0= exit  \ Unpopulated external SD is not an error
+      \ Operator may abandon test when card is not present ...
+      test-station 6 = if
+         external? 0=  \ ... is not an error for unpopulated external SD
+      else
+         true  \ ... is always an error in SMT or RUNIN
+      then
+      exit
    then
 
    open 0=  if  ." Open SD card failed" cr true exit  then
