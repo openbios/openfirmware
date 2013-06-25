@@ -98,13 +98,19 @@ headers
    false
 ;
 
+[ifdef] test-station
+: ship?  test-station 6 =  ;
+[else]
+: ship?  true  ;
+[then]
+
 external
 : selftest  ( -- error? )
    set-unit
 
    wait-card?  if
       \ Operator may abandon test when card is not present ...
-      test-station 6 = if
+      ship?  if
          external? 0=  \ ... is not an error for unpopulated external SD
       else
          true  \ ... is always an error in SMT or RUNIN
