@@ -233,7 +233,7 @@ c;
 : wav-#sample   ( -- #sample )   wav-fact-adr dup  if      8 + le-l@  then  ;
 : wav-blk-size  ( -- blk-size )  wav-fmt-adr  dup  if  h# 14 + le-w@  then  ;
 
-: set-volume  ( -- )   " set-volume" $call-audio  ;
+: set-volume  ( volume -- )   " set-volume" $call-audio  ;
 0 value src-sample-rate
 0 value dst-sample-rate
 : try-set-sample-rate  ( desired-rate -- )

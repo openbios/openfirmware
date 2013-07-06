@@ -465,7 +465,7 @@ defer playback-alarm
 0 value alarmed?
 
 : install-playback-alarm     ( -- )
-   true to alarmed?  ['] playback-alarm d# 3 alarm
+   true to alarmed?  ['] playback-alarm d# 2 alarm
 ;
 : uninstall-playback-alarm   ( -- )
    alarmed?  if
@@ -829,7 +829,7 @@ h# 20000 constant tlen
 
 : wait-sound  ( -- )
    lock[
-   begin  playing?  while   d# 10 ms  ?end-playing  repeat
+   begin  playing?  while   d# 2 ms  ?end-playing  repeat
    ]unlock
 ;
 
