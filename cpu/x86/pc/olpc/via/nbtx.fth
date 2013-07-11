@@ -15,7 +15,7 @@ purpose: User interface for NAND multicast updater - transmission to XO-1.5
 \ On XO-1, you must load the special "thin" firmware from a USB stick.
 : ?load-thin-wlan-fw  ( -- )
    " /wlan" find-package 0= abort" No /wlan device"  ( phandle )
-
+   >parent
    " thin" rot get-package-property  if              ( )
       \ Absence of "thin" property means we need to get special firmware
       " u:\usb8388t.bin" " wlan-fw" $setenv
