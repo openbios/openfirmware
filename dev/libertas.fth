@@ -1228,7 +1228,7 @@ external
    \ It prevents listening stations, of which there can be many,
    \ from transmitting when they come on-line.
    2dup  " olpc-mesh"  $=  if  passive-scan  then
-   2dup  " olpc-NANDblaster"  $=  if  passive-scan  then
+   \ 2dup  " OLPC-NANDblaster"  $=  if  passive-scan  then
 
    d# 32 min  scan-ssid pack drop
 ;
