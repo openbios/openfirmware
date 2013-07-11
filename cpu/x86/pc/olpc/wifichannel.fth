@@ -89,8 +89,7 @@ max-channel# 1+ array >channel-speed
 ;
 
 : scan-channel  ( channel# -- actual )
-   1 swap lshift  " set-channel-mask" $call-wlan
-   scan-buf d# 2048 " scan" $call-wlan  ( actual )
+   >r scan-buf d# 2048 r> " scan" $call-wlan  ( actual )
 ;
 
 : channel-stats  ( channel# -- total-rssi max-rssi #beacons )
