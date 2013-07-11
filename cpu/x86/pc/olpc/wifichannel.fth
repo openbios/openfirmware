@@ -88,12 +88,13 @@ max-channel# 1+ array >channel-speed
    drop  r>                  ( #beacons )
 ;
 
-: scan-channel  ( channel# -- actual )
-   >r scan-buf d# 2048 r> " scan" $call-wlan  ( actual )
+: scan-channel  ( channel# -- false | actual true )
+   >r scan-buf d# 2048 r> " scan" $call-wlan
 ;
 
 : channel-stats  ( channel# -- total-rssi max-rssi #beacons )
    scan-channel  if
+      drop
       analyze-beacons
    else
       0 0 0
@@ -246,7 +247,8 @@ d# 1514 buffer: tx-test-buf
 
 : (.channel-beacons)  ( channel# -- )
    dup >r              ( r: channel# )
-   scan-channel  if    ( r: channel# )
+   scan-channel  if    ( actual r: channel# )
+      drop
       show-beacons     ( #beacons r: channel# )
    else                ( r: channel# )
       0                ( #beacons r: channel# )
