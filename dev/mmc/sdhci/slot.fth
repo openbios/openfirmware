@@ -23,6 +23,7 @@
 : r/w-blocks " r/w-blocks" $call-parent  ;
 : erase-blocks  " erase-blocks" $call-parent  ;
 : fresh-write-blocks-start  " fresh-write-blocks-start" $call-parent  ;
+: r/w-blocks-end? " r/w-blocks-end?" $call-parent  ;
 : r/w-blocks-end " r/w-blocks-end" $call-parent  ;
 : dma-alloc  " dma-alloc" $call-parent  ;
 : dma-free  " dma-free" $call-parent  ;
