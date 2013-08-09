@@ -93,20 +93,11 @@ d# 20 constant /root-dev-buf
 : add-root-dev  ( cmdline$ -- cmdline$' )
 ;
 [then]
+: setup-header-end   ( -- endbyte )   load-base h# 201 + c@ h# 202 +  ;
+: setup-header-size  ( -- #bytes )  setup-header-end h# 1f1 - 1+  ;
 
 : set-parameters  ( cmdline$ -- )
    screen-info  linux-params  /screen-info  move  \ Ostensibly screen info
-
-   h#  40 +lp  h#  14 erase       \ apm_bios_info (APM BIOS info)
-   h#  54 +lp  h#  0c erase       \ pad2
-   h#  60 +lp  h#  10 erase       \ ist_info (Intel SpeedStep BIOS info)
-   h#  70 +lp  h#  10 erase       \ pad3
-   h#  80 +lp  h#  10 erase       \ hd0_info (obsolete)
-   h#  90 +lp  h#  10 erase       \ hd1_info (obsolete)
-   h#  a0 +lp  h#  10 erase       \ sys_desc_table (from MCA - Microchannel)
-   h#  b0 +lp  h#  90 erase       \ pad4  
-   h# 140 +lp  h#  80 erase       \ edid_info
-   h# 1c0 +lp  h#  20 erase       \ efi_info
 
    linux-memtop ( #bytes )
    d# 1023 invert and  d# 1024 /  ( #kbytes )
@@ -269,7 +260,8 @@ defer place-ramdisk
    " HdrS"  comp  if  false exit  then  ( )
    h# 10.0000 to linux-base
    code16-size to cmdline-offset         \ Save in case we clobber load-base
-   load-base  0 +lp  code16-size  move   \ Copy the 16-bit stuff
+   h#   0 +lp  d# 4096 erase
+   load-base h# 1f1 + h# 1f1 +lp  setup-header-size  move   \ Copy the 16-bit stuff
    loaded code16-size /string  linux-base  swap  move  \ Copy the 32-bit stuff
    true to linux-loaded?
    true
