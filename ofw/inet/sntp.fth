@@ -67,13 +67,7 @@ h# 30 constant /sntp-request
    swap h# 28 + be-l@             ( fraction seconds )
    false                          ( d.timestamp false )
 ;
-: try-sntp  ( hostname$ -- true | d.timestamp false )
-   " ip" open-dev  to ip-ih
-   ip-ih 0=  if
-      ." Networking not available" cr
-      true exit
-   then
-
+: do-sntp  ( hostname$ -- true | d.timestamp false )
    d# 5,000 " set-timeout" $call-ip
 
    2dup " DHCP" $=  if                      ( hostname$ )
@@ -88,6 +82,16 @@ h# 30 constant /sntp-request
 
    send-sntp-request
    receive-sntp-reply
+;
+: try-sntp  ( hostname$ -- true | d.timestamp false )
+   " ip" open-dev  to ip-ih
+   ip-ih 0=  if
+      ." Networking not available" cr
+      true exit
+   then
+   ['] do-sntp  catch  if       ( x x )
+      2drop true                ( true )
+   then                         ( true | d.timestamp false )
    ip-ih close-dev
 ;
 
