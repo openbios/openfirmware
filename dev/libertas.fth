@@ -1167,7 +1167,7 @@ h# 7ffe instance value channel-mask
    +xb                          \ Band #
    +xb                          \ Channel #
    scan-type dup +xb            \ Scan type - 0:active  or  1:passive
-   if  d# 30  else  d# 110  then
+   if  d# 110  else  d# 30  then
    dup +xw                      \ Min scan time
    +xw                          \ Max scan time ( r: payload' )
    'x r@ -  r> 2- le-w!                         ( )
