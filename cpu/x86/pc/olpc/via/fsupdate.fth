@@ -357,7 +357,8 @@ previous definitions
    ." Searching for a NAND file system update image." cr
    " disk: ext:" fs-update-from-list
    ." Trying NANDblaster" cr
-   ['] nandblaster catch  0=  if  exit  then
+   ['] nandblaster
+   catch  ?dup  if  .error  else  exit  then
    " http:\\172.18.0.1" fs-update-from-list
 ;
 

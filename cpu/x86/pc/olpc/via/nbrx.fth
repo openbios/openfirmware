@@ -8,6 +8,12 @@ purpose: User interface for NAND multicast updater - reception
 
 \ This is the wireless version
 : nandblaster  ( -- )
+   " OLPC-NANDblaster" $essid  " /wlan" open-dev dup 0=		( ih nearby? )
+   ['] olpc-ssids to default-ssids  reset-wifi-cfg		( ih nearby? )
+   " NN" find-tag  if  ?-null  $essid  then  \ network name	( ih nearby? )
+   " PP" find-tag  if  ?-null  $wpa    then  \ pass phrase	( ih nearby? )
+   abort" No NANDblaster nearby"				( ih )
+   close-dev							( )
    false to already-go?
    -1 to nb-zd-#sectors
    secure$

@@ -18,6 +18,7 @@ constant /wifi-cfg
 /wifi-cfg buffer: ram-wifi-cfg
 defer wifi-cfg  ' ram-wifi-cfg to wifi-cfg
 
+: reset-wifi-cfg  wifi-cfg  /wifi-cfg erase  ;
 
 \ =======================================================================
 \ wifi-cfg data
@@ -56,9 +57,9 @@ defer default-ssids  ( -- $ )  ' null$ to default-ssids
 
 0 value ssid-reset?
 : $essid  ( essid$ -- )
-   dup 0= abort" Empty ESSID string"
-   wifi-cfg  /wifi-cfg erase    ( adr len )
-   wifi-cfg >wc-ssid pstr!      ( )
+   dup 0= abort" Empty ESSID string"    ( adr len )
+   reset-wifi-cfg                       ( adr len )
+   wifi-cfg >wc-ssid pstr!              ( )
    true to ssid-reset?
    \ When an explicit SSID is given, don't fall back to the default list
    ['] null$ to default-ssids

@@ -1167,7 +1167,7 @@ h# 7ffe instance value channel-mask
    +xb                          \ Band #
    +xb                          \ Channel #
    scan-type dup +xb            \ Scan type - 0:active  or  1:passive
-   if  d# 110  else  d# 30  then
+   if  d# 220  else  d# 30  then
    dup +xw                      \ Min scan time
    +xw                          \ Max scan time ( r: payload' )
    'x r@ -  r> 2- le-w!                         ( )
@@ -1228,7 +1228,7 @@ external
    \ It prevents listening stations, of which there can be many,
    \ from transmitting when they come on-line.
    2dup  " olpc-mesh"  $=  if  passive-scan  then
-   \ 2dup  " OLPC-NANDblaster"  $=  if  passive-scan  then
+   2dup  " OLPC-NANDblaster"  $=  if  passive-scan  then
 
    d# 32 min  scan-ssid pack drop
 ;
