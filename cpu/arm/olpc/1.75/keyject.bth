@@ -20,7 +20,7 @@ in: cforth.img
 build-now
 
 fload ${BP}/cpu/arm/olpc/1.75/fw-version.fth
-macro: FW_MINOR 20z
+macro: FW_MINOR 34y
 
 " macro: FW_VERSION ${FW_PREFIX}${FW_MAJOR}${FW_MINOR}" expand$ eval
 
@@ -83,7 +83,7 @@ $new-file
 
    " sourceurl"   " sourceurl"                    $add-dropin
 
-   " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/Beep-Beep-800Hz-8k.wav"  " splash"   $add-deflated-dropin
 
    " ec.img"                                     " ecimage.bin"    $add-deflated-dropin
    " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
@@ -94,6 +94,11 @@ $new-file
    " nandblaster_tx.bin"   " nb_tx"    $add-deflated-dropin
 
    \ icons for mfg test gui
+   " ${BP}/cpu/x86/pc/olpc/images/bigx.di"      $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/bigcheck.di"  $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
+
    " testicons/play.565"        " play.565"     $add-deflated-dropin
    " testicons/quit.565"        " quit.565"     $add-deflated-dropin
    " testicons/cpu.565"         " cpu.565"      $add-deflated-dropin
@@ -129,11 +134,6 @@ $new-file
    " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
 
    " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
-
-   " ${BP}/cpu/x86/pc/olpc/images/bigx.di"      $add-file
-   " ${BP}/cpu/x86/pc/olpc/images/bigcheck.di"  $add-file
-   " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
-   " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
 
 \    " ${BP}/cpu/x86/pc/olpc/images/warnings.565"  " warnings.565"  $add-deflated-dropin
    " ${BP}/cpu/x86/pc/olpc/images/lightdot.565"  " lightdot.565"  $add-deflated-dropin
