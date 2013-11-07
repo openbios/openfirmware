@@ -1,9 +1,9 @@
 FTHFILES= \
-  ../accelerometer.fth \
+  ../../accelerometer.fth \
   ../../../mmp2/gpio.fth \
   ../../../mmp2/mfpr.fth \
   ../../../mmap.fth \
-  ../smbus.fth \
+  ../../smbus.fth \
   ../../../mmp2/twsi.fth \
   ./sdkit.fth
 
