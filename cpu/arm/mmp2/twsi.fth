@@ -28,7 +28,7 @@ h# 011000 ,  h# 031000 ,  h# 032000 ,  h# 033000 ,  h# 033800 ,  h# 034000 ,
 
 [ifdef] unaligned-mmap
 6 0  do
-   channel-bases i la+ io@  unaligned-mmap  channel-bases i la+ io!
+   channel-bases i la+ l@  unaligned-mmap  channel-bases i la+ l!
 loop
 [then]
 

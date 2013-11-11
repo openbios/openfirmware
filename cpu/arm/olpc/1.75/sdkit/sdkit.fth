@@ -6,8 +6,7 @@ fload gpio.fth
 : us  ( n -- )  d# 40 *  0  do loop  ;
 : ms  ( n -- )  0  ?do  d# 1000 us  loop  ;
 fload smbus.fth
-fload camera-test.fth
 fload twsi.fth
-fload accelerometer.fth
+fload twsi-i2c.fth
 .( See http://wiki.laptop.org/go/Forth_Lesson_22) cr
 hex
