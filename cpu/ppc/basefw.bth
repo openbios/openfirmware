@@ -69,6 +69,8 @@ support-package: iso9660-file-system
    fload ${BP}/ofw/fs/cdfs/loadpkg.fth	\ ISO 9660 CD-ROM file system reader
 end-support-package
 
+fload ${BP}/ofw/disklabel/gpttools.fth
+
 support-package: disk-label
    fload ${BP}/ofw/disklabel/loadpkg.fth	\ Disk label package
 end-support-package

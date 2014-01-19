@@ -5,6 +5,8 @@ OPT = -O
 BP=../../..
 
 CFLAGS = -DPPCSIM -DTARGET_POWERPC
+CFLAGS += -m32
+LFLAGS += -m32
 
 CC = gcc
 

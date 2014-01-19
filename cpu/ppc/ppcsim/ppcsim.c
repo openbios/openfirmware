@@ -1805,19 +1805,19 @@ case 1023: ILLEGAL;
 power:
 		if (!TBAR)
 		    printf("Unimplemented POWER instruction %08lx (%s) at %lx\n",
-		           (long)instruction, (long)opname, (long)CIA);
+		           (long)instruction, opname, (long)CIA);
 		goto trapout;
 
 unimplemented:
 		if (!TBAR)
 		    printf("Unimplemented instruction %08lx (%s)at %lx\n",
-		           (long)instruction, (long)opname, (long)CIA);
+		           (long)instruction, opname, (long)CIA);
 		goto trapout;
 
 illegal:
 		if (!TBAR)
 		    printf("Illegal instruction %08lx at %lx\n",
-			   (long)instruction, (long)CIA, (long)0);
+			   (long)instruction, (long)CIA);
 
 trapout:
 		if (TBAR) {
@@ -1875,7 +1875,7 @@ dumpregs()
 	 "      r0         r1         r2         r3         r4         r5\n"
 	);
 	printf(
-	 "%8x   %8x   %8x   %8x   %8x   %8x\n\n",
+	 "%8lx   %8lx   %8lx   %8lx   %8lx   %8lx\n\n",
 	 greg[ 0],  greg[ 1],   greg[ 2],  greg[ 3],  greg[ 4],  greg[ 5]
 	);
 
@@ -1883,7 +1883,7 @@ dumpregs()
 	 "      r6         r7         r8         r9         r10        r11\n"
 	);
 	printf(
-	 "%8x   %8x   %8x   %8x   %8x   %8x\n\n",
+	 "%8lx   %8lx   %8lx   %8lx   %8lx   %8lx\n\n",
 	 greg[ 6],  greg[ 7],   greg[ 8],  greg[ 9],  greg[10],  greg[11]
 	);
 #endif
@@ -1891,24 +1891,24 @@ dumpregs()
 	 " r20  t0    r21  t1    r22  t2    r23  t3    r24  t4    r25  t5\n"
 	);
 	printf(
-	 "%8x   %8x   %8x   %8x   %8x   %8x\n\n",
+	 "%8lx   %8lx   %8lx   %8lx   %8lx   %8lx\n\n",
 	 greg[20],  greg[21],   greg[22],  greg[23],  greg[24],  greg[25]
 	);
 	printf(
 	 " r26 base   r27  up    r28 tos    r29  ip    r30  rp    r31  sp\n"
 	);
 	printf(
-	 "%8x   %8x   %8x   %8x   %8x   %8x\n\n",
+	 "%8lx   %8lx   %8lx   %8lx   %8lx   %8lx\n\n",
 	 greg[26],  greg[27],   greg[28],  greg[29],  greg[30],  greg[31]
 	);
-	printf("pc %x  LR %x  CTR %x  CR %x",
-		pc,    LR,    CTR,    CR.all
+	printf("pc %lx  LR %lx  CTR %lx  CR %lx",
+		pc,     LR,     CTR,     CR.all
 	);
 #ifndef SIMROM
-	printf("  CALLS: %x", greg[29]	/* IP */);
+	printf("  CALLS: %lx", greg[29]	/* IP */);
 
 	if (greg[30])
-		printf(" %x %x %x",
+		printf(" %lx %lx %lx",
 		 ((u_long *)greg[30])[0],	/* Return stack */
 		 ((u_long *)greg[30])[1],
 		 ((u_long *)greg[30])[2]
@@ -1919,13 +1919,13 @@ dumpregs()
 dumpallregs()
 {
         int i;
-	for (i=0; i<8 ; i++)  printf("%9x", greg[i]);  putchar('\n');
-	for (   ; i<16; i++)  printf("%9x", greg[i]);  putchar('\n');
-	for (   ; i<24; i++)  printf("%9x", greg[i]);  putchar('\n');
-	for (   ; i<32; i++)  printf("%9x", greg[i]);  putchar('\n');
+	for (i=0; i<8 ; i++)  printf("%9lx", greg[i]);  putchar('\n');
+	for (   ; i<16; i++)  printf("%9lx", greg[i]);  putchar('\n');
+	for (   ; i<24; i++)  printf("%9lx", greg[i]);  putchar('\n');
+	for (   ; i<32; i++)  printf("%9lx", greg[i]);  putchar('\n');
 
-	printf("pc %x  LR %x  CTR %x  CR %x  ",
-		pc,    LR,    CTR,    CR.all
+	printf("pc %lx  LR %lx  CTR %lx  CR %lx  ",
+		pc,     LR,     CTR,     CR.all
 	);
 	printf("\n");
 }
@@ -1956,7 +1956,7 @@ dumpmem(adr)
 	u_long *reladr;
 
 	reladr = (u_long *) &xmem[ (int)adr ];
-	printf("%x: %8x %8x %8x %8x %8x %8x %8x %8x\n",
+	printf("%lx: %8lx %8lx %8lx %8lx %8lx %8lx %8lx %8lx\n",
 		adr,
 		reladr[0], reladr[1], reladr[2], reladr[3],
 		reladr[4], reladr[5], reladr[6], reladr[7]
@@ -1983,7 +1983,7 @@ trace(name, instruction)
 	IABR = 0;
 	stepping = 1;
 
-	printf("%x %x %s ", pc, greg[29], name);
+	printf("%lx %lx %s ", pc, greg[29], name);
 	for (done=0; !done; ) {
 		printf(" : ");
 #ifndef SIMROM
@@ -1994,13 +1994,14 @@ trace(name, instruction)
 #endif
 		switch(c)
 		{
-			case 'b':  scanf("%x", &IABR); stepping = 0; break;
+			int res;
+			case 'b':  res = scanf("%lx", &IABR); stepping = 0; break;
 			case 'n':  IABR = greg[27]; stepping = 0; break;
-			case 'u':  scanf("%x", &arg);
+			case 'u':  res = scanf("%x", &arg);
 				   dumpmem((long)(greg[27]+arg));
 				   GETLINE;
 				   break;
-			case 'm':  scanf("%x", &arg);
+			case 'm':  res = scanf("%x", &arg);
 				   dumpmem((long)arg);
 				   GETLINE;
 				   break;

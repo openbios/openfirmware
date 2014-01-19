@@ -326,10 +326,6 @@ extern void log_input(char *, int);
 extern void log_command_line(int, char **);
 extern void log_env(char *, char *);
 
-#if !defined(LinuxPOWERPC) && !defined(__APPLE__)
-  extern int	read(), write();
-#endif
-
 INTERNAL char *	substr();
 INTERNAL long	path_open();
 INTERNAL void	keymode();
@@ -348,7 +344,11 @@ INTERNAL long	f_crstr();
   long c_key();
   long s_bye();
   void restoremode();
+#ifdef PPCSIM
+  void simulate(char *, char *, char *, long (**)(), char *, int, char **, int);
+#else
   void simulate(char *, char *, char *, long (**)(), char *, int, char **);
+#endif
   long find(long, int, long, char *);
 #else
   INTERNAL long	c_key();
@@ -710,12 +710,14 @@ void set_bp(void);
 void
 set_bp(void)
 {
+	char *pret;
+	int ret;
 	char here[MAXPATHLEN];
-	getcwd(here, MAXPATHLEN);
-	getcwd(bpval, MAXPATHLEN);
+	pret = getcwd(here, MAXPATHLEN);
+	pret = getcwd(bpval, MAXPATHLEN);
 	while (1) {
 		if (access(host_cpu, F_OK) == 0) {
-			getcwd(hostdirval, MAXPATHLEN);
+			pret = getcwd(hostdirval, MAXPATHLEN);
 			strcat(hostdirval, "/");
 			strcat(hostdirval, host_cpu);
 			strcat(hostdirval, "/");
@@ -723,14 +725,14 @@ set_bp(void)
 		}
 		if (access("ofw", F_OK) == 0)
 			break;
-		chdir("..");
-		getcwd(bpval, MAXPATHLEN);
+		ret = chdir("..");
+		pret = getcwd(bpval, MAXPATHLEN);
 		if (strcmp(bpval, "/") == 0) {
 			bpval[0] = '\0';
 			break;
 		}
 	}
-	chdir(here);
+	ret = chdir(here);
 }
 
 struct woptions {  char *dashopt; char *forthopt; } woptions[] =
@@ -1112,6 +1114,7 @@ main(int argc, char **argv
 #endif
 
 #ifdef TARGET_POWERPC
+#ifndef PPCSIM
 # ifdef NOGLUE
 	{ long toc_entry[2]; int c;
 		toc_entry[1] = 0;
@@ -1126,6 +1129,7 @@ main(int argc, char **argv
 		loadaddr+sizeof(header)+START_OFFSET);
 	s_bye(0L);
 # endif
+#endif
 #endif
 
 #ifdef __APPLE_CC__
@@ -1694,16 +1698,16 @@ c_drain(long fd)
 INTERNAL long
 c_expect(long max, char *buffer)
 {
-	int c = 0;
+	int c = 0, ret;
 	register char *p = buffer;
 
 	linemode();
 
 	fflush(stdout);
-	read(0, &c, 1);
+	ret = read(0, &c, 1);
 	while (max--  &&  c != '\n'  &&  c != EOF ) {
 		*p++ = c;
-		read(0, &c, 1);
+		ret = read(0, &c, 1);
 	}
 	keymode();
 	return ( (long)(p - buffer) );
@@ -1756,9 +1760,10 @@ s_bye(long code)
 void
 error(char *str1, char *str2)
 {
-	write(2,str1,strlen(str1));
-	write(2,str2,strlen(str2));
-	write(2,"\n",1);
+	int ret;
+	ret = write(2,str1,strlen(str1));
+	ret = write(2,str2,strlen(str2));
+	ret = write(2,"\n",1);
 }
 
 
@@ -1791,11 +1796,11 @@ INTERNAL char *expand_name();
 
 char output_filename[MAXPATHLEN];
 #ifdef USE_STDIO
-#define NONE -1
-int output_fd = NONE;
+  #define NONE (FILE *)0
+  FILE *output_fd = NONE;
 #else
-#define NONE (FILE *)0
-FILE *output_fd = NONE;
+  #define NONE -1
+  int output_fd = NONE;
 #endif
 
 #ifdef USE_STDIO
@@ -1849,7 +1854,7 @@ f_creat(char *name, long mode)
 	if (result != -1) {
 		strcpy(output_filename, name);
 		output_fd = result;
-	}		
+	}
 #else
 #ifdef __unix__
 	result = open(expand_name(name), O_RDWR|O_CREAT|O_TRUNC, (int)mode);
@@ -1858,8 +1863,8 @@ f_creat(char *name, long mode)
 #endif
 	if (result != -1) {
 		strcpy(output_filename, name);
-		output_fd = (FILE *)result;
-	}		
+		output_fd = result;
+	}
 #endif
 	return((long)result);
 }

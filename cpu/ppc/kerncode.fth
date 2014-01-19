@@ -88,6 +88,7 @@ extend-meta-assembler
 :-h skip-branch     " addi ip,ip,/branch"                      evaluate  ;-h
 :-h literal-to-tos  " lwzu tos,/token(ip)"                     evaluate  ;-h
 :-h literal-to-t0   " lwzu t0,/token(ip)"                      evaluate  ;-h
+:-h tliteral-to-t0  " lwzu t0,/token(ip)  add t0,t0,base"      evaluate  ;-h
 :-h rdrop           " addi rp,rp,1cell"                        evaluate  ;-h
 :-h rdrop3          " addi rp,rp,3cells"                       evaluate  ;-h
 
@@ -191,21 +192,22 @@ end-code
 meta definitions
 
 code isdefer  ( xt -- )
-   literal-to-t0
+   tliteral-to-t0
    lwz    t0,/cf(t0)   \ User number in t0
+   subfc  tos,base,tos
    stwx   tos,t0,up
    pop-tos
 c;
 
 code isvalue  ( n -- )
-   literal-to-t0
+   tliteral-to-t0
    lwz    t0,/cf(t0)   \ User number in t0
    stwx   tos,t0,up
    pop-tos
 c;
 
 code isuser  ( n -- )
-   literal-to-t0
+   tliteral-to-t0
    lwz    t0,/cf(t0)   \ User number in t0
    stwx   tos,t0,up
    pop-tos
@@ -218,7 +220,7 @@ code isconstant ( n -- )
 c;
 
 code isvariable ( n -- )
-   literal-to-t0
+   tliteral-to-t0
    stw    tos,/cf(t0)
    pop-tos
 c;
@@ -381,6 +383,15 @@ code (endof)    (s -- )
    take-branch
 c;
 code (endcase)  (s n -- )
+   pop-tos
+c;
+
+\ ($endof) is the same as branch, and ($endcase) is the same as drop,
+\ but redefining them this way makes the decompiler much easier.
+code ($endof)    (s -- )
+   take-branch
+c;
+code ($endcase)  (s n -- )
    pop-tos
 c;
 
@@ -760,6 +771,145 @@ code lfill (s start-adr count long -- )
    mtspr ctr,t2
 
    pop2
+c;
+
+\ Find the first occurence of bvalue, returning the residual string
+code bscan  ( adr len bvalue -- adr' len' )
+   mr    t1,tos        \ t1:bvalue
+   lwz   tos,0(sp)     \ tos:len
+   addi  sp,sp,1cell   \ Move stack pointer by one
+
+   cmpi  0,0,tos,0  0=  if  \ Bail out if len=0
+      next
+   then
+
+   lwz   t0,0(sp)      \ t0:adr
+
+   addi  t0,t0,-1      \ Account for pre-incrementing
+   begin
+      lbzu   t2,1(t0)
+      cmp    0,0,t1,t2  =  if
+         stw  t0,0(sp)
+         next
+      then
+      addic.  tos,tos,-1
+   0= until
+
+   addi t0,t0,1
+   stw  t0,0(sp)
+c;
+
+code wscan  ( adr len wvalue -- adr' len' )
+   mr    t1,tos        \ t1:lvalue
+   lwz   tos,0(sp)     \ tos:len
+   addi  sp,sp,1cell   \ Move stack pointer by one
+
+   cmpi  0,0,tos,0  0=  if  \ Bail out if len=0
+      next
+   then
+
+   lwz   t0,0(sp)      \ t0:adr
+
+   addi  t0,t0,-2      \ Account for pre-incrementing
+   begin
+      lhzu   t2,2(t0)
+      cmp    0,0,t1,t2  =  if
+         stw  t0,0(sp)
+         next
+      then
+      addic.  tos,tos,-2
+   0= until
+
+   addi t0,t0,2
+   stw  t0,0(sp)
+c;
+
+code lscan  ( adr len lvalue -- adr' len' )
+   mr    t1,tos        \ t1:lvalue
+   lwz   tos,0(sp)     \ tos:len
+   addi  sp,sp,1cell   \ Move stack pointer by one
+
+   cmpi  0,0,tos,0  0=  if  \ Bail out if len=0
+      next
+   then
+
+   lwz   t0,0(sp)      \ t0:adr
+
+   addi  t0,t0,-4      \ Account for pre-incrementing
+   begin
+      lwzu   t2,4(t0)
+      cmp    0,0,t1,t2  =  if
+         stw  t0,0(sp)
+         next
+      then
+      addic.  tos,tos,-4
+   0= until
+
+   addi t0,t0,4
+   stw  t0,0(sp)
+c;
+
+\ Skip initial occurrences of bvalue, returning the residual length
+code bskip  ( adr len bvalue -- residue )
+   mr    t1,tos        \ t1:bvalue
+   lwz   tos,0(sp)     \ tos:len
+   lwz   t0,1cell(sp)  \ t0:adr
+   addi  sp,sp,2cells  \ Move stack pointer by two
+
+   cmpi  0,0,tos,0  0=  if  \ Bail out if len=0
+      next
+   then
+
+   addi  t0,t0,-1      \ Account for pre-incrementing
+   begin
+      lbzu   t2,1(t0)
+      cmp    0,0,t1,t2  <>  if
+         next
+      then
+      addic.  tos,tos,-1
+   0= until
+c;
+
+\ Skip initial occurrences of wvalue, returning the residual length
+code wskip  ( adr len wvalue -- residue )
+   mr    t1,tos        \ t1:bvalue
+   lwz   tos,0(sp)     \ tos:len
+   lwz   t0,1cell(sp)  \ t0:adr
+   addi  sp,sp,2cells  \ Move stack pointer by two
+
+   cmpi  0,0,tos,0  0=  if  \ Bail out if len=0
+      next
+   then
+
+   addi  t0,t0,-2      \ Account for pre-incrementing
+   begin
+      lhzu   t2,2(t0)
+      cmp    0,0,t1,t2  <>  if
+         next
+      then
+      addic.  tos,tos,-2
+   0= until
+c;
+
+\ Skip initial occurrences of bvalue, returning the residual length
+code lskip  ( adr len lvalue -- residue )
+   mr    t1,tos        \ t1:bvalue
+   lwz   tos,0(sp)     \ tos:len
+   lwz   t0,1cell(sp)  \ t0:adr
+   addi  sp,sp,2cells  \ Move stack pointer by two
+
+   cmpi  0,0,tos,0  0=  if  \ Bail out if len=0
+      next
+   then
+
+   addi  t0,t0,-4      \ Account for pre-incrementing
+   begin
+      lwzu   t2,4(t0)
+      cmp    0,0,t1,t2  <>  if
+         next
+      then
+      addic.  tos,tos,-4
+   0= until
 c;
 
 code noop (s -- )  c;

@@ -44,7 +44,7 @@ forth: ${OBJS}
 	@ln -sf forth x86forth
 
 xinflate.lo: ${ZIPDIR}/inflate.c
-	${CC} -c ${MFLAGS} -Wall -fno-stack-protector -ffreestanding -D_FORTIFY_SOURCE=0 -DNEED_BCOPY -O3 -fpic $< -o $@
+	${CC} -c ${MFLAGS} -Wall -fno-builtin -fno-stack-protector -ffreestanding -DNEED_BCOPY -O2 -fpic $< -o $@
 
 xinflate.o: xinflate.lo
 	${LD} -melf_i386 -T inflate.ld $< -o $@

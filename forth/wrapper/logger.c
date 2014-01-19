@@ -241,6 +241,7 @@ void log_command_line(int argc, char *argv[]);
 void log_command_line(int argc, char *argv[])
 {
     int i;
+    char *pret;
     char cwdbuf[MAXPATHLEN*2];
 
 #ifdef __unix__
@@ -278,7 +279,7 @@ void log_command_line(int argc, char *argv[])
     sprintf(info, "host: %s\n", hostname);
     record(&misc);
 
-    getcwd(cwdbuf, 128);
+    pret = getcwd(cwdbuf, 128);
     sprintf(info, "cwd: %s\n", cwdbuf);
     record(&misc);
 }
