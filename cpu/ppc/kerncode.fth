@@ -214,7 +214,7 @@ code isuser  ( n -- )
 c;
 
 code isconstant ( n -- )
-   literal-to-t0
+   tliteral-to-t0
    stw    tos,/cf(t0)
    pop-tos
 c;
