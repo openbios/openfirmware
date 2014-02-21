@@ -18,6 +18,8 @@ purpose: Common developer utilities
 
 : .os  " more int:\boot\olpc_build" eval  ;
 
+: boost  .bat  h# 3b ec-cmd  d# 1000 ms  h# 3c ec-cmd  d# 1000 ms  .bat  ;
+
 stand-init: wifi
    " NN" find-tag  if  ?-null  $essid  then  \ network name
    " PP" find-tag  if  ?-null  $wpa    then  \ pass phrase
