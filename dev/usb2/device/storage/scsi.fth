@@ -40,8 +40,8 @@ struct
    1 field >csw-stat
 constant /csw
 
-h# 43425355 constant cbw-signature	\ little-endian
-h# 53425355 constant csw-signature	\ little-endian
+h# 43425355 constant cbw-signature	\ little-endian (USBC)
+h# 53425355 constant csw-signature	\ little-endian (USBS)
 
 0 value cbw-tag
 0 value cbw
