@@ -342,7 +342,7 @@ base !
 
    \ Does a dummy ready and throws away the result.
    \ required to get the EDI interface enabled
-   h# ff22 ['] edi-b@ catch if noop else drop then
+   h# ff22 ['] edi-b@ catch 2drop
 
    set-chip-id
 
