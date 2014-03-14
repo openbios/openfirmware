@@ -55,6 +55,7 @@ code fb16-invert  ( adr width height bytes/line fg-color bg-color -- )
     mfspr	t6,ctr		\ Save counter
     
     subf	t0,t1,t0	\ Account for inner loop incrementing
+    subf	t0,t1,t0	\  (2 bytes per pixel)
     addi	t3,t3,-2	\ Account for inner loop incrementing
 
     begin 			\ Outer loop
@@ -94,6 +95,9 @@ code fb32-invert  ( adr width height bytes/line fg-color bg-color -- )
     mfspr	t6,ctr		\ Save counter
     
     subf	t0,t1,t0	\ Account for inner loop incrementing
+    subf	t0,t1,t0	\  (4 bytes per pixel)
+    subf	t0,t1,t0	\  (4 bytes per pixel)
+    subf	t0,t1,t0	\  (4 bytes per pixel)
     addi	t3,t3,-4	\ Account for inner loop incrementing
 
     begin 			\ Outer loop
@@ -200,6 +204,7 @@ code fb16-paint
  
     addi	t3,t3,-2	\ Account for pre-incrementing
     subf	t2,t5,t2	\ Account for inner loop incrementing
+    subf	t2,t5,t2	\  (2 bytes per pixel)
     mfspr	t8,ctr		\ Save counter
 
     addi	r0,r0,8		\ Constant 8 (pixels/font-byte), needed below
@@ -263,6 +268,9 @@ code fb32-paint
  
     addi	t3,t3,-4	\ Account for pre-incrementing
     subf	t2,t5,t2	\ Account for inner loop incrementing
+    subf	t2,t5,t2	\  (4 bytes per pixel)
+    subf	t2,t5,t2	\  (4 bytes per pixel)
+    subf	t2,t5,t2	\  (4 bytes per pixel)
     mfspr	t8,ctr		\ Save counter
 
     addi	r0,r0,8		\ Constant 8 (pixels/font-byte), needed below
