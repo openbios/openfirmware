@@ -551,8 +551,9 @@ true value text-on?
 \     81 audio volume
 \     82 alternate boot
 \     83 nfs rpc xid
+\     84 android vs linux dual boot state
 \     80 -> 8f (erased by driver when magic number wrong)
-\     84 -> ad (unallocated)
+\     85 -> ad (unallocated)
 
 fload ${BP}/cpu/arm/mmp2/clocks.fth
 fload ${BP}/cpu/arm/olpc/banner.fth
