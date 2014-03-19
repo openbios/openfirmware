@@ -1,6 +1,6 @@
 \ The EC microcode
 macro: EC_PLATFORM cl4
-macro: EC_VERSION 7_0_4_11
+macro: EC_VERSION 7_0_4_12
 
 \ Alternate command for getting EC microcode, for testing new versions.
 \ Temporarily uncomment the line and modify the path as necessary
