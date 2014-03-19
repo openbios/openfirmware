@@ -13,7 +13,7 @@ hex
    34 10 ov!
    27 11 ov!
    21 12 ov!
-   17 13 ov!
+   17 13 ov!         \ (not in siv120d.c, not in datasheet)
    ce 16 ov!
    aa 17 ov!
 
@@ -21,6 +21,7 @@ hex
    01 21 ov!         \ P_HBNKT
    01 22 ov!         \ P_ROWFIL
    65 23 ov!         \ P_VBNKT - 01 for 30 fps, 65 for 25 fps
+                     \ vertical blank time, (siv120d.c uses 01)
 
    \ AE
    01 00 ov!
