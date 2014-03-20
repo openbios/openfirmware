@@ -992,15 +992,15 @@ constant #fixed-bufs
 \ resource).  If we ever need to make this ROMable, we can implement copy-on-
 \ write for initial values.
 
-: >initial-value  ( pfa -- adr )
-   @
+: initial-values'  ( -- adr )
    my-self  if	\ Use current instance's package if there is a current instance
       my-voc (push-package)  initial-values  (pop-package)
    else		\ Otherwise use the active package
       initial-values
    then
-   +
 ;
+
+: >initial-value  ( pfa -- adr )  @  initial-values' +  ;
 
 3 actions
 action:  >initial-value @  ;
@@ -1055,7 +1055,7 @@ headerless
 ;
 
 \ Returns the address of the initial value of the named instance data.
-: (initial-addr)  ( adr -- adr' )    my-self -  initial-values +  ;
+: (initial-addr)  ( adr -- adr' )    my-self -  initial-values' +  ;
 : initial-addr  \ name  ( -- addr )
    [compile] addr
    state @  if  compile (initial-addr)  else  (initial-addr)  then
