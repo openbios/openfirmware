@@ -188,7 +188,10 @@ drop
 
 -1 value fw-seq
 
-: fw-seq++  ( -- seq )  fw-seq 1+ dup to fw-seq  ;
+defer fw-seq++
+: fw-seq-l++  ( -- seq )  fw-seq 1+ dup to fw-seq  ;
+: fw-seq-b++  ( -- seq )  fw-seq 1+  h# ff and  dup to fw-seq  ;
+' fw-seq-l++ to fw-seq++
 
 d#     30 constant resp-wait-tiny
 d#  1,000 constant resp-wait-short
@@ -2143,6 +2146,7 @@ false instance value quiet?
    " " set-ssid  \ Instance buffers aren't necessarily initially 0
    opencount @ 0=  if
       init-buf
+      mv8787?  if  ['] fw-seq-b++ to fw-seq++  then
       setup-transport  if  free-buf false exit  then
       ds-ready to driver-state
       multifunction?  if  init-function  then

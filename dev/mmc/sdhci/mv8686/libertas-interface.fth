@@ -8,6 +8,7 @@
 : data-out  ( adr len -- )  " data-out" $call-parent  ;
 : release-bus-resources  ( -- )  " release-bus-resources" $call-parent  ;
 : multifunction?  ( -- flag )  " multifunction?" $call-parent  ;
+: mv8787?  ( -- flag )  " mv8787?" $call-parent  ;
 : set-parent-channel  ( -- )  my-space " set-address" $call-parent  ;
 : setup-transport  ( -- error? )  false  ;  \ Done by parent
 
