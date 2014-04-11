@@ -536,7 +536,7 @@ true value got-indicator?
 : process-pmic-failure  ( -- )  ;
 : process-gmic-failure  ( -- )  ;
 
-: .event  ?cr  ." Event: "  type  cr ;
+: .event  ( $ -- )  ?cr  ." Event: "  type  cr ;
 0 instance value last-event
 0 instance value backlog
 0 value debug-tx-feedback?
