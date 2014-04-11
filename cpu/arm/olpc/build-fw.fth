@@ -691,6 +691,8 @@ d# 6500 constant ms-factor
 
 fload ${BP}/cpu/x86/pc/olpc/sound.fth
 fload ${BP}/cpu/x86/pc/olpc/guardrtc.fth
+fload ${BP}/cpu/arm/olpc/chooseos.fth
+fload ${BP}/cpu/arm/olpc/bootmenu.fth
 fload ${BP}/cpu/x86/pc/olpc/security.fth
 
 stand-init: xid
@@ -819,6 +821,12 @@ dev /client-services  patch noop visible enter  dend
    game-key-mask =  if  protect-fw try-fs-update  then
 ;
 
+: ?boot-menu  ( -- )
+   rocker-down game-key?  if
+      protect-fw  visible  bootmenu  show-child invisible
+   then
+;
+
 [ifdef] use-screen-kbd
 0 value screen-kbd-ih
 : open-screen-keyboard  ( -- )
@@ -935,6 +943,7 @@ dev /client-services  patch noop visible enter  dend
 \+ use-screen-kbd  ?text-on
    ?diags
    ?fs-update
+   ?boot-menu
 
    factory-test? 0=  if  secure-startup  then
    unblock-exceptions

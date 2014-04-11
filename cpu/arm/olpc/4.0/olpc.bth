@@ -151,6 +151,10 @@ $new-file
    " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
    " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
 
+   \ icons for boot menu
+   " ${BP}/cpu/x86/pc/olpc/images/android.565"  " android.565"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/xos.565"      " xos.565"       $add-deflated-dropin
+
    " nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
    " nandblaster_tx.bin"   " nb_tx"    $add-deflated-dropin
 
