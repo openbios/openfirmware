@@ -1,4 +1,3 @@
-\ See license at end of file
 purpose: OS chooser for dual boot (Android and Linux)
 
 : choice-present?  ( -- present? )

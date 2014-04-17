@@ -1,4 +1,4 @@
-\ TODO: enable touchscreen
+purpose: OLPC XO-4 boot menu, for dual boot (Android and Linux)
 
 \ ubuntu:/usr/share/app-install/icons/sugar-xo.svg
 icon: xos.icon     rom:xos.565
