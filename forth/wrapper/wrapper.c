@@ -2111,7 +2111,12 @@ m_realloc(long size, char *adr)
 INTERNAL long
 m_sbrk(long size)
 {
+#ifdef __APPLE__
+	perror("forth: sbrk is no longer supported on Mac OS X 10.9\n");
+	exit(1);
+#else  // Other UNIXs still support sbrk()
 	return((long)sbrk(size));
+#endif
 }
 #endif
 

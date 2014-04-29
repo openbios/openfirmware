@@ -318,7 +318,7 @@ simulate(u8 *mem, u32 start, u32 header, u32 syscall_vec,
     register u32 res;
     register u32 cond;
     register u32 temp;
-    u32 indent = 0;
+    s32 indent = 0;
     u32 name;
     u32 namelen;
     // u32 last_pc;
@@ -448,12 +448,12 @@ case 0x04: if (OP1 == 0 || OP2 == 0) {
            switch (BXTYPE) {
     // P=0, U=1, bit22=0, W=0 - post-index, subtract offset, register, no writeback
 	   case 0x9: INSTR("umull");
-	       { unsigned long long result;
-		   result = (unsigned long long)RM * (unsigned long long)RS;
+	       { u64 result;
+		   result = (u64)RM * (u64)RS;
                    RN = (u32)((result >> 32) & 0xffffffffLL);
                    RD = (u32)(result & 0xffffffffLL);
 		   if (S) {
-		       N = (result < 0);
+                       N = (RN & 0x80000000LL) ? 1 : 0;
 		       Z = (result == 0);
 		   }
 	       }
@@ -516,7 +516,7 @@ break;
                case 0x5:
                case 0x7: INSTR("sbc"); SHFT(res); SBB(RD, res, RN, C); break;
                case 0x9: INSTR("smull"); 
-	       { long long result, a, b;
+	       { s64 result, a, b;
 		   a = (int)RM;
 		   b = (int)RS;
 		   result = a * b;
