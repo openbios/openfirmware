@@ -43,6 +43,14 @@ headers
    " "(00 00 00 00 00 00)" drop  no-data-command  0=
 ;
 
+\ Some devices require a second TEST UNIT READY, despite returning
+\ CHECK CONDITION, with sense NOT READY and MEDIUM NOT PRESENT.
+
+: retry-unit-ready?  ( -- ready? )
+   unit-ready?  ?dup  if  exit  then
+   unit-ready?
+;
+
 \ Ensures that the disk is spinning, but doesn't wait forever
 
 create sstart-cmd  h# 1b c, 0 c, 0 c, 0 c, 1 c, 0 c,
@@ -206,7 +214,7 @@ external
       \ up to 30 secs to spin up.
       d# 45 d# 1000 *  set-timeout
 
-      unit-ready?  0=  if  false  exit  then
+      retry-unit-ready?  0=  if  false  exit  then
 
       \ It might be a good idea to do an inquiry here to determine the
       \ device configuration, checking the result to see if the device
