@@ -2146,7 +2146,9 @@ false instance value quiet?
    " " set-ssid  \ Instance buffers aren't necessarily initially 0
    opencount @ 0=  if
       init-buf
-      mv8787?  if  ['] fw-seq-b++ to fw-seq++  then
+      [ifdef] mv8787?
+	 mv8787?  if  ['] fw-seq-b++ to fw-seq++  then
+      [then]
       setup-transport  if  free-buf false exit  then
       ds-ready to driver-state
       multifunction?  if  init-function  then
