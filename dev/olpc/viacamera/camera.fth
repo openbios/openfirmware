@@ -70,6 +70,12 @@ VGA_WIDTH VGA_HEIGHT * 2* constant /dma-buf
 
 : soft-reset  ( -- )  ;
 
+: ?siv120d  ( -- )
+   ['] camera-config behavior ['] siv120d-config =  if
+      0640.0140 314 cl!         \ Horizontal end and start cycles for siv120d
+   then                         \ (a quirk specific to XO-1.5 and siv120d)
+;
+
 : (init)  ( -- )
    0         300 cl!		\ Mask all interrupts
    8850.2104 310 cl!		\ Enable CLK, FIFO threshold, UYVY, 8-bit CCIR601,
@@ -156,6 +162,7 @@ external
    init
    my-args " yuv" $=  to use-ycrcb?
    sensor-found? 0=  if  false exit  then
+   ?siv120d
    alloc-dma-bufs
    read-setup
    true

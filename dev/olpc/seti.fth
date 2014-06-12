@@ -6,10 +6,9 @@ hex
 
    \ SNR
    00 00 ov!	\ bank 0
-   00 04 ov!
-   03 05 ov!	\ CHIP_CNTR
-   \ 33 07 ov!
-   32 07 ov!
+   00 04 ov!	\ CNTR_B, enable preview mode
+   03 05 ov!	\ VMODE, VGA 640 x 480
+   32 07 ov!	\ CNTR_C, output drivability control, PCLK 19mA, other 14mA
    34 10 ov!
    27 11 ov!
    21 12 ov!
@@ -17,11 +16,11 @@ hex
    ce 16 ov!
    aa 17 ov!
 
-   00 20 ov!         \ P_BNKT
+                     \ frame control registers for preview mode
+   00 20 ov!         \ P_BNKT, [5:4] P_HBNKT high bits, [1:0] P_VBNKT high bits
    01 21 ov!         \ P_HBNKT
    01 22 ov!         \ P_ROWFIL
-   65 23 ov!         \ P_VBNKT - 01 for 30 fps, 65 for 25 fps
-                     \ vertical blank time, (siv120d.c uses 01)
+   65 23 ov!         \ P_VBNKT, 01 for 30 fps, 65 for 25 fps (siv120d.c uses 01)
 
    \ AE
    01 00 ov!
@@ -289,6 +288,10 @@ hex
    then
 ;
 
+\ SIV121C, not supported on XO-1.5,
+\ because sensor maximum clock 27 MHz, and host provides 48 MHz.
+
+[ifndef] olpc-xo-1.5
 : siv121c-config  ( ycrcb? -- )
    >r               ( r: ycrcb? )
 
@@ -648,6 +651,7 @@ hex
       cb 12 ov!  \ OUTFMT, RGB565 setting
    then
 ;
+[then]
 
 : (set-mirrored)  ( mirrored? -- )
    4 ov@  1                       ( mirrored? reg-value bit )
@@ -659,9 +663,11 @@ hex
    0 0 ov!  (set-mirrored)
 ;
 
+[ifndef] olpc-xo-1.5
 : siv121c-set-mirrored  ( mirrored? -- )
    1 0 ov!  (set-mirrored)
 ;
+[then]
 
 : probe-seti  ( -- found? )
    h# 33 to camera-smb-slave  ( )
@@ -674,6 +680,7 @@ hex
       false exit              ( -- false )
    then                       ( regval )
 
+[ifndef] olpc-xo-1.5
    dup h# 95 = if
       " SETi,SIV121C" " sensor" string-property
 [ifdef] set-sensor-properties
@@ -683,6 +690,7 @@ hex
       ['] siv121c-config to camera-config
       drop true exit
    then
+[then]
 
    dup h# 12 =  if
       " SETi,SIV120D" " sensor" string-property
