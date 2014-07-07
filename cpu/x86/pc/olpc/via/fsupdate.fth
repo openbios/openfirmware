@@ -132,7 +132,7 @@ h# 10 value /pe    \ size of a partition entry
    then                       ( )                ( r: )
 ;
 
-0 2value file-bytes
+0. 2value file-bytes
 : data:  ( "filename" -- )
    safe-parse-word            ( filename$ )
    nb-zd-#sectors  -1 <>  if  ( filename$ )
