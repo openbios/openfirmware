@@ -324,6 +324,7 @@ create jedec-spi-table
 
    \ XO-1.75 and XO-3 and XO-4 A2
    h# 3425c2 ,  h# 10.0000 ,  ," MX25U8035"   \ Macronix 3V3
+   h# 1450ef ,  h# 10.0000 ,  ," W25Q80BW"    \ Winbond 1V8 (AB-ID is 13)
 
    \ XO-1 and XO-1.5
    h# 1430ef ,  h# 10.0000 ,  ," WX25X80"     \ Winbond  (AB-ID is 13)
