@@ -20,7 +20,7 @@ headerless
 
 : .storage  ( -- )
    " int:0" partition-end  if    ( d.size )
-      d# 200,000,000. d+         ( d.size' )  \ Round up
+      d# 500,000,000. d+         ( d.size' )  \ Round up
       d# 1,000,000,000 um/mod    ( rem Gb )
       nip  .d ." GB "            ( )
    else                          ( )
