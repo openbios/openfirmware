@@ -1,0 +1,32 @@
+# This setting of HOSTDIR is for cross-building on an x86 Linux system
+# For it to work, you first need to build the simulator version of ppcforth
+# in cpu/x86/Linux with "make -f Makefile.ppcforth"
+OS := $(shell uname)
+
+HOSTCPU:=x86
+HOSTDIR:=../../../${HOSTCPU}/${OS}
+
+all: prepfw.dic
+
+.PHONY: FORCE all clean
+
+.PRECIOUS: prepfw.dic
+
+${HOSTDIR}/forth:
+	@make -C ${HOSTDIR} forth
+
+${HOSTDIR}/ppcforth:
+	@make -C ${HOSTDIR} -f Makefile.ppcforth ppcforth
+
+build: ${HOSTDIR}/forth
+	@ln -sf $< $@
+
+%.dic: FORCE build ${HOSTDIR}/ppcforth
+	./build $@
+
+builder.dic: FORCE build
+	-[ ! -f builder.sav ] && cp builder.dic builder.sav
+	./build builder.dic
+
+clean:
+	rm -f prepfw.dic *.log *~ build

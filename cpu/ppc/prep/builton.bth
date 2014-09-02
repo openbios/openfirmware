@@ -1,0 +1,38 @@
+purpose: Create "builton.fth" file containing the current date
+copyright: Copyright 1997 FirmWorks  All Rights Reserved
+
+command: &native &this
+build-now
+
+\needs today         fload ${BP}/fm/cwrapper/date.fth
+
+: put$  ( adr len -- )  ofd @ fputs  ;
+
+\ Creates a "builton.fth" file indicating the current date and time.
+\ It contains, for example:
+\ : build-date " December 17, 1996 18:26:50" ;
+\ d# 19961217 constant built-date-int
+\ dev /openprom
+\    built-date-int encode-int " built-on" property
+\ device-end
+
+writing builton.fth
+" \ Defines build-date"n" put$
+" : build-date "" " put$   today date$ put$   bl ofd @ fputc
+now time$ put$  " "" ;"n" put$      
+
+" d# " put$
+base @ decimal
+today (.) put$  <# u# u# u#> put$  <# u# u# u#>  put$
+base !
+"  constant built-date-int"n" put$
+
+" dev /openprom"n" put$
+"    built-date-int encode-int "" built-on"" property"n" put$
+" device-end"n" put$
+
+ofd @ fclose
+
+\ We don't want to log the creation of this file, because doing so
+\ tends to cause double-recompiles in some cases.
+" builton.log" delete-file drop

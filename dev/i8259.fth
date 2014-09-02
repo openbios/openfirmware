@@ -137,12 +137,12 @@ alias interrupt-done eoi
       drop false                               ( false )
    then                                        ( false | level true )
 ;
-: interrupt-done  ( -- )  eoi  ;
 : eoi  ( -- )
    h# b h# 20 ocw3@  4 and      ( slave? )
    h# 20 h# 20 pc!              ( slave? )  \ EOI to master
    if  h# 20 h# a0 pc!  then    ( )	    \ EOI to slave
 ;
+: interrupt-done  ( -- )  eoi  ;
 [then]
 
 \ XXX we really should map the registers

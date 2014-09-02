@@ -1,0 +1,130 @@
+purpose: OFW build file for QEMU/prep
+\ See license at end of file
+
+dictionary: ${BP}/cpu/ppc/prep/build/prepfw.dic
+command: &ppcforth &dictionary &this
+build-now
+
+true to stand-init-debug?
+
+hex
+warning on
+
+h#   4.0000 constant initial-heap-size
+
+fload ${BP}/dev/diaguart.fth		\ Diagnostic driver for serial port
+h# 3f8 is uart-base
+fload ${BP}/forth/lib/sysuart.fth	\ Plug UART routines into key and emit
+' ukey is diag-key			\ Feed UART input to "dl"
+
+: ?report drop ;
+: fw-title ( -- )
+   ." Open Firmware"
+   " build-date"  $find  if  ."  , Built  " execute type  else  2drop  then  cr
+   ?spaces ." Copyright (c) 1995-2000, FirmWorks." cr
+   ?spaces ." Copyright (c) 2014, Artyom Tarasenko." cr
+;
+' fw-title to .firmware
+
+: .r3 ;
+
+fload ${BP}/cpu/ppc/ppcboot.fth 	\ Forth startup code
+
+fload ${BP}/dev/pci/configm1.fth
+fload ${BP}/cpu/ppc/prep/raven.fth
+
+\ Add name properties and an init method to the root node of the device tree.
+fload ${BP}/cpu/ppc/prep/qemu/rootnode.fth
+
+\ Add drivers for supported plug-in cards
+fload ${BP}/cpu/ppc/prep/qemu/devices.fth
+fload ${BP}/cpu/ppc/prep/qemu/devalias.fth
+
+: (probe-all)
+  true to fcode-debug?
+  true to diag-switch?
+   " probe-" do-drop-in
+   probe-pci
+;
+['] (probe-all) to probe-all
+
+stand-init:  Keyboard overrides
+   ?bailout
+;
+
+\ Add CPU properties
+fload ${BP}/cpu/ppc/prep/qemu/cpunode.fth	\ CPU node additions
+
+\ Scrub memory and add it to the available list.
+fload ${BP}/cpu/ppc/prep/qemu/probemem.fth	\ Memory probing
+
+0 value residual-data
+: make-aix-l2-cache ;
+
+fload ${BP}/cpu/ppc/prep/residdef.fth		\ Residual data structure
+
+: get-int  ( name$ phandle -- int )
+   get-package-property  abort" Missing property"  get-encoded-int
+;
+
+: make-boot-name ;
+
+fload ${BP}/cpu/ppc/prep/mkresid.fth               \ Residual data creation
+fload ${BP}/cpu/ppc/prep/encresid.fth              \ Residual data encoding
+
+fload ${BP}/cpu/ppc/prep/fortyone.fth              \ handler for AIX booting
+
+support-package: ufs-file-system
+   fload ${BP}/ofw/fs/ufs/ufs.fth               \ Unix file system
+end-support-package
+
+fload ${BP}/forth/lib/crc32.fth
+\needs unix-seconds>  fload ${BP}/ofw/fs/unixtime.fth   \ Unix time calculation
+\needs ($crc16)       fload ${BP}/forth/lib/crc16.fth
+support-package: ext2-file-system
+    fload ${BP}/ofw/fs/ext2fs/ext2fs.fth \ Linux file system
+end-support-package
+
+
+devalias dropins /flash
+
+\ Create a pseudo-device that presents the dropin modules as a filesystem.
+fload ${BP}/ofw/fs/dropinfs.fth
+\ This devalias lets us say, for example, "dir rom:"
+devalias rom     /dropin-fs
+
+\ XXX should check QEMU -nographic option
+\ for now, comment out the two following lines for graphic boot
+\ " com1"  ' output-device  set-config-string-default
+\ " com1"  ' input-device   set-config-string-default
+
+
+install-rom-cold
+
+.( --- Saving fw.dic ---)  " fw.dic" $save-forth  cr
+
+\ LICENSE_BEGIN
+\ Copyright (c) 1997 FirmWorks
+\ Copyright (c) 2014 Artyom Tarasenko
+\
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
+

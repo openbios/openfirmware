@@ -60,7 +60,7 @@ external
    1-  swap d# 11 rshift  h# 1f and                  ( int-pin0 dev# )
 
    \ Bail out for non-existent device IDs
-   pin,dev>pic-irq  if  false exit  then             ( opic-int# )
+   pin,dev>isa-irq  if  false exit  then             ( opic-int# )
 
    true
 ;

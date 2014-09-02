@@ -1,0 +1,133 @@
+purpose: Low-level startup code for QEMU -M prep
+\ See license at end of file
+
+dictionary: ${BP}/cpu/ppc/build/basefw.dic
+command: &ppcforth &dictionary &this
+
+build-now
+
+\ create debug-start
+create slam-it				\ Slam the chipset into a working mode
+
+h# 0018.0000 constant RAMsize		\ Firmware size
+h# fef8.0000 constant falcon-base
+h# fef8.0010 constant falcon-mem-config
+h# feff.0000 constant raven-base
+
+
+\needs start-assembling  fload ${BP}/cpu/ppc/asmtools.fth
+\needs write-dropin      fload ${BP}/forth/lib/mkdropin.fth
+
+assembler
+' be-l@ is asm@
+' be-l! is asm!
+forth
+
+start-assembling
+
+label my-entry
+   0 ,				\ To be patched later
+end-code
+
+fload ${BP}/cpu/ppc/prep/qemu/slam.fth		\ Code to emulate POR state
+
+
+\needs io-base h# 8000.0000 constant io-base
+fload ${BP}/cpu/ppc/prep/qemu/initrav.fth	\ Code to init Raven
+[ifdef] debug-start
+fload ${BP}/arch/prep/initcom1.fth		\ Code to init COM1
+[then]
+
+label init-pbc		\ Setup VIA SouthBridge Chip
+   mfspr   r30,lr
+
+   set     r1,h#80000cf8	\ PCI Configuration Address Register
+
+   set     r2,h#80005840	\ Config address of word containing offset 41
+   stwbrx  r2,r0,r1
+   set     r3,h#20		\ Enable Port 92 Fast Reset
+   stb     r3,5(r1)		\ Write to config register 0x41
+
+   set     r2,h#80005844	\ Config address of word containing offset 46
+   stwbrx  r2,r0,r1
+   set     r3,h#0120		\ (swapped) Enable Delay Transaction, posting
+   sth     r3,6(r1)		\ Write to config register 0x46
+   
+   set     r2,h#80005848	\ Config address of word containing offset 48
+   stwbrx  r2,r0,r1
+   set     r3,h#0901		\ (swapped) Enable Extra RTC port 74/75
+   sth     r3,4(r1)		\ Write to config register 0x48
+   
+   set     r2,h#8000584c	\ Config address of word containing offset 4e
+   stwbrx  r2,r0,r1
+\   set     r3,h#00f1		\ (byte-swapped) set mem/DMA routing
+   set     r3,h#ffff		\ (byte-swapped) set mem/DMA routing
+   sth     r3,6(r1)		\ Write to config register 0x4e
+
+   set     r2,h#80005854	\ Config address of word containing offset 56
+   stwbrx  r2,r0,r1
+   set     r3,h#a500		\ (swapped) IRQ10 for PIRQA, IRQ5 for PIRQB
+   sth     r3,6(r1)		\ Write to config register 0x56
+
+   mtspr   lr,r30		\ Restore return address
+   bclr    20,0			\ Return
+end-code
+
+label start-system
+   mfspr   r31,lr
+
+   grand-slam    bl *		\ Attempt to emulate POR state...
+
+   setup-raven   bl *
+   init-pbc      bl *
+\ [ifdef] debug-start
+\   init-com1     bl *
+\ [then]
+
+\ XXX Read value from NVRAM when QEMU's NVRAM layout is settled
+\ or read in from the Falcon registers when it's emulated.
+
+   set r5,h#8000000 \ 128 MiB
+   stw  r5,0(r0)                \ Store here for ppcboot.fth
+
+   RAMsize  set r4,*            \ Space Firmware gets
+   subf   r3,r4,r5              \ Memory base address
+
+
+   mtspr  lr,r31		\ Restore return address
+   bclr   20,0			\ ET go home...
+end-code
+
+start-system  my-entry  put-branch
+
+end-assembling
+
+writing start.di
+asm-base  here over -  0  " start" write-dropin
+ofd @ fclose
+
+\ LICENSE_BEGIN
+\ Copyright (c) 1997 FirmWorks
+\ Copyright (c) 2014 Artyom Tarasenko
+\
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
+

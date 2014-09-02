@@ -84,7 +84,8 @@ create pkt-buf pkt-len allot
 defer pio-rwblock  ' noop to pio-rwblock
 : sendpkt  ( addr len pkt-addr -- count )
    over h# a0 swap sendcmd                         ( addr len pkt-addr )
-   wait-until-drq  pkt-len chip-base io-blk-w!     ( addr len )
+   wait-until-drq  if h# 100 ms 3drop 0 then       ( addr len pkt-addr )
+   pkt-len chip-base io-blk-w!                     ( addr len )
    waitonbusy                                      ( addr len )
    waitfordrq  if		\ Timeout          ( addr len )
       h# 100 ms  2drop 0                           ( 0 )

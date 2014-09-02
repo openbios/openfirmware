@@ -4,6 +4,7 @@ purpose: Build Open Firmware core for PC
 dictionary: ${BP}/cpu/x86/build/basefw.dic
 command: &x86forth &dictionary &this
 in: builton.fth
+in: ${BP}/dev/ide/node.hex
 build-now
 
 " fw.tag" r/w create-file drop  tag-file !
@@ -191,6 +192,8 @@ support-package: nfs
 end-support-package
 [then]
 devalias nfs net//obp-tftp:last//nfs
+
+fload ${BP}/dev/ide/twolevel-ide.fth
 
 fload ${BP}/ofw/inet/loadtcp.fth
 

@@ -8,7 +8,7 @@ h# 8000.0000 constant io-base  \ Wrong for GoldenGate
 [then]
 
 \needs start-assembling fload ${BP}/cpu/ppc/asmtools.fth
-\needs write-dropin     fload ${BP}/tools/mkdropin.fth
+\needs write-dropin     fload ${BP}/forth/lib/mkdropin.fth
 
 h#  e.0000  d# 16 rshift  constant inflate-offset    \ Shifted for addis
 h#  f.0000  d# 16 rshift  constant workspace-offset  \ Shifted for addis

@@ -55,6 +55,18 @@ external
    r> base !
 ;
 
+: probe-child  ( unit -- )
+   dup set-address                            ( unit )
+   any-blocks? 0=  if  drop  exit  then       ( unit )
+   new-device                                 ( unit )
+      encode-int " reg" property              ( )
+      " node-fcode" $call-parent 1 byte-load  ( )
+      cdrom?  if  " cdrom" device-name  then  ( )
+   finish-device                              ( )
+;
+
+: probe  ( -- )  2 0  do  i probe-child  loop  ;
+
 headers
 \ LICENSE_BEGIN
 \ Copyright (c) 2006 FirmWorks

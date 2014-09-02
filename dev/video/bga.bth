@@ -1,0 +1,51 @@
+\ See license at end of file
+purpose: Build file for Bochs Graphics Adapter driver
+
+command: &tokenize &this
+build-now
+
+silent on
+
+begin-tokenizing bga.fc
+
+FCode-version2
+
+" vga" device-name
+fload ${BP}/dev/video/common/defer.fth          \ Defered words
+1024x768x16
+fload ${BP}/dev/video/controlr/pcimap.fth       \ Generic PCI implementations
+fload ${BP}/dev/video/controlr/vga.fth          \ Load generic VGA routines
+fload ${BP}/dev/video/controlr/bga.fth          \ Load BGA routines
+fload ${BP}/dev/video/controlr/bgapci.fth       \ PCI routines
+fload ${BP}/dev/video/common/graphics.fth       \ Graphics and color routines
+fload ${BP}/dev/video/common/init.fth           \ Init code
+fload ${BP}/dev/video/common/display.fth        \ High level interface code
+
+probe
+end0
+
+end-tokenizing
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2014 Artyom Tarasenko
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END

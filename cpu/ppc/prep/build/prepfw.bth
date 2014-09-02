@@ -1,0 +1,206 @@
+purpose: Load file for PReP firmware - no board specifics
+\ See license at end of file
+
+dictionary: ${BP}/cpu/ppc/build/basefw.dic
+command: &ppcforth &dictionary &this
+build-now
+
+
+\ ' $report-name to include-hook
+
+fload ${BP}/cpu/ppc/prep/basevars.fth
+0 value little-endian?
+
+headerless
+h# 1000 to pagesize
+d# 12   to pageshift
+
+false value chrp?	\ Change as needed
+headers
+
+dev /
+1 encode-int  " #address-cells"  property
+" prep" " compatible" string-property
+device-end
+
+\ Memory management services
+fload ${BP}/ofw/core/clntmem1.fth	\ client services for memory
+fload ${BP}/ofw/core/memlist.fth     \ Resource list common routines
+fload ${BP}/ofw/core/showlist.fth	\ Linked list display tool
+fload ${BP}/ofw/core/allocph1.fth	\ S Physical memory allocator
+fload ${BP}/ofw/core/availpm.fth	\ Available memory list
+
+headerless
+: (memory?)  ( phys -- flag )
+   chrp?  if  h# 4000.0000  else  h# 8000.0000  then  u<
+;
+' (memory?) to memory?
+
+\ Handy tools to mark device nodes with the "built-in" property
+: mark-builtin  ( -- false )
+   0 package(  0 0 encode-bytes  " built-in" property  )package
+   false
+;
+: mark-builtin-all  ( -- )
+   ['] mark-builtin ['] search-preorder catch  2drop
+;
+headers
+
+\ Load file format handlers
+fload ${BP}/cpu/ppc/prep/initpgm.fth	\ Basic boot handler
+fload ${BP}/cpu/ppc/prep/elf.fth	\ handler for ELF booting
+
+\ Reboot and re-entry code
+fload ${BP}/cpu/ppc/reboot.fth		\ Restart the client program
+fload ${BP}/cpu/ppc/reenter.fth		\ Various entries into Forth
+
+\ Miscellaneous hardware interface words
+fload ${BP}/cpu/ppc/cache603.fth	\ Cache synchronization
+fload ${BP}/cpu/ppc/segreg.fth	\ Segment register access
+fload ${BP}/cpu/ppc/bat.fth		\ BAT mapping register access
+fload ${BP}/cpu/ppc/scrub.fth	\ Fast memory scrubbing using "dcbz"
+
+fload ${BP}/ofw/termemu/cp881-16.fth  \ ISO-Latin1 Font
+hex
+warning on
+
+h#  40.0000 ' load-base set-config-int-default
+
+headerless
+: (initial-heap)  ( -- adr len )  sp0 @ ps-size -  limit  tuck -  ;
+' (initial-heap) is initial-heap
+headers
+
+" /openprom" find-device
+   " FirmWorks,3.0" encode-string " model" property
+device-end
+
+fload ${BP}/cpu/ppc/prep/isaio.fth		\ ISA I/O space access
+\ XXX this may need to change for L2 cache support
+warning @ warning off
+\ We can't turn on the dcache until we have set up BAT mapping
+stand-init: Instruction cache on
+   icache-on? 0=  if  icache-on  then
+;
+warning !
+
+fload ${BP}/cpu/ppc/dectrap.fth		\ Null decrementer handler
+stand-init: Enable machine check exceptions
+   msr@  h# 1000 or  msr!
+;
+
+headerless
+defer set-memory-map  ' noop to set-memory-map
+
+headers
+stand-init: Set Memory Map
+   set-memory-map
+;
+
+headerless
+h# 6000.0000 value fw-virt-base			\ 32 megs of mapping space
+h# 0200.0000 value fw-virt-size
+
+0 value memsize
+headers
+
+fload ${BP}/cpu/ppc/loadvmem.fth		\ /mmu node
+stand-init: MMU
+   " /mmu" open-dev mmu-node !
+;
+
+fload ${BP}/cpu/ppc/rootnode.fth 	   \ Methods for root node
+stand-init: Root node
+   " /"  " init"  execute-device-method drop
+;
+stand-init: Data cache on
+   msr@ h# 10 and  dcache-on? 0=  and  if  dcache-on  then
+;
+stand-init: Fast CPU mode
+   fastest-mode
+;
+
+0 0  " "  " /"  begin-package
+fload ${BP}/cpu/ppc/prep/mappci.fth	\ PCI-to-root-node address translation
+fload ${BP}/dev/pcibus.fth		\ Generic PCI bus package
+end-package
+stand-init: PCI host bridge
+   " /pci" " init" execute-device-method drop
+;
+
+fload ${BP}/dev/pciprobe.fth
+defer probe-all  ' probe-pci to probe-all
+
+fload ${BP}/dev/scsi/probscsi.fth
+
+fload ${BP}/cpu/ppc/cpunode.fth
+
+fload ${BP}/ofw/core/bailout.fth
+
+fload ${BP}/cpu/ppc/prep/reset.fth		 \ Reset via "92" register
+
+fload ${BP}/ofw/core/countdwn.fth	 \ Startup countdown
+
+: restore-stdout  ( -- )
+   " restore" stdout @ ['] $call-method  catch  if  3drop  then
+;
+
+fload ${BP}/forth/lib/pattern.fth		\ Text string pattern matching
+fload ${BP}/ofw/core/filecmds.fth 	\ File commands: dir, del, ren, etc.
+
+: startup  ( -- )
+   standalone?  0=  if  exit  then
+
+   copy-reboot-info
+
+   \ Ensure a clean startup state regardless of the development
+   \ environment's use of these variables
+   0 stdin !  0 stdout !  0 to my-self
+
+[ifdef] debug-startup  ." nvramrc" cr  [then]
+   use-nvramrc?  if  nvramrc safe-evaluate  then
+
+[ifdef] debug-startup  ." probe" cr  [then]
+   auto-banner?  if  probe-all install-console banner  then
+
+   hex
+   warning on
+   only forth also definitions
+
+   install-alarm
+
+   #line off
+
+   auto-boot
+   restore-stdout
+
+   user-interface
+;
+
+.( --- Saving prepfw.dic ---)  " prepfw.dic" $save-forth  cr
+
+\ LICENSE_BEGIN
+\ Copyright (c) 1997 FirmWorks
+\ Copyright (c) 2014 Artyom Tarasenko
+\
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
+

@@ -1,0 +1,56 @@
+purpose: Build file rom image for QEMU -M prep
+\ See license at end of file
+
+command: &builder &this
+in: builton.fth
+in: ${BP}/cpu/ppc/prep/qemu/build/start.di
+in: ${BP}/cpu/ppc/prep/qemu/build/resetvec.di
+in: ${BP}/cpu/ppc/prep/qemu/build/fw.dic
+in: ${BP}/dev/video/build/bga.fc
+in: ${BP}/dev/video/build/cirrus.fc
+build-now
+
+\needs $add-dropin  fload ${BP}/forth/lib/mkdropin.fth
+
+\ Always re-create the builton.fth file when we make a new rom.img
+fload ${BP}/forth/lib/date.fth
+fload ${BP}/cpu/ppc/prep/builton.bth
+
+writing qprepofw.rom
+   " resetvec.di"         $add-file
+   " start.di"            $add-file
+
+   " fw.dic"                               " firmware"     $add-dropin
+
+   " builton.fth"                          " probe-"       $add-dropin
+   " ${BP}/dev/video/build/cirrus.fc"      " pci1013,b8"   $add-dropin
+   " ${BP}/dev/video/build/bga.fc"         " class030000"  $add-dropin
+   " ${BP}/ofw/termemu/cp881-16.obf"       " font"         $add-dropin
+\ h# 8.0000 pad-file
+ofd @ fclose
+
+\ LICENSE_BEGIN
+\ Copyright (c) 1997 FirmWorks
+\ Copyright (c) 2014 Artyom Tarasenko
+\
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
+
