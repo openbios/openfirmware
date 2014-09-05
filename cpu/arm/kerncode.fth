@@ -802,34 +802,37 @@ c;
 
 code d-  ( d1 d2 -- d1-d2 )
    ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
-   subs      r2,r2,r0
-   sbc       r1,r1,tos
-   psh       r2,sp
-   mov       tos,r1
+   subs      r0,r2,r0
+   sbc       tos,r1,tos
+   psh       r0,sp
 c;
 code d<  ( d1 d2 -- f )
    ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
    subs      r2,r2,r0
-   sbcs      tos,r1,tos
-   mov       tos,tos,asr #0
+   sbcs      r1,r1,tos
+   movge     tos,#0
+   mvnlt     tos,#0
 c;
 code d>=  ( d1 d2 -- f )
    ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
    subs      r2,r2,r0
-   sbcs      tos,r1,tos
-   mvn       tos,tos,asr #0
+   sbcs      r1,r1,tos
+   movlt     tos,#0
+   mvnge     tos,#0
 c;
 code d>  ( d1 d2 -- f )
    ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
-   subs      r0,r0,r2
-   sbcs      tos,tos,r1
-   mov       tos,tos,asr #0
+   subs      r2,r2,r0
+   sbcs      r1,r1,tos
+   movle     tos,#0
+   mvngt     tos,#0
 c;
 code d<=  ( d1 d2 -- f )
    ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
-   subs      r0,r0,r2
-   sbcs      tos,tos,r1
-   mvn       tos,tos,asr #0
+   subs      r2,r2,r0
+   sbcs      tos,r1,tos
+   movgt     tos,#0
+   mvnle     tos,#0
 c;
 code du<  ( d1 d2 -- f )
    ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
