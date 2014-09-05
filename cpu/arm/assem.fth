@@ -1210,6 +1210,10 @@ also arm-assembler definitions
 : mov    01a0.0000 {cond/s} amode-rdop2  ;
 : mvn    01e0.0000 {cond/s} amode-rdop2  ;
 : mvn    01e0.0000 {cond/s} amode-rdop2  ;
+: sxtb   06af.0070 {cond}   amode-rdop2  ;
+: sxth   06bf.0070 {cond}   amode-rdop2  ;
+: uxtb   06ef.0070 {cond}   amode-rdop2  ;
+: uxth   06ff.0070 {cond}   amode-rdop2  ;
 
 : movw   0300.0000 {cond}   amode-movw   ;
 : movt   0340.0000 {cond}   amode-movw   ;
@@ -1309,7 +1313,8 @@ also arm-assembler definitions
 
 : rev    06bf.0f30 {cond}   amode-rev  ;
 : rev16  06bf.0fb0 {cond}   amode-rev  ;
-: revsh  06ff.0f30 {cond}   amode-rev  ;
+: rbit   06ff.0f30 {cond}   amode-rev  ;
+: revsh  06ff.0fb0 {cond}   amode-rev  ;
 
 : swp    0100.0090 {cond} {b}  amode-swp  ;
 : strex  0180.0f90 {cond} {bh} amode-swp  ;
