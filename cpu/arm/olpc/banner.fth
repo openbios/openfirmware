@@ -70,7 +70,7 @@ h# 40 buffer: partition-map
    then
    internal-disk-present?  if    ( )
       internal-disk-size         ( d.size )
-      d# 200,000,000.  d+        ( d.size' )  \ Round up
+      d# 500,000,000.  d+        ( d.size' )  \ Round up
       d# 1,000,000,000 um/mod    ( rem Gb )
       nip  .d ." GB "            ( )
    else                          ( )
