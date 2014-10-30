@@ -57,6 +57,7 @@ end-string-array
       0  of  ." "      endof
       1  of  ." GPB "  endof
       2  of  ." BYD "  endof
+      3  of  ." SMP "  endof
       ." UnknownVendor "
    endcase                         ( type )
 
@@ -64,6 +65,7 @@ end-string-array
       0  of  ." "           endof
       1  of  ." NiMH  "     endof
       2  of  ." LiFePO4  "  endof
+      3  of  ." LiPoly  "  endof
       ." UnknownType  "
    endcase
 ;
