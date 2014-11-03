@@ -60,6 +60,7 @@ variable #in-bytes
    out-ptr @ spi-b@
    8 out-ptr !
 ;
+: spi-start  ( -- )  ;
 
 : edi-wait-b  ( -- b )
    4 #in-bytes !

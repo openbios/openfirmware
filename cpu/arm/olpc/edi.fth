@@ -1,7 +1,7 @@
 \ See license at end of file
 purpose: Access and FLASH programming for KB3731 EC via its "EDI" interface
 
-\ The following code depends on externally-privided low-level SPI bus
+\ The following code depends on externally-provided low-level SPI bus
 \ access primitives that are defined in "bbedi.fth" for the "native"
 \ case (EC and CPU on the same machine).  They can also be implemented
 \ for tethered programming from a different machine like an XO-1.5.
