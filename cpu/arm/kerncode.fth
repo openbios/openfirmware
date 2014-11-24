@@ -822,17 +822,17 @@ code d>=  ( d1 d2 -- f )
 c;
 code d>  ( d1 d2 -- f )
    ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
-   subs      r2,r2,r0
-   sbcs      r1,r1,tos
-   movle     tos,#0
-   mvngt     tos,#0
+   subs      r2,r0,r2
+   sbcs      r1,tos,r1
+   movge     tos,#0
+   mvnlt     tos,#0
 c;
 code d<=  ( d1 d2 -- f )
    ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
-   subs      r2,r2,r0
-   sbcs      tos,r1,tos
-   movgt     tos,#0
-   mvnle     tos,#0
+   subs      r2,r0,r2
+   sbcs      r1,tos,r1
+   movlt     tos,#0
+   mvnge     tos,#0
 c;
 code du<  ( d1 d2 -- f )
    ldmia     sp!,{r0,r1,r2}     \ tos r0       r1 r2
