@@ -10,13 +10,15 @@ hex
 
 h# 0013.0103 value ax-gpio		\ GPIO toggle values
 
-\ This may need to optimized at some point
-: ax88772?  ( -- flag )
+0 value ax88772?                        \ is an AX88772 based device
+
+: is-ax88772?  ( -- flag )
    pid vid wljoin   case                          ( vid.pid )
+      h# 0b95.772b  of  true exit  endof  \ ZHN ASIX AX88772BLF
       h# 13b1.0018  of  true exit  endof  \ ID for Linksys USB200M rev 2
       h# 2001.3c05  of  true exit  endof  \ ID for D-Link DUB-E100 rev B
       h# 07d1.3c05  of  true exit  endof  \ Alternate ID for D-Link DUB-E100 rev B
-      h# 0b95.7720  of  true exit  endof  \ Another 88772 device, possibly ST Labs
+      h# 0b95.7720  of  true exit  endof  \ ST Labs, ZoWii Zoltan Tech ZU-80
       h# 0b95.772a  of  true exit  endof  \ Chip on VIA demo board
       h# 05ac.1402  of  true exit  endof  \ Apple
    endcase
@@ -231,6 +233,7 @@ h# 88 value def-rx-ctl   \ SO (MAC ON) and AB (accept broadcast)
    else
       use-multicast?  if  2 or  then
    then
+   ax88772?  if  h# 100 or  then  \ RH1M: rx header format type 1
    to def-rx-ctl
    def-rx-ctl rx-ctl!
 ;
@@ -312,6 +315,7 @@ create bitrev3  0 c,  4 c,  2 c,  6 c,  1 c,  5 c,  3 c,  7 c,
 ;
 
 : init-ax  ( -- )
+   is-ax88772? to ax88772?
    ['] ax-init-nic  to init-nic
    ['] ax-link-up?  to link-up?
    ['] ax-start-mac to start-mac
