@@ -75,6 +75,7 @@ $new-file
 \   " fw.img"   " firmware"  $add-dropin
    " resetvec.img"  " reset" $add-dropin
 
+   " ${BP}/cpu/arm/mmp3/gic.fth" " mmp3-gic-" $add-dropin
 \   " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"      $add-deflated-dropin
    " ${BP}/dev/usb2/device/hub/build/hub.fc"     " usb,class9"      $add-deflated-dropin
    " ${BP}/dev/usb2/device/generic/build/generic.fc"  " usbdevice"  $add-deflated-dropin

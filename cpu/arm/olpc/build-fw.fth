@@ -254,6 +254,7 @@ fload ${BP}/dev/olpc/kb3700/spicmd.fth           \ EC SPI Command Protocol
 : wlan-reset  ( -- )  wlan-reset-gpio# gpio-clr  d# 20 ms  wlan-reset-gpio# gpio-set  ;
 
 fload ${BP}/ofw/core/fdt.fth
+[ifdef] mmp3  autoload: mmp3-gic-  defines: mmp3-gic  [then]
 fload ${BP}/cpu/arm/linux.fth
 
 \ Create the alias unless it already exists
@@ -617,6 +618,11 @@ fload ${BP}/cpu/arm/mmp2/wakeups.fth
 
 [ifdef] mmp3
 fload ${BP}/cpu/arm/mmp3/dramrecal.fth
+: linux-hook-smp ( -- )
+   [ ' linux-hook behavior compile, ]  \ Chain to old behavior
+   enable-smp
+;
+' linux-hook-smp to linux-hook
 [then]
 [ifdef] mmp2
 fload ${BP}/cpu/arm/mmp2/dramrecal.fth
@@ -889,7 +895,7 @@ dev /client-services  patch noop visible enter  dend
 
    " probe-" do-drop-in
 
-   [ifdef] unused-cores-off  unused-cores-off  [then]
+   [ifdef] unused-core-off  unused-core-off  [then]
    show-child
 
    update-ec-flash?  if

@@ -29,6 +29,16 @@ new-device
 
 finish-device
 
+[ifdef] olpc-cl4
+new-device
+   " cpu" device-name
+   " cpu" device-type
+   1 " reg" integer-property
+   : open true ;
+   : close ;
+finish-device
+[then]
+
 end-package
 
 stand-init: CPU nodes

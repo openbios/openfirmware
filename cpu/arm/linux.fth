@@ -107,6 +107,7 @@ h# 10000 constant /fdt-max
 \      args-buf cscount set-parameters          ( )
 \   then
    disable-interrupts
+[ifdef] mmp3-gic  mmp3-gic  [then]
 
    linux-base linux-base  (init-program)    \ Starting address, SP
    0 to r0

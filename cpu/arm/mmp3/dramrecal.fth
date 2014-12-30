@@ -125,7 +125,12 @@ purpose: SoC-specific low-level power management factors
 : idle-cfg-clr  ( mask -- )  h# 18 pmua-clr  ;
 : idle-cfg-set  ( mask -- )  h# 18 pmua-set  ;
 
-: cc4-set  ( mask -- )  h# 248 pmua-set  ;
+: cc2-set  ( mask -- )  h# 150 pmua-set  ;  \ PMUA_CC2_PJ
+: cc2-clr  ( mask -- )  h# 150 pmua-clr  ;
+
+: cc3-set  ( mask -- )  h# 188 pmua-set  ;  \ PMUA_CC3_PJ
+
+: cc4-set  ( mask -- )  h# 248 pmua-set  ;  \ PMUA_PJ_C0_CC4
 : cc4-clr  ( mask -- )  h# 248 pmua-clr  ;
 
 \ PXA2128_Registers_Manual_revF.pdf says to always write 0 to bits [14:0]
@@ -281,11 +286,69 @@ c;
 
 alias do-wfi wfi
 
-: unused-cores-off  ( -- )
+\ a reset handler for second core
+code spin
+   mrs  r0, cpsr
+   bic  r0, r0, #0x1f
+   orr  r0, r0, #0xd3
+   msr  cpsr,r0
+
+   mov  r0, #0                          \ set up for MCR
+   mcr  p15, 0, r0, cr8, cr7, 0         \ invalidate TLBs
+   mcr  p15, 0, r0, cr7, cr5, 0         \ invalidate icache
+   mcr  p15, 0, r0, cr7, cr5, 6         \ invalidate BP array
+   mcr  p15, 0, r0, cr7, cr10, 4        \ DSB
+   mcr  p15, 0, r0, cr7, cr5, 4         \ ISB
+
+   mrc  p15, 0, r0, cr1, cr0, 0
+   bic  r0, r0, #0x00002000             \ clear bits 13 (--V-)
+   bic  r0, r0, #0x00000007             \ clear bits 2:0 (-CAM)
+   orr  r0, r0, #0x00000002             \ set bit 1 (--A-) Align
+   orr  r0, r0, #0x00000800             \ set bit 11 (Z---) BTB
+   bic  r0, r0, #0x00001000             \ set bit 12 (I) I-cache
+   mcr  p15, 0, r0, cr1, cr0, 0
+
+   set  r1,#0xd4019018                  \ physical address of gpio set register
+   mov  r0,#0x400                       \ mask for port bit, storage led
+   str  r0,[r1]
+
+   set  r1,#0xd4282c24                  \ address of __sw_branch register
+   mov  r0,#0x0
+   str  r0,[r1]                         \ clear register
+   begin
+      mov  r3, #0x4000                  \ delay loop constant
+      begin
+         subs  r3, r3, #1               \ delay loop
+      = until
+      ldr  r0, [r1]                     \ read __sw_branch register
+      cmp  r0, #0x0                     \ contains an address?
+      movne  pc, r0                     \ yes, then branch
+   again                                \ infinite loop
+c;
+
+: enable-smp  ( -- )
+   ['] spin >physical 0  hw-install-handler  0 d# 4096 sync-cache
+
+   h# 8 cc3-set  \ moltres timerclk domain software reset, release
+
+   \ moltres peripheral space configuration register
+   h# e000.0000 h# 94 ciu!  \ set periphbase_addr
+   h# ffff.e001 h# 9c ciu!  \ set periphbase_size, set periphbase_enable
+
+   \ enable all clocks
+   h# ffff.ffff h# 0024 mpmu!  \ MPMU_CGR_SP
+   h# ffff.ffff h# 1024 mpmu!  \ MPMU_CGR_PJ
+   h# 3.ffff h# dc pmua!       \ PMUA_GLB_CLK_CTRL
+
+   h# 2000.0000 h# 200 pmua!  \ PMUA_PJ_IDLE_CFG2, stay powered on WFI
+   0 h# d428.2c24 l!  \ clear __sw_branch register
+   h# 0200.0000 cc2-clr d# 1 ms h# 0200.0000 cc2-set  \ reset mpcore2
+;
+
+: unused-core-off  ( -- )  \ mmcore
    h# e320f003 0 instruction!  \ Put WFI instruction in reset vector
-   h# 2000.0062 h# 200 pmua!   \ PMUA_PJ_IDLE_CFG2 - mpcore2 deep sleep on WFI
-   h# 2000.0062 h# 204 pmua!   \ PMUA_PJ_IDLE_CFG3 - mmcore deep sleep on WFI
-   h# 150 pmua@ h# 0600.0000 or h# 150 pmua!  \ PMUA_CC2_PJ - unreset mpcore2 & mmcore
+   h# 2000.0062 h# 204 pmua!   \ PMUA_PJ_IDLE_CFG3, power down on WFI
+   h# 0400.0000 cc2-set        \ release reset
 ;
 
 \ LICENSE_BEGIN

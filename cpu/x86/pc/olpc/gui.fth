@@ -498,15 +498,16 @@ d# 1200 d# 26 - value bar-x-last
    " bigx" $show-centered
 ;
 
-: linux-hook-unfreeze
+defer show-going-hook  ' noop to show-going-hook
+
+: linux-hook-gui
    [ ' linux-hook behavior compile, ]
+   show-going-hook
 ;
-: linux-hook-freeze
-   [ ' linux-hook behavior compile, ]
-   show-going
-;
-: freeze    ( -- )  ['] linux-hook-freeze   to linux-hook  ;
-: unfreeze  ( -- )  ['] linux-hook-unfreeze to linux-hook  ;
+' linux-hook-gui to linux-hook
+
+: freeze    ( -- )  ['] show-going  to show-going-hook  ;
+: unfreeze  ( -- )  ['] noop  to show-going-hook  ;
 
 
 \ LICENSE_BEGIN
