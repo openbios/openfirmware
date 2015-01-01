@@ -52,7 +52,7 @@ dend
 : irqdef ( irq# -- )
   0 encode-int
   rot encode-int encode+
-  1 encode-int encode+
+  4 encode-int encode+
   " interrupts" property
 ;
 
@@ -78,11 +78,21 @@ dev /sspa  3 irqdef  dend
 \ dev /camera  1 irqdef  dend
 dev /ap-sp  28 irqdef  dend
 dev /usb  2c irqdef  dend
-dev /ec-spi 14 irqdef  dend
+dev /ec-spi
+  0 encode-int
+  h# 14 encode-int encode+
+  h# 4 encode-int encode+
+  " interrupts" property
+dend
 \ dev /sd/sdhci@d4217000  0 irqdef  dend
 dev /sd/sdhci@d4280000  27 irqdef  dend
 dev /sd/sdhci@d4281000  35 irqdef  dend
-dev /sd/sdhci@d4280800  34 irqdef  dend
+dev /sd/sdhci@d4280800
+  0 encode-int
+  h# 34 encode-int encode+
+  h# 4 encode-int encode+
+  " interrupts" property
+dend
 \ dev /gpu  0 2 irqdef2  dend
 dev /display  29 irqdef  dend
 dev /vmeta  1a irqdef  dend
