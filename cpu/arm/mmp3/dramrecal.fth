@@ -329,14 +329,12 @@ c;
 : enable-smp  ( -- )
    ['] spin >physical 0  hw-install-handler  0 d# 4096 sync-cache
 
-   h# 8 cc3-set  \ moltres timerclk domain software reset, release
-
-   \ moltres peripheral space configuration register
+   \ enable mapping of PMR peripherals, so that PGU and GIC can be used,
+   \ using the moltres peripheral space configuration register
    h# e000.0000 h# 94 ciu!  \ set periphbase_addr
    h# ffff.e001 h# 9c ciu!  \ set periphbase_size, set periphbase_enable
 
    \ enable all clocks
-   h# ffff.ffff h# 0024 mpmu!  \ MPMU_CGR_SP
    h# ffff.ffff h# 1024 mpmu!  \ MPMU_CGR_PJ
    h# 3.ffff h# dc pmua!       \ PMUA_GLB_CLK_CTRL
 
