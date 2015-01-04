@@ -10,7 +10,7 @@ dend
 \ list of unique colours in frame buffer
 0 value ct              \ address of table
 d# 62 value /ct         \ entries in table (and alphabet utilisation, @-~)
-			\ d# 62 is insufficient for menu
+                        \ d# 62 is insufficient for menu
 h# 0 value nct          \ next entry to use in table
 
 \ borrowed from screen-ih

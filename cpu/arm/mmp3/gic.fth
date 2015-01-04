@@ -15,16 +15,17 @@ purpose: Generic Interrupt Controller node for Marvell MMP3
 
   : make-gmux-node  ( statreg maskreg irq# #irqs )
      new-device
-     " interrupt-controller" name             ( maskreg statreg irq# #irqs )
-     " mrvl,intc-nr-irqs" integer-property    ( maskreg statreg irq# )
+     " interrupt-controller" name               ( maskreg statreg irq# #irqs )
+     " mrvl,intc-nr-irqs" integer-property      ( maskreg statreg irq# )
      0 encode-int  rot encode-int encode+
      1 encode-int encode+
-     " interrupts" property                 ( maskreg statreg )
+     " interrupts" property                     ( maskreg statreg )
      >r  4 encode-reg  r> 4 encode-reg encode+  " reg" property  ( )
      " mrvl,mmp3-mux-intc" +compatible
      0 0 " interrupt-controller" property
      1 " #interrupt-cells" integer-property
-     " mux status" encode-string  " mux mask" encode-string  encode+ " reg-names" property
+     " mux status" encode-string
+     " mux mask" encode-string  encode+ " reg-names" property
      finish-device
   ;
 
@@ -67,77 +68,77 @@ dend
   " interrupts" property
 ;
 
-\ modify all irqs to use 3 cells instead of 1
-dev /timer  d irqdef  dend
-\ dev /wakeup-rtc  1 0 irqdef2  dend
-\ dev /thermal  b irqdef  dend
-\ dev /audio  2 irqdef  dend
-dev /sspa  3 irqdef  dend
-\ dev /adma@c0ffd800  12 13 irqdef2  dend
-\ dev /adma@c0ffd900  14 15 irqdef2  dend
-\ dev /camera  1 irqdef  dend
-dev /ap-sp  28 irqdef  dend
-dev /usb  2c irqdef  dend
-dev /ec-spi
-  0 encode-int
-  h# 14 encode-int encode+
-  h# 4 encode-int encode+
-  " interrupts" property
-dend
-\ dev /sd/sdhci@d4217000  0 irqdef  dend
-dev /sd/sdhci@d4280000  27 irqdef  dend
-dev /sd/sdhci@d4281000  35 irqdef  dend
-dev /sd/sdhci@d4280800
-  0 encode-int
-  h# 34 encode-int encode+
-  h# 4 encode-int encode+
-  " interrupts" property
-dend
-\ dev /gpu  0 2 irqdef2  dend
-dev /display  29 irqdef  dend
-dev /vmeta  1a irqdef  dend
-dev /flash  0 irqdef  dend
-dev /uart@d4016000  2e irqdef  dend
-dev /uart@d4030000  1b irqdef  dend
-dev /uart@d4017000  1c irqdef  dend
-dev /uart@d4018000  18 irqdef  dend
-dev /i2c@d4034000  4 irqdef  dend
-dev /i2c@d4033000  2 irqdef  dend
-dev /i2c@d4031000  0 irqdef  dend
-dev /i2c@d4011000  7 irqdef  dend
-dev /dma  30 irqdef  dend
-dev /gpio  31 irqdef  dend
+\ modify irqs to use 3 cells instead of 1
+dev /timer              h# 0d irqdef  dend
+\ dev /wakeup-rtc         h# 01 h# 00 irqdef2  dend
+\ dev /thermal            h# 0b irqdef  dend
+\ dev /audio              h# 02 irqdef  dend
+dev /sspa               h# 03 irqdef  dend
+\ dev /adma@c0ffd800      h# 12 h# 13 irqdef2  dend
+\ dev /adma@c0ffd900      h# 14 h# 15 irqdef2  dend
+\ dev /camera             h# 01 irqdef  dend
+dev /ap-sp              h# 28 irqdef  dend
+dev /usb                h# 2c irqdef  dend
+dev /ec-spi             h# 14 irqdef  dend
+\ dev /sd/sdhci@d4217000  h# 00 irqdef  dend
+dev /sd/sdhci@d4280000  h# 27 irqdef  dend
+dev /sd/sdhci@d4281000  h# 35 irqdef  dend
+dev /sd/sdhci@d4280800  h# 34 irqdef  dend
+\ dev /gpu                h# 00 h# 02 irqdef2  dend
+dev /display            h# 29 irqdef  dend
+dev /vmeta              h# 1a irqdef  dend
+dev /flash              h# 00 irqdef  dend
+dev /uart@d4016000      h# 2e irqdef  dend
+dev /uart@d4030000      h# 1b irqdef  dend
+dev /uart@d4017000      h# 1c irqdef  dend
+dev /uart@d4018000      h# 18 irqdef  dend
+dev /i2c@d4034000       h# 04 irqdef  dend
+dev /i2c@d4033000       h# 02 irqdef  dend
+dev /i2c@d4031000       h# 00 irqdef  dend
+dev /i2c@d4011000       h# 07 irqdef  dend
+dev /dma                h# 30 irqdef  dend
+dev /gpio               h# 31 irqdef  dend
 
 \ modify all mux irq users to not point to ICU node
 dev /sd/sdhci@d4217000
-  " /interrupt-controller@e0001000/interrupt-controller@184" encode-phandle " interrupt-parent" property
+  " /interrupt-controller@e0001000/interrupt-controller@184" encode-phandle
+  " interrupt-parent" property
 dend
 dev /camera@d420a000
-  " /interrupt-controller@e0001000/interrupt-controller@1cc" encode-phandle " interrupt-parent" property
+  " /interrupt-controller@e0001000/interrupt-controller@1cc" encode-phandle
+  " interrupt-parent" property
 dend
 dev /adma@c0ffd800
-  " /interrupt-controller@e0001000/interrupt-controller@128" encode-phandle " interrupt-parent" property
+  " /interrupt-controller@e0001000/interrupt-controller@128" encode-phandle
+  " interrupt-parent" property
 dend
 dev /adma@c0ffd900
-  " /interrupt-controller@e0001000/interrupt-controller@128" encode-phandle " interrupt-parent" property
+  " /interrupt-controller@e0001000/interrupt-controller@128" encode-phandle
+  " interrupt-parent" property
 dend
 dev /thermal
-  " /interrupt-controller@e0001000/interrupt-controller@188" encode-phandle " interrupt-parent" property
+  " /interrupt-controller@e0001000/interrupt-controller@188" encode-phandle
+  " interrupt-parent" property
 dend
 dev /wakeup-rtc
-  " /interrupt-controller@e0001000/interrupt-controller@154" encode-phandle " interrupt-parent" property
+  " /interrupt-controller@e0001000/interrupt-controller@154" encode-phandle
+  " interrupt-parent" property
 dend
 dev /gpu
-  " /interrupt-controller@e0001000/interrupt-controller@1c0" encode-phandle " interrupt-parent" property
+  " /interrupt-controller@e0001000/interrupt-controller@1c0" encode-phandle
+  " interrupt-parent" property
 dend
 dev /i2c@d4034000
-  " /interrupt-controller@e0001000/interrupt-controller@158" encode-phandle " interrupt-parent" property
+  " /interrupt-controller@e0001000/interrupt-controller@158" encode-phandle
+  " interrupt-parent" property
 dend
 dev /i2c@d4033000
-  " /interrupt-controller@e0001000/interrupt-controller@158" encode-phandle " interrupt-parent" property
+  " /interrupt-controller@e0001000/interrupt-controller@158" encode-phandle
+  " interrupt-parent" property
 dend
 dev /i2c@d4031000
-  " /interrupt-controller@e0001000/interrupt-controller@158" encode-phandle " interrupt-parent" property
+  " /interrupt-controller@e0001000/interrupt-controller@158" encode-phandle
+  " interrupt-parent" property
 dend
 
 : mmp3-gic  ." mmp3-gic" cr  ;  \ 92ms
