@@ -288,30 +288,6 @@ alias do-wfi wfi
 
 \ a reset handler for second core
 code spin
-   mrs  r0, cpsr
-   bic  r0, r0, #0x1f
-   orr  r0, r0, #0xd3
-   msr  cpsr,r0
-
-   mov  r0, #0                          \ set up for MCR
-   mcr  p15, 0, r0, cr8, cr7, 0         \ invalidate TLBs
-   mcr  p15, 0, r0, cr7, cr5, 0         \ invalidate icache
-   mcr  p15, 0, r0, cr7, cr5, 6         \ invalidate BP array
-   mcr  p15, 0, r0, cr7, cr10, 4        \ DSB
-   mcr  p15, 0, r0, cr7, cr5, 4         \ ISB
-
-   mrc  p15, 0, r0, cr1, cr0, 0
-   bic  r0, r0, #0x00002000             \ clear bits 13 (--V-)
-   bic  r0, r0, #0x00000007             \ clear bits 2:0 (-CAM)
-   orr  r0, r0, #0x00000002             \ set bit 1 (--A-) Align
-   orr  r0, r0, #0x00000800             \ set bit 11 (Z---) BTB
-   bic  r0, r0, #0x00001000             \ set bit 12 (I) I-cache
-   mcr  p15, 0, r0, cr1, cr0, 0
-
-   set  r1,#0xd4019018                  \ physical address of gpio set register
-   mov  r0,#0x400                       \ mask for port bit, storage led
-   str  r0,[r1]
-
    set  r1,#0xd4282c24                  \ address of __sw_branch register
    mov  r0,#0x0
    str  r0,[r1]                         \ clear register
@@ -334,11 +310,6 @@ c;
    h# e000.0000 h# 94 ciu!  \ set periphbase_addr
    h# ffff.e001 h# 9c ciu!  \ set periphbase_size, set periphbase_enable
 
-   \ enable all clocks
-   h# ffff.ffff h# 1024 mpmu!  \ MPMU_CGR_PJ
-   h# 3.ffff h# dc pmua!       \ PMUA_GLB_CLK_CTRL
-
-   h# 2000.0000 h# 200 pmua!  \ PMUA_PJ_IDLE_CFG2, stay powered on WFI
    0 h# d428.2c24 l!  \ clear __sw_branch register
    h# 0200.0000 cc2-clr d# 1 ms h# 0200.0000 cc2-set  \ reset mpcore2
 ;
