@@ -70,21 +70,13 @@ dend
 
 \ modify irqs to use 3 cells instead of 1
 dev /timer              h# 0d irqdef  dend
-\ dev /wakeup-rtc         h# 01 h# 00 irqdef2  dend
-\ dev /thermal            h# 0b irqdef  dend
-\ dev /audio              h# 02 irqdef  dend
 dev /sspa               h# 03 irqdef  dend
-\ dev /adma@c0ffd800      h# 12 h# 13 irqdef2  dend
-\ dev /adma@c0ffd900      h# 14 h# 15 irqdef2  dend
-\ dev /camera             h# 01 irqdef  dend
 dev /ap-sp              h# 28 irqdef  dend
 dev /usb                h# 2c irqdef  dend
 dev /ec-spi             h# 14 irqdef  dend
-\ dev /sd/sdhci@d4217000  h# 00 irqdef  dend
 dev /sd/sdhci@d4280000  h# 27 irqdef  dend
 dev /sd/sdhci@d4281000  h# 35 irqdef  dend
 dev /sd/sdhci@d4280800  h# 34 irqdef  dend
-\ dev /gpu                h# 00 h# 02 irqdef2  dend
 dev /display            h# 29 irqdef  dend
 dev /vmeta              h# 1a irqdef  dend
 dev /flash              h# 00 irqdef  dend
@@ -92,9 +84,6 @@ dev /uart@d4016000      h# 2e irqdef  dend
 dev /uart@d4030000      h# 1b irqdef  dend
 dev /uart@d4017000      h# 1c irqdef  dend
 dev /uart@d4018000      h# 18 irqdef  dend
-dev /i2c@d4034000       h# 04 irqdef  dend
-dev /i2c@d4033000       h# 02 irqdef  dend
-dev /i2c@d4031000       h# 00 irqdef  dend
 dev /i2c@d4011000       h# 07 irqdef  dend
 dev /dma                h# 30 irqdef  dend
 dev /gpio               h# 31 irqdef  dend
