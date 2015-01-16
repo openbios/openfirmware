@@ -130,4 +130,4 @@ dev /i2c@d4031000
   " interrupt-parent" property
 dend
 
-: mmp3-gic  ." mmp3-gic" cr  ;  \ 92ms
+: mmp3-gic  ;  \ 92ms
