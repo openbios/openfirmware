@@ -244,10 +244,18 @@ defer dcon-unjam
    scanint-set
    false
 ;
+h# f value default-bright
 : dcon-enable  ( -- )
    dcon-setup  if  exit  then
    true set-color
-   h# f bright!
+   default-bright bright!
+;
+: ?bright
+   " BL" find-tag  if
+      ?-null  push-hex  $number  if  0  then  pop-base
+      to default-bright
+   then
+   default-bright bright!
 ;
 
 0 value dcon-found?
@@ -271,6 +279,7 @@ defer dcon-unjam
 \ Unnecessary because CForth has already done it
 \   dcon-load  dcon-enable  ( maybe-set-cmos )
    \ dcon-enable leaves mode set to 69 - 40:antialias, 20:swizzle, 8:backlight on, 1:passthru off
+   ?bright
    scanint-set
    true
 ;
