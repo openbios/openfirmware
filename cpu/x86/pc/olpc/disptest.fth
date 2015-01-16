@@ -111,6 +111,21 @@ d# 5,000 constant burnin-time		\ 5 seconds
       loop
    loop
 ;
+0 [if]
+: bvsr  ( -- )
+   set-stripes  half-bias  black-screen   ( )
+   d# 256 0  do                ( )
+      d# 256 0  do             ( )
+         i 0 j rgb>565         ( color )
+         hstripe i * xbias +   ( color x )
+         vstripe j * ybias +   ( color x y )
+         hstripe vstripe       ( color x y )
+         fill-rect
+      loop
+   loop
+;
+[then]
+
 : hgradient  ( -- )
    set-stripes  black-screen   ( )
    d# 256 0  do                ( )
