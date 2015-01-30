@@ -1320,7 +1320,13 @@ alias ?ec-update noop immediate
 
    load-crypto  if  " Crypto load failed" .security-failure   then       ( )
 
-   alternate?  if  " \boot-alt"  else  " \boot"  then  pn-buf place
+   alternate?  if
+      [ifdef] mmp3  true to no-mmp3-gic?  [then]
+      " \boot-alt"
+   else
+      " \boot"
+   then
+   pn-buf place
 
    key?  if
       pending-char c@  h# 1b =  if

@@ -254,7 +254,10 @@ fload ${BP}/dev/olpc/kb3700/spicmd.fth           \ EC SPI Command Protocol
 : wlan-reset  ( -- )  wlan-reset-gpio# gpio-clr  d# 20 ms  wlan-reset-gpio# gpio-set  ;
 
 fload ${BP}/ofw/core/fdt.fth
-[ifdef] mmp3  autoload: mmp3-gic-  defines: mmp3-gic  [then]
+[ifdef] mmp3
+   autoload: mmp3-gic-  defines: mmp3-gic
+   0 value no-mmp3-gic?
+[then]
 fload ${BP}/cpu/arm/linux.fth
 
 \ Create the alias unless it already exists
