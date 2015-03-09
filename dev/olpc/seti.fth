@@ -288,7 +288,7 @@ hex
    then
 ;
 
-\ SIV121C, not supported on XO-1.5,
+\ SIV121C, SIV121D, not supported on XO-1.5,
 \ because sensor maximum clock 27 MHz, and host provides 48 MHz.
 
 [ifndef] olpc-xo-1.5
@@ -651,6 +651,37 @@ hex
       cb 12 ov!  \ OUTFMT, RGB565 setting
    then
 ;
+
+: siv121d-config  ( ycrcb? -- )
+   >r        ( r: ucrcb? )
+
+   01 00 ov! \ BLK_SEL - block address bank selector - Timing Control Block
+   02 03 ov! \ CNTR_A - Control global reset and device enable -
+             \ global reset, idle mode with clock disabled.
+
+   00 00 ov! \ BLK_SEL - block address bank selector - PMU block
+   04 03 ov! \ CHIP_CNTR - Chip control -
+             \ enable output pads, disable software stand-by power-down mode.
+
+   \ AE
+   02 00 ov! \ BLK_SEL - block address bank selector - AE (automatic exposure)
+   04 11 ov! \ MAX_SHUTSTEP
+   \ minimum exposure time when automatic exposure in use, reduce to increase frame rate at low light levels at the expense of image brightness
+
+   \ IDP
+   04 00 ov! \ BLK_SEL - block address bank selector - IDP
+   1d 11 ov! \ SIGCNT - invert PCLK polarity
+   ( r: ycrcb? )  r>  if    ( )
+      25 12 ov! \ OUTFMT, YUV
+   else
+      83 12 ov! \ OUTFMT, RGB565 setting
+   then
+
+   \ Sensor On
+   01 00 ov! \ BLK_SEL - block address bank selector - Control Block
+   01 03 ov! \ CNTR_A - Control global reset and device enable -
+             \ no reset, dynamic mode with clock enabled
+;
 [then]
 
 : (set-mirrored)  ( mirrored? -- )
@@ -681,6 +712,16 @@ hex
    then                       ( regval )
 
 [ifndef] olpc-xo-1.5
+   dup h# de = if
+      " SETi,SIV121D" " sensor" string-property
+[ifdef] set-sensor-properties
+      " seti,siv121d" camera-smb-slave set-sensor-properties
+[then]
+      ['] siv121c-set-mirrored to set-mirrored
+      ['] siv121d-config to camera-config
+      drop true exit
+   then
+
    dup h# 95 = if
       " SETi,SIV121C" " sensor" string-property
 [ifdef] set-sensor-properties
