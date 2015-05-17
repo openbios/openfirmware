@@ -652,6 +652,48 @@ hex
    then
 ;
 
+0 [if]
+\ unused, minimal register changes to get siv121c to work after power up
+: siv121c-config  ( ycrcb? -- )
+   >r               ( r: ycrcb? )
+
+   01 00 ov! \ BLK_SEL - block address bank selector - Timing Control Block
+   02 03 ov! \ CNTR_A - Control global reset and device enable -
+             \ global reset, idle mode with clock disabled.
+
+   00 00 ov! \ BLK_SEL - block address bank selector - PMU block
+   04 03 ov! \ CHIP_CNTR - Chip control -
+             \ enable output pads, disable software stand-by power-down mode.
+
+   \ TCB
+   01 00 ov! \ BLK_SEL - block address bank selector - Timing Control Block
+   c1 07 ov! \  recommend, BLC_CAL
+   1e 10 ov! \  recommend, ramp_ref
+   81 11 ov! \  recommend, ramp_sig_start level
+   84 17 ov! \  recommend, abs_cntr1
+
+   \  AE
+   02 00 ov!
+   04 11 ov! \ MAX_SHUTSTEP
+   \ minimum exposure time when automatic exposure in use, reduce to increase frame rate at low light levels at the expense of image brightness
+
+   \  IDP
+   04 00 ov!
+   ( r: ycrcb? )  r>  if    ( )
+      25 12 ov! \  OUTFMT, set for yuv422 mode
+   else
+      83 12 ov!  \ OUTFMT, RGB565 setting
+   then
+   7f 10 ov! \ IPFUN
+
+   \ Sensor On
+   01 00 ov! \ BLK_SEL - block address bank selector - Control Block
+   01 03 ov! \ CNTR_A - Control global reset and device enable -
+             \ no reset, dynamic mode with clock enabled
+
+;
+[then]
+
 : siv121d-config  ( ycrcb? -- )
    >r        ( r: ucrcb? )
 
