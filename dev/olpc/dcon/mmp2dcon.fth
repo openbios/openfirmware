@@ -237,9 +237,7 @@ defer dcon-unjam
    h# 0101  h# 41 dcon!
    h# 0101  h# 42 dcon!
 
-[ifdef] mmp3
    h# 1830  h# 4c dcon!   \ low drive strength for DETTL clock and data
-[then]
    h# 12 mode!
    scanint-set
    false
