@@ -368,11 +368,11 @@ false value 720p-native?
    then
 ;
 : get-hdmi-edid  ( -- adr len )
-   " /hdmi-ddc" open-dev  dup  if    ( ih )
+   " /hdmi-ddc" open-dev  ?dup  if   ( ih )
       " edid$" 2 pick $call-method   ( ih adr len )
       rot close-dev                  ( adr len )
-   else
-      " "
+   else                              ( )
+      " "                            ( adr len )
    then
 ;
 : choose-hdmi-resolution  ( -- )
