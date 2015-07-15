@@ -22,49 +22,86 @@ purpose: Inject additional keys into manufacturing data
 ;
 
 \ !!! Change the date for each different deployment
-: keyject-expired?  ( -- flag )  " 20090401T000000Z" expired?  ;
+: keyject-expired?  ( -- flag )  " 20131108T000000Z" expired?  ;
 
 \ !!! Change the key list for each different deployment
 : new-key-list$  ( -- )  " o1 s1 d1 w1 a1"  ;
 
-\ True if the all the requested tags are already present.
+\ True if the requested tags are all present and all correct.
 \ This prevents endless looping.
-: already-injected?  ( -- flag )
-   new-key-list$  begin  dup  while  ( $ )
-      bl left-parse-string           ( $' name$ )
-      find-tag  if                   ( $ value$ )
-         2drop                       ( $ )
-      else                           ( $ )
-         2drop  false exit
-      then                           ( $ )
-   repeat                            ( $ )
-   2drop true
+0 value already-injected
+
+: key-differs  ( name$ -- )
+   ." Key " type ."  did differ." cr
+   false to already-injected
 ;
 
-: inject-key  ( keyname$ -- )
-   2dup find-drop-in  if             ( keyname$ value$ )
-      2over ram-find-tag  if         ( keyname$ value$ oldvalue$ )
-         2 pick <>  if               ( keyname$ value$ oldvalue$ )
-            3drop                    ( keyname$ )
-            ." Warning: inconsistent old tag length for " type cr   ( )
-            exit
-         then                        ( keyname$ value$ oldvalue-adr )
-         >r 2tuck  r> swap  move     ( valu$ keyname$ )
-         green-letters
-         ." Replaced " type cr       ( value$ )
-         cancel
-      else                           ( keyname$ value$ )
-         2swap                       ( value$ keyname$ )
-         2over 2over                 ( value$ keyname$ value$ keyname$ )
-         ($add-tag)                  ( value$ keyname$ )
-         green-letters
-         ." Added " type cr          ( value$ )
-         cancel
-      then                           ( value$ )
-      free-mem                       ( )
-   else                              ( keyname$ )
-      ." Warning: Can't find a dropin module for " type cr  ( )
-   then                              ( )
+: key-missing  ( name$ -- )
+   ." Key " type ."  was missing." cr
+   false to already-injected
+;
+
+: key-unknown  ( name$ -- )
+   ." Key " type ."  is unknown, no dropin." cr
+   \ no action possible, needs keyjector to be recreated.
+;
+
+: key-ok  ( name$ -- )
+   ." Key " type ."  is okay." cr
+   \ no action desired.
+;
+
+: test-key  ( name$ -- )
+   2dup find-tag  if                    ( name$ value$ )
+      2over find-drop-in  if            ( name$ value$ existing$ )
+         $=  0=  if                     ( name$ )
+            2dup key-differs            ( name$ )
+         else
+            2dup key-ok
+         then                           ( name$ )
+      else                              ( name$ value$ )
+         2drop 2dup key-unknown         ( name$ )
+      then                              ( name$ )
+      2drop                             ( )
+   else                                 ( name$ )
+      key-missing                       ( )
+   then                                 ( )
+;
+
+: already-injected?  ( -- flag )
+   true to already-injected             ( )
+   new-key-list$  begin  dup  while     ( $ )
+      bl left-parse-string              ( $' name$ )
+      test-key                          ( $ )
+   repeat                               ( $ )
+   2drop                                ( )
+   already-injected                     ( flag )
+;
+
+: inject-key  ( name$ -- )
+   2dup find-drop-in  if                        ( name$ value$ )
+      green-letters                             ( name$ value$ )
+      2over ram-find-tag  if                    ( name$ value$ oldvalue$ )
+         2 pick <>  if                          ( name$ value$ oldvalue-adr )
+            drop                                ( name$ value$ )
+            2over ($delete-tag)                 ( name$ value$ )
+            2over ." Deleted " type cr          ( name$ value$ )
+            2over 2over 2swap ($add-tag)        ( name$ value$ )
+            2swap ." Added " type cr            ( value$ )
+         else                                   ( name$ value$ oldvalue-adr )
+            >r 2tuck  r> swap  move             ( value$ name$ )
+            ." Replaced " type cr               ( value$ )
+         then                                   ( value$ )
+      else                                      ( name$ value$ )
+         2swap                                  ( value$ name$ )
+         2over 2over ($add-tag)                 ( value$ name$ )
+         ." Added " type cr                     ( value$ )
+      then                                      ( value$ )
+      cancel                                    ( value$ )
+      free-mem                                  ( )
+   else                                         ( name$ )
+      ." Warning: key " type ."  is not in firmware image dropins" cr  ( )
+   then                                         ( )
 ;
 
 : inject-keys  ( -- )
@@ -82,7 +119,7 @@ purpose: Inject additional keys into manufacturing data
    red-letters  ." Not injecting because:   "  type  cr  cancel
    cr
    ." Will update firmware in 20 seconds" cr
-   d# 20,000 ms
+   d# 21 1 do i .d (cr d# 1,000 ms loop
 ;
 
 : do-keyject?  ( -- flag )

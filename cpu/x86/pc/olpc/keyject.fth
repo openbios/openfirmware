@@ -97,7 +97,7 @@ purpose: Inject additional keys into manufacturing data
          2over 2over ($add-tag)                 ( value$ name$ )
          ." Added " type cr                     ( value$ )
       then                                      ( value$ )
-      black-letters                             ( value$ )
+      cancel                                    ( value$ )
       free-mem                                  ( )
    else                                         ( name$ )
       ." Warning: key " type ."  is not in firmware image dropins" cr  ( )
@@ -116,7 +116,7 @@ purpose: Inject additional keys into manufacturing data
 
 : keyject-error  ( msg$ -- )
    cr
-   red-letters  ." Not injecting because:   "  type  cr  black-letters
+   red-letters  ." Not injecting because:   "  type  cr  cancel
    cr
    ." Will update firmware in 20 seconds" cr
    d# 21 1 do i .d (cr d# 1,000 ms loop
@@ -217,7 +217,7 @@ false value new-firmware?
 
 : ?keyject  ( -- )
    visible
-   green-letters  cr ." Security Key Injector" cr cr  black-letters
+   green-letters  cr ." Security Key Injector" cr cr  cancel
    \ Get the new firmware first, so any security checks use the old keys
    get-new-firmware
    do-keyject?  if
