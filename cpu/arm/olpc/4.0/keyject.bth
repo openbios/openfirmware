@@ -1,0 +1,227 @@
+purpose: Construct the Open Firmware module collection
+
+command: &builder &this
+in: ${BP}/cpu/arm/olpc/4.0/build/ec.img
+in: ${BP}/cpu/arm/olpc/4.0/build/nn.hex
+in: ${BP}/cpu/arm/olpc/4.0/build/fw.img
+in: ${BP}/cpu/arm/olpc/4.0/build/resetvec.img
+in: ${BP}/cpu/arm/olpc/4.0/build/mcastnand.bin
+in: sd8686.bin
+in: mv8787.bin
+in: verify.img
+in: ${BP}/dev/usb2/device/hub/build/hub.fc
+in: ${BP}/dev/usb2/device/generic/build/generic.fc
+in: ${BP}/dev/usb2/device/net/build/usbnet.fc
+in: ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc
+in: ${BP}/dev/usb2/device/mouse/build/usbmouse.fc
+in: ${BP}/dev/usb2/device/serial/build/usbserial.fc
+in: ${BP}/dev/usb2/device/storage/build/usbstorage.fc
+in: testicons.bin
+in: ${BP}/clients/emacs/arm/emacs
+in: cforth.img
+build-now
+
+fload ${BP}/cpu/arm/olpc/4.0/fw-version.fth
+
+" macro: FW_VERSION ${FW_PREFIX}${FW_MAJOR}${FW_MINOR}" expand$ eval
+
+fload ${BP}/cpu/arm/olpc/4.0/config.fth
+
+\ Always re-create the builton.fth file when we make a new rom.img
+fload ${BP}/cpu/x86/pc/builton.bth
+fload ${BP}/cpu/arm/olpc/sourceurl.fth
+
+fload ${BP}/forth/lib/crc32.fth
+
+hex
+
+: pad-file  ( location -- )
+   ofd @ fsize
+   2dup u< abort" The ROM image is too large"
+   ?do  h# ff ofd @ fputc  loop
+;
+
+fload ${BP}/cpu/arm/marvell/tim.fth
+
+\ Marvell Non-Trusted Image Module image creation script for XO-4.0 platform.
+
+tim: 00030400 0 OLPC PXA212x
+  flash: SPI'10
+  timh:  TIMH        0 d101f000
+  image: OBMI     2000 d1000000 cforth.img
+  reserved:
+    \ Disable USB download/init by enabling the FFUART for download
+    \ This works around a PHY init erratum for the B0 chip
+    uart: 00004646 1
+    term:
+  end-reserved
+end-tim
+
+h# 20.0000 to reserved-start
+h# 20.0000 to reserved-end
+
+.( --- Saving as )
+" ${FW_VERSION}.rom" expand$  2dup lower  ( adr len )
+2dup type cr  ( adr len )
+$new-file
+   tim$ ofd @ fputs
+
+   dropin-offset  pad-file
+
+\ Loads the set of drivers that is common to different output formats
+
+   " ${BP}/cpu/arm/build/inflate.bin"        " inflate"         $add-dropin
+   " fw.img"   " firmware"  $add-deflated-dropin
+\   " fw.img"   " firmware"  $add-dropin
+   " resetvec.img"  " reset" $add-dropin
+
+   " ${BP}/cpu/arm/mmp3/gic.fth" " mmp3-gic-" $add-dropin
+\   " ${BP}/dev/usb2/hcd/ehci/build/ehci.fc"	" class0c0320"      $add-deflated-dropin
+   " ${BP}/dev/usb2/device/hub/build/hub.fc"     " usb,class9"      $add-deflated-dropin
+   " ${BP}/dev/usb2/device/generic/build/generic.fc"  " usbdevice"  $add-deflated-dropin
+   " ${BP}/dev/usb2/device/net/build/usbnet.fc"       " usbnet"     $add-deflated-dropin
+   " ${BP}/dev/usb2/device/keyboard/build/usbkbd.fc" " usb,class3,1,1" $add-deflated-dropin
+   " ${BP}/dev/usb2/device/mouse/build/usbmouse.fc"  " usb,class3,1,2" $add-deflated-dropin
+   " ${BP}/dev/usb2/device/serial/build/usbserial.fc" " usbserial"  $add-deflated-dropin
+   " ${BP}/dev/usb2/device/storage/build/usbstorage.fc" " usbstorage"   $add-deflated-dropin
+
+   " sd8686_helper.bin"                          " helper_sd.bin" $add-deflated-dropin
+   " sd8686.bin"                                 " sd8686.bin"    $add-deflated-dropin
+   " mv8787.bin"                                 " mv8787.bin"    $add-deflated-dropin
+
+   " builton.fth"                       " probe-"          $add-dropin
+
+0 [if]
+   " ${BP}/clients/emacs/x86/emacs"             " emacs"         $add-deflated-dropin
+   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
+   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
+[then]
+
+   " ${BP}/ofw/inet/telnetd.fth"          " telnetd"             $add-deflated-dropin
+
+\    " ${BP}/cpu/x86/pc/olpc/images/warnings.565"  " warnings.565"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/lightdot.565"  " lightdot.565"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/yellowdot.565" " yellowdot.565" $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/darkdot.565"   " darkdot.565"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/lock.565"      " lock.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/unlock.565"    " unlock.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/plus.565"      " plus.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/minus.565"     " minus.565"     $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/x.565"         " x.565"         $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/sad.565"       " sad.565"       $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/bigdot.565"    " bigdot.565"    $add-deflated-dropin
+
+   " ${BP}/cpu/x86/pc/olpc/images/check.565"    " check.565"     $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/xogray.565"   " xogray.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/ethernet.565" " ethernet.565"  $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/usbkey.565"   " disk.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/wireless.565" " wlan.565"      $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/laptop.565"   " int.565"       $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/sd.565"       " ext.565"       $add-deflated-dropin
+
+   " verify.img"                                " verify"        $add-deflated-dropin
+   " os.public"                                 " ospubkey"      $add-dropin \ Incompressible
+   " fw.public"                                 " fwpubkey"      $add-dropin \ Incompressible
+   " fs.public"                                 " fspubkey"      $add-dropin \ Incompressible
+   " lease.public"                              " leasepubkey"   $add-dropin \ Incompressible
+   " developer.public"                          " develpubkey"   $add-dropin \ Incompressible
+
+   " sourceurl"   " sourceurl"                    $add-dropin
+
+   " ${BP}/cpu/x86/pc/olpc/images/Edge1-8k-EQ-Comp-Amp-Short.wav"  " splash"   $add-deflated-dropin
+
+   \ icons for mfg test gui
+   " testicons/play.565"        " play.565"     $add-deflated-dropin
+   " testicons/quit.565"        " quit.565"     $add-deflated-dropin
+   " testicons/cpu.565"         " cpu.565"      $add-deflated-dropin
+   " testicons/spi.565"         " spi.565"      $add-deflated-dropin
+   " testicons/ram.565"         " ram.565"      $add-deflated-dropin
+   " testicons/sdcard.565"      " sdcard.565"   $add-deflated-dropin
+   " testicons/keyboard.565"    " keyboard.565" $add-deflated-dropin
+   " testicons/display.565"     " display.565"  $add-deflated-dropin
+   " testicons/touchpad.565"    " touchpad.565" $add-deflated-dropin
+   " testicons/audio.565"       " audio.565"    $add-deflated-dropin
+   " testicons/usb.565"         " usb.565"      $add-deflated-dropin
+   " testicons/battery.565"     " battery.565"  $add-deflated-dropin
+   " testicons/camera.565"      " camera.565"   $add-deflated-dropin
+   " testicons/wifi.565"        " wifi.565"     $add-deflated-dropin
+   " testicons/clock.565"       " clock.565"    $add-deflated-dropin
+   " testicons/timer.565"       " timer.565"    $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/bigx.di"      $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/bigcheck.di"  $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/leds.di"      $add-file
+   " ${BP}/cpu/x86/pc/olpc/images/ebook.di"     $add-file
+
+   \ icons for boot menu
+   " ${BP}/cpu/x86/pc/olpc/images/android.565"  " android.565"   $add-deflated-dropin
+   " ${BP}/cpu/x86/pc/olpc/images/xos.565"      " xos.565"       $add-deflated-dropin
+
+   " nandblaster15_rx.bin" " nb15_rx"  $add-deflated-dropin
+   " nandblaster_tx.bin"   " nb_tx"    $add-deflated-dropin
+
+   " ec.img"                                    " ecimage.bin"   $add-deflated-dropin
+   " nn.hex"                                    " nn.hex"        $add-deflated-dropin
+   " ${BP}/clients/emacs/x86/emacs.rc"          " emacs.rc"      $add-deflated-dropin
+   " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
+   " ${BP}/clients/emacs/arm/emacs"             " emacs"         $add-deflated-dropin
+
+.( Dropin top is )  ofd @ fsize  .x cr
+
+/rom pad-file
+
+\ Insert the revision signature
+h# 10 buffer: signature
+signature h# 10 blank
+signature$  signature  swap move
+" ${FW_VERSION}" expand$  signature     6 + swap move
+" ${FW_PREFIX}${FW_MAJOR}" expand$  signature d# 13 + swap move
+signature-offset ofd @ fseek
+signature h# 10  ofd @ fputs
+
+/l buffer: crcbuf
+/rom buffer: filebuf
+
+\ Read the entire image, compute the CRC, and store it in the CRC location
+0 ofd @ fseek
+filebuf /rom ofd @ fgets /rom <> abort" Can't read back image"
+0 crctab  filebuf /rom  ($crc)  crcbuf !
+
+crc-offset ofd @ fseek
+crcbuf /l ofd @ fputs
+
+ofd @ fclose
+
+\ Creating olpc.version serves two purposes:
+\ a) It reports the firmware revision for use by external scripts
+\ b) It provides an olpc.* artifact for the builder dependency management.
+
+writing olpc.version
+" ${FW_VERSION}" expand$  2dup lower  ofd @ fputs
+ofd @ fclose
+
+
+
+\ LICENSE_BEGIN
+\ Copyright (c) 2010 FirmWorks
+\ 
+\ Permission is hereby granted, free of charge, to any person obtaining
+\ a copy of this software and associated documentation files (the
+\ "Software"), to deal in the Software without restriction, including
+\ without limitation the rights to use, copy, modify, merge, publish,
+\ distribute, sublicense, and/or sell copies of the Software, and to
+\ permit persons to whom the Software is furnished to do so, subject to
+\ the following conditions:
+\ 
+\ The above copyright notice and this permission notice shall be
+\ included in all copies or substantial portions of the Software.
+\ 
+\ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+\ EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+\ MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+\ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+\ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+\ OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+\ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+\
+\ LICENSE_END
+
