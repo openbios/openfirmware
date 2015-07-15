@@ -140,12 +140,12 @@ purpose: Inject additional keys into manufacturing data
 
 false value new-firmware?
 : got-firmware?  ( dev$ -- flag )
-   2dup ." Looking for new bootfw2.zip on " type cr     ( dev$ )
+   2dup ." Looking for new fw.zip on " type cr     ( dev$ )
    dn-buf place                                         ( )
    " \boot" pn-buf place                                ( )
    filesystem-present?  0=  if  false exit  then        ( )
    null$ cn-buf place                                   ( )
-   " bootfw2" bundle-present?  0=  if  false exit  then ( )
+   " fw" bundle-present?  0=  if  false exit  then ( )
    ."   Found" cr                                       ( )
    secure?  if                                          ( )
       load-crypto  if                                   ( )
@@ -242,12 +242,12 @@ false value new-firmware?
 ?keyject
 
 [ifdef] HowItWorks
-OLPC signs bootfw.zip containing OFW image A and bootfw2.zip containing OFW image B.
+OLPC signs bootfw.zip containing OFW image A and fw.zip containing OFW image B.
 * A is an OFW with additional keyjector functionality
 * B is an ordinary OFW
 Version number B > version number A.
 
-bootfw.zip and bootfw2.zip are presented to a deployment machine in the usual manner,
+bootfw.zip and fw.zip are presented to a deployment machine in the usual manner,
 either on a USB key or as part of a signed OS image.
 
 On a deployment machine with firmware X (version X < version A):
@@ -263,7 +263,7 @@ reflash mechanism.
 so it
   ! Injects the new keys
 then it
-  ! Reads bootfw2.zip, checks its signature, and reflashes with firmware B (version > A)
+  ! Reads fw.zip, checks its signature, and reflashes with firmware B (version > A)
   ! Reboots
 
 2) Firmware B starts, performs the normal fw update attempt step,
