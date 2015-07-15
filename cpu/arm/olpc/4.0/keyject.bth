@@ -22,6 +22,9 @@ in: cforth.img
 build-now
 
 fload ${BP}/cpu/arm/olpc/4.0/fw-version.fth
+\ for an SKU322 keyjector
+macro: FW_MAJOR B
+macro: FW_MINOR 42y
 
 " macro: FW_VERSION ${FW_PREFIX}${FW_MAJOR}${FW_MINOR}" expand$ eval
 
@@ -165,6 +168,15 @@ $new-file
    " ${BP}/clients/emacs/emacs.hlp"             " emacs.hlp"     $add-deflated-dropin
    " ${BP}/clients/emacs/arm/emacs"             " emacs"         $add-deflated-dropin
 
+   \ for an SKU322 keyjector
+   " ${BP}/cpu/x86/pc/olpc/keyject.fth" " probe+"       $add-deflated-dropin
+   \ Incompressible
+   " ${BP}/cpu/x86/pc/olpc/o1.public"   " o1"           $add-dropin
+   " ${BP}/cpu/x86/pc/olpc/s1.public"   " s1"           $add-dropin
+   " ${BP}/cpu/x86/pc/olpc/d1.public"   " d1"           $add-dropin
+   " ${BP}/cpu/x86/pc/olpc/w1.public"   " w1"           $add-dropin
+   " ${BP}/cpu/x86/pc/olpc/a1.public"   " a1"           $add-dropin
+
 .( Dropin top is )  ofd @ fsize  .x cr
 
 /rom pad-file
@@ -195,7 +207,8 @@ ofd @ fclose
 \ a) It reports the firmware revision for use by external scripts
 \ b) It provides an olpc.* artifact for the builder dependency management.
 
-writing olpc.version
+\ for an SKU322 keyjector
+writing keyject.version
 " ${FW_VERSION}" expand$  2dup lower  ofd @ fputs
 ofd @ fclose
 
