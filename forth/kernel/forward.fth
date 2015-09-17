@@ -80,6 +80,13 @@ variable lastanf-s
 : resolved?  ( acf -- flag )  \ true if already resolved
    resolution@ origin-t u>
 ;
+: defined?-t  \ name  ( -- flag )
+   safe-parse-word $sfind  if
+      resolved?
+   else
+      2drop false
+   then
+;
 
 \ Words to manipulate the symbol table vocabulary at the end of compilation.
 

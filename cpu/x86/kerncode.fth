@@ -470,6 +470,8 @@ code 0<= (s n -- f )  <=  unary-test  c;
 code 0>  (s n -- f )  >   unary-test  c;
 code 0>= (s n -- f )  0>= unary-test  c;
 
+: ?exit  (s flag -- ) 0<> if exit then ;
+
 assembler definitions
 :-h compare
    ax pop  bx pop  ax bx cmp

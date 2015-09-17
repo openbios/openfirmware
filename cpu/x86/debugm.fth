@@ -9,7 +9,7 @@ vocabulary bug   bug also definitions
 nuser 'debug   \ code field for high level trace
 nuser <ip      \ lower limit of ip
 nuser ip>      \ upper limit of ip
-nuser cnt      \ how many times thru debug next
+nuser cntx     \ how many times thru debug next
 
 label _flush_cache  ( -- )
    ret
@@ -58,13 +58,13 @@ label debnext
    u>= if
       'user ip>   ip  cmp
       u< if
-         'user cnt  ax  mov
+         'user cntx  ax  mov
 	 ax             inc
-         ax  'user cnt  mov
+         ax  'user cntx  mov
          2 #        ax  cmp
 	 = if
             ax ax sub
-	    ax  'user cnt         mov
+	    ax  'user cntx         mov
 \            normal-next #)   ax   lea
 	    make-even 				\ word-align address
 \- rel      normal-next   dup #)   ax   lea

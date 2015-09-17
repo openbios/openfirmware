@@ -42,7 +42,7 @@ headers
 : force-redisplay  ( -- )  -1 to displayed-xt  ;
 
 : (debug)       (s low-adr hi-adr -- )
-   unbug   1 cnt !   ip> !   <ip !   pnext
+   unbug   1 cntx !   ip> !   <ip !   pnext
    slow-next? @ 0=  if
       here  low-dictionary-adr  slow-next
       slow-next? on
@@ -294,8 +294,8 @@ variable hex-stack    \ Show the data stack in hex?
             ascii $  of  space 2dup type cr to-cmd-column false endof \ String
             ascii Q  of  cr ." unbug" abort           true   endof \ Quit
             ascii (  of  the-ip set-<ip                  false  endof
-            ascii <  of  the-ip ta1+ set-<ip  1 cnt !    false  endof
-            ascii )  of  the-ip ip> !  1 cnt !           false  endof
+            ascii <  of  the-ip ta1+ set-<ip  1 cntx !   false  endof
+            ascii )  of  the-ip ip> !  1 cntx !          false  endof
             ascii *  of  the-ip find-cfa dup <ip !  'unnest ip> !  false  endof
             ascii \  of  show-rstack @ 0= show-rstack !  false  endof  \ toggle return stack display
             ascii X  of  hex-stack @ 0= hex-stack !      false  endof  \ toggle heX stack display

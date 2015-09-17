@@ -395,7 +395,9 @@ create nullstring 0 c, 0 c,
 : "move (s from-pstr to-pstr -- to-pstr )   >r count r> pack  ;
 
 \ : count      (s adr -- adr+1 len )  dup 1+   swap c@   ;
+[ifndef]-t /string
 : /string  ( adr len cnt -- adr' len' )  tuck - -rot + swap  ;
+[then]
 
 : printable?  ( n -- flag ) \ true if n is a printable ascii character
    dup bl th 7f within  swap  th 80  th ff  between  or
@@ -415,8 +417,12 @@ create nullstring 0 c, 0 c,
    dup  0  ?do   2dup + 1- c@   white-space? 0=  ?leave  1-    loop
 ;
 
+[ifndef]-t upper
 : upper  (s adr len -- )  bounds  ?do i dup c@ upc swap c!  loop  ;
+[then]
+[ifndef]-t lower
 : lower  (s adr len -- )  bounds  ?do i dup c@ lcc swap c!  loop  ;
+[then]
 
 nuser caps
 : f83-compare  (s adr adr2 len -- -1 | 0 | 1 )
@@ -523,9 +529,12 @@ decimal
    cmove> drop
 ;
 
+[ifndef]-t 2rot
 : 2rot  (s a b c d e f -- c d e f a b )  5 roll  5 roll  ;
-
+[then]
+[ifndef]-t ?dup
 : ?dup   (s n -- [n] n )  dup if   dup   then   ;
+[then]
 : between (s n min max -- f )  >r over <= swap r> <= and  ;
 : within  (s n1 min max+1 -- f )  over -  >r - r> u<  ;
  
@@ -628,7 +637,7 @@ nuser dp           \ dictionary pointer
 \ needs to temporarily contain odd byte offset because of c,
 : here  (s -- addr )  dp @  ;
 
-fffffffc value limit
+-4 value limit
 : unused  ( -- #bytes )  limit here -  ;
 
 defer allot-error
@@ -709,7 +718,7 @@ defer allot-error
 \t16      compile  (lit)  ,
 \t16   then
 
-64\ \t32   dup -1 h# 0.ffff.fffe n->l between  if
+64\ \t32   dup 1+ d# 32 >> 0=  if
 64\ \t32      compile (llit) 1+ l,
 64\ \t32   else
     \t32      compile (lit) ,
@@ -926,14 +935,17 @@ hex
 : numdelim?  ( char -- flag )  dup ascii . =  swap ascii , =  or  ;
 : $dnumber?  ( adr len -- [ n .. ] #cells )
    0 0  2swap                                         ( ud $ )
-   dup  0=  if  4drop  0  exit  then            ( ud $ )
+   dup  0=  if  4drop  0  exit  then                  ( ud $ )
    over c@ ascii - =                                  ( ud $ neg? )
    dup  >r  negate /string                            ( ud $' )  ( r: neg? )
+   base @ >r                                          ( ud $' ) ( r: neg? base )
+   \ Recognize leading "0x"
+   over 2 " 0x" $=  if  hex 2 /string  then
 
    \ Convert groups of digits possibly separated by periods or commas
    begin  >number  dup 1 >  while                     ( ud' $' )
       over c@ numdelim?  0=  if                       ( ud' $' )
-         r> 5drop  0  exit				( ud' $' )
+         2r> base !  5drop  0  exit                   ( ud' $' )
       then                                            ( ud' $' )
       1 /string                                       ( ud' $' )
    repeat                                             ( ud' $' )
@@ -944,12 +956,13 @@ hex
       c@  ascii . =  if                               ( ud )
          true                                         ( ud dbl? )
       else                                            ( ud )
-         r> 3drop  0  exit
+         2r> base !  3drop  0  exit
       then                                            ( ud dbl? )
    else                                               ( ud adr )
       drop false                                      ( ud dbl? )
    then                                               ( ud dbl? )
 
+   r> base !
    over or  if                                        ( ud )
       r>  if  dnegate  then  2
    else
@@ -1142,7 +1155,8 @@ headers
 64\ : 16\  [compile] \  ; immediate
 64\ : 32\  [compile] \  ; immediate
 64\ : 64\  ; immediate
-[then]
+
+[then] \ run-time
 
 \ From definers.fth
 
@@ -1170,7 +1184,9 @@ nuser csp          \ for stack position error checking
 : ?csp   (s -- )   sp@ csp @ <>   ( -22 ) abort" Stack Changed "  ;
 
 : (;code)   (s -- )  ip>  aligned acf-aligned  used   ;
-: (does>)   (s -- )  ip>  acf-aligned  used   ;
+64\ : (does>)   (s -- )  ip>     aligned  used   ;
+32\ : (does>)   (s -- )  ip> acf-aligned  used   ;
+16\ : (does>)   (s -- )  ip> acf-aligned  used   ;
 
 defer do-entercode
 ' noop is do-entercode
@@ -1188,7 +1204,11 @@ defer do-exitcode
 : c;  ( -- )  next  end-code  ;
 
 : ;code     (s -- )
-   ?csp   compile  (;code)  align acf-align  place-;code
+   ?csp   compile  (;code)
+16\ align acf-align
+32\ align acf-align
+64\       acf-align
+   place-;code
    [compile] [   reveal   do-entercode
 ; immediate
 
@@ -1196,9 +1216,13 @@ defer do-exitcode
    state @  if
      compile (does>)
    else
-     here  aligned acf-aligned  used  !csp not-hidden  ]
+16\  here aligned acf-aligned  used  !csp not-hidden  ]
+32\  here aligned acf-aligned  used  !csp not-hidden  ]
+64\  here aligned              used  !csp not-hidden  ]
    then
-   align acf-align  place-does
+16\ align acf-align  place-does
+32\ align acf-align  place-does
+64\ align            place-does
 ; immediate
 
 : :        (s -- )  ?exec  !csp   header  hide   ]  colon-cf  ;
@@ -1279,14 +1303,13 @@ headerless
 
 headers
 : do-buffer  ( apf -- adr )
-   dup >user @  if          ( apf )
-      >user @               ( adr )
-   else                     ( apf )
-      dup /user# + @        ( apf size )
-      dup alloc-mem         ( apf size adr )
-      dup rot erase         ( apf adr )
-      dup rot >user !       ( adr )
-   then
+   dup >user @ ?dup          ( apf adr adr | apf 0 )
+   if  nip exit  then        ( apf )
+   \ Must use unaligned-@ here, since /user# != /n on all machines.
+   dup /user# + unaligned-@  ( apf size )
+   dup alloc-mem             ( apf size adr )
+   dup rot erase             ( apf adr )
+   dup rot >user !           ( adr )
 ;
 : (buffer:)  ( size -- )
    create-cf  make-buffer  does> do-buffer
@@ -1474,6 +1497,27 @@ headers
 : vocabulary  ( "name" -- )  header (wordlist)  ;
 
 defer $find-next
+
+[ifndef]-t ($find-next)
+\ Generic colon definition version of ($find-next). This is guaranteed
+\ to be suboptimal in almost all cases, but it's useful before you start
+\ writing and debugging accelerated versions.
+\ 'link' is an address in a vocaulary containing the token (of the
+\ acf) of the newest definition
+: ($find-next) ( adr len link -- adr len alf true | adr len false )
+   begin
+      link@ dup origin <>                 ( adr len acf more? )
+   while
+      >link >r r@ l>name name>string      ( target$ this$ R:alf )
+      2over $=  if
+        r>  true exit
+      then
+      r>
+   repeat
+   drop false
+;
+[then]
+
 ' ($find-next) is $find-next
 
 \  : insert-after  ( new-node old-node -- )
@@ -2000,9 +2044,8 @@ headerless
 : line-delimiter file @ 17 na+  ;   \ The last delimiter at the end of each line
 : pre-delimiter  file @ 18 na+  ;   \ The first line delimiter (if any)
 : (file-name)    file @ 19 na+  ;   \ The name of the file
-/n round-up
 headers
-20 /n-t * d# 68 +  constant /fd
+d# 20 /n-t * d# 68 +  /n-t round-up  constant /fd
 
 : set-name  ( adr len -- )
    \ If the name is too long, cut off initial characters (because the

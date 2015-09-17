@@ -9,7 +9,7 @@ h# 80 constant metacompiling
 
 \ Non-immediate version which is compiled inside several
 \ meta and transition words
-: literal-t  ( n -- )  n->l-t compile-t (lit) ,-t  ;
+: literal-t  ( n -- )  n->n-t compile-t (lit) ,-t  ;
 
 \ vocabularies:
 \ transition
@@ -401,7 +401,7 @@ variable flags-t
 
 \ Automatic allocation of space in the user area
 variable #user-t
-/n constant #ualign-t
+/n-t constant #ualign-t
 : ualigned-t ( n -- n' )  #ualign-t 1- + #ualign-t negate and  ;
 
 : ualloc-t  ( n -- next-user-# )  \ allocate n bytes and leave a user number
@@ -415,7 +415,9 @@ variable #user-t
 : isconstant  ( acf -- n )  >body-t @-t  ;
 : constant  \ name  ( n -- )
    safe-parse-word  3dup $equ
-   " constant-cf"  $header-t    s->l-t ,-t
+64\ " constant-cf"  $header-t  n->n-t ,-t
+32\ " constant-cf"  $header-t  s->l-t ,-t
+16\ " constant-cf"  $header-t  s->l-t ,-t
    ['] isconstant setaction    ?debug
 ;
 
@@ -425,7 +427,9 @@ variable #user-t
    ['] iscreate setaction    ?debug
 ;
 
-: isvariable  ( n acf -- )  >body-t !-t  ;
+64\ : isvariable  ( n acf -- )  >body-t >r n->n-t r> !-t  ;
+32\ : isvariable  ( n acf -- )  >body-t !-t  ;
+16\ : isvariable  ( n acf -- )  >body-t !-t  ;
 : variable  \ name  ( -- )
    " variable-cf" header-t   0 n->n-t ,-t
    ['] isvariable setaction    ?debug
@@ -489,7 +493,10 @@ variable #user-t
 \ of defining the label.
 
 : mlabel  \ name  ( -- )  ( Later:  -- adr-t )
-   safe-parse-word  align-t acf-align-t $label
+   safe-parse-word  align-t
+32\ acf-align-t
+16\ acf-align-t
+   $label
 ;
 : mloclabel  \ name  ( -- )  ( Later:  -- adr-t )
    safe-parse-word  $label
@@ -568,14 +575,20 @@ transition definitions
    \ XXX the alignment should be done in startdoes; it is incorrect
    \ to assume that acf alignment is sufficient (code alignment might
    \ be stricter).
-   align-t acf-align-t here-t doestarget !
+64\ align-t             here-t doestarget !
+32\ align-t acf-align-t here-t doestarget !
+16\ align-t acf-align-t here-t doestarget !
    " startdoes" $meta-execute
    target
 ; immediate
 
 : ;code     (s -- )
    host
-   ?csp  compile-t (;code)   align-t  acf-align-t  here-t doestarget !
+   ?csp  compile-t (;code)
+64\           acf-align-t
+32\  align-t  acf-align-t
+16\  align-t  acf-align-t
+   here-t doestarget !
    " start;code" $meta-execute
    [compile] [  reveal-t  entercode
    target
@@ -669,6 +682,9 @@ meta assembler definitions
 ;
 
 meta definitions
+: [ifdef]-t   defined?-t    [compile] [if]  ; immediate-h
+: [ifndef]-t  defined?-t 0= [compile] [if]  ; immediate-h
+
 alias :   :-t
 alias ]   ]-t
 alias /n  /n-t

@@ -269,7 +269,7 @@ inflate(struct workspace *wsptr, int nohdr, u_char* clear, u_char *compr)
                 }
 
 	    } else {
-	        int i;                /* temporary variables */
+	        int i = 0;            /* temporary variables */
 		struct huft *tl;      /* literal/length code table */
 		struct huft *td;      /* distance code table */
 		int bl;               /* lookup bits for tl */
