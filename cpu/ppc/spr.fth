@@ -426,7 +426,7 @@ code der@  ( -- n )
    mfspr  tos,der
 c;
 code der!  ( n -- )
-   mtspr immr,tos
+   mtspr der,tos
    lwz tos,0(sp)
    addi sp,sp,1cell
 c;
