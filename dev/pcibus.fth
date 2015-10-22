@@ -1183,7 +1183,8 @@ defer avoid?  ( phys.hi -- flag )
             4                                               ( increment )
          then                                               ( increment )
       +loop
-
+   else
+      " reg property missing!" diag-type-cr
    then
    r> finish-aa-property
 ;

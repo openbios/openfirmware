@@ -39,6 +39,9 @@ d# 640 instance value /scanline			  \ Active screen width
 : reg@  ( index -- value )  regs rl!  regs 1+ rl@  ;
 : reg!  ( value index -- )  regs rl!  regs 1+ rl!  ;
 
+: my-w@  ( offset -- w )  my-space +  " config-w@" $call-parent  ;
+: my-w!  ( w offset -- )  my-space +  " config-w!" $call-parent  ;
+
 \ Here are the register numbers.  Most of these registers are
 \ accessed only once, so I don't define access words for many of them.
 \ (W) means that it is meaningful for you to write to this register
@@ -85,6 +88,7 @@ d# 640 instance value /scanline			  \ Active screen width
 h# 200.0000 instance value /mem
 : map-regs  ( -- )
    0 0 my-space h# 0100.0010 +  h# 10  " map-in" $call-parent to regs
+   4 my-w@ 1 or 4 my-w!
 ;
 : map-mem  ( -- )
    my-space h# 14 +  " config-l@" $call-parent   if
@@ -94,12 +98,16 @@ h# 200.0000 instance value /mem
       0   0 my-space  h# 0200.0018 +  /fb    " map-in" $call-parent  to frame-buffer-adr
       /fb 0 my-space  h# 0200.0018 +  /fifo  " map-in" $call-parent  to fifo
    then
-   3  my-space   h# 04 + " config-w!" $call-parent
+   4 my-w@ 2 or 4 my-w!
 ;
-: unmap-regs  ( -- )  regs  h# 10  " map-out" $call-parent  ;
+: unmap-regs  ( -- )
+   regs  h# 10  " map-out" $call-parent
+   4 my-w@ 1 invert and 4 my-w!
+;
 : unmap-mem  ( -- )
    fifo              /fifo  " map-out" $call-parent
    frame-buffer-adr  /fb    " map-out" $call-parent
+   4 my-w@ 2 invert and 4 my-w!
 ;
 
 \ Min and Max are the static limits of the FIFO area.
@@ -116,6 +124,23 @@ h# 200.0000 instance value /mem
    unmap-regs
    abort  \ We don't support version 0
 ;
+
+: int+  ( adr len n -- adr' len' )  encode-int encode+  ;
+
+: set-reg-property
+   my-address my-space encode-phys                        0 int+ h# 0    int+
+   my-address my-space h# 0100.0010 + encode-phys encode+ 0 int+ h# 10   int+
+   my-address my-space h# 0200.0014 + encode-phys encode+ 0 int+ /fb     int+
+   my-address my-space h# 0200.0018 + encode-phys encode+ 0 int+ /fifo   int+
+   " reg" property
+;
+
+: probe ( -- )
+   map-regs
+   set-reg-property
+   unmap-regs
+;
+
 : init-fb  ( -- )
    depth 7 reg!  7 reg@ depth <>  if  7 reg@  to depth  then
    
