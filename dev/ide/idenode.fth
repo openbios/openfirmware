@@ -22,6 +22,7 @@ external
 
 : any-blocks?   " any-blocks?"   $call-parent ;
 : cdrom?        " cdrom?"        $call-parent ;
+: node-fcode    " node-fcode"    $call-parent ;
 
 : set-address   ( unit -- dummy unit )
 
