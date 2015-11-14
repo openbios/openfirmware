@@ -3,13 +3,19 @@
  * Main routine for calling the PowerPC simulator to simulate ROM images
  */
 
+#include <sys/types.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
 extern void simulate();
-extern char *malloc();
 
 char *loadaddr;
 
 #define MEMSIZE 0x800000
 
+int
 main()
 {
 	int f;

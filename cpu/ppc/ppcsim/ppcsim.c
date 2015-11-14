@@ -39,6 +39,16 @@ union {
 
 #define ILLEGAL goto illegal
 
+void catch_signals();
+void trace(char *name, u_long instruction, u_long pc);
+int xfindnext(register u_char *adr, 
+    register long strlen,
+    register long base,
+    register u_long link,
+    u_long *alf);
+
+void umtimes(u_long *dhighp, u_long *dlowp, u_long u1, u_long u2);
+
 #ifdef TRACE
 #define INSTR(a)	trace(a, instruction, pc)
 #else
@@ -1832,6 +1842,7 @@ trapout:
 }
 
 
+void
 umtimes(dhighp, dlowp, u1, u2)
     u_long *dhighp, *dlowp;
     u_long u1, u2;
@@ -1868,6 +1879,7 @@ dplus(dhighp, dlowp, shigh, slow)
 
 #ifdef TRACE
 #include <sys/signal.h>
+void
 dumpregs()
 {
 #ifdef ARGREGS
@@ -1916,6 +1928,7 @@ dumpregs()
 	printf("\n");
 #endif
 }
+void
 dumpallregs()
 {
         int i;
@@ -1937,6 +1950,8 @@ handle_signal(foo)
 	dumpregs();
 	s_bye(1);
 }
+
+void
 catch_signals()
 {
 	signal(SIGINT,handle_signal);
@@ -1950,6 +1965,7 @@ catch_signals()
 #endif
 }
 
+void
 dumpmem(adr)
 	long adr;
 {
@@ -1968,9 +1984,12 @@ dumpmem(adr)
 #else
 #define GETLINE
 #endif
-trace(name, instruction)
+
+void
+trace(name, instruction, pc)
 	char *name;
 	u_long instruction;
+	u_long pc;
 {
 	int done;
 	int arg;
