@@ -343,6 +343,9 @@ simulate(u8 *mem, u32 start, u32 header, u32 syscall_vec,
             regdump(instruction, last_pc, 0);
 //#endif
         EVAL_COND(COND);
+        if (cond == 0) {
+            goto annul;
+        }
         if (cond == 0xf)
                 UNIMP("unconditional");
         switch (OP) {
@@ -1283,6 +1286,7 @@ case 0x7d:
 case 0x7e:
 case 0x7f: UNIMP("svc"); break;
         } // switch (OP)
+annul:
         if (PC == last_pc)
             PC += 4;
         else // branch or move
